@@ -20,9 +20,9 @@ env:
 
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy to ECS
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Checkout

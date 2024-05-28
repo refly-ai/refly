@@ -1,0 +1,51 @@
+name: Deploy Web
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      project-name:
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish to Cloudflare Pages
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: refly-ai
+          SENTRY_PROJECT: web
+        with:
+          environment: ${{ inputs.environment }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "yarn"
+
+      - name: Build
+        run: cd web && yarn --frozen-lockfile && yarn build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ inputs.project-name }}
+          directory: web/dist
+          workingDirectory: web

@@ -1,0 +1,15 @@
+name: Deploy Web To Staging
+
+on:
+  push:
+    branches-ignore:
+      - release
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    uses: ./.github/workflows/deploy-web-base.yml
+    with:
+      environment: staging
+      project-name: refly-staging
+    secrets: inherit

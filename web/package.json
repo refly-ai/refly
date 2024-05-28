@@ -12,6 +12,7 @@
   "dependencies": {
     "@arco-design/web-react": "^2.47.1",
     "@arco-themes/react-refly-ai": "0.0.2",
+    "@paralleldrive/cuid2": "^2.2.2",
     "@radix-ui/react-popover": "^1.0.7",
     "@redux-devtools/extension": "^3.3.0",
     "@sentry/react": "^7.113.0",

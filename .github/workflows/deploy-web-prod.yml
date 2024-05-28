@@ -1,0 +1,15 @@
+name: Deploy Web To Prod
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    uses: ./.github/workflows/deploy-web-base.yml
+    with:
+      environment: production
+      project-name: refly
+    secrets: inherit
