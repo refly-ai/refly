@@ -49,6 +49,42 @@ router.post('/htmlUpload', async (request, env) => {
 	return Response.json({ storageKey: objectKey }, { status: 200 });
 });
 
+router.post('/resourceUpload', async (request, env) => {
+	// Check authorization header for jwt token
+	const authorization = request.headers.get('Authorization');
+	if (!authorization || !authorization.toLowerCase().startsWith('bearer ')) {
+		return new Response('Authorization failed', { status: 401 });
+	}
+	const token = authorization.substring(7);
+	const isValid = await jwt.verify(token, env.JWT_SECRET);
+	if (!isValid) {
+		return new Response('Invalid token', { status: 401 });
+	}
+
+	const formData = await request.formData();
+	const file = formData.get('file');
+	const data = await file.arrayBuffer();
+	const hash = await sha256(new TextEncoder().encode(formData.get('url')));
+
+	// Upload HTML file
+	const objectKey = `html-upload/${hash}.html`;
+	const aws = new AwsClient({ service: 's3', accessKeyId: env.AWS_ACCESS_KEY, secretAccessKey: env.AWS_SECRET_KEY });
+	const uploadUrl = `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${objectKey}`;
+	console.log('uploadUrl:', uploadUrl);
+
+	const res = await aws.fetch(uploadUrl, {
+		body: data,
+		method: 'PUT',
+		headers: {
+			'Content-Type': 'application/html',
+		},
+	});
+	const resText = await res.text();
+	console.log(resText);
+
+	return Response.json({ storageKey: objectKey }, { status: 200 });
+});
+
 // 404 for everything else
 router.all('*', () => new Response('Not Found.', { status: 404 }));
 
