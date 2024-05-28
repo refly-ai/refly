@@ -56,7 +56,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  // tracer.start();
+  tracer.start();
   const configService = app.get(ConfigService);
   await app.listen(configService.get('port'));
 }

@@ -2,10 +2,10 @@ name: Deploy Reflyd To Staging
 
 on:
   push:
-    branches:
-      - "!release**"
+    branches-ignore:
+      - release
     paths:
-      - "reflyd/src/**"
+      - "reflyd/**"
   workflow_dispatch:
 
 jobs:

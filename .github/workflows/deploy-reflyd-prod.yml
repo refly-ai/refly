@@ -5,7 +5,7 @@ on:
     branches:
       - release
     paths:
-      - "reflyd/src/**"
+      - "reflyd/**"
   workflow_dispatch:
 
 jobs:
