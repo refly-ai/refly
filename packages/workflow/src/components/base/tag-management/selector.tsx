@@ -1,0 +1,316 @@
+import type { FC } from "react"
+import { useMemo, useState } from "react"
+import { useContext } from "use-context-selector"
+import { useTranslation } from "react-i18next"
+import { useUnmount } from "ahooks"
+import cn from "classnames"
+import { RiAddLine } from "@remixicon/react"
+import { useStore as useTagStore } from "./store"
+import type { HtmlContentProps } from "@/components/base/popover"
+import CustomPopover from "@/components/base/popover"
+import Divider from "@/components/base/divider"
+import SearchInput from "@/components/base/search-input"
+import {
+  Tag01,
+  Tag03,
+} from "@/components/base/icons/src/vender/line/financeAndECommerce"
+import type { Tag } from "@/components/base/tag-management/constant"
+import Checkbox from "@/components/base/checkbox"
+import { bindTag, createTag, fetchTagList, unBindTag } from "@/service/tag"
+import { ToastContext } from "@/components/base/toast"
+
+type TagSelectorProps = {
+  targetID: string
+  isPopover?: boolean
+  position?: "bl" | "br"
+  type: "knowledge" | "app"
+  value: string[]
+  selectedTags: Tag[]
+  onCacheUpdate: (tags: Tag[]) => void
+  onChange?: () => void
+}
+
+type PanelProps = {
+  onCreate: () => void
+} & HtmlContentProps &
+  TagSelectorProps
+
+const Panel = (props: PanelProps) => {
+  const { t } = useTranslation()
+  const { notify } = useContext(ToastContext)
+  const {
+    targetID,
+    type,
+    value,
+    selectedTags,
+    onCacheUpdate,
+    onChange,
+    onCreate,
+  } = props
+  const tagList = useTagStore(s => s.tagList)
+  const setTagList = useTagStore(s => s.setTagList)
+  const setShowTagManagementModal = useTagStore(
+    s => s.setShowTagManagementModal,
+  )
+  const [selectedTagIDs, setSelectedTagIDs] = useState<string[]>(value)
+  const [keywords, setKeywords] = useState("")
+  const handleKeywordsChange = (value: string) => {
+    setKeywords(value)
+  }
+
+  const notExisted = useMemo(() => {
+    return tagList.every(tag => tag.type === type && tag.name !== keywords)
+  }, [type, tagList, keywords])
+  const filteredSelectedTagList = useMemo(() => {
+    return selectedTags.filter(tag => tag.name.includes(keywords))
+  }, [keywords, selectedTags])
+  const filteredTagList = useMemo(() => {
+    return tagList.filter(
+      tag =>
+        tag.type === type &&
+        !value.includes(tag.id) &&
+        tag.name.includes(keywords),
+    )
+  }, [type, tagList, value, keywords])
+
+  const [creating, setCreating] = useState<Boolean>(false)
+  const createNewTag = async () => {
+    if (!keywords) return
+    if (creating) return
+    try {
+      setCreating(true)
+      const newTag = await createTag(keywords, type)
+      notify({ type: "success", message: t("common.tag.created") })
+      setTagList([...tagList, newTag])
+      setCreating(false)
+      onCreate()
+    } catch (e: any) {
+      notify({ type: "error", message: t("common.tag.failed") })
+      setCreating(false)
+    }
+  }
+  const bind = async (tagIDs: string[]) => {
+    try {
+      await bindTag(tagIDs, targetID, type)
+      notify({
+        type: "success",
+        message: t("common.actionMsg.modifiedSuccessfully"),
+      })
+    } catch (e: any) {
+      notify({
+        type: "error",
+        message: t("common.actionMsg.modifiedUnsuccessfully"),
+      })
+    }
+  }
+  const unbind = async (tagID: string) => {
+    try {
+      await unBindTag(tagID, targetID, type)
+      notify({
+        type: "success",
+        message: t("common.actionMsg.modifiedSuccessfully"),
+      })
+    } catch (e: any) {
+      notify({
+        type: "error",
+        message: t("common.actionMsg.modifiedUnsuccessfully"),
+      })
+    }
+  }
+  const selectTag = (tag: Tag) => {
+    if (selectedTagIDs.includes(tag.id))
+      setSelectedTagIDs(selectedTagIDs.filter(v => v !== tag.id))
+    else setSelectedTagIDs([...selectedTagIDs, tag.id])
+  }
+
+  const valueNotChanged = useMemo(() => {
+    return (
+      value.length === selectedTagIDs.length &&
+      value.every(v => selectedTagIDs.includes(v)) &&
+      selectedTagIDs.every(v => value.includes(v))
+    )
+  }, [value, selectedTagIDs])
+  const handleValueChange = () => {
+    const addTagIDs = selectedTagIDs.filter(v => !value.includes(v))
+    const removeTagIDs = value.filter(v => !selectedTagIDs.includes(v))
+    const selectedTags = tagList.filter(tag => selectedTagIDs.includes(tag.id))
+    onCacheUpdate(selectedTags)
+    Promise.all([
+      ...(addTagIDs.length ? [bind(addTagIDs)] : []),
+      ...[removeTagIDs.length ? removeTagIDs.map(tagID => unbind(tagID)) : []],
+    ]).finally(() => {
+      if (onChange) onChange()
+    })
+  }
+  useUnmount(() => {
+    if (valueNotChanged) return
+    handleValueChange()
+  })
+
+  const onMouseLeave = async () => {
+    props.onClose?.()
+  }
+  return (
+    <div
+      className="relative w-full rounded-lg border-[0.5px] border-gray-200 bg-white"
+      onMouseLeave={onMouseLeave}>
+      <div className="border-b-[0.5px] border-black/5 p-2">
+        <SearchInput
+          placeholder={t("common.tag.selectorPlaceholder") || ""}
+          white
+          value={keywords}
+          onChange={handleKeywordsChange}
+        />
+      </div>
+      {keywords && notExisted && (
+        <div className="p-1">
+          <div
+            className="flex cursor-pointer items-center gap-2 rounded-lg py-[6px] pl-3 pr-2 hover:bg-gray-100"
+            onClick={createNewTag}>
+            <RiAddLine className="h-4 w-4 text-gray-500" />
+            <div className="grow truncate text-sm leading-5 text-gray-700">
+              {`${t("common.tag.create")} `}
+              <span className="font-medium">{`"${keywords}"`}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {keywords && notExisted && filteredTagList.length > 0 && (
+        <Divider className="!my-0 !h-[1px]" />
+      )}
+      {(filteredTagList.length > 0 || filteredSelectedTagList.length > 0) && (
+        <div className="max-h-[172px] overflow-y-auto p-1">
+          {filteredSelectedTagList.map(tag => (
+            <div
+              key={tag.id}
+              className="flex cursor-pointer items-center gap-2 rounded-lg py-[6px] pl-3 pr-2 hover:bg-gray-100"
+              onClick={() => selectTag(tag)}>
+              <Checkbox
+                className="shrink-0"
+                checked={selectedTagIDs.includes(tag.id)}
+                onCheck={() => {}}
+              />
+              <div
+                title={tag.name}
+                className="grow truncate text-sm leading-5 text-gray-700">
+                {tag.name}
+              </div>
+            </div>
+          ))}
+          {filteredTagList.map(tag => (
+            <div
+              key={tag.id}
+              className="flex cursor-pointer items-center gap-2 rounded-lg py-[6px] pl-3 pr-2 hover:bg-gray-100"
+              onClick={() => selectTag(tag)}>
+              <Checkbox
+                className="shrink-0"
+                checked={selectedTagIDs.includes(tag.id)}
+                onCheck={() => {}}
+              />
+              <div
+                title={tag.name}
+                className="grow truncate text-sm leading-5 text-gray-700">
+                {tag.name}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {!keywords &&
+        !filteredTagList.length &&
+        !filteredSelectedTagList.length && (
+          <div className="p-1">
+            <div className="flex flex-col items-center gap-1 p-3">
+              <Tag03 className="h-6 w-6 text-gray-300" />
+              <div className="text-xs leading-[14px] text-gray-500">
+                {t("common.tag.noTag")}
+              </div>
+            </div>
+          </div>
+        )}
+      <Divider className="!my-0 !h-[1px]" />
+      <div className="p-1">
+        <div
+          className="flex cursor-pointer items-center gap-2 rounded-lg py-[6px] pl-3 pr-2 hover:bg-gray-100"
+          onClick={() => setShowTagManagementModal(true)}>
+          <Tag03 className="h-4 w-4 text-gray-500" />
+          <div className="grow truncate text-sm leading-5 text-gray-700">
+            {t("common.tag.manageTags")}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const TagSelector: FC<TagSelectorProps> = ({
+  targetID,
+  isPopover = true,
+  position,
+  type,
+  value,
+  selectedTags,
+  onCacheUpdate,
+  onChange,
+}) => {
+  const { t } = useTranslation()
+
+  const setTagList = useTagStore(s => s.setTagList)
+
+  const getTagList = async () => {
+    const res = await fetchTagList(type)
+    setTagList(res)
+  }
+
+  const triggerContent = useMemo(() => {
+    if (selectedTags?.length)
+      return selectedTags.map(tag => tag.name).join(", ")
+    return ""
+  }, [selectedTags])
+
+  const Trigger = () => {
+    return (
+      <div
+        className={cn(
+          "group/tip relative flex w-full cursor-pointer items-center gap-1 rounded-md px-2 py-[7px] hover:bg-gray-100",
+        )}>
+        <Tag01 className="h-3 w-3 shrink-0" />
+        <div className="grow truncate text-start text-xs font-normal leading-[18px]">
+          {!triggerContent ? t("common.tag.addTag") : triggerContent}
+        </div>
+      </div>
+    )
+  }
+  return (
+    <>
+      {isPopover && (
+        <CustomPopover
+          htmlContent={
+            <Panel
+              type={type}
+              targetID={targetID}
+              value={value}
+              selectedTags={selectedTags}
+              onCacheUpdate={onCacheUpdate}
+              onChange={onChange}
+              onCreate={getTagList}
+            />
+          }
+          position={position}
+          trigger="click"
+          btnElement={<Trigger />}
+          btnClassName={open =>
+            cn(
+              open ? "!bg-gray-100 !text-gray-700" : "!bg-transparent",
+              "!w-full !p-0 !border-0 !text-gray-500 hover:!bg-gray-100 hover:!text-gray-700",
+            )
+          }
+          popupClassName="!w-full !ring-0"
+          className={"!z-20 h-fit !w-full"}
+        />
+      )}
+    </>
+  )
+}
+
+export default TagSelector

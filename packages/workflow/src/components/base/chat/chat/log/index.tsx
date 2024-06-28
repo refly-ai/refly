@@ -1,0 +1,42 @@
+import type { FC } from "react"
+import { useTranslation } from "react-i18next"
+import { File02 } from "@/components/base/icons/src/vender/line/files"
+import type { IChatItem } from "@/components/base/chat/chat/type"
+import { useStore as useAppStore } from "@/store"
+
+type LogProps = {
+  logItem: IChatItem
+}
+const Log: FC<LogProps> = ({ logItem }) => {
+  const { t } = useTranslation()
+  const setCurrentLogItem = useAppStore(s => s.setCurrentLogItem)
+  const setShowPromptLogModal = useAppStore(s => s.setShowPromptLogModal)
+  const setShowAgentLogModal = useAppStore(s => s.setShowAgentLogModal)
+  const setShowMessageLogModal = useAppStore(s => s.setShowMessageLogModal)
+  const { workflow_run_id: runID, agent_thoughts } = logItem
+  const isAgent = agent_thoughts && agent_thoughts.length > 0
+
+  return (
+    <div
+      className="flex shrink-0 cursor-pointer items-center justify-center rounded-[6px] p-1 font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+      onClick={e => {
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+        setCurrentLogItem(logItem)
+        if (runID) setShowMessageLogModal(true)
+        else if (isAgent) setShowAgentLogModal(true)
+        else setShowPromptLogModal(true)
+      }}>
+      <File02 className="mr-1 h-4 w-4" />
+      <div className="text-xs leading-4">
+        {runID
+          ? t("appLog.viewLog")
+          : isAgent
+            ? t("appLog.agentLog")
+            : t("appLog.promptLog")}
+      </div>
+    </div>
+  )
+}
+
+export default Log

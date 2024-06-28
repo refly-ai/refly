@@ -65,6 +65,11 @@
       "reviewCategory": "packages"
     },
     {
+      "packageName": "@refly/workflow",
+      "projectFolder": "packages/workflow",
+      "reviewCategory": "packages"
+    },
+    {
       "packageName": "@refly/api",
       "projectFolder": "apps/api",
       "reviewCategory": "apps"

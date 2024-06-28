@@ -1,0 +1,6 @@
+.wrapper {
+  display: inline-flex;
+  background: url(~@/components/base/icons/assets/image/llm/minimax.png) center
+    center no-repeat;
+  background-size: contain;
+}

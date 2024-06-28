@@ -1,0 +1,200 @@
+import type { FC } from "react"
+import { memo, useCallback, useMemo } from "react"
+import { useNodes } from "reactflow"
+import { useTranslation } from "react-i18next"
+import { useContext } from "use-context-selector"
+import { useStore, useWorkflowStore } from "../store"
+import { BlockEnum, InputVarType } from "../types"
+import type { StartNodeType } from "../nodes/start/types"
+import {
+  useChecklistBeforePublish,
+  useNodesReadOnly,
+  useNodesSyncDraft,
+  useWorkflowMode,
+  useWorkflowRun,
+} from "../hooks"
+import AppPublisher from "@/components/app-publisher"
+import { ToastContext } from "../../base/toast"
+import RunAndHistory from "./run-and-history"
+import EditingTitle from "./editing-title"
+import RunningTitle from "./running-title"
+import RestoringTitle from "./restoring-title"
+import ViewHistory from "./view-history"
+import Checklist from "./checklist"
+import { Grid01 } from "@/components/base/icons/src/vender/line/layout"
+import Button from "@/components/base/button"
+import { useStore as useAppStore } from "@/store"
+import { publishWorkflow } from "@/service/workflow"
+import { ArrowNarrowLeft } from "@/components/base/icons/src/vender/line/arrows"
+import { useFeatures } from "@/components/base/features/hooks"
+
+const Header: FC = () => {
+  const { t } = useTranslation()
+  const workflowStore = useWorkflowStore()
+  const appDetail = useAppStore(s => s.appDetail)
+  const appSidebarExpand = useAppStore(s => s.appSidebarExpand)
+  const appID = appDetail?.id
+  const { nodesReadOnly, getNodesReadOnly } = useNodesReadOnly()
+  const publishedAt = useStore(s => s.publishedAt)
+  const draftUpdatedAt = useStore(s => s.draftUpdatedAt)
+  const toolPublished = useStore(s => s.toolPublished)
+  const nodes = useNodes<StartNodeType>()
+  const startNode = nodes.find(node => node.data.type === BlockEnum.Start)
+  const startVariables = startNode?.data.variables
+  const fileSettings = useFeatures(s => s.features.file)
+  const variables = useMemo(() => {
+    const data = startVariables || []
+    if (fileSettings?.image?.enabled) {
+      return [
+        ...data,
+        {
+          type: InputVarType.files,
+          variable: "__image",
+          required: false,
+          label: "files",
+        },
+      ]
+    }
+
+    return data
+  }, [fileSettings?.image?.enabled, startVariables])
+
+  const {
+    handleLoadBackupDraft,
+    handleBackupDraft,
+    handleRestoreFromPublishedWorkflow,
+  } = useWorkflowRun()
+  const { handleCheckBeforePublish } = useChecklistBeforePublish()
+  const { handleSyncWorkflowDraft } = useNodesSyncDraft()
+  const { notify } = useContext(ToastContext)
+  const { normal, restoring, viewHistory } = useWorkflowMode()
+
+  const handleShowFeatures = useCallback(() => {
+    const { showFeaturesPanel, isRestoring, setShowFeaturesPanel } =
+      workflowStore.getState()
+    if (getNodesReadOnly() && !isRestoring) return
+    setShowFeaturesPanel(!showFeaturesPanel)
+  }, [workflowStore, getNodesReadOnly])
+
+  const handleCancelRestore = useCallback(() => {
+    handleLoadBackupDraft()
+    workflowStore.setState({ isRestoring: false })
+  }, [workflowStore, handleLoadBackupDraft])
+
+  const handleRestore = useCallback(() => {
+    workflowStore.setState({ isRestoring: false })
+    workflowStore.setState({ backupDraft: undefined })
+    handleSyncWorkflowDraft(true)
+  }, [handleSyncWorkflowDraft, workflowStore])
+
+  const onPublish = useCallback(async () => {
+    if (handleCheckBeforePublish()) {
+      const res = await publishWorkflow(`/apps/${appID}/workflows/publish`)
+
+      if (res) {
+        notify({ type: "success", message: t("common.api.actionSuccess") })
+        workflowStore.getState().setPublishedAt(res.created_at)
+      }
+    } else {
+      throw new Error("Checklist failed")
+    }
+  }, [appID, handleCheckBeforePublish, notify, t, workflowStore])
+
+  const onStartRestoring = useCallback(() => {
+    workflowStore.setState({ isRestoring: true })
+    handleBackupDraft()
+    handleRestoreFromPublishedWorkflow()
+  }, [handleBackupDraft, handleRestoreFromPublishedWorkflow, workflowStore])
+
+  const onPublisherToggle = useCallback(
+    (state: boolean) => {
+      if (state) handleSyncWorkflowDraft(true)
+    },
+    [handleSyncWorkflowDraft],
+  )
+
+  const handleGoBackToEdit = useCallback(() => {
+    handleLoadBackupDraft()
+    workflowStore.setState({ historyWorkflowData: undefined })
+  }, [workflowStore, handleLoadBackupDraft])
+
+  const handleToolConfigureUpdate = useCallback(() => {
+    workflowStore.setState({ toolPublished: true })
+  }, [workflowStore])
+
+  return (
+    <div
+      className="absolute left-0 top-0 z-10 flex h-14 w-full items-center justify-between px-3"
+      style={{
+        background:
+          "linear-gradient(180deg, #F9FAFB 0%, rgba(249, 250, 251, 0.00) 100%)",
+      }}>
+      <div>
+        {appSidebarExpand === "collapse" && (
+          <div className="text-xs font-medium text-gray-700">
+            {appDetail?.name}
+          </div>
+        )}
+        {normal && <EditingTitle />}
+        {viewHistory && <RunningTitle />}
+        {restoring && <RestoringTitle />}
+      </div>
+      {normal && (
+        <div className="flex items-center">
+          <RunAndHistory />
+          <div className="mx-2 h-3.5 w-[1px] bg-gray-200"></div>
+          <Button className="mr-2" onClick={handleShowFeatures}>
+            <Grid01 className="mr-1 h-4 w-4 text-gray-500" />
+            {t("workflow.common.features")}
+          </Button>
+          <AppPublisher
+            {...{
+              publishedAt,
+              draftUpdatedAt,
+              disabled: Boolean(getNodesReadOnly()),
+              toolPublished,
+              inputs: variables,
+              onRefreshData: handleToolConfigureUpdate,
+              onPublish,
+              onRestore: onStartRestoring,
+              onToggle: onPublisherToggle,
+              crossAxisOffset: 53,
+            }}
+          />
+          <div className="mx-2 h-3.5 w-[1px] bg-gray-200"></div>
+          <Checklist disabled={nodesReadOnly} />
+        </div>
+      )}
+      {viewHistory && (
+        <div className="flex items-center">
+          <ViewHistory withText />
+          <div className="mx-2 h-3.5 w-[1px] bg-gray-200"></div>
+          <Button
+            variant="primary"
+            className="mr-2"
+            onClick={handleGoBackToEdit}>
+            <ArrowNarrowLeft className="mr-1 h-4 w-4" />
+            {t("workflow.common.goBackToEdit")}
+          </Button>
+        </div>
+      )}
+      {restoring && (
+        <div className="flex items-center">
+          <Button onClick={handleShowFeatures}>
+            <Grid01 className="mr-1 h-4 w-4 text-gray-500" />
+            {t("workflow.common.features")}
+          </Button>
+          <div className="mx-2 h-3.5 w-[1px] bg-gray-200"></div>
+          <Button className="mr-2" onClick={handleCancelRestore}>
+            {t("common.operation.cancel")}
+          </Button>
+          <Button onClick={handleRestore} variant="primary">
+            {t("workflow.common.restore")}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default memo(Header)

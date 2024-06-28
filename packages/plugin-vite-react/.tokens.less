@@ -537,10 +537,10 @@
 @link-color-bg_hover: var(--color-fill-2);
 @link-color-bg_active: var(--color-fill-3);
 @link-padding-horizontal: 4px;
-@link-color-text: rgb(var(--primary-7));
-@link-color-text_hover: rgb(var(--primary-7));
-@link-color-text_active: rgb(var(--primary-7));
-@link-color-text_disabled: rgb(var(--primary-3));
+@link-color-text: rgb(var(--link-6));
+@link-color-text_hover: rgb(var(--link-6));
+@link-color-text_active: rgb(var(--link-6));
+@link-color-text_disabled: var(--color-link-light-3);
 @link-color-text_success: rgb(var(--success-6));
 @link-color-text_success_hover: rgb(var(--success-6));
 @link-color-text_success_active: rgb(var(--success-6));
@@ -888,7 +888,6 @@
 @color-panel-block-border-radius: 2px;
 @color-panel-border-color: var(--color-border-2);
 @color-picker-prefix-cls: ~'@{prefix}-color-picker';
-@color-prefix-cls: ~'@{prefix}-color';
 
 
 /*********** shadow1 ***********/
@@ -1052,7 +1051,7 @@
 @input-color-addon-border: var(--color-neutral-3);
 @input-border-addon-separator-width: 1px;
 @input-color-border_focus: rgb(var(--primary-6));
-@input-color-shadow_focus: rgb(var(--primary-2));
+@input-color-shadow_focus: var(--color-primary-light-2);
 @input-size-shadow_focus: 0;
 @input-color-addon-border_default: transparent;
 @input-color-text: var(--color-text-1);
@@ -3971,8 +3970,3 @@
 /*********** verification ***********/
 
 @verification-code-prefix-cls: ~'@{prefix}-verification-code';
-
-
-/*********** watermark ***********/
-
-@watermark-prefix-cls: ~'@{prefix}-watermark';

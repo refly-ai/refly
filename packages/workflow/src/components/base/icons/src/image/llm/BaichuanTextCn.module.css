@@ -1,0 +1,6 @@
+.wrapper {
+  display: inline-flex;
+  background: url(~@/components/base/icons/assets/image/llm/baichuan-text-cn.png)
+    center center no-repeat;
+  background-size: contain;
+}
