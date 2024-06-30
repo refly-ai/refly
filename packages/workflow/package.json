@@ -127,7 +127,10 @@
     "@lexical/utils": "~0.16.0",
     "lodash": "~4.17.21",
     "elkjs": "~0.9.3",
-    "@lexical/code": "~0.16.0"
+    "@lexical/code": "~0.16.0",
+    "vite-plugin-require": "~1.2.14",
+    "monaco-editor": "~0.50.0",
+    "vite-plugin-monaco-editor": "~1.1.0"
   },
   "devDependencies": {
     "@refly/arco-vite-plugin-react": "workspace:*",

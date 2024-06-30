@@ -102,8 +102,8 @@ const Workflow: FC<WorkflowProps> = memo(
       setShowImportDSLModal,
       setSyncWorkflowDraftHash,
     } = workflowStore.getState()
-    const { handleSyncWorkflowDraft, syncWorkflowDraftWhenPageClose } =
-      useNodesSyncDraft()
+    // const { handleSyncWorkflowDraft, syncWorkflowDraftWhenPageClose } =
+    //   useNodesSyncDraft()
     const { workflowReadOnly } = useWorkflowReadOnly()
     const { nodesReadOnly } = useNodesReadOnly()
 
@@ -136,33 +136,33 @@ const Workflow: FC<WorkflowProps> = memo(
       }
     }, [])
 
-    useEffect(() => {
-      return () => {
-        handleSyncWorkflowDraft(true, true)
-      }
-    }, [])
+    // useEffect(() => {
+    //   return () => {
+    //     handleSyncWorkflowDraft(true, true)
+    //   }
+    // }, [])
 
-    const { handleRefreshWorkflowDraft } = useWorkflowUpdate()
-    const handleSyncWorkflowDraftWhenPageClose = useCallback(() => {
-      if (document.visibilityState === "hidden")
-        syncWorkflowDraftWhenPageClose()
-      else if (document.visibilityState === "visible")
-        setTimeout(() => handleRefreshWorkflowDraft(), 500)
-    }, [syncWorkflowDraftWhenPageClose, handleRefreshWorkflowDraft])
+    // const { handleRefreshWorkflowDraft } = useWorkflowUpdate()
+    // const handleSyncWorkflowDraftWhenPageClose = useCallback(() => {
+    //   if (document.visibilityState === "hidden")
+    //     syncWorkflowDraftWhenPageClose()
+    //   else if (document.visibilityState === "visible")
+    //     setTimeout(() => handleRefreshWorkflowDraft(), 500)
+    // }, [syncWorkflowDraftWhenPageClose, handleRefreshWorkflowDraft])
 
-    useEffect(() => {
-      document.addEventListener(
-        "visibilitychange",
-        handleSyncWorkflowDraftWhenPageClose,
-      )
+    // useEffect(() => {
+    //   document.addEventListener(
+    //     "visibilitychange",
+    //     handleSyncWorkflowDraftWhenPageClose,
+    //   )
 
-      return () => {
-        document.removeEventListener(
-          "visibilitychange",
-          handleSyncWorkflowDraftWhenPageClose,
-        )
-      }
-    }, [handleSyncWorkflowDraftWhenPageClose])
+    //   return () => {
+    //     document.removeEventListener(
+    //       "visibilitychange",
+    //       handleSyncWorkflowDraftWhenPageClose,
+    //     )
+    //   }
+    // }, [handleSyncWorkflowDraftWhenPageClose])
 
     useEventListener("keydown", e => {
       if ((e.key === "d" || e.key === "D") && (e.ctrlKey || e.metaKey))
@@ -218,11 +218,11 @@ const Workflow: FC<WorkflowProps> = memo(
     const { handleStartWorkflowRun } = useWorkflowStartRun()
     const { handleExportDSL } = useDSL()
 
-    useOnViewportChange({
-      onEnd: () => {
-        handleSyncWorkflowDraft()
-      },
-    })
+    // useOnViewportChange({
+    //   onEnd: () => {
+    //     handleSyncWorkflowDraft()
+    //   },
+    // })
 
     const { shortcutsEnabled: workflowHistoryShortcutsEnabled } =
       useWorkflowHistoryStore()

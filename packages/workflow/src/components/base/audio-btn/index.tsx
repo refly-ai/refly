@@ -134,7 +134,7 @@ const AudioBtn = ({
           className={`box-border flex cursor-pointer items-center justify-center p-0.5 ${isAudition || "rounded-md bg-white !p-0"}`}
           onClick={handleToggle}>
           {audioState === "loading" ? (
-            <div className="flex h-6 w-6 items-center justify-center rounded-md p-2">
+            <div className="flex items-center justify-center w-6 h-6 p-2 rounded-md">
               <Loading />
             </div>
           ) : (

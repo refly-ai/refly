@@ -1,6 +1,7 @@
 import forms from "@tailwindcss/forms"
 import animate from "tailwindcss-animate"
 import typography from "@tailwindcss/typography"
+import customTypograph from "./typography"
 
 export default {
   content: [
@@ -10,6 +11,7 @@ export default {
     "./node_modules/@refly/editor-common/src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
+    typography: customTypograph,
     extend: {
       screens: {
         mobile: "100px",

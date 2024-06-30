@@ -11,7 +11,8 @@ import { AppRouter } from "./routes/index"
 import { AppLayout } from "@refly/ai-workspace-common/components/layout/index"
 
 // 导入 i18n
-import "@refly/ai-workspace-common/i18n/config"
+import "./i18n/i18next-config"
+import "./i18n"
 import { Spin } from "@arco-design/web-react"
 import { getEnv, setRuntime } from "@refly/ai-workspace-common/utils/env"
 import { useUserStore } from "../../../packages/ai-workspace-common/src/stores/user"

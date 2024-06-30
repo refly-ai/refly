@@ -5,15 +5,21 @@ import path from "path"
 import postcss from "./postcss.config"
 import { vitePluginForArco } from "@refly/arco-vite-plugin-react"
 import tsconfigPaths from "vite-tsconfig-paths"
+import monacoEditorPlugin from "vite-plugin-monaco-editor"
+import { codeInspectorPlugin } from "code-inspector-plugin"
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode === "development"
 
   return {
+    define: {
+      "process.env": process.env,
+    },
     plugins: [
       react(),
       tsconfigPaths(),
+      monacoEditorPlugin.default({}),
       vitePluginForArco({
         theme: "@arco-themes/react-refly-ai",
         filePatterns: [
@@ -21,6 +27,9 @@ export default defineConfig(({ mode }) => {
           "apps/extension-wxt/src",
           "packages/ai-workspace-common/src",
         ],
+      }),
+      codeInspectorPlugin({
+        bundler: "vite",
       }),
       ...(isDev
         ? []

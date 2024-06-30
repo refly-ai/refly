@@ -38,6 +38,7 @@ import {
 } from "@/service/tools"
 import I18n from "@/context/i18n"
 import { CollectionType } from "@/components/tools/types"
+import { mockWorkflowDraft } from "@/mock-data/workflow-draft"
 
 export const useIsChatMode = () => {
   const appDetail = useAppStore(s => s.appDetail)
@@ -487,9 +488,10 @@ export const useWorkflowInit = () => {
 
   const handleGetInitialWorkflowData = useCallback(async () => {
     try {
-      const res = await fetchWorkflowDraft(
-        `/apps/${appDetail.id}/workflows/draft`,
-      )
+      // const res = await fetchWorkflowDraft(
+      //   `/apps/${appDetail.id}/workflows/draft`,
+      // )
+      const res = mockWorkflowDraft as FetchWorkflowDraftResponse
 
       setData(res)
       setSyncWorkflowDraftHash(res.hash)

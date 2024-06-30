@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useContext } from "use-context-selector"
 import cn from "classnames"
-import { useSelectedLayoutSegments } from "next/navigation"
 import Link from "next/link"
 import Toast from "../../base/toast"
 import Item from "./app-nav-item"
@@ -16,6 +15,7 @@ import {
 import ExploreContext from "@/context/explore-context"
 import Confirm from "@/components/base/confirm"
 import useBreakpoints, { MediaType } from "@/hooks/use-breakpoints"
+import { useSelectedLayoutSegments } from "@/hooks/use-selected-layout-segment"
 
 const SelectedDiscoveryIcon = () => (
   <svg
@@ -157,11 +157,11 @@ const SideBar: FC<IExploreSideBarProps> = ({ controlUpdateInstalledApps }) => {
       </div>
       {installedApps.length > 0 && (
         <div className="mt-10">
-          <p className="mobile:px-0 break-all pl-2 text-xs font-medium uppercase text-gray-500">
+          <p className="pl-2 text-xs font-medium text-gray-500 uppercase break-all mobile:px-0">
             {t("explore.sidebar.workspace")}
           </p>
           <div
-            className="mt-3 space-y-1 overflow-y-auto overflow-x-hidden"
+            className="mt-3 space-y-1 overflow-x-hidden overflow-y-auto"
             style={{
               height: "calc(100vh - 250px)",
             }}>

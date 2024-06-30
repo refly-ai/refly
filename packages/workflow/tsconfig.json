@@ -33,7 +33,7 @@
       "tailwindcss/nesting"
     ]
   },
-  "include": ["src", "tailwind.config.ts", "../../packages/ai-workspace-common/src/components/workspace/content-panel", "../../packages/ai-workspace-common/src/components/workspace/knowledge-keyword-list", "../../packages/ai-workspace-common/src/components/workspace/left-assist-panel", "tailwindcss-nesting.d.ts"],
+  "include": ["src", "tailwind.config.ts", "typography.ts", "../../packages/ai-workspace-common/src/components/workspace/content-panel", "../../packages/ai-workspace-common/src/components/workspace/knowledge-keyword-list", "../../packages/ai-workspace-common/src/components/workspace/left-assist-panel", "tailwindcss-nesting.d.ts"],
   "exclude": ["node_modules", "dist"],
   "references": [{ "path": "./tsconfig.node.json" },  { "path": "../../packages/ai-workspace-common"}, { "path": "../../packages/editor-common"}, { "path": "../../packages/utils"}]
 }

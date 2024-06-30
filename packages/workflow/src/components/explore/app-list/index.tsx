@@ -11,7 +11,6 @@ import s from "./style.module.css"
 import ExploreContext from "@/context/explore-context"
 import type { App } from "@/models/explore"
 import Category from "@/components/explore/category"
-import AppCard from "@/components/explore/app-card"
 import { fetchAppDetail, fetchAppList } from "@/service/explore"
 import { importApp } from "@/service/apps"
 import { useTabSearchParams } from "@/hooks/use-tab-searchparams"
@@ -127,7 +126,7 @@ const Apps = ({ pageType = PageType.EXPLORE, onSuccess }: AppsProps) => {
 
   if (!categories) {
     return (
-      <div className="flex h-full items-center">
+      <div className="flex items-center h-full">
         <Loading type="area" />
       </div>
     )
@@ -142,7 +141,7 @@ const Apps = ({ pageType = PageType.EXPLORE, onSuccess }: AppsProps) => {
           : "h-[calc(100%-56px)]",
       )}>
       {pageType === PageType.EXPLORE && (
-        <div className="shrink-0 px-12 pt-6">
+        <div className="px-12 pt-6 shrink-0">
           <div className={`mb-1 ${s.textGradient} text-xl font-semibold`}>
             {t("explore.apps.title")}
           </div>
@@ -168,33 +167,6 @@ const Apps = ({ pageType = PageType.EXPLORE, onSuccess }: AppsProps) => {
           onChange={setCurrCategory}
           allCategoriesEn={allCategoriesEn}
         />
-      </div>
-      <div
-        className={cn(
-          "relative flex flex-1 shrink-0 grow flex-col overflow-auto bg-gray-100 pb-6",
-          pageType === PageType.EXPLORE ? "mt-6" : "mt-0 pt-2",
-        )}>
-        <nav
-          className={cn(
-            s.appList,
-            "grid shrink-0 content-start",
-            pageType === PageType.EXPLORE
-              ? "gap-4 px-6 sm:px-12"
-              : "gap-3 px-8 sm:!grid-cols-2 md:!grid-cols-3 lg:!grid-cols-4",
-          )}>
-          {filteredList.map(app => (
-            <AppCard
-              key={app.app_id}
-              isExplore={pageType === PageType.EXPLORE}
-              app={app}
-              canCreate={hasEditPermission}
-              onCreate={() => {
-                setCurrApp(app)
-                setIsShowCreateModal(true)
-              }}
-            />
-          ))}
-        </nav>
       </div>
       {isShowCreateModal && (
         <CreateAppModal

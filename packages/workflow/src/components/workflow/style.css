@@ -1,3 +1,7 @@
+#workflow-container {
+  height: 100vh;
+}
+
 .workflow-panel-animation .react-flow__viewport {
   transition: transform 0.3s ease-in-out;
 }

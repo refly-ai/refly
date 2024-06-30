@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import type { App } from "@/types/app"
 import type { IChatItem } from "@/components/base/chat/chat/type"
+import { mockAppDetail } from "@/mock-data/app-detail"
 
 type State = {
   appDetail?: App
@@ -23,7 +24,7 @@ type Action = {
 }
 
 export const useStore = create<State & Action>(set => ({
-  appDetail: undefined,
+  appDetail: mockAppDetail as App,
   setAppDetail: appDetail => set(() => ({ appDetail })),
   appSidebarExpand: "",
   setAppSiderbarExpand: appSidebarExpand => set(() => ({ appSidebarExpand })),

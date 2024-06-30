@@ -75,17 +75,17 @@ export const useNodesSyncDraft = () => {
     }
   }, [store, featuresStore, workflowStore])
 
-  const syncWorkflowDraftWhenPageClose = useCallback(() => {
-    if (getNodesReadOnly()) return
-    const postParams = getPostParams()
+  // const syncWorkflowDraftWhenPageClose = useCallback(() => {
+  //   if (getNodesReadOnly()) return
+  //   const postParams = getPostParams()
 
-    if (postParams) {
-      navigator.sendBeacon(
-        `${API_PREFIX}/apps/${params.appId}/workflows/draft?_token=${localStorage.getItem("console_token")}`,
-        JSON.stringify(postParams.params),
-      )
-    }
-  }, [getPostParams, params.appId, getNodesReadOnly])
+  //   if (postParams) {
+  //     navigator.sendBeacon(
+  //       `${API_PREFIX}/apps/${params.appId}/workflows/draft?_token=${localStorage.getItem("console_token")}`,
+  //       JSON.stringify(postParams.params),
+  //     )
+  //   }
+  // }, [getPostParams, params.appId, getNodesReadOnly])
 
   const doSyncWorkflowDraft = useCallback(
     async (notRefreshWhenSyncError?: boolean) => {
@@ -133,6 +133,6 @@ export const useNodesSyncDraft = () => {
   return {
     doSyncWorkflowDraft,
     handleSyncWorkflowDraft,
-    syncWorkflowDraftWhenPageClose,
+    // syncWorkflowDraftWhenPageClose,
   }
 }

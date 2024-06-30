@@ -8,34 +8,16 @@ import { useUserStore } from "@refly/ai-workspace-common/stores/user"
 import { useTranslation } from "react-i18next"
 import { LOCALE } from "@refly/constants"
 
+// 样式
+import "../styles/globals.css"
+import "../styles/markdown.scss"
+
 export const AppRouter = (props: { layout?: any }) => {
-  const { layout: Layout } = props
-  const userStore = useUserStore()
-
-  const { i18n } = useTranslation()
-  const language = i18n.languages?.[0]
-
-  // 获取 locale
-  const storageLocalSettings = safeParseJSON(
-    localStorage.getItem("refly-local-settings"),
-  )
-  const locale =
-    storageLocalSettings?.uiLocale ||
-    userStore?.localSettings?.uiLocale ||
-    LOCALE.EN
-
-  // TODO: 国际化相关内容
-  useEffect(() => {
-    if (locale && language !== locale) {
-      i18n.changeLanguage(locale)
-    }
-  }, [locale])
-
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Workspace />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/" element={<Workspace />} />
+      {/* http://localhost:5173/app/08402e34-b33a-4cc4-8224-6c6ee453a773/workflow */}
+      <Route path="/app/:appId/workflow" element={<Workspace />} />
+    </Routes>
   )
 }

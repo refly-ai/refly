@@ -2,7 +2,6 @@
 import { useCallback, useEffect } from "react"
 import Link from "next/link"
 import { useBoolean } from "ahooks"
-import { useSelectedLayoutSegment } from "next/navigation"
 import { Bars3Icon } from "@heroicons/react/20/solid"
 import HeaderBillingBtn from "../billing/header-billing-btn"
 import AccountDropdown from "./account-dropdown"
@@ -18,6 +17,7 @@ import LogoSite from "@/components/base/logo/logo-site"
 import useBreakpoints, { MediaType } from "@/hooks/use-breakpoints"
 import { useProviderContext } from "@/context/provider-context"
 import { useModalContext } from "@/context/modal-context"
+import { useSelectedLayoutSegment } from "@/hooks/use-selected-layout-segment"
 
 const navClassName = `
   flex items-center relative mr-0 sm:mr-3 px-3 h-8 rounded-xl
@@ -45,18 +45,18 @@ const Header = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSegment])
   return (
-    <div className="flex flex-1 items-center justify-between px-4">
+    <div className="flex items-center justify-between flex-1 px-4">
       <div className="flex items-center">
         {isMobile && (
           <div
-            className="flex h-8 w-8 cursor-pointer items-center justify-center"
+            className="flex items-center justify-center w-8 h-8 cursor-pointer"
             onClick={toggle}>
-            <Bars3Icon className="h-4 w-4 text-gray-500" />
+            <Bars3Icon className="w-4 h-4 text-gray-500" />
           </div>
         )}
         {!isMobile && (
           <>
-            <Link href="/apps" className="mr-4 flex items-center">
+            <Link href="/apps" className="flex items-center mr-4">
               <LogoSite className="object-contain" />
             </Link>
             <GithubStar />
@@ -65,7 +65,7 @@ const Header = () => {
       </div>
       {isMobile && (
         <div className="flex">
-          <Link href="/apps" className="mr-4 flex items-center">
+          <Link href="/apps" className="flex items-center mr-4">
             <LogoSite />
           </Link>
           <GithubStar />
@@ -79,7 +79,7 @@ const Header = () => {
           <ToolsNav className={navClassName} />
         </div>
       )}
-      <div className="flex flex-shrink-0 items-center">
+      <div className="flex items-center flex-shrink-0">
         <EnvNav />
         {enableBilling && (
           <div className="mr-3 select-none">
@@ -91,7 +91,7 @@ const Header = () => {
         </WorkspaceProvider>
       </div>
       {isMobile && isShowNavMenu && (
-        <div className="flex w-full flex-col gap-y-1 p-2">
+        <div className="flex flex-col w-full p-2 gap-y-1">
           <ExploreNav className={navClassName} />
           <AppNav />
           {isCurrentWorkspaceEditor && <DatasetNav />}

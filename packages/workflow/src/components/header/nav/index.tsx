@@ -2,12 +2,12 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
-import { useSelectedLayoutSegment } from "next/navigation"
 import classNames from "classnames"
 import type { INavSelectorProps } from "./nav-selector"
 import NavSelector from "./nav-selector"
 import { ArrowNarrowLeft } from "@/components/base/icons/src/vender/line/arrows"
 import { useStore as useAppStore } from "@/store"
+import { useSelectedLayoutSegment } from "@/hooks/use-selected-layout-segment"
 
 type INavProps = {
   icon: React.ReactNode
@@ -51,7 +51,7 @@ const Nav = ({
           onMouseLeave={() => setHovered(false)}>
           <div className="mr-2">
             {hovered && curNav ? (
-              <ArrowNarrowLeft className="h-4 w-4" />
+              <ArrowNarrowLeft className="w-4 h-4" />
             ) : isActived ? (
               activeIcon
             ) : (
