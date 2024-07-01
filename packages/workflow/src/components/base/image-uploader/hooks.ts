@@ -119,7 +119,7 @@ export const useImageFiles = () => {
             setFiles(newFiles)
           },
         },
-        !!params.token,
+        !!params?.token,
       )
     }
   }
@@ -211,7 +211,7 @@ export const useLocalFileUploader = ({
                 onUpload({ ...imageFile, progress: -1 })
               },
             },
-            !!params.token,
+            !!params?.token,
           )
         },
         false,
@@ -228,7 +228,7 @@ export const useLocalFileUploader = ({
       )
       reader.readAsDataURL(file)
     },
-    [disabled, limit, notify, t, onUpload, params.token],
+    [disabled, limit, notify, t, onUpload, params?.token],
   )
 
   return { disabled, handleLocalFileUpload }

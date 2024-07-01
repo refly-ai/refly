@@ -9,6 +9,7 @@ import { useNodesReadOnly } from "./use-workflow"
 import { syncWorkflowDraft } from "@/service/workflow"
 import { useFeaturesStore } from "@/components/base/features/hooks"
 import { API_PREFIX } from "@/config"
+import { mockWorkflowDraft } from "@/mock-data/workflow-draft"
 
 export const useNodesSyncDraft = () => {
   const store = useStoreApi()
@@ -96,7 +97,8 @@ export const useNodesSyncDraft = () => {
         const { setSyncWorkflowDraftHash, setDraftUpdatedAt } =
           workflowStore.getState()
         try {
-          const res = await syncWorkflowDraft(postParams)
+          // const res = await syncWorkflowDraft(postParams)
+          const res = mockWorkflowDraft
           setSyncWorkflowDraftHash(res.hash)
           setDraftUpdatedAt(res.updated_at)
         } catch (error: any) {

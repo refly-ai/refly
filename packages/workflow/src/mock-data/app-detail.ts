@@ -4,7 +4,7 @@ export const mockAppDetail = {
   id: "c8aadf44-94be-4dee-9d36-d0a093392f55",
   name: "工作流",
   description: "",
-  mode: "workflow",
+  mode: "advanced-chat",
   icon: "🤖",
   icon_background: "#FFEAD5",
   model_config: undefined,
