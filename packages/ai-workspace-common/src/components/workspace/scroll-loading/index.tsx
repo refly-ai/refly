@@ -34,7 +34,7 @@ export const ScrollLoading = (props: ScrollLoadingProps) => {
 
   return (
     <Button onClick={() => loadMore()} style={{ marginBottom: 32 }}>
-      加载更多
+      {t('common.loadMore')}
     </Button>
   );
 };

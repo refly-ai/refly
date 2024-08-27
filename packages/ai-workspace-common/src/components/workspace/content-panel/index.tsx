@@ -109,7 +109,7 @@ const ContentHeader = (props: { setVal: (val: string) => void; hitTop: boolean; 
         {hitTop && (
           <SearchQuickOpenBtn
             className="work-space-top-search"
-            placeholder="loggedHomePage.newThreadTextForWorkSpace"
+            placeholder="loggedHomePage.quickSearch.placeholderForHome"
           />
         )}
       </div>

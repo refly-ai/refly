@@ -19,6 +19,8 @@ import { useAINote } from '@refly-packages/ai-workspace-common/hooks/use-ai-note
 import { RenderItem } from '@refly-packages/ai-workspace-common/components/search/types';
 import classNames from 'classnames';
 
+import { useTranslation } from 'react-i18next';
+
 export interface SearchProps extends React.ComponentProps<'div'> {
   showList?: boolean;
   onClickOutside?: () => void;
@@ -35,6 +37,7 @@ export const Search = (props: SearchProps) => {
   const [displayMode, setDisplayMode] = useState<'search' | 'list'>('list');
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [isComposing, setIsComposing] = useState(false);
+  const { t } = useTranslation();
 
   // skill
   const [selectedSkill, setSelectedSkill] = useState<SkillMeta>();
@@ -180,7 +183,7 @@ export const Search = (props: SearchProps) => {
   const renderData: RenderItem[] = [
     {
       domain: 'skill',
-      heading: '技能',
+      heading: t('loggedHomePage.quickSearch.skill'),
       action: false, // 是否开启 action
       data: searchStore.searchedSkills || [],
       icon: <IconRobot style={{ fontSize: 12 }} />,
@@ -196,10 +199,10 @@ export const Search = (props: SearchProps) => {
     },
     {
       domain: 'note',
-      heading: '笔记',
+      heading: t('loggedHomePage.quickSearch.note'),
       action: true,
       actionHeading: {
-        create: '创建新笔记',
+        create: t('loggedHomePage.quickSearch.newNote'),
       },
       data: searchStore.searchedNotes || [],
       icon: <IconEdit style={{ fontSize: 12 }} />,
@@ -216,10 +219,10 @@ export const Search = (props: SearchProps) => {
     },
     {
       domain: 'readResources',
-      heading: '阅读资源',
+      heading: t('loggedHomePage.quickSearch.readResource'),
       action: true,
       actionHeading: {
-        create: '添加阅读资源',
+        create: t('loggedHomePage.quickSearch.newReadResource'),
       },
       data: searchStore.searchedReadResources || [],
       icon: <IconBook style={{ fontSize: 12 }} />,
@@ -234,10 +237,10 @@ export const Search = (props: SearchProps) => {
     },
     {
       domain: 'knowledgeBases',
-      heading: '知识库',
+      heading: t('loggedHomePage.quickSearch.collection'),
       action: true,
       actionHeading: {
-        create: '创建新知识库',
+        create: t('loggedHomePage.quickSearch.newCollection'),
       },
       data: searchStore.searchedKnowledgeBases || [],
       icon: <IconFile style={{ fontSize: 12 }} />,
@@ -251,10 +254,10 @@ export const Search = (props: SearchProps) => {
     },
     {
       domain: 'convs',
-      heading: '会话',
+      heading: t('loggedHomePage.quickSearch.thread'),
       action: true,
       actionHeading: {
-        create: '创建新会话',
+        create: t('loggedHomePage.quickSearch.newThread'),
       },
       data: searchStore.searchedConvs || [],
       icon: <IconMessage style={{ fontSize: 12 }} />,
@@ -273,12 +276,12 @@ export const Search = (props: SearchProps) => {
 
   const getInputPlaceholder = (domain: string) => {
     if (domain === 'home') {
-      return `直接提问或搜索技能，笔记，资源，知识库，会话...`;
+      return t('loggedHomePage.quickSearch.placeholderForHome');
     } else if (domain === 'skill-execute') {
-      return `输入你想要提问的问题，并基于此问题执行技能`;
+      return t('loggedHomePage.quickSearch.placeholderForSkillExecute');
     } else {
       const data = getRenderData(domain);
-      return `搜索 ${data?.heading}...`;
+      return t('loggedHomePage.quickSearch.placeholderForWeblink', { domain: data?.heading });
     }
   };
 

@@ -171,7 +171,27 @@
   },
   "loggedHomePage": {
     "newThreadText": "新会话",
-    "newThreadTextForWorkSpace": "提问、搜索或输入 / 或 @ 调用技能执行任务",
+    "quickSearch": {
+      "skill": "技能",
+      "note": "笔记",
+      "newNote": "创建新笔记",
+      "readResource": "阅读资源",
+      "newReadResource": "添加阅读资源",
+      "collection": "知识库",
+      "newCollection": "创建新知识库",
+      "thread": "会话",
+      "newThread": "创建新会话",
+      "placeholderForHome": "直接提问或搜索技能，笔记，资源，知识库，会话...",
+      "placeholderForSkillExecute": "输入你想要提问的问题，并基于此问题执行技能",
+      "placeholderForWeblink": "搜索 {{domain}}...",
+      "home": {
+        "heading": "建议",
+        "askAI": "问问知识管家",
+        "onlineSearch": "AI 联网搜索",
+        "collectionSearch": "AI 知识库搜索",
+        "showAll": "查看所有{{heading}}"
+      }
+    },
     "homePage": {
       "title": "知识，在此繁茂",
       "searchPlaceholder": "输入搜索内容...",
@@ -353,6 +373,7 @@
       "skillInstances": "已添加技能",
       "skillTemplate": "技能市场"
     },
+    "createFromTemplate": "从模板创建",
     "newSkillModal": {
       "newTitle": "创建技能",
       "updateTitle": "更新技能",

@@ -31,6 +31,7 @@ import { useKnowledgeBaseJumpNewPath } from '@refly-packages/ai-workspace-common
 import { useBigSearchQuickAction } from '@refly-packages/ai-workspace-common/hooks/use-big-search-quick-action';
 import { RenderItem } from '@refly-packages/ai-workspace-common/components/search/types';
 import { useSkillStore } from '@refly-packages/ai-workspace-common/stores/skill';
+import { useTranslation } from 'react-i18next';
 
 export function Home({
   pages,
@@ -56,6 +57,7 @@ export function Home({
   const [searchParams, setSearchParams] = useSearchParams();
   const { triggerSkillQuickAction } = useBigSearchQuickAction();
   const skillStore = useSkillStore();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setValue('refly-built-in-ask-ai');
@@ -63,22 +65,7 @@ export function Home({
 
   return (
     <>
-      {/* <Command.Group heading="Projects">
-          <Item
-            shortcut="S P"
-            onSelect={() => {
-              searchProjects();
-            }}
-          >
-            <ProjectsIcon />
-            Search Projects...
-          </Item>
-          <Item>
-            <PlusIcon />
-            Create New Project...
-          </Item>
-        </Command.Group> */}
-      <Command.Group heading="建议">
+      <Command.Group heading={t('loggedHomePage.quickSearch.home.heading')}>
         <Item
           value="refly-built-in-ask-ai"
           keywords={['NewConv']}
@@ -90,7 +77,7 @@ export function Home({
           }}
         >
           <IconMessage style={{ fontSize: 12 }} />
-          问问知识管家
+          {t('loggedHomePage.quickSearch.home.askAI')}
         </Item>
         <Item
           value="refly-built-in-ai-online-search"
@@ -101,7 +88,7 @@ export function Home({
           }}
         >
           <IconSearch style={{ fontSize: 12 }} />
-          AI 联网搜索
+          {t('loggedHomePage.quickSearch.home.onlineSearch')}
         </Item>
         <Item
           value="refly-built-in-ai-knowledgebase-search"
@@ -112,7 +99,7 @@ export function Home({
           }}
         >
           <IconSearch style={{ fontSize: 12 }} />
-          AI 知识库搜索
+          {t('loggedHomePage.quickSearch.home.collectionSearch')}
         </Item>
       </Command.Group>
       {data
@@ -147,7 +134,7 @@ export function Home({
                 activeValue={activeValue}
               >
                 <IconApps style={{ fontSize: 12 }} />
-                查看所有{renderItem?.heading}
+                {t('loggedHomePage.quickSearch.home.showAll', { heading: renderItem?.heading })}
               </Item>
             ) : null}
             {renderItem?.action ? (

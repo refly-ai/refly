@@ -171,6 +171,27 @@
   },
   "loggedHomePage": {
     "newThreadText": "New Thread",
+    "quickSearch": {
+      "skill": "Skills",
+      "note": "Notes",
+      "newNote": "Create New Note",
+      "readResource": "Read Resources",
+      "newReadResource": "Add Read Resource",
+      "collection": "Collections",
+      "newCollection": "Create New Collection",
+      "thread": "Threads",
+      "newThread": "Create New Thread",
+      "placeholderForHome": "Ask a question or search for skills, notes, resources, collections, and threads...",
+      "placeholderForSkillExecute": "Enter the question you want to ask and execute the skill based on this question",
+      "placeholderForWeblink": "Search {{domain}}...",
+      "home": {
+        "heading": "Suggestions",
+        "askAI": "Ask Knowledge Curator",
+        "onlineSearch": "AI Online Search",
+        "collectionSearch": "AI Knowledge Base Search",
+        "showAll": "View All {{heading}}"
+      }
+    },
     "homePage": {
       "title": "Where knowledge thrives",
       "searchPlaceholder": "Search for Refly",
@@ -336,6 +357,7 @@
       "skillInstances": "Skill Instances",
       "skillTemplate": "Skill templates"
     },
+    "createFromTemplate": "Create from template",
     "newSkillModal": {
       "newTitle": "Add New Skill",
       "updateTitle": "Update Skill",

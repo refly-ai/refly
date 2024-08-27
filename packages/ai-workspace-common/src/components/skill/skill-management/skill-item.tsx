@@ -9,6 +9,7 @@ import { IconUser, IconPlayCircle, IconPlus } from '@arco-design/web-react/icon'
 import './skill-item.scss';
 import { SkillTemplate, SkillInstance } from '@refly/openapi-schema';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { InstanceInvokeModal } from '@refly-packages/ai-workspace-common/components/skill/instance-invoke-modal';
 
 type source = 'instance' | 'template';
@@ -30,6 +31,7 @@ interface SkillInsProsp extends SkillItemProps {
 export const SkillItem = (props: SkillTempProsp | SkillInsProsp) => {
   const navigate = useNavigate();
   const { data, isInstalled, showExecute, source, itemKey, canGoDetail, refreshList, postDeleteList } = props;
+  const { t } = useTranslation();
 
   const getSkillItemPopupContainer = () => {
     const elem = document.getElementById(`skillItem${itemKey}`);
@@ -107,7 +109,7 @@ export const SkillItem = (props: SkillTempProsp | SkillInsProsp) => {
               }}
             >
               <IconPlus />
-              从模板创建
+              {t('skill.createFromTemplate')}
             </Button>
           )}
         </div>

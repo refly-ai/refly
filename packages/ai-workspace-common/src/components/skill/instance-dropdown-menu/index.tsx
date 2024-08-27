@@ -40,6 +40,8 @@ const DropList = (props: DropListProps) => {
           focusLock
           title={t('common.deleteConfirmMessage')}
           position="br"
+          okText={t('common.confirm')}
+          cancelText={t('common.cancel')}
           getPopupContainer={getPopupContainer}
           onOk={(e) => {
             handleDeleteInstance(e);

@@ -112,15 +112,17 @@ const SkillDetail = () => {
         </div>
       </div>
 
-      <Spin
-        dot
-        loading={loading}
-        style={{ width: '100%', height: '100%', backgroundColor: '#fff' }}
-        className="skill-detail__content"
-      >
-        {loading ? (
+      {loading ? (
+        <Spin
+          dot
+          loading={loading}
+          style={{ width: '100%', height: '100%', backgroundColor: '#fff' }}
+          className="skill-detail__content"
+        >
           <div className="skill-detail__content-wrap"></div>
-        ) : (
+        </Spin>
+      ) : (
+        <div className="skill-detail__content">
           <div className="skill-detail__content-wrap">
             <div className="skill-detail__content-top">
               <Avatar className="skill-avatar" shape="square" size={140}>
@@ -164,8 +166,8 @@ const SkillDetail = () => {
               </div>
             </div>
           </div>
-        )}
-      </Spin>
+        </div>
+      )}
       <InstanceInvokeModal
         data={skillDetail}
         visible={invokeModalVisible}

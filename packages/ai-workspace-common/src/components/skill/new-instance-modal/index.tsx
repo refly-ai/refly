@@ -76,6 +76,8 @@ export const NewSkillInstanceModal = (props: NewSkillInstanceModalProps) => {
       title={t(`skill.newSkillModal.${type}Title`)}
       style={{ width: 800 }}
       visible={visible}
+      okText={t('common.confirm')}
+      cancelText={t('common.cancel')}
       onOk={onOk}
       confirmLoading={confirmLoading}
       onCancel={() => setVisible(false)}
