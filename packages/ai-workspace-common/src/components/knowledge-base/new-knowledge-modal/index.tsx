@@ -77,6 +77,8 @@ export const NewKnowledgeModal = () => {
       <Modal
         title={t(`workspace.newKnowledgeModal.${editCollection ? 'editModalTitle' : 'modalTitle'}`)}
         visible={importKnowledgeModal.showNewKnowledgeModal}
+        okText={t('common.confirm')}
+        cancelText={t('common.cancel')}
         onOk={onOk}
         confirmLoading={confirmLoading}
         onCancel={() => importKnowledgeModal.setShowNewKnowledgeModal(false)}

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-
+import { useTranslation } from 'react-i18next';
 // components
 import { SkillItem } from '@refly-packages/ai-workspace-common/components/skill/skill-management/skill-item';
 // store
@@ -16,6 +16,7 @@ interface SkillInstanceListProps {
   canGoDetail?: boolean;
 }
 export const SkillInstanceList = (props: SkillInstanceListProps) => {
+  const { t } = useTranslation();
   const { dataList, loadMore, setDataList, hasMore, isRequesting, reload } = useFetchDataList({
     fetchData: async (queryPayload) => {
       const res = await getClient().listSkillInstances({
@@ -31,7 +32,7 @@ export const SkillInstanceList = (props: SkillInstanceListProps) => {
   }, []);
 
   if (dataList.length === 0 && !isRequesting) {
-    return <Empty description="暂无技能实例" />;
+    return <Empty description={t('skill.skillDetail.emptyInstances')} />;
   }
   return (
     <List

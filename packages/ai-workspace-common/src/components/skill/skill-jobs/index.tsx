@@ -45,6 +45,7 @@ export const SkillJobs = (props: SkillJobsProps) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const skillId = searchParams.get('skillId') as string;
+  const { t } = useTranslation();
 
   const { dataList, setDataList, loadMore, hasMore, isRequesting, reload } = useFetchDataList({
     fetchData: async (queryPayload) => {
@@ -125,7 +126,7 @@ export const SkillJobs = (props: SkillJobsProps) => {
   };
 
   const JobCard = (props: { job: SkillJob }) => {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const language = i18n.languages?.[0];
     const { job } = props;
     let eventT: eventType = null;
@@ -136,7 +137,11 @@ export const SkillJobs = (props: SkillJobsProps) => {
       eventMessage = conversation.title;
     } else if (trigger) {
       eventT = trigger.triggerType;
-      eventMessage = trigger.simpleEventName;
+      if (eventT === 'simpleEvent') {
+        eventMessage = t(`skill.newTriggerModal.${trigger.simpleEventName}`);
+      } else {
+        eventMessage = t(`skill.newTriggerModal.${trigger.timerConfig?.repeatInterval}`);
+      }
     }
 
     const handleClickJob = () => {
@@ -185,7 +190,7 @@ export const SkillJobs = (props: SkillJobsProps) => {
   };
 
   if (dataList.length === 0 && !isRequesting) {
-    return <Empty description="暂无运行记录" />;
+    return <Empty description={t('skill.skillDetail.emptyJobs')} />;
   }
   return (
     <List

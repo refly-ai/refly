@@ -8,9 +8,11 @@
     "edit": "Edit",
     "save": "Save",
     "loadMore": "Load More",
+    "more": "More",
     "putErr": "Failed to perform operation. Please try again!",
     "putSuccess": "Operation Successful",
-    "deleteConfirmMessage": "Are you sure you want to delete?"
+    "deleteConfirmMessage": "Are you sure you want to delete?",
+    "multiSelect": "Multi-select"
   },
   "systemMaintenanceShutdown": {
     "title": "Dear Valued Users,",
@@ -167,6 +169,23 @@
       "collection": "Collection",
       "resourcePlaceholder": "Please select resources",
       "collectionPlaceholder": "Please select Collection"
+    },
+    "directory": {
+      "resourceCount": "{{count}} contents",
+      "searchPlaceholder": "Search Knowledge Base..."
+    },
+    "quickSearch": {
+      "suggest": "Suggestions",
+      "new": "Create New {{domain}}"
+    },
+    "note": {
+      "newNote": "Click to add new note",
+      "noteCharsCount": "{{count}} characters",
+      "autoSaved": "Note has been saved",
+      "saving": "Note is being saved...",
+      "readOnly": "Read Only",
+      "edit": "Edit",
+      "serviceDisconnected": "Service Disconnected"
     }
   },
   "loggedHomePage": {
@@ -336,6 +355,7 @@
   },
   "threadLibrary": {
     "title": "Threads",
+    "newThread": "New Thread",
     "footer": {
       "noMoreText": "You've reached the end of the list."
     },
@@ -419,7 +439,11 @@
       "jobs": "Jobs",
       "triggers": "Triggers",
       "addTrigger": "Add Trigger",
-      "back": "Back"
+      "back": "Back",
+      "emptyJobs": "No Jobs",
+      "emptyTriggers": "Please configure triggers first",
+      "emptyInstances": "No Skill Instances",
+      "emptyTemplates": "No Skill Templates"
     }
   },
   "threadItem": {
@@ -587,6 +611,106 @@
   "components": {
     "markdown": {
       "copySuccess": "Content Copied to Clipboard"
+    }
+  },
+  "copilot": {
+    "quickActions": "Quick Actions",
+    "baseContextCard": {
+      "resourceContextCard": {
+        "title": "Quick Actions for Current Resource",
+        "summary": {
+          "prompt": "Summary",
+          "title": "Summary"
+        },
+        "relatedResource": {
+          "prompt": "Similar Resources",
+          "title": "Similar Resources"
+        }
+      },
+      "knowledgeBaseContextCard": {
+        "title": "Quick Actions for Current Knowledge Base",
+        "relatedCollection": {
+          "prompt": "Similar Knowledge Base",
+          "title": "Similar Knowledge Base"
+        }
+      },
+      "noteContextCard": {
+        "title": "Quick Actions for Current Note",
+        "noteSelectedTitle": "Question within Selected Note Content",
+        "selectedContentCount": "({{count}} items)",
+        "noSelectedContent": "No selected content...",
+        "improveWriting": {
+          "prompt": "Optimize the target text for writing purposes",
+          "title": "Improve Writing"
+        },
+        "fixSpllingAndGrammar": {
+          "prompt": "Fix spelling and grammar errors",
+          "title": "Fix Splling and Grammar"
+        },
+        "makeShorter": {
+          "prompt": "Shorten and refine content",
+          "title": "Shorten Content"
+        },
+        "makeLonger": {
+          "prompt": "Expand content",
+          "title": "Expand Content"
+        },
+        "changeTone": {
+          "prompt": "Change the selected content to {{tone}} tone",
+          "itemList": {
+            "professional": "professional",
+            "casual": "casual",
+            "direct": "direct",
+            "confident": "confident",
+            "friendly": "friendly"
+          },
+          "title": "Change Tone"
+        },
+        "simplifyLanguage": {
+          "prompt": "Simplify the content while maintaining the same meaning in a way that a first grader can understand",
+          "title": "Simplify Language"
+        },
+        "summary": {
+          "prompt": "Summarize the selected content",
+          "title": "Summary"
+        },
+        "translate": {
+          "prompt": "Translate the selected content to {{language}} language",
+          "title": "Translate"
+        },
+        "explainThis": {
+          "prompt": "Explain the selected content",
+          "title": "Explain"
+        },
+        "findActionItem": {
+          "prompt": "Extract action items",
+          "title": "Extract Action Items"
+        },
+        "continueWriting": {
+          "prompt": "Continue writing based on the current context and complete the content",
+          "title": "Continue Writing"
+        },
+        "brainstormIdeas": {
+          "prompt": "Brainstorm ideas",
+          "title": "Brainstorm Ideas"
+        },
+        "blogPost": {
+          "prompt": "Write a blog post",
+          "title": "Write a Blog Post"
+        },
+        "outline": {
+          "prompt": "Write an article outline",
+          "title": "Write an Article Outline"
+        },
+        "socialMediaPost": {
+          "prompt": "Write a social media post",
+          "title": "Write a Social Media Post"
+        }
+      }
+    },
+    "chatInput": {
+      "skillManager": "Skill Manage",
+      "placeholder": "Ask a question, discover new knowledge"
     }
   },
   "hooks": {

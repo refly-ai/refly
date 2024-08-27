@@ -8,9 +8,11 @@
     "edit": "编辑",
     "save": "保存",
     "loadMore": "加载更多",
+    "more": "更多",
     "putErr": "操作失败，请尝试重试！",
     "putSuccess": "操作成功",
-    "deleteConfirmMessage": "确定删除？"
+    "deleteConfirmMessage": "确定删除？",
+    "multiSelect": "多选"
   },
   "systemMaintenanceShutdown": {
     "title": "尊敬的用户，您好！",
@@ -167,6 +169,23 @@
       "collection": "知识库",
       "resourcePlaceholder": "请选择资源",
       "collectionPlaceholder": "请选择知识库"
+    },
+    "directory": {
+      "resourceCount": "{{count}} 个内容",
+      "searchPlaceholder": "搜索知识库..."
+    },
+    "quickSearch": {
+      "suggest": "建议",
+      "new": "创建新 {{domain}}"
+    },
+    "note": {
+      "newNote": "创建新笔记",
+      "noteCharsCount": "共 {{count}} 字",
+      "autoSaved": "笔记已自动保存",
+      "saving": "笔记保存中...",
+      "readOnly": "只读",
+      "edit": "编辑",
+      "serviceDisconnected": "服务已断开"
     }
   },
   "loggedHomePage": {
@@ -352,6 +371,7 @@
       "allTopics": "所有主题"
     },
     "title": "会话库",
+    "newThread": "新会话",
     "footer": {
       "noMoreText": "已经到底啦~"
     },
@@ -435,7 +455,11 @@
       "jobs": "运行记录",
       "triggers": "触发器",
       "addTrigger": "添加触发器",
-      "back": "返回技能管理"
+      "back": "返回技能管理",
+      "emptyJobs": "暂无运行记录",
+      "emptyTriggers": "请先配置触发器",
+      "emptyInstances": "暂无技能实例",
+      "emptyTemplates": "暂无技能模板"
     }
   },
   "settings": {
@@ -598,6 +622,106 @@
   "components": {
     "markdown": {
       "copySuccess": "内容已复制到剪切板！"
+    }
+  },
+  "copilot": {
+    "quickActions": "快捷操作",
+    "baseContextCard": {
+      "resourceContextCard": {
+        "title": "当前资源快捷操作",
+        "summary": {
+          "prompt": "总结",
+          "title": "总结"
+        },
+        "relatedResource": {
+          "prompt": "相似资源",
+          "title": "相似资源"
+        }
+      },
+      "knowledgeBaseContextCard": {
+        "title": "当前知识库快捷操作",
+        "relatedCollection": {
+          "prompt": "相似知识库",
+          "title": "相似知识库"
+        }
+      },
+      "noteContextCard": {
+        "title": "当前笔记快捷操作",
+        "noteSelectedTitle": "选中笔记内容问答",
+        "selectedContentCount": "（共 {{count}} 个）",
+        "noSelectedContent": "暂无选中内容...",
+        "improveWriting": {
+          "prompt": "以更适于写作的目的优化目标文本",
+          "title": "改进写作"
+        },
+        "fixSpllingAndGrammar": {
+          "prompt": "修复拼写和语法错误",
+          "title": "修复拼写和语法错误"
+        },
+        "makeShorter": {
+          "prompt": "缩短并精炼内容",
+          "title": "缩短内容"
+        },
+        "makeLonger": {
+          "prompt": "扩写内容",
+          "title": "扩写内容"
+        },
+        "changeTone": {
+          "prompt": "将选中内容修改为 {{tone}} 语气",
+          "itemList": {
+            "professional": "专业的",
+            "casual": "随意的",
+            "direct": "直接的",
+            "confident": "自信的",
+            "friendly": "友好的"
+          },
+          "title": "修改语气"
+        },
+        "simplifyLanguage": {
+          "prompt": "以一年级小学生能够听懂的形式保持语义不变的前提下简化这段内容",
+          "title": "简化语言"
+        },
+        "summary": {
+          "prompt": "总结选中内容",
+          "title": "总结"
+        },
+        "translate": {
+          "prompt": "将选中内容翻译为 {{language}} 语言",
+          "title": "翻译"
+        },
+        "explainThis": {
+          "prompt": "解释选中内容",
+          "title": "解释"
+        },
+        "findActionItem": {
+          "prompt": "提取待办事项",
+          "title": "提取代办事项"
+        },
+        "continueWriting": {
+          "prompt": "基于当前上下文续写并将内容补充完整",
+          "title": "续写"
+        },
+        "brainstormIdeas": {
+          "prompt": "脑暴想法",
+          "title": "脑暴想法"
+        },
+        "blogPost": {
+          "prompt": "撰写博客文章",
+          "title": "撰写博客文章"
+        },
+        "outline": {
+          "prompt": "撰写文章大纲",
+          "title": "撰写文章大纲"
+        },
+        "socialMediaPost": {
+          "prompt": "撰写社交媒体文章",
+          "title": "撰写社交媒体文章"
+        }
+      }
+    },
+    "chatInput": {
+      "skillManager": "管理",
+      "placeholder": "提出问题，发现新知"
     }
   },
   "title": "欢迎 {{name}}，使用 react-i18next 完全类型安全的 React",

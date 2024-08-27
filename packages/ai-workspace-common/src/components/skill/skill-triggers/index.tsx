@@ -23,6 +23,7 @@ const Col = Grid.Col;
 interface SkillTriggersProps {}
 
 export const SkillTriggers = (props: SkillTriggersProps) => {
+  const { t } = useTranslation();
   const createTrigger = useCreateTrigger();
   const importNewTriggerModal = useImportNewTriggerModal();
   const [searchParams] = useSearchParams();
@@ -112,7 +113,14 @@ export const SkillTriggers = (props: SkillTriggersProps) => {
                 style={{ fontSize: 16, margin: '0 20px' }}
                 onClick={handleUpdateTrigger}
               />
-              <Popconfirm focusLock title={t('common.deleteConfirmMessage')} position="br" onOk={deleteTrigger}>
+              <Popconfirm
+                focusLock
+                title={t('common.deleteConfirmMessage')}
+                position="br"
+                okText={t('common.confirm')}
+                cancelText={t('common.cancel')}
+                onOk={deleteTrigger}
+              >
                 <IconDelete className="actions-item" style={{ fontSize: 16 }} />
               </Popconfirm>
             </div>
@@ -135,7 +143,7 @@ export const SkillTriggers = (props: SkillTriggersProps) => {
   }, [importNewTriggerModal.reloadTriggerList]);
 
   if (dataList.length === 0 && !isRequesting) {
-    return <Empty description="请先配置触发器" />;
+    return <Empty description={t('skill.skillDetail.emptyTriggers')} />;
   }
 
   return (

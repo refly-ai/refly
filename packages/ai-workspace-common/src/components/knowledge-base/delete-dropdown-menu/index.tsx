@@ -44,6 +44,8 @@ const DropList = (props: DropListProps) => {
           title={t(
             `workspace.deleteDropdownMenu.deleteConfirmFor${type.replace(type[0], type[0].toLocaleUpperCase())}`,
           )}
+          okText={t('common.confirm')}
+          cancelText={t('common.cancel')}
           position="br"
           onOk={(e) => {
             handleDeleteClick(e);

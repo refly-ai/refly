@@ -17,8 +17,10 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { ResourceList } from '@refly-packages/ai-workspace-common/components/resource-list';
 import { useKnowledgeBaseJumpNewPath } from '@refly-packages/ai-workspace-common/hooks/use-jump-new-path';
 import { DeleteDropdownMenu } from '@refly-packages/ai-workspace-common/components/knowledge-base/delete-dropdown-menu';
+import { useTranslation } from 'react-i18next';
 
 export const KnowledgeBaseDirectory = () => {
+  const { t } = useTranslation();
   const [isFetching, setIsFetching] = useState(false);
   const reloadKnowledgeBaseState = useReloadListState();
   const knowledgeBaseStore = useKnowledgeBaseStore();
@@ -116,7 +118,11 @@ export const KnowledgeBaseDirectory = () => {
                   .fromNow()}
               </span>
               {' · '}
-              <span>{knowledgeBaseStore?.currentKnowledgeBase?.resources?.length || 0} 个内容</span>
+              <span>
+                {t('knowledgeBase.directory.resourceCount', {
+                  count: knowledgeBaseStore?.currentKnowledgeBase?.resources?.length || 0,
+                })}
+              </span>
             </div>
           </div>
         </div>
@@ -130,7 +136,7 @@ export const KnowledgeBaseDirectory = () => {
       </div>
       <div className="knowledge-base-directory-list-container">
         <ResourceList
-          placeholder="搜索知识库..."
+          placeholder={t('knowledgeBase.directory.searchPlaceholder')}
           isFetching={isFetching}
           resources={resources as Resource[]}
           collectionId={kbId}

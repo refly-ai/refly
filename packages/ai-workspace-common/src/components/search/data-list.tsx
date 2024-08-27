@@ -12,6 +12,7 @@ import { Item } from './item';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { SearchResult } from '@refly/openapi-schema';
 import { useKnowledgeBaseJumpNewPath } from '@refly-packages/ai-workspace-common/hooks/use-jump-new-path';
+import { useTranslation } from 'react-i18next';
 
 export function DataList({
   domain,
@@ -41,6 +42,7 @@ export function DataList({
   const [hasMore, setHasMore] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
   const { jumpToKnowledgeBase, jumpToNote, jumpToReadResource, jumpToConv } = useKnowledgeBaseJumpNewPath();
+  const { t } = useTranslation();
 
   const searchStore = useSearchStore();
 
@@ -178,7 +180,7 @@ export function DataList({
 
   return (
     <>
-      <Command.Group heading="建议">
+      <Command.Group heading={t('knowledgeBase.quickSearch.suggest')}>
         <Item
           value={`create${domain}`}
           keywords={[`create${domain}`]}
@@ -186,7 +188,7 @@ export function DataList({
           activeValue={activeValue}
         >
           <IconFolderAdd style={{ fontSize: 12 }} />
-          创建新{heading}
+          {t('knowledgeBase.quickSearch.new', { domain })}
         </Item>
       </Command.Group>
       <Command.Group heading={heading}>
@@ -213,7 +215,7 @@ export function DataList({
       {hasMore && displayMode === 'list' ? (
         <div className="search-load-more">
           <Button type="text" loading={isRequesting} onClick={() => loadMore(currentPage)}>
-            加载更多
+            {t('common.loadMore')}
           </Button>
         </div>
       ) : null}

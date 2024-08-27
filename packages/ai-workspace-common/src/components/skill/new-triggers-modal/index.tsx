@@ -133,6 +133,8 @@ export const NewTriggersModal = (props: NewTriggersModalProps) => {
       title={t(`skill.newTriggerModal.${importNewTriggerModal.trigger ? 'update' : 'new'}Title`)}
       style={{ width: 700 }}
       visible={importNewTriggerModal.showtriggerModal}
+      okText={t('common.confirm')}
+      cancelText={t('common.cancel')}
       onOk={onOk}
       confirmLoading={confirmLoading}
       onCancel={() => importNewTriggerModal.setShowtriggerModall(false)}

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-
+import { useTranslation } from 'react-i18next';
 // components
 import { SkillItem } from '@refly-packages/ai-workspace-common/components/skill/skill-management/skill-item';
 // store
@@ -13,6 +13,7 @@ import { ScrollLoading } from '@refly-packages/ai-workspace-common/components/wo
 import { List, Empty } from '@arco-design/web-react';
 
 export const SkillTemplateList = () => {
+  const { t } = useTranslation();
   const { dataList, loadMore, hasMore, isRequesting } = useFetchDataList({
     fetchData: async (queryPayload) => {
       const res = await getClient().listSkillTemplates({
@@ -28,7 +29,7 @@ export const SkillTemplateList = () => {
   }, []);
 
   if (dataList.length === 0 && !isRequesting) {
-    return <Empty description="暂无数据" />;
+    return <Empty description={t('skill.skillDetail.emptyTemplates')} />;
   }
   return (
     <List

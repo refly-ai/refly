@@ -74,7 +74,7 @@ export const ResourceCollectionAssociativeModal = (props: ResourceCollectionAsso
   return (
     <Modal
       title={t(`knowledgeBase.resourceCollectionAssociativeModal.${domain}Title`)}
-      style={{ width: 600 }}
+      style={{ width: 650 }}
       visible={visible}
       okText={t(`common.confirm`)}
       cancelText={t(`common.cancel`)}

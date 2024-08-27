@@ -37,7 +37,7 @@ export const ConvLibrary = () => {
               convId: "",
             })
           }>
-          新会话
+          {t("threadLibrary.newThread")}
         </Button>
       </div>
       <ConvList

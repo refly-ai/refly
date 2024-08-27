@@ -8,6 +8,7 @@ import { useCookie } from 'react-use';
 import { Button, Divider, Input, Spin, Switch, Tabs } from '@arco-design/web-react';
 import { IconLock, IconUnlock } from '@arco-design/web-react/icon';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { IconClockCircle, IconEdit, IconSearch } from '@arco-design/web-react/icon';
 import { editorEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/editor';
 import { useListenToSelection } from '@refly-packages/ai-workspace-common/hooks/use-listen-to-selection';
@@ -220,6 +221,7 @@ export const AINoteStatusBar = (props: AINoteStatusBarProps) => {
   const { noteId } = note;
   const noteStore = useNoteStore();
   const { handleDeleteTab } = useNoteTabs();
+  const { t } = useTranslation();
 
   return (
     <div className="note-status-bar">
@@ -227,21 +229,25 @@ export const AINoteStatusBar = (props: AINoteStatusBarProps) => {
         {noteId && noteStore.noteServerStatus === 'connected' ? (
           <div className="note-status-bar-item">
             <AiOutlineFileWord />
-            <p className="conv-title">共 {noteStore.noteCharsCount} 字</p>
+            <p className="conv-title">{t('knowledgeBase.note.noteCharsCount', { count: noteStore.noteCharsCount })}</p>
           </div>
         ) : null}
         {noteId && noteStore.noteServerStatus === 'disconnected' ? (
           <div className="note-status-bar-item">
             <Divider type="vertical" />
             <AiOutlineWarning />
-            <p className="conv-title">服务已断开</p>
+            <p className="conv-title">{t('knowledgeBase.note.serviceDisconnected')}</p>
           </div>
         ) : null}
         {noteId && noteStore.noteServerStatus === 'connected' ? (
           <div className="note-status-bar-item">
             <Divider type="vertical" />
             <IconClockCircle />
-            <p className="conv-title">{noteStore.noteSaveStatus === 'Saved' ? `笔记已自动保存` : `笔记保存中...`}</p>
+            <p className="conv-title">
+              {noteStore.noteSaveStatus === 'Saved'
+                ? t('knowledgeBase.note.autoSaved')
+                : t('knowledgeBase.note.saving')}
+            </p>
           </div>
         ) : null}
       </div>
@@ -249,7 +255,9 @@ export const AINoteStatusBar = (props: AINoteStatusBarProps) => {
         {noteId ? (
           <div className="note-status-bar-item">
             {note.readOnly ? <IconLock /> : <IconUnlock />}
-            <p className="mr-2 conv-title">{note.readOnly ? '只读' : '编辑'}</p>
+            <p className="mr-2 conv-title">
+              {note.readOnly ? t('knowledgeBase.note.readOnly') : t('knowledgeBase.note.edit')}
+            </p>
             <Switch
               type="round"
               size="small"
