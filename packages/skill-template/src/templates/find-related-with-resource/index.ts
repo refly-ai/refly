@@ -27,8 +27,12 @@ export class FindRelatedWithResource extends BaseSkill {
   };
 
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [{ key: 'query', required: true }],
-    contextRules: [],
+    input: {
+      rules: [{ key: 'query', required: true }],
+    },
+    context: {
+      rules: [{ key: 'resourceIds', limit: 1, required: true }],
+    },
   };
 
   description = 'Search for relevant information in the knowledge base.';

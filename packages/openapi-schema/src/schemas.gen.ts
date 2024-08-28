@@ -1803,7 +1803,7 @@ export const $SkillInputKey = {
 
 export const $SkillContextKey = {
   type: 'string',
-  enum: ['resourceIds', 'collectionIds', 'noteIds', 'contentList', 'urls'],
+  enum: ['resourceIds', 'externalResources', 'collectionIds', 'noteIds', 'contentList', 'urls'],
 } as const;
 
 export const $SkillInvocationRule = {
@@ -1822,30 +1822,54 @@ export const $SkillInvocationRule = {
         },
       ],
     },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of items',
+      default: 10,
+    },
     required: {
       type: 'boolean',
-      description: 'Whether the key is required',
+      description: 'Whether this key is required (default is false)',
+    },
+  },
+} as const;
+
+export const $InvocationRuleGroupRelation = {
+  type: 'string',
+  enum: ['regular', 'mutuallyExclusive'],
+} as const;
+
+export const $SkillInvocationRuleGroup = {
+  type: 'object',
+  required: ['rules'],
+  properties: {
+    rules: {
+      type: 'array',
+      description: 'Skill invocation rules',
+      items: {
+        $ref: '#/components/schemas/SkillInvocationRule',
+      },
+    },
+    relation: {
+      type: 'string',
+      description: 'Group relation',
+      default: 'regular',
+      $ref: '#/components/schemas/InvocationRuleGroupRelation',
     },
   },
 } as const;
 
 export const $SkillInvocationConfig = {
   type: 'object',
-  required: ['inputRules', 'contextRules'],
+  required: ['input', 'context'],
   properties: {
-    inputRules: {
-      type: 'array',
-      description: 'Skill input rules',
-      items: {
-        $ref: '#/components/schemas/SkillInvocationRule',
-      },
+    input: {
+      description: 'Skill input rule group',
+      $ref: '#/components/schemas/SkillInvocationRuleGroup',
     },
-    contextRules: {
-      type: 'array',
-      description: 'Skill context rules',
-      items: {
-        $ref: '#/components/schemas/SkillInvocationRule',
-      },
+    context: {
+      description: 'Skill context rule group',
+      $ref: '#/components/schemas/SkillInvocationRuleGroup',
     },
   },
 } as const;

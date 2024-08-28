@@ -22,8 +22,12 @@ export class ResourceLabelerSkill extends BaseSkill {
   };
 
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [],
-    contextRules: [{ key: 'resourceIds', required: true }],
+    input: {
+      rules: [],
+    },
+    context: {
+      rules: [{ key: 'resourceIds', required: true }],
+    },
   };
 
   description = 'Add labels to given resource. Key and values are arbitrary.';

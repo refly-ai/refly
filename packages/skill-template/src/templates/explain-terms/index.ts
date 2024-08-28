@@ -22,8 +22,12 @@ export class ExplainTermsSkill extends BaseSkill {
   };
 
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [{ key: 'query' }],
-    contextRules: [{ key: 'contentList' }],
+    input: {
+      rules: [{ key: 'query' }],
+    },
+    context: {
+      rules: [{ key: 'contentList' }],
+    },
   };
 
   description = 'Explain the terms in the content';

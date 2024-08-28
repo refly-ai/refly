@@ -33,8 +33,12 @@ export class OnlineSearchSkill extends BaseSkill {
   };
 
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [{ key: 'query', required: true }],
-    contextRules: [],
+    input: {
+      rules: [{ key: 'query', required: true }],
+    },
+    context: {
+      rules: [],
+    },
   };
 
   description =

@@ -1226,7 +1226,13 @@ export type PopulatedSkillContext = SkillContext & {
 
 export type SkillInputKey = 'query';
 
-export type SkillContextKey = 'resourceIds' | 'collectionIds' | 'noteIds' | 'contentList' | 'urls';
+export type SkillContextKey =
+  | 'resourceIds'
+  | 'externalResources'
+  | 'collectionIds'
+  | 'noteIds'
+  | 'contentList'
+  | 'urls';
 
 export type SkillInvocationRule = {
   /**
@@ -1234,20 +1240,37 @@ export type SkillInvocationRule = {
    */
   key: SkillInputKey | SkillContextKey;
   /**
-   * Whether the key is required
+   * Maximum number of items
+   */
+  limit?: number;
+  /**
+   * Whether this key is required (default is false)
    */
   required?: boolean;
 };
 
+export type InvocationRuleGroupRelation = 'regular' | 'mutuallyExclusive';
+
+export type SkillInvocationRuleGroup = {
+  /**
+   * Skill invocation rules
+   */
+  rules: Array<SkillInvocationRule>;
+  /**
+   * Group relation
+   */
+  relation?: InvocationRuleGroupRelation;
+};
+
 export type SkillInvocationConfig = {
   /**
-   * Skill input rules
+   * Skill input rule group
    */
-  inputRules: Array<SkillInvocationRule>;
+  input: SkillInvocationRuleGroup;
   /**
-   * Skill context rules
+   * Skill context rule group
    */
-  contextRules: Array<SkillInvocationRule>;
+  context: SkillInvocationRuleGroup;
 };
 
 /**

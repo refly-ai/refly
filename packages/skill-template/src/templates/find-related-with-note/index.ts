@@ -27,8 +27,16 @@ export class FindRelatedWithNote extends BaseSkill {
   };
 
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [{ key: 'query', required: true }],
-    contextRules: [],
+    input: {
+      rules: [{ key: 'query', required: true }],
+    },
+    context: {
+      rules: [
+        { key: 'noteIds', limit: 1 },
+        { key: 'resourceIds', limit: 1 },
+      ],
+      relation: 'mutuallyExclusive',
+    },
   };
 
   description = 'Search for relevant information in the knowledge base.';
@@ -62,10 +70,9 @@ export class FindRelatedWithNote extends BaseSkill {
   retrieve = async (state: GraphState, config: SkillRunnableConfig) => {
     const { user } = config;
 
-    const { noteIds = [] } = config?.configurable || {};
-    const lastNoteId = noteIds[noteIds.length - 1];
-    const lastNote = await this.engine.service.getNoteDetail(user, lastNoteId);
-    const content = lastNote?.data?.content;
+    const { notes = [] } = config?.configurable || {};
+    const lastNote = notes[notes.length - 1];
+    const content = lastNote?.content;
 
     this.emitEvent(
       {

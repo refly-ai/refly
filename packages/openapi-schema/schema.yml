@@ -2486,6 +2486,7 @@ components:
       type: string
       enum:
         - resourceIds
+        - externalResources
         - collectionIds
         - noteIds
         - contentList
@@ -2501,9 +2502,33 @@ components:
           oneOf:
             - $ref: '#/components/schemas/SkillInputKey'
             - $ref: '#/components/schemas/SkillContextKey'
+        limit:
+          type: number
+          description: Maximum number of items
+          default: 10
         required:
           type: boolean
-          description: Whether the key is required
+          description: Whether this key is required (default is false)
+    InvocationRuleGroupRelation:
+      type: string
+      enum:
+        - regular
+        - mutuallyExclusive
+    SkillInvocationRuleGroup:
+      type: object
+      required:
+        - rules
+      properties:
+        rules:
+          type: array
+          description: Skill invocation rules
+          items:
+            $ref: '#/components/schemas/SkillInvocationRule'
+        relation:
+          type: string
+          description: Group relation
+          default: regular
+          $ref: '#/components/schemas/InvocationRuleGroupRelation'
     SkillInvocationConfig:
       type: object
       required:
@@ -2520,6 +2545,12 @@ components:
           description: Skill context rules
           items:
             $ref: '#/components/schemas/SkillInvocationRule'
+        input:
+          description: Skill input rule group
+          $ref: '#/components/schemas/SkillInvocationRuleGroup'
+        context:
+          description: Skill context rule group
+          $ref: '#/components/schemas/SkillInvocationRuleGroup'
     SkillJobStatus:
       type: string
       description: Skill job status
