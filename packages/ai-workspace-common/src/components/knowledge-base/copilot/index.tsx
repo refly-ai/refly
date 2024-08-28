@@ -29,9 +29,6 @@ import { KnowledgeBaseListModal } from './knowledge-base-list-modal';
 import { SkillManagementModal } from '@refly-packages/ai-workspace-common/components/skill/skill-management-modal';
 import { SkillDisplay } from './skill-display';
 
-// requests
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-
 // state
 import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
 import { useConversationStore } from '@refly-packages/ai-workspace-common/stores/conversation';

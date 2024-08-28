@@ -3,12 +3,10 @@ import { useState, useEffect } from 'react';
 // components
 import { useCreateTrigger } from '@refly-packages/ai-workspace-common/hooks/use-create-trigger';
 import { useImportNewTriggerModal } from '@refly-packages/ai-workspace-common/stores/import-new-trigger-modal';
-import { InvokeOptionComponent } from '@refly-packages/ai-workspace-common/components/skill/RuleOptionComponent';
+import { InvocationFormItems } from '@refly-packages/ai-workspace-common/components/skill/invocation-form-items';
 import { useTranslation } from 'react-i18next';
-// store
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
-import { SkillInstance, SkillTrigger } from '@refly/openapi-schema';
+import { SkillInstance } from '@refly/openapi-schema';
 
 import { Modal, Form, Input, Message, Select, DatePicker } from '@arco-design/web-react';
 const FormItem = Form.Item;
@@ -46,13 +44,6 @@ export const NewTriggersModal = (props: NewTriggersModalProps) => {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [form] = Form.useForm();
   const [_triggerType, setTriggerType] = useState('');
-
-  const { inputRules = [], contextRules = [] } = data?.invocationConfig || {};
-  const optionItems = [...inputRules, ...contextRules].map((rule) => ({
-    key: rule.key,
-    required: rule.required,
-    formComp: InvokeOptionComponent({ rule, form, t, fieldMap: fromFieldMap }),
-  }));
 
   const onOk = () => {
     form.validate().then(async (res) => {
@@ -201,18 +192,7 @@ export const NewTriggersModal = (props: NewTriggersModalProps) => {
               </Select>
             </FormItem>
 
-            {optionItems.map(({ key, required, formComp }) => {
-              return (
-                <FormItem
-                  label={t(`skill.instanceInvokeModal.formLabel.${key}`)}
-                  key={key}
-                  required={required}
-                  field={fromFieldMap[key]}
-                >
-                  {formComp}
-                </FormItem>
-              );
-            })}
+            <InvocationFormItems invocationConfig={data.invocationConfig} form={form} t={t} fieldMap={fromFieldMap} />
           </>
         )}
 

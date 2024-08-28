@@ -2531,9 +2531,6 @@ components:
           $ref: '#/components/schemas/InvocationRuleGroupRelation'
     SkillInvocationConfig:
       type: object
-      required:
-        - inputRules
-        - contextRules
       properties:
         inputRules:
           type: array

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 // components
-import { InvokeOptionComponent } from '@refly-packages/ai-workspace-common/components/skill/RuleOptionComponent';
+import { InvocationFormItems } from '@refly-packages/ai-workspace-common/components/skill/invocation-form-items';
 import { useTranslation } from 'react-i18next';
 // store
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -32,13 +32,6 @@ export const InstanceInvokeModal = (props: InstanceInvokeModalProps) => {
   const { t } = useTranslation();
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [form] = Form.useForm();
-
-  const { inputRules = [], contextRules = [] } = data?.invocationConfig || {};
-  const optionItems = [...inputRules, ...contextRules].map((rule) => ({
-    key: rule.key,
-    required: rule.required,
-    formComp: InvokeOptionComponent({ rule, form, t }),
-  }));
 
   const onOk = () => {
     form.validate().then(async (res) => {
@@ -79,7 +72,7 @@ export const InstanceInvokeModal = (props: InstanceInvokeModalProps) => {
   return (
     <Modal
       title={t('skill.instanceInvokeModal.title')}
-      style={{ width: 600 }}
+      style={{ width: 750 }}
       visible={visible}
       onOk={onOk}
       okText={t('common.confirm')}
@@ -88,13 +81,7 @@ export const InstanceInvokeModal = (props: InstanceInvokeModalProps) => {
       onCancel={() => setVisible(false)}
     >
       <Form {...formItemLayout} form={form}>
-        {optionItems.map(({ key, required, formComp }) => {
-          return (
-            <FormItem label={t(`skill.instanceInvokeModal.formLabel.${key}`)} key={key} required={required} field={key}>
-              {formComp}
-            </FormItem>
-          );
-        })}
+        <InvocationFormItems invocationConfig={data.invocationConfig} form={form} t={t} />
       </Form>
     </Modal>
   );

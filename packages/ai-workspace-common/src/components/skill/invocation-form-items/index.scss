@@ -1,0 +1,50 @@
+.invocation-form {
+  padding: 20px;
+
+  &__input-group {
+    margin-bottom: 20px;
+  }
+
+  &__label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  &__input {
+    width: 100%;
+    padding: 0px 8px;
+    font-size: 14px;
+
+    &:focus {
+      border-color: #00a3bf;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(0, 163, 191, 0.2);
+    }
+
+    &--textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+  }
+
+  &__radio-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__radio-option {
+    cursor: pointer;
+    margin-right: 0 !important;
+
+    input[type='radio'] {
+      margin-right: 0;
+    }
+  }
+
+  .arco-radio-mask-wrapper {
+    position: absolute;
+    left: 10px;
+    top: 32px;
+  }
+}

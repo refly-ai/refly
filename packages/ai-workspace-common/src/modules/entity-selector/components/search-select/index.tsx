@@ -101,6 +101,7 @@ export const SearchSelect = (props: SearchSelectProps) => {
         handleValueChange(value, [domain]);
       }}
       onClick={() => {
+        if (props.disabled) return;
         setPopupVisible(!popupVisible);
       }}
       value={value}

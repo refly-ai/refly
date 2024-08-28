@@ -1861,8 +1861,21 @@ export const $SkillInvocationRuleGroup = {
 
 export const $SkillInvocationConfig = {
   type: 'object',
-  required: ['input', 'context'],
   properties: {
+    inputRules: {
+      type: 'array',
+      description: 'Skill input rules',
+      items: {
+        $ref: '#/components/schemas/SkillInvocationRule',
+      },
+    },
+    contextRules: {
+      type: 'array',
+      description: 'Skill context rules',
+      items: {
+        $ref: '#/components/schemas/SkillInvocationRule',
+      },
+    },
     input: {
       description: 'Skill input rule group',
       $ref: '#/components/schemas/SkillInvocationRuleGroup',

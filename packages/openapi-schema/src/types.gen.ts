@@ -1264,13 +1264,21 @@ export type SkillInvocationRuleGroup = {
 
 export type SkillInvocationConfig = {
   /**
+   * Skill input rules
+   */
+  inputRules?: Array<SkillInvocationRule>;
+  /**
+   * Skill context rules
+   */
+  contextRules?: Array<SkillInvocationRule>;
+  /**
    * Skill input rule group
    */
-  input: SkillInvocationRuleGroup;
+  input?: SkillInvocationRuleGroup;
   /**
    * Skill context rule group
    */
-  context: SkillInvocationRuleGroup;
+  context?: SkillInvocationRuleGroup;
 };
 
 /**
