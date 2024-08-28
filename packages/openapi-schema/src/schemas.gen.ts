@@ -270,6 +270,75 @@ export const $LabelInstance = {
   },
 } as const;
 
+export const $InputMode = {
+  type: 'string',
+  description: 'Data input mode',
+  enum: ['input', 'inputNumber', 'select', 'multiSelect'],
+} as const;
+
+export const $SelectOption = {
+  type: 'object',
+  description: 'Select option',
+  required: ['label', 'value'],
+  properties: {
+    label: {
+      type: 'string',
+      description: 'Option label',
+    },
+    value: {
+      type: 'string',
+      description: 'Option value',
+    },
+    disabled: {
+      type: 'boolean',
+      description: 'Whether this option is disabled',
+      default: false,
+    },
+  },
+} as const;
+
+export const $DynamicConfigItem = {
+  type: 'object',
+  description: 'Dynamic config item',
+  required: ['key', 'label', 'inputMode'],
+  properties: {
+    key: {
+      type: 'string',
+      description: 'Config key',
+    },
+    label: {
+      type: 'string',
+      description: 'Config label',
+    },
+    inputMode: {
+      description: 'Config input mode',
+      $ref: '#/components/schemas/InputMode',
+    },
+    options: {
+      type: 'array',
+      description: 'Config options',
+      items: {
+        $ref: '#/components/schemas/SelectOption',
+      },
+    },
+  },
+} as const;
+
+export const $SkillTemplateConfigSchema = {
+  type: 'object',
+  description: 'Skill template config schema',
+  required: ['items'],
+  properties: {
+    items: {
+      type: 'array',
+      description: 'Config items',
+      items: {
+        $ref: '#/components/schemas/DynamicConfigItem',
+      },
+    },
+  },
+} as const;
+
 export const $SkillTemplate = {
   type: 'object',
   description: 'Skill template',
@@ -286,6 +355,10 @@ export const $SkillTemplate = {
     description: {
       type: 'string',
       description: 'Skill template description',
+    },
+    configSchema: {
+      description: 'Skill template config schema',
+      $ref: '#/components/schemas/SkillTemplateConfigSchema',
     },
   },
 } as const;
@@ -440,6 +513,10 @@ export const $SkillInstance = {
           type: 'string',
           description: 'Skill instance description',
         },
+        tplConfig: {
+          type: 'object',
+          description: 'Skill template config',
+        },
         invocationConfig: {
           description: 'Skill invocation config',
           $ref: '#/components/schemas/SkillInvocationConfig',
@@ -496,6 +573,10 @@ export const $SkillJob = {
     context: {
       description: 'Skill context',
       $ref: '#/components/schemas/PopulatedSkillContext',
+    },
+    tplConfig: {
+      type: 'object',
+      description: 'Skill template config',
     },
     createdAt: {
       type: 'string',
@@ -1609,6 +1690,10 @@ export const $SkillInstanceCreateParam = {
       type: 'string',
       description: 'Skill description',
     },
+    tplConfig: {
+      type: 'object',
+      description: 'Skill template config',
+    },
   },
 } as const;
 
@@ -1862,20 +1947,6 @@ export const $SkillInvocationRuleGroup = {
 export const $SkillInvocationConfig = {
   type: 'object',
   properties: {
-    inputRules: {
-      type: 'array',
-      description: 'Skill input rules',
-      items: {
-        $ref: '#/components/schemas/SkillInvocationRule',
-      },
-    },
-    contextRules: {
-      type: 'array',
-      description: 'Skill context rules',
-      items: {
-        $ref: '#/components/schemas/SkillInvocationRule',
-      },
-    },
     input: {
       description: 'Skill input rule group',
       $ref: '#/components/schemas/SkillInvocationRuleGroup',
@@ -1903,6 +1974,10 @@ export const $InvokeSkillRequest = {
     context: {
       description: 'Skill invocation context',
       $ref: '#/components/schemas/SkillContext',
+    },
+    tplConfig: {
+      type: 'object',
+      description: 'Skill template config',
     },
     skillId: {
       type: 'string',

@@ -1375,6 +1375,64 @@ components:
           type: string
           description: Label value
           example: HotPotQA
+    InputMode:
+      type: string
+      description: Data input mode
+      enum:
+        - input
+        - inputNumber
+        - select
+        - multiSelect
+    SelectOption:
+      type: object
+      description: Select option
+      required:
+        - label
+        - value
+      properties:
+        label:
+          type: string
+          description: Option label
+        value:
+          type: string
+          description: Option value
+        disabled:
+          type: boolean
+          description: Whether this option is disabled
+          default: false
+    DynamicConfigItem:
+      type: object
+      description: Dynamic config item
+      required:
+        - key
+        - label
+        - inputMode
+      properties:
+        key:
+          type: string
+          description: Config key
+        label:
+          type: string
+          description: Config label
+        inputMode:
+          description: Config input mode
+          $ref: '#/components/schemas/InputMode'
+        options:
+          type: array
+          description: Config options
+          items:
+            $ref: '#/components/schemas/SelectOption'
+    SkillTemplateConfigSchema:
+      type: object
+      description: Skill template config schema
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          description: Config items
+          items:
+            $ref: '#/components/schemas/DynamicConfigItem'
     SkillTemplate:
       type: object
       description: Skill template
@@ -1391,6 +1449,9 @@ components:
         description:
           type: string
           description: Skill template description
+        configSchema:
+          description: Skill template config schema
+          $ref: '#/components/schemas/SkillTemplateConfigSchema'
     SkillTriggerType:
       type: string
       description: Skill trigger type
@@ -1522,6 +1583,9 @@ components:
             description:
               type: string
               description: Skill instance description
+            tplConfig:
+              type: object
+              description: Skill template config
             invocationConfig:
               description: Skill invocation config
               $ref: '#/components/schemas/SkillInvocationConfig'
@@ -1571,6 +1635,9 @@ components:
         context:
           description: Skill context
           $ref: '#/components/schemas/PopulatedSkillContext'
+        tplConfig:
+          type: object
+          description: Skill template config
         createdAt:
           type: string
           format: date-time
@@ -2360,6 +2427,9 @@ components:
         description:
           type: string
           description: Skill description
+        tplConfig:
+          type: object
+          description: Skill template config
     CreateSkillInstanceRequest:
       type: object
       required:
@@ -2532,16 +2602,6 @@ components:
     SkillInvocationConfig:
       type: object
       properties:
-        inputRules:
-          type: array
-          description: Skill input rules
-          items:
-            $ref: '#/components/schemas/SkillInvocationRule'
-        contextRules:
-          type: array
-          description: Skill context rules
-          items:
-            $ref: '#/components/schemas/SkillInvocationRule'
         input:
           description: Skill input rule group
           $ref: '#/components/schemas/SkillInvocationRuleGroup'
@@ -2565,6 +2625,9 @@ components:
         context:
           description: Skill invocation context
           $ref: '#/components/schemas/SkillContext'
+        tplConfig:
+          type: object
+          description: Skill template config
         skillId:
           type: string
           description: Skill instance ID to invoke (if not provided, skill scheduler will be used)

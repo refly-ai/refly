@@ -13,7 +13,7 @@ import { SystemMessage } from '@langchain/core/messages';
 import { HumanMessage } from '@langchain/core/messages';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../../base';
 import { ToolMessage } from '@langchain/core/messages';
-import { Source, SkillInvocationConfig } from '@refly/openapi-schema';
+import { Source, SkillInvocationConfig, SkillTemplateConfigSchema } from '@refly/openapi-schema';
 
 interface GraphState extends BaseSkillState {
   // 初始上下文
@@ -30,6 +30,10 @@ export class OnlineSearchSkill extends BaseSkill {
   displayName = {
     en: 'Online Search',
     'zh-CN': '在线搜索',
+  };
+
+  configSchema: SkillTemplateConfigSchema = {
+    items: [],
   };
 
   invocationConfig: SkillInvocationConfig = {

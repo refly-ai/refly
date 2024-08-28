@@ -5,7 +5,7 @@ import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../../base';
 // schema
 import { z } from 'zod';
-import { SkillInvocationConfig } from '@refly/openapi-schema';
+import { SkillInvocationConfig, SkillTemplateConfigSchema } from '@refly/openapi-schema';
 
 interface GraphState extends BaseSkillState {
   documents: Document[];
@@ -19,6 +19,10 @@ export class CreateGitDiffCommitSkill extends BaseSkill {
   displayName = {
     en: 'Create Git Diff Commit',
     'zh-CN': '创建Git Diff Commit',
+  };
+
+  configSchema: SkillTemplateConfigSchema = {
+    items: [],
   };
 
   invocationConfig: SkillInvocationConfig = {

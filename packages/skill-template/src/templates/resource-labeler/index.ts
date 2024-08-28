@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { SystemMessage } from '@langchain/core/messages';
 import { HumanMessage } from '@langchain/core/messages';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../../base';
-import { LabelClass, SkillInvocationConfig } from '@refly/openapi-schema';
+import { LabelClass, SkillInvocationConfig, SkillTemplateConfigSchema } from '@refly/openapi-schema';
 
 interface GraphState extends BaseSkillState {
   labelClass: LabelClass;
@@ -21,12 +21,16 @@ export class ResourceLabelerSkill extends BaseSkill {
     'zh-CN': '资源标签归类',
   };
 
+  configSchema: SkillTemplateConfigSchema = {
+    items: [],
+  };
+
   invocationConfig: SkillInvocationConfig = {
     input: {
       rules: [],
     },
     context: {
-      rules: [{ key: 'resourceIds', required: true }],
+      rules: [{ key: 'resourceIds', limit: 1, required: true }],
     },
   };
 

@@ -5,7 +5,7 @@ import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../../base';
 // schema
 import { z } from 'zod';
-import { SkillInvocationConfig } from '@refly/openapi-schema';
+import { SkillInvocationConfig, SkillTemplateConfigSchema } from '@refly/openapi-schema';
 
 interface GraphState extends BaseSkillState {
   documents: Document[];
@@ -20,9 +20,17 @@ export class CreateBlogPostSkill extends BaseSkill {
     'zh-CN': '创建博客文章',
   };
 
+  configSchema: SkillTemplateConfigSchema = {
+    items: [],
+  };
+
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [{ key: 'query' }],
-    contextRules: [{ key: 'contentList' }],
+    input: {
+      rules: [{ key: 'query' }],
+    },
+    context: {
+      rules: [{ key: 'contentList' }],
+    },
   };
 
   description = 'Create the blog post';

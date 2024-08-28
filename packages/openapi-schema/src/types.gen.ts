@@ -217,6 +217,61 @@ export type LabelInstance = {
 };
 
 /**
+ * Data input mode
+ */
+export type InputMode = 'input' | 'inputNumber' | 'select' | 'multiSelect';
+
+/**
+ * Select option
+ */
+export type SelectOption = {
+  /**
+   * Option label
+   */
+  label: string;
+  /**
+   * Option value
+   */
+  value: string;
+  /**
+   * Whether this option is disabled
+   */
+  disabled?: boolean;
+};
+
+/**
+ * Dynamic config item
+ */
+export type DynamicConfigItem = {
+  /**
+   * Config key
+   */
+  key: string;
+  /**
+   * Config label
+   */
+  label: string;
+  /**
+   * Config input mode
+   */
+  inputMode: InputMode;
+  /**
+   * Config options
+   */
+  options?: Array<SelectOption>;
+};
+
+/**
+ * Skill template config schema
+ */
+export type SkillTemplateConfigSchema = {
+  /**
+   * Config items
+   */
+  items: Array<DynamicConfigItem>;
+};
+
+/**
  * Skill template
  */
 export type SkillTemplate = {
@@ -232,6 +287,10 @@ export type SkillTemplate = {
    * Skill template description
    */
   description?: string;
+  /**
+   * Skill template config schema
+   */
+  configSchema?: SkillTemplateConfigSchema;
 };
 
 /**
@@ -354,6 +413,12 @@ export type SkillInstance = SkillMeta & {
    */
   description?: string;
   /**
+   * Skill template config
+   */
+  tplConfig?: {
+    [key: string]: unknown;
+  };
+  /**
    * Skill invocation config
    */
   invocationConfig: SkillInvocationConfig;
@@ -403,6 +468,12 @@ export type SkillJob = {
    * Skill context
    */
   context: PopulatedSkillContext;
+  /**
+   * Skill template config
+   */
+  tplConfig?: {
+    [key: string]: unknown;
+  };
   /**
    * Job creation time
    */
@@ -1120,6 +1191,12 @@ export type SkillInstanceCreateParam = {
    * Skill description
    */
   description?: string;
+  /**
+   * Skill template config
+   */
+  tplConfig?: {
+    [key: string]: unknown;
+  };
 };
 
 export type CreateSkillInstanceRequest = {
@@ -1264,14 +1341,6 @@ export type SkillInvocationRuleGroup = {
 
 export type SkillInvocationConfig = {
   /**
-   * Skill input rules
-   */
-  inputRules?: Array<SkillInvocationRule>;
-  /**
-   * Skill context rules
-   */
-  contextRules?: Array<SkillInvocationRule>;
-  /**
    * Skill input rule group
    */
   input?: SkillInvocationRuleGroup;
@@ -1295,6 +1364,12 @@ export type InvokeSkillRequest = {
    * Skill invocation context
    */
   context?: SkillContext;
+  /**
+   * Skill template config
+   */
+  tplConfig?: {
+    [key: string]: unknown;
+  };
   /**
    * Skill instance ID to invoke (if not provided, skill scheduler will be used)
    */

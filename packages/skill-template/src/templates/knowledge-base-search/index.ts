@@ -6,7 +6,7 @@ import { AIMessage, BaseMessage, HumanMessage, SystemMessage } from '@langchain/
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../../base';
 import { ReflySearch } from '../../tools/refly-search';
-import { SearchResponse, Source, SkillInvocationConfig } from '@refly/openapi-schema';
+import { SearchResponse, Source, SkillInvocationConfig, SkillTemplateConfigSchema } from '@refly/openapi-schema';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 
 interface GraphState extends BaseSkillState {
@@ -27,6 +27,10 @@ export class KnowledgeBaseSearch extends BaseSkill {
   displayName = {
     en: 'Knowledge Base Search',
     'zh-CN': '知识库搜索',
+  };
+
+  configSchema: SkillTemplateConfigSchema = {
+    items: [],
   };
 
   invocationConfig: SkillInvocationConfig = {

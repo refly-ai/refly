@@ -5,7 +5,7 @@ import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../../base';
 // schema
 import { z } from 'zod';
-import { SkillInvocationConfig } from '@refly/openapi-schema';
+import { SkillInvocationConfig, SkillTemplateConfigSchema } from '@refly/openapi-schema';
 
 interface GraphState extends BaseSkillState {
   documents: Document[];
@@ -21,9 +21,17 @@ export class BasicSummaryWithResourceSkill extends BaseSkill {
     'zh-CN': '基于选中资源的总结',
   };
 
+  configSchema: SkillTemplateConfigSchema = {
+    items: [],
+  };
+
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [{ key: 'query' }],
-    contextRules: [{ key: 'resourceIds' }],
+    input: {
+      rules: [{ key: 'query' }],
+    },
+    context: {
+      rules: [{ key: 'resourceIds' }],
+    },
   };
 
   description = 'Give a summary of the selected resource';
