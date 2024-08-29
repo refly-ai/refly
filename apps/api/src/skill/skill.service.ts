@@ -247,7 +247,11 @@ export class SkillService {
         skillId: genSkillID(),
         uid,
         ...pick(instance, ['tplName', 'displayName', 'description']),
-        invocationConfig: JSON.stringify(tplConfigMap.get(instance.tplName)?.invocationConfig),
+        tplConfig: JSON.stringify(instance.tplConfig ?? {}),
+        configSchema: JSON.stringify(tplConfigMap.get(instance.tplName)?.configSchema ?? {}),
+        invocationConfig: JSON.stringify(
+          tplConfigMap.get(instance.tplName)?.invocationConfig ?? {},
+        ),
       })),
     });
   }
@@ -371,6 +375,7 @@ export class SkillService {
         skillDisplayName: skill?.displayName ?? 'Scheduler',
         input: JSON.stringify(input),
         context: JSON.stringify(contextCopy ?? {}),
+        tplConfig: JSON.stringify(param.tplConfig ?? {}),
         status: 'running',
         triggerId,
         convId,
@@ -380,7 +385,9 @@ export class SkillService {
 
   async sendInvokeSkillTask(user: User, param: InvokeSkillRequest) {
     const skill = await this.skillInvokePreCheck(user, param);
+
     param.context = await this.populateSkillContext(user, param.context);
+    param.tplConfig = { ...JSON.parse(skill?.tplConfig ?? '{}'), ...param.tplConfig };
 
     const job = await this.createSkillJob(user, { ...param, skill });
 
@@ -404,6 +411,15 @@ export class SkillService {
     await this.streamInvokeSkill(user, param, null, jobId);
   }
 
+  async invokeSkillFromApi(user: User, param: InvokeSkillRequest) {
+    const skill = await this.skillInvokePreCheck(user, param);
+
+    param.context = await this.populateSkillContext(user, param.context);
+    param.tplConfig = { ...JSON.parse(skill?.tplConfig ?? '{}'), ...param.tplConfig };
+
+    return this.streamInvokeSkill(user, param);
+  }
+
   async buildInvokeConfig(data: {
     user: User;
     skill: SkillInstance;
@@ -421,8 +437,9 @@ export class SkillService {
     const config: SkillRunnableConfig = {
       configurable: {
         ...param.context,
-        convId: param.convId,
         installedSkills,
+        convId: param.convId,
+        tplConfig: param.tplConfig,
       },
       user,
     };

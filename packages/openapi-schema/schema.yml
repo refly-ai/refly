@@ -1417,6 +1417,10 @@ components:
         inputMode:
           description: Config input mode
           $ref: '#/components/schemas/InputMode'
+        required:
+          type: boolean
+          description: Whether this config is required
+          default: false
         label:
           type: string
           description: Config label, with auto-selected locale
@@ -1438,6 +1442,23 @@ components:
           description: Config options
           items:
             $ref: '#/components/schemas/SelectOption'
+    DynamicConfigValue:
+      type: object
+      description: Dynamic config value
+      required:
+        - value
+        - label
+      properties:
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: array
+              items:
+                type: string
+        label:
+          type: string
+          description: Config label
     SkillTemplateConfigSchema:
       type: object
       description: Skill template config schema
@@ -1585,6 +1606,12 @@ components:
           type: string
           description: Skill ID
           example: sk-g30e1b80b5g1itbemc0g5jj3
+    SkillTemplateConfig:
+      type: object
+      description: Skill template config (key is config item key, value is config value)
+      additionalProperties:
+        description: Skill template config value
+        $ref: '#/components/schemas/DynamicConfigValue'
     SkillInstance:
       type: object
       description: Skill
@@ -1600,8 +1627,11 @@ components:
               type: string
               description: Skill instance description
             tplConfig:
-              type: object
               description: Skill template config
+              $ref: '#/components/schemas/SkillTemplateConfig'
+            tplConfigSchema:
+              description: Skill template config schema
+              $ref: '#/components/schemas/SkillTemplateConfigSchema'
             invocationConfig:
               description: Skill invocation config
               $ref: '#/components/schemas/SkillInvocationConfig'
@@ -1652,8 +1682,8 @@ components:
           description: Skill context
           $ref: '#/components/schemas/PopulatedSkillContext'
         tplConfig:
-          type: object
           description: Skill template config
+          $ref: '#/components/schemas/SkillTemplateConfig'
         createdAt:
           type: string
           format: date-time
@@ -2444,8 +2474,8 @@ components:
           type: string
           description: Skill description
         tplConfig:
-          type: object
           description: Skill template config
+          $ref: '#/components/schemas/SkillTemplateConfig'
     CreateSkillInstanceRequest:
       type: object
       required:
@@ -2642,8 +2672,8 @@ components:
           description: Skill invocation context
           $ref: '#/components/schemas/SkillContext'
         tplConfig:
-          type: object
           description: Skill template config
+          $ref: '#/components/schemas/SkillTemplateConfig'
         skillId:
           type: string
           description: Skill instance ID to invoke (if not provided, skill scheduler will be used)

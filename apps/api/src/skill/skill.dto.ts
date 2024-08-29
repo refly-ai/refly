@@ -26,6 +26,8 @@ export function skillInstancePO2DTO(skill: SkillInstanceModel): SkillInstance {
   return {
     ...pick(skill, ['skillId', 'tplName', 'displayName', 'description']),
     invocationConfig: JSON.parse(skill.invocationConfig),
+    tplConfig: JSON.parse(skill.tplConfig),
+    tplConfigSchema: JSON.parse(skill.configSchema),
     createdAt: skill.createdAt.toJSON(),
     updatedAt: skill.updatedAt.toJSON(),
   };
@@ -56,6 +58,7 @@ export function skillJobPO2DTO(
     trigger: job.trigger ? skillTriggerPO2DTO(job.trigger) : undefined,
     conversation: job.conversation ? toConversationDTO(job.conversation) : undefined,
     messages: job.messages?.map(toChatMessageDTO) ?? [],
+    tplConfig: JSON.parse(job.tplConfig),
     jobStatus: job.status as SkillJobStatus,
     input: JSON.parse(job.input),
     context: JSON.parse(job.context),

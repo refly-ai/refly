@@ -230,6 +230,10 @@ model SkillInstance {
   uid              String    @map("uid")
   /// Skill invocation config (JSON)
   invocationConfig String    @default("{}") @map("invocation_config")
+  /// Skill config schema (JSON)
+  configSchema     String    @default("{}") @map("config_schema")
+  /// Skill template config (JSON)
+  tplConfig        String    @default("{}") @map("tpl_config")
   /// Create timestamp
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
@@ -292,6 +296,8 @@ model SkillJob {
   input            String   @map("input")
   /// Context (JSON of `SkillContext`)
   context          String   @map("context")
+  /// Skill template config (JSON)
+  tplConfig        String   @default("{}") @map("tpl_config")
   /// Skill job status (refer to `SkillJobStatus`)
   status           String   @map("status")
   /// Skill trigger id

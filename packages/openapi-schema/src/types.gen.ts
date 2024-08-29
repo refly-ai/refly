@@ -258,6 +258,10 @@ export type DynamicConfigItem = {
    */
   inputMode: InputMode;
   /**
+   * Whether this config is required
+   */
+  required?: boolean;
+  /**
    * Config label, with auto-selected locale
    */
   label?: string;
@@ -281,6 +285,17 @@ export type DynamicConfigItem = {
    * Config options
    */
   options?: Array<SelectOption>;
+};
+
+/**
+ * Dynamic config value
+ */
+export type DynamicConfigValue = {
+  value: string | number | Array<string>;
+  /**
+   * Config label
+   */
+  label: string;
 };
 
 /**
@@ -427,6 +442,13 @@ export type SkillMeta = {
 };
 
 /**
+ * Skill template config (key is config item key, value is config value)
+ */
+export type SkillTemplateConfig = {
+  [key: string]: DynamicConfigValue;
+};
+
+/**
  * Skill
  */
 export type SkillInstance = SkillMeta & {
@@ -437,9 +459,11 @@ export type SkillInstance = SkillMeta & {
   /**
    * Skill template config
    */
-  tplConfig?: {
-    [key: string]: unknown;
-  };
+  tplConfig?: SkillTemplateConfig;
+  /**
+   * Skill template config schema
+   */
+  tplConfigSchema?: SkillTemplateConfigSchema;
   /**
    * Skill invocation config
    */
@@ -493,9 +517,7 @@ export type SkillJob = {
   /**
    * Skill template config
    */
-  tplConfig?: {
-    [key: string]: unknown;
-  };
+  tplConfig?: SkillTemplateConfig;
   /**
    * Job creation time
    */
@@ -1216,9 +1238,7 @@ export type SkillInstanceCreateParam = {
   /**
    * Skill template config
    */
-  tplConfig?: {
-    [key: string]: unknown;
-  };
+  tplConfig?: SkillTemplateConfig;
 };
 
 export type CreateSkillInstanceRequest = {
@@ -1389,9 +1409,7 @@ export type InvokeSkillRequest = {
   /**
    * Skill template config
    */
-  tplConfig?: {
-    [key: string]: unknown;
-  };
+  tplConfig?: SkillTemplateConfig;
   /**
    * Skill instance ID to invoke (if not provided, skill scheduler will be used)
    */

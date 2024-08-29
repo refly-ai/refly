@@ -317,6 +317,11 @@ export const $DynamicConfigItem = {
       description: 'Config input mode',
       $ref: '#/components/schemas/InputMode',
     },
+    required: {
+      type: 'boolean',
+      description: 'Whether this config is required',
+      default: false,
+    },
     label: {
       type: 'string',
       description: 'Config label, with auto-selected locale',
@@ -345,6 +350,34 @@ export const $DynamicConfigItem = {
       items: {
         $ref: '#/components/schemas/SelectOption',
       },
+    },
+  },
+} as const;
+
+export const $DynamicConfigValue = {
+  type: 'object',
+  description: 'Dynamic config value',
+  required: ['value', 'label'],
+  properties: {
+    value: {
+      oneOf: [
+        {
+          type: 'string',
+        },
+        {
+          type: 'number',
+        },
+        {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
+      ],
+    },
+    label: {
+      type: 'string',
+      description: 'Config label',
     },
   },
 } as const;
@@ -523,6 +556,15 @@ export const $SkillMeta = {
   },
 } as const;
 
+export const $SkillTemplateConfig = {
+  type: 'object',
+  description: 'Skill template config (key is config item key, value is config value)',
+  additionalProperties: {
+    description: 'Skill template config value',
+    $ref: '#/components/schemas/DynamicConfigValue',
+  },
+} as const;
+
 export const $SkillInstance = {
   type: 'object',
   description: 'Skill',
@@ -539,8 +581,12 @@ export const $SkillInstance = {
           description: 'Skill instance description',
         },
         tplConfig: {
-          type: 'object',
           description: 'Skill template config',
+          $ref: '#/components/schemas/SkillTemplateConfig',
+        },
+        tplConfigSchema: {
+          description: 'Skill template config schema',
+          $ref: '#/components/schemas/SkillTemplateConfigSchema',
         },
         invocationConfig: {
           description: 'Skill invocation config',
@@ -600,8 +646,8 @@ export const $SkillJob = {
       $ref: '#/components/schemas/PopulatedSkillContext',
     },
     tplConfig: {
-      type: 'object',
       description: 'Skill template config',
+      $ref: '#/components/schemas/SkillTemplateConfig',
     },
     createdAt: {
       type: 'string',
@@ -1716,8 +1762,8 @@ export const $SkillInstanceCreateParam = {
       description: 'Skill description',
     },
     tplConfig: {
-      type: 'object',
       description: 'Skill template config',
+      $ref: '#/components/schemas/SkillTemplateConfig',
     },
   },
 } as const;
@@ -2001,8 +2047,8 @@ export const $InvokeSkillRequest = {
       $ref: '#/components/schemas/SkillContext',
     },
     tplConfig: {
-      type: 'object',
       description: 'Skill template config',
+      $ref: '#/components/schemas/SkillTemplateConfig',
     },
     skillId: {
       type: 'string',

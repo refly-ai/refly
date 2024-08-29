@@ -74,8 +74,7 @@ export class SkillController {
     res.setHeader('Connection', 'keep-alive');
     res.status(200);
 
-    body.context = await this.skillService.populateSkillContext(user, body.context);
-    await this.skillService.streamInvokeSkill(user, body, res);
+    await this.skillService.invokeSkillFromApi(user, body);
   }
 
   @UseGuards(JwtAuthGuard)
