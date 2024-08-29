@@ -226,13 +226,19 @@ export type InputMode = 'input' | 'inputNumber' | 'select' | 'multiSelect';
  */
 export type SelectOption = {
   /**
-   * Option label
-   */
-  label: string;
-  /**
    * Option value
    */
   value: string;
+  /**
+   * Option label, with auto-selected locale
+   */
+  label?: string;
+  /**
+   * Option label (key is locale, value is label)
+   */
+  labelDict?: {
+    [key: string]: string;
+  };
   /**
    * Whether this option is disabled
    */
@@ -248,13 +254,29 @@ export type DynamicConfigItem = {
    */
   key: string;
   /**
-   * Config label
-   */
-  label: string;
-  /**
    * Config input mode
    */
   inputMode: InputMode;
+  /**
+   * Config label, with auto-selected locale
+   */
+  label?: string;
+  /**
+   * Config label (key is locale, value is label)
+   */
+  labelDict?: {
+    [key: string]: string;
+  };
+  /**
+   * Config description, with auto-selected locale
+   */
+  description?: string;
+  /**
+   * Config description (key is locale, value is description)
+   */
+  descriptionDict?: {
+    [key: string]: string;
+  };
   /**
    * Config options
    */

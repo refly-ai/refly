@@ -279,15 +279,22 @@ export const $InputMode = {
 export const $SelectOption = {
   type: 'object',
   description: 'Select option',
-  required: ['label', 'value'],
+  required: ['value'],
   properties: {
-    label: {
-      type: 'string',
-      description: 'Option label',
-    },
     value: {
       type: 'string',
       description: 'Option value',
+    },
+    label: {
+      type: 'string',
+      description: 'Option label, with auto-selected locale',
+    },
+    labelDict: {
+      type: 'object',
+      description: 'Option label (key is locale, value is label)',
+      additionalProperties: {
+        type: 'string',
+      },
     },
     disabled: {
       type: 'boolean',
@@ -300,19 +307,37 @@ export const $SelectOption = {
 export const $DynamicConfigItem = {
   type: 'object',
   description: 'Dynamic config item',
-  required: ['key', 'label', 'inputMode'],
+  required: ['key', 'inputMode'],
   properties: {
     key: {
       type: 'string',
       description: 'Config key',
     },
-    label: {
-      type: 'string',
-      description: 'Config label',
-    },
     inputMode: {
       description: 'Config input mode',
       $ref: '#/components/schemas/InputMode',
+    },
+    label: {
+      type: 'string',
+      description: 'Config label, with auto-selected locale',
+    },
+    labelDict: {
+      type: 'object',
+      description: 'Config label (key is locale, value is label)',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+    description: {
+      type: 'string',
+      description: 'Config description, with auto-selected locale',
+    },
+    descriptionDict: {
+      type: 'object',
+      description: 'Config description (key is locale, value is description)',
+      additionalProperties: {
+        type: 'string',
+      },
     },
     options: {
       type: 'array',

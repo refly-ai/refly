@@ -19,6 +19,7 @@ import {
   SkillContext,
   SkillMeta,
   SkillTemplate,
+  SkillTemplateConfigSchema,
   SkillTriggerCreateParam,
   TimerInterval,
   TimerTriggerConfig,
@@ -43,6 +44,7 @@ import {
   buildSuccessResponse,
   writeSSEResponse,
   pick,
+  omit,
 } from '@/utils';
 import { InvokeSkillJobData } from './skill.dto';
 import { KnowledgeService } from '@/knowledge/knowledge.service';
@@ -87,6 +89,33 @@ function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
       throw new BadRequestException('invalid timer trigger config');
     }
   }
+}
+
+function transformSkillConfigSchema(
+  schema: SkillTemplateConfigSchema,
+  locale: string,
+): SkillTemplateConfigSchema {
+  return {
+    items: schema.items.map((item) =>
+      omit(
+        {
+          ...item,
+          label: item.labelDict[locale],
+          description: item.descriptionDict[locale],
+          options: item.options?.map((option) =>
+            omit(
+              {
+                ...option,
+                label: option.labelDict[locale],
+              },
+              ['labelDict'],
+            ),
+          ),
+        },
+        ['labelDict', 'descriptionDict'],
+      ),
+    ),
+  };
 }
 
 interface CreateSkillJobData extends InvokeSkillRequest {
@@ -176,10 +205,12 @@ export class SkillService {
 
   listSkillTemplates(user: User, param: ListSkillTemplatesData['query']): SkillTemplate[] {
     const { page, pageSize } = param;
+    const locale = user.uiLocale || 'en';
     const templates = this.skillInventory.map((skill) => ({
       name: skill.name,
-      displayName: skill.displayName[user.uiLocale || 'en'],
+      displayName: skill.displayName[locale],
       description: skill.description,
+      configSchema: transformSkillConfigSchema(skill.configSchema, locale),
     }));
 
     return templates.slice((page - 1) * pageSize, page * pageSize);

@@ -32,16 +32,29 @@ export class FindRelatedContent extends BaseSkill {
     items: [
       {
         key: 'domains',
-        label: 'Domains',
         inputMode: 'multiSelect',
+        labelDict: {
+          en: 'Search Domains',
+          'zh-CN': '搜索范围',
+        },
+        descriptionDict: {
+          en: 'The domains to search related content',
+          'zh-CN': '搜索相关内容的范围',
+        },
         options: [
           {
-            label: 'Resource',
             value: 'resource',
+            labelDict: {
+              en: 'Resource',
+              'zh-CN': '资源',
+            },
           },
           {
-            label: 'Note',
             value: 'note',
+            labelDict: {
+              en: 'Note',
+              'zh-CN': '笔记',
+            },
           },
         ],
       },
