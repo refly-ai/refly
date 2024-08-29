@@ -487,7 +487,7 @@ export class SearchService {
     const processedReq = this.preprocessSearchRequest(req);
 
     const results = await Promise.all(
-      req.domains.map((domain) => {
+      processedReq.domains.map((domain) => {
         switch (domain) {
           case 'resource':
             return this.searchResources(user, processedReq);

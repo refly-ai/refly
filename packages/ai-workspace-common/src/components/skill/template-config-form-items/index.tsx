@@ -86,8 +86,8 @@ const ConfigItem = (props: {
 export const TemplateConfigFormItems = (props: {
   schema: SkillTemplateConfigSchema;
   form: FormInstance;
-  fieldPrefix?: string;
   tplConfig?: SkillTemplateConfig;
+  fieldPrefix?: string;
 }) => {
   const { i18n } = useTranslation();
   const locale = i18n.languages?.[0] || 'en';

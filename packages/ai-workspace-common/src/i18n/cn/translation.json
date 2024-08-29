@@ -12,7 +12,10 @@
     "putErr": "操作失败，请尝试重试！",
     "putSuccess": "操作成功",
     "deleteConfirmMessage": "确定删除？",
-    "multiSelect": "多选"
+    "multiSelect": "多选",
+    "input": "输入",
+    "context": "上下文",
+    "templateConfig": "模板配置"
   },
   "systemMaintenanceShutdown": {
     "title": "尊敬的用户，您好！",
@@ -414,12 +417,12 @@
       "confirm": "确定",
       "putErr": "操作失败，请尝试重试！",
       "putSuccess": "操作成功",
-      "basicInfo": "基础信息",
-      "templateConfig": "模板配置"
+      "basicInfo": "基础信息"
     },
     "newTriggerModal": {
       "newTitle": "创建触发器",
       "updateTitle": "更新触发器",
+      "triggerConfig": "触发器配置",
       "name": "名称",
       "namePlaceholder": "请输入触发器名称",
       "triggerType": "类型",
@@ -458,7 +461,9 @@
         "collectionIds": "请选择知识库",
         "contentList": "请输入或粘贴内容",
         "urls": "请输入链接，每行一个..."
-      }
+      },
+      "invokeConfig": "运行配置",
+      "templateConfig": "模板配置"
     },
     "skillDetail": {
       "run": "运行",

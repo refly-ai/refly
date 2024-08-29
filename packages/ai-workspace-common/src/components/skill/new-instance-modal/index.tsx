@@ -122,7 +122,7 @@ export const NewSkillInstanceModal = (props: NewSkillInstanceModalProps) => {
           </CollapseItem>
 
           {configSchema?.items?.length > 0 && (
-            <CollapseItem name="templateConfig" header={t('skill.newSkillModal.templateConfig')}>
+            <CollapseItem name="templateConfig" header={t('common.templateConfig')}>
               <TemplateConfigFormItems
                 schema={configSchema}
                 form={form}

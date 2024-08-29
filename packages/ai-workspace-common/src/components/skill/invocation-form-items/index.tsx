@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input, Form, FormInstance, Radio } from '@arco-design/web-react';
 import { TFunction } from 'i18next';
 import { SearchSelect } from '@refly-packages/ai-workspace-common/modules/entity-selector/components';
-import { SkillInvocationConfig, SkillInvocationRule, SkillInvocationRuleGroup } from '@refly/openapi-schema';
+import { SkillInvocationRule, SkillInvocationRuleGroup } from '@refly/openapi-schema';
 
 import './index.scss';
 
@@ -15,6 +15,10 @@ const ruleKeyToSearchDomain = {
   noteIds: 'note',
   collectionIds: 'collection',
 } as const;
+
+const getFormField = (fieldPrefix: string, key: string) => {
+  return `${fieldPrefix ? fieldPrefix + '.' : ''}${key}`;
+};
 
 const InvokeOption = (props: {
   rule: SkillInvocationRule;
@@ -78,68 +82,73 @@ const InvokeOption = (props: {
   return null;
 };
 
-export const InvokeOptionGroup = (props: {
-  rg: SkillInvocationRuleGroup;
+interface InvokeOptionGroupProps {
+  ruleGroup: SkillInvocationRuleGroup;
   form: FormInstance;
   t: TFunction;
-  fieldMap?: Object;
-}) => {
-  const { rg, form, t, fieldMap } = props;
-  const { rules, relation } = rg;
+  fieldPrefix?: string;
+}
 
+export const InvocationFormItems = (props: InvokeOptionGroupProps) => {
+  const { ruleGroup, form, t, fieldPrefix } = props;
+  if (!ruleGroup) return null;
+
+  const { rules, relation } = ruleGroup;
   if (rules.length === 0) return null;
 
   const [selectedKey, setSelectedKey] = useState<string | null>(rules[0].key);
-
   const [ruleValues, setRuleValues] = useState<Record<string, string>>({});
 
   if (relation === 'mutuallyExclusive') {
     return (
-      <RadioGroup
-        className="invocation-form__radio-group"
-        defaultValue={rules[0].key}
-        onChange={(value) => {
-          setSelectedKey(value);
-          rules.forEach((rule) => {
-            if (rule.key !== value) {
-              // clear the value of the unselected item
-              form.setFieldValue(fieldMap ? fieldMap[rule.key] : rule.key, undefined);
-            } else {
-              // restore the value of the selected item
-              form.setFieldValue(fieldMap ? fieldMap[rule.key] : rule.key, ruleValues[rule.key]);
-            }
-          });
-        }}
-      >
-        {rules.map((rule) => (
-          <Radio
-            key={rule.key}
-            value={rule.key}
-            checked={rule.key === selectedKey}
-            className="invocation-form__radio-option"
-          >
-            <FormItem
-              label={t(`skill.instanceInvokeModal.formLabel.${rule.key}`)}
+      <div className="invocation-form">
+        <RadioGroup
+          className="invocation-form__radio-group"
+          defaultValue={rules[0].key}
+          onChange={(value) => {
+            setSelectedKey(value);
+            rules.forEach((rule) => {
+              const field = getFormField(fieldPrefix, rule.key);
+              if (rule.key !== value) {
+                // clear the value of the unselected item
+                form.setFieldValue(field, undefined);
+              } else {
+                // restore the value of the selected item
+                form.setFieldValue(field, ruleValues[rule.key]);
+              }
+            });
+          }}
+        >
+          {rules.map((rule) => (
+            <Radio
               key={rule.key}
-              required={rule.required}
-              field={fieldMap ? fieldMap[rule.key] : rule.key}
+              value={rule.key}
+              checked={rule.key === selectedKey}
+              className="invocation-form__radio-option"
             >
-              <div style={{ opacity: selectedKey === rule.key ? 1 : 0.5 }}>
-                <InvokeOption
-                  rule={rule}
-                  t={t}
-                  disabled={selectedKey !== rule.key}
-                  onChange={(val) => {
-                    const field = fieldMap ? fieldMap[rule.key] : rule.key;
-                    setRuleValues({ ...ruleValues, [field]: val });
-                    form.setFieldValue(field, val);
-                  }}
-                />
-              </div>
-            </FormItem>
-          </Radio>
-        ))}
-      </RadioGroup>
+              <FormItem
+                label={t(`skill.instanceInvokeModal.formLabel.${rule.key}`)}
+                key={rule.key}
+                required={rule.required}
+                field={getFormField(fieldPrefix, rule.key)}
+              >
+                <div style={{ opacity: selectedKey === rule.key ? 1 : 0.5 }}>
+                  <InvokeOption
+                    rule={rule}
+                    t={t}
+                    disabled={selectedKey !== rule.key}
+                    onChange={(val) => {
+                      const field = getFormField(fieldPrefix, rule.key);
+                      setRuleValues({ ...ruleValues, [field]: val });
+                      form.setFieldValue(field, val);
+                    }}
+                  />
+                </div>
+              </FormItem>
+            </Radio>
+          ))}
+        </RadioGroup>
+      </div>
     );
   }
 
@@ -148,34 +157,16 @@ export const InvokeOptionGroup = (props: {
       label={t(`skill.instanceInvokeModal.formLabel.${rule.key}`)}
       key={rule.key}
       required={rule.required}
-      field={fieldMap ? fieldMap[rule.key] : rule.key}
-      className="invocation-form__input-group"
+      field={getFormField(fieldPrefix, rule.key)}
     >
       <InvokeOption
         rule={rule}
         t={t}
         disabled={selectedKey !== rule.key}
         onChange={(val) => {
-          form.setFieldValue(fieldMap ? fieldMap[rule.key] : rule.key, val);
+          form.setFieldValue(getFormField(fieldPrefix, rule.key), val);
         }}
       />
     </FormItem>
   ));
-};
-
-export const InvocationFormItems = (props: {
-  invocationConfig: SkillInvocationConfig;
-  form: FormInstance;
-  t: TFunction;
-  fieldMap?: Object;
-}) => {
-  const { invocationConfig, ...rest } = props;
-  const { input, context } = invocationConfig;
-
-  return (
-    <div className="invocation-form">
-      <InvokeOptionGroup rg={input} {...rest} />
-      <InvokeOptionGroup rg={context} {...rest} />
-    </div>
-  );
 };

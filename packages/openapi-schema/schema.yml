@@ -1584,6 +1584,9 @@ components:
         context:
           description: Skill context
           $ref: '#/components/schemas/SkillContext'
+        tplConfig:
+          description: Skill template config
+          $ref: '#/components/schemas/SkillTemplateConfig'
         enabled:
           type: boolean
           description: Trigger enabled
@@ -2740,6 +2743,9 @@ components:
         context:
           description: Skill invocation context
           $ref: '#/components/schemas/SkillContext'
+        tplConfig:
+          description: Skill template config
+          $ref: '#/components/schemas/SkillTemplateConfig'
         enabled:
           type: boolean
           description: Whether this trigger is enabled

@@ -645,6 +645,7 @@ export class SkillService {
       {
         input: JSON.parse(trigger.input || '{}'),
         context: JSON.parse(trigger.context || '{}'),
+        tplConfig: JSON.parse(trigger.tplConfig || '{}'),
         skillId: trigger.skillId,
         triggerId: trigger.triggerId,
         uid: user.uid,
@@ -697,6 +698,7 @@ export class SkillService {
           timerConfig: trigger.timerConfig ? JSON.stringify(trigger.timerConfig) : undefined,
           input: trigger.input ? JSON.stringify(trigger.input) : undefined,
           context: trigger.context ? JSON.stringify(trigger.context) : undefined,
+          tplConfig: trigger.tplConfig ? JSON.stringify(trigger.tplConfig) : undefined,
         },
         enabled: !!trigger.enabled,
       })),
@@ -726,6 +728,7 @@ export class SkillService {
           timerConfig: param.timerConfig ? JSON.stringify(param.timerConfig) : undefined,
           input: param.input ? JSON.stringify(param.input) : undefined,
           context: param.context ? JSON.stringify(param.context) : undefined,
+          tplConfig: param.tplConfig ? JSON.stringify(param.tplConfig) : undefined,
         },
       },
     });

@@ -8,7 +8,10 @@ import { useTranslation } from 'react-i18next';
 
 import { SkillInstance } from '@refly/openapi-schema';
 
-import { Modal, Form, Input, Message, Select, DatePicker } from '@arco-design/web-react';
+import { Collapse, Modal, Form, Input, Message, Select, DatePicker } from '@arco-design/web-react';
+import { TemplateConfigFormItems } from '@refly-packages/ai-workspace-common/components/skill/template-config-form-items';
+
+const CollapseItem = Collapse.Item;
 const FormItem = Form.Item;
 const Option = Select.Option;
 
@@ -23,14 +26,6 @@ const formItemLayout = {
 
 const triggerType = ['timer', 'simpleEvent'];
 const repeatInterval = ['hour', 'day', 'week', 'month', 'year'];
-const fromFieldMap = {
-  query: 'input.query',
-  resourceIds: 'context.resourceIds',
-  noteIds: 'context.noteIds',
-  collectionIds: 'context.collectionIds',
-  contentList: 'input.contentList',
-  urls: 'input.urls',
-};
 
 interface NewTriggersModalProps {
   data: SkillInstance;
@@ -47,7 +42,6 @@ export const NewTriggersModal = (props: NewTriggersModalProps) => {
 
   const onOk = () => {
     form.validate().then(async (res) => {
-      console.log('res111', res);
       const { contentList, urls } = res?.context || {};
       const qrams = {
         ...res,
@@ -131,58 +125,31 @@ export const NewTriggersModal = (props: NewTriggersModalProps) => {
       onCancel={() => importNewTriggerModal.setShowtriggerModall(false)}
     >
       <Form {...formItemLayout} form={form}>
-        <FormItem
-          label={t('skill.newTriggerModal.name')}
-          required
-          field="displayName"
-          rules={[{ required: true, message: t('skill.newTriggerModal.namePlaceholder') }]}
-        >
-          <Input placeholder={t('skill.newTriggerModal.namePlaceholder')} maxLength={50} showWordLimit />
-        </FormItem>
-
-        <FormItem
-          label={t('skill.newTriggerModal.triggerType')}
-          required
-          field="triggerType"
-          rules={[{ required: true, message: t('skill.newTriggerModal.triggerTypePlaceholder') }]}
-        >
-          <Select
-            size="large"
-            placeholder={t('skill.newTriggerModal.triggerTypePlaceholder')}
-            onChange={(value) => {
-              setTriggerType(value);
-            }}
-          >
-            {triggerType.map((item) => {
-              return (
-                <Option key={item} value={item}>
-                  {t(`skill.newTriggerModal.${item}`)}
-                </Option>
-              );
-            })}
-          </Select>
-        </FormItem>
-
-        {_triggerType === 'timer' && (
-          <>
+        <Collapse bordered={false} defaultActiveKey={['triggerConfig', 'input', 'context']}>
+          <CollapseItem name="triggerConfig" header={t('skill.newTriggerModal.triggerConfig')}>
             <FormItem
-              label={t('skill.newTriggerModal.timerConfig')}
+              label={t('skill.newTriggerModal.name')}
               required
-              field="timerConfig.datetime"
-              rules={[{ required: true, message: t('skill.newTriggerModal.timerConfigPlaceholder') }]}
+              field="displayName"
+              rules={[{ required: true, message: t('skill.newTriggerModal.namePlaceholder') }]}
             >
-              <DatePicker
-                showTime={{
-                  defaultValue: '00:00:00',
-                }}
-                format="YYYY-MM-DD HH:mm:ss"
-                placeholder={t('skill.newTriggerModal.timerConfigPlaceholder')}
-              />
+              <Input placeholder={t('skill.newTriggerModal.namePlaceholder')} maxLength={50} showWordLimit />
             </FormItem>
 
-            <FormItem label={t('skill.newTriggerModal.repeatInterval')} field="timerConfig.repeatInterval">
-              <Select allowClear size="large" placeholder={t('skill.newTriggerModal.repeatIntervalPlaceholder')}>
-                {repeatInterval.map((item) => {
+            <FormItem
+              label={t('skill.newTriggerModal.triggerType')}
+              required
+              field="triggerType"
+              rules={[{ required: true, message: t('skill.newTriggerModal.triggerTypePlaceholder') }]}
+            >
+              <Select
+                size="large"
+                placeholder={t('skill.newTriggerModal.triggerTypePlaceholder')}
+                onChange={(value) => {
+                  setTriggerType(value);
+                }}
+              >
+                {triggerType.map((item) => {
                   return (
                     <Option key={item} value={item}>
                       {t(`skill.newTriggerModal.${item}`)}
@@ -192,28 +159,74 @@ export const NewTriggersModal = (props: NewTriggersModalProps) => {
               </Select>
             </FormItem>
 
-            <InvocationFormItems invocationConfig={data.invocationConfig} form={form} t={t} fieldMap={fromFieldMap} />
-          </>
-        )}
+            {_triggerType === 'timer' && (
+              <>
+                <FormItem
+                  label={t('skill.newTriggerModal.timerConfig')}
+                  required
+                  field="timerConfig.datetime"
+                  rules={[{ required: true, message: t('skill.newTriggerModal.timerConfigPlaceholder') }]}
+                >
+                  <DatePicker
+                    showTime={{
+                      defaultValue: '00:00:00',
+                    }}
+                    format="YYYY-MM-DD HH:mm:ss"
+                    placeholder={t('skill.newTriggerModal.timerConfigPlaceholder')}
+                  />
+                </FormItem>
 
-        {_triggerType === 'simpleEvent' && (
-          <FormItem
-            label={t('skill.newTriggerModal.event')}
-            required
-            field="simpleEventName"
-            rules={[{ required: true, message: t('skill.newTriggerModal.eventPlaceholder') }]}
-          >
-            <Select size="large" placeholder={t('skill.newTriggerModal.eventPlaceholder')}>
-              {['onResourceReady'].map((item) => {
-                return (
-                  <Option key={item} value={item}>
-                    {t(`skill.newTriggerModal.${item}`)}
-                  </Option>
-                );
-              })}
-            </Select>
-          </FormItem>
-        )}
+                <FormItem label={t('skill.newTriggerModal.repeatInterval')} field="timerConfig.repeatInterval">
+                  <Select allowClear size="large" placeholder={t('skill.newTriggerModal.repeatIntervalPlaceholder')}>
+                    {repeatInterval.map((item) => {
+                      return (
+                        <Option key={item} value={item}>
+                          {t(`skill.newTriggerModal.${item}`)}
+                        </Option>
+                      );
+                    })}
+                  </Select>
+                </FormItem>
+              </>
+            )}
+
+            {_triggerType === 'simpleEvent' && (
+              <FormItem
+                label={t('skill.newTriggerModal.event')}
+                required
+                field="simpleEventName"
+                rules={[{ required: true, message: t('skill.newTriggerModal.eventPlaceholder') }]}
+              >
+                <Select size="large" placeholder={t('skill.newTriggerModal.eventPlaceholder')}>
+                  {['onResourceReady'].map((item) => {
+                    return (
+                      <Option key={item} value={item}>
+                        {t(`skill.newTriggerModal.${item}`)}
+                      </Option>
+                    );
+                  })}
+                </Select>
+              </FormItem>
+            )}
+          </CollapseItem>
+
+          <CollapseItem name="input" header={t('common.input')}>
+            <InvocationFormItems ruleGroup={data?.invocationConfig.input} form={form} t={t} fieldPrefix="input" />
+          </CollapseItem>
+
+          <CollapseItem name="context" header={t('common.context')}>
+            <InvocationFormItems ruleGroup={data?.invocationConfig.context} form={form} t={t} fieldPrefix="context" />
+          </CollapseItem>
+
+          <CollapseItem name="templateConfig" header={t('common.templateConfig')}>
+            <TemplateConfigFormItems
+              schema={data?.tplConfigSchema}
+              form={form}
+              tplConfig={data?.tplConfig}
+              fieldPrefix="tplConfig"
+            />
+          </CollapseItem>
+        </Collapse>
       </Form>
     </Modal>
   );

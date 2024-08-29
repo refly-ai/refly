@@ -266,6 +266,8 @@ model SkillTrigger {
   input           String?   @map("input")
   /// Skill context
   context         String?   @map("context")
+  /// Skill template config (JSON)
+  tplConfig       String?   @map("tpl_config")
   /// Whether this skill is enabled
   enabled         Boolean   @map("enabled")
   /// Bull job id (for timer trigger)

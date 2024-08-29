@@ -13,6 +13,7 @@ import {
   SkillInvocationConfig,
   SkillMeta,
   User,
+  SkillTemplateConfig,
 } from '@refly/openapi-schema';
 import { EventEmitter } from 'node:stream';
 import { randomUUID } from 'node:crypto';
@@ -140,7 +141,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     currentSkill?: SkillMeta;
     chatHistory?: BaseMessage[];
     installedSkills?: SkillMeta[];
-    tplConfig?: Record<string, unknown>;
+    tplConfig?: SkillTemplateConfig;
     emitter?: EventEmitter<SkillEventMap>;
   };
   user: User;

@@ -417,6 +417,10 @@ export type SkillTrigger = {
    */
   context?: SkillContext;
   /**
+   * Skill template config
+   */
+  tplConfig?: SkillTemplateConfig;
+  /**
    * Trigger enabled
    */
   enabled: boolean;
@@ -1478,6 +1482,10 @@ export type SkillTriggerCreateParam = {
    * Skill invocation context
    */
   context?: SkillContext;
+  /**
+   * Skill template config
+   */
+  tplConfig?: SkillTemplateConfig;
   /**
    * Whether this trigger is enabled
    */

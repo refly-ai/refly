@@ -127,7 +127,7 @@ export class FindRelatedContent extends BaseSkill {
     const tool = new ReflySearch({
       engine: this.engine,
       user,
-      domains: tplConfig.domains as SearchDomain[],
+      domains: tplConfig.domains.value as SearchDomain[],
       mode: 'vector',
     });
     const output = await tool.invoke(content, config);

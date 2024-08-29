@@ -1,10 +1,4 @@
 .invocation-form {
-  padding: 20px;
-
-  &__input-group {
-    margin-bottom: 20px;
-  }
-
   &__label {
     display: block;
     margin-bottom: 8px;
@@ -31,6 +25,13 @@
   &__radio-group {
     display: flex;
     flex-direction: column;
+    margin-top: -20px;
+    margin-bottom: 20px;
+
+    label {
+      height: 36px;
+      margin-bottom: 20px;
+    }
   }
 
   &__radio-option {

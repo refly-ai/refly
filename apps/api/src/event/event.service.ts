@@ -56,6 +56,7 @@ export class EventService {
             skillId: skill.skillId,
             context: skillContext,
             triggerId: trigger.triggerId,
+            tplConfig: JSON.parse(trigger.tplConfig || '{}'),
           });
         }),
       );

@@ -523,6 +523,10 @@ export const $SkillTrigger = {
       description: 'Skill context',
       $ref: '#/components/schemas/SkillContext',
     },
+    tplConfig: {
+      description: 'Skill template config',
+      $ref: '#/components/schemas/SkillTemplateConfig',
+    },
     enabled: {
       type: 'boolean',
       description: 'Trigger enabled',
@@ -2145,6 +2149,10 @@ export const $SkillTriggerCreateParam = {
     context: {
       description: 'Skill invocation context',
       $ref: '#/components/schemas/SkillContext',
+    },
+    tplConfig: {
+      description: 'Skill template config',
+      $ref: '#/components/schemas/SkillTemplateConfig',
     },
     enabled: {
       type: 'boolean',
