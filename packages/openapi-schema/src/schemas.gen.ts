@@ -357,8 +357,12 @@ export const $DynamicConfigItem = {
 export const $DynamicConfigValue = {
   type: 'object',
   description: 'Dynamic config value',
-  required: ['value', 'label'],
+  required: ['label', 'value', 'displayValue'],
   properties: {
+    label: {
+      type: 'string',
+      description: 'Config key label',
+    },
     value: {
       oneOf: [
         {
@@ -374,10 +378,11 @@ export const $DynamicConfigValue = {
           },
         },
       ],
+      description: 'Config value',
     },
-    label: {
+    displayValue: {
       type: 'string',
-      description: 'Config label',
+      description: 'Config display value',
     },
   },
 } as const;

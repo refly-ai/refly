@@ -176,7 +176,7 @@ const SkillDetail = () => {
       />
       <NewSkillInstanceModal
         type="update"
-        data={skillDetail}
+        instance={skillDetail}
         visible={visible}
         setVisible={(val) => setVisible(val)}
         postConfirmCallback={() => handleGetSkillInstances()}

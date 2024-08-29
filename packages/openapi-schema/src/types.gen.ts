@@ -291,11 +291,18 @@ export type DynamicConfigItem = {
  * Dynamic config value
  */
 export type DynamicConfigValue = {
-  value: string | number | Array<string>;
   /**
-   * Config label
+   * Config key label
    */
   label: string;
+  /**
+   * Config value
+   */
+  value: string | number | Array<string>;
+  /**
+   * Config display value
+   */
+  displayValue: string;
 };
 
 /**

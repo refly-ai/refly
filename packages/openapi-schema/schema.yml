@@ -1446,9 +1446,13 @@ components:
       type: object
       description: Dynamic config value
       required:
-        - value
         - label
+        - value
+        - displayValue
       properties:
+        label:
+          type: string
+          description: Config key label
         value:
           oneOf:
             - type: string
@@ -1456,9 +1460,10 @@ components:
             - type: array
               items:
                 type: string
-        label:
+          description: Config value
+        displayValue:
           type: string
-          description: Config label
+          description: Config display value
     SkillTemplateConfigSchema:
       type: object
       description: Skill template config schema

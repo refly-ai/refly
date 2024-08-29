@@ -81,7 +81,7 @@ export const InstanceInvokeModal = (props: InstanceInvokeModalProps) => {
       onCancel={() => setVisible(false)}
     >
       <Form {...formItemLayout} form={form}>
-        <InvocationFormItems invocationConfig={data.invocationConfig} form={form} t={t} />
+        <InvocationFormItems invocationConfig={data?.invocationConfig} form={form} t={t} />
       </Form>
     </Modal>
   );

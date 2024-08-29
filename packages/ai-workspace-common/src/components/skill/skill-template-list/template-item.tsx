@@ -56,7 +56,7 @@ export const TemplateItem = (props: TemplateItemProps) => {
           </Button>
         </div>
       </div>
-      <NewSkillInstanceModal type="new" data={data} visible={visible} setVisible={(val) => setVisible(val)} />
+      <NewSkillInstanceModal type="new" template={data} visible={visible} setVisible={(val) => setVisible(val)} />
     </div>
   );
 };

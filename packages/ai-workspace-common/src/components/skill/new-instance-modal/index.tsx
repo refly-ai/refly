@@ -7,35 +7,45 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 
 import { SkillInstance, SkillTemplate } from '@refly/openapi-schema';
 
-import { Modal, Form, Input, Message } from '@arco-design/web-react';
+import { Collapse, Modal, Form, Input, Message } from '@arco-design/web-react';
+import { TemplateConfigFormItems } from '@refly-packages/ai-workspace-common/components/skill/template-config-form-items';
+
+const CollapseItem = Collapse.Item;
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
+
 type modalType = 'new' | 'update';
+
 interface NewSkillInstanceModalProps {
   type: modalType;
-  data?: SkillInstance | SkillTemplate;
+  instance?: SkillInstance;
+  template?: SkillTemplate;
   visible: boolean;
   setVisible: (val: boolean) => void;
   postConfirmCallback?: () => void;
 }
+
 export const NewSkillInstanceModal = (props: NewSkillInstanceModalProps) => {
-  const { type, visible, data, setVisible, postConfirmCallback } = props;
+  const { type, visible, instance, template, setVisible, postConfirmCallback } = props;
   const { t } = useTranslation();
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [form] = Form.useForm();
-  const onOk = (res) => {
+
+  const onOk = () => {
     form.validate().then(async (res) => {
       setConfirmLoading(true);
       let resultError: unknown;
       try {
-        if (type === 'new') {
+        if (type === 'new' && template) {
           const { error } = await getClient().createSkillInstance({
-            body: { instanceList: [{ ...res, tplName: data.name }] },
+            body: { instanceList: [{ ...res, tplName: template.name }] },
           });
           resultError = error;
         }
-        if (type === 'update') {
-          const { error } = await getClient().updateSkillInstance({ body: { ...res, skillId: data.skillId } });
+        if (type === 'update' && instance) {
+          const { error } = await getClient().updateSkillInstance({
+            body: { ...res, skillId: instance.skillId },
+          });
           resultError = error;
         }
       } catch (error) {
@@ -56,8 +66,8 @@ export const NewSkillInstanceModal = (props: NewSkillInstanceModalProps) => {
   };
 
   useEffect(() => {
-    if (visible && data) {
-      const { displayName, description } = data;
+    if (visible) {
+      const { displayName, description } = type === 'new' ? template : instance;
       form.setFieldsValue({ displayName, description });
     }
   }, [visible]);
@@ -71,6 +81,8 @@ export const NewSkillInstanceModal = (props: NewSkillInstanceModalProps) => {
     },
   };
 
+  const configSchema = type === 'new' ? template?.configSchema : instance?.tplConfigSchema;
+
   return (
     <Modal
       title={t(`skill.newSkillModal.${type}Title`)}
@@ -83,28 +95,43 @@ export const NewSkillInstanceModal = (props: NewSkillInstanceModalProps) => {
       onCancel={() => setVisible(false)}
     >
       <Form {...formItemLayout} form={form}>
-        <FormItem
-          label={t('skill.newSkillModal.name')}
-          required
-          field="displayName"
-          rules={[{ required: true, message: t('skill.newSkillModal.namePlaceholder') }]}
-        >
-          <Input placeholder={t('skill.newSkillModal.namePlaceholder')} maxLength={50} showWordLimit />
-        </FormItem>
-        <FormItem
-          label={t('skill.newSkillModal.description')}
-          required
-          field="description"
-          rules={[{ required: true, message: t('skill.newSkillModal.descriptionPlaceholder') }]}
-        >
-          <TextArea
-            placeholder={t('skill.newSkillModal.descriptionPlaceholder')}
-            autoSize
-            maxLength={500}
-            showWordLimit
-            style={{ minHeight: 84 }}
-          />
-        </FormItem>
+        <Collapse bordered={false} defaultActiveKey={['basicInfo', 'templateConfig']}>
+          <CollapseItem name="basicInfo" header={t('skill.newSkillModal.basicInfo')}>
+            <FormItem
+              label={t('skill.newSkillModal.name')}
+              required
+              field="displayName"
+              rules={[{ required: true, message: t('skill.newSkillModal.namePlaceholder') }]}
+            >
+              <Input placeholder={t('skill.newSkillModal.namePlaceholder')} maxLength={50} showWordLimit />
+            </FormItem>
+            <FormItem
+              label={t('skill.newSkillModal.description')}
+              required
+              field="description"
+              rules={[{ required: true, message: t('skill.newSkillModal.descriptionPlaceholder') }]}
+            >
+              <TextArea
+                placeholder={t('skill.newSkillModal.descriptionPlaceholder')}
+                autoSize
+                maxLength={500}
+                showWordLimit
+                style={{ minHeight: 84 }}
+              />
+            </FormItem>
+          </CollapseItem>
+
+          {configSchema?.items?.length > 0 && (
+            <CollapseItem name="templateConfig" header={t('skill.newSkillModal.templateConfig')}>
+              <TemplateConfigFormItems
+                schema={configSchema}
+                form={form}
+                fieldPrefix="tplConfig"
+                tplConfig={instance?.tplConfig}
+              />
+            </CollapseItem>
+          )}
+        </Collapse>
       </Form>
     </Modal>
   );

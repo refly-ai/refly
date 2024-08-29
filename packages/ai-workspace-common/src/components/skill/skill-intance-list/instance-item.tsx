@@ -41,11 +41,11 @@ export const InstanceItem = (props: InstanceItemProps) => {
   };
 
   const goSkillDetail = () => {
-    const { skillId } = data as SkillInstance;
+    const { skillId } = data;
 
     // click from skill-management-modal, set selectedSkill for copilot
     if (source === 'skill-management-modal') {
-      setSelectedSkillInstalce(data as SkillInstance);
+      setSelectedSkillInstalce(data);
       setSkillManagerModalVisible(false);
 
       return;
@@ -105,7 +105,6 @@ export const InstanceItem = (props: InstanceItemProps) => {
           </div>
           <div className="instance-item__title">
             <div className="instance-item__title-name">{data?.displayName}</div>
-            {/* 第一期不需要，后面再加 */}
             {/* <div className="instance-item__title-info">
               <span className="instance-item__title-info-item">
                 <IconUser /> 99
@@ -157,16 +156,12 @@ export const InstanceItem = (props: InstanceItemProps) => {
       </div>
       <NewSkillInstanceModal
         type="update"
-        data={data}
+        instance={data}
         visible={visible}
         setVisible={(val) => setVisible(val)}
         postConfirmCallback={refreshList}
       />
-      <InstanceInvokeModal
-        visible={invokeModalVisible}
-        setVisible={(val) => setInvokeModalVisible(val)}
-        data={data as SkillInstance}
-      />
+      <InstanceInvokeModal visible={invokeModalVisible} setVisible={(val) => setInvokeModalVisible(val)} data={data} />
     </div>
   );
 };

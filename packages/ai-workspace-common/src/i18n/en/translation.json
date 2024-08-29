@@ -397,7 +397,9 @@
       "cancel": "Cancel",
       "confirm": "Confirm",
       "putErr": "Failed. Please try again.",
-      "putSuccess": "successfully"
+      "putSuccess": "successfully",
+      "basicInfo": "Basic Info",
+      "templateConfig": "Template Config"
     },
     "newTriggerModal": {
       "newTitle": "Add New Trigger",

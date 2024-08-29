@@ -6,7 +6,7 @@ import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../../base';
 // schema
 import { z } from 'zod';
-import { SearchResponse, SkillInvocationConfig } from '@refly/openapi-schema';
+import { SkillInvocationConfig, SkillTemplateConfigSchema } from '@refly/openapi-schema';
 import { TokenTextSplitter } from 'langchain/text_splitter';
 import { loadSummarizationChain } from 'langchain/chains';
 import { PromptTemplate } from '@langchain/core/prompts';
@@ -45,9 +45,16 @@ export class WebsiteSummarySkill extends BaseSkill {
     'zh-CN': '网站总结',
   };
 
+  configSchema: SkillTemplateConfigSchema = {
+    items: [],
+  };
   invocationConfig: SkillInvocationConfig = {
-    inputRules: [{ key: 'query' }],
-    contextRules: [{ key: 'contentList' }],
+    input: {
+      rules: [{ key: 'query' }],
+    },
+    context: {
+      rules: [{ key: 'contentList' }],
+    },
   };
 
   description = 'Give a summary of the website content';

@@ -413,7 +413,9 @@
       "cancel": "取消",
       "confirm": "确定",
       "putErr": "操作失败，请尝试重试！",
-      "putSuccess": "操作成功"
+      "putSuccess": "操作成功",
+      "basicInfo": "基础信息",
+      "templateConfig": "模板配置"
     },
     "newTriggerModal": {
       "newTitle": "创建触发器",

@@ -12,6 +12,18 @@
   height: 100% !important;
 }
 
+.arco-modal-header {
+  border-bottom: none;
+}
+
+.arco-modal-footer {
+  border-top: none;
+}
+
+.arco-btn {
+  border-radius: 8px;
+}
+
 .content-layout {
   box-sizing: border-box;
 
