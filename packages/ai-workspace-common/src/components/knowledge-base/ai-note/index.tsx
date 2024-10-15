@@ -48,6 +48,7 @@ import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores
 import { ToC } from './ToC';
 import { IconBook, IconLoading, IconPlus, IconSearch } from '@arco-design/web-react/icon';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
+import { CopilotOperationModule } from '@refly-packages/ai-workspace-common/components/knowledge-base/copilot/copilot-operation-module';
 
 const MemorizedToC = memo(ToC);
 
@@ -227,6 +228,8 @@ const CollaborativeEditor = ({ noteId }: { noteId: string }) => {
     }
   }, [readOnly]);
 
+  const copilotOperationModuleRef = useRef<HTMLDivElement>(null);
+
   return (
     <div
       className={classNames('w-full', 'ai-note-editor-content-container', {
@@ -268,6 +271,11 @@ const CollaborativeEditor = ({ noteId }: { noteId: string }) => {
                 text: t('knowledgeBase.context.addToContext'),
                 handleClick: handleContentSelectorClick,
               }}
+              copilotOperationModule={
+                <div>
+                  <CopilotOperationModule />
+                </div>
+              }
             />
             <CollabGenAIBlockMenu />
           </EditorContent>

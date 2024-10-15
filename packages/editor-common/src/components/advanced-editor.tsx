@@ -10,6 +10,8 @@ import { LinkSelector } from './selectors/link-selector';
 import { NodeSelector } from './selectors/node-selector';
 import { ContentSelectorButtons } from './selectors/content-selector-buttons';
 import { Separator } from './ui/separator';
+import { Button } from './ui/button';
+import Magic from './ui/icons/magic';
 
 import GenerativeMenuSwitch from './generative/generative-menu-switch';
 import GenerativeBlockMenu from './generative/generative-block-menu';
@@ -52,16 +54,22 @@ interface CollabGenAIMenuSwitchProps {
     text: string;
     handleClick: () => void;
   };
+  copilotOperationModule: React.ReactNode;
 }
 export const CollabGenAIMenuSwitch: React.FC<CollabGenAIMenuSwitchProps> = (props) => {
-  const { contentSelector } = props;
+  const { contentSelector, copilotOperationModule } = props;
   const [openNode, setOpenNode] = useState(false);
   const [openColor, setOpenColor] = useState(false);
   const [openLink, setOpenLink] = useState(false);
   const [openAI, setOpenAI] = useState(false);
 
   return (
-    <GenerativeMenuSwitch open={openAI} onOpenChange={setOpenAI}>
+    <GenerativeMenuSwitch open={openAI} onOpenChange={setOpenAI} copilotOperationModule={copilotOperationModule}>
+      <Button className="gap-1 rounded-none text-green-500" variant="ghost" onClick={() => setOpenAI(true)} size="sm">
+        <Magic className="h-5 w-5" />
+        Ask AI
+      </Button>
+      <Separator orientation="vertical" />
       <ContentSelectorButtons text={contentSelector?.text} handleClick={contentSelector?.handleClick} />
       <Separator orientation="vertical" />
       <NodeSelector open={openNode} onOpenChange={setOpenNode} />

@@ -7,9 +7,10 @@ interface GenerativeMenuSwitchProps {
   children: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  copilotOperationModule: React.ReactNode;
 }
 
-const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSwitchProps) => {
+const GenerativeMenuSwitch = ({ children, open, onOpenChange, copilotOperationModule }: GenerativeMenuSwitchProps) => {
   const { editor } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -31,8 +32,7 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
         }}
         className="z-50 flex w-fit max-w-full overflow-hidden rounded-md border border-muted bg-background shadow-xl"
       >
-        {open && <AISelector open={open} onOpenChange={onOpenChange} />}
-        {!open && <Fragment>{children}</Fragment>}
+        {open ? copilotOperationModule : <Fragment>{children}</Fragment>}
       </EditorBubble>
     </div>
   );
