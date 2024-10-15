@@ -2506,6 +2506,11 @@ export const $InvokeSkillRequest = {
       type: 'string',
       description: 'Selected model',
     },
+    enableEdit: {
+      type: 'boolean',
+      description: 'Whether to enable in-place editing',
+      default: false,
+    },
     createConvParam: {
       description: 'Create conversation parameters',
       $ref: '#/components/schemas/CreateConversationRequest',

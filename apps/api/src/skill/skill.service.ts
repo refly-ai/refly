@@ -566,6 +566,7 @@ export class SkillService {
       configurable: {
         ...context,
         modelName,
+        enableEdit: !!data.enableEdit,
         locale: data?.locale ?? user.uiLocale ?? 'en',
         installedSkills,
         convId,

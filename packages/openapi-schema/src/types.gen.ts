@@ -1781,6 +1781,10 @@ export type InvokeSkillRequest = {
    */
   modelName?: string;
   /**
+   * Whether to enable in-place editing
+   */
+  enableEdit?: boolean;
+  /**
    * Create conversation parameters
    */
   createConvParam?: CreateConversationRequest;
