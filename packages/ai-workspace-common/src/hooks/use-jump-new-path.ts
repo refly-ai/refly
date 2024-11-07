@@ -161,8 +161,8 @@ export const useJumpNewPath = () => {
     openNewTab?: boolean;
     state: { navigationContext?: NavigationContext };
   }) => {
-    for (const key of Array.from(searchParams.keys())) {
-      if (['resId', 'canvasId'].includes(key)) {
+    if (state.navigationContext?.clearSearchParams) {
+      for (const key of Array.from(searchParams.keys())) {
         searchParams.delete(key);
       }
     }

@@ -108,6 +108,25 @@ export const ProjectDirectory = (props: {
     setShareLoading(false);
   };
 
+  useEffect(() => {
+    if (canvasId || resId) {
+      return;
+    }
+
+    // Handle cases where activeTab exists but canvasId or resId query param is missing
+    if (activeTab?.type === 'canvas') {
+      jumpToCanvas({
+        canvasId: activeTab.key,
+        projectId,
+      });
+    } else if (activeTab?.type === 'resource') {
+      jumpToResource({
+        resId: activeTab.key,
+        projectId,
+      });
+    }
+  }, [activeTab, canvasId, resId]);
+
   // Watch for canvasId change
   useDebounce(
     () => {

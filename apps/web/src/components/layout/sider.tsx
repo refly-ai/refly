@@ -340,6 +340,7 @@ export const SiderLayout = () => {
       state: {
         navigationContext: {
           shouldFetchDetail: true,
+          clearSearchParams: true,
           source: MessageIntentSource.Project,
         },
       },
