@@ -361,8 +361,6 @@ const CollaborativeEditor = ({ projectId, canvasId }: { projectId: string; canva
           defaultValue: "Write something, or press 'space' for AI, '/' for commands",
         });
 
-        console.log('node', node.type.name);
-
         switch (node.type.name) {
           case 'heading':
             return t('editor.placeholder.heading', {

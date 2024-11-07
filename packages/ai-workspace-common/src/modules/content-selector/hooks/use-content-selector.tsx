@@ -523,7 +523,6 @@ export const useContentSelector = (selector: string | null, domain: SelectedText
   const onStatusHandler = (event: MessageEvent<any>) => {
     const data = event as any as BackgroundMessage;
     if ((data as SyncStatusEvent)?.name === 'syncMarkStatusEvent') {
-      console.log('contentSelectorStatusHandler data', event, getRuntime());
       const { type, scope } = (data as SyncStatusEvent)?.body;
 
       if (type === 'start') {
