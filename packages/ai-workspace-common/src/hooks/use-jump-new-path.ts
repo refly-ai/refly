@@ -144,19 +144,6 @@ export const useJumpNewPath = () => {
     }
   };
 
-  const removeKbAndResId = ({ baseUrl = '' }: { baseUrl?: string }) => {
-    searchParams.delete('kbId');
-    searchParams.delete('resId');
-    setSearchParams(searchParams);
-    navigate(`${baseUrl}/knowledge-base?${searchParams.toString()}`);
-  };
-
-  const removeNoteId = ({ baseUrl = '' }: { baseUrl?: string }) => {
-    searchParams.delete('noteId');
-    setSearchParams(searchParams);
-    navigate(`${baseUrl}/knowledge-base?${searchParams.toString()}`);
-  };
-
   const jumpToConv = ({
     convId,
     projectId,
@@ -174,6 +161,12 @@ export const useJumpNewPath = () => {
     openNewTab?: boolean;
     state: { navigationContext?: NavigationContext };
   }) => {
+    for (const key of Array.from(searchParams.keys())) {
+      if (['resId', 'canvasId'].includes(key)) {
+        searchParams.delete(key);
+      }
+    }
+
     let url: string;
 
     if (projectId) {
@@ -208,7 +201,5 @@ export const useJumpNewPath = () => {
     jumpToProject,
     jumpToResource,
     jumpToConv,
-    removeKbAndResId,
-    removeNoteId,
   };
 };

@@ -16,6 +16,7 @@ import { DragEndEvent, PointerSensor, useSensor } from '@dnd-kit/core';
 import { arrayMove, horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import ResourceDeck from '@refly-packages/ai-workspace-common/components/project-detail/resource-view/resource-deck';
+import { useJumpNewPath } from '@refly-packages/ai-workspace-common/hooks/use-jump-new-path';
 
 interface DraggableTabPaneProps extends React.HTMLAttributes<HTMLDivElement> {
   'data-node-key': string;
@@ -45,6 +46,7 @@ export const ContentArea = (props: { projectId: string; setBindResourceModalVisi
   const { t } = useTranslation();
 
   const { tabsMap, activeTabMap, setProjectTabs, setActiveTab, handleDeleteTab } = useProjectTabs();
+  const { jumpToCanvas, jumpToResource } = useJumpNewPath();
   const tabs = tabsMap[projectId] || [];
   const activeTab = tabs.find((x) => x.key === activeTabMap[projectId]);
 
@@ -65,8 +67,18 @@ export const ContentArea = (props: { projectId: string; setBindResourceModalVisi
   }));
 
   const onChange = (newActiveKey: string) => {
-    if (projectId) {
-      setActiveTab(projectId, newActiveKey);
+    setActiveTab(projectId, newActiveKey);
+    const tab = tabs.find((x) => x.key === newActiveKey);
+    if (tab?.type === 'canvas') {
+      jumpToCanvas({
+        canvasId: tab.key,
+        projectId,
+      });
+    } else if (tab?.type === 'resource') {
+      jumpToResource({
+        resId: tab.key,
+        projectId,
+      });
     }
   };
 

@@ -96,21 +96,6 @@ export const ProjectDirectory = (props: {
 
   const { addRecentProject } = useHandleRecents();
 
-  useEffect(() => {
-    if (activeTab?.type === 'canvas' && !canvasId) {
-      jumpToCanvas({
-        canvasId: activeTab.key,
-        projectId,
-      });
-    }
-    if (activeTab?.type === 'resource' && !resId) {
-      jumpToResource({
-        resId: activeTab.key,
-        projectId,
-      });
-    }
-  }, [activeTab, canvasId, resId]);
-
   const { createShare } = useHandleShare();
   const [shareLoading, setShareLoading] = useState(false);
   const handleShare = async () => {
@@ -138,7 +123,7 @@ export const ProjectDirectory = (props: {
         }
       }
     },
-    100,
+    10,
     [canvasId, canvases],
   );
 
@@ -157,7 +142,7 @@ export const ProjectDirectory = (props: {
         }
       }
     },
-    100,
+    10,
     [resId, resources],
   );
 
