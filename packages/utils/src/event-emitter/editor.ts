@@ -28,10 +28,12 @@ export type Events = {
   contineInChat: string;
   createNewNote: string;
   streamCanvasContent: {
+    canvasId: string;
     isFirst: boolean;
     content: string;
   };
   streamEditCanvasContent: {
+    canvasId: string;
     isFirst: boolean;
     content: string;
   };

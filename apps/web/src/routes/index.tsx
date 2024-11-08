@@ -6,6 +6,7 @@ import { safeParseJSON } from "@refly-packages/ai-workspace-common/utils/parse"
 import { useUserStoreShallow } from "@refly-packages/ai-workspace-common/stores/user"
 import { useTranslation } from "react-i18next"
 import { useGetUserSettings } from "@refly-packages/ai-workspace-common/hooks/use-get-user-settings"
+import { useHandleEditorEmitter } from "@refly-packages/ai-workspace-common/hooks/use-handle-editor-emitter"
 import { LOCALE } from "@refly/common-types"
 import {
   BetaProtectedRoute,
@@ -85,6 +86,9 @@ export const AppRouter = (props: { layout?: any }) => {
 
   // Check user login status
   useGetUserSettings()
+
+  // Globally handle editor emitter events
+  useHandleEditorEmitter()
 
   // Change locale if not matched
   const { i18n } = useTranslation()

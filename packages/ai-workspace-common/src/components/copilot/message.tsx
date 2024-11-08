@@ -28,7 +28,7 @@ import { ContextItem } from '@refly-packages/ai-workspace-common/components/copi
 import { ContextPreview } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/context-preview';
 
 import { ClientChatMessage, Mark } from '@refly/common-types';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { memo } from 'react';
 import classNames from 'classnames';
 import { parseMarkdownWithCitations } from '@refly/utils/parse';
@@ -38,6 +38,7 @@ import { useProcessContextItems } from '@refly-packages/ai-workspace-common/comp
 
 // utils
 import { processWithCanvas } from './utils';
+import { useEditorStoreShallow } from '@refly-packages/ai-workspace-common/stores/editor';
 
 export const HumanMessage = memo(
   (props: { message: Partial<ChatMessage>; profile: { avatar: string; name: string }; disable?: boolean }) => {
@@ -123,7 +124,9 @@ export const AssistantMessage = memo(
     const isWeb = runtime === 'web';
 
     const { t } = useTranslation();
-    const noteStoreEditor = useCanvasStore((state) => state.editor);
+    const currentCanvas = useCanvasStoreShallow((state) => state.currentCanvas);
+    const editorData = useEditorStoreShallow((state) => state.editorMap[currentCanvas?.canvasId]);
+
     let sources =
       typeof message?.structuredData?.['sources'] === 'string'
         ? safeParseJSON(message?.structuredData?.['sources'])
@@ -143,7 +146,7 @@ export const AssistantMessage = memo(
       const parsedContent = parseMarkdownWithCitations(content, sources);
 
       if (type === 'insertBlow' || type === 'replaceSelection') {
-        const editor = noteStoreEditor;
+        const editor = editorData?.instance;
 
         if (!editor) return;
 

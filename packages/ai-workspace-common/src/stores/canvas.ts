@@ -3,7 +3,6 @@ import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 
 import { Canvas } from '@refly/openapi-schema';
-import { EditorInstance } from '@refly-packages/editor-core/components';
 
 export enum ActionSource {
   KnowledgeBase = 'knowledge-base',
@@ -40,8 +39,6 @@ interface CanvasBaseState {
   activeTab: string;
   canvasPanelVisible: boolean;
 
-  // canvas
-  editor: EditorInstance | null;
   canvasServerStatus: CanvasServerStatus;
   canvasCharsCount: number;
   canvasSaveStatus: CanvasSaveStatus;
@@ -60,7 +57,6 @@ interface CanvasBaseState {
   updateCanvasServerStatus: (status: CanvasServerStatus) => void;
   updateCanvasSaveStatus: (status: CanvasSaveStatus) => void;
   updateCanvasCharsCount: (count: number) => void;
-  updateEditor: (editor: EditorInstance) => void;
 
   updateLastCursorPosRef: (pos: number) => void;
   updateTocItems: (items: TableOfContentsItem[]) => void;
@@ -79,6 +75,7 @@ export const defaultState = {
 
   // canvases
   editor: null,
+  editorMap: {},
   canvasServerStatus: 'disconnected' as CanvasServerStatus,
   canvasCharsCount: 0,
   canvasSaveStatus: 'Unsaved' as CanvasSaveStatus,
@@ -101,7 +98,6 @@ export const useCanvasStore = create<CanvasBaseState>()(
     updateCanvasPanelVisible: (visible: boolean) => set((state) => ({ ...state, canvasPanelVisible: visible })),
 
     // canvases
-    updateEditor: (editor: EditorInstance) => set((state) => ({ ...state, editor })),
     updateCanvasServerStatus: (status: CanvasServerStatus) =>
       set((state) => ({ ...state, canvasServerStatus: status })),
     updateCanvasSaveStatus: (status: CanvasSaveStatus) => set((state) => ({ ...state, canvasSaveStatus: status })),

@@ -199,11 +199,13 @@ export const useBuildTask = () => {
     ) {
       if (intentMatcher?.type === CanvasIntentType.GenerateCanvas && incrementalContent) {
         editorEmitter.emit('streamCanvasContent', {
+          canvasId: intentMatcher?.canvasId,
           isFirst: isFirstStreamContent,
           content: incrementalContent,
         });
       } else if (intentMatcher?.type === CanvasIntentType.EditCanvas && incrementalContent) {
         editorEmitter.emit('streamEditCanvasContent', {
+          canvasId: intentMatcher?.canvasId,
           isFirst: isFirstStreamContent,
           content: incrementalContent,
         });

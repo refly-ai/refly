@@ -9,10 +9,11 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useTranslation } from 'react-i18next';
 import { useImportProjectModal } from '@refly-packages/ai-workspace-common/stores/import-project-modal';
 import { IconCopy } from '@arco-design/web-react/icon';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { useHandleRecents } from '@refly-packages/ai-workspace-common/hooks/use-handle-rencents';
 import { useProjectTabs } from '@refly-packages/ai-workspace-common/hooks/use-project-tabs';
+import { useEditorStoreShallow } from '@refly-packages/ai-workspace-common/stores/editor';
 const iconStyle = {
   marginRight: 8,
   fontSize: 16,
@@ -33,9 +34,9 @@ interface DropListProps {
 
 const DropList = (props: DropListProps) => {
   const { handleCancel, handleDeleteClick, handlEditProject, type, getPopupContainer, position, canCopy } = props;
-  const canvasStore = useCanvasStore((state) => ({
-    editor: state.editor,
-  }));
+  const currentCanvas = useCanvasStoreShallow((state) => state.currentCanvas);
+  const editorData = useEditorStoreShallow((state) => state.editorMap[currentCanvas?.canvasId]);
+
   const { t } = useTranslation();
 
   return (
@@ -54,7 +55,7 @@ const DropList = (props: DropListProps) => {
           <div
             onClick={(e) => {
               e.stopPropagation();
-              const editor = canvasStore.editor;
+              const editor = editorData?.instance;
               if (editor) {
                 const markdown = editor.storage.markdown.getMarkdown();
                 copyToClipboard(markdown);
