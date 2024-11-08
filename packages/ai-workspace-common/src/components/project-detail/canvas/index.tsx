@@ -39,8 +39,8 @@ import { useCanvasTabs } from '@refly-packages/ai-workspace-common/hooks/use-can
 import { useContentSelector } from '@refly-packages/ai-workspace-common/modules/content-selector/hooks/use-content-selector';
 import '@refly-packages/ai-workspace-common/modules/content-selector/styles/content-selector.scss';
 import classNames from 'classnames';
-import { useContentSelectorStore } from '@refly-packages/ai-workspace-common/modules/content-selector/stores/content-selector';
-import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { useContentSelectorStoreShallow } from '@refly-packages/ai-workspace-common/modules/content-selector/stores/content-selector';
+import { useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common/stores/context-panel';
 // componets
 import { ToC } from './ToC';
 import { IconBook } from '@arco-design/web-react/icon';
@@ -342,14 +342,14 @@ const CollaborativeEditor = ({ projectId, canvasId }: { projectId: string; canva
     updateLastCursorPosRef: state.updateLastCursorPosRef,
   }));
 
-  const contextPanelStore = useContextPanelStore((state) => ({
+  const contextPanelStore = useContextPanelStoreShallow((state) => ({
     updateBeforeSelectionNoteContent: state.updateBeforeSelectionNoteContent,
     updateAfterSelectionNoteContent: state.updateAfterSelectionNoteContent,
     updateCurrentSelectionContent: state.updateCurrentSelectionContent,
   }));
   const editorRef = useRef<EditorInstance>();
 
-  const { showContentSelector, scope } = useContentSelectorStore((state) => ({
+  const { showContentSelector, scope } = useContentSelectorStoreShallow((state) => ({
     showContentSelector: state.showContentSelector,
     scope: state.scope,
   }));
