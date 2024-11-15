@@ -8,18 +8,19 @@ import { RiDoubleQuotesL } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { useSearchStrategy } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/hooks/use-search-strategy';
 import { MessageIntentSource } from '@refly-packages/ai-workspace-common/types/copilot';
-import { Command } from 'cmdk';
 import { IconCheck, IconRefresh } from '@arco-design/web-react/icon';
-import { Home } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/components/base-search-and-selector/home';
 
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/stores/search';
 import { RenderItem } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/types/item';
 import { Mark } from '@refly/common-types';
 import { getTypeIcon } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/utils/icon';
-import { SearchResult } from '../../../../openapi-schema/src/types.gen';
+import { BaseReference, ReferenceType } from '../../../../openapi-schema/src/types.gen';
 import { useDebouncedCallback } from 'use-debounce';
 import { IconCanvas, IconResource } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
+import { useReferencesStoreShallow } from '@refly-packages/ai-workspace-common/stores/references';
+
 interface ReferenceSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,6 +31,13 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
   const { noCategoryBigSearchRes } = useSearchStoreShallow((state) => ({
     noCategoryBigSearchRes: state.noCategoryBigSearchRes,
   }));
+
+  const { fetchReferences } = useReferencesStoreShallow((state) => ({
+    fetchReferences: state.fetchReferences,
+  }));
+
+  const [searchParams] = useSearchParams();
+  const canvasId = searchParams.get('canvasId');
 
   const { handleSearch } = useSearchStrategy({
     limit: 20,
@@ -103,9 +111,35 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
     onOpenChange(false);
   };
 
-  const onConfirm = () => {
-    onOpenChange(false);
+  const addReferences = async () => {
+    let references: BaseReference[] = [];
+    if (activeTab === 'library') {
+      references = selectedItems.map((item) => ({
+        sourceId: canvasId,
+        sourceType: 'canvas',
+        targetId: item.id,
+        targetType: item.type,
+      }));
+    }
+    setConfirmLoading(true);
+    const { data } = await getClient().addReferences({
+      body: {
+        references,
+      },
+    });
+    setConfirmLoading(false);
+    if (data?.success) {
+      fetchReferences({
+        sourceType: 'canvas',
+        sourceId: canvasId,
+      });
+      onClose();
+    }
   };
+
+  // const onConfirm = () => {
+  //   onOpenChange(false);
+  // };
 
   useEffect(() => {
     if (open && activeTab === 'library') {
@@ -186,7 +220,13 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
               {t('common.cancel')}
             </AntdButton>
 
-            <AntdButton className="text-xs" size="small" type="primary">
+            <AntdButton
+              className="text-xs"
+              size="small"
+              type="primary"
+              loading={confirmLoading}
+              onClick={addReferences}
+            >
               {t('common.confirm')}
             </AntdButton>
           </div>
