@@ -335,10 +335,10 @@ export const AssistantMessage = memo(
                     <Dropdown droplist={tokenUsageDropdownList}>
                       <Button
                         type="text"
-                        icon={<MdOutlineToken style={{ fontSize: 14, marginRight: 4 }} />}
+                        icon={<MdOutlineToken style={{ fontSize: 14 }} />}
                         className={'assist-action-item'}
                       >
-                        <span className="action-text">{tokenUsage} Tokens</span>
+                        {tokenUsage} Tokens
                       </Button>
                     </Dropdown>
                   </div>
