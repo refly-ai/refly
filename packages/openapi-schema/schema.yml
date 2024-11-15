@@ -390,6 +390,10 @@ paths:
       responses:
         '200':
           description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryReferencesResponse'
   /knowledge/reference/add:
     post:
       tags:
@@ -409,7 +413,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseResponse'
+                $ref: '#/components/schemas/AddReferencesResponse'
   /knowledge/reference/delete:
     post:
       tags:
@@ -1562,6 +1566,9 @@ components:
         url:
           type: string
           description: Reference URL
+        description:
+          type: string
+          description: Reference description
     BaseReference:
       type: object
       description: Basic reference info
@@ -2887,6 +2894,9 @@ components:
     QueryReferencesRequest:
       type: object
       properties:
+        referenceId:
+          type: string
+          description: Reference ID
         sourceType:
           description: Source entity type
           $ref: '#/components/schemas/EntityType'

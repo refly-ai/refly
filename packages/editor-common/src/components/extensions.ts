@@ -14,6 +14,7 @@ import {
   SpaceAICommand,
   DoublePlusAICommand,
   Placeholder,
+  Citation,
 } from '@refly-packages/editor-core/extensions';
 import { UploadImagesPlugin } from '@refly-packages/editor-core/plugins';
 
@@ -135,6 +136,7 @@ export const defaultExtensions = [
   taskItem,
   horizontalRule,
   aiHighlight,
+  Citation,
   // codeBlockLowlight,
   youtube,
   characterCount,

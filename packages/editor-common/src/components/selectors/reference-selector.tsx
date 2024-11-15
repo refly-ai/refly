@@ -15,11 +15,12 @@ import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/store
 import { RenderItem } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/types/item';
 import { Mark } from '@refly/common-types';
 import { getTypeIcon } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/utils/icon';
-import { BaseReference, ReferenceType } from '../../../../openapi-schema/src/types.gen';
+import { BaseReference, ReferenceType } from '@refly/openapi-schema';
 import { useDebouncedCallback } from 'use-debounce';
 import { IconCanvas, IconResource } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 import { useReferencesStoreShallow } from '@refly-packages/ai-workspace-common/stores/references';
+import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
 
 interface ReferenceSelectorProps {
   open: boolean;
@@ -129,6 +130,15 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
     });
     setConfirmLoading(false);
     if (data?.success) {
+      const referenceList = data.data;
+      const editor = useCanvasStore.getState().editor;
+
+      referenceList.forEach((reference) => {
+        editor.commands.addCitation({
+          referenceId: reference.referenceId,
+        });
+      });
+
       fetchReferences({
         sourceType: 'canvas',
         sourceId: canvasId,

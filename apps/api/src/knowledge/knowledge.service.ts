@@ -944,7 +944,7 @@ export class KnowledgeService {
     user: User,
     param: QueryReferencesRequest,
   ): Promise<ExtendedReferenceModel[]> {
-    const { sourceType, sourceId, targetType, targetId } = param;
+    const { sourceType, sourceId, targetType, targetId, referenceId } = param;
 
     // Check if the source and target entities exist for this user
     const entityChecks: Promise<void>[] = [];
@@ -956,7 +956,9 @@ export class KnowledgeService {
     }
     await Promise.all(entityChecks);
 
-    const where: Prisma.ReferenceWhereInput = {};
+    const where: Prisma.ReferenceWhereInput = {
+      referenceId,
+    };
     if (sourceType && sourceId) {
       where.sourceType = sourceType;
       where.sourceId = sourceId;
@@ -1014,11 +1016,13 @@ export class KnowledgeService {
         refMeta = {
           title: resourceMap[refId]?.title,
           url: JSON.parse(resourceMap[refId]?.meta || '{}')?.url,
+          description: resourceMap[refId]?.contentPreview,
         };
       } else if (refType === 'canvas') {
         refMeta = {
           title: canvasMap[refId]?.title,
           projectId: canvasMap[refId]?.projectId,
+          description: canvasMap[refId]?.contentPreview,
         };
       }
       return refMeta;

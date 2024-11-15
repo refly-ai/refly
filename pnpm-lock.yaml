@@ -1412,6 +1412,9 @@ importers:
       '@refly/common-types':
         specifier: workspace:*
         version: link:../common-types
+      '@refly/openapi-schema':
+        specifier: workspace:*
+        version: link:../openapi-schema
       '@refly/utils':
         specifier: workspace:*
         version: link:../utils

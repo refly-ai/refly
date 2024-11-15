@@ -43,6 +43,10 @@ export type ReferenceMeta = {
    * Reference URL
    */
   url?: string;
+  /**
+   * Reference description
+   */
+  description?: string;
 };
 
 /**
@@ -1318,6 +1322,10 @@ export type DeleteCanvasRequest = {
 };
 
 export type QueryReferencesRequest = {
+  /**
+   * Reference ID
+   */
+  referenceId?: string;
   /**
    * Source entity type
    */
@@ -2697,7 +2705,7 @@ export type QueryReferencesData = {
   body: QueryReferencesRequest;
 };
 
-export type QueryReferencesResponse2 = unknown;
+export type QueryReferencesResponse2 = QueryReferencesResponse;
 
 export type QueryReferencesError = unknown;
 
@@ -2705,7 +2713,7 @@ export type AddReferencesData = {
   body: AddReferencesRequest;
 };
 
-export type AddReferencesResponse2 = BaseResponse;
+export type AddReferencesResponse2 = AddReferencesResponse;
 
 export type AddReferencesError = unknown;
 
@@ -3415,7 +3423,7 @@ export type $OpenApiTs = {
         /**
          * Successful operation
          */
-        '200': unknown;
+        '200': QueryReferencesResponse;
       };
     };
   };
@@ -3426,7 +3434,7 @@ export type $OpenApiTs = {
         /**
          * Successful operation
          */
-        '200': BaseResponse;
+        '200': AddReferencesResponse;
       };
     };
   };

@@ -46,6 +46,10 @@ export const $ReferenceMeta = {
       type: 'string',
       description: 'Reference URL',
     },
+    description: {
+      type: 'string',
+      description: 'Reference description',
+    },
   },
 } as const;
 
@@ -1736,6 +1740,10 @@ export const $DeleteCanvasRequest = {
 export const $QueryReferencesRequest = {
   type: 'object',
   properties: {
+    referenceId: {
+      type: 'string',
+      description: 'Reference ID',
+    },
     sourceType: {
       description: 'Source entity type',
       $ref: '#/components/schemas/EntityType',

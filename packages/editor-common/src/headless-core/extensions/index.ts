@@ -55,6 +55,7 @@ const Horizontal = HorizontalRule.extend({
 });
 
 export * from './ai-highlight';
+export * from './citation';
 export * from './slash-command';
 export * from './space-ai-command';
 export * from './double-plus-ai-command';
