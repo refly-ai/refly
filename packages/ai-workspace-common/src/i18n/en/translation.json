@@ -438,6 +438,17 @@
       "text": "Text"
     }
   },
+  "referenceManager": {
+    "title": "Add Reference",
+    "library": "Library",
+    "canvas": "Canvas",
+    "resource": "Resource",
+    "externalUrl": "External Link",
+    "canvasPlaceholder": "Search Canvas...",
+    "resourcePlaceholder": "Search Resource...",
+    "libraryPlaceholder": "Search Canvas and Resource...",
+    "noResult": "No results found"
+  },
   "loggedHomePage": {
     "searchEverything": "Search",
     "quickSearch": {

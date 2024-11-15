@@ -14,6 +14,7 @@ import { BaseMarkType, frontendBaseMarkTypes, backendBaseMarkTypes, Mark } from 
 import { useLoadExtensionWeblinkData } from './use-load-weblink-data.extension';
 
 interface UseSearchStrategyProps {
+  limit?: number;
   source: MessageIntentSource;
   onLoadingChange?: (loading: boolean) => void;
 }
@@ -35,7 +36,7 @@ const mapSearchResultToMark = (searchResult: SearchResult): Mark => {
   return newMark;
 };
 
-export const useSearchStrategy = ({ source, onLoadingChange }: UseSearchStrategyProps) => {
+export const useSearchStrategy = ({ limit = 5, source, onLoadingChange }: UseSearchStrategyProps) => {
   const [displayMode, setDisplayMode] = useState<'search' | 'list'>('list');
   const searchStore = useSearchStore();
 
@@ -83,6 +84,7 @@ export const useSearchStrategy = ({ source, onLoadingChange }: UseSearchStrategy
         body: {
           query: searchVal,
           domains: domains,
+          limit,
         },
       });
 

@@ -130,7 +130,7 @@ ul[data-type='taskList'] li[data-checked='true'] > div > p {
 }
 
 .tippy-box {
-  max-width: 430px !important;
+  max-width: 500px !important;
 }
 
 .ProseMirror:not(.dragging) .ProseMirror-selectednode {

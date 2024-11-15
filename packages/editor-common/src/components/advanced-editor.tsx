@@ -11,7 +11,7 @@ import { NodeSelector } from './selectors/node-selector';
 import { ContentSelectorButtons } from './selectors/content-selector-buttons';
 import { AIBtnSelector } from './selectors/ai-btn-selector';
 import { Separator } from './ui/separator';
-
+import { ReferenceSelector } from './selectors/reference-selector';
 import GenerativeMenuSwitch from './generative/inline/generative-menu-switch';
 import GenerativeBlockMenuSwitch from './generative/block/generative-block-menu-switch';
 import { TextButtons } from './selectors/text-buttons';
@@ -60,6 +60,7 @@ export const CollabGenAIMenuSwitch: React.FC<CollabGenAIMenuSwitchProps> = (prop
   const [openColor, setOpenColor] = useState(false);
   const [openLink, setOpenLink] = useState(false);
   const [openAI, setOpenAI] = useState(false);
+  const [openReference, setOpenReference] = useState(false);
 
   return (
     <GenerativeMenuSwitch open={openAI} onOpenChange={setOpenAI}>
@@ -70,6 +71,7 @@ export const CollabGenAIMenuSwitch: React.FC<CollabGenAIMenuSwitchProps> = (prop
       <Separator orientation="vertical" />
       <TextButtons />
       <LinkSelector open={openLink} onOpenChange={setOpenLink} />
+      <ReferenceSelector open={openReference} onOpenChange={setOpenReference} />
       <Separator orientation="vertical" />
       <ColorSelector open={openColor} onOpenChange={setOpenColor} />
     </GenerativeMenuSwitch>

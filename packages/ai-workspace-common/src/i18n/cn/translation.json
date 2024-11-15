@@ -439,6 +439,17 @@
       "text": "文本"
     }
   },
+  "referenceManager": {
+    "title": "添加引用",
+    "library": "知识库",
+    "canvas": "稿布",
+    "resource": "资源",
+    "externalUrl": "外部链接",
+    "canvasPlaceholder": "搜索稿布...",
+    "resourcePlaceholder": "搜索资源...",
+    "libraryPlaceholder": "搜索稿布和资源...",
+    "noResult": "未找到结果"
+  },
   "loggedHomePage": {
     "searchEverything": "搜索任何内容",
     "quickSearch": {
