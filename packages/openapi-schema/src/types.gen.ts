@@ -62,7 +62,7 @@ export type BaseReference = {
    */
   targetType: ReferenceType;
   /**
-   * Target entity ID
+   * Target entity ID. If it's external url, pass the url string
    */
   targetId: string;
 };
@@ -159,7 +159,7 @@ export type Resource = {
 /**
  * Reference type
  */
-export type ReferenceType = 'canvas' | 'resource';
+export type ReferenceType = 'canvas' | 'resource' | 'externalUrl';
 
 export type Canvas = {
   /**
@@ -2419,6 +2419,10 @@ export type ScrapeWeblinkRequest = {
 };
 
 export type ScrapeWeblinkResult = {
+  /**
+   * Weblink URL
+   */
+  url?: string;
   /**
    * Weblink title
    */

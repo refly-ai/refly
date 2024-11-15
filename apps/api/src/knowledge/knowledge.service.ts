@@ -25,7 +25,6 @@ import {
   UpsertProjectRequest,
   BindProjectResourceRequest,
   QueryReferencesRequest,
-  ReferenceType,
   BaseReference,
   AddReferencesRequest,
   DeleteReferencesRequest,
@@ -38,6 +37,7 @@ import {
   QUEUE_RESOURCE,
   streamToString,
   QUEUE_SYNC_STORAGE_USAGE,
+  QUEUE_PARSE_REF_URL,
 } from '@/utils';
 import {
   genResourceID,
@@ -47,7 +47,11 @@ import {
   genProjectID,
   genReferenceID,
 } from '@refly-packages/utils';
-import { ExtendedReferenceModel, FinalizeResourceParam } from './knowledge.dto';
+import {
+  ExtendedReferenceModel,
+  FinalizeResourceParam,
+  ParseReferenceExternalUrlParam,
+} from './knowledge.dto';
 import { pick } from '../utils';
 import { SimpleEventData } from '@/event/event.dto';
 import { SyncStorageUsageJobData } from '@/subscription/subscription.dto';
@@ -75,6 +79,7 @@ export class KnowledgeService {
     private subscriptionService: SubscriptionService,
     @Inject(MINIO_INTERNAL) private minio: MinioService,
     @InjectQueue(QUEUE_RESOURCE) private queue: Queue<FinalizeResourceParam>,
+    @InjectQueue(QUEUE_PARSE_REF_URL) private refQueue: Queue<ParseReferenceExternalUrlParam>,
     @InjectQueue(QUEUE_SIMPLE_EVENT) private simpleEventQueue: Queue<SimpleEventData>,
     @InjectQueue(QUEUE_SYNC_STORAGE_USAGE) private ssuQueue: Queue<SyncStorageUsageJobData>,
   ) {}
@@ -998,17 +1003,22 @@ export class KnowledgeService {
       });
     }
 
-    const genReferenceMeta = (sourceType: string, sourceId: string) => {
+    const genReferenceMetaObj = (refType: string, refId: string) => {
+      // Don't generate metadata object for external URLs, use targetMeta directly
+      if (refType === 'externalUrl') {
+        return null;
+      }
+
       let refMeta: ReferenceMeta;
-      if (sourceType === 'resource') {
+      if (refType === 'resource') {
         refMeta = {
-          title: resourceMap[sourceId]?.title,
-          url: JSON.parse(resourceMap[sourceId]?.meta || '{}')?.url,
+          title: resourceMap[refId]?.title,
+          url: JSON.parse(resourceMap[refId]?.meta || '{}')?.url,
         };
-      } else if (sourceType === 'canvas') {
+      } else if (refType === 'canvas') {
         refMeta = {
-          title: canvasMap[sourceId]?.title,
-          projectId: canvasMap[sourceId]?.projectId,
+          title: canvasMap[refId]?.title,
+          projectId: canvasMap[refId]?.projectId,
         };
       }
       return refMeta;
@@ -1018,8 +1028,8 @@ export class KnowledgeService {
     return references.map((ref) => {
       return {
         ...ref,
-        sourceMeta: genReferenceMeta(ref.sourceType, ref.sourceId),
-        targetMeta: genReferenceMeta(ref.targetType, ref.targetId),
+        sourceMetaObj: genReferenceMetaObj(ref.sourceType, ref.sourceId),
+        targetMetaObj: genReferenceMetaObj(ref.targetType, ref.targetId),
       };
     });
   }
@@ -1028,8 +1038,6 @@ export class KnowledgeService {
     user: User,
     references: BaseReference[],
   ): Promise<Prisma.ReferenceCreateManyInput[]> {
-    const validRefTypes: ReferenceType[] = ['resource', 'canvas'];
-
     // Deduplicate references using a Set with stringified unique properties
     const uniqueRefs = new Set(
       references.map((ref) =>
@@ -1037,7 +1045,10 @@ export class KnowledgeService {
           sourceType: ref.sourceType,
           sourceId: ref.sourceId,
           targetType: ref.targetType,
-          targetId: ref.targetId,
+          targetId:
+            ref.targetType === 'externalUrl'
+              ? normalizeUrl(ref.targetId, { stripHash: true })
+              : ref.targetId,
         }),
       ),
     );
@@ -1047,10 +1058,10 @@ export class KnowledgeService {
     const canvasIds: Set<string> = new Set();
 
     deduplicatedRefs.forEach((ref) => {
-      if (!validRefTypes.includes(ref.sourceType)) {
+      if (!['resource', 'canvas'].includes(ref.sourceType)) {
         throw new ParamsError(`Invalid source type: ${ref.sourceType}`);
       }
-      if (!validRefTypes.includes(ref.targetType)) {
+      if (!['resource', 'canvas', 'externalUrl'].includes(ref.targetType)) {
         throw new ParamsError(`Invalid target type: ${ref.targetType}`);
       }
       if (ref.sourceType === 'resource' && ref.targetType === 'canvas') {
@@ -1098,7 +1109,8 @@ export class KnowledgeService {
       ...canvases.map((c) => c.canvasId),
     ]);
     const missingEntities = deduplicatedRefs.filter(
-      (e) => !foundIds.has(e.sourceId) || !foundIds.has(e.targetId),
+      (e) =>
+        !foundIds.has(e.sourceId) || (e.targetType !== 'externalUrl' && !foundIds.has(e.targetId)),
     );
     if (missingEntities.length > 0) {
       this.logger.warn(`Entities not found: ${JSON.stringify(missingEntities)}`);
@@ -1116,7 +1128,7 @@ export class KnowledgeService {
     const { references } = param;
     const referenceInputs = await this.prepareReferenceInputs(user, references);
 
-    return this.prisma.$transaction(
+    const refResults = await this.prisma.$transaction(
       referenceInputs.map((input) =>
         this.prisma.reference.upsert({
           where: {
@@ -1132,6 +1144,19 @@ export class KnowledgeService {
         }),
       ),
     );
+
+    const externalUrlReferenceIds = refResults
+      .filter((ref) => ref.targetType === 'externalUrl')
+      .map((ref) => ref.referenceId);
+
+    // Process external URLs in batches of 10
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < externalUrlReferenceIds.length; i += BATCH_SIZE) {
+      const batch = externalUrlReferenceIds.slice(i, i + BATCH_SIZE);
+      await this.refQueue.add({ referenceIds: batch });
+    }
+
+    return refResults;
   }
 
   async deleteReferences(user: User, param: DeleteReferencesRequest) {
@@ -1157,5 +1182,30 @@ export class KnowledgeService {
         deletedAt: null,
       },
     });
+  }
+
+  async parseReferenceExternalUrl(param: ParseReferenceExternalUrlParam) {
+    const { referenceIds } = param;
+
+    const references = await this.prisma.reference.findMany({
+      select: { referenceId: true, targetId: true },
+      where: { referenceId: { in: referenceIds }, deletedAt: null },
+    });
+    const urls = references.map((ref) => ref.targetId);
+
+    const scrapedUrls = await Promise.all(
+      urls.map((url) => this.miscService.scrapeWeblink({ url })),
+    );
+
+    await this.prisma.$transaction(
+      references.map((ref, index) =>
+        this.prisma.reference.update({
+          where: { referenceId: ref.referenceId },
+          data: {
+            targetMeta: JSON.stringify(scrapedUrls[index]),
+          },
+        }),
+      ),
+    );
   }
 }

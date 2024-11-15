@@ -58,4 +58,5 @@ async function bootstrap() {
 
   await app.listen(configService.get('port'));
 }
-bootstrap();
+
+bootstrap().catch((err) => Sentry.captureException(err));

@@ -21,6 +21,10 @@ export type FinalizeResourceParam = {
   uid: string;
 };
 
+export type ParseReferenceExternalUrlParam = {
+  referenceIds: string[];
+};
+
 export const projectPO2DTO = (project: ProjectModel): Project => {
   return {
     ...pick(project, ['projectId', 'title', 'description', 'shareCode']),
@@ -76,13 +80,15 @@ export const canvasPO2DTO = (
 };
 
 export interface ExtendedReferenceModel extends ReferenceModel {
-  sourceMeta?: ReferenceMeta;
-  targetMeta?: ReferenceMeta;
+  sourceMetaObj?: ReferenceMeta;
+  targetMetaObj?: ReferenceMeta;
 }
 
 export const referencePO2DTO = (reference: ExtendedReferenceModel): Reference => {
   return {
-    ...pick(reference, ['referenceId', 'sourceId', 'targetId', 'sourceMeta', 'targetMeta']),
+    ...pick(reference, ['referenceId', 'sourceId', 'targetId']),
+    sourceMeta: reference.sourceMetaObj ?? JSON.parse(reference.sourceMeta || '{}'),
+    targetMeta: reference.targetMetaObj ?? JSON.parse(reference.targetMeta || '{}'),
     sourceType: reference.sourceType as ReferenceType,
     targetType: reference.targetType as ReferenceType,
   };

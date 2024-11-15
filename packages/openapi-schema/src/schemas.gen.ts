@@ -68,7 +68,7 @@ export const $BaseReference = {
     },
     targetId: {
       type: 'string',
-      description: 'Target entity ID',
+      description: "Target entity ID. If it's external url, pass the url string",
     },
   },
 } as const;
@@ -192,7 +192,7 @@ export const $Resource = {
 export const $ReferenceType = {
   type: 'string',
   description: 'Reference type',
-  enum: ['canvas', 'resource'],
+  enum: ['canvas', 'resource', 'externalUrl'],
 } as const;
 
 export const $Canvas = {
@@ -3518,6 +3518,10 @@ export const $ScrapeWeblinkRequest = {
 export const $ScrapeWeblinkResult = {
   type: 'object',
   properties: {
+    url: {
+      type: 'string',
+      description: 'Weblink URL',
+    },
     title: {
       type: 'string',
       description: 'Weblink title',

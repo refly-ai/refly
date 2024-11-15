@@ -1582,7 +1582,7 @@ components:
           description: Target entity type
         targetId:
           type: string
-          description: Target entity ID
+          description: Target entity ID. If it's external url, pass the url string
     Reference:
       allOf:
         - $ref: '#/components/schemas/BaseReference'
@@ -1678,6 +1678,7 @@ components:
       enum:
         - canvas
         - resource
+        - externalUrl
     Canvas:
       type: object
       required:
@@ -4067,6 +4068,9 @@ components:
     ScrapeWeblinkResult:
       type: object
       properties:
+        url:
+          type: string
+          description: Weblink URL
         title:
           type: string
           description: Weblink title

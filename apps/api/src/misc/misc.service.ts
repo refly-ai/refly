@@ -42,6 +42,7 @@ export class MiscService {
     const result = await scrapeWeblink(url);
 
     return {
+      url,
       title: result.title,
       description: result.description,
       image: result.image,
