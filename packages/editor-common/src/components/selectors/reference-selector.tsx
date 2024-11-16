@@ -15,12 +15,14 @@ import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/store
 import { RenderItem } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/types/item';
 import { Mark } from '@refly/common-types';
 import { getTypeIcon } from '@refly-packages/ai-workspace-common/components/copilot/copilot-operation-module/context-manager/utils/icon';
-import { BaseReference, ReferenceType } from '@refly/openapi-schema';
+import { BaseReference } from '@refly/openapi-schema';
 import { useDebouncedCallback } from 'use-debounce';
 import { IconCanvas, IconResource } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 import { useReferencesStoreShallow } from '@refly-packages/ai-workspace-common/stores/references';
 import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
+
+const { TextArea } = Input;
 
 interface ReferenceSelectorProps {
   open: boolean;
@@ -37,6 +39,7 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
     fetchReferences: state.fetchReferences,
   }));
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [searchParams] = useSearchParams();
   const canvasId = searchParams.get('canvasId');
 
@@ -52,15 +55,14 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
 
   const inputRef = React.useRef<InputRef>(null);
   const [selectedItems, setSelectedItems] = useState<Mark[]>([]);
-
   const [activeTab, setActiveTab] = useState('library');
+  const [linkStr, setLinkStr] = useState('');
 
   const debouncedHandleSearch = useDebouncedCallback(async (val: string) => {
     handleSearch(val);
   }, 300);
 
   const handleSearchValueChange = (val: string) => {
-    console.log('handleSearchValueChange', val);
     debouncedHandleSearch(val);
   };
 
@@ -82,14 +84,20 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
     type: item.type,
     icon: getTypeIcon(item.type, { width: 12, height: 12 }),
     onItemClick: (item: Mark) => {
-      if (selectedItems.some((selected) => selected.id === item.id)) {
-        // 如果已选中，则移除
-        setSelectedItems(selectedItems.filter((selected) => selected.id !== item.id));
-      } else {
-        // 如果未选中，则添加到最前面
-        setSelectedItems([item, ...selectedItems]);
-      }
-      console.log('selectedItems', selectedItems);
+      const scrollTop = scrollContainerRef.current?.scrollTop;
+
+      setSelectedItems((prev) => {
+        if (prev.some((selected) => selected.id === item.id)) {
+          return prev.filter((selected) => selected.id !== item.id);
+        }
+        return [item, ...prev];
+      });
+
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current && scrollTop !== undefined) {
+          scrollContainerRef.current.scrollTop = scrollTop;
+        }
+      });
     },
   }));
 
@@ -121,6 +129,14 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
         targetId: item.id,
         targetType: item.type,
       }));
+    } else if (activeTab === 'externalUrl') {
+      const links = linkStr.split('\n').filter((link) => link.trim());
+      references = links.map((link) => ({
+        sourceId: canvasId,
+        sourceType: 'canvas',
+        targetId: link.trim(),
+        targetType: 'externalUrl',
+      }));
     }
     setConfirmLoading(true);
     const { data } = await getClient().addReferences({
@@ -147,10 +163,6 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
     }
   };
 
-  // const onConfirm = () => {
-  //   onOpenChange(false);
-  // };
-
   useEffect(() => {
     if (open && activeTab === 'library') {
       if (inputRef?.current) {
@@ -161,20 +173,27 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
     }
   }, [open, activeTab]);
 
+  useEffect(() => {
+    if (open) {
+      setSelectedItems([]);
+      setLinkStr('');
+    }
+  }, [open]);
+
   return (
     <Popover modal={true} open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <Button size="sm" variant="ghost" className="gap-2 rounded-none border-none">
-          <RiDoubleQuotesL className="h-3 w-3 font-medium" />
+          <RiDoubleQuotesL className={`h-3 w-3 font-medium ${open ? 'text-[#00968F]' : ''}`} />
         </Button>
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-60 pt-1 pb-2 px-2 border-solid border-1 border-gray-100 rounded-lg"
+        className="w-60 p-0 border-solid border-1 border-gray-100 rounded-lg"
         sideOffset={10}
       >
-        <div className="h-[300px] flex flex-col gap-2">
-          <div className="flex items-center gap-2">
+        <div className="h-[300px] flex flex-col pt-1 pb-2">
+          <div className="flex items-center gap-2 px-2">
             {tabs.map((tab) => (
               <Button
                 className="flex flex-col items-center justify-center hover:bg-transparent hover:text-[#00968F]"
@@ -191,13 +210,18 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
 
           {activeTab === 'library' && (
             <>
-              <Input
-                ref={inputRef}
-                placeholder={t(`referenceManager.${activeTab}Placeholder`)}
-                onChange={(e) => handleSearchValueChange(e.target.value)}
-              />
+              <div className="px-2 mb-2">
+                <Input
+                  style={{
+                    fontSize: '12px',
+                  }}
+                  ref={inputRef}
+                  placeholder={t(`referenceManager.${activeTab}Placeholder`)}
+                  onChange={(e) => handleSearchValueChange(e.target.value)}
+                />
+              </div>
 
-              <div className="flex-grow overflow-y-scroll flex flex-col relative">
+              <div className="flex-grow overflow-y-scroll flex flex-col relative" ref={scrollContainerRef}>
                 <Spin spinning={loading}>
                   {sortedRenderData.length ? (
                     sortedRenderData.map((item) => (
@@ -223,15 +247,32 @@ export const ReferenceSelector = ({ open, onOpenChange }: ReferenceSelectorProps
             </>
           )}
 
-          {activeTab === 'externalUrl' && <div>UrlSelector</div>}
+          {activeTab === 'externalUrl' && (
+            <div className="flex-grow px-2">
+              <TextArea
+                style={{
+                  fontSize: '12px',
+                }}
+                placeholder={t('resource.import.webLinkPlaceholer')}
+                rows={4}
+                autoSize={{
+                  minRows: 10,
+                  maxRows: 10,
+                }}
+                value={linkStr}
+                onChange={(e) => setLinkStr(e.target.value)}
+              />
+            </div>
+          )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 px-2 pt-1 border-t border-t-1 border-solid border-l-0 border-r-0 border-b-0 border-gray-100">
             <AntdButton className="text-xs" size="small" color="default" variant="filled" onClick={onClose}>
               {t('common.cancel')}
             </AntdButton>
 
             <AntdButton
               className="text-xs"
+              disabled={activeTab === 'library' ? selectedItems.length === 0 : linkStr.trim() === ''}
               size="small"
               type="primary"
               loading={confirmLoading}
