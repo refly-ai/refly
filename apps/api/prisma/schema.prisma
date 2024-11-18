@@ -350,10 +350,14 @@ model Reference {
   sourceType  String    @map("source_type")
   /// Source entity ID
   sourceId    String    @map("source_id")
-  /// Target entity type (e.g., "canvas" or "resource")
+  /// Source entity metadata (JSON), should only be used for external url references
+  sourceMeta  String?   @map("source_meta")
+  /// Target entity type (e.g., "canvas", "resource", "externalUrl")
   targetType  String    @map("target_type")
   /// Target entity ID
   targetId    String    @map("target_id")
+  /// Target entity metadata (JSON), should only be used for external url references
+  targetMeta  String?   @map("target_meta")
   /// UID of the user who created the reference
   uid         String    @map("uid")
   /// Create timestamp

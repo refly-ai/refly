@@ -43,6 +43,10 @@ export type ReferenceMeta = {
    * Reference URL
    */
   url?: string;
+  /**
+   * Reference description
+   */
+  description?: string;
 };
 
 /**
@@ -62,7 +66,7 @@ export type BaseReference = {
    */
   targetType: ReferenceType;
   /**
-   * Target entity ID
+   * Target entity ID. If it's external url, pass the url string
    */
   targetId: string;
 };
@@ -159,7 +163,7 @@ export type Resource = {
 /**
  * Reference type
  */
-export type ReferenceType = 'canvas' | 'resource';
+export type ReferenceType = 'canvas' | 'resource' | 'externalUrl';
 
 export type Canvas = {
   /**
@@ -1319,6 +1323,10 @@ export type DeleteCanvasRequest = {
 
 export type QueryReferencesRequest = {
   /**
+   * Reference ID
+   */
+  referenceId?: string;
+  /**
    * Source entity type
    */
   sourceType?: EntityType;
@@ -2420,6 +2428,10 @@ export type ScrapeWeblinkRequest = {
 
 export type ScrapeWeblinkResult = {
   /**
+   * Weblink URL
+   */
+  url?: string;
+  /**
    * Weblink title
    */
   title?: string;
@@ -2693,7 +2705,7 @@ export type QueryReferencesData = {
   body: QueryReferencesRequest;
 };
 
-export type QueryReferencesResponse2 = unknown;
+export type QueryReferencesResponse2 = QueryReferencesResponse;
 
 export type QueryReferencesError = unknown;
 
@@ -2701,7 +2713,7 @@ export type AddReferencesData = {
   body: AddReferencesRequest;
 };
 
-export type AddReferencesResponse2 = BaseResponse;
+export type AddReferencesResponse2 = AddReferencesResponse;
 
 export type AddReferencesError = unknown;
 
@@ -3411,7 +3423,7 @@ export type $OpenApiTs = {
         /**
          * Successful operation
          */
-        '200': unknown;
+        '200': QueryReferencesResponse;
       };
     };
   };
@@ -3422,7 +3434,7 @@ export type $OpenApiTs = {
         /**
          * Successful operation
          */
-        '200': BaseResponse;
+        '200': AddReferencesResponse;
       };
     };
   };

@@ -90,6 +90,7 @@ export const BaseSearchAndSelector = ({
       onSearchValueChange(val);
     }
     setSearchValue(val);
+    console.log('handleSearch', val, activeTab);
     handleSearch(val, activeTab);
   };
 

@@ -46,6 +46,10 @@ export const $ReferenceMeta = {
       type: 'string',
       description: 'Reference URL',
     },
+    description: {
+      type: 'string',
+      description: 'Reference description',
+    },
   },
 } as const;
 
@@ -68,7 +72,7 @@ export const $BaseReference = {
     },
     targetId: {
       type: 'string',
-      description: 'Target entity ID',
+      description: "Target entity ID. If it's external url, pass the url string",
     },
   },
 } as const;
@@ -192,7 +196,7 @@ export const $Resource = {
 export const $ReferenceType = {
   type: 'string',
   description: 'Reference type',
-  enum: ['canvas', 'resource'],
+  enum: ['canvas', 'resource', 'externalUrl'],
 } as const;
 
 export const $Canvas = {
@@ -1736,6 +1740,10 @@ export const $DeleteCanvasRequest = {
 export const $QueryReferencesRequest = {
   type: 'object',
   properties: {
+    referenceId: {
+      type: 'string',
+      description: 'Reference ID',
+    },
     sourceType: {
       description: 'Source entity type',
       $ref: '#/components/schemas/EntityType',
@@ -3518,6 +3526,10 @@ export const $ScrapeWeblinkRequest = {
 export const $ScrapeWeblinkResult = {
   type: 'object',
   properties: {
+    url: {
+      type: 'string',
+      description: 'Weblink URL',
+    },
     title: {
       type: 'string',
       description: 'Weblink title',
