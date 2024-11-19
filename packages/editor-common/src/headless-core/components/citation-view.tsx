@@ -39,7 +39,11 @@ const CitationPopoverContent = ({ referenceId }: { referenceId: string }) => {
         <div>{reference?.targetMeta?.title}</div>
       </div>
       <div>{reference?.targetMeta?.url}</div>
-      <div className="w-20 text-xs text-gray-500">{reference?.targetMeta?.description}</div>
+      {reference?.targetMeta?.description && (
+        <div className="mt-2 max-w-[400px] max-h-[150px] overflow-scroll text-xs text-gray-500">
+          {reference?.targetMeta?.description}
+        </div>
+      )}
     </Spin>
   );
 };
