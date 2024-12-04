@@ -27,7 +27,7 @@ import { InPlaceEditType } from '@refly-packages/utils';
 import { DocumentNotFoundError } from '@refly-packages/errors';
 
 export class EditDoc extends BaseSkill {
-  name = 'edit_doc';
+  name = 'editDoc';
 
   displayName = {
     en: 'Edit Document',
@@ -149,18 +149,18 @@ export class EditDoc extends BaseSkill {
 
       context = preparedRes.contextStr;
       sources = preparedRes.sources;
+
+      this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
+
+      this.emitEvent(
+        {
+          event: 'structured_data',
+          content: JSON.stringify(sources),
+          structuredDataKey: 'sources',
+        },
+        config,
+      );
     }
-
-    this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
-
-    this.emitEvent(
-      {
-        event: 'structured_data',
-        content: JSON.stringify(sources),
-        structuredDataKey: 'sources',
-      },
-      config,
-    );
 
     const requestMessages = buildFinalRequestMessages({
       module,

@@ -598,26 +598,22 @@ export const IconSchema = {
 export const SkillSchema = {
   type: 'object',
   description: 'Skill',
-  required: ['name', 'displayName'],
+  required: ['name'],
   properties: {
     name: {
       type: 'string',
-      description: 'Skill template name',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Skill template display name',
+      description: 'Skill name',
     },
     description: {
       type: 'string',
-      description: 'Skill template description',
+      description: 'Skill description',
     },
     icon: {
-      description: 'Skill template icon',
+      description: 'Skill icon',
       $ref: '#/components/schemas/Icon',
     },
     configSchema: {
-      description: 'Skill template config schema',
+      description: 'Skill config schema',
       $ref: '#/components/schemas/SkillTemplateConfigDefinition',
     },
   },
@@ -744,20 +740,11 @@ export const SkillTriggerSchema = {
 export const SkillMetaSchema = {
   type: 'object',
   description: 'Skill metadata',
-  required: ['displayName'],
+  required: ['name'],
   properties: {
-    displayName: {
+    name: {
       type: 'string',
-      description: 'Skill display name',
-    },
-    tplName: {
-      type: 'string',
-      description: 'Skill template name',
-    },
-    skillId: {
-      type: 'string',
-      description: 'Skill ID',
-      example: 'sk-g30e1b80b5g1itbemc0g5jj3',
+      description: 'Skill name',
     },
     icon: {
       description: 'Skill icon',
@@ -778,10 +765,6 @@ export const ActionMetaSchema = {
     name: {
       type: 'string',
       description: 'Action name',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Action display name',
     },
     icon: {
       description: 'Action icon',
@@ -1143,15 +1126,11 @@ export const ArtifactSchema = {
 export const ActionStepMetaSchema = {
   type: 'object',
   description: 'Action step metadata',
-  required: ['name', 'title'],
+  required: ['name'],
   properties: {
     name: {
       type: 'string',
       description: 'Step name',
-    },
-    title: {
-      type: 'string',
-      description: 'Step title',
     },
   },
 } as const;
@@ -1159,12 +1138,8 @@ export const ActionStepMetaSchema = {
 export const ActionStepSchema = {
   type: 'object',
   description: 'Action step',
-  required: ['title', 'status'],
+  required: ['name', 'status'],
   properties: {
-    title: {
-      type: 'string',
-      description: 'Step title',
-    },
     name: {
       type: 'string',
       description: 'Step name',
@@ -2561,7 +2536,7 @@ export const DeleteLabelInstanceRequestSchema = {
 
 export const ActionSchema = {
   type: 'object',
-  required: ['actionType', 'actionName', 'displayName'],
+  required: ['actionType', 'actionName'],
   properties: {
     actionType: {
       type: 'string',
@@ -2575,10 +2550,6 @@ export const ActionSchema = {
     icon: {
       description: 'Action icon',
       $ref: '#/components/schemas/Icon',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Action display name',
     },
   },
 } as const;
@@ -3170,8 +3141,8 @@ export const InvokeSkillRequestSchema = {
     },
     skillName: {
       type: 'string',
-      description: 'Skill name (if not provided, common_qna will be used)',
-      default: 'common_qna',
+      description: 'Skill name (if not provided, commonQnA will be used)',
+      default: 'commonQnA',
     },
     target: {
       description: 'Skill invocation target',

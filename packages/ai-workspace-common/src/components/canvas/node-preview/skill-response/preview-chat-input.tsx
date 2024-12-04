@@ -30,7 +30,7 @@ export const PreviewChatInput = (props: PreviewChatInputProps) => {
     setUserQuery(query);
   }, [query]);
 
-  const hideSelectedSkillHeader = !actionMeta || actionMeta?.name === 'common_qna' || !actionMeta?.name;
+  const hideSelectedSkillHeader = !actionMeta || actionMeta?.name === 'commonQnA' || !actionMeta?.name;
 
   return (
     <div className="ai-copilot-chat-container">

@@ -20,7 +20,6 @@ import {
   PinSkillInstanceRequest,
   Resource,
   SkillContext,
-  SkillMeta,
   Skill,
   SkillTriggerCreateParam,
   TimerInterval,
@@ -244,11 +243,9 @@ export class SkillService {
     };
   };
 
-  listSkills(user: User): Skill[] {
-    const locale = user.uiLocale || 'en';
+  listSkills(): Skill[] {
     const skills = this.skillInventory.map((skill) => ({
       name: skill.name,
-      displayName: skill.displayName[locale],
       icon: skill.icon,
       description: skill.description,
       configSchema: skill.configSchema,
@@ -421,7 +418,6 @@ export class SkillService {
     }
 
     param.input ??= { query: '' };
-    param.skillName ??= 'common_qna';
 
     if (param.context) {
       param.context = await this.populateSkillContext(user, param.context);
@@ -430,6 +426,7 @@ export class SkillService {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
     }
 
+    param.skillName ||= 'commonQnA';
     const skill = this.skillInventory.find((s) => s.name === param.skillName);
     if (!skill) {
       throw new SkillNotFoundError(`skill ${param.skillName} not found`);
@@ -603,14 +600,6 @@ export class SkillService {
     },
   ): Promise<SkillRunnableConfig> {
     const { context, tplConfig, modelName, resultHistory, eventListener } = data;
-    const installedSkills: SkillMeta[] = (
-      await this.prisma.skillInstance.findMany({
-        where: { uid: user.uid, deletedAt: null },
-      })
-    ).map((s) => ({
-      ...pick(s, ['skillId', 'tplName', 'displayName']),
-      icon: JSON.parse(s.icon),
-    }));
 
     const displayLocale =
       (data?.locale === 'auto' ? await detectLanguage(data?.input?.query) : data?.locale) ||
@@ -624,7 +613,6 @@ export class SkillService {
         modelName,
         locale: displayLocale,
         uiLocale: user.uiLocale,
-        installedSkills,
         tplConfig,
         resultId: data.result?.resultId,
       },

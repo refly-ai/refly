@@ -1,6 +1,4 @@
 import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
-
-// schema
 import { z } from 'zod';
 // types
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
@@ -35,29 +33,8 @@ const titleSchema = z.object({
   reason: z.string().describe('The reasoning process for generating this title'),
 });
 
-// Add to stepTitleDict
-const stepTitleDict = {
-  analyzeContext: {
-    en: 'Context Analysis',
-    'zh-CN': '上下文分析',
-  },
-  generateTitle: {
-    en: 'Generate Title',
-    'zh-CN': '生成标题',
-  },
-  generateDocument: {
-    en: 'Generate Document',
-    'zh-CN': '生成文档',
-  },
-};
-
 export class GenerateDoc extends BaseSkill {
-  name = 'generate_doc';
-
-  displayName = {
-    en: 'Generate Document',
-    'zh-CN': '生成文档',
-  };
+  name = 'generateDoc';
 
   icon: Icon = { type: 'emoji', value: '📝' };
 
@@ -87,18 +64,9 @@ export class GenerateDoc extends BaseSkill {
       documents,
       contentList,
       projects,
-      uiLocale,
     } = config.configurable;
 
-    // set current step
-    config.metadata.step = {
-      name: 'analyzeContext',
-      title: stepTitleDict.analyzeContext[uiLocale],
-    };
-
     const { tplConfig } = config?.configurable || {};
-    const enableWebSearch = tplConfig?.enableWebSearch?.value as boolean;
-    const enableKnowledgeBaseSearch = tplConfig?.enableKnowledgeBaseSearch?.value as boolean;
 
     let optimizedQuery = '';
     let mentionedContext: IContext;
@@ -143,7 +111,7 @@ export class GenerateDoc extends BaseSkill {
       queryTokens < LONG_QUERY_TOKENS_THRESHOLD && // 只有短查询才需要重写
       (hasContext || chatHistoryTokens > 0); // 保持原有的上下文相关判断
 
-    const needPrepareContext = (hasContext && remainingTokens > 0) || enableWebSearch || enableKnowledgeBaseSearch;
+    const needPrepareContext = hasContext && remainingTokens > 0;
     this.engine.logger.log(`needRewriteQuery: ${needRewriteQuery}, needPrepareContext: ${needPrepareContext}`);
 
     if (needRewriteQuery) {
@@ -161,6 +129,7 @@ export class GenerateDoc extends BaseSkill {
     this.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
 
     if (needPrepareContext) {
+      config.metadata.step = { name: 'analyzeContext' };
       const preparedRes = await prepareContext(
         {
           query: optimizedQuery,
@@ -179,18 +148,20 @@ export class GenerateDoc extends BaseSkill {
 
       context = preparedRes.contextStr;
       sources = preparedRes.sources;
+
+      this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
+
+      if (sources.length > 0) {
+        this.emitEvent(
+          {
+            event: 'structured_data',
+            content: JSON.stringify(sources),
+            structuredDataKey: 'sources',
+          },
+          config,
+        );
+      }
     }
-
-    this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
-
-    this.emitEvent(
-      {
-        event: 'structured_data',
-        content: JSON.stringify(sources),
-        structuredDataKey: 'sources',
-      },
-      config,
-    );
 
     const requestMessages = buildFinalRequestMessages({
       module,
@@ -303,10 +274,7 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
     const { requestMessages, context, usedChatHistory } = await this.commonPreprocess(state, config, module);
 
     // Generate title first
-    config.metadata.step = {
-      name: 'generateTitle',
-      title: stepTitleDict.generateTitle[uiLocale],
-    };
+    config.metadata.step = { name: 'generateTitle' };
 
     const documentTitle = await this.generateTitle(state, config, {
       context,
@@ -320,10 +288,7 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
     });
 
     // set current step
-    config.metadata.step = {
-      name: 'generateDocument',
-      title: stepTitleDict.generateDocument[uiLocale],
-    };
+    config.metadata.step = { name: 'generateDocument' };
 
     const artifact: Artifact = {
       type: 'document',

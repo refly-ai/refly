@@ -1,4 +1,5 @@
 import { IconDown } from '@arco-design/web-react/icon';
+import { useTranslation } from 'react-i18next';
 import { useResizeBox } from '@refly-packages/ai-workspace-common/hooks/use-resize-box';
 import { useSkillStoreShallow } from '@refly-packages/ai-workspace-common/stores/skill';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
@@ -8,6 +9,7 @@ import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-s
 import { useListSkills } from '@refly-packages/ai-workspace-common/queries';
 
 export const SkillDisplay = () => {
+  const { t } = useTranslation();
   const skillStore = useSkillStoreShallow((state) => ({
     setSelectedSkill: state.setSelectedSkill,
     setSkillManagerModalVisible: state.setSkillManagerModalVisible,
@@ -46,8 +48,14 @@ export const SkillDisplay = () => {
           skillStore.setSelectedSkill(item);
         }}
       >
-        <SkillAvatar noBorder size={20} icon={item?.icon} displayName={item?.displayName} background="transparent" />
-        <span className="skill-item-title">{item?.displayName}</span>
+        <SkillAvatar
+          noBorder
+          size={20}
+          icon={item?.icon}
+          displayName={t(`${item?.name}.name`, { ns: 'skill' })}
+          background="transparent"
+        />
+        <span className="skill-item-title">{t(`${item?.name}.name`, { ns: 'skill' })}</span>
       </div>
     ));
   }, [skills, containCnt, skillStore.setSelectedSkill]);

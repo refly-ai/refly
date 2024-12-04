@@ -2152,22 +2152,18 @@ components:
       description: Skill
       required:
         - name
-        - displayName
       properties:
         name:
           type: string
-          description: Skill template name
-        displayName:
-          type: string
-          description: Skill template display name
+          description: Skill name
         description:
           type: string
-          description: Skill template description
+          description: Skill description
         icon:
-          description: Skill template icon
+          description: Skill icon
           $ref: '#/components/schemas/Icon'
         configSchema:
-          description: Skill template config schema
+          description: Skill config schema
           $ref: '#/components/schemas/SkillTemplateConfigDefinition'
     SkillTriggerType:
       type: string
@@ -2277,18 +2273,11 @@ components:
       type: object
       description: Skill metadata
       required:
-        - displayName
+        - name
       properties:
-        displayName:
+        name:
           type: string
-          description: Skill display name
-        tplName:
-          type: string
-          description: Skill template name
-        skillId:
-          type: string
-          description: Skill ID
-          example: sk-g30e1b80b5g1itbemc0g5jj3
+          description: Skill name
         icon:
           description: Skill icon
           $ref: '#/components/schemas/Icon'
@@ -2303,9 +2292,6 @@ components:
         name:
           type: string
           description: Action name
-        displayName:
-          type: string
-          description: Action display name
         icon:
           description: Action icon
           $ref: '#/components/schemas/Icon'
@@ -2608,24 +2594,17 @@ components:
       description: Action step metadata
       required:
         - name
-        - title
       properties:
         name:
           type: string
           description: Step name
-        title:
-          type: string
-          description: Step title
     ActionStep:
       type: object
       description: Action step
       required:
-        - title
+        - name
         - status
       properties:
-        title:
-          type: string
-          description: Step title
         name:
           type: string
           description: Step name
@@ -3597,7 +3576,6 @@ components:
       required:
         - actionType
         - actionName
-        - displayName
       properties:
         actionType:
           type: string
@@ -3609,9 +3587,6 @@ components:
         icon:
           description: Action icon
           $ref: '#/components/schemas/Icon'
-        displayName:
-          type: string
-          description: Action display name
     ListActionResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -4023,8 +3998,8 @@ components:
           $ref: '#/components/schemas/SkillTemplateConfig'
         skillName:
           type: string
-          description: Skill name (if not provided, common_qna will be used)
-          default: common_qna
+          description: Skill name (if not provided, commonQnA will be used)
+          default: commonQnA
         target:
           description: Skill invocation target
           $ref: '#/components/schemas/Entity'

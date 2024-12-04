@@ -1,6 +1,5 @@
 import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
-import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition } from '@refly-packages/openapi-schema';
@@ -8,7 +7,6 @@ import { GraphState } from '../scheduler/types';
 import { ModelContextLimitMap, safeStringifyJSON } from '@refly-packages/utils';
 
 // utils
-import { callMultiLingualWebSearch } from '../scheduler/module/multiLingualSearch';
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
 import { prepareWebSearchContext } from '../scheduler/utils/context';
 
@@ -20,26 +18,10 @@ import { countMessagesTokens } from '../scheduler/utils/token';
 import { truncateMessages } from '../scheduler/utils/truncator';
 import { countToken } from '../scheduler/utils/token';
 
-const stepTitleDict = {
-  webSearch: {
-    en: 'Web Search',
-    'zh-CN': '全网搜索',
-  },
-  answerGeneration: {
-    en: 'Answer Generation',
-    'zh-CN': '生成答案',
-  },
-};
-
 export class WebSearch extends BaseSkill {
-  name = 'web_search';
+  name = 'webSearch';
 
-  displayName = {
-    en: 'Web Search',
-    'zh-CN': '网络搜索',
-  };
-
-  icon: Icon = { type: 'emoji', value: '🔍' };
+  icon: Icon = { type: 'emoji', value: '🌐' };
 
   configSchema: SkillTemplateConfigDefinition = {
     items: [
@@ -75,13 +57,10 @@ export class WebSearch extends BaseSkill {
     this.emitEvent({ event: 'log', content: `Start web search...` }, config);
 
     const { messages = [], query: originalQuery } = state;
-    const { locale = 'en', uiLocale = 'en', chatHistory = [], modelName, currentSkill } = config.configurable;
+    const { locale = 'en', chatHistory = [], modelName, currentSkill } = config.configurable;
 
     // Set current step
-    config.metadata.step = {
-      name: 'webSearch',
-      title: stepTitleDict.webSearch[uiLocale],
-    };
+    config.metadata.step = { name: 'webSearch' };
 
     // Preprocess query and ensure it's not too long
     const query = preprocessQuery(originalQuery, {
@@ -134,10 +113,7 @@ export class WebSearch extends BaseSkill {
     );
 
     // Set current step for answer generation
-    config.metadata.step = {
-      name: 'answerGeneration',
-      title: stepTitleDict.answerGeneration[uiLocale],
-    };
+    config.metadata.step = { name: 'answerGeneration' };
 
     // Build messages for the model
     const module = {

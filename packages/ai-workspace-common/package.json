@@ -24,6 +24,7 @@
     "@radix-ui/react-slot": "~1.0.2",
     "@refly/common-types": "workspace:*",
     "@refly/errors": "workspace:*",
+    "@refly/i18n": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/utils": "workspace:*",
     "@sentry/react": "^7.113.0",

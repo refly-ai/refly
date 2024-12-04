@@ -23,10 +23,6 @@ import { SkillEvent } from '@refly-packages/common-types';
 
 export abstract class BaseSkill extends StructuredTool {
   /**
-   * Skill display name
-   */
-  abstract displayName: Record<string, string>;
-  /**
    * Skill template icon
    */
   icon: Icon = { type: 'emoji', value: '🔧' };
@@ -86,8 +82,7 @@ export abstract class BaseSkill extends StructuredTool {
 
     // Ensure currentSkill is not empty.
     config.configurable.currentSkill ??= {
-      tplName: this.name,
-      displayName: this.displayName[config.configurable.uiLocale || 'en'],
+      name: this.name,
       icon: this.icon,
     };
 
@@ -157,11 +152,9 @@ export interface SkillRunnableConfig extends RunnableConfig {
     locale?: string;
     uiLocale?: string;
     modelName?: string;
-    selectedSkill?: SkillMeta;
     currentSkill?: SkillMeta;
     currentStep?: ActionStepMeta;
     chatHistory?: BaseMessage[];
-    installedSkills?: SkillMeta[];
     tplConfig?: SkillTemplateConfig;
     emitter?: EventEmitter<SkillEventMap>;
   };

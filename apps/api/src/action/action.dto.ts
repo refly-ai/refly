@@ -15,7 +15,7 @@ export interface InvokeActionJobData extends InvokeActionRequest {
 
 export function actionStepPO2DTO(step: ActionStepModel): ActionStep {
   return {
-    ...pick(step, ['title', 'content']),
+    ...pick(step, ['name', 'content']),
     artifacts: JSON.parse(step.artifacts || '[]'),
     structuredData: JSON.parse(step.structuredData || '{}'),
     tokenUsage: JSON.parse(step.tokenUsage || '[]'),

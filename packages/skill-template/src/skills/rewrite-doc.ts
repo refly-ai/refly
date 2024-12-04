@@ -24,12 +24,7 @@ import { buildFinalRequestMessages, SkillPromptModule } from '../scheduler/utils
 import * as rewriteCanvas from '../scheduler/module/rewriteCanvas';
 
 export class RewriteDoc extends BaseSkill {
-  name = 'rewrite_doc';
-
-  displayName = {
-    en: 'Rewrite Document',
-    'zh-CN': '重写文档',
-  };
+  name = 'rewriteDoc';
 
   icon: Icon = { type: 'emoji', value: '🔄' };
 
@@ -147,18 +142,19 @@ export class RewriteDoc extends BaseSkill {
 
       context = preparedRes.contextStr;
       sources = preparedRes.sources;
+      this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
+
+      if (sources.length > 0) {
+        this.emitEvent(
+          {
+            event: 'structured_data',
+            content: JSON.stringify(sources),
+            structuredDataKey: 'sources',
+          },
+          config,
+        );
+      }
     }
-
-    this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
-
-    this.emitEvent(
-      {
-        event: 'structured_data',
-        content: JSON.stringify(sources),
-        structuredDataKey: 'sources',
-      },
-      config,
-    );
 
     const requestMessages = buildFinalRequestMessages({
       module,

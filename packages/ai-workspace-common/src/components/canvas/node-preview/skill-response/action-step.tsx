@@ -63,11 +63,14 @@ export const ActionStepCard = ({
       ? safeParseJSON(step?.structuredData?.['recommendedQuestions'])
       : (step?.structuredData?.['recommendedQuestions'] as Array<string>);
 
+  console.log('result', result);
+
   return (
     <div>
       <Divider className="my-2" />
       <div className="my-3 text-gray-600 text-sm">
-        {t('canvas.skillResponse.stepTitle', { index })} {' - ' + step.title}
+        {t('canvas.skillResponse.stepTitle', { index })}{' '}
+        {' - ' + t(`${result.actionMeta?.name}.steps.${step.name}.name`, { ns: 'skill', defaultValue: step.name })}
       </div>
 
       {sources && <SourceViewer sources={sources} query={query} />}

@@ -32,6 +32,7 @@
   "exclude": ["node_modules", "dist", "./src/**/*.spec.ts"],
   "references": [
     { "path": "../../packages/errors" },
+    { "path": "../../packages/i18n" },
     { "path": "../../packages/openapi-schema" },
     { "path": "../../packages/common-types" },
     { "path": "../../packages/utils" },

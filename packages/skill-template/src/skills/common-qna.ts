@@ -1,20 +1,9 @@
 import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
-
-// schema
 import { z } from 'zod';
-// types
-import { SystemMessage } from '@langchain/core/messages';
-import { HumanMessage } from '@langchain/core/messages';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { safeStringifyJSON } from '@refly-packages/utils';
-import {
-  ActionStepMeta,
-  Icon,
-  SkillInvocationConfig,
-  SkillTemplateConfigDefinition,
-  Source,
-} from '@refly-packages/openapi-schema';
+import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition, Source } from '@refly-packages/openapi-schema';
 import { createSkillTemplateInventory } from '../inventory';
 
 // types
@@ -29,24 +18,8 @@ import { buildFinalRequestMessages, SkillPromptModule } from '../scheduler/utils
 // prompts
 import * as commonQnA from '../scheduler/module/commonQnA';
 
-const stepTitleDict = {
-  analyzeContext: {
-    en: 'Context Analysis',
-    'zh-CN': '上下文分析',
-  },
-  commonQnA: {
-    en: 'Question Answering',
-    'zh-CN': '问题回答',
-  },
-};
-
 export class CommonQnA extends BaseSkill {
-  name = 'common_qna';
-
-  displayName = {
-    en: 'Common Question Answering',
-    'zh-CN': '通用问答',
-  };
+  name = 'commonQnA';
 
   icon: Icon = { type: 'emoji', value: '💬' };
 
@@ -83,18 +56,9 @@ export class CommonQnA extends BaseSkill {
       documents,
       contentList,
       projects,
-      uiLocale,
     } = config.configurable;
 
-    // set current step
-    config.metadata.step = {
-      name: 'analyzeContext',
-      title: stepTitleDict.analyzeContext[uiLocale],
-    };
-
     const { tplConfig } = config?.configurable || {};
-    const enableWebSearch = tplConfig?.enableWebSearch?.value as boolean;
-    const enableKnowledgeBaseSearch = tplConfig?.enableKnowledgeBaseSearch?.value as boolean;
 
     let optimizedQuery = '';
     let mentionedContext: IContext;
@@ -139,7 +103,7 @@ export class CommonQnA extends BaseSkill {
       queryTokens < LONG_QUERY_TOKENS_THRESHOLD && // 只有短查询才需要重写
       (hasContext || chatHistoryTokens > 0); // 保持原有的上下文相关判断
 
-    const needPrepareContext = (hasContext && remainingTokens > 0) || enableWebSearch || enableKnowledgeBaseSearch;
+    const needPrepareContext = hasContext && remainingTokens > 0;
     this.engine.logger.log(`needRewriteQuery: ${needRewriteQuery}, needPrepareContext: ${needPrepareContext}`);
 
     if (needRewriteQuery) {
@@ -157,6 +121,8 @@ export class CommonQnA extends BaseSkill {
     this.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
 
     if (needPrepareContext) {
+      config.metadata.step = { name: 'analyzeContext' };
+
       const preparedRes = await prepareContext(
         {
           query: optimizedQuery,
@@ -175,19 +141,21 @@ export class CommonQnA extends BaseSkill {
 
       context = preparedRes.contextStr;
       sources = preparedRes.sources;
+
+      this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
+      this.engine.logger.log(`sources: ${safeStringifyJSON(sources)}`);
+
+      if (sources.length > 0) {
+        this.emitEvent(
+          {
+            event: 'structured_data',
+            content: JSON.stringify(sources),
+            structuredDataKey: 'sources',
+          },
+          config,
+        );
+      }
     }
-
-    this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
-    this.engine.logger.log(`sources: ${safeStringifyJSON(sources)}`);
-
-    this.emitEvent(
-      {
-        event: 'structured_data',
-        content: JSON.stringify(sources),
-        structuredDataKey: 'sources',
-      },
-      config,
-    );
 
     const requestMessages = buildFinalRequestMessages({
       module,
@@ -208,7 +176,7 @@ export class CommonQnA extends BaseSkill {
   callCommonQnA = async (state: GraphState, config: SkillRunnableConfig): Promise<Partial<GraphState>> => {
     this.emitEvent({ event: 'log', content: `Start to call common qna...` }, config);
 
-    const { currentSkill, uiLocale = 'en' } = config.configurable;
+    const { currentSkill } = config.configurable;
 
     // common preprocess
     const module = {
@@ -221,10 +189,7 @@ export class CommonQnA extends BaseSkill {
     this.emitEvent({ event: 'log', content: `Start to generate an answer...` }, config);
 
     // set current step
-    config.metadata.step = {
-      name: 'commonQnA',
-      title: stepTitleDict.commonQnA[uiLocale],
-    };
+    config.metadata.step = { name: 'answerQuestion' };
 
     const model = this.engine.chatModel({ temperature: 0.1 });
     const responseMessage = await model.invoke(requestMessages, {

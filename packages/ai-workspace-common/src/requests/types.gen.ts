@@ -460,23 +460,19 @@ export type Icon = {
  */
 export type Skill = {
     /**
-     * Skill template name
+     * Skill name
      */
     name: string;
     /**
-     * Skill template display name
-     */
-    displayName: string;
-    /**
-     * Skill template description
+     * Skill description
      */
     description?: string;
     /**
-     * Skill template icon
+     * Skill icon
      */
     icon?: Icon;
     /**
-     * Skill template config schema
+     * Skill config schema
      */
     configSchema?: SkillTemplateConfigDefinition;
 };
@@ -583,17 +579,9 @@ export type SkillTrigger = {
  */
 export type SkillMeta = {
     /**
-     * Skill display name
+     * Skill name
      */
-    displayName: string;
-    /**
-     * Skill template name
-     */
-    tplName?: string;
-    /**
-     * Skill ID
-     */
-    skillId?: string;
+    name: string;
     /**
      * Skill icon
      */
@@ -612,10 +600,6 @@ export type ActionMeta = {
      * Action name
      */
     name?: string;
-    /**
-     * Action display name
-     */
-    displayName?: string;
     /**
      * Action icon
      */
@@ -944,10 +928,6 @@ export type ActionStepMeta = {
      * Step name
      */
     name: string;
-    /**
-     * Step title
-     */
-    title: string;
 };
 
 /**
@@ -955,13 +935,9 @@ export type ActionStepMeta = {
  */
 export type ActionStep = {
     /**
-     * Step title
-     */
-    title: string;
-    /**
      * Step name
      */
-    name?: string;
+    name: string;
     /**
      * Step content
      */
@@ -1820,10 +1796,6 @@ export type Action = {
      * Action icon
      */
     icon?: Icon;
-    /**
-     * Action display name
-     */
-    displayName: string;
 };
 
 export type ListActionResponse = BaseResponse & {
@@ -2231,7 +2203,7 @@ export type InvokeSkillRequest = {
      */
     tplConfig?: SkillTemplateConfig;
     /**
-     * Skill name (if not provided, common_qna will be used)
+     * Skill name (if not provided, commonQnA will be used)
      */
     skillName?: string;
     /**

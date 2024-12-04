@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2017",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "incremental": true,
+    "strict": true,
+    "inlineSources": true,
+    "baseUrl": "./",
+    "rootDir": "./src",
+    "sourceRoot": "/",
+    "paths": {
+      "@refly-packages/*": ["../*/src"]
+    },
+    "composite": true,
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

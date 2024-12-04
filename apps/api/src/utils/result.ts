@@ -1,12 +1,11 @@
 import { SkillEvent } from '@refly-packages/common-types';
 import { Prisma } from '@prisma/client';
-import { ActionStepMeta, Artifact, TokenUsageItem } from '@refly-packages/openapi-schema';
+import { Artifact, TokenUsageItem } from '@refly-packages/openapi-schema';
 import { SkillRunnableMeta } from '@refly-packages/skill-template';
 
 import { aggregateTokenUsage } from '@refly-packages/utils';
 interface StepData {
   name: string;
-  title: string;
   content: string;
   structuredData: Record<string, unknown>;
   artifacts: Record<string, Artifact>;
@@ -29,23 +28,20 @@ export class ResultAggregator {
    */
   private aborted: boolean = false;
 
-  private getOrInitData(step: ActionStepMeta): StepData {
+  private getOrInitData(step: string): StepData {
     if (!step) {
-      step = {
-        name: 'default',
-        title: 'Default Step',
-      };
+      step = 'default';
     }
 
-    const stepData = this.data[step.name];
+    const stepData = this.data[step];
     if (stepData) {
       return stepData;
     }
 
-    this.stepNames.push(step.name);
+    this.stepNames.push(step);
 
     return {
-      ...step,
+      name: step,
       content: '',
       structuredData: {},
       artifacts: {},
@@ -62,7 +58,7 @@ export class ResultAggregator {
       return;
     }
 
-    const step: StepData = this.getOrInitData(event.step);
+    const step: StepData = this.getOrInitData(event.step?.name);
     switch (event.event) {
       case 'artifact':
         if (event.artifact) {
@@ -79,7 +75,7 @@ export class ResultAggregator {
   }
 
   addUsageItem(meta: SkillRunnableMeta, usage: TokenUsageItem) {
-    const step = this.getOrInitData(meta.step);
+    const step = this.getOrInitData(meta.step?.name);
     step.usageItems.push(usage);
     this.data[step.name] = step;
   }
@@ -89,7 +85,7 @@ export class ResultAggregator {
       return;
     }
 
-    const step = this.getOrInitData(meta.step);
+    const step = this.getOrInitData(meta.step?.name);
 
     step.content += content;
 
@@ -98,12 +94,11 @@ export class ResultAggregator {
 
   getSteps({ resultId }: { resultId: string }): Prisma.ActionStepCreateManyInput[] {
     return this.stepNames.map((stepName, order) => {
-      const { name, title, content, structuredData, artifacts, usageItems } = this.data[stepName];
+      const { name, content, structuredData, artifacts, usageItems } = this.data[stepName];
       const aggregatedUsage = aggregateTokenUsage(usageItems);
 
       return {
         name,
-        title,
         content,
         resultId,
         order,

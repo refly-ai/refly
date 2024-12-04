@@ -6,7 +6,7 @@ export interface SkillEvent {
    */
   event: 'start' | 'end' | 'stream' | 'log' | 'artifact' | 'structured_data' | 'token_usage' | 'create_node' | 'error';
   /**
-   * The action step metadata
+   * The action step name
    */
   step?: ActionStepMeta;
   /**

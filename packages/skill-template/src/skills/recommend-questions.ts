@@ -1,20 +1,12 @@
 import { START, END, StateGraph } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
-import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
+import { BaseSkill, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { GraphState } from '../scheduler/types';
 import { z } from 'zod';
-import { SystemMessage, HumanMessage, BaseMessage } from '@langchain/core/messages';
+import { BaseMessage } from '@langchain/core/messages';
 import { extractStructuredData } from '../scheduler/utils/extractor';
 import { truncateMessages } from '../scheduler/utils/truncator';
 import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition } from '@refly-packages/openapi-schema';
-
-// Add to stepTitleDict
-const stepTitleDict = {
-  recommendQuestions: {
-    en: 'Generate Recommended Questions',
-    'zh-CN': '生成推荐问题',
-  },
-};
 
 // Schema for recommended questions with reasoning
 const recommendQuestionsSchema = z.object({
@@ -27,13 +19,7 @@ const recommendQuestionsSchema = z.object({
 });
 
 export class RecommendQuestions extends BaseSkill {
-  // Basic skill properties
-  name = 'recommend_questions';
-
-  displayName = {
-    en: 'Recommend Questions',
-    'zh-CN': '推荐问题',
-  };
+  name = 'recommendQuestions';
 
   icon: Icon = { type: 'emoji', value: '❓' };
 
@@ -56,13 +42,10 @@ export class RecommendQuestions extends BaseSkill {
   // Main method to generate related questions
   genRecommendQuestions = async (state: GraphState, config: SkillRunnableConfig): Promise<Partial<GraphState>> => {
     const { messages = [] } = state;
-    const { locale = 'en', chatHistory = [], uiLocale = 'en' } = config.configurable || {};
+    const { locale = 'en', chatHistory = [] } = config.configurable || {};
 
     // Generate title first
-    config.metadata.step = {
-      name: 'recommendQuestions',
-      title: stepTitleDict.recommendQuestions[uiLocale],
-    };
+    config.metadata.step = { name: 'recommendQuestions' };
 
     // Truncate chat history with larger window for better context
     const usedChatHistory = truncateMessages(chatHistory, 10, 800, 4000);

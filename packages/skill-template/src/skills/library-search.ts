@@ -1,16 +1,14 @@
 import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
-import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition } from '@refly-packages/openapi-schema';
 import { GraphState } from '../scheduler/types';
-import { ModelContextLimitMap, safeStringifyJSON } from '@refly-packages/utils';
+import { ModelContextLimitMap } from '@refly-packages/utils';
 
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
 
 // prompts
-import * as webSearch from '../scheduler/module/webSearch/index';
 import { prepareContext } from '../scheduler/utils/context';
 import { preprocessQuery } from '../scheduler/utils/queryRewrite';
 import { countMessagesTokens } from '../scheduler/utils/token';
@@ -18,24 +16,8 @@ import { truncateMessages } from '../scheduler/utils/truncator';
 import { countToken } from '../scheduler/utils/token';
 import * as librarySearch from '../scheduler/module/librarySearch';
 
-const stepTitleDict = {
-  librarySearch: {
-    en: 'Library Search',
-    'zh-CN': '知识库搜索',
-  },
-  answerGeneration: {
-    en: 'Answer Generation',
-    'zh-CN': '生成答案',
-  },
-};
-
 export class LibrarySearch extends BaseSkill {
-  name = 'library_search';
-
-  displayName = {
-    en: 'Library Search',
-    'zh-CN': '知识库搜索',
-  };
+  name = 'librarySearch';
 
   icon: Icon = { type: 'emoji', value: '🔍' };
 
@@ -59,13 +41,10 @@ export class LibrarySearch extends BaseSkill {
     this.emitEvent({ event: 'log', content: `Start library search...` }, config);
 
     const { messages = [], query: originalQuery } = state;
-    const { locale = 'en', uiLocale = 'en', chatHistory = [], modelName, currentSkill } = config.configurable;
+    const { locale = 'en', chatHistory = [], modelName, currentSkill } = config.configurable;
 
     // Set current step
-    config.metadata.step = {
-      name: 'librarySearch',
-      title: stepTitleDict.librarySearch[uiLocale],
-    };
+    config.metadata.step = { name: 'librarySearch' };
 
     // Preprocess query and ensure it's not too long
     const query = preprocessQuery(originalQuery, {
@@ -126,10 +105,7 @@ export class LibrarySearch extends BaseSkill {
     );
 
     // Set current step for answer generation
-    config.metadata.step = {
-      name: 'answerGeneration',
-      title: stepTitleDict.answerGeneration[uiLocale],
-    };
+    config.metadata.step = { name: 'answerGeneration' };
 
     // Build messages for the model
     const module = {

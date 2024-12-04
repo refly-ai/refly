@@ -110,7 +110,7 @@ export const useInvokeAction = () => {
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
-    if (!result) {
+    if (!result || !step) {
       return;
     }
 
@@ -129,7 +129,7 @@ export const useInvokeAction = () => {
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
-    if (!result || !structuredDataKey) {
+    if (!result || !structuredDataKey || !step) {
       return;
     }
 
@@ -157,7 +157,7 @@ export const useInvokeAction = () => {
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
-    if (!result) {
+    if (!result || !step) {
       return;
     }
 
@@ -274,7 +274,9 @@ export const useInvokeAction = () => {
     onUpdateResult(resultId, {
       resultId,
       type: 'skill',
-      actionMeta: {},
+      actionMeta: {
+        name: payload.skillName || 'commonQnA',
+      },
       title: input?.query,
       targetId: payload.target?.entityId,
       targetType: payload.target?.entityType,

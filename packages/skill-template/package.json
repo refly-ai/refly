@@ -11,21 +11,21 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "langchain": "0.3.6",
-    "@langchain/langgraph": "0.2.23",
+    "@dqbd/tiktoken": "~1.0.16",
     "@langchain/community": "0.3.16",
     "@langchain/core": "0.3.19",
+    "@langchain/langgraph": "0.2.23",
     "@langchain/openai": "0.3.14",
-    "tsx": "^4.6.2",
+    "@types/lodash": "~4.17.10",
     "better-sqlite3": "^9.5.0",
     "dotenv": "~16.4.5",
-    "zod": "3.23.8",
     "duck-duck-scrape": "~2.2.5",
     "is-url": "~1.2.4",
-    "@dqbd/tiktoken": "~1.0.16",
-    "lodash.uniqby": "~4.7.0",
+    "langchain": "0.3.6",
     "lodash": "~4.17.21",
-    "@types/lodash": "~4.17.10",
-    "p-limit": "3.1.0"
+    "lodash.uniqby": "~4.7.0",
+    "p-limit": "3.1.0",
+    "tsx": "^4.6.2",
+    "zod": "3.23.8"
   }
 }

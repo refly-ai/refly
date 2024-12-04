@@ -194,8 +194,6 @@ model ActionStep {
   resultId       String   @map("result_id")
   /// Step order
   order          Int      @default(0) @map("order")
-  /// Step title
-  title          String   @map("title")
   /// Step name
   name           String   @map("name")
   /// Step content

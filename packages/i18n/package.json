@@ -1,0 +1,11 @@
+{
+  "name": "@refly/i18n",
+  "version": "1.0.0",
+  "description": "Refly product translations",
+  "author": "",
+  "license": "ISC",
+  "exports": {
+    "./en-US/*": "./src/en-US/*.ts",
+    "./zh-Hans/*": "./src/zh-Hans/*.ts"
+  }
+}

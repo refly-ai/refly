@@ -1,4 +1,3 @@
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { GraphState, IContext, MentionedContextItem, QueryAnalysis } from '../types';
 import { summarizeChatHistory, summarizeContext } from './summarizer';
 import { z } from 'zod';
@@ -206,6 +205,9 @@ export async function analyzeQueryAndContext(
   query: string,
   ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState; tplConfig: SkillTemplateConfig },
 ): Promise<QueryAnalysis> {
+  // set current step
+  ctx.config.metadata.step = { name: 'analyzeContext' };
+
   const { chatHistory, resources, documents, contentList, projects, modelName } = ctx.config.configurable;
   const context: IContext = {
     resources,

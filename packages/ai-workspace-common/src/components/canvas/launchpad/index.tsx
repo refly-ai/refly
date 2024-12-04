@@ -104,7 +104,7 @@ export const LaunchPad = () => {
         title: item.data.title,
         steps: item.data.metadata?.steps,
       })),
-      skillName: skillStore.selectedSkill?.name || 'common_qna',
+      skillName: skillStore.selectedSkill?.name,
       locale: localSettings?.outputLocale,
       tplConfig,
     };
