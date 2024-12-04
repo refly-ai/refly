@@ -351,6 +351,9 @@ importers:
       '@refly/common-types':
         specifier: workspace:*
         version: link:../../packages/common-types
+      '@refly/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../../packages/openapi-schema

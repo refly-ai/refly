@@ -1,4 +1,4 @@
-import enTranslation from '@refly-packages/ai-workspace-common/i18n/en/translation.json';
+import enTranslation from '@refly/i18n/en-US/ui';
 
 export const translation = {
   ...enTranslation,

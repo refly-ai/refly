@@ -69,6 +69,7 @@
     "@refly/plugin-vite-encoding": "1.3.3",
     "@refly/plugin-vite-watcher": "1.3.3",
     "@refly/common-types": "workspace:*",
+    "@refly/i18n": "workspace:*",
     "@refly/utils": "workspace:*",
     "lodash.debounce": "~4.0.8",
     "react-icons": "~5.2.1",
