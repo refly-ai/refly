@@ -109,9 +109,10 @@ export const CanvasToolbar: FC<ToolbarProps> = ({ onToolSelect }) => {
       const domain = selectedItems[0]?.domain;
       console.log('selectedItems', selectedItems);
       selectedItems.forEach((item) => {
+        const contentPreview = item?.snippets?.map((snippet) => snippet?.text || '').join('\n');
         addNode({
           type: domain as CanvasNodeType,
-          data: { title: item.title, entityId: item.id, contentPreview: item.contentPreview },
+          data: { title: item.title, entityId: item.id, contentPreview: item?.contentPreview || contentPreview },
         });
       });
     }

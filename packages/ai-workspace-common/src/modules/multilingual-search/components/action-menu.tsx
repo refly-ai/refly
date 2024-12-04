@@ -77,18 +77,27 @@ export const ActionMenu: React.FC<ActionMenuProps> = (props) => {
         getLibraryList();
         message.success(t('common.putSuccess'));
         setSelectedItems([]);
-        const resources = (Array.isArray(data?.data) ? data?.data : []).map((resource) => ({
-          id: resource.resourceId,
-          title: resource.title,
-          domain: 'resource',
-          contentPreview: resource.contentPreview,
-        }));
+
+        const resources = (Array.isArray(data?.data) ? data?.data : []).map((resource, index) => {
+          const selectedItem = selectedItems[index];
+          return {
+            id: resource.resourceId,
+            title: resource.title,
+            domain: 'resource',
+            contentPreview: selectedItem?.pageContent ?? resource.contentPreview,
+          };
+        });
+
         resources.forEach((resource) => {
           addNode({
             type: 'resource',
             data: {
               title: resource.title,
               entityId: resource.id,
+              contentPreview: resource.contentPreview,
+              metadata: {
+                contentPreview: resource.contentPreview,
+              },
             },
           });
         });
@@ -101,6 +110,9 @@ export const ActionMenu: React.FC<ActionMenuProps> = (props) => {
             title: item.title,
             entityId: item.metadata?.entityId,
             contentPreview: item.pageContent,
+            metadata: {
+              contentPreview: item.pageContent,
+            },
           },
         });
       });

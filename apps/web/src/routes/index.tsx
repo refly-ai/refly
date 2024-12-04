@@ -10,7 +10,7 @@ import {
   BetaProtectedRoute,
   RequestAccessRoute,
 } from "@refly-packages/ai-workspace-common/components/request-access/protected-route"
-import { useHandlePaymentCallback } from "@refly-packages/ai-workspace-common/hooks/use-handle-payment-callback"
+import { useHandleUrlParamsCallback } from "@refly-packages/ai-workspace-common/hooks/use-handle-url-params-callback"
 import { SuspenseLoading } from "@refly-packages/ai-workspace-common/components/common/loading"
 import { HomeRedirect } from "@refly-packages/ai-workspace-common/components/home-redirect"
 // Lazy load components
@@ -73,7 +73,7 @@ export const AppRouter = (props: { layout?: any }) => {
   }, [i18n, locale])
 
   // Handle payment callback
-  useHandlePaymentCallback()
+  useHandleUrlParamsCallback()
 
   const routeLogin = useMatch("/")
 

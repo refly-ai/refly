@@ -16,6 +16,7 @@ import {
   ToolNodeMeta,
   ResponseNodeMeta,
 } from './types';
+import { t } from 'i18next';
 
 // Export all components and types
 export * from './types';
@@ -69,10 +70,11 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
   switch (nodeType) {
     case 'document':
       return {
-        contentPreview: 'Loading document content...',
+        contentPreview: t('canvas.nodePreview.document.contentPreview'),
         // Add optional fields with default values
         title: '',
         lastModified: new Date().toISOString(),
+        status: 'finish',
       } as DocumentNodeMeta;
 
     case 'resource':
@@ -81,7 +83,7 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
         url: '',
         description: '',
         lastAccessed: new Date().toISOString(),
-        contentPreview: 'Loading resource content...',
+        contentPreview: t('canvas.nodePreview.resource.contentPreview'),
       } as ResourceNodeMeta;
 
     case 'skill':
@@ -106,6 +108,7 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
         modelName: 'Skill Response',
         status: 'waiting',
         executionTime: null,
+        contentPreview: t('canvas.nodePreview.skillResponse.contentPreview'),
       } as ResponseNodeMeta;
 
     case 'toolResponse':

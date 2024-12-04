@@ -1,175 +1,191 @@
-import React from "react"
+import React, { ReactNode } from "react"
+import { useTranslation } from "react-i18next"
+import { AiOutlineAppstore, AiOutlineExperiment } from "react-icons/ai"
+import { FaRegPaperPlane } from "react-icons/fa"
+import { LuSearch } from "react-icons/lu"
+import { MdOutlineNoteAlt } from "react-icons/md"
+
+// Feature type definition for better type safety
+interface Feature {
+  tag: string
+  tagIcon?: string | ReactNode
+  title: string
+  description: string
+  bulletPoints: string[]
+  imageSrc: string
+  isReversed?: boolean
+  background?: string
+}
+
+interface FeatureCardProps {
+  isReversed?: boolean
+  background?: string
+}
+
+const FeatureCard = ({
+  feature,
+  isReversed = false,
+  background = "linear-gradient(180deg, #F3EEFC 0%, #FFFFFF 100%)",
+}: FeatureCardProps & { feature: Feature }) => (
+  <div className="relative mx-auto mt-[40px] w-full md:w-[65%]">
+    <div
+      className="min-h-[360px] w-full overflow-visible rounded-[20px] md:h-[600px]"
+      style={{
+        background,
+        border: "1px solid rgba(0, 0, 0, 0.05)",
+      }}>
+      <div
+        className={`flex h-full flex-col gap-6 p-6 md:flex-row ${
+          isReversed ? "md:flex-row-reverse" : ""
+        }`}>
+        {/* Image Section */}
+        <div className="relative h-[260px] md:h-auto md:w-1/2">
+          <img
+            src={feature?.imageSrc ?? "/fallback-image.png"}
+            alt={`${feature?.title ?? "Feature"} visualization`}
+            className="absolute h-full w-[130%] object-contain"
+            style={{
+              [isReversed ? "right" : "left"]: "-30%",
+              borderRadius: "20px",
+              opacity: 1,
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        {/* Content Section */}
+        <div className="flex flex-col justify-center md:w-1/2">
+          <span className="mb-3 inline-flex w-fit items-center rounded-lg border border-solid border-black/10 bg-white px-4 py-1 text-sm font-medium shadow-[0_3px_20px_0_rgba(0,0,0,0.10)]">
+            {feature?.tagIcon && (
+              <span className="mr-2 flex items-center">
+                {typeof feature.tagIcon === "string"
+                  ? feature.tagIcon
+                  : feature.tagIcon}
+              </span>
+            )}
+            <span>{feature?.tag}</span>
+          </span>
+          <h2 className="mb-4 text-2xl font-bold md:text-3xl">
+            {feature?.title}
+          </h2>
+          <ul className="space-y-3">
+            {feature?.bulletPoints?.map((point, index) => (
+              <li key={index} className="flex items-start gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
+                  ✓
+                </span>
+                <span className="text-gray-700">{point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+)
 
 function FeaturesBlocks() {
+  const { t } = useTranslation()
+  const header = {
+    tag: t("landingPage.features.tag"),
+    tagIcon: <AiOutlineAppstore />,
+    title: t("landingPage.features.title"),
+  }
+
+  // Sample feature data
+  const features: Feature[] = [
+    {
+      tag: "Plan",
+      tagIcon: <FaRegPaperPlane className="inline-block" />,
+      title: t("landingPage.features.featureOne.title"),
+      description: t("landingPage.features.featureOne.description"),
+      bulletPoints: t("landingPage.features.featureOne.bulletPoints", {
+        returnObjects: true,
+      }) as string[],
+      imageSrc: "https://static.refly.ai/landing/generateOutline.png",
+      isReversed: false,
+      background: "linear-gradient(180deg, #F3EEFC 0%, #FFFFFF 100%)",
+    },
+    {
+      tag: t("landingPage.features.featureTwo.tag"),
+      tagIcon: <LuSearch className="inline-block" />,
+      title: t("landingPage.features.featureTwo.title"),
+      description: t("landingPage.features.featureTwo.description"),
+      bulletPoints: t("landingPage.features.featureTwo.bulletPoints", {
+        returnObjects: true,
+      }) as string[],
+      imageSrc: "https://static.refly.ai/landing/importResource.png",
+      isReversed: true,
+      background: "linear-gradient(180deg, #EAF6FF 0%, #FFFFFF 100%)",
+    },
+    {
+      tag: "Research",
+      tagIcon: <AiOutlineExperiment className="inline-block" />,
+      title: t("landingPage.features.featureThree.title"),
+      description: t("landingPage.features.featureThree.description"),
+      bulletPoints: t("landingPage.features.featureThree.bulletPoints", {
+        returnObjects: true,
+      }) as string[],
+      imageSrc: "https://static.refly.ai/landing/research.png",
+      isReversed: false,
+      background: "linear-gradient(180deg, #FFF3F3 0%, #FFFFFF 100%)",
+    },
+    {
+      tag: "Thinking & Creation",
+      tagIcon: <MdOutlineNoteAlt className="inline-block" />,
+      title: t("landingPage.features.featureFour.title"),
+      description: t("landingPage.features.featureFour.description"),
+      bulletPoints: t("landingPage.features.featureFour.bulletPoints", {
+        returnObjects: true,
+      }) as string[],
+      imageSrc: "https://static.refly.ai/landing/generateArticle.png",
+      isReversed: true,
+      background: "linear-gradient(180deg, #F3FFF3 0%, #FFFFFF 100%)",
+    },
+  ]
+
   return (
-    <section className="px-6 sm:px-6 md:px-6 lg:px-0">
-      <div className="border-border2 mx-auto box-content flex w-full max-w-4xl flex-col items-start border-b pb-24 pt-16 text-left sm:pt-20">
-        <div className="mb-16 flex flex-col items-start">
-          <div className="max-w-3xl">
-            <h2 className="z-20 mb-4 text-[2rem] leading-[1.1] !tracking-[-0.1rem] sm:text-[3rem]">
-              AI 知识库，AI 笔记，AI Copilot，
-              <span
-                className="feature-header-highlight"
-                style={{
-                  background: "#DEECDD",
-                  position: "relative",
-                  zIndex: 1,
-                }}>
-                你的 All-in-one 的知识管理操作系统
+    <section className="mt-[98px] px-6 sm:px-6 md:px-6 lg:px-0">
+      {/* Header Section */}
+      <div className="mb-16 text-center">
+        <span className="mb-8 inline-flex items-center justify-center rounded-lg border border-solid border-black/10 bg-white px-6 py-2 text-sm font-medium shadow-[0_3px_20px_0_rgba(0,0,0,0.10)]">
+          {header?.tagIcon && (
+            <span className="mr-2 flex items-center">
+              {typeof header.tagIcon === "string"
+                ? header.tagIcon
+                : header.tagIcon}
+            </span>
+          )}
+          <span>{header?.tag}</span>
+        </span>
+        <section className="text-center">
+          <h1 className="text-3xl font-bold md:text-4xl">
+            {header?.title?.split("Primary Features")[0] ??
+              "An Overview of Refly's"}
+            <div className="mt-2">
+              <span className="relative text-[#F17B2C]">
+                Primary Features
+                <span className="absolute bottom-0 left-0 h-1 w-full bg-[#F17B2C]"></span>
               </span>
-            </h2>
-            <p className="max-w-3xl text-base !leading-[1.3] !tracking-[-0.03rem] sm:text-lg">
-              <span className="span-wrap-styles">
-                结合社区共创的 AI
-                技能，无论是文字、图片、视频或是播客，都能轻松高效地完成知识的导入、整理、消化和产出全流程，节省时间和减轻知识焦虑，获取前所未有的洞见。
-              </span>
-            </p>
-          </div>
-        </div>
-        <div className="rp-1 bg-elementGray border-border2 rounded-lg border sm:rounded-xl sm:p-2">
-          <img
-            className="shadow-heroImageInner mx-auto w-full rounded-md"
-            src="https://static.refly.ai/landing/features-knowledgebase.png"
-            width="1024"
-            height="504"
-            alt="Hero"
-          />
-        </div>
+            </div>
+          </h1>
+        </section>
       </div>
-      <div className="border-border2 mx-auto box-content flex w-full max-w-4xl flex-col items-start border-b pb-24 pt-16 text-left sm:pt-20">
-        <div className="mb-16 flex flex-col items-start">
-          <div className="max-w-3xl">
-            <h2 className="z-20 mb-4 text-[2rem] leading-[1.1] !tracking-[-0.1rem] sm:text-[3rem]">
-              连接你的任意数据源，
-              <span
-                className="feature-header-highlight"
-                style={{
-                  background: "#D5E5EE",
-                  position: "relative",
-                  zIndex: 1,
-                }}>
-                通过知识图谱建立知识联系
-              </span>
-            </h2>
-            <p className="max-w-3xl text-base !leading-[1.3] !tracking-[-0.03rem] sm:text-lg">
-              <span className="span-wrap-styles">
-                无论是 Notion、EverNote、Google Docs 还是本地文档，还是
-                Zapier、Retool、Dify 等已有的工作流平台，Refly
-                都能轻松融入您已有的知识流程，并借助强大的技能插件系统完成前所未有的工作
-              </span>
-            </p>
-          </div>
-        </div>
-        <div className="bg-elementGray border-border2 rounded-lg border p-1 sm:rounded-xl sm:p-2">
-          <img
-            className="shadow-heroImageInner mx-auto w-full rounded-md"
-            src="https://static.refly.ai/landing/features-import.png"
-            width="1024"
-            height="504"
-            alt="Hero"
-          />
-        </div>
-      </div>
-      <div className="border-border2 mx-auto box-content flex w-full max-w-4xl flex-col items-start border-b pb-24 pt-16 text-left sm:pt-20">
-        <div className="mb-16 flex flex-col items-start">
-          <div className="max-w-3xl">
-            <h2 className="z-20 mb-4 text-[2rem] leading-[1.1] !tracking-[-0.1rem] sm:text-[3rem]">
-              通过 Agent 驱动的 Skill 集合，
-              <span
-                className="feature-header-highlight"
-                style={{
-                  background: "#F3E1E9",
-                  position: "relative",
-                  zIndex: 1,
-                }}>
-                为你打造超级智能知识助手
-              </span>
-            </h2>
-            <p className="max-w-3xl text-base !leading-[1.3] !tracking-[-0.03rem] sm:text-lg">
-              <span className="span-wrap-styles">
-                通过AI 搜索，知识库智能检索，AI
-                笔记等超实用技能集合，主动触发或者通过事件触发技能，Human-in-the-loop
-                构建知识体系，基于大模型让知识「活起来」，构建知识体系
-              </span>
-            </p>
-          </div>
-        </div>
-        <div className="rp-1 bg-elementGray border-border2 rounded-lg border sm:rounded-xl sm:p-2">
-          <img
-            className="shadow-heroImageInner mx-auto w-full rounded-md"
-            src="https://static.refly.ai/landing/features-agent.png"
-            width="1024"
-            height="504"
-            alt="Hero"
-          />
-        </div>
-      </div>
-      <div className="border-border2 mx-auto box-content flex w-full max-w-4xl flex-col items-start border-b pb-24 pt-16 text-left sm:pt-20">
-        <div className="mb-16 flex flex-col items-start">
-          <div className="max-w-3xl">
-            <h2 className="z-20 mb-4 text-[2rem] leading-[1.1] !tracking-[-0.1rem] sm:text-[3rem]">
-              感知上下文，有记忆
-              <span
-                className="feature-header-highlight"
-                style={{
-                  background: "#ECE3D1",
-                  position: "relative",
-                  zIndex: 1,
-                }}>
-                更懂你，越用越智能的智能知识伙伴
-              </span>
-            </h2>
-            <p className="max-w-3xl text-base !leading-[1.3] !tracking-[-0.03rem] sm:text-lg">
-              <span className="span-wrap-styles">
-                按需记录你的历史对话，自动提取你的知识标签与爱好，Refly AI
-                感知你的信息、地点、时间与操作知识的行为特征，自动在下一次对话中运用这些知识，让你少打字确更懂你
-              </span>
-            </p>
-          </div>
-        </div>
-        <div className="bg-elementGray border-border2 rounded-lg border p-1 sm:rounded-xl sm:p-2">
-          <img
-            className="shadow-heroImageInner mx-auto w-full rounded-md"
-            src="https://static.refly.ai/landing/features-private-context.png"
-            width="1024"
-            height="504"
-            alt="Hero"
-          />
-        </div>
-      </div>
-      <div className="border-border2 mx-auto box-content flex w-full max-w-4xl flex-col items-start border-b pb-24 pt-16 text-left sm:pt-20">
-        <div className="mb-16 flex flex-col items-start">
-          <div className="max-w-3xl">
-            <h2 className="z-20 mb-4 text-[2rem] leading-[1.1] !tracking-[-0.1rem] sm:text-[3rem]">
-              网页，浏览器插件，应用内搜索
-              <span
-                className="feature-header-highlight"
-                style={{
-                  background: "#EBD4EB",
-                  position: "relative",
-                  zIndex: 1,
-                }}>
-                你的知识，触手可达
-              </span>
-            </h2>
-            <p className="max-w-3xl text-base !leading-[1.3] !tracking-[-0.03rem] sm:text-lg">
-              <span className="span-wrap-styles">
-                Refly
-                智能伙伴可以在任意网页通过快捷键唤醒，你可以与智能伙伴便捷对话，无论完成阅读或写作任务，还是查询自己的历史数据，她都能轻松胜任
-              </span>
-            </p>
-          </div>
-        </div>
-        <div className="rp-1 bg-elementGray border-border2 rounded-lg border sm:rounded-xl sm:p-2">
-          <img
-            className="shadow-heroImageInner mx-auto w-full rounded-md"
-            src="https://static.refly.ai/landing/features-big-search.png"
-            width="1024"
-            height="504"
-            alt="Hero"
-          />
-        </div>
-      </div>
+
+      {/* Feature Cards */}
+      {features?.map((feature, index) => (
+        <FeatureCard
+          key={feature.tag}
+          feature={feature}
+          isReversed={index % 2 !== 0}
+          background={
+            feature.background ??
+            `linear-gradient(180deg, ${
+              ["#F3EEFC", "#EAF6FF", "#FFF3F3", "#F3FFF3"][index % 4]
+            } 0%, #FFFFFF 100%)`
+          }
+        />
+      ))}
     </section>
   )
 }

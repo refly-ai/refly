@@ -5,17 +5,24 @@ import {
   ArgumentsHost,
   Logger,
   HttpException,
+  Inject,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 
 import * as Sentry from '@sentry/node';
-import { UnknownError } from '@refly-packages/errors';
+import { OAuthError, UnknownError } from '@refly-packages/errors';
 import { genBaseRespDataFromError } from '@/utils/exception';
 import { User } from '@prisma/client';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
+
+  constructor(
+    @Inject(ConfigService)
+    private readonly configService: ConfigService,
+  ) {}
 
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -37,8 +44,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const user = request.user as User;
 
-    // Handle other business exceptions
     const baseRespData = genBaseRespDataFromError(exception);
+
+    // Handle OAuth errors, redirect to home page
+    if (baseRespData.errCode === new OAuthError().code) {
+      const redirectUrl = this.configService.get('auth.redirectUrl');
+      response.redirect(`${redirectUrl}?loginFailed=1`);
+      return;
+    }
 
     if (baseRespData.errCode === new UnknownError().code) {
       Sentry.captureException(exception, {
@@ -51,6 +64,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         `Request: ${request.method} ${request.url} unknown err: ${exception.stack}`,
       );
     } else {
+      // Handle other business exceptions
       this.logger.warn(
         `Request: ${request.method} ${request.url} biz err: ${baseRespData.errMsg}, ` +
           `stack: ${baseRespData.stack}`,

@@ -141,7 +141,7 @@ export class FindRelatedContent extends BaseSkill {
     }
 
     const sources: Source[] = searchResp.data?.map((result) => ({
-      url: result.metadata?.resourceMeta?.url,
+      url: (result.metadata?.['resourceMeta']?.['url'] as string) || '',
       title: result.title,
       pageContent: result.snippets.map((s) => s.text).join('\n\n'),
       metadata: {

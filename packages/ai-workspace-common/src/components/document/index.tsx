@@ -454,7 +454,7 @@ export const CanvasStatusBar = ({
       </div>
 
       <div className="note-status-bar-menu">
-        <div className="note-status-bar-item" style={{ display: 'flex', alignItems: 'center' }}>
+        {/* <div className="note-status-bar-item" style={{ display: 'flex', alignItems: 'center' }}>
           <Popover
             content={
               <div className="sidebar">
@@ -470,8 +470,8 @@ export const CanvasStatusBar = ({
             <Button type="text" style={{ width: 32, height: 32 }} icon={<IconBook style={{ fontSize: 16 }} />} />
           </Popover>
           <Divider type="vertical" />
-        </div>
-        <Button
+        </div> */}
+        {/* <Button
           type="text"
           size="small"
           style={{ color: deckSize ? '#00968F' : '' }}
@@ -479,9 +479,9 @@ export const CanvasStatusBar = ({
           onClick={() => {
             setDeckSize(deckSize ? 0 : 200);
           }}
-        ></Button>
-        <Divider type="vertical" />
-        <Button
+        ></Button> */}
+        {/* <Divider type="vertical" /> */}
+        {/* <Button
           type="text"
           size="small"
           style={{ color: currentDocument?.shareCode ? '#00968F' : '' }}
@@ -491,7 +491,7 @@ export const CanvasStatusBar = ({
         >
           {currentDocument?.shareCode ? t('projectDetail.share.sharing') : t('common.share')}
         </Button>
-        <Divider type="vertical" />
+        <Divider type="vertical" /> */}
 
         {currentDocument && documentServerStatus === 'connected' ? (
           <div
@@ -512,6 +512,7 @@ export const CanvasStatusBar = ({
             />
           </div>
         ) : null}
+
         <div className="note-status-bar-item">
           <Divider type="vertical" />
           <DeleteDropdownMenu
@@ -554,11 +555,12 @@ export const DocumentEditorHeader = () => {
 
   return (
     <div className="w-full">
-      <div className="mx-2 mt-4 max-w-screen-lg">
+      <div className="mx-0 mt-4 max-w-screen-lg">
         <Input
           className="text-3xl font-bold bg-transparent focus:border-transparent focus:bg-transparent"
           placeholder="Enter The Title"
           value={title}
+          style={{ paddingLeft: 6 }}
           onChange={onTitleChange}
         />
       </div>

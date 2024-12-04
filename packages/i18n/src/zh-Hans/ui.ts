@@ -93,26 +93,63 @@ const translations = {
     },
   },
   landingPage: {
-    slogan: '知识，在此繁茂',
-    description:
-      '快速总结与形成洞察、自动化归档以及智能语义搜索——Refly 能够为你打造第二大脑，拓展你的知识视野，并赋予你超乎寻常的能力。',
+    slogan: 'AI 创作引擎',
+    simplySlogan: '创作引擎',
+    description: '基于自由画布的创作平台，通过多线程对话、知识整合、上下文记忆和智能搜索，将想法转化为优质内容。',
+    simplyDescrption: {
+      first: 'Refly 是一个基于自由画布的 AI 内容创作引擎。',
+      second: '通过多线程对话、知识库集成、场景记忆和智能检索，帮助将创意转化为优质内容。',
+    },
+    messageText: '立即体验 AI 自由画布，激发创作灵感！',
+    tryForFree: '开始使用',
+    contactUs: '联系我们',
     joinBtn: '免费使用',
     downloadBtn: '下载插件',
     loginBtn: '登录',
     dashboard: '主页',
-    featureOne: {
-      title: '基于插件快捷操作',
-      description: '为任何网站提供快速摘要，持续提问，并对你喜爱的内容进行深入研究',
-    },
-    featureTwo: {
-      title: '全能搜索引擎',
-      description: '全能搜索引擎支持自然语言搜索，帮助你检索所有记忆，并构建你的第二大脑',
-    },
-    featureThree: {
-      title: '自动标签与时间线',
-      description: '自动标记、随时搜索和回顾。通过标签和时间线构建知识体系',
+    features: {
+      tag: '功能',
+      title: 'Refly 的主要功能总览',
+      featureOne: {
+        tag: '规划',
+        title: '头脑风暴、梳理大纲、将想法转为可落地的行动',
+        bulletPoints: [
+          '20+ 场景，适配学术论文、竞品调研、技术文章、自媒体撰文、项目、OKR',
+          'AI 一键生成内容大纲',
+          '基于历史知识进行推荐、关联记忆',
+        ],
+      },
+      featureTwo: {
+        tag: '探索与导入',
+        title: '连接任何数据，并添加为可写作的素材',
+        bulletPoints: [
+          'AI 搜索智能发现',
+          '浏览器插件导入私有数据',
+          'Refly 网页导入任何公有数据或文本',
+          '自动语义处理并使用知识库搜索获取关键洞见',
+        ],
+      },
+      featureThree: {
+        tag: '研究',
+        title: '快速从每一个知识库、资源和每一行文字挖掘洞见',
+        bulletPoints: ['AI 搜索进行实时回答', '基于你最相关的上下文得到答案', '通过浏览器插件和上下文选择器研究细节'],
+      },
+      featureFour: {
+        tag: '自动标签与时间线',
+        title: '基于你的上下文语境，使用最强大的模型愉快的撰写目标文章',
+        bulletPoints: [
+          '选择资源、笔记或划线任意内容进行提问',
+          '30+ 撰写写作、阅读、审稿而生的 AI 技能',
+          '通过 AI Apply 一键插入，引用溯源 AI 撰写内容来源',
+        ],
+      },
     },
     footer: {
+      cta: {
+        title: '准备好立即体验 AI 自由画布，激发创作灵感了吗？',
+        getStarted: '立即体验',
+        contactUs: '联系我们',
+      },
       description:
         '快速总结与形成洞察、自动化归档以及智能语义搜索——Refly 能够为你打造第二大脑，拓展你的知识视野，并赋予你超乎寻常的能力。',
       right: 'Refly.ai 版权所有。',
@@ -134,6 +171,10 @@ const translations = {
         one: 'support@refly.ai',
       },
     },
+    loginFailed: {
+      title: '登录失败',
+      content: '登录失败，请重新登录',
+    },
     loginModal: {
       title: '欢迎来到 Refly, 登录以继续使用',
       loginBtn: {
@@ -149,7 +190,7 @@ const translations = {
   },
   projectDetail: {
     directory: {
-      newCanvas: '新画布',
+      newCanvas: '新稿布',
       importResource: '导入资源',
       chat: 'Chat',
       empty: '空空如也',
@@ -157,7 +198,7 @@ const translations = {
       remove: '移除',
       delete: '删除',
       projectSelector: {
-        title: '移动画布',
+        title: '移动稿布',
         tip: '请选择目标项目',
         success: '移动成功！',
       },
@@ -165,7 +206,7 @@ const translations = {
     share: {
       createShareFailed: '创建分享失败，请重试！',
       project: '项目',
-      canvas: '画布',
+      canvas: '稿布',
       title: '分享{{entityType}}',
       description: '你的{{entityType}}正在分享中',
       copyLink: '复制链接',
@@ -177,7 +218,7 @@ const translations = {
       copyLinkSuccess: '链接已复制到剪切板！',
     },
     contentArea: {
-      addCanvas: '新画布',
+      addCanvas: '新稿布',
       addResource: '新资源',
     },
   },
@@ -193,13 +234,13 @@ const translations = {
     contentPanel: {
       tabPanel: {
         resource: '资源',
-        canvas: '画布',
+        canvas: '稿布',
         project: '项目',
         thread: '会话',
       },
       newButton: {
         resource: '新资源',
-        canvas: '新画布',
+        canvas: '新稿布',
         project: '新项目',
       },
     },
@@ -266,10 +307,10 @@ const translations = {
       importResource: '导入资源',
     },
     directory: {
-      canvasCount: '{{count}} 篇画布',
+      canvasCount: '{{count}} 篇稿布',
       resourceCount: '{{count}} 篇资源',
       resourcesSearchPlaceholder: '搜索资源...',
-      canvasesSearchPlaceholder: '搜索画布...',
+      canvasesSearchPlaceholder: '搜索稿布...',
       conversationsSearchPlaceholder: '搜索会话...',
     },
     quickSearch: {
@@ -278,14 +319,14 @@ const translations = {
     },
     note: {
       connecting: '连接中...',
-      newNote: '创建新画布',
+      newNote: '创建新稿布',
       noteCharsCount: '共 {{count}} 字',
       autoSaved: '已自动保存',
       saving: '保存中...',
-      readOnly: '画布已设为只读状态',
-      edit: '画布已设为可编辑状态',
+      readOnly: '稿布已设为只读状态',
+      edit: '稿布已设为可编辑状态',
       serviceDisconnected: '服务已断开',
-      createNoteFailed: '创建画布失败，请重试！',
+      createNoteFailed: '创建稿布失败，请重试！',
       defaultTitle: '未命名',
     },
     canvas: {
@@ -299,7 +340,7 @@ const translations = {
         },
       },
       leavePageModal: {
-        title: '确认离开当前画布吗？',
+        title: '确认离开当前稿布吗？',
         content: 'AI 仍在写作中，退出页面会导致内容丢失，是否确认离开？',
       },
     },
@@ -309,11 +350,11 @@ const translations = {
       contentSelector: '内容划线选择器',
       addContext: '添加上下文',
       clearContext: '清空',
-      addToContext: '引用',
+      addToContext: '引用提问',
       resource: '资源',
       resources: '资源',
-      canvas: '画布',
-      canvases: '画布',
+      canvas: '稿布',
+      canvases: '稿布',
       projects: '项目',
       project: '项目',
       contentList: '内容列表',
@@ -328,8 +369,8 @@ const translations = {
       contextRequiredTip: '至少选择 1 个{{type}}',
       contextLimitTip: '最多可选择{{limit}}个{{type}}，当前已选择{{currentCount}}个',
       popoverSelector: {
-        webPlaceholder: '搜索画布、资源或项目...',
-        extensionPlaceholder: '搜索网页、画布、资源或项目...',
+        webPlaceholder: '搜索稿布、资源或项目...',
+        extensionPlaceholder: '搜索网页、稿布、资源或项目...',
         footer: {
           navigate: '导航',
           toggle: '切换',
@@ -352,6 +393,7 @@ const translations = {
       },
       alreadyAddedWithTitle: '[{{type}}] {{title}} 已添加到上下文',
       addSuccessWithTitle: '[{{type}}] {{title}} 已成功添加到上下文',
+      addToContextSuccess: '已成功添加到上下文',
       untitled: '未命名',
       deleteSuccessWithTitle: '已成功删除 [{{type}}] "{{title}}"',
       nodeTypes: {
@@ -367,7 +409,7 @@ const translations = {
     },
     header: {
       searchAndOpenResourceOrProject: '搜索并打开资源或项目',
-      searchOrOpenNote: '搜索或打开画布',
+      searchOrOpenNote: '搜索或打开稿布',
       searchOrOpenThread: '搜索或打开会话',
       openThreadHistory: '打开会话历史',
       newThread: '新建会话',
@@ -410,9 +452,9 @@ const translations = {
       placeholder: '搜索{{domain}}...',
     },
     newCanvas: {
-      modalTitle: '新画布',
+      modalTitle: '新稿布',
       titlePlaceholder: '请输入写作标题',
-      descriptionPlaceholder: '请输入画布描述',
+      descriptionPlaceholder: '请输入稿布描述',
     },
     contextSelector: {
       placeholder: '输入关键词搜索画布内节点...',
@@ -431,6 +473,20 @@ const translations = {
     nodeStatus: {
       isCreatingDocument: '创建中...',
       createDocument: '创建文档',
+    },
+    nodePreview: {
+      document: {
+        contentPreview: '加载文档内容中...',
+        noContentPreview: '暂无内容预览',
+      },
+      resource: {
+        contentPreview: '加载资源内容中...',
+        noContentPreview: '暂无内容预览',
+      },
+      skillResponse: {
+        contentPreview: '技能响应内容加载中...',
+        noContentPreview: '暂无内容预览',
+      },
     },
   },
   resource: {
@@ -757,7 +813,7 @@ const translations = {
       formLabel: {
         query: '问题',
         resources: '资源',
-        notes: '画布',
+        notes: '稿布',
         collections: '知识库',
         contentList: '内容',
         urls: '链接列表',
@@ -765,7 +821,7 @@ const translations = {
       placeholder: {
         query: '请输入问题',
         resources: '请选择资源',
-        notes: '请选择画布',
+        notes: '请选择稿布',
         collections: '请选择知识库',
         contentList: {
           select: '请选择内容',
@@ -866,13 +922,13 @@ const translations = {
         yearlyPlan: '每年自动续费',
         tooltip: {
           modelToken: 'Token 同时包括模型输入和输出',
-          vectorStorage: '用于存储资源和画布的语义化向量数据',
-          fileStorage: '用于存储资源文本、画布文本和历史版本、以及上传的文件（图片）数据',
+          vectorStorage: '用于存储资源和稿布的语义化向量数据',
+          fileStorage: '用于存储资源文本、稿布文本和历史版本、以及上传的文件（图片）数据',
         },
         vectorStorage: '向量存储',
         fileStorage: '文件存储',
         fileStorageType: {
-          note: '画布',
+          note: '稿布',
           resource: '资源',
           file: '上传文件',
         },
@@ -1029,14 +1085,14 @@ const translations = {
     placeholder: {
       project: '选择项目',
       resource: '选择资源',
-      note: '选择画布',
+      note: '选择稿布',
       skill: '选择技能',
       conversation: '选择会话',
     },
     createEntity: {
       project: '新建项目',
       resource: '新建资源',
-      note: '新建画布',
+      note: '新建稿布',
       skill: '新建技能',
       conversation: '新建会话',
       newProjectNameIsEmpty: '请输入项目名称',
@@ -1083,8 +1139,8 @@ const translations = {
         },
       },
       noteContextCard: {
-        title: '当前画布快捷操作',
-        noteSelectedTitle: '选中画布内容问答',
+        title: '当前稿布快捷操作',
+        noteSelectedTitle: '选中稿布内容问答',
         selectedContentCount: '（共 {{count}} 个）',
         noSelectedContent: '暂无选中内容...',
         improveWriting: {
@@ -1162,10 +1218,10 @@ const translations = {
       placeholder: '暂无选中内容...',
       options: {
         resource: '选中资源内容',
-        note: '选中画布内容',
-        noteCursorSelection: '画布光标选中内容',
-        noteBeforeCursorSelection: '画布光标前内容',
-        noteAfterCursorSelection: '画布光标后内容',
+        note: '选中稿布内容',
+        noteCursorSelection: '稿布光标选中内容',
+        noteBeforeCursorSelection: '稿布光标前内容',
+        noteAfterCursorSelection: '稿布光标后内容',
         conversation: '选中会话内容',
       },
       save: {
@@ -1202,7 +1258,7 @@ const translations = {
     },
     projectSelector: {
       title: '选择项目',
-      tip: '所选项目将用于保存画布，若未选择将自动新建项目。',
+      tip: '所选项目将用于保存稿布，若未选择将自动新建项目。',
     },
     webSearch: {
       title: '全网搜索',
@@ -1237,7 +1293,7 @@ const translations = {
       writeTwitterArticle: '写一篇 Twitter 原创文章',
       installSkillHint: '你还未添加任何助手，点我添加',
       installSkillHintTitle: '添加助手',
-      openCanvas: '打开画布',
+      openCanvas: '打开稿布',
     },
     recommendQuestions: {
       title: '推荐问题',
@@ -1272,8 +1328,8 @@ const translations = {
       },
     },
     contentSelector: {
-      openForWeb: '开启选择内容提问, 画布已进入只读模式',
-      closeForWeb: '关闭选择器, 画布已恢复编辑',
+      openForWeb: '开启选择内容提问, 稿布已进入只读模式',
+      closeForWeb: '关闭选择器, 稿布已恢复编辑',
       open: '已开启内容选择器',
       close: '已关闭内容选择器',
     },

@@ -1,14 +1,9 @@
 .knowledge-base-resource-detail-container {
   position: relative;
-  padding: 0 32px 24px 32px;
+  padding: 0 12px 0 12px;
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  .knowledge-base-resource-detail-empty {
-    height: 100%;
-    display: flex;
-    align-items: center;
-  }
 
   .parse_failed-tip {
     font-size: 18px;
@@ -19,38 +14,6 @@
     cursor: pointer;
     &:hover {
       background: rgba(255, 0, 0, 0.1);
-    }
-  }
-
-  .wait_parse-alert {
-    padding: 6px 15px;
-    .arco-alert-content {
-      font-size: 13px;
-      color: rgb(202 138 4);
-    }
-  }
-
-  .wait_index-alert {
-    padding: 6px 15px;
-    .arco-alert-content {
-      font-size: 13px;
-      color: rgb(202 138 4);
-    }
-  }
-
-  .index_failed-alert {
-    padding: 6px 15px;
-    .arco-alert-content {
-      font-size: 13px;
-      color: rgb(220 38 38);
-    }
-  }
-
-  .parse_failed-alert {
-    padding: 6px 15px;
-    .arco-alert-content {
-      font-size: 13px;
-      color: rgb(220 38 38);
     }
   }
 

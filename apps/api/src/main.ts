@@ -52,7 +52,7 @@ async function bootstrap() {
   app.enableCors();
   app.use(cookieParser());
   app.useWebSocketAdapter(new CustomWsAdapter(app, configService.get<number>('wsPort')));
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalFilters(new GlobalExceptionFilter(configService));
 
   tracer.start();
 

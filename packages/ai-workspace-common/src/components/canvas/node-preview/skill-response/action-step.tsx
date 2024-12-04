@@ -52,8 +52,6 @@ export const ActionStepCard = ({
     return node;
   };
 
-  console.log('step', step);
-
   let sources =
     typeof step?.structuredData?.['sources'] === 'string'
       ? safeParseJSON(step?.structuredData?.['sources'])

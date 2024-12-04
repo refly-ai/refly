@@ -24,23 +24,24 @@ export const DocumentNodePreview = ({ nodeData }: DocumentNodePreviewProps) => {
 
   return (
     <div className="h-full overflow-hidden">
-      <Splitter
+      <DocumentEditor docId={entityId} deckSize={deckSize} setDeckSize={setDeckSize} />
+      {/* <Splitter
         layout="vertical"
         onResize={(sizes) => {
           setDeckSize(sizes[1]);
         }}
-      >
-        <Splitter.Panel>
+      > */}
+      {/* <Splitter.Panel>
           <DocumentEditor docId={entityId} deckSize={deckSize} setDeckSize={setDeckSize} />
-        </Splitter.Panel>
+        </Splitter.Panel> */}
 
-        {/* Only render deck panel if we have valid entity */}
-        {entityId && (
+      {/* Only render deck panel if we have valid entity */}
+      {/* {entityId && (
           <Splitter.Panel size={deckSize} max={'80%'} collapsible>
             <ResourceDeck domain={entityType} id={entityId} />
           </Splitter.Panel>
-        )}
-      </Splitter>
+        )} */}
+      {/* </Splitter> */}
     </div>
   );
 };

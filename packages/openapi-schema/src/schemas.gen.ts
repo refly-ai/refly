@@ -3851,26 +3851,6 @@ export const SearchRequestSchema = {
   },
 } as const;
 
-export const SearchResultMetaSchema = {
-  type: 'object',
-  properties: {
-    resourceType: {
-      type: 'string',
-      description: 'Resource type',
-      $ref: '#/components/schemas/ResourceType',
-    },
-    resourceMeta: {
-      type: 'object',
-      description: 'Resource metadata',
-      $ref: '#/components/schemas/ResourceMeta',
-    },
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
-  },
-} as const;
-
 export const SearchResultSnippetSchema = {
   type: 'object',
   properties: {
@@ -3921,8 +3901,9 @@ export const SearchResultSchema = {
       description: 'Search result relevance score',
     },
     metadata: {
+      type: 'object',
       description: 'Search result metadata',
-      $ref: '#/components/schemas/SearchResultMeta',
+      additionalProperties: true,
     },
     createdAt: {
       type: 'string',

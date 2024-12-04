@@ -1,9 +1,10 @@
 import React from 'react';
-import { Button } from 'antd';
+import { Button, message } from 'antd';
 import { SelectionBubble } from '@refly-packages/ai-workspace-common/components/selection-bubble';
 import { useTranslation } from 'react-i18next';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { useSelectionContext } from '@refly-packages/ai-workspace-common/hooks/use-selection-context';
+import { MessageSquareDiff } from 'lucide-react';
 
 interface SelectionContextProps {
   containerClass?: string;
@@ -21,6 +22,7 @@ export const SelectionContext: React.FC<SelectionContextProps> = ({ containerCla
     const node: CanvasNode = getNodeData(text);
 
     addToContext(node);
+    message.success(t('knowledgeBase.context.addToContextSuccess'));
   };
 
   return (
@@ -28,15 +30,21 @@ export const SelectionContext: React.FC<SelectionContextProps> = ({ containerCla
       <div
         className="refly-selector-hover-menu"
         style={{
-          background: 'white',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          borderRadius: '4px',
+          background: '#FFFFFF',
+          border: '1px solid rgba(0,0,0,0.10)',
+          boxShadow: '0 2px 6px 0 rgba(0,0,0,0.10)',
+          borderRadius: '8px',
           padding: '2px 4px',
         }}
         onClick={() => handleAddToContext(selectedText)}
       >
-        <Button type="text" size="small">
-          <span className="font-medium">{t('knowledgeBase.context.addToContext')}</span>
+        <Button
+          type="text"
+          size="small"
+          className="text-[#00968F] hover:text-[#00968F]/80"
+          icon={<MessageSquareDiff size={12} className="text-[#00968F]" />}
+        >
+          <span className="font-medium text-xs text-[#00968F]">{t('knowledgeBase.context.addToContext')}</span>
         </Button>
       </div>
     </SelectionBubble>

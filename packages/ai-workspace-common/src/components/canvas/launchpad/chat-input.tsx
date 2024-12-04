@@ -150,7 +150,7 @@ export const ChatInput = (props: ChatInputProps) => {
                 placeholder={t('copilot.chatInput.placeholder')}
                 autoSize={{
                   minRows: 1,
-                  maxRows: 3,
+                  maxRows: 6,
                 }}
               ></TextArea>
             </div>

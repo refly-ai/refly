@@ -3,7 +3,7 @@ import { Divider, Layout } from 'antd';
 import { SearchBox } from './components/search-box';
 import { SearchProgress } from './components/search-progress';
 import { SearchResults } from './components/search-results';
-import { ActionMenu } from './components/action-menu';
+import { ActionMenu, ImportActionMode } from './components/action-menu';
 import { SearchHome } from './components/search-home';
 import { useMultilingualSearchStoreShallow } from './stores/multilingual-search';
 import './index.scss';
@@ -81,6 +81,7 @@ function MultilingualSearch() {
         <ActionMenu
           getTarget={() => document.querySelector('.import-resource-right-panel') as HTMLElement}
           sourceType="multilingualSearch"
+          importActionMode={ImportActionMode.CREATE_RESOURCE}
         />
       </div>
     </div>

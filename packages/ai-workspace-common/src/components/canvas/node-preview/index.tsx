@@ -53,9 +53,8 @@ export const NodePreview = ({
   const handleClose = useCallback(() => {
     if (isPinned) {
       removePinnedNode(canvasId, node);
-    } else {
-      unselectNode(node);
     }
+    unselectNode(node);
   }, [node, removePinnedNode, isPinned, unselectNode]);
 
   const previewComponent = useMemo(() => {
@@ -136,7 +135,7 @@ export const NodePreview = ({
             isMaximized={isMaximized}
           />
         </div>
-        <div className="h-[calc(100%-64px)] overflow-auto rounded-b-lg pointer-events-auto preview-container">
+        <div className="h-[calc(100%-52px)] overflow-auto rounded-b-lg pointer-events-auto preview-container">
           {previewComponent}
         </div>
       </div>

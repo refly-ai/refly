@@ -32,6 +32,14 @@ export class ParamsError extends BaseError {
   };
 }
 
+export class OAuthError extends BaseError {
+  code = 'E0004';
+  messageDict = {
+    en: 'Authorization process failed, please try again',
+    'zh-CN': '授权过程失败，请重试',
+  };
+}
+
 export class CanvasNotFoundError extends BaseError {
   code = 'E1000';
   messageDict = {
@@ -158,6 +166,7 @@ const errorMap = {
   E0001: ConnectionError,
   E0002: UnauthorizedError,
   E0003: ParamsError,
+  E0004: OAuthError,
   E1000: CanvasNotFoundError,
   E1001: ProjectNotFoundError,
   E1002: ResourceNotFoundError,

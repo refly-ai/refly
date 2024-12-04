@@ -21,14 +21,15 @@ export const ResourceNodePreview = ({ resourceId }: ResourceNodePreviewProps) =>
 
   return (
     <div className="h-full bg-white rounded">
-      <Splitter layout="vertical" onResize={(sizes) => setDeckSize(sizes[1])}>
+      <ResourceView resourceId={resourceId} deckSize={deckSize} setDeckSize={setDeckSize} />
+      {/* <Splitter layout="vertical" onResize={(sizes) => setDeckSize(sizes[1])}>
         <Splitter.Panel className="min-h-[200px]">
-          <ResourceView resourceId={resourceId} deckSize={deckSize} setDeckSize={setDeckSize} />
+        <ResourceView resourceId={resourceId} deckSize={deckSize} setDeckSize={setDeckSize} />
         </Splitter.Panel>
         <Splitter.Panel size={deckSize} max={'80%'} collapsible>
           <ResourceDeck domain="resource" id={resourceId} />
         </Splitter.Panel>
-      </Splitter>
+      </Splitter> */}
     </div>
   );
 };

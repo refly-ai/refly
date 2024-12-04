@@ -7,6 +7,8 @@ import {
   CanvasNode,
   DocumentNodeProps,
   ResourceNodeProps,
+  SkillResponseNode,
+  SkillResponseNodeProps,
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { DocumentNode, ResourceNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 
@@ -73,18 +75,28 @@ export const ContextPreview = ({ item }: { item: CanvasNode }) => {
     setSearchParams({ canvasId }, { replace: true });
   };
 
-  useEffect(() => {
-    if (item.type === 'document' && !item?.data?.metadata?.sourceType) {
-      if (isShare) {
-        getShareDocument(item.data?.entityId as string);
-      } else {
-        getDocumentDetail(item.data?.entityId as string);
-      }
-    } else if (item.type === 'resource' && !item?.data?.metadata?.sourceType) {
-      getResourceDetail(item.data?.entityId as string);
-    } else {
-      setContent((item.data?.metadata?.contentPreview as string) || '');
+  const fetchContent = async () => {
+    if (!item?.data?.entityId || (item?.data?.metadata?.sourceType as string)?.includes('Selection')) {
+      setContent((item?.data?.metadata?.contentPreview as string) ?? '');
+      return;
     }
+    try {
+      if (item.type === 'document') {
+        if (isShare) {
+          await getShareDocument(item.data.entityId);
+        } else {
+          await getDocumentDetail(item.data.entityId);
+        }
+      } else if (item.type === 'resource') {
+        await getResourceDetail(item.data.entityId);
+      }
+    } catch (error) {
+      console.error('Failed to fetch content:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchContent();
   }, [item.id]);
 
   const renderPreviewNode = () => {
@@ -92,7 +104,7 @@ export const ContextPreview = ({ item }: { item: CanvasNode }) => {
       isPreview: true,
       hideActions: true,
       hideHandles: true,
-      data: item.data,
+      data: { ...item.data, contentPreview: content },
       selected: false,
       id: item.id,
     };
@@ -102,6 +114,8 @@ export const ContextPreview = ({ item }: { item: CanvasNode }) => {
         return <DocumentNode {...(commonProps as DocumentNodeProps)} />;
       case 'resource':
         return <ResourceNode {...(commonProps as ResourceNodeProps)} />;
+      case 'skillResponse':
+        return <SkillResponseNode {...(commonProps as SkillResponseNodeProps)} />;
       default:
         return null;
     }

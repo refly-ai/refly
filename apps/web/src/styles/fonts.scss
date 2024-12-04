@@ -1,0 +1,27 @@
+@font-face {
+  font-family: "Alibaba PuHuiTi Bold";
+  src:
+    url("https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2")
+      format("woff2"),
+    url("https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.ttf")
+      format("truetype");
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@font-face {
+  font-family: "Alibaba PuHuiTi Light";
+  src:
+    url("https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2")
+      format("woff2"),
+    url("https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.ttf")
+      format("truetype");
+  font-weight: light;
+  font-style: normal;
+  font-display: swap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

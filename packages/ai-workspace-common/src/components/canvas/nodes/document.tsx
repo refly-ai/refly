@@ -29,7 +29,7 @@ export const DocumentNode = ({
   const [isHovered, setIsHovered] = useState(false);
   const { edges } = useCanvasControl();
   const { setEdges } = useReactFlow();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
 
   // Check if node has any connections
@@ -178,7 +178,7 @@ export const DocumentNode = ({
 
           <Spin spinning={status === 'executing' && !data.contentPreview} style={{ height: 100 }}>
             <div className="text-xs leading-4 text-gray-500 line-clamp-6 overflow-hidden text-ellipsis">
-              {data.contentPreview}
+              {data.contentPreview || t('canvas.nodePreview.document.noContentPreview')}
             </div>
           </Spin>
 

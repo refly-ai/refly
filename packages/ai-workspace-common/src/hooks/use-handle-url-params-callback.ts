@@ -2,17 +2,40 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 
-export const useHandlePaymentCallback = () => {
+export const useHandleUrlParamsCallback = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isLogin = useUserStore.getState().isLogin;
+  const userProfile = localStorage.getItem('refly-user-profile');
   const [showModal, setShowModal] = useState(false);
-  // 添加支付状态检查
+  const okButtonProps = { style: { backgroundColor: '#00968F' } };
+
   useEffect(() => {
-    if (!isLogin || showModal) return;
+    if (showModal) return;
+
+    if (!userProfile) {
+      const loginFailed = searchParams.get('loginFailed');
+      if (loginFailed) {
+        setShowModal(true);
+        Modal.error({
+          centered: true,
+          title: t('landingPage.loginFailed.title'),
+          content: t('landingPage.loginFailed.content'),
+          okText: t('common.confirm'),
+          okButtonProps,
+          autoFocusButton: null,
+          onOk: () => {
+            setShowModal(false);
+          },
+          onCancel: () => {
+            setShowModal(false);
+          },
+        });
+      }
+      return;
+    }
+
     const paySuccess = searchParams.get('paySuccess');
     const payCancel = searchParams.get('payCancel');
     if (paySuccess || payCancel) {
@@ -24,8 +47,11 @@ export const useHandlePaymentCallback = () => {
           : t('settings.action.payCancelDescription');
         if (paySuccess) {
           Modal.success({
+            centered: true,
             title,
             content: description,
+            okButtonProps,
+            autoFocusButton: null,
             onOk: () => {
               setShowModal(false);
             },
@@ -35,8 +61,11 @@ export const useHandlePaymentCallback = () => {
           });
         } else {
           Modal.error({
+            centered: true,
             title,
             content: description,
+            okButtonProps,
+            autoFocusButton: null,
             onOk: () => {
               setShowModal(false);
             },
@@ -54,5 +83,5 @@ export const useHandlePaymentCallback = () => {
         });
       }, 1);
     }
-  }, [searchParams, t, navigate, isLogin, showModal]);
+  }, [searchParams, t, navigate, showModal]);
 };

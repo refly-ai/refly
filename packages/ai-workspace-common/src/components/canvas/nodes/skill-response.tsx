@@ -1,6 +1,6 @@
 import { Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
-import { CanvasNodeData, ResponseNodeMeta, CanvasNode } from './types';
+import { CanvasNodeData, ResponseNodeMeta, CanvasNode, SkillResponseNodeProps } from './types';
 import { Node } from '@xyflow/react';
 import { useState, useCallback } from 'react';
 import { CustomHandle } from './custom-handle';
@@ -22,8 +22,8 @@ import { getArtifactIcon } from '@refly-packages/ai-workspace-common/components/
 
 type SkillResponseNode = Node<CanvasNodeData<ResponseNodeMeta>, 'skillResponse'>;
 
-export const SkillResponseNode = (props: NodeProps<SkillResponseNode>) => {
-  const { data, selected, id } = props;
+export const SkillResponseNode = (props: SkillResponseNodeProps) => {
+  const { data, selected, id, hideActions = false, isPreview = false, hideHandles = false, onNodeClick } = props;
   const [isHovered, setIsHovered] = useState(false);
   const { edges } = useCanvasControl();
   const { setEdges } = useReactFlow();
@@ -119,8 +119,13 @@ export const SkillResponseNode = (props: NodeProps<SkillResponseNode>) => {
   }, [content, debouncedCreateDocument, data.entityId, data?.title, modelName]);
 
   return (
-    <div className="relative group" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-      {isWeb && (
+    <div
+      className="relative group"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={onNodeClick}
+    >
+      {isWeb && !hideActions && (
         <ActionButtons
           type="skill-response"
           onAddToChatHistory={handleAddToChatHistory}
@@ -144,20 +149,24 @@ export const SkillResponseNode = (props: NodeProps<SkillResponseNode>) => {
           ${getNodeCommonStyles({ selected, isHovered })}
         `}
       >
-        <CustomHandle
-          type="target"
-          position={Position.Left}
-          isConnected={isTargetConnected}
-          isNodeHovered={isHovered}
-          nodeType="response"
-        />
-        <CustomHandle
-          type="source"
-          position={Position.Right}
-          isConnected={isSourceConnected}
-          isNodeHovered={isHovered}
-          nodeType="response"
-        />
+        {!isPreview && !hideHandles && (
+          <>
+            <CustomHandle
+              type="target"
+              position={Position.Left}
+              isConnected={isTargetConnected}
+              isNodeHovered={isHovered}
+              nodeType="response"
+            />
+            <CustomHandle
+              type="source"
+              position={Position.Right}
+              isConnected={isSourceConnected}
+              isNodeHovered={isHovered}
+              nodeType="response"
+            />
+          </>
+        )}
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
@@ -191,7 +200,7 @@ export const SkillResponseNode = (props: NodeProps<SkillResponseNode>) => {
               text-ellipsis
             "
             >
-              {content}
+              {(isPreview ? contentPreview : content) || t('canvas.nodePreview.skillResponse.noContentPreview')}
             </div>
             <div className="flex items-center gap-2">
               {artifacts?.map((artifact) => (

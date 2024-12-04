@@ -133,8 +133,8 @@ export const TopToolbar: FC<TopToolbarProps> = ({ canvasId }) => {
         }}
       >
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-[#ffffff] rounded-lg px-2 py-1 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
-            <Button type="text" icon={<IconMoreHorizontal />} />
+          <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
+            <Button type="text" icon={<IconMoreHorizontal />} className="w-8 h-6 flex items-center justify-center" />
           </div>
         </div>
       </Dropdown>
@@ -214,14 +214,15 @@ export const TopToolbar: FC<TopToolbarProps> = ({ canvasId }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex items-center bg-[#ffffff] rounded-lg px-2 py-1 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
-          <Button type="text" icon={<PiShootingStar />} />
+        <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
+          <Button type="text" icon={<PiShootingStar />} className="w-8 h-6 flex items-center justify-center" />
           <Divider type="vertical" />
           <Tooltip title={t(`canvas.toolbar.${showPreview ? 'hidePreview' : 'showPreview'}`)}>
             <Button
               type="text"
               icon={<MdOutlineHideImage style={{ color: showPreview ? '#9CA3AF' : '#000' }} />}
               onClick={() => setShowPreview(!showPreview)}
+              className="w-8 h-6 flex items-center justify-center"
             />
           </Tooltip>
         </div>

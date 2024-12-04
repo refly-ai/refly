@@ -1,4 +1,5 @@
 import { Tabs, Modal } from 'antd';
+import { useEffect } from 'react';
 
 // components
 import { useTranslation } from 'react-i18next';
@@ -22,7 +23,7 @@ interface SettingModalProps {
 }
 export const SettingModal = (props: SettingModalProps) => {
   const { visible, setVisible } = props;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const tabs = [
     {
@@ -44,6 +45,9 @@ export const SettingModal = (props: SettingModalProps) => {
       children: <LanguageSetting />,
     },
   ];
+  useEffect(() => {
+    console.log('useEffect', i18n.language);
+  }, [i18n.language]);
 
   return (
     <Modal
@@ -54,7 +58,7 @@ export const SettingModal = (props: SettingModalProps) => {
           <IconSettings /> {t('tabMeta.settings.title')}
         </span>
       }
-      width={850}
+      width={i18n.language === 'zh-CN' ? 850 : 910}
       footer={null}
       open={visible}
       onCancel={() => setVisible(false)}

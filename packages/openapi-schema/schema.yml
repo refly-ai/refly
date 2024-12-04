@@ -4451,20 +4451,6 @@ components:
           type: number
           description: Search result limit for each domain
           default: 5
-    SearchResultMeta:
-      type: object
-      properties:
-        resourceType:
-          type: string
-          description: Resource type
-          $ref: '#/components/schemas/ResourceType'
-        resourceMeta:
-          type: object
-          description: Resource metadata
-          $ref: '#/components/schemas/ResourceMeta'
-        projectId:
-          type: string
-          description: Project ID
     SearchResultSnippet:
       type: object
       properties:
@@ -4505,8 +4491,9 @@ components:
           type: number
           description: Search result relevance score
         metadata:
+          type: object
           description: Search result metadata
-          $ref: '#/components/schemas/SearchResultMeta'
+          additionalProperties: true
         createdAt:
           type: string
           format: date-time

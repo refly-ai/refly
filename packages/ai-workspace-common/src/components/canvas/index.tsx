@@ -218,7 +218,7 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
           />
         </ReactFlow>
 
-        <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[444px] z-10">
+        <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[444px] z-50">
           <LaunchPad />
         </div>
       </div>
@@ -232,7 +232,7 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
             <div className="flex gap-2 h-full">
               {/* Left shadow and arrow indicator */}
               {showLeftIndicator && (
-                <div className="sticky left-0 top-0 w-12 h-full bg-gradient-to-r from-white to-transparent z-50 flex items-center justify-start pointer-events-none absolute">
+                <div className="sticky left-0 top-0 w-12 h-full bg-gradient-to-r from-white to-transparent z-10 flex items-center justify-start pointer-events-none absolute">
                   <div className="text-gray-400 ml-2">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                       <path
@@ -272,7 +272,7 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
 
               {/* Right shadow and arrow indicator */}
               {showRightIndicator && (
-                <div className="sticky right-0 top-0 w-12 h-full bg-gradient-to-l from-white to-transparent z-50 flex items-center justify-end pointer-events-none absolute">
+                <div className="sticky right-0 top-0 w-12 h-full bg-gradient-to-l from-white to-transparent z-10 flex items-center justify-end pointer-events-none absolute">
                   <div className="text-gray-400 mr-2">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                       <path

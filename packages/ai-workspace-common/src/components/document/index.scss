@@ -21,7 +21,7 @@
 /* Basic editor styles */
 .tiptap {
   caret-color: var(--purple);
-  margin: 1.5rem;
+  margin: 0.5rem;
 
   &:focus {
     outline: none;
@@ -427,7 +427,7 @@
 
   .ai-note-editor {
     position: relative;
-    height: calc(100% - 40px);
+    height: calc(100% - 4px);
     overflow: scroll;
     padding-bottom: 48px;
     width: 100%;
@@ -436,7 +436,7 @@
     flex-direction: column;
     align-items: center;
     &-container {
-      width: 90%;
+      width: 95%;
       max-width: 1024px;
     }
   }

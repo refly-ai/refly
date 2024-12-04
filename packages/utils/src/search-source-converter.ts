@@ -1,4 +1,4 @@
-import { SearchDomain, SearchResult, SearchResultMeta, Source, SourceMeta } from '@refly-packages/openapi-schema';
+import { SearchDomain, SearchResult, Source, SourceMeta } from '@refly-packages/openapi-schema';
 
 // Helper function to generate unique key for a source
 const getSourceKey = (source: Source): string => {
@@ -75,14 +75,14 @@ export const sourcesToSearchResults = (sources: Source[]): SearchResult[] => {
     metadata: {
       ...source.metadata,
       url: source.url,
-    } as any as SearchResultMeta,
+    },
   }));
 };
 
 // Helper function to convert SearchResult[] back to Source[]
 export const searchResultsToSources = (results: SearchResult[]): Source[] => {
   return results.map((result) => ({
-    url: result.metadata?.['url'] || '',
+    url: (result.metadata?.['url'] as string) || '',
     title: result.title,
     pageContent: result.snippets?.[0]?.text || '',
     score: result.relevanceScore, // Map relevanceScore to score

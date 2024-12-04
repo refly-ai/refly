@@ -2623,21 +2623,6 @@ export type SearchRequest = {
     limit?: number;
 };
 
-export type SearchResultMeta = {
-    /**
-     * Resource type
-     */
-    resourceType?: ResourceType;
-    /**
-     * Resource metadata
-     */
-    resourceMeta?: ResourceMeta;
-    /**
-     * Project ID
-     */
-    projectId?: string;
-};
-
 export type SearchResultSnippet = {
     /**
      * Search result content text
@@ -2681,7 +2666,9 @@ export type SearchResult = {
     /**
      * Search result metadata
      */
-    metadata?: SearchResultMeta;
+    metadata?: {
+        [key: string]: unknown;
+    };
     /**
      * Data creation time
      */
