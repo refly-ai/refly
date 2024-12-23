@@ -56,6 +56,7 @@ export const BaseSearchAndSelector = ({
   const contextPanelStore = useContextPanelStoreShallow((state) => ({
     clearContextItems: state.clearContextItems,
     resetSelectedTextCardState: state.resetSelectedTextCardState,
+    clearHistoryItems: state.clearHistoryItems,
   }));
   // hooks
 
@@ -199,6 +200,7 @@ export const BaseSearchAndSelector = ({
               onClick={() => {
                 contextPanelStore.resetSelectedTextCardState();
                 contextPanelStore.clearContextItems();
+                contextPanelStore.clearHistoryItems();
               }}
             >
               {t('knowledgeBase.context.clearContext')}
