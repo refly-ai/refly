@@ -109,6 +109,7 @@ export class EditDoc extends BaseSkill {
     this.engine.logger.log(`needRewriteQuery: ${needRewriteQuery}, needPrepareContext: ${needPrepareContext}`);
 
     if (needRewriteQuery) {
+      config.metadata.step = { name: 'analyzeContext' };
       const analyedRes = await analyzeQueryAndContext(query, {
         config,
         ctxThis: this,
@@ -123,6 +124,7 @@ export class EditDoc extends BaseSkill {
     this.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
 
     if (needPrepareContext) {
+      config.metadata.step = { name: 'prepareContext' };
       const preparedRes = await prepareContext(
         {
           query: optimizedQuery,
@@ -208,6 +210,8 @@ export class EditDoc extends BaseSkill {
 
     // Prepare prompts using module functions
     const { requestMessages } = await this.commonPreprocess(state, config, module);
+
+    config.metadata.step = { name: 'editDoc' };
 
     try {
       const responseMessage = await model.invoke(requestMessages, {
