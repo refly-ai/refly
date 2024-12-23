@@ -1379,16 +1379,8 @@ const translations = {
       standard: 'Standard',
       free: 'Free',
       tokenUsed: 'Used {{used}} / {{quota}}',
-      quotaExceeded: {
-        t1: {
-          free: 'Upgrade',
-          pro: 'Quota Exceeded, Check Your Subscription',
-        },
-        t2: {
-          free: 'Quota Exceeded, Upgrade To Use More',
-          pro: 'Quota Exceeded, Check Your Subscription',
-        },
-      },
+      upgrade: 'Upgrade',
+      quotaExceeded: 'Quota exceeded, click to upgrade subscription',
     },
     contentSelector: {
       openForWeb: 'Enable content selection for questions, and the canvas is now in read-only mode',

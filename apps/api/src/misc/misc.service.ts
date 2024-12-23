@@ -3,7 +3,6 @@ import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import {
   EntityType,
-  ModelInfo,
   ScrapeWeblinkRequest,
   ScrapeWeblinkResult,
   UploadResponse,
@@ -24,7 +23,6 @@ import {
   ResourceNotFoundError,
   DocumentNotFoundError,
 } from '@refly-packages/errors';
-import { modelInfoPO2DTO } from './misc.dto';
 
 @Injectable()
 export class MiscService {
@@ -237,13 +235,5 @@ export class MiscService {
   async getFileStream(objectKey: string): Promise<StreamableFile> {
     const data = await this.minio.client.getObject(`static/${objectKey}`);
     return new StreamableFile(data);
-  }
-
-  async listModels(): Promise<ModelInfo[]> {
-    const models = await this.prisma.modelInfo.findMany({
-      where: { enabled: true },
-    });
-
-    return models.map((model) => modelInfoPO2DTO(model));
   }
 }

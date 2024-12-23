@@ -1371,16 +1371,8 @@ const translations = {
       standard: '标准模型',
       free: '免费模型',
       tokenUsed: '已使用 {{used}} / {{quota}}',
-      quotaExceeded: {
-        t1: {
-          free: '升级',
-          paid: '超出限额，请检查订阅',
-        },
-        t2: {
-          free: '超出限额，升级以扩充',
-          paid: '超出限额，请检查订阅',
-        },
-      },
+      upgrade: '升级',
+      quotaExceeded: '额度已用尽，点击升级订阅',
     },
     contentSelector: {
       openForWeb: '开启选择内容提问, 画布已进入只读模式',

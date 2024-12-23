@@ -648,7 +648,7 @@ export class SubscriptionService implements OnModuleInit {
     if (
       this.modelListSyncedAt &&
       this.modelList?.length > 0 &&
-      this.modelListSyncedAt > new Date(Date.now() - 1000 * 60 * 5)
+      this.modelListSyncedAt > new Date(Date.now() - 1000 * 10)
     ) {
       return this.modelList;
     }

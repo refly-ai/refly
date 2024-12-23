@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button, Dropdown, DropdownProps, MenuProps, Progress, Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { IconDown } from '@arco-design/web-react/icon';
@@ -25,13 +24,50 @@ interface ModelSelectorProps {
   trigger?: DropdownProps['trigger'];
 }
 
+const UsageProgress = ({
+  used,
+  quota,
+  setDropdownOpen,
+}: {
+  used: number;
+  quota: number;
+  setDropdownOpen: (open: boolean) => void;
+}) => {
+  const { t } = useTranslation();
+  const setShowSettingModal = useSiderStoreShallow((state) => state.setShowSettingModal);
+
+  const handleShowSettingModal = () => {
+    setDropdownOpen(false);
+    setShowSettingModal(true);
+  };
+
+  return (
+    <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleShowSettingModal()}>
+      <Progress
+        type="circle"
+        percent={(used / quota) * 100}
+        strokeColor={used >= quota ? '#EF4444' : '#46C0B2'}
+        strokeWidth={20}
+        size={14}
+        format={() =>
+          used >= quota
+            ? t(`copilot.modelSelector.quotaExceeded`)
+            : t('copilot.modelSelector.tokenUsed', {
+                used: used?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') ?? '0',
+                quota: quota?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') ?? '0',
+              })
+        }
+      />
+    </div>
+  );
+};
+
 export const ModelSelector = ({
   placement = 'bottomLeft',
   trigger = ['click'],
   briefMode = false,
 }: ModelSelectorProps) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { userProfile } = useUserStoreShallow((state) => ({
@@ -55,23 +91,26 @@ export const ModelSelector = ({
 
   const planTier = userProfile?.subscription?.planType || 'free';
 
-  const { setShowSettingModal } = useSiderStoreShallow((state) => ({
-    setShowSettingModal: state.setShowSettingModal,
-  }));
+  const droplist: MenuProps['items'] = [];
 
-  const handleShowSettingModal = () => {
-    setDropdownOpen(false);
-    setShowSettingModal(true);
-  };
+  const t1Models = modelList
+    ?.filter((model) => model.tier === 't1')
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((model) => ({
+      key: model.name,
+      icon: <img className="w-4 h-4 mr-2" src={ModelProviderIcons[model.provider]} alt={model.provider} />,
+      label: <span className="text-xs">{model.label}</span>,
+      disabled: t1Disabled,
+    }));
 
-  const droplist: MenuProps['items'] = [
-    {
+  if (t1Models?.length > 0) {
+    droplist.push({
       key: 't1',
       type: 'group',
       label: (
         <div className="flex justify-between items-center">
           <span className="text-sm">{t('copilot.modelSelector.premium')}</span>
-          {planTier === 'free' ? (
+          {planTier === 'free' && tokenUsage?.t1TokenQuota === 0 ? (
             <Button
               type="text"
               size="small"
@@ -83,76 +122,60 @@ export const ModelSelector = ({
                 setSubscribeModalVisible(true);
               }}
             >
-              {t1Disabled ? t(`copilot.modelSelector.quotaExceeded.t1.free`) : ''}
+              {t(`copilot.modelSelector.upgrade`)}
             </Button>
           ) : (
-            <Progress
-              type="circle"
-              percent={(tokenUsage?.t1TokenUsed / tokenUsage?.t1TokenQuota) * 100}
-              strokeColor={t1Disabled ? '#EF4444' : '#46C0B2'}
-              strokeWidth={20}
-              size={14}
-              format={() =>
-                t1Disabled
-                  ? t(`copilot.modelSelector.quotaExceeded.t1.paid`)
-                  : t('copilot.modelSelector.tokenUsed', {
-                      used: tokenUsage?.t1TokenUsed?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') ?? '0',
-                      quota: tokenUsage?.t1TokenQuota?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') ?? '0',
-                    })
-              }
+            <UsageProgress
+              used={tokenUsage?.t1TokenUsed}
+              quota={tokenUsage?.t1TokenQuota}
+              setDropdownOpen={setDropdownOpen}
             />
           )}
         </div>
       ),
-      children: modelList
-        ?.filter((model) => model.tier === 't1')
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((model) => ({
-          key: model.name,
-          icon: <img className="w-4 h-4 mr-2" src={ModelProviderIcons[model.provider]} alt={model.provider} />,
-          label: <span className="text-xs">{model.label}</span>,
-          disabled: t1Disabled,
-        })),
-    },
-    {
+      children: t1Models,
+    });
+  }
+
+  const t2Models = modelList
+    ?.filter((model) => model.tier === 't2')
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((model) => ({
+      key: model.name,
+      icon: <img className="w-4 h-4 mr-2" src={ModelProviderIcons[model.provider]} alt={model.provider} />,
+      label: <span className="text-xs">{model.label}</span>,
+      disabled: t2Disabled,
+    }));
+
+  if (t2Models?.length > 0) {
+    droplist.push({
       key: 't2',
       type: 'group',
       label: (
         <div className="flex justify-between items-center">
           <div className="text-sm">{t('copilot.modelSelector.standard')}</div>
-          <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleShowSettingModal()}>
-            <Progress
-              type="circle"
-              percent={(tokenUsage?.t2TokenUsed / tokenUsage?.t2TokenQuota) * 100}
-              strokeColor={t2Disabled ? '#EF4444' : '#46C0B2'}
-              strokeWidth={20}
-              size={14}
-              format={() =>
-                t2Disabled
-                  ? t(`copilot.modelSelector.quotaExceeded.t2.${planTier === 'free' ? 'free' : 'paid'}`)
-                  : t('copilot.modelSelector.tokenUsed', {
-                      used: tokenUsage?.t2TokenUsed?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') ?? '0',
-                      quota: tokenUsage?.t2TokenQuota?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') ?? '0',
-                    })
-              }
-            />
-          </div>
+          <UsageProgress
+            used={tokenUsage?.t2TokenUsed}
+            quota={tokenUsage?.t2TokenQuota}
+            setDropdownOpen={setDropdownOpen}
+          />
         </div>
       ),
-      children:
-        modelList
-          ?.filter((model) => model.tier === 't2')
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((model) => {
-            return {
-              key: model.name,
-              icon: <img className="w-4 h-4 mr-2" src={ModelProviderIcons[model.provider]} alt={model.provider} />,
-              label: <span className="text-xs">{model.label}</span>,
-              disabled: t2Disabled,
-            };
-          }) ?? [],
-    },
-    {
+      children: t2Models,
+    });
+  }
+
+  const freeModels = modelList
+    ?.filter((model) => model.tier === 'free')
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((model) => ({
+      key: model.name,
+      icon: <img className="w-4 h-4 mr-2" src={ModelProviderIcons[model.provider]} alt={model.provider} />,
+      label: <span className="text-xs">{model.label}</span>,
+    }));
+
+  if (freeModels?.length > 0) {
+    droplist.push({
       key: 'free',
       type: 'group',
       label: (
@@ -161,16 +184,9 @@ export const ModelSelector = ({
           <LuInfinity className="text-sm" />
         </div>
       ),
-      children: modelList
-        ?.filter((model) => model.tier === 'free')
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((model) => ({
-          key: model.name,
-          icon: <img className="w-4 h-4 mr-2" src={ModelProviderIcons[model.provider]} alt={model.provider} />,
-          label: <span className="text-xs">{model.label}</span>,
-        })),
-    },
-  ];
+      children: freeModels,
+    });
+  }
 
   const isModelDisabled = (meter: TokenUsageMeter, model: ModelInfo) => {
     if (meter && model) {
