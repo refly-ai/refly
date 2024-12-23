@@ -81,6 +81,7 @@ export const aggregateTokenUsage = (usageItems: TokenUsageItem[]): TokenUsageIte
   > = {};
 
   usageItems.forEach((item) => {
+    if (!item) return;
     const key = `${item.tier}:${item.modelName}`;
     if (!aggregatedUsage[key]) {
       aggregatedUsage[key] = { inputTokens: 0, outputTokens: 0, modelProvider: item.modelProvider };

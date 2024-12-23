@@ -3,9 +3,7 @@ import { FormInstance } from '@arco-design/web-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
-import { IconDown, IconPause, IconSend, IconSettings, IconQuestionCircle } from '@arco-design/web-react/icon';
-import { useMessageStateStoreShallow } from '@refly-packages/ai-workspace-common/stores/message-state';
-import { useSkillStoreShallow } from '@refly-packages/ai-workspace-common/stores/skill';
+import { IconSend } from '@arco-design/web-react/icon';
 import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
@@ -15,8 +13,8 @@ import { AISettingsDropdown } from './ai-settings';
 // styles
 import './index.scss';
 import { getRuntime } from '@refly-packages/ai-workspace-common/utils/env';
-import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { PiMagicWand } from 'react-icons/pi';
+import { useGetSubscriptionUsage } from '@refly-packages/ai-workspace-common/queries/queries';
 
 interface ChatActionsProps {
   form?: FormInstance;
@@ -39,16 +37,9 @@ export const ChatActions = (props: ChatActionsProps) => {
     enableDeepReasonWebSearch: state.enableDeepReasonWebSearch,
     setEnableDeepReasonWebSearch: state.setEnableDeepReasonWebSearch,
   }));
-  const messageStateStore = useMessageStateStoreShallow((state) => ({
-    pending: state.pending,
-  }));
-  const skillStore = useSkillStoreShallow((state) => ({
-    selectedSkill: state.selectedSkill,
-  }));
 
-  const { tokenUsage } = useSubscriptionStoreShallow((state) => ({
-    tokenUsage: state.tokenUsage,
-  }));
+  const { data: tokenUsageData } = useGetSubscriptionUsage();
+  const tokenUsage = tokenUsageData?.data?.token;
   const tokenAvailable =
     tokenUsage?.t1TokenQuota > tokenUsage?.t1TokenUsed || tokenUsage?.t2TokenQuota > tokenUsage?.t2TokenUsed;
 
@@ -61,9 +52,8 @@ export const ChatActions = (props: ChatActionsProps) => {
     setLoginModalVisible: state.setLoginModalVisible,
   }));
 
-  // const canSendEmptyMessage = skillStore?.selectedSkill || (!skillStore?.selectedSkill && chatStore.newQAText?.trim());
   const canSendEmptyMessage = chatStore.newQAText?.trim();
-  const canSendMessage = !userStore.isLogin || (!messageStateStore?.pending && tokenAvailable && canSendEmptyMessage);
+  const canSendMessage = !userStore.isLogin || (tokenAvailable && canSendEmptyMessage);
 
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,23 +86,16 @@ export const ChatActions = (props: ChatActionsProps) => {
         <AISettingsDropdown collapsed={containerWidth < COLLAPSE_WIDTH} briefMode={false} trigger={['click']} />
       </div>
       <div className="right-actions">
-        {messageStateStore?.pending ? (
-          <Button size="small" onClick={handleAbort}>
-            <IconPause />
-          </Button>
-        ) : null}
-
         <Tooltip destroyTooltipOnHide title={t('copilot.chatActions.recommendQuestions')}>
           <Button size="small" onClick={() => setRecommendQuestionsOpen(!recommendQuestionsOpen)} className="mr-0">
             <PiMagicWand />
           </Button>
         </Tooltip>
 
-        {messageStateStore?.pending && !isWeb ? null : (
+        {!isWeb ? null : (
           <Button
             size="small"
             type="primary"
-            loading={messageStateStore?.pending}
             disabled={!canSendMessage}
             className="text-xs gap-1"
             onClick={() => handleSendMessage()}

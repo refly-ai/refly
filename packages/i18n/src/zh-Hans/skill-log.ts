@@ -3,6 +3,10 @@ const translations = {
     title: '生成标题',
     description: '成功生成标题：{{title}}',
   },
+  generateTitleFailed: {
+    title: '生成标题',
+    description: '由于模型能力不足，无法生成标题，使用提问作为默认标题',
+  },
   rewriteQuery: {
     title: '分解问题',
     description: '子查询：{{rewrittenQueries}}, 耗时 {{duration}} 毫秒',

@@ -43,4 +43,4 @@ jobs:
 
       - name: Wait for deployment to complete
         run: |
-          kubectl rollout status deployment/refly-api --timeout=300s -n refly-app
+          kubectl rollout status deployment/refly-api --timeout=900s -n refly-app

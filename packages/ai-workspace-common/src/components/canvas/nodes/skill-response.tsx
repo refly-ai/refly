@@ -147,7 +147,6 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
       }
 
       if (shouldUpdate) {
-        console.log(`[${new Date().toISOString()}] update node data: ${newNodeData}`);
         setNodeData(id, newNodeData);
       }
     }

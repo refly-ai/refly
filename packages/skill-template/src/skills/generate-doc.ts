@@ -114,7 +114,7 @@ export class GenerateDoc extends BaseSkill {
 
     this.engine.logger.log(`requestMessages: ${safeStringifyJSON(requestMessages)}`);
 
-    return { requestMessages, context, sources, usedChatHistory };
+    return { optimizedQuery, requestMessages, context, sources, usedChatHistory };
   };
 
   // Add new method to generate title
@@ -207,7 +207,11 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
       buildContextUserPrompt: generateDocument.buildGenerateDocumentContextUserPrompt,
     };
 
-    const { requestMessages, context, usedChatHistory } = await this.commonPreprocess(state, config, module);
+    const { optimizedQuery, requestMessages, context, usedChatHistory } = await this.commonPreprocess(
+      state,
+      config,
+      module,
+    );
 
     // Generate title first
     config.metadata.step = { name: 'generateTitle' };
@@ -216,11 +220,15 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
       context,
       chatHistory: usedChatHistory,
     });
-    this.emitEvent({ log: { key: 'generateTitle', descriptionArgs: { title: documentTitle } } }, config);
+    if (documentTitle) {
+      this.emitEvent({ log: { key: 'generateTitle', descriptionArgs: { title: documentTitle } } }, config);
+    } else {
+      this.emitEvent({ log: { key: 'generateTitleFailed' } }, config);
+    }
 
     // Create document with generated title
     const res = await this.engine.service.createDocument(user, {
-      title: documentTitle,
+      title: documentTitle || optimizedQuery,
       initialContent: '',
     });
 

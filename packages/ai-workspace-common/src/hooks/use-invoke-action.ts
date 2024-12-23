@@ -74,7 +74,7 @@ export const useInvokeAction = () => {
       } else if (eventType === 'token_usage') {
         nodeData.metadata = {
           status: payload.status,
-          tokenUsage: aggregateTokenUsage(steps.flatMap((s) => s.tokenUsage)),
+          tokenUsage: aggregateTokenUsage(steps.flatMap((s) => s.tokenUsage).filter(Boolean)),
         };
       }
 
