@@ -73,6 +73,15 @@ type ActionButtonsProps = {
   isCreatingDocument?: boolean;
 };
 
+type MenuItem = {
+  icon?: React.ReactNode;
+  label?: string;
+  onClick?: () => void;
+  loading?: boolean;
+  danger?: boolean;
+  type: 'button' | 'divider';
+};
+
 // Memoized action buttons container
 export const ActionButtons = memo(
   ({
@@ -98,170 +107,134 @@ export const ActionButtons = memo(
     const { getNode } = useReactFlow();
     const { canvasId } = useCanvasContext();
 
-    // Define dropdown menu items
-    const menuItems: MenuProps['items'] = [
+    const menuItems: MenuItem[] = [
       {
-        key: 'delete',
-        label: (
-          <div className="flex items-center gap-2 text-red-600 whitespace-nowrap">
-            <IconDelete className="w-4 h-4 flex-shrink-0" />
-            {t('canvas.nodeActions.delete')}
-          </div>
-        ),
-        onClick: onDelete,
-        className: 'hover:bg-red-50',
+        type: 'button',
+        icon: <IconPreview className="w-4 h-4" />,
+        label: t('canvas.nodeActions.preview'),
+        onClick: () => {
+          addPinnedNode(canvasId, getNode(nodeId) as CanvasNode<any>);
+          addPinnedNodeEmitter.emit('addPinnedNode', { id: nodeId, canvasId });
+        },
       },
-      // {
-      //   key: 'helpLink',
-      //   label: (
-      //     <div className="flex items-center gap-2 whitespace-nowrap">
-      //       <HelpCircle className="w-4 h-4 flex-shrink-0" />
-      //       Help Link
-      //     </div>
-      //   ),
-      //   onClick: onHelpLink,
-      // },
-      // {
-      //   key: 'about',
-      //   label: (
-      //     <div className="flex items-center gap-2 whitespace-nowrap">
-      //       <Info className="w-4 h-4 flex-shrink-0" />
-      //       About
-      //     </div>
-      //   ),
-      //   onClick: onAbout,
-      // },
-    ];
+      { type: 'divider' },
+      // Document and Resource specific actions
+      ...(type === 'document' || type === 'resource'
+        ? [
+            {
+              type: 'button',
+              icon: <MessageSquareDiff className="w-4 h-4" />,
+              label: t('canvas.nodeActions.addToContext'),
+              onClick: onAddToContext,
+            },
+            // Resource specific loading state
+            ...(type === 'resource' && isProcessing
+              ? [
+                  {
+                    type: 'button',
+                    icon: <Loader2 className="w-4 h-4" />,
+                    label: t('canvas.nodeActions.processingVector'),
+                    loading: true,
+                  },
+                ]
+              : []),
+          ]
+        : []),
+      // Skill response specific actions
+      ...(type === 'skill-response'
+        ? [
+            isCompleted && {
+              type: 'button',
+              icon: <IconRerun className="w-4 h-4" />,
+              label: t('canvas.nodeActions.rerun'),
+              onClick: onRerun,
+            },
+            {
+              type: 'button',
+              icon: <FileInput className="w-4 h-4" />,
+              label: t('canvas.nodeActions.insertToDoc'),
+              onClick: onInsertToDoc,
+            },
+            {
+              type: 'button',
+              icon: <MessageSquareDiff className="w-4 h-4" />,
+              label: t('canvas.nodeActions.addToContext'),
+              onClick: onAddToChatHistory,
+            },
+            onCreateDocument && {
+              type: 'button',
+              icon: <FilePlus className="w-4 h-4" />,
+              label: t('canvas.nodeStatus.createDocument'),
+              onClick: onCreateDocument,
+              loading: isCreatingDocument,
+            },
+          ].filter(Boolean)
+        : []),
+      { type: 'divider' },
+      {
+        type: 'button',
+        icon: <IconDelete className="w-4 h-4" />,
+        label: t('canvas.nodeActions.delete'),
+        onClick: onDelete,
+        danger: true,
+      },
+    ].filter(Boolean) as MenuItem[];
 
     return (
       <div
         className="
-        absolute 
-        -top-12
-        right-0
-        opacity-0 
-        group-hover:opacity-100
-        transition-opacity 
-        duration-200
-        ease-in-out
-        z-50
-        flex
-        gap-1
-        p-1
-        rounded-lg
-        bg-white
-        border-[0.5px]
-        border-[rgba(0,0,0,0.03)]
-        shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)]
-      "
+          absolute
+          -right-[154px]
+          top-0
+          opacity-0
+          group-hover:opacity-100
+          transition-opacity
+          duration-200
+          ease-in-out
+          z-50
+          w-[150px]
+          bg-white
+          rounded-lg
+          border
+          border-[rgba(0,0,0,0.06)]
+          shadow-[0px_4px_6px_-2px_rgba(16,24,40,0.03),0px_12px_16px_-4px_rgba(16,24,40,0.08)]
+          p-2
+        "
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
         }}
       >
-        <ActionButton
-          icon={<IconPreview className="w-4 h-4" />}
-          onClick={() => {
-            addPinnedNode(canvasId, getNode(nodeId) as CanvasNode<any>);
-            addPinnedNodeEmitter.emit('addPinnedNode', {
-              id: nodeId,
-              canvasId,
-            });
-          }}
-          tooltip={t('canvas.nodeActions.preview')}
-        />
+        {menuItems.map((item, index) => {
+          if (item.type === 'divider') {
+            return <div key={`divider-${index}`} className="my-1 h-[1px] bg-gray-100" />;
+          }
 
-        {/* Document specific buttons */}
-        {type === 'document' && onAddToContext && (
-          <ActionButton
-            icon={<MessageSquareDiff className="w-4 h-4" />}
-            onClick={onAddToContext}
-            tooltip={t('canvas.nodeActions.addToContext')}
-          />
-        )}
-
-        {/* Resource specific buttons */}
-        {type === 'resource' && (
-          <>
-            {onAddToContext && (
-              <ActionButton
-                icon={<MessageSquareDiff className="w-4 h-4" />}
-                onClick={onAddToContext}
-                tooltip={t('canvas.nodeActions.addToContext')}
-              />
-            )}
-            {isProcessing && (
-              <ActionButton
-                icon={<Loader2 className="w-4 h-4" />}
-                onClick={() => {}}
-                loading={true}
-                tooltip={t('canvas.nodeActions.processingVector')}
-              />
-            )}
-          </>
-        )}
-
-        {/* Skill Response specific buttons */}
-        {type === 'skill-response' && (
-          <>
-            {onRerun && isCompleted && (
-              <ActionButton
-                icon={<IconRerun className="w-4 h-4" />}
-                onClick={onRerun}
-                tooltip={t('canvas.nodeActions.rerun')}
-              />
-            )}
-            {onInsertToDoc && (
-              <ActionButton
-                icon={<FileInput className="w-4 h-4" />}
-                onClick={onInsertToDoc}
-                tooltip={t('canvas.nodeActions.insertToDoc')}
-              />
-            )}
-            {onAddToChatHistory && (
-              <ActionButton
-                icon={<MessageSquareDiff className="w-4 h-4" />}
-                onClick={onAddToChatHistory}
-                tooltip={t('canvas.nodeActions.addToContext')}
-              />
-            )}
-            {onCreateDocument && (
-              <ActionButton
-                icon={<FilePlus className="w-4 h-4" />}
-                onClick={onCreateDocument}
-                loading={isCreatingDocument}
-                tooltip={
-                  isCreatingDocument ? t('canvas.nodeStatus.isCreatingDocument') : t('canvas.nodeStatus.createDocument')
-                }
-              />
-            )}
-          </>
-        )}
-
-        {/* More options dropdown (common for all types) */}
-        <Dropdown
-          menu={{
-            items: menuItems,
-            disabled: isCreatingDocument,
-          }}
-          trigger={['click', 'hover']}
-          placement="bottomRight"
-          destroyPopupOnHide
-          overlayClassName="min-w-[160px] w-max"
-          getPopupContainer={(triggerNode) => triggerNode.parentNode as HTMLElement}
-          dropdownRender={(menu) => (
-            <div className="min-w-[160px] bg-white rounded-lg border-[0.5px] border-[rgba(0,0,0,0.03)] shadow-lg">
-              {menu}
-            </div>
-          )}
-        >
-          <ActionButton
-            icon={<MoreHorizontal className="w-4 h-4" />}
-            onClick={(e) => e.preventDefault()}
-            tooltip={t('canvas.nodeActions.moreOptions')}
-            withTooltip={false}
-          />
-        </Dropdown>
+          return (
+            <Button
+              key={index}
+              type="text"
+              className={`
+                w-full
+                h-8
+                flex
+                items-center
+                gap-2
+                px-2
+                rounded
+                text-sm
+                transition-colors
+                ${item.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}
+                ${item.loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+              `}
+              onClick={item.onClick}
+              disabled={item.loading}
+            >
+              {item.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : item.icon}
+              <span className="flex-1 text-left truncate">{item.label}</span>
+            </Button>
+          );
+        })}
       </div>
     );
   },
