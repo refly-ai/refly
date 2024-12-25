@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import api from '@opentelemetry/api';
@@ -48,7 +48,7 @@ import { ActionModule } from './action/action.module';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        redis: {
+        connection: {
           host: configService.get('redis.host'),
           port: configService.get('redis.port'),
           password: configService.get('redis.password') || undefined,

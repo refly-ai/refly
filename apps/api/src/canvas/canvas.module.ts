@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { CanvasService } from './canvas.service';
 import { CanvasController } from './canvas.controller';
 import { CommonModule } from '@/common/common.module';

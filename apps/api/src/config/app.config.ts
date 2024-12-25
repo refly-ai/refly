@@ -77,6 +77,8 @@ export default () => ({
   },
   skill: {
     defaultModel: process.env.REFLY_DEFAULT_MODEL || 'openai/gpt-4o-mini',
+    idleTimeout: parseInt(process.env.SKILL_IDLE_TIMEOUT) || 1000 * 10, // 10 seconds
+    executionTimeout: parseInt(process.env.SKILL_EXECUTION_TIMEOUT) || 1000 * 60 * 3, // 3 minutes
   },
   stripe: {
     apiKey: process.env.STRIPE_API_KEY,

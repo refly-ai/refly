@@ -20,7 +20,7 @@ import {
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { aggregateTokenUsage, genActionResultID } from '@refly-packages/utils/index';
 import { CanvasNodeData, ResponseNodeMeta } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
-import { useListModels, useListSkills } from '@refly-packages/ai-workspace-common/queries/queries';
+import { useGetSubscriptionUsage, useListModels, useListSkills } from '@refly-packages/ai-workspace-common/queries';
 
 export const useInvokeAction = () => {
   const { addNode, setNodeDataByEntity } = useCanvasControl();
@@ -30,6 +30,8 @@ export const useInvokeAction = () => {
 
   const globalAbortControllerRef = { current: null as AbortController | null };
   const globalIsAbortedRef = { current: false as boolean };
+
+  const { refetch: refetchTokenUsage } = useGetSubscriptionUsage();
 
   const onUpdateResult = (resultId: string, payload: ActionResult, event?: SkillEvent) => {
     actionEmitter.emit('updateResult', { resultId, payload });
@@ -270,6 +272,8 @@ export const useInvokeAction = () => {
         );
       });
     }
+
+    setTimeout(() => refetchTokenUsage(), 2000);
   };
 
   const onSkillError = (skillEvent: SkillEvent) => {

@@ -1,25 +1,26 @@
-import { Process, Processor } from '@nestjs/bull';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
-import { Job } from 'bull';
+import { Job } from 'bullmq';
 
 import { KnowledgeService } from './knowledge.service';
-import { QUEUE_RESOURCE, CHANNEL_FINALIZE_RESOURCE } from '../utils/const';
+import { QUEUE_RESOURCE } from '../utils/const';
 import { FinalizeResourceParam } from './knowledge.dto';
 
 @Processor(QUEUE_RESOURCE)
-export class ResourceProcessor {
+export class ResourceProcessor extends WorkerHost {
   private readonly logger = new Logger(ResourceProcessor.name);
 
-  constructor(private knowledgeService: KnowledgeService) {}
+  constructor(private knowledgeService: KnowledgeService) {
+    super();
+  }
 
-  @Process(CHANNEL_FINALIZE_RESOURCE)
-  async handleFinalizeResource(job: Job<FinalizeResourceParam>) {
-    this.logger.log(`[handleFinalizeResource] job: ${JSON.stringify(job)}`);
+  async process(job: Job<FinalizeResourceParam>) {
+    this.logger.log(`[${QUEUE_RESOURCE}] job: ${JSON.stringify(job)}`);
 
     try {
       await this.knowledgeService.finalizeResource(job.data);
     } catch (error) {
-      this.logger.error(`[handleFinalizeResource] error: ${error?.stack}`);
+      this.logger.error(`[${QUEUE_RESOURCE}] error: ${error?.stack}`);
       throw error;
     }
   }

@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import pLimit from 'p-limit';
 import crypto from 'node:crypto';
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import normalizeUrl from 'normalize-url';
 import { readingTime } from 'reading-time-estimator';
 import { Prisma, Resource as ResourceModel, Document as DocumentModel } from '@prisma/client';
@@ -31,7 +31,6 @@ import {
   DeleteDocumentRequest,
 } from '@refly-packages/openapi-schema';
 import {
-  CHANNEL_FINALIZE_RESOURCE,
   QUEUE_SIMPLE_EVENT,
   QUEUE_RESOURCE,
   streamToString,
@@ -198,7 +197,7 @@ export class KnowledgeService {
     });
 
     // Add to queue to be processed by worker
-    await this.queue.add(CHANNEL_FINALIZE_RESOURCE, {
+    await this.queue.add('finalizeResource', {
       resourceId: resource.resourceId,
       uid: user.uid,
     });
@@ -356,7 +355,7 @@ export class KnowledgeService {
     }
 
     // Send simple event
-    await this.simpleEventQueue.add({
+    await this.simpleEventQueue.add('simpleEvent', {
       entityType: 'resource',
       entityId: resourceId,
       name: 'onResourceReady',
@@ -364,7 +363,7 @@ export class KnowledgeService {
     });
 
     // Sync storage usage
-    await this.ssuQueue.add({
+    await this.ssuQueue.add('syncStorageUsage', {
       uid: user.uid,
       timestamp: new Date(),
     });
@@ -444,7 +443,7 @@ export class KnowledgeService {
       this.minio.client.removeObject(resource.storageKey),
       this.ragService.deleteResourceNodes(user, resourceId),
       this.elasticsearch.deleteResource(resourceId),
-      this.ssuQueue.add({
+      this.ssuQueue.add('syncStorageUsage', {
         uid: user.uid,
         timestamp: new Date(),
       }),
@@ -562,7 +561,7 @@ export class KnowledgeService {
       updatedAt: doc.updatedAt.toJSON(),
     });
 
-    await this.ssuQueue.add({
+    await this.ssuQueue.add('syncStorageUsage', {
       uid: user.uid,
       timestamp: new Date(),
     });
@@ -638,7 +637,7 @@ export class KnowledgeService {
     await Promise.all(cleanups);
 
     // Sync storage usage after all the cleanups
-    await this.ssuQueue.add({
+    await this.ssuQueue.add('syncStorageUsage', {
       uid: user.uid,
       timestamp: new Date(),
     });

@@ -5,7 +5,7 @@ import classNames from 'classnames';
 import { Divider, message } from 'antd';
 import { CanvasNodeData, ResponseNodeMeta, CanvasNode, SkillResponseNodeProps } from './types';
 import { Node } from '@xyflow/react';
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { CustomHandle } from './custom-handle';
 import { LuChevronRight } from 'react-icons/lu';
 import { useEdgeStyles } from '../constants';
@@ -37,8 +37,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { SelectedSkillHeader } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/selected-skill-header';
 import { ModelProviderIcons } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
-import { EditorOperation } from '@refly-packages/utils/event-emitter/editor';
 import { createNodeEventName, cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
 
 type SkillResponseNode = Node<CanvasNodeData<ResponseNodeMeta>, 'skillResponse'>;
 
@@ -102,6 +102,8 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
 
   const statusShouldPoll = !status || status === 'executing' || status === 'waiting';
 
+  const updateActionResult = useActionResultStoreShallow((state) => state.updateActionResult);
+
   const { data: result, error } = useGetActionResult({ query: { resultId: entityId } }, null, {
     enabled: Boolean(entityId) && statusShouldPoll && shouldPoll,
     refetchInterval: POLLING_INTERVAL,
@@ -150,6 +152,7 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
 
       if (shouldUpdate) {
         setNodeData(id, newNodeData);
+        updateActionResult(entityId, remoteResult);
       }
     }
   }, [shouldPoll, remoteResult, data]);

@@ -1,6 +1,6 @@
 import { Inject, Injectable, StreamableFile, Logger } from '@nestjs/common';
-import { Queue } from 'bull';
-import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
 import {
   EntityType,
   ScrapeWeblinkRequest,
@@ -141,7 +141,7 @@ export class MiscService {
       'Content-Type': file.mimetype,
     });
 
-    await this.ssuQueue.add({
+    await this.ssuQueue.add('syncStorageUsage', {
       uid: user.uid,
       timestamp: new Date(),
     });

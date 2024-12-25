@@ -567,20 +567,24 @@ export class SubscriptionService implements OnModuleInit {
           ...pick(usage, ['tier', 'modelProvider', 'modelName', 'inputTokens', 'outputTokens']),
         },
       }),
-      this.prisma.tokenUsageMeter.updateMany({
-        where: {
-          uid,
-          startAt: { lte: timestamp },
-          OR: [{ endAt: null }, { endAt: { gte: timestamp } }],
-          subscriptionId: user.subscriptionId,
-          deletedAt: null,
-        },
-        data: {
-          [usage.tier === 't1' ? 't1TokenUsed' : 't2TokenUsed']: {
-            increment: usage.inputTokens + usage.outputTokens,
-          },
-        },
-      }),
+      ...(usage.tier !== 'free'
+        ? [
+            this.prisma.tokenUsageMeter.updateMany({
+              where: {
+                uid,
+                startAt: { lte: timestamp },
+                OR: [{ endAt: null }, { endAt: { gte: timestamp } }],
+                subscriptionId: user.subscriptionId,
+                deletedAt: null,
+              },
+              data: {
+                [usage.tier === 't1' ? 't1TokenUsed' : 't2TokenUsed']: {
+                  increment: usage.inputTokens + usage.outputTokens,
+                },
+              },
+            }),
+          ]
+        : []),
     ]);
   }
 

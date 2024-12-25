@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 
 import { KnowledgeController } from './knowledge.controller';
 import { KnowledgeService } from './knowledge.service';

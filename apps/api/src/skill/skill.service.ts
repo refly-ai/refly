@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter } from 'node:events';
 import pLimit from 'p-limit';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import * as Y from 'yjs';
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { Prisma, SkillTrigger as SkillTriggerModel } from '@prisma/client';
 import { Response } from 'express';
@@ -54,14 +54,14 @@ import {
 } from '@refly-packages/utils';
 import { PrismaService } from '@/common/prisma.service';
 import {
-  CHANNEL_INVOKE_SKILL,
   QUEUE_SKILL,
   buildSuccessResponse,
   writeSSEResponse,
   pick,
   QUEUE_SYNC_TOKEN_USAGE,
+  QUEUE_SKILL_TIMEOUT_CHECK,
 } from '@/utils';
-import { InvokeSkillJobData } from './skill.dto';
+import { InvokeSkillJobData, SkillTimeoutCheckJobData } from './skill.dto';
 import { KnowledgeService } from '@/knowledge/knowledge.service';
 import { documentPO2DTO, resourcePO2DTO, referencePO2DTO } from '@/knowledge/knowledge.dto';
 import { ConfigService } from '@nestjs/config';
@@ -71,7 +71,6 @@ import { LabelService } from '@/label/label.service';
 import { labelClassPO2DTO, labelPO2DTO } from '@/label/label.dto';
 import { SyncTokenUsageJobData } from '@/subscription/subscription.dto';
 import { SubscriptionService } from '@/subscription/subscription.service';
-import { ElasticsearchService } from '@/common/elasticsearch.service';
 import {
   ModelNotSupportedError,
   ModelUsageQuotaExceeded,
@@ -131,7 +130,6 @@ export class SkillService {
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
-    private elasticsearch: ElasticsearchService,
     private label: LabelService,
     private search: SearchService,
     private knowledge: KnowledgeService,
@@ -140,6 +138,8 @@ export class SkillService {
     private subscription: SubscriptionService,
     private collabService: CollabService,
     @InjectQueue(QUEUE_SKILL) private skillQueue: Queue<InvokeSkillJobData>,
+    @InjectQueue(QUEUE_SKILL_TIMEOUT_CHECK)
+    private timeoutCheckQueue: Queue<SkillTimeoutCheckJobData>,
     @InjectQueue(QUEUE_SYNC_TOKEN_USAGE) private usageReportQueue: Queue<SyncTokenUsageJobData>,
   ) {
     this.skillEngine = new SkillEngine(this.logger, this.buildReflyService(), {
@@ -469,6 +469,7 @@ export class SkillService {
             errors: JSON.stringify([]),
             input: JSON.stringify(param.input),
             context: JSON.stringify(purgeContext(param.context)),
+            tplConfig: JSON.stringify(param.tplConfig),
             history: JSON.stringify(purgeResultHistory(param.resultHistory)),
           },
         }),
@@ -497,6 +498,7 @@ export class SkillService {
           } as ActionMeta),
           input: JSON.stringify(param.input),
           context: JSON.stringify(purgeContext(param.context)),
+          tplConfig: JSON.stringify(param.tplConfig),
           history: JSON.stringify(purgeResultHistory(param.resultHistory)),
         },
       });
@@ -588,7 +590,7 @@ export class SkillService {
 
   async sendInvokeSkillTask(user: User, param: InvokeSkillRequest) {
     const data = await this.skillInvokePreCheck(user, param);
-    await this.skillQueue.add(CHANNEL_INVOKE_SKILL, data);
+    await this.skillQueue.add('invokeSkill', data);
 
     return data.result;
   }
@@ -667,6 +669,16 @@ export class SkillService {
     }
 
     try {
+      await this.timeoutCheckQueue.add(
+        `execution_timeout_check:${data.result?.resultId}`,
+        {
+          uid: user.uid,
+          resultId: data.result?.resultId,
+          type: 'execution',
+        },
+        { delay: this.config.get('skill.executionTimeout') },
+      );
+
       await this._invokeSkill(user, data, res);
     } catch (err) {
       if (res) {
@@ -683,6 +695,31 @@ export class SkillService {
     }
   }
 
+  async checkSkillTimeout(param: SkillTimeoutCheckJobData) {
+    const { uid, resultId, type } = param;
+
+    const timeout: number =
+      type === 'idle'
+        ? this.config.get('skill.idleTimeout')
+        : this.config.get('skill.executionTimeout');
+
+    const result = await this.prisma.actionResult.findUnique({ where: { uid, resultId } });
+    if (!result) {
+      this.logger.warn(`result not found for resultId: ${resultId}`);
+      return;
+    }
+
+    if (result.status === 'executing' && result.updatedAt < new Date(Date.now() - timeout)) {
+      this.logger.warn(`skill invocation ${type} timeout for resultId: ${resultId}`);
+      await this.prisma.actionResult.update({
+        where: { resultId },
+        data: { status: 'failed', errors: JSON.stringify(['Execution timeout']) },
+      });
+    } else {
+      this.logger.log(`skill invocation settled for resultId: ${resultId}`);
+    }
+  }
+
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
     const { input, result } = data;
     const { resultId, actionMeta } = result;
@@ -695,6 +732,22 @@ export class SkillService {
         aborted = true;
       });
     }
+
+    const job = await this.timeoutCheckQueue.add(
+      `idle_timeout_check:${resultId}`,
+      {
+        uid: user.uid,
+        resultId,
+        type: 'idle',
+      },
+      { delay: parseInt(this.config.get('skill.idleTimeout')) },
+    );
+
+    const throttledResetIdleTimeout = throttle(
+      async () => await job.changeDelay(this.config.get('skill.idleTimeout')),
+      100,
+      { leading: true, trailing: true },
+    );
 
     const resultAggregator = new ResultAggregator();
 
@@ -712,6 +765,8 @@ export class SkillService {
           this.logger.warn(`skill invocation aborted, ignore event: ${JSON.stringify(data)}`);
           return;
         }
+
+        await throttledResetIdleTimeout();
 
         if (res) {
           writeSSEResponse(res, data);
@@ -801,6 +856,9 @@ export class SkillService {
           throw new Error('AbortError');
         }
 
+        // reset idle timeout check when events are received
+        await throttledResetIdleTimeout();
+
         runMeta = event.metadata as SkillRunnableMeta;
         const chunk: AIMessageChunk = event.data?.chunk ?? event.data?.output;
 
@@ -869,7 +927,7 @@ export class SkillService {
                 usage,
                 timestamp: new Date(),
               };
-              await this.usageReportQueue.add(tokenUsage);
+              await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
             }
             break;
         }
@@ -947,7 +1005,7 @@ export class SkillService {
     };
 
     const job = await this.skillQueue.add(
-      CHANNEL_INVOKE_SKILL,
+      'invokeSkill',
       {
         ...param,
         uid: user.uid,

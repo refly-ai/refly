@@ -20,6 +20,12 @@ export interface InvokeSkillJobData extends InvokeSkillRequest {
   modelInfo?: ModelInfo;
 }
 
+export interface SkillTimeoutCheckJobData {
+  uid: string;
+  type: 'idle' | 'execution';
+  resultId: string;
+}
+
 export function skillInstancePO2DTO(skill: SkillInstanceModel): SkillInstance {
   return {
     ...pick(skill, ['skillId', 'description']),

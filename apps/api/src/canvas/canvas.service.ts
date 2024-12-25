@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import * as Y from 'yjs';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import { MINIO_INTERNAL } from '@/common/minio.service';
 import { MinioService } from '@/common/minio.service';
 import { PrismaService } from '@/common/prisma.service';
@@ -140,7 +140,7 @@ export class CanvasService {
     await Promise.all(cleanups);
 
     // Sync storage usage
-    await this.ssuQueue.add({
+    await this.ssuQueue.add('syncStorageUsage', {
       uid,
       timestamp: new Date(),
     });

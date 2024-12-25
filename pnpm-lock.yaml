@@ -65,9 +65,9 @@ importers:
       '@langchain/openai':
         specifier: 0.3.14
         version: 0.3.14(@langchain/core@0.3.19)
-      '@nestjs/bull':
-        specifier: ~10.1.0
-        version: 10.1.1(@nestjs/common@10.3.10)(@nestjs/core@10.3.10)(bull@4.16.3)
+      '@nestjs/bullmq':
+        specifier: ~10.2.3
+        version: 10.2.3(@nestjs/common@10.3.10)(@nestjs/core@10.3.10)(bullmq@5.34.4)
       '@nestjs/common':
         specifier: ~10.3.9
         version: 10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.1)
@@ -131,9 +131,9 @@ importers:
       '@sentry/profiling-node':
         specifier: ^7.113.0
         version: 7.119.0
-      bull:
-        specifier: ^4.12.2
-        version: 4.16.3
+      bullmq:
+        specifier: ~5.34.4
+        version: 5.34.4
       cheerio:
         specifier: ~1.0.0
         version: 1.0.0
@@ -2513,7 +2513,7 @@ packages:
     resolution: {integrity: sha512-kEBmG8KyqtxJZv+ygbEim+KCGtIq1fC22Ms3S4ziXmYKm8uyoLX0MHONVKwp+9opg390VaKRNt4a7A9NwmpNhw==}
     requiresBuild: true
     dependencies:
-      tslib: 2.7.0
+      tslib: 2.8.1
     dev: false
     optional: true
 
@@ -4887,29 +4887,29 @@ packages:
     dev: false
     optional: true
 
-  /@nestjs/bull-shared@10.2.1(@nestjs/common@10.3.10)(@nestjs/core@10.3.10):
-    resolution: {integrity: sha512-zvnTvSq6OJ92omcsFUwaUmPbM3PRgWkIusHPB5TE3IFS7nNdM3OwF+kfe56sgKjMtQQMe/56lok0S04OtPMX5Q==}
+  /@nestjs/bull-shared@10.2.3(@nestjs/common@10.3.10)(@nestjs/core@10.3.10):
+    resolution: {integrity: sha512-XcgAjNOgq6b5DVCytxhR5BKiwWo7hsusVeyE7sfFnlXRHeEtIuC2hYWBr/ZAtvL/RH0/O0tqtq0rVl972nbhJw==}
     peerDependencies:
       '@nestjs/common': ^8.0.0 || ^9.0.0 || ^10.0.0
       '@nestjs/core': ^8.0.0 || ^9.0.0 || ^10.0.0
     dependencies:
       '@nestjs/common': 10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.1)
       '@nestjs/core': 10.3.10(@nestjs/common@10.3.10)(@nestjs/platform-express@10.4.4)(@nestjs/websockets@10.3.10)(reflect-metadata@0.1.14)(rxjs@7.8.1)
-      tslib: 2.6.3
+      tslib: 2.8.1
     dev: false
 
-  /@nestjs/bull@10.1.1(@nestjs/common@10.3.10)(@nestjs/core@10.3.10)(bull@4.16.3):
-    resolution: {integrity: sha512-fbhgXNk1DpV27M8hdGH94iNJ7YonZRYyusmHb2qvvYMRBxkuzN0Hjf02jYCNUiPvCpn+WZBeEiYlYK30x3HkAQ==}
+  /@nestjs/bullmq@10.2.3(@nestjs/common@10.3.10)(@nestjs/core@10.3.10)(bullmq@5.34.4):
+    resolution: {integrity: sha512-Lo4W5kWD61/246Y6H70RNgV73ybfRbZyKKS4CBRDaMELpxgt89O+EgYZUB4pdoNrWH16rKcaT0AoVsB/iDztKg==}
     peerDependencies:
       '@nestjs/common': ^8.0.0 || ^9.0.0 || ^10.0.0
       '@nestjs/core': ^8.0.0 || ^9.0.0 || ^10.0.0
-      bull: ^3.3 || ^4.0.0
+      bullmq: ^3.0.0 || ^4.0.0 || ^5.0.0
     dependencies:
-      '@nestjs/bull-shared': 10.2.1(@nestjs/common@10.3.10)(@nestjs/core@10.3.10)
+      '@nestjs/bull-shared': 10.2.3(@nestjs/common@10.3.10)(@nestjs/core@10.3.10)
       '@nestjs/common': 10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.1)
       '@nestjs/core': 10.3.10(@nestjs/common@10.3.10)(@nestjs/platform-express@10.4.4)(@nestjs/websockets@10.3.10)(reflect-metadata@0.1.14)(rxjs@7.8.1)
-      bull: 4.16.3
-      tslib: 2.6.2
+      bullmq: 5.34.4
+      tslib: 2.8.1
     dev: false
 
   /@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.1):
@@ -9997,17 +9997,16 @@ packages:
       ieee754: 1.2.1
     dev: false
 
-  /bull@4.16.3:
-    resolution: {integrity: sha512-BZbPzNiKXczfZPXBTVhcN73b+CQFHTzVb7yJi1bSYld4/8bDc9oh/j/dYTsQBgOAZIZahFeHO6dPHbVEXXCvCg==}
-    engines: {node: '>=12'}
+  /bullmq@5.34.4:
+    resolution: {integrity: sha512-FPTN5eqsYO5/Blm6vh/bVJ0eADrVLjTBDjMkPCqZN3xx/5GqHov9NwxM6A6M3m6n2Vg+gNAoN98t7bTij5/UEA==}
     dependencies:
       cron-parser: 4.9.0
-      get-port: 5.1.1
       ioredis: 5.4.1
-      lodash: 4.17.21
-      msgpackr: 1.11.0
+      msgpackr: 1.11.2
+      node-abort-controller: 3.1.1
       semver: 7.6.3
-      uuid: 8.3.2
+      tslib: 2.8.1
+      uuid: 9.0.1
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -12248,7 +12247,7 @@ packages:
     resolution: {integrity: sha512-QFaHbhv9WPUeLYBDe/PAuLKJ4Dd9OPvKs9xZBr3yLXnUrDNaVXKu2baDBXe3naPY30hgHYSsf2JW4jzas2mDEQ==}
     engines: {node: '>=10'}
     dependencies:
-      tslib: 2.7.0
+      tslib: 2.8.1
     dev: false
 
   /follow-redirects@1.15.9(debug@4.3.7):
@@ -12496,11 +12495,6 @@ packages:
     resolution: {integrity: sha512-pjzuKtY64GYfWizNAJ0fr9VqttZkNiK2iS430LtIHzjBEr6bX8Am2zm4sW4Ro5wjWW5cAlRL1qAMTcXbjNAO2Q==}
     engines: {node: '>=8.0.0'}
     dev: true
-
-  /get-port@5.1.1:
-    resolution: {integrity: sha512-g/Q1aTSDOxFpchXC4i8ZWvxA1lnPqx/JHqcpIw0/LX9T8x/GBbi6YnlN5nhaKIFkT8oFsscUKgDJYxfwfS6QsQ==}
-    engines: {node: '>=8'}
-    dev: false
 
   /get-port@7.1.0:
     resolution: {integrity: sha512-QB9NKEeDg3xxVwCCwJQ9+xycaz6pBB6iQ76wiWMl1927n0Kir6alPiP+yuiICLLU4jpMe08dXfpebuQppFA2zw==}
@@ -15670,8 +15664,8 @@ packages:
     dev: false
     optional: true
 
-  /msgpackr@1.11.0:
-    resolution: {integrity: sha512-I8qXuuALqJe5laEBYoFykChhSXLikZmUhccjGsPuSJ/7uPip2TJ7lwdIQwWSAi0jGZDXv4WOP8Qg65QZRuXxXw==}
+  /msgpackr@1.11.2:
+    resolution: {integrity: sha512-F9UngXRlPyWCDEASDpTf6c9uNhGPTqnTeLVt7bN+bU1eajoR/8V9ys2BRaV5C/e5ihE6sJ9uPIKaYt6bFuO32g==}
     optionalDependencies:
       msgpackr-extract: 3.0.3
     dev: false
@@ -15804,6 +15798,10 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       semver: 7.6.3
+    dev: false
+
+  /node-abort-controller@3.1.1:
+    resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
     dev: false
 
   /node-domexception@1.0.0:
@@ -18107,7 +18105,7 @@ packages:
       '@types/react': 18.3.10
       react: 18.3.1
       react-style-singleton: 2.2.1(@types/react@18.3.10)(react@18.3.1)
-      tslib: 2.7.0
+      tslib: 2.8.1
     dev: false
 
   /react-remove-scroll@2.5.5(@types/react@18.3.10)(react@18.3.1):
@@ -18124,7 +18122,7 @@ packages:
       react: 18.3.1
       react-remove-scroll-bar: 2.3.6(@types/react@18.3.10)(react@18.3.1)
       react-style-singleton: 2.2.1(@types/react@18.3.10)(react@18.3.1)
-      tslib: 2.7.0
+      tslib: 2.8.1
       use-callback-ref: 1.3.2(@types/react@18.3.10)(react@18.3.1)
       use-sidecar: 1.1.2(@types/react@18.3.10)(react@18.3.1)
     dev: false
@@ -18209,7 +18207,7 @@ packages:
       get-nonce: 1.0.1
       invariant: 2.2.4
       react: 18.3.1
-      tslib: 2.7.0
+      tslib: 2.8.1
     dev: false
 
   /react-syntax-highlighter@15.5.0(react@18.3.1):
@@ -19965,16 +19963,16 @@ packages:
       strip-bom: 3.0.0
     dev: true
 
-  /tslib@2.6.2:
-    resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
-    dev: false
-
   /tslib@2.6.3:
     resolution: {integrity: sha512-xNvxJEOUiWPGhUuUdQgAJPKOOJfGnIyKySOc09XkKsgdUV/3E2zvwZYdejjmRgPCgcym1juLH3226yA7sEFJKQ==}
 
   /tslib@2.7.0:
     resolution: {integrity: sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==}
     requiresBuild: true
+
+  /tslib@2.8.1:
+    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
+    dev: false
 
   /tsup@8.3.0(jiti@1.21.6)(tsx@4.19.1)(typescript@5.3.3):
     resolution: {integrity: sha512-ALscEeyS03IomcuNdFdc0YWGVIkwH1Ws7nfTbAPuoILvEV2hpGQAY72LIOjglGo4ShWpZfpBqP/jpQVCzqYQag==}
@@ -20525,7 +20523,7 @@ packages:
     dependencies:
       '@types/react': 18.3.10
       react: 18.3.1
-      tslib: 2.7.0
+      tslib: 2.8.1
     dev: false
 
   /use-debounce@10.0.3(react@18.3.1):
@@ -20550,7 +20548,7 @@ packages:
       '@types/react': 18.3.10
       detect-node-es: 1.1.0
       react: 18.3.1
-      tslib: 2.7.0
+      tslib: 2.8.1
     dev: false
 
   /use-sync-external-store@1.2.2(react@18.3.1):
