@@ -22,6 +22,7 @@ export const useCreateDocument = () => {
       { sourceNodeId, addToCanvas }: { sourceNodeId?: string; addToCanvas?: boolean },
     ) => {
       try {
+        message.loading(t('canvas.nodeActions.startCreateDocument'));
         const parsedContent = parseMarkdownCitationsAndCanvasTags(content, []);
         setIsCreating(true);
         const { data } = await getClient().createDocument({

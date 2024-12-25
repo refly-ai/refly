@@ -496,6 +496,9 @@ const translations = {
       stepTitle: 'Step {{index}}',
       aiThinking: 'AI is thinking ...',
       sourcesCnt: 'Total of {{count}} source(s) found',
+      executing: 'Skill is executing, please wait...',
+      startRunning: 'Skill is running...',
+      startRerun: 'Skill is rerunning...',
     },
     chatHistory: {
       alreadyAdded: 'Already added to chat history',
@@ -524,6 +527,7 @@ const translations = {
       askFollowUp: 'Ask Follow-up',
       moreOptions: 'More Options',
       delete: 'Delete Node From Canvas',
+      startCreateDocument: 'Creating Document...',
     },
     nodeStatus: {
       isCreatingDocument: 'Creating Document...',

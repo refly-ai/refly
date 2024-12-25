@@ -2,7 +2,7 @@ import { Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { CanvasNode, CanvasNodeData, DocumentNodeMeta, DocumentNodeProps } from './types';
 import { Node } from '@xyflow/react';
 import { CustomHandle } from './custom-handle';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useCanvasControl } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
 import { useEdgeStyles } from '../constants';
 import { getNodeCommonStyles } from './index';
@@ -18,6 +18,8 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import Moveable from 'react-moveable';
 import classNames from 'classnames';
+import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { createNodeEventName, cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/nodeActions';
 
 type DocumentNode = Node<CanvasNodeData<DocumentNodeMeta>, 'document'>;
 
@@ -117,6 +119,26 @@ export const DocumentNode = ({
     console.log('Show about info');
   }, []);
 
+  // Add event handling
+  useEffect(() => {
+    // Create node-specific event handlers
+    const handleNodeAddToContext = () => handleAddToContext();
+    const handleNodeDelete = () => handleDelete();
+
+    // Register events with node ID
+    nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+    nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+    return () => {
+      // Cleanup events when component unmounts
+      nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+      nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+      // Clean up all node events
+      cleanupNodeEvents(id);
+    };
+  }, [id, handleAddToContext, handleDelete]);
+
   return (
     <div className={classNames({ nowheel: isOperating })}>
       <div
@@ -132,16 +154,7 @@ export const DocumentNode = ({
           cursor: isOperating ? 'text' : 'grab',
         }}
       >
-        {!isPreview && !hideActions && (
-          <ActionButtons
-            type="document"
-            nodeId={id}
-            onAddToContext={handleAddToContext}
-            onDelete={handleDelete}
-            onHelpLink={handleHelpLink}
-            onAbout={handleAbout}
-          />
-        )}
+        {!isPreview && !hideActions && <ActionButtons type="document" nodeId={id} />}
 
         <div
           className={`

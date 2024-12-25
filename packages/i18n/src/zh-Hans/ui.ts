@@ -488,6 +488,9 @@ const translations = {
       stepTitle: '步骤 {{index}}',
       aiThinking: 'AI 正在思考中...',
       sourcesCnt: '共找到 {{count}} 个来源',
+      executing: '技能正在执行中，请稍等...',
+      startRunning: '技能开始执行...',
+      startRerun: '技能开始重新执行...',
     },
     chatHistory: {
       alreadyAdded: '已添加到对话历史',
@@ -516,6 +519,7 @@ const translations = {
       askFollowUp: '继续提问',
       moreOptions: '更多选项',
       delete: '删除节点',
+      startCreateDocument: '创建文档中...',
     },
     nodeStatus: {
       isCreatingDocument: '创建中...',

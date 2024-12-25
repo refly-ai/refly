@@ -19,6 +19,8 @@ import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/store
 import { useGetResourceDetail } from '@refly-packages/ai-workspace-common/queries';
 import Moveable from 'react-moveable';
 import classNames from 'classnames';
+import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { createNodeEventName, cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/nodeActions';
 
 type ResourceNode = Node<CanvasNodeData<ResourceNodeMeta>, 'resource'>;
 
@@ -156,6 +158,26 @@ export const ResourceNode = ({
     }
   }, [data.contentPreview, remoteResult]);
 
+  // Add event handling
+  useEffect(() => {
+    // Create node-specific event handlers
+    const handleNodeAddToContext = () => handleAddToContext();
+    const handleNodeDelete = () => handleDelete();
+
+    // Register events with node ID
+    nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+    nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+    return () => {
+      // Cleanup events when component unmounts
+      nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+      nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+      // Clean up all node events
+      cleanupNodeEvents(id);
+    };
+  }, [id, handleAddToContext, handleDelete]);
+
   return (
     <div className={classNames({ nowheel: isOperating })}>
       <div
@@ -171,17 +193,7 @@ export const ResourceNode = ({
           cursor: isOperating ? 'text' : 'grab',
         }}
       >
-        {!isPreview && !hideActions && (
-          <ActionButtons
-            type="resource"
-            nodeId={id}
-            onAddToContext={handleAddToContext}
-            onDelete={handleDelete}
-            onHelpLink={handleHelpLink}
-            onAbout={handleAbout}
-            isProcessing={false}
-          />
-        )}
+        {!isPreview && !hideActions && <ActionButtons type="resource" nodeId={id} />}
 
         <div
           className={`

@@ -2,7 +2,7 @@ import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import Moveable from 'react-moveable';
 import classNames from 'classnames';
-import { Divider } from 'antd';
+import { Divider, message } from 'antd';
 import { CanvasNodeData, ResponseNodeMeta, CanvasNode, SkillResponseNodeProps } from './types';
 import { Node } from '@xyflow/react';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
@@ -35,8 +35,10 @@ import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/store
 import { useGetActionResult } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { SelectedSkillHeader } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/selected-skill-header';
-
 import { ModelProviderIcons } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { EditorOperation } from '@refly-packages/utils/event-emitter/editor';
+import { createNodeEventName, cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/nodeActions';
 
 type SkillResponseNode = Node<CanvasNodeData<ResponseNodeMeta>, 'skillResponse'>;
 
@@ -197,6 +199,13 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
   const { invokeAction } = useInvokeAction();
 
   const handleRerun = useCallback(() => {
+    if (['executing', 'waiting'].includes(data?.metadata?.status)) {
+      message.info(t('canvas.skillResponse.executing'));
+      return;
+    }
+
+    message.info(t('canvas.skillResponse.startRerun'));
+
     // Disable polling temporarily after rerun
     setSize({ width: 288, height: 'auto' });
     setShouldPoll(false);
@@ -216,9 +225,13 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
     });
   }, [data, entityId, invokeAction, setNodeData]);
 
+  const insertToDoc = useInsertToDocument(data.entityId);
+  const handleInsertToDoc = useCallback(async () => {
+    await insertToDoc('insertBlow', data?.contentPreview);
+  }, [insertToDoc, data.entityId, data]);
+
   const runtime = getRuntime();
   const isWeb = runtime === 'web';
-  const handleInsertToDoc = useInsertToDocument(data.entityId);
 
   const handleDelete = useDeleteNode(
     {
@@ -249,6 +262,11 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
     });
   }, [content, debouncedCreateDocument, data.entityId, data?.title]);
 
+  const handleAddToContext = useCallback(() => {
+    handleAddToChatHistory();
+    addContextItem(node as NodeItem);
+  }, [node, handleAddToChatHistory, addContextItem]);
+
   const knowledgeBaseStore = useKnowledgeBaseStoreShallow((state) => ({
     updateSourceListDrawer: state.updateSourceListDrawer,
   }));
@@ -278,6 +296,35 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
     resizeMoveable(offsetWidth, offsetHeight);
   }, [content, artifacts?.length, sources.length]);
 
+  // Update event handling
+  useEffect(() => {
+    // Create node-specific event handlers
+    const handleNodeRerun = () => handleRerun();
+    const handleNodeAddToContext = () => handleAddToContext();
+    const handleNodeInsertToDoc = () => handleInsertToDoc();
+    const handleNodeCreateDocument = () => handleCreateDocument();
+    const handleNodeDelete = () => handleDelete();
+
+    // Register events with node ID
+    nodeActionEmitter.on(createNodeEventName(id, 'rerun'), handleNodeRerun);
+    nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+    nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
+    nodeActionEmitter.on(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
+    nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+    return () => {
+      // Cleanup events when component unmounts
+      nodeActionEmitter.off(createNodeEventName(id, 'rerun'), handleNodeRerun);
+      nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+      nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
+      nodeActionEmitter.off(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
+      nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+      // Clean up all node events
+      cleanupNodeEvents(id);
+    };
+  }, [id, handleRerun, handleAddToContext, handleInsertToDoc, handleCreateDocument, handleDelete]);
+
   return (
     <div className={classNames({ nowheel: isOperating })}>
       <div
@@ -293,24 +340,7 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
           cursor: isOperating ? 'text' : 'grab',
         }}
       >
-        {isWeb && !hideActions && (
-          <ActionButtons
-            type="skill-response"
-            nodeId={id}
-            onAddToChatHistory={() => {
-              handleAddToChatHistory();
-              addContextItem(node as NodeItem);
-            }}
-            onRerun={handleRerun}
-            onInsertToDoc={() => handleInsertToDoc('insertBlow', content)}
-            onCreateDocument={content ? handleCreateDocument : undefined}
-            onDelete={handleDelete}
-            onHelpLink={handleHelpLink}
-            onAbout={handleAbout}
-            isCompleted={metadata?.status === 'finish'}
-            isCreatingDocument={isCreating}
-          />
-        )}
+        {!isPreview && !hideActions && <ActionButtons type="skillResponse" nodeId={id} />}
 
         <div className={`relative h-full flex flex-col ${getNodeCommonStyles({ selected, isHovered })}`}>
           {!isPreview && !hideHandles && (

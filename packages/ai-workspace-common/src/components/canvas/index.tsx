@@ -8,6 +8,15 @@ import { CanvasToolbar } from './canvas-toolbar';
 import { TopToolbar } from './top-toolbar';
 import { NodePreview } from './node-preview';
 import { HiOutlineDocumentAdd } from 'react-icons/hi';
+import { ContextMenu } from './context-menu';
+import { NodeContextMenu } from './node-context-menu';
+import { ActionButtons } from './nodes/action-buttons';
+import { useAddToChatHistory } from '@refly-packages/ai-workspace-common/hooks/use-add-to-chat-history';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/use-invoke-action';
+import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/use-delete-node';
+import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/use-insert-to-document';
+import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/use-create-document';
+import { NodeItem, useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common/stores/context-panel';
 
 import '@xyflow/react/dist/style.css';
 import { useCanvasControl } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
@@ -22,7 +31,6 @@ import { useCanvasNodesStore } from '@refly-packages/ai-workspace-common/stores/
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { LayoutControl } from './layout-control';
 import { addPinnedNodeEmitter } from '@refly-packages/ai-workspace-common/events/addPinnedNode';
-import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/use-create-document';
 import { MenuPopper } from './menu-popper';
 
 const selectionStyles = `
@@ -36,6 +44,16 @@ const selectionStyles = `
     border: 0.5px solid #00968F !important;
   }
 `;
+
+const POLLING_COOLDOWN_TIME = 5000;
+
+interface ContextMenuState {
+  open: boolean;
+  position: { x: number; y: number };
+  type: 'canvas' | 'node';
+  nodeId?: string;
+  nodeType?: 'document' | 'resource' | 'skillResponse';
+}
 
 const Flow = ({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
@@ -64,6 +82,7 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
   );
 
   const reactFlowInstance = useReactFlow();
+  const { getNode } = reactFlowInstance;
 
   const { pendingNode, clearPendingNode } = useCanvasNodesStore();
   const { provider } = useCanvasContext();
@@ -119,30 +138,6 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
     [mode, edgeStyles],
   );
 
-  const onNodeClick = useCallback(
-    (event: React.MouseEvent, node: CanvasNode<any>) => {
-      if (!node?.id) {
-        console.warn('Invalid node clicked');
-        return;
-      }
-
-      // If clicking the currently selected node, toggle operating mode
-      if (node.selected && node.id === operatingNodeId) {
-        // Already in operating mode, do nothing
-        return;
-      } else if (node.selected && !operatingNodeId) {
-        // Enter operating mode
-        setOperatingNodeId(node.id);
-        event.stopPropagation();
-      } else {
-        // Just select the node
-        setOperatingNodeId(null);
-        setSelectedNode(node);
-      }
-    },
-    [setSelectedNode, operatingNodeId, setOperatingNodeId],
-  );
-
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
   const [lastClickTime, setLastClickTime] = useState(0);
@@ -150,6 +145,7 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
       setOperatingNodeId(null);
+      setContextMenu((prev) => ({ ...prev, open: false }));
 
       const currentTime = new Date().getTime();
       const timeDiff = currentTime - lastClickTime;
@@ -230,6 +226,90 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
     return unsubscribe;
   }, [canvasId]);
 
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    open: false,
+    position: { x: 0, y: 0 },
+    type: 'canvas',
+  });
+
+  const onPaneContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      const flowPosition = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      setContextMenu({
+        open: true,
+        position: flowPosition,
+        type: 'canvas',
+      });
+    },
+    [reactFlowInstance],
+  );
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: CanvasNode<any>) => {
+      event.preventDefault();
+      const flowPosition = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      // Map node type to menu type
+      let menuNodeType: 'document' | 'resource' | 'skillResponse';
+      switch (node.type) {
+        case 'document':
+          menuNodeType = 'document';
+          break;
+        case 'resource':
+          menuNodeType = 'resource';
+          break;
+        case 'skillResponse':
+          menuNodeType = 'skillResponse';
+          break;
+        default:
+          return; // Don't show context menu for unknown node types
+      }
+
+      setContextMenu({
+        open: true,
+        position: flowPosition,
+        type: 'node',
+        nodeId: node.id,
+        nodeType: menuNodeType,
+      });
+    },
+    [reactFlowInstance],
+  );
+
+  const onNodeClick = useCallback(
+    (event: React.MouseEvent, node: CanvasNode<any>) => {
+      setContextMenu((prev) => ({ ...prev, open: false }));
+
+      if (!node?.id) {
+        console.warn('Invalid node clicked');
+        return;
+      }
+
+      // If clicking the currently selected node, toggle operating mode
+      if (node.selected && node.id === operatingNodeId) {
+        // Already in operating mode, do nothing
+        return;
+      } else if (node.selected && !operatingNodeId) {
+        // Enter operating mode
+        setOperatingNodeId(node.id);
+        event.stopPropagation();
+      } else {
+        // Just select the node
+        setOperatingNodeId(null);
+        setSelectedNode(node);
+      }
+    },
+    [setSelectedNode, operatingNodeId, setOperatingNodeId],
+  );
+
   return (
     <Spin
       className="w-full h-full"
@@ -272,6 +352,8 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
+            onPaneContextMenu={onPaneContextMenu}
+            onNodeContextMenu={onNodeContextMenu}
             nodeDragThreshold={10}
             nodesDraggable={!operatingNodeId}
           >
@@ -368,6 +450,24 @@ const Flow = ({ canvasId }: { canvasId: string }) => {
         <BigSearchModal />
 
         <MenuPopper open={menuOpen} position={menuPosition} setOpen={setMenuOpen} />
+
+        {contextMenu.open && contextMenu.type === 'canvas' && (
+          <ContextMenu
+            open={contextMenu.open}
+            position={contextMenu.position}
+            setOpen={(open) => setContextMenu((prev) => ({ ...prev, open }))}
+          />
+        )}
+
+        {contextMenu.open && contextMenu.type === 'node' && contextMenu.nodeId && contextMenu.nodeType && (
+          <NodeContextMenu
+            open={contextMenu.open}
+            position={contextMenu.position}
+            nodeId={contextMenu.nodeId}
+            nodeType={contextMenu.nodeType}
+            setOpen={(open) => setContextMenu((prev) => ({ ...prev, open }))}
+          />
+        )}
       </div>
     </Spin>
   );
