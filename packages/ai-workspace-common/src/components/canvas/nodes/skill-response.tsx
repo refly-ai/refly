@@ -12,7 +12,7 @@ import { useEdgeStyles } from '../constants';
 import { getNodeCommonStyles } from './index';
 import { ActionButtons } from './action-buttons';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/use-invoke-action';
-import { useCanvasControl } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
+import { useCanvasControl, useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/use-delete-node';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/use-insert-to-document';
 import { getRuntime } from '@refly-packages/ai-workspace-common/utils/env';
@@ -50,7 +50,8 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const { edges, setNodeData } = useCanvasControl();
-  const { setEdges, getNode } = useReactFlow();
+  const { setEdges, getNode, setNodes } = useReactFlow();
+  const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
   const { t, i18n } = useTranslation();
   const language = i18n.languages?.[0];
@@ -169,33 +170,13 @@ export const SkillResponseNode = (props: SkillResponseNodeProps) => {
   // Handle node hover events
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
-    setEdges((eds) =>
-      eds.map((edge) => {
-        if (edge.source === id || edge.target === id) {
-          return {
-            ...edge,
-            style: edgeStyles.hover,
-          };
-        }
-        return edge;
-      }),
-    );
-  }, [id, setEdges, edgeStyles]);
+    onHoverStart();
+  }, [onHoverStart]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
-    setEdges((eds) =>
-      eds.map((edge) => {
-        if (edge.source === id || edge.target === id) {
-          return {
-            ...edge,
-            style: edgeStyles.default,
-          };
-        }
-        return edge;
-      }),
-    );
-  }, [id, setEdges, edgeStyles]);
+    onHoverEnd();
+  }, [onHoverEnd]);
 
   const handleAddToChatHistory = useAddToChatHistory(node as NodeItem);
 

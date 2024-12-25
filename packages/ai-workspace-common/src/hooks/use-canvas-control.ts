@@ -534,3 +534,63 @@ export const useCanvasControl = (selectedCanvasId?: string) => {
     updateAllEdgesStyle,
   };
 };
+
+export const useNodeHoverEffect = (nodeId: string) => {
+  const { setEdges, setNodes } = useReactFlow();
+  const edgeStyles = useEdgeStyles();
+
+  const handleMouseEnter = useCallback(() => {
+    setEdges((eds) =>
+      eds.map((edge) => {
+        if (edge.source === nodeId || edge.target === nodeId) {
+          return {
+            ...edge,
+            style: edgeStyles.hover,
+          };
+        }
+        return edge;
+      }),
+    );
+    setNodes((nodes) =>
+      nodes.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            zIndex: 1000,
+          };
+        }
+        return node;
+      }),
+    );
+  }, [nodeId, setEdges, edgeStyles, setNodes]);
+
+  const handleMouseLeave = useCallback(() => {
+    setEdges((eds) =>
+      eds.map((edge) => {
+        if (edge.source === nodeId || edge.target === nodeId) {
+          return {
+            ...edge,
+            style: edgeStyles.default,
+          };
+        }
+        return edge;
+      }),
+    );
+    setNodes((nodes) =>
+      nodes.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            zIndex: 0,
+          };
+        }
+        return node;
+      }),
+    );
+  }, [nodeId, setEdges, edgeStyles, setNodes]);
+
+  return {
+    handleMouseEnter,
+    handleMouseLeave,
+  };
+};

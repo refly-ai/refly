@@ -3,7 +3,7 @@ import { CanvasNode, CanvasNodeData, DocumentNodeMeta, DocumentNodeProps } from 
 import { Node } from '@xyflow/react';
 import { CustomHandle } from './custom-handle';
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useCanvasControl } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
+import { useCanvasControl, useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
 import { useEdgeStyles } from '../constants';
 import { getNodeCommonStyles } from './index';
 import { ActionButtons } from './action-buttons';
@@ -58,36 +58,18 @@ export const DocumentNode = ({
 
   const edgeStyles = useEdgeStyles();
 
+  const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
+
   // Handle node hover events
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
-    setEdges((eds) =>
-      eds.map((edge) => {
-        if (edge.source === id || edge.target === id) {
-          return {
-            ...edge,
-            style: edgeStyles.hover,
-          };
-        }
-        return edge;
-      }),
-    );
-  }, [id, setEdges, edgeStyles]);
+    onHoverStart();
+  }, [onHoverStart]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
-    setEdges((eds) =>
-      eds.map((edge) => {
-        if (edge.source === id || edge.target === id) {
-          return {
-            ...edge,
-            style: edgeStyles.default,
-          };
-        }
-        return edge;
-      }),
-    );
-  }, [id, setEdges, edgeStyles]);
+    onHoverEnd();
+  }, [onHoverEnd]);
 
   const handleAddToContext = useAddToContext(
     {

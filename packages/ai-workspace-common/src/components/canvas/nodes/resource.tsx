@@ -4,7 +4,7 @@ import { CanvasNodeData, ResourceNodeMeta, CanvasNode, ResourceNodeProps } from 
 import { Node } from '@xyflow/react';
 import { CustomHandle } from './custom-handle';
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useCanvasControl } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
+import { useCanvasControl, useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
 import { useEdgeStyles } from '../constants';
 import { getNodeCommonStyles } from './index';
 import { ActionButtons } from './action-buttons';
@@ -74,19 +74,21 @@ export const ResourceNode = ({
     { leading: true, trailing: false },
   );
 
+  const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
+
   const handleMouseEnter = useCallback(() => {
     if (!isHovered) {
       setIsHovered(true);
-      updateEdgeStyles(true);
+      onHoverStart();
     }
-  }, [isHovered, updateEdgeStyles]);
+  }, [isHovered, onHoverStart]);
 
   const handleMouseLeave = useCallback(() => {
     if (isHovered) {
       setIsHovered(false);
-      updateEdgeStyles(false);
+      onHoverEnd();
     }
-  }, [isHovered, updateEdgeStyles]);
+  }, [isHovered, onHoverEnd]);
 
   const handleAddToContext = useAddToContext(
     {

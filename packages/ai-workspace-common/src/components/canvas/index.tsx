@@ -10,13 +10,7 @@ import { NodePreview } from './node-preview';
 import { HiOutlineDocumentAdd } from 'react-icons/hi';
 import { ContextMenu } from './context-menu';
 import { NodeContextMenu } from './node-context-menu';
-import { ActionButtons } from './nodes/action-buttons';
-import { useAddToChatHistory } from '@refly-packages/ai-workspace-common/hooks/use-add-to-chat-history';
-import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/use-invoke-action';
-import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/use-delete-node';
-import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/use-insert-to-document';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/use-create-document';
-import { NodeItem, useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common/stores/context-panel';
 
 import '@xyflow/react/dist/style.css';
 import { useCanvasControl } from '@refly-packages/ai-workspace-common/hooks/use-canvas-control';
