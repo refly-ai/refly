@@ -191,7 +191,7 @@ export const MemoNode = ({
     <div className={classNames({ nowheel: isOperating })}>
       <div
         ref={targetRef}
-        className={`relative group ${onNodeClick ? 'cursor-pointer' : ''}`}
+        className="relative"
         onMouseEnter={!isPreview ? handleMouseEnter : undefined}
         onMouseLeave={!isPreview ? handleMouseLeave : undefined}
         onClick={onNodeClick}
@@ -202,7 +202,7 @@ export const MemoNode = ({
           cursor: isOperating ? 'text' : 'grab',
         }}
       >
-        {!isPreview && !hideActions && <ActionButtons type="memo" nodeId={id} />}
+        {!isPreview && !hideActions && <ActionButtons type="memo" nodeId={id} isNodeHovered={isHovered} />}
 
         <div
           className={`

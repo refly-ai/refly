@@ -1,44 +1,63 @@
-import { FC, memo } from 'react';
+import { FC, memo, useState } from 'react';
 import { NodeActionMenu } from '../node-action-menu';
 
 type ActionButtonsProps = {
   nodeId: string;
   type: 'document' | 'resource' | 'skillResponse' | 'memo';
+  isNodeHovered: boolean;
 };
 
-// Memoize ActionButtons since it only depends on nodeId and type
 export const ActionButtons: FC<ActionButtonsProps> = memo(
-  ({ nodeId, type }) => {
+  ({ nodeId, type, isNodeHovered }) => {
+    const [isMenuHovered, setIsMenuHovered] = useState(false);
+
     return (
-      <div
-        className="
-        absolute
-        -right-[154px]
-        top-0
-        opacity-0
-        group-hover:opacity-100
-        transition-opacity
-        duration-200
-        ease-in-out
-        z-50
-        w-[150px]
-        bg-white
-        rounded-lg
-      "
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-        }}
-      >
-        <NodeActionMenu nodeId={nodeId} nodeType={type} />
-      </div>
+      <>
+        <div
+          className={`
+            absolute
+            -right-[30px]
+            top-0
+            w-[30px]
+            h-full
+            ${isNodeHovered || isMenuHovered ? '' : 'pointer-events-none'}
+          `}
+          onMouseEnter={() => setIsMenuHovered(true)}
+          onMouseLeave={() => setIsMenuHovered(false)}
+        />
+        <div
+          className={`
+            absolute
+            -right-[154px]
+            top-0
+            transition-opacity
+            duration-200
+            ease-in-out
+            z-50
+            w-[150px]
+            bg-white
+            rounded-lg
+            ${isNodeHovered || isMenuHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+          `}
+          onMouseEnter={() => setIsMenuHovered(true)}
+          onMouseLeave={() => setIsMenuHovered(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+        >
+          <NodeActionMenu nodeId={nodeId} nodeType={type} />
+        </div>
+      </>
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison function
-    return prevProps.nodeId === nextProps.nodeId && prevProps.type === nextProps.type;
+    return (
+      prevProps.nodeId === nextProps.nodeId &&
+      prevProps.type === nextProps.type &&
+      prevProps.isNodeHovered === nextProps.isNodeHovered
+    );
   },
 );
 
-// Add display name for debugging
 ActionButtons.displayName = 'ActionButtons';

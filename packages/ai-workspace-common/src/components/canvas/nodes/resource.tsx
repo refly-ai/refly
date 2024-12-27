@@ -239,13 +239,22 @@ export const ResourceNode = memo(
       <div className={classNames({ nowheel: isOperating })}>
         <div
           ref={targetRef}
-          className="relative group"
+          className="relative"
           onMouseEnter={!props.isPreview ? handleMouseEnter : undefined}
           onMouseLeave={!props.isPreview ? handleMouseLeave : undefined}
           onClick={props.onNodeClick}
-          style={nodeStyle}
+          style={
+            {
+              width: `${size.width}px`,
+              height: `${size.height}px`,
+              userSelect: isOperating ? 'text' : 'none',
+              cursor: isOperating ? 'text' : 'grab',
+            } as React.CSSProperties
+          }
         >
-          {!props.isPreview && !props.hideActions && <ActionButtons type="resource" nodeId={props.id} />}
+          {!props.isPreview && !props.hideActions && (
+            <ActionButtons type="resource" nodeId={props.id} isNodeHovered={isHovered} />
+          )}
 
           <div
             className={`
@@ -311,20 +320,21 @@ export const ResourceNode = memo(
               const newWidth = Math.max(100, width);
               const newHeight = Math.max(80, height);
 
-              let newLeft = target.offsetLeft;
-              let newTop = target.offsetTop;
+              const htmlTarget = target as HTMLElement;
+              let newLeft = htmlTarget.offsetLeft;
+              let newTop = htmlTarget.offsetTop;
 
               if (direction[0] === -1) {
-                newLeft = target.offsetLeft - (newWidth - target.offsetWidth);
+                newLeft = htmlTarget.offsetLeft - (newWidth - htmlTarget.offsetWidth);
               }
               if (direction[1] === -1) {
-                newTop = target.offsetTop - (newHeight - target.offsetHeight);
+                newTop = htmlTarget.offsetTop - (newHeight - htmlTarget.offsetHeight);
               }
 
-              target.style.width = `${newWidth}px`;
-              target.style.height = `${newHeight}px`;
-              target.style.left = `${newLeft}px`;
-              target.style.top = `${newTop}px`;
+              htmlTarget.style.width = `${newWidth}px`;
+              htmlTarget.style.height = `${newHeight}px`;
+              htmlTarget.style.left = `${newLeft}px`;
+              htmlTarget.style.top = `${newTop}px`;
 
               setSize({ width: newWidth, height: newHeight });
             }}

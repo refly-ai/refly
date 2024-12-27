@@ -441,13 +441,13 @@ export const SkillResponseNode = memo(
       <div className={classNames({ nowheel: isOperating })}>
         <div
           ref={targetRef}
-          className="relative group"
+          className="relative"
           style={nodeStyle}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={onNodeClick}
         >
-          {!isPreview && !hideActions && <ActionButtons type="skillResponse" nodeId={id} />}
+          {!isPreview && !hideActions && <ActionButtons type="skillResponse" nodeId={id} isNodeHovered={isHovered} />}
 
           <div className={`relative h-full flex flex-col ${getNodeCommonStyles({ selected, isHovered })}`}>
             {!isPreview && !hideHandles && (
