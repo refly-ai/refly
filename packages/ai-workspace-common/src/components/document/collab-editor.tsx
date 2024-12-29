@@ -287,6 +287,7 @@ export const CollaborativeEditor = memo(
 
         const isFocused = editor.isFocused;
 
+        const { activeDocumentId } = useDocumentStore.getState();
         if (activeDocumentId !== docId) {
           return;
         }
@@ -321,7 +322,7 @@ export const CollaborativeEditor = memo(
         editorEmitter.off('insertBelow', insertBelow);
         documentActions.setActiveDocumentId(null);
       };
-    }, [docId, documentActions.setActiveDocumentId, activeDocumentId]);
+    }, [docId]);
 
     useEffect(() => {
       if (editorRef.current) {
@@ -369,10 +370,13 @@ export const CollaborativeEditor = memo(
     // Handle component unmount
     useEffect(() => {
       return () => {
-        // Only clear activeDocumentId if this document was the active one
-        useDocumentStore.getState().activeDocumentId === docId && documentActions.setActiveDocumentId(undefined);
+        if (useDocumentStore.getState().activeDocumentId === docId) {
+          documentActions.setActiveDocumentId(undefined);
+        }
       };
     }, [docId]);
+
+    console.log('CollaborativeEditor', activeDocumentId);
 
     return (
       <div
