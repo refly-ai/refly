@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { XYPosition } from '@xyflow/react';
+import { useReactFlow, XYPosition } from '@xyflow/react';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +28,7 @@ const deduplicateEdges = (edges: any[]) => {
 export const useAddNode = (canvasId: string) => {
   const { t } = useTranslation();
   const edgeStyles = useEdgeStyles();
+  const { setCenter, getNode } = useReactFlow();
 
   const { setNodes, setEdges, addPinnedNode } = useCanvasStoreShallow((state) => ({
     setNodes: state.setNodes,
@@ -35,19 +36,21 @@ export const useAddNode = (canvasId: string) => {
     addPinnedNode: state.addPinnedNode,
   }));
 
-  const setNodeCenter = useCallback((nodeId: string) => {
-    // Center view on new node after it's rendered
-    requestAnimationFrame(() => {
-      const renderedNode = document.getElementById(nodeId);
-      if (renderedNode) {
-        renderedNode.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'center',
-        });
-      }
-    });
-  }, []);
+  const setNodeCenter = useCallback(
+    (nodeId: string) => {
+      // Center view on new node after it's rendered
+      requestAnimationFrame(() => {
+        const renderedNode = getNode(nodeId);
+        if (renderedNode) {
+          setCenter(renderedNode.position.x, renderedNode.position.y, {
+            duration: 300,
+            zoom: 1,
+          });
+        }
+      });
+    },
+    [setCenter],
+  );
 
   const setSelectedNode = useCallback(
     (node: any) => {
