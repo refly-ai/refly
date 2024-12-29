@@ -5,14 +5,11 @@ import { CustomHandle } from './custom-handle';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
-import { useEdgeStyles } from '../constants';
 import { getNodeCommonStyles } from './index';
 import { ActionButtons } from './action-buttons';
 import { useTranslation } from 'react-i18next';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
-import { IconMemo } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Input } from 'antd';
 
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
@@ -23,6 +20,13 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import { Markdown as MarkdownPreview } from '@refly-packages/ai-workspace-common/components/markdown';
 import { Markdown } from 'tiptap-markdown';
 import StarterKit from '@tiptap/starter-kit';
+import TextStyle from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import { Link } from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import './memo.scss';
 import { useThrottledCallback } from 'use-debounce';
@@ -33,7 +37,9 @@ import {
   nodeActionEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
+import { MemoEditor } from './memo-editor';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
+
 type MemoNode = Node<CanvasNodeData, 'memo'>;
 
 export const MemoNode = ({
@@ -48,10 +54,8 @@ export const MemoNode = ({
   const [isHovered, setIsHovered] = useState(false);
   const { edges } = useCanvasData();
   const setNodeDataByEntity = useSetNodeDataByEntity();
-  const { setEdges } = useReactFlow();
   const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
-  const [title, setTitle] = useState(data.title);
 
   // console.log('memo', id);
 
@@ -60,7 +64,7 @@ export const MemoNode = ({
   const targetRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({
     width: node?.measured?.width ?? 288,
-    height: node?.measured?.height ?? 384,
+    height: node?.measured?.height ?? 284,
   });
   const { operatingNodeId } = useCanvasStoreShallow((state) => ({
     operatingNodeId: state.operatingNodeId,
@@ -73,8 +77,6 @@ export const MemoNode = ({
   // Check if node has any connections
   const isTargetConnected = edges?.some((edge) => edge.target === id);
   const isSourceConnected = edges?.some((edge) => edge.source === id);
-
-  const edgeStyles = useEdgeStyles();
 
   // Handle node hover events
   const handleMouseEnter = useCallback(() => {
@@ -138,8 +140,30 @@ export const MemoNode = ({
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Underline,
+      TextStyle,
+      Color,
+      Highlight.configure({
+        multicolor: true,
+        HTMLAttributes: {
+          class: 'highlight',
+        },
+      }),
+      Link.configure({
+        openOnClick: true,
+        HTMLAttributes: {
+          class: 'text-blue-500 hover:underline cursor-pointer',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+        validate: (href) => /^(https?:\/\/|mailto:|tel:)/.test(href),
+      }),
       Markdown.configure({
         html: false,
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
       }),
       Placeholder.configure({
         placeholder: t('knowledgeBase.context.memoPlaceholder'),
@@ -154,41 +178,46 @@ export const MemoNode = ({
       attributes: {
         class: classNames('max-w-none', 'focus:outline-none'),
       },
+      handleDOMEvents: {
+        mousedown: (view, event) => {
+          if (selected) {
+            event.stopPropagation();
+          }
+          onNodeClick?.();
+          return false;
+        },
+        click: (view, event) => {
+          if (selected) {
+            event.stopPropagation();
+          }
+          onNodeClick?.();
+          return false;
+        },
+      },
     },
   });
 
   const onMemoUpdates = useThrottledCallback(async (editor: EditorInstance) => {
     const markdown = editor.storage.markdown.getMarkdown();
+    const maxLength = 1000;
 
+    editor.commands.setContent(markdown.slice(0, maxLength));
     setNodeDataByEntity(
       {
         entityId: data?.entityId,
         type: 'memo',
       },
       {
-        contentPreview: markdown,
+        contentPreview: markdown?.slice(0, maxLength),
       },
     );
   }, 500);
 
-  const onTitleChange = useThrottledCallback((value: string) => {
-    setNodeDataByEntity(
-      {
-        entityId: data?.entityId,
-        type: 'memo',
-      },
-      {
-        title: value,
-      },
-    );
-  }, 500);
-
-  useEffect(() => {
-    onTitleChange(title);
-  }, [title, setTitle]);
+  const [bgColor, setBgColor] = useState('#E7F5FF');
 
   return (
     <div className={classNames({ nowheel: isOperating })}>
+      {!isPreview && selected && <MemoEditor editor={editor} bgColor={bgColor} onChangeBackground={setBgColor} />}
       <div
         ref={targetRef}
         className="relative"
@@ -198,20 +227,20 @@ export const MemoNode = ({
         style={{
           width: `${size.width}px`,
           height: `${size.height}px`,
-          userSelect: isOperating ? 'text' : 'none',
-          cursor: isOperating ? 'text' : 'grab',
+          userSelect: 'none',
+          cursor: isOperating ? 'default' : 'grab',
         }}
       >
         {!isPreview && !hideActions && <ActionButtons type="memo" nodeId={id} isNodeHovered={isHovered} />}
 
         <div
+          style={{ backgroundColor: bgColor }}
           className={`
             relative
             h-full
             ${getNodeCommonStyles({ selected: !isPreview && selected, isHovered })}
           `}
         >
-          <div className="absolute bottom-0 left-0 right-0 h-[20%] bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
           {!isPreview && !hideHandles && (
             <>
               <CustomHandle
@@ -231,40 +260,11 @@ export const MemoNode = ({
             </>
           )}
           <div className="flex flex-col h-full">
-            <div className="flex-shrink-0 mb-3">
-              <div className="flex items-center gap-2">
-                <div
-                  className="
-                    w-6 
-                    h-6 
-                    rounded 
-                    bg-[#2E90FA]
-                    shadow-[0px_2px_4px_-2px_rgba(16,24,60,0.06),0px_4px_8px_-2px_rgba(16,24,60,0.1)]
-                    flex 
-                    items-center 
-                    justify-center
-                    flex-shrink-0
-                  "
-                >
-                  <IconMemo className="w-4 h-4 text-white" />
-                </div>
-                {!isPreview ? (
-                  <Input
-                    className="text-sm font-medium leading-normal border-none focus:border-none hover:bg-gray-100"
-                    placeholder="Enter The Title"
-                    value={title}
-                    style={{ paddingLeft: 6 }}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
-                ) : (
-                  <div className="text-sm font-medium leading-normal">{title}</div>
-                )}
-              </div>
-            </div>
-
             <div className="relative flex-grow overflow-y-auto pr-2 -mr-2">
               {!isPreview ? (
-                <EditorContent editor={editor} className={classNames('text-xs memo-node-editor h-full w-full')} />
+                <div className="editor-wrapper" style={{ userSelect: 'text', cursor: 'text' }}>
+                  <EditorContent editor={editor} className={classNames('text-xs memo-node-editor h-full w-full')} />
+                </div>
               ) : (
                 <MarkdownPreview className="text-xs" content={data?.contentPreview ?? ''} />
               )}
@@ -293,7 +293,7 @@ export const MemoNode = ({
             }
           }}
           onResize={({ target, width, height, direction }) => {
-            const newWidth = Math.max(100, width);
+            const newWidth = Math.max(200, width);
             const newHeight = Math.max(80, height);
 
             let newLeft = (target as HTMLElement).offsetLeft;

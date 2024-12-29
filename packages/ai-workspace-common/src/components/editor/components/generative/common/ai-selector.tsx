@@ -14,21 +14,17 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useTranslation } from 'react-i18next';
 import { ActionResult, ActionStatus, ConfigScope, InvokeSkillRequest } from '@refly/openapi-schema';
-import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
+import { useChatStore, useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 import { genActionResultID, getClientOrigin } from '@refly-packages/utils/index';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
-import { LOCALE } from '@refly/common-types';
 import { HiCheck, HiXMark } from 'react-icons/hi2';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { useDocumentContext } from '@refly-packages/ai-workspace-common/context/document';
-import { MessageIntentSource } from '@refly-packages/ai-workspace-common/types/copilot';
 import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { convertContextItemsToContext } from '@refly-packages/ai-workspace-common/utils/map-context-items';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { AISettingsDropdown } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/ai-settings';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
-import { CopyIcon } from '@refly-packages/ai-workspace-common/components/search/icons';
 import { IconCopy } from '@arco-design/web-react/icon';
+import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
 
 interface AISelectorProps {
   open: boolean;
@@ -94,6 +90,11 @@ export const AISelector = memo(({ onOpenChange, handleBubbleClose, inPlaceEditTy
   const [resultStatus, setResultStatus] = useState<ActionStatus>('waiting');
   const { docId } = useDocumentContext();
   const { invokeAction } = useInvokeAction();
+
+  const { selectedModel, setSelectedModel } = useChatStoreShallow((state) => ({
+    selectedModel: state.selectedModel,
+    setSelectedModel: state.setSelectedModel,
+  }));
 
   const handleEdit = () => {
     const selection = editor.state.selection;
@@ -257,13 +258,6 @@ export const AISelector = memo(({ onOpenChange, handleBubbleClose, inPlaceEditTy
     }
   };
 
-  // payload: Omit<InPlaceSendMessagePayload, 'userInput'>
-  const handleAskAIResponse = () => {
-    handleBubbleClose?.();
-    // onOpenChange(false);
-    // editorEmitter.emit('bubbleClose');
-  };
-
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -280,14 +274,6 @@ export const AISelector = memo(({ onOpenChange, handleBubbleClose, inPlaceEditTy
       document.removeEventListener('keydown', handleEsc);
     };
   }, [onOpenChange, editor]);
-
-  useEffect(() => {
-    editorEmitter.on('askAIResponse', handleAskAIResponse);
-
-    return () => {
-      editorEmitter.off('askAIResponse', handleAskAIResponse);
-    };
-  }, []);
 
   const handleReplace = () => {
     const selection = editor.view.state.selection;
@@ -341,7 +327,13 @@ export const AISelector = memo(({ onOpenChange, handleBubbleClose, inPlaceEditTy
           <div className="flex relative flex-row items-center" cmdk-input-wrapper="">
             <div className="flex flex-1 items-center pl-4 border-b" cmdk-input-wrapper="">
               <Button size="small" type="default" className="rounded border text-gray-500 mr-1">
-                <AISettingsDropdown placement="bottom" collapsed={true} briefMode={true} />
+                <ModelSelector
+                  model={selectedModel}
+                  setModel={setSelectedModel}
+                  placement="bottom"
+                  briefMode={true}
+                  trigger={['click']}
+                />
               </Button>
               <AddBaseMarkContext />
               <Input.TextArea

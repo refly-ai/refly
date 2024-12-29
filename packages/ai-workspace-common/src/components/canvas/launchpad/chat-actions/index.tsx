@@ -3,21 +3,23 @@ import { FormInstance } from '@arco-design/web-react';
 import { useRef, useState, useMemo, useCallback } from 'react';
 import { memo } from 'react';
 
-import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 import { IconSend } from '@arco-design/web-react/icon';
 import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 
-// components
-import { AISettingsDropdown } from './ai-settings';
 // styles
 import './index.scss';
 import { getRuntime } from '@refly-packages/ai-workspace-common/utils/env';
 import { PiMagicWand } from 'react-icons/pi';
 import { useGetSubscriptionUsage } from '@refly-packages/ai-workspace-common/queries/queries';
+import { ModelSelector } from './model-selector';
+import { ModelInfo } from '@refly/openapi-schema';
 
 interface ChatActionsProps {
+  query: string;
+  model: ModelInfo;
+  setModel: (model: ModelInfo) => void;
   form?: FormInstance;
   handleSendMessage: () => void;
   handleAbort: () => void;
@@ -25,7 +27,7 @@ interface ChatActionsProps {
 
 export const ChatActions = memo(
   (props: ChatActionsProps) => {
-    const { handleSendMessage, handleAbort } = props;
+    const { query, model, setModel, handleSendMessage, handleAbort } = props;
     const { t } = useTranslation();
 
     const { setRecommendQuestionsOpen, recommendQuestionsOpen } = useLaunchpadStoreShallow(
@@ -46,17 +48,6 @@ export const ChatActions = memo(
     const handleSendClick = useCallback(() => {
       handleSendMessage();
     }, [handleSendMessage]);
-
-    // stores
-    const chatStore = useChatStoreShallow((state) => ({
-      newQAText: state.newQAText,
-      enableWebSearch: state.enableWebSearch,
-      setEnableWebSearch: state.setEnableWebSearch,
-      enableKnowledgeBaseSearch: state.enableKnowledgeBaseSearch,
-      setEnableKnowledgeBaseSearch: state.setEnableKnowledgeBaseSearch,
-      enableDeepReasonWebSearch: state.enableDeepReasonWebSearch,
-      setEnableDeepReasonWebSearch: state.setEnableDeepReasonWebSearch,
-    }));
 
     const { data: tokenUsageData } = useGetSubscriptionUsage({}, [], {
       refetchOnWindowFocus: false,
@@ -81,20 +72,18 @@ export const ChatActions = memo(
       setLoginModalVisible: state.setLoginModalVisible,
     }));
 
-    const canSendEmptyMessage = useMemo(() => chatStore.newQAText?.trim(), [chatStore.newQAText]);
+    const canSendEmptyMessage = useMemo(() => query?.trim(), [query]);
     const canSendMessage = useMemo(
       () => !userStore.isLogin || (tokenAvailable && canSendEmptyMessage),
       [userStore.isLogin, tokenAvailable, canSendEmptyMessage],
     );
 
-    const [containerWidth, setContainerWidth] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
-    const COLLAPSE_WIDTH = 600;
 
     return (
       <div className="chat-actions" ref={containerRef}>
         <div className="left-actions">
-          <AISettingsDropdown collapsed={containerWidth < COLLAPSE_WIDTH} briefMode={false} trigger={['click']} />
+          <ModelSelector model={model} setModel={setModel} briefMode={false} trigger={['click']} />
         </div>
         <div className="right-actions">
           <Tooltip destroyTooltipOnHide title={t('copilot.chatActions.recommendQuestions')}>

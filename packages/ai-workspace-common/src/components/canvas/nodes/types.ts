@@ -6,6 +6,7 @@ import {
   Artifact,
   CanvasNodeType,
   ModelInfo,
+  Skill,
   TokenUsageItem,
 } from '@refly/openapi-schema';
 
@@ -32,9 +33,9 @@ export type ResourceNodeMeta = {
 
 export type SkillNodeMeta = {
   query: string;
-  skillType: 'prompt' | 'prompt-struct' | 'skill' | 'code' | 'http' | string;
-  // 如果是 prompt 类型，可能需要额外的模型信息
-  model?: string;
+  selectedSkill?: Skill;
+  modelInfo?: ModelInfo;
+  contextNodeIds?: string[];
 };
 
 export type ToolNodeMeta = {

@@ -3,19 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { FC, useCallback, useMemo } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
-  IconReply,
-  IconPreview,
   IconRerun,
   IconDelete,
+  IconAskAI,
+  IconLoading,
+  IconRun,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
-import { Loader2, FileInput, MessageSquareDiff, FilePlus } from 'lucide-react';
-import { NodeItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { FileInput, MessageSquareDiff, FilePlus } from 'lucide-react';
 import { addPinnedNodeEmitter } from '@refly-packages/ai-workspace-common/events/addPinnedNode';
 import { nodeActionEmitter, createNodeEventName } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
+import { genSkillID } from '@refly-packages/utils/id';
+import { CanvasNodeType } from '@refly/openapi-schema';
+import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 
 interface MenuItem {
   key: string;
@@ -30,7 +33,7 @@ interface MenuItem {
 
 interface NodeActionMenuProps {
   nodeId: string;
-  nodeType: 'document' | 'resource' | 'skillResponse' | 'memo';
+  nodeType: CanvasNodeType;
   onClose?: () => void;
   isProcessing?: boolean;
   isCompleted?: boolean;
@@ -41,6 +44,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
   const { t } = useTranslation();
   const { getNode } = useReactFlow();
   const { canvasId } = useCanvasContext();
+  const { addNode } = useAddNode(canvasId);
 
   const { activeDocumentId } = useDocumentStoreShallow((state) => ({
     activeDocumentId: state.activeDocumentId,
@@ -52,6 +56,29 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
   // console.log('nodeactionmenu', nodeId);
 
   const addPinnedNode = useCanvasStoreShallow(useCallback((state) => state.addPinnedNode, []));
+
+  const handleAskAI = useCallback(() => {
+    const node = getNode(nodeId) as CanvasNode;
+    addNode(
+      {
+        type: 'skill',
+        data: {
+          title: 'Skill',
+          entityId: genSkillID(),
+          metadata: {
+            contextNodeIds: [nodeId],
+          },
+        },
+      },
+      [{ type: node.type, entityId: node.data.entityId }],
+    );
+    onClose?.();
+  }, [nodeId]);
+
+  const handleRun = useCallback(() => {
+    nodeActionEmitter.emit(createNodeEventName(nodeId, 'run'));
+    onClose?.();
+  }, [nodeId]);
 
   const handleRerun = useCallback(() => {
     nodeActionEmitter.emit(createNodeEventName(nodeId, 'rerun'));
@@ -89,10 +116,10 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
   const getMenuItems = (): MenuItem[] => {
     const baseItems: MenuItem[] = [
       {
-        key: 'preview',
-        icon: IconPreview,
-        label: t('canvas.nodeActions.preview'),
-        onClick: handlePreview,
+        key: 'askAI',
+        icon: IconAskAI,
+        label: t('canvas.nodeActions.askAI'),
+        onClick: handleAskAI,
         type: 'button' as const,
       },
       { key: 'divider-1', type: 'divider' } as MenuItem,
@@ -130,6 +157,15 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
           icon: FileInput,
           label: t('canvas.nodeActions.insertToDoc'),
           onClick: handleInsertToDoc,
+          type: 'button' as const,
+        },
+      ],
+      skill: [
+        {
+          key: 'run',
+          icon: IconRun,
+          label: t('canvas.nodeActions.run'),
+          onClick: handleRun,
           type: 'button' as const,
         },
       ],
@@ -178,7 +214,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
     };
 
     return [
-      ...(nodeType !== 'memo' ? baseItems : []),
+      ...(nodeType !== 'memo' && nodeType !== 'skill' ? baseItems : []),
       ...(nodeTypeItems[nodeType] || []),
       { key: 'divider-2', type: 'divider' } as MenuItem,
       deleteItem,
@@ -228,7 +264,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
             onClick={item.onClick}
             disabled={item.disabled}
           >
-            {item.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <item.icon className="w-4 h-4" />}
+            {item.loading ? <IconLoading className="w-4 h-4" /> : <item.icon className="w-4 h-4" />}
             <span className="flex-1 text-left truncate">{item.label}</span>
           </Button>
         );

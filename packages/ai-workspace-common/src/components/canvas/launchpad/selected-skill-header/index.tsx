@@ -1,36 +1,33 @@
 import { Button } from 'antd';
-// styles
-import './index.scss';
 import { IconClose } from '@arco-design/web-react/icon';
-import { useSkillStoreShallow } from '@refly-packages/ai-workspace-common/stores/skill';
 import { SkillAvatar } from '@refly-packages/ai-workspace-common/components/skill/skill-avatar';
 import { useTranslation } from 'react-i18next';
 import { Skill } from '@refly/openapi-schema';
 import classNames from 'classnames';
+import './index.scss';
 
 interface SelectedSkillHeaderProps {
-  // Add readonly and controlled props
   readonly?: boolean;
   skill?: Skill;
-  onClose?: () => void;
-  // Add className prop
   className?: string;
+  onClose?: () => void;
+  setSelectedSkill?: (skill: Skill | null) => void;
 }
 
-export const SelectedSkillHeader = ({ readonly, skill, onClose, className }: SelectedSkillHeaderProps) => {
+export const SelectedSkillHeader = ({
+  readonly,
+  skill,
+  className,
+  onClose,
+  setSelectedSkill,
+}: SelectedSkillHeaderProps) => {
   const { t } = useTranslation();
-  const skillStore = useSkillStoreShallow((state) => ({
-    selectedSkill: skill ?? state.selectedSkill,
-    setSelectedSkill: state.setSelectedSkill,
-  }));
+  const skillDisplayName = skill ? t(`${skill?.name}.name`, { ns: 'skill' }) : '';
 
-  const selectedSkill = skill ?? skillStore.selectedSkill;
-  const skillDisplayName = selectedSkill ? t(`${selectedSkill?.name}.name`, { ns: 'skill' }) : '';
-
-  return selectedSkill ? (
+  return skill ? (
     <div className={classNames('selected-skill', className)}>
       <div className="selected-skill-profile">
-        <SkillAvatar size={20} shape="circle" icon={selectedSkill?.icon} displayName={skillDisplayName} />
+        <SkillAvatar size={20} shape="circle" icon={skill?.icon} displayName={skillDisplayName} />
         <p>{skillDisplayName}</p>
       </div>
       {!readonly && (
@@ -40,7 +37,7 @@ export const SelectedSkillHeader = ({ readonly, skill, onClose, className }: Sel
             icon={<IconClose />}
             onClick={() => {
               onClose?.();
-              skillStore.setSelectedSkill(null);
+              setSelectedSkill?.(null);
             }}
           />
         </div>

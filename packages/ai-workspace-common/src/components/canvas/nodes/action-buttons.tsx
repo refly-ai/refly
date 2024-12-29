@@ -1,9 +1,10 @@
 import { FC, memo, useState } from 'react';
 import { NodeActionMenu } from '../node-action-menu';
+import { CanvasNodeType } from '@refly/openapi-schema';
 
 type ActionButtonsProps = {
   nodeId: string;
-  type: 'document' | 'resource' | 'skillResponse' | 'memo';
+  type: CanvasNodeType;
   isNodeHovered: boolean;
 };
 

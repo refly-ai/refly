@@ -61,6 +61,14 @@ export const defaultSelectedTextCardDomainKeysExtension: SelectedTextDomain[] = 
   (item) => item.key as SelectedTextDomain,
 );
 
+export interface FilterErrorInfo {
+  [key: string]: {
+    limit: number;
+    currentCount: number;
+    required?: boolean;
+  };
+}
+
 export interface NodeItem extends CanvasNode<any> {
   isPreview?: boolean; // is preview mode
   isCurrentContext?: boolean;
@@ -83,11 +91,11 @@ interface ContextPanelState {
   // selection text
   currentSelectedMark: Mark;
   selectedDomain: SelectedTextDomain;
-  enableMultiSelect: boolean; // 支持多选
+  enableMultiSelect: boolean;
 
   currentSelectedMarks: Mark[]; // 作为唯一的 context items 来源
   filterIdsOfCurrentSelectedMarks: string[]; // 作为 context items 的过滤
-  filterErrorInfo: { [key: string]: { limit: number; currentCount: number; required?: boolean } }; // 作为 context items 的过滤错误信息
+  filterErrorInfo: FilterErrorInfo;
   formErrors: Record<string, string>;
 
   // context card
@@ -110,9 +118,7 @@ interface ContextPanelState {
   updateFilterIdsOfCurrentSelectedMarks: (ids: string[]) => void;
   resetSelectedTextCardState: () => void;
   setSelectedTextCardDomain: (domain: SelectedTextDomain[]) => void;
-  updateFilterErrorInfo: (errorInfo: {
-    [key: string]: { limit: number; currentCount: number; required?: boolean };
-  }) => void;
+  updateFilterErrorInfo: (errorInfo: FilterErrorInfo) => void;
   setFormErrors: (errors: Record<string, string>) => void;
 
   // context card
@@ -157,7 +163,7 @@ export const defaultSelectedTextCardState = {
   enableMultiSelect: true, // default enable multi select, later to see if we need to enable multiSelect ability
   currentSelectedMarks: [] as Mark[],
   filterIdsOfCurrentSelectedMarks: [] as string[],
-  filterErrorInfo: {} as { [key: string]: { limit: number; currentCount: number; required?: boolean } },
+  filterErrorInfo: {} as FilterErrorInfo,
   formErrors: {} as Record<string, string>,
 };
 
@@ -209,9 +215,8 @@ export const useContextPanelStore = create<ContextPanelState>()(
     updateCurrentSelectedMarks: (marks: Mark[]) => set((state) => ({ ...state, currentSelectedMarks: marks })),
     updateFilterIdsOfCurrentSelectedMarks: (ids: string[]) =>
       set((state) => ({ ...state, filterIdsOfCurrentSelectedMarks: ids })),
-    updateFilterErrorInfo: (errorInfo: {
-      [key: string]: { limit: number; currentCount: number; required?: boolean };
-    }) => set((state) => ({ ...state, filterErrorInfo: errorInfo })),
+    updateFilterErrorInfo: (errorInfo: FilterErrorInfo) =>
+      set((state) => ({ ...state, filterErrorInfo: { ...state.filterErrorInfo, ...errorInfo } })),
     setFormErrors: (errors: Record<string, string>) => set((state) => ({ ...state, formErrors: errors })),
 
     addMark: (mark: Mark) =>

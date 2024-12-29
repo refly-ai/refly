@@ -1,12 +1,13 @@
 import { FC, useEffect, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { NodeActionMenu } from '../node-action-menu';
+import { CanvasNodeType } from '@refly/openapi-schema';
 
 interface NodeContextMenuProps {
   open: boolean;
   position: { x: number; y: number };
   nodeId: string;
-  nodeType: 'document' | 'resource' | 'skillResponse';
+  nodeType: CanvasNodeType;
   setOpen: (open: boolean) => void;
 }
 

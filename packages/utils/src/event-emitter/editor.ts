@@ -16,12 +16,6 @@ export interface CanvasEditConfig {
   inPlaceEditType?: InPlaceEditType;
 }
 
-export interface InPlaceSendMessagePayload {
-  userInput: string;
-  inPlaceActionType?: InPlaceActionType;
-  canvasEditConfig?: CanvasEditConfig;
-}
-
 export type Events = {
   insertBelow: string;
   replaceSelection: string;
@@ -38,8 +32,6 @@ export type Events = {
     content: string;
   };
   activeAskAI: { value: boolean; docId?: string };
-  inPlaceSendMessage: InPlaceSendMessagePayload;
-  askAIResponse: Omit<InPlaceSendMessagePayload, 'userInput'>;
   editorSynced: void;
   exitFullScreen: void;
 };
@@ -50,9 +42,7 @@ export type EditorOperation =
   | 'contineInChat'
   | 'streamCanvasContent'
   | 'streamEditCanvasContent'
-  | 'inPlaceSendMessage'
   | 'activeAskAI'
-  | 'askAIResponse'
   | 'editorSynced'
   | 'exitFullScreen';
 

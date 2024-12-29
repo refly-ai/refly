@@ -89,10 +89,7 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
     case 'skill':
       return {
         query: '',
-        skillType: 'prompt',
-        model: 'gpt-4',
-        parameters: {}, // Additional parameters if needed
-        lastExecuted: null,
+        modelInfo: null,
       } as SkillNodeMeta;
 
     case 'tool':

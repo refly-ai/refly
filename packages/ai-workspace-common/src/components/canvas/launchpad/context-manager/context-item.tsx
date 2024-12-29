@@ -67,22 +67,19 @@ export const ContextItem = ({
     [nodes, setSelectedNode, t],
   );
 
-  const content = (
-    <div>
-      <ContextPreview item={item} />
-    </div>
-  );
+  const content = <ContextPreview item={item} />;
 
   const isSelection = item?.data?.metadata?.sourceType?.toLowerCase()?.includes('selection');
   const sourceType = isSelection ? 'selection' : item?.type;
-  // console.log('sourceType', sourceType, item, isSelection);
 
   return (
     <Popover
       arrow={false}
       content={content}
       trigger="hover"
-      placement="top"
+      mouseEnterDelay={0.5}
+      mouseLeaveDelay={0.1}
+      overlayInnerStyle={{ padding: 0 }}
       overlayClassName="context-preview-popover rounded-lg"
     >
       <Button

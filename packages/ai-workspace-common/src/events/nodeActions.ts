@@ -16,7 +16,7 @@ export const createNodeEventName = (nodeId: string, action: string) =>
   `node:${nodeId}:${action}` as keyof NodeActionEvents;
 
 export const cleanupNodeEvents = (nodeId: string) => {
-  const eventTypes = ['rerun', 'delete', 'addToContext', 'createDocument', 'insertToDoc'];
+  const eventTypes = ['run', 'rerun', 'delete', 'addToContext', 'createDocument', 'insertToDoc'];
   eventTypes.forEach((type) => {
     nodeActionEmitter.all.delete(createNodeEventName(nodeId, type));
   });

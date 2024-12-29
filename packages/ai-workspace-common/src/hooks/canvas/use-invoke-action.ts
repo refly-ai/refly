@@ -15,7 +15,8 @@ import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action
 import { aggregateTokenUsage, genActionResultID } from '@refly-packages/utils/index';
 import { CanvasNodeData, ResponseNodeMeta } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { useGetSubscriptionUsage, useListModels, useListSkills } from '@refly-packages/ai-workspace-common/queries';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useCallback } from 'react';
+import { XYPosition } from '@xyflow/react';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 export const useInvokeAction = () => {
@@ -317,14 +318,17 @@ export const useInvokeAction = () => {
     abortAction(error?.errMsg);
   };
 
-  const abortAction = (msg?: string) => {
-    try {
-      globalAbortControllerRef.current?.abort();
-      globalIsAbortedRef.current = true;
-    } catch (err) {
-      console.log('shutdown error', err);
-    }
-  };
+  const abortAction = useCallback(
+    (msg?: string) => {
+      try {
+        globalAbortControllerRef.current?.abort();
+        globalIsAbortedRef.current = true;
+      } catch (err) {
+        console.log('shutdown error', err);
+      }
+    },
+    [globalAbortControllerRef, globalIsAbortedRef],
+  );
 
   const onCompleted = () => {};
 
@@ -346,7 +350,7 @@ export const useInvokeAction = () => {
     gcTime: 5 * 60 * 1000,
   });
 
-  const invokeAction = (payload: InvokeSkillRequest) => {
+  const invokeAction = (payload: InvokeSkillRequest, newNodePosition?: XYPosition) => {
     payload.resultId ||= genActionResultID();
 
     const { resultId, input } = payload;
@@ -402,6 +406,7 @@ export const useInvokeAction = () => {
               status: 'executing',
             },
           },
+          position: newNodePosition,
         },
         connectTo,
       );

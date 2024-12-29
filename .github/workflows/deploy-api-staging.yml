@@ -1,0 +1,54 @@
+name: Deploy API To Staging
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'apps/web/**'
+      - 'apps/extension-wxt/**'
+      - 'packages/ai-workspace-common/**'
+      - 'packages/i18n/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: reflyai
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/api/Dockerfile
+          push: true
+          tags: reflyai/refly-api:${{ github.sha }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" > ./kubeconfig
+          chmod 600 kubeconfig
+          echo "KUBECONFIG=./kubeconfig" >> $GITHUB_ENV
+
+      - name: Update Kubernetes deployment
+        run: |
+          kubectl set image deployment/refly-api-staging refly-api=reflyai/refly-api:${{ github.sha }} --record -n refly-app
+
+      - name: Wait for deployment to complete
+        run: |
+          kubectl rollout status deployment/refly-api-staging --timeout=300s -n refly-app

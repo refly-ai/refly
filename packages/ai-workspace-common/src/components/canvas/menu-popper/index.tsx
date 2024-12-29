@@ -1,8 +1,6 @@
 import { Button, Divider } from 'antd';
 import { HiOutlineDocumentAdd } from 'react-icons/hi';
-import { HiOutlineBars2 } from 'react-icons/hi2';
 import { RiUploadCloud2Line } from 'react-icons/ri';
-import { PiShootingStar } from 'react-icons/pi';
 import { MdOutlineAutoAwesomeMotion } from 'react-icons/md';
 
 import { useTranslation } from 'react-i18next';
@@ -12,11 +10,11 @@ import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-s
 import { useImportResourceStoreShallow } from '@refly-packages/ai-workspace-common/stores/import-resource';
 import { CanvasNodeType, SearchDomain } from '@refly/openapi-schema';
 import { ContextItem } from '@refly-packages/ai-workspace-common/types/context';
+import { IconAskAI, IconDocument, IconResource } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { genMemoID, genSkillID } from '@refly-packages/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { IconDocument, IconResource } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useReactFlow } from '@xyflow/react';
-import { genMemoID } from '@refly-packages/utils/id';
 import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
 
 // Define toolbar item interface
@@ -48,7 +46,7 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
   }));
 
   const menuItems: ToolbarItem[] = [
-    { key: 'askAI', icon: PiShootingStar, type: 'button' },
+    { key: 'askAI', icon: IconAskAI, type: 'button' },
     { key: 'divider-1', type: 'divider' },
     { key: 'createDocument', icon: HiOutlineDocumentAdd, type: 'button' },
     { key: 'createMemo', icon: MdOutlineAutoAwesomeMotion, type: 'button' },
@@ -108,6 +106,14 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
 
   const menuScreenPosition = getMenuScreenPosition();
 
+  const createSkillNode = (position: { x: number; y: number }) => {
+    addNode({
+      type: 'skill',
+      data: { title: 'Skill', entityId: genSkillID() },
+      position: position,
+    });
+  };
+
   const createMemo = (position: { x: number; y: number }) => {
     const memoId = genMemoID();
     addNode({
@@ -121,6 +127,8 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
     setActiveKey(key);
     switch (key) {
       case 'askAI':
+        createSkillNode(position);
+        setOpen(false);
         break;
       case 'createDocument':
         await createSingleDocumentInCanvas(position);

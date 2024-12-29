@@ -1,7 +1,7 @@
 import { Button } from 'antd';
 import { cn } from '../utils';
 import { BoldIcon, CodeIcon, ItalicIcon, StrikethroughIcon, UnderlineIcon, type LucideIcon } from 'lucide-react';
-import { EditorBubbleItem, useEditor } from '../../core/components';
+import { EditorBubbleItem, EditorInstance, useEditor } from '../../core/components';
 
 type SelectorItem = {
   name: string;
@@ -10,8 +10,9 @@ type SelectorItem = {
   isActive: (editor: ReturnType<typeof useEditor>['editor']) => boolean;
 };
 
-export const TextButtons = () => {
-  const { editor } = useEditor();
+export const TextButtons = ({ triggerEditor }: { triggerEditor?: EditorInstance }) => {
+  const { editor: currentEditor } = useEditor();
+  const editor = triggerEditor || currentEditor;
   if (!editor) return null;
   const items: SelectorItem[] = [
     {
@@ -50,6 +51,7 @@ export const TextButtons = () => {
     <div className="flex items-center">
       {items.map((item) => (
         <EditorBubbleItem
+          triggerEditor={triggerEditor}
           key={item.name}
           onSelect={(editor) => {
             item.command(editor);

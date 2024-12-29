@@ -31,6 +31,7 @@ import {
   EditorPerformanceProvider,
   useEditorPerformance,
 } from '@refly-packages/ai-workspace-common/context/editor-performance';
+import { CanvasNodeType } from '@refly/openapi-schema';
 import { useEdgeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-edge-operations';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
@@ -54,7 +55,7 @@ interface ContextMenuState {
   position: { x: number; y: number };
   type: 'canvas' | 'node';
   nodeId?: string;
-  nodeType?: 'document' | 'resource' | 'skillResponse';
+  nodeType?: CanvasNodeType;
 }
 
 // Add new memoized components
@@ -201,8 +202,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     [lastClickTime, setOperatingNodeId],
   );
 
-  const selectedNodes = nodes?.filter((node) => node.selected);
-
   const handleToolSelect = (tool: string) => {
     // Handle tool selection
     console.log('Selected tool:', tool);
@@ -316,7 +315,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       });
 
       // Map node type to menu type
-      let menuNodeType: 'document' | 'resource' | 'skillResponse';
+      let menuNodeType: CanvasNodeType;
       switch (node.type) {
         case 'document':
           menuNodeType = 'document';
@@ -326,6 +325,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           break;
         case 'skillResponse':
           menuNodeType = 'skillResponse';
+          break;
+        case 'skill':
+          menuNodeType = 'skill';
+          break;
+        case 'memo':
+          menuNodeType = 'memo';
           break;
         default:
           return; // Don't show context menu for unknown node types
@@ -365,7 +370,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       }
 
       // Memo nodes are not previewable
-      if (node.type === 'memo') {
+      if (node.type === 'memo' || node.type === 'skill') {
         return;
       }
 
@@ -516,43 +521,9 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           >
             <div className="relative h-full">
               <div className="flex gap-2 h-full">
-                {/* Left shadow and arrow indicator */}
-                {/* {showLeftIndicator && (
-                <div className="sticky left-0 top-0 w-12 h-full bg-gradient-to-r from-white to-transparent z-10 flex items-center justify-start pointer-events-none absolute">
-                  <div className="text-gray-400 ml-2">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M15 19l-7-7 7-7"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              )} */}
-
                 {pinnedNodes
                   ?.filter(Boolean)
                   ?.map((node) => <NodePreview key={node?.id} node={node} canvasId={canvasId} />)}
-
-                {/* Right shadow and arrow indicator */}
-                {/* {showRightIndicator && (
-                <div className="sticky right-0 top-0 w-12 h-full bg-gradient-to-l from-white to-transparent z-10 flex items-center justify-end pointer-events-none absolute">
-                  <div className="text-gray-400 mr-2">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M9 5l7 7-7 7"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              )} */}
               </div>
             </div>
           </div>

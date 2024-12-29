@@ -52,7 +52,7 @@ export const NodePreview = memo(
     }));
 
     const handleClose = useCallback(() => {
-      removePinnedNode(canvasId, node);
+      removePinnedNode(canvasId, node.id);
     }, [node, removePinnedNode, canvasId]);
 
     const previewStyles = useMemo(

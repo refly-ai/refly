@@ -13,7 +13,7 @@ export const useNodePreviewControl = ({ canvasId }: UseNodePreviewControlOptions
       clickToPreview: state.clickToPreview,
       setClickToPreview: state.setClickToPreview,
       addPinnedNode: (canvasId: string, node: CanvasNode) => state.addPinnedNode(canvasId, node),
-      removePinnedNode: (canvasId: string, node: CanvasNode) => state.removePinnedNode(canvasId, node),
+      removePinnedNode: (canvasId: string, nodeId: string) => state.removePinnedNode(canvasId, nodeId),
       pinnedNodes: state.config[canvasId]?.pinnedNodes || [],
     }),
   );
@@ -41,7 +41,7 @@ export const useNodePreviewControl = ({ canvasId }: UseNodePreviewControlOptions
    */
   const unpinNode = useCallback(
     (node: CanvasNode) => {
-      removePinnedNode(canvasId, node);
+      removePinnedNode(canvasId, node.id);
     },
     [canvasId, removePinnedNode],
   );
@@ -61,7 +61,7 @@ export const useNodePreviewControl = ({ canvasId }: UseNodePreviewControlOptions
    */
   const clearPinnedNodes = useCallback(() => {
     pinnedNodes.forEach((node) => {
-      removePinnedNode(canvasId, node);
+      removePinnedNode(canvasId, node.id);
     });
   }, [canvasId, pinnedNodes, removePinnedNode]);
 

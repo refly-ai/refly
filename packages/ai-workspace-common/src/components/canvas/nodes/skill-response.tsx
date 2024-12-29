@@ -5,7 +5,7 @@ import classNames from 'classnames';
 import { Divider, message } from 'antd';
 import { CanvasNodeData, ResponseNodeMeta, CanvasNode, SkillResponseNodeProps } from './types';
 import { Node } from '@xyflow/react';
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, memo } from 'react';
 import { CustomHandle } from './custom-handle';
 import { LuChevronRight } from 'react-icons/lu';
 import { useEdgeStyles } from '../constants';
@@ -39,8 +39,7 @@ import { ModelProviderIcons } from '@refly-packages/ai-workspace-common/componen
 import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { createNodeEventName, cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
-import { memo } from 'react';
-import { Source } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { Source } from '@refly/openapi-schema';
 import { useSetNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data';
 
 type SkillResponseNode = Node<CanvasNodeData<ResponseNodeMeta>, 'skillResponse'>;
@@ -127,22 +126,18 @@ const NodeFooter = memo(
   },
 );
 
-// 主组件使用 memo 包裹
 export const SkillResponseNode = memo(
   (props: SkillResponseNodeProps) => {
     const { data, selected, id, hideActions = false, isPreview = false, hideHandles = false, onNodeClick } = props;
     const [isHovered, setIsHovered] = useState(false);
-    const contentRef = useRef<HTMLDivElement>(null);
 
     const { edges, operatingNodeId } = useCanvasStoreShallow((state) => ({
       edges: state.data[state.currentCanvasId]?.edges ?? [],
       operatingNodeId: state.operatingNodeId,
     }));
 
-    // console.log('skillresponse', id);
-
     const setNodeData = useSetNodeData();
-    const { setEdges, getNode, setNodes } = useReactFlow();
+    const { getNode } = useReactFlow();
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
     const targetRef = useRef<HTMLDivElement>(null);
@@ -324,17 +319,7 @@ export const SkillResponseNode = memo(
       'skillResponse',
     );
 
-    const handleHelpLink = useCallback(() => {
-      // Implement help link logic
-      console.log('Open help link');
-    }, []);
-
-    const handleAbout = useCallback(() => {
-      // Implement about logic
-      console.log('Show about info');
-    }, []);
-
-    const { debouncedCreateDocument, isCreating } = useCreateDocument();
+    const { debouncedCreateDocument } = useCreateDocument();
 
     const handleCreateDocument = useCallback(async () => {
       await debouncedCreateDocument(data?.title ?? t('common.newDocument'), content, {

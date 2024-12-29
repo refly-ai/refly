@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 
-import './index.scss';
 import { Item } from './item';
 import { RenderItem } from './type';
 import classNames from 'classnames';

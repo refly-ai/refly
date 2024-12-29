@@ -1,6 +1,6 @@
 import { SVGProps } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
-import { EditorBubbleItem, useEditor } from '../../core/components';
+import { EditorBubbleItem, EditorInstance, useEditor } from '../../core/components';
 import { LuCode, LuList, LuListOrdered, LuListTodo } from 'react-icons/lu';
 import { RiH1, RiH2, RiH3, RiQuoteText, RiText } from 'react-icons/ri';
 
@@ -73,29 +73,32 @@ const items: SelectorItem[] = [
 ];
 
 interface NodeSelectorProps {
+  triggerEditor?: EditorInstance;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const NodeSelector = ({ open, onOpenChange }: NodeSelectorProps) => {
-  const { editor } = useEditor();
+export const NodeSelector = ({ triggerEditor, open, onOpenChange }: NodeSelectorProps) => {
+  const { editor: currentEditor } = useEditor();
+  const editor = triggerEditor || currentEditor;
   if (!editor) return null;
   const activeItem = items.filter((item) => item.isActive(editor)).pop() ?? items[0];
 
   const content = (
-    <div className="w-48 p-1">
+    <div className="w-38">
       {items.map((item) => (
         <EditorBubbleItem
+          triggerEditor={triggerEditor}
           key={item.name}
           onSelect={(editor) => {
             item.command(editor);
             onOpenChange(false);
           }}
-          className="flex cursor-pointer items-center justify-between rounded-sm px-2 py-1 text-sm hover:bg-gray-100"
+          className="flex cursor-pointer items-center justify-between rounded-sm p-1 text-xs hover:bg-gray-100"
         >
           <div className="flex items-center space-x-2">
             <div className="rounded-sm border p-1 flex items-center justify-center">
-              <item.icon className="h-4 w-4" />
+              <item.icon className="h-3 w-3" />
             </div>
             <span className="text-xs">{item.name}</span>
           </div>

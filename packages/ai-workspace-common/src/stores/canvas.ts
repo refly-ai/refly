@@ -39,7 +39,7 @@ export interface CanvasState {
   addPinnedNode: (canvasId: string, node: CanvasNode<any>) => void;
   setCanvasLocalSynced: (canvasId: string, syncedAt: number) => void;
   setCanvasRemoteSynced: (canvasId: string, syncedAt: number) => void;
-  removePinnedNode: (canvasId: string, node: CanvasNode<any>) => void;
+  removePinnedNode: (canvasId: string, nodeId: string) => void;
   setShowPreview: (show: boolean) => void;
   setShowMaxRatio: (show: boolean) => void;
   setShowLaunchpad: (show: boolean) => void;
@@ -133,10 +133,10 @@ export const useCanvasStore = create<CanvasState>()(
           state.config[canvasId].pinnedNodes = state.config[canvasId].pinnedNodes.filter((n) => n.id !== node.id);
           state.config[canvasId].pinnedNodes.unshift(node);
         }),
-      removePinnedNode: (canvasId, node) =>
+      removePinnedNode: (canvasId, nodeId) =>
         set((state) => {
           state.config[canvasId] ??= defaultCanvasConfig();
-          state.config[canvasId].pinnedNodes = state.config[canvasId].pinnedNodes.filter((n) => n.id !== node.id);
+          state.config[canvasId].pinnedNodes = state.config[canvasId].pinnedNodes.filter((n) => n.id !== nodeId);
         }),
       setInteractionMode: (mode) =>
         set((state) => {

@@ -408,6 +408,7 @@ const translations = {
         resource: '资源',
         skillResponse: '技能响应',
         memo: '备忘录',
+        skill: '技能',
       },
       memoPlaceholder: '记录当下的灵感...',
       noContent: '没有可插入的内容',
@@ -522,8 +523,10 @@ const translations = {
       nodeNotFound: '源节点未找到或已被删除，请先添加到画布',
     },
     nodeActions: {
+      askAI: '问问 AI',
       addToContext: '添加到上下文',
       processingVector: '处理向量',
+      run: '运行',
       rerun: '重新运行',
       preview: '打开预览',
       insertToDoc: '插入文档',

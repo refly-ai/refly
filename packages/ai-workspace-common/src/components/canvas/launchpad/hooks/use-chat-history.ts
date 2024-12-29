@@ -7,7 +7,6 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
-import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 
 export const useChatHistory = () => {
@@ -44,45 +43,7 @@ export const useChatHistory = () => {
     };
   }, []);
 
-  const { nodes } = useCanvasData();
   const { setSelectedNodeByEntity } = useNodeSelection();
-  const selectedResultNodes = nodes?.filter((node) => node?.selected && node?.type === 'skillResponse');
-
-  // Sync nodes with history items
-  useEffect(() => {
-    const { historyItems, contextItems } = useContextPanelStore.getState();
-    const contextStore = useContextPanelStore.getState();
-
-    const newHistoryItems = [
-      ...(selectedResultNodes
-        ?.filter((node) => !historyItems?.some((item) => !item?.isPreview && item?.id === node?.id))
-        ?.map((node) => ({ ...node, isPreview: true })) ?? []),
-      ...(historyItems?.filter((item) => !item?.isPreview) ?? []),
-    ];
-
-    // Sync context items with history items
-    contextItems.forEach((contextItem) => {
-      // Remove context item if it's a skill response and not in history
-      if (
-        contextItem.type === 'skillResponse' &&
-        !newHistoryItems.some((historyItem) => historyItem.id === contextItem.id)
-      ) {
-        contextStore.removeContextItem(contextItem.id);
-      }
-    });
-
-    // Add missing history items to context
-    newHistoryItems.forEach((historyItem) => {
-      if (
-        historyItem.type === 'skillResponse' &&
-        !contextItems.some((contextItem) => contextItem.id === historyItem.id)
-      ) {
-        contextStore.addContextItem(historyItem);
-      }
-    });
-
-    setHistoryItems(newHistoryItems);
-  }, [JSON.stringify(selectedResultNodes?.map((node) => node?.data.contentPreview))]);
 
   const handleItemClick = (item: NodeItem) => {
     setSelectedNodeByEntity({ type: 'skillResponse', entityId: item.data.entityId });

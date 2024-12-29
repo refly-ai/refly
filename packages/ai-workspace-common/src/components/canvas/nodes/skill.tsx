@@ -1,134 +1,211 @@
-import { Handle, NodeProps, Position, useEdges, useReactFlow } from '@xyflow/react';
+import { NodeProps, Position, useReactFlow } from '@xyflow/react';
 import { CanvasNodeData, SkillNodeMeta } from './types';
 import { Node } from '@xyflow/react';
-import { Sparkles, MoreHorizontal, Cpu, Code2, Globe } from 'lucide-react';
 import { CustomHandle } from './custom-handle';
-import { useState, useCallback } from 'react';
-import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
-import { useEdgeStyles } from '../constants';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+
 import { getNodeCommonStyles } from './index';
+import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
+import { IconAskAI } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { ModelInfo, Skill } from '@refly/openapi-schema';
+import { useDebouncedCallback } from 'use-debounce';
+import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
+import { convertContextItemsToContext } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
+import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
+import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
+import { ActionButtons } from '@refly-packages/ai-workspace-common/components/canvas/nodes/action-buttons';
+import { cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { createNodeEventName } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
+import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
+import { NodeItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { useSetNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data';
+import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useEdgeStyles } from '@refly-packages/ai-workspace-common/components/canvas/constants';
 
 type SkillNode = Node<CanvasNodeData<SkillNodeMeta>, 'skill'>;
-
-// 根据不同的技能类型返回不同的图标
-const getSkillIcon = (skillType: string) => {
-  switch (skillType) {
-    case 'prompt':
-    case 'prompt-struct':
-      return Cpu;
-    case 'skill':
-      return Sparkles;
-    case 'code':
-      return Code2;
-    case 'http':
-      return Globe;
-    default:
-      return Sparkles;
-  }
-};
-
-// 根据不同的技能类型返回不同的显示名称
-const getSkillTitle = (skillType: string) => {
-  switch (skillType) {
-    case 'prompt':
-      return 'Prompt';
-    case 'prompt-struct':
-      return 'Structured Prompt';
-    case 'skill':
-      return 'Skill';
-    case 'code':
-      return 'Code';
-    case 'http':
-      return 'HTTP Request';
-    default:
-      return skillType;
-  }
-};
 
 export const SkillNode = ({ data, selected, id }: NodeProps<SkillNode>) => {
   const [isHovered, setIsHovered] = useState(false);
   const { edges } = useCanvasData();
-  const { setEdges } = useReactFlow();
-  const SkillIcon = getSkillIcon(data.metadata.skillType);
+  const setNodeData = useSetNodeData();
   const edgeStyles = useEdgeStyles();
+  const { getNode, addEdges, deleteElements } = useReactFlow();
+  const handleDeleteNode = useDeleteNode(
+    {
+      id,
+      type: 'skill',
+      data,
+      position: { x: 0, y: 0 },
+    },
+    'skill',
+  );
+
+  const { query, selectedSkill, modelInfo, contextNodeIds = [] } = data.metadata;
+
+  const [localQuery, setLocalQuery] = useState(query);
 
   // Check if node has any connections
   const isTargetConnected = edges?.some((edge) => edge.target === id);
   const isSourceConnected = edges?.some((edge) => edge.source === id);
 
+  const updateNodeData = useDebouncedCallback((data: Partial<CanvasNodeData<SkillNodeMeta>>) => {
+    setNodeData(id, data);
+  }, 50);
+
+  const { selectedModel } = useChatStoreShallow((state) => ({
+    selectedModel: state.selectedModel,
+  }));
+
+  const { invokeAction, abortAction } = useInvokeAction();
+  const { canvasId } = useCanvasContext();
+
+  const setQuery = useCallback(
+    (query: string) => {
+      setLocalQuery(query);
+      updateNodeData({ title: query, metadata: { query } });
+    },
+    [id, updateNodeData],
+  );
+
+  const setModelInfo = useCallback(
+    (modelInfo: ModelInfo | null) => {
+      setNodeData(id, { metadata: { modelInfo } });
+    },
+    [id, setNodeData],
+  );
+
+  const contextItems = useMemo(() => contextNodeIds.map((id) => getNode(id) as NodeItem), [contextNodeIds]);
+
+  const setContextItems = useCallback(
+    (items: NodeItem[]) => {
+      // Update node data with new context node IDs
+      setNodeData(id, { metadata: { contextNodeIds: items.map((item) => item.id) } });
+
+      const { edges = [] } = useCanvasStore.getState().data[canvasId] ?? {};
+
+      // Get existing edges connected to this node
+      const existingEdges = edges?.filter((edge) => edge.target === id) ?? [];
+      const existingSourceIds = new Set(existingEdges.map((edge) => edge.source));
+
+      // Find items that need new connections
+      const newItems = items.filter((item) => !existingSourceIds.has(item.id));
+
+      // Create new edges for unconnected items
+      const newEdges = newItems.map((item) => ({
+        id: `${item.id}-${id}`,
+        source: item.id,
+        target: id,
+        style: edgeStyles.hover,
+        type: 'default',
+      }));
+
+      // Find edges that need to be removed
+      const edgesToRemove = existingEdges.filter((edge) => !items.some((item) => item.id === edge.source));
+
+      // Apply changes
+      if (newEdges?.length > 0) {
+        addEdges(newEdges);
+      }
+
+      if (edgesToRemove?.length > 0) {
+        deleteElements({ edges: edgesToRemove });
+      }
+    },
+    [id, canvasId, setNodeData, addEdges, deleteElements],
+  );
+
+  useEffect(() => {
+    if (selectedModel && !modelInfo) {
+      setModelInfo(selectedModel);
+    }
+  }, [selectedModel]);
+
+  const setSelectedSkill = useCallback(
+    (skill: Skill | null) => {
+      setNodeData(id, { metadata: { selectedSkill: skill } });
+    },
+    [id, updateNodeData],
+  );
+
+  const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
+
   // Handle node hover events
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
-    setEdges((eds) =>
-      eds.map((edge) => {
-        if (edge.source === id || edge.target === id) {
-          return {
-            ...edge,
-            style: edgeStyles.hover,
-          };
-        }
-        return edge;
-      }),
-    );
-  }, [id, setEdges, edgeStyles]);
+    onHoverStart();
+  }, [onHoverStart]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
-    setEdges((eds) =>
-      eds.map((edge) => {
-        if (edge.source === id || edge.target === id) {
-          return {
-            ...edge,
-            style: edgeStyles.default,
-          };
-        }
-        return edge;
-      }),
+    onHoverEnd();
+  }, [onHoverEnd]);
+
+  const handleSendMessage = useCallback(() => {
+    const node = getNode(id);
+    const data = node?.data as CanvasNodeData<SkillNodeMeta>;
+    const { query, modelInfo, selectedSkill } = data.metadata ?? {};
+
+    deleteElements({ nodes: [node] });
+
+    invokeAction(
+      {
+        resultId: data.entityId,
+        input: {
+          query,
+        },
+        target: {
+          entityId: canvasId,
+          entityType: 'canvas',
+        },
+        modelName: modelInfo?.name,
+        context: convertContextItemsToContext(contextItems),
+        resultHistory: contextItems
+          .filter((item) => item.type === 'skillResponse')
+          .map((item) => ({
+            resultId: item.data?.entityId,
+            title: item.data?.title,
+          })),
+        skillName: selectedSkill?.name,
+      },
+      node?.position,
     );
-  }, [id, setEdges, edgeStyles]);
+  }, [id]);
+
+  useEffect(() => {
+    // Create node-specific event handlers
+    const handleNodeRun = () => handleSendMessage();
+    const handleNodeDelete = () => handleDeleteNode();
+
+    // Register events with node ID
+    nodeActionEmitter.on(createNodeEventName(id, 'run'), handleNodeRun);
+    nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+    return () => {
+      // Cleanup events when component unmounts
+      nodeActionEmitter.off(createNodeEventName(id, 'run'), handleNodeRun);
+      nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
+
+      // Clean up all node events
+      cleanupNodeEvents(id);
+    };
+  }, [id, handleSendMessage, handleDeleteNode]);
 
   return (
     <div className="relative group" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-      {/* Action Button */}
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-        }}
-        className="
-          absolute 
-          -top-9 
-          -right-0
-          opacity-0 
-          group-hover:opacity-100
-          transition-opacity 
-          duration-200 
-          ease-in-out
-          z-50
-        "
-      >
-        <button
-          className="
-            p-1.5
-            rounded-md 
-            bg-white
-            hover:bg-gray-50
-            text-gray-600
-            shadow-[0px_1px_2px_0px_rgba(16,24,60,0.05)]
-            border border-[#EAECF0]
-          "
-        >
-          <MoreHorizontal className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
       <div
         className={`
-          w-[170px]
-          h-[71px]
+          w-[384px]
+          max-h-[400px]
           ${getNodeCommonStyles({ selected, isHovered })}
         `}
       >
+        <ActionButtons type="skill" nodeId={id} />
+
         <CustomHandle
           type="target"
           position={Position.Left}
@@ -144,7 +221,7 @@ export const SkillNode = ({ data, selected, id }: NodeProps<SkillNode>) => {
           nodeType="skill"
         />
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           {/* Header with Icon and Type */}
           <div className="flex items-center gap-2">
             <div
@@ -160,7 +237,7 @@ export const SkillNode = ({ data, selected, id }: NodeProps<SkillNode>) => {
                 flex-shrink-0
               "
             >
-              <SkillIcon className="w-4 h-4 text-white" />
+              <IconAskAI className="w-4 h-4 text-white" />
             </div>
 
             <span
@@ -173,45 +250,24 @@ export const SkillNode = ({ data, selected, id }: NodeProps<SkillNode>) => {
                 truncate
               "
             >
-              {getSkillTitle(data.metadata.skillType)}
+              {'Prompt'}
             </span>
           </div>
 
-          {/* Skill Title */}
-          <div
-            className="
-              text-[13px]
-              font-medium
-              leading-normal
-              text-[rgba(0,0,0,0.8)]
-              font-['PingFang_SC']
-            "
-          >
-            {data.title}
-          </div>
-
-          {/* Skill Preview Content */}
-          <div
-            className="
-              text-[10px]
-              leading-3
-              text-[rgba(0,0,0,0.8)]
-              font-['PingFang_SC']
-              line-clamp-2
-              overflow-hidden
-              text-ellipsis
-            "
-          >
-            {/* 根据不同类型显示不同的预览内容 */}
-            {data?.metadata?.skillType?.startsWith?.('prompt') ? (
-              <div className="flex items-center gap-1 text-gray-500">
-                <Cpu className="w-3 h-3" />
-                <span>GPT-4</span>
-              </div>
-            ) : data.metadata.skillType === 'skill' ? (
-              <div>{data.metadata.query}</div>
-            ) : null}
-          </div>
+          <ContextManager contextItems={contextItems} setContextItems={setContextItems} />
+          <ChatInput
+            handleSendMessage={() => handleSendMessage()}
+            query={localQuery}
+            setQuery={setQuery}
+            selectedSkill={selectedSkill}
+          />
+          <ChatActions
+            query={localQuery}
+            model={modelInfo}
+            setModel={setModelInfo}
+            handleSendMessage={handleSendMessage}
+            handleAbort={abortAction}
+          />
         </div>
       </div>
     </div>

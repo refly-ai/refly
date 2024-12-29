@@ -11,14 +11,24 @@ import {
 } from 'react-icons/hi2';
 import { IoIosMore } from 'react-icons/io';
 import { HiOutlineReply } from 'react-icons/hi';
-import { LuSearch, LuSettings, LuCheck, LuCopy, LuTrash, LuRotateCw, LuBrain, LuGift } from 'react-icons/lu';
-import { LuView } from 'react-icons/lu';
+import {
+  LuSearch,
+  LuSettings,
+  LuCheck,
+  LuCopy,
+  LuTrash,
+  LuRotateCw,
+  LuBrain,
+  LuGift,
+  LuSparkles,
+} from 'react-icons/lu';
+import { LuView, LuPlay } from 'react-icons/lu';
 import { RiErrorWarningLine } from 'react-icons/ri';
 
 import { RiDoubleQuotesL } from 'react-icons/ri';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { BiText } from 'react-icons/bi';
-import { PiNotePencil, PiNotePencilLight } from 'react-icons/pi';
+import { PiNotePencil, PiNotePencilLight, PiShootingStar } from 'react-icons/pi';
 
 import { IoLibraryOutline } from 'react-icons/io5';
 import { HiOutlineChevronDown } from 'react-icons/hi';
@@ -32,6 +42,7 @@ import DeepSeekIcon from '@refly-packages/ai-workspace-common/assets/deepseek.sv
 
 export const IconCanvasFill = HiSparkles;
 export const IconCanvas = HiOutlineSparkles;
+export const IconAskAI = LuSparkles;
 export const IconDocument = HiOutlineDocumentText;
 export const IconResource = HiOutlineSquare3Stack3D;
 export const IconMemo = PiNotePencilLight;
@@ -46,6 +57,7 @@ export const IconPlus = HiPlus;
 export const IconMinus = HiMinus;
 export const IconCheck = LuCheck;
 export const IconPlay = HiMiniPlayCircle;
+export const IconRun = LuPlay;
 export const IconRerun = LuRotateCw;
 export const IconReply = HiOutlineReply;
 export const IconMoreHorizontal = IoIosMore;

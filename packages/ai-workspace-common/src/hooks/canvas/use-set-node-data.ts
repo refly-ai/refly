@@ -30,7 +30,8 @@ export const useSetNodeData = (selectedCanvasId?: string) => {
       const currentNodes = useCanvasStore.getState().data[canvasId]?.nodes ?? [];
       const updatedNodes = currentNodes.map((n) => ({
         ...n,
-        data: n.id === nodeId ? { ...n.data, ...nodeData } : n.data,
+        data:
+          n.id === nodeId ? { ...n.data, ...nodeData, metadata: { ...n.data.metadata, ...nodeData.metadata } } : n.data,
       }));
       setNodes(canvasId, updatedNodes);
       syncNodesToYDoc(updatedNodes);

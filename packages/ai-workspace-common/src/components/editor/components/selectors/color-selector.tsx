@@ -1,5 +1,5 @@
 import { Check, ChevronDown } from 'lucide-react';
-import { EditorBubbleItem, useEditor } from '../../core/components';
+import { EditorBubbleItem, EditorInstance, useEditor } from '../../core/components';
 
 import { Button, Popover } from 'antd';
 
@@ -89,22 +89,25 @@ const HIGHLIGHT_COLORS: BubbleColorMenuItem[] = [
 interface ColorSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  triggerEditor?: EditorInstance;
 }
 
-export const ColorSelector = ({ open, onOpenChange }: ColorSelectorProps) => {
-  const { editor } = useEditor();
+export const ColorSelector = ({ open, onOpenChange, triggerEditor }: ColorSelectorProps) => {
+  const { editor: currentEditor } = useEditor();
+  const editor = triggerEditor || currentEditor;
 
   if (!editor) return null;
   const activeColorItem = TEXT_COLORS.find(({ color }) => editor?.isActive('textStyle', { color }));
   const activeHighlightItem = HIGHLIGHT_COLORS.find(({ color }) => editor?.isActive('highlight', { color }));
 
   const content = (
-    <div className="flex max-h-80 w-48 flex-col overflow-hidden overflow-y-auto p-1">
+    <div className="flex max-h-80 w-38 flex-col overflow-hidden overflow-y-auto">
       <div className="flex flex-col">
         <div className="my-1 px-2 text-xs font-semibold text-muted-foreground">Color</div>
         {TEXT_COLORS?.map(({ name, color }) => (
           <EditorBubbleItem
             key={name}
+            triggerEditor={triggerEditor}
             onSelect={() => {
               editor?.commands.unsetColor();
               name !== 'Default' &&
@@ -130,6 +133,7 @@ export const ColorSelector = ({ open, onOpenChange }: ColorSelectorProps) => {
         {HIGHLIGHT_COLORS?.map(({ name, color }) => (
           <EditorBubbleItem
             key={name}
+            triggerEditor={triggerEditor}
             onSelect={() => {
               editor?.commands.unsetHighlight();
               name !== 'Default' && editor?.commands.setHighlight({ color });

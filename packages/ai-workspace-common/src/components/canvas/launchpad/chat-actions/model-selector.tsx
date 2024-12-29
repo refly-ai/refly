@@ -3,7 +3,6 @@ import { Button, Dropdown, DropdownProps, MenuProps, Progress, Skeleton } from '
 import { useTranslation } from 'react-i18next';
 import { IconDown } from '@arco-design/web-react/icon';
 import classNames from 'classnames';
-import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
@@ -17,9 +16,9 @@ import { LuInfinity } from 'react-icons/lu';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 
 interface ModelSelectorProps {
-  dropdownMode?: boolean;
+  model: ModelInfo | null;
+  setModel: (model: ModelInfo | null) => void;
   briefMode?: boolean;
-  className?: string;
   placement?: DropdownProps['placement'];
   trigger?: DropdownProps['trigger'];
 }
@@ -65,16 +64,12 @@ const UsageProgress = memo(
 UsageProgress.displayName = 'UsageProgress';
 
 export const ModelSelector = memo(
-  ({ placement = 'bottomLeft', trigger = ['click'], briefMode = false }: ModelSelectorProps) => {
+  ({ placement = 'bottomLeft', trigger = ['click'], briefMode = false, model, setModel }: ModelSelectorProps) => {
     const { t } = useTranslation();
     const [dropdownOpen, setDropdownOpen] = useState(false);
 
     const { userProfile } = useUserStoreShallow((state) => ({
       userProfile: state.userProfile,
-    }));
-    const { selectedModel, setSelectedModel } = useChatStoreShallow((state) => ({
-      selectedModel: state.selectedModel,
-      setSelectedModel: state.setSelectedModel,
     }));
     const { setSubscribeModalVisible } = useSubscriptionStoreShallow((state) => ({
       setSubscribeModalVisible: state.setSubscribeModalVisible,
@@ -237,24 +232,24 @@ export const ModelSelector = memo(
     }, []);
 
     useEffect(() => {
-      if (!selectedModel || isModelDisabled(tokenUsage, selectedModel)) {
+      if (!model || isModelDisabled(tokenUsage, model)) {
         const availableModel = modelList?.find((model) => !isModelDisabled(tokenUsage, model));
         if (availableModel) {
-          setSelectedModel(availableModel);
+          setModel(availableModel);
         } else {
-          setSelectedModel(null);
+          setModel(null);
         }
       }
-    }, [selectedModel, tokenUsage, modelList, isModelDisabled, setSelectedModel]);
+    }, [model, tokenUsage, modelList, isModelDisabled, setModel]);
 
     const handleMenuClick = useCallback(
       ({ key }: { key: string }) => {
-        const model = modelList?.find((model) => model.name === key);
-        if (model) {
-          setSelectedModel(model);
+        const selectedModel = modelList?.find((model) => model.name === key);
+        if (selectedModel) {
+          setModel(selectedModel);
         }
       },
-      [modelList, setSelectedModel],
+      [modelList, setModel],
     );
 
     if (isModelListLoading || isTokenUsageLoading) {
@@ -275,14 +270,10 @@ export const ModelSelector = memo(
       >
         {!briefMode ? (
           <span className={classNames('model-selector', 'chat-action-item')}>
-            {selectedModel ? (
+            {model ? (
               <>
-                <img
-                  className="w-3 h-3 mx-1"
-                  src={ModelProviderIcons[selectedModel?.provider]}
-                  alt={selectedModel?.provider}
-                />
-                {selectedModel?.label}
+                <img className="w-3 h-3 mx-1" src={ModelProviderIcons[model?.provider]} alt={model?.provider} />
+                {model?.label}
               </>
             ) : (
               <>
@@ -302,6 +293,7 @@ export const ModelSelector = memo(
     return (
       prevProps.placement === nextProps.placement &&
       prevProps.briefMode === nextProps.briefMode &&
+      prevProps.model === nextProps.model &&
       JSON.stringify(prevProps.trigger) === JSON.stringify(nextProps.trigger)
     );
   },

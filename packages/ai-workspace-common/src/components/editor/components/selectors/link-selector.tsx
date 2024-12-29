@@ -1,6 +1,6 @@
 import { Button, Popover } from 'antd';
 import { Check, Trash } from 'lucide-react';
-import { useEditor } from '../../core/components';
+import { useEditor, EditorInstance } from '../../core/components';
 import { useEffect, useRef } from 'react';
 import { Link as LucideLink } from 'lucide-react';
 
@@ -25,11 +25,13 @@ export function getUrlFromString(str: string) {
 interface LinkSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  triggerEditor?: EditorInstance;
 }
 
-export const LinkSelector = ({ open, onOpenChange }: LinkSelectorProps) => {
+export const LinkSelector = ({ open, onOpenChange, triggerEditor }: LinkSelectorProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { editor } = useEditor();
+  const { editor: currentEditor } = useEditor();
+  const editor = triggerEditor || currentEditor;
 
   useEffect(() => {
     inputRef.current?.focus();
