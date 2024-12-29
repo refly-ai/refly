@@ -167,7 +167,7 @@ export const CollaborativeEditor = memo(
     });
 
     const buildNodeData = (text: string) => {
-      const { currentDocument } = useDocumentStore.getState().documentStates[docId];
+      const { currentDocument } = useDocumentStore.getState()?.documentStates?.[docId] ?? {};
 
       return {
         id: genUniqueId(),

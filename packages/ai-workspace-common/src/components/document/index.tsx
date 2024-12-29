@@ -1,6 +1,7 @@
-import { useEffect, useState, memo, useCallback } from 'react';
-import { useDebounce } from 'use-debounce';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { useEffect, useState, memo, useCallback, useRef } from 'react';
+import { useDebounce, useDebouncedCallback } from 'use-debounce';
+import { CanvasNode, Document } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 import './index.scss';
 import { Input, Spin } from '@arco-design/web-react';
@@ -8,7 +9,7 @@ import { Button, Dropdown, DropdownProps, MenuProps, message, Popconfirm } from 
 import { HiOutlineLockClosed, HiOutlineLockOpen } from 'react-icons/hi2';
 import { IconMoreHorizontal, IconDelete, IconCopy } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useTranslation } from 'react-i18next';
-import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
+import { useDocumentStore, useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
 
 import { CollaborativeEditor } from './collab-editor';
 import { DocumentProvider, useDocumentContext } from '@refly-packages/ai-workspace-common/context/document';
@@ -19,6 +20,8 @@ import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/can
 import { ydoc2Markdown } from '@refly-packages/utils/editor';
 import { time } from '@refly-packages/utils/time';
 import { LOCALE } from '@refly/common-types';
+import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { useGetDocumentDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 
 const ActionDropdown = ({ docId, node }: { docId: string; node?: CanvasNode }) => {
   const { ydoc } = useDocumentContext();
@@ -192,28 +195,38 @@ const StatusBar = memo(
 const DocumentEditorHeader = memo(
   ({ docId }: { docId: string }) => {
     const { t } = useTranslation();
-    const { ydoc } = useDocumentContext();
-    const ydocTitle = ydoc.getText('title').toJSON();
+    const { currentDocument, updateCurrentDocument } = useDocumentStoreShallow((state) => ({
+      currentDocument: state.documentStates[docId]?.currentDocument,
+      updateCurrentDocument: state.updateCurrentDocument,
+      documentStates: state.documentStates,
+    }));
 
     const setNodeDataByEntity = useSetNodeDataByEntity();
 
-    const onTitleChange = (newTitle: string) => {
-      ydoc?.transact(() => {
-        const yTitle = ydoc?.getText('title');
-        yTitle?.delete(0, yTitle?.length ?? 0);
-        yTitle?.insert(0, newTitle);
-      });
-
+    const debouncedUpdateNodeTitle = useDebouncedCallback((title) => {
       setNodeDataByEntity(
         {
           entityId: docId,
           type: 'document',
         },
         {
-          title: newTitle,
+          title,
         },
       );
+    }, 500);
+
+    const onTitleChange = (newTitle: string) => {
+      const currentDocument = useDocumentStore.getState().documentStates[docId]?.currentDocument;
+
+      if (!currentDocument) {
+        return;
+      }
+
+      updateCurrentDocument(docId, { ...currentDocument, title: newTitle });
+      debouncedUpdateNodeTitle(newTitle);
     };
+
+    const title = currentDocument?.title;
 
     return (
       <div className="w-full">
@@ -221,7 +234,7 @@ const DocumentEditorHeader = memo(
           <Input
             className="text-3xl font-bold bg-transparent focus:border-transparent focus:bg-transparent"
             placeholder={t('editor.placeholder.title')}
-            value={ydocTitle}
+            value={title}
             style={{ paddingLeft: 6 }}
             onChange={onTitleChange}
           />
@@ -266,16 +279,60 @@ const DocumentBody = memo(
 export const DocumentEditor = memo(
   (props: { docId: string; deckSize: number; setDeckSize: (size: number) => void; node?: CanvasNode }) => {
     const { docId, deckSize, setDeckSize, node } = props;
+    const prevNote = useRef<Document>();
 
-    const { resetState } = useDocumentStoreShallow((state) => ({
+    const { resetState, updateCurrentDocument, currentDocument } = useDocumentStoreShallow((state) => ({
       resetState: state.resetState,
+      updateCurrentDocument: state.updateCurrentDocument,
+      currentDocument: state?.documentStates[docId]?.currentDocument,
     }));
+
+    const { data: documentDetail, isLoading } = useGetDocumentDetail(
+      {
+        query: { docId },
+      },
+      [],
+      {
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 60 * 1000, // 数据保持新鲜1分钟
+        gcTime: 5 * 60 * 1000, // 缓存5分钟
+      },
+    );
+
+    useEffect(() => {
+      if (documentDetail?.data) {
+        updateCurrentDocument(docId, documentDetail.data);
+      }
+    }, [documentDetail?.data, docId]);
 
     useEffect(() => {
       return () => {
         resetState(docId);
       };
     }, []);
+
+    const debouncedUpdateDocument = useDebouncedCallback(async (document: Document) => {
+      const res = await getClient().updateDocument({
+        body: {
+          docId: document.docId,
+          title: document.title,
+          readOnly: document.readOnly,
+        },
+      });
+      if (res.error) {
+        console.error(res.error);
+        return;
+      }
+    }, 500);
+
+    useEffect(() => {
+      if (currentDocument && prevNote.current?.docId === currentDocument?.docId) {
+        debouncedUpdateDocument(currentDocument);
+      }
+      prevNote.current = currentDocument;
+    }, [currentDocument?.title, currentDocument?.readOnly, debouncedUpdateDocument]);
 
     return (
       <DocumentProvider docId={docId}>

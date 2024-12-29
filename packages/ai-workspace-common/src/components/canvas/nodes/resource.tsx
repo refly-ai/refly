@@ -233,7 +233,7 @@ export const ResourceNode = memo(
       setSize({ width: newWidth, height: newHeight });
     }, []);
 
-    console.log('isOperating', isOperating);
+    // console.log('isOperating', isOperating);
 
     return (
       <div className={classNames({ nowheel: isOperating })}>
