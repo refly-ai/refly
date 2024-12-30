@@ -3,7 +3,7 @@ export const noContextExamples = `
 
 <example index="1">
 <query>
-Rewrite this partial section to be more comprehensive
+Rewrite this section to be more comprehensive
 </query>
 <context>
 <reflyArtifact identifier="tech-doc" type="document" title="Cloud Computing Overview">
@@ -11,23 +11,21 @@ Cloud computing is transforming modern business. <highlight>It provides scalable
 </reflyArtifact>
 </context>
 <response>
-Cloud computing is transforming modern business. Cloud computing revolutionizes business operations through its comprehensive suite of capabilities. At its core, it delivers scalable computing resources through a pay-as-you-go model, eliminating substantial upfront infrastructure investments. Organizations can dynamically adjust their computing capacity based on demand, ensuring optimal resource utilization and cost efficiency. Many organizations are adopting cloud solutions.
-... [Note: Full response would continue with more words]
+It delivers a comprehensive suite of scalable computing resources through a pay-as-you-go model, significantly reducing infrastructure costs while enabling organizations to dynamically adjust their computing capacity based on real-time demands.
 </response>
 </example>
 
 <example index="2">
 <query>
-Rewrite the entire document to be more comprehensive
+Translate this section to Chinese
 </query>
 <context>
 <reflyArtifact identifier="tech-doc" type="document" title="Cloud Computing Overview">
-<highlight>Cloud computing provides scalable resources and reduces infrastructure costs. Companies can access computing power on demand.</highlight>
+Our platform enables <highlight>secure and reliable data processing with advanced encryption methods</highlight> for all users.
 </reflyArtifact>
 </context>
 <response>
-Cloud computing revolutionizes modern business operations through its comprehensive suite of capabilities. At its core, it delivers scalable computing resources through a pay-as-you-go model, eliminating substantial upfront infrastructure investments. Organizations can dynamically adjust their computing capacity based on demand, ensuring optimal resource utilization and cost efficiency.
-... [Note: Full response would continue with more words]
+采用先进的加密方法进行安全可靠的数据处理
 </response>
 </example>
 
@@ -37,12 +35,11 @@ Improve the grammar and clarity of this section
 </query>
 <context>
 <reflyArtifact identifier="api-docs" type="document" title="API Documentation">
-Authentication is required for all endpoints. <highlight>When you wanting to make API calls, you need getting the token first and then you putting it in the header of you're request, this is important because without it the API will not work and give error.</highlight> See the authentication section for details.
+Authentication is required for all endpoints. <highlight>When you wanting to make API calls, you need getting the token first and then you putting it in the header of you're request</highlight>. See the authentication section for details.
 </reflyArtifact>
 </context>
 <response>
-Authentication is required for all endpoints. To make API calls, first obtain an authentication token and include it in your request headers. This step is crucial as requests without valid authentication tokens will result in error responses. See the authentication section for details.
-... [Note: Full response would continue with more words]
+To make API calls, first obtain an authentication token and include it in your request headers
 </response>
 </example>`;
 
@@ -53,13 +50,13 @@ export const contextualExamples = `
 <example index="1">
 <chatHistory>
 <ChatHistoryItem type="human">What's our current cloud infrastructure cost?</ChatHistoryItem>
-<ChatHistoryItem type="ai">Based on recent analysis, we've achieved 40% cost reduction .</ChatHistoryItem>
+<ChatHistoryItem type="ai">Based on recent analysis, we've achieved 40% cost reduction.</ChatHistoryItem>
 <ChatHistoryItem type="human">Please update our cloud overview with these details.</ChatHistoryItem>
 </chatHistory>
 <context>
 <documentContext>
 <reflyArtifact identifier="tech-doc" type="document" title="Cloud Computing Overview">
-Cloud computing is transforming modern business. <highlight>It provides scalable resources and reduces infrastructure costs. Companies can access computing power on demand.</highlight> Many organizations are adopting cloud solutions.
+Cloud computing is transforming modern business. <highlight>It provides scalable resources and reduces infrastructure costs.</highlight> Many organizations are adopting cloud solutions.
 </reflyArtifact>
 </documentContext>
 
@@ -77,14 +74,14 @@ Our analysis shows:
 </referenceContext>
 </context>
 <response>
-Cloud computing is transforming modern business. It delivers elastic scalability and proven cost benefits, with our organization achieving a 40% reduction in infrastructure costs . The platform enables dynamic resource scaling with 60% improved utilization rates and 30% faster deployment cycles . Many organizations are adopting cloud solutions.
+It delivers elastic scalability with proven cost benefits, demonstrating a 40% reduction in infrastructure costs
 </response>
 </example>
 
 <example index="2">
 <chatHistory>
 <ChatHistoryItem type="human">What authentication method do we use?</ChatHistoryItem>
-<ChatHistoryItem type="ai">We use JWT tokens with 15-minute expiration .</ChatHistoryItem>
+<ChatHistoryItem type="ai">We use JWT tokens with 15-minute expiration.</ChatHistoryItem>
 <ChatHistoryItem type="human">Update our auth docs to reflect this.</ChatHistoryItem>
 </chatHistory>
 <context>
@@ -108,14 +105,14 @@ Authentication requirements:
 </referenceContext>
 </context>
 <response>
-Authentication is required for all endpoints. To make API calls, obtain a JWT token which expires after 15 minutes . Include this token in your request headers and note that rate limiting is enforced on all endpoints . See the authentication section for details.
+To make API calls, obtain a JWT token (15-minute expiration) and include it in your request headers
 </response>
 </example>
 
 <example index="3">
 <chatHistory>
 <ChatHistoryItem type="human">How do we handle database backups?</ChatHistoryItem>
-<ChatHistoryItem type="ai">We use automated daily backups with 30-day retention .</ChatHistoryItem>
+<ChatHistoryItem type="ai">We use automated daily backups with 30-day retention.</ChatHistoryItem>
 <ChatHistoryItem type="human">Please update our backup documentation.</ChatHistoryItem>
 </chatHistory>
 <context>
@@ -144,14 +141,14 @@ Recovery time objectives:
 </referenceContext>
 </context>
 <response>
-Database management is critical. We implement automated daily backups with 30-day retention and encrypted storage . Our recovery SLAs guarantee 1-hour restoration for critical data and 4-hour recovery for non-critical systems . Recovery procedures are documented below.
+We implement automated daily backups with 30-day retention and encrypted storage
 </response>
 </example>
 
 <example index="4">
 <chatHistory>
 <ChatHistoryItem type="human">What monitoring tools do we use?</ChatHistoryItem>
-<ChatHistoryItem type="ai">We use Prometheus with Grafana dashboards .</ChatHistoryItem>
+<ChatHistoryItem type="ai">We use Prometheus with Grafana dashboards.</ChatHistoryItem>
 <ChatHistoryItem type="human">Update our monitoring section with these details.</ChatHistoryItem>
 </chatHistory>
 <context>
@@ -181,6 +178,6 @@ Standard thresholds:
 </referenceContext>
 </context>
 <response>
-System health is monitored continuously. We leverage Prometheus for metrics collection with Grafana dashboards for visualization, integrated with PagerDuty for alerting . Our system triggers alerts at 80% CPU utilization, 90% memory usage, and 500ms latency thresholds . Alert thresholds are defined below.
+We leverage Prometheus for metrics collection with Grafana dashboards for visualization, integrated with PagerDuty for alerting
 </response>
 </example>`;

@@ -46,7 +46,7 @@ const getShortcutSymbols = (osType: string) => {
   };
 };
 
-const CONTEXT_CHAR_LIMIT = 5000;
+const CONTEXT_CHAR_LIMIT = 500;
 
 const getCompleteBlock = (editor: Editor, doc: any, pos: number, isPrefix: boolean = true): string => {
   if (!doc) return '';

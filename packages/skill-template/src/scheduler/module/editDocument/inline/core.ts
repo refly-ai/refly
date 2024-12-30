@@ -1,4 +1,3 @@
-
 // Add new priority rules for inline editing
 export const inlineEditPriorityRulesPrompt = `
 ## Edit Priority Rules
@@ -33,7 +32,13 @@ Always prioritize the highlighted inline content and its immediate surrounding t
 // Add inline operation rules
 export const inlineOperationRulesPrompt = `
 ## Inline Operation Rules
-1. For text improvement requests:
+1. Output Rules:
+   - Output ONLY the replacement for highlighted text
+   - NEVER include surrounding context
+   - NEVER include highlight tags
+   - Ensure output fits seamlessly in place of highlight
+
+2. For text improvement requests:
    - Enhance clarity while preserving meaning
    - Maintain consistent tone and style
    - Ensure grammatical accuracy
@@ -41,15 +46,15 @@ export const inlineOperationRulesPrompt = `
    - Preserve key technical information
    - Improve readability without changing intent
 
-2. For content expansion:
-   - Elaborate within the inline context
+3. For content expansion:
+   - Elaborate within the highlight bounds only
    - Keep consistent with surrounding text
    - Add relevant details seamlessly
    - Maintain paragraph coherence
    - Support claims with examples
    - Ensure logical progression
 
-3. For text correction:
+4. For text correction:
    - Fix errors while preserving intent
    - Ensure proper grammar and punctuation
    - Maintain document style
@@ -57,25 +62,34 @@ export const inlineOperationRulesPrompt = `
    - Verify technical accuracy
    - Preserve key terminology
 
-4. For style adjustments:
+5. For style adjustments:
    - Match document's tone
    - Preserve technical accuracy
    - Maintain readability
    - Ensure professional quality
    - Keep consistent terminology
    - Follow style guidelines
+
+6. For translation requests:
+   - Translate ONLY highlighted content
+   - Preserve original meaning
+   - Maintain appropriate tone
+   - Consider cultural context
+   - Keep technical terms consistent
 `;
 
 export const importantRemindersPrompt = `
 ## Important Reminders
 1. Content Scope:
    - Edit ONLY content within <highlight> tags
-   - Preserve content before/after highlight tags
-   - Never include highlight tags in output
-   - Maintain document title exactly as provided
+   - Output ONLY the replacement content for highlighted text
+   - NEVER include content before or after highlights
+   - NEVER include highlight tags in output
+   - NEVER output any surrounding context
+   - Focus EXCLUSIVELY on modifying highlighted content
 
 2. Content Quality:
-   - Ensure seamless integration with surrounding text
+   - Ensure content can integrate seamlessly when replaced
    - Maintain or improve content clarity
    - Keep consistent terminology
    - Preserve technical accuracy
@@ -83,7 +97,6 @@ export const importantRemindersPrompt = `
 
 3. Format Requirements:
    - Use proper markdown formatting
-   - Maintain document structure
    - Follow consistent styling
    - Output clean content without XML tags
    - Title is context only - do not expand
@@ -96,13 +109,12 @@ export const importantRemindersPrompt = `
    - Execute technical corrections
 
 5. Context Integration:
-   - Consider surrounding content
-   - Maintain document flow
+   - Use surrounding context for understanding only
+   - NEVER output surrounding context
+   - Create content that will flow naturally when replaced
    - Preserve key information
-   - Create natural transitions
    - Follow established patterns
 `;
-
 
 // Core editing instructions
 export const buildInlineEditDocumentCoreInstructionsPrompt = () => `
