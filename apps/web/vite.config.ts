@@ -10,6 +10,7 @@ import { codeInspectorPlugin } from "code-inspector-plugin"
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode === "development"
+  console.log("sentry auth token", process.env.SENTRY_AUTH_TOKEN)
 
   return {
     plugins: [
