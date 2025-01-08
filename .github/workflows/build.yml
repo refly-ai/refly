@@ -34,7 +34,7 @@ jobs:
         run: pnpm install
 
       - name: Build
-        run: pnpm build
+        run: SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }} pnpm build
         env:
           NODE_OPTIONS: '--max_old_space_size=8192'
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
