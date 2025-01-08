@@ -76,7 +76,6 @@
     "use-debounce": "^10.0.3",
     "uuid": "^9.0.0",
     "vite-tsconfig-paths": "~4.3.2",
-    "wxt": "workspace:*",
     "zustand": "~4.5.1"
   },
   "devDependencies": {

@@ -751,9 +751,6 @@ importers:
       vite-tsconfig-paths:
         specifier: ~4.3.2
         version: 4.3.2(typescript@5.3.3)(vite@5.4.8)
-      wxt:
-        specifier: workspace:*
-        version: link:../../packages/wxt
       zustand:
         specifier: ~4.5.1
         version: 4.5.5(@types/react@18.3.10)(immer@10.1.1)(react@18.3.1)

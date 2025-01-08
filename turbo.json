@@ -14,7 +14,8 @@
     "build": {
       "cache": false,
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "env": ["*"]
     },
     "lint:ci": {},
     "lint": {},
