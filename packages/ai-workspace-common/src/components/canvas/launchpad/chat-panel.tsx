@@ -87,6 +87,7 @@ export const ChatPanel = () => {
   }, [selectedSkill?.name]);
 
   const handleSendMessage = (userInput?: string) => {
+    throw new Error('test');
     const error = handleFilterErrorTip();
     if (error) {
       return;
