@@ -10,6 +10,7 @@ import { codeInspectorPlugin } from "code-inspector-plugin"
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode === "development"
+  const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN
 
   return {
     plugins: [
@@ -27,13 +28,16 @@ export default defineConfig(({ mode }) => {
         bundler: "vite",
         editor: "code",
       }),
-      ...(process.env.SENTRY_AUTH_TOKEN
+      ...(sentryAuthToken
         ? [
             sentryVitePlugin({
               org: "refly-ai",
               project: "web",
-              authToken: process.env.SENTRY_AUTH_TOKEN,
+              authToken: sentryAuthToken,
               errorHandler: err => console.warn(err),
+              sourcemaps: {
+                filesToDeleteAfterUpload: ["*.map"],
+              },
             }),
           ]
         : []),
@@ -55,7 +59,7 @@ export default defineConfig(({ mode }) => {
       commonjsOptions: {
         transformMixedEsModules: true,
       },
-      sourcemap: isDev,
+      sourcemap: isDev || !!sentryAuthToken,
       minify: "terser",
       terserOptions: {
         compress: {
