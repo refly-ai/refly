@@ -1,4 +1,4 @@
-import { defineConfig, searchForWorkspaceRoot, UserConfig, loadEnv } from "vite"
+import { defineConfig, searchForWorkspaceRoot, UserConfig } from "vite"
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 import react from "@vitejs/plugin-react"
 import path from "path"
@@ -9,7 +9,6 @@ import { codeInspectorPlugin } from "code-inspector-plugin"
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd())
   const isDev = mode === "development"
 
   return {
@@ -32,7 +31,7 @@ export default defineConfig(({ mode }) => {
         debug: true,
         org: "refly-ai",
         project: "web",
-        authToken: env.SENTRY_AUTH_TOKEN ?? "",
+        authToken: process.env.SENTRY_AUTH_TOKEN,
         errorHandler: err => console.warn(err),
         sourcemaps: {
           filesToDeleteAfterUpload: ["*.map"],
