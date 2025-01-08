@@ -38,6 +38,8 @@ jobs:
         env:
           NODE_OPTIONS: '--max_old_space_size=8192'
           SENTRY_AUTH_TOKEN: ${{ inputs.environment != 'ci' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
       - name: Create Sentry release
         if: inputs.environment == 'production'

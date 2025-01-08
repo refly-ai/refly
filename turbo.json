@@ -12,7 +12,6 @@
       "persistent": false
     },
     "build": {
-      "cache": false,
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],
       "env": ["*"]
