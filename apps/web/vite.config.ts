@@ -10,7 +10,6 @@ import { codeInspectorPlugin } from "code-inspector-plugin"
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode === "development"
-  console.log("sentry auth token", process.env.SENTRY_AUTH_TOKEN)
 
   return {
     plugins: [
@@ -35,7 +34,7 @@ export default defineConfig(({ mode }) => {
         authToken: process.env.SENTRY_AUTH_TOKEN,
         errorHandler: err => console.warn(err),
         sourcemaps: {
-          filesToDeleteAfterUpload: ["*.map"],
+          filesToDeleteAfterUpload: ["**/*.js.map"],
         },
       }),
     ],
