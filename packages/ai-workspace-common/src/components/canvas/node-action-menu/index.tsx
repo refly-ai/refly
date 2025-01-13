@@ -11,6 +11,7 @@ import {
   IconExpand,
   IconShrink,
   IconCopy,
+  IconMemo,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
@@ -35,6 +36,7 @@ import { useUngroupNodes } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-cluster';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
+import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
 
 interface MenuItem {
   key: string;
@@ -195,6 +197,19 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
 
     onClose?.();
   }, [nodeId, canvasId, node, addNodePreview, onClose]);
+  const { createMemo } = useCreateMemo();
+
+  const handleCreateMemo = useCallback(() => {
+    createMemo({
+      content: '',
+      position: undefined,
+      sourceNode: {
+        type: nodeType,
+        entityId: nodeData?.entityId,
+      },
+    });
+    onClose?.();
+  }, [nodeData, node?.position, nodeType, createMemo, onClose]);
 
   const getMenuItems = (activeDocumentId: string): MenuItem[] => {
     if (isMultiSelection) {
@@ -344,6 +359,13 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
     const footerItems: MenuItem[] = [
       ...(nodeType !== 'skill' && nodeType !== 'group'
         ? [
+            {
+              key: 'createMemo',
+              icon: IconMemo,
+              label: t('canvas.nodeActions.createMemo'),
+              onClick: handleCreateMemo,
+              type: 'button' as const,
+            },
             {
               key: 'copy',
               icon: IconCopy,
