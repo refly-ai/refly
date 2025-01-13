@@ -7,6 +7,7 @@ import { useDebounce } from 'use-debounce';
 
 import { MdOutlineImage, MdOutlineAspectRatio } from 'react-icons/md';
 import { AiOutlineMenuUnfold } from 'react-icons/ai';
+import { BiErrorCircle } from 'react-icons/bi';
 import { IconEdit, IconSearch } from '@refly-packages/ai-workspace-common/components/common/icon';
 import SiderPopover from '../../../../../../apps/web/src/pages/sider-popover';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
@@ -177,6 +178,26 @@ const ToolbarButtons = memo(
   },
 );
 
+const WarningButton = memo(({ show }: { show: boolean }) => {
+  const { t } = useTranslation();
+
+  if (!show) return null;
+
+  return (
+    <Tooltip title={t('canvas.connectionTimeout.extra')}>
+      <Button
+        type="text"
+        danger
+        icon={<BiErrorCircle style={{ fontSize: '16px' }} />}
+        onClick={() => window.location.reload()}
+        className="flex items-center gap-1 ml-2 text-red-500 hover:text-red-600"
+      >
+        {t('canvas.connectionTimeout.title')}
+      </Button>
+    </Tooltip>
+  );
+});
+
 export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
   const { i18n, t } = useTranslation();
   const language = i18n.language as LOCALE;
@@ -212,8 +233,29 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
     }),
   );
 
+  const [connectionTimeout, setConnectionTimeout] = useState(false);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    if (provider?.status !== 'connected') {
+      timeoutId = setTimeout(() => {
+        setConnectionTimeout(true);
+      }, 10000);
+    } else {
+      setConnectionTimeout(false);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [provider?.status]);
+
   const canvasTitle = data?.title;
   const hasCanvasSynced = config?.localSyncedAt > 0 && config?.remoteSyncedAt > 0;
+  const showWarning = connectionTimeout && !hasCanvasSynced && provider.status !== 'connected';
 
   return (
     <>
@@ -247,6 +289,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
             debouncedUnsyncedChanges={debouncedUnsyncedChanges}
             language={language}
           />
+          <WarningButton show={showWarning} />
         </div>
 
         <div className="flex items-center gap-2 relative z-10">

@@ -468,20 +468,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       spinning={!hasCanvasSynced && provider.status !== 'connected' && !connectionTimeout}
       tip={connectionTimeout ? t('common.connectionFailed') : t('common.loading')}
     >
-      <Modal
-        centered
-        open={connectionTimeout}
-        onOk={() => window.location.reload()}
-        onCancel={() => setConnectionTimeout(false)}
-        okText={t('common.retry')}
-        cancelText={t('common.cancel')}
-      >
-        <Result
-          status="warning"
-          title={t('canvas.connectionTimeout.title')}
-          extra={t('canvas.connectionTimeout.extra')}
-        />
-      </Modal>
       <div className="w-full h-screen relative flex flex-col overflow-hidden">
         <CanvasToolbar onToolSelect={handleToolSelect} />
         <TopToolbar canvasId={canvasId} />
