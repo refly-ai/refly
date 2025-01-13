@@ -74,12 +74,14 @@ const defaultConfigurableState = {
   enableKnowledgeBaseSearch: true,
 };
 
+export const defaultNewQAText = '';
+
 export const defaultExtraState = {
   messageIntentContext: undefined,
-  newQAText: '',
 };
 
 export const defaultState = {
+  newQAText: defaultNewQAText,
   ...defaultConfigurableState,
   ...defaultExtraState,
 };
