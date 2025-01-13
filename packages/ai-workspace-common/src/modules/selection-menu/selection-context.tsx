@@ -6,27 +6,57 @@ import { useSelectionContext } from './use-selection-context';
 import { IconMemo, IconQuote } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { useReactFlow } from '@xyflow/react';
+import { CanvasNodeType } from '@refly/openapi-schema';
 
 interface SelectionContextProps {
   containerClass?: string;
   getContextItem: (text: string) => IContextItem;
+  getSourceNode?: () => { type: CanvasNodeType; entityId: string } | null;
 }
 
-export const SelectionContext: React.FC<SelectionContextProps> = ({ containerClass, getContextItem }) => {
+export const SelectionContext: React.FC<SelectionContextProps> = ({
+  containerClass,
+  getContextItem,
+  getSourceNode,
+}) => {
   const { t } = useTranslation();
   const { selectedText, isSelecting, addToContext, removeSelection } = useSelectionContext({
     containerClass,
   });
+  const { getNodes } = useReactFlow();
 
   const { createMemo } = useCreateMemo();
+
   const handleCreateMemo = useCallback(
     (selectedText: string) => {
-      createMemo({
-        content: selectedText,
-      });
+      const sourceNode = getSourceNode?.();
+      if (sourceNode) {
+        const nodes = getNodes();
+        const node = nodes.find((n) => n.data?.entityId === sourceNode.entityId);
+        if (node) {
+          createMemo({
+            content: selectedText,
+            position: {
+              x: node.position.x + 300,
+              y: node.position.y,
+            },
+            sourceNode,
+          });
+        } else {
+          createMemo({
+            content: selectedText,
+            sourceNode,
+          });
+        }
+      } else {
+        createMemo({
+          content: selectedText,
+        });
+      }
       removeSelection();
     },
-    [selectedText, createMemo],
+    [getSourceNode, createMemo, getNodes],
   );
 
   const handleAddToContext = useCallback(

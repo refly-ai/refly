@@ -181,9 +181,15 @@ export const CollaborativeEditor = memo(
     const { createMemo } = useCreateMemo();
     const handleCreateMemo = useCallback(
       (selectedText: string) => {
-        createMemo({ content: selectedText });
+        createMemo({
+          content: selectedText,
+          sourceNode: {
+            type: 'document',
+            entityId: docId,
+          },
+        });
       },
-      [selectedText],
+      [docId],
     );
 
     // Apply Codeblock Highlighting on the HTML from editor.getHTML()

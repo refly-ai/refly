@@ -121,6 +121,13 @@ const StepContent = memo(
     buildContextItem: (text: string) => IContextItem;
     step: ActionStep;
   }) => {
+    const getSourceNode = useCallback(() => {
+      return {
+        type: 'skillResponse' as const,
+        entityId: resultId,
+      };
+    }, [resultId]);
+
     return (
       <div className="my-3 text-gray-600 text-base">
         <div className={`skill-response-content-${resultId}-${step.name}`}>
@@ -128,6 +135,7 @@ const StepContent = memo(
           <SelectionContext
             containerClass={`skill-response-content-${resultId}-${step.name}`}
             getContextItem={buildContextItem}
+            getSourceNode={getSourceNode}
           />
         </div>
       </div>

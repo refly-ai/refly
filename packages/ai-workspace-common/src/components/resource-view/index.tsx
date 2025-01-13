@@ -138,6 +138,13 @@ const ResourceContent = memo(
       [resourceDetail],
     );
 
+    const getSourceNode = useCallback(() => {
+      return {
+        type: 'resource' as const,
+        entityId: resourceId,
+      };
+    }, [resourceId]);
+
     return (
       <div
         className={classNames(`knowledge-base-resource-content resource-content-${resourceId}`, {
@@ -148,7 +155,11 @@ const ResourceContent = memo(
       >
         <div className="knowledge-base-resource-content-title">{resourceDetail?.title}</div>
         <Markdown content={resourceDetail?.content || ''} className="text-base" />
-        <SelectionContext containerClass={`resource-content-${resourceId}`} getContextItem={buildContextItem} />
+        <SelectionContext
+          containerClass={`resource-content-${resourceId}`}
+          getContextItem={buildContextItem}
+          getSourceNode={getSourceNode}
+        />
       </div>
     );
   },
