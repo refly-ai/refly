@@ -17,7 +17,9 @@ export const NodeHeader = memo(({ title, Icon, iconBgColor = '#17B26A' }: NodeHe
         >
           <Icon className="w-4 h-4 text-white" />
         </div>
-        <span className="text-sm font-medium leading-normal text-[rgba(0,0,0,0.8)] truncate">{title}</span>
+        <span className="text-sm font-medium leading-normal text-[rgba(0,0,0,0.8)] truncate" title={title}>
+          {title}
+        </span>
       </div>
     </div>
   );

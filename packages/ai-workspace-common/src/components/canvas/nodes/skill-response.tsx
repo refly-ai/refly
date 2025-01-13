@@ -55,7 +55,9 @@ const NodeHeader = memo(({ query, skillName, skill }: { query: string; skillName
           <div className="w-6 h-6 rounded bg-[#F79009] shadow-lg flex items-center justify-center flex-shrink-0">
             <IconResponse className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-medium leading-normal truncate cursor-help">{query}</span>
+          <span className="text-sm font-medium leading-normal truncate block cursor-pointer" title={query}>
+            {query}
+          </span>
         </div>
       </div>
       {skillName && skillName !== 'commonQnA' && (
