@@ -107,6 +107,8 @@ export const SourceListModal = (props: SourceListModalProps) => {
         height: 'auto',
         borderBottom: '1px solid var(--color-border-2)',
       }}
+      mask={false}
+      maskClosable={false}
       title={
         <div className="source-list-modal-header">
           <div className="header-content">
