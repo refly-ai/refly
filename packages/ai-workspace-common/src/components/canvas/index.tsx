@@ -362,6 +362,11 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       const { operatingNodeId } = useCanvasStore.getState();
       setContextMenu((prev) => ({ ...prev, open: false }));
 
+      if (event.metaKey || event.shiftKey) {
+        event.stopPropagation();
+        return;
+      }
+
       if (!node?.id) {
         console.warn('Invalid node clicked');
         return;
