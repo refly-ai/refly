@@ -385,21 +385,40 @@ export const SiderLayout = (props: { source: "sider" | "popover" }) => {
             </div>
 
             <div className="mt-auto">
-              <Alert
-                message={
-                  <div className="flex cursor-pointer items-center justify-center">
-                    <a
-                      href="https://powerformer.feishu.cn/wiki/Syrsw7DJxiaExSkoSiXcTF1inBg?from=canvas"
-                      target="_blank">
-                      👉{"    "}
-                      <span>{t("loggedHomePage.siderMenu.joinFeedback")}</span>
-                    </a>
-                  </div>
-                }
-                type="success"
-                closable
-                className="mb-2"
-              />
+              <div className="mb-2 flex flex-col gap-2">
+                <Alert
+                  message={
+                    <div className="flex cursor-pointer items-center justify-center">
+                      <a
+                        href="https://powerformer.feishu.cn/wiki/Syrsw7DJxiaExSkoSiXcTF1inBg?from=canvas"
+                        target="_blank">
+                        👉{"    "}
+                        <span>
+                          {t("loggedHomePage.siderMenu.joinFeedback")}
+                        </span>
+                      </a>
+                    </div>
+                  }
+                  type="success"
+                  closable
+                />
+                <Alert
+                  message={
+                    <div className="flex cursor-pointer items-center justify-center">
+                      <a
+                        href="https://powerformer.feishu.cn/wiki/Syrsw7DJxiaExSkoSiXcTF1inBg"
+                        target="_blank">
+                        📖{"    "}
+                        <span>
+                          {t("loggedHomePage.siderMenu.viewTutorial")}
+                        </span>
+                      </a>
+                    </div>
+                  }
+                  type="info"
+                  closable
+                />
+              </div>
               {!!userStore.userProfile?.uid && (
                 <MenuItem
                   key="Settings"

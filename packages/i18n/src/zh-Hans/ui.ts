@@ -834,6 +834,7 @@ const translations = {
       recentChats: '最近会话',
       viewMore: '查看更多',
       joinFeedback: '加入反馈群',
+      viewTutorial: '查看教程',
     },
   },
   knowledgeLibrary: {
