@@ -23,6 +23,7 @@ import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/us
 import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';
 import { NodeHeader } from './shared/node-header';
 import { ContentPreview } from './shared/content-preview';
+import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 
 type DocumentNode = Node<CanvasNodeData<DocumentNodeMeta>, 'document'>;
 
@@ -130,28 +131,37 @@ export const DocumentNode = memo(
       );
     }, [id, data.entityId, addNode]);
 
+    const { duplicateDocument } = useCreateDocument();
+
+    const handleDuplicateDocument = useCallback(() => {
+      duplicateDocument(data.title, data.contentPreview || '', data.entityId, data.metadata);
+    }, [data, duplicateDocument]);
+
     // Add event handling
     useEffect(() => {
       // Create node-specific event handlers
       const handleNodeAddToContext = () => handleAddToContext();
       const handleNodeDelete = () => handleDelete();
       const handleNodeAskAI = () => handleAskAI();
+      const handleNodeDuplicateDocument = () => handleDuplicateDocument();
 
       // Register events with node ID
       nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
       nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
+      nodeActionEmitter.on(createNodeEventName(id, 'duplicateDocument'), handleNodeDuplicateDocument);
 
       return () => {
         // Cleanup events when component unmounts
         nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
         nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
+        nodeActionEmitter.off(createNodeEventName(id, 'duplicateDocument'), handleNodeDuplicateDocument);
 
         // Clean up all node events
         cleanupNodeEvents(id);
       };
-    }, [id, handleAddToContext, handleDelete, handleAskAI]);
+    }, [id, handleAddToContext, handleDelete, handleAskAI, handleDuplicateDocument]);
 
     return (
       <div className={classNames({ nowheel: isOperating })}>

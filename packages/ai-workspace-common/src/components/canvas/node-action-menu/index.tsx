@@ -211,6 +211,11 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
     onClose?.();
   }, [nodeData, node?.position, nodeType, createMemo, onClose]);
 
+  const handleDuplicateDocument = useCallback(() => {
+    nodeActionEmitter.emit(createNodeEventName(nodeId, 'duplicateDocument'));
+    onClose?.();
+  }, [nodeId, onClose]);
+
   const getMenuItems = (activeDocumentId: string): MenuItem[] => {
     if (isMultiSelection) {
       return [
@@ -359,6 +364,17 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({ nodeId, nodeType, onCl
     const footerItems: MenuItem[] = [
       ...(nodeType !== 'skill' && nodeType !== 'group'
         ? [
+            ...(nodeType === 'document'
+              ? [
+                  {
+                    key: 'duplicateDocument',
+                    icon: GrClone,
+                    label: t('canvas.nodeActions.duplicateDocument'),
+                    onClick: handleDuplicateDocument,
+                    type: 'button' as const,
+                  },
+                ]
+              : []),
             {
               key: 'createMemo',
               icon: IconMemo,

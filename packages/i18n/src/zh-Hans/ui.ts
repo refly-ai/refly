@@ -633,6 +633,7 @@ const translations = {
       layoutCluster: '子节点自动布局',
       centerNode: '定位节点',
       editQuery: '编辑提问',
+      duplicateDocument: '创建文档副本',
     },
     nodeStatus: {
       isCreatingDocument: '创建中...',

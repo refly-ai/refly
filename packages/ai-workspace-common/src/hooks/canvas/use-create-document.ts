@@ -128,5 +128,36 @@ export const useCreateDocument = () => {
     }
   };
 
-  return { createDocument, debouncedCreateDocument, isCreating, createSingleDocumentInCanvas };
+  const duplicateDocument = async (title: string, content: string, sourceDocId: string, metadata?: any) => {
+    const docId = genDocumentID();
+    const newTitle = `${title} ${t('canvas.nodeActions.copy')}`;
+
+    await createLocalDocument(docId, newTitle, content);
+
+    setDocumentLocalSyncedAt(docId, Date.now());
+    setDocumentRemoteSyncedAt(docId, Date.now());
+
+    message.success(t('common.putSuccess'));
+
+    if (canvasId && canvasId !== 'empty') {
+      const newNode = {
+        type: 'document' as CanvasNodeType,
+        data: {
+          title: newTitle,
+          entityId: docId,
+          contentPreview: content.slice(0, 500),
+          metadata: {
+            ...metadata,
+            status: 'finish',
+          },
+        },
+      };
+
+      addNode(newNode, [{ type: 'document', entityId: sourceDocId }], false, true);
+    }
+
+    return docId;
+  };
+
+  return { createDocument, debouncedCreateDocument, isCreating, createSingleDocumentInCanvas, duplicateDocument };
 };

@@ -641,6 +641,7 @@ const translations = {
       layoutCluster: 'Layout Sub Nodes',
       centerNode: 'Center Node Position',
       editQuery: 'Edit Query',
+      duplicateDocument: 'Duplicate Document',
     },
     nodeStatus: {
       isCreatingDocument: 'Creating Document...',
