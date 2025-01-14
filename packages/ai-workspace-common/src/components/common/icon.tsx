@@ -43,7 +43,8 @@ import { AiOutlineShrink } from 'react-icons/ai';
 import { RiExpandDiagonalLine } from 'react-icons/ri';
 import { TbWorldSearch } from 'react-icons/tb';
 import { GrCircleQuestion } from 'react-icons/gr';
-import { FaNoteSticky, FaRegNoteSticky, FaX } from 'react-icons/fa6';
+import { FaNoteSticky, FaRegNoteSticky } from 'react-icons/fa6';
+import { HiOutlineTableCells } from 'react-icons/hi2';
 
 import OpenAIIcon from '@refly-packages/ai-workspace-common/assets/openai.svg';
 import ClaudeIcon from '@refly-packages/ai-workspace-common/assets/claude.svg';
@@ -93,6 +94,7 @@ export const IconSubscription = LuGift;
 export const IconExit = RxExit;
 export const IconExpand = RiExpandDiagonalLine;
 export const IconShrink = AiOutlineShrink;
+export const IconTable = HiOutlineTableCells;
 
 export const IconX = BsTwitterX;
 export const IconGithub = BsGithub;

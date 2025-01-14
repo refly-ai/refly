@@ -15,6 +15,7 @@ import { createUploadFn } from './image-upload';
 import Magic from './ui/icons/magic';
 import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
 import { Editor, Range } from '@tiptap/core';
+import { IconTable } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 export const configureSuggestionItems = (param: { entityId: string; entityType: string }) => {
   const createBlockAfterCurrent = (editor: Editor, range: Range, createNodeType: () => void) => {
@@ -158,6 +159,19 @@ export const configureSuggestionItems = (param: { entityId: string; entityType: 
         });
       },
     },
+    // {
+    //   title: 'Table',
+    //   description: 'Insert a table.',
+    //   searchTerms: ['table'],
+    //   icon: <IconTable size={18} />,
+    //   command: ({ editor, range }) => {
+    //     if (!editor) return;
+
+    //     createBlockAfterCurrent(editor, range, () => {
+    //       editor.chain().focus().insertTable({ rows: 3, cols: 3 }).run();
+    //     });
+    //   },
+    // },
   ]);
 };
 

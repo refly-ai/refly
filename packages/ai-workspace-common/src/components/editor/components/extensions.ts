@@ -19,6 +19,12 @@ import { UploadImagesPlugin } from '@refly-packages/ai-workspace-common/componen
 
 import { cx } from 'class-variance-authority';
 import { common, createLowlight } from 'lowlight';
+import {
+  Table,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from '@refly-packages/ai-workspace-common/components/editor/extensions';
 
 //TODO I am using cx here to get tailwind autocomplete working, idk if someone else can write a regex to just capture the class key in objects
 const aiHighlight = AIHighlight;
@@ -126,8 +132,11 @@ const youtube = Youtube.configure({
 
 const characterCount = CharacterCount.configure();
 
+const tableExtensions = [Table, TableRow, TableHeader, TableCell];
+
 export const defaultExtensions = [
   starterKit,
+  // ...tableExtensions,
   tiptapLink,
   tiptapImage,
   // updatedImage,

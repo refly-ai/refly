@@ -920,6 +920,18 @@ importers:
       '@tiptap/extension-placeholder':
         specifier: 2.0.3
         version: 2.0.3(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
+      '@tiptap/extension-table':
+        specifier: ^2.11.0
+        version: 2.11.0(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
+      '@tiptap/extension-table-cell':
+        specifier: ^2.11.0
+        version: 2.11.0(@tiptap/core@2.7.4)
+      '@tiptap/extension-table-header':
+        specifier: ^2.11.0
+        version: 2.11.0(@tiptap/core@2.7.4)
+      '@tiptap/extension-table-row':
+        specifier: ^2.11.0
+        version: 2.11.0(@tiptap/core@2.7.4)
       '@tiptap/extension-task-item':
         specifier: 2.7.4
         version: 2.7.4(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
@@ -8135,6 +8147,40 @@ packages:
       '@tiptap/core': ^2.7.0
     dependencies:
       '@tiptap/core': 2.7.4(@tiptap/pm@2.7.4)
+    dev: false
+
+  /@tiptap/extension-table-cell@2.11.0(@tiptap/core@2.7.4):
+    resolution: {integrity: sha512-05lXXaGPWzVi/mVYRzsiLbaZ1VVU42buCkoTZrduvJsGEu6K+Cut2fqo7I29CJmJ0P/hDSyMEJDKqdKSP9xalA==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+    dependencies:
+      '@tiptap/core': 2.7.4(@tiptap/pm@2.7.4)
+    dev: false
+
+  /@tiptap/extension-table-header@2.11.0(@tiptap/core@2.7.4):
+    resolution: {integrity: sha512-pOKz1E7VT9v37psA0lFJ0mcj2DAa/KNqNqO3TGOUnNOYaN+/6w01i6tA7rAinULsxaFTZx5x1BGLMqonc6n0fw==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+    dependencies:
+      '@tiptap/core': 2.7.4(@tiptap/pm@2.7.4)
+    dev: false
+
+  /@tiptap/extension-table-row@2.11.0(@tiptap/core@2.7.4):
+    resolution: {integrity: sha512-j+o5Lr1JynSWcd/NN+4mNELvcVwj6CxcNT3J37oc5uy0a6CBhHlmp1d9eEbEnk95tMEsibunVV73wRqE150nEw==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+    dependencies:
+      '@tiptap/core': 2.7.4(@tiptap/pm@2.7.4)
+    dev: false
+
+  /@tiptap/extension-table@2.11.0(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4):
+    resolution: {integrity: sha512-RH9pw2L2eilFjQxEGaWdk7929rm4NLxCs/aXuFVY+zL3ZHzHovsMDM5SZiyk4pTnVpE2Bj8+NcDZ8r/zMcvYIA==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+      '@tiptap/pm': ^2.7.0
+    dependencies:
+      '@tiptap/core': 2.7.4(@tiptap/pm@2.7.4)
+      '@tiptap/pm': 2.7.4
     dev: false
 
   /@tiptap/extension-task-item@2.7.4(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4):

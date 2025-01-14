@@ -197,6 +197,51 @@ export const schema = new Schema({
         return ['br'];
       },
     },
+
+    table: {
+      content: 'table_header table_body',
+      group: 'block',
+      parseDOM: [{ tag: 'table' }],
+      toDOM() {
+        return ['table', 0];
+      },
+    },
+
+    table_header: {
+      content: 'table_row+',
+      parseDOM: [{ tag: 'thead' }],
+      toDOM() {
+        return ['thead', 0];
+      },
+    },
+
+    table_body: {
+      content: 'table_row*',
+      parseDOM: [{ tag: 'tbody' }],
+      toDOM() {
+        return ['tbody', 0];
+      },
+    },
+
+    table_row: {
+      content: 'table_cell+',
+      parseDOM: [{ tag: 'tr' }],
+      toDOM() {
+        return ['tr', 0];
+      },
+    },
+
+    table_cell: {
+      content: 'block+',
+      attrs: {
+        header: { default: false },
+        align: { default: null },
+      },
+      parseDOM: [{ tag: 'td' }, { tag: 'th', attrs: { header: true } }],
+      toDOM(node) {
+        return [node.attrs.header ? 'th' : 'td', 0];
+      },
+    },
   },
 
   marks: {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useEffect, useMemo, useRef, memo, useCallback, useState } from 'react';
 import { useThrottledCallback } from 'use-debounce';
 import classNames from 'classnames';
 import wordsCount from 'words-count';
@@ -29,6 +29,10 @@ import { configureSlashCommand } from '@refly-packages/ai-workspace-common/compo
 import Collaboration from '@tiptap/extension-collaboration';
 import { handleImageDrop, handleImagePaste } from '@refly-packages/ai-workspace-common/components/editor/core/plugins';
 import { getHierarchicalIndexes, TableOfContents } from '@tiptap-pro/extension-table-of-contents';
+import {
+  TableColumnMenu,
+  TableRowMenu,
+} from '@refly-packages/ai-workspace-common/components/editor/extensions/Table/menus';
 
 import { getClientOrigin } from '@refly-packages/utils/url';
 import { useDocumentStore, useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
@@ -49,7 +53,9 @@ export const CollaborativeEditor = memo(
     const lastCursorPosRef = useRef<number>();
     const { isNodeDragging } = useEditorPerformance();
     const editorRef = useRef<EditorInstance>();
+    // const [editor, setEditor] = useState<EditorInstance | null>(null);
     const { provider, ydoc } = useDocumentContext();
+    // const menuContainerRef = useRef(null);
 
     // Move hooks to top level
     const documentActions = useDocumentStoreShallow((state) => ({
@@ -120,6 +126,10 @@ export const CollaborativeEditor = memo(
             case 'listItem':
             case 'taskList':
             case 'taskItem':
+              return '';
+            case 'table':
+            case 'tableRow':
+            case 'tableCell':
               return '';
             default:
               return defaultPlaceholder;
@@ -369,10 +379,12 @@ export const CollaborativeEditor = memo(
               extensions={extensions}
               onCreate={({ editor }) => {
                 editorRef.current = editor;
+                // setEditor(editor);
                 documentActions.setActiveDocumentId(docId);
               }}
               editable={!readOnly}
               className="w-full h-full border-muted sm:rounded-lg"
+              // ref={menuContainerRef}
               editorProps={{
                 handleDOMEvents: {
                   keydown: (_view, event) => handleCommandNavigation(event),
@@ -398,6 +410,8 @@ export const CollaborativeEditor = memo(
                 }}
               />
               <CollabGenAIBlockMenu />
+              {/* <TableRowMenu editor={editorRef.current} appendTo={menuContainerRef} /> */}
+              {/* <TableColumnMenu editor={editorRef.current} appendTo={menuContainerRef} /> */}
             </EditorContent>
           </EditorRoot>
         </div>
