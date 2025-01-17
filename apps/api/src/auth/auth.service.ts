@@ -166,7 +166,7 @@ export class AuthService {
     const tokens = await this.login(payload);
     this.setAuthCookie(res, tokens);
     res.clearCookie(LEGACY_TOKEN_COOKIE, {
-      domain: this.configService.get('auth.cookieDomain'),
+      domain: this.configService.get('auth.cookie.domain'),
       secure: true,
       sameSite: 'strict',
     });
@@ -174,9 +174,9 @@ export class AuthService {
 
   cookieOptions(key: string): CookieOptions {
     const baseOptions: CookieOptions = {
-      domain: this.configService.get('auth.cookieDomain') ?? '',
-      secure: true,
-      sameSite: 'strict',
+      domain: this.configService.get('auth.cookie.domain'),
+      secure: this.configService.get('auth.cookie.secure'),
+      sameSite: this.configService.get('auth.cookie.sameSite'),
       path: '/',
     };
 
