@@ -47,8 +47,12 @@ export default () => ({
     password: process.env.ELASTICSEARCH_PASSWORD,
   },
   auth: {
-    cookieDomain: process.env.REFLY_COOKIE_DOMAIN || '.refly.ai',
     redirectUrl: process.env.LOGIN_REDIRECT_URL,
+    cookie: {
+      domain: process.env.REFLY_COOKIE_DOMAIN || '.refly.ai',
+      secure: process.env.REFLY_COOKIE_SECURE === 'true' || false,
+      sameSite: process.env.REFLY_COOKIE_SAME_SITE || 'strict',
+    },
     jwt: {
       secret: process.env.JWT_SECRET || 'test',
       expiresIn: process.env.JWT_EXPIRATION_TIME || '15m',
