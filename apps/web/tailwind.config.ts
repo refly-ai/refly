@@ -104,7 +104,7 @@ export default {
       fontFamily: {
         inter: ["Inter", "sans-serif"],
         "architects-daughter": ['"Architects Daughter"', "sans-serif"],
-        alibaba: ["Alibaba PuHuiTi", "sans-serif"],
+        alibaba: ["Alibaba PuHuiTi", "system-ui", "sans-serif"],
       },
       fontSize: {
         xs: "0.75rem",
@@ -266,6 +266,10 @@ export default {
         orbit: "orbit calc(var(--duration)*1s) linear infinite",
         backgroundPositionSpin:
           "background-position-spin 3000ms infinite alternate",
+      },
+      fontWeight: {
+        light: "300",
+        bold: "700",
       },
     },
   },

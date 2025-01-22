@@ -54,7 +54,7 @@ function Footer() {
         <div className="mx-auto w-full max-w-7xl md:w-[70%]">
           {/* CTA Block */}
           <div
-            className="mb-[72px] flex h-[380px] w-full flex-col items-center justify-center rounded-[20px] border border-[#E3E3E3] p-12 text-center font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif]"
+            className="mb-[72px] flex h-[380px] w-full flex-col items-center justify-center rounded-[20px] border border-[#E3E3E3] p-12 text-center font-alibaba text-3xl font-bold"
             style={{
               backgroundImage:
                 "linear-gradient(180deg, #F8E2D3 0%, #FCFBFA 95%, #FCFAF9 100%, #FCFCFC 100%, #FFFFFF 100%)",
