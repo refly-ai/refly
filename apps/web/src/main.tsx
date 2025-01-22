@@ -57,13 +57,12 @@ const initSentry = async () => {
           matchRoutes,
         }),
       ],
-      // Performance Monitoring
-      tracesSampleRate: 1.0, //  Capture 100% of the transactions
-      // Set 'tracePropagationTargets' to control for which URLs distributed tracing should be enabled
+      // Reduce sampling rates to minimize performance impact
+      tracesSampleRate: 0.1, // Reduce from 1.0 to 0.1 (10% sampling)
       tracePropagationTargets: ["localhost", "https://refly.ai"],
       // Session Replay
-      replaysSessionSampleRate: 0, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-      replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
+      replaysSessionSampleRate: 0.05, // Reduce from 0 to 0.05 (5% sampling)
+      replaysOnErrorSampleRate: 0.2, // Reduce from 1.0 to 0.2 (20% sampling on errors)
     })
   }
 }

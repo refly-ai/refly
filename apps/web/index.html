@@ -8,41 +8,24 @@
     <meta
       name="description"
       content="Refly is a free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content." />
-    <style>
-      @font-face {
-        font-family: "Alibaba PuHuiTi";
-        font-weight: bold;
-        font-display: swap;
-        src:
-          url("https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2")
-            format("woff2"),
-          url("https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.ttf")
-            format("truetype");
-      }
+    
+    <!-- Preconnect to static assets domain -->
+    <link rel="preconnect" href="https://static.refly.ai" crossorigin />
+    <link rel="dns-prefetch" href="https://static.refly.ai" />
 
-      @font-face {
-        font-family: "Alibaba PuHuiTi";
-        font-weight: 300;
-        font-display: swap;
-        src:
-          url("https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2")
-            format("woff2"),
-          url("https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.ttf")
-            format("truetype");
-      }
-    </style>
+    <!-- Preload critical fonts -->
     <link
       rel="preload"
       href="https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2"
       as="font"
       type="font/woff2"
-      crossorigin="anonymous" />
+      crossorigin />
     <link
       rel="preload"
       href="https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2"
       as="font"
       type="font/woff2"
-      crossorigin="anonymous" />
+      crossorigin />
   </head>
   <script
     async

@@ -89,7 +89,7 @@ const FeatureCard = ({
                   style={{ backgroundColor: feature?.color ?? "#37C390" }}>
                   ✓
                 </span>
-                <span className="font-['Alibaba_PuHuiTi_Light',system-ui,-apple-system,sans-serif] leading-6 text-gray-700">
+                <span className="font-alibaba text-base font-light leading-6 text-gray-700">
                   {point}
                 </span>
               </li>
@@ -195,7 +195,7 @@ function FeaturesBlocks() {
           <span>{header?.tag}</span>
         </span>
         <section className="text-center">
-          <h1 className="font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-3xl md:text-4xl">
+          <h1 className="font-alibaba text-3xl font-bold md:text-4xl">
             {i18n.language === "zh-CN" ? (
               <>
                 Refly

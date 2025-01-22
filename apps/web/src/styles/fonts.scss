@@ -1,27 +1,43 @@
+/* Define Alibaba PuHuiTi font family */
 @font-face {
-  font-family: "Alibaba PuHuiTi Bold";
+  font-family: "Alibaba PuHuiTi";
   src:
+    local("Alibaba PuHuiTi Bold"),
     url("https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2")
-      format("woff2"),
-    url("https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.ttf")
-      format("truetype");
-  font-weight: bold;
+      format("woff2");
+  font-weight: 700; /* bold */
   font-style: normal;
   font-display: swap;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  unicode-range: U+4E00-9FFF; /* Chinese characters only */
 }
 
 @font-face {
-  font-family: "Alibaba PuHuiTi Light";
+  font-family: "Alibaba PuHuiTi";
   src:
+    local("Alibaba PuHuiTi Light"),
     url("https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2")
-      format("woff2"),
-    url("https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.ttf")
-      format("truetype");
-  font-weight: light;
+      format("woff2");
+  font-weight: 200; /* light */
   font-style: normal;
   font-display: swap;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  unicode-range: U+4E00-9FFF; /* Chinese characters only */
+}
+
+/* CSS Variables for font stacks */
+:root {
+  --font-alibaba: "Alibaba PuHuiTi", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+}
+
+/* Utility classes */
+.font-alibaba {
+  font-family: var(--font-alibaba);
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-light {
+  font-weight: 200;
 }
