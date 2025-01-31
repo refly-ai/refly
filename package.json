@@ -27,14 +27,15 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
     "@types/node": "20.14.8",
+    "commitizen": "^4.2.4",
+    "cypress": "^14.0.1",
+    "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
     "rimraf": "^5.0.10",
     "turbo": "^2.1.2",
     "typescript": "5.3.3",
-    "vitest": "^2.1.0",
-    "commitizen": "^4.2.4",
-    "cz-conventional-changelog": "^3.3.0"
+    "vitest": "^2.1.0"
   },
   "packageManager": "pnpm@8.15.8",
   "config": {
