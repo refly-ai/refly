@@ -77,8 +77,8 @@ export default defineConfig({
       },
     }) as WxtViteConfig,
   manifest: {
-    version: '0.1.0',
-    author: 'pftom',
+    version: '0.3.6',
+    author: 'support@refly.ai',
     name: '__MSG_displayName__',
     description: '__MSG_description__',
     default_locale: 'en',
