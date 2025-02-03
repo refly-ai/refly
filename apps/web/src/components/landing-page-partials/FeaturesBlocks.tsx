@@ -151,7 +151,7 @@ function FeaturesBlocks() {
       bulletPoints: t('landingPage.features.featureFive.bulletPoints', {
         returnObjects: true,
       }) as string[],
-      imageSrc: 'https://static.refly.ai/landing/features-clip-and-save.webp',
+      imageSrc: 'https://static.refly.ai/landing/features-clip.webp',
       isReversed: false,
       background: 'linear-gradient(180deg, #E8F5E9 0%, #FFFFFF 100%)',
       color: '#4CAF50',
