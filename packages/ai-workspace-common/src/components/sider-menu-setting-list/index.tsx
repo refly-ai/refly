@@ -5,7 +5,9 @@ import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { useLogout } from '@refly-packages/ai-workspace-common/hooks/use-logout';
 import { GrGroup } from 'react-icons/gr';
-
+import { MemoizedIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconChrome } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { EXTENSION_DOWNLOAD_LINK } from '@refly/utils/url';
 export const SiderMenuSettingList = (props: { children: React.ReactNode }) => {
   const { t } = useTranslation();
   const userStore = useUserStore();
@@ -41,6 +43,11 @@ export const SiderMenuSettingList = (props: { children: React.ReactNode }) => {
       label: t('loggedHomePage.siderMenu.contactUs'),
     },
     {
+      key: 'addToChrome',
+      icon: <MemoizedIcon icon={IconChrome} className="w-[14px] h-[14px]" />,
+      label: t('loggedHomePage.siderMenu.addToChrome'),
+    },
+    {
       type: 'divider',
     },
     {
@@ -57,6 +64,8 @@ export const SiderMenuSettingList = (props: { children: React.ReactNode }) => {
       setShowSettingModal(true);
     } else if (key === 'logout') {
       handleLogout();
+    } else if (key === 'addToChrome') {
+      window.open(EXTENSION_DOWNLOAD_LINK, '_blank');
     }
   };
 

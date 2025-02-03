@@ -33,6 +33,7 @@ export const ContentClipper: React.FC<ContentClipperProps> = ({ className, onSav
     content: '',
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isClipping, setIsClipping] = useState(false);
   const { saveSelectedContent } = useSaveSelectedContent();
   const { handleSaveResourceAndNotify } = useSaveResourceNotify();
 
@@ -45,6 +46,7 @@ export const ContentClipper: React.FC<ContentClipperProps> = ({ className, onSav
         if (response?.body) {
           setPageInfo(response.body);
         }
+        setIsClipping(false);
       }
     }, getRuntime());
   }, []);
@@ -52,6 +54,7 @@ export const ContentClipper: React.FC<ContentClipperProps> = ({ className, onSav
   // Handle clip current page content
   const handleClipContent = useCallback(async () => {
     try {
+      setIsClipping(true);
       // Send message to content script to get page content
       const msg: BackgroundMessage = {
         source: getRuntime(),
@@ -59,6 +62,7 @@ export const ContentClipper: React.FC<ContentClipperProps> = ({ className, onSav
       };
       sendMessage(msg);
     } catch (err) {
+      setIsClipping(false);
       console.error('Failed to clip content:', err);
       message.error(t('extension.webClipper.error.clipContentFailed'));
     }
@@ -176,6 +180,7 @@ export const ContentClipper: React.FC<ContentClipperProps> = ({ className, onSav
           size="large"
           icon={<HiOutlineDocumentDownload />}
           onClick={handleClipContent}
+          loading={isClipping}
           className="flex-1"
         >
           {t('extension.webClipper.action.clip')}

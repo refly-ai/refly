@@ -237,7 +237,7 @@ const getSelectedKey = (pathname: string) => {
 
 export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
   const { source = 'sider' } = props;
-  const [starCount, setStarCount] = useState('851');
+  const [starCount, setStarCount] = useState('913');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { updateLibraryModalActiveKey } = useKnowledgeBaseStoreShallow((state) => ({

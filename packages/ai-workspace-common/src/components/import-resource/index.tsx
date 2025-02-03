@@ -8,6 +8,7 @@ import {
 
 import { ImportFromWeblink } from './intergrations/import-from-weblink';
 import { ImportFromText } from './intergrations/import-from-text';
+import { ImportFromExtension } from './intergrations/import-from-extension';
 import { useTranslation } from 'react-i18next';
 
 import './index.scss';
@@ -15,7 +16,7 @@ import { useEffect } from 'react';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { getRuntime } from '@refly/utils/env';
 import MultilingualSearch from '@refly-packages/ai-workspace-common/modules/multilingual-search';
-import { TbClipboard, TbWorldSearch } from 'react-icons/tb';
+import { TbClipboard, TbWorldSearch, TbBrowserPlus } from 'react-icons/tb';
 import { IconImportResource } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 const MenuItem = Menu.Item;
@@ -100,6 +101,12 @@ export const ImportResourceModal = () => {
                       </span>
                       {t('resource.import.fromText')}
                     </MenuItem>
+                    <MenuItem key="import-from-extension">
+                      <span className="flex items-center justify-center mr-2">
+                        <TbBrowserPlus className="text-base" />
+                      </span>
+                      {t('resource.import.fromExtension')}
+                    </MenuItem>
                   </Menu>
                 </div>
               </div>
@@ -110,6 +117,7 @@ export const ImportResourceModal = () => {
               {selectedMenuItem === 'import-from-weblink' ? <ImportFromWeblink /> : null}
               {selectedMenuItem === 'import-from-paste-text' ? <ImportFromText /> : null}
               {selectedMenuItem === 'import-from-web-search' ? <MultilingualSearch /> : null}
+              {selectedMenuItem === 'import-from-extension' ? <ImportFromExtension /> : null}
             </div>
           </Splitter.Panel>
         </Splitter>

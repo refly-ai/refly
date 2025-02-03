@@ -12,6 +12,11 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/router';
 import './header.scss';
 import { FaDiscord, FaGithub } from 'react-icons/fa6';
+import { EXTENSION_DOWNLOAD_LINK } from '@refly/utils/url';
+import {
+  IconChrome,
+  MemoizedIcon,
+} from '@refly-packages/ai-workspace-common/components/common/icon';
 
 function Header() {
   const navigate = useNavigate();
@@ -23,7 +28,7 @@ function Header() {
   }));
 
   const [value, setValue] = useState('product');
-  const [starCount, setStarCount] = useState('614');
+  const [starCount, setStarCount] = useState('913');
 
   const tabOptions = [
     {
@@ -139,6 +144,14 @@ function Header() {
             {starCount}
           </Button>
 
+          <Button
+            onClick={() => {
+              window.open(EXTENSION_DOWNLOAD_LINK, '_blank');
+            }}
+            icon={<MemoizedIcon icon={IconChrome} />}
+          >
+            {t('landingPage.addToChrome')}
+          </Button>
           <Button type="primary" onClick={() => setLoginModalOpen(true)}>
             {t('landingPage.tryForFree')}
           </Button>

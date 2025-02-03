@@ -66,7 +66,9 @@ import QwenIcon from '@refly-packages/ai-workspace-common/assets/qwen.svg';
 import MetaLlamaIcon from '@refly-packages/ai-workspace-common/assets/meta.svg';
 import DeepSeekIcon from '@refly-packages/ai-workspace-common/assets/deepseek.svg';
 import MistralIcon from '@refly-packages/ai-workspace-common/assets/mistral.svg';
+import ChromeIcon from '@refly-packages/ai-workspace-common/assets/chrome.svg';
 import { MdOutlineMouse } from 'react-icons/md';
+import { memo } from 'react';
 
 export const IconCanvas = TfiBlackboard;
 export const IconAskAI = LuSparkles;
@@ -124,7 +126,7 @@ export const IconEmail = BsEnvelope;
 export const IconGuideLine = RiGuideLine;
 export const IconLanguage = IoLanguage;
 export const IconDeleteFile = TiDocumentDelete;
-
+export const IconChrome = ChromeIcon;
 export const ModelProviderIcons = {
   openai: OpenAIIcon,
   anthropic: ClaudeIcon,
@@ -161,3 +163,7 @@ export const getSkillIcon = (skillName: string, className?: string) => {
       return <IconAskAI className={className} />;
   }
 };
+
+export const MemoizedIcon = memo(({ icon, className }: { icon: string; className?: string }) => (
+  <img className={`w-4 h-4 ${className}`} src={icon} alt={icon} />
+));
