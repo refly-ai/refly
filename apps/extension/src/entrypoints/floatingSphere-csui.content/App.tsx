@@ -8,7 +8,6 @@ import './App.scss';
 import classNames from 'classnames';
 import { IconHighlight, IconSave, IconClose } from '@arco-design/web-react/icon';
 import { useSaveCurrentWeblinkAsResource } from '@/hooks/use-save-resource';
-import { useToggleCopilot } from '@/modules/toggle-copilot/hooks/use-toggle-copilot';
 import { useSaveResourceNotify } from '@refly-packages/ai-workspace-common/hooks/use-save-resouce-notify';
 import { useListenToCopilotType } from '@/modules/toggle-copilot/hooks/use-listen-to-copilot-type';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +32,7 @@ const getPopupContainer = () => {
 };
 
 export const App = () => {
-  const [selectedText, setSelectedText] = useState<string>('');
+  const [selectedText, _setSelectedText] = useState<string>('');
   const { saveResource } = useSaveCurrentWeblinkAsResource();
   const { handleSaveResourceAndNotify } = useSaveResourceNotify();
   // const { handleToggleCopilot } = useToggleCopilot();
@@ -58,7 +57,7 @@ export const App = () => {
   console.log('i18n', i18n?.languages);
 
   // 加载快捷键
-  const [shortcut] = useState<string>(reflyEnv.getOsType() === 'OSX' ? '⌘ J' : 'Ctrl J');
+  const [_shortcut] = useState<string>(reflyEnv.getOsType() === 'OSX' ? '⌘ J' : 'Ctrl J');
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const [position, setPosition] = useState({ y: 0 });

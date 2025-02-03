@@ -19,6 +19,6 @@ export const handleToggleCopilotSidePanel = (
       });
     }
   } catch (error) {
-    console.error(`handleToggleCopilot error: `, error);
+    console.error('handleToggleCopilot error: ', error);
   }
 };

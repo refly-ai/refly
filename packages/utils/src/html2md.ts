@@ -59,6 +59,7 @@ const cleanMarkdown = (markdownContent: string): string => {
   cleanedMarkdown = cleanedMarkdown.replace(/(\S)\s+\*/g, '$1*');
 
   // Remove zero-width spaces and other invisible characters
+  // biome-ignore lint/suspicious/noMisleadingCharacterClass: <explanation>
   cleanedMarkdown = cleanedMarkdown.replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
 
   // Remove empty lines that only contain spaces or special characters

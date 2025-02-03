@@ -19,17 +19,17 @@ export const useMockInAppResource = () => {
     updateResource: state.updateResource,
     currentResource: state.currentResource,
   }));
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, _setSearchParams] = useSearchParams();
   const { jumpToResource } = useJumpNewPath();
 
   const kbId = searchParams.get('kbId');
   const resId = searchParams.get('resId');
-  const isKbPage = useMatch('/knowledge-base');
+  const _isKbPage = useMatch('/knowledge-base');
   const isHomepage = useMatch('/');
   /**
    * 在这之前，已经在初始
    */
-  const handleFakeKBRouteJump = () => {
+  const _handleFakeKBRouteJump = () => {
     jumpToResource({
       resId: 'tempResId',
     });

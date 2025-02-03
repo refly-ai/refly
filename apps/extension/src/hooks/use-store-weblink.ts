@@ -70,7 +70,7 @@ export const useStoreWeblink = () => {
 
   // TODO:
 
-  const handleGetWeblinkStatus = () => {};
+  const _handleGetWeblinkStatus = () => {};
 
   const confirmToClientUpload = async (url: string) => {
     Modal.confirm({

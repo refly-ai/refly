@@ -27,14 +27,14 @@ export const useSetCopilotType = () => {
       return;
     }
 
-    const copilotTypeStorage = await storage.getItem(`sync:copilotType`);
+    const copilotTypeStorage = await storage.getItem('sync:copilotType');
     console.log('copilotTypeStorage', copilotTypeStorage);
     if (copilotTypeStorage && copilotTypeEnums.includes(copilotTypeStorage as ICopilotType)) {
       return;
     }
 
     copilotTypeStore.setCopilotType(runtime as ICopilotType);
-    await storage.setItem(`sync:copilotType`, runtime);
+    await storage.setItem('sync:copilotType', runtime);
   };
 
   useEffect(() => {

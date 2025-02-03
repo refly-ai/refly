@@ -5,9 +5,9 @@ import { useCopilotStore } from '@refly-packages/ai-workspace-common/stores/copi
 export const useBindCommands = () => {
   // 快捷键相关
   const copilotStore = useCopilotStore();
-  const softKeyboardShortcutsEnabledRef = useRef(true);
-  const keyboardShortcutRef = useRef('');
-  const keyboardSendShortcutRef = useRef('');
+  const _softKeyboardShortcutsEnabledRef = useRef(true);
+  const _keyboardShortcutRef = useRef('');
+  const _keyboardSendShortcutRef = useRef('');
 
   // const loadCommands = async () => {
   //   const commands = await apiRequest({

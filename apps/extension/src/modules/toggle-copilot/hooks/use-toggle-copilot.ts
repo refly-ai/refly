@@ -4,10 +4,7 @@ import { getRuntime } from '@refly/utils/env';
 import pTimeout from 'p-timeout';
 import { checkPageUnsupported } from '@refly-packages/ai-workspace-common/utils/extension/check';
 import { checkBrowserArc } from '@/utils/browser';
-import { ToggleCopilotStatus } from '@/types/sidePanel';
 import { useCopilotTypeStore } from '@/modules/toggle-copilot/stores/use-copilot-type';
-
-const toggleCopilotStatus = {} as ToggleCopilotStatus;
 
 export const useToggleCopilot = () => {
   const { copilotType } = useCopilotTypeStore((state) => ({
@@ -66,27 +63,20 @@ export const useToggleCopilot = () => {
   // initial check side panel open status
   const handleCheckSidePanelOpenStatus = async () => {
     try {
-      const promise = new Promise(async (resolve) => {
-        try {
-          console.log('sendMessage', 'checkSidePanelOpenStatus');
-          const res = await sendMessage({
-            type: 'others',
-            name: 'checkSidePanelOpenStatus',
-            source: getRuntime(),
-          });
-          isCopilotOpenRef.current = res?.isCopilotOpen;
-          resolve(res);
-        } catch (error) {
-          console.error(`checkSidePanelOpenStatus error: ${error}`);
-          isCopilotOpenRef.current = false;
-          resolve(false);
-        }
-      });
-
-      await pTimeout(promise, { milliseconds: 1000 });
+      const result = await pTimeout(
+        sendMessage({
+          type: 'others',
+          name: 'checkSidePanelOpenStatus',
+          source: getRuntime(),
+        }),
+        { milliseconds: 1000 },
+      );
+      isCopilotOpenRef.current = result?.isCopilotOpen ?? false;
+      return result;
     } catch (error) {
       console.error(`checkSidePanelOpenStatus error: ${error}`);
       isCopilotOpenRef.current = false;
+      return false;
     }
   };
 

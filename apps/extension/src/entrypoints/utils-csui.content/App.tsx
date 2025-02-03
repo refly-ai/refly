@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { checkBrowserArc } from '@/utils/browser';
 
 import './App.scss';
 

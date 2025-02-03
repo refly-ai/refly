@@ -3,7 +3,6 @@ import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { LOCALE } from '@refly/common-types';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Spin } from '@arco-design/web-react';
 
 // Components
 import { Login } from '@/pages/login';

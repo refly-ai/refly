@@ -9,8 +9,8 @@ import { handleInjectContentSelectorCss } from '@/entrypoints/background/events/
 
 export const onMessage = async (
   msg: BackgroundMessage,
-  sender: Runtime.MessageSender,
-  sendResponse: (response?: any) => void,
+  _sender: Runtime.MessageSender,
+  _sendResponse: (response?: any) => void,
 ) => {
   // 前置做保存，后续使用
   await saveLastActiveTab();

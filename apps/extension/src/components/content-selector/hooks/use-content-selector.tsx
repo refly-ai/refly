@@ -1,6 +1,5 @@
 import classNames from 'classnames';
 import { useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
 import { Message } from '@arco-design/web-react';
 import type {
   Mark,

@@ -1,9 +1,6 @@
 import { Message, Link } from '@arco-design/web-react';
-import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
-import { getLocale } from '@refly-packages/ai-workspace-common/utils/locale';
 import { showErrorNotification } from '@refly-packages/ai-workspace-common/utils/notification';
 import type { LOCALE } from '@refly/common-types';
-import { OperationTooFrequent, StorageQuotaExceeded } from '@refly/errors';
 import type { BaseResponse } from '@refly/openapi-schema';
 
 import { delay } from '@refly/utils';

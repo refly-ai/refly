@@ -20,10 +20,10 @@ export const Login = () => {
     setIsLogin: state.setIsLogin,
     isLogin: state.isLogin,
   }));
-  const loginWindowRef = useRef<Window | null>();
+  const _loginWindowRef = useRef<Window | null>();
   const { t } = useTranslation();
 
-  const [loginNotification, setLoginNotification] = useStorage('refly-login-notify', '', 'sync');
+  const [loginNotification, _setLoginNotification] = useStorage('refly-login-notify', '', 'sync');
 
   /**
    * 0. 获取主站的登录态，如果没有登录就访问 Login 页面，已登录之后再展示可操作页面

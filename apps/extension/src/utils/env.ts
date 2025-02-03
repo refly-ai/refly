@@ -23,11 +23,11 @@ export class ReflyEnv {
     }
   }
   getOsType() {
-    const t = navigator.userAgent,
-      n = navigator.platform,
-      a = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K', 'macOS'],
-      i = ['Win32', 'Win64', 'Windows', 'WinCE'],
-      s = ['iPhone', 'iPad', 'iPod'];
+    const t = navigator.userAgent;
+    const n = navigator.platform;
+    const a = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K', 'macOS'];
+    const i = ['Win32', 'Win64', 'Windows', 'WinCE'];
+    const s = ['iPhone', 'iPad', 'iPod'];
     return a.indexOf(n) !== -1
       ? 'OSX'
       : s.indexOf(n) !== -1
@@ -38,14 +38,19 @@ export class ReflyEnv {
             ? 'Android'
             : /Linux/.test(n)
               ? 'Linux'
-              : (console.error('unable to detect os type, use Windows as default', n, t),
-                'Windows');
+              : this.getDefaultOsType(n, t);
   }
+
+  private getDefaultOsType(platform: string, userAgent: string) {
+    console.error('unable to detect os type, use Windows as default', platform, userAgent);
+    return 'Windows';
+  }
+
   isChrome() {
-    const t = navigator.userAgent,
-      n = t.includes('Chrome') && t.includes('Safari'),
-      a = t.includes('Edg'),
-      i = t.includes('OPR');
+    const t = navigator.userAgent;
+    const n = t.includes('Chrome') && t.includes('Safari');
+    const a = t.includes('Edg');
+    const i = t.includes('OPR');
     return n && !a && !i;
   }
 

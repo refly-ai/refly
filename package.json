@@ -14,14 +14,15 @@
     "codegen": "turbo run codegen",
     "clean": "turbo run clean",
     "lint": "biome lint .",
-    "lint:fix": "biome lint . --apply",
+    "lint:fix": "biome lint . --write",
     "format": "biome format .",
     "format:fix": "biome format . --write",
     "check": "biome check .",
-    "check:fix": "biome check . --apply",
+    "check:fix": "biome check . --write",
     "test": "pnpm -r --if-present test",
     "test:unit": "pnpm -r --if-present test:unit",
-    "test:integration": "pnpm -r --if-present test:integration"
+    "test:integration": "pnpm -r --if-present test:integration",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
@@ -40,5 +41,9 @@
     "commitizen": {
       "path": "cz-conventional-changelog"
     }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": ["biome check --write"],
+    "*.json": ["biome format --write"]
   }
 }

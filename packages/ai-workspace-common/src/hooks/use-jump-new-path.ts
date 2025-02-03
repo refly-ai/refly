@@ -47,13 +47,12 @@ export const useJumpNewPath = () => {
     extraQuery?: Record<string, string>,
   ) => {
     if (extraQuery) {
-      Object.entries(extraQuery).forEach(([key, value]) => {
+      for (const [key, value] of Object.entries(extraQuery)) {
         if (!['canvasId', 'resId', 'convId'].includes(key)) {
-          return;
+          continue;
         }
-
         searchParams.set(key, value);
-      });
+      }
     }
 
     setSearchParams(searchParams);

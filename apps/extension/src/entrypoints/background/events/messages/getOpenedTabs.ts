@@ -2,7 +2,7 @@ import { sendMessage } from '@refly-packages/ai-workspace-common/utils/extension
 import { BackgroundMessage } from '@refly/common-types';
 import { browser } from 'wxt/browser';
 
-export const handleGetOpenedTabs = async (msg: BackgroundMessage) => {
+export const handleGetOpenedTabs = async (_msg: BackgroundMessage) => {
   try {
     // 获取当前浏览器标签页
     const tabs = await browser.tabs.query({ currentWindow: true });

@@ -1,16 +1,12 @@
 import { defineContentScript } from 'wxt/sandbox';
-import ReactDOM from 'react-dom/client';
-import { createShadowRootUi } from 'wxt/client';
-import App from './App';
 import { setRuntime } from '@refly/utils/env';
-import { MemoryRouter } from '@refly-packages/ai-workspace-common/utils/router';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
   // 2. Set cssInjectionMode
   cssInjectionMode: 'ui',
 
-  async main(ctx) {
+  async main() {
     setRuntime('extension-csui');
     // console.log('ctx', ctx);
     // 3. Define your UI`

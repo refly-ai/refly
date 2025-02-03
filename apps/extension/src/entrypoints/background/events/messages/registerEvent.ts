@@ -16,27 +16,26 @@ export const handleRegisterSidePanel = async (msg: BackgroundMessage) => {
   } else {
     if (typeof isSetSidePanel === 'boolean' && isSetSidePanel) {
       return;
-    } else {
-      isSetSidePanel = true;
     }
+    isSetSidePanel = true;
     // @ts-ignore
     browser?.sidePanel
       .setPanelBehavior({ openPanelOnActionClick: true })
       .then(() => {
         console.log('register sidePanel success');
       })
-      .catch((error: any) => console.error(`sidePanel open error: `, error));
+      .catch((error: any) => console.error('sidePanel open error: ', error));
   }
 };
 
-export const handleUnregisterSidePanel = async (msg: BackgroundMessage) => {
+export const handleUnregisterSidePanel = async (_msg: BackgroundMessage) => {
   // @ts-ignore
   browser?.sidePanel
     .setPanelBehavior({ openPanelOnActionClick: false })
     .then(() => {
       console.log('unregister sidePanel success');
     })
-    .catch((error: any) => console.error(`sidePanel unregister error: `, error));
+    .catch((error: any) => console.error('sidePanel unregister error: ', error));
 };
 
 export const handleRegisterEvent = async (msg: BackgroundMessage) => {

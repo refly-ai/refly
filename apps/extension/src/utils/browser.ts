@@ -5,11 +5,9 @@ let isArc: boolean | undefined = undefined;
 export const checkBrowserArc = async () => {
   try {
     console.log('parent', window.parent);
-    isArc = getComputedStyle(window.parent?.document.documentElement).getPropertyValue(
+    isArc = !!getComputedStyle(window.parent?.document.documentElement).getPropertyValue(
       '--arc-palette-title',
-    )
-      ? true
-      : false;
+    );
 
     if (!isArc) {
       sendToBackground({

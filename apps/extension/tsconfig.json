@@ -1,9 +1,9 @@
 {
-  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "allowImportingTsExtensions": true,
-    "jsx": "react-jsx", // path
+    "jsx": "react-jsx",
     "useDefineForClassFields": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"],
       "@refly-packages/ai-workspace-common/*": ["../../packages/ai-workspace-common/src/*"],

@@ -1,7 +1,7 @@
 import { BackgroundMessage } from '@refly/common-types';
 import { browser } from 'wxt/browser';
 
-export const handleInjectContentSelectorCss = async (msg: BackgroundMessage) => {
+export const handleInjectContentSelectorCss = async (_msg: BackgroundMessage) => {
   try {
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
     const { id } = tabs[0];

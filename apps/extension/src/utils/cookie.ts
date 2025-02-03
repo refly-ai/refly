@@ -1,24 +1,19 @@
+import { UID_COOKIE } from '@refly/utils/cookie';
 import { getClientOrigin } from '@refly/utils/url';
 import { browser } from 'wxt/browser';
 
 export async function getCookie() {
   try {
-    const promise = new Promise(async (resolve, reject) => {
-      const res = await browser.cookies?.get({
-        name: '_rf_access',
-        url: getClientOrigin(),
-      });
-
-      if (res?.value) {
-        resolve(res?.value);
-      } else {
-        reject('user not auth');
-      }
+    const res = await browser.cookies?.get({
+      name: UID_COOKIE,
+      url: getClientOrigin(),
     });
 
-    const res = await promise;
+    if (!res?.value) {
+      throw new Error('user not auth');
+    }
 
-    return res;
+    return res.value;
   } catch (err) {
     console.log('err', err);
   }

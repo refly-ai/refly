@@ -1,9 +1,5 @@
 import { AuthenticationExpiredError, ConnectionError } from '@refly/errors';
-import getClient, {
-  extractBaseResp,
-} from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { getLocale } from '@refly-packages/ai-workspace-common/utils/locale';
-import { showErrorNotification } from '@refly-packages/ai-workspace-common/utils/notification';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { logout } from '@refly-packages/ai-workspace-common/hooks/use-logout';
 
 interface RefreshResult {

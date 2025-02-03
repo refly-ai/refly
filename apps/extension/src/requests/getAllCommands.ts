@@ -11,7 +11,7 @@ const handler = async (
       success: true,
       data: commands,
     };
-  } catch (err) {
+  } catch (_err) {
     return {
       success: false,
     };

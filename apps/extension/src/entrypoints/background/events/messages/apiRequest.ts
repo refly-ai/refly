@@ -4,14 +4,7 @@ import * as requestModule from '@refly/openapi-schema';
 import { BackgroundMessage } from '@refly/common-types';
 import { createClient } from '@hey-api/client-fetch';
 import { getExtensionServerOrigin } from '@refly/utils/url';
-import { getCookie } from '@/utils/cookie';
-import { getToken } from '../../index';
 import { AuthenticationExpiredError, OperationTooFrequent, UnknownError } from '@refly/errors';
-import { responseInterceptorWithTokenRefresh } from '@refly-packages/ai-workspace-common/utils/auth';
-import {
-  cacheClonedRequest,
-  getAndClearCachedRequest,
-} from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 const client = createClient({
   baseUrl: `${getExtensionServerOrigin()}/v1`,

@@ -43,7 +43,7 @@ export const useStorage = <T>(
 
 export const handleGetAndWatchValue = async <T>(
   key: string,
-  location: StorageLocation = 'local',
+  location: StorageLocation,
   onCallback: (val: T) => void,
 ) => {
   // 默认对 storage 都序列化

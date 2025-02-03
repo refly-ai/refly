@@ -10,7 +10,6 @@ import { ContentClipper } from '@/components/content-clipper';
 import { setRuntime } from '@refly/utils/env';
 import { Unsupported } from '@/entrypoints/popup/unsupported';
 import { LoginHeader } from '@/entrypoints/popup/login-header';
-import { LoadLoading } from '@/entrypoints/popup/load-loading';
 
 import { SuspenseLoading } from '@refly-packages/ai-workspace-common/components/common/loading/index';
 /**

@@ -11,7 +11,7 @@ export const useListenToCopilotType = () => {
   }));
 
   // 监听更改
-  const [copilotTypeStorage, setCopilotTypeStorage] = useStorage('copilotType', '', 'sync');
+  const [copilotTypeStorage, _setCopilotTypeStorage] = useStorage('copilotType', '', 'sync');
 
   // 监听copilotTypeStorage的变化
   useEffect(() => {

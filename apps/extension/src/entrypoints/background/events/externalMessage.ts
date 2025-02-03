@@ -5,8 +5,8 @@ import { setToken } from '../index';
 
 export const onExternalMessage = async (
   msg: any,
-  sender: Runtime.MessageSender,
-  sendResponse: (response?: any) => void,
+  _sender: Runtime.MessageSender,
+  _sendResponse: (response?: any) => void,
 ) => {
   console.log('onMessageExternal msg', msg);
   if (msg?.name === 'external-refly-login-notify') {

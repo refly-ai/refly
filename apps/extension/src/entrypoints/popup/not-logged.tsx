@@ -1,4 +1,4 @@
-import { Button, ConfigProvider, Spin, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 
 import { getClientOrigin } from '@refly/utils/url';

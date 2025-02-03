@@ -18,7 +18,6 @@ export const OutputLocaleList = (props: { children: any }) => {
   const uiLocale = i18n?.languages?.[0] as LOCALE;
 
   const userStore = useUserStore();
-  const { outputLocale } = userStore?.localSettings || {};
 
   const changeLang = async (lng: OutputLocale) => {
     const { localSettings } = useUserStore.getState();

@@ -4,22 +4,13 @@ import { vitePluginForArco } from '@refly/arco-vite-plugin-react';
 import { pluginViteEncoding } from '@refly/plugin-vite-encoding';
 import postcssConfig from './postcss.config';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import path from 'path';
+import path from 'node:path';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
-
-const getFileAbsolutePath = (fileName: string) => {
-  return path.join(__dirname, fileName);
-};
-
-// const extraWatchFiles = [
-//   getFileAbsolutePath('../../packages/ai-workspace-common/src'),
-//   getFileAbsolutePath('./src/entrypoints/'),
-// ];
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   srcDir: 'src',
-  vite: (env: ConfigEnv) =>
+  vite: (_env: ConfigEnv) =>
     ({
       logLevel: 'error',
       plugins: [
