@@ -14,6 +14,7 @@ import {
   IconLanguage,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { FaGithub } from 'react-icons/fa6';
+import { EXTENSION_DOWNLOAD_LINK, getClientOrigin } from '@refly/utils/url';
 
 const resources = [
   {
@@ -31,6 +32,17 @@ const resources = [
   {
     title: 'discord',
     link: 'https://discord.gg/bWjffrb89h',
+  },
+];
+
+const platforms = [
+  {
+    title: 'chrome',
+    link: EXTENSION_DOWNLOAD_LINK,
+  },
+  {
+    title: 'web',
+    link: getClientOrigin(),
   },
 ];
 
@@ -242,6 +254,26 @@ function Footer() {
                           {t('landingPage.footer.about.terms')}
                         </Link>
                       </li>
+                    </ul>
+                  </div>
+
+                  {/* Platforms Section */}
+                  <div>
+                    <h6 className="mb-1 text-[14px] font-medium">
+                      {t('landingPage.footer.platforms.title')}
+                    </h6>
+                    <ul className="list-none text-sm">
+                      {platforms.map((item) => (
+                        <li key={item.title} className="mb-1">
+                          <Link
+                            to={item.link}
+                            target="_blank"
+                            className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                          >
+                            {t(`landingPage.footer.platforms.${item.title}`)}
+                          </Link>
+                        </li>
+                      ))}
                     </ul>
                   </div>
 

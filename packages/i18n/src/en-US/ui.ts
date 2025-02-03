@@ -208,6 +208,11 @@ const translations = {
         community: 'Community',
         mail: 'Email',
       },
+      platforms: {
+        title: 'Platforms',
+        chrome: 'Chrome Extension',
+        web: 'Web App',
+      },
     },
     loginFailed: {
       title: 'Login Failed',

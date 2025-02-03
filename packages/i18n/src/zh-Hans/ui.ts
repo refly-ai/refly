@@ -208,6 +208,11 @@ const translations = {
         community: '社区',
         mail: '邮箱',
       },
+      platforms: {
+        title: '平台',
+        chrome: 'Chrome 插件',
+        web: 'Web 应用',
+      },
     },
     loginFailed: {
       title: '登录失败',
