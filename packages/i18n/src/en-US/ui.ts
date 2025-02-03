@@ -114,6 +114,7 @@ const translations = {
     },
     messageText: 'New DeepSeek R1 inference model released! ⚡️ ',
     tryForFree: 'Get Started',
+    addToChrome: 'Add to Chrome',
     contactUs: 'Contact Us',
     watchVideo: 'Watch Video',
     joinBtn: 'Join for free',
@@ -960,6 +961,7 @@ const translations = {
     },
     siderMenu: {
       contactUs: 'Contact Us',
+      addToChrome: 'Add to Chrome',
       canvasTitle: 'Canvas',
       canvasDescription:
         'Create, edit, and view canvas, unlike traditional Chatbot applications, Refly completes the entire process of dialogue thinking, content consumption, and creation through an infinite two-dimensional canvas.',

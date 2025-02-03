@@ -125,6 +125,7 @@ const translations = {
     },
     messageText: '全新推理模型 DeepSeek R1 上线！⚡️ ！',
     tryForFree: '开始使用',
+    addToChrome: '添加到 Chrome',
     contactUs: '联系我们',
     watchVideo: '观看视频',
     joinBtn: '免费使用',
@@ -950,6 +951,7 @@ const translations = {
     },
     siderMenu: {
       contactUs: '联系我们',
+      addToChrome: '添加到 Chrome',
       canvasTitle: '画布',
       canvasDescription:
         '创建、编辑和查看画布, 不同于传统的 Chatbot 应用，Refly 通过无限延伸的二维画布来完成对话思考、内容消费和创作的全流程。',
