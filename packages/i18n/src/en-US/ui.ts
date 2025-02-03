@@ -881,6 +881,13 @@ const translations = {
       storageLimited: 'Storage quota exceeded',
       storagePartialLimited: 'Insufficient storage: only {{count}} files can be saved',
       upgrade: 'Upgrade Now',
+      fromExtension: 'Web Clipper',
+      extensionTitle: 'Save Web Content with One Click',
+      extensionDescription:
+        'Install our Chrome extension to easily save web content to your canvas.',
+      downloadExtension: 'Download Extension',
+      viewDocs: 'View Documentation',
+      recommendedPlatforms: 'Recommended Platforms',
     },
     wait_parse: 'Parsing',
     parse_failed: 'Parse Failed, click to retry',

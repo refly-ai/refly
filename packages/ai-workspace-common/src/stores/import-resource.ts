@@ -17,7 +17,8 @@ export interface LinkMeta {
 export type ImportResourceMenuItem =
   | 'import-from-weblink'
   | 'import-from-paste-text'
-  | 'import-from-web-search';
+  | 'import-from-web-search'
+  | 'import-from-extension';
 
 interface ImportResourceState {
   importResourceModalVisible: boolean;
