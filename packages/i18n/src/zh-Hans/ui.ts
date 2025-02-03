@@ -171,6 +171,16 @@ const translations = {
           'AI 编辑助手，确保专业输出质量',
         ],
       },
+      featureFive: {
+        tag: '剪存',
+        title: '一键剪存任意网页内容，持续打造第二大脑',
+        bulletPoints: [
+          '一键保存任意网页内容（Twitter、小红书、Notion 等）',
+          '支持私有网页内容剪存与整理',
+          '持续积累个人知识库',
+          '无缝集成到第二大脑',
+        ],
+      },
     },
     pricing: {
       title: '计划与定价',

@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AiOutlineAppstore, AiOutlineExperiment } from 'react-icons/ai';
 import { FaRegPaperPlane } from 'react-icons/fa';
+import { HiOutlineDocumentDownload } from 'react-icons/hi';
 import { LuSearch } from 'react-icons/lu';
 import { MdOutlineNoteAlt } from 'react-icons/md';
 
@@ -142,6 +143,19 @@ function FeaturesBlocks() {
       background: 'linear-gradient(180deg, #EAF6FF 0%, #FFFFFF 100%)',
       color: '#3B82F6',
       tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(59,130,246,0.20)',
+    },
+    {
+      tag: t('landingPage.features.featureFive.tag'),
+      tagIcon: <HiOutlineDocumentDownload className="inline-block" />,
+      title: t('landingPage.features.featureFive.title'),
+      bulletPoints: t('landingPage.features.featureFive.bulletPoints', {
+        returnObjects: true,
+      }) as string[],
+      imageSrc: 'https://static.refly.ai/landing/features-clip-and-save.webp',
+      isReversed: false,
+      background: 'linear-gradient(180deg, #E8F5E9 0%, #FFFFFF 100%)',
+      color: '#4CAF50',
+      tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(76,175,80,0.20)',
     },
     {
       tag: t('landingPage.features.featureThree.tag'),

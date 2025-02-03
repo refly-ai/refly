@@ -163,6 +163,16 @@ const translations = {
           'AI editing assistant for quality professional output',
         ],
       },
+      featureFive: {
+        tag: 'Clip & Save',
+        title: 'One-click content saving from any webpage to build your second brain',
+        bulletPoints: [
+          'One-click save content from any webpage (Twitter, Notion, etc.)',
+          'Support private webpage content saving and organization',
+          'Continuously build your personal knowledge base',
+          'Seamlessly integrate with your second brain',
+        ],
+      },
     },
     pricing: {
       title: 'Plans and Pricing',
