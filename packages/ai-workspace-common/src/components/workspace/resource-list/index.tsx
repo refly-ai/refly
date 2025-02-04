@@ -173,7 +173,7 @@ export const ResourceList = () => {
       });
       return res?.data;
     },
-    pageSize: 12,
+    pageSize: 16,
   });
 
   useEffect(() => {

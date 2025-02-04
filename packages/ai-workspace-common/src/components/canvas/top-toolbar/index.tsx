@@ -1,15 +1,14 @@
 import { useEffect, FC, useState, useCallback, memo } from 'react';
-import { Button, Divider, Tooltip, Skeleton, Popover } from 'antd';
+import { Button, Tooltip, Skeleton, Popover } from 'antd';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { useTranslation } from 'react-i18next';
 import { LOCALE } from '@refly/common-types';
 import { useDebounce } from 'use-debounce';
 
 import { MdOutlineImage, MdOutlineAspectRatio } from 'react-icons/md';
-import { AiOutlineMenuUnfold } from 'react-icons/ai';
 import { BiErrorCircle } from 'react-icons/bi';
 import { IconEdit, IconSearch } from '@refly-packages/ai-workspace-common/components/common/icon';
-import SiderPopover from '../../../../../../apps/web/src/pages/sider-popover';
+
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { Helmet } from 'react-helmet';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -23,6 +22,7 @@ import { CanvasRename } from './canvas-rename';
 import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-card';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
+import { SiderCollapse } from './sider-collapse';
 
 interface TopToolbarProps {
   canvasId: string;
@@ -235,9 +235,8 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
   const { i18n, t } = useTranslation();
   const language = i18n.language as LOCALE;
 
-  const { collapse, setCollapse } = useSiderStoreShallow((state) => ({
+  const { collapse } = useSiderStoreShallow((state) => ({
     collapse: state.collapse,
-    setCollapse: state.setCollapse,
   }));
 
   const { provider } = useCanvasContext();
@@ -300,20 +299,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
         }`}
       >
         <div className="flex items-center relative z-10">
-          {collapse && (
-            <>
-              <SiderPopover>
-                <Button
-                  type="text"
-                  icon={<AiOutlineMenuUnfold size={16} className="text-gray-500" />}
-                  onClick={() => {
-                    setCollapse(!collapse);
-                  }}
-                />
-              </SiderPopover>
-              <Divider type="vertical" className="pr-[4px] h-4" />
-            </>
-          )}
+          <SiderCollapse />
           <CanvasTitle
             canvasId={canvasId}
             canvasTitle={canvasTitle}

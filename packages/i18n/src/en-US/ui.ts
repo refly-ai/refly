@@ -62,6 +62,7 @@ const translations = {
     login: 'Login',
     share: 'Share',
     noMoreText: 'No more~',
+    back: 'Go Back',
   },
   verifyRules: {
     emailRequired: 'Email cannot be empty',

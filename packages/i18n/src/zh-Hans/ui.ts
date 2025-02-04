@@ -70,6 +70,7 @@ const translations = {
     login: '登录',
     share: '分享',
     noMoreText: '已经到底啦~',
+    back: '返回',
   },
   verifyRules: {
     emailRequired: '邮箱地址不能为空',

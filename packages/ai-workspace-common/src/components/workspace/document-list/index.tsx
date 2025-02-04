@@ -75,7 +75,7 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
       onOpenChange={handleOpenChange}
       menu={{ items }}
     >
-      <Button type="text" icon={<IconMoreHorizontal />} />
+      <Button type="text" icon={<IconMoreHorizontal />} onClick={(e) => e.stopPropagation()} />
     </Dropdown>
   );
 };
@@ -131,7 +131,7 @@ export const DocumentList = () => {
       });
       return res?.data;
     },
-    pageSize: 12,
+    pageSize: 16,
   });
 
   useEffect(() => {

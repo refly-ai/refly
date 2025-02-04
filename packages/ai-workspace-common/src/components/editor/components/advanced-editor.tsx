@@ -50,7 +50,7 @@ export const CollabEditorCommand = (props: { entityId: string; entityType: strin
 };
 
 interface CollabGenAIMenuSwitchProps {
-  contentSelector: {
+  contentSelector?: {
     text: string;
     handleClick: () => void;
     createMemo: () => void;
@@ -66,11 +66,19 @@ export const CollabGenAIMenuSwitch: React.FC<CollabGenAIMenuSwitchProps> = (prop
   return (
     <GenerativeMenuSwitch open={openAI} onOpenChange={setOpenAI}>
       <AIBtnSelector open={openAI} onOpenChange={setOpenAI} />
-      <ContentSelectorButtons
-        text={contentSelector?.text}
-        handleClick={contentSelector?.handleClick}
-      />
-      <CreateMemoSelector text={contentSelector?.text} handleClick={contentSelector?.createMemo} />
+      {contentSelector && (
+        <>
+          <ContentSelectorButtons
+            text={contentSelector?.text}
+            handleClick={contentSelector?.handleClick}
+          />
+
+          <CreateMemoSelector
+            text={contentSelector?.text}
+            handleClick={contentSelector?.createMemo}
+          />
+        </>
+      )}
       <Divider className="mx-0 h-8" type="vertical" />
       <NodeSelector open={openNode} onOpenChange={setOpenNode} />
       <Divider className="mx-0 h-8" type="vertical" />

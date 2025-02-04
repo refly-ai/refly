@@ -25,7 +25,7 @@ export const DocumentNodePreview = memo(
 
     return (
       <div className="h-full overflow-hidden">
-        <DocumentEditor docId={entityId} />
+        <DocumentEditor docId={entityId} source="canvas" />
       </div>
     );
   },

@@ -1,10 +1,9 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { DocumentBody } from '@refly-packages/ai-workspace-common/components/document';
-import { DocumentProvider } from '@refly-packages/ai-workspace-common/context/document';
+import { DocumentEditor } from '@refly-packages/ai-workspace-common/components/document';
 
-const DocumentDetail = React.memo(() => {
+const DocumentDetailPage = React.memo(() => {
   const { t } = useTranslation();
   const { docId } = useParams();
 
@@ -17,14 +16,14 @@ const DocumentDetail = React.memo(() => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <DocumentProvider docId={docId}>
-        <DocumentBody docId={docId} />
-      </DocumentProvider>
+    <div className="h-screen bg-white flex flex-col">
+      <div className="flex-grow overflow-y-auto py-4">
+        <DocumentEditor source="detail" docId={docId} />
+      </div>
     </div>
   );
 });
 
-DocumentDetail.displayName = 'DocumentDetail';
+DocumentDetailPage.displayName = 'DocumentDetailPage';
 
-export default DocumentDetail;
+export default DocumentDetailPage;

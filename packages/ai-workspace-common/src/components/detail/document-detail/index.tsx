@@ -1,9 +1,8 @@
 import { useEffect, useState, memo, useCallback } from 'react';
 import { useDebounce } from 'use-debounce';
 
-import './index.scss';
 import { Input, Spin } from '@arco-design/web-react';
-import { Button, message, Tooltip } from 'antd';
+import { Button, Divider, message, Tooltip } from 'antd';
 import {
   IconCopy,
   IconLock,
@@ -12,23 +11,22 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
 
-import { CollaborativeEditor } from './collab-editor';
-import {
-  DocumentProvider,
-  useDocumentContext,
-} from '@refly-packages/ai-workspace-common/context/document';
-import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
+import { PureCollaborativeEditor } from '@refly-packages/ai-workspace-common/components/document/pure-collab-editor';
+import { useDocumentContext } from '@refly-packages/ai-workspace-common/context/document';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { ydoc2Markdown } from '@refly-packages/utils/editor';
 import { time } from '@refly-packages/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useDocumentSync } from '@refly-packages/ai-workspace-common/hooks/use-document-sync';
-import { DocumentDetail } from '@refly-packages/ai-workspace-common/components/detail/document-detail';
+import { TiArrowBackOutline } from 'react-icons/ti';
+import { useNavigate } from 'react-router-dom';
+import { SiderCollapse } from '@refly-packages/ai-workspace-common/components/canvas/top-toolbar/sider-collapse';
 
 const StatusBar = memo(
   ({ docId }: { docId: string }) => {
     const { provider, ydoc } = useDocumentContext();
 
+    const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const language = i18n.language as LOCALE;
 
@@ -94,6 +92,21 @@ const StatusBar = memo(
     return (
       <div className="w-full h-10 p-3 border-x-0 border-t-0 border-b border-solid border-gray-100 flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
+          <SiderCollapse />
+
+          <Button
+            type="text"
+            className="px-[4px]"
+            icon={<TiArrowBackOutline size={16} className="text-gray-500" />}
+            onClick={() => {
+              navigate(-1);
+            }}
+          >
+            <span className="text-gray-500">{t('common.back')}</span>
+          </Button>
+
+          <Divider type="vertical" className="pr-[4px] h-4" />
+
           <div
             className={`
                   relative w-2.5 h-2.5 rounded-full
@@ -150,19 +163,8 @@ const DocumentEditorHeader = memo(
     }));
     const { syncTitleToYDoc } = useDocumentSync();
 
-    const setNodeDataByEntity = useSetNodeDataByEntity();
-
     const onTitleChange = (newTitle: string) => {
       syncTitleToYDoc(newTitle);
-      setNodeDataByEntity(
-        {
-          entityId: docId,
-          type: 'document',
-        },
-        {
-          title: newTitle,
-        },
-      );
     };
 
     return (
@@ -203,7 +205,7 @@ const DocumentBody = memo(
           <div className="ai-note-editor">
             <div className="ai-note-editor-container">
               <DocumentEditorHeader docId={docId} />
-              <CollaborativeEditor docId={docId} />
+              <PureCollaborativeEditor docId={docId} />
             </div>
           </div>
         </Spin>
@@ -213,8 +215,8 @@ const DocumentBody = memo(
   (prevProps, nextProps) => prevProps.docId === nextProps.docId,
 );
 
-export const DocumentEditor = memo(
-  ({ docId, source }: { docId: string; source?: 'detail' | 'canvas' }) => {
+export const DocumentDetail = memo(
+  ({ docId }: { docId: string }) => {
     const { resetState } = useDocumentStoreShallow((state) => ({
       resetState: state.resetState,
     }));
@@ -226,18 +228,10 @@ export const DocumentEditor = memo(
     }, []);
 
     return (
-      <DocumentProvider docId={docId}>
-        <div className="flex flex-col ai-note-container">
-          {source === 'detail' ? (
-            <DocumentDetail docId={docId} />
-          ) : (
-            <>
-              <StatusBar docId={docId} />
-              <DocumentBody docId={docId} />
-            </>
-          )}
-        </div>
-      </DocumentProvider>
+      <div className="flex flex-col ai-note-container">
+        <StatusBar docId={docId} />
+        <DocumentBody docId={docId} />
+      </div>
     );
   },
   (prevProps, nextProps) => {

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { ResourceList } from '@refly-packages/ai-workspace-common/components/workspace/resource-list';
 import { DocumentList } from '@refly-packages/ai-workspace-common/components/workspace/document-list';
+import { SiderCollapse } from '@refly-packages/ai-workspace-common/components/canvas/top-toolbar/sider-collapse';
 import './index.scss';
 import { IconDocument } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { IconResource } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -50,8 +51,13 @@ export const ContentPanel = () => {
   };
 
   return (
-    <div className="py-4 px-8 h-full box-border overflow-hidden">
-      <Tabs type="card" activeKey={activeKey} items={tabs} onChange={handleTabChange} />
+    <div className="pb-4 px-8 h-full box-border overflow-hidden">
+      <div className="flex gap-2">
+        <SiderCollapse showDivider={false} size={18} />
+        <div className="flex-1 pt-3">
+          <Tabs type="card" activeKey={activeKey} items={tabs} onChange={handleTabChange} />
+        </div>
+      </div>
     </div>
   );
 };
