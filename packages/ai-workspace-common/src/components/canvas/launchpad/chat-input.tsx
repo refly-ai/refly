@@ -211,6 +211,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
               minRows: 1,
               maxRows: maxRows ?? 6,
             }}
+            data-cy="chat-input"
           />
         </AutoComplete>
       </div>

@@ -1,5 +1,6 @@
 import { SkillRunnableConfig } from '../base';
 import { ChatOpenAI, OpenAIChatInput } from '@langchain/openai';
+import { FakeListChatModel } from '@langchain/core/utils/testing';
 import { Document } from '@langchain/core/documents';
 import {
   CreateLabelClassRequest,
@@ -42,6 +43,7 @@ import {
   DeleteDocumentResponse,
   DeleteDocumentRequest,
 } from '@refly-packages/openapi-schema';
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 // TODO: unify with frontend
 export type ContentNodeType =
@@ -157,7 +159,14 @@ export class SkillEngine {
     this.config = config;
   }
 
-  chatModel(params?: Partial<OpenAIChatInput>): ChatOpenAI {
+  chatModel(params?: Partial<OpenAIChatInput>): BaseChatModel {
+    if (process.env.MOCK_LLM_RESPONSE) {
+      return new FakeListChatModel({
+        responses: ['This is a test'],
+        sleep: 100,
+      });
+    }
+
     return new ChatOpenAI({
       model: this.config?.configurable?.modelInfo?.name || this.options.defaultModel,
       apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,

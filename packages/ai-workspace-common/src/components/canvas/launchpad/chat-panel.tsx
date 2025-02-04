@@ -230,7 +230,7 @@ export const ChatPanel = () => {
   );
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" data-cy="launchpad-chat-panel">
       <div className="ai-copilot-chat-container">
         <div className="chat-input-container rounded-[7px] overflow-hidden">
           <SelectedSkillHeader

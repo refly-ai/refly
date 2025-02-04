@@ -70,6 +70,7 @@ const CanvasTitle = memo(
         <div
           className="ml-1 group flex items-center gap-2 text-sm font-bold text-gray-500 cursor-pointer hover:text-gray-700"
           onClick={handleEditClick}
+          data-cy="canvas-title-edit"
         >
           <Tooltip
             title={

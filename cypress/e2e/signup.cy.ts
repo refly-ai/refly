@@ -9,7 +9,7 @@ describe('Signup Flow', () => {
     cy.get('[data-cy="switch-to-signup-button"]').click();
 
     // Fill in the signup form
-    cy.get('[data-cy="email-input"]').type('test@example.com');
+    cy.get('[data-cy="email-input"]').type('signup-test@example.com');
     cy.get('[data-cy="password-input"]').type('testPassword123');
 
     // Submit the form

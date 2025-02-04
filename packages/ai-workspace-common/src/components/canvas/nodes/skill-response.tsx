@@ -54,7 +54,7 @@ const NodeHeader = memo(
   ({ query, skillName, skill }: { query: string; skillName: string; skill: any }) => {
     return (
       <>
-        <div className="flex-shrink-0 mb-3">
+        <div className="flex-shrink-0 mb-3" data-cy="skill-response-node-header">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-[#F79009] shadow-lg flex items-center justify-center flex-shrink-0">
               <IconResponse className="w-4 h-4 text-white" />
@@ -458,7 +458,7 @@ export const SkillResponseNode = memo(
     }, []);
 
     return (
-      <div className={classNames({ nowheel: isOperating })}>
+      <div className={classNames({ nowheel: isOperating })} data-cy="skill-response-node">
         <div
           ref={targetRef}
           className={classNames({

@@ -45,6 +45,14 @@ declare namespace Cypress {
      * cy.execSQL('SELECT * FROM users')
      */
     execSQL(query: string): Chainable<string>;
+    /**
+     * Login to the app
+     * @param email - Email to login with
+     * @param password - Password to login with
+     * @example
+     * cy.login('test@example.com', 'testPassword123')
+     */
+    login(email: string, password: string): Chainable<void>;
   }
 }
 
@@ -60,6 +68,14 @@ Cypress.Commands.add('execSQL', (query: string) => {
   cy.exec(command).then((result) => {
     cy.log(`SQL execution result: ${result.stdout}`);
   });
+});
+
+Cypress.Commands.add('login', (email: string, password: string) => {
+  cy.visit('/');
+  cy.get('[data-cy="try-for-free-button"]').click();
+  cy.get('[data-cy="email-input"]').type(email);
+  cy.get('[data-cy="password-input"]').type(password);
+  cy.get('[data-cy="continue-button"]').click();
 });
 
 // Intercept all requests to api.github.com

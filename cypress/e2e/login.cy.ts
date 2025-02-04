@@ -18,7 +18,7 @@ describe('Login Flow', () => {
 
   it('should successfully login with valid credentials', () => {
     // Fill in the login form
-    cy.get('[data-cy="email-input"]').type('test@example.com');
+    cy.get('[data-cy="email-input"]').type('alice@example.com');
     cy.get('[data-cy="password-input"]').type('testPassword123');
 
     // Submit the form
@@ -34,7 +34,7 @@ describe('Login Flow', () => {
 
   it('should show error with invalid password', () => {
     // Fill in the login form with wrong password
-    cy.get('[data-cy="email-input"]').type('test@example.com');
+    cy.get('[data-cy="email-input"]').type('alice@example.com');
     cy.get('[data-cy="password-input"]').type('wrongpassword');
 
     // Submit the form

@@ -55,7 +55,7 @@ export const LaunchPad = memo(
     }
 
     return (
-      <div className="ai-copilot-operation-container">
+      <div className="ai-copilot-operation-container" data-cy="launchpad">
         <div className="ai-copilot-operation-body">
           <SkillDisplay />
           <RecommendQuestionsPanel
