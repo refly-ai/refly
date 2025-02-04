@@ -7,6 +7,7 @@ import postcss from './postcss.config';
 import { vitePluginForArco } from '@refly/arco-vite-plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
+import { gtagPlugin } from './vite-gtag-plugin';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -17,6 +18,7 @@ export default defineConfig(({ mode }) => {
       react(),
       preload(),
       tsconfigPaths(),
+      gtagPlugin(),
       vitePluginForArco({
         theme: '@arco-themes/react-refly-ai',
         filePatterns: ['apps/web/src', 'packages/ai-workspace-common/src', 'apps/extension/src'],
