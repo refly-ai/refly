@@ -1,81 +1,57 @@
-import { useRef, useState, useEffect } from 'react';
-import { Radio } from '@arco-design/web-react';
-import { Affix } from 'antd';
+import { Tabs } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 import { ResourceList } from '@refly-packages/ai-workspace-common/components/workspace/resource-list';
 import { DocumentList } from '@refly-packages/ai-workspace-common/components/workspace/document-list';
 import './index.scss';
-import classNames from 'classnames';
+import { IconDocument } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconResource } from '@refly-packages/ai-workspace-common/components/common/icon';
+import {
+  useKnowledgeBaseStoreShallow,
+  type LibraryModalActiveKey,
+} from '@refly-packages/ai-workspace-common/stores/knowledge-base';
 
-const RadioGroup = Radio.Group;
-
-const Content = (props: { val: string }) => {
-  switch (props.val) {
-    case 'resource':
-      return <ResourceList />;
-    case 'document':
-      return <DocumentList />;
-    default:
-      return <ResourceList />;
-  }
-};
-
-const ContentHeader = (props: { setVal: (val: string) => void; hitTop: boolean; val: string }) => {
-  const navigate = useNavigate();
+export const ContentPanel = () => {
   const { t } = useTranslation();
-  const { setVal, hitTop } = props;
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabs = [
+    {
+      key: 'document',
+      label: t('common.document'),
+      icon: <IconDocument style={{ transform: 'translateY(2px)' }} />,
+      children: <DocumentList />,
+    },
+    {
+      key: 'resource',
+      label: t('common.resource'),
+      icon: <IconResource style={{ transform: 'translateY(2px)' }} />,
+      children: <ResourceList />,
+    },
+  ];
+
+  const { libraryModalActiveKey, updateLibraryModalActiveKey } = useKnowledgeBaseStoreShallow(
+    (state) => ({
+      libraryModalActiveKey: state.libraryModalActiveKey,
+      updateLibraryModalActiveKey: state.updateLibraryModalActiveKey,
+    }),
+  );
+
+  // Get tab from URL or use default
+  const tabFromUrl = searchParams?.get('tab');
+  const isValidTab = tabFromUrl === 'document' || tabFromUrl === 'resource';
+  const activeKey = isValidTab ? tabFromUrl : libraryModalActiveKey;
 
   const handleTabChange = (key: string) => {
-    setVal(key);
-    navigate(`?tab=${key}`);
+    const newKey = key as LibraryModalActiveKey;
+    updateLibraryModalActiveKey(newKey);
+    setSearchParams({ tab: newKey });
   };
 
   return (
-    <div
-      className={classNames(
-        'content-panel-header',
-        { 'content-panel-header-hit-top': hitTop },
-        'relative flex justify-between items-center py-3 h-16',
-      )}
-    >
-      <div className="flex items-center">
-        <RadioGroup
-          type="button"
-          size="large"
-          className="content-panel-radio-group"
-          defaultValue="resource"
-          value={props.val}
-          onChange={(val) => handleTabChange(val)}
-          style={{ borderRadius: 8 }}
-        >
-          <Radio value="canvas">{t('workspace.contentPanel.tabPanel.canvas')}</Radio>
-          <Radio value="resource">{t('workspace.contentPanel.tabPanel.resource')}</Radio>
-          <Radio value="document">{t('workspace.contentPanel.tabPanel.document')}</Radio>
-        </RadioGroup>
-      </div>
-    </div>
-  );
-};
-
-export const ContentPanel = () => {
-  const ref = useRef();
-  const [val, setVal] = useState('canvas');
-  const [hitTop, setHitTop] = useState(false);
-  const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    const tab = searchParams.get('tab') as string;
-    setVal(tab || 'canvas');
-  }, [searchParams]);
-
-  return (
-    <div className="content-panel-container" ref={ref}>
-      <Affix offsetTop={0} target={() => ref.current} onChange={setHitTop}>
-        <ContentHeader val={val} setVal={setVal} hitTop={hitTop} />
-      </Affix>
-      <Content val={val} />
+    <div className="py-4 px-8 h-full box-border overflow-hidden">
+      <Tabs type="card" activeKey={activeKey} items={tabs} onChange={handleTabChange} />
     </div>
   );
 };

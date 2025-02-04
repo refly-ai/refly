@@ -6,7 +6,7 @@ import {
   IconDelete,
   IconResourceFilled,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { LuPlus, LuExternalLink } from 'react-icons/lu';
+import { LuExternalLink } from 'react-icons/lu';
 
 import { useEffect, useState } from 'react';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -16,14 +16,12 @@ import { useTranslation } from 'react-i18next';
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { ScrollLoading } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
-import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { Resource } from '@refly/openapi-schema';
-import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
-import { useDeleteResource } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-resource';
+import { useDeleteResourceForLibrary } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-resource-for-library';
 import { getClientOrigin } from '@refly-packages/utils/url';
+import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 
 const ActionDropdown = ({
   resource,
@@ -31,37 +29,17 @@ const ActionDropdown = ({
 }: { resource: Resource; afterDelete: () => void }) => {
   const { t } = useTranslation();
   const [popupVisible, setPopupVisible] = useState(false);
-  const { refetchUsage } = useSubscriptionUsage();
-  const { addNode } = useAddNode();
-  const { setShowLibraryModal } = useSiderStoreShallow((state) => ({
-    setShowLibraryModal: state.setShowLibraryModal,
-  }));
-  const { deleteResource } = useDeleteResource();
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    deleteResource(resource.resourceId).then((success) => {
+  const { deleteResourceForLibrary } = useDeleteResourceForLibrary();
+
+  const handleDelete = () => {
+    deleteResourceForLibrary(resource.resourceId).then((success) => {
       if (success) {
         message.success(t('common.putSuccess'));
         setPopupVisible(false);
-        refetchUsage();
         afterDelete?.();
       }
     });
-  };
-
-  const handleAddToCanvas: MenuProps['onClick'] = ({ domEvent }) => {
-    domEvent.stopPropagation();
-    addNode({
-      type: 'resource',
-      data: {
-        title: resource.title,
-        entityId: resource.resourceId,
-        contentPreview: resource.contentPreview,
-      },
-    });
-    setShowLibraryModal(false);
-    setPopupVisible(false);
   };
 
   const handleOpenWebpage: MenuProps['onClick'] = ({ domEvent }) => {
@@ -76,16 +54,6 @@ const ActionDropdown = ({
     {
       label: (
         <div className="flex items-center">
-          <LuPlus size={16} className="mr-2" />
-          {t('workspace.addToCanvas')}
-        </div>
-      ),
-      key: 'addToCanvas',
-      onClick: handleAddToCanvas,
-    },
-    {
-      label: (
-        <div className="flex items-center">
           <LuExternalLink size={16} className="mr-2" />
           {t('workspace.openWebpage')}
         </div>
@@ -96,25 +64,27 @@ const ActionDropdown = ({
     },
     {
       label: (
-        <Popconfirm
-          placement="bottomLeft"
-          title={t('canvas.nodeActions.resourceDeleteConfirm', {
-            title: resource.title || t('common.untitled'),
-          })}
-          onConfirm={handleDelete}
-          onCancel={(e?: React.MouseEvent) => {
-            e?.stopPropagation();
-            setPopupVisible(false);
-          }}
-          okText={t('common.confirm')}
-          cancelText={t('common.cancel')}
-          overlayStyle={{ maxWidth: '300px' }}
-        >
-          <div className="flex items-center text-red-600">
-            <IconDelete size={16} className="mr-2" />
-            {t('workspace.deleteDropdownMenu.delete')}
-          </div>
-        </Popconfirm>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Popconfirm
+            placement="bottomLeft"
+            title={t('canvas.nodeActions.resourceDeleteConfirm', {
+              title: resource.title || t('common.untitled'),
+            })}
+            onConfirm={handleDelete}
+            onCancel={(e?: React.MouseEvent) => {
+              e?.stopPropagation();
+              setPopupVisible(false);
+            }}
+            okText={t('common.confirm')}
+            cancelText={t('common.cancel')}
+            overlayStyle={{ maxWidth: '300px' }}
+          >
+            <div className="flex items-center text-red-600">
+              <IconDelete size={16} className="mr-2" />
+              {t('workspace.deleteDropdownMenu.delete')}
+            </div>
+          </Popconfirm>
+        </div>
       ),
       key: 'delete',
     },
@@ -142,11 +112,10 @@ const ResourceCard = ({ item, onDelete }: { item: Resource; onDelete: () => void
   const { t, i18n } = useTranslation();
   const language = i18n.languages?.[0];
   const [showFallbackIcon, setShowFallbackIcon] = useState(false);
+  const navigate = useNavigate();
 
   const handleCardClick = () => {
-    if (item.data?.url) {
-      window.open(item.data.url, '_blank');
-    }
+    navigate(`/resource/${item.resourceId}`);
   };
 
   return (
@@ -196,9 +165,6 @@ const ResourceCard = ({ item, onDelete }: { item: Resource; onDelete: () => void
 
 export const ResourceList = () => {
   const { t } = useTranslation();
-  const { showLibraryModal } = useSiderStoreShallow((state) => ({
-    showLibraryModal: state.showLibraryModal,
-  }));
 
   const { dataList, loadMore, reload, hasMore, isRequesting, setDataList } = useFetchDataList({
     fetchData: async (queryPayload) => {
@@ -211,17 +177,15 @@ export const ResourceList = () => {
   });
 
   useEffect(() => {
-    if (showLibraryModal) {
-      reload();
-    }
-  }, [showLibraryModal]);
+    reload();
+  }, []);
 
   return (
     <Spin className="w-full h-full" spinning={isRequesting}>
-      <div className="w-full h-[calc(50vh-60px)] overflow-y-auto">
+      <div className="w-full h-[calc(100vh-80px)] overflow-y-auto">
         {isRequesting || dataList.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
               {dataList.map((item) => (
                 <ResourceCard
                   key={item.resourceId}

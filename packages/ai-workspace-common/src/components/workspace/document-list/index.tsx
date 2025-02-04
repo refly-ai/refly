@@ -1,6 +1,7 @@
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { Dropdown, Button, Popconfirm, message, Empty, Divider } from 'antd';
 import type { MenuProps, DropdownProps } from 'antd';
+import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 
 import {
   IconMoreHorizontal,
@@ -17,24 +18,17 @@ import { useTranslation } from 'react-i18next';
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { ScrollLoading } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
-import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
-import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-document';
+import { useDeleteDocumentForLibrary } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-document-for-library';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
-import { LuPlus } from 'react-icons/lu';
 
 const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () => void }) => {
   const { t } = useTranslation();
   const [popupVisible, setPopupVisible] = useState(false);
-  const { deleteDocument } = useDeleteDocument();
-  const { addNode } = useAddNode();
-  const { setShowLibraryModal } = useSiderStoreShallow((state) => ({
-    setShowLibraryModal: state.setShowLibraryModal,
-  }));
+  const { deleteDocumentForLibrary } = useDeleteDocumentForLibrary();
 
   const handleDelete = async () => {
-    const success = await deleteDocument(doc.docId);
+    const success = await deleteDocumentForLibrary(doc.docId);
     if (success) {
       message.success(t('common.putSuccess'));
       setPopupVisible(false);
@@ -42,47 +36,27 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
     }
   };
 
-  const handleAddToCanvas = () => {
-    addNode({
-      type: 'document',
-      data: {
-        title: doc.title,
-        entityId: doc.docId,
-        contentPreview: doc.contentPreview,
-      },
-    });
-    setShowLibraryModal(false);
-  };
-
   const items: MenuProps['items'] = [
     {
       label: (
-        <div className="flex items-center">
-          <LuPlus size={16} className="mr-2" />
-          {t('workspace.addToCanvas')}
+        <div onClick={(e) => e.stopPropagation()}>
+          <Popconfirm
+            placement="bottomLeft"
+            title={t('canvas.nodeActions.documentDeleteConfirm', {
+              title: doc.title || t('common.untitled'),
+            })}
+            onConfirm={handleDelete}
+            onCancel={() => setPopupVisible(false)}
+            okText={t('common.confirm')}
+            cancelText={t('common.cancel')}
+            overlayStyle={{ maxWidth: '300px' }}
+          >
+            <div className="flex items-center text-red-600">
+              <IconDelete size={16} className="mr-2" />
+              {t('workspace.deleteDropdownMenu.delete')}
+            </div>
+          </Popconfirm>
         </div>
-      ),
-      key: 'addToCanvas',
-      onClick: () => handleAddToCanvas(),
-    },
-    {
-      label: (
-        <Popconfirm
-          placement="bottomLeft"
-          title={t('canvas.nodeActions.documentDeleteConfirm', {
-            title: doc.title || t('common.untitled'),
-          })}
-          onConfirm={handleDelete}
-          onCancel={() => setPopupVisible(false)}
-          okText={t('common.confirm')}
-          cancelText={t('common.cancel')}
-          overlayStyle={{ maxWidth: '300px' }}
-        >
-          <div className="flex items-center text-red-600">
-            <IconDelete size={16} className="mr-2" />
-            {t('workspace.deleteDropdownMenu.delete')}
-          </div>
-        </Popconfirm>
       ),
       key: 'delete',
     },
@@ -109,9 +83,17 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
 const DocumentCard = ({ item, onDelete }: { item: Document; onDelete: () => void }) => {
   const { t, i18n } = useTranslation();
   const language = i18n.languages?.[0];
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate(`/document/${item.docId}`);
+  };
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden border border-solid cursor-pointer border-gray-200 hover:border-green-500 transition-colors duration-200">
+    <div
+      className="bg-white rounded-lg overflow-hidden border border-solid cursor-pointer border-gray-200 hover:border-green-500 transition-colors duration-200"
+      onClick={handleClick}
+    >
       <div className="h-36 px-4 py-3 overflow-hidden">
         <Markdown
           content={item.contentPreview || t('canvas.nodePreview.document.noContentPreview')}
@@ -141,9 +123,6 @@ const DocumentCard = ({ item, onDelete }: { item: Document; onDelete: () => void
 
 export const DocumentList = () => {
   const { t } = useTranslation();
-  const { showLibraryModal } = useSiderStoreShallow((state) => ({
-    showLibraryModal: state.showLibraryModal,
-  }));
 
   const { dataList, setDataList, loadMore, reload, hasMore, isRequesting } = useFetchDataList({
     fetchData: async (queryPayload) => {
@@ -156,17 +135,15 @@ export const DocumentList = () => {
   });
 
   useEffect(() => {
-    if (showLibraryModal) {
-      reload();
-    }
-  }, [showLibraryModal]);
+    reload();
+  }, []);
 
   return (
     <Spin className="w-full h-full" spinning={isRequesting}>
-      <div className="w-full h-[calc(50vh-60px)] overflow-y-auto">
+      <div className="w-full h-[calc(100vh-80px)] overflow-y-auto">
         {isRequesting || dataList.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
               {dataList.map((item) => (
                 <DocumentCard
                   key={item.docId}

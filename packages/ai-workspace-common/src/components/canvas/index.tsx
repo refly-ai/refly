@@ -18,14 +18,11 @@ import {
   useCanvasContext,
 } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useEdgeStyles } from './constants';
-import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import {
   useCanvasStore,
   useCanvasStoreShallow,
 } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { BigSearchModal } from '@refly-packages/ai-workspace-common/components/search/modal';
-import { CanvasListModal } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal';
-import { LibraryModal } from '@refly-packages/ai-workspace-common/components/workspace/library-modal';
 import { useCanvasNodesStore } from '@refly-packages/ai-workspace-common/stores/canvas-nodes';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { LayoutControl } from './layout-control';
@@ -96,14 +93,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       showMaxRatio: state.showMaxRatio,
     }),
   );
-
-  const { showCanvasListModal, showLibraryModal, setShowCanvasListModal, setShowLibraryModal } =
-    useSiderStoreShallow((state) => ({
-      showCanvasListModal: state.showCanvasListModal,
-      showLibraryModal: state.showLibraryModal,
-      setShowCanvasListModal: state.setShowCanvasListModal,
-      setShowLibraryModal: state.setShowLibraryModal,
-    }));
 
   const reactFlowInstance = useReactFlow();
 
@@ -573,8 +562,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           </div>
         )}
 
-        <CanvasListModal visible={showCanvasListModal} setVisible={setShowCanvasListModal} />
-        <LibraryModal visible={showLibraryModal} setVisible={setShowLibraryModal} />
         <BigSearchModal />
 
         <MenuPopper open={menuOpen} position={menuPosition} setOpen={setMenuOpen} />

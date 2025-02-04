@@ -20,6 +20,8 @@ import { SettingModal } from '@refly-packages/ai-workspace-common/components/set
 import { TourModal } from '@refly-packages/ai-workspace-common/components/tour-modal';
 import { SettingsGuideModal } from '@refly-packages/ai-workspace-common/components/settings-guide';
 import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
+import { CanvasListModal } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal';
+
 // hooks
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import {
@@ -111,20 +113,17 @@ const MenuItemContent = (props: {
   collapse?: boolean;
   position?: 'left' | 'right';
   hoverContent?: HoverContent;
+  setShowCanvasListModal: (visible: boolean) => void;
 }) => {
-  const { position = 'left', type, hoverContent } = props;
+  const navigate = useNavigate();
+  const { position = 'left', type, hoverContent, setShowCanvasListModal } = props;
   const { hoverCardEnabled } = useHoverCard();
-
-  const { setShowLibraryModal, setShowCanvasListModal } = useSiderStoreShallow((state) => ({
-    setShowLibraryModal: state.setShowLibraryModal,
-    setShowCanvasListModal: state.setShowCanvasListModal,
-  }));
 
   const handleNavClick = () => {
     if (type === 'Canvas') {
       setShowCanvasListModal(true);
     } else if (type === 'Library') {
-      setShowLibraryModal(true);
+      navigate('/library');
     }
   };
 
@@ -244,9 +243,12 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
     updateLibraryModalActiveKey: state.updateLibraryModalActiveKey,
   }));
 
-  const { setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
-    setSettingsModalActiveTab: state.setSettingsModalActiveTab,
-  }));
+  const { setSettingsModalActiveTab, showCanvasListModal, setShowCanvasListModal } =
+    useSiderStoreShallow((state) => ({
+      setSettingsModalActiveTab: state.setSettingsModalActiveTab,
+      showCanvasListModal: state.showCanvasListModal,
+      setShowCanvasListModal: state.setShowCanvasListModal,
+    }));
 
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
@@ -396,6 +398,7 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
                           icon={item.icon}
                           title={t(`loggedHomePage.siderMenu.${item.name}`)}
                           hoverContent={item.hoverContent}
+                          setShowCanvasListModal={setShowCanvasListModal}
                         />
                       }
                     >
@@ -513,6 +516,7 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
         <SettingsGuideModal />
         <TourModal />
         <StorageExceededModal />
+        <CanvasListModal visible={showCanvasListModal} setVisible={setShowCanvasListModal} />
       </div>
     </Sider>
   );

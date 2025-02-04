@@ -13,11 +13,14 @@ import {
 import { useHandleUrlParamsCallback } from '@refly-packages/ai-workspace-common/hooks/use-handle-url-params-callback';
 import { SuspenseLoading } from '@refly-packages/ai-workspace-common/components/common/loading';
 import { HomeRedirect } from '@refly-packages/ai-workspace-common/components/home-redirect';
+import DocumentDetail from '../pages/document/detail';
+import ResourceDetail from '../pages/resource/detail';
 
 // Lazy load components
 const Home = lazy(() => import('@/pages/home'));
 const Canvas = lazy(() => import('@/pages/canvas'));
 const Pricing = lazy(() => import('@/pages/pricing'));
+const Library = lazy(() => import('@/pages/library'));
 
 const prefetchRoutes = () => {
   // Prefetch common routes
@@ -88,6 +91,26 @@ export const AppRouter = (props: { layout?: any }) => {
             path="/canvas/:canvasId"
             element={<BetaProtectedRoute component={Canvas} hasBetaAccess={hasBetaAccess} />}
           />
+
+          <Route
+            path="/library"
+            element={<BetaProtectedRoute component={Library} hasBetaAccess={hasBetaAccess} />}
+          />
+
+          <Route
+            path="/document/:docId"
+            element={
+              <BetaProtectedRoute component={DocumentDetail} hasBetaAccess={hasBetaAccess} />
+            }
+          />
+
+          <Route
+            path="/resource/:resId"
+            element={
+              <BetaProtectedRoute component={ResourceDetail} hasBetaAccess={hasBetaAccess} />
+            }
+          />
+
           <Route
             path="/request-access"
             element={<RequestAccessRoute hasBetaAccess={hasBetaAccess} />}

@@ -1,44 +1,20 @@
-import { Button, Skeleton, Empty, Alert } from 'antd';
 import { useEffect, useState, memo, useCallback } from 'react';
+import { Button, Skeleton, Empty, Alert } from 'antd';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { IconLoading, IconRefresh } from '@arco-design/web-react/icon';
-import { IconQuote } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ResourceIcon } from '@refly-packages/ai-workspace-common/components/common/resourceIcon';
-import { genUniqueId } from '@refly-packages/utils/id';
-import { SelectionContext } from '@refly-packages/ai-workspace-common/modules/selection-menu/selection-context';
 import { useGetResourceDetail } from '@refly-packages/ai-workspace-common/queries';
 import { Resource } from '@refly/openapi-schema';
 
-import './index.scss';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import '../../resource-view/index.scss';
 
 interface ResourceViewProps {
   resourceId: string;
-  deckSize: number;
-  setDeckSize: (size: number) => void;
 }
-
-const _TopBar = memo(
-  ({ deckSize, setDeckSize }: { deckSize: number; setDeckSize: (size: number) => void }) => {
-    return (
-      <div className="w-[90%] pt-2 pb-2 mx-auto flex justify-end items-center">
-        <Button
-          type="text"
-          size="small"
-          style={{ color: deckSize ? 'rgb(var(--primary-6))' : '#000' }}
-          icon={<IconQuote />}
-          onClick={() => {
-            setDeckSize(deckSize ? 0 : 200);
-          }}
-        />
-      </div>
-    );
-  },
-);
 
 const ResourceMeta = memo(
   ({
@@ -133,39 +109,10 @@ const ResourceContent = memo(
     resourceDetail: Resource;
     resourceId: string;
   }) => {
-    const buildContextItem = useCallback(
-      (text: string) => {
-        return {
-          type: 'resourceSelection',
-          entityId: genUniqueId(),
-          title: text.slice(0, 50),
-          selection: {
-            content: text,
-            sourceTitle: resourceDetail.title,
-            sourceEntityId: resourceDetail.resourceId,
-            sourceEntityType: 'resource',
-          },
-        } as IContextItem;
-      },
-      [resourceDetail],
-    );
-
-    const getSourceNode = useCallback(() => {
-      return {
-        type: 'resource' as const,
-        entityId: resourceId,
-      };
-    }, [resourceId]);
-
     return (
       <div className={classNames(`knowledge-base-resource-content resource-content-${resourceId}`)}>
         <div className="knowledge-base-resource-content-title">{resourceDetail?.title}</div>
         <Markdown content={resourceDetail?.content || ''} className="text-base" />
-        <SelectionContext
-          containerClass={`resource-content-${resourceId}`}
-          getContextItem={buildContextItem}
-          getSourceNode={getSourceNode}
-        />
       </div>
     );
   },
@@ -177,7 +124,7 @@ const ResourceContent = memo(
   },
 );
 
-export const ResourceView = memo(
+export const ResourceDetail = memo(
   (props: ResourceViewProps) => {
     const { resourceId } = props;
     const { t } = useTranslation();
