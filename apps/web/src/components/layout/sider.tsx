@@ -497,6 +497,7 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
                 <MenuItem
                   key="Settings"
                   className="flex h-12 items-center justify-between"
+                  data-cy="settings-menu-item"
                   renderItemInTooltip={() => (
                     <MenuItemTooltipContent title={t('loggedHomePage.siderMenu.settings')} />
                   )}

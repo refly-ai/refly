@@ -35,3 +35,43 @@
 //     }
 //   }
 // }
+
+declare namespace Cypress {
+  interface Chainable {
+    /**
+     * Execute SQL query through Docker container
+     * @param query - SQL query to execute
+     * @example
+     * cy.execSQL('SELECT * FROM users')
+     */
+    execSQL(query: string): Chainable<string>;
+  }
+}
+
+Cypress.Commands.add('execSQL', (query: string) => {
+  // Write query to temp file first to avoid shell escaping issues
+  const tempFile = '/tmp/cypress-sql-query.sql';
+  cy.writeFile(tempFile, query);
+
+  const command = `docker exec -i refly_db psql -tA '${Cypress.env('databaseUrl')}' < ${tempFile}`;
+
+  cy.log(`Executing SQL command: ${command}`);
+
+  cy.exec(command).then((result) => {
+    cy.log(`SQL execution result: ${result.stdout}`);
+  });
+});
+
+// Intercept all requests to api.github.com
+beforeEach(() => {
+  cy.intercept('GET', 'https://api.github.com/**', {
+    statusCode: 200,
+    body: {
+      // Provide mock data that matches the GitHub API response structure
+      // you can customize this based on your needs
+      stargazers_count: 1000,
+      forks_count: 500,
+      subscribers_count: 100,
+    },
+  }).as('githubApi');
+});

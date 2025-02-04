@@ -32,6 +32,10 @@ class CustomThrottlerGuard extends ThrottlerGuard {
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
     const contextType = context.getType<'http' | 'stripe_webhook'>();
 
+    if (process.env.NODE_ENV !== 'production') {
+      return true;
+    }
+
     // Skip throttling for Stripe webhook endpoint
     if (contextType === 'stripe_webhook') {
       return true;

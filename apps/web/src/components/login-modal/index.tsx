@@ -49,7 +49,13 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
   };
 
   const handleEmailAuth = async () => {
-    const values = await form.validateFields();
+    let values: FormValues;
+    try {
+      values = await form.validateFields();
+    } catch (error) {
+      console.error('Error validating form fields', error);
+      return;
+    }
 
     authStore.setLoginProvider('email');
     authStore.setLoginInProgress(true);
