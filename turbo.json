@@ -6,6 +6,11 @@
       "persistent": true,
       "dependsOn": ["sync-db-schema"]
     },
+    "start": {
+      "cache": false,
+      "persistent": false,
+      "dependsOn": ["sync-db-schema"]
+    },
     "sync-db-schema": {
       "cache": false,
       "persistent": false
