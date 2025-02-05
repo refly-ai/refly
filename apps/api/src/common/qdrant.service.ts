@@ -6,6 +6,7 @@ import { Filter, PointStruct, ScrollRequest } from './qdrant.dto';
 @Injectable()
 export class QdrantService implements OnModuleInit {
   private readonly logger = new Logger(QdrantService.name);
+  private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout
 
   private collectionName: string;
   private client: QdrantClient;
@@ -36,10 +37,23 @@ export class QdrantService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.ensureCollectionExists();
+    const initPromise = this.initializeCollection();
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(`Qdrant initialization timed out after ${this.INIT_TIMEOUT}ms`);
+      }, this.INIT_TIMEOUT);
+    });
+
+    try {
+      await Promise.race([initPromise, timeoutPromise]);
+      this.logger.log('Qdrant collection initialized successfully');
+    } catch (error) {
+      this.logger.error(`Failed to initialize Qdrant collection: ${error}`);
+      throw error;
+    }
   }
 
-  async ensureCollectionExists() {
+  async initializeCollection() {
     const { exists } = await this.client.collectionExists(this.collectionName);
 
     if (!exists) {

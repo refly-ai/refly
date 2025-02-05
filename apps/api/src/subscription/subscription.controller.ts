@@ -37,7 +37,7 @@ export class SubscriptionController {
 
   @Get('/plans')
   async getPlans(): Promise<GetSubscriptionPlansResponse> {
-    const plans = this.subscriptionService.getSubscriptionPlans();
+    const plans = await this.subscriptionService.getSubscriptionPlans();
     return buildSuccessResponse(plans.map(subscriptionPlanPO2DTO));
   }
 
