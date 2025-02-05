@@ -51,7 +51,7 @@ jobs:
           parallel: true
           build: pnpm copy-env build
           start: pnpm start
-          wait-on: 'http://localhost:5700,http://localhost:5800,http://localhost:5801'
+          wait-on: 'http://localhost:5700,http://localhost:5800'
         env:
           VITE_API_URL: 'http://localhost:5800'
           VITE_COLLAB_URL: 'http://localhost:5801'
@@ -60,7 +60,8 @@ jobs:
           NODE_OPTIONS: '--max_old_space_size=8192'
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          CYPRESS_PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          CYPRESS_BASE_URL: 'http://localhost:5700'
+          CYPRESS_PROJECT_ID: ${{ secrets.CYPRESS_PROJECT_ID }}
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
           COMMIT_INFO_SHA: ${{ github.event.pull_request.head.sha }}
