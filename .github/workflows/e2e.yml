@@ -33,7 +33,7 @@ jobs:
           browser: chrome
           record: true
           parallel: true
-          build: pnpm copy-env && pnpm build
+          build: pnpm copy-env build
           start: pnpm start
           wait-on: 'http://localhost:5700,http://localhost:5800,http://localhost:5801'
         env:
