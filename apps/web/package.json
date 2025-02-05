@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "copy-env": "ncp .env.example .env",
     "dev": "vite",
     "start": "serve dist -p 5700",
     "build": "rimraf dist && vite build",

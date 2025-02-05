@@ -15,6 +15,10 @@
       "cache": false,
       "persistent": false
     },
+    "copy-env": {
+      "cache": false,
+      "persistent": false
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],

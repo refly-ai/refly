@@ -12,6 +12,7 @@
     "build:api": "turbo run build --filter=@refly/api",
     "build:web": "turbo run build --filter=@refly/web",
     "build:extension": "turbo run build --filter=@refly/extension",
+    "copy-env": "turbo run copy-env",
     "codegen": "turbo run codegen",
     "clean": "turbo run clean",
     "lint": "biome lint .",
