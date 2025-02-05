@@ -8,8 +8,7 @@
     },
     "start": {
       "cache": false,
-      "persistent": false,
-      "dependsOn": ["sync-db-schema"]
+      "persistent": true
     },
     "sync-db-schema": {
       "cache": false,
