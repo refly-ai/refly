@@ -3,6 +3,9 @@ describe('Canvas Flow', () => {
     cy.fixture('users-setup.sql').then((sql) => {
       cy.execSQL(sql);
     });
+    cy.fixture('models-setup.sql').then((sql) => {
+      cy.execSQL(sql);
+    });
   });
 
   after(() => {

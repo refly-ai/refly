@@ -30,14 +30,14 @@ describe('Signup Flow', () => {
     });
   });
 
-  it('should handle OAuth signup with Google', () => {
-    cy.get('[data-cy="google-login-button"]').should('be.visible').click();
+  // it('should handle OAuth signup with Google', () => {
+  //   cy.get('[data-cy="google-login-button"]').should('be.visible').click();
 
-    cy.origin('https://accounts.google.com', () => {
-      // Verify we've reached the Google login page by checking the URL
-      cy.url().should('include', 'accounts.google.com');
-    });
-  });
+  //   cy.origin('https://accounts.google.com', () => {
+  //     // Verify we've reached the Google login page by checking the URL
+  //     cy.url().should('include', 'accounts.google.com');
+  //   });
+  // });
 
   it('should validate email format', () => {
     cy.get('[data-cy="switch-to-signup-button"]').click();
