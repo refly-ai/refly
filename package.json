@@ -15,6 +15,7 @@
     "copy-env": "turbo run copy-env",
     "codegen": "turbo run codegen",
     "clean": "turbo run clean",
+    "cy:open": "cypress open",
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",
     "format": "biome format .",
