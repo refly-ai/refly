@@ -214,6 +214,7 @@ function HeroHome() {
                 size="large"
                 type="primary"
                 className="cursor-pointer"
+                data-cy="try-for-free-button"
               >
                 {t('landingPage.tryForFree')}
               </Button>

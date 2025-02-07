@@ -102,6 +102,7 @@ interface SearchResponse<T> {
 @Injectable()
 export class ElasticsearchService implements OnModuleInit {
   private readonly logger = new Logger(ElasticsearchService.name);
+  private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout
 
   private client: Client;
 
@@ -116,6 +117,23 @@ export class ElasticsearchService implements OnModuleInit {
   }
 
   async onModuleInit() {
+    const initPromise = this.initializeIndices();
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(`Elasticsearch initialization timed out after ${this.INIT_TIMEOUT}ms`);
+      }, this.INIT_TIMEOUT);
+    });
+
+    try {
+      await Promise.race([initPromise, timeoutPromise]);
+      this.logger.log('Elasticsearch indices initialized successfully');
+    } catch (error) {
+      this.logger.error(`Failed to initialize Elasticsearch indices: ${error}`);
+      throw error;
+    }
+  }
+
+  private async initializeIndices() {
     for (const config of Object.values(indexConfig)) {
       await this.ensureIndexExists(config);
     }

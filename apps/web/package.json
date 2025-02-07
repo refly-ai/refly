@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "copy-env": "ncp .env.example .env",
     "dev": "vite",
+    "start": "serve dist -p 5700",
     "build": "rimraf dist && vite build",
     "preview": "vite preview",
     "analyze": "source-map-explorer 'dist/assets/*.js'"
@@ -89,6 +91,7 @@
     "less": "^4.2.0",
     "postcss": "^8.4.21",
     "sass": "1.71.1",
+    "serve": "^14.2.4",
     "source-map-explorer": "~2.5.3",
     "tailwindcss": "^3.2.6",
     "vite": "^5.1.4",

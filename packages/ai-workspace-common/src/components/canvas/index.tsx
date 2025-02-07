@@ -538,6 +538,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
                     type="text"
                     className="ml-0.5 text-[20px] text-[#00968F] py-[4px] px-[8px]"
                     onClick={() => createSingleDocumentInCanvas()}
+                    data-cy="canvas-create-document-button"
                   >
                     {t('canvas.toolbar.createDocument')}
                   </Button>

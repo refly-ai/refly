@@ -324,12 +324,7 @@ export const CanvasToolbar = memo<ToolbarProps>(({ onToolSelect }) => {
   return (
     <div
       className="absolute left-[12px] top-1/2 -translate-y-1/2 bg-white border border-solid border-gray-100 shadow-sm rounded-lg p-2 flex flex-col gap-2 z-10"
-      style={
-        {
-          // border: '1px solid rgba(16, 24, 40, 0.0784)',
-          // boxShadow: '0px 4px 6px 0px rgba(16, 24, 40, 0.03)',
-        }
-      }
+      data-cy="canvas-toolbar"
     >
       {tools.map((tool) => {
         if (tool.type === 'divider') {

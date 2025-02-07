@@ -19,6 +19,7 @@ export class MinioService implements OnModuleInit {
   private readonly logger = new Logger(MinioService.name);
   private _client: MinioClient;
   private proxiedClient: ProxiedMinioClient;
+  private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout
 
   constructor(@Inject('MINIO_CONFIG') private config: MinioConfig) {
     this._client = new MinioClient({
@@ -47,12 +48,34 @@ export class MinioService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    const exists = await this._client.bucketExists(this.config.bucket);
-    if (exists) {
-      this.logger.log(`Bucket ${this.config.bucket} exists`);
-    } else {
+    const initPromise = this.initializeBuckets();
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(`Minio initialization timed out after ${this.INIT_TIMEOUT}ms`);
+      }, this.INIT_TIMEOUT);
+    });
+
+    try {
+      await Promise.race([initPromise, timeoutPromise]);
+      this.logger.log('Minio buckets initialized successfully');
+    } catch (error) {
+      this.logger.error(`Failed to initialize Minio buckets: ${error}`);
+      throw error;
+    }
+  }
+
+  async initializeBuckets() {
+    try {
       await this._client.makeBucket(this.config.bucket);
-      this.logger.log(`Bucket ${this.config.bucket} created`);
+      this.logger.log(`Bucket ${this.config.bucket} created successfully`);
+    } catch (error: any) {
+      // If bucket already exists in any form, just log and continue
+      if (error?.code === 'BucketAlreadyExists' || error?.code === 'BucketAlreadyOwnedByYou') {
+        this.logger.log(`Bucket ${this.config.bucket} already exists`);
+        return;
+      }
+      this.logger.error(`Failed to create bucket: ${error?.message}`);
+      throw error;
     }
   }
 

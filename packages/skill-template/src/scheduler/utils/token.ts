@@ -7,7 +7,6 @@ import {
   SkillContextResourceItem,
   Source,
 } from '@refly-packages/openapi-schema';
-import { LLMType } from '@refly-packages/utils';
 
 // const enc_p50k_base = get_encoding('p50k_base');
 const enc_cl100k_base = get_encoding('cl100k_base');
@@ -56,5 +55,3 @@ export const checkHasContext = (context: IContext) => {
 export const countMessagesTokens = (messages: BaseMessage[] = []) => {
   return messages.reduce((sum, message) => sum + countToken(message.content as string), 0);
 };
-
-export { LLMType };

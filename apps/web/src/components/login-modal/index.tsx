@@ -49,7 +49,13 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
   };
 
   const handleEmailAuth = async () => {
-    const values = await form.validateFields();
+    let values: FormValues;
+    try {
+      values = await form.validateFields();
+    } catch (error) {
+      console.error('Error validating form fields', error);
+      return;
+    }
 
     authStore.setLoginProvider('email');
     authStore.setLoginInProgress(true);
@@ -135,6 +141,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
           <Button
             onClick={() => handleLogin('github')}
             className="mt-2 h-8 w-40"
+            data-cy="github-login-button"
             loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
             disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
           >
@@ -146,6 +153,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
           <Button
             onClick={() => handleLogin('google')}
             className="mt-2 h-8 w-40"
+            data-cy="google-login-button"
             loading={authStore.loginInProgress && authStore.loginProvider === 'google'}
             disabled={authStore.loginInProgress && authStore.loginProvider !== 'google'}
           >
@@ -181,6 +189,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
               type="email"
               placeholder={t('landingPage.loginModal.emailPlaceholder')}
               className="h-8"
+              data-cy="email-input"
             />
           </Form.Item>
 
@@ -216,6 +225,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
             <Input.Password
               placeholder={t('landingPage.loginModal.passwordPlaceholder')}
               className="h-8"
+              data-cy="password-input"
             />
           </Form.Item>
 
@@ -225,6 +235,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
               onClick={handleEmailAuth}
               loading={authStore.loginInProgress && authStore.loginProvider === 'email'}
               className="h-10 w-full text-base"
+              data-cy="continue-button"
             >
               {t('landingPage.loginModal.continue')}
             </Button>
@@ -238,6 +249,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
               <Button
                 type="link"
                 className="p-0 text-green-600"
+                data-cy="switch-to-signin-button"
                 onClick={() => handleModeSwitch(false)}
               >
                 {t('landingPage.loginModal.signin')}
@@ -249,6 +261,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
               <Button
                 type="link"
                 className="p-0 text-green-600"
+                data-cy="switch-to-signup-button"
                 onClick={() => handleModeSwitch(true)}
               >
                 {t('landingPage.loginModal.signup')}

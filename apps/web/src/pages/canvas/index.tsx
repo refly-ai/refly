@@ -58,6 +58,7 @@ const CanvasPage = () => {
           onClick={debouncedCreateCanvas}
           loading={isCreating}
           icon={<IconPlus />}
+          data-cy="empty-canvas-create-button"
         >
           {t('loggedHomePage.siderMenu.newCanvas')}
         </Button>

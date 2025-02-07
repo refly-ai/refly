@@ -4,9 +4,19 @@
     "dev": {
       "cache": false,
       "persistent": true,
+      "env": ["*"],
       "dependsOn": ["sync-db-schema"]
     },
+    "start": {
+      "cache": false,
+      "persistent": true,
+      "env": ["*"]
+    },
     "sync-db-schema": {
+      "cache": false,
+      "persistent": false
+    },
+    "copy-env": {
       "cache": false,
       "persistent": false
     },
