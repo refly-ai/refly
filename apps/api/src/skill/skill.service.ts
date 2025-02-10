@@ -225,6 +225,10 @@ export class SkillService {
         await this.knowledge.deleteReferences(user, req);
         return buildSuccessResponse({});
       },
+      extract: async (user, req) => {
+        const result = await this.rag.extract(user, req);
+        return result;
+      },
       inMemorySearchWithIndexing: async (user, options) => {
         const result = await this.rag.inMemorySearchWithIndexing(user, options);
         return buildSuccessResponse(result);

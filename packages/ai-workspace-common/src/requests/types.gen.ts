@@ -1606,6 +1606,87 @@ export type AddReferencesResponse = BaseResponse & {
   data?: Array<Reference>;
 };
 
+export type ExtractRequest = {
+  /**
+   * URL to extract content from
+   */
+  url: string;
+  /**
+   * Query to focus on when extracting content
+   */
+  query?: string;
+  /**
+   * Content type
+   */
+  type?: string;
+  /**
+   * Extraction options
+   */
+  options?: {
+    /**
+     * Topic to focus on when extracting content
+     */
+    topic?: string;
+    /**
+     * Maximum length of extracted content
+     */
+    maxLength?: number;
+  };
+};
+
+export type ExtractResponse = BaseResponse & {
+  /**
+   * Extracted content data
+   */
+  data?: Array<{
+    /**
+     * Content type
+     */
+    type?: string;
+    /**
+     * Source URL
+     */
+    url: string;
+    /**
+     * Extracted content
+     */
+    content: string;
+    /**
+     * Sequence number
+     */
+    seq: number;
+    /**
+     * Content title
+     */
+    title: string;
+    /**
+     * Node type
+     */
+    nodeType: string;
+    /**
+     * Additional metadata
+     */
+    metadata?: {
+      /**
+       * Content title
+       */
+      title?: string;
+      /**
+       * Content date
+       */
+      date?: string;
+      /**
+       * Content source
+       */
+      source?: string;
+      /**
+       * Error message if extraction failed
+       */
+      error?: string;
+    };
+  }>;
+};
+
 export type DeleteReferencesRequest = {
   /**
    * Reference ID list

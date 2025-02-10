@@ -50,19 +50,6 @@ export function tidyMarkdown(markdown: string): string {
   return normalizedMarkdown.trim();
 }
 
-/**
- * Clean markdown for consumption by LLM, by removing images and links.
- */
-export function cleanMarkdownForIngest(markdown: string): string {
-  // Remove images
-  let plainText = markdown.replace(/!\[.*?\]\(.*?\)/g, '');
-
-  // Convert links to plain text
-  plainText = plainText.replace(/\[(.+?)\]\(.*?\)/g, '$1');
-
-  return plainText;
-}
-
 const getTurndown = (mode: FormatMode) => {
   const turnDownService = new TurndownService({
     headingStyle: 'atx',

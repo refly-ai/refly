@@ -7,10 +7,15 @@ import { Embeddings } from '@langchain/core/embeddings';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { FireworksEmbeddings } from '@langchain/community/embeddings/fireworks';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
-import { cleanMarkdownForIngest } from '@refly-packages/utils';
+import { cleanMarkdownForIngest, convertHTMLToMarkdown, tidyMarkdown } from '@refly-packages/utils';
 
-import { SearchResult, User } from '@refly-packages/openapi-schema';
-import { HybridSearchParam, ContentPayload, ReaderResult, NodeMeta } from './rag.dto';
+import {
+  SearchResult,
+  User,
+  ExtractRequest,
+  type ExtractResponse,
+} from '@refly-packages/openapi-schema';
+import { HybridSearchParam, ContentPayload, NodeMeta, ReaderResult } from './rag.dto';
 import { QdrantService } from '@/common/qdrant.service';
 import { Condition, PointStruct } from '@/common/qdrant.dto';
 import { genResourceUuid } from '@/utils';
@@ -322,6 +327,82 @@ export class RAGService {
         { key: 'docId', match: { value: docId } },
       ],
     });
+  }
+
+  async extract(user: User, param: ExtractRequest): Promise<ExtractResponse> {
+    const { url, type = 'extract', options } = param;
+    const { topic, maxLength } = options || {};
+
+    try {
+      // Fetch content from remote reader
+      const readerResult = await this.crawlFromRemoteReader(url);
+
+      // Convert HTML to markdown using the utility functions
+      const markdown = convertHTMLToMarkdown('render', readerResult.data.content);
+
+      // Clean and tidy the markdown
+      const cleanedMarkdown = tidyMarkdown(markdown);
+
+      // If topic is provided, try to extract relevant content
+      let finalContent = cleanedMarkdown;
+      if (topic) {
+        // Use vector search to find relevant sections
+        const docs = await this.inMemorySearchWithIndexing(user, {
+          content: cleanedMarkdown,
+          query: topic,
+          k: 3,
+          needChunk: true,
+        });
+
+        // Combine relevant sections
+        finalContent = docs.map((doc) => doc.pageContent).join('\n\n');
+      }
+
+      // Truncate content if maxLength is specified
+      if (maxLength && finalContent.length > maxLength) {
+        finalContent = `${finalContent.slice(0, maxLength)}...`;
+      }
+
+      const source = new URL(url).hostname;
+      return {
+        success: true,
+        data: [
+          {
+            type,
+            url,
+            content: finalContent,
+            seq: 0,
+            title: readerResult.data.title || source,
+            nodeType: 'document',
+            metadata: {
+              title: readerResult.data.title,
+              date: readerResult.data.publishedTime,
+              source,
+            },
+          },
+        ],
+      };
+    } catch (error) {
+      this.logger.error(`Failed to extract content from ${url}: ${error}`);
+      const source = new URL(url).hostname;
+      return {
+        success: true,
+        data: [
+          {
+            type,
+            url,
+            content: '',
+            seq: 0,
+            title: source,
+            nodeType: 'document',
+            metadata: {
+              error: error.message,
+              source,
+            },
+          },
+        ],
+      };
+    }
   }
 
   async retrieve(user: User, param: HybridSearchParam): Promise<ContentPayload[]> {

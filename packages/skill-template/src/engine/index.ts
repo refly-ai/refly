@@ -41,6 +41,8 @@ import {
   DeleteCanvasRequest,
   DeleteDocumentResponse,
   DeleteDocumentRequest,
+  ExtractRequest,
+  ExtractResponse,
 } from '@refly-packages/openapi-schema';
 
 // TODO: unify with frontend
@@ -97,6 +99,7 @@ export interface ReflyService {
     results: SearchResult[],
     options?: { topN?: number; relevanceThreshold?: number },
   ) => Promise<RerankResponse>;
+  extract: (user: User, req: ExtractRequest) => Promise<ExtractResponse>;
   addReferences: (user: User, req: AddReferencesRequest) => Promise<AddReferencesResponse>;
   deleteReferences: (user: User, req: DeleteReferencesRequest) => Promise<DeleteReferencesResponse>;
   inMemorySearchWithIndexing: (

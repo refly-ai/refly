@@ -2218,6 +2218,108 @@ export const AddReferencesResponseSchema = {
   ],
 } as const;
 
+export const ExtractRequestSchema = {
+  type: 'object',
+  required: ['url'],
+  properties: {
+    url: {
+      type: 'string',
+      description: 'URL to extract content from',
+    },
+    query: {
+      type: 'string',
+      description: 'Query to focus on when extracting content',
+    },
+    type: {
+      type: 'string',
+      description: 'Content type',
+    },
+    options: {
+      type: 'object',
+      description: 'Extraction options',
+      properties: {
+        topic: {
+          type: 'string',
+          description: 'Topic to focus on when extracting content',
+        },
+        maxLength: {
+          type: 'number',
+          description: 'Maximum length of extracted content',
+        },
+      },
+    },
+  },
+} as const;
+
+export const ExtractResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Extracted content data',
+          items: {
+            type: 'object',
+            required: ['url', 'content', 'seq', 'title', 'nodeType'],
+            properties: {
+              type: {
+                type: 'string',
+                description: 'Content type',
+              },
+              url: {
+                type: 'string',
+                description: 'Source URL',
+              },
+              content: {
+                type: 'string',
+                description: 'Extracted content',
+              },
+              seq: {
+                type: 'number',
+                description: 'Sequence number',
+              },
+              title: {
+                type: 'string',
+                description: 'Content title',
+              },
+              nodeType: {
+                type: 'string',
+                description: 'Node type',
+              },
+              metadata: {
+                type: 'object',
+                description: 'Additional metadata',
+                properties: {
+                  title: {
+                    type: 'string',
+                    description: 'Content title',
+                  },
+                  date: {
+                    type: 'string',
+                    description: 'Content date',
+                  },
+                  source: {
+                    type: 'string',
+                    description: 'Content source',
+                  },
+                  error: {
+                    type: 'string',
+                    description: 'Error message if extraction failed',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const DeleteReferencesRequestSchema = {
   type: 'object',
   required: ['referenceIds'],

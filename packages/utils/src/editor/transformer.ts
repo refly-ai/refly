@@ -37,11 +37,6 @@ export const markdown2StateUpdate = (markdown: string) => {
   return ydoc2StateUpdate(ydoc);
 };
 
-export type FormatMode =
-  | 'render' // For markdown rendering
-  | 'ingest' // For consumption by LLMs
-  | 'vanilla'; // Without any processing;
-
 /**
  * Clean markdown for consumption by LLM, by removing images and links.
  */

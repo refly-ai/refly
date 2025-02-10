@@ -384,9 +384,9 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
   }
 
   private async search(query: string, config: SkillRunnableConfig) {
-    const searchResults = await this.engine.service.search(config.configurable.user, {
-      query,
-      limit: 5,
+    const searchResults = await this.engine.service.webSearch(config.configurable.user, {
+      q: query,
+      limit: 10,
     });
 
     if (!searchResults?.data) {
@@ -433,8 +433,9 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
         );
 
         // Use the service's content extraction
-        const response = await this.engine.service.processWebContent(config.configurable.user, {
+        const response = await this.engine.service.extract(config.configurable.user, {
           url,
+          query: topic,
           type: 'extract',
           options: {
             topic,
@@ -442,16 +443,15 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
           },
         });
 
-        const content = response?.data?.content;
-
-        if (content) {
+        const extractedContent = response?.data?.[0]?.content;
+        if (extractedContent) {
           const model = this.engine.chatModel({ temperature: 0.1 });
           const structuredContent = await extractStructuredData(
             model,
             extractResultSchema,
             `Structure the following extracted content with key points and metadata:
             URL: ${url}
-            Content: ${content}
+            Content: ${extractedContent}
             Topic: ${topic}
             
             Extract key information about the topic, focusing on facts, data, and expert opinions.`,
