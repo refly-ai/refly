@@ -5,3 +5,4 @@ export * from './edit-doc';
 export * from './web-search';
 export * from './library-search';
 export * from './recommend-questions';
+export * from './deep-research';

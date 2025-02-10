@@ -21,7 +21,7 @@ import { processQuery } from '../scheduler/utils/queryProcessor';
 // prompts
 import * as generateDocument from '../scheduler/module/generateDocument';
 import { extractStructuredData } from '../scheduler/utils/extractor';
-import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/dist/messages';
+import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 import { truncateTextWithToken } from '../scheduler/utils/truncator';
 import { checkModelContextLenSupport } from '../scheduler/utils/model';
 import * as deepResearchPrompts from '../scheduler/module/deep-research/prompt';

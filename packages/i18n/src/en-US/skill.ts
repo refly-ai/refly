@@ -53,6 +53,28 @@ const translations = {
       },
     },
   },
+  deepResearch: {
+    name: 'Deep Research',
+    description: 'Perform comprehensive research on complex topics',
+    placeholder: 'Enter your research topic or question...',
+    steps: {
+      analyzeContext: {
+        name: 'Research Planning',
+      },
+      webSearch: {
+        name: 'Web Search',
+      },
+      extract: {
+        name: 'Content Extraction',
+      },
+      analyze: {
+        name: 'Analysis & Synthesis',
+      },
+      synthesis: {
+        name: 'Final Report Generation',
+      },
+    },
+  },
   librarySearch: {
     name: 'Library Search',
     description: 'Search the library and get answers',

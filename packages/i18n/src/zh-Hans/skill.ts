@@ -53,6 +53,28 @@ const translations = {
       },
     },
   },
+  deepResearch: {
+    name: '深度研究',
+    description: '对复杂主题进行全面深入的研究',
+    placeholder: '输入您的研究主题或问题...',
+    steps: {
+      analyzeContext: {
+        name: '研究规划',
+      },
+      webSearch: {
+        name: '网络搜索',
+      },
+      extract: {
+        name: '内容提取',
+      },
+      analyze: {
+        name: '分析与综合',
+      },
+      synthesis: {
+        name: '最终报告生成',
+      },
+    },
+  },
   librarySearch: {
     name: '知识库搜索',
     description: '搜索知识库并获取答案',

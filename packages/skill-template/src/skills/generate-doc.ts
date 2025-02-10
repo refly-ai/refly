@@ -23,7 +23,7 @@ import { processQuery } from '../scheduler/utils/queryProcessor';
 // prompts
 import * as generateDocument from '../scheduler/module/generateDocument';
 import { extractStructuredData } from '../scheduler/utils/extractor';
-import { BaseMessage, HumanMessage } from '@langchain/core/dist/messages';
+import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { truncateTextWithToken } from '../scheduler/utils/truncator';
 import { checkModelContextLenSupport } from '../scheduler/utils/model';
 

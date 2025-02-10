@@ -25,6 +25,7 @@ import {
   WebSearch,
   LibrarySearch,
   RecommendQuestions,
+  DeepResearch,
 } from './skills';
 
 export const createSkillTemplateInventory = (engine: SkillEngine): BaseSkill[] => {
@@ -50,6 +51,7 @@ export const createSkillTemplateInventory = (engine: SkillEngine): BaseSkill[] =
 
 export const createSkillInventory = (engine: SkillEngine): BaseSkill[] => {
   return [
+    new DeepResearch(engine),
     new WebSearch(engine),
     new LibrarySearch(engine),
     new GenerateDoc(engine),

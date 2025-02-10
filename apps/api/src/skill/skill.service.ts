@@ -7,7 +7,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { Prisma, SkillTrigger as SkillTriggerModel } from '@prisma/client';
 import { Response } from 'express';
-import { AIMessageChunk, BaseMessage } from '@langchain/core/dist/messages';
+import { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
 import {
   CreateSkillInstanceRequest,
   CreateSkillTriggerRequest,
