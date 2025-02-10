@@ -25,50 +25,13 @@ import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/dist/messa
 import { truncateTextWithToken } from '../scheduler/utils/truncator';
 import { checkModelContextLenSupport } from '../scheduler/utils/model';
 import * as deepResearchPrompts from '../scheduler/module/deep-research/prompt';
-
-// Add title schema with reason
-const titleSchema = z.object({
-  title: z.string().describe('The document title based on user query and context'),
-  description: z.string().optional().describe('A brief description of the document content'),
-  reason: z.string().describe('The reasoning process for generating this title'),
-});
-
-// Define research step schemas with detailed descriptions
-const searchResultSchema = z.object({
-  title: z.string().describe('The title of the search result'),
-  url: z.string().describe('The URL of the search result'),
-  description: z.string().describe('A brief description of the search result content'),
-  relevance: z.number().min(0).max(1).describe('Relevance score between 0 and 1'),
-  confidence: z.number().min(0).max(1).describe('Confidence score of the result between 0 and 1'),
-});
-
-const extractResultSchema = z.object({
-  url: z.string().describe('The URL of the extracted content'),
-  content: z.string().describe('The extracted content from the URL'),
-  keyPoints: z.array(z.string()).describe('Key points extracted from the content'),
-  metadata: z
-    .object({
-      author: z.string().optional().describe('Author of the content if available'),
-      date: z.string().optional().describe('Publication date if available'),
-      source: z.string().describe('Source domain or platform'),
-    })
-    .describe('Additional metadata about the content'),
-});
-
-const analysisSchema = z.object({
-  summary: z.string().describe('A comprehensive summary of the findings'),
-  gaps: z.array(z.string()).describe('Identified gaps in the current research'),
-  nextSteps: z.array(z.string()).describe('Recommended next steps for research'),
-  shouldContinue: z.boolean().describe('Whether further research is needed'),
-  nextSearchTopic: z.string().optional().describe('The next topic to search if continuing'),
-  confidence: z
-    .object({
-      findings: z.number().min(0).max(1).describe('Confidence in the current findings'),
-      gaps: z.number().min(0).max(1).describe('Confidence in identified gaps'),
-      recommendations: z.number().min(0).max(1).describe('Confidence in next step recommendations'),
-    })
-    .describe('Confidence scores for different aspects of the analysis'),
-});
+import {
+  titleSchema,
+  extractResultSchema,
+  searchResultSchema,
+  analysisSchema,
+  researchPlanSchema,
+} from '../scheduler/module/deep-research/schema';
 
 export class DeepResearch extends BaseSkill {
   name = 'deepResearch';
@@ -610,58 +573,56 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
       config,
     );
 
-    // Analyze query and get initial plan
-    const planningResult = await this.engine.chatModel({ temperature: 0.1 }).invoke([
-      {
-        role: 'system',
-        content: deepResearchPrompts.deepResearchSystemPrompt,
-      },
-      {
-        role: 'user',
-        content: deepResearchPrompts.deepResearchPrompt(query),
-      },
-    ]);
+    const model = this.engine.chatModel({ temperature: 0.1 });
 
-    // Extract structured plan from discussion
-    const researchPlan = await this.engine.chatModel({ temperature: 0.1 }).invoke([
-      {
-        role: 'system',
-        content: 'Extract key research aspects and initial topics from the planning discussion.',
-      },
-      {
-        role: 'user',
-        content: planningResult.content,
-      },
-    ]);
+    try {
+      // Extract structured research plan
+      const researchPlan = await extractStructuredData(
+        model,
+        researchPlanSchema,
+        `${deepResearchPrompts.deepResearchSystemPrompt}
 
-    await this.addActivity(
-      {
-        type: 'thought',
-        status: 'complete',
-        message: 'Research plan created',
-        depth: 0,
-      },
-      { completedSteps: 1, totalExpectedSteps: 1 },
-      config,
-    );
+Research Topic/Question: ${query}
 
-    // Update research plan parsing
-    const topics = Array.isArray(researchPlan.content)
-      ? researchPlan.content
-          .map((item) => {
-            if (typeof item === 'string') return item;
-            if (typeof item === 'object' && 'text' in item) return item.text;
-            return null;
-          })
-          .filter(Boolean)
-      : typeof researchPlan.content === 'string'
-        ? researchPlan.content.split('\n').filter(Boolean)
-        : [];
+Based on this research topic, create a detailed research plan that includes:
+1. Main topic clarification and scope
+2. Key sub-topics to investigate
+3. Research approach and methodology
+4. Potential sources to prioritize
 
-    return {
-      initialTopic: query,
-      plannedTopics: topics,
-    };
+Please analyze the query thoroughly and provide a structured research plan.`,
+        config,
+        3,
+        config?.configurable?.modelInfo,
+      );
+
+      await this.addActivity(
+        {
+          type: 'thought',
+          status: 'complete',
+          message: 'Research plan created',
+          depth: 0,
+        },
+        { completedSteps: 1, totalExpectedSteps: 1 },
+        config,
+      );
+
+      // Log the research plan for debugging
+      this.engine.logger.log(`Research Plan: ${safeStringifyJSON(researchPlan)}`);
+
+      // Transform the structured plan into the expected return format
+      return {
+        initialTopic: researchPlan.mainTopic,
+        plannedTopics: researchPlan.subTopics.map((topic) => topic.topic),
+      };
+    } catch (error) {
+      this.engine.logger.error(`Failed to create research plan: ${error}`);
+      // Fallback to using the original query if planning fails
+      return {
+        initialTopic: query,
+        plannedTopics: [],
+      };
+    }
   }
 
   async performResearch(
