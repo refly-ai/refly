@@ -1,4 +1,10 @@
-import { SearchDomain, SearchResult, Source, SourceMeta } from '@refly-packages/openapi-schema';
+import {
+  SearchDomain,
+  SearchResult,
+  Source,
+  SourceMeta,
+  type WebSearchResponse,
+} from '@refly-packages/openapi-schema';
 
 // Helper function to generate unique key for a source
 const getSourceKey = (source: Source): string => {
@@ -94,6 +100,19 @@ export const searchResultsToSources = (results: SearchResult[]): Source[] => {
       ...result.metadata,
       score: result.relevanceScore, // Also store in metadata for consistency
     } as any as SourceMeta,
+  }));
+};
+
+export const webSearchResultsToSources = (results: WebSearchResponse): Source[] => {
+  return results?.data?.map((result) => ({
+    url: result.url,
+    title: result.name,
+    pageContent: result.snippet,
+    score: 0,
+    metadata: {
+      originalLocale: result.locale,
+      originalQuery: result.name,
+    },
   }));
 };
 

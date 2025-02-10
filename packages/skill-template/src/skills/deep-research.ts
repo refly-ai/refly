@@ -1,7 +1,7 @@
 import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { safeStringifyJSON, webSearchResultsToSources } from '@refly-packages/utils';
 import {
   Artifact,
   Icon,
@@ -28,7 +28,6 @@ import * as deepResearchPrompts from '../scheduler/module/deep-research/prompt';
 import {
   titleSchema,
   extractResultSchema,
-  searchResultSchema,
   analysisSchema,
   researchPlanSchema,
 } from '../scheduler/module/deep-research/schema';
@@ -53,6 +52,20 @@ export class DeepResearch extends BaseSkill {
   graphState: StateGraphArgs<BaseSkillState>['channels'] = {
     ...baseStateGraphArgs,
   };
+
+  // Add researchState as a class property
+  private researchState: {
+    findings: Array<{ text: string; source: string }>;
+    summaries: string[];
+    currentDepth: number;
+    completedSteps: number;
+    totalExpectedSteps: number;
+    currentTopic: string;
+    plannedTopics: string[];
+    failedAttempts: number;
+    maxFailedAttempts: number;
+    urlToSearch: string;
+  } | null = null;
 
   commonPreprocess = async (
     state: GraphState,
@@ -327,14 +340,7 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
     );
   }
 
-  private async addSource(
-    source: {
-      url: string;
-      title: string;
-      relevance: number;
-    },
-    config: SkillRunnableConfig,
-  ) {
+  private async addSource(source: Source, config: SkillRunnableConfig) {
     this.emitEvent(
       {
         structuredData: {
@@ -347,32 +353,88 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
   }
 
   private async search(query: string, config: SkillRunnableConfig) {
-    const searchResults = await this.engine.service.webSearch(config.configurable.user, {
-      q: query,
-      limit: 10,
-    });
-
-    if (!searchResults?.data) {
-      throw new Error('Search failed');
+    if (!this.researchState) {
+      throw new Error('Research state not initialized');
     }
 
-    const model = this.engine.chatModel({ temperature: 0.1 });
-    const structuredResults = await extractStructuredData(
-      model,
-      z.array(searchResultSchema),
-      `Analyze and structure the following search results:
-      ${JSON.stringify(searchResults.data)}
-      
-      Provide a structured analysis of each result with relevance and confidence scores.`,
-      config,
-      3,
-      config?.configurable?.modelInfo,
-    );
+    try {
+      // Add activity for search start
+      await this.addActivity(
+        {
+          type: 'search',
+          status: 'pending',
+          message: `Searching for "${query}"`,
+          depth: this.researchState.currentDepth,
+        },
+        this.researchState,
+        config,
+      );
 
-    return {
-      success: true,
-      data: structuredResults,
-    };
+      const searchResults = await this.engine.service.webSearch(config.configurable.user, {
+        q: query,
+        limit: 10,
+      });
+
+      if (!searchResults?.data) {
+        // Handle search failure
+        this.researchState.failedAttempts++;
+        await this.addActivity(
+          {
+            type: 'search',
+            status: 'error',
+            message: `Search failed for "${query}" (Attempt ${this.researchState.failedAttempts} of ${this.researchState.maxFailedAttempts})`,
+            depth: this.researchState.currentDepth,
+          },
+          this.researchState,
+          config,
+        );
+
+        if (this.researchState.failedAttempts >= this.researchState.maxFailedAttempts) {
+          throw new Error(`Search failed after ${this.researchState.maxFailedAttempts} attempts`);
+        }
+        throw new Error('Search failed');
+      }
+
+      const sources = webSearchResultsToSources(searchResults);
+
+      // Reset failed attempts on success
+      this.researchState.failedAttempts = 0;
+
+      // Add activity for successful search
+      await this.addActivity(
+        {
+          type: 'search',
+          status: 'complete',
+          message: `Found ${sources.length} relevant results`,
+          depth: this.researchState.currentDepth,
+        },
+        this.researchState,
+        config,
+      );
+
+      return {
+        success: true,
+        data: sources,
+      };
+    } catch (error) {
+      // Handle any unexpected errors
+      this.researchState.failedAttempts++;
+      await this.addActivity(
+        {
+          type: 'search',
+          status: 'error',
+          message: `Search error: ${error.message} (Attempt ${this.researchState.failedAttempts} of ${this.researchState.maxFailedAttempts})`,
+          depth: this.researchState.currentDepth,
+        },
+        this.researchState,
+        config,
+      );
+
+      if (this.researchState.failedAttempts >= this.researchState.maxFailedAttempts) {
+        throw new Error(`Search failed after ${this.researchState.maxFailedAttempts} attempts`);
+      }
+      throw error;
+    }
   }
 
   private async extractFromUrls(
@@ -456,7 +518,23 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
     timeRemaining: number,
     config: SkillRunnableConfig,
   ) {
+    if (!this.researchState) {
+      throw new Error('Research state not initialized');
+    }
+
     try {
+      // Add activity for analysis start
+      await this.addActivity(
+        {
+          type: 'analyze',
+          status: 'pending',
+          message: 'Analyzing findings and planning next steps',
+          depth: this.researchState.currentDepth,
+        },
+        this.researchState,
+        config,
+      );
+
       const timeRemainingMinutes = Math.round((timeRemaining / 1000 / 60) * 10) / 10;
       const model = this.engine.chatModel({ temperature: 0.1 });
 
@@ -477,8 +555,31 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
         config?.configurable?.modelInfo,
       );
 
+      // Add activity for successful analysis
+      await this.addActivity(
+        {
+          type: 'analyze',
+          status: 'complete',
+          message: structuredAnalysis.summary,
+          depth: this.researchState.currentDepth,
+        },
+        this.researchState,
+        config,
+      );
+
       return structuredAnalysis;
     } catch (error) {
+      // Add activity for failed analysis
+      await this.addActivity(
+        {
+          type: 'analyze',
+          status: 'error',
+          message: `Analysis error: ${error.message}`,
+          depth: this.researchState.currentDepth,
+        },
+        this.researchState,
+        config,
+      );
       console.error('Analysis error:', error);
       return null;
     }
@@ -634,23 +735,21 @@ Please analyze the query thoroughly and provide a structured research plan.`,
     const timeLimit = 4.5 * 60 * 1000;
     const maxDepth = 7;
 
-    // 添加错误重试计数
-    let failedAttempts = 0;
-    const maxFailedAttempts = 3;
-    let researchState: any;
-
     try {
       const { initialTopic, plannedTopics } = await this.analyzeQueryAndPlan(query, config);
 
-      researchState = {
-        findings: [] as Array<{ text: string; source: string }>,
-        summaries: [] as string[],
+      // Initialize researchState as class property
+      this.researchState = {
+        findings: [],
+        summaries: [],
         currentDepth: 0,
         completedSteps: 0,
         totalExpectedSteps: maxDepth * 5,
         currentTopic: initialTopic,
         plannedTopics,
         failedAttempts: 0,
+        maxFailedAttempts: 3,
+        urlToSearch: '',
       };
 
       this.emitEvent(
@@ -659,14 +758,14 @@ Please analyze the query thoroughly and provide a structured research plan.`,
             type: 'progress-init',
             content: {
               maxDepth,
-              totalSteps: researchState.totalExpectedSteps,
+              totalSteps: this.researchState.totalExpectedSteps,
             },
           },
         },
         config,
       );
 
-      while (researchState.currentDepth < maxDepth) {
+      while (this.researchState.currentDepth < maxDepth) {
         const timeElapsed = Date.now() - startTime;
         const timeRemaining = timeLimit - timeElapsed;
 
@@ -676,26 +775,26 @@ Please analyze the query thoroughly and provide a structured research plan.`,
               type: 'thought',
               status: 'complete',
               message: 'Research stopped due to time limit',
-              depth: researchState.currentDepth,
+              depth: this.researchState.currentDepth,
             },
-            researchState,
+            this.researchState,
             config,
           );
           break;
         }
 
-        researchState.currentDepth++;
+        this.researchState.currentDepth++;
 
-        // 更新深度和进度
+        // update depth and progress
         this.emitEvent(
           {
             structuredData: {
               type: 'depth-delta',
               content: {
-                current: researchState.currentDepth,
+                current: this.researchState.currentDepth,
                 max: maxDepth,
-                completedSteps: researchState.completedSteps,
-                totalSteps: researchState.totalExpectedSteps,
+                completedSteps: this.researchState.completedSteps,
+                totalSteps: this.researchState.totalExpectedSteps,
               },
             },
           },
@@ -703,69 +802,87 @@ Please analyze the query thoroughly and provide a structured research plan.`,
         );
 
         try {
-          // 搜索阶段
-          const searchResults = await this.search(researchState.currentTopic, config);
+          // search stage
+          const searchResults = await this.search(this.researchState.currentTopic, config);
 
-          // 提取阶段
+          // Add sources from search results
+          for (const result of searchResults.data) {
+            this.addSource(result, config);
+          }
+
+          // extract stage
           const topUrls = searchResults.data.slice(0, 3).map((r) => r.url);
           const extractions = await this.extractFromUrls(
             topUrls,
-            researchState.currentTopic,
-            researchState.currentDepth,
-            researchState,
+            this.researchState.currentTopic,
+            this.researchState.currentDepth,
+            this.researchState,
             config,
           );
 
-          // 分析阶段
+          // analyze stage
           const analysis = await this.analyzeAndPlan(
-            [...researchState.findings, ...extractions],
-            researchState.currentTopic,
+            [...this.researchState.findings, ...extractions],
+            this.researchState.currentTopic,
             timeRemaining,
             config,
           );
 
-          // 更新研究状态
-          researchState.findings.push(...extractions);
+          // update research state
+          this.researchState.findings.push(...extractions);
           if (analysis?.summary) {
-            researchState.summaries.push(analysis.summary);
+            this.researchState.summaries.push(analysis.summary);
           }
 
-          // 检查是否继续
+          // check if continue
           if (!analysis?.shouldContinue || analysis?.gaps?.length === 0) {
             break;
           }
 
-          // 更新下一个主题
-          researchState.currentTopic = analysis.nextSearchTopic || analysis.gaps[0];
+          // update next topic and urlToSearch
+          this.researchState.currentTopic = analysis.nextSearchTopic || analysis.gaps[0];
+          this.researchState.urlToSearch = analysis.urlToSearch || '';
 
-          // 重置失败计数
-          failedAttempts = 0;
+          // Add thought activity for topic transition
+          if (analysis.nextSearchTopic) {
+            await this.addActivity(
+              {
+                type: 'thought',
+                status: 'complete',
+                message: `Moving to explore: ${analysis.nextSearchTopic}`,
+                depth: this.researchState.currentDepth,
+              },
+              this.researchState,
+              config,
+            );
+          }
         } catch (error) {
-          failedAttempts++;
           await this.addActivity(
             {
               type: 'thought',
               status: 'error',
               message: `Error in research cycle: ${error.message}`,
-              depth: researchState.currentDepth,
+              depth: this.researchState.currentDepth,
             },
-            researchState,
+            this.researchState,
             config,
           );
 
-          if (failedAttempts >= maxFailedAttempts) {
-            throw new Error(`Research failed after ${maxFailedAttempts} attempts`);
+          if (this.researchState.failedAttempts >= this.researchState.maxFailedAttempts) {
+            throw new Error(
+              `Research failed after ${this.researchState.maxFailedAttempts} attempts`,
+            );
           }
         }
       }
 
-      // 最终综合
+      // final synthesis
       const synthesisResult = await this.synthesize(
         query,
-        researchState.findings,
-        researchState.summaries,
-        researchState.currentDepth,
-        researchState,
+        this.researchState.findings,
+        this.researchState.summaries,
+        this.researchState.currentDepth,
+        this.researchState,
         config,
       );
 
@@ -777,39 +894,44 @@ Please analyze the query thoroughly and provide a structured research plan.`,
         ],
       };
     } catch (error) {
-      // 处理整体研究过程的错误
-      await this.addActivity(
-        {
-          type: 'thought',
-          status: 'error',
-          message: `Research failed: ${error.message}`,
-          depth: researchState?.currentDepth || 0,
-        },
-        { completedSteps: 0, totalExpectedSteps: maxDepth * 5 },
-        config,
-      );
-
-      // 如果有部分结果，尝试返回部分结果
-      if (researchState?.findings?.length > 0) {
-        const partialSynthesis = await this.synthesize(
-          query,
-          researchState.findings,
-          researchState.summaries,
-          researchState.currentDepth,
-          researchState,
+      // handle error in research process
+      if (this.researchState) {
+        await this.addActivity(
+          {
+            type: 'thought',
+            status: 'error',
+            message: `Research failed: ${error.message}`,
+            depth: this.researchState.currentDepth || 0,
+          },
+          this.researchState,
           config,
         );
 
-        return {
-          messages: [
-            new AIMessage({
-              content: `Note: Research was incomplete due to errors.\n\n${partialSynthesis}`,
-            }),
-          ],
-        };
+        // if have partial result, try to return partial result
+        if (this.researchState.findings.length > 0) {
+          const partialSynthesis = await this.synthesize(
+            query,
+            this.researchState.findings,
+            this.researchState.summaries,
+            this.researchState.currentDepth,
+            this.researchState,
+            config,
+          );
+
+          return {
+            messages: [
+              new AIMessage({
+                content: `Note: Research was incomplete due to errors.\n\n${partialSynthesis}`,
+              }),
+            ],
+          };
+        }
       }
 
       throw error;
+    } finally {
+      // Clean up researchState
+      this.researchState = null;
     }
   }
 

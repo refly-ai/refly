@@ -35,6 +35,7 @@ export const analysisSchema = z.object({
   nextSteps: z.array(z.string()).describe('Recommended next steps for research'),
   shouldContinue: z.boolean().describe('Whether further research is needed'),
   nextSearchTopic: z.string().optional().describe('The next topic to search if continuing'),
+  urlToSearch: z.string().optional().describe('Specific URL to search next if any'),
   confidence: z
     .object({
       findings: z.number().min(0).max(1).describe('Confidence in the current findings'),
