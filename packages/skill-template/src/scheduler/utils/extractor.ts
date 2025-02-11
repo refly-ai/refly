@@ -13,11 +13,15 @@ function extractJsonFromMarkdown(content: string): any {
 
   // Try different JSON extraction patterns
   const patterns = [
-    // Pattern 1: Standard markdown code block
-    /```(?:json)?\n([\s\S]*?)\n```/,
-    // Pattern 2: Single-line code block
+    // Pattern 1: Standard markdown code block with json tag
+    /```json\n([\s\S]*?)\n```/,
+    // Pattern 2: Standard markdown code block without language tag
+    /```\n([\s\S]*?)\n```/,
+    // Pattern 3: Single-line code block
     /`(.*?)`/,
-    // Pattern 3: Raw JSON
+    // Pattern 4: Raw JSON with optional whitespace
+    /^\s*({\s*[\s\S]*?\s*})\s*$/,
+    // Pattern 5: Raw JSON content
     /([\s\S]*)/,
   ];
 
@@ -25,17 +29,25 @@ function extractJsonFromMarkdown(content: string): any {
     const match = normalizedContent.match(pattern);
     if (match?.[1]) {
       try {
-        const trimmed = match[1].trim();
-        return JSON.parse(trimmed);
-      } catch (_e) {}
+        // Clean the extracted content
+        const extracted = match[1]
+          .replace(/^\s+|\s+$/g, '') // Trim whitespace
+          .replace(/\\"/g, '"') // Handle escaped quotes
+          .replace(/\\n/g, '\n'); // Handle escaped newlines
+
+        return JSON.parse(extracted);
+      } catch (_e) {
+        // Move to next pattern if parsing fails
+        console.log('extractJsonFromMarkdown json parse failed: ', _e);
+      }
     }
   }
 
-  // If all patterns fail, try to parse the entire content
+  // If all patterns fail, try to parse the entire content as a last resort
   try {
     return JSON.parse(normalizedContent);
-  } catch (_error) {
-    throw new Error('Failed to parse JSON from response');
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from response: ${error.message}`);
   }
 }
 

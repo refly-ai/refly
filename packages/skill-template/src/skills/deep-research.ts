@@ -352,7 +352,7 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
     );
   }
 
-  private async search(query: string, config: SkillRunnableConfig) {
+  private async search(query: string, limit: number, config: SkillRunnableConfig) {
     if (!this.researchState) {
       throw new Error('Research state not initialized');
     }
@@ -372,7 +372,7 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
 
       const searchResults = await this.engine.service.webSearch(config.configurable.user, {
         q: query,
-        limit: 10,
+        limit,
       });
 
       if (!searchResults?.data) {
@@ -734,6 +734,7 @@ Please analyze the query thoroughly and provide a structured research plan.`,
     const startTime = Date.now();
     const timeLimit = 4.5 * 60 * 1000;
     const maxDepth = 7;
+    const WEB_SEARCH_LIMIT = 2;
 
     try {
       const { initialTopic, plannedTopics } = await this.analyzeQueryAndPlan(query, config);
@@ -803,7 +804,11 @@ Please analyze the query thoroughly and provide a structured research plan.`,
 
         try {
           // search stage
-          const searchResults = await this.search(this.researchState.currentTopic, config);
+          const searchResults = await this.search(
+            this.researchState.currentTopic,
+            WEB_SEARCH_LIMIT,
+            config,
+          );
 
           // Add sources from search results
           for (const result of searchResults.data) {
