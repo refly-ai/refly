@@ -337,7 +337,8 @@ export class KnowledgeService {
     let result: ParseResult;
 
     if (resourceType === 'weblink') {
-      const parser = parserFactory.createParser('jina');
+      // Use createParserByUrl to automatically select the appropriate parser
+      const parser = parserFactory.createParserByUrl(url);
       result = await parser.parse(url);
     } else if (resource.rawFileKey) {
       const parser = parserFactory.createParserByContentType(contentType);

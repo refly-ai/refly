@@ -109,6 +109,10 @@ export type ResourceMeta = {
    * Weblink title
    */
   title?: string;
+  /**
+   * File content type (MIME type)
+   */
+  contentType?: string;
 };
 
 /**
@@ -3010,7 +3014,7 @@ export type BatchCreateResourceData = {
   body: Array<UpsertResourceRequest>;
 };
 
-export type BatchCreateResourceResponse2 = UpsertResourceResponse;
+export type BatchCreateResourceResponse2 = BatchCreateResourceResponse;
 
 export type BatchCreateResourceError = unknown;
 

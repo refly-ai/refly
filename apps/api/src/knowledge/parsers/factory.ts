@@ -6,13 +6,15 @@ import { MarkerParser } from './marker.parser';
 import { JinaParser } from './jina.parser';
 import { PlainTextParser } from '@/knowledge/parsers/plain-text.parser';
 import { UnsupportedFileTypeError } from '@refly-packages/errors';
+import { YoutubeParser } from './youtube.parser';
+import { BilibiliParser } from './bilibili.parser';
 
 @Injectable()
 export class ParserFactory {
   constructor(private readonly config: ConfigService) {}
 
   createParser(
-    type: 'pandoc' | 'marker' | 'jina' | 'plain-text',
+    type: 'pandoc' | 'marker' | 'jina' | 'plain-text' | 'youtube' | 'bilibili',
     options?: ParserOptions,
   ): BaseParser {
     const mockMode = this.config.get('env') === 'test';
@@ -26,6 +28,10 @@ export class ParserFactory {
         return new JinaParser(this.config, { mockMode, ...options });
       case 'plain-text':
         return new PlainTextParser(this.config, { mockMode, ...options });
+      case 'youtube':
+        return new YoutubeParser(this.config, { mockMode, ...options });
+      case 'bilibili':
+        return new BilibiliParser(this.config, { mockMode, ...options });
       default:
         throw new Error(`Unknown parser type: ${type}`);
     }
@@ -49,5 +55,20 @@ export class ParserFactory {
       default:
         throw new UnsupportedFileTypeError(`Unsupported contentType: ${contentType}`);
     }
+  }
+
+  createParserByUrl(url: string, options?: ParserOptions): BaseParser {
+    const mockMode = this.config.get('env') === 'test';
+
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return new YoutubeParser(this.config, { mockMode, ...options });
+    }
+
+    if (url.includes('bilibili.com')) {
+      return new BilibiliParser(this.config, { mockMode, ...options });
+    }
+
+    // Default to Jina parser for other URLs
+    return new JinaParser(this.config, { mockMode, ...options });
   }
 }

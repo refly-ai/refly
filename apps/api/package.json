@@ -88,7 +88,9 @@
     "uuid": "^9.0.1",
     "ws": "~8.17.0",
     "y-protocols": "^1.0.6",
-    "yjs": "^13.6.8"
+    "yjs": "^13.6.8",
+    "youtube-transcript": "^1.2.1",
+    "youtubei.js": "^13.0.0"
   },
   "devDependencies": {
     "@golevelup/ts-jest": "^0.6.2",
