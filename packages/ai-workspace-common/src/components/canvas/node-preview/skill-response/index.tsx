@@ -27,13 +27,48 @@ import { IconRerun } from '@refly-packages/ai-workspace-common/components/common
 
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { getWholeParsedContent } from '@refly-packages/ai-workspace-common/utils/content-parser';
+
+// Add deep research related types
+interface DeepResearchState {
+  activity: Array<{
+    type: 'search' | 'extract' | 'analyze' | 'reasoning' | 'synthesis' | 'thought';
+    status: 'pending' | 'complete' | 'error';
+    message: string;
+    timestamp: string;
+    depth?: number;
+    completedSteps?: number;
+    totalSteps?: number;
+  }>;
+  sources: Array<{
+    url: string;
+    title: string;
+    description: string;
+  }>;
+  progress: {
+    maxDepth: number;
+    totalSteps: number;
+    currentDepth: number;
+    completedSteps: number;
+  };
+}
+
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
   resultId: string;
 }
 
 const StepsList = memo(
-  ({ steps, result, title }: { steps: ActionStep[]; result: ActionResult; title: string }) => {
+  ({
+    steps,
+    result,
+    title,
+    deepResearchState,
+  }: {
+    steps: ActionStep[];
+    result: ActionResult;
+    title: string;
+    deepResearchState: DeepResearchState;
+  }) => {
     return (
       <>
         {steps.map((step, index) => (
@@ -49,6 +84,7 @@ const StepsList = memo(
               }
               index={index + 1}
               query={title}
+              deepResearchState={deepResearchState}
             />
           </div>
         ))}
@@ -76,6 +112,18 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   const { t } = useTranslation();
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Add deep research state
+  const [deepResearchState, setDeepResearchState] = useState<DeepResearchState>({
+    activity: [],
+    sources: [],
+    progress: {
+      maxDepth: 0,
+      totalSteps: 0,
+      currentDepth: 0,
+      completedSteps: 0,
+    },
+  });
 
   const fetchActionResult = async (resultId: string) => {
     setLoading(true);
@@ -113,6 +161,90 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
       setLoading(false);
     }
   }, [resultId, result]);
+
+  // Handle deep research updates
+  useEffect(() => {
+    if (result?.steps) {
+      for (const step of result.steps) {
+        if (step.structuredData) {
+          try {
+            // Handle progress initialization
+            if (step.structuredData.type === 'progress-init') {
+              const content = step.structuredData.content as {
+                maxDepth: number;
+                totalSteps: number;
+              };
+              setDeepResearchState((prev) => ({
+                ...prev,
+                progress: {
+                  ...prev.progress,
+                  maxDepth: content.maxDepth,
+                  totalSteps: content.totalSteps,
+                },
+              }));
+            }
+
+            // Handle depth updates
+            if (step.structuredData.type === 'depth-delta') {
+              const content = step.structuredData.content as {
+                current: number;
+                max: number;
+                completedSteps: number;
+                totalSteps: number;
+              };
+              setDeepResearchState((prev) => ({
+                ...prev,
+                progress: {
+                  ...prev.progress,
+                  currentDepth: content.current,
+                  maxDepth: content.max,
+                  completedSteps: content.completedSteps,
+                  totalSteps: content.totalSteps,
+                },
+              }));
+            }
+
+            // Handle activity updates
+            if (step.structuredData.type === 'activity') {
+              const content = step.structuredData.content as {
+                type: 'search' | 'extract' | 'analyze' | 'reasoning' | 'synthesis' | 'thought';
+                status: 'pending' | 'complete' | 'error';
+                message: string;
+                timestamp: string;
+                depth?: number;
+                completedSteps?: number;
+                totalSteps?: number;
+              };
+              setDeepResearchState((prev) => ({
+                ...prev,
+                activity: [...prev.activity, content],
+                progress: {
+                  ...prev.progress,
+                  completedSteps: content.completedSteps ?? prev.progress.completedSteps,
+                  totalSteps: content.totalSteps ?? prev.progress.totalSteps,
+                },
+              }));
+            }
+
+            // Handle source updates
+            if (step.structuredData.type === 'source-delta') {
+              const content = step.structuredData.content as {
+                url: string;
+                title: string;
+                description: string;
+              };
+              setDeepResearchState((prev) => ({
+                ...prev,
+                sources: [...prev.sources, content],
+              }));
+            }
+          } catch (error) {
+            console.error('Error processing deep research update:', error);
+          }
+        }
+      }
+    }
+  }, [result?.steps]);
 
   const scrollToBottom = useCallback(
     (event: { resultId: string; payload: ActionResult }) => {
@@ -180,7 +312,10 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   }, [resultId, title, canvasId, invokeAction]);
 
   useEffect(() => {
-    const handleLocateToPreview = (event: { id: string; type?: 'editResponse' }) => {
+    const handleLocateToPreview = (event: {
+      id: string;
+      type?: 'editResponse';
+    }) => {
       if (event.id === node.id && event.type === 'editResponse') {
         setEditMode(true);
       }
@@ -195,7 +330,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
 
   if (!result && !loading) {
     return (
-      <div className="h-full w-full flex items-center justify-center">
+      <div className="flex justify-center items-center w-full h-full">
         <Result
           status="404"
           subTitle={t('canvas.skillResponse.resultNotFound')}
@@ -233,7 +368,9 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
       )}
 
       <div
-        className={cn('h-full transition-opacity duration-500', { 'opacity-30': editMode })}
+        className={cn('h-full transition-opacity duration-500', {
+          'opacity-30': editMode,
+        })}
         onClick={() => {
           if (editMode) {
             setEditMode(false);
@@ -241,13 +378,13 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
         }}
       >
         {result?.status === 'failed' ? (
-          <div className="h-full w-full flex items-center justify-center">
+          <div className="flex justify-center items-center w-full h-full">
             <Result
               status="500"
               subTitle={t('canvas.skillResponse.executionFailed')}
               extra={
                 <Button
-                  icon={<IconRerun className="text-sm flex items-center justify-center" />}
+                  icon={<IconRerun className="flex justify-center items-center text-sm" />}
                   onClick={handleRetry}
                 >
                   {t('canvas.nodeActions.rerun')}
@@ -260,7 +397,12 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
             {steps.length === 0 && isPending && (
               <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
             )}
-            <StepsList steps={steps} result={result} title={title} />
+            <StepsList
+              steps={steps}
+              result={result}
+              title={title}
+              deepResearchState={deepResearchState}
+            />
           </>
         )}
       </div>
