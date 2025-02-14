@@ -54,10 +54,14 @@ const HoverMenu: React.FC<HoverMenuProps> = React.memo(
       >
         <div className="bg-white border border-gray-100 shadow-lg rounded-lg px-2 py-1 flex gap-2">
           <Button type="text" onClick={handleSaveClick} icon={<IconSave />}>
-            <span className="font-medium">{t('extension.floatingSphere.clipSelectedContent')}</span>
+            <span className="font-medium">
+              {t('translation:extension.floatingSphere.clipSelectedContent')}
+            </span>
           </Button>
           <Button type="text" onClick={handleCopyToClipboard} icon={<IconCopy />}>
-            <span className="font-medium">{t('extension.floatingSphere.copySelectedContent')}</span>
+            <span className="font-medium">
+              {t('translation:extension.floatingSphere.copySelectedContent')}
+            </span>
           </Button>
         </div>
       </div>

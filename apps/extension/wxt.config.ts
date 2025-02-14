@@ -68,7 +68,7 @@ export default defineConfig({
       },
     }) as WxtViteConfig,
   manifest: {
-    version: '0.3.6',
+    version: '0.3.7',
     author: 'support@refly.ai',
     name: '__MSG_displayName__',
     description: '__MSG_description__',
