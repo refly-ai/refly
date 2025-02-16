@@ -7,6 +7,7 @@ import {
   Sparkles,
   Wrench,
   Maximize2,
+  Minimize2,
   MoreHorizontal,
   X,
   Cpu,
@@ -258,7 +259,7 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = ({
             className={`p-1.5 hover:bg-gray-100 ${isMaximized ? 'text-primary-600' : 'text-gray-500'}`}
             onClick={() => onMaximize()}
           >
-            <Maximize2 className="w-4 h-4" />
+            {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </Button>
         )}
         <Button
