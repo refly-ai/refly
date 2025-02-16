@@ -4,7 +4,8 @@ import type { MenuProps, DropdownProps } from 'antd';
 import {
   IconMoreHorizontal,
   IconDelete,
-  IconResourceFilled,
+  IconImportResource,
+  IconDownloadFile,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LuPlus, LuExternalLink } from 'react-icons/lu';
 
@@ -20,10 +21,12 @@ import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores
 import { Resource } from '@refly/openapi-schema';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
-import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { useDeleteResource } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-resource';
 import { getClientOrigin } from '@refly-packages/utils/url';
+import { useImportResourceStoreShallow } from '@refly-packages/ai-workspace-common/stores/import-resource';
+import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/use-download-file';
+import { ResourceIcon } from '@refly-packages/ai-workspace-common/components/common/resourceIcon';
 
 const ActionDropdown = ({
   resource,
@@ -37,6 +40,7 @@ const ActionDropdown = ({
     setShowLibraryModal: state.setShowLibraryModal,
   }));
   const { deleteResource } = useDeleteResource();
+  const { downloadFile } = useDownloadFile();
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -72,6 +76,11 @@ const ActionDropdown = ({
     }
   };
 
+  const handleDownloadFile: MenuProps['onClick'] = ({ domEvent }) => {
+    domEvent.stopPropagation();
+    downloadFile(resource.rawFileKey);
+  };
+
   const items: MenuProps['items'] = [
     {
       label: (
@@ -94,6 +103,17 @@ const ActionDropdown = ({
       onClick: handleOpenWebpage,
       disabled: !resource.data?.url,
     },
+    resource.rawFileKey &&
+      resource.resourceType === 'file' && {
+        label: (
+          <div className="flex items-center">
+            <IconDownloadFile size={16} className="mr-2" />
+            {t('workspace.downloadFile')}
+          </div>
+        ),
+        key: 'downloadFile',
+        onClick: handleDownloadFile,
+      },
     {
       label: (
         <Popconfirm
@@ -110,7 +130,7 @@ const ActionDropdown = ({
           cancelText={t('common.cancel')}
           overlayStyle={{ maxWidth: '300px' }}
         >
-          <div className="flex items-center text-red-600">
+          <div className="flex items-center text-red-600" onClick={(e) => e.stopPropagation()}>
             <IconDelete size={16} className="mr-2" />
             {t('workspace.deleteDropdownMenu.delete')}
           </div>
@@ -133,7 +153,13 @@ const ActionDropdown = ({
       onOpenChange={handleOpenChange}
       menu={{ items }}
     >
-      <Button type="text" icon={<IconMoreHorizontal />} onClick={(e) => e.stopPropagation()} />
+      <Button
+        type="text"
+        icon={<IconMoreHorizontal />}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      />
     </Dropdown>
   );
 };
@@ -141,13 +167,24 @@ const ActionDropdown = ({
 const ResourceCard = ({ item, onDelete }: { item: Resource; onDelete: () => void }) => {
   const { t, i18n } = useTranslation();
   const language = i18n.languages?.[0];
-  const [showFallbackIcon, setShowFallbackIcon] = useState(false);
 
-  const handleCardClick = () => {
-    if (item.data?.url) {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Only open URL if click target is the card itself or its direct children
+    // (excluding the dropdown menu and its children)
+    const target = e.target as HTMLElement;
+    const isMenuClick = target.closest('.ant-dropdown') || target.closest('.ant-btn');
+
+    if (!isMenuClick && item.data?.url) {
       window.open(item.data.url, '_blank');
     }
   };
+
+  let url = '';
+  try {
+    url = new URL(item?.data?.url || getClientOrigin()).hostname;
+  } catch (error) {
+    console.warn(`invalid url: ${item?.data?.url}, error: ${error}`);
+  }
 
   return (
     <div
@@ -163,20 +200,12 @@ const ResourceCard = ({ item, onDelete }: { item: Resource; onDelete: () => void
       <Divider className="m-0 text-gray-200" />
       <div className="px-3 pt-2 pb-1 flex justify-between items-center bg-gray-50">
         <div className="flex items-center gap-3 mb-2">
-          {item.data?.url ? (
-            showFallbackIcon ? (
-              <IconResourceFilled color={NODE_COLORS.resource} size={24} />
-            ) : (
-              <img
-                src={`https://www.google.com/s2/favicons?domain=${new URL(item?.data?.url || getClientOrigin()).hostname}&sz=32`}
-                alt="Website favicon"
-                className="w-6 h-6"
-                onError={() => setShowFallbackIcon(true)}
-              />
-            )
-          ) : (
-            <IconResourceFilled color={NODE_COLORS.resource} size={24} />
-          )}
+          <ResourceIcon
+            url={url}
+            resourceType={item?.resourceType}
+            extension={item?.rawFileKey?.split('.').pop()}
+            size={24}
+          />
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-medium max-w-48 truncate">
               {item.title || t('common.untitled')}
@@ -196,10 +225,13 @@ const ResourceCard = ({ item, onDelete }: { item: Resource; onDelete: () => void
 
 export const ResourceList = () => {
   const { t } = useTranslation();
-  const { showLibraryModal } = useSiderStoreShallow((state) => ({
+  const { showLibraryModal, setShowLibraryModal } = useSiderStoreShallow((state) => ({
     showLibraryModal: state.showLibraryModal,
+    setShowLibraryModal: state.setShowLibraryModal,
   }));
-
+  const { setImportResourceModalVisible } = useImportResourceStoreShallow((state) => ({
+    setImportResourceModalVisible: state.setImportResourceModalVisible,
+  }));
   const { dataList, loadMore, reload, hasMore, isRequesting, setDataList } = useFetchDataList({
     fetchData: async (queryPayload) => {
       const res = await getClient().listResources({
@@ -236,7 +268,18 @@ export const ResourceList = () => {
           </>
         ) : (
           <div className="h-full flex items-center justify-center">
-            <Empty description={t('common.empty')} />
+            <Empty description={t('common.empty')}>
+              <Button
+                className="text-[#00968F]"
+                icon={<IconImportResource className="-mr-1 flex items-center justify-center" />}
+                onClick={() => {
+                  setShowLibraryModal(false);
+                  setImportResourceModalVisible(true);
+                }}
+              >
+                {t('canvas.toolbar.importResource')}
+              </Button>
+            </Empty>
           </div>
         )}
       </div>

@@ -1,5 +1,4 @@
-import { Modal } from '@arco-design/web-react';
-import { Menu, Divider, Splitter } from 'antd';
+import { Menu, Divider, Splitter, Modal } from 'antd';
 import { HiLink } from 'react-icons/hi';
 import {
   ImportResourceMenuItem,
@@ -8,15 +7,16 @@ import {
 
 import { ImportFromWeblink } from './intergrations/import-from-weblink';
 import { ImportFromText } from './intergrations/import-from-text';
+import { ImportFromExtension } from './intergrations/import-from-extension';
 import { useTranslation } from 'react-i18next';
 
 import './index.scss';
 import { useEffect } from 'react';
-import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { getRuntime } from '@refly/utils/env';
 import MultilingualSearch from '@refly-packages/ai-workspace-common/modules/multilingual-search';
-import { TbClipboard, TbWorldSearch } from 'react-icons/tb';
+import { TbClipboard, TbWorldSearch, TbBrowserPlus, TbFile } from 'react-icons/tb';
 import { IconImportResource } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { ImportFromFile } from '@refly-packages/ai-workspace-common/components/import-resource/intergrations/import-from-file';
 
 const MenuItem = Menu.Item;
 
@@ -47,18 +47,17 @@ export const ImportResourceModal = () => {
 
   return (
     <Modal
-      visible={importResourceModalVisible}
+      open={importResourceModalVisible}
       footer={null}
       onCancel={() => {
         setImportResourceModalVisible(false);
       }}
-      getPopupContainer={getPopupContainer}
       className="import-resource-modal"
+      height={'70%'}
+      width={'65%'}
       style={{
-        height: '70%',
         minHeight: 500,
         maxHeight: 660,
-        width: '65%',
         minWidth: '300px',
         maxWidth: '1050px',
       }}
@@ -88,6 +87,12 @@ export const ImportResourceModal = () => {
                       </span>
                       {t('resource.import.fromWebSearch')}
                     </MenuItem>
+                    <MenuItem key="import-from-file">
+                      <span className="flex items-center justify-center mr-2">
+                        <TbFile className="text-base" />
+                      </span>
+                      {t('resource.import.fromFile')}
+                    </MenuItem>
                     <MenuItem key="import-from-weblink">
                       <span className="flex items-center justify-center mr-2">
                         <HiLink className="text-base" />
@@ -100,6 +105,12 @@ export const ImportResourceModal = () => {
                       </span>
                       {t('resource.import.fromText')}
                     </MenuItem>
+                    <MenuItem key="import-from-extension">
+                      <span className="flex items-center justify-center mr-2">
+                        <TbBrowserPlus className="text-base" />
+                      </span>
+                      {t('resource.import.fromExtension')}
+                    </MenuItem>
                   </Menu>
                 </div>
               </div>
@@ -110,6 +121,8 @@ export const ImportResourceModal = () => {
               {selectedMenuItem === 'import-from-weblink' ? <ImportFromWeblink /> : null}
               {selectedMenuItem === 'import-from-paste-text' ? <ImportFromText /> : null}
               {selectedMenuItem === 'import-from-web-search' ? <MultilingualSearch /> : null}
+              {selectedMenuItem === 'import-from-extension' ? <ImportFromExtension /> : null}
+              {selectedMenuItem === 'import-from-file' ? <ImportFromFile /> : null}
             </div>
           </Splitter.Panel>
         </Splitter>

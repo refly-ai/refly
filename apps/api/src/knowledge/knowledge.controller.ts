@@ -7,7 +7,10 @@ import {
   UseGuards,
   ParseIntPipe,
   DefaultValuePipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   User,
   UpsertResourceRequest,
@@ -36,6 +39,7 @@ import { buildSuccessResponse } from '@/utils';
 import { LoginedUser } from '@/utils/decorators/user.decorator';
 import { documentPO2DTO, resourcePO2DTO, referencePO2DTO } from './knowledge.dto';
 import { ParamsError } from '@refly-packages/errors';
+import { safeParseJSON } from '@refly-packages/utils';
 
 @Controller('v1/knowledge')
 export class KnowledgeController {
@@ -80,6 +84,39 @@ export class KnowledgeController {
     const resource = await this.knowledgeService.createResource(user, body, {
       checkStorageQuota: true,
     });
+    await this.knowledgeService.syncStorageUsage(user);
+    return buildSuccessResponse(resourcePO2DTO(resource));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('resource/createWithFile')
+  @UseInterceptors(FileInterceptor('file'))
+  async createResourceWithFile(
+    @LoginedUser() user: User,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: UpsertResourceRequest,
+  ): Promise<UpsertResourceResponse> {
+    if (!file) {
+      throw new ParamsError('File is required');
+    }
+
+    // Convert file content to string
+    const content = file.buffer.toString('utf-8');
+    const data = typeof body.data === 'object' ? body.data : safeParseJSON(body.data);
+
+    // Create resource with file content
+    const resource = await this.knowledgeService.createResource(
+      user,
+      {
+        ...body,
+        content,
+        data,
+      },
+      {
+        checkStorageQuota: true,
+      },
+    );
+
     await this.knowledgeService.syncStorageUsage(user);
     return buildSuccessResponse(resourcePO2DTO(resource));
   }

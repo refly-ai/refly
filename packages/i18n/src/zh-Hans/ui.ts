@@ -70,6 +70,11 @@ const translations = {
     login: '登录',
     share: '分享',
     noMoreText: '已经到底啦~',
+    uploadImage: '上传图片',
+    uploadSuccess: '上传成功',
+    uploadFailed: '上传失败',
+    dropImageHere: '拖放图片到这里',
+    presetColors: '预设颜色',
   },
   verifyRules: {
     emailRequired: '邮箱地址不能为空',
@@ -123,8 +128,9 @@ const translations = {
       first: '由多线程对话、知识库集成、上下文记忆和智能搜索驱动，',
       second: 'Refly 是将创意转化为优质内容的最佳方式。',
     },
-    messageText: '全新推理模型 DeepSeek R1 上线！⚡️ ！',
+    messageText: 'Refly 网页剪存 Chrome 插件发布! ⚡️! ',
     tryForFree: '开始使用',
+    addToChrome: '添加到 Chrome',
     contactUs: '联系我们',
     watchVideo: '观看视频',
     joinBtn: '免费使用',
@@ -170,6 +176,16 @@ const translations = {
           'AI 编辑助手，确保专业输出质量',
         ],
       },
+      featureFive: {
+        tag: '剪存',
+        title: '一键剪存任意网页内容，持续打造第二大脑',
+        bulletPoints: [
+          '一键保存任意网页内容（Twitter、小红书、Notion 等）',
+          '支持私有网页内容剪存与整理',
+          '持续积累个人知识库',
+          '无缝集成到第二大脑',
+        ],
+      },
     },
     pricing: {
       title: '计划与定价',
@@ -206,6 +222,11 @@ const translations = {
         title: '联系我们',
         community: '社区',
         mail: '邮箱',
+      },
+      platforms: {
+        title: '平台',
+        chrome: 'Chrome 插件',
+        web: 'Web 应用',
       },
     },
     loginFailed: {
@@ -252,6 +273,7 @@ const translations = {
       price: '价格',
       docs: '文档',
       discord: 'Discord',
+      priceTag: '五折',
     },
     faq: {
       title: '常见问题',
@@ -360,6 +382,7 @@ const translations = {
   workspace: {
     addToCanvas: '添加到画布',
     openWebpage: '打开原网页',
+    downloadFile: '下载文件',
     canvasListModal: {
       continue: '继续对话',
     },
@@ -526,11 +549,11 @@ const translations = {
         result: '结果',
         empty: '未命中过滤条件',
       },
-      alreadyAddedWithTitle: '{{type}}「{{title}}」已添加到上下文',
-      addSuccessWithTitle: '{{type}}「{{title}}」已成功添加到上下文',
+      alreadyAddedWithTitle: '已添加到上下文',
+      addSuccessWithTitle: '已成功添加到上下文',
       addToContextSuccess: '已成功添加到上下文',
       untitled: '未命名',
-      deleteSuccessWithTitle: '已成功删除{{type}}节点「{{title}}」',
+      deleteSuccessWithTitle: '已成功删除{{type}}节点',
       memoPlaceholder: '记录当下的灵感...',
       noContent: '没有可插入的内容',
       noEditor: '没有打开的文档',
@@ -559,7 +582,8 @@ const translations = {
   },
   resourceType: {
     weblink: '网页链接',
-    pastedText: '粘贴文本',
+    text: '粘贴文本',
+    file: '文件',
   },
   canvas: {
     emptyText: '双击向 AI 提问, 或',
@@ -569,6 +593,7 @@ const translations = {
       skillResponse: '技能响应',
       memo: '备忘录',
       skill: '技能',
+      image: '图片',
     },
     contextMenu: {
       createGroup: '创建分组',
@@ -608,6 +633,7 @@ const translations = {
       addSkill: '添加技能',
       addTool: '添加工具',
       autoLayout: '自动布局',
+      autoName: '自动命名',
       askAI: '问问 AI',
       askAIDescription:
         '通过 AI 提问，可以选择上下文、切换技能或模型，以获取写作灵感、内容创作、知识问答等。',
@@ -640,6 +666,8 @@ const translations = {
       mouse: '鼠标模式',
       touchpad: '触控板模式',
       tooltip: {
+        undo: '撤销',
+        redo: '重做',
         zoom: '缩放百分比',
         zoomIn: '放大',
         zoomOut: '缩小',
@@ -707,6 +735,7 @@ const translations = {
       createMemoDescription: '创建一个空备忘录，用于快速记录想法，支持 Markdown 格式',
       copy: '复制节点内容',
       copyDescription: '将节点内容以 Markdown 格式复制到剪贴板',
+      createDocumentDescription: '创建文档',
       askAI: '问问 AI',
       askAIDescription:
         '向 AI 提问，选择上下文或切换技能后输入需求，获取写作、阅读理解或问题解答等帮助',
@@ -759,6 +788,7 @@ const translations = {
       deleteDocumentDescription: '从知识库以及所有画布中删除该文档',
       documentDeleteConfirm:
         '确认要删除文档 {{title}} 吗？该操作将从知识库以及所有画布中移除此文档。',
+      downloadFile: '下载文件',
     },
     nodeStatus: {
       isCreatingDocument: '创建中...',
@@ -840,6 +870,10 @@ const translations = {
     import: {
       title: '资源集成',
       fromWebSearch: '全网搜索',
+      fromFile: '上传文件',
+      dragOrClick: '点击或拖拽文件到此区域上传',
+      unsupportedFileType: '请上传指定类型的文件',
+      supportedFiles: '支持文件: {{formats}}，每个文件最大 5MB',
       fromWeblink: '粘贴链接',
       selectAll: '全选',
       webLinkPlaceholer: '输入或粘贴有效的网页链接，每行一个....',
@@ -848,6 +882,7 @@ const translations = {
       emptyLink: '你还未添加任何链接！',
       waitingList: '待处理列表',
       linkCount: '共 {{count}} 个',
+      fileCount: '共 {{count}} 个',
       saveTo: '保存至',
       scrapeError: '抓取失败',
       integration: '集成',
@@ -865,6 +900,12 @@ const translations = {
       storageLimited: '存储空间已满',
       storagePartialLimited: '存储空间不足，仅能保存 {{count}} 个资源',
       upgrade: '升级订阅',
+      fromExtension: '插件剪存',
+      extensionTitle: '一键保存网页内容',
+      extensionDescription: '安装我们的 Chrome 插件，轻松保存网页内容到画布中。',
+      downloadExtension: '下载插件',
+      viewDocs: '查看文档',
+      recommendedPlatforms: '推荐平台',
     },
     wait_parse: '内容解析中',
     parse_failed: '解析失败，点击重试',
@@ -950,6 +991,7 @@ const translations = {
     },
     siderMenu: {
       contactUs: '联系我们',
+      addToChrome: '添加到 Chrome',
       canvasTitle: '画布',
       canvasDescription:
         '创建、编辑和查看画布, 不同于传统的 Chatbot 应用，Refly 通过无限延伸的二维画布来完成对话思考、内容消费和创作的全流程。',
@@ -1422,7 +1464,8 @@ const translations = {
   },
   components: {
     markdown: {
-      copySuccess: '内容已复制到剪切板！',
+      copySuccess: '复制成功',
+      mermaidError: 'Mermaid 图表渲染失败',
     },
   },
   copilot: {
@@ -1643,6 +1686,7 @@ const translations = {
       tokenUsed: '已使用 {{used}} / {{quota}}',
       upgrade: '升级',
       quotaExceeded: '额度已用尽，点击升级订阅',
+      noVisionSupport: '该模型不支持消费图片',
     },
     contentSelector: {
       openForWeb: '开启选择内容提问, 画布已进入只读模式',

@@ -3,10 +3,24 @@ import { useCanvasContext } from '../../context/canvas';
 import { useThrottledCallback } from 'use-debounce';
 import { Edge } from '@xyflow/react';
 import { CanvasNode } from '../../components/canvas/nodes';
+import { UndoManager } from 'yjs';
+import { omit } from '@refly/utils';
 
 export const useCanvasSync = () => {
   const { provider } = useCanvasContext();
   const ydoc = provider.document;
+
+  const undoManager = useMemo(() => {
+    if (!ydoc) return null;
+
+    // Create UndoManager tracking title, nodes and edges
+    return new UndoManager(
+      [ydoc.getText('title'), ydoc.getArray('nodes'), ydoc.getArray('edges')],
+      {
+        captureTimeout: 1000,
+      },
+    );
+  }, [ydoc]);
 
   const syncFunctions = useMemo(() => {
     const syncTitleToYDoc = (title: string) => {
@@ -29,7 +43,7 @@ export const useCanvasSync = () => {
       ydoc?.transact(() => {
         const yEdges = ydoc?.getArray('edges');
         yEdges?.delete(0, yEdges?.length ?? 0);
-        yEdges?.push(edges);
+        yEdges?.push(edges.map((edge) => omit(edge, ['style'])));
       });
     };
 
@@ -54,5 +68,6 @@ export const useCanvasSync = () => {
     ...syncFunctions,
     throttledSyncNodesToYDoc,
     throttledSyncEdgesToYDoc,
+    undoManager,
   };
 };

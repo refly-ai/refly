@@ -8,6 +8,22 @@ export class UnknownError extends BaseError {
   };
 }
 
+export class ContentTooLargeError extends BaseError {
+  code = 'E2004';
+  messageDict = {
+    en: 'Content is too large. Maximum length is 100k characters.',
+    'zh-CN': '内容过长。最大长度为 10 万字符。',
+  };
+}
+
+export class PayloadTooLargeError extends BaseError {
+  code = 'E2005';
+  messageDict = {
+    en: 'Request payload is too large. Maximum size is 100KB.',
+    'zh-CN': '请求数据过大。最大大小为 100KB。',
+  };
+}
+
 export class ConnectionError extends BaseError {
   code = 'E0001';
   messageDict = {
@@ -85,6 +101,14 @@ export class AuthenticationExpiredError extends BaseError {
   messageDict = {
     en: 'Authentication expired, please sign in again',
     'zh-CN': '身份验证已过期，请重新登录',
+  };
+}
+
+export class UnsupportedFileTypeError extends BaseError {
+  code = 'E0012';
+  messageDict = {
+    en: 'This file type is temporarily not supported',
+    'zh-CN': '暂不支持该文件类型',
   };
 }
 
@@ -168,6 +192,14 @@ export class ActionResultNotFoundError extends BaseError {
   };
 }
 
+export class StaticFileNotFoundError extends BaseError {
+  code = 'E1012';
+  messageDict = {
+    en: 'Upload file not found, please try again',
+    'zh-CN': '上传文件不存在，请重新尝试',
+  };
+}
+
 export class StorageQuotaExceeded extends BaseError {
   code = 'E2001';
   messageDict = {
@@ -205,6 +237,7 @@ const errorMap = {
   E0009: IncorrectVerificationCode,
   E0010: OperationTooFrequent,
   E0011: AuthenticationExpiredError,
+  E0012: UnsupportedFileTypeError,
   E1000: CanvasNotFoundError,
   E1002: ResourceNotFoundError,
   E1003: DocumentNotFoundError,
@@ -215,9 +248,12 @@ const errorMap = {
   E1008: LabelInstanceNotFoundError,
   E1009: ShareNotFoundError,
   E1011: ActionResultNotFoundError,
+  E1012: StaticFileNotFoundError,
   E2001: StorageQuotaExceeded,
   E2002: ModelUsageQuotaExceeded,
   E2003: ModelNotSupportedError,
+  E2004: ContentTooLargeError,
+  E2005: PayloadTooLargeError,
 };
 
 export function getErrorMessage(code: string, locale: string): string {

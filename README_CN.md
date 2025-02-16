@@ -11,7 +11,7 @@
 
 Refly 是一个开源的 AI 原生创作引擎。Refly 直观的自由画布界面集成了多线程对话、RAG 检索流程、上下文记忆、智能搜索和 AI 文档编辑等功能，让您轻松地将创意转化为完整作品。
 
-[🚀 Refly v0.2.3 正式发布！全新升级产品引导体验！](https://docs.refly.ai/changelog/v0.2.3)
+[🚀 Refly 网页剪存 Chrome 插件发布! ⚡️! ](https://docs.refly.ai/guide/chrome-extension)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://refly.ai/) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 

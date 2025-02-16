@@ -1,6 +1,13 @@
 import { useCallback, useMemo, useEffect, useState, useRef, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactFlow, Background, MiniMap, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import {
+  ReactFlow,
+  Background,
+  MiniMap,
+  ReactFlowProvider,
+  useReactFlow,
+  Node,
+} from '@xyflow/react';
 import { Button } from 'antd';
 import { nodeTypes, CanvasNode } from './nodes';
 import { LaunchPad } from './launchpad';
@@ -46,6 +53,8 @@ import { SelectionContextMenu } from '@refly-packages/ai-workspace-common/compon
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
 import { IconCreateDocument } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
+import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 
 const selectionStyles = `
   .react-flow__selection {
@@ -407,7 +416,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       }
 
       // Memo nodes are not previewable
-      if (node.type === 'memo' || node.type === 'skill' || node.type === 'group') {
+      if (['memo', 'skill', 'group', 'image'].includes(node.type)) {
         return;
       }
 
@@ -459,15 +468,20 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
   // Optimize node dragging performance
-  const { setIsNodeDragging } = useEditorPerformance();
+  const { setIsNodeDragging, setDraggingNodeId } = useEditorPerformance();
 
-  const onNodeDragStart = useCallback(() => {
-    setIsNodeDragging(true);
-  }, [setIsNodeDragging]);
+  const onNodeDragStart = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      setIsNodeDragging(true);
+      setDraggingNodeId(node.id);
+    },
+    [setIsNodeDragging, setDraggingNodeId],
+  );
 
   const onNodeDragStop = useCallback(() => {
     setIsNodeDragging(false);
-  }, [setIsNodeDragging]);
+    setDraggingNodeId(null);
+  }, [setIsNodeDragging, setDraggingNodeId]);
 
   const onSelectionContextMenu = useCallback(
     (event: React.MouseEvent) => {
@@ -486,6 +500,63 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     },
     [reactFlowInstance],
   );
+
+  const { handleUploadImage } = useUploadImage();
+  const { undoManager } = useCanvasSync();
+
+  // Add drag and drop handlers
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback(
+    async (event: React.DragEvent) => {
+      event.preventDefault();
+      const files = Array.from(event.dataTransfer.files);
+      const imageFile = files.find((file) => file.type.startsWith('image/'));
+
+      if (imageFile) {
+        handleUploadImage(imageFile, canvasId, event);
+      }
+    },
+    [addNode, reactFlowInstance],
+  );
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+
+    // Ignore input, textarea and contentEditable elements
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.contentEditable === 'true'
+    ) {
+      return;
+    }
+
+    // Check for mod key (Command on Mac, Ctrl on Windows/Linux)
+    const isModKey = e.metaKey || e.ctrlKey;
+
+    if (isModKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        // Mod+Shift+Z for Redo
+        undoManager.redo();
+      } else {
+        // Mod+Z for Undo
+        undoManager.undo();
+      }
+    }
+  };
+
+  // Set up keyboard shortcuts for undo/redo
+  useEffect(() => {
+    if (!undoManager) return;
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoManager]);
 
   return (
     <Spin
@@ -522,11 +593,11 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             onNodeDragStop={onNodeDragStop}
             nodeDragThreshold={10}
             nodesDraggable={!operatingNodeId}
-            // onlyRenderVisibleElements={true}
-            elevateNodesOnSelect={false}
             onSelectionContextMenu={onSelectionContextMenu}
             deleteKeyCode={['Backspace', 'Delete']}
             multiSelectionKeyCode={['Shift', 'Meta']}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
           >
             {nodes?.length === 0 && hasCanvasSynced && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50">

@@ -42,6 +42,9 @@ import type {
   DeleteCanvasData,
   DeleteCanvasError,
   DeleteCanvasResponse,
+  AutoNameCanvasData,
+  AutoNameCanvasError,
+  AutoNameCanvasResponse2,
   ListResourcesData,
   ListResourcesError,
   ListResourcesResponse,
@@ -54,6 +57,9 @@ import type {
   CreateResourceData,
   CreateResourceError,
   CreateResourceResponse,
+  CreateResourceWithFileData,
+  CreateResourceWithFileError,
+  CreateResourceWithFileResponse,
   BatchCreateResourceData,
   BatchCreateResourceError,
   BatchCreateResourceResponse2,
@@ -125,12 +131,6 @@ import type {
   DeleteLabelInstanceResponse,
   ListActionsError,
   ListActionsResponse,
-  InvokeActionData,
-  InvokeActionError,
-  InvokeActionResponse2,
-  StreamInvokeActionData,
-  StreamInvokeActionError,
-  StreamInvokeActionResponse,
   GetActionResultData,
   GetActionResultError,
   GetActionResultResponse2,
@@ -205,6 +205,9 @@ import type {
   UploadResponse2,
   ServeStaticError,
   ServeStaticResponse,
+  ConvertData,
+  ConvertError,
+  ConvertResponse2,
 } from './types.gen';
 
 export const client = createClient(createConfig());
@@ -395,6 +398,23 @@ export const deleteCanvas = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Auto name canvas
+ * Auto name a canvas
+ */
+export const autoNameCanvas = <ThrowOnError extends boolean = false>(
+  options: Options<AutoNameCanvasData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    AutoNameCanvasResponse2,
+    AutoNameCanvasError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/autoName',
+  });
+};
+
+/**
  * List resources
  * List all resources
  */
@@ -455,6 +475,28 @@ export const createResource = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/knowledge/resource/create',
+  });
+};
+
+/**
+ * Create new resource with file upload
+ * Create a new resource with file upload in a single request
+ */
+export const createResourceWithFile = <ThrowOnError extends boolean = false>(
+  options: Options<CreateResourceWithFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateResourceWithFileResponse,
+    CreateResourceWithFileError,
+    ThrowOnError
+  >({
+    ...options,
+    ...formDataBodySerializer,
+    headers: {
+      'Content-Type': null,
+      ...options?.headers,
+    },
+    url: '/knowledge/resource/createWithFile',
   });
 };
 
@@ -845,36 +887,6 @@ export const listActions = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).get<ListActionsResponse, ListActionsError, ThrowOnError>({
     ...options,
     url: '/action/list',
-  });
-};
-
-/**
- * Invoke action
- * Invoke an action asynchronously
- */
-export const invokeAction = <ThrowOnError extends boolean = false>(
-  options: Options<InvokeActionData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<InvokeActionResponse2, InvokeActionError, ThrowOnError>({
-    ...options,
-    url: '/action/invoke',
-  });
-};
-
-/**
- * Stream invoke action
- * Invoke an action and return SSE stream
- */
-export const streamInvokeAction = <ThrowOnError extends boolean = false>(
-  options: Options<StreamInvokeActionData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    StreamInvokeActionResponse,
-    StreamInvokeActionError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/action/streamInvoke',
   });
 };
 
@@ -1305,5 +1317,23 @@ export const serveStatic = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).get<ServeStaticResponse, ServeStaticError, ThrowOnError>({
     ...options,
     url: '/misc/static/{fileName}',
+  });
+};
+
+/**
+ * Convert between formats
+ * Convert content between different formats (e.g., HTML to Markdown)
+ */
+export const convert = <ThrowOnError extends boolean = false>(
+  options: Options<ConvertData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ConvertResponse2, ConvertError, ThrowOnError>({
+    ...options,
+    ...formDataBodySerializer,
+    headers: {
+      'Content-Type': null,
+      ...options?.headers,
+    },
+    url: '/misc/convert',
   });
 };

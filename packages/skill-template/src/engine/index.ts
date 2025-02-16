@@ -1,6 +1,6 @@
 import { SkillRunnableConfig } from '../base';
-import { ChatOpenAI, OpenAIChatInput } from '@langchain/openai';
 import { FakeListChatModel } from '@langchain/core/utils/testing';
+import { ChatDeepSeek, ChatDeepSeekInput } from './chat-deepseek';
 import { Document } from '@langchain/core/documents';
 import {
   CreateLabelClassRequest,
@@ -149,17 +149,14 @@ export class SkillEngine {
     public service: ReflyService,
     private options?: SkillEngineOptions,
   ) {
-    this.options = {
-      defaultModel: 'openai/gpt-4o-mini',
-      ...options,
-    };
+    this.options = options;
   }
 
   configure(config: SkillRunnableConfig) {
     this.config = config;
   }
 
-  chatModel(params?: Partial<OpenAIChatInput>): BaseChatModel {
+  chatModel(params?: Partial<ChatDeepSeekInput>, useDefaultChatModel = false): BaseChatModel {
     if (process.env.MOCK_LLM_RESPONSE) {
       return new FakeListChatModel({
         responses: ['This is a test'],
@@ -167,8 +164,10 @@ export class SkillEngine {
       });
     }
 
-    return new ChatOpenAI({
-      model: this.config?.configurable?.modelInfo?.name || this.options.defaultModel,
+    return new ChatDeepSeek({
+      model: useDefaultChatModel
+        ? this.options.defaultModel
+        : this.config?.configurable?.modelInfo?.name || this.options.defaultModel,
       apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
       configuration: {
         baseURL: process.env.OPENROUTER_API_KEY && 'https://openrouter.ai/api/v1',
@@ -178,6 +177,7 @@ export class SkillEngine {
         },
       },
       ...params,
+      include_reasoning: true,
     });
   }
 }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { message } from 'antd';
 import {
@@ -6,6 +6,7 @@ import {
   useContextPanelStore,
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
+import AddToContextMessageContent from '../../components/message/add-to-context-message';
 
 export const useAddToContext = () => {
   const { t } = useTranslation();
@@ -40,28 +41,32 @@ export const useAddToContext = () => {
       }
 
       if (isAlreadyAdded) {
-        message.warning(
-          t('knowledgeBase.context.alreadyAddedWithTitle', {
+        message.warning({
+          content: React.createElement(AddToContextMessageContent, {
             title: nodeTitle,
-            type: t(`canvas.nodeTypes.${nodeType}`),
+            nodeType: t(`canvas.nodeTypes.${nodeType}`),
+            action: t('knowledgeBase.context.alreadyAddedWithTitle'),
           }),
-        );
+          key: 'already-added-warning',
+        });
         return false;
       }
 
       // Add to context
       contextStore.addContextItem(item);
 
-      message.success(
-        t('knowledgeBase.context.addSuccessWithTitle', {
+      message.success({
+        content: React.createElement(AddToContextMessageContent, {
           title: nodeTitle || t('common.untitled'),
-          type: t(`canvas.nodeTypes.${nodeType}`),
+          nodeType: t(`canvas.nodeTypes.${nodeType}`),
+          action: t('knowledgeBase.context.addSuccessWithTitle'),
         }),
-      );
+        key: 'add-success',
+      });
 
       return true;
     },
-    [showLaunchpad, setShowLaunchpad],
+    [showLaunchpad, setShowLaunchpad, t],
   );
 
   const addContextItems = useCallback(

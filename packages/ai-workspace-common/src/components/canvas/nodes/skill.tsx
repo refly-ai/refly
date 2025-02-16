@@ -37,6 +37,8 @@ import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/store
 import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';
 import classNames from 'classnames';
 import Moveable from 'react-moveable';
+import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
+import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 
 type SkillNode = Node<CanvasNodeData<SkillNodeMeta>, 'skill'>;
 
@@ -114,7 +116,9 @@ export const SkillNode = memo(
     const { operatingNodeId } = useCanvasStoreShallow((state) => ({
       operatingNodeId: state.operatingNodeId,
     }));
+    const { draggingNodeId } = useEditorPerformance();
     const isOperating = operatingNodeId === id;
+    const isDragging = draggingNodeId === id;
     const node = useMemo(() => getNode(id), [id, getNode]);
     const { containerStyle, handleResize, updateSize } = useNodeSize({
       id,
@@ -146,6 +150,8 @@ export const SkillNode = memo(
 
     const { invokeAction, abortAction } = useInvokeAction();
     const { canvasId } = useCanvasContext();
+
+    const { handleUploadImage } = useUploadImage();
 
     const setQuery = useCallback(
       (query: string) => {
@@ -207,7 +213,7 @@ export const SkillNode = memo(
 
       const { offsetWidth, offsetHeight } = targetRef.current;
       resizeMoveable(offsetWidth, offsetHeight);
-    }, [resizeMoveable]);
+    }, [resizeMoveable, targetRef.current?.offsetHeight]);
 
     useEffect(() => {
       if (skillSelectedModel && !modelInfo) {
@@ -317,6 +323,19 @@ export const SkillNode = memo(
       };
     }, [id, handleSendMessage, handleDelete]);
 
+    const handleImageUpload = async (file: File) => {
+      const nodeData = await handleUploadImage(file, canvasId);
+      if (nodeData) {
+        setContextItems([
+          ...contextItems,
+          {
+            type: 'image',
+            ...nodeData,
+          },
+        ]);
+      }
+    };
+
     return (
       <div className={classNames({ nowheel: isOperating })}>
         <div
@@ -328,7 +347,7 @@ export const SkillNode = memo(
           onMouseLeave={handleMouseLeave}
           style={containerStyle}
         >
-          <ActionButtons type="skill" nodeId={id} isNodeHovered={isHovered} />
+          {!isDragging && <ActionButtons type="skill" nodeId={id} isNodeHovered={isHovered} />}
           <div className={`w-full h-full ${getNodeCommonStyles({ selected, isHovered })}`}>
             <CustomHandle
               type="target"
@@ -372,6 +391,7 @@ export const SkillNode = memo(
                   setQuery(localQuery?.slice(0, -1));
                   setSelectedSkill(skill);
                 }}
+                onUploadImage={handleImageUpload}
               />
 
               {selectedSkill?.configSchema?.items?.length > 0 && (
@@ -397,6 +417,8 @@ export const SkillNode = memo(
                 setModel={setModelInfo}
                 handleSendMessage={handleSendMessage}
                 handleAbort={abortAction}
+                onUploadImage={handleImageUpload}
+                contextItems={contextItems}
               />
             </div>
           </div>

@@ -2,7 +2,7 @@
   "name": "@refly/extension",
   "description": "A free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and AI documents, easily transforms ideas into quality content.",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.6",
   "type": "module",
   "scripts": {
     "predev": "wxt prepare",

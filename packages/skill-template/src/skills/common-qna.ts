@@ -38,6 +38,7 @@ export class CommonQnA extends BaseSkill {
 
   schema = z.object({
     query: z.string().optional().describe('The question to be answered'),
+    images: z.array(z.string()).optional().describe('The images to be read by the skill'),
   });
 
   graphState: StateGraphArgs<BaseSkillState>['channels'] = {
@@ -56,7 +57,7 @@ export class CommonQnA extends BaseSkill {
     config: SkillRunnableConfig,
     module: SkillPromptModule,
   ) => {
-    const { messages = [] } = state;
+    const { messages = [], images = [] } = state;
     const { locale = 'en', modelInfo } = config.configurable;
 
     // Use shared query processor
@@ -112,11 +113,10 @@ export class CommonQnA extends BaseSkill {
       messages,
       needPrepareContext: needPrepareContext && isModelContextLenSupport,
       context,
+      images,
       originalQuery: query,
       rewrittenQuery: optimizedQuery,
     });
-
-    this.engine.logger.log(`requestMessages: ${safeStringifyJSON(requestMessages)}`);
 
     return { requestMessages, sources };
   };
@@ -150,8 +150,6 @@ export class CommonQnA extends BaseSkill {
         ...currentSkill,
       },
     });
-
-    this.engine.logger.log(`responseMessage: ${safeStringifyJSON(responseMessage)}`);
 
     return { messages: [responseMessage] };
   };

@@ -4,7 +4,7 @@
     "description": "Name of the extension."
   },
   "description": {
-    "message": "A free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.",
+    "message": "An OpenSource AI-powered free-form canvas with multi-threaded dialogue, knowledge base, intelligent search, and WYSIWYG AI editor",
     "description": "Description of the extension."
   },
   "displayName": {

@@ -18,13 +18,16 @@ interface ProcessedResponse {
     statusText: string;
     headers: Record<string, string>;
   };
-  error: { errCode: string; success: boolean; traceId?: string };
+  error: { errCode: string; success: boolean; traceId?: string; errMsg: string };
+}
+
+interface RequestArg {
+  body?: any;
+  [key: string]: any;
 }
 
 // Helper function to process response before sending through messaging
 const processResponse = async (response: Response, data: any): Promise<ProcessedResponse> => {
-  // Clone response early to avoid body already read issues
-
   let parsedBody: any;
 
   // Handle non-ok responses
@@ -52,28 +55,80 @@ const processResponse = async (response: Response, data: any): Promise<Processed
         break;
     }
   } else if (response.headers.get('Content-Type')?.includes('application/json')) {
-    // Use the cloned response for JSON parsing
     parsedBody = data;
   } else {
     parsedBody = { success: true };
   }
 
-  // Return both original response properties and parsed body
+  // Convert headers to object using Array.from
+  const headers: Record<string, string> = {};
+  response.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+
   return {
     response: {
       ok: response.ok,
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
+      headers,
     },
     error: parsedBody,
   };
 };
 
+// Helper function to deserialize File object
+const deserializeFile = (serializedFile: any) => {
+  const uint8Array = new Uint8Array(serializedFile.content);
+  return new File([uint8Array], serializedFile.name, {
+    type: serializedFile.contentType,
+    lastModified: serializedFile.lastModified,
+  });
+};
+
+// Helper function to deserialize FormData
+const deserializeFormData = (serializedFormData: any) => {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(serializedFormData.data)) {
+    if (value && typeof value === 'object' && 'type' in value && value.type === 'File') {
+      formData.append(key, deserializeFile(value) as Blob);
+    } else {
+      formData.append(key, value as string);
+    }
+  }
+  return formData;
+};
+
 export const handleRequestReflect = async (msg: BackgroundMessage) => {
+  // Deserialize File/FormData if present
+  let args = msg.args;
+  if (msg.hasFileData) {
+    args = args?.map((arg: any) => {
+      if (!arg || typeof arg !== 'object') return arg;
+
+      const deserialized = { ...arg } as RequestArg;
+      if (deserialized.body && typeof deserialized.body === 'object') {
+        if ('type' in deserialized.body) {
+          if (deserialized.body.type === 'FormData') {
+            deserialized.body = deserializeFormData(deserialized.body);
+          } else if (deserialized.body.type === 'File') {
+            deserialized.body = deserializeFile(deserialized.body);
+          }
+        } else {
+          for (const [key, value] of Object.entries(deserialized.body)) {
+            if (value && typeof value === 'object' && 'type' in value && value.type === 'File') {
+              deserialized.body[key] = deserializeFile(value);
+            }
+          }
+        }
+      }
+      return deserialized;
+    });
+  }
+
   // @ts-ignore
   const res = await requestModule[msg.name as keyof typeof requestModule]?.call?.(null, {
-    ...msg.args?.[0],
+    ...args?.[0],
     client,
   });
 

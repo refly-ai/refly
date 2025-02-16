@@ -310,6 +310,8 @@ export const CanvasToolbar = memo<ToolbarProps>(({ onToolSelect }) => {
               title: item.title,
               entityId: item.id,
               contentPreview: item?.contentPreview || contentPreview,
+              metadata:
+                item.domain === 'resource' ? { resourceType: item?.metadata?.resourceType } : {},
             },
           },
           undefined,

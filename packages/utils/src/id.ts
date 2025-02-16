@@ -20,6 +20,7 @@ export enum IDPrefix {
   CONTENT_SELECTOR = 'cs-',
   MEMO = 'm-',
   VERIFICATION_SESSION = 'vs-',
+  IMAGE = 'img-',
 }
 
 export function genUID(): string {
@@ -56,6 +57,10 @@ export function genCanvasID(): string {
 
 export function genMemoID(): string {
   return IDPrefix.MEMO + createId();
+}
+
+export function genImageID(): string {
+  return IDPrefix.IMAGE + createId();
 }
 
 export function genReferenceID(): string {

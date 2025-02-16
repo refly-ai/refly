@@ -6,7 +6,7 @@ import { ConnectionError } from '@refly/errors';
 interface SaveContentMetadata {
   title?: string;
   url?: string;
-  res: BaseResponse;
+  res?: BaseResponse;
 }
 
 export const useSaveSelectedContent = () => {
@@ -19,18 +19,23 @@ export const useSaveSelectedContent = () => {
       const title = metadata?.title || document?.title || 'Untitled';
       const url = metadata?.url || document?.location?.href || 'https://www.refly.ai';
 
+      // Create a text file from the content
+      const textBlob = new Blob([content], { type: 'text/plain' });
+      const textFile = new File([textBlob], 'content.txt', { type: 'text/plain' });
       const createResourceData: UpsertResourceRequest = {
         resourceType: 'text',
         title,
-        content: content || '',
         data: {
           url,
           title,
         },
       };
 
-      const { error } = await getClient().createResource({
-        body: createResourceData,
+      const { error } = await getClient().createResourceWithFile({
+        body: {
+          ...createResourceData,
+          file: textFile,
+        },
       });
 
       // const resourceId = data?.data?.resourceId;
@@ -46,7 +51,9 @@ export const useSaveSelectedContent = () => {
       return {
         url: '',
         res: {
+          success: false,
           errCode: new ConnectionError(err)?.code,
+          errMsg: err?.message,
         } as BaseResponse,
       };
     }

@@ -137,13 +137,18 @@ export const ResourceMetaSchema = {
       description: 'Weblink title',
       example: 'Google',
     },
+    contentType: {
+      type: 'string',
+      description: 'File content type (MIME type)',
+      example: 'application/pdf',
+    },
   },
 } as const;
 
 export const ResourceTypeSchema = {
   type: 'string',
   description: 'Resource type',
-  enum: ['weblink', 'text'],
+  enum: ['weblink', 'text', 'file'],
 } as const;
 
 export const ResourceSchema = {
@@ -179,6 +184,10 @@ export const ResourceSchema = {
     vectorSize: {
       type: 'string',
       description: 'Resource vector storage size (in bytes)',
+    },
+    rawFileKey: {
+      type: 'string',
+      description: 'Raw file storage key (used to download the file)',
     },
     createdAt: {
       type: 'string',
@@ -253,7 +262,7 @@ export const DocumentSchema = {
 export const EntityTypeSchema = {
   type: 'string',
   description: 'Entity type',
-  enum: ['document', 'resource', 'canvas'],
+  enum: ['document', 'resource', 'canvas', 'user', 'skillResponse'],
 } as const;
 
 export const EntitySchema = {
@@ -1055,6 +1064,10 @@ export const ActionStepSchema = {
       type: 'string',
       description: 'Step content',
     },
+    reasoningContent: {
+      type: 'string',
+      description: 'Step reasoning content',
+    },
     artifacts: {
       type: 'array',
       description: 'Step artifacts',
@@ -1105,6 +1118,10 @@ export const ActionResultSchema = {
     title: {
       type: 'string',
       description: 'Action result title',
+    },
+    input: {
+      description: 'Action input',
+      $ref: '#/components/schemas/SkillInput',
     },
     tier: {
       description: 'Model tier',
@@ -1882,6 +1899,45 @@ export const DeleteCanvasRequestSchema = {
   },
 } as const;
 
+export const AutoNameCanvasRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    directUpdate: {
+      type: 'boolean',
+      description: 'Whether to directly update the canvas title',
+      default: false,
+    },
+  },
+} as const;
+
+export const AutoNameCanvasResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Auto name canvas result',
+          properties: {
+            title: {
+              type: 'string',
+              description: 'New canvas title',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const UpsertResourceRequestSchema = {
   type: 'object',
   required: ['title', 'resourceType'],
@@ -1903,6 +1959,10 @@ export const UpsertResourceRequestSchema = {
     data: {
       description: 'Resource metadata',
       $ref: '#/components/schemas/ResourceMeta',
+    },
+    storageKey: {
+      type: 'string',
+      description: 'Storage key',
     },
     content: {
       type: 'string',
@@ -2270,7 +2330,11 @@ export const SkillEventSchema = {
     },
     content: {
       type: 'string',
-      description: 'Event content. Only present when `event` is `stream`.',
+      description: 'Event content. Only present when `event` is `stream`',
+    },
+    reasoningContent: {
+      type: 'string',
+      description: 'Reasoning content. Only present when `event` is `stream`',
     },
     tokenUsage: {
       description: 'Token usage data. Only present when `event` is `token_usage`.',
@@ -2837,6 +2901,13 @@ export const SkillInputSchema = {
       type: 'string',
       description: 'User query',
     },
+    images: {
+      type: 'array',
+      description: 'Image list (storage keys)',
+      items: {
+        type: 'string',
+      },
+    },
   },
 } as const;
 
@@ -3086,72 +3157,6 @@ export const ActionContextItemSchema = {
       description: 'Context metadata',
     },
   },
-} as const;
-
-export const InvokeActionRequestSchema = {
-  type: 'object',
-  properties: {
-    actionType: {
-      description: 'Action type',
-      $ref: '#/components/schemas/ActionType',
-    },
-    actionName: {
-      type: 'string',
-      description: 'Action name',
-    },
-    input: {
-      description: 'Action input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    context: {
-      type: 'array',
-      description: 'Action invocation context',
-      items: {
-        $ref: '#/components/schemas/ActionContextItem',
-      },
-    },
-    config: {
-      description: 'Action config',
-      $ref: '#/components/schemas/ActionConfig',
-    },
-    canvasId: {
-      description: 'Canvas ID',
-      type: 'string',
-    },
-    locale: {
-      type: 'string',
-      description: 'Selected output locale',
-    },
-    modelName: {
-      type: 'string',
-      description: 'Selected model',
-    },
-    jobId: {
-      description: 'Skill job ID (if not provided, a new job will be created)',
-      type: 'string',
-    },
-    triggerId: {
-      description: "Trigger ID (typically you don't need to provide this)",
-      type: 'string',
-    },
-  },
-} as const;
-
-export const InvokeActionResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        jobId: {
-          type: 'string',
-          description: 'Skill job ID',
-        },
-      },
-    },
-  ],
 } as const;
 
 export const InvokeSkillRequestSchema = {
@@ -3947,9 +3952,14 @@ export const ScrapeWeblinkResponseSchema = {
   ],
 } as const;
 
+export const FileVisibilitySchema = {
+  type: 'string',
+  enum: ['public', 'private'],
+} as const;
+
 export const UploadRequestSchema = {
   type: 'object',
-  required: ['file', 'entityId', 'entityType'],
+  required: ['file'],
   properties: {
     file: {
       type: 'string',
@@ -3963,6 +3973,10 @@ export const UploadRequestSchema = {
     entityType: {
       description: 'Entity type',
       $ref: '#/components/schemas/EntityType',
+    },
+    visibility: {
+      description: 'File visibility (default is private)',
+      $ref: '#/components/schemas/FileVisibility',
     },
   },
 } as const;
@@ -3978,10 +3992,59 @@ export const UploadResponseSchema = {
         data: {
           type: 'object',
           description: 'File upload result',
+          required: ['url', 'storageKey'],
           properties: {
             url: {
               type: 'string',
               description: 'File URL',
+            },
+            storageKey: {
+              type: 'string',
+              description: 'Storage key',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ConvertRequestSchema = {
+  type: 'object',
+  required: ['file'],
+  properties: {
+    file: {
+      type: 'string',
+      format: 'binary',
+      description: 'The file to convert',
+    },
+    from: {
+      type: 'string',
+      description: 'Source format (e.g., html)',
+      default: 'html',
+    },
+    to: {
+      type: 'string',
+      description: 'Target format (e.g., markdown)',
+      default: 'markdown',
+    },
+  },
+} as const;
+
+export const ConvertResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            content: {
+              type: 'string',
+              description: 'Converted markdown content',
             },
           },
         },
@@ -4101,7 +4164,17 @@ export const InMemorySearchResponseSchema = {
 
 export const CanvasNodeTypeSchema = {
   type: 'string',
-  enum: ['document', 'resource', 'skill', 'tool', 'skillResponse', 'toolResponse', 'memo', 'group'],
+  enum: [
+    'document',
+    'resource',
+    'skill',
+    'tool',
+    'skillResponse',
+    'toolResponse',
+    'memo',
+    'group',
+    'image',
+  ],
 } as const;
 
 export const CanvasNodeDataSchema = {

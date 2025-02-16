@@ -6,7 +6,6 @@
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "biomejs.biome",
   "typescript.preferences.importModuleSpecifier": "non-relative",
-  "typescript.preferences.preferTypeOnlyAutoImports": true,
   "tailwindCSS.includeLanguages": {
     "typescript": "tsx",
     "javascript": "jsx",

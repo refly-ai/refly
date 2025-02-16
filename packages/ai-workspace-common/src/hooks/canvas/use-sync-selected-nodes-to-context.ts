@@ -8,7 +8,8 @@ import {
 export const useSyncSelectedNodesToContext = () => {
   const { nodes } = useCanvasData();
   const selectedContextNodes = nodes.filter(
-    (node) => node.selected && ['resource', 'document', 'skillResponse'].includes(node.type),
+    (node) =>
+      node.selected && ['resource', 'document', 'image', 'skillResponse'].includes(node.type),
   );
 
   const selectedEntityIds =

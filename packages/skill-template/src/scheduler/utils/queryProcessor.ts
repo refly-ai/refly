@@ -1,7 +1,7 @@
 import { GraphState } from '../types';
 import { BaseSkill, SkillRunnableConfig } from '../../base';
 import { checkHasContext, countToken, countMessagesTokens } from './token';
-import { truncateMessages } from './truncator';
+import { isEmptyMessage, truncateMessages } from './truncator';
 import { analyzeQueryAndContext, preprocessQuery } from './query-rewrite/index';
 import { safeStringifyJSON } from '@refly-packages/utils';
 import { checkIsSupportedModel } from './model';
@@ -47,7 +47,7 @@ export async function processQuery(options: QueryProcessorOptions): Promise<Quer
   ctxThis.engine.logger.log(`preprocess query: ${query}`);
 
   // Process chat history
-  const chatHistory = rawChatHistory.filter((message) => message.content !== '');
+  const chatHistory = rawChatHistory.filter((message) => !isEmptyMessage(message));
   const usedChatHistory = truncateMessages(chatHistory, 20, 4000, 30000);
 
   // Check context

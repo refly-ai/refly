@@ -4,7 +4,7 @@ export default defineConfig({
   client: '@hey-api/client-fetch',
   input: './schema.yml',
   output: {
-    format: 'prettier',
+    format: 'biome',
     path: 'src/',
   },
 });

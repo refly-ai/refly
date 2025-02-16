@@ -43,6 +43,7 @@ export class RewriteDoc extends BaseSkill {
 
   schema = z.object({
     query: z.string().optional().describe('The rewrite query'),
+    images: z.array(z.string()).optional().describe('The images to be read by the skill'),
   });
 
   graphState: StateGraphArgs<GraphState>['channels'] = {
@@ -58,7 +59,7 @@ export class RewriteDoc extends BaseSkill {
     config: SkillRunnableConfig,
     module: SkillPromptModule,
   ) => {
-    const { messages = [], query: originalQuery } = state;
+    const { messages = [], query: originalQuery, images = [] } = state;
     const {
       locale = 'en',
       chatHistory = [],
@@ -105,13 +106,12 @@ export class RewriteDoc extends BaseSkill {
       `maxTokens: ${maxTokens}, queryTokens: ${queryTokens}, chatHistoryTokens: ${chatHistoryTokens}, remainingTokens: ${remainingTokens}`,
     );
 
-    // 新增：定义长查询的阈值（可以根据实际需求调整）
-    const LONG_QUERY_TOKENS_THRESHOLD = 100; // 约等于50-75个英文单词或25-35个中文字
+    const LONG_QUERY_TOKENS_THRESHOLD = 100; // About 50-75 English words or 25-35 Chinese characters
 
-    // 优化 needRewriteQuery 判断逻辑
+    // Optimize needRewriteQuery judgment logic
     const needRewriteQuery =
-      queryTokens < LONG_QUERY_TOKENS_THRESHOLD && // 只有短查询才需要重写
-      (hasContext || chatHistoryTokens > 0); // 保持原有的上下文相关判断
+      queryTokens < LONG_QUERY_TOKENS_THRESHOLD && // Only rewrite short queries
+      (hasContext || chatHistoryTokens > 0); // Keep original context-related judgment
 
     const needPrepareContext =
       (hasContext && remainingTokens > 0) || enableWebSearch || enableKnowledgeBaseSearch;
@@ -165,11 +165,10 @@ export class RewriteDoc extends BaseSkill {
       messages,
       needPrepareContext,
       context,
+      images,
       originalQuery: query,
       rewrittenQuery: optimizedQuery,
     });
-
-    this.engine.logger.log(`requestMessages: ${safeStringifyJSON(requestMessages)}`);
 
     return { requestMessages };
   };
@@ -203,8 +202,6 @@ export class RewriteDoc extends BaseSkill {
         ...currentSkill,
       },
     });
-
-    this.engine.logger.log(`responseMessage: ${safeStringifyJSON(responseMessage)}`);
 
     return { messages: [responseMessage] };
   };

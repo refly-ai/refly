@@ -82,7 +82,7 @@ export const callMultiLingualWebSearch = async (
   const timeTracker = new TimeTracker();
   let finalResults: Source[] = [];
 
-  const model = engine.chatModel({ temperature: 0.1 });
+  const model = engine.chatModel({ temperature: 0.1 }, true);
 
   const enableQueryRewrite = params.enableQueryRewrite ?? true;
 

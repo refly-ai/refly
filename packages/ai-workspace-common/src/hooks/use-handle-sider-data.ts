@@ -16,12 +16,12 @@ export const useHandleSiderData = (initData?: boolean) => {
 
   const [isLoadingCanvas, setIsLoadingCanvas] = useState(false);
 
-  const getCanvasList = async () => {
-    setIsLoadingCanvas(true);
+  const getCanvasList = async (setLoading?: boolean) => {
+    setLoading && setIsLoadingCanvas(true);
     const { data: res, error } = await getClient().listCanvases({
       query: { page: 1, pageSize: DATA_NUM },
     });
-    setIsLoadingCanvas(false);
+    setLoading && setIsLoadingCanvas(false);
     if (error) {
       console.error('getCanvasList error', error);
       return [];
@@ -85,13 +85,13 @@ export const useHandleSiderData = (initData?: boolean) => {
     updateLibraryList(libraryList);
   };
 
-  const loadSiderData = async () => {
-    getCanvasList();
+  const loadSiderData = async (setLoading?: boolean) => {
+    getCanvasList(setLoading);
   };
 
   useEffect(() => {
     if (initData) {
-      loadSiderData();
+      loadSiderData(true);
     }
   }, []);
 

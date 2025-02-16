@@ -3,9 +3,10 @@ import { ResourceView } from '@refly-packages/ai-workspace-common/components/res
 
 interface ResourceNodePreviewProps {
   resourceId?: string;
+  nodeId: string;
 }
 
-const ResourceNodePreviewComponent = ({ resourceId }: ResourceNodePreviewProps) => {
+const ResourceNodePreviewComponent = ({ resourceId, nodeId }: ResourceNodePreviewProps) => {
   const [deckSize, setDeckSize] = useState<number>(0);
 
   if (!resourceId) {
@@ -18,7 +19,12 @@ const ResourceNodePreviewComponent = ({ resourceId }: ResourceNodePreviewProps) 
 
   return (
     <div className="h-full bg-white rounded">
-      <ResourceView resourceId={resourceId} deckSize={deckSize} setDeckSize={setDeckSize} />
+      <ResourceView
+        resourceId={resourceId}
+        deckSize={deckSize}
+        setDeckSize={setDeckSize}
+        nodeId={nodeId}
+      />
     </div>
   );
 };

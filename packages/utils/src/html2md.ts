@@ -3,7 +3,7 @@ import { Readability } from '@mozilla/readability';
 import { convertHTMLToMarkdown } from './markdown';
 
 // HTML preprocessing utilities
-const cleanHtml = (htmlContent: string): string => {
+export const cleanHtml = (htmlContent: string): string => {
   let cleanedHtml = htmlContent;
 
   // Remove all comments
@@ -121,16 +121,45 @@ export const getReadabilityHtml = (node: Document | HTMLElement | DocumentFragme
   }
 };
 
-export const getReadabilityMarkdown = (element: Document | HTMLElement | DocumentFragment) => {
-  const html = getReadabilityHtml(element);
+// Common preprocessing method for HTML content
+export const preprocessHtmlContent = (
+  htmlContent: string | Document | HTMLElement | DocumentFragment,
+): string => {
+  let content = '';
+
+  // Handle different input types
+  if (typeof htmlContent === 'string') {
+    content = htmlContent;
+  } else if (
+    htmlContent instanceof Document ||
+    htmlContent instanceof HTMLElement ||
+    htmlContent instanceof DocumentFragment
+  ) {
+    const div = document.createElement('div');
+    div.appendChild(htmlContent.cloneNode(true));
+    content = div.innerHTML;
+  }
+
+  // Only do minimal cleaning to preserve HTML structure
+  content = content
+    // Remove script tags
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove style tags
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    // Remove comments
+    .replace(/<!--[\s\S]*?-->/g, '');
+
+  return content;
+};
+
+export const getMarkdown = (element: Document | HTMLElement | DocumentFragment) => {
+  const html = preprocessHtmlContent(element);
   const md = convertHTMLToMarkdown('render', html);
   return cleanMarkdown(md);
 };
 
-export const getMarkdown = (element: Document | HTMLElement | DocumentFragment) => {
-  const div = document.createElement('div');
-  div.appendChild(element.cloneNode(true));
-  const html = cleanHtml(div.innerHTML);
+export const getReadabilityMarkdown = (element: Document | HTMLElement | DocumentFragment) => {
+  const html = preprocessHtmlContent(element);
   const md = convertHTMLToMarkdown('render', html);
   return cleanMarkdown(md);
 };
@@ -140,8 +169,9 @@ export function getSelectionNodesMarkdown() {
   const range = selection?.getRangeAt(0);
   const text = selection?.toString();
 
-  const fragment = range.cloneRange().cloneContents();
-  const mdText = getMarkdown(fragment);
+  const fragment = range?.cloneRange().cloneContents();
+  if (!fragment) return text || '';
 
+  const mdText = getMarkdown(fragment);
   return mdText || text || ''; // compatible with empty markdown text
 }

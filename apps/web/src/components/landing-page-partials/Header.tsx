@@ -1,9 +1,7 @@
 import Logo from '@/assets/logo.svg';
-import { Button } from 'antd';
+import { Button, Badge } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
-import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
-import { IconDown, IconLanguage } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useState, useEffect } from 'react';
 import {
   useNavigate,
@@ -12,6 +10,11 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/router';
 import './header.scss';
 import { FaDiscord, FaGithub } from 'react-icons/fa6';
+import { EXTENSION_DOWNLOAD_LINK } from '@refly/utils/url';
+import {
+  IconChrome,
+  MemoizedIcon,
+} from '@refly-packages/ai-workspace-common/components/common/icon';
 
 function Header() {
   const navigate = useNavigate();
@@ -23,7 +26,7 @@ function Header() {
   }));
 
   const [value, setValue] = useState('product');
-  const [starCount, setStarCount] = useState('614');
+  const [starCount, setStarCount] = useState('913');
 
   const tabOptions = [
     {
@@ -31,7 +34,19 @@ function Header() {
       value: 'product',
     },
     {
-      label: t('landingPage.tab.price'),
+      label: (
+        <Badge
+          count={t('landingPage.tab.priceTag')}
+          style={{
+            fontSize: '10px',
+            padding: '0 4px',
+            opacity: 0.8,
+          }}
+          offset={[0, -4]}
+        >
+          <span className="mr-3">{t('landingPage.tab.price')}</span>
+        </Badge>
+      ),
       value: 'pricing',
     },
     {
@@ -121,24 +136,24 @@ function Header() {
         </div>
 
         <div className="flex items-center gap-2">
-          <UILocaleList>
-            <Button type="text" size="middle" className="px-2 text-gray-600 hover:text-[#00968f]">
-              <IconLanguage className="h-4 w-4" />
-              {t('language')}{' '}
-              <IconDown className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
-            </Button>
-          </UILocaleList>
-
           <Button
             type="text"
             size="middle"
-            icon={<FaGithub className="h-4 w-4" />}
             onClick={() => window.open('https://github.com/refly-ai/refly', '_blank')}
-            className="flex items-center gap-1 px-2 text-gray-600 hover:text-[#00968f]"
+            className="flex items-center gap-1 px-4 text-gray-600 hover:text-[#00968f]"
           >
-            {starCount}
+            <FaGithub className="h-4 w-4 mr-1" />
+            <span>{starCount}</span>
           </Button>
 
+          <Button
+            onClick={() => {
+              window.open(EXTENSION_DOWNLOAD_LINK, '_blank');
+            }}
+            icon={<MemoizedIcon icon={IconChrome} />}
+          >
+            {t('landingPage.addToChrome')}
+          </Button>
           <Button type="primary" onClick={() => setLoginModalOpen(true)}>
             {t('landingPage.tryForFree')}
           </Button>

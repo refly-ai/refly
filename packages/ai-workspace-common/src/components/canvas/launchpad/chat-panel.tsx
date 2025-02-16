@@ -30,6 +30,8 @@ import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-c
 import { IoClose } from 'react-icons/io5';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
+import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
+import { omit } from '@refly-packages/utils/index';
 
 const PremiumBanner = () => {
   const { t } = useTranslation();
@@ -113,6 +115,7 @@ export const ChatPanel = () => {
   const { handleFilterErrorTip } = useContextFilterErrorTip();
   const { addNode } = useAddNode();
   const { invokeAction, abortAction } = useInvokeAction();
+  const { handleUploadImage } = useUploadImage();
 
   // automatically sync selected nodes to context
   useSyncSelectedNodesToContext();
@@ -193,7 +196,7 @@ export const ChatPanel = () => {
           entityId: resultId,
           metadata: {
             status: 'executing',
-            contextItems,
+            contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
           },
         },
       },
@@ -219,7 +222,7 @@ export const ChatPanel = () => {
   const customActions: CustomAction[] = useMemo(
     () => [
       {
-        icon: <PiMagicWand />,
+        icon: <PiMagicWand className="flex items-center" />,
         title: t('copilot.chatActions.recommendQuestions'),
         onClick: () => {
           handleRecommendQuestionsToggle();
@@ -228,6 +231,19 @@ export const ChatPanel = () => {
     ],
     [handleRecommendQuestionsToggle, t],
   );
+
+  const handleImageUpload = async (file: File) => {
+    const nodeData = await handleUploadImage(file, canvasId);
+    if (nodeData) {
+      setContextItems([
+        ...contextItems,
+        {
+          type: 'image',
+          ...nodeData,
+        },
+      ]);
+    }
+  };
 
   return (
     <div className="relative w-full" data-cy="launchpad-chat-panel">
@@ -245,13 +261,16 @@ export const ChatPanel = () => {
             setContextItems={setContextItems}
             filterErrorInfo={filterErrorInfo}
           />
-          <ChatInput
-            query={chatStore.newQAText}
-            setQuery={chatStore.setNewQAText}
-            selectedSkillName={selectedSkill?.name}
-            autoCompletionPlacement={'topLeft'}
-            handleSendMessage={handleSendMessage}
-          />
+          <div className="px-3">
+            <ChatInput
+              query={chatStore.newQAText}
+              setQuery={chatStore.setNewQAText}
+              selectedSkillName={selectedSkill?.name}
+              autoCompletionPlacement={'topLeft'}
+              handleSendMessage={handleSendMessage}
+              onUploadImage={handleImageUpload}
+            />
+          </div>
 
           {selectedSkill?.configSchema?.items?.length > 0 && (
             <ConfigManager
@@ -279,6 +298,8 @@ export const ChatPanel = () => {
             handleSendMessage={handleSendMessage}
             handleAbort={handleAbort}
             customActions={customActions}
+            onUploadImage={handleImageUpload}
+            contextItems={contextItems}
           />
         </div>
       </div>

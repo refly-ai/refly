@@ -269,7 +269,17 @@ export class AuthService {
     let avatar: string;
     try {
       if (photos?.length > 0) {
-        avatar = (await this.miscService.dumpFileFromURL({ uid }, photos[0].value)).url;
+        avatar = (
+          await this.miscService.dumpFileFromURL(
+            { uid },
+            {
+              url: photos[0].value,
+              entityId: uid,
+              entityType: 'user',
+              visibility: 'public',
+            },
+          )
+        ).url;
       }
     } catch (e) {
       this.logger.warn(`failed to download avatar: ${e}`);

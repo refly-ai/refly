@@ -135,6 +135,10 @@ export const baseStateGraphArgs = {
     reducer: (left: string, right: string) => (right ? right : left || ''),
     default: () => '',
   },
+  images: {
+    reducer: (x: string[], y: string[]) => x.concat(y),
+    default: () => [],
+  },
   locale: {
     reducer: (left?: string, right?: string) => (right ? right : left || 'en'),
     default: () => 'en',

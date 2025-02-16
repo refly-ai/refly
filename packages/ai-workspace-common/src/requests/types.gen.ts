@@ -109,12 +109,16 @@ export type ResourceMeta = {
    * Weblink title
    */
   title?: string;
+  /**
+   * File content type (MIME type)
+   */
+  contentType?: string;
 };
 
 /**
  * Resource type
  */
-export type ResourceType = 'weblink' | 'text';
+export type ResourceType = 'weblink' | 'text' | 'file';
 
 export type Resource = {
   /**
@@ -145,6 +149,10 @@ export type Resource = {
    * Resource vector storage size (in bytes)
    */
   vectorSize?: string;
+  /**
+   * Raw file storage key (used to download the file)
+   */
+  rawFileKey?: string;
   /**
    * Resource creation time
    */
@@ -206,7 +214,7 @@ export type Document = {
 /**
  * Entity type
  */
-export type EntityType = 'document' | 'resource' | 'canvas';
+export type EntityType = 'document' | 'resource' | 'canvas' | 'user' | 'skillResponse';
 
 /**
  * Entity
@@ -876,6 +884,10 @@ export type ActionStep = {
    */
   content?: string;
   /**
+   * Step reasoning content
+   */
+  reasoningContent?: string;
+  /**
    * Step artifacts
    */
   artifacts?: Array<Artifact>;
@@ -911,6 +923,10 @@ export type ActionResult = {
    * Action result title
    */
   title?: string;
+  /**
+   * Action input
+   */
+  input?: SkillInput;
   /**
    * Model tier
    */
@@ -1445,6 +1461,29 @@ export type DeleteCanvasRequest = {
   deleteAllFiles?: boolean;
 };
 
+export type AutoNameCanvasRequest = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Whether to directly update the canvas title
+   */
+  directUpdate?: boolean;
+};
+
+export type AutoNameCanvasResponse = BaseResponse & {
+  /**
+   * Auto name canvas result
+   */
+  data?: {
+    /**
+     * New canvas title
+     */
+    title?: string;
+  };
+};
+
 export type UpsertResourceRequest = {
   /**
    * Resource title
@@ -1462,6 +1501,10 @@ export type UpsertResourceRequest = {
    * Resource metadata
    */
   data?: ResourceMeta;
+  /**
+   * Storage key
+   */
+  storageKey?: string;
   /**
    * Resource content (this will be ignored if storageKey was set)
    */
@@ -1645,9 +1688,13 @@ export type SkillEvent = {
    */
   version?: number;
   /**
-   * Event content. Only present when `event` is `stream`.
+   * Event content. Only present when `event` is `stream`
    */
   content?: string;
+  /**
+   * Reasoning content. Only present when `event` is `stream`
+   */
+  reasoningContent?: string;
   /**
    * Token usage data. Only present when `event` is `token_usage`.
    */
@@ -1985,6 +2032,10 @@ export type SkillInput = {
    * User query
    */
   query?: string;
+  /**
+   * Image list (storage keys)
+   */
+  images?: Array<string>;
 };
 
 /**
@@ -2177,56 +2228,6 @@ export type ActionContextItem = {
   metadata?: {
     [key: string]: unknown;
   };
-};
-
-export type InvokeActionRequest = {
-  /**
-   * Action type
-   */
-  actionType?: ActionType;
-  /**
-   * Action name
-   */
-  actionName?: string;
-  /**
-   * Action input
-   */
-  input?: SkillInput;
-  /**
-   * Action invocation context
-   */
-  context?: Array<ActionContextItem>;
-  /**
-   * Action config
-   */
-  config?: ActionConfig;
-  /**
-   * Canvas ID
-   */
-  canvasId?: string;
-  /**
-   * Selected output locale
-   */
-  locale?: string;
-  /**
-   * Selected model
-   */
-  modelName?: string;
-  /**
-   * Skill job ID (if not provided, a new job will be created)
-   */
-  jobId?: string;
-  /**
-   * Trigger ID (typically you don't need to provide this)
-   */
-  triggerId?: string;
-};
-
-export type InvokeActionResponse = BaseResponse & {
-  /**
-   * Skill job ID
-   */
-  jobId?: string;
 };
 
 export type InvokeSkillRequest = {
@@ -2735,6 +2736,8 @@ export type ScrapeWeblinkResponse = BaseResponse & {
   data?: ScrapeWeblinkResult;
 };
 
+export type FileVisibility = 'public' | 'private';
+
 export type UploadRequest = {
   /**
    * File to upload
@@ -2743,11 +2746,15 @@ export type UploadRequest = {
   /**
    * Entity ID
    */
-  entityId: string;
+  entityId?: string;
   /**
    * Entity type
    */
-  entityType: EntityType;
+  entityType?: EntityType;
+  /**
+   * File visibility (default is private)
+   */
+  visibility?: FileVisibility;
 };
 
 export type UploadResponse = BaseResponse & {
@@ -2758,7 +2765,35 @@ export type UploadResponse = BaseResponse & {
     /**
      * File URL
      */
-    url?: string;
+    url: string;
+    /**
+     * Storage key
+     */
+    storageKey: string;
+  };
+};
+
+export type ConvertRequest = {
+  /**
+   * The file to convert
+   */
+  file: Blob | File;
+  /**
+   * Source format (e.g., html)
+   */
+  from?: string;
+  /**
+   * Target format (e.g., markdown)
+   */
+  to?: string;
+};
+
+export type ConvertResponse = BaseResponse & {
+  data?: {
+    /**
+     * Converted markdown content
+     */
+    content?: string;
   };
 };
 
@@ -2840,7 +2875,8 @@ export type CanvasNodeType =
   | 'skillResponse'
   | 'toolResponse'
   | 'memo'
-  | 'group';
+  | 'group'
+  | 'image';
 
 export type CanvasNodeData = {
   /**
@@ -2972,6 +3008,14 @@ export type DeleteCanvasResponse = BaseResponse;
 
 export type DeleteCanvasError = unknown;
 
+export type AutoNameCanvasData = {
+  body: AutoNameCanvasRequest;
+};
+
+export type AutoNameCanvasResponse2 = AutoNameCanvasResponse;
+
+export type AutoNameCanvasError = unknown;
+
 export type ListResourcesData = {
   query?: {
     /**
@@ -3036,6 +3080,35 @@ export type CreateResourceResponse = UpsertResourceResponse;
 
 export type CreateResourceError = unknown;
 
+export type CreateResourceWithFileData = {
+  body: {
+    /**
+     * File to upload
+     */
+    file: Blob | File;
+    /**
+     * Resource title
+     */
+    title: string;
+    /**
+     * Resource type
+     */
+    resourceType: ResourceType;
+    /**
+     * Resource ID (only used for update)
+     */
+    resourceId?: string;
+    /**
+     * Resource metadata
+     */
+    data?: ResourceMeta;
+  };
+};
+
+export type CreateResourceWithFileResponse = UpsertResourceResponse;
+
+export type CreateResourceWithFileError = unknown;
+
 export type BatchCreateResourceData = {
   /**
    * Resource creation request
@@ -3043,7 +3116,7 @@ export type BatchCreateResourceData = {
   body: Array<UpsertResourceRequest>;
 };
 
-export type BatchCreateResourceResponse2 = UpsertResourceResponse;
+export type BatchCreateResourceResponse2 = BatchCreateResourceResponse;
 
 export type BatchCreateResourceError = unknown;
 
@@ -3302,28 +3375,6 @@ export type ListActionsResponse = ListActionResponse;
 
 export type ListActionsError = unknown;
 
-export type InvokeActionData = {
-  /**
-   * Action invocation request
-   */
-  body: InvokeActionRequest;
-};
-
-export type InvokeActionResponse2 = InvokeActionResponse;
-
-export type InvokeActionError = unknown;
-
-export type StreamInvokeActionData = {
-  /**
-   * Skill invocation request
-   */
-  body: InvokeActionRequest;
-};
-
-export type StreamInvokeActionResponse = string;
-
-export type StreamInvokeActionError = unknown;
-
 export type GetActionResultData = {
   query: {
     /**
@@ -3577,3 +3628,11 @@ export type UploadError = unknown;
 export type ServeStaticResponse = unknown;
 
 export type ServeStaticError = unknown;
+
+export type ConvertData = {
+  body: ConvertRequest;
+};
+
+export type ConvertResponse2 = ConvertResponse;
+
+export type ConvertError = unknown;

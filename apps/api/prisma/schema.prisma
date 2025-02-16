@@ -146,31 +146,33 @@ model ActionResult {
 
 model ActionStep {
   /// Primary key
-  pk             BigInt    @id @default(autoincrement())
+  pk               BigInt    @id @default(autoincrement())
   /// Action result id which this step belongs to
-  resultId       String    @map("result_id")
+  resultId         String    @map("result_id")
   /// Action result version
-  version        Int       @default(0) @map("version")
+  version          Int       @default(0) @map("version")
   /// Step order
-  order          Int       @default(0) @map("order")
+  order            Int       @default(0) @map("order")
   /// Step name
-  name           String    @map("name")
+  name             String    @map("name")
   /// Step content
-  content        String    @map("content")
+  content          String    @map("content")
+  /// Step reasoning content
+  reasoningContent String?   @map("reasoning_content")
   /// Structured data output (JSON)
-  structuredData String    @default("{}") @map("structured_data")
+  structuredData   String    @default("{}") @map("structured_data")
   /// Action logs
-  logs           String    @default("[]") @map("logs")
+  logs             String    @default("[]") @map("logs")
   /// Action artifacts (JSON array)
-  artifacts      String    @default("[]") @map("artifacts")
+  artifacts        String    @default("[]") @map("artifacts")
   /// Token usage summary (JSON array)
-  tokenUsage     String    @default("[]") @map("token_usage")
+  tokenUsage       String    @default("[]") @map("token_usage")
   /// Create timestamp
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@index([resultId, version, order])
   @@map("action_steps")
@@ -211,27 +213,34 @@ model TokenUsage {
 
 model StaticFile {
   /// Primary key
-  pk          BigInt    @id @default(autoincrement())
+  pk                BigInt    @id @default(autoincrement())
   /// UID
-  uid         String    @map("uid")
+  uid               String    @map("uid")
   /// Storage key
-  storageKey  String    @map("storage_key")
+  storageKey        String    @map("storage_key")
   /// Storage size (in bytes)
-  storageSize BigInt    @default(0) @map("storage_size")
+  storageSize       BigInt    @default(0) @map("storage_size")
+  /// Content type
+  contentType       String    @default("") @map("content_type")
+  /// Processed image storage key (only applicable to images)
+  processedImageKey String?   @map("processed_image_key")
   /// Entity id
-  entityId    String?   @map("entity_id")
+  entityId          String?   @map("entity_id")
   /// Entity type
-  entityType  String?   @map("entity_type")
+  entityType        String?   @map("entity_type")
+  /// Visibility
+  visibility        String    @default("private") @map("visibility")
   /// Expiration timestamp
-  expiredAt   DateTime? @map("expired_at") @db.Timestamptz()
+  expiredAt         DateTime? @map("expired_at") @db.Timestamptz()
   /// Create timestamp
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz()
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
 
-  @@index([uid, entityId, entityType])
+  @@index([entityId, entityType])
+  @@index([storageKey])
   @@map("static_files")
 }
 
@@ -302,6 +311,8 @@ model Resource {
   storageSize    BigInt    @default(0) @map("storage_size")
   /// Vector storage size (in bytes)
   vectorSize     BigInt    @default(0) @map("vector_size")
+  /// Raw file storage key
+  rawFileKey     String?   @map("raw_file_key")
   /// Index status
   indexStatus    String    @default("init") @map("index_status")
   /// Title

@@ -11,6 +11,7 @@ import { CollabService } from '@/collab/collab.service';
 import { ElasticsearchService } from '@/common/elasticsearch.service';
 import { CanvasNotFoundError } from '@refly-packages/errors';
 import {
+  AutoNameCanvasRequest,
   DeleteCanvasRequest,
   Entity,
   EntityType,
@@ -21,6 +22,11 @@ import {
 import { genCanvasID } from '@refly-packages/utils';
 import { DeleteKnowledgeEntityJobData } from '@/knowledge/knowledge.dto';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY } from '@/utils/const';
+import { ConfigService } from '@nestjs/config';
+import { ChatOpenAI } from '@langchain/openai';
+import { HumanMessage } from '@langchain/core/messages';
+import { SystemMessage } from '@langchain/core/messages';
+import { AutoNameCanvasJobData } from './canvas.dto';
 
 @Injectable()
 export class CanvasService {
@@ -31,6 +37,7 @@ export class CanvasService {
     private elasticsearch: ElasticsearchService,
     private collabService: CollabService,
     private miscService: MiscService,
+    private configService: ConfigService,
     @Inject(MINIO_INTERNAL) private minio: MinioService,
     @InjectQueue(QUEUE_DELETE_KNOWLEDGE_ENTITY)
     private deleteKnowledgeQueue: Queue<DeleteKnowledgeEntityJobData>,
@@ -170,18 +177,6 @@ export class CanvasService {
           ),
         );
       }
-    }
-
-    const files = await this.prisma.staticFile.findMany({
-      where: { entityId: canvas.canvasId, entityType: 'canvas' },
-    });
-
-    if (files.length > 0) {
-      cleanups.push(
-        this.prisma.staticFile.deleteMany({
-          where: { entityId: canvas.canvasId, entityType: 'canvas' },
-        }),
-      );
     }
 
     await Promise.all(cleanups);
@@ -335,5 +330,100 @@ export class CanvasService {
         }),
       ),
     );
+  }
+
+  async autoNameCanvas(user: User, param: AutoNameCanvasRequest) {
+    const { canvasId, directUpdate = false } = param;
+
+    const canvas = await this.prisma.canvas.findFirst({
+      where: { canvasId, uid: user.uid, deletedAt: null },
+    });
+    if (!canvas) {
+      throw new CanvasNotFoundError();
+    }
+
+    const results = await this.prisma.actionResult.findMany({
+      select: { title: true, input: true, version: true, resultId: true },
+      where: { targetId: canvasId, targetType: 'canvas' },
+    });
+
+    const canvasContent = await Promise.all(
+      results.map(async (result) => {
+        const { resultId, version, input, title } = result;
+        const steps = await this.prisma.actionStep.findMany({
+          where: { resultId, version },
+        });
+        const parsedInput = JSON.parse(input ?? '{}');
+        const question = parsedInput?.query ?? title;
+
+        return `Question: ${question}\nAnswer: ${steps.map((s) => s.content.slice(0, 100)).join('\n')}`;
+      }),
+    );
+
+    // If no action results, try to get all entities associated with the canvas
+    if (canvasContent.length === 0) {
+      const relations = await this.prisma.canvasEntityRelation.findMany({
+        where: { canvasId, entityType: { in: ['resource', 'document'] }, deletedAt: null },
+      });
+      const documents = await this.prisma.document.findMany({
+        select: { title: true, contentPreview: true },
+        where: { docId: { in: relations.map((r) => r.entityId) } },
+      });
+      const resources = await this.prisma.resource.findMany({
+        select: { title: true, contentPreview: true },
+        where: { resourceId: { in: relations.map((r) => r.entityId) } },
+      });
+      canvasContent.push(
+        ...documents.map((d) => `Title: ${d.title}\nContent Preview: ${d.contentPreview}`),
+        ...resources.map((r) => `Title: ${r.title}\nContent Preview: ${r.contentPreview}`),
+      );
+    }
+
+    const combinedContent = canvasContent.filter(Boolean).join('\n\n');
+
+    if (!combinedContent) {
+      return { title: '' };
+    }
+
+    const model = new ChatOpenAI({
+      model: this.configService.get('skill.defaultModel'),
+      apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
+      configuration: {
+        baseURL: process.env.OPENROUTER_API_KEY && 'https://openrouter.ai/api/v1',
+        defaultHeaders: {
+          'HTTP-Referer': 'https://refly.ai',
+          'X-Title': 'Refly',
+        },
+      },
+    });
+
+    const systemPrompt =
+      'Given the following content from a canvas, generate a concise and descriptive title (maximum 5 words)';
+    const result = await model.invoke([
+      new SystemMessage(systemPrompt),
+      new HumanMessage(combinedContent),
+    ]);
+    const newTitle = result.content.toString();
+
+    if (directUpdate) {
+      await this.updateCanvas(user, {
+        canvasId,
+        title: newTitle,
+      });
+    }
+
+    return { title: newTitle };
+  }
+
+  async autoNameCanvasFromQueue(jobData: AutoNameCanvasJobData) {
+    const { uid, canvasId } = jobData;
+    const user = await this.prisma.user.findFirst({ where: { uid } });
+    if (!user) {
+      this.logger.warn(`user not found for uid ${uid} when auto naming canvas: ${canvasId}`);
+      return;
+    }
+
+    const result = await this.autoNameCanvas(user, { canvasId, directUpdate: true });
+    this.logger.log(`Auto named canvas ${canvasId} with title: ${result.title}`);
   }
 }

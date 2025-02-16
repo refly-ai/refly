@@ -19,6 +19,7 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-cluster';
 import Moveable from 'react-moveable';
+import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 
 interface GroupMetadata {
   label?: string;
@@ -67,6 +68,8 @@ export const GroupNode = memo(
 
     // Memoize node and its measurements
     const node = useMemo(() => getNode(id), [id, getNode]);
+    const { draggingNodeId } = useEditorPerformance();
+    const isDragging = draggingNodeId === id;
 
     const initialSize = useMemo(
       () => ({
@@ -317,7 +320,9 @@ export const GroupNode = memo(
 
             {!isPreview && !hideActions && (
               <>
-                <ActionButtons type="group" nodeId={id} isNodeHovered={isHovered} />
+                {!isDragging && (
+                  <ActionButtons type="group" nodeId={id} isNodeHovered={isHovered} />
+                )}
                 <GroupActionButtons
                   nodeId={id}
                   isTemporary={data.metadata?.isTemporary}

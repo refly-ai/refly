@@ -5,9 +5,14 @@ import { Queue } from 'bullmq';
 import * as Y from 'yjs';
 import { InjectQueue } from '@nestjs/bullmq';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { Prisma, SkillTrigger as SkillTriggerModel } from '@prisma/client';
+import { getWholeParsedContent } from '@refly-packages/utils';
+import {
+  Prisma,
+  SkillTrigger as SkillTriggerModel,
+  ActionResult as ActionResultModel,
+} from '@prisma/client';
 import { Response } from 'express';
-import { AIMessageChunk, BaseMessage } from '@langchain/core/dist/messages';
+import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/dist/messages';
 import {
   CreateSkillInstanceRequest,
   CreateSkillTriggerRequest,
@@ -61,6 +66,7 @@ import {
   QUEUE_SYNC_TOKEN_USAGE,
   QUEUE_SKILL_TIMEOUT_CHECK,
   QUEUE_SYNC_REQUEST_USAGE,
+  QUEUE_AUTO_NAME_CANVAS,
 } from '@/utils';
 import { InvokeSkillJobData, SkillTimeoutCheckJobData } from './skill.dto';
 import { KnowledgeService } from '@/knowledge/knowledge.service';
@@ -81,34 +87,15 @@ import {
 import { genBaseRespDataFromError } from '@/utils/exception';
 import { CanvasService } from '@/canvas/canvas.service';
 import { canvasPO2DTO } from '@/canvas/canvas.dto';
-import { actionResultPO2DTO, actionStepPO2DTO } from '@/action/action.dto';
+import { actionResultPO2DTO } from '@/action/action.dto';
 import { CollabService } from '@/collab/collab.service';
 import { throttle } from 'lodash';
 import { ResultAggregator } from '@/utils/result';
 import { CollabContext } from '@/collab/collab.dto';
 import { DirectConnection } from '@hocuspocus/server';
 import { modelInfoPO2DTO } from '@/misc/misc.dto';
-
-export function createLangchainMessage(result: ActionResult, steps: ActionStep[]): BaseMessage[] {
-  const query = result.title;
-
-  return [
-    new HumanMessage({ content: query }),
-    ...(steps?.length > 0
-      ? steps.map(
-          (step) =>
-            new AIMessage({
-              content: step.content, // TODO: dump artifact content to message
-              additional_kwargs: {
-                skillMeta: result.actionMeta,
-                structuredData: step.structuredData,
-                type: result.type,
-              },
-            }),
-        )
-      : []),
-  ];
-}
+import { MiscService } from '@/misc/misc.service';
+import { AutoNameCanvasJobData } from '@/canvas/canvas.dto';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -138,12 +125,15 @@ export class SkillService {
     private canvas: CanvasService,
     private subscription: SubscriptionService,
     private collabService: CollabService,
+    private misc: MiscService,
     @InjectQueue(QUEUE_SKILL) private skillQueue: Queue<InvokeSkillJobData>,
     @InjectQueue(QUEUE_SKILL_TIMEOUT_CHECK)
     private timeoutCheckQueue: Queue<SkillTimeoutCheckJobData>,
     @InjectQueue(QUEUE_SYNC_TOKEN_USAGE) private usageReportQueue: Queue<SyncTokenUsageJobData>,
     @InjectQueue(QUEUE_SYNC_REQUEST_USAGE)
     private requestUsageQueue: Queue<SyncRequestUsageJobData>,
+    @InjectQueue(QUEUE_AUTO_NAME_CANVAS)
+    private autoNameCanvasQueue: Queue<AutoNameCanvasJobData>,
   ) {
     this.skillEngine = new SkillEngine(this.logger, this.buildReflyService(), {
       defaultModel: this.config.get('skill.defaultModel'),
@@ -569,38 +559,34 @@ export class SkillService {
    * Populate skill result history with actual result detail and steps.
    */
   async populateSkillResultHistory(user: User, resultHistory: ActionResult[]) {
-    // Get all results
+    // Fetch all results for the given resultIds
     const results = await this.prisma.actionResult.findMany({
       where: { resultId: { in: resultHistory.map((r) => r.resultId) }, uid: user.uid },
     });
 
-    // Get all steps for these results in a single query
-    const steps = await this.prisma.actionStep.findMany({
-      where: { resultId: { in: results.map((r) => r.resultId) } },
-    });
-
-    // Create maps for efficient lookups
-    const resultMap = new Map<string, ActionResult>();
-    const stepsMap = new Map<string, ActionStep[]>();
-
-    // Group steps by resultId
-    for (const step of steps) {
-      const resultSteps = stepsMap.get(step.resultId) ?? [];
-      resultSteps.push(actionStepPO2DTO(step));
-      stepsMap.set(step.resultId, resultSteps);
-    }
-
-    // Convert results and add steps
+    // Group results by resultId and pick the one with the highest version
+    const latestResultsMap = new Map<string, ActionResultModel>();
     for (const r of results) {
-      const resultDTO = actionResultPO2DTO(r);
-      resultDTO.steps = stepsMap.get(r.resultId);
-      resultMap.set(r.resultId, resultDTO);
+      const latestResult = latestResultsMap.get(r.resultId);
+      if (!latestResult || r.version > latestResult.version) {
+        latestResultsMap.set(r.resultId, r);
+      }
     }
 
-    return resultHistory
-      .map((r) => resultMap.get(r.resultId))
-      .filter(Boolean) // Remove any undefined results
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const finalResults: ActionResult[] = await Promise.all(
+      Array.from(latestResultsMap.entries()).map(async ([resultId, result]) => {
+        const steps = await this.prisma.actionStep.findMany({
+          where: { resultId, version: result.version },
+          orderBy: { order: 'asc' },
+        });
+        return actionResultPO2DTO({ ...result, steps });
+      }),
+    );
+
+    // Sort the results by createdAt ascending
+    finalResults.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    return finalResults;
   }
 
   async sendInvokeSkillTask(user: User, param: InvokeSkillRequest) {
@@ -625,6 +611,42 @@ export class SkillService {
     const jobData = await this.skillInvokePreCheck(user, param);
 
     return this.streamInvokeSkill(user, jobData, res);
+  }
+
+  async buildLangchainMessages(
+    user: User,
+    result: ActionResult,
+    steps: ActionStep[],
+  ): Promise<BaseMessage[]> {
+    const query = result.input?.query || result.title;
+
+    let imageUrls: string[] = [];
+    if (result.input?.images?.length > 0) {
+      imageUrls = await this.misc.generateImageUrls(user, result.input.images);
+    }
+    const imageContent: MessageContentComplex[] = imageUrls.map((url) => ({
+      type: 'image_url',
+      image_url: { url },
+    }));
+
+    return [
+      new HumanMessage({
+        content: [{ type: 'text', text: query }, ...imageContent],
+      }),
+      ...(steps?.length > 0
+        ? steps.map(
+            (step) =>
+              new AIMessage({
+                content: getWholeParsedContent(step.reasoningContent, step.content), //  // TODO: dump artifact content to message
+                additional_kwargs: {
+                  skillMeta: result.actionMeta,
+                  structuredData: step.structuredData,
+                  type: result.type,
+                },
+              }),
+          )
+        : []),
+    ];
   }
 
   async buildInvokeConfig(
@@ -658,9 +680,9 @@ export class SkillService {
     };
 
     if (resultHistory?.length > 0) {
-      config.configurable.chatHistory = resultHistory.flatMap((r) =>
-        createLangchainMessage(r, r.steps),
-      );
+      config.configurable.chatHistory = await Promise.all(
+        resultHistory.map((r) => this.buildLangchainMessages(user, r, r.steps)),
+      ).then((messages) => messages.flat());
     }
 
     if (eventListener) {
@@ -752,6 +774,10 @@ export class SkillService {
     const { input, result } = data;
     const { resultId, version, actionMeta, tier } = result;
 
+    if (input.images?.length > 0) {
+      input.images = await this.misc.generateImageUrls(user, input.images);
+    }
+
     await this.requestUsageQueue.add('syncRequestUsage', {
       uid: user.uid,
       tier,
@@ -762,7 +788,6 @@ export class SkillService {
 
     if (res) {
       res.on('close', () => {
-        this.logger.log('skill invocation aborted due to client disconnect');
         aborted = true;
       });
     }
@@ -914,7 +939,9 @@ export class SkillService {
         switch (event.event) {
           case 'on_chat_model_stream': {
             const content = chunk.content.toString();
-            if (content && res && !runMeta?.suppressOutput) {
+            const reasoningContent = chunk?.additional_kwargs?.reasoning_content?.toString() || '';
+
+            if ((content || reasoningContent) && res && !runMeta?.suppressOutput) {
               if (runMeta?.artifact) {
                 const { entityId } = runMeta.artifact;
                 const artifact = artifactMap[entityId];
@@ -937,11 +964,12 @@ export class SkillService {
                 throttledMarkdownUpdate(artifact);
               } else {
                 // Update result content and forward stream events to client
-                resultAggregator.handleStreamContent(runMeta, content);
+                resultAggregator.handleStreamContent(runMeta, content, reasoningContent);
                 writeSSEResponse(res, {
                   event: 'stream',
                   resultId,
                   content,
+                  reasoningContent,
                   step: runMeta?.step,
                 });
               }
@@ -1012,6 +1040,19 @@ export class SkillService {
       ]);
 
       writeSSEResponse(res, { event: 'end', resultId, version });
+
+      // Check if we need to auto-name the target canvas
+      if (data.target?.entityType === 'canvas' && !result.errors.length) {
+        const canvas = await this.prisma.canvas.findFirst({
+          where: { canvasId: data.target.entityId, uid: user.uid },
+        });
+        if (canvas && !canvas.title) {
+          await this.autoNameCanvasQueue.add('autoNameCanvas', {
+            uid: user.uid,
+            canvasId: canvas.canvasId,
+          });
+        }
+      }
 
       await this.requestUsageQueue.add('syncRequestUsage', {
         uid: user.uid,

@@ -4,10 +4,12 @@ import { type Options } from '@hey-api/client-fetch';
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from '@tanstack/react-query';
 import {
   addReferences,
+  autoNameCanvas,
   batchCreateResource,
   batchUpdateDocument,
   checkSettingsField,
   checkVerification,
+  convert,
   createCanvas,
   createCheckoutSession,
   createDocument,
@@ -15,6 +17,7 @@ import {
   createLabelInstance,
   createPortalSession,
   createResource,
+  createResourceWithFile,
   createShare,
   createSkillInstance,
   createSkillTrigger,
@@ -39,7 +42,6 @@ import {
   getShareContent,
   getSubscriptionPlans,
   getSubscriptionUsage,
-  invokeAction,
   invokeSkill,
   listActions,
   listCanvases,
@@ -61,7 +63,6 @@ import {
   scrape,
   search,
   serveStatic,
-  streamInvokeAction,
   streamInvokeSkill,
   unpinSkillInstance,
   updateCanvas,
@@ -77,6 +78,8 @@ import {
 import {
   AddReferencesData,
   AddReferencesError,
+  AutoNameCanvasData,
+  AutoNameCanvasError,
   BatchCreateResourceData,
   BatchCreateResourceError,
   BatchUpdateDocumentData,
@@ -85,6 +88,8 @@ import {
   CheckSettingsFieldError,
   CheckVerificationData,
   CheckVerificationError,
+  ConvertData,
+  ConvertError,
   CreateCanvasData,
   CreateCanvasError,
   CreateCheckoutSessionData,
@@ -98,6 +103,8 @@ import {
   CreatePortalSessionError,
   CreateResourceData,
   CreateResourceError,
+  CreateResourceWithFileData,
+  CreateResourceWithFileError,
   CreateShareData,
   CreateShareError,
   CreateSkillInstanceData,
@@ -141,8 +148,6 @@ import {
   GetShareContentError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
-  InvokeActionData,
-  InvokeActionError,
   InvokeSkillData,
   InvokeSkillError,
   ListActionsError,
@@ -179,8 +184,6 @@ import {
   SearchData,
   SearchError,
   ServeStaticError,
-  StreamInvokeActionData,
-  StreamInvokeActionError,
   StreamInvokeSkillData,
   StreamInvokeSkillError,
   UnpinSkillInstanceData,
@@ -694,6 +697,23 @@ export const useDeleteCanvas = <
     mutationFn: (clientOptions) => deleteCanvas(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useAutoNameCanvas = <
+  TData = Common.AutoNameCanvasMutationResult,
+  TError = AutoNameCanvasError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<AutoNameCanvasData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<AutoNameCanvasData, true>, TContext>({
+    mutationKey: Common.UseAutoNameCanvasKeyFn(mutationKey),
+    mutationFn: (clientOptions) => autoNameCanvas(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useUpdateResource = <
   TData = Common.UpdateResourceMutationResult,
   TError = UpdateResourceError,
@@ -726,6 +746,24 @@ export const useCreateResource = <
   useMutation<TData, TError, Options<CreateResourceData, true>, TContext>({
     mutationKey: Common.UseCreateResourceKeyFn(mutationKey),
     mutationFn: (clientOptions) => createResource(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useCreateResourceWithFile = <
+  TData = Common.CreateResourceWithFileMutationResult,
+  TError = CreateResourceWithFileError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreateResourceWithFileData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreateResourceWithFileData, true>, TContext>({
+    mutationKey: Common.UseCreateResourceWithFileKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      createResourceWithFile(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useBatchCreateResource = <
@@ -1034,40 +1072,6 @@ export const useDeleteLabelInstance = <
     mutationFn: (clientOptions) => deleteLabelInstance(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
-export const useInvokeAction = <
-  TData = Common.InvokeActionMutationResult,
-  TError = InvokeActionError,
-  TQueryKey extends Array<unknown> = unknown[],
-  TContext = unknown,
->(
-  mutationKey?: TQueryKey,
-  options?: Omit<
-    UseMutationOptions<TData, TError, Options<InvokeActionData, true>, TContext>,
-    'mutationKey' | 'mutationFn'
-  >,
-) =>
-  useMutation<TData, TError, Options<InvokeActionData, true>, TContext>({
-    mutationKey: Common.UseInvokeActionKeyFn(mutationKey),
-    mutationFn: (clientOptions) => invokeAction(clientOptions) as unknown as Promise<TData>,
-    ...options,
-  });
-export const useStreamInvokeAction = <
-  TData = Common.StreamInvokeActionMutationResult,
-  TError = StreamInvokeActionError,
-  TQueryKey extends Array<unknown> = unknown[],
-  TContext = unknown,
->(
-  mutationKey?: TQueryKey,
-  options?: Omit<
-    UseMutationOptions<TData, TError, Options<StreamInvokeActionData, true>, TContext>,
-    'mutationKey' | 'mutationFn'
-  >,
-) =>
-  useMutation<TData, TError, Options<StreamInvokeActionData, true>, TContext>({
-    mutationKey: Common.UseStreamInvokeActionKeyFn(mutationKey),
-    mutationFn: (clientOptions) => streamInvokeAction(clientOptions) as unknown as Promise<TData>,
-    ...options,
-  });
 export const useInvokeSkill = <
   TData = Common.InvokeSkillMutationResult,
   TError = InvokeSkillError,
@@ -1340,6 +1344,23 @@ export const useUpload = <
   useMutation<TData, TError, Options<UploadData, true>, TContext>({
     mutationKey: Common.UseUploadKeyFn(mutationKey),
     mutationFn: (clientOptions) => upload(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useConvert = <
+  TData = Common.ConvertMutationResult,
+  TError = ConvertError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ConvertData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ConvertData, true>, TContext>({
+    mutationKey: Common.UseConvertKeyFn(mutationKey),
+    mutationFn: (clientOptions) => convert(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useUpdateSettings = <

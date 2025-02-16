@@ -10,6 +10,11 @@ export interface DeleteCanvasNodesJobData {
   entities: Entity[];
 }
 
+export interface AutoNameCanvasJobData {
+  uid: string;
+  canvasId: string;
+}
+
 export function canvasPO2DTO(canvas: CanvasModel): Canvas {
   return {
     ...pick(canvas, ['canvasId', 'title', 'shareCode']),

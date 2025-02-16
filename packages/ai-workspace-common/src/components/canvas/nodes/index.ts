@@ -7,6 +7,7 @@ import { ToolNode } from './tool';
 import { SkillResponseNode } from './skill-response';
 import { MemoNode } from './memo/memo';
 import { GroupNode } from './group';
+import { ImageNode } from './image';
 import {
   NodeMetadataMap,
   CanvasNodeData,
@@ -28,7 +29,7 @@ export * from './tool';
 export * from './skill-response';
 export * from './memo/memo';
 export * from './group';
-
+export * from './image';
 // Node types mapping
 export const nodeTypes: NodeTypes = {
   document: DocumentNode,
@@ -38,6 +39,7 @@ export const nodeTypes: NodeTypes = {
   skillResponse: SkillResponseNode,
   memo: MemoNode,
   group: GroupNode,
+  image: ImageNode,
 };
 
 // Helper function to prepare node data
@@ -127,6 +129,12 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
         status: 'waiting',
         executionTime: null,
       } as ResponseNodeMeta;
+
+    case 'image':
+      return {
+        sizeMode: 'adaptive',
+        style: {},
+      };
 
     default:
       return {};

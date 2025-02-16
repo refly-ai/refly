@@ -27,6 +27,7 @@ import { NodeHeader } from './shared/node-header';
 import { ContentPreview } from './shared/content-preview';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-document';
+import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 
 export const DocumentNode = memo(
   ({
@@ -50,7 +51,9 @@ export const DocumentNode = memo(
       operatingNodeId: state.operatingNodeId,
     }));
 
+    const { draggingNodeId } = useEditorPerformance();
     const isOperating = operatingNodeId === id;
+    const isDragging = draggingNodeId === id;
     const sizeMode = data?.metadata?.sizeMode || 'adaptive';
     const node = useMemo(() => getNode(id), [id, getNode]);
 
@@ -199,7 +202,7 @@ export const DocumentNode = memo(
           onClick={onNodeClick}
           style={isPreview ? { width: 288, height: 200 } : containerStyle}
         >
-          {!isPreview && !hideActions && (
+          {!isPreview && !hideActions && !isDragging && (
             <ActionButtons type="document" nodeId={id} isNodeHovered={isHovered} />
           )}
 

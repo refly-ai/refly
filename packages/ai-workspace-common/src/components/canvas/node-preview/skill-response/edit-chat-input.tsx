@@ -16,6 +16,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useReactFlow } from '@xyflow/react';
 import { GrRevert } from 'react-icons/gr';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
+import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 
 interface EditChatInputProps {
   enabled: boolean;
@@ -63,6 +64,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   const { canvasId } = useCanvasContext();
   const { invokeAction } = useInvokeAction();
   const skill = useFindSkill(localActionMeta?.name);
+  const { handleUploadImage } = useUploadImage();
 
   const textareaRef = useRef<HTMLDivElement>(null);
 
@@ -129,7 +131,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   const customActions: CustomAction[] = useMemo(
     () => [
       {
-        icon: <GrRevert />,
+        icon: <GrRevert className="flex items-center" />,
         title: t('copilot.chatActions.discard'),
         onClick: () => {
           setEditMode(false);
@@ -148,6 +150,19 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
       name: skill.name,
     });
   }, []);
+
+  const handleImageUpload = async (file: File) => {
+    const nodeData = await handleUploadImage(file, canvasId);
+    if (nodeData) {
+      setEditContextItems([
+        ...editContextItems,
+        {
+          type: 'image',
+          ...nodeData,
+        },
+      ]);
+    }
+  };
 
   if (!enabled) {
     return null;
@@ -174,17 +189,20 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
           contextItems={editContextItems}
           setContextItems={setEditContextItems}
         />
-        <ChatInput
-          ref={textareaRef}
-          query={editQuery}
-          setQuery={setEditQuery}
-          selectedSkillName={localActionMeta?.name}
-          handleSendMessage={handleSendMessage}
-          handleSelectSkill={(skill) => {
-            setEditQuery(editQuery?.slice(0, -1));
-            handleSelectSkill(skill);
-          }}
-        />
+        <div className="px-3">
+          <ChatInput
+            ref={textareaRef}
+            query={editQuery}
+            setQuery={setEditQuery}
+            selectedSkillName={localActionMeta?.name}
+            handleSendMessage={handleSendMessage}
+            handleSelectSkill={(skill) => {
+              setEditQuery(editQuery?.slice(0, -1));
+              handleSelectSkill(skill);
+            }}
+            onUploadImage={handleImageUpload}
+          />
+        </div>
         <ChatActions
           className="p-2 px-3"
           query={editQuery}
@@ -193,6 +211,8 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
           handleSendMessage={handleSendMessage}
           handleAbort={() => {}}
           customActions={customActions}
+          onUploadImage={handleImageUpload}
+          contextItems={editContextItems}
         />
 
         {/* {skillStore.selectedSkill?.configSchema?.items?.length > 0 && (

@@ -63,13 +63,15 @@
   },
   "files": {
     "ignoreUnknown": true,
+    "maxSize": 3000000,
     "ignore": [
       "**/node_modules/**",
       "**/dist/**",
       "**/.wxt/**",
       "**/.output/**",
       "**/build/**",
-      "packages/wxt/**"
+      "packages/wxt/**",
+      "**/common/temp/**"
     ]
   }
 }

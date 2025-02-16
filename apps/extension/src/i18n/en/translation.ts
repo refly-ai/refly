@@ -126,6 +126,12 @@ export const translation = {
     webClipper: {
       placeholder: {
         enterOrClipContent: 'Enter content or click clip button to get current page content...',
+        title: 'Title',
+        enterTitle: 'Enter title or use current page title',
+        url: 'URL',
+        enterUrl: 'Enter URL or use current page URL',
+        content: 'Content',
+        metadata: 'Title & URL',
       },
       action: {
         clip: 'Clip Current Page',

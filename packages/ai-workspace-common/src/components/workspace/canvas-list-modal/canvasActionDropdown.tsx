@@ -148,6 +148,7 @@ export const CanvasActionDropdown = (props: CanvasActionDropdown) => {
 
       <div onClick={(e) => e.stopPropagation()}>
         <CanvasRename
+          canvasId={canvasId}
           canvasTitle={canvasName}
           isModalOpen={isModalOpen}
           handleModalOk={handleModalOk}

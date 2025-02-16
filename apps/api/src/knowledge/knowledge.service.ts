@@ -5,7 +5,12 @@ import crypto from 'node:crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import normalizeUrl from 'normalize-url';
 import { readingTime } from 'reading-time-estimator';
-import { Prisma, Resource as ResourceModel, Document as DocumentModel } from '@prisma/client';
+import {
+  Prisma,
+  Resource as ResourceModel,
+  Document as DocumentModel,
+  StaticFile as StaticFileModel,
+} from '@prisma/client';
 import { RAGService } from '@/rag/rag.service';
 import { PrismaService } from '@/common/prisma.service';
 import { ElasticsearchService } from '@/common/elasticsearch.service';
@@ -16,7 +21,6 @@ import {
   ListResourcesData,
   User,
   GetResourceDetailData,
-  IndexStatus,
   ReindexResourceRequest,
   ResourceType,
   QueryReferencesRequest,
@@ -36,6 +40,7 @@ import {
   streamToString,
   QUEUE_SYNC_STORAGE_USAGE,
   QUEUE_CLEAR_CANVAS_ENTITY,
+  streamToBuffer,
 } from '@/utils';
 import {
   genResourceID,
@@ -44,7 +49,11 @@ import {
   genReferenceID,
   genDocumentID,
 } from '@refly-packages/utils';
-import { ExtendedReferenceModel, FinalizeResourceParam } from './knowledge.dto';
+import {
+  ExtendedReferenceModel,
+  FinalizeResourceParam,
+  ResourcePrepareResult,
+} from './knowledge.dto';
 import { pick } from '../utils';
 import { SimpleEventData } from '@/event/event.dto';
 import { SyncStorageUsageJobData } from '@/subscription/subscription.dto';
@@ -59,12 +68,16 @@ import {
   DocumentNotFoundError,
 } from '@refly-packages/errors';
 import { DeleteCanvasNodesJobData } from '@/canvas/canvas.dto';
+import { ParserFactory } from '@/knowledge/parsers/factory';
+import { ConfigService } from '@nestjs/config';
+import { ParseResult } from './parsers/base';
 
 @Injectable()
 export class KnowledgeService {
   private logger = new Logger(KnowledgeService.name);
 
   constructor(
+    private config: ConfigService,
     private prisma: PrismaService,
     private elasticsearch: ElasticsearchService,
     private ragService: RAGService,
@@ -130,6 +143,84 @@ export class KnowledgeService {
     return { ...resource, content };
   }
 
+  async prepareResource(user: User, param: UpsertResourceRequest): Promise<ResourcePrepareResult> {
+    const { resourceType, content, data } = param;
+
+    let identifier: string;
+    let staticFile: StaticFileModel | null = null;
+
+    if (resourceType === 'text') {
+      if (!content) {
+        throw new ParamsError('content is required for text resource');
+      }
+      const sha = crypto.createHash('sha256').update(content).digest('hex');
+      identifier = `text://${sha}`;
+    } else if (resourceType === 'weblink') {
+      if (!data?.url) {
+        throw new ParamsError('URL is required for weblink resource');
+      }
+      identifier = normalizeUrl(param.data.url, { stripHash: true });
+    } else if (resourceType === 'file') {
+      if (!param.storageKey) {
+        throw new ParamsError('storageKey is required for file resource');
+      }
+      staticFile = await this.prisma.staticFile.findFirst({
+        where: {
+          storageKey: param.storageKey,
+          uid: user.uid,
+          deletedAt: null,
+        },
+      });
+      if (!staticFile) {
+        throw new ParamsError(`static file ${param.storageKey} not found`);
+      }
+      const sha = crypto.createHash('sha256');
+      const fileStream = await this.minio.client.getObject(staticFile.storageKey);
+      sha.update(await streamToBuffer(fileStream));
+
+      identifier = `file://${sha.digest('hex')}`;
+    } else {
+      throw new ParamsError('Invalid resource type');
+    }
+
+    if (content) {
+      // save content to object storage
+      const storageKey = `resources/${param.resourceId}.txt`;
+      await this.minio.client.putObject(storageKey, param.content);
+      const storageSize = (await this.minio.client.statObject(storageKey)).size;
+
+      return {
+        storageKey,
+        storageSize,
+        identifier,
+        indexStatus: 'wait_index', // skip parsing stage, since content is provided
+        contentPreview: param.content.slice(0, 500),
+      };
+    }
+
+    if (resourceType === 'weblink') {
+      return {
+        identifier,
+        indexStatus: 'wait_parse',
+        metadata: {
+          ...param.data,
+          url: identifier,
+        },
+      };
+    }
+
+    // must be file resource
+    return {
+      identifier,
+      indexStatus: 'wait_parse',
+      staticFile,
+      metadata: {
+        ...param.data,
+        contentType: staticFile.contentType,
+      },
+    };
+  }
+
   async createResource(
     user: User,
     param: UpsertResourceRequest,
@@ -143,52 +234,28 @@ export class KnowledgeService {
     }
 
     param.resourceId = genResourceID();
-
-    let storageKey: string;
-    let storageSize = 0;
-    let identifier: string;
-    let indexStatus: IndexStatus = 'wait_parse';
-
-    if (param.resourceType === 'weblink') {
-      if (!param.data) {
-        throw new ParamsError('data is required');
-      }
-      const { url, title } = param.data;
-      if (!url) {
-        throw new ParamsError('url is required');
-      }
-      param.title ||= title;
-      param.data.url = normalizeUrl(url, { stripHash: true });
-      identifier = param.data.url;
-    } else if (param.resourceType === 'text') {
-      if (!param.content) {
-        throw new ParamsError('content is required for text resource');
-      }
-      const md5Hash = crypto
-        .createHash('md5')
-        .update(param.content ?? '')
-        .digest('hex');
-      identifier = `text://${md5Hash}`;
-    } else {
-      throw new ParamsError('Invalid resource type');
+    if (param.content) {
+      param.content = param.content.replace(/x00/g, '');
     }
+
+    const {
+      identifier,
+      indexStatus,
+      contentPreview,
+      storageKey,
+      storageSize,
+      staticFile,
+      metadata,
+    } = await this.prepareResource(user, param);
 
     const existingResource = await this.prisma.resource.findFirst({
-      where: { uid: user.uid, identifier, deletedAt: null },
+      where: {
+        uid: user.uid,
+        identifier,
+        deletedAt: null,
+      },
     });
     param.resourceId = existingResource ? existingResource.resourceId : genResourceID();
-
-    const cleanedContent = param.content?.replace(/x00/g, '') ?? '';
-
-    if (cleanedContent) {
-      // save text content to object storage
-      storageKey = `resources/${param.resourceId}.txt`;
-      await this.minio.client.putObject(storageKey, cleanedContent);
-      storageSize = (await this.minio.client.statObject(storageKey)).size;
-
-      // skip parse stage, since content is provided
-      indexStatus = 'wait_index';
-    }
 
     const resource = await this.prisma.resource.upsert({
       where: { resourceId: param.resourceId },
@@ -196,23 +263,33 @@ export class KnowledgeService {
         resourceId: param.resourceId,
         identifier,
         resourceType: param.resourceType,
-        meta: JSON.stringify(param.data || {}),
-        contentPreview: cleanedContent?.slice(0, 500),
+        meta: JSON.stringify({ ...param.data, ...metadata }),
+        contentPreview,
         storageKey,
         storageSize,
+        rawFileKey: staticFile?.storageKey,
         uid: user.uid,
-        title: param.title || 'Untitled',
+        title: param.title || '',
         indexStatus,
       },
       update: {
-        meta: JSON.stringify(param.data || {}),
-        contentPreview: cleanedContent?.slice(0, 500),
+        meta: JSON.stringify({ ...param.data, ...metadata }),
+        contentPreview,
         storageKey,
         storageSize,
-        title: param.title || 'Untitled',
+        rawFileKey: staticFile?.storageKey,
+        title: param.title || '',
         indexStatus,
       },
     });
+
+    // Update static file entity reference
+    if (staticFile) {
+      await this.prisma.staticFile.update({
+        where: { pk: staticFile.pk },
+        data: { entityId: resource.resourceId, entityType: 'resource' },
+      });
+    }
 
     // Add to queue to be processed by worker
     await this.queue.add('finalizeResource', {
@@ -235,6 +312,133 @@ export class KnowledgeService {
   }
 
   /**
+   * Process images in the markdown content and replace them with uploaded URLs.
+   * 1) if the imagePath is present in parse result, replace it with uploaded path
+   * 2) if the imagePath is a URL, download the image and upload it to Minio
+   * 3) if the imagePath is a base64 string, convert it to buffer and upload it to Minio
+   */
+  private async processContentImages(user: User, result: ParseResult, resourceId: string) {
+    const { content, images = {} } = result;
+    if (!content) {
+      return content;
+    }
+
+    // Regular expression to find markdown image links
+    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const uploadedImages: Record<string, string> = {};
+
+    // Upload all images from parse result to Minio
+    for (const [imagePath, imageBuffer] of Object.entries(images)) {
+      try {
+        const { url } = await this.miscService.uploadBuffer(user, {
+          fpath: imagePath,
+          buf: imageBuffer,
+          entityId: resourceId,
+          entityType: 'resource',
+        });
+        uploadedImages[imagePath] = url;
+      } catch (error) {
+        this.logger.error(`Failed to upload image ${imagePath}: ${error?.stack}`);
+      }
+    }
+
+    // Find all image matches in the content
+    const matches = Array.from(content.matchAll(imageRegex));
+    this.logger.log(`Found ${matches.length} images in content`);
+
+    let lastIndex = 0;
+    let modifiedContent = '';
+
+    // Process each match sequentially
+    for (const match of matches) {
+      const [fullMatch, altText, imagePath] = match;
+      const matchIndex = match.index ?? 0;
+
+      // Add text between matches
+      modifiedContent += content.slice(lastIndex, matchIndex);
+      lastIndex = matchIndex + fullMatch.length;
+
+      try {
+        // If we already have an uploaded version of this image, use its URL
+        if (uploadedImages[imagePath]) {
+          modifiedContent += `![${altText}](${uploadedImages[imagePath]})`;
+          continue;
+        }
+
+        // Handle URL images
+        if (imagePath.startsWith('http')) {
+          try {
+            const { url } = await this.miscService.dumpFileFromURL(user, {
+              url: imagePath,
+              entityId: resourceId,
+              entityType: 'resource',
+            });
+            modifiedContent += `![${altText}](${url})`;
+          } catch (error) {
+            this.logger.error(`Failed to dump image from URL ${imagePath}: ${error?.stack}`);
+            modifiedContent += fullMatch;
+          }
+          continue;
+        }
+
+        // Handle base64 images
+        if (imagePath.startsWith('data:')) {
+          // Skip SVG images, since they tend to be icons for interactive elements
+          if (imagePath.includes('data:image/svg+xml')) {
+            modifiedContent += fullMatch;
+            continue;
+          }
+
+          try {
+            // Extract mime type and base64 data
+            const [mimeHeader, base64Data] = imagePath.split(',');
+            if (!base64Data) {
+              modifiedContent += fullMatch;
+              continue;
+            }
+
+            const mimeType = mimeHeader.match(/data:(.*?);/)?.[1];
+            if (!mimeType || !mimeType.startsWith('image/')) {
+              modifiedContent += fullMatch;
+              continue;
+            }
+
+            // Generate a unique filename based on mime type
+            const ext = mimeType.split('/')[1];
+            const filename = `${crypto.randomUUID()}.${ext}`;
+
+            // Convert base64 to buffer and upload
+            const imageBuffer = Buffer.from(base64Data, 'base64');
+            const { url } = await this.miscService.uploadBuffer(user, {
+              fpath: filename,
+              buf: imageBuffer,
+              entityId: resourceId,
+              entityType: 'resource',
+            });
+
+            modifiedContent += `![${altText}](${url})`;
+          } catch (error) {
+            this.logger.error(`Failed to process base64 image: ${error?.stack}`);
+            modifiedContent += fullMatch;
+          }
+          continue;
+        }
+
+        // If none of the above conditions match, keep the original
+        modifiedContent += fullMatch;
+      } catch (error) {
+        this.logger.error(`Failed to process image ${imagePath}: ${error?.stack}`);
+        modifiedContent += fullMatch;
+      }
+    }
+
+    // Add any remaining content after the last match
+    modifiedContent += content.slice(lastIndex);
+
+    return modifiedContent;
+  }
+
+  /**
    * Parse resource content from remote URL into markdown.
    * Currently only weblinks are supported.
    */
@@ -246,17 +450,37 @@ export class KnowledgeService {
       return resource;
     }
 
-    const { resourceId, meta } = resource;
-    const { url } = JSON.parse(meta) as ResourceMeta;
+    const { resourceId, resourceType, meta } = resource;
+    const { url, contentType } = JSON.parse(meta) as ResourceMeta;
 
-    let content = '';
-    let _title = '';
+    const parserFactory = new ParserFactory(this.config);
 
-    if (url) {
-      const { data } = await this.ragService.crawlFromRemoteReader(url);
-      content = data.content?.replace(/x00/g, '') ?? '';
-      _title ||= data.title;
+    let result: ParseResult;
+
+    if (resourceType === 'weblink') {
+      const parser = parserFactory.createParser('jina');
+      result = await parser.parse(url);
+    } else if (resource.rawFileKey) {
+      const parser = parserFactory.createParserByContentType(contentType);
+      const fileStream = await this.minio.client.getObject(resource.rawFileKey);
+      const fileBuffer = await streamToBuffer(fileStream);
+      result = await parser.parse(fileBuffer);
+    } else {
+      throw new Error(`Cannot parse resource ${resourceId} with no content or rawFileKey`);
     }
+
+    if (result.error) {
+      throw new Error(`Parse resource ${resourceId} failed: ${result.error}`);
+    }
+
+    this.logger.log(
+      `Parse resource ${resourceId} success, images: ${Object.keys(result.images ?? {})}`,
+    );
+
+    result.content = await this.processContentImages(user, result, resourceId);
+
+    const content = result.content?.replace(/x00/g, '') || '';
+    const title = result.title || resource.title;
 
     const storageKey = `resources/${resourceId}.txt`;
     await this.minio.client.putObject(storageKey, content);
@@ -267,12 +491,13 @@ export class KnowledgeService {
         storageKey,
         storageSize: (await this.minio.client.statObject(storageKey)).size,
         wordCount: readingTime(content).words,
-        title: resource.title,
+        title,
         indexStatus: 'wait_index',
         contentPreview: content?.slice(0, 500),
         meta: JSON.stringify({
           url,
-          title: resource.title,
+          title,
+          contentType,
         } as ResourceMeta),
       },
     });
@@ -454,15 +679,27 @@ export class KnowledgeService {
       }),
     ]);
 
-    await Promise.all([
-      this.minio.client.removeObject(resource.storageKey),
+    const cleanups: Promise<any>[] = [
+      this.miscService.removeFilesByEntity(user, {
+        entityId: resourceId,
+        entityType: 'resource',
+      }),
       this.ragService.deleteResourceNodes(user, resourceId),
       this.elasticsearch.deleteResource(resourceId),
       this.syncStorageUsage(user),
       this.canvasQueue.add('deleteNodes', {
         entities: [{ entityId: resourceId, entityType: 'resource' }],
       }),
-    ]);
+    ];
+
+    if (resource.storageKey) {
+      cleanups.push(this.minio.client.removeObject(resource.storageKey));
+    }
+    if (resource.rawFileKey) {
+      cleanups.push(this.minio.client.removeObject(resource.rawFileKey));
+    }
+
+    await Promise.all(cleanups);
   }
 
   async listDocuments(user: User, param: ListDocumentsData['query']) {

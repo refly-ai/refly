@@ -6,6 +6,7 @@ import {
   IconMoreHorizontal,
   IconDelete,
   IconDocumentFilled,
+  IconCreateDocument,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 import { useEffect, useState } from 'react';
@@ -23,6 +24,7 @@ import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/can
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { LuPlus } from 'react-icons/lu';
+import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 
 const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () => void }) => {
   const { t } = useTranslation();
@@ -141,8 +143,10 @@ const DocumentCard = ({ item, onDelete }: { item: Document; onDelete: () => void
 
 export const DocumentList = () => {
   const { t } = useTranslation();
-  const { showLibraryModal } = useSiderStoreShallow((state) => ({
+  const { createSingleDocumentInCanvas } = useCreateDocument();
+  const { showLibraryModal, setShowLibraryModal } = useSiderStoreShallow((state) => ({
     showLibraryModal: state.showLibraryModal,
+    setShowLibraryModal: state.setShowLibraryModal,
   }));
 
   const { dataList, setDataList, loadMore, reload, hasMore, isRequesting } = useFetchDataList({
@@ -179,7 +183,18 @@ export const DocumentList = () => {
           </>
         ) : (
           <div className="h-full flex items-center justify-center">
-            <Empty description={t('common.empty')} />
+            <Empty description={t('common.empty')}>
+              <Button
+                className="text-[#00968F]"
+                icon={<IconCreateDocument className="-mr-1 flex items-center justify-center" />}
+                onClick={() => {
+                  createSingleDocumentInCanvas();
+                  setShowLibraryModal(false);
+                }}
+              >
+                {t('canvas.toolbar.createDocument')}
+              </Button>
+            </Empty>
           </div>
         )}
       </div>

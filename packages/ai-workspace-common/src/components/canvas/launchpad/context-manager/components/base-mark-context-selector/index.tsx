@@ -77,36 +77,32 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
 
   // Memoize the filtered and sorted nodes to prevent unnecessary recalculations
   const processedNodes = useMemo(() => {
-    const sortedItems: IContextItem[] = [
-      ...(selectedItems || []),
-      ...(
-        targetNodes?.filter(
+    // First get unselected nodes and reverse them to show most recent first
+    const unselectedNodes =
+      targetNodes
+        ?.filter(
           (node) => !selectedItems.some((selected) => selected.entityId === node.data?.entityId),
-        ) || []
-      ).map((node) => ({
-        title:
-          node?.type === 'memo'
-            ? node.data?.contentPreview
-              ? `${node.data?.title} - ${node.data?.contentPreview?.slice(0, 10)}`
-              : node.data?.title
-            : node.data?.title,
-        entityId: node.data?.entityId,
-        type: node.type,
-        metadata: node.data?.metadata,
-      })),
-    ];
+        )
+        .reverse()
+        .map((node) => ({
+          title:
+            node?.type === 'memo'
+              ? node.data?.contentPreview
+                ? `${node.data?.title} - ${node.data?.contentPreview?.slice(0, 10)}`
+                : node.data?.title
+              : node.data?.title,
+          entityId: node.data?.entityId,
+          type: node.type,
+          metadata: node.data?.metadata,
+        })) ?? [];
 
-    const filteredItems =
-      sortedItems?.filter((item) =>
-        item?.title?.toLowerCase().includes(searchValue.toLowerCase()),
-      ) ?? [];
+    // Filter based on search value
+    const filteredUnselectedNodes = unselectedNodes.filter((item) =>
+      item?.title?.toLowerCase().includes(searchValue.toLowerCase()),
+    );
 
-    return [
-      ...(selectedItems ?? []),
-      ...(filteredItems?.filter(
-        (item) => !selectedItems?.some((selected) => selected?.entityId === item?.entityId),
-      ) ?? []),
-    ];
+    // Return selected items first, followed by filtered & reversed unselected nodes
+    return [...(selectedItems ?? []), ...filteredUnselectedNodes];
   }, [targetNodes, searchValue, selectedItems]);
 
   // Memoize the render data transformation

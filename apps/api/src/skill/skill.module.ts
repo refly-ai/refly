@@ -12,11 +12,13 @@ import {
   QUEUE_SKILL,
   QUEUE_SKILL_TIMEOUT_CHECK,
   QUEUE_SYNC_REQUEST_USAGE,
+  QUEUE_AUTO_NAME_CANVAS,
 } from '@/utils';
 import { LabelModule } from '@/label/label.module';
 import { SkillProcessor, SkillTimeoutCheckProcessor } from '@/skill/skill.processor';
 import { SubscriptionModule } from '@/subscription/subscription.module';
 import { CollabModule } from '@/collab/collab.module';
+import { MiscModule } from '@/misc/misc.module';
 
 @Module({
   imports: [
@@ -28,10 +30,12 @@ import { CollabModule } from '@/collab/collab.module';
     RAGModule,
     SubscriptionModule,
     CollabModule,
+    MiscModule,
     BullModule.registerQueue({ name: QUEUE_SKILL }),
     BullModule.registerQueue({ name: QUEUE_SKILL_TIMEOUT_CHECK }),
     BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_USAGE }),
     BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
+    BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
   ],
   providers: [SkillService, SkillProcessor, SkillTimeoutCheckProcessor],
   controllers: [SkillController],

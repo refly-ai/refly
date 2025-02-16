@@ -14,7 +14,7 @@ const PreviewComponent = memo(
 
     switch (node.type) {
       case 'resource':
-        return <ResourceNodePreview resourceId={node.data.entityId} />;
+        return <ResourceNodePreview resourceId={node.data.entityId} nodeId={node.id} />;
       case 'document':
         return (
           <DocumentNodePreview
@@ -107,6 +107,10 @@ export const NodePreview = memo(
     );
   },
   (prevProps, nextProps) => {
-    return prevProps.node?.id === nextProps.node?.id && prevProps.canvasId === nextProps.canvasId;
+    return (
+      prevProps.node?.id === nextProps.node?.id &&
+      prevProps.canvasId === nextProps.canvasId &&
+      prevProps.node?.data?.metadata?.rawFileKey === nextProps.node?.data?.metadata?.rawFileKey
+    );
   },
 );

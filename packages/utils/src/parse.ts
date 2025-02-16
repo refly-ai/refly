@@ -52,12 +52,26 @@ const getParsedCitation = (markdown = '') => {
     .replace(/\[\[\s*[cC]itation\s*:\s*(\d+)\s*]]/g, '[citation]($1)');
 };
 
-export const markdownCitationParse = (markdown: string) => {
-  if (typeof markdown !== 'string') {
-    return markdown;
-  }
+/**
+ * Convert LaTeX math delimiters from \[...\] to $$...$$
+ */
+export const convertLatexDelimiters = (content: string): string => {
+  // Replace display math mode \[...\] with $$...$$
+  let result = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$${math}$$`);
 
-  return getParsedCitation(markdown);
+  // Replace inline math mode \(...\) with $...$
+  result = result.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
+
+  return result;
+};
+
+export const markdownCitationParse = (content: string): string => {
+  if (!content) return '';
+
+  // Convert LaTeX delimiters first
+  const parsedContent = convertLatexDelimiters(content);
+
+  return getParsedCitation(parsedContent);
 };
 
 export function parseMarkdownCitationsAndCanvasTags(content: string, _sources: Source[]): string {

@@ -1,5 +1,11 @@
 import { useCallback } from 'react';
-import { ActionStep, ActionStepMeta, Entity, SkillEvent } from '@refly/openapi-schema';
+import {
+  ActionStep,
+  ActionStepMeta,
+  Entity,
+  InvokeSkillRequest,
+  SkillEvent,
+} from '@refly/openapi-schema';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
 import { LOCALE } from '@refly/common-types';
@@ -83,6 +89,7 @@ export const useInvokeAction = () => {
       : {
           ...stepMeta,
           content: '',
+          reasoningContent: '',
           artifacts: [],
           structuredData: {},
         };
@@ -96,7 +103,7 @@ export const useInvokeAction = () => {
   };
 
   const onSkillStream = (skillEvent: SkillEvent) => {
-    const { resultId, content, step } = skillEvent;
+    const { resultId, content, reasoningContent = '', step } = skillEvent;
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
@@ -106,6 +113,12 @@ export const useInvokeAction = () => {
 
     const updatedStep: ActionStep = findOrCreateStep(result.steps ?? [], step);
     updatedStep.content += content;
+
+    if (!updatedStep.reasoningContent) {
+      updatedStep.reasoningContent = reasoningContent;
+    } else {
+      updatedStep.reasoningContent += reasoningContent;
+    }
 
     onUpdateResult(
       resultId,
@@ -294,7 +307,7 @@ export const useInvokeAction = () => {
       version = 0,
       tplConfig = {},
     } = payload;
-    const { context, resultHistory } = convertContextItemsToInvokeParams(
+    const { context, resultHistory, images } = convertContextItemsToInvokeParams(
       contextItems,
       (item) =>
         findThreadHistory({ resultId: item.entityId }).map((node) => ({
@@ -308,10 +321,11 @@ export const useInvokeAction = () => {
         })),
     );
 
-    const param = {
+    const param: InvokeSkillRequest = {
       resultId,
       input: {
         query,
+        images,
       },
       target,
       modelName: modelInfo?.name,

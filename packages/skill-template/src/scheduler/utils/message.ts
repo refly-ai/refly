@@ -21,6 +21,7 @@ export const buildFinalRequestMessages = ({
   messages,
   needPrepareContext,
   context,
+  images,
   originalQuery,
   rewrittenQuery,
 }: {
@@ -30,6 +31,7 @@ export const buildFinalRequestMessages = ({
   messages: BaseMessage[];
   needPrepareContext: boolean;
   context: string;
+  images: string[];
   originalQuery: string;
   rewrittenQuery: string;
 }) => {
@@ -44,7 +46,12 @@ export const buildFinalRequestMessages = ({
     ...chatHistory,
     ...messages,
     ...contextMessages,
-    new HumanMessage(userPrompt),
+    new HumanMessage({
+      content: [
+        { type: 'text', text: userPrompt },
+        ...(images?.map((image) => ({ type: 'image_url', image_url: { url: image } })) || []),
+      ],
+    }),
   ];
 
   return requestMessages;

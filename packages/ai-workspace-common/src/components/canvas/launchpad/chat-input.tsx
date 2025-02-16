@@ -20,6 +20,7 @@ interface ChatInputProps {
   autoCompletionPlacement?: 'bottomLeft' | 'bottomRight' | 'topLeft' | 'topRight';
   handleSendMessage: () => void;
   handleSelectSkill?: (skill: Skill) => void;
+  onUploadImage?: (file: File) => Promise<void>;
 }
 
 const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
@@ -33,10 +34,12 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       maxRows,
       handleSendMessage,
       handleSelectSkill,
+      onUploadImage,
     },
     ref,
   ) => {
     const { t } = useTranslation();
+    const [isDragging, setIsDragging] = useState(false);
 
     const inputRef = useRef<RefTextAreaType>(null);
     const searchStore = useSearchStoreShallow((state) => ({
@@ -46,6 +49,32 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       setSelectedSkill: state.setSelectedSkill,
     }));
     const [showSkillSelector, setShowSkillSelector] = useState(false);
+
+    const handlePaste = useCallback(
+      async (e: React.ClipboardEvent<HTMLDivElement | HTMLTextAreaElement>) => {
+        if (!onUploadImage) {
+          return;
+        }
+
+        const items = e.clipboardData?.items;
+
+        if (!items?.length) {
+          return;
+        }
+
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (file) {
+              await onUploadImage(file);
+            }
+            break;
+          }
+        }
+      },
+      [onUploadImage],
+    );
 
     const { data } = useListSkills({}, null, {
       refetchOnWindowFocus: false,
@@ -161,7 +190,47 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
     );
 
     return (
-      <div ref={ref} className="w-full h-full flex flex-col flex-grow overflow-y-auto">
+      <div
+        ref={ref}
+        className={cn(
+          'w-full h-full flex flex-col flex-grow overflow-y-auto relative',
+          isDragging && 'ring-2 ring-green-500 ring-opacity-50 rounded-lg',
+        )}
+        onPaste={handlePaste}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+        }}
+        onDrop={async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+
+          if (!onUploadImage) return;
+
+          const files = Array.from(e.dataTransfer.files);
+          const imageFile = files.find((file) => file.type.startsWith('image/'));
+
+          if (imageFile) {
+            try {
+              await onUploadImage(imageFile);
+            } catch (error) {
+              console.error('Failed to upload image:', error);
+            }
+          }
+        }}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 bg-green-50/50 flex items-center justify-center pointer-events-none z-10 rounded-lg border-2 border-green-500/30">
+            <div className="text-green-600 text-sm font-medium">{t('common.dropImageHere')}</div>
+          </div>
+        )}
         <AutoComplete
           className="h-full"
           autoFocus
@@ -185,6 +254,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           onSearch={(value) => handleSearch(value)}
         >
           <TextArea
+            style={{ paddingLeft: 0, paddingRight: 0, height: '100%' }}
             ref={inputRef}
             autoFocus
             onBlur={() => {
@@ -195,6 +265,17 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
             value={query ?? ''}
             onChange={handleInputChange}
             onKeyDownCapture={(e) => handleKeyDown(e)}
+            onPaste={(e) => {
+              if (e.clipboardData?.items) {
+                for (const item of e.clipboardData.items) {
+                  if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    break;
+                  }
+                }
+              }
+            }}
             className={cn(
               '!m-0 bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
               inputClassName,
@@ -225,7 +306,8 @@ export const ChatInput = memo(ChatInputComponent, (prevProps, nextProps) => {
   return (
     prevProps.query === nextProps.query &&
     prevProps.selectedSkillName === nextProps.selectedSkillName &&
-    prevProps.handleSelectSkill === nextProps.handleSelectSkill
+    prevProps.handleSelectSkill === nextProps.handleSelectSkill &&
+    prevProps.onUploadImage === nextProps.onUploadImage
   );
 }) as typeof ChatInputComponent;
 

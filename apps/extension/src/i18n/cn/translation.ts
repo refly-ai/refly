@@ -125,6 +125,12 @@ export const translation = {
     webClipper: {
       placeholder: {
         enterOrClipContent: '输入内容或点击剪藏按钮获取当前页面内容...',
+        title: '标题',
+        enterTitle: '输入标题或使用当前页面标题',
+        url: '网址',
+        enterUrl: '输入网址或使用当前页面网址',
+        content: '内容',
+        metadata: '标题和网址',
       },
       action: {
         clip: '剪藏当前页面',

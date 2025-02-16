@@ -10,11 +10,16 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '@/auth/guard/jwt-auth.guard';
 import { CanvasService } from './canvas.service';
-import { User as UserType } from '@prisma/client';
 import { LoginedUser } from '@/utils/decorators/user.decorator';
 import { canvasPO2DTO } from '@/canvas/canvas.dto';
 import { buildSuccessResponse } from '@/utils';
-import { UpsertCanvasRequest, DeleteCanvasRequest } from '@refly-packages/openapi-schema';
+import {
+  User,
+  UpsertCanvasRequest,
+  DeleteCanvasRequest,
+  AutoNameCanvasRequest,
+  AutoNameCanvasResponse,
+} from '@refly-packages/openapi-schema';
 
 @Controller('v1/canvas')
 export class CanvasController {
@@ -23,7 +28,7 @@ export class CanvasController {
   @UseGuards(JwtAuthGuard)
   @Get('list')
   async listCanvases(
-    @LoginedUser() user: UserType,
+    @LoginedUser() user: User,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
   ) {
@@ -33,22 +38,32 @@ export class CanvasController {
 
   @UseGuards(JwtAuthGuard)
   @Post('create')
-  async createCanvas(@LoginedUser() user: UserType, @Body() body: UpsertCanvasRequest) {
+  async createCanvas(@LoginedUser() user: User, @Body() body: UpsertCanvasRequest) {
     const canvas = await this.canvasService.createCanvas(user, body);
     return buildSuccessResponse(canvasPO2DTO(canvas));
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('update')
-  async updateCanvas(@LoginedUser() user: UserType, @Body() body: UpsertCanvasRequest) {
+  async updateCanvas(@LoginedUser() user: User, @Body() body: UpsertCanvasRequest) {
     const canvas = await this.canvasService.updateCanvas(user, body);
     return buildSuccessResponse(canvasPO2DTO(canvas));
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('delete')
-  async deleteCanvas(@LoginedUser() user: UserType, @Body() body: DeleteCanvasRequest) {
+  async deleteCanvas(@LoginedUser() user: User, @Body() body: DeleteCanvasRequest) {
     await this.canvasService.deleteCanvas(user, body);
     return buildSuccessResponse({});
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('autoName')
+  async autoNameCanvas(
+    @LoginedUser() user: User,
+    @Body() body: AutoNameCanvasRequest,
+  ): Promise<AutoNameCanvasResponse> {
+    const data = await this.canvasService.autoNameCanvas(user, body);
+    return buildSuccessResponse(data);
   }
 }

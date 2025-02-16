@@ -13,3 +13,4 @@ export * from './timeTracker';
 export * from './search-source-converter';
 export * from './translate';
 export * from './cookie';
+export * from './content-parser';

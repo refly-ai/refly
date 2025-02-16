@@ -49,6 +49,7 @@ export class GenerateDoc extends BaseSkill {
 
   schema = z.object({
     query: z.string().optional().describe('The search query'),
+    images: z.array(z.string()).optional().describe('The images to be read by the skill'),
   });
 
   graphState: StateGraphArgs<BaseSkillState>['channels'] = {
@@ -60,7 +61,7 @@ export class GenerateDoc extends BaseSkill {
     config: SkillRunnableConfig,
     module: SkillPromptModule,
   ) => {
-    const { messages = [] } = state;
+    const { messages = [], images = [] } = state;
     const { locale = 'en', modelInfo } = config.configurable;
     const { tplConfig } = config?.configurable || {};
 
@@ -119,11 +120,10 @@ export class GenerateDoc extends BaseSkill {
       messages,
       needPrepareContext: needPrepareContext && isModelContextLenSupport,
       context,
+      images,
       originalQuery: query,
       rewrittenQuery: optimizedQuery,
     });
-
-    this.engine.logger.log(`requestMessages: ${safeStringifyJSON(requestMessages)}`);
 
     return { optimizedQuery, requestMessages, context, sources, usedChatHistory };
   };
@@ -137,7 +137,7 @@ export class GenerateDoc extends BaseSkill {
     const { query = '' } = state;
     const { locale = 'en', uiLocale = 'en' } = config.configurable;
 
-    const model = this.engine.chatModel({ temperature: 0.1 });
+    const model = this.engine.chatModel({ temperature: 0.1 }, true);
 
     // Prepare context snippet if available
     let contextSnippet = '';
@@ -271,8 +271,6 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
         artifact,
       },
     });
-
-    this.engine.logger.log(`responseMessage: ${safeStringifyJSON(responseMessage)}`);
 
     this.emitEvent(
       {

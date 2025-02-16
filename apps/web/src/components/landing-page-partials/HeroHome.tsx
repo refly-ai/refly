@@ -11,11 +11,9 @@ import { Button, Modal } from 'antd';
 import BlurImage from '@/components/common/BlurImage';
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 function HeroHome() {
   const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
@@ -72,20 +70,21 @@ function HeroHome() {
                 <div className="z-10 flex items-center justify-center">
                   <div
                     onClick={() => {
-                      navigate('/pricing');
+                      window.open('https://docs.refly.ai/guide/chrome-extension', '_blank');
                     }}
                     className={cn(
                       'group inline-flex items-center justify-center rounded-lg border border-black/5 bg-white text-base hover:cursor-pointer hover:bg-neutral-50 dark:border-white/5',
                       'px-4',
                       'py-2',
+                      'w-auto',
                     )}
                   >
                     <AnimatedShinyText className="inline-flex items-center justify-center transition ease-out">
-                      <span className="whitespace-nowrap text-[#00968F]">
+                      <span className="whitespace-nowrap text-[#00968F] text-sm sm:text-base truncate">
                         🚀 {t('landingPage.messageText')}
                       </span>
                     </AnimatedShinyText>
-                    <ArrowRightIcon className="ml-2 h-4 w-4 text-[#00968F] transition-transform duration-300 ease-in-out group-hover:translate-x-0.5" />
+                    <ArrowRightIcon className="ml-2 h-4 w-4 shrink-0 text-[#00968F] transition-transform duration-300 ease-in-out group-hover:translate-x-0.5" />
                   </div>
                 </div>
               </div>

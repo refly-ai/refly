@@ -57,8 +57,8 @@ export const NodeSelector = (props: NodeSelectorProps) => {
 
   const { nodes } = useCanvasData();
 
-  const targetNodes = nodes.filter((node) => !['group'].includes(node?.type));
-  const sortedItems: IContextItem[] = targetNodes.map((node) => ({
+  const targetNodes = nodes.filter((node) => !['group', 'skill'].includes(node?.type));
+  const sortedItems: IContextItem[] = [...targetNodes].reverse().map((node) => ({
     title: node.data?.title,
     entityId: node.data?.entityId,
     type: node.type,
@@ -66,10 +66,8 @@ export const NodeSelector = (props: NodeSelectorProps) => {
   }));
 
   const processedItems = useMemo(() => {
-    return (
-      sortedItems?.filter((item) =>
-        item?.title?.toLowerCase().includes(searchValue.toLowerCase()),
-      ) ?? []
+    return sortedItems.filter((item) =>
+      item?.title?.toLowerCase().includes(searchValue.toLowerCase()),
     );
   }, [sortedItems, searchValue]);
 

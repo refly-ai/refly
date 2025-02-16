@@ -186,7 +186,7 @@ ${summarizedChatHistory}
 
 Please analyze the query, focusing primarily on the current query and available context. Only consider the chat history if it's directly relevant to understanding the current query.`;
 
-  const model = ctx.ctxThis.engine.chatModel({ temperature: 0.3 });
+  const model = ctx.ctxThis.engine.chatModel({ temperature: 0.3 }, true);
 
   try {
     const result = await extractStructuredData(

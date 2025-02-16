@@ -2,6 +2,7 @@ import {
   Resource as ResourceModel,
   Document as DocumentModel,
   Reference as ReferenceModel,
+  StaticFile as StaticFileModel,
 } from '@prisma/client';
 import {
   Resource,
@@ -12,8 +13,19 @@ import {
   ReferenceMeta,
   Document,
   EntityType,
+  ResourceMeta,
 } from '@refly-packages/openapi-schema';
 import { pick } from '@/utils';
+
+export interface ResourcePrepareResult {
+  storageKey?: string;
+  staticFile?: StaticFileModel;
+  storageSize?: number;
+  identifier?: string;
+  indexStatus?: IndexStatus;
+  contentPreview?: string;
+  metadata?: ResourceMeta;
+}
 
 export type FinalizeResourceParam = {
   resourceId: string;
@@ -35,7 +47,7 @@ export const resourcePO2DTO = (
     return null;
   }
   return {
-    ...pick(resource, ['resourceId', 'title', 'content', 'contentPreview']),
+    ...pick(resource, ['resourceId', 'title', 'content', 'contentPreview', 'rawFileKey']),
     resourceType: resource.resourceType as ResourceType,
     indexStatus: resource.indexStatus as IndexStatus,
     storageSize: resource.storageSize.toString(),

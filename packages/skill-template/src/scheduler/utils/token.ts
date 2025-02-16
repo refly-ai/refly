@@ -1,6 +1,6 @@
 import { IContext } from '../types';
 import { get_encoding } from '@dqbd/tiktoken';
-import { BaseMessage } from '@langchain/core/messages';
+import { BaseMessage, MessageContent } from '@langchain/core/messages';
 import {
   SkillContextDocumentItem,
   SkillContextContentItem,
@@ -16,8 +16,20 @@ const enc_cl100k_base = get_encoding('cl100k_base');
 // https://github.com/niieani/gpt-tokenizer
 // type TokenizerType = 'chat' | 'text-only' | 'code' | 'edit' | 'embeddings' | 'turbo' | 'gpt3' | 'codex';
 
-export const countToken = (text = '') => {
-  return enc_cl100k_base.encode(text || '').length;
+export const countToken = (content: MessageContent) => {
+  if (typeof content === 'string') {
+    return enc_cl100k_base.encode(content || '').length;
+  }
+
+  if (Array.isArray(content)) {
+    return content.reduce((sum, item) => {
+      if (item.type === 'text') {
+        return sum + countToken(item.text);
+      }
+      return sum;
+    }, 0);
+  }
+  return 0;
 };
 
 export const countContentTokens = (contentList: SkillContextContentItem[] = []) => {
@@ -53,5 +65,5 @@ export const checkHasContext = (context: IContext) => {
 };
 
 export const countMessagesTokens = (messages: BaseMessage[] = []) => {
-  return messages.reduce((sum, message) => sum + countToken(message.content as string), 0);
+  return messages.reduce((sum, message) => sum + countToken(message.content), 0);
 };

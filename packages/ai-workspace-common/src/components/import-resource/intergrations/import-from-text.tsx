@@ -72,6 +72,9 @@ export const ImportFromText = () => {
           title: data?.data?.title || 'Untitled',
           entityId: data?.data?.resourceId,
           contentPreview: data?.data?.contentPreview,
+          metadata: {
+            resourceType: 'text',
+          },
         },
         position: insertNodePosition,
       });

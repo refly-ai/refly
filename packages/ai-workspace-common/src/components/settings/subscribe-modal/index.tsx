@@ -28,7 +28,6 @@ export const SubscribeModal = () => {
       footer={null}
       className="subscribe-modal !p-0"
       onCancel={() => setVisible(false)}
-      zIndex={100}
     >
       <div className="w-full h-full overflow-auto flex flex-col items-center gap-3">
         <div className="font-bold text-3xl m-auto flex items-center gap-2">

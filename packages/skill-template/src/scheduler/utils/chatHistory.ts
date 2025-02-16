@@ -31,7 +31,7 @@ just reformulate it if needed and otherwise return it as is.
     new MessagesPlaceholder('chatHistory'),
     ['human', `The user's question is {question}, please output answer in ${locale} language:`],
   ]);
-  const llm = engine.chatModel({ temperature: 0 });
+  const llm = engine.chatModel({ temperature: 0 }, true);
   const contextualizeQChain = contextualizeQPrompt.pipe(llm).pipe(new StringOutputParser());
 
   const contextualUserQuery = await contextualizeQChain.invoke({

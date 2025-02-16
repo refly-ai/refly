@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import { Button, Dropdown, Space, Divider, Tooltip } from 'antd';
+import { UndoManager } from 'yjs';
 import { LuCompass, LuLayoutDashboard, LuLightbulb, LuShipWheel } from 'react-icons/lu';
 import { RiFullscreenFill } from 'react-icons/ri';
 import { FiHelpCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
-import { LuZoomIn, LuZoomOut } from 'react-icons/lu';
+import { LuUndo, LuRedo, LuZoomIn, LuZoomOut } from 'react-icons/lu';
 import {
   IconDocumentation,
   IconDown,
@@ -22,6 +23,7 @@ import { IconExpand, IconShrink } from '@refly-packages/ai-workspace-common/comp
 
 import './index.scss';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 
 interface LayoutControlProps {
   mode: 'mouse' | 'touchpad';
@@ -46,6 +48,7 @@ interface ActionButtonsProps {
   onLayout: (direction: 'TB' | 'LR') => void;
   onToggleSizeMode: () => void;
   nodeSizeMode: 'compact' | 'adaptive';
+  undoManager: UndoManager;
   t: TFunction;
 }
 
@@ -78,8 +81,26 @@ const TooltipButton = memo(({ tooltip, children, ...buttonProps }: TooltipButton
 
 // Update component definitions
 const ActionButtons = memo(
-  ({ onFitView, onLayout, onToggleSizeMode, nodeSizeMode, t }: ActionButtonsProps) => (
+  ({ onFitView, onLayout, onToggleSizeMode, nodeSizeMode, undoManager, t }: ActionButtonsProps) => (
     <>
+      <TooltipButton
+        tooltip={t('canvas.toolbar.tooltip.undo')}
+        onClick={() => undoManager?.undo()}
+        className={buttonClass}
+      >
+        <LuUndo className={iconClass} size={16} />
+      </TooltipButton>
+
+      <TooltipButton
+        tooltip={t('canvas.toolbar.tooltip.redo')}
+        onClick={() => undoManager?.redo()}
+        className={buttonClass}
+      >
+        <LuRedo className={iconClass} size={16} />
+      </TooltipButton>
+
+      <Divider type="vertical" className="h-full" />
+
       <TooltipButton
         tooltip={t('canvas.toolbar.tooltip.fitView')}
         onClick={onFitView}
@@ -272,6 +293,7 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(({ mode, changeM
     setNodeSizeMode: state.setNodeSizeMode,
   }));
   const { updateAllNodesSizeMode } = useNodeOperations();
+  const { undoManager } = useCanvasSync();
 
   // Add handler for size mode toggle
   const handleToggleSizeMode = useCallback(() => {
@@ -329,6 +351,7 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(({ mode, changeM
           onLayout={onLayout}
           onToggleSizeMode={handleToggleSizeMode}
           nodeSizeMode={nodeSizeMode}
+          undoManager={undoManager}
           t={t}
         />
 

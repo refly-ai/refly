@@ -4,10 +4,12 @@ import { type Options } from '@hey-api/client-fetch';
 import { UseQueryResult } from '@tanstack/react-query';
 import {
   addReferences,
+  autoNameCanvas,
   batchCreateResource,
   batchUpdateDocument,
   checkSettingsField,
   checkVerification,
+  convert,
   createCanvas,
   createCheckoutSession,
   createDocument,
@@ -15,6 +17,7 @@ import {
   createLabelInstance,
   createPortalSession,
   createResource,
+  createResourceWithFile,
   createShare,
   createSkillInstance,
   createSkillTrigger,
@@ -39,7 +42,6 @@ import {
   getShareContent,
   getSubscriptionPlans,
   getSubscriptionUsage,
-  invokeAction,
   invokeSkill,
   listActions,
   listCanvases,
@@ -61,7 +63,6 @@ import {
   scrape,
   search,
   serveStatic,
-  streamInvokeAction,
   streamInvokeSkill,
   unpinSkillInstance,
   updateCanvas,
@@ -360,6 +361,12 @@ export const UseDeleteCanvasKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteCanvasKey,
   ...(mutationKey ?? []),
 ];
+export type AutoNameCanvasMutationResult = Awaited<ReturnType<typeof autoNameCanvas>>;
+export const useAutoNameCanvasKey = 'AutoNameCanvas';
+export const UseAutoNameCanvasKeyFn = (mutationKey?: Array<unknown>) => [
+  useAutoNameCanvasKey,
+  ...(mutationKey ?? []),
+];
 export type UpdateResourceMutationResult = Awaited<ReturnType<typeof updateResource>>;
 export const useUpdateResourceKey = 'UpdateResource';
 export const UseUpdateResourceKeyFn = (mutationKey?: Array<unknown>) => [
@@ -370,6 +377,14 @@ export type CreateResourceMutationResult = Awaited<ReturnType<typeof createResou
 export const useCreateResourceKey = 'CreateResource';
 export const UseCreateResourceKeyFn = (mutationKey?: Array<unknown>) => [
   useCreateResourceKey,
+  ...(mutationKey ?? []),
+];
+export type CreateResourceWithFileMutationResult = Awaited<
+  ReturnType<typeof createResourceWithFile>
+>;
+export const useCreateResourceWithFileKey = 'CreateResourceWithFile';
+export const UseCreateResourceWithFileKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateResourceWithFileKey,
   ...(mutationKey ?? []),
 ];
 export type BatchCreateResourceMutationResult = Awaited<ReturnType<typeof batchCreateResource>>;
@@ -480,18 +495,6 @@ export const UseDeleteLabelInstanceKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteLabelInstanceKey,
   ...(mutationKey ?? []),
 ];
-export type InvokeActionMutationResult = Awaited<ReturnType<typeof invokeAction>>;
-export const useInvokeActionKey = 'InvokeAction';
-export const UseInvokeActionKeyFn = (mutationKey?: Array<unknown>) => [
-  useInvokeActionKey,
-  ...(mutationKey ?? []),
-];
-export type StreamInvokeActionMutationResult = Awaited<ReturnType<typeof streamInvokeAction>>;
-export const useStreamInvokeActionKey = 'StreamInvokeAction';
-export const UseStreamInvokeActionKeyFn = (mutationKey?: Array<unknown>) => [
-  useStreamInvokeActionKey,
-  ...(mutationKey ?? []),
-];
 export type InvokeSkillMutationResult = Awaited<ReturnType<typeof invokeSkill>>;
 export const useInvokeSkillKey = 'InvokeSkill';
 export const UseInvokeSkillKeyFn = (mutationKey?: Array<unknown>) => [
@@ -586,6 +589,12 @@ export type UploadMutationResult = Awaited<ReturnType<typeof upload>>;
 export const useUploadKey = 'Upload';
 export const UseUploadKeyFn = (mutationKey?: Array<unknown>) => [
   useUploadKey,
+  ...(mutationKey ?? []),
+];
+export type ConvertMutationResult = Awaited<ReturnType<typeof convert>>;
+export const useConvertKey = 'Convert';
+export const UseConvertKeyFn = (mutationKey?: Array<unknown>) => [
+  useConvertKey,
   ...(mutationKey ?? []),
 ];
 export type UpdateSettingsMutationResult = Awaited<ReturnType<typeof updateSettings>>;

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Button, Tooltip, Message } from '@arco-design/web-react';
 import { reflyEnv } from '@/utils/env';
+import { preprocessHtmlContent } from '@refly/utils/html2md';
 
 import '@/i18n/config';
 import Logo from '@/assets/logo.svg';
@@ -19,7 +20,6 @@ import {
 import { getRuntime } from '@refly/utils/env';
 import { useSaveSelectedContent } from '@/hooks/use-save-selected-content';
 import { BackgroundMessage, SyncMarkEvent, type MessageName } from '@refly/common-types';
-import { getReadabilityMarkdown } from '@refly/utils/html2md';
 import { useGetUserSettings } from '@/hooks/use-get-user-settings';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 
@@ -86,16 +86,17 @@ export const App = () => {
 
       // Handle get page content request
       if (data?.name === 'getPageContent') {
-        // Get page content using readability
-        const content = getReadabilityMarkdown(document?.body || document);
-        // Send response back with complete page information
+        const html = document?.documentElement?.outerHTML ?? '';
+        // Use our new preprocessing method for better content extraction
+        const cleanedHtml = preprocessHtmlContent(html);
+
         const response = {
           source: getRuntime(),
           name: 'getPageContentResponse' as MessageName,
           body: {
             title: document?.title || '',
             url: window?.location?.href || '',
-            content,
+            content: cleanedHtml,
           },
         };
         sendMessage(response);

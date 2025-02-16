@@ -274,6 +274,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /canvas/autoName:
+    post:
+      tags:
+        - canvas
+      summary: Auto name canvas
+      description: Auto name a canvas
+      operationId: autoNameCanvas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoNameCanvasRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoNameCanvasResponse'
   /knowledge/resource/list:
     get:
       tags:
@@ -391,6 +411,51 @@ paths:
                 $ref: '#/components/schemas/UpsertResourceResponse'
       security:
         - api_key: []
+  /knowledge/resource/createWithFile:
+    post:
+      tags:
+        - knowledge
+      summary: Create new resource with file upload
+      description: Create a new resource with file upload in a single request
+      operationId: createResourceWithFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - title
+                - resourceType
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+                title:
+                  type: string
+                  description: Resource title
+                  example: My Resource
+                resourceType:
+                  description: Resource type
+                  $ref: '#/components/schemas/ResourceType'
+                resourceId:
+                  type: string
+                  description: Resource ID (only used for update)
+                  example: r-g30e1b80b5g1itbemc0g5jj3
+                data:
+                  description: Resource metadata
+                  $ref: '#/components/schemas/ResourceMeta'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertResourceResponse'
+      security:
+        - api_key: []
   /knowledge/resource/batchCreate:
     post:
       tags:
@@ -413,7 +478,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpsertResourceResponse'
+                $ref: '#/components/schemas/BatchCreateResourceResponse'
       security:
         - api_key: []
   /knowledge/resource/reindex:
@@ -940,48 +1005,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListActionResponse'
-  /action/invoke:
-    post:
-      tags:
-        - action
-      summary: Invoke action
-      description: Invoke an action asynchronously
-      operationId: invokeAction
-      requestBody:
-        description: Action invocation request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/InvokeActionRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InvokeActionResponse'
-  /action/streamInvoke:
-    post:
-      tags:
-        - action
-      summary: Stream invoke action
-      description: Invoke an action and return SSE stream
-      operationId: streamInvokeAction
-      requestBody:
-        description: Skill invocation request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/InvokeActionRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            text/event-stream:
-              schema:
-                type: string
   /action/result:
     get:
       tags:
@@ -1537,6 +1560,26 @@ paths:
       responses:
         '200':
           description: successful operation
+  /misc/convert:
+    post:
+      tags:
+        - misc
+      summary: Convert between formats
+      description: Convert content between different formats (e.g., HTML to Markdown)
+      operationId: convert
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConvertRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConvertResponse'
 components:
   schemas:
     User:
@@ -1647,12 +1690,17 @@ components:
           type: string
           description: Weblink title
           example: Google
+        contentType:
+          type: string
+          description: File content type (MIME type)
+          example: application/pdf
     ResourceType:
       type: string
       description: Resource type
       enum:
         - weblink
         - text
+        - file
     Resource:
       type: object
       required:
@@ -1683,6 +1731,9 @@ components:
         vectorSize:
           type: string
           description: Resource vector storage size (in bytes)
+        rawFileKey:
+          type: string
+          description: Raw file storage key (used to download the file)
         createdAt:
           type: string
           format: date-time
@@ -1744,6 +1795,8 @@ components:
         - document
         - resource
         - canvas
+        - user
+        - skillResponse
     Entity:
       type: object
       description: Entity
@@ -2386,6 +2439,9 @@ components:
         content:
           type: string
           description: Step content
+        reasoningContent:
+          type: string
+          description: Step reasoning content
         artifacts:
           type: array
           description: Step artifacts
@@ -2424,6 +2480,9 @@ components:
         title:
           type: string
           description: Action result title
+        input:
+          description: Action input
+          $ref: '#/components/schemas/SkillInput'
         tier:
           description: Model tier
           $ref: '#/components/schemas/ModelTier'
@@ -2991,6 +3050,30 @@ components:
           type: boolean
           description: Whether to delete all files in the canvas
           default: false
+    AutoNameCanvasRequest:
+      type: object
+      required:
+        - canvasId
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID
+        directUpdate:
+          type: boolean
+          description: Whether to directly update the canvas title
+          default: false
+    AutoNameCanvasResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Auto name canvas result
+              properties:
+                title:
+                  type: string
+                  description: New canvas title
     UpsertResourceRequest:
       type: object
       required:
@@ -3011,6 +3094,9 @@ components:
         data:
           description: Resource metadata
           $ref: '#/components/schemas/ResourceMeta'
+        storageKey:
+          type: string
+          description: Storage key
         content:
           type: string
           description: Resource content (this will be ignored if storageKey was set)
@@ -3229,7 +3315,10 @@ components:
           description: Result version
         content:
           type: string
-          description: Event content. Only present when `event` is `stream`.
+          description: Event content. Only present when `event` is `stream`
+        reasoningContent:
+          type: string
+          description: Reasoning content. Only present when `event` is `stream`
         tokenUsage:
           description: Token usage data. Only present when `event` is `token_usage`.
           $ref: '#/components/schemas/TokenUsageItem'
@@ -3600,6 +3689,11 @@ components:
         query:
           type: string
           description: User query
+        images:
+          type: array
+          description: Image list (storage keys)
+          items:
+            type: string
     SkillContextResourceItem:
       type: object
       description: Skill context resource item
@@ -3784,49 +3878,6 @@ components:
         metadata:
           type: object
           description: Context metadata
-    InvokeActionRequest:
-      type: object
-      properties:
-        actionType:
-          description: Action type
-          $ref: '#/components/schemas/ActionType'
-        actionName:
-          type: string
-          description: Action name
-        input:
-          description: Action input
-          $ref: '#/components/schemas/SkillInput'
-        context:
-          type: array
-          description: Action invocation context
-          items:
-            $ref: '#/components/schemas/ActionContextItem'
-        config:
-          description: Action config
-          $ref: '#/components/schemas/ActionConfig'
-        canvasId:
-          description: Canvas ID
-          type: string
-        locale:
-          type: string
-          description: Selected output locale
-        modelName:
-          type: string
-          description: Selected model
-        jobId:
-          description: Skill job ID (if not provided, a new job will be created)
-          type: string
-        triggerId:
-          description: Trigger ID (typically you don't need to provide this)
-          type: string
-    InvokeActionResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            jobId:
-              type: string
-              description: Skill job ID
     InvokeSkillRequest:
       type: object
       properties:
@@ -4349,12 +4400,15 @@ components:
             data:
               description: Weblink scrape result
               $ref: '#/components/schemas/ScrapeWeblinkResult'
+    FileVisibility:
+      type: string
+      enum:
+        - public
+        - private
     UploadRequest:
       type: object
       required:
         - file
-        - entityId
-        - entityType
       properties:
         file:
           type: string
@@ -4366,6 +4420,9 @@ components:
         entityType:
           description: Entity type
           $ref: '#/components/schemas/EntityType'
+        visibility:
+          description: File visibility (default is private)
+          $ref: '#/components/schemas/FileVisibility'
     UploadResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -4374,10 +4431,44 @@ components:
             data:
               type: object
               description: File upload result
+              required:
+                - url
+                - storageKey
               properties:
                 url:
                   type: string
                   description: File URL
+                storageKey:
+                  type: string
+                  description: Storage key
+    ConvertRequest:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The file to convert
+        from:
+          type: string
+          description: Source format (e.g., html)
+          default: html
+        to:
+          type: string
+          description: Target format (e.g., markdown)
+          default: markdown
+    ConvertResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: Converted markdown content
     ModelCapabilities:
       type: object
       properties:
@@ -4462,6 +4553,7 @@ components:
         - toolResponse
         - memo
         - group
+        - image
     CanvasNodeData:
       type: object
       required:

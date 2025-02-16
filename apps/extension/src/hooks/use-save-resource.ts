@@ -1,42 +1,84 @@
-import { CreateResourceData, type BaseResponse } from '@refly/openapi-schema';
-import { getMarkdown, getReadabilityMarkdown } from '@refly/utils/html2md';
+import { UpsertResourceRequest, type BaseResponse } from '@refly/openapi-schema';
+import { getMarkdown, preprocessHtmlContent } from '@refly/utils/html2md';
+import { convertHTMLToMarkdown } from '@refly/utils/markdown';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { getClientOrigin } from '@refly/utils/url';
 import { getRuntime } from '@refly/utils/env';
 import { ConnectionError } from '@refly/errors';
 
+interface SaveResourceOptions {
+  title?: string;
+  url?: string;
+}
+
 export const useSaveCurrentWeblinkAsResource = () => {
-  const saveResource = async () => {
+  const saveResource = async (options?: SaveResourceOptions) => {
     try {
       const runtime = getRuntime();
       const isWeb = runtime === 'web';
-      const pageContent = isWeb
-        ? getMarkdown(document?.body)
-        : getReadabilityMarkdown(document?.body ? document?.body : document);
+
+      // First preprocess the HTML content with minimal cleaning
+      const preprocessedHtml = preprocessHtmlContent(document?.body ?? document);
+
+      let pageContent = '';
+      try {
+        // Create a Blob from the HTML content
+        const htmlBlob = new Blob([preprocessedHtml], { type: 'text/html' });
+        const htmlFile = new File([htmlBlob], 'content.html', { type: 'text/html' });
+
+        // Use extract API to convert HTML to Markdown
+        const result = await getClient().convert({
+          body: {
+            from: 'html',
+            to: 'markdown',
+            file: htmlFile,
+          },
+        });
+
+        if (result?.data?.data?.content) {
+          pageContent = result.data.data.content;
+        } else {
+          throw new Error('Extract API returned no content');
+        }
+      } catch (err) {
+        console.error('Failed to convert HTML to Markdown using extract:', err);
+        // Fallback to direct conversion if extract fails
+        pageContent = isWeb
+          ? getMarkdown(document?.body ?? document)
+          : convertHTMLToMarkdown('render', preprocessedHtml);
+      }
+
+      const title = options?.title?.trim() || document?.title || 'Untitled';
+      const websiteUrl = options?.url?.trim() || location.href;
+
       const resource = {
-        resourceId: 'tempResId',
-        title: document?.title || '',
+        title,
         data: {
-          url: location.href,
-          title: document?.title || '',
+          url: websiteUrl,
+          title,
+          source: 'extension',
         },
         resourceType: 'weblink',
         isPublic: false,
         readOnly: true,
         collabEnabled: false,
-        content: pageContent || '',
       };
 
-      const createResourceData: CreateResourceData = {
+      const textBlob = new Blob([pageContent], { type: 'text/plain' });
+      const textFile = new File([textBlob], 'content.txt', { type: 'text/plain' });
+
+      const createResourceData: UpsertResourceRequest = {
+        title: resource?.title,
+        resourceType: 'weblink',
+        data: resource?.data,
+      };
+
+      const { error } = await getClient().createResourceWithFile({
         body: {
-          title: resource?.title,
-          resourceType: 'weblink',
-          data: resource?.data,
-          content: resource?.content,
+          ...createResourceData,
+          file: textFile,
         },
-      };
-
-      const { error } = await getClient().createResource(createResourceData);
+      });
       // const resourceId = data?.data?.resourceId;
       // const url = `${getClientOrigin(false)}/resource/${resourceId}`;
       const url = `${getClientOrigin(false)}`;
@@ -48,7 +90,9 @@ export const useSaveCurrentWeblinkAsResource = () => {
       return {
         url: '',
         res: {
+          success: false,
           errCode: new ConnectionError(err).code,
+          errMsg: err?.message,
         } as BaseResponse,
       };
     }

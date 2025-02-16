@@ -52,6 +52,7 @@ export class RecommendQuestions extends BaseSkill {
 
   schema = z.object({
     query: z.string().describe('The query to recommend questions'),
+    images: z.array(z.string()).optional().describe('The images to be read by the skill'),
   });
 
   graphState = {

@@ -16,6 +16,7 @@ import { getArtifactIcon } from '@refly-packages/ai-workspace-common/components/
 import { RecommendQuestions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/recommend-questions';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { getWholeParsedContent } from '@refly-packages/utils/content-parser';
 
 const parseStructuredData = (structuredData: Record<string, unknown>, field: string) => {
   return typeof structuredData[field] === 'string'
@@ -217,6 +218,8 @@ export const ActionStepCard = memo(
     const logs = step?.logs?.filter((log) => log?.key);
     const skillName = result.actionMeta?.name || 'commonQnA';
 
+    const content = getWholeParsedContent(step.reasoningContent, step.content);
+
     const handleArtifactSelect = useCallback(
       (artifact) => {
         setSelectedNodeByEntity({
@@ -251,10 +254,10 @@ export const ActionStepCard = memo(
 
         {parsedData.sources && <SourceViewer sources={parsedData.sources} query={query} />}
 
-        {step.content && (
+        {content && (
           <StepContent
             resultId={result.resultId}
-            content={step.content}
+            content={content}
             sources={parsedData.sources}
             buildContextItem={buildContextItem}
             step={step}

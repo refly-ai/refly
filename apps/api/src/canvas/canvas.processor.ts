@@ -3,8 +3,16 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 
 import { CanvasService } from './canvas.service';
-import { QUEUE_CLEAR_CANVAS_ENTITY, QUEUE_SYNC_CANVAS_ENTITY } from '@/utils/const';
-import { DeleteCanvasNodesJobData, SyncCanvasEntityJobData } from './canvas.dto';
+import {
+  QUEUE_CLEAR_CANVAS_ENTITY,
+  QUEUE_SYNC_CANVAS_ENTITY,
+  QUEUE_AUTO_NAME_CANVAS,
+} from '@/utils/const';
+import {
+  DeleteCanvasNodesJobData,
+  SyncCanvasEntityJobData,
+  AutoNameCanvasJobData,
+} from './canvas.dto';
 
 @Processor(QUEUE_SYNC_CANVAS_ENTITY)
 export class SyncCanvasEntityProcessor extends WorkerHost {
@@ -44,5 +52,19 @@ export class ClearCanvasEntityProcessor extends WorkerHost {
       this.logger.error(`[${QUEUE_CLEAR_CANVAS_ENTITY}] error ${job.id}: ${error?.stack}`);
       throw error;
     }
+  }
+}
+
+@Processor(QUEUE_AUTO_NAME_CANVAS)
+export class AutoNameCanvasProcessor extends WorkerHost {
+  private logger = new Logger(AutoNameCanvasProcessor.name);
+
+  constructor(private canvasService: CanvasService) {
+    super();
+  }
+
+  async process(job: Job<AutoNameCanvasJobData>) {
+    this.logger.log(`Processing auto name canvas job ${job.id} for canvas ${job.data.canvasId}`);
+    await this.canvasService.autoNameCanvasFromQueue(job.data);
   }
 }

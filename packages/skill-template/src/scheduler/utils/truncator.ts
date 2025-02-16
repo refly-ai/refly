@@ -9,12 +9,32 @@ import { sortContentBySimilarity } from './semanticSearch';
 
 import { IContext, GraphState } from '../types';
 import { countToken } from './token';
-import { BaseMessage } from '@langchain/core/messages';
+import { BaseMessage, MessageContent } from '@langchain/core/messages';
 
 // configurable params
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_TOKENS = 4000;
 const MAX_MESSAGES_TOTAL_TOKENS = 20000;
+
+export const isEmptyMessage = (message: BaseMessage) => {
+  if (typeof message.content === 'string') {
+    return message.content.trim() === '';
+  }
+
+  if (message.content.length === 0) {
+    return true;
+  }
+
+  // If the message contains an image, it is not empty
+  if (message.content.some((item) => item.type === 'image_url')) {
+    return false;
+  }
+
+  const textContent = message.content
+    .map((item) => (item.type === 'text' ? item.text : ''))
+    .join('\n\n');
+  return textContent.trim() === '';
+};
 
 export const truncateMessages = (
   messages: BaseMessage[] = [],
@@ -27,7 +47,7 @@ export const truncateMessages = (
 
   for (let i = messages.length - 1; i >= Math.max(0, messages.length - maxMessages); i--) {
     const message = messages[i];
-    let content = message.content as string;
+    let content = message.content;
     let tokens = countToken(content);
 
     if (tokens > maxMessageTokens) {
@@ -47,10 +67,15 @@ export const truncateMessages = (
   return truncatedMessages;
 };
 
-export const truncateTextWithToken = (text: string, maxTokens: number): string => {
-  if (!text || typeof text !== 'string') return '';
+export const truncateTextWithToken = (content: MessageContent, maxTokens: number): string => {
+  if (!content) return '';
 
-  const words = text.split(' ');
+  if (typeof content !== 'string') {
+    const textContent = content.map((item) => (item.type === 'text' ? item.text : '')).join('\n\n');
+    return truncateTextWithToken(textContent, maxTokens);
+  }
+
+  const words = content.split(' ');
   let truncatedText = '';
   let currentTokens = 0;
 
@@ -64,7 +89,7 @@ export const truncateTextWithToken = (text: string, maxTokens: number): string =
     }
   }
 
-  return truncatedText + (truncatedText.length < text.length ? '...' : '');
+  return truncatedText + (truncatedText.length < content.length ? '...' : '');
 };
 
 export const truncateContext = (context: IContext, maxTokens: number): IContext => {

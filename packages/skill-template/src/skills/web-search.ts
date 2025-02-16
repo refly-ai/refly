@@ -48,6 +48,7 @@ export class WebSearch extends BaseSkill {
 
   schema = z.object({
     query: z.string().optional().describe('The search query'),
+    images: z.array(z.string()).optional().describe('The images to be read by the skill'),
   });
 
   graphState: StateGraphArgs<BaseSkillState>['channels'] = {
@@ -58,7 +59,7 @@ export class WebSearch extends BaseSkill {
     state: GraphState,
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
-    const { messages = [] } = state;
+    const { messages = [], images = [] } = state;
     const { locale = 'en', currentSkill } = config.configurable;
 
     // Set current step
@@ -122,6 +123,7 @@ export class WebSearch extends BaseSkill {
       messages,
       needPrepareContext: true,
       context: contextStr,
+      images,
       originalQuery: query,
       rewrittenQuery: optimizedQuery,
     });

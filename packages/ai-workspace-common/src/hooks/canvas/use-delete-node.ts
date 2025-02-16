@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { message } from 'antd';
 import { useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import DeleteNodeMessageContent from '../../components/message/delete-node-message';
 
 interface DeleteNodeOptions {
   showMessage?: boolean;
@@ -27,12 +28,15 @@ export const useDeleteNode = () => {
         const nodeTitle = node.data?.title ?? t('knowledgeBase.context.untitled');
 
         // Show success message
-        message.success(
-          t('knowledgeBase.context.deleteSuccessWithTitle', {
+        message.success({
+          content: React.createElement(DeleteNodeMessageContent, {
             title: nodeTitle || t('common.untitled'),
-            type: t(`canvas.nodeTypes.${node.type}`),
+            action: t('knowledgeBase.context.deleteSuccessWithTitle', {
+              type: t(`canvas.nodeTypes.${node.type}`),
+            }),
           }),
-        );
+          key: 'delete-success',
+        });
       }
 
       return true;

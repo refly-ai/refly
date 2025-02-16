@@ -9,7 +9,7 @@
   },
   "scripts": {
     "preview": "vite preview",
-    "codegen": "openapi-rq -i ../openapi-schema/schema.yml -o src --noSchemas && biome check ./src/queries --apply"
+    "codegen": "openapi-rq -i ../openapi-schema/schema.yml -o src --noSchemas && biome check ./src --write"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
@@ -65,6 +65,7 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.0",
     "cmdk": "~1.0.0",
+    "colord": "^2.9.3",
     "copy-to-clipboard": "~3.3.3",
     "dayjs": "~1.11.7",
     "highlight.js": "^11.9.0",
@@ -81,8 +82,10 @@
     "lowlight": "~3.1.0",
     "lucide-react": "~0.454.0",
     "md5": "^2.3.0",
+    "mermaid": "^10.9.3",
     "mitt": "~3.0.1",
     "prism-react-renderer": "~2.3.1",
+    "prop-types": "^15.8.1",
     "qs": "~6.12.3",
     "rate-limiter-flexible": "~5.0.3",
     "react": "^18.2.0",

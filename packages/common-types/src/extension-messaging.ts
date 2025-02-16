@@ -36,4 +36,5 @@ export interface BackgroundMessage<T = any> {
   source: IRuntime;
   target?: any;
   args?: any;
+  hasFileData?: boolean;
 }

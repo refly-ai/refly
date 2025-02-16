@@ -8,6 +8,7 @@ import {
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { aggregateTokenUsage } from '@refly-packages/utils/models';
 import { useSetNodeDataByEntity } from './use-set-node-data-by-entity';
+import { getWholeParsedContent } from '@refly-packages/utils/content-parser';
 
 const generateFullNodeDataUpdates = (
   payload: ActionResult,
@@ -16,7 +17,7 @@ const generateFullNodeDataUpdates = (
     title: payload.title,
     entityId: payload.resultId,
     contentPreview: payload.steps
-      .map((s) => s.content)
+      .map((s) => getWholeParsedContent(s?.reasoningContent, s?.content))
       ?.filter(Boolean)
       ?.join('\n'),
     metadata: {
@@ -51,7 +52,7 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
 
   if (eventType === 'stream') {
     nodeData.contentPreview = steps
-      .map((s) => s.content)
+      .map((s) => getWholeParsedContent(s?.reasoningContent, s?.content))
       ?.filter(Boolean)
       ?.join('\n');
   } else if (eventType === 'artifact') {

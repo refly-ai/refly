@@ -53,6 +53,7 @@ export class EditDoc extends BaseSkill {
 
   schema = z.object({
     query: z.string().optional().describe('The search query'),
+    images: z.array(z.string()).optional().describe('The images to be read by the skill'),
   });
 
   graphState: StateGraphArgs<GraphState>['channels'] = {
@@ -68,7 +69,7 @@ export class EditDoc extends BaseSkill {
     config: SkillRunnableConfig,
     module: SkillPromptModule,
   ) => {
-    const { messages = [], query: originalQuery } = state;
+    const { messages = [], query: originalQuery, images = [] } = state;
     const {
       locale = 'en',
       chatHistory = [],
@@ -115,13 +116,12 @@ export class EditDoc extends BaseSkill {
       `maxTokens: ${maxTokens}, queryTokens: ${queryTokens}, chatHistoryTokens: ${chatHistoryTokens}, remainingTokens: ${remainingTokens}`,
     );
 
-    // 新增：定义长查询的阈值（可以根据实际需求调整）
-    const LONG_QUERY_TOKENS_THRESHOLD = 100; // 约等于50-75个英文单词或25-35个中文字
+    const LONG_QUERY_TOKENS_THRESHOLD = 100; // About 50-75 English words or 25-35 Chinese characters
 
-    // 优化 needRewriteQuery 判断逻辑
+    // Optimize needRewriteQuery judgment logic
     const needRewriteQuery =
-      queryTokens < LONG_QUERY_TOKENS_THRESHOLD && // 只有短查询才需要重写
-      (hasContext || chatHistoryTokens > 0); // 保持原有的上下文相关判断
+      queryTokens < LONG_QUERY_TOKENS_THRESHOLD && // Only rewrite short queries
+      (hasContext || chatHistoryTokens > 0); // Keep original context-related judgment
 
     const needPrepareContext = hasContext && remainingTokens > 0;
     this.engine.logger.log(
@@ -177,21 +177,14 @@ export class EditDoc extends BaseSkill {
       messages,
       needPrepareContext: needPrepareContext && isModelContextLenSupport,
       context,
+      images,
       originalQuery: query,
       rewrittenQuery: optimizedQuery,
     });
 
-    this.engine.logger.log(`requestMessages: ${safeStringifyJSON(requestMessages)}`);
-
     return { requestMessages };
   };
 
-  // TODO: 将实际的 document 的内容发送给模型，拼接为 prompt 处理
-  /**
-   * Update canvas：更新的形态
-   * 1. 口头模糊指明（可能涉及处理多个）：直接口头指明模糊更新的内容（需要模型扫描并给出待操作的模块和对应的 startIndex 和 endIndex），则只需要优化这些内容，其他保持原样，并且发送给前端流式写入
-   * 2. 前端明确选中（目前只支持一个）：明确具备选中的 startIndex 和 endIndex（使用的是 tiptap editor），则只需要优化这块内容，其他保持原样，并且发送给前端流式写入
-   */
   callEditDoc = async (
     state: GraphState,
     config: SkillRunnableConfig,

@@ -337,6 +337,7 @@ export const AISelector = memo(({ onOpenChange, inPlaceEditType }: AISelectorPro
                 placement="bottom"
                 briefMode={true}
                 trigger={['click']}
+                contextItems={contextItems}
               />
             </Button>
             <AddBaseMarkContext contextItems={contextItems} setContextItems={setContextItems} />

@@ -67,11 +67,9 @@ export class SubscriptionService implements OnModuleInit {
 
   private async setupSubscriptionCheckJobs() {
     // Remove any existing recurring jobs
-    const existingJobs = await this.checkCanceledSubscriptionsQueue.getRepeatableJobs();
+    const existingJobs = await this.checkCanceledSubscriptionsQueue.getJobSchedulers();
     await Promise.all(
-      existingJobs.map((job) =>
-        this.checkCanceledSubscriptionsQueue.removeRepeatableByKey(job.key),
-      ),
+      existingJobs.map((job) => this.checkCanceledSubscriptionsQueue.removeJobScheduler(job.id)),
     );
 
     // Add the new recurring job with concurrency options
@@ -240,15 +238,21 @@ export class SubscriptionService implements OnModuleInit {
 
   async cancelSubscription(sub: SubscriptionModel) {
     await this.prisma.$transaction(async (prisma) => {
+      // Mark the subscription as canceled
+      await prisma.subscription.update({
+        where: { subscriptionId: sub.subscriptionId },
+        data: { status: 'canceled' },
+      });
+
       const user = await prisma.user.findUnique({ where: { uid: sub.uid } });
       if (!user) {
         this.logger.error(`No user found for uid ${sub.uid}`);
         return;
       }
 
-      // Idempotency check
-      if (!user.subscriptionId) {
-        this.logger.error(`No subscription found for user ${sub.uid}`);
+      // Proceed only if the user's current subscription matches the one to be canceled
+      if (user.subscriptionId !== sub.subscriptionId) {
+        this.logger.warn(`Subscription ${sub.subscriptionId} not valid for user ${user.uid}`);
         return;
       }
 
@@ -256,12 +260,6 @@ export class SubscriptionService implements OnModuleInit {
       await prisma.user.update({
         where: { uid: sub.uid },
         data: { subscriptionId: null },
-      });
-
-      // Mark the subscription as canceled
-      await prisma.subscription.update({
-        where: { subscriptionId: sub.subscriptionId },
-        data: { status: 'canceled' },
       });
 
       const now = new Date();
@@ -461,7 +459,12 @@ export class SubscriptionService implements OnModuleInit {
 
     const meter = await this.getOrCreateStorageUsageMeter(userModel);
 
-    return { available: meter.fileCountQuota - meter.fileCountUsed };
+    return {
+      available:
+        meter.fileCountQuota < 0
+          ? Number.POSITIVE_INFINITY
+          : meter.fileCountQuota - meter.fileCountUsed,
+    };
   }
 
   async getOrCreateTokenUsageMeter(user: User, _sub?: SubscriptionModel) {

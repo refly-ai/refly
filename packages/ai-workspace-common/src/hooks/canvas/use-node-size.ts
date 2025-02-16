@@ -81,6 +81,12 @@ export const useNodeSize = ({
     defaultHeight,
   ]);
 
+  useEffect(() => {
+    if (sizeMode === 'compact') {
+      updateSize({ height: 'auto' });
+    }
+  }, [sizeMode, updateSize]);
+
   // Handle resize event
   const handleResize = useCallback(
     ({ target, width, height, direction }) => {
@@ -119,13 +125,13 @@ export const useNodeSize = ({
       position: 'relative',
       width: size.width,
       height: size.height,
-      maxHeight: size.maxHeight,
+      maxHeight: sizeMode === 'compact' ? size.maxHeight : undefined,
       minWidth: sizeMode === 'compact' ? minWidth : defaultWidth,
       maxWidth,
       userSelect: isOperating ? 'text' : 'none',
       cursor: isOperating ? 'text' : 'grab',
     }),
-    [size, sizeMode, minWidth, maxWidth, defaultWidth, isOperating],
+    [size, sizeMode, minWidth, maxWidth, defaultWidth, isOperating, sizeMode],
   );
 
   return {

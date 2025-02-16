@@ -30,14 +30,28 @@ export const ContentPreview = memo(
       return content || '';
     }, [content, sizeMode, maxCompactLength]);
 
+    // Memoize className to prevent re-renders when only isOperating changes
+    const markdownClassName = useMemo(
+      () =>
+        `text-xs overflow-hidden ${isOperating ? 'pointer-events-auto cursor-text select-text' : 'pointer-events-none select-none'} ${className}`,
+      [isOperating, className],
+    );
+
     return (
       <Spin spinning={isLoading}>
-        <Markdown
-          className={`text-xs overflow-hidden ${isOperating ? 'pointer-events-auto cursor-text select-text' : 'pointer-events-none select-none'} ${className}`}
-          content={previewContent}
-          sources={sources || []}
-        />
+        <Markdown className={markdownClassName} content={previewContent} sources={sources || []} />
       </Spin>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.content === nextProps.content &&
+      prevProps.sizeMode === nextProps.sizeMode &&
+      prevProps.isOperating === nextProps.isOperating &&
+      prevProps.isLoading === nextProps.isLoading &&
+      prevProps.maxCompactLength === nextProps.maxCompactLength &&
+      prevProps.className === nextProps.className &&
+      JSON.stringify(prevProps.sources) === JSON.stringify(nextProps.sources)
     );
   },
 );

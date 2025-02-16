@@ -41,7 +41,7 @@ import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly-packages/utils/id';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
-
+import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 export const MemoNode = ({
   data,
   selected,
@@ -58,8 +58,6 @@ export const MemoNode = ({
   const language = i18n.languages?.[0];
   const { addNode } = useAddNode();
 
-  // console.log('memo', id);
-
   const { getNode } = useReactFlow();
   const node = getNode(id);
   const targetRef = useRef<HTMLDivElement>(null);
@@ -70,6 +68,8 @@ export const MemoNode = ({
   const { operatingNodeId } = useCanvasStoreShallow((state) => ({
     operatingNodeId: state.operatingNodeId,
   }));
+  const { draggingNodeId } = useEditorPerformance();
+  const isDragging = draggingNodeId === id;
 
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
@@ -297,7 +297,7 @@ export const MemoNode = ({
         {!isPreview && selected && (
           <MemoEditor editor={editor} bgColor={bgColor} onChangeBackground={onUpdateBgColor} />
         )}
-        {!isPreview && !hideActions && (
+        {!isPreview && !hideActions && !isDragging && (
           <ActionButtons type="memo" nodeId={id} isNodeHovered={isHovered} />
         )}
 

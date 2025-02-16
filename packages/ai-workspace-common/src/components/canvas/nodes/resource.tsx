@@ -32,7 +32,7 @@ import { ContentPreview } from './shared/content-preview';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { message } from 'antd';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-
+import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 export const ResourceNode = memo(
   ({ id, data, isPreview, selected, hideActions, hideHandles, onNodeClick }: ResourceNodeProps) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -54,7 +54,9 @@ export const ResourceNode = memo(
       operatingNodeId: state.operatingNodeId,
     }));
 
+    const { draggingNodeId } = useEditorPerformance();
     const isOperating = operatingNodeId === id;
+    const isDragging = draggingNodeId === id;
     const sizeMode = data?.metadata?.sizeMode || 'adaptive';
     const node = useMemo(() => getNode(id), [id, getNode]);
 
@@ -249,7 +251,7 @@ export const ResourceNode = memo(
             'nodrag nopan select-text': isOperating,
           })}
         >
-          {!isPreview && !hideActions && (
+          {!isPreview && !hideActions && !isDragging && (
             <ActionButtons type="resource" nodeId={id} isNodeHovered={isHovered} />
           )}
 

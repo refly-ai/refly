@@ -68,19 +68,14 @@ export default defineConfig({
       },
     }) as WxtViteConfig,
   manifest: {
-    version: '0.1.0',
-    author: 'pftom',
+    version: '0.3.6',
+    author: 'support@refly.ai',
     name: '__MSG_displayName__',
     description: '__MSG_description__',
     default_locale: 'en',
     host_permissions: ['https://*/*', 'http://*/*', '<all_urls>'],
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'self'",
-    },
-    commands: {
-      _execute_action: {
-        suggested_key: { default: 'Ctrl+J', mac: 'Command+J' },
-      },
     },
     key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlkdw0WXN0WT9YYu1nsWezZzSmWrGpny4gK0UhiL7nbz2NQkqq32KsW51Ag3wdvD/ccyS5VUUEnnlAwxmk0CfnO+TNEFM5lCtF+1/2j5HpmlqZMUlu3tUx+SiY3mF6R9cpbfts3IjWomuRVMfHXmWEu3Gctv4T5hSTNKd44Z3SOPj5KeUxYryJmL/y8LR6lj9F/a5Gfblf5t214GKeFXjewgQOmAGT+v5NurIu3xuwPkYqmkrNcRrQHqkdREH4AFp4TjlNpx5W+AR6Qh9FRkGjXTlcVMQ62KqPlIV29Y/VTO/4oUVhPMhVxXH91ojoA7Vzgr76OtnjaysNZbBapxgFQIDAQAB',
     externally_connectable: {
@@ -95,7 +90,6 @@ export default defineConfig({
     permissions: [
       'storage',
       'scripting',
-      'history',
       'activeTab',
       'tabs',
       'cookies',

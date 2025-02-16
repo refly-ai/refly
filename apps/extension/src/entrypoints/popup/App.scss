@@ -1,7 +1,7 @@
 body {
   padding: 8px;
   width: 380px;
-  height: 416px;
+  height: 456px;
   margin: 0;
   overflow: hidden;
 }
@@ -14,6 +14,7 @@ body {
 .popup-page {
   width: 100%;
   height: 100%;
+  overflow-y: auto;
   min-height: 380px;
   padding: 16px;
   display: flex;
@@ -74,6 +75,20 @@ body {
             text-decoration: underline;
           }
         }
+      }
+    }
+
+    .content-clipper-collapse {
+      .ant-collapse-header {
+        padding: 12px 0;
+      }
+
+      .ant-collapse-content {
+        padding: 0;
+      }
+
+      .ant-collapse-content-box {
+        padding: 0;
       }
     }
   }

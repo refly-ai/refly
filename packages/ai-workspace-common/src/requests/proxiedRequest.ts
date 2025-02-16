@@ -85,6 +85,49 @@ client.interceptors.response.use(async (response, request) => {
   return await responseInterceptorWithTokenRefresh(response, cachedRequest ?? request);
 });
 
+// Helper function to serialize File object
+const serializeFile = async (file: File) => {
+  const arrayBuffer = await file.arrayBuffer();
+  return {
+    type: 'File',
+    name: file.name,
+    content: Array.from(new Uint8Array(arrayBuffer)),
+    contentType: file.type,
+    lastModified: file.lastModified,
+  };
+};
+
+// Helper function to serialize FormData
+const serializeFormData = async (formData: FormData) => {
+  const serialized: Record<string, any> = {};
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      serialized[key] = await serializeFile(value);
+    } else {
+      serialized[key] = value;
+    }
+  }
+  return {
+    type: 'FormData',
+    data: serialized,
+  };
+};
+
+// Helper function to check if object contains File or FormData
+const hasFileOrFormData = (obj: any): boolean => {
+  if (!obj) return false;
+  if (obj instanceof File || obj instanceof FormData) return true;
+  if (typeof obj === 'object') {
+    return Object.values(obj).some((value) => hasFileOrFormData(value));
+  }
+  return false;
+};
+
+interface RequestArg {
+  body?: FormData | File | Record<string, any>;
+  [key: string]: any;
+}
+
 const wrapFunctions = (module: any) => {
   const wrappedModule: any = {};
 
@@ -97,12 +140,37 @@ const wrapFunctions = (module: any) => {
         console.log(`Calling function ${String(key)} with arguments: ${safeStringifyJSON(args)}`);
 
         try {
+          const hasFileData = args.some((arg) => hasFileOrFormData(arg));
+
+          let serializedArgs = args;
+          if (hasFileData) {
+            serializedArgs = await Promise.all(
+              args.map(async (arg) => {
+                if (!arg || typeof arg !== 'object') return arg;
+                const serialized = { ...arg } as RequestArg;
+                if (serialized.body instanceof FormData) {
+                  serialized.body = await serializeFormData(serialized.body);
+                } else if (serialized.body instanceof File) {
+                  serialized.body = await serializeFile(serialized.body);
+                } else if (typeof serialized.body === 'object') {
+                  for (const [key, value] of Object.entries(serialized.body)) {
+                    if (value instanceof File) {
+                      serialized.body[key] = await serializeFile(value);
+                    }
+                  }
+                }
+                return serialized;
+              }),
+            );
+          }
+
           const res = (await sendToBackground({
             name: String(key) as MessageName,
             type: 'apiRequest',
             source: getRuntime(),
             target: module,
-            args,
+            args: serializedArgs,
+            hasFileData,
           })) as { response: Response; data: any; error: { errCode: string; success: boolean } };
 
           if (res?.response && runtime !== 'extension-csui') {
@@ -128,8 +196,6 @@ const wrapFunctions = (module: any) => {
       wrappedModule[key] = async (...args: unknown[]) => {
         try {
           const response = await origMethod(...args);
-
-          console.log('response', response);
 
           if (response) {
             const error = await extractBaseResp(response?.response as Response, response?.data);

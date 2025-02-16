@@ -1,5 +1,5 @@
 import { IconLoading } from '@arco-design/web-react/icon';
-import { memo, useEffect, useRef, useState, Suspense } from 'react';
+import { memo, useEffect, useRef, useState, Suspense, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 import RemarkBreaks from 'remark-breaks';
@@ -37,6 +37,18 @@ export const Markdown = memo(
       RehypeHighlight: null,
     });
 
+    // Memoize the className to prevent inline object creation
+    const markdownClassName = useMemo(
+      () => cn('markdown-body', props.className),
+      [props.className],
+    );
+
+    // Memoize the parsed content
+    const parsedContent = useMemo(
+      () => markdownCitationParse(props?.content || ''),
+      [props.content],
+    );
+
     // Dynamically import KaTeX CSS
     useEffect(() => {
       import('katex/dist/katex.min.css').then(() => setIsKatexLoaded(true));
@@ -55,12 +67,9 @@ export const Markdown = memo(
       );
     }, []);
 
-    const shouldLoading = props.loading;
-    const parsedContent = markdownCitationParse(props?.content || '');
-
     return (
-      <div className={cn('markdown-body', props.className)} ref={mdRef}>
-        {shouldLoading ? (
+      <div className={markdownClassName} ref={mdRef}>
+        {props.loading ? (
           <IconLoading />
         ) : (
           <Suspense fallback={<div>{t('common.loading')}</div>}>
@@ -81,7 +90,6 @@ export const Markdown = memo(
                     ],
                   ]}
                   components={{
-                    // ...canvasComponents,
                     pre: CodeElement.Component,
                     a: (args) => LinkElement.Component(args, props?.sources || []),
                   }}
@@ -93,6 +101,14 @@ export const Markdown = memo(
           </Suspense>
         )}
       </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.content === nextProps.content &&
+      prevProps.loading === nextProps.loading &&
+      prevProps.className === nextProps.className &&
+      JSON.stringify(prevProps.sources) === JSON.stringify(nextProps.sources)
     );
   },
 );

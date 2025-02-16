@@ -89,7 +89,7 @@ export const convertContextItemsToInvokeParams = (
   items: IContextItem[],
   getHistory: (item: IContextItem) => ActionResult[],
   getMemo?: (item: IContextItem) => { content: string; title: string }[],
-): { context: SkillContext; resultHistory: ActionResult[] } => {
+): { context: SkillContext; resultHistory: ActionResult[]; images: string[] } => {
   const context = {
     contentList: [
       ...(items
@@ -154,8 +154,12 @@ export const convertContextItemsToInvokeParams = (
         ? getHistory(item)
         : [{ title: item.title, resultId: item.entityId }];
     });
+  const images = items
+    ?.filter((item) => item.type === 'image')
+    .map((item) => item.metadata?.storageKey)
+    .filter(Boolean);
 
-  return { context, resultHistory };
+  return { context, resultHistory, images };
 };
 
 export const convertContextItemsToEdges = (

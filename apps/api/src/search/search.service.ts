@@ -15,6 +15,7 @@ import {
   BatchWebSearchRequest,
   Source,
   SearchStep,
+  SearchDomain,
 } from '@refly-packages/openapi-schema';
 import { RAGService } from '@/rag/rag.service';
 import { ElasticsearchService } from '@/common/elasticsearch.service';
@@ -148,7 +149,7 @@ export class SearchService {
     return Object.values(groupedEntities).map((entities) => ({
       ...req,
       user: entities[0].user,
-      domains: [entities[0].entityType],
+      domains: [entities[0].entityType as SearchDomain],
       entities: entities,
     }));
   }

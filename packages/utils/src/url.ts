@@ -6,6 +6,9 @@ const overrideLocalDev = false;
 export const SENTRY_DSN =
   'https://3a105c6104e4c4de3ead00dc11f16623@o4507205453414400.ingest.us.sentry.io/4507209639133184';
 
+export const EXTENSION_DOWNLOAD_LINK =
+  'https://chromewebstore.google.com/detail/lecbjbapfkinmikhadakbclblnemmjpd';
+
 export const SERVER_PROD_DOMAIN = 'https://api.refly.ai';
 export const SERVER_STAGING_DOMAIN = 'https://staging-api.refly.ai';
 export const SERVER_DEV_DOMAIN = 'http://localhost:5800';

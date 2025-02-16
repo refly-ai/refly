@@ -5,13 +5,17 @@
     border-radius: 8px;
   }
 
-  .arco-modal-content {
+  .ant-modal-content {
     width: 100%;
     height: 100%;
     padding: 0;
   }
 
-  div:has(.arco-modal-content) {
+  div:has(.ant-modal-content) {
+    height: 100%;
+  }
+
+  .ant-modal-body {
     height: 100%;
   }
 }
@@ -42,6 +46,10 @@
         margin-left: 14px;
         font-weight: bold;
       }
+    }
+
+    .ant-menu-vertical {
+      border-inline-end: none;
     }
   }
 
@@ -220,4 +228,15 @@
 
 .keyword {
   color: #00968f;
+}
+
+.file-upload-container {
+  overflow: hidden;
+  .ant-upload-drag {
+    height: 160px;
+  }
+  .ant-upload-list {
+    max-height: 180px;
+    overflow-y: auto;
+  }
 }
