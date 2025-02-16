@@ -69,6 +69,7 @@ const NodeHeader = memo(
             <Input
               className="!border-transparent font-bold focus:!bg-transparent px-0.5 py-0"
               value={editTitle}
+              data-cy="skill-response-node-header-input"
               onChange={(e) => {
                 setEditTitle(e.target.value);
                 updateTitle?.(e.target.value);

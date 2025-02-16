@@ -38,10 +38,15 @@ describe('Canvas Flow', () => {
       .type('Say this is a test')
       .type('{enter}');
 
+    // Wait for the response node to be visible first
+    cy.get('[data-cy="skill-response-node"]').should('be.visible');
+
+    // Then wait for the input to be visible and have the correct value
+    cy.get('[data-cy="skill-response-node-header-input"]')
+      .should('be.visible')
+      .should('have.value', 'Say this is a test');
+
     // Verify the response is displayed in the chat
     cy.get('[data-cy="skill-response-node"]').should('be.visible').contains('This is a test');
-    cy.get('[data-cy="skill-response-node-header"]')
-      .should('be.visible')
-      .contains('Say this is a test');
   });
 });
