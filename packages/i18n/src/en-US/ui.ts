@@ -117,7 +117,7 @@ const translations = {
         'Powered by multi-threaded dialogue, knowledge integration, context memory, and intelligent search, ',
       second: 'Refly is the best way to transform ideas into quality content.',
     },
-    messageText: 'Refly Chrome Extension web clipper launched! ⚡️! ',
+    messageText: 'Support file upload and multi-modal image processing⚡️ ',
     tryForFree: 'Get Started',
     addToChrome: 'Add to Chrome',
     contactUs: 'Contact Us',
@@ -285,6 +285,11 @@ const translations = {
       A3: 'Changing the subscription plan is not supported at present. If you need to cancel your subscription, please click the "Settings - Subscription - Manage Billing and Subscription" button and then proceed to the Stripe platform to manage your subscription. Once the cancellation is successful, your account will be automatically downgraded to the free version upon the expiration of the current plan.',
       Q4: 'Is a refund available?',
       A4: 'Currently, there is no refund option available. If you have a strong demand for a refund, please contact the Refly team, and we will assist you in resolving the issue.',
+    },
+    testimonials: {
+      tag: 'User Testimonials',
+      description:
+        "Don't just take our word for it. Here's what real people are saying about Refly on Twitter.",
     },
   },
   priceContent: {

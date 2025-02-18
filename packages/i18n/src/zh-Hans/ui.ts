@@ -128,7 +128,7 @@ const translations = {
       first: '由多线程对话、知识库集成、上下文记忆和智能搜索驱动，',
       second: 'Refly 是将创意转化为优质内容的最佳方式。',
     },
-    messageText: 'Refly 网页剪存 Chrome 插件发布! ⚡️! ',
+    messageText: '支持文件上传和多模态图片处理⚡️ ',
     tryForFree: '开始使用',
     addToChrome: '添加到 Chrome',
     contactUs: '联系我们',
@@ -285,6 +285,10 @@ const translations = {
       A3: '目前不支持更改订阅方案。如果您需要取消订阅方案，请点击「设置-订阅-管理账单及订阅」按钮后前往 Stripe 管理订阅计划。取消订阅成功后，在当前方案到期时将自动降级为免费版。',
       Q4: '是否支持退款？',
       A4: '目前暂不开放退款入口，如果您有强烈的退款需求，请联系 Refly 团队为您解决。',
+    },
+    testimonials: {
+      tag: '用户评价',
+      description: '不要只相信我们的话，看看用户在 Twitter 上对 Refly 的真实评价。',
     },
   },
   priceContent: {
