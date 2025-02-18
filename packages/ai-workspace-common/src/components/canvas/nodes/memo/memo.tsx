@@ -42,6 +42,8 @@ import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use
 import { genSkillID } from '@refly-packages/utils/id';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
+import { ColorMarkdownExtension } from '@refly-packages/ai-workspace-common/utils/colorMarkdownExtentions';
+
 export const MemoNode = ({
   data,
   selected,
@@ -178,7 +180,9 @@ export const MemoNode = ({
       StarterKit,
       Underline,
       TextStyle,
-      Color,
+      Color.configure({
+        types: ['textStyle'],
+      }),
       Highlight.configure({
         multicolor: true,
         HTMLAttributes: {
@@ -195,8 +199,16 @@ export const MemoNode = ({
         validate: (href) => /^(https?:\/\/|mailto:|tel:)/.test(href),
       }),
       Markdown.configure({
-        html: false,
+        html: true,
+        transformCopiedText: true,
+        transformPastedText: true,
+        breaks: true,
+        tightLists: true,
+        tightListClass: 'tight',
+        bulletListMarker: '-',
+        linkify: true,
       }),
+      ColorMarkdownExtension,
       TaskList,
       TaskItem.configure({
         nested: true,
@@ -252,6 +264,7 @@ export const MemoNode = ({
         editor.commands.setTextSelection(currentPos);
       }
     }
+    console.log('markdown', markdown, markdown.length);
 
     setNodeDataByEntity(
       {

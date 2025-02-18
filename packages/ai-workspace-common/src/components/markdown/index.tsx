@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 
 import RemarkBreaks from 'remark-breaks';
 import RemarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 import { cn, markdownCitationParse } from '@refly/utils';
 
@@ -80,6 +81,7 @@ export const Markdown = memo(
                 <ReactMarkdown
                   remarkPlugins={[RemarkGfm, RemarkBreaks, plugins.RemarkMath]}
                   rehypePlugins={[
+                    rehypeRaw,
                     plugins.RehypeKatex,
                     [
                       plugins.RehypeHighlight,

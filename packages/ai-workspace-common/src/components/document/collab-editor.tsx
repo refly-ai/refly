@@ -43,6 +43,10 @@ import { useEditorPerformance } from '@refly-packages/ai-workspace-common/contex
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { Markdown } from 'tiptap-markdown';
+import TextStyle from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import { ColorMarkdownExtension } from '@refly-packages/ai-workspace-common/utils/colorMarkdownExtentions';
 
 export const CollaborativeEditor = memo(
   ({ docId }: { docId: string }) => {
@@ -140,6 +144,21 @@ export const CollaborativeEditor = memo(
           entityType: 'document',
         }),
         createPlaceholderExtension(),
+        TextStyle,
+        Color.configure({
+          types: ['textStyle'],
+        }),
+        ColorMarkdownExtension,
+        Markdown.configure({
+          html: true,
+          transformCopiedText: true,
+          transformPastedText: true,
+          breaks: true,
+          tightLists: true,
+          tightListClass: 'tight',
+          bulletListMarker: '-',
+          linkify: true,
+        }),
         Collaboration.configure({
           document: ydoc,
         }),

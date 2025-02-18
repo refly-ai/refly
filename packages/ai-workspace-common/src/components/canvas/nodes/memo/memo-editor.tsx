@@ -5,7 +5,7 @@ import { Color } from 'antd/es/color-picker';
 import { NodeSelector } from '@refly-packages/ai-workspace-common/components/editor/components/selectors/node-selector';
 import { TextButtons } from '@refly-packages/ai-workspace-common/components/editor/components/selectors/text-buttons';
 import { LinkSelector } from '@refly-packages/ai-workspace-common/components/editor/components/selectors/link-selector';
-
+import { ColorSelector } from '@refly-packages/ai-workspace-common/components/editor/components/selectors/color-selector';
 import './memo-editor.scss';
 import { useTranslation } from 'react-i18next';
 type MemoEditorProps = {
@@ -17,7 +17,7 @@ type MemoEditorProps = {
 export const MemoEditor: FC<MemoEditorProps> = ({ editor, bgColor, onChangeBackground }) => {
   const [open, setOpen] = useState(false);
   const [openLink, setOpenLink] = useState(false);
-  const [_openColor, _setOpenColor] = useState(false);
+  const [openColor, setOpenColor] = useState(false);
   const { t } = useTranslation();
 
   // Define preset colors
@@ -50,8 +50,8 @@ export const MemoEditor: FC<MemoEditorProps> = ({ editor, bgColor, onChangeBackg
         <Divider className="mx-0 h-8" type="vertical" />
         <NodeSelector open={open} onOpenChange={setOpen} triggerEditor={editor} />
         <Divider className="mx-0 h-8" type="vertical" />
-        {/* <ColorSelector open={openColor} onOpenChange={setOpenColor} triggerEditor={editor} />
-        <Divider className="mx-0 h-8" type="vertical" /> */}
+        <ColorSelector open={openColor} onOpenChange={setOpenColor} triggerEditor={editor} />
+        <Divider className="mx-0 h-8" type="vertical" />
         <TextButtons triggerEditor={editor} />
         <LinkSelector open={openLink} onOpenChange={setOpenLink} triggerEditor={editor} />
       </div>
