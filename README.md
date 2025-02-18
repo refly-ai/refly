@@ -9,11 +9,11 @@
     ⭐️  The AI Native Creation Engine ⭐️ <br>
 </h1>
 
-Refly is an open-source AI-native creation engine. It's intuitive free-form canvas interface combines multi-threaded conversations, knowledge base RAG integration, contextual memory, intelligent search, WYSIWYG AI editor and more, empowering you to effortlessly transform ideas into production-ready content.
+Refly is an open-source AI-native creation engine powered by 13+ leading AI models. Its intuitive free-form canvas interface integrates multi-threaded conversations, multimodal inputs (text/images/files), RAG retrieval process, browser extension web clipper, contextual memory, and AI document editing capabilities, empowering you to effortlessly transform ideas into complete works.
 
-[🚀 Refly Chrome Extension web clipper launched! ⚡️!](https://docs.refly.ai/guide/chrome-extension)
+[🚀 v0.3.0 Released! Now Supporting Multimodal Images and File Uploads ⚡️](https://docs.refly.ai/changelog/v0.3.0)
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://refly.ai/) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
 <p align="center">
     <a href="https://refly.ai" target="_blank">
@@ -24,11 +24,13 @@ Refly is an open-source AI-native creation engine. It's intuitive free-form canv
         <img alt="Discord Chat" src="https://img.shields.io/discord/1323513432686989362?label=chat&logo=discord&logoColor=white&style=flat&color=5865F2"></a>
     <a href="https://x.com/reflyai" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/twitter/follow/reflyai"></a>
+    <a href="https://www.typescriptlang.org/" target="_blank">
+        <img alt="TypeScript-version-icon" src="https://img.shields.io/badge/TypeScript-^5.3.3-blue"></a>
 </p>
 
 <p align="center">
-  <a href=""><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
-  <a href="README_CN.md"><img alt="简体中文版自述文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+  <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
+  <a href="./README_CN.md"><img alt="简体中文版自述文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
 </p>
 
 </div>
@@ -55,47 +57,64 @@ docker compose up -d
 
 Visit [http://localhost:5700](http://localhost:5700/) to start using ReflyAI.
 
+For core deployment tutorials, environment variable configuration, and FAQs, please refer to 👉 [Deployment Guide](https://docs.refly.ai/guide/self-deploy).
+
 ### Local Development
 
 View details in [CONTRIBUTING](./CONTRIBUTING.md).
 
-## Key Features
+## ✨ Key Features
 
-1. **Multi-threaded dialogues:** Refly implements an innovative multi-threaded dialogues mechanism that allows you to freely switch between multiple independent conversation topics. This enables more fluid and natural thought expansion and in-depth discussions, effectively breaking through the limitations of traditional conversations. It helps build complex and effective **Agentic Workflows** in **human-AI collaboration**.
+### `1` 🧵 Multi-threaded Conversation System
+Built on an innovative multi-threaded architecture that enables parallel management of independent conversation contexts. Implements complex Agentic Workflows through efficient state management and context switching mechanisms, transcending traditional dialogue model limitations.
 
-https://github.com/user-attachments/assets/9dbff21f-cf01-42e7-a76f-eb16b1a11c97
+### `2` 🤖 Multi-model Integration Framework
+- Integration with 13+ leading language models, including DeepSeek R1, Claude 3.5 Sonnet, Google Gemini 2.0, and OpenAI O3-mini
+- Support for model hybrid scheduling and parallel processing
+- Flexible model switching mechanism with unified conversation interface
+- Multi-model knowledge base collaboration
 
-<br />
+### `3` 🎨 Multimodal Processing Capabilities
+- File Format Support: 7+ formats including PDF, DOCX, RTF, TXT, MD, HTML, EPUB
+- Image Processing: Support for mainstream formats including PNG, JPG, JPEG, BMP, GIF, SVG, WEBP
+- Intelligent Batch Processing: Canvas multi-element selection and AI analysis
 
-2. **AI-Powered Capabilities:** Leveraging AI models, after inputting a question, users can flexibly select any node on the canvas as context to generate new node content. This includes **AI web search, AI knowledge base search, AI-recommended questions, and AI document smart generation**. It integrates capabilities like Perplexity AI and Stanford Storm into a single workspace.
+### `4` ⚡️ AI-Powered Skill System
+Integrating advanced capabilities from Perplexity AI, Stanford Storm, and more:
+- Intelligent web-wide search and information aggregation
+- Vector database-based knowledge retrieval
+- Smart query rewriting and recommendations
+- AI-assisted document generation workflow
 
-https://github.com/user-attachments/assets/be4e18f9-07bb-4b91-90a5-ee2c27bfbf6f
+### `5` 🔍 Context Management System
+- Precise temporary knowledge base construction
+- Flexible node selection mechanism
+- Multi-dimensional context correlation
+- Cursor-like intelligent context understanding
 
-<br />
+### `6` 📚 Knowledge Base Engine
+- Support for multi-source heterogeneous data import
+- RAG-based semantic retrieval architecture
+- Intelligent knowledge graph construction
+- Personalized knowledge space management
 
-3. **Context Memory:** Providing precise temporary knowledge base support for each conversation, ensuring the AI model can accurately understand and respond to your questions. Similar to Cursor, you can flexibly select any node in the canvas or add references as context.
+### `7` ✂️ Intelligent Content Capture
+- One-click content capture from mainstream platforms (Github, Medium, Wikipedia, Arxiv)
+- Intelligent content parsing and structuring
+- Automatic knowledge classification and tagging
+- Deep knowledge base integration
 
-https://github.com/user-attachments/assets/fd95abae-8090-4a6f-a67b-99246568f5d7
+### `8` 📌 Citation System
+- Flexible multi-source content referencing
+- Intelligent context correlation
+- One-click citation generation
+- Reference source tracking
 
-<br />
-
-4. **Knowledge Base Integration:** Supports importing diverse external resources and intelligently integrating them into the canvas based on your needs. This helps build a comprehensive knowledge system and create a personalized thinking space. With intelligent retrieval technologies like RAG (Retrieval-Augmented Generation), you can make semantic queries, making it a true second brain.
-
-https://github.com/user-attachments/assets/263425a8-ed18-4765-9c6a-020fcd867ab2
-
-<br />
-
-5. **Quotes:** Support flexible selection of content from various resources, documents, memos, or skill outputs, allowing one-click addition as contextual references to enhance the accuracy and depth of conversations.
-
-https://github.com/user-attachments/assets/27725ad6-cca2-490a-ba50-59a9577dd174
-
-<br />
-
-6. **AI Document Editing:** Beyond providing powerful real-time Markdown editing capabilities, it supports intelligent selection of document content and AI-assisted precise modifications and refinements based on your needs, offering you a Notion-like powerful AI editor.
-
-https://github.com/user-attachments/assets/9f11b8eb-dd9d-4691-aca1-d3f11ff801ab
-
-<br />
+### `9` ✍️ AI-Enhanced Editor
+- Real-time Markdown rendering
+- AI-assisted content optimization
+- Intelligent content analysis
+- Notion-like editing experience
 
 ## How to Use?
 

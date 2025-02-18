@@ -9,11 +9,11 @@
     ⭐️  AI Native 内容创作引擎 ⭐️ <br>
 </h1>
 
-Refly 是一个开源的 AI 原生创作引擎。Refly 直观的自由画布界面集成了多线程对话、RAG 检索流程、上下文记忆、智能搜索和 AI 文档编辑等功能，让您轻松地将创意转化为完整作品。
+Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型。其直观的自由画布界面支持多线程对话、多模态输入（文本/图片/文件）、RAG 检索流程、浏览器插件剪藏、上下文记忆和 AI 文档编辑等功能，让您轻松地将创意转化为完整作品。
 
-[🚀 Refly 网页剪存 Chrome 插件发布! ⚡️! ](https://docs.refly.ai/guide/chrome-extension)
+[🚀 v0.3.0 正式发布！支持多模态图片、文件上传等能力⚡️ ](https://docs.refly.ai/zh/changelog/v0.3.0)
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://refly.ai/) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
 <p align="center">
     <a href="https://refly.ai" target="_blank">
@@ -57,47 +57,64 @@ docker compose up -d
 
 访问 [http://localhost:5700](http://localhost:5700/) 开始使用 ReflyAI。
 
+核心部署教程、环境变量配置和常见问题参见 👉 [部署教程](https://docs.refly.ai/zh/guide/self-deploy)。
+
 ### 本地开发
 
 查看 [CONTRIBUTING](./CONTRIBUTING_CN.md) 了解更多信息。
 
-## 关键特性
+## 核心特性
 
-1. **多线程对话** ：Refly 采用创新的多线程对话机制，让您能够自由切换多个独立对话主题，实现更流畅自然的思维发散与深入探讨，有效突破传统对话的局限性，在人机协作过程中构建复杂且有效的 Agentic Workflow。
+### `1` 🧵 多线程对话系统
+基于创新的多线程对话架构，支持并行管理多个独立会话上下文。通过高效的状态管理和上下文切换机制，实现复杂的 Agentic Workflow，突破传统对话模型的限制。
 
-https://github.com/user-attachments/assets/9dbff21f-cf01-42e7-a76f-eb16b1a11c97
+### `2` 🤖 多模型集成框架
+- 集成 13+ 主流大语言模型，包括 DeepSeek R1、Claude 3.5 Sonnet、Google Gemini 2.0、OpenAI O3-mini 等
+- 支持模型混合调度和并行处理
+- 灵活的模型切换机制和统一的对话接口
+- 多模型知识库协同
 
-<br />
+### `3` 🎨 多模态处理能力
+- 文件格式支持：PDF、DOCX、RTF、TXT、MD、HTML、EPUB 等 7+ 种格式
+- 图像处理：支持 PNG、JPG、JPEG、BMP、GIF、SVG、WEBP 等主流格式
+- 智能批处理：支持画布多元素批量选择和 AI 分析
 
-2. **AI 驱动的技能** ：借助 AI 模型驱动，输入问题后，可灵活选取画布中的任一节点作为上下文，生成新的节点内容，包括 AI 全网搜索、AI 知识库搜索、AI 推荐提问和 AI 文档智能生成等，将 Perplexity AI、Standford Storm 等能力整合在一处工作空间。
+### `4` ⚡️ AI 驱动的技能系统
+集成 Perplexity AI、Stanford Storm 等先进能力，提供：
+- 智能全网搜索与信息聚合
+- 基于向量数据库的知识检索
+- 智能问题改写与推荐
+- AI 辅助文档生成工作流
 
-https://github.com/user-attachments/assets/be4e18f9-07bb-4b91-90a5-ee2c27bfbf6f
+### `5` 🔍 上下文管理系统
+- 精确的临时知识库构建
+- 灵活的节点选择机制
+- 多维度上下文关联
+- 类 Cursor 的智能上下文理解
 
-<br />
+### `6` 📚 知识库引擎
+- 支持多源异构数据导入
+- 基于 RAG 的语义检索架构
+- 智能知识图谱构建
+- 个性化知识空间管理
 
-3. **上下文** ：为每次对话提供精确的临时知识库支持，确保 AI 模型能准确理解和回应您的问题。与 Cursor 类似，您可以灵活选择画布中的任意节点或添加引用作为上下文。
+### `7` ✂️ 智能内容采集
+- 支持主流平台内容一键采集（Github、Medium、Wikipedia、Arxiv 等）
+- 智能内容解析与结构化
+- 自动知识分类与标签
+- 深度知识库集成
 
-https://github.com/user-attachments/assets/fd95abae-8090-4a6f-a67b-99246568f5d7
+### `8` 📌 引用系统
+- 灵活的多源内容引用
+- 智能上下文关联
+- 一键引用生成
+- 引用溯源支持
 
-<br />
-
-4. **知识库整合** ：支持导入多样化的外部资源，根据需求智能整合到画布中，构建完整的知识体系，打造个性化的思维空间，还能通过 RAG 等智能检索技术进行语义提问，是真正的第二大脑。
-
-https://github.com/user-attachments/assets/263425a8-ed18-4765-9c6a-020fcd867ab2
-
-<br />
-
-5. **引文** ：支持从各类资源、文档、备忘录或技能输出中灵活选取内容，一键添加为上下文引用，提升对话的准确性和深度。
-
-https://github.com/user-attachments/assets/27725ad6-cca2-490a-ba50-59a9577dd174
-
-<br />
-
-6. **AI 文档编辑** ：除提供强大的 Markdown 实时编辑功能外，支持智能选中文档内容，根据您的需求进行 AI 辅助的精准修改和润色，提供给您一个类 Notion 的强大 AI 编辑器。
-
-https://github.com/user-attachments/assets/9f11b8eb-dd9d-4691-aca1-d3f11ff801ab
-
-<br />
+### `9` ✍️ AI 增强编辑器
+- 实时 Markdown 渲染
+- AI 辅助内容优化
+- 智能内容分析
+- 类 Notion 的编辑体验
 
 ## 如何使用 ？
 
