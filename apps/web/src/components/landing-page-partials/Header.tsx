@@ -13,8 +13,11 @@ import { FaDiscord, FaGithub } from 'react-icons/fa6';
 import { EXTENSION_DOWNLOAD_LINK } from '@refly/utils/url';
 import {
   IconChrome,
+  IconDown,
+  IconLanguage,
   MemoizedIcon,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
 
 function Header() {
   const navigate = useNavigate();
@@ -41,6 +44,7 @@ function Header() {
             fontSize: '10px',
             padding: '0 4px',
             opacity: 0.8,
+            boxShadow: 'none',
           }}
           offset={[0, -4]}
         >
@@ -136,6 +140,13 @@ function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          <UILocaleList>
+            <Button type="text" size="middle" className="px-2 text-gray-600 hover:text-[#00968f]">
+              <IconLanguage className="h-4 w-4" />
+              {t('language')}{' '}
+              <IconDown className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
+            </Button>
+          </UILocaleList>
           <Button
             type="text"
             size="middle"
