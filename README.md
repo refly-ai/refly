@@ -63,43 +63,58 @@ For core deployment tutorials, environment variable configuration, and FAQs, ple
 
 View details in [CONTRIBUTING](./CONTRIBUTING.md).
 
-## Key Features
+## ✨ Key Features
 
-1. **🧵 Multi-threaded Conversations**: Refly introduces an innovative multi-threaded conversation system that enables seamless switching between multiple independent discussion topics. This facilitates natural thought expansion and in-depth exploration, breaking free from traditional conversation constraints while building effective Agentic Workflows in human-AI collaboration.
+### `1` 🧵 Multi-threaded Conversation System
+Built on an innovative multi-threaded architecture that enables parallel management of independent conversation contexts. Implements complex Agentic Workflows through efficient state management and context switching mechanisms, transcending traditional dialogue model limitations.
 
-<br />
+### `2` 🤖 Multi-model Integration Framework
+- Integration with 13+ leading language models, including DeepSeek R1, Claude 3.5 Sonnet, Google Gemini 2.0, and OpenAI O3-mini
+- Support for model hybrid scheduling and parallel processing
+- Flexible model switching mechanism with unified conversation interface
+- Multi-model knowledge base collaboration
 
-2. **🤖 Multi-model Support**: Integrates 13+ leading AI models including DeepSeek R1, Claude 3.5 Sonnet, Google Gemini 2.0, and OpenAI O3-mini. Supports hybrid model usage, parallel processing, inter-model dialogue, and unified knowledge base integration.
+### `3` 🎨 Multimodal Processing Capabilities
+- File Format Support: 7+ formats including PDF, DOCX, RTF, TXT, MD, HTML, EPUB
+- Image Processing: Support for mainstream formats including PNG, JPG, JPEG, BMP, GIF, SVG, WEBP
+- Intelligent Batch Processing: Canvas multi-element selection and AI analysis
 
-<br />
+### `4` ⚡️ AI-Powered Skill System
+Integrating advanced capabilities from Perplexity AI, Stanford Storm, and more:
+- Intelligent web-wide search and information aggregation
+- Vector database-based knowledge retrieval
+- Smart query rewriting and recommendations
+- AI-assisted document generation workflow
 
-3. **🎨 Multimodal Capabilities**: Handles diverse input formats including text, images, and files. Supports 7+ file formats (PDF, DOCX, RTF, TXT, MD, HTML, EPUB) and 7+ image formats (PNG, JPG, JPEG, BMP, GIF, SVG, WEBP). Enables batch selection and AI querying of files and images on the canvas.
+### `5` 🔍 Context Management System
+- Precise temporary knowledge base construction
+- Flexible node selection mechanism
+- Multi-dimensional context correlation
+- Cursor-like intelligent context understanding
 
-<br />
+### `6` 📚 Knowledge Base Engine
+- Support for multi-source heterogeneous data import
+- RAG-based semantic retrieval architecture
+- Intelligent knowledge graph construction
+- Personalized knowledge space management
 
-4. **⚡️ AI-Powered Skills**: Leverages AI models to generate new content nodes from any selected canvas context. Features include AI web search, knowledge base search, smart question suggestions, and document generation. Integrates capabilities from Perplexity AI, Stanford Storm, and more into a unified workspace.
+### `7` ✂️ Intelligent Content Capture
+- One-click content capture from mainstream platforms (Github, Medium, Wikipedia, Arxiv)
+- Intelligent content parsing and structuring
+- Automatic knowledge classification and tagging
+- Deep knowledge base integration
 
-<br />
+### `8` 📌 Citation System
+- Flexible multi-source content referencing
+- Intelligent context correlation
+- One-click citation generation
+- Reference source tracking
 
-5. **🔍 Context Awareness**: Provides precise temporary knowledge base support for each conversation, ensuring accurate AI comprehension and responses. Similar to Cursor, users can flexibly select any canvas node or add references as context.
-
-<br />
-
-6. **📚 Knowledge Integration**: Enables importing diverse external resources and intelligently organizing them within the canvas. Build comprehensive knowledge systems and personalized thinking spaces, with semantic querying powered by RAG technology - creating a true second brain.
-
-<br />
-
-7. **✂️ Browser Extension Clipper**: Easily capture content from popular platforms like Github, Medium, Wikipedia, and Arxiv. Save entire web pages or specific quotes directly to your AI knowledge base, continuously building your second brain while boosting productivity.
-
-<br />
-
-8. **📌 Smart Citations**: Flexibly select and reference content from various sources including resources, documents, memos, and skill outputs. One-click contextual referencing enhances conversation accuracy and depth.
-
-<br />
-
-9. **✍️ AI Document Editor**: Features a powerful Markdown real-time editor with AI-assisted content selection, precise modifications, and refinements. Provides a Notion-like experience with advanced AI editing capabilities.
-
-<br />
+### `9` ✍️ AI-Enhanced Editor
+- Real-time Markdown rendering
+- AI-assisted content optimization
+- Intelligent content analysis
+- Notion-like editing experience
 
 ## How to Use?
 
