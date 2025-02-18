@@ -153,9 +153,9 @@ export class AuthService {
 
   cookieOptions(key: string): CookieOptions {
     const baseOptions: CookieOptions = {
-      domain: this.configService.get('auth.cookieDomain') ?? '',
-      secure: true,
-      sameSite: 'strict',
+      domain: this.configService.get('auth.cookie.domain'),
+      secure: Boolean(this.configService.get('auth.cookie.secure')),
+      sameSite: this.configService.get('auth.cookie.sameSite'),
       path: '/',
     };
 

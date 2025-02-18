@@ -54,8 +54,12 @@ export default () => ({
   },
   auth: {
     skipVerification: process.env.AUTH_SKIP_VERIFICATION === 'true' || false,
-    cookieDomain: process.env.REFLY_COOKIE_DOMAIN || 'localhost',
     redirectUrl: process.env.LOGIN_REDIRECT_URL,
+    cookie: {
+      domain: process.env.REFLY_COOKIE_DOMAIN,
+      secure: process.env.REFLY_COOKIE_SECURE,
+      sameSite: process.env.REFLY_COOKIE_SAME_SITE,
+    },
     jwt: {
       secret: process.env.JWT_SECRET || 'test',
       expiresIn: process.env.JWT_EXPIRATION_TIME || '1h',
@@ -94,7 +98,6 @@ export default () => ({
     relevanceThreshold: Number.parseFloat(process.env.RERANKER_RELEVANCE_THRESHOLD) || 0.5,
   },
   skill: {
-    defaultModel: process.env.REFLY_DEFAULT_MODEL || 'openai/gpt-4o-mini',
     idleTimeout: Number.parseInt(process.env.SKILL_IDLE_TIMEOUT) || 1000 * 60, // 1 minute
     executionTimeout: Number.parseInt(process.env.SKILL_EXECUTION_TIMEOUT) || 1000 * 60 * 3, // 3 minutes
   },

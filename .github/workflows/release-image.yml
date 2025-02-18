@@ -1,17 +1,14 @@
-name: Build and Push Docker Images
+name: Release Docker Images
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
-    paths:
-      - 'apps/api/**'
-      - 'apps/web/**'
-      - 'packages/**'
+    tags:
+      - 'v*'
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Images
+  release-image:
+    name: Release Docker Images
     runs-on: ubuntu-latest
     if: github.repository == 'refly-ai/refly'
     strategy:
@@ -20,6 +17,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - uses: pnpm/action-setup@v4
         if: matrix.app == 'web'
@@ -65,4 +66,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            reflyai/refly-${{ matrix.app }}:${{ github.sha }}
+            reflyai/refly-${{ matrix.app }}:latest
+            reflyai/refly-${{ matrix.app }}:${{ steps.get_version.outputs.VERSION }}

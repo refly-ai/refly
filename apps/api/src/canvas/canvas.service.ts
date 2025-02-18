@@ -22,11 +22,11 @@ import {
 import { genCanvasID } from '@refly-packages/utils';
 import { DeleteKnowledgeEntityJobData } from '@/knowledge/knowledge.dto';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY } from '@/utils/const';
-import { ConfigService } from '@nestjs/config';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage } from '@langchain/core/messages';
 import { SystemMessage } from '@langchain/core/messages';
 import { AutoNameCanvasJobData } from './canvas.dto';
+import { SubscriptionService } from '@/subscription/subscription.service';
 
 @Injectable()
 export class CanvasService {
@@ -37,7 +37,7 @@ export class CanvasService {
     private elasticsearch: ElasticsearchService,
     private collabService: CollabService,
     private miscService: MiscService,
-    private configService: ConfigService,
+    private subscriptionService: SubscriptionService,
     @Inject(MINIO_INTERNAL) private minio: MinioService,
     @InjectQueue(QUEUE_DELETE_KNOWLEDGE_ENTITY)
     private deleteKnowledgeQueue: Queue<DeleteKnowledgeEntityJobData>,
@@ -385,8 +385,11 @@ export class CanvasService {
       return { title: '' };
     }
 
+    const defaultModel = await this.subscriptionService.getDefaultModel();
+    this.logger.log(`Using default model for auto naming: ${defaultModel?.name}`);
+
     const model = new ChatOpenAI({
-      model: this.configService.get('skill.defaultModel'),
+      model: defaultModel?.name,
       apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
       configuration: {
         baseURL: process.env.OPENROUTER_API_KEY && 'https://openrouter.ai/api/v1',

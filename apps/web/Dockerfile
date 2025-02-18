@@ -12,13 +12,12 @@ WORKDIR /usr/share/nginx/html
 COPY apps/web/dist .
 
 # Create config.js template
-RUN echo "window.ENV = { \
-  API_URL: '${API_URL:-http://localhost:5800}', \
-  COLLAB_URL: '${COLLAB_URL:-http://localhost:5801}' \
-};" > config.template.js
+RUN echo 'window.ENV = { API_URL: "$API_URL", COLLAB_URL: "$COLLAB_URL" };' > /usr/share/nginx/html/config.template.js
 
 # Create entrypoint script
-RUN printf '#!/bin/bash\nenvsubst < config.template.js > config.js\nexec nginx -g "daemon off;"\n' > /docker-entrypoint.sh
+RUN printf '#!/bin/bash\n\
+envsubst < /usr/share/nginx/html/config.template.js > /usr/share/nginx/html/config.js\n\
+exec nginx -g "daemon off;"\n' > /docker-entrypoint.sh
 
 RUN chmod +x /docker-entrypoint.sh
 

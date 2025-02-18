@@ -30,7 +30,7 @@ model Account {
   /// Create timestamp
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -92,7 +92,7 @@ model User {
   /// Create timestamp
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@map("users")
 }
@@ -137,7 +137,7 @@ model ActionResult {
   /// Create timestamp
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt  DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@unique([resultId, version])
   @@index([targetType, targetId])
@@ -170,7 +170,7 @@ model ActionStep {
   /// Create timestamp
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -205,7 +205,7 @@ model TokenUsage {
   /// Create timestamp
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([uid, createdAt])
   @@map("token_usages")
@@ -235,7 +235,7 @@ model StaticFile {
   /// Create timestamp
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -264,7 +264,7 @@ model Canvas {
   /// Create timestamp
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -324,7 +324,7 @@ model Resource {
   /// Create timestamp
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -360,7 +360,7 @@ model Document {
   /// Create timestamp
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -387,7 +387,7 @@ model Reference {
   /// Create timestamp
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -424,7 +424,7 @@ model SkillInstance {
   /// Create timestamp
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Deletion timestamp
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -462,7 +462,7 @@ model SkillTrigger {
   /// Create timestamp
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Deletion timestamp
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -488,7 +488,7 @@ model LabelClass {
   /// Create timestamp
   createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Deletion timestamp
   deletedAt    DateTime?       @map("deleted_at") @db.Timestamptz()
   /// Related labels
@@ -519,7 +519,7 @@ model LabelInstance {
   /// Create timestamp
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Deletion timestamp
   deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz()
 
@@ -553,7 +553,7 @@ model SubscriptionPlan {
   /// Create timestamp
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@unique([planType, interval])
   @@map("subscription_plans")
@@ -581,7 +581,7 @@ model Subscription {
   /// Create timestamp
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([uid])
   @@index([status, cancelAt])
@@ -620,7 +620,7 @@ model TokenUsageMeter {
   /// Create timestamp
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Deletion timestamp
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -660,7 +660,7 @@ model StorageUsageMeter {
   /// Create timestamp
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Deletion timestamp
   deletedAt          DateTime? @map("deleted_at") @db.Timestamptz()
 
@@ -687,10 +687,12 @@ model ModelInfo {
   tier         String   @map("tier")
   /// Whether this model is enabled
   enabled      Boolean  @default(true) @map("enabled")
+  /// Whether this model is the default model
+  isDefault    Boolean  @default(false) @map("is_default")
   /// Create timestamp
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@map("model_infos")
 }
@@ -715,7 +717,7 @@ model CheckoutSession {
   /// Create timestamp
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([sessionId])
   @@map("checkout_sessions")
@@ -743,7 +745,7 @@ model RefreshToken {
   /// Create timestamp
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([uid])
   @@map("refresh_tokens")

@@ -135,9 +135,7 @@ export class SkillService {
     @InjectQueue(QUEUE_AUTO_NAME_CANVAS)
     private autoNameCanvasQueue: Queue<AutoNameCanvasJobData>,
   ) {
-    this.skillEngine = new SkillEngine(this.logger, this.buildReflyService(), {
-      defaultModel: this.config.get('skill.defaultModel'),
-    });
+    this.skillEngine = new SkillEngine(this.logger, this.buildReflyService());
     this.skillInventory = createSkillInventory(this.skillEngine);
   }
 
@@ -386,8 +384,10 @@ export class SkillService {
     }
 
     param.input ||= { query: '' };
-    param.modelName ||= this.config.get('skill.defaultModel');
     param.skillName ||= 'commonQnA';
+
+    const defaultModel = await this.subscription.getDefaultModel();
+    param.modelName ||= defaultModel?.name;
 
     // Check for usage quota
     const usageResult = await this.subscription.checkRequestUsage(user);
@@ -711,6 +711,9 @@ export class SkillService {
     }
 
     const { resultId, version } = data.result;
+
+    const defaultModel = await this.subscription.getDefaultModel();
+    this.skillEngine.setOptions({ defaultModel: defaultModel?.name });
 
     try {
       await this.timeoutCheckQueue.add(

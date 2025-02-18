@@ -152,6 +152,10 @@ export class SkillEngine {
     this.options = options;
   }
 
+  setOptions(options: SkillEngineOptions) {
+    this.options = options;
+  }
+
   configure(config: SkillRunnableConfig) {
     this.config = config;
   }

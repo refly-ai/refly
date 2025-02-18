@@ -795,6 +795,31 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
+  async getDefaultModel() {
+    const models = await this.getModelList();
+    const defaultModel = models.find((model) => model.isDefault);
+
+    // If default model is present, return it
+    if (defaultModel) {
+      return defaultModel;
+    }
+
+    // Fallback to first t2 model
+    const t2Model = models.find((model) => model.tier === 't2');
+    if (t2Model) {
+      return t2Model;
+    }
+
+    // Fallback to first model
+    if (models.length > 0) {
+      return models[0];
+    }
+
+    throw new Error(
+      'No valid models configured, follow the instructions in https://docs.refly.ai/guide/self-deploy#initialize-llm-models',
+    );
+  }
+
   private async fetchModelList(): Promise<ModelInfoModel[]> {
     const models = await this.prisma.modelInfo.findMany({
       where: { enabled: true },

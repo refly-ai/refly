@@ -49,11 +49,11 @@ To start deployment:
 
 ```bash
 cd deploy/docker
-cp .env.example .env # make sure all required envs are properly set
+cp ../../apps/api/.env.example .env # copy the example api env file
 docker compose up -d
 ```
 
-Visit [http://localhost:5700](http://localhost:5700/) to start using ReflyAI.
+For the following steps, you can visit [Self-deploy Guide](https://docs.refly.ai/guide/self-deploy) for more details.
 
 ### Local Development
 
