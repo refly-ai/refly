@@ -65,6 +65,7 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.0",
     "cmdk": "~1.0.0",
+    "cobe": "^0.6.3",
     "colord": "^2.9.3",
     "copy-to-clipboard": "~3.3.3",
     "dayjs": "~1.11.7",

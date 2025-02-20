@@ -10,9 +10,9 @@ import {
   BentoGrid,
 } from '@refly-packages/ai-workspace-common/components/magicui/bento-grid';
 import { Marquee } from '@refly-packages/ai-workspace-common/components/magicui/marquee';
+import GlobeDemo from '@refly-packages/ai-workspace-common/components/magicui/globe-demo';
 import { IconType } from 'react-icons';
 import { LucideIcon } from 'lucide-react';
-
 interface FeatureItem {
   Icon: IconType | LucideIcon;
   name: string;
@@ -151,7 +151,9 @@ export default function FeatureBlocks() {
       className: 'col-span-3 lg:col-span-1',
       href: '#',
       cta: 'Learn more',
-      background: <div />,
+      background: (
+        <GlobeDemo className="absolute right-2 top-4 h-[300px] border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-105" />
+      ),
     },
   ];
 

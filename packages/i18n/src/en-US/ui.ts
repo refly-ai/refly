@@ -219,7 +219,7 @@ const translations = {
         ],
       },
       featureFive: {
-        tag: 'AI Editor',
+        tag: 'WYSIWYG AI Document Editor',
         title: 'Intelligent AI-Assisted Editor',
         bulletPoints: [
           'Real-time AI writing suggestions and refinements',

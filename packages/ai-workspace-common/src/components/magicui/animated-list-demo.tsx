@@ -13,10 +13,10 @@ interface Item {
 
 let notifications = [
   {
-    name: 'Claude 3.5 Sonnet',
-    description: 'Most capable model for highly complex tasks',
-    time: 'Anthropic',
-    icon: ModelProviderIcons.anthropic,
+    name: 'DeepSeek R1',
+    description: 'Advanced language understanding',
+    time: 'DeepSeek',
+    icon: ModelProviderIcons.deepseek,
   },
   {
     name: 'o3-mini',
@@ -24,6 +24,13 @@ let notifications = [
     time: 'OpenAI',
     icon: ModelProviderIcons.openai,
   },
+  {
+    name: 'Claude 3.5 Sonnet',
+    description: 'Most capable model for highly complex tasks',
+    time: 'Anthropic',
+    icon: ModelProviderIcons.anthropic,
+  },
+
   {
     name: 'Gemini Flash 2.0',
     description: 'Fast and efficient for everyday tasks',
@@ -42,12 +49,7 @@ let notifications = [
     time: 'Meta',
     icon: ModelProviderIcons['meta-llama'],
   },
-  {
-    name: 'DeepSeek R1',
-    description: 'Advanced language understanding',
-    time: 'DeepSeek',
-    icon: ModelProviderIcons.deepseek,
-  },
+
   {
     name: 'Mistral 8x7B Instruct',
     description: 'Efficient and powerful language model',
