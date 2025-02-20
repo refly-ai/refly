@@ -2,50 +2,63 @@
 
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { AnimatedList } from './animated-list';
+import { ModelProviderIcons } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 interface Item {
   name: string;
   description: string;
   icon: string;
-  color: string;
   time: string;
 }
 
 let notifications = [
   {
-    name: 'Payment received',
-    description: 'Magic UI',
-    time: '15m ago',
-
-    icon: '💸',
-    color: '#00C9A7',
+    name: 'Claude 3.5 Sonnet',
+    description: 'Most capable model for highly complex tasks',
+    time: 'Anthropic',
+    icon: ModelProviderIcons.anthropic,
   },
   {
-    name: 'User signed up',
-    description: 'Magic UI',
-    time: '10m ago',
-    icon: '👤',
-    color: '#FFB800',
+    name: 'o3-mini',
+    description: 'Advanced reasoning and creativity',
+    time: 'OpenAI',
+    icon: ModelProviderIcons.openai,
   },
   {
-    name: 'New message',
-    description: 'Magic UI',
-    time: '5m ago',
-    icon: '💬',
-    color: '#FF3D71',
+    name: 'Gemini Flash 2.0',
+    description: 'Fast and efficient for everyday tasks',
+    time: 'Google',
+    icon: ModelProviderIcons.google,
   },
   {
-    name: 'New event',
-    description: 'Magic UI',
-    time: '2m ago',
-    icon: '🗞️',
-    color: '#1E86FF',
+    name: 'Qwen-Max',
+    description: 'Powerful multilingual capabilities',
+    time: 'Qwen',
+    icon: ModelProviderIcons.qwen,
+  },
+  {
+    name: 'Llama 3.3 70B',
+    description: 'Open source foundation model',
+    time: 'Meta',
+    icon: ModelProviderIcons['meta-llama'],
+  },
+  {
+    name: 'DeepSeek R1',
+    description: 'Advanced language understanding',
+    time: 'DeepSeek',
+    icon: ModelProviderIcons.deepseek,
+  },
+  {
+    name: 'Mistral 8x7B Instruct',
+    description: 'Efficient and powerful language model',
+    time: 'Mistral',
+    icon: ModelProviderIcons.mistral,
   },
 ];
 
-notifications = Array.from({ length: 10 }, () => notifications).flat();
+notifications = Array.from({ length: 5 }, () => notifications).flat();
 
-const Notification = ({ name, description, icon, color, time }: Item) => {
+const Notification = ({ name, description, icon, time }: Item) => {
   return (
     <figure
       className={cn(
@@ -59,13 +72,8 @@ const Notification = ({ name, description, icon, color, time }: Item) => {
       )}
     >
       <div className="flex flex-row items-center gap-3">
-        <div
-          className="flex size-10 items-center justify-center rounded-2xl"
-          style={{
-            backgroundColor: color,
-          }}
-        >
-          <span className="text-lg">{icon}</span>
+        <div className="flex size-10 items-center justify-center rounded-2xl bg-white border border-gray-200">
+          <img src={icon} alt={name} className="size-6" />
         </div>
         <div className="flex flex-col overflow-hidden">
           <figcaption className="flex flex-row items-center whitespace-pre text-lg font-medium dark:text-white ">

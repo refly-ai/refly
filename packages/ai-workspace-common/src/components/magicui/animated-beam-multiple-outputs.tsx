@@ -5,6 +5,10 @@ import { forwardRef, useRef } from 'react';
 
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { AnimatedBeam } from './animated-beam';
+import {
+  ModelProviderIcons,
+  IconDocument,
+} from '@refly-packages/ai-workspace-common/components/common/icon';
 
 const Circle = forwardRef<HTMLDivElement, { className?: string; children?: React.ReactNode }>(
   ({ className, children }, ref) => {
@@ -34,7 +38,6 @@ export default function AnimatedBeamMultipleOutputDemo({
   const div2Ref = useRef<HTMLDivElement>(null);
   const div3Ref = useRef<HTMLDivElement>(null);
   const div4Ref = useRef<HTMLDivElement>(null);
-  const div5Ref = useRef<HTMLDivElement>(null);
   const div6Ref = useRef<HTMLDivElement>(null);
   const div7Ref = useRef<HTMLDivElement>(null);
 
@@ -49,29 +52,26 @@ export default function AnimatedBeamMultipleOutputDemo({
       <div className="flex size-full max-w-lg flex-row items-stretch justify-between gap-10">
         <div className="flex flex-col justify-center gap-2">
           <Circle ref={div1Ref}>
-            <Icons.googleDrive />
+            <img src={ModelProviderIcons.openai} alt="OpenAI" className="size-6" />
           </Circle>
           <Circle ref={div2Ref}>
-            <Icons.googleDocs />
+            <img src={ModelProviderIcons.deepseek} alt="DeepSeek" className="size-6" />
           </Circle>
           <Circle ref={div3Ref}>
-            <Icons.whatsapp />
+            <Icons.googleDrive />
           </Circle>
           <Circle ref={div4Ref}>
-            <Icons.messenger />
-          </Circle>
-          <Circle ref={div5Ref}>
-            <Icons.notion />
+            <Icons.googleDocs />
           </Circle>
         </div>
         <div className="flex flex-col justify-center">
           <Circle ref={div6Ref} className="size-16">
-            <Icons.openai />
+            <img src="/logo.svg" alt="Refly" className="size-10" />
           </Circle>
         </div>
         <div className="flex flex-col justify-center">
           <Circle ref={div7Ref}>
-            <Icons.user />
+            <IconDocument className="size-6" />
           </Circle>
         </div>
       </div>
@@ -80,7 +80,6 @@ export default function AnimatedBeamMultipleOutputDemo({
       <AnimatedBeam containerRef={containerRef} fromRef={div2Ref} toRef={div6Ref} />
       <AnimatedBeam containerRef={containerRef} fromRef={div3Ref} toRef={div6Ref} />
       <AnimatedBeam containerRef={containerRef} fromRef={div4Ref} toRef={div6Ref} />
-      <AnimatedBeam containerRef={containerRef} fromRef={div5Ref} toRef={div6Ref} />
       <AnimatedBeam containerRef={containerRef} fromRef={div6Ref} toRef={div7Ref} />
     </div>
   );
@@ -429,6 +428,38 @@ const Icons = {
       <path
         fill="#ffffff"
         d="M34.394,18.501l-5.7,4.22c-0.61,0.46-1.44,0.46-2.04,0.01L22.68,19.74	c-1.68-1.25-4.06-0.82-5.19,0.94l-1.21,1.89l-4.11,6.68c-0.6,0.94,0.55,2.01,1.44,1.34l5.7-4.22c0.61-0.46,1.44-0.46,2.04-0.01	l3.974,2.991c1.68,1.25,4.06,0.82,5.19-0.94l1.21-1.89l4.11-6.68C36.434,18.901,35.284,17.831,34.394,18.501z"
+      />
+    </svg>
+  ),
+  document: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z"
+        stroke="#000000"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 7H17"
+        stroke="#000000"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 12H17"
+        stroke="#000000"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 17H13"
+        stroke="#000000"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   ),

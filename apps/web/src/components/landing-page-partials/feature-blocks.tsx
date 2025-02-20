@@ -1,5 +1,5 @@
-import { RiCalendar2Fill, RiFile2Fill } from 'react-icons/ri';
-import { BellIcon, Share2Icon } from 'lucide-react';
+import { RiRobot2Fill, RiMarkdownLine, RiFile2Fill } from 'react-icons/ri';
+import { Share2Icon, GitBranchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import AnimatedBeamMultipleOutputDemo from '@refly-packages/ai-workspace-common/components/magicui/animated-beam-multiple-outputs';
@@ -25,24 +25,36 @@ interface FeatureItem {
 
 const files = [
   {
-    name: 'bitcoin.pdf',
-    body: 'Bitcoin is a cryptocurrency invented in 2008 by an unknown person or group of people using the name Satoshi Nakamoto.',
+    name: 'document.pdf',
+    body: 'PDF documents with text, images, and formatting that maintain their appearance across different platforms.',
   },
   {
-    name: 'finances.xlsx',
-    body: 'A spreadsheet or worksheet is a file made of rows and columns that help sort data, arrange data easily, and calculate numerical data.',
+    name: 'image.png',
+    body: 'High-quality lossless image format supporting transparency, ideal for screenshots and web graphics.',
   },
   {
-    name: 'logo.svg',
-    body: 'Scalable Vector Graphics is an Extensible Markup Language-based vector image format for two-dimensional graphics with support for interactivity and animation.',
+    name: 'photo.jpg',
+    body: 'Compressed image format perfect for photographs and complex images with millions of colors.',
   },
   {
-    name: 'keys.gpg',
-    body: 'GPG keys are used to encrypt and decrypt email, files, directories, and whole disk partitions and to authenticate messages.',
+    name: 'presentation.pptx',
+    body: 'Microsoft PowerPoint presentations with slides, animations, and multimedia content.',
   },
   {
-    name: 'seed.txt',
-    body: 'A seed phrase, seed recovery phrase or backup seed phrase is a list of words which store all the information needed to recover Bitcoin funds on-chain.',
+    name: 'spreadsheet.xlsx',
+    body: 'Microsoft Excel spreadsheets for data analysis, calculations, and financial reports.',
+  },
+  {
+    name: 'code.py',
+    body: 'Python source code files containing programming logic and algorithms.',
+  },
+  {
+    name: 'data.json',
+    body: 'Structured data format commonly used for configuration and API responses.',
+  },
+  {
+    name: 'vector.svg',
+    body: 'Scalable Vector Graphics for resolution-independent images and animations.',
   },
 ];
 
@@ -87,7 +99,7 @@ export default function FeatureBlocks() {
       ),
     },
     {
-      Icon: BellIcon,
+      Icon: RiRobot2Fill,
       name: t('landingPage.features.featureTwo.tag'),
       description: t('landingPage.features.featureTwo.title'),
       bulletPoints: t('landingPage.features.featureTwo.bulletPoints', {
@@ -101,7 +113,7 @@ export default function FeatureBlocks() {
       ),
     },
     {
-      Icon: Share2Icon,
+      Icon: GitBranchIcon,
       name: t('landingPage.features.featureThree.tag'),
       description: t('landingPage.features.featureThree.title'),
       bulletPoints: t('landingPage.features.featureThree.bulletPoints', {
@@ -109,24 +121,34 @@ export default function FeatureBlocks() {
       }) as string[],
       href: '#',
       cta: 'Learn more',
-      className: 'col-span-3 lg:col-span-2',
+      className: 'col-span-3 lg:col-span-1',
       background: (
         <AnimatedBeamMultipleOutputDemo className="absolute right-2 top-4 h-[300px] border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-105" />
       ),
     },
     {
-      Icon: RiCalendar2Fill,
+      Icon: Share2Icon,
       name: t('landingPage.features.featureFour.tag'),
       description: t('landingPage.features.featureFour.title'),
       bulletPoints: t('landingPage.features.featureFour.bulletPoints', {
         returnObjects: true,
       }) as string[],
+      href: '#',
+      cta: 'Learn more',
+      className: 'col-span-3 lg:col-span-1',
+      background: <div />,
+    },
+    {
+      Icon: RiMarkdownLine,
+      name: t('landingPage.features.featureFive.tag'),
+      description: t('landingPage.features.featureFive.title'),
+      bulletPoints: t('landingPage.features.featureFive.bulletPoints', {
+        returnObjects: true,
+      }) as string[],
       className: 'col-span-3 lg:col-span-1',
       href: '#',
       cta: 'Learn more',
-      background: (
-        <AnimatedBeamMultipleOutputDemo className="absolute right-2 top-4 h-[300px] border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-105" />
-      ),
+      background: <div />,
     },
   ];
 
