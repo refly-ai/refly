@@ -84,6 +84,7 @@
     "md5": "^2.3.0",
     "mermaid": "^10.9.3",
     "mitt": "~3.0.1",
+    "motion": "^12.4.5",
     "prism-react-renderer": "~2.3.1",
     "prop-types": "^15.8.1",
     "qs": "~6.12.3",

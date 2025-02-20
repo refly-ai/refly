@@ -126,10 +126,10 @@ const translations = {
     downloadBtn: 'Download Extension',
     loginBtn: 'Login',
     dashboard: 'Dashboard',
-    features: {
+    workflow: {
       tag: 'Workflow',
       title: "An Overview of Refly's",
-      featureOne: {
+      workflowOne: {
         tag: 'Planning',
         title:
           'Transform chaos into clarity with our free-form canvas for professional content creation',
@@ -139,7 +139,7 @@ const translations = {
           'Build deep thought connections through your growing personal knowledge base',
         ],
       },
-      featureTwo: {
+      workflowTwo: {
         tag: 'Explore & Import',
         title:
           'Break down knowledge barriers, turning fragmented information into creative resources',
@@ -149,7 +149,7 @@ const translations = {
           'Automatic knowledge linking for cross-domain insights',
         ],
       },
-      featureThree: {
+      workflowThree: {
         tag: 'Research',
         title: 'Spark insights through multi-threaded dialogues, making research more illuminating',
         bulletPoints: [
@@ -158,7 +158,7 @@ const translations = {
           'Flexible knowledge base integration for accelerated breakthroughs',
         ],
       },
-      featureFour: {
+      workflowFour: {
         tag: 'Thinking & Creation',
         title:
           'From ideation to completion, elevate your professional content with deeper insights',
@@ -168,7 +168,7 @@ const translations = {
           'AI editing assistant for quality professional output',
         ],
       },
-      featureFive: {
+      workflowFive: {
         tag: 'Clip & Save',
         title: 'One-click content saving from any webpage to build your second brain',
         bulletPoints: [
@@ -176,6 +176,55 @@ const translations = {
           'Support private webpage content saving and organization',
           'Continuously build your personal knowledge base',
           'Seamlessly integrate with your second brain',
+        ],
+      },
+    },
+    features: {
+      tag: 'Core Features',
+      title: "Refly's Key Features",
+      featureOne: {
+        tag: 'Multimodal Support',
+        title: 'Support for Multiple File Formats and Image Processing',
+        bulletPoints: [
+          'Support for PDF, DOCX, RTF, TXT, MD, HTML, EPUB and more document formats',
+          'Support for JPG, PNG, JPEG, WEBP, GIF, TIFF, BMP and other image formats',
+          'Intelligent recognition and processing of various file types for a unified experience',
+        ],
+      },
+      featureTwo: {
+        tag: 'Multiple Models',
+        title: 'Integration of 13+ Top AI Models for Various Scenarios',
+        bulletPoints: [
+          'Support for advanced models like Claude, DeepSeek, Gemini, GPT-4o',
+          'Standard models including Claude Haiku, DeepSeek V3, Llama',
+          'Intelligent model recommendations based on task requirements',
+        ],
+      },
+      featureThree: {
+        tag: 'Multi-threaded Chat',
+        title: 'Flexible Multi-threaded Dialogue and Context Management',
+        bulletPoints: [
+          'Support for multiple independent conversation threads for parallel exploration',
+          'Precise context selection and management for enhanced dialogue quality',
+          'Intelligent context memory for conversation coherence',
+        ],
+      },
+      featureFour: {
+        tag: 'Knowledge Base',
+        title: 'Powerful Knowledge Base Management with Browser Extension',
+        bulletPoints: [
+          'Build personalized knowledge bases for information retention and reuse',
+          'Convenient browser extension for one-click web content saving',
+          'Smart knowledge association and retrieval for creative inspiration',
+        ],
+      },
+      featureFive: {
+        tag: 'AI Editor',
+        title: 'Intelligent AI-Assisted Editor',
+        bulletPoints: [
+          'Real-time AI writing suggestions and refinements',
+          'Support for multiple writing styles and format adjustments',
+          'Intelligent text analysis and improvement recommendations',
         ],
       },
     },

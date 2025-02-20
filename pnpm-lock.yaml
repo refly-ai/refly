@@ -686,6 +686,9 @@ importers:
       md5:
         specifier: ^2.3.0
         version: 2.3.0
+      motion:
+        specifier: ^12.4.5
+        version: 12.4.5(react-dom@18.3.1)(react@18.3.1)
       qs:
         specifier: ~6.12.3
         version: 6.12.3
@@ -1044,6 +1047,9 @@ importers:
       mitt:
         specifier: ~3.0.1
         version: 3.0.1
+      motion:
+        specifier: ^12.4.5
+        version: 12.4.5(react-dom@18.3.1)(react@18.3.1)
       prism-react-renderer:
         specifier: ~2.3.1
         version: 2.3.1(react@18.3.1)
@@ -12794,6 +12800,27 @@ packages:
   /fraction.js@4.3.7:
     resolution: {integrity: sha512-ZsDfxO51wGAXREY55a7la9LScWpwv9RxIrYABrlvOFBlH/ShPnrtsXeuUIfXKKOVicNxQ+o8JTbJvjS4M89yew==}
 
+  /framer-motion@12.4.5(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-9+8wglyIJFeUpVg4U8Ohvoo5x7zmvRqawWXhEUThcYdwL/5A1/OkLvQo68Zz5taUE11HKG/Ex+LPaN2+fMkRdA==}
+    peerDependencies:
+      '@emotion/is-prop-valid': '*'
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@emotion/is-prop-valid':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+    dependencies:
+      motion-dom: 12.4.5
+      motion-utils: 12.0.0
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      tslib: 2.8.1
+    dev: false
+
   /framework-utils@1.1.0:
     resolution: {integrity: sha512-KAfqli5PwpFJ8o3psRNs8svpMGyCSAe8nmGcjQ0zZBWN2H6dZDnq+ABp3N3hdUmFeMrLtjOCTXD4yplUJIWceg==}
     dev: false
@@ -16406,6 +16433,36 @@ packages:
     requiresBuild: true
     dev: false
     optional: true
+
+  /motion-dom@12.4.5:
+    resolution: {integrity: sha512-Q2xmhuyYug1CGTo0jdsL05EQ4RhIYXlggFS/yPhQQRNzbrhjKQ1tbjThx5Plv68aX31LsUQRq4uIkuDxdO5vRQ==}
+    dependencies:
+      motion-utils: 12.0.0
+    dev: false
+
+  /motion-utils@12.0.0:
+    resolution: {integrity: sha512-MNFiBKbbqnmvOjkPyOKgHUp3Q6oiokLkI1bEwm5QA28cxMZrv0CbbBGDNmhF6DIXsi1pCQBSs0dX8xjeER1tmA==}
+    dev: false
+
+  /motion@12.4.5(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-z6fue+RKrOnj/5usGuteIuKHQs+89lOUpTLCwBrk9nl0/GcCDZQZevVan38DhTbru9k2aWH8eyY9qU/qnvUz8g==}
+    peerDependencies:
+      '@emotion/is-prop-valid': '*'
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@emotion/is-prop-valid':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+    dependencies:
+      framer-motion: 12.4.5(react-dom@18.3.1)(react@18.3.1)
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      tslib: 2.8.1
+    dev: false
 
   /mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}

@@ -109,9 +109,9 @@ const WorkflowCard = ({
 function WorkflowBlocks() {
   const { t, i18n } = useTranslation();
   const header = {
-    tag: t('landingPage.features.tag'),
+    tag: t('landingPage.workflow.tag'),
     tagIcon: <TbActivityHeartbeat />,
-    title: t('landingPage.features.title'),
+    title: t('landingPage.workflow.title'),
     color: '#000000',
     tagShadow:
       '0 3px 20px 0 rgba(0,0,0,0.10), 0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(227,227,227,0.50)',
@@ -120,10 +120,10 @@ function WorkflowBlocks() {
   // Sample feature data
   const workflows: Workflow[] = [
     {
-      tag: t('landingPage.features.featureOne.tag'),
+      tag: t('landingPage.workflow.workflowOne.tag'),
       tagIcon: <FaRegPaperPlane className="inline-block" />,
-      title: t('landingPage.features.featureOne.title'),
-      bulletPoints: t('landingPage.features.featureOne.bulletPoints', {
+      title: t('landingPage.workflow.workflowOne.title'),
+      bulletPoints: t('landingPage.workflow.workflowOne.bulletPoints', {
         returnObjects: true,
       }) as string[],
       imageSrc: 'https://static.refly.ai/landing/generateOutline.webp',
@@ -133,10 +133,10 @@ function WorkflowBlocks() {
       tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(131,98,223,0.12)',
     },
     {
-      tag: t('landingPage.features.featureTwo.tag'),
+      tag: t('landingPage.workflow.workflowTwo.tag'),
       tagIcon: <LuSearch className="inline-block" />,
-      title: t('landingPage.features.featureTwo.title'),
-      bulletPoints: t('landingPage.features.featureTwo.bulletPoints', {
+      title: t('landingPage.workflow.workflowTwo.title'),
+      bulletPoints: t('landingPage.workflow.workflowTwo.bulletPoints', {
         returnObjects: true,
       }) as string[],
       imageSrc: 'https://static.refly.ai/landing/importResource.webp',
@@ -146,10 +146,10 @@ function WorkflowBlocks() {
       tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(59,130,246,0.20)',
     },
     {
-      tag: t('landingPage.features.featureFive.tag'),
+      tag: t('landingPage.workflow.workflowFive.tag'),
       tagIcon: <HiOutlineDocumentDownload className="inline-block" />,
-      title: t('landingPage.features.featureFive.title'),
-      bulletPoints: t('landingPage.features.featureFive.bulletPoints', {
+      title: t('landingPage.workflow.workflowFive.title'),
+      bulletPoints: t('landingPage.workflow.workflowFive.bulletPoints', {
         returnObjects: true,
       }) as string[],
       imageSrc: 'https://static.refly.ai/landing/features-clip.webp',
@@ -159,10 +159,10 @@ function WorkflowBlocks() {
       tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(76,175,80,0.20)',
     },
     {
-      tag: t('landingPage.features.featureThree.tag'),
+      tag: t('landingPage.workflow.workflowThree.tag'),
       tagIcon: <AiOutlineExperiment className="inline-block" />,
-      title: t('landingPage.features.featureThree.title'),
-      bulletPoints: t('landingPage.features.featureThree.bulletPoints', {
+      title: t('landingPage.workflow.workflowThree.title'),
+      bulletPoints: t('landingPage.workflow.workflowThree.bulletPoints', {
         returnObjects: true,
       }) as string[],
       imageSrc: 'https://static.refly.ai/landing/research.webp',
@@ -172,10 +172,10 @@ function WorkflowBlocks() {
       tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(241,123,44,0.10)',
     },
     {
-      tag: t('landingPage.features.featureFour.tag'),
+      tag: t('landingPage.workflow.workflowFour.tag'),
       tagIcon: <MdOutlineNoteAlt className="inline-block" />,
-      title: t('landingPage.features.featureFour.title'),
-      bulletPoints: t('landingPage.features.featureFour.bulletPoints', {
+      title: t('landingPage.workflow.workflowFour.title'),
+      bulletPoints: t('landingPage.workflow.workflowFour.bulletPoints', {
         returnObjects: true,
       }) as string[],
       imageSrc: 'https://static.refly.ai/landing/generateArticle.webp',
