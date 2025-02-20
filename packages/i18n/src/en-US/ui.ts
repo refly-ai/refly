@@ -182,13 +182,84 @@ const translations = {
     features: {
       tag: 'Core Features',
       title: "Refly's Key Features",
+      fileFormats: {
+        pdf: {
+          name: 'document.pdf',
+          body: 'Professional PDF documents with rich text, images, and interactive elements that maintain consistent formatting.',
+        },
+        markdown: {
+          name: 'notes.md',
+          body: 'Clean and simple Markdown files for documentation, notes, and formatted text with support for code blocks.',
+        },
+        word: {
+          name: 'report.docx',
+          body: 'Microsoft Word documents with advanced formatting, track changes, and collaborative editing features.',
+        },
+        html: {
+          name: 'webpage.html',
+          body: 'Web pages with structured content, styling, and interactive elements for browser viewing.',
+        },
+        epub: {
+          name: 'book.epub',
+          body: 'Digital books in EPUB format with reflowable content, chapters, and multimedia support.',
+        },
+        jpg: {
+          name: 'photo.jpg',
+          body: 'High-quality compressed photos and images, perfect for web and print usage.',
+        },
+        gif: {
+          name: 'animation.gif',
+          body: 'Animated GIF images for short loops, reactions, and simple motion graphics.',
+        },
+        png: {
+          name: 'screenshot.png',
+          body: 'Lossless PNG images with transparency support, ideal for UI elements and screenshots.',
+        },
+      },
+      models: {
+        deepseekR1: {
+          name: 'DeepSeek R1',
+          description: 'Advanced language understanding',
+          provider: 'DeepSeek',
+        },
+        o3mini: {
+          name: 'o3-mini',
+          description: 'Advanced reasoning and creativity',
+          provider: 'OpenAI',
+        },
+        claude35: {
+          name: 'Claude 3.5 Sonnet',
+          description: 'Most capable model for highly complex tasks',
+          provider: 'Anthropic',
+        },
+        gemini: {
+          name: 'Gemini Flash 2.0',
+          description: 'Fast and efficient for everyday tasks',
+          provider: 'Google',
+        },
+        qwen: {
+          name: 'Qwen-Max',
+          description: 'Powerful multilingual capabilities',
+          provider: 'Qwen',
+        },
+        llama: {
+          name: 'Llama 3.3 70B',
+          description: 'Open source foundation model',
+          provider: 'Meta',
+        },
+        mistral: {
+          name: 'Mistral 8x7B Instruct',
+          description: 'Efficient and powerful language model',
+          provider: 'Mistral',
+        },
+      },
       featureOne: {
         tag: 'Multimodal Support',
-        title: 'Support for Multiple File Formats and Image Processing',
+        title: 'Support for 14+ File and Image Formats for Comprehensive Creation',
         bulletPoints: [
-          'Support for PDF, DOCX, RTF, TXT, MD, HTML, EPUB and more document formats',
+          'Support for PDF, DOCX, RTF, TXT, MD, HTML, EPUB and other document formats',
           'Support for JPG, PNG, JPEG, WEBP, GIF, TIFF, BMP and other image formats',
-          'Intelligent recognition and processing of various file types for a unified experience',
+          'Intelligent recognition and processing of multiple file types for a unified experience',
         ],
       },
       featureTwo: {
@@ -201,12 +272,12 @@ const translations = {
         ],
       },
       featureThree: {
-        tag: 'Multi-threaded Chat',
-        title: 'Flexible Multi-threaded Dialogue and Context Management',
+        tag: 'Branching Dialogue',
+        title: 'Flexible Branching Dialogue and Smart Context Selection',
         bulletPoints: [
-          'Support for multiple independent conversation threads for parallel exploration',
-          'Precise context selection and management for enhanced dialogue quality',
-          'Intelligent context memory for conversation coherence',
+          'Support for branching conversations to explore multiple thought paths simultaneously',
+          'Freely select knowledge base or canvas cards as context for enhanced responses',
+          'Smart context memory ensures conversation coherence across different branches',
         ],
       },
       featureFour: {
@@ -337,7 +408,7 @@ const translations = {
     },
     testimonials: {
       tag: 'User Testimonials',
-      title: 'Millions love their creation with Refly',
+      title: 'Thousands love their creation with Refly',
       description: 'Join 4000+ Reflyers to unleash inspiration and accelerate creation 👩‍🎨🧑‍🎨',
     },
   },

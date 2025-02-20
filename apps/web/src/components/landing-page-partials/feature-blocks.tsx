@@ -12,7 +12,13 @@ import {
 import { Marquee } from '@refly-packages/ai-workspace-common/components/magicui/marquee';
 import GlobeDemo from '@refly-packages/ai-workspace-common/components/magicui/globe-demo';
 import { IconType } from 'react-icons';
-import { LucideIcon } from 'lucide-react';
+import { AiOutlineAppstore } from 'react-icons/ai';
+
+interface FileFormat {
+  name: string;
+  body: string;
+}
+
 interface FeatureItem {
   Icon: IconType | LucideIcon;
   name: string;
@@ -22,45 +28,32 @@ interface FeatureItem {
   cta: string;
   className: string;
   background: JSX.Element;
+  color?: string;
+  tagShadow?: string;
 }
 
-const files = [
-  {
-    name: 'document.pdf',
-    body: 'PDF documents with text, images, and formatting that maintain their appearance across different platforms.',
-  },
-  {
-    name: 'image.png',
-    body: 'High-quality lossless image format supporting transparency, ideal for screenshots and web graphics.',
-  },
-  {
-    name: 'photo.jpg',
-    body: 'Compressed image format perfect for photographs and complex images with millions of colors.',
-  },
-  {
-    name: 'presentation.pptx',
-    body: 'Microsoft PowerPoint presentations with slides, animations, and multimedia content.',
-  },
-  {
-    name: 'spreadsheet.xlsx',
-    body: 'Microsoft Excel spreadsheets for data analysis, calculations, and financial reports.',
-  },
-  {
-    name: 'code.py',
-    body: 'Python source code files containing programming logic and algorithms.',
-  },
-  {
-    name: 'data.json',
-    body: 'Structured data format commonly used for configuration and API responses.',
-  },
-  {
-    name: 'vector.svg',
-    body: 'Scalable Vector Graphics for resolution-independent images and animations.',
-  },
-];
-
 export default function FeatureBlocks() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const header = {
+    tag: t('landingPage.features.tag'),
+    tagIcon: <AiOutlineAppstore />,
+    title: t('landingPage.features.title'),
+    color: '#000000',
+    tagShadow:
+      '0 3px 20px 0 rgba(0,0,0,0.10), 0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(227,227,227,0.50)',
+  };
+
+  const files = [
+    t('landingPage.features.fileFormats.pdf', { returnObjects: true }) as FileFormat,
+    t('landingPage.features.fileFormats.markdown', { returnObjects: true }) as FileFormat,
+    t('landingPage.features.fileFormats.word', { returnObjects: true }) as FileFormat,
+    t('landingPage.features.fileFormats.html', { returnObjects: true }) as FileFormat,
+    t('landingPage.features.fileFormats.epub', { returnObjects: true }) as FileFormat,
+    t('landingPage.features.fileFormats.jpg', { returnObjects: true }) as FileFormat,
+    t('landingPage.features.fileFormats.gif', { returnObjects: true }) as FileFormat,
+    t('landingPage.features.fileFormats.png', { returnObjects: true }) as FileFormat,
+  ];
 
   const features: FeatureItem[] = [
     {
@@ -73,6 +66,8 @@ export default function FeatureBlocks() {
       href: '#',
       cta: 'Learn more',
       className: 'col-span-3 lg:col-span-1',
+      color: '#6E3FF3',
+      tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(131,98,223,0.12)',
       background: (
         <Marquee
           pauseOnHover
@@ -109,6 +104,8 @@ export default function FeatureBlocks() {
       href: '#',
       cta: 'Learn more',
       className: 'col-span-3 lg:col-span-2',
+      color: '#3B82F6',
+      tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(59,130,246,0.20)',
       background: (
         <AnimatedListDemo className="absolute right-2 top-4 h-[300px] w-full scale-75 border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-90" />
       ),
@@ -123,6 +120,8 @@ export default function FeatureBlocks() {
       href: '#',
       cta: 'Learn more',
       className: 'col-span-3 lg:col-span-1',
+      color: '#4CAF50',
+      tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(76,175,80,0.20)',
       background: (
         <AnimatedBeamMultipleOutputDemo className="absolute right-2 top-4 h-[300px] border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-105" />
       ),
@@ -137,6 +136,8 @@ export default function FeatureBlocks() {
       href: '#',
       cta: 'Learn more',
       className: 'col-span-3 lg:col-span-1',
+      color: '#F17B2C',
+      tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(241,123,44,0.10)',
       background: (
         <AnimatedBeanDemo className="absolute right-2 top-4 h-[300px] border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-105" />
       ),
@@ -151,6 +152,8 @@ export default function FeatureBlocks() {
       className: 'col-span-3 lg:col-span-1',
       href: '#',
       cta: 'Learn more',
+      color: '#F1A62D',
+      tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(200,140,44,0.20)',
       background: (
         <GlobeDemo className="absolute right-2 top-4 h-[300px] border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-105" />
       ),
@@ -160,19 +163,46 @@ export default function FeatureBlocks() {
   return (
     <section className="relative mx-auto mt-[98px] max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
       {/* Header Section */}
-      <div className="text-center">
+      <div className="mb-16 text-center">
         <span
           className="mb-8 inline-flex items-center justify-center rounded-lg border border-solid border-black/10 bg-white px-6 py-2 font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-sm"
           style={{
-            boxShadow:
-              '0 3px 20px 0 rgba(0,0,0,0.10), 0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(227,227,227,0.50)',
+            color: header?.color ?? '#000000',
+            boxShadow: header?.tagShadow ?? '0 3px 20px 0 rgba(0,0,0,0.10)',
           }}
         >
-          {t('landingPage.features.tag')}
+          {header?.tagIcon && (
+            <span className="mr-2 flex items-center" style={{ color: header?.color ?? '#000000' }}>
+              {typeof header.tagIcon === 'string' ? header.tagIcon : header.tagIcon}
+            </span>
+          )}
+          <span>{header?.tag}</span>
         </span>
-        <h2 className="mt-4 font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-3xl md:text-4xl">
-          {t('landingPage.features.title')}
-        </h2>
+        <section className="text-center">
+          <h1 className="font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-3xl md:text-4xl">
+            {i18n.language === 'zh-CN' ? (
+              <>
+                Refly
+                <div className="mt-2">
+                  <span className="relative text-[#F1A62D]">
+                    主要功能总览
+                    <span className="absolute bottom-0 left-0 h-1 w-full bg-[#F1A62D]" />
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                {header?.title?.split('Primary Features')[0]}
+                <div className="mt-2">
+                  <span className="relative text-[#F1A62D]">
+                    Primary Features
+                    <span className="absolute bottom-0 left-0 h-1 w-full bg-[#F1A62D]" />
+                  </span>
+                </div>
+              </>
+            )}
+          </h1>
+        </section>
       </div>
 
       {/* Feature Grid */}
@@ -188,14 +218,28 @@ export default function FeatureBlocks() {
               )}
             >
               <div className="relative z-10">
-                <feature.Icon className="h-8 w-8" />
-                <h3 className="mt-4 text-xl font-semibold">{feature.name}</h3>
-                <p className="mt-2 text-neutral-600 dark:text-neutral-300">{feature.description}</p>
+                <span
+                  className="mb-3 inline-flex w-fit items-center rounded-lg px-4 py-1 font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-sm"
+                  style={{
+                    background: '#FFFFFF',
+                    border: `1px solid ${feature.color ?? '#000000'}`,
+                    boxShadow: feature.tagShadow ?? '0 3px 20px 0 rgba(0,0,0,0.10)',
+                    borderRadius: '8px',
+                    color: feature.color ?? '#000000',
+                  }}
+                >
+                  <feature.Icon className="mr-2 h-4 w-4" />
+                  <span>{feature.name}</span>
+                </span>
+                <h3 className="mt-4 text-xl font-semibold">{feature.description}</h3>
                 {feature.bulletPoints && (
                   <ul className="mt-4 space-y-2">
                     {feature.bulletPoints.map((point: string, i: number) => (
                       <li key={i} className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
+                        <span
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-white"
+                          style={{ backgroundColor: feature.color ?? '#37C390' }}
+                        >
                           ✓
                         </span>
                         <span className="text-sm text-neutral-600 dark:text-neutral-300">

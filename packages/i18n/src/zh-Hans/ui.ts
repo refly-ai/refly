@@ -140,9 +140,80 @@ const translations = {
     features: {
       tag: '核心功能',
       title: 'Refly 的主要功能',
+      fileFormats: {
+        pdf: {
+          name: 'document.pdf',
+          body: '专业的 PDF 文档，支持富文本、图片和交互元素，保持一致的格式排版。',
+        },
+        markdown: {
+          name: 'notes.md',
+          body: '简洁的 Markdown 文件，用于文档编写、笔记和格式化文本，支持代码块。',
+        },
+        word: {
+          name: 'report.docx',
+          body: 'Microsoft Word 文档，具有高级格式设置、修订跟踪和协作编辑功能。',
+        },
+        html: {
+          name: 'webpage.html',
+          body: '网页文件，包含结构化内容、样式和交互元素，适用于浏览器查看。',
+        },
+        epub: {
+          name: 'book.epub',
+          body: 'EPUB 格式的电子书，支持自适应内容排版、章节和多媒体。',
+        },
+        jpg: {
+          name: 'photo.jpg',
+          body: '高质量压缩的照片和图像，适用于网页和打印。',
+        },
+        gif: {
+          name: 'animation.gif',
+          body: '动态 GIF 图像，用于短循环动画、表情包和简单动态图形。',
+        },
+        png: {
+          name: 'screenshot.png',
+          body: '无损 PNG 图像，支持透明度，适用于 UI 元素和截图。',
+        },
+      },
+      models: {
+        deepseekR1: {
+          name: 'DeepSeek R1',
+          description: '先进的语言理解能力',
+          provider: 'DeepSeek',
+        },
+        o3mini: {
+          name: 'o3-mini',
+          description: '高级推理和创造力',
+          provider: 'OpenAI',
+        },
+        claude35: {
+          name: 'Claude 3.5 Sonnet',
+          description: '最适合处理高度复杂任务的模型',
+          provider: 'Anthropic',
+        },
+        gemini: {
+          name: 'Gemini Flash 2.0',
+          description: '快速高效的日常任务处理',
+          provider: 'Google',
+        },
+        qwen: {
+          name: 'Qwen-Max',
+          description: '强大的多语言处理能力',
+          provider: 'Qwen',
+        },
+        llama: {
+          name: 'Llama 3.3 70B',
+          description: '开源基础模型',
+          provider: 'Meta',
+        },
+        mistral: {
+          name: 'Mistral 8x7B Instruct',
+          description: '高效强大的语言模型',
+          provider: 'Mistral',
+        },
+      },
       featureOne: {
         tag: '多模态支持',
-        title: '支持多种文件格式和图片处理，打造全方位创作体验',
+        title: '支持 14+ 文件和图片类型，打造全方位创作体验',
         bulletPoints: [
           '支持 PDF、DOCX、RTF、TXT、MD、HTML、EPUB 等多种文档格式',
           '支持 JPG、PNG、JPEG、WEBP、GIF、TIFF、BMP 等图片格式',
@@ -159,12 +230,12 @@ const translations = {
         ],
       },
       featureThree: {
-        tag: '多线程对话',
-        title: '灵活的多线程对话与上下文管理',
+        tag: '多分支对话',
+        title: '灵活的多分支对话与智能上下文选择',
         bulletPoints: [
-          '支持多个独立对话线程，实现并行思维探索',
-          '精确的上下文选择和管理，提升对话质量',
-          '智能的上下文记忆，确保对话连贯性',
+          '支持对话分支，同时探索多条思维路径',
+          '自由选择知识库或画布卡片作为上下文，提升回答质量',
+          '智能的上下文记忆，确保不同分支间对话的连贯性',
         ],
       },
       featureFour: {
@@ -287,7 +358,7 @@ const translations = {
     },
     testimonials: {
       tag: '用户评价',
-      title: '数百万用户在 Refly 创作',
+      title: '数千名用户在 Refly 创作',
       description: '加入 4000+ Reflyer，一起释放灵感，加速创作 👩‍🎨🧑‍🎨',
     },
     workflow: {

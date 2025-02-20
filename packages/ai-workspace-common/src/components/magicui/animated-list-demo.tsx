@@ -3,6 +3,13 @@
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { AnimatedList } from './animated-list';
 import { ModelProviderIcons } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { useTranslation } from 'react-i18next';
+
+interface ModelInfo {
+  name: string;
+  description: string;
+  provider: string;
+}
 
 interface Item {
   name: string;
@@ -11,54 +18,74 @@ interface Item {
   time: string;
 }
 
-let notifications = [
-  {
-    name: 'DeepSeek R1',
-    description: 'Advanced language understanding',
-    time: 'DeepSeek',
-    icon: ModelProviderIcons.deepseek,
-  },
-  {
-    name: 'o3-mini',
-    description: 'Advanced reasoning and creativity',
-    time: 'OpenAI',
-    icon: ModelProviderIcons.openai,
-  },
-  {
-    name: 'Claude 3.5 Sonnet',
-    description: 'Most capable model for highly complex tasks',
-    time: 'Anthropic',
-    icon: ModelProviderIcons.anthropic,
-  },
+export default function AnimatedListDemo({
+  className,
+}: {
+  className?: string;
+}) {
+  const { t } = useTranslation();
 
-  {
-    name: 'Gemini Flash 2.0',
-    description: 'Fast and efficient for everyday tasks',
-    time: 'Google',
-    icon: ModelProviderIcons.google,
-  },
-  {
-    name: 'Qwen-Max',
-    description: 'Powerful multilingual capabilities',
-    time: 'Qwen',
-    icon: ModelProviderIcons.qwen,
-  },
-  {
-    name: 'Llama 3.3 70B',
-    description: 'Open source foundation model',
-    time: 'Meta',
-    icon: ModelProviderIcons['meta-llama'],
-  },
+  const notifications = [
+    {
+      ...(t('landingPage.features.models.deepseekR1', {
+        returnObjects: true,
+      }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.deepseek,
+    },
+    {
+      ...(t('landingPage.features.models.o3mini', { returnObjects: true }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.openai,
+    },
+    {
+      ...(t('landingPage.features.models.claude35', {
+        returnObjects: true,
+      }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.anthropic,
+    },
+    {
+      ...(t('landingPage.features.models.gemini', { returnObjects: true }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.google,
+    },
+    {
+      ...(t('landingPage.features.models.qwen', { returnObjects: true }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.qwen,
+    },
+    {
+      ...(t('landingPage.features.models.llama', { returnObjects: true }) as unknown as ModelInfo),
+      icon: ModelProviderIcons['meta-llama'],
+    },
+    {
+      ...(t('landingPage.features.models.mistral', {
+        returnObjects: true,
+      }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.mistral,
+    },
+    {
+      ...(t('landingPage.features.models.deepseekR1', {
+        returnObjects: true,
+      }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.deepseek,
+    },
+    {
+      ...(t('landingPage.features.models.o3mini', { returnObjects: true }) as unknown as ModelInfo),
+      icon: ModelProviderIcons.openai,
+    },
+  ];
 
-  {
-    name: 'Mistral 8x7B Instruct',
-    description: 'Efficient and powerful language model',
-    time: 'Mistral',
-    icon: ModelProviderIcons.mistral,
-  },
-];
+  const repeatedNotifications = Array.from({ length: 5 }, () => notifications).flat();
 
-notifications = Array.from({ length: 5 }, () => notifications).flat();
+  return (
+    <div className={cn('relative flex h-[500px] w-full flex-col overflow-hidden p-2', className)}>
+      <AnimatedList>
+        {repeatedNotifications.map((item, idx) => (
+          <Notification {...item} key={idx} time={item.provider} />
+        ))}
+      </AnimatedList>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-background" />
+    </div>
+  );
+}
 
 const Notification = ({ name, description, icon, time }: Item) => {
   return (
@@ -89,21 +116,3 @@ const Notification = ({ name, description, icon, time }: Item) => {
     </figure>
   );
 };
-
-export default function AnimatedListDemo({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <div className={cn('relative flex h-[500px] w-full flex-col overflow-hidden p-2', className)}>
-      <AnimatedList>
-        {notifications.map((item, idx) => (
-          <Notification {...item} key={idx} />
-        ))}
-      </AnimatedList>
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-background" />
-    </div>
-  );
-}
