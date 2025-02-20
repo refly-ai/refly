@@ -288,8 +288,8 @@ const translations = {
     },
     testimonials: {
       tag: 'User Testimonials',
-      description:
-        "Don't just take our word for it. Here's what real people are saying about Refly on Twitter.",
+      title: 'Millions love their creation with Refly',
+      description: 'Join 4000+ Reflyers to unleash inspiration and accelerate creation 👩‍🎨🧑‍🎨',
     },
   },
   priceContent: {

@@ -1,6 +1,6 @@
 import { CSSProperties, FC, ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 
 interface AnimatedShinyTextProps {
   children: ReactNode;

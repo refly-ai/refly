@@ -288,7 +288,8 @@ const translations = {
     },
     testimonials: {
       tag: '用户评价',
-      description: '不要只相信我们的话，看看用户在 Twitter 上对 Refly 的真实评价。',
+      title: '数百万用户在 Refly 创作',
+      description: '加入 4000+ Reflyer，一起释放灵感，加速创作 👩‍🎨🧑‍🎨',
     },
   },
   priceContent: {

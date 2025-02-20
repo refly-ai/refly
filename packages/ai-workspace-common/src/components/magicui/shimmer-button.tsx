@@ -1,6 +1,6 @@
 import React, { CSSProperties } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 
 export interface ShimmerButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   shimmerColor?: string;

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 
 export default function AnimatedGradientText({
   children,
