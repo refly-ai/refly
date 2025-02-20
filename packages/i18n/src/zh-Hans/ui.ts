@@ -138,8 +138,8 @@ const translations = {
     loginBtn: '登录',
     dashboard: '主页',
     features: {
-      tag: '功能',
-      title: 'Refly 的主要功能总览',
+      tag: '工作流',
+      title: 'Refly 的主要工作流总览',
       featureOne: {
         tag: '规划',
         title: '在自由画布中梳理思路，让专业创作从混沌到有序',

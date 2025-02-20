@@ -127,8 +127,8 @@ const translations = {
     loginBtn: 'Login',
     dashboard: 'Dashboard',
     features: {
-      tag: 'Features',
-      title: "An Overview of Refly's Primary Features",
+      tag: 'Workflow',
+      title: "An Overview of Refly's",
       featureOne: {
         tag: 'Planning',
         title:

@@ -1,13 +1,14 @@
 import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AiOutlineAppstore, AiOutlineExperiment } from 'react-icons/ai';
+import { TbActivityHeartbeat } from 'react-icons/tb';
+import { AiOutlineExperiment } from 'react-icons/ai';
 import { FaRegPaperPlane } from 'react-icons/fa';
 import { HiOutlineDocumentDownload } from 'react-icons/hi';
 import { LuSearch } from 'react-icons/lu';
 import { MdOutlineNoteAlt } from 'react-icons/md';
 
 // Feature type definition for better type safety
-interface Feature {
+interface Workflow {
   tag: string;
   tagIcon?: string | ReactNode;
   title: string;
@@ -19,16 +20,16 @@ interface Feature {
   tagShadow?: string;
 }
 
-interface FeatureCardProps {
+interface WorkflowCardProps {
   isReversed?: boolean;
   background?: string;
 }
 
-const FeatureCard = ({
-  feature,
+const WorkflowCard = ({
+  workflow,
   isReversed = false,
   background = 'linear-gradient(180deg, #F3EEFC 0%, #FFFFFF 100%)',
-}: FeatureCardProps & { feature: Feature }) => (
+}: WorkflowCardProps & { workflow: Workflow }) => (
   <div className="relative mx-auto mt-[40px] w-full max-w-7xl md:w-[65%]">
     <div
       className="min-h-[360px] w-full overflow-visible rounded-[20px] md:h-[600px]"
@@ -45,8 +46,8 @@ const FeatureCard = ({
         {/* Image Section - Updated with hover animation */}
         <div className="relative h-[260px] cursor-pointer overflow-visible transition-transform duration-300 ease-out hover:scale-95 md:h-auto md:w-1/2">
           <img
-            src={feature?.imageSrc ?? '/fallback-image.png'}
-            alt={`${feature?.title ?? 'Feature'} visualization`}
+            src={workflow?.imageSrc ?? '/fallback-image.png'}
+            alt={`${workflow?.title ?? 'Workflow'} visualization`}
             className="absolute h-full w-[130%] rounded-[20px] object-contain"
             style={{
               [isReversed ? 'right' : 'left']: '-30%',
@@ -63,33 +64,33 @@ const FeatureCard = ({
             className="mb-3 inline-flex w-fit items-center rounded-lg px-4 py-1 font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-sm"
             style={{
               background: '#FFFFFF',
-              border: `1px solid ${feature?.color ?? '#000000'}`,
-              boxShadow: feature?.tagShadow ?? '0 3px 20px 0 rgba(0,0,0,0.10)',
+              border: `1px solid ${workflow?.color ?? '#000000'}`,
+              boxShadow: workflow?.tagShadow ?? '0 3px 20px 0 rgba(0,0,0,0.10)',
               borderRadius: '8px',
-              color: feature?.color ?? '#000000',
+              color: workflow?.color ?? '#000000',
             }}
           >
-            {feature?.tagIcon && (
+            {workflow?.tagIcon && (
               <span
                 className="mr-2 flex items-center"
-                style={{ color: feature?.color ?? '#000000' }}
+                style={{ color: workflow?.color ?? '#000000' }}
               >
-                {typeof feature.tagIcon === 'string' ? feature.tagIcon : feature.tagIcon}
+                {typeof workflow.tagIcon === 'string' ? workflow.tagIcon : workflow.tagIcon}
               </span>
             )}
             <span className="font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif]">
-              {feature?.tag}
+              {workflow?.tag}
             </span>
           </span>
           <h2 className="mb-4 font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-2xl md:text-3xl">
-            {feature?.title}
+            {workflow?.title}
           </h2>
           <ul className="space-y-3">
-            {feature?.bulletPoints?.map((point, index) => (
+            {workflow?.bulletPoints?.map((point, index) => (
               <li key={index} className="flex items-center gap-3">
                 <span
                   className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-white"
-                  style={{ backgroundColor: feature?.color ?? '#37C390' }}
+                  style={{ backgroundColor: workflow?.color ?? '#37C390' }}
                 >
                   ✓
                 </span>
@@ -105,11 +106,11 @@ const FeatureCard = ({
   </div>
 );
 
-function FeaturesBlocks() {
+function WorkflowBlocks() {
   const { t, i18n } = useTranslation();
   const header = {
     tag: t('landingPage.features.tag'),
-    tagIcon: <AiOutlineAppstore />,
+    tagIcon: <TbActivityHeartbeat />,
     title: t('landingPage.features.title'),
     color: '#000000',
     tagShadow:
@@ -117,7 +118,7 @@ function FeaturesBlocks() {
   };
 
   // Sample feature data
-  const features: Feature[] = [
+  const workflows: Workflow[] = [
     {
       tag: t('landingPage.features.featureOne.tag'),
       tagIcon: <FaRegPaperPlane className="inline-block" />,
@@ -210,7 +211,7 @@ function FeaturesBlocks() {
                 Refly
                 <div className="mt-2">
                   <span className="relative text-[#F17B2C]">
-                    主要功能总览
+                    主要工作流总览
                     <span className="absolute bottom-0 left-0 h-1 w-full bg-[#F17B2C]" />
                   </span>
                 </div>
@@ -220,7 +221,7 @@ function FeaturesBlocks() {
                 {header?.title?.split('Primary Features')[0]}
                 <div className="mt-2">
                   <span className="relative text-[#F17B2C]">
-                    Primary Features
+                    Primary Workflow
                     <span className="absolute bottom-0 left-0 h-1 w-full bg-[#F17B2C]" />
                   </span>
                 </div>
@@ -231,13 +232,13 @@ function FeaturesBlocks() {
       </div>
 
       {/* Feature Cards */}
-      {features?.map((feature, index) => (
-        <FeatureCard
-          key={feature.tag}
-          feature={feature}
+      {workflows?.map((workflow, index) => (
+        <WorkflowCard
+          key={workflow.tag}
+          workflow={workflow}
           isReversed={index % 2 !== 0}
           background={
-            feature.background ??
+            workflow.background ??
             `linear-gradient(180deg, ${
               ['#F3EEFC', '#EAF6FF', '#FFF3F3', '#F3FFF3'][index % 4]
             } 0%, #FFFFFF 100%)`
@@ -248,4 +249,4 @@ function FeaturesBlocks() {
   );
 }
 
-export default FeaturesBlocks;
+export default WorkflowBlocks;

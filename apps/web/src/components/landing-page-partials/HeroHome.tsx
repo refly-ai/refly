@@ -70,7 +70,7 @@ function HeroHome() {
                 <div className="z-10 flex items-center justify-center">
                   <div
                     onClick={() => {
-                      window.open('https://docs.refly.ai/guide/chrome-extension', '_blank');
+                      window.open('https://docs.refly.ai/changelog/v0.3.0', '_blank');
                     }}
                     className={cn(
                       'group inline-flex items-center justify-center rounded-lg border border-black/5 bg-white text-base hover:cursor-pointer hover:bg-neutral-50 dark:border-white/5',
