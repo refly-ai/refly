@@ -211,7 +211,7 @@ const translations = {
       },
       featureFour: {
         tag: 'Knowledge Base',
-        title: 'Powerful Knowledge Base Management with Browser Extension',
+        title: 'Powerful Knowledge Base Management with Data Connector and Browser Extension',
         bulletPoints: [
           'Build personalized knowledge bases for information retention and reuse',
           'Convenient browser extension for one-click web content saving',

@@ -169,7 +169,7 @@ const translations = {
       },
       featureFour: {
         tag: '知识库集成',
-        title: '强大的知识库管理与浏览器插件支持',
+        title: '具有数据连接器和浏览器扩展的强大知识库管理',
         bulletPoints: [
           '构建个性化知识库，实现知识沉淀与复用',
           '便捷的浏览器插件，一键保存网页内容',

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import AnimatedBeamMultipleOutputDemo from '@refly-packages/ai-workspace-common/components/magicui/animated-beam-multiple-outputs';
 import AnimatedListDemo from '@refly-packages/ai-workspace-common/components/magicui/animated-list-demo';
+import AnimatedBeanDemo from '@refly-packages/ai-workspace-common/components/magicui/animated-bean-demo';
 import {
   BentoCard,
   BentoGrid,
@@ -136,7 +137,9 @@ export default function FeatureBlocks() {
       href: '#',
       cta: 'Learn more',
       className: 'col-span-3 lg:col-span-1',
-      background: <div />,
+      background: (
+        <AnimatedBeanDemo className="absolute right-2 top-4 h-[300px] border-none transition-all duration-300 ease-out [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] group-hover:scale-105" />
+      ),
     },
     {
       Icon: RiMarkdownLine,
