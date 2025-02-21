@@ -8,6 +8,12 @@ import enUSSkillLog from '@refly/i18n/en-US/skill-log';
 import zhHansUi from '@refly/i18n/zh-Hans/ui';
 import zhHansSkill from '@refly/i18n/zh-Hans/skill';
 import zhHansSkillLog from '@refly/i18n/zh-Hans/skill-log';
+import jaUi from '@refly/i18n/ja/ui';
+import jaSkill from '@refly/i18n/ja/skill';
+import jaSkillLog from '@refly/i18n/ja/skill-log';
+import koUi from '@refly/i18n/ko/ui';
+import koSkill from '@refly/i18n/ko/skill';
+import koSkillLog from '@refly/i18n/ko/skill-log';
 
 i18next
   .use(LanguageDetector)
@@ -30,6 +36,16 @@ i18next
         ui: zhHansUi,
         skill: zhHansSkill,
         skillLog: zhHansSkillLog,
+      },
+      ja: {
+        ui: jaUi,
+        skill: jaSkill,
+        skillLog: jaSkillLog,
+      },
+      ko: {
+        ui: koUi,
+        skill: koSkill,
+        skillLog: koSkillLog,
       },
     },
     // if you see an error like: "Argument of type 'DefaultTFuncReturn' is not assignable to parameter of type xyz"

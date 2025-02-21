@@ -62,6 +62,16 @@ export const UILocaleList = React.memo(
         label: 'English',
         onClick: () => changeLang('en' as LOCALE),
       },
+      {
+        key: 'ko',
+        label: '한국어',
+        onClick: () => changeLang('ko' as LOCALE),
+      },
+      {
+        key: 'ja',
+        label: '日本語',
+        onClick: () => changeLang('ja' as LOCALE),
+      },
     ];
 
     return (
