@@ -1,19 +1,31 @@
 const translations = {
-  common: {
-    title: '스킬 로그',
-    description: '스킬 실행 로그',
-    status: '상태',
-    startTime: '시작 시간',
-    endTime: '종료 시간',
-    duration: '소요 시간',
-    input: '입력',
-    output: '출력',
-    error: '오류',
-    success: '성공',
-    failed: '실패',
-    running: '실행 중',
-    pending: '대기 중',
-    cancelled: '취소됨',
+  generateTitle: {
+    title: '제목 생성',
+    description: '생성된 제목: {{title}}, {{duration}}ms 소요',
+  },
+  generateTitleFailed: {
+    title: '제목 생성',
+    description: '모델 능력으로 인해 제목 생성에 실패하여 쿼리를 제목으로 사용함',
+  },
+  rewriteQuery: {
+    title: '질문 분해',
+    description: '서브 쿼리: {{rewrittenQueries}}, {{duration}}ms 소요',
+  },
+  translateQuery: {
+    title: '쿼리 번역',
+    description: '번역된 쿼리: {{translatedQueries}}, {{duration}}ms 소요',
+  },
+  webSearchCompleted: {
+    title: '웹 검색 완료',
+    description: '총 {{totalResults}}개의 결과, {{duration}}ms 소요',
+  },
+  translateResults: {
+    title: '결과 번역',
+    description: '총 {{totalResults}}개의 결과, {{duration}}ms 소요',
+  },
+  rerankResults: {
+    title: '관련 결과 선택',
+    description: '총 {{totalResults}}개의 결과, {{duration}}ms 소요',
   },
 };
 

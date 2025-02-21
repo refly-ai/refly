@@ -1,44 +1,80 @@
 const translations = {
-  common: {
-    title: 'タイトル',
-    description: '説明',
-    example: '例',
-    input: '入力',
-    output: '出力',
-    context: 'コンテキスト',
-    settings: '設定',
-    parameters: 'パラメータ',
-    required: '必須',
-    optional: 'オプション',
-    default: 'デフォルト',
-    type: 'タイプ',
-    value: '値',
-    name: '名前',
-    category: 'カテゴリ',
-    tags: 'タグ',
-    author: '作者',
-    version: 'バージョン',
-    license: 'ライセンス',
-    homepage: 'ホームページ',
-    repository: 'リポジトリ',
-    bugs: 'バグ報告',
-    keywords: 'キーワード',
-    dependencies: '依存関係',
-    devDependencies: '開発依存関係',
-    peerDependencies: 'ピア依存関係',
-    bundledDependencies: 'バンドル依存関係',
-    optionalDependencies: 'オプション依存関係',
-    engines: 'エンジン',
-    os: 'OS',
-    cpu: 'CPU',
+  commonQnA: {
+    name: '質問回答',
+    description: 'コンテキストに基づいて質問に答えます',
+    placeholder: 'AIに質問をして、/を押してスキルを選択してください...',
+    steps: {
+      analyzeContext: {
+        name: 'コンテキスト分析',
+      },
+      answerQuestion: {
+        name: '質問回答',
+      },
+    },
   },
-  categories: {
-    writing: '文章作成',
-    analysis: '分析',
-    translation: '翻訳',
-    programming: 'プログラミング',
-    research: '研究',
-    other: 'その他',
+  generateDoc: {
+    name: 'ドキュメント作成',
+    description: '質問とコンテキストに基づいてドキュメントを生成します',
+    placeholder: 'AIがあなたのドキュメントを作成します...',
+    steps: {
+      analyzeContext: {
+        name: 'コンテキスト分析',
+      },
+      generateTitle: {
+        name: 'タイトル生成',
+      },
+      generateDocument: {
+        name: 'ドキュメント生成',
+      },
+    },
+  },
+  editDoc: {
+    name: 'ドキュメント編集',
+    placeholder: 'AIがあなたのドキュメントを編集します...',
+    steps: {},
+  },
+  rewriteDoc: {
+    name: 'ドキュメントの書き直し',
+    steps: {},
+  },
+  webSearch: {
+    name: 'ウェブ検索',
+    description: 'ウェブを検索して答えを得ます',
+    placeholder: 'ウェブを検索して答えを得ましょう...',
+    steps: {
+      analyzeContext: {
+        name: 'コンテキスト分析',
+      },
+      webSearch: {
+        name: 'ウェブ検索',
+      },
+      answerQuestion: {
+        name: '答えの生成',
+      },
+    },
+  },
+  librarySearch: {
+    name: '図書館検索',
+    description: '図書館を検索して答えを得ます',
+    placeholder: '図書館を検索して答えを得ましょう...',
+    steps: {
+      librarySearch: {
+        name: '図書館検索',
+      },
+      answerQuestion: {
+        name: '答えの生成',
+      },
+    },
+  },
+  recommendQuestions: {
+    name: '質問の推薦',
+    description: 'コンテキストに基づいて質問をブレインストーミングします',
+    placeholder: 'AIがあなたに質問を推薦します...',
+    steps: {
+      recommendQuestions: {
+        name: '推薦質問の生成',
+      },
+    },
   },
 };
 

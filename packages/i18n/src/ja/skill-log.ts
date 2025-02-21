@@ -1,19 +1,31 @@
 const translations = {
-  common: {
-    title: 'スキルログ',
-    description: 'スキル実行ログ',
-    status: 'ステータス',
-    startTime: '開始時間',
-    endTime: '終了時間',
-    duration: '所要時間',
-    input: '入力',
-    output: '出力',
-    error: 'エラー',
-    success: '成功',
-    failed: '失敗',
-    running: '実行中',
-    pending: '保留中',
-    cancelled: 'キャンセル済み',
+  generateTitle: {
+    title: 'タイトル生成',
+    description: '生成されたタイトル: {{title}}, {{duration}}msで完了',
+  },
+  generateTitleFailed: {
+    title: 'タイトル生成',
+    description: 'モデルの能力によりタイトルの生成に失敗し、クエリをタイトルとして使用しました',
+  },
+  rewriteQuery: {
+    title: '質問を分解',
+    description: 'サブクエリ: {{rewrittenQueries}}, {{duration}}msで完了',
+  },
+  translateQuery: {
+    title: 'クエリを翻訳',
+    description: '翻訳されたクエリ: {{translatedQueries}}, {{duration}}msで完了',
+  },
+  webSearchCompleted: {
+    title: 'ウェブ検索完了',
+    description: '合計{{totalResults}}件の結果、{{duration}}msで完了',
+  },
+  translateResults: {
+    title: '結果を翻訳',
+    description: '合計{{totalResults}}件の結果、{{duration}}msで完了',
+  },
+  rerankResults: {
+    title: '関連する結果を選択',
+    description: '合計{{totalResults}}件の結果、{{duration}}msで完了',
   },
 };
 
