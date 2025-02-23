@@ -5,11 +5,13 @@ export interface SkillPromptModule {
   buildContextUserPrompt: (context: string, needPrepareContext: boolean) => string;
   buildUserPrompt: ({
     originalQuery,
-    rewrittenQuery,
+    optimizedQuery,
+    rewrittenQueries,
     locale,
   }: {
     originalQuery: string;
-    rewrittenQuery: string;
+    optimizedQuery: string;
+    rewrittenQueries: string[];
     locale: string;
   }) => string;
 }
@@ -23,7 +25,8 @@ export const buildFinalRequestMessages = ({
   context,
   images,
   originalQuery,
-  rewrittenQuery,
+  optimizedQuery,
+  rewrittenQueries,
 }: {
   module: SkillPromptModule;
   locale: string;
@@ -33,11 +36,17 @@ export const buildFinalRequestMessages = ({
   context: string;
   images: string[];
   originalQuery: string;
-  rewrittenQuery: string;
+  optimizedQuery: string;
+  rewrittenQueries?: string[];
 }) => {
   const systemPrompt = module.buildSystemPrompt(locale, needPrepareContext);
   const contextUserPrompt = module.buildContextUserPrompt?.(context, needPrepareContext) || '';
-  const userPrompt = module.buildUserPrompt({ originalQuery, rewrittenQuery, locale });
+  const userPrompt = module.buildUserPrompt({
+    originalQuery,
+    optimizedQuery,
+    rewrittenQueries,
+    locale,
+  });
 
   const contextMessages = contextUserPrompt ? [new HumanMessage(contextUserPrompt)] : [];
 

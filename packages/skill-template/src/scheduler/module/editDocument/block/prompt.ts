@@ -123,11 +123,11 @@ export const buildBlockEditDocumentSystemPrompt = (
 
 export const buildBlockEditDocumentUserPrompt = ({
   originalQuery,
-  rewrittenQuery,
+  optimizedQuery,
   locale,
 }: {
   originalQuery: string;
-  rewrittenQuery: string;
+  optimizedQuery: string;
   locale: string;
 }) => {
   return `
@@ -135,11 +135,11 @@ export const buildBlockEditDocumentUserPrompt = ({
 ${originalQuery}
 
 ${
-  rewrittenQuery !== originalQuery
+  optimizedQuery !== originalQuery
     ? `
-## AI Rewritten Query (Secondary)
+## AI Optimized Query (Secondary)
 // Consider this as supplementary context only
-${rewrittenQuery}
+${optimizedQuery}
 `
     : ''
 }

@@ -38,6 +38,7 @@ import { extractStructuredData } from '../../utils/extractor';
  */
 
 interface CallMultiLingualWebSearchParams {
+  rewrittenQueries?: string[];
   searchLimit: number;
   searchLocaleList: string[];
   resultDisplayLocale: string;
@@ -58,7 +59,7 @@ export const callMultiLingualWebSearch = async (
   ctx: {
     config: SkillRunnableConfig;
     ctxThis: BaseSkill;
-    state: GraphState;
+    state: GraphState & { rewrittenQueries?: string[] };
   },
 ): Promise<{ sources: Source[] }> => {
   const { config, ctxThis, state } = ctx;
@@ -67,6 +68,7 @@ export const callMultiLingualWebSearch = async (
   const { query } = state;
 
   // TODO: 针对在 scheduler 里面调用,
+  const { rewrittenQueries } = params;
   let searchLocaleList = params.searchLocaleList || ['en'];
   const resultDisplayLocale = params.resultDisplayLocale || 'auto';
   const enableRerank = params.enableRerank || false;
@@ -87,10 +89,10 @@ export const callMultiLingualWebSearch = async (
   const enableQueryRewrite = params.enableQueryRewrite ?? true;
 
   try {
-    let queries = [query]; // Default to original query
+    let queries = rewrittenQueries || [query]; // Use rewrittenQueries if available
 
-    // Step 1: Rewrite query (now optional)
-    if (enableQueryRewrite) {
+    // Step 1: Rewrite query (only if no rewrittenQueries provided)
+    if (enableQueryRewrite && (!rewrittenQueries || rewrittenQueries.length === 0)) {
       timeTracker.startStep('rewriteQuery');
       try {
         const rewriteResult = await extractStructuredData(
@@ -125,6 +127,21 @@ export const callMultiLingualWebSearch = async (
         queries = [query];
         timeTracker.endStep('rewriteQuery');
       }
+    } else if (rewrittenQueries) {
+      // If rewrittenQueries provided, emit event with them
+      const rewriteDuration = 0; // No actual rewrite performed
+      ctxThis.emitEvent(
+        {
+          log: {
+            key: 'rewriteQuery',
+            descriptionArgs: {
+              duration: rewriteDuration,
+              rewrittenQueries: rewrittenQueries.join(', '),
+            },
+          },
+        },
+        config,
+      );
     }
 
     // Determine display locale

@@ -73,6 +73,7 @@ export class GenerateDoc extends BaseSkill {
       hasContext,
       remainingTokens,
       mentionedContext,
+      rewrittenQueries,
     } = await processQuery({
       config,
       ctxThis: this,
@@ -84,7 +85,9 @@ export class GenerateDoc extends BaseSkill {
 
     const needPrepareContext = hasContext && remainingTokens > 0;
     const isModelContextLenSupport = checkModelContextLenSupport(modelInfo);
-    this.engine.logger.log(`needPrepareContext: ${needPrepareContext}`);
+
+    this.engine.logger.log(`optimizedQuery: ${optimizedQuery}`);
+    this.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
 
     if (needPrepareContext) {
       config.metadata.step = { name: 'analyzeContext' };
@@ -94,6 +97,7 @@ export class GenerateDoc extends BaseSkill {
           mentionedContext,
           maxTokens: remainingTokens,
           enableMentionedContext: hasContext,
+          rewrittenQueries,
         },
         {
           config,
@@ -122,10 +126,11 @@ export class GenerateDoc extends BaseSkill {
       context,
       images,
       originalQuery: query,
-      rewrittenQuery: optimizedQuery,
+      optimizedQuery,
+      rewrittenQueries,
     });
 
-    return { optimizedQuery, requestMessages, context, sources, usedChatHistory };
+    return { optimizedQuery, requestMessages, context, sources, usedChatHistory, rewrittenQueries };
   };
 
   // Add new method to generate title

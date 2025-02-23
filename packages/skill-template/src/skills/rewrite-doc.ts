@@ -181,7 +181,7 @@ export class RewriteDoc extends BaseSkill {
       context,
       images,
       originalQuery: query,
-      rewrittenQuery: optimizedQuery,
+      optimizedQuery,
     });
 
     return { requestMessages };

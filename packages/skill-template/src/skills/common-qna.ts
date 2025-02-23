@@ -68,6 +68,7 @@ export class CommonQnA extends BaseSkill {
       hasContext,
       remainingTokens,
       mentionedContext,
+      rewrittenQueries,
     } = await processQuery({
       config,
       ctxThis: this,
@@ -91,6 +92,7 @@ export class CommonQnA extends BaseSkill {
           mentionedContext,
           maxTokens: remainingTokens,
           enableMentionedContext: hasContext,
+          rewrittenQueries,
         },
         {
           config,
@@ -115,7 +117,8 @@ export class CommonQnA extends BaseSkill {
       context,
       images,
       originalQuery: query,
-      rewrittenQuery: optimizedQuery,
+      optimizedQuery,
+      rewrittenQueries,
     });
 
     return { requestMessages, sources };

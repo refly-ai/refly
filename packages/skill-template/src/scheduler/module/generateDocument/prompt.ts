@@ -8,6 +8,7 @@ import { buildContextFormat } from './context';
 import { noContextExamples, contextualExamples } from './examples';
 import { buildQueryPriorityInstruction, buildSpecificQueryInstruction } from '../common/query';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
+import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 
 export const buildGenerateDocumentCommonPrompt = (example: string) => `
 ## Core Capabilities and Goals
@@ -121,14 +122,16 @@ export const buildGenerateDocumentSystemPrompt = (_locale: string, needPrepareCo
 
 export const buildGenerateDocumentUserPrompt = ({
   originalQuery,
-  rewrittenQuery,
+  optimizedQuery,
+  rewrittenQueries,
   locale,
 }: {
   originalQuery: string;
-  rewrittenQuery: string;
+  optimizedQuery: string;
+  rewrittenQueries: string[];
   locale: string;
 }) => {
-  if (originalQuery === rewrittenQuery) {
+  if (originalQuery === optimizedQuery) {
     return `## User Query
      ${originalQuery}
 
@@ -143,11 +146,18 @@ export const buildGenerateDocumentUserPrompt = ({
      `;
   }
 
-  return `## Original User Query
- ${originalQuery}
- 
- ## Rewritten User Query
- ${rewrittenQuery}
+  return `## User Query
+
+### Original User Query
+${originalQuery}
+
+### Optimized User Query
+${optimizedQuery}
+
+### Rewritten User Queries
+${rewrittenQueries.map((query) => `- ${query}`).join('\n')}
+
+${buildQueryIntentAnalysisInstruction()}
 
  ${commonImportantNotes()}
 

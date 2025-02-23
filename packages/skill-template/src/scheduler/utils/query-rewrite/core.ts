@@ -87,9 +87,16 @@ export const postprocessContext = (
 
 // Add schema for query analysis
 const queryAnalysisSchema = z.object({
-  rewrittenQuery: z
-    .string()
-    .describe('The query after entity clarification, keeping original intent intact'),
+  analysis: z
+    .object({
+      queryAnalysis: z.string().describe('Understanding of the search intent and context'),
+      queryRewriteStrategy: z.string().describe('Strategy for query optimization'),
+      summary: z.string().describe('One-sentence summary of user core goal with context'),
+    })
+    .describe('Analysis of the search query'),
+
+  rewrittenQueries: z.array(z.string()).describe('Original query rewritten into focused aspects'),
+
   mentionedContext: z
     .array(
       z.object({
@@ -100,11 +107,6 @@ const queryAnalysisSchema = z.object({
       }),
     )
     .describe('Array of referenced context items'),
-  intent: z
-    .enum(['SEARCH_QA', 'WRITING', 'READING_COMPREHENSION', 'OTHER'])
-    .describe("The query's primary purpose"),
-  confidence: z.number().min(0).max(1).describe('Confidence score for the analysis'),
-  reasoning: z.string().describe('Explanation of why the query was kept or modified'),
 });
 
 export async function analyzeQueryAndContext(
@@ -158,13 +160,21 @@ export async function analyzeQueryAndContext(
      * ONLY when query contains ambiguous references like "as mentioned before", "like you said"
      * IGNORE chat history if query is self-contained or unrelated
 
-3. When to Rewrite
+3. Query Analysis & Rewrite Strategy
+   - Analyze query intent and context comprehensively
+   - Generate multiple focused sub-queries for different aspects
+   - Create a concise summary of user's core goal
+   - Identify and link relevant context items
+   - Maintain technical terms and domain-specific language
+
+4. When to Rewrite
    - Query contains ambiguous references ("this/it/that") to context or chat history
    - Query implicitly refers to selected content
    - Query needs entity specification
    - Query references previous conversation without clear context
+   - Query can be broken down into multiple focused aspects
 
-4. When NOT to Rewrite
+5. When NOT to Rewrite
    - Query is already specific and clear
    - Context and chat history are unrelated to query
    - Query explicitly states its target
@@ -198,18 +208,23 @@ Please analyze the query, focusing primarily on the current query and available 
       ctx?.config?.configurable?.modelInfo,
     );
 
-    ctx.ctxThis.engine.logger.log(`- Rewritten Query: ${result.rewrittenQuery}
+    ctx.ctxThis.engine.logger.log(`- Query Analysis: ${result.analysis.queryAnalysis}
+    - Rewrite Strategy: ${result.analysis.queryRewriteStrategy}
+    - Summary: ${result.analysis.summary}
+    - Rewritten Queries: ${safeStringifyJSON(result.rewrittenQueries)}
     - Mentioned Context: ${safeStringifyJSON(result.mentionedContext)}
-    - Intent: ${result.intent} (confidence: ${result.confidence})
-    - Reasoning: ${result.reasoning}
     `);
 
     return {
-      optimizedQuery: result?.rewrittenQuery || query,
+      optimizedQuery: result?.analysis?.summary || query,
       mentionedContext: postprocessContext(result?.mentionedContext, context),
-      intent: result?.intent,
-      confidence: result?.confidence,
-      reasoning: result?.reasoning,
+      rewrittenQueries: result?.rewrittenQueries || [query],
+      analysis: {
+        queryAnalysis: result?.analysis?.queryAnalysis ?? 'Query analysis not available',
+        queryRewriteStrategy:
+          result?.analysis?.queryRewriteStrategy ?? 'No rewrite strategy applied',
+        summary: result?.analysis?.summary ?? query,
+      },
     };
   } catch (error) {
     ctx.ctxThis.engine.logger.error(`Failed to analyze query: ${error}`);
@@ -217,9 +232,12 @@ Please analyze the query, focusing primarily on the current query and available 
     return {
       optimizedQuery: query,
       mentionedContext: { resources: [], documents: [], contentList: [] },
-      intent: 'OTHER',
-      confidence: 0,
-      reasoning: 'Analysis failed, using original query',
+      rewrittenQueries: [query],
+      analysis: {
+        queryAnalysis: 'Analysis failed',
+        queryRewriteStrategy: 'Using original query',
+        summary: query,
+      },
     };
   }
 }

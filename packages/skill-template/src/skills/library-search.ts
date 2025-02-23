@@ -62,16 +62,18 @@ export class LibrarySearch extends BaseSkill {
     };
 
     // Use shared query processor
-    const { optimizedQuery, query, usedChatHistory, remainingTokens } = await processQuery({
-      config,
-      ctxThis: this,
-      state,
-    });
+    const { optimizedQuery, rewrittenQueries, query, usedChatHistory, remainingTokens } =
+      await processQuery({
+        config,
+        ctxThis: this,
+        state,
+      });
 
     // Prepare context with library search focus
     const librarySearchContext = await prepareContext(
       {
         query: optimizedQuery,
+        rewrittenQueries,
         mentionedContext: {
           contentList: [],
           resources: [],
@@ -129,7 +131,8 @@ export class LibrarySearch extends BaseSkill {
       context: contextStr,
       images,
       originalQuery: query,
-      rewrittenQuery: optimizedQuery,
+      optimizedQuery,
+      rewrittenQueries,
     });
 
     // Generate answer using the model

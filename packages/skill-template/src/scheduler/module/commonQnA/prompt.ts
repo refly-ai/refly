@@ -9,6 +9,7 @@ import { buildContextDisplayInstruction } from '../common/context';
 import { buildCommonQnAExamples, buildCommonQnAChatHistoryExamples } from './examples';
 import { buildCitationRules } from '../common/citationRules';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
+import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 
 export const buildNoContextCommonQnASystemPrompt = () => {
   return `You are an AI assistant developed by Refly. Your task is to provide helpful, accurate, and concise information to users' queries.
@@ -113,14 +114,16 @@ export const buildCommonQnASystemPrompt = (_locale: string, needPrepareContext: 
 
 export const buildCommonQnAUserPrompt = ({
   originalQuery,
-  rewrittenQuery,
+  optimizedQuery,
+  rewrittenQueries,
   locale,
 }: {
   originalQuery: string;
-  rewrittenQuery: string;
+  optimizedQuery: string;
+  rewrittenQueries: string[];
   locale: string;
 }) => {
-  if (originalQuery === rewrittenQuery) {
+  if (originalQuery === optimizedQuery) {
     return `## User Query
     ${originalQuery}
 
@@ -132,11 +135,19 @@ export const buildCommonQnAUserPrompt = ({
     `;
   }
 
-  return `## Original User Query
+  return `## User Query
+
+### Original User Query
 ${originalQuery}
 
-## Rewritten User Query
-${rewrittenQuery}
+### Optimized User Query
+${optimizedQuery}
+
+### Rewritten User Queries
+${rewrittenQueries.join('\n')}
+
+${buildQueryIntentAnalysisInstruction()}
+
 
 ## Important
 ${chatHistoryReminder()}

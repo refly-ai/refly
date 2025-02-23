@@ -3,6 +3,7 @@ import { Source, ResourceType } from '@refly-packages/openapi-schema';
 import { truncateContext, truncateMessages } from './truncator';
 import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { getClientOrigin } from '@refly-packages/utils';
+import { MAX_NEED_RECALL_TOKEN } from './constants';
 
 export const concatChatHistoryToStr = (messages: BaseMessage[]) => {
   let chatHistoryStr = '';
@@ -35,29 +36,33 @@ export const concatMergedContextToStr = (mergedContext: {
   let contextStr = '';
   const currentIndex = 1; // Start index
 
-  // Handle web search sources
-  const webSearchContexConcatRes = concatContextToStr({ webSearchSources }, currentIndex);
-
-  // Only process mentioned and lower priority contexts if they exist
+  // Process mentioned context first
   const mentionedContextConcatRes = mentionedContext
-    ? concatContextToStr(mentionedContext, webSearchContexConcatRes.nextIndex)
-    : { contextStr: '', nextIndex: webSearchContexConcatRes.nextIndex };
+    ? concatContextToStr(mentionedContext, currentIndex)
+    : { contextStr: '', nextIndex: currentIndex };
 
+  // Then process lower priority context
   const lowerPriorityContextConcatRes = lowerPriorityContext
     ? concatContextToStr(lowerPriorityContext, mentionedContextConcatRes.nextIndex)
     : { contextStr: '', nextIndex: mentionedContextConcatRes.nextIndex };
 
-  // Only add sections that have content
-  if (webSearchContexConcatRes.contextStr?.length > 0) {
-    contextStr += `<WebSearchContext>\n${webSearchContexConcatRes.contextStr}\n</WebSearchContext>\n\n`;
-  }
+  // Finally process web search sources
+  const webSearchContexConcatRes = concatContextToStr(
+    { webSearchSources },
+    lowerPriorityContextConcatRes.nextIndex,
+  );
 
+  // Add sections in priority order
   if (mentionedContextConcatRes.contextStr?.length > 0) {
     contextStr += `<MentionedContext>\n${mentionedContextConcatRes.contextStr}\n</MentionedContext>\n\n`;
   }
 
   if (lowerPriorityContextConcatRes.contextStr?.length > 0) {
     contextStr += `<OtherContext>\n${lowerPriorityContextConcatRes.contextStr}\n</OtherContext>\n\n`;
+  }
+
+  if (webSearchContexConcatRes.contextStr?.length > 0) {
+    contextStr += `<WebSearchContext>\n${webSearchContexConcatRes.contextStr}\n</WebSearchContext>\n\n`;
   }
 
   return contextStr.trim();
@@ -71,13 +76,14 @@ export const flattenMergedContextToSources = (mergedContext: {
   const { mentionedContext, lowerPriorityContext, webSearchSources = [] } = mergedContext || {};
 
   const sources = [
-    // Always include web search sources
+    // Prioritize mentioned context
+    ...(mentionedContext ? flattenContextToSources(mentionedContext) : []),
+    // Then lower priority context
+    ...(lowerPriorityContext ? flattenContextToSources(lowerPriorityContext) : []),
+    // Finally web search sources
     ...flattenContextToSources({
       webSearchSources,
     }),
-    // Only include other contexts if they exist
-    ...(mentionedContext ? flattenContextToSources(mentionedContext) : []),
-    ...(lowerPriorityContext ? flattenContextToSources(lowerPriorityContext) : []),
   ];
 
   // Remove duplicates while preserving order
@@ -100,21 +106,6 @@ export const concatContextToStr = (context: Partial<IContext>, startIndex = 1) =
 
   let contextStr = '';
   let index = startIndex; // Use passed in startIndex
-
-  if (webSearchSources.length > 0) {
-    // contextStr += 'Following are the web search results: \n';
-    const concatWebSearchSource = (url: string, title: string, content: string) => {
-      return `<ContextItem citationIndex='[[citation:${index++}]]' type='webSearchSource' url='${url}' title='${title}'>${content}</WebSearchSource>`;
-    };
-
-    contextStr += webSearchSources
-      .map((s) => concatWebSearchSource(s.url, s.title, s.pageContent))
-      .join('\n');
-    contextStr += '\n\n';
-  }
-
-  // TODO: prior handle mentioned context, includes mentioned contentList, documents, and resources
-  // TODO: otherwise, the context more front will be more priority, should be most focused in the prompt
 
   if (contentList.length > 0) {
     // contextStr += 'Following are the user selected content: \n';
@@ -174,25 +165,43 @@ export const concatContextToStr = (context: Partial<IContext>, startIndex = 1) =
     contextStr += `\n\n<KnowledgeBaseResources>\n${resourceStr}\n</KnowledgeBaseResources>\n\n`;
   }
 
+  if (webSearchSources.length > 0) {
+    // contextStr += 'Following are the web search results: \n';
+    const concatWebSearchSource = (url: string, title: string, content: string) => {
+      return `<ContextItem citationIndex='[[citation:${index++}]]' type='webSearchSource' url='${url}' title='${title}'>${content}</WebSearchSource>`;
+    };
+
+    contextStr += webSearchSources
+      .map((s) => concatWebSearchSource(s.url, s.title, s.pageContent))
+      .join('\n');
+    contextStr += '\n\n';
+  }
+
   return { contextStr, nextIndex: index };
 };
 
-export const summarizeContext = (context: IContext, maxContextTokens: number): string => {
+export const summarizeContext = (
+  context: IContext,
+  maxContextTokens: number,
+  maxContentLength: number = MAX_NEED_RECALL_TOKEN,
+): string => {
   const { contentList = [], resources = [], documents = [] } = context || {};
   const previewedContext: IContext = {
     resources: resources.map((r) => ({
       ...r,
-      content: r?.resource?.contentPreview || `${r.resource?.content?.slice(0, 50)}...`,
+      content: `${r.resource?.content?.slice(0, maxContentLength)}...`,
     })),
     documents: documents.map((n) => ({
       ...n,
-      content: n?.document?.contentPreview || `${n.document?.content?.slice(0, 50)}...`,
+      content: `${n.document?.content?.slice(0, maxContentLength)}...`,
     })),
-    contentList: contentList.map((c) => ({ ...c, content: `${c.content?.slice(0, 50)}...` })),
+    contentList: contentList.map((c) => ({
+      ...c,
+      content: `${c.content?.slice(0, maxContentLength)}...`,
+    })),
   };
   const truncatedContext = truncateContext(previewedContext, maxContextTokens);
 
-  // contentPreview just about 100~150 tokens, cannot overflow
   const contextConcatRes = concatContextToStr(truncatedContext, 1);
 
   return contextConcatRes.contextStr || 'no available context';
