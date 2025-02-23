@@ -215,10 +215,12 @@ Please analyze the query, focusing primarily on the current query and available 
     - Mentioned Context: ${safeStringifyJSON(result.mentionedContext)}
     `);
 
+    const optimizedQuery = result?.analysis?.summary || query;
+
     return {
-      optimizedQuery: result?.analysis?.summary || query,
+      optimizedQuery,
       mentionedContext: postprocessContext(result?.mentionedContext, context),
-      rewrittenQueries: result?.rewrittenQueries || [query],
+      rewrittenQueries: [optimizedQuery, query, ...(result?.rewrittenQueries || [])],
       analysis: {
         queryAnalysis: result?.analysis?.queryAnalysis ?? 'Query analysis not available',
         queryRewriteStrategy:
