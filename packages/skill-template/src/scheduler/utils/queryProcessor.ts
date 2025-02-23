@@ -5,20 +5,12 @@ import { isEmptyMessage, truncateMessages } from './truncator';
 import { analyzeQueryAndContext, preprocessQuery } from './query-rewrite/index';
 import { safeStringifyJSON } from '@refly-packages/utils';
 import { checkIsSupportedModel } from './model';
+import { QueryProcessorResult } from '../types';
 
 interface QueryProcessorOptions {
   config: SkillRunnableConfig;
   ctxThis: BaseSkill;
   state: GraphState;
-}
-
-interface QueryProcessorResult {
-  optimizedQuery: string;
-  query: string;
-  usedChatHistory: any[];
-  hasContext: boolean;
-  remainingTokens: number;
-  mentionedContext: any;
 }
 
 export async function processQuery(options: QueryProcessorOptions): Promise<QueryProcessorResult> {
@@ -34,6 +26,7 @@ export async function processQuery(options: QueryProcessorOptions): Promise<Quer
   const { tplConfig } = config?.configurable || {};
 
   let optimizedQuery = '';
+  let rewrittenQueries: string[] = [];
   let mentionedContext: any;
 
   // Preprocess query
@@ -83,13 +76,15 @@ export async function processQuery(options: QueryProcessorOptions): Promise<Quer
         state,
         tplConfig,
       });
-      optimizedQuery = analyzedRes.optimizedQuery;
+      optimizedQuery = analyzedRes.analysis.summary;
       mentionedContext = analyzedRes.mentionedContext;
+      rewrittenQueries = analyzedRes.rewrittenQueries;
     }
   }
 
   ctxThis.engine.logger.log(`optimizedQuery: ${optimizedQuery}`);
   ctxThis.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
+  ctxThis.engine.logger.log(`rewrittenQueries: ${safeStringifyJSON(rewrittenQueries)}`);
 
   return {
     optimizedQuery,
@@ -98,5 +93,6 @@ export async function processQuery(options: QueryProcessorOptions): Promise<Quer
     hasContext,
     remainingTokens,
     mentionedContext,
+    rewrittenQueries,
   };
 }

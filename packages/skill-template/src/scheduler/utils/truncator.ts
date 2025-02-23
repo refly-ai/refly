@@ -11,10 +11,8 @@ import { IContext, GraphState } from '../types';
 import { countToken } from './token';
 import { BaseMessage, MessageContent } from '@langchain/core/messages';
 
-// configurable params
-const MAX_MESSAGES = 20;
-const MAX_MESSAGE_TOKENS = 4000;
-const MAX_MESSAGES_TOTAL_TOKENS = 20000;
+// chat history params
+import { MAX_MESSAGES, MAX_MESSAGE_TOKENS, MAX_MESSAGES_TOTAL_TOKENS } from './constants';
 
 export const isEmptyMessage = (message: BaseMessage) => {
   if (typeof message.content === 'string') {

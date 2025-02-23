@@ -28,11 +28,13 @@ export async function prepareContext(
     mentionedContext,
     maxTokens,
     enableMentionedContext,
+    rewrittenQueries,
   }: {
     query: string;
     mentionedContext: IContext;
     maxTokens: number;
     enableMentionedContext: boolean;
+    rewrittenQueries?: string[];
   },
   ctx: {
     config: SkillRunnableConfig;
@@ -65,6 +67,7 @@ export async function prepareContext(
     const preparedRes = await prepareWebSearchContext(
       {
         query,
+        rewrittenQueries,
         enableQueryRewrite: isSupportedModel,
       },
       ctx,
@@ -179,11 +182,13 @@ export async function prepareContext(
 export async function prepareWebSearchContext(
   {
     query,
+    rewrittenQueries,
     enableQueryRewrite = true,
     enableTranslateQuery = false,
     enableTranslateResult = false,
   }: {
     query: string;
+    rewrittenQueries?: string[];
     enableQueryRewrite?: boolean;
     enableTranslateQuery?: boolean;
     enableTranslateResult?: boolean;
@@ -225,6 +230,7 @@ export async function prepareWebSearchContext(
   // Call multiLingualWebSearch instead of webSearch
   const searchResult = await callMultiLingualWebSearch(
     {
+      rewrittenQueries,
       searchLimit,
       searchLocaleList,
       resultDisplayLocale: locale || 'auto',

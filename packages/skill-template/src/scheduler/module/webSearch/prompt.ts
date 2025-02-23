@@ -9,6 +9,7 @@ import { buildWebSearchChatHistoryExamples } from './examples';
 import { buildQueryPriorityInstruction, buildSpecificQueryInstruction } from '../common/query';
 import { buildContextFormat } from './context';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
+import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 
 export const buildWebSearchSystemPrompt = () => {
   return `You are an AI assistant developed by Refly, specializing in providing accurate information based on web search results. Your task is to synthesize information from multiple web sources to provide comprehensive and accurate answers.
@@ -55,14 +56,16 @@ ${buildSpecificQueryInstruction()}
 
 export const buildWebSearchUserPrompt = ({
   originalQuery,
-  rewrittenQuery,
+  optimizedQuery,
+  rewrittenQueries,
   locale,
 }: {
   originalQuery: string;
-  rewrittenQuery: string;
+  optimizedQuery: string;
+  rewrittenQueries: string[];
   locale: string;
 }) => {
-  if (originalQuery === rewrittenQuery) {
+  if (originalQuery === optimizedQuery) {
     return `## Search Query
 ${originalQuery}
 
@@ -74,11 +77,18 @@ ${buildLocaleFollowInstruction(locale)}
 `;
   }
 
-  return `## Original Search Query
+  return `## User Query
+
+### Original Search Query
 ${originalQuery}
 
-## Optimized Search Query
-${rewrittenQuery}
+### Optimized Search Query
+${optimizedQuery}
+
+### Rewritten Search Queries
+${rewrittenQueries.map((query) => `- ${query}`).join('\n')}
+
+${buildQueryIntentAnalysisInstruction()}
 
 ${buildCitationReminder()}
 

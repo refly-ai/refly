@@ -8,6 +8,7 @@ import { buildLibrarySearchExamples, buildLibrarySearchChatHistoryExamples } fro
 import { buildQueryPriorityInstruction, buildSpecificQueryInstruction } from '../common/query';
 import { buildContextFormat } from './context';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
+import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 
 export const buildLibrarySearchSystemPrompt = () => {
   return `You are an AI assistant developed by Refly, specializing in knowledge base search and information retrieval. Your task is to provide accurate answers based on the organization's internal knowledge base.
@@ -54,14 +55,16 @@ ${buildSpecificQueryInstruction()}
 
 export const buildLibrarySearchUserPrompt = ({
   originalQuery,
-  rewrittenQuery,
+  optimizedQuery,
+  rewrittenQueries,
   locale,
 }: {
   originalQuery: string;
-  rewrittenQuery: string;
+  optimizedQuery: string;
+  rewrittenQueries: string[];
   locale: string;
 }) => {
-  if (originalQuery === rewrittenQuery) {
+  if (originalQuery === optimizedQuery) {
     return `## Knowledge Base Query
 ${originalQuery}
 
@@ -73,11 +76,18 @@ ${buildLocaleFollowInstruction(locale)}
 `;
   }
 
-  return `## Original Knowledge Base Query
+  return `## User Query
+
+### Original User Query
 ${originalQuery}
 
-## Optimized Knowledge Base Query
-${rewrittenQuery}
+### Optimized Knowledge Base Query
+${optimizedQuery}
+
+### Rewritten Knowledge Base Queries
+${rewrittenQueries.join('\n')}
+
+${buildQueryIntentAnalysisInstruction()}
 
 ${buildCitationReminder()}
 

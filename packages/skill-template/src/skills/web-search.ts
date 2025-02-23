@@ -76,12 +76,18 @@ export class WebSearch extends BaseSkill {
     };
 
     // Use shared query processor
-    const { optimizedQuery, query, usedChatHistory, remainingTokens, mentionedContext } =
-      await processQuery({
-        config,
-        ctxThis: this,
-        state,
-      });
+    const {
+      optimizedQuery,
+      query,
+      usedChatHistory,
+      remainingTokens,
+      mentionedContext,
+      rewrittenQueries,
+    } = await processQuery({
+      config,
+      ctxThis: this,
+      state,
+    });
 
     // Prepare context with web search focus
     const { contextStr, sources } = await prepareContext(
@@ -90,6 +96,7 @@ export class WebSearch extends BaseSkill {
         mentionedContext,
         maxTokens: remainingTokens,
         enableMentionedContext: true,
+        rewrittenQueries,
       },
       {
         config,
@@ -141,7 +148,8 @@ export class WebSearch extends BaseSkill {
       context: contextStr,
       images,
       originalQuery: query,
-      rewrittenQuery: optimizedQuery,
+      optimizedQuery,
+      rewrittenQueries,
     });
 
     // Generate answer using the model
