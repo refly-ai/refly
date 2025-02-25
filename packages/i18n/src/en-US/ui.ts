@@ -183,7 +183,7 @@ const translations = {
     },
     features: {
       tag: 'Core Features',
-      title: "Refly's Key Features",
+      title: "Refly's",
       fileFormats: {
         pdf: {
           name: 'document.pdf',
