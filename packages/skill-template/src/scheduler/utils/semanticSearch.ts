@@ -556,72 +556,6 @@ export async function processMentionedContextWithSimilarity(
   };
 }
 
-export async function processWholeSpaceWithSimilarity(
-  query: string,
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
-): Promise<(SkillContextResourceItem | SkillContextDocumentItem)[]> {
-  // 1. scope projects for get relevant chunks
-  const relevantChunks = await knowledgeBaseSearchGetRelevantChunks(
-    query,
-    {
-      entities: [],
-      domains: ['resource', 'document'],
-      limit: 10,
-    },
-    ctx,
-  );
-
-  // If knowledge base search returns empty results, fallback to in-memory search
-  if (!relevantChunks || relevantChunks.length === 0) {
-    // Since we don't have specific content to search in memory, we'll return empty array
-    return [];
-  }
-
-  // 2. Group chunks by domain and id
-  const groupedChunks: { [key: string]: DocumentInterface[] } = {};
-  for (const chunk of relevantChunks) {
-    const key = `${chunk.metadata.domain}_${chunk.id}`;
-    if (!groupedChunks[key]) {
-      groupedChunks[key] = [];
-    }
-    groupedChunks[key].push(chunk);
-  }
-
-  // 3. Concatenate results
-  const result: (SkillContextResourceItem | SkillContextDocumentItem)[] = [];
-  for (const key in groupedChunks) {
-    const [domain, id] = key.split('_');
-    const assembledContent = assembleChunks(groupedChunks[key]);
-
-    if (domain === 'resource') {
-      result.push({
-        resource: {
-          resourceId: id,
-          content: assembledContent,
-          title: groupedChunks[key][0]?.metadata?.title,
-          data: {
-            url: groupedChunks[key][0]?.metadata?.url,
-          },
-        },
-      } as SkillContextResourceItem);
-    } else if (domain === 'document') {
-      result.push({
-        document: {
-          docId: id,
-          content: assembledContent,
-          title: groupedChunks[key][0]?.metadata?.title,
-          data: {
-            url: groupedChunks[key][0]?.metadata?.url,
-          },
-        },
-      } as SkillContextDocumentItem);
-    }
-  }
-
-  return result;
-}
-
-// TODO: 召回有问题，需要优化
 export async function knowledgeBaseSearchGetRelevantChunks(
   query: string,
   metadata: { entities: Entity[]; domains: SearchDomain[]; limit: number },
@@ -649,7 +583,7 @@ export async function knowledgeBaseSearchGetRelevantChunks(
     },
   }));
 
-  return relevantChunks;
+  return relevantChunks || [];
 }
 
 // TODO: 召回有问题，需要优化

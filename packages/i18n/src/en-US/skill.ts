@@ -58,6 +58,9 @@ const translations = {
     description: 'Search the library and get answers',
     placeholder: 'Search the library and get answers...',
     steps: {
+      analyzeContext: {
+        name: 'Context Analysis',
+      },
       librarySearch: {
         name: 'Library Search',
       },

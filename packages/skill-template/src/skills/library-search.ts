@@ -62,23 +62,25 @@ export class LibrarySearch extends BaseSkill {
     };
 
     // Use shared query processor
-    const { optimizedQuery, rewrittenQueries, query, usedChatHistory, remainingTokens } =
-      await processQuery({
-        config,
-        ctxThis: this,
-        state,
-      });
+    const {
+      optimizedQuery,
+      rewrittenQueries,
+      query,
+      usedChatHistory,
+      remainingTokens,
+      mentionedContext,
+    } = await processQuery({
+      config,
+      ctxThis: this,
+      state,
+    });
 
     // Prepare context with library search focus
-    const librarySearchContext = await prepareContext(
+    const { contextStr, sources } = await prepareContext(
       {
         query: optimizedQuery,
         rewrittenQueries,
-        mentionedContext: {
-          contentList: [],
-          resources: [],
-          documents: [],
-        },
+        mentionedContext,
         maxTokens: remainingTokens,
         enableMentionedContext: true,
       },
@@ -89,8 +91,6 @@ export class LibrarySearch extends BaseSkill {
         tplConfig: config.configurable.tplConfig,
       },
     );
-
-    const { contextStr, sources } = librarySearchContext;
 
     // Set current step for answer generation
     config.metadata.step = { name: 'answerQuestion' };

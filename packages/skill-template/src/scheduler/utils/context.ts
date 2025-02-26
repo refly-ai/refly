@@ -1,26 +1,22 @@
 import { GraphState, IContext } from '../types';
-import { countContextTokens, countWebSearchContextTokens, checkHasContext } from './token';
+import { countContextTokens, countSourcesTokens, checkHasContext } from './token';
 import {
   processSelectedContentWithSimilarity,
   processDocumentsWithSimilarity,
   processResourcesWithSimilarity,
-  processWholeSpaceWithSimilarity,
   processMentionedContextWithSimilarity,
 } from './semanticSearch';
 import { BaseSkill, SkillRunnableConfig } from '../../base';
-import { mergeAndTruncateContexts, truncateContext } from './truncator';
+import { truncateContext } from './truncator';
 import { flattenMergedContextToSources, concatMergedContextToStr } from './summarizer';
-import {
-  SkillContextDocumentItem,
-  SkillContextResourceItem,
-  SkillTemplateConfig,
-  Source,
-} from '@refly-packages/openapi-schema';
+import { SkillTemplateConfig, Source } from '@refly-packages/openapi-schema';
 import { uniqBy } from 'lodash';
 import { MAX_CONTEXT_RATIO } from './constants';
 import { safeStringifyJSON } from '@refly-packages/utils';
 import { callMultiLingualWebSearch } from '../module/multiLingualSearch';
+import { callMultiLingualLibrarySearch } from '../module/multiLingualLibrarySearch';
 import { checkIsSupportedModel, checkModelContextLenSupport } from './model';
+import { SkillContextContentItemMetadata } from '../types';
 
 export async function prepareContext(
   {
@@ -74,12 +70,35 @@ export async function prepareContext(
     );
     processedWebSearchContext = preparedRes.processedWebSearchContext;
   }
-  const webSearchContextTokens = countWebSearchContextTokens(
-    processedWebSearchContext.webSearchSources,
-  );
+  const webSearchContextTokens = countSourcesTokens(processedWebSearchContext.webSearchSources);
   remainingTokens = maxContextTokens - webSearchContextTokens;
 
-  // 2. mentioned context
+  // 2. library search context
+  let processedLibrarySearchContext: IContext = {
+    contentList: [],
+    resources: [],
+    documents: [],
+    librarySearchSources: [],
+  };
+  if (enableKnowledgeBaseSearch) {
+    const librarySearchRes = await performLibrarySearchContext(
+      {
+        query,
+        rewrittenQueries,
+        enableQueryRewrite: isSupportedModel,
+        enableSearchWholeSpace: true,
+      },
+      ctx,
+    );
+    processedLibrarySearchContext = librarySearchRes.processedLibrarySearchContext;
+    // Adjust remaining tokens based on library search results
+    const librarySearchContextTokens = countSourcesTokens(
+      processedLibrarySearchContext.librarySearchSources,
+    );
+    remainingTokens -= librarySearchContextTokens;
+  }
+
+  // 3. mentioned context
   let processedMentionedContext: IContext = {
     contentList: [],
     resources: [],
@@ -99,71 +118,77 @@ export async function prepareContext(
     remainingTokens -= mentionContextRes.mentionedContextTokens || 0;
   }
 
-  // 3. lower priority context
-  let lowerPriorityContext: IContext = {
+  // 4. relevant context from user-provided content (if there are tokens remaining)
+  let relevantContext: IContext = {
     contentList: [],
     resources: [],
     documents: [],
   };
-  if (remainingTokens > 0 && (enableMentionedContext || enableKnowledgeBaseSearch)) {
+  if (
+    remainingTokens > 0 &&
+    (ctx.config.configurable.contentList?.length > 0 ||
+      ctx.config.configurable.resources?.length > 0 ||
+      ctx.config.configurable.documents?.length > 0)
+  ) {
     const { contentList = [], resources = [], documents = [] } = ctx.config.configurable;
-    // prev remove overlapping items in mentioned context
-    ctx.ctxThis.engine.logger.log(
-      `Remove Overlapping Items In Mentioned Context...
-      - mentionedContext: ${safeStringifyJSON(processedMentionedContext)}
-      - context: ${safeStringifyJSON({
-        contentList,
-        resources,
-        documents,
-      })}
-      `,
-    );
 
-    const context = removeOverlappingContextItems(processedMentionedContext, {
+    // Remove overlapping items with mentioned context
+    const filteredContext = removeOverlappingContextItems(processedMentionedContext, {
       contentList,
       resources,
       documents,
     });
 
-    lowerPriorityContext = await prepareLowerPriorityContext(
+    // Get relevant context directly
+    relevantContext = await prepareRelevantContext(
       {
         query,
-        maxLowerPriorityContextTokens: remainingTokens,
-        context,
-        processedMentionedContext,
+        context: filteredContext,
       },
       ctx,
     );
+
+    // Truncate to fit within token limits
+    if (countContextTokens(relevantContext) > remainingTokens) {
+      relevantContext = truncateContext(relevantContext, remainingTokens);
+    }
   }
 
-  ctx.ctxThis.engine.logger.log(
-    `Prepared Lower Priority before deduplication! ${safeStringifyJSON(lowerPriorityContext)}`,
-  );
+  ctx.ctxThis.engine.logger.log(`Prepared Relevant Context: ${safeStringifyJSON(relevantContext)}`);
 
-  const deduplicatedLowerPriorityContext = deduplicateContexts(lowerPriorityContext);
+  // Merge all contexts with proper deduplication
+  const deduplicatedRelevantContext = deduplicateContexts(relevantContext);
   const mergedContext = {
     mentionedContext: processedMentionedContext,
-    lowerPriorityContext: deduplicatedLowerPriorityContext,
+    relevantContext: deduplicatedRelevantContext,
     webSearchSources: processedWebSearchContext.webSearchSources,
+    librarySearchSources: removeOverlappingLibrarySearchSources(
+      processedLibrarySearchContext.librarySearchSources,
+      processedMentionedContext,
+      deduplicatedRelevantContext,
+      ctx.ctxThis.engine.logger,
+    ),
   };
 
-  ctx.ctxThis.engine.logger.log(
-    `Prepared Lower Priority after deduplication! ${safeStringifyJSON(mergedContext)}`,
-  );
+  ctx.ctxThis.engine.logger.log(`Merged Context: ${safeStringifyJSON(mergedContext)}`);
 
   const hasMentionedContext = checkHasContext(processedMentionedContext);
-  const hasLowerPriorityContext = checkHasContext(deduplicatedLowerPriorityContext);
+  const hasRelevantContext = checkHasContext(relevantContext);
 
-  // may optimize web search sources by context
-  const LIMIT_WEB_SEARCH_SOURCES_COUNT = 10;
-  if (hasMentionedContext || hasLowerPriorityContext) {
+  // Limit search sources count when we have other context
+  const LIMIT_SEARCH_SOURCES_COUNT = 10;
+  if (hasMentionedContext || hasRelevantContext) {
     mergedContext.webSearchSources = mergedContext.webSearchSources.slice(
       0,
-      LIMIT_WEB_SEARCH_SOURCES_COUNT,
+      LIMIT_SEARCH_SOURCES_COUNT,
+    );
+    mergedContext.librarySearchSources = mergedContext.librarySearchSources.slice(
+      0,
+      LIMIT_SEARCH_SOURCES_COUNT,
     );
   }
 
-  // TODO: need add rerank here
+  // Generate final context string and sources
   const contextStr = concatMergedContextToStr(mergedContext);
   const sources = flattenMergedContextToSources(mergedContext);
 
@@ -346,66 +371,6 @@ export async function prepareMentionedContext(
   };
 }
 
-export async function prepareLowerPriorityContext(
-  {
-    query,
-    maxLowerPriorityContextTokens,
-    context,
-    processedMentionedContext,
-  }: {
-    query: string;
-    maxLowerPriorityContextTokens: number;
-    context: IContext;
-    processedMentionedContext: IContext;
-  },
-  ctx: {
-    config: SkillRunnableConfig;
-    ctxThis: BaseSkill;
-    state: GraphState;
-    tplConfig: SkillTemplateConfig;
-  },
-): Promise<IContext> {
-  ctx.ctxThis.engine.logger.log(`Prepare Lower Priority Context..., ${safeStringifyJSON(context)}`);
-
-  // 1. relevant context
-  const relevantContext = await prepareRelevantContext(
-    {
-      query,
-      context,
-    },
-    ctx,
-  );
-
-  // 2. container level context
-  const containerLevelContext = await prepareContainerLevelContext(
-    {
-      query,
-      context,
-    },
-    ctx,
-  );
-
-  // 3. remove overlapping items in container level context
-  const removeOverlappingItemsInContainerLevelContext = removeOverlappingContextItems(
-    relevantContext,
-    removeOverlappingContextItems(processedMentionedContext, containerLevelContext),
-  );
-
-  const finalContext = await mergeAndTruncateContexts(
-    relevantContext,
-    removeOverlappingItemsInContainerLevelContext,
-    query,
-    maxLowerPriorityContextTokens,
-    ctx,
-  );
-
-  ctx.ctxThis.engine.logger.log(
-    `Prepared Lower Priority Context successfully! ${safeStringifyJSON(finalContext)}`,
-  );
-
-  return finalContext;
-}
-
 export async function prepareRelevantContext(
   {
     query,
@@ -455,79 +420,13 @@ export async function prepareRelevantContext(
   return relevantContexts;
 }
 
-export async function prepareContainerLevelContext(
-  {
-    query,
-    context,
-  }: {
-    query: string;
-    context: IContext;
-  },
-  ctx: {
-    config: SkillRunnableConfig;
-    ctxThis: BaseSkill;
-    state: GraphState;
-    tplConfig: SkillTemplateConfig;
-  },
-): Promise<IContext> {
-  const enableKnowledgeBaseSearch = ctx.tplConfig?.enableKnowledgeBaseSearch?.value;
-  const enableSearchWholeSpace = enableKnowledgeBaseSearch;
-
-  const processedContext: IContext = {
-    contentList: [],
-    resources: [],
-    documents: [],
-  };
-
-  ctx.ctxThis.engine.logger.log(
-    `Prepare Container Level Context..., 
-     - context: ${safeStringifyJSON(context)}
-     - enableKnowledgeBaseSearch: ${enableKnowledgeBaseSearch}
-     - enableSearchWholeSpace: ${enableSearchWholeSpace}
-     - processedContext: ${safeStringifyJSON(processedContext)}`,
-  );
-
-  // 2. whole space search context
-  const relevantResourcesOrDocumentsFromWholeSpace = enableSearchWholeSpace
-    ? await processWholeSpaceWithSimilarity(query, ctx)
-    : [];
-
-  // 3. Group by resource and document, deduplicate, and place in processedContext
-  const uniqueResourceIds = new Set<string>();
-  const uniqueDocIds = new Set<string>();
-
-  const addUniqueItem = (item: SkillContextResourceItem | SkillContextDocumentItem) => {
-    if ('resource' in item && item.resource) {
-      const resourceId = item.resource.resourceId;
-      if (!uniqueResourceIds.has(resourceId)) {
-        uniqueResourceIds.add(resourceId);
-        processedContext.resources.push(item);
-      }
-    } else if ('document' in item && item.document) {
-      const docId = item.document.docId;
-      if (!uniqueDocIds.has(docId)) {
-        uniqueDocIds.add(docId);
-        processedContext.documents.push(item);
-      }
-    }
-  };
-
-  // Then add items from whole space
-  relevantResourcesOrDocumentsFromWholeSpace.forEach(addUniqueItem);
-
-  ctx.ctxThis.engine.logger.log(
-    `Prepared Container Level Context successfully! ${safeStringifyJSON(processedContext)}`,
-  );
-
-  return processedContext;
-}
-
 export function deduplicateContexts(context: IContext): IContext {
   return {
     contentList: uniqBy(context.contentList || [], 'content'),
     resources: uniqBy(context.resources || [], (item) => item.resource?.content),
     documents: uniqBy(context.documents || [], (item) => item.document?.content),
     webSearchSources: uniqBy(context.webSearchSources || [], (item) => item?.pageContent),
+    librarySearchSources: uniqBy(context.librarySearchSources || [], (item) => item?.pageContent),
   };
 }
 
@@ -628,3 +527,264 @@ export const mutateContextMetadata = (
 
   return originalContext;
 };
+
+export async function performLibrarySearchContext(
+  {
+    query,
+    rewrittenQueries,
+    enableQueryRewrite = true,
+    enableTranslateQuery = false,
+    enableTranslateResult = false,
+    enableSearchWholeSpace = false,
+  }: {
+    query: string;
+    rewrittenQueries?: string[];
+    enableQueryRewrite?: boolean;
+    enableTranslateQuery?: boolean;
+    enableTranslateResult?: boolean;
+    enableSearchWholeSpace?: boolean;
+  },
+  ctx: {
+    config: SkillRunnableConfig;
+    ctxThis: BaseSkill;
+    state: GraphState;
+    tplConfig: SkillTemplateConfig;
+  },
+): Promise<{
+  processedLibrarySearchContext: IContext;
+}> {
+  ctx.ctxThis.engine.logger.log('Prepare Library Search Context...');
+
+  // Configure search parameters
+  const enableDeepSearch = (ctx.tplConfig?.enableDeepSearch?.value as boolean) || false;
+  const { locale = 'en' } = ctx?.config?.configurable || {};
+
+  let searchLimit = 10;
+  const enableRerank = true;
+  const searchLocaleList: string[] = ['en'];
+  let rerankRelevanceThreshold = 0.2;
+
+  if (enableDeepSearch) {
+    searchLimit = 20;
+    enableTranslateQuery = true;
+    rerankRelevanceThreshold = 0.4;
+  }
+
+  const processedLibrarySearchContext: IContext = {
+    contentList: [],
+    resources: [],
+    documents: [],
+    librarySearchSources: [],
+  };
+
+  // Call multiLingualLibrarySearch
+  const searchResult = await callMultiLingualLibrarySearch(
+    {
+      rewrittenQueries,
+      searchLimit,
+      searchLocaleList,
+      resultDisplayLocale: locale || 'auto',
+      enableRerank,
+      enableTranslateQuery,
+      enableTranslateResult,
+      rerankRelevanceThreshold,
+      translateConcurrencyLimit: 10,
+      libraryConcurrencyLimit: 3,
+      batchSize: 5,
+      enableDeepSearch,
+      enableQueryRewrite,
+      enableSearchWholeSpace,
+    },
+    {
+      config: ctx.config,
+      ctxThis: ctx.ctxThis,
+      state: { ...ctx.state, query },
+    },
+  );
+
+  // Take only first 10 sources for models with limited context length
+  const isModelContextLenSupport = checkModelContextLenSupport(
+    ctx?.config?.configurable?.modelInfo,
+  );
+  let librarySearchSources = searchResult.sources || [];
+  if (!isModelContextLenSupport) {
+    librarySearchSources = librarySearchSources.slice(0, 10);
+  }
+
+  // Store the sources in the context
+  processedLibrarySearchContext.librarySearchSources = librarySearchSources;
+
+  // Process sources into documents and resources based on their metadata
+  const uniqueResourceIds = new Set<string>();
+  const uniqueDocIds = new Set<string>();
+
+  for (const source of librarySearchSources) {
+    const metadata = source.metadata || {};
+    const entityType = metadata.entityType;
+    const entityId = metadata.entityId;
+
+    if (entityType === 'resource' && entityId && !uniqueResourceIds.has(entityId)) {
+      uniqueResourceIds.add(entityId);
+      processedLibrarySearchContext.resources.push({
+        resource: {
+          resourceId: entityId,
+          content: source.pageContent || '',
+          title: source.title || '',
+          resourceType: 'text',
+          data: {
+            url: source.url || '',
+          },
+        },
+      });
+    } else if (entityType === 'document' && entityId && !uniqueDocIds.has(entityId)) {
+      uniqueDocIds.add(entityId);
+      processedLibrarySearchContext.documents.push({
+        document: {
+          docId: entityId,
+          content: source.pageContent || '',
+          title: source.title || '',
+        },
+      });
+    }
+  }
+
+  ctx.ctxThis.engine.logger.log(
+    `Prepared Library Search Context successfully! ${safeStringifyJSON(processedLibrarySearchContext)}`,
+  );
+
+  return {
+    processedLibrarySearchContext,
+  };
+}
+
+/**
+ * Removes library search sources that overlap with mentioned or relevant context
+ * Library search has the lowest priority, so we should deduplicate it against other contexts
+ */
+export function removeOverlappingLibrarySearchSources(
+  librarySearchSources: Source[],
+  mentionedContext: IContext | null,
+  relevantContext: IContext | null,
+  logger?: any,
+): Source[] {
+  if (!librarySearchSources?.length) {
+    return [];
+  }
+
+  if (!mentionedContext && !relevantContext) {
+    return librarySearchSources;
+  }
+
+  // Extract all entity IDs from mentioned and relevant context
+  const existingEntityIds = new Set<string>();
+
+  // Helper function to collect entity IDs from context
+  const collectEntityIds = (context: IContext | null) => {
+    if (!context) return;
+
+    // Collect from resources
+    for (const item of context.resources || []) {
+      if (item.resource?.resourceId) {
+        existingEntityIds.add(`resource-${item.resource.resourceId}`);
+      }
+    }
+
+    // Collect from documents
+    for (const item of context.documents || []) {
+      if (item.document?.docId) {
+        existingEntityIds.add(`document-${item.document.docId}`);
+      }
+    }
+
+    // Collect from contentList
+    for (const item of context.contentList || []) {
+      const metadata = item.metadata as any as SkillContextContentItemMetadata;
+      if (metadata?.entityId && metadata?.domain) {
+        existingEntityIds.add(`${metadata.domain}-${metadata.entityId}`);
+      }
+    }
+  };
+
+  // Collect entity IDs from both contexts
+  collectEntityIds(mentionedContext);
+  collectEntityIds(relevantContext);
+
+  // Filter out library search sources that match by entity ID or have identical content
+  const uniqueLibrarySearchSources = librarySearchSources.filter((source) => {
+    const metadata = source.metadata || {};
+    const entityType = metadata.entityType;
+    const entityId = metadata.entityId;
+
+    // Check if this source has a matching entity ID in mentioned or relevant context
+    if (entityType && entityId) {
+      const key = `${entityType}-${entityId}`;
+      if (existingEntityIds.has(key)) {
+        return false; // Skip this source as it already exists in higher priority context
+      }
+    }
+
+    // Check for duplicate content in mentioned context
+    if (mentionedContext) {
+      // Check in resources
+      if (
+        mentionedContext.resources?.some(
+          (resource) => resource.resource?.content === source.pageContent,
+        )
+      ) {
+        return false;
+      }
+
+      // Check in documents
+      if (
+        mentionedContext.documents?.some(
+          (document) => document.document?.content === source.pageContent,
+        )
+      ) {
+        return false;
+      }
+
+      // Check in contentList
+      if (mentionedContext.contentList?.some((content) => content.content === source.pageContent)) {
+        return false;
+      }
+    }
+
+    // Check for duplicate content in relevant context
+    if (relevantContext) {
+      // Check in resources
+      if (
+        relevantContext.resources?.some(
+          (resource) => resource.resource?.content === source.pageContent,
+        )
+      ) {
+        return false;
+      }
+
+      // Check in documents
+      if (
+        relevantContext.documents?.some(
+          (document) => document.document?.content === source.pageContent,
+        )
+      ) {
+        return false;
+      }
+
+      // Check in contentList
+      if (relevantContext.contentList?.some((content) => content.content === source.pageContent)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Log how many items were removed
+  const removedCount = librarySearchSources.length - uniqueLibrarySearchSources.length;
+  if (removedCount > 0 && logger) {
+    logger.log(
+      `Removed ${removedCount} duplicate library search sources that already exist in mentioned or relevant context`,
+    );
+  }
+
+  return uniqueLibrarySearchSources;
+}

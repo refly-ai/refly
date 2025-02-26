@@ -58,6 +58,9 @@ const translations = {
     description: '搜索知识库并获取答案',
     placeholder: '搜索知识库并获取答案...',
     steps: {
+      analyzeContext: {
+        name: '上下文分析',
+      },
       librarySearch: {
         name: '知识库搜索',
       },

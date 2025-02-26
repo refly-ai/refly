@@ -19,6 +19,10 @@ const translations = {
     title: 'Web Search Completed',
     description: 'Total of {{totalResults}} results, completed in {{duration}}ms',
   },
+  librarySearchCompleted: {
+    title: 'Library Search Completed',
+    description: 'Total of {{totalResults}} results, completed in {{duration}}ms',
+  },
   translateResults: {
     title: 'Translate Results',
     description: 'Total of {{totalResults}} results, completed in {{duration}}ms',

@@ -64,6 +64,7 @@ export interface IContext {
   documents: SkillContextDocumentItem[];
   messages?: BaseMessage[];
   webSearchSources?: Source[];
+  librarySearchSources?: Source[];
   locale?: string | LOCALE;
 }
 

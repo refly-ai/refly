@@ -44,15 +44,20 @@ export const countDocumentTokens = (documents: SkillContextDocumentItem[] = []) 
   return documents.reduce((sum, document) => sum + countToken(document?.document?.content), 0);
 };
 
-export const countWebSearchContextTokens = (webSearchSources: Source[] = []) => {
-  return webSearchSources.reduce((sum, source) => sum + countToken(source?.pageContent), 0);
+export const countSourcesTokens = (sources: Source[] = []) => {
+  return sources.reduce((sum, source) => sum + countToken(source?.pageContent), 0);
 };
+
+// Keep the old function for backward compatibility
+export const countWebSearchContextTokens = countSourcesTokens;
 
 export const countContextTokens = (context: IContext) => {
   return (
     countContentTokens(context?.contentList) +
     countResourceTokens(context?.resources) +
-    countDocumentTokens(context?.documents)
+    countDocumentTokens(context?.documents) +
+    countSourcesTokens(context?.webSearchSources) +
+    countSourcesTokens(context?.librarySearchSources)
   );
 };
 
@@ -60,7 +65,9 @@ export const checkHasContext = (context: IContext) => {
   return (
     context?.contentList?.length > 0 ||
     context?.resources?.length > 0 ||
-    context?.documents?.length > 0
+    context?.documents?.length > 0 ||
+    context?.webSearchSources?.length > 0 ||
+    context?.librarySearchSources?.length > 0
   );
 };
 

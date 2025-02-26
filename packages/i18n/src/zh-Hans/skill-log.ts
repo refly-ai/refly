@@ -19,6 +19,10 @@ const translations = {
     title: '网页搜索完成',
     description: '总共 {{totalResults}} 个结果, 耗时 {{duration}} 毫秒',
   },
+  librarySearchCompleted: {
+    title: '知识库搜索完成',
+    description: '总共 {{totalResults}} 个结果, 耗时 {{duration}} 毫秒',
+  },
   translateResults: {
     title: '翻译结果',
     description: '总共 {{totalResults}} 个结果, 耗时 {{duration}} 毫秒',
