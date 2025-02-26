@@ -81,6 +81,10 @@ export const concatMergedContextToStr = (mergedContext: {
     contextStr += `<LibrarySearchContext>\n${librarySearchContextConcatRes.contextStr}\n</LibrarySearchContext>\n\n`;
   }
 
+  if (webSearchContexConcatRes.contextStr?.length > 0) {
+    contextStr += `<WebSearchContext>\n${webSearchContexConcatRes.contextStr}\n</WebSearchContext>\n\n`;
+  }
+
   return contextStr.trim();
 };
 
