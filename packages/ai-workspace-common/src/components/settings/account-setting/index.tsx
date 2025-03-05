@@ -48,6 +48,7 @@ export const AccountSetting = () => {
       setAvatarError(false);
       setAvatarUrl(data.data.url);
     }
+    setLoadingAvatar(false);
   };
 
   const beforeUpload = (file: File) => {
