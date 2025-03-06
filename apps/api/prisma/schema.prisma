@@ -488,6 +488,31 @@ model ShareRecord {
   @@map("share_records")
 }
 
+model DuplicateRecord {
+  /// Primary key
+  pk         BigInt    @id @default(autoincrement())
+  /// Source entity ID
+  sourceId   String    @map("source_id")
+  /// Target entity ID
+  targetId   String    @map("target_id")
+  /// Entity type
+  entityType String    @map("entity_type")
+  /// UID of the user who created the duplicate record
+  uid        String    @map("uid")
+  /// Status (pending, finish, failed)
+  status     String    @default("pending") @map("status")
+  /// Create timestamp
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@unique([sourceId, targetId])
+  @@index([targetId])
+  @@map("duplicate_records")
+}
+
 model Reference {
   /// Primary key
   pk          BigInt    @id @default(autoincrement())

@@ -158,6 +158,8 @@ export class CollabService {
       const state = await streamToBuffer(readable);
       Y.applyUpdate(document, state);
 
+      this.logger.log(`loaded document nodes: ${document.getArray('nodes').toJSON().length}`);
+
       const title = document.getText('title')?.toJSON();
       if (!title) {
         document.getText('title').insert(0, entity.title);

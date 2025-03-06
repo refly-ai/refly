@@ -1011,6 +1011,16 @@ export class KnowledgeService {
       },
     });
 
+    const dupRecord = await this.prisma.duplicateRecord.create({
+      data: {
+        uid: user.uid,
+        sourceId: sourceDoc.docId,
+        targetId: newDocId,
+        entityType: 'document',
+        status: 'pending',
+      },
+    });
+
     const migrations: Promise<any>[] = [
       this.minio.duplicateFile(sourceDoc.storageKey, newStorageKey),
       this.minio.duplicateFile(sourceDoc.stateStorageKey, newStateStorageKey),
@@ -1035,10 +1045,23 @@ export class KnowledgeService {
       );
     }
 
-    // Duplicate the files and index
-    await Promise.all(migrations);
+    try {
+      // Duplicate the files and index
+      await Promise.all(migrations);
 
-    await this.syncStorageUsage(user);
+      await this.prisma.duplicateRecord.update({
+        where: { pk: dupRecord.pk },
+        data: { status: 'finish' },
+      });
+
+      await this.syncStorageUsage(user);
+    } catch (error) {
+      await this.prisma.duplicateRecord.update({
+        where: { pk: dupRecord.pk },
+        data: { status: 'failed' },
+      });
+      throw error;
+    }
 
     return newDoc;
   }
@@ -1091,6 +1114,15 @@ export class KnowledgeService {
         storageKey: newStorageKey,
       },
     });
+    const dupRecord = await this.prisma.duplicateRecord.create({
+      data: {
+        uid: user.uid,
+        sourceId: sourceResource.resourceId,
+        targetId: newResourceId,
+        entityType: 'resource',
+        status: 'pending',
+      },
+    });
 
     const migrations: Promise<any>[] = [
       this.ragService.duplicateDocument({
@@ -1105,18 +1137,33 @@ export class KnowledgeService {
       migrations.push(this.minio.duplicateFile(sourceResource.storageKey, newStorageKey));
     }
     if (sourceResource.uid !== user.uid) {
-      this.miscService.duplicateFilesByEntity(user, {
-        sourceEntityId: sourceResource.resourceId,
-        sourceEntityType: 'resource',
-        sourceUid: sourceResource.uid,
-        targetEntityId: newResourceId,
-        targetEntityType: 'resource',
-      });
+      migrations.push(
+        this.miscService.duplicateFilesByEntity(user, {
+          sourceEntityId: sourceResource.resourceId,
+          sourceEntityType: 'resource',
+          sourceUid: sourceResource.uid,
+          targetEntityId: newResourceId,
+          targetEntityType: 'resource',
+        }),
+      );
     }
 
-    await Promise.all(migrations);
+    try {
+      await Promise.all(migrations);
 
-    await this.syncStorageUsage(user);
+      await this.prisma.duplicateRecord.update({
+        where: { pk: dupRecord.pk },
+        data: { status: 'finish' },
+      });
+
+      await this.syncStorageUsage(user);
+    } catch (error) {
+      await this.prisma.duplicateRecord.update({
+        where: { pk: dupRecord.pk },
+        data: { status: 'failed' },
+      });
+      throw error;
+    }
 
     return newResource;
   }

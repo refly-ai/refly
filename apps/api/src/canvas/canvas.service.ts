@@ -203,18 +203,37 @@ export class CanvasService {
       },
     });
 
-    await this._duplicateCanvas({
-      uid: user.uid,
-      sourceCanvasId: canvasId,
-      targetCanvasId: newCanvasId,
-      duplicateEntities,
+    const dupRecord = await this.prisma.duplicateRecord.create({
+      data: {
+        uid: user.uid,
+        sourceId: canvasId,
+        targetId: newCanvasId,
+        entityType: 'canvas',
+        status: 'pending',
+      },
     });
+
+    try {
+      await this._duplicateCanvas({
+        uid: user.uid,
+        sourceCanvasId: canvasId,
+        targetCanvasId: newCanvasId,
+        duplicateEntities,
+        dupRecord,
+      });
+    } catch (error) {
+      await this.prisma.duplicateRecord.update({
+        where: { pk: dupRecord.pk },
+        data: { status: 'failed' },
+      });
+      throw error;
+    }
 
     return newCanvas;
   }
 
   async _duplicateCanvas(jobData: DuplicateCanvasJobData) {
-    const { uid, sourceCanvasId, targetCanvasId, duplicateEntities } = jobData;
+    const { uid, sourceCanvasId, targetCanvasId, duplicateEntities, dupRecord } = jobData;
 
     const user = await this.prisma.user.findUnique({
       where: { uid },
@@ -311,9 +330,15 @@ export class CanvasService {
     await this.minio.client.putObject(stateStorageKey, Buffer.from(Y.encodeStateAsUpdate(doc)));
 
     // Update canvas status to completed
-    await this.prisma.canvas.update({
-      where: { canvasId: targetCanvasId },
-      data: { status: 'ready' },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.canvas.update({
+        where: { canvasId: targetCanvasId },
+        data: { status: 'ready' },
+      });
+      await tx.duplicateRecord.update({
+        where: { pk: dupRecord.pk },
+        data: { status: 'finish' },
+      });
     });
 
     this.logger.log(`Successfully duplicated canvas ${sourceCanvasId} to ${targetCanvasId}`);

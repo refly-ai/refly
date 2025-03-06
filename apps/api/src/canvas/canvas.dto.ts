@@ -2,6 +2,7 @@ import {
   Canvas as CanvasModel,
   CanvasTemplateCategory as CanvasTemplateCategoryModel,
   CanvasTemplate as CanvasTemplateModel,
+  DuplicateRecord,
 } from '@prisma/client';
 import {
   Canvas,
@@ -30,6 +31,7 @@ export interface DuplicateCanvasJobData {
   targetCanvasId: string;
   title?: string;
   duplicateEntities?: boolean;
+  dupRecord?: DuplicateRecord;
 }
 
 export function canvasPO2DTO(canvas: CanvasModel & { minimapUrl?: string }): Canvas {
