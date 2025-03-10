@@ -3929,21 +3929,13 @@ components:
         shareData:
           type: string
           description: Raw share data (JSON string)
-    CreateShareResult:
-      type: object
-      required:
-        - shareId
-      properties:
-        shareId:
-          type: string
-          description: Share ID
     CreateShareResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
         - type: object
           properties:
             data:
-              $ref: '#/components/schemas/CreateShareResult'
+              $ref: '#/components/schemas/ShareRecord'
               description: Share created
     ListShareResponse:
       allOf:

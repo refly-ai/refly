@@ -27,8 +27,8 @@ export class ShareController {
     @Query('entityId') entityId: string,
     @Query('entityType') entityType: EntityType,
   ): Promise<ListShareResponse> {
-    const result = await this.shareService.listShares(user, { shareId, entityId, entityType });
-    return buildSuccessResponse(result.map(shareRecordPO2DTO));
+    const results = await this.shareService.listShares(user, { shareId, entityId, entityType });
+    return buildSuccessResponse(results.map(shareRecordPO2DTO));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -38,7 +38,7 @@ export class ShareController {
     @Body() body: CreateShareRequest,
   ): Promise<CreateShareResponse> {
     const result = await this.shareService.createShare(user, body);
-    return buildSuccessResponse({ shareId: result.shareId });
+    return buildSuccessResponse(shareRecordPO2DTO(result));
   }
 
   @UseGuards(JwtAuthGuard)

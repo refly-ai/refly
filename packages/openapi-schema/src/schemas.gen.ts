@@ -2846,17 +2846,6 @@ export const CreateShareRequestSchema = {
   },
 } as const;
 
-export const CreateShareResultSchema = {
-  type: 'object',
-  required: ['shareId'],
-  properties: {
-    shareId: {
-      type: 'string',
-      description: 'Share ID',
-    },
-  },
-} as const;
-
 export const CreateShareResponseSchema = {
   allOf: [
     {
@@ -2866,7 +2855,7 @@ export const CreateShareResponseSchema = {
       type: 'object',
       properties: {
         data: {
-          $ref: '#/components/schemas/CreateShareResult',
+          $ref: '#/components/schemas/ShareRecord',
           description: 'Share created',
         },
       },

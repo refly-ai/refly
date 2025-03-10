@@ -2108,18 +2108,11 @@ export type CreateShareRequest = {
   shareData?: string;
 };
 
-export type CreateShareResult = {
-  /**
-   * Share ID
-   */
-  shareId: string;
-};
-
 export type CreateShareResponse = BaseResponse & {
   /**
    * Share created
    */
-  data?: CreateShareResult;
+  data?: ShareRecord;
 };
 
 export type ListShareResponse = BaseResponse & {

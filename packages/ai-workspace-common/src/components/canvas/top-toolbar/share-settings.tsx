@@ -96,54 +96,30 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
   const reshareAndCopyLink = useCallback(async () => {
     if (access === 'off') return;
 
-    try {
-      setUpdateLoading(true);
+    // Copy link to clipboard immediately for better UX
+    const newShareLink = getShareLink('canvas', shareRecord?.shareId ?? '');
+    await navigator.clipboard.writeText(newShareLink);
+    message.success(t('shareContent.copyLinkSuccess'));
 
-      // Get the most recent share data before performing operations
-      const latestSharesData = await getClient().listShares({
-        query: { entityId: canvasId, entityType: 'canvas' },
-      });
-      const latestShareRecord = latestSharesData?.data?.data?.[0];
-
-      // Delete existing share if any
-      if (latestShareRecord?.shareId) {
-        await getClient().deleteShare({
-          body: { shareId: latestShareRecord.shareId },
-        });
-      }
-
-      // Create new share with latest content
-      const { data, error } = await getClient().createShare({
-        body: {
-          entityId: canvasId,
-          entityType: 'canvas',
-          allowDuplication: true,
-        },
-      });
-
-      if (data?.success && !error) {
-        await refetchShares();
-        // Get the updated share link
-        const updatedShareData = await getClient().listShares({
-          query: { entityId: canvasId, entityType: 'canvas' },
+    // Asynchronously create new share with latest content
+    (async () => {
+      try {
+        const { data, error } = await getClient().createShare({
+          body: {
+            entityId: canvasId,
+            entityType: 'canvas',
+            allowDuplication: true,
+          },
         });
 
-        const updatedShareRecord = updatedShareData?.data?.data?.[0];
-        if (updatedShareRecord?.shareId) {
-          const newShareLink = getShareLink('canvas', updatedShareRecord.shareId);
-          navigator.clipboard.writeText(newShareLink);
-          message.success(t('shareContent.copyLinkSuccess'));
+        if (data?.success && !error) {
+          await refetchShares();
         }
-      } else {
-        message.error(t('shareContent.copyLinkError') || 'Failed to generate new share link');
+      } catch (error) {
+        console.error('Failed to create share:', error);
       }
-    } catch (err) {
-      console.error('Error resharing canvas:', err);
-      message.error(t('shareContent.copyLinkError') || 'Failed to generate new share link');
-    } finally {
-      setUpdateLoading(false);
-    }
-  }, [canvasId, access, refetchShares, t]);
+    })();
+  }, [access, canvasId, refetchShares, shareRecord?.shareId, t]);
 
   const buttons = useMemo(
     () => [

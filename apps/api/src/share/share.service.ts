@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createId } from '@paralleldrive/cuid2';
 import { PrismaService } from '@/common/prisma.service';
 import { MiscService } from '@/misc/misc.service';
+import { ShareRecord } from '@prisma/client';
 import {
   CreateShareRequest,
-  CreateShareResult,
   DeleteShareRequest,
   DuplicateShareRequest,
   Entity,
@@ -57,7 +57,19 @@ export class ShareService {
 
   async createShareForCanvas(user: User, param: CreateShareRequest) {
     const { entityId: canvasId, parentShareId, allowDuplication } = param;
-    const shareId = genShareId('canvas');
+
+    // Check if shareRecord already exists
+    const existingShareRecord = await this.prisma.shareRecord.findFirst({
+      where: {
+        entityId: canvasId,
+        entityType: 'canvas',
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    // Generate shareId only if needed
+    const shareId = existingShareRecord?.shareId ?? genShareId('canvas');
 
     const canvas = await this.prisma.canvas.findUnique({
       where: { canvasId, uid: user.uid, deletedAt: null },
@@ -98,45 +110,51 @@ export class ShareService {
     await Promise.all(imageProcessingPromises);
 
     // Process other node types
-    for (const node of canvasData.nodes) {
+    for (const node of canvasData.nodes ?? []) {
       if (node.type === 'document') {
         const { shareRecord, document } = await this.createShareForDocument(user, {
-          entityId: node.data.entityId,
+          entityId: node.data?.entityId,
           entityType: 'document',
           parentShareId: shareId,
           allowDuplication,
         });
 
-        node.data.contentPreview = document.contentPreview;
-        node.data.metadata = {
-          ...node.data.metadata,
-          shareId: shareRecord.shareId,
-        };
+        if (node.data) {
+          node.data.contentPreview = document?.contentPreview;
+          node.data.metadata = {
+            ...node.data.metadata,
+            shareId: shareRecord?.shareId,
+          };
+        }
       } else if (node.type === 'resource') {
         const { shareRecord, resource } = await this.createShareForResource(user, {
-          entityId: node.data.entityId,
+          entityId: node.data?.entityId,
           entityType: 'resource',
           parentShareId: shareId,
           allowDuplication,
         });
 
-        node.data.contentPreview = resource.contentPreview;
-        node.data.metadata = {
-          ...node.data.metadata,
-          shareId: shareRecord.shareId,
-        };
+        if (node.data) {
+          node.data.contentPreview = resource?.contentPreview;
+          node.data.metadata = {
+            ...node.data.metadata,
+            shareId: shareRecord?.shareId,
+          };
+        }
       } else if (node.type === 'skillResponse') {
         const { shareRecord } = await this.createShareForSkillResponse(user, {
-          entityId: node.data.entityId,
+          entityId: node.data?.entityId,
           entityType: 'skillResponse',
           parentShareId: shareId,
           allowDuplication,
         });
 
-        node.data.metadata = {
-          ...node.data.metadata,
-          shareId: shareRecord.shareId,
-        };
+        if (node.data) {
+          node.data.metadata = {
+            ...node.data.metadata,
+            shareId: shareRecord?.shareId,
+          };
+        }
       }
     }
 
@@ -156,18 +174,41 @@ export class ShareService {
       storageKey: `share/${shareId}.json`,
     });
 
-    const shareRecord = await this.prisma.shareRecord.create({
-      data: {
-        shareId,
-        title: canvas.title,
-        uid: user.uid,
-        entityId: canvasId,
-        entityType: 'canvas',
-        storageKey,
-        parentShareId,
-        allowDuplication,
-      },
-    });
+    let shareRecord: ShareRecord;
+
+    if (existingShareRecord) {
+      // Update existing shareRecord
+      shareRecord = await this.prisma.shareRecord.update({
+        where: {
+          pk: existingShareRecord.pk,
+        },
+        data: {
+          title: canvas.title,
+          storageKey,
+          parentShareId,
+          allowDuplication,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(
+        `Updated existing share record: ${shareRecord.shareId} for canvas: ${canvasId}`,
+      );
+    } else {
+      // Create new shareRecord
+      shareRecord = await this.prisma.shareRecord.create({
+        data: {
+          shareId,
+          title: canvas.title,
+          uid: user.uid,
+          entityId: canvasId,
+          entityType: 'canvas',
+          storageKey,
+          parentShareId,
+          allowDuplication,
+        },
+      });
+      this.logger.log(`Created new share record: ${shareRecord.shareId} for canvas: ${canvasId}`);
+    }
 
     return { shareRecord, canvas };
   }
@@ -175,7 +216,18 @@ export class ShareService {
   async createShareForDocument(user: User, param: CreateShareRequest) {
     const { entityId: documentId, parentShareId, allowDuplication } = param;
 
-    const shareId = genShareId('document');
+    // Check if shareRecord already exists
+    const existingShareRecord = await this.prisma.shareRecord.findFirst({
+      where: {
+        entityId: documentId,
+        entityType: 'document',
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    // Generate shareId only if needed
+    const shareId = existingShareRecord?.shareId ?? genShareId('document');
 
     const documentDetail = await this.knowledgeService.getDocumentDetail(user, {
       docId: documentId,
@@ -195,25 +247,62 @@ export class ShareService {
       storageKey: `share/${shareId}.json`,
     });
 
-    const shareRecord = await this.prisma.shareRecord.create({
-      data: {
-        shareId,
-        title: document.title,
-        uid: user.uid,
-        entityId: documentId,
-        entityType: 'document',
-        storageKey,
-        parentShareId,
-        allowDuplication,
-      },
-    });
+    let shareRecord: ShareRecord;
+
+    if (existingShareRecord) {
+      // Update existing shareRecord
+      shareRecord = await this.prisma.shareRecord.update({
+        where: {
+          pk: existingShareRecord.pk,
+        },
+        data: {
+          title: document.title,
+          storageKey,
+          parentShareId,
+          allowDuplication,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(
+        `Updated existing share record: ${shareRecord.shareId} for document: ${documentId}`,
+      );
+    } else {
+      // Create new shareRecord
+      shareRecord = await this.prisma.shareRecord.create({
+        data: {
+          shareId,
+          title: document.title,
+          uid: user.uid,
+          entityId: documentId,
+          entityType: 'document',
+          storageKey,
+          parentShareId,
+          allowDuplication,
+        },
+      });
+      this.logger.log(
+        `Created new share record: ${shareRecord.shareId} for document: ${documentId}`,
+      );
+    }
 
     return { shareRecord, document };
   }
 
   async createShareForResource(user: User, param: CreateShareRequest) {
     const { entityId: resourceId, parentShareId, allowDuplication } = param;
-    const shareId = genShareId('resource');
+
+    // Check if shareRecord already exists
+    const existingShareRecord = await this.prisma.shareRecord.findFirst({
+      where: {
+        entityId: resourceId,
+        entityType: 'resource',
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    // Generate shareId only if needed
+    const shareId = existingShareRecord?.shareId ?? genShareId('resource');
 
     const resourceDetail = await this.knowledgeService.getResourceDetail(user, {
       resourceId,
@@ -233,25 +322,62 @@ export class ShareService {
       storageKey: `share/${shareId}.json`,
     });
 
-    const shareRecord = await this.prisma.shareRecord.create({
-      data: {
-        shareId,
-        title: resource.title,
-        uid: user.uid,
-        entityId: resourceId,
-        entityType: 'resource',
-        storageKey,
-        parentShareId,
-        allowDuplication,
-      },
-    });
+    let shareRecord: ShareRecord;
+
+    if (existingShareRecord) {
+      // Update existing shareRecord
+      shareRecord = await this.prisma.shareRecord.update({
+        where: {
+          pk: existingShareRecord.pk,
+        },
+        data: {
+          title: resource.title,
+          storageKey,
+          parentShareId,
+          allowDuplication,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(
+        `Updated existing share record: ${shareRecord.shareId} for resource: ${resourceId}`,
+      );
+    } else {
+      // Create new shareRecord
+      shareRecord = await this.prisma.shareRecord.create({
+        data: {
+          shareId,
+          title: resource.title,
+          uid: user.uid,
+          entityId: resourceId,
+          entityType: 'resource',
+          storageKey,
+          parentShareId,
+          allowDuplication,
+        },
+      });
+      this.logger.log(
+        `Created new share record: ${shareRecord.shareId} for resource: ${resourceId}`,
+      );
+    }
 
     return { shareRecord, resource };
   }
 
   async createShareForSkillResponse(user: User, param: CreateShareRequest) {
     const { entityId: resultId, parentShareId, allowDuplication } = param;
-    const shareId = genShareId('skillResponse');
+
+    // Check if shareRecord already exists
+    const existingShareRecord = await this.prisma.shareRecord.findFirst({
+      where: {
+        entityId: resultId,
+        entityType: 'skillResponse',
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    // Generate shareId only if needed
+    const shareId = existingShareRecord?.shareId ?? genShareId('skillResponse');
 
     const actionResultDetail = await this.actionService.getActionResult(user, {
       resultId,
@@ -267,25 +393,63 @@ export class ShareService {
       storageKey: `share/${shareId}.json`,
     });
 
-    const shareRecord = await this.prisma.shareRecord.create({
-      data: {
-        shareId,
-        title: actionResult.title,
-        uid: user.uid,
-        entityId: resultId,
-        entityType: 'skillResponse',
-        storageKey,
-        parentShareId,
-        allowDuplication,
-      },
-    });
+    let shareRecord: ShareRecord;
+
+    if (existingShareRecord) {
+      // Update existing shareRecord
+      shareRecord = await this.prisma.shareRecord.update({
+        where: {
+          pk: existingShareRecord.pk,
+        },
+        data: {
+          title: actionResult.title ?? 'Skill Response',
+          storageKey,
+          parentShareId,
+          allowDuplication,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(
+        `Updated existing share record: ${shareRecord.shareId} for skill response: ${resultId}`,
+      );
+    } else {
+      // Create new shareRecord
+      shareRecord = await this.prisma.shareRecord.create({
+        data: {
+          shareId,
+          title: actionResult.title ?? 'Skill Response',
+          uid: user.uid,
+          entityId: resultId,
+          entityType: 'skillResponse',
+          storageKey,
+          parentShareId,
+          allowDuplication,
+        },
+      });
+      this.logger.log(
+        `Created new share record: ${shareRecord.shareId} for skill response: ${resultId}`,
+      );
+    }
 
     return { shareRecord, actionResult };
   }
 
   async createShareForRawData(user: User, param: CreateShareRequest) {
-    const { entityId, entityType, shareData, parentShareId, allowDuplication } = param;
-    const shareId = genShareId(entityType as keyof typeof SHARE_CODE_PREFIX);
+    const { entityId, entityType, title, shareData, parentShareId, allowDuplication } = param;
+
+    // Check if shareRecord already exists
+    const existingShareRecord = await this.prisma.shareRecord.findFirst({
+      where: {
+        entityId,
+        entityType,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    // Generate shareId only if needed
+    const shareId =
+      existingShareRecord?.shareId ?? genShareId(entityType as keyof typeof SHARE_CODE_PREFIX);
 
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'rawData.json',
@@ -296,18 +460,41 @@ export class ShareService {
       storageKey: `share/${shareId}.json`,
     });
 
-    const shareRecord = await this.prisma.shareRecord.create({
-      data: {
-        shareId,
-        title: 'Raw Data',
-        uid: user.uid,
-        entityId,
-        entityType,
-        storageKey,
-        parentShareId,
-        allowDuplication,
-      },
-    });
+    let shareRecord = existingShareRecord;
+
+    if (existingShareRecord) {
+      // Update existing shareRecord
+      shareRecord = await this.prisma.shareRecord.update({
+        where: {
+          pk: existingShareRecord.pk,
+        },
+        data: {
+          title: param.title ?? 'Raw Data',
+          storageKey,
+          parentShareId,
+          allowDuplication,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(
+        `Updated existing share record: ${shareRecord.shareId} for raw data: ${entityId}`,
+      );
+    } else {
+      shareRecord = await this.prisma.shareRecord.create({
+        data: {
+          shareId,
+          title,
+          uid: user.uid,
+          entityId,
+          entityType,
+          storageKey,
+          parentShareId,
+          allowDuplication,
+        },
+      });
+
+      this.logger.log(`Created new share record: ${shareRecord.shareId} for raw data: ${entityId}`);
+    }
 
     return { shareRecord };
   }
@@ -377,7 +564,7 @@ export class ShareService {
     return updatedContent;
   }
 
-  async createShare(user: User, req: CreateShareRequest): Promise<CreateShareResult> {
+  async createShare(user: User, req: CreateShareRequest): Promise<ShareRecord> {
     switch (req.entityType) {
       case 'canvas':
         return (await this.createShareForCanvas(user, req)).shareRecord;
