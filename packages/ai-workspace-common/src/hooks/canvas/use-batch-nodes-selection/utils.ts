@@ -99,7 +99,7 @@ export const calculateGroupBoundaries = (nodesToGroup: Node[], currentNodes: Nod
   const groupNode = {
     type: 'group' as const,
     data: {
-      title: 'Group',
+      title: '',
       metadata: {
         ...dimensions,
       },

@@ -14,6 +14,7 @@ import {
   IconMemo,
   IconDeleteFile,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { RiFullscreenFill } from 'react-icons/ri';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import {
@@ -95,7 +96,11 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     setLocalSizeMode(nodeData?.metadata?.sizeMode || 'adaptive');
   }, [nodeData?.metadata?.sizeMode]);
 
-  const addNodePreview = useCanvasStoreShallow((state) => state.addNodePreview);
+  const { addNodePreview, nodePreviews, clickToPreview } = useCanvasStoreShallow((state) => ({
+    addNodePreview: state.addNodePreview,
+    nodePreviews: state.config[canvasId]?.nodePreviews ?? [],
+    clickToPreview: state.clickToPreview,
+  }));
   const { ungroupNodes } = useUngroupNodes();
 
   const handleAskAI = useCallback(() => {
@@ -179,6 +184,20 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     }
     onClose?.();
   }, [node, nodeId, canvasId, onClose, addNodePreview]);
+
+  const handleFullScreenPreview = useCallback(() => {
+    const isPreviewOpen = nodePreviews?.some((preview) => preview.id === nodeId);
+
+    if (!isPreviewOpen) {
+      addNodePreview(canvasId, node);
+    }
+
+    requestAnimationFrame(() => {
+      nodeActionEmitter.emit(createNodeEventName(nodeId, 'fullScreenPreview'));
+    });
+
+    onClose?.();
+  }, [node, nodeId, canvasId, onClose, addNodePreview, nodeType, nodePreviews]);
 
   const handleUngroup = useCallback(() => {
     ungroupNodes(nodeId);
@@ -380,7 +399,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
       ];
 
       const operationItems: MenuItem[] = [
-        {
+        !clickToPreview && {
           key: 'preview',
           icon: IconPreview,
           label: t('canvas.nodeActions.preview'),
@@ -392,6 +411,13 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
             videoUrl:
               'https://static.refly.ai/onboarding/nodeAction/nodeActionMenu-openPreview.webm',
           },
+        },
+        nodeType !== 'image' && {
+          key: 'fullScreen',
+          icon: RiFullscreenFill,
+          label: t('canvas.nodeActions.fullScreen'),
+          onClick: handleFullScreenPreview,
+          type: 'button' as const,
         },
         nodeType !== 'image' && ({ key: 'divider-1', type: 'divider' } as MenuItem),
         nodeType !== 'image' && {
@@ -743,7 +769,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
               ${item.loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
             type="text"
-            icon={<item.icon className="w-4 h-4" />}
+            icon={<item.icon className="w-4 h-4 flex items-center justify-center" />}
             loading={item.loading}
             onClick={item.onClick}
             disabled={item.disabled}

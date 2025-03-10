@@ -992,6 +992,8 @@ const translations = {
       preview: 'Open Preview',
       previewDescription:
         'Display the complete content of the node in the preview panel on the right side of the canvas',
+      fullScreen: 'Full Screen Preview',
+      fullScreenDescription: 'Preview the node content in full screen mode',
       insertToDoc: 'Insert to Document',
       insertToDocDescription:
         'Integrate the node content into the document, supporting iterative writing',
@@ -1032,6 +1034,7 @@ const translations = {
       documentDeleteConfirm:
         'Confirm to delete document {{title}}? This action will remove this document from library and all canvases.',
       downloadFile: 'Download File',
+      editGroupNamePlaceholder: 'Please enter the group name',
     },
     nodeStatus: {
       isCreatingDocument: 'Creating Document...',

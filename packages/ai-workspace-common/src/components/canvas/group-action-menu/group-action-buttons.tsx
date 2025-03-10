@@ -19,7 +19,7 @@ export const GroupActionButtons: FC<GroupActionButtonsProps> = memo(
         <div
           className={`
             absolute
-            -top-[60px]
+            -bottom-[60px]
             left-0
             w-full
             h-[60px]
@@ -32,7 +32,7 @@ export const GroupActionButtons: FC<GroupActionButtonsProps> = memo(
         <div
           className={`
             absolute
-            -top-[56px]
+            -bottom-[56px]
             left-1/2
             transform
             -translate-x-1/2

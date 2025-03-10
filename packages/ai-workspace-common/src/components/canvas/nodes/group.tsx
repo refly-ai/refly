@@ -5,6 +5,7 @@ import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/ca
 import { ActionButtons } from './shared/action-buttons';
 import { CanvasNode, CommonNodeProps } from './shared/types';
 import { GroupActionButtons } from '../group-action-menu/group-action-buttons';
+import { GroupName } from '../group-action-menu/group-name';
 import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import {
   createNodeEventName,
@@ -21,12 +22,15 @@ import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas
 import Moveable from 'react-moveable';
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
+import { useThrottledCallback } from 'use-debounce';
 
 interface GroupMetadata {
   label?: string;
   width?: number;
   height?: number;
   isTemporary?: boolean;
+  bgColor?: string;
 }
 
 interface GroupData {
@@ -66,6 +70,7 @@ export const GroupNode = memo(
     const { addContextItems } = useAddToContext();
     const { addNode } = useAddNode();
     const { selectNodeCluster, groupNodeCluster, layoutNodeCluster } = useNodeCluster();
+    const setNodeDataByEntity = useSetNodeDataByEntity();
 
     // Memoize node and its measurements
     const node = useMemo(() => getNode(id), [id, getNode]);
@@ -269,6 +274,41 @@ export const GroupNode = memo(
       });
     }, [id, data, getNodes, deleteNodes, deleteNode]);
 
+    const handleUpdateName = useThrottledCallback(
+      (name: string) => {
+        setNodeDataByEntity(
+          {
+            entityId: data.entityId,
+            type: 'group',
+          },
+          {
+            title: name,
+          },
+        );
+      },
+      500,
+      {
+        leading: true,
+        trailing: true,
+      },
+    );
+
+    const handleChangeBgColor = useCallback((color: string) => {
+      console.log('change bg color', color);
+      setNodeDataByEntity(
+        {
+          entityId: data.entityId,
+          type: 'group',
+        },
+        {
+          metadata: {
+            ...data.metadata,
+            bgColor: color,
+          },
+        },
+      );
+    }, []);
+
     useEffect(() => {
       const handleNodeDelete = () => handleDelete();
 
@@ -299,6 +339,7 @@ export const GroupNode = memo(
               background: 'transparent',
               border: selected ? '2px dashed #00968F' : '2px dashed rgba(0, 0, 0, 0.1)',
               transition: 'all 0.2s ease',
+              backgroundColor: data.metadata?.bgColor || 'transparent',
             }}
           >
             {!isPreview && !hideHandles && (
@@ -334,6 +375,15 @@ export const GroupNode = memo(
                 />
               </>
             )}
+
+            <GroupName
+              title={data.title}
+              onUpdateName={handleUpdateName}
+              selected={selected}
+              readonly={readonly}
+              bgColor={data.metadata?.bgColor || 'rgba(255, 255, 255, 0)'}
+              onChangeBgColor={handleChangeBgColor}
+            />
           </div>
         </div>
 

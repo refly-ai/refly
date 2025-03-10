@@ -12,6 +12,7 @@ export type NodeActionEvents = {
   [key: `node:${string}:askAI`]: undefined;
   [key: `node:${string}:cloneAskAI`]: undefined;
   [key: `node:${string}:cloneAskAI.completed`]: undefined;
+  [key: `node:${string}:fullScreenPreview`]: undefined;
 };
 
 export const nodeActionEmitter = mitt<NodeActionEvents>();
