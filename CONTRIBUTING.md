@@ -117,6 +117,12 @@ pnpm dev
 ```
 - You may encounter the error `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`
   - You may need to set `NODE_OPTIONS='--max-old-space-size=8192'` to solve this problem 
+- If you cannot see the login and registration page (CORS policy)
+  - Please check `apps/api/.env` and set `ORIGIN=http://localhost:5173`
+- If you cannot register
+  - Please check `apps/api/prisma/schema.prisma` 
+  - Run `pnpm sync-db-schema` in `apps/api`
+  - If you are a windows user, using `bash` to run `pnpm sync-db-schema-win` in `apps/api`
 
 You can visit [http://localhost:5173](http://localhost:5173/) to start developing Refly.
 
