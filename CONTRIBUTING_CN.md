@@ -51,6 +51,8 @@ git clone git@github.com:<github_用户名>/refly.git
 - [Docker](https://www.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 - [Node.js v20.x (LTS)](http://nodejs.org)
+- [Visual Studio](https://visualstudio.microsoft.com/zh-hans/)
+  - 确保您安装了最新版本的 Visual Studio，并且在安装过程中选择了“C++ 桌面开发”
 
 ### 4. 安装步骤
 1. 启动中间件服务：
@@ -67,6 +69,7 @@ pnpm install
 
 3. 配置环境变量：
 ```bash
+cd ../..
 cp apps/web/.env.example apps/web/.env
 cp apps/api/.env.example apps/api/.env
 ```
@@ -76,6 +79,9 @@ cp apps/api/.env.example apps/api/.env
 pnpm build
 pnpm dev
 ```
+- 部署时可能会遇到`FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`
+  - 可能可以通过设置`NODE_OPTIONS='--max-old-space-size=8192'`解决
+
 访问 [http://localhost:5173](http://localhost:5173/) 开始开发
 
 ## 项目结构

@@ -72,6 +72,8 @@ Refly requires the following dependencies to build:
 - [Docker](https://www.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 - [Node.js v20.x (LTS)](http://nodejs.org)
+- [Visual Studio](https://visualstudio.microsoft.com/)
+  - Ensure you install the latest version of Visual Studio, and select the "C++ Desktop Development" workload during installation.
 
 ### 4. Installation
 
@@ -95,12 +97,13 @@ docker-compose -f docker-compose.middleware.yml up -d
 
 ```bash
 corepack enable
-pnpm install
+pnpm install #make sure you install visual studio before this step
 ```
 
 3. Set up environment variables for both API and web:
 
 ```bash
+cd ../..
 cp apps/web/.env.example apps/web/.env
 cp apps/api/.env.example apps/api/.env
 ```
@@ -112,6 +115,8 @@ cp apps/api/.env.example apps/api/.env
 pnpm build
 pnpm dev
 ```
+- You may encounter the error `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`
+  - You may need to set `NODE_OPTIONS='--max-old-space-size=8192'` to solve this problem 
 
 You can visit [http://localhost:5173](http://localhost:5173/) to start developing Refly.
 
