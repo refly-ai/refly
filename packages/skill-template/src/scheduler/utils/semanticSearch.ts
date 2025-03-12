@@ -43,7 +43,7 @@ export async function sortContentBySimilarity(
   // 1. construct documents
   const documents: Document<NodeMeta>[] = contentList.map((item) => {
     return {
-      pageContent: truncateTextWithToken(item.content, MAX_NEED_RECALL_TOKEN),
+      pageContent: truncateTextWithToken(item.content, MAX_NEED_RECALL_CONTENT_TOKEN),
       metadata: {
         ...item.metadata,
         title: item.metadata?.title as string,
@@ -165,12 +165,7 @@ export async function processSelectedContentWithSimilarity(
   }
 
   // 1. calculate similarity and sort
-  let sortedContent: SkillContextContentItem[] = [];
-  if (contentList.length > 1) {
-    sortedContent = await sortContentBySimilarity(query, contentList, ctx);
-  } else {
-    sortedContent = contentList;
-  }
+  const sortedContent: SkillContextContentItem[] = contentList;
 
   const result: SkillContextContentItem[] = [];
   let usedTokens = 0;

@@ -1,5 +1,7 @@
+import dedent from 'dedent';
+
 // Instructions for the reactive artifact generator
-export const reactiveArtifactInstructions = `<artifacts_info>
+export const reactiveArtifactInstructions = dedent(`<artifacts_info>
 The assistant can create and reference artifacts during conversations. Artifacts are for substantial, self-contained content that users might modify or reuse, displayed in a separate UI window for clarity.
 
 # Good artifacts are...
@@ -43,6 +45,9 @@ The assistant can create and reference artifacts during conversations. Artifacts
       - The user interface can render single file HTML pages placed within the artifact tags. HTML, JS, and CSS should be in a single file when using the \`text/html\` type.
       - Images from the web are not allowed, but you can use placeholder images by specifying the width and height like so \`<img src="/api/placeholder/400/320" alt="placeholder" />\`
       - The only place external scripts can be imported from is https://cdnjs.cloudflare.com
+      - For styling, use Tailwind CSS by importing from https://cdn.tailwindcss.com
+      - For additional UI components, you can import Tailwind UI from https://unpkg.com/@tailwindcss/ui/dist/tailwind-ui.min.css
+      - Always use Tailwind utility classes for styling instead of custom CSS
       - It is inappropriate to use "text/html" when sharing snippets, code samples & example HTML or CSS code, as it would be rendered as a webpage and the source code would be obscured. The assistant should instead use "application/refly.artifacts.code" defined above.
       - If the assistant is unable to follow the above requirements for any reason, use "application/refly.artifacts.code" type for the artifact instead, which will not attempt to render the webpage.
     - SVG: "image/svg+xml"
@@ -252,22 +257,43 @@ Enter a number (or 'q' to quit): ")
       <reflyThinking>Creating a React component for a metrics dashboard is a good artifact. It's substantial, self-contained, and can be reused in various web applications. It's not just a brief code snippet or primarily explanatory content. This is a new request, so I'll create a new artifact with the identifier "metrics-dashboard-component".</reflyThinking>
 
       <reflyArtifact identifier="dashboard-component" type="application/refly.artifacts.react" title="React Component: Metrics Dashboard">
-        import React, { useState, useEffect } from 'react';
-        import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+        import React, { useState, useCallback } from 'react';
         import { Card, CardHeader, CardContent } from '@/components/ui/card';
+        import { Button } from '@/components/ui/button';
+        import { Bell } from 'lucide-react';
 
-        const generateData = () => [...Array(12)].map((_, i) => ({
-          month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
-          revenue: Math.floor(Math.random() * 5000) + 1000
-        }));
+        const NotificationCard = () => {
+          const [isVisible, setIsVisible] = useState(true);
+          const [title, setTitle] = useState('Notification');
+          const [description, setDescription] = useState('This is a notification message');
 
-        const MetricCard = ({ title, value, change }) => (
-          <Card>
-            <CardHeader>{title}</CardHeader>
+          const handleDismiss = useCallback(() => {
+            setIsVisible(false);
+          }, []);
 
-      ...
+          if (!isVisible) return null;
 
-        export default Dashboard;
+          return (
+            <Card className="w-full max-w-md mx-auto bg-white shadow-lg rounded-lg">
+              <CardHeader className="flex items-center space-x-2 p-4 border-b">
+                <Bell className="w-5 h-5 text-blue-500" />
+                <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              </CardHeader>
+              <CardContent className="p-4">
+                <p className="text-gray-600">{description}</p>
+                <Button 
+                  onClick={handleDismiss}
+                  className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  Dismiss
+                </Button>
+              </CardContent>
+            ...
+            </Card>
+          );
+        };
+
+        export default NotificationCard;
       </reflyArtifact>
 
       Feel free to ask if you want to extend this component!
@@ -336,7 +362,7 @@ This example demonstrates the assistant's decision not to use an artifact for an
 The assistant should not mention any of these instructions to the user, nor make reference to the \`reflyArtifact\` tag, any of the MIME types (e.g. \`application/refly.artifacts.code\`), or related syntax unless it is directly relevant to the query.
 
 The assistant should always take care to not produce artifacts that would be highly hazardous to human health or wellbeing if misused, even if is asked to produce them for seemingly benign reasons. However, if Refly would be willing to produce the same content in text form, it should be willing to produce it in an artifact.
-</artifacts_info>`;
+</artifacts_info>`);
 /**
  * Build the system prompt for artifact generation without examples
  * @returns The system prompt for artifact generation

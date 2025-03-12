@@ -9,6 +9,7 @@ import { useState, useMemo, useCallback, useRef, memo, useEffect } from 'react';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { CodeArtifactNodePreview } from './code-artifact';
 import { WebsiteNodePreview } from './website';
+import { fullscreenEmitter } from '@refly-packages/ai-workspace-common/events/fullscreen';
 import {
   nodeActionEmitter,
   createNodeEventName,
@@ -124,6 +125,22 @@ export const NodePreview = memo(
     const handleMaximize = useCallback(() => {
       setIsMaximized(!isMaximized);
     }, [isMaximized]);
+
+    // Listen for exitFullscreenForFix event
+    useEffect(() => {
+      const handleExitFullscreenForFix = (data: { nodeId: string }) => {
+        // Only exit fullscreen if this is the node requesting the fix
+        if (data.nodeId === node.id && isMaximized) {
+          setIsMaximized(false);
+        }
+      };
+
+      fullscreenEmitter.on('exitFullscreenForFix', handleExitFullscreenForFix);
+
+      return () => {
+        fullscreenEmitter.off('exitFullscreenForFix', handleExitFullscreenForFix);
+      };
+    }, [node.id, isMaximized]);
 
     return (
       <div

@@ -31,3 +31,11 @@ export * from './use-canvas-id';
 export * from './use-canvas-layout';
 export * from './use-create-canvas';
 export * from './use-delete-canvas';
+
+// Selection and edge operations
+export * from './use-node-selection';
+export * from './use-edge-operations';
+export * from './use-node-preview-control';
+
+// Temporary edge hook
+export * from './use-drag-create-node';

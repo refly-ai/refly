@@ -3,15 +3,10 @@ import { useParams } from 'react-router-dom';
 import { useCanvasContext } from '../../context/canvas';
 import { useCanvasStore, useCanvasStoreShallow } from '../../stores/canvas';
 import { CanvasNodeData } from '../../components/canvas/nodes';
-import { CanvasNodeType } from '@refly/openapi-schema';
 import { useCanvasSync } from './use-canvas-sync';
 import { purgeContextItems } from '@refly-packages/ai-workspace-common/utils/map-context-items';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
-
-export interface CanvasNodeFilter {
-  type: CanvasNodeType;
-  entityId: string;
-}
+import { CanvasNodeFilter } from './use-node-selection';
 
 export const useSetNodeDataByEntity = () => {
   const { canvasId: contextCanvasId } = useCanvasContext();

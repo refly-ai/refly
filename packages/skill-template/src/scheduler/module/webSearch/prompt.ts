@@ -10,8 +10,8 @@ import { buildQueryPriorityInstruction, buildSpecificQueryInstruction } from '..
 import { buildContextFormat } from './context';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
 import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
-import { buildFormatDisplayInstruction } from '../common/format';
-
+import { buildFormatDisplayInstruction, buildVisualExamplesInstruction } from '../common/format';
+import { buildSimpleDetailedExplanationInstruction } from '../common/personalization';
 export const buildWebSearchSystemPrompt = () => {
   return `You are an AI assistant developed by Refly, specializing in providing accurate information based on web search results and internal knowledge base. Your task is to synthesize information from multiple sources to provide comprehensive, actionable, and accurate answers.
 
@@ -140,6 +140,8 @@ ${chatHistoryReminder()}
 ${buildLocaleFollowInstruction(locale)}
 
 ${buildFormatDisplayInstruction()}
+${buildVisualExamplesInstruction()}
+${buildSimpleDetailedExplanationInstruction()}
 `;
 };
 

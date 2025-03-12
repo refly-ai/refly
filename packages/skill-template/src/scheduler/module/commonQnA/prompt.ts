@@ -10,7 +10,8 @@ import { buildCommonQnAExamples, buildCommonQnAChatHistoryExamples } from './exa
 import { buildCitationRules } from '../common/citationRules';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
 import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
-import { buildFormatDisplayInstruction } from '../common/format';
+import { buildFormatDisplayInstruction, buildVisualExamplesInstruction } from '../common/format';
+import { buildSimpleDetailedExplanationInstruction } from '../common/personalization';
 
 export const buildNoContextCommonQnASystemPrompt = () => {
   return `You are an AI assistant developed by Refly. Your task is to provide helpful, accurate, and concise information to users' queries.
@@ -135,6 +136,8 @@ export const buildCommonQnAUserPrompt = ({
     ${buildLocaleFollowInstruction(locale)}
 
     ${buildFormatDisplayInstruction()}
+    ${buildVisualExamplesInstruction()}
+    ${buildSimpleDetailedExplanationInstruction()}
     `;
   }
 

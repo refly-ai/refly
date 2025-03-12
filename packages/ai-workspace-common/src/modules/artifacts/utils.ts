@@ -48,42 +48,42 @@ export const getArtifactContent = (content: string) => {
 
 // Function to extract content and attributes from artifact tag
 export const getArtifactContentAndAttributes = (content: string) => {
-  // Step 1: Find the opening tag and extract all attributes
-  const openingTagRegex = /<reflyArtifact\b([^>]*)>/;
-  const openingMatch = openingTagRegex.exec(content);
+  // Step 1: Find the complete opening tag using a more precise regex
+  const openingTagRegex = /<reflyArtifact\b[^>]*>/;
+  const openingMatch = content.match(openingTagRegex);
   const attributes: Record<string, string> = {};
 
-  if (openingMatch && openingMatch.length > 1) {
-    const attrStr = openingMatch[1];
-    // Use a regex that can handle quoted attribute values potentially containing spaces and special chars
-    const attrRegex = /(\w+)=["']([^"']*)["']/g;
-    let match: RegExpExecArray | null = null;
+  if (!openingMatch || !openingMatch[0]) {
+    return {
+      content: '',
+      title: '',
+      language: 'typescript',
+      type: '',
+    };
+  }
 
-    // Extract all attributes using regex
-    match = attrRegex.exec(attrStr);
-    while (match !== null) {
-      attributes[match[1]] = match[2];
-      match = attrRegex.exec(attrStr);
-    }
+  const openingTag = openingMatch[0];
+  const openingTagIndex = content.indexOf(openingTag);
+  const openTagEndPos = openingTagIndex + openingTag.length;
+
+  // Extract attributes from the opening tag
+  const attrRegex = /(\w+)=["']([^"']*)["']/g;
+  let attrMatch = attrRegex.exec(openingTag);
+  while (attrMatch !== null) {
+    attributes[attrMatch[1]] = attrMatch[2];
+    attrMatch = attrRegex.exec(openingTag);
   }
 
   // Step 2: Extract the content between opening and closing tags
-  // We'll use a more precise approach to get everything between tags
   let contentValue = '';
+  const closeTagStartPos = content.lastIndexOf('</reflyArtifact>');
 
-  // Find the position of the first closing bracket of the opening tag
-  const openTagEndPos = content.indexOf('>', content.indexOf('<reflyArtifact'));
-  if (openTagEndPos > -1) {
-    // Find the position of the closing tag
-    const closeTagStartPos = content.lastIndexOf('</reflyArtifact>');
-
-    if (closeTagStartPos > -1) {
-      // Extract content between opening and closing tags
-      contentValue = content.substring(openTagEndPos + 1, closeTagStartPos).trim();
-    } else {
-      // No closing tag found, extract till the end
-      contentValue = content.substring(openTagEndPos + 1).trim();
-    }
+  if (closeTagStartPos > -1) {
+    // Extract content between opening and closing tags
+    contentValue = content.substring(openTagEndPos, closeTagStartPos).trim();
+  } else {
+    // No closing tag found, extract till the end
+    contentValue = content.substring(openTagEndPos).trim();
   }
 
   return {

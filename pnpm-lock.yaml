@@ -1377,6 +1377,9 @@ importers:
       better-sqlite3:
         specifier: ^9.5.0
         version: 9.6.0
+      dedent:
+        specifier: ^1.5.3
+        version: 1.5.3
       dotenv:
         specifier: ~16.4.5
         version: 16.4.5

@@ -9,7 +9,8 @@ import { buildQueryPriorityInstruction, buildSpecificQueryInstruction } from '..
 import { buildContextFormat } from './context';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
 import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
-import { buildFormatDisplayInstruction } from '../common/format';
+import { buildFormatDisplayInstruction, buildVisualExamplesInstruction } from '../common/format';
+import { buildSimpleDetailedExplanationInstruction } from '../common/personalization';
 
 export const buildLibrarySearchSystemPrompt = () => {
   return `You are an AI assistant developed by Refly, specializing in knowledge base search and information retrieval. Your task is to provide accurate answers based on the organization's internal knowledge base.
@@ -97,6 +98,8 @@ ${buildQueryProcessAndChatHistoryInstructions()}
 ${buildLocaleFollowInstruction(locale)}
 
 ${buildFormatDisplayInstruction()}
+${buildVisualExamplesInstruction()}
+${buildSimpleDetailedExplanationInstruction()}
 `;
 };
 

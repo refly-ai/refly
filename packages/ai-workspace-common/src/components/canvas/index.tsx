@@ -50,6 +50,7 @@ import { CustomEdge } from './edges/custom-edge';
 import NotFoundOverlay from './NotFoundOverlay';
 import { getFreshNodePreviews } from '../../utils/canvas';
 import { NODE_MINI_MAP_COLORS } from './nodes/shared/colors';
+import { useDragToCreateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-create-node';
 
 import '@xyflow/react/dist/style.css';
 import './index.scss';
@@ -283,10 +284,28 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState(0);
 
+  const { onConnectEnd: temporaryEdgeOnConnectEnd } = useDragToCreateNode();
+
+  const cleanupTemporaryEdges = useCallback(() => {
+    const rfInstance = reactFlowInstance;
+    rfInstance.setNodes((nodes) => nodes.filter((node) => node.type !== 'temporaryEdge'));
+    rfInstance.setEdges((edges) => {
+      // Get the current nodes to check if source/target is a temporary node
+      const currentNodes = rfInstance.getNodes();
+      const isTemporaryNode = (id: string) =>
+        currentNodes.some((node) => node.id === id && node.type === 'temporaryEdge');
+
+      return edges.filter((edge) => !isTemporaryNode(edge.source) && !isTemporaryNode(edge.target));
+    });
+  }, [reactFlowInstance]);
+
   const handlePanelClick = useCallback(
     (event: React.MouseEvent) => {
       setOperatingNodeId(null);
       setContextMenu((prev) => ({ ...prev, open: false }));
+
+      // Clean up temporary nodes when clicking on canvas
+      cleanupTemporaryEdges();
 
       // Reset edge selection when clicking on canvas
       if (selectedEdgeId) {
@@ -310,7 +329,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
       setLastClickTime(currentTime);
     },
-    [lastClickTime, setOperatingNodeId, reactFlowInstance, selectedEdgeId],
+    [lastClickTime, setOperatingNodeId, reactFlowInstance, selectedEdgeId, cleanupTemporaryEdges],
   );
 
   const handleToolSelect = (tool: string) => {
@@ -754,6 +773,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             onNodesChange={readonly ? readonlyNodesChange : onNodesChange}
             onEdgesChange={readonly ? readonlyEdgesChange : onEdgesChange}
             onConnect={readonly ? readonlyConnect : onConnect}
+            onConnectEnd={readonly ? undefined : temporaryEdgeOnConnectEnd}
             onNodeClick={handleNodeClick}
             onPaneClick={handlePanelClick}
             onPaneContextMenu={readonly ? undefined : onPaneContextMenu}

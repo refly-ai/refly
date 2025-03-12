@@ -141,6 +141,16 @@ export const SkillNode = memo(
       defaultHeight: 'auto',
     });
 
+    // Add a safe container style with NaN check
+    const safeContainerStyle = useMemo(() => {
+      const style = { ...containerStyle };
+      // Ensure height is never NaN
+      if (typeof style.height === 'number' && Number.isNaN(style.height)) {
+        style.height = 'auto';
+      }
+      return style;
+    }, [containerStyle]);
+
     const { entityId, metadata = {} } = data;
     const {
       query,
@@ -238,7 +248,15 @@ export const SkillNode = memo(
       if (!targetRef.current || readonly) return;
 
       const { offsetWidth, offsetHeight } = targetRef.current;
-      resizeMoveable(offsetWidth, offsetHeight);
+      // Ensure we're not passing NaN values to resizeMoveable
+      if (
+        !Number.isNaN(offsetWidth) &&
+        !Number.isNaN(offsetHeight) &&
+        offsetWidth > 0 &&
+        offsetHeight > 0
+      ) {
+        resizeMoveable(offsetWidth, offsetHeight);
+      }
     }, [resizeMoveable, targetRef.current?.offsetHeight]);
 
     useEffect(() => {
@@ -373,8 +391,7 @@ export const SkillNode = memo(
       [entityId, setNodeDataByEntity],
     );
 
-    // listen to edges changes and automatically update contextItems
-    useEffect(() => {
+    const updateContextItemsByEdges = () => {
       if (readonly) return;
 
       const currentEdges = edges?.filter((edge) => edge.target === id) || [];
@@ -411,7 +428,16 @@ export const SkillNode = memo(
       if (JSON.stringify(updatedContextItems) !== JSON.stringify(contextItems)) {
         patchNodeData(id, { metadata: { contextItems: updatedContextItems } });
       }
-    }, [edges, id, contextItems, getNodes, patchNodeData, readonly]);
+    };
+
+    const debouncedUpdateContextItems = useDebouncedCallback(() => {
+      updateContextItemsByEdges();
+    }, 300);
+
+    // listen to edges changes and automatically update contextItems
+    useEffect(() => {
+      debouncedUpdateContextItems();
+    }, [edges?.length, id, contextItems, getNodes()?.length, debouncedUpdateContextItems]);
 
     return (
       <div className={classNames({ nowheel: isOperating && isHovered })}>
@@ -420,7 +446,7 @@ export const SkillNode = memo(
           className={classNames({
             'relative group nodrag nopan select-text': isOperating,
           })}
-          style={containerStyle}
+          style={safeContainerStyle}
         >
           {!isDragging && !readonly && (
             <ActionButtons type="skill" nodeId={id} isNodeHovered={selected && isHovered} />
@@ -469,7 +495,10 @@ export const SkillNode = memo(
                 query={localQuery}
                 setQuery={(value) => {
                   setQuery(value);
-                  updateSize({ height: 'auto' });
+                  // Safely update size with a check
+                  setTimeout(() => {
+                    updateSize({ height: 'auto' });
+                  }, 0);
                 }}
                 selectedSkillName={skill?.name}
                 inputClassName="px-1 py-0"
@@ -493,7 +522,10 @@ export const SkillNode = memo(
                   fieldPrefix="tplConfig"
                   configScope="runtime"
                   onExpandChange={(_expanded) => {
-                    updateSize({ height: 'auto' });
+                    // Safely update size with a check
+                    setTimeout(() => {
+                      updateSize({ height: 'auto' });
+                    }, 0);
                   }}
                   resetConfig={() => {
                     const defaultConfig = skill?.tplConfig ?? {};

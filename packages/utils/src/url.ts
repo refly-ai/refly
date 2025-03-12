@@ -116,6 +116,16 @@ export function extractUrlsWithLinkify(query: string): {
         url = `https://${url}`;
       }
 
+      // Check if the original URL in the query had a trailing slash
+      // We need to use the match indices to extract the exact original string
+      const originalUrlText = query.substring(match.index, match.lastIndex);
+      const hasTrailingSlash = originalUrlText.endsWith('/');
+
+      // Add trailing slash if it was in the original URL but got removed
+      if (hasTrailingSlash && !url.endsWith('/')) {
+        url = `${url}/`;
+      }
+
       return url;
     })
     .filter(isValidUrl); // Filter out any URLs that aren't valid

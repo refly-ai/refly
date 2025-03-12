@@ -14,6 +14,7 @@ import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
 import { ConfigScope, Skill } from '@refly/openapi-schema';
 import { CodeArtifactType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/types';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { fullscreenEmitter } from '@refly-packages/ai-workspace-common/events/fullscreen';
 
 interface CodeArtifactNodePreviewProps {
   node: CanvasNode<CodeArtifactNodeMeta>;
@@ -35,36 +36,37 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
   // Sync local state with node metadata changes
   useEffect(() => {
     // Only update if activeTab changes and is different from current state
-    // const metadataActiveTab = node.data?.metadata?.activeTab as 'code' | 'preview';
-    // if (metadataActiveTab && metadataActiveTab !== currentTab) {
-    //   setCurrentTab(metadataActiveTab);
-    // }
+    const metadataActiveTab = node.data?.metadata?.activeTab as 'code' | 'preview';
+    if (metadataActiveTab && metadataActiveTab !== currentTab) {
+      setCurrentTab(metadataActiveTab);
+    }
+
     // Update type if it changes in metadata
-    // const metadataType = node.data?.metadata?.type as CodeArtifactType;
-    // if (metadataType && metadataType !== currentType) {
-    //   setCurrentType(metadataType);
-    // }
-  }, [node.data?.metadata?.activeTab, currentTab, node.data?.metadata?.type, currentType]);
+    const metadataType = node.data?.metadata?.type as CodeArtifactType;
+    if (metadataType && metadataType !== currentType) {
+      setCurrentType(metadataType);
+    }
+  }, [node.data?.metadata?.activeTab, node.data?.metadata?.type]);
 
   // Update node data when tab changes
   const handleTabChange = useCallback(
     (tab: 'code' | 'preview') => {
       setCurrentTab(tab);
 
-      if (node.data?.entityId) {
-        setNodeDataByEntity(
-          {
-            type: 'codeArtifact',
-            entityId: node.data.entityId,
-          },
-          {
-            metadata: {
-              ...node.data?.metadata,
-              activeTab: tab,
-            },
-          },
-        );
-      }
+      // if (node.data?.entityId) {
+      //   setNodeDataByEntity(
+      //     {
+      //       type: 'codeArtifact',
+      //       entityId: node.data.entityId,
+      //     },
+      //     {
+      //       metadata: {
+      //         ...node.data?.metadata,
+      //         activeTab: tab,
+      //       },
+      //     },
+      //   );
+      // }
     },
     [node.data?.entityId, node.data?.metadata, setNodeDataByEntity],
   );
@@ -75,20 +77,20 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
       setCurrentType(newType);
 
       // Ensure newType is a valid CodeArtifactType
-      if (data?.entityId && newType) {
-        setNodeDataByEntity(
-          {
-            type: 'codeArtifact',
-            entityId: data.entityId,
-          },
-          {
-            metadata: {
-              ...data?.metadata,
-              type: newType,
-            },
-          },
-        );
-      }
+      // if (data?.entityId && newType) {
+      //   setNodeDataByEntity(
+      //     {
+      //       type: 'codeArtifact',
+      //       entityId: data.entityId,
+      //     },
+      //     {
+      //       metadata: {
+      //         ...data?.metadata,
+      //         type: newType,
+      //       },
+      //     },
+      //   );
+      // }
     },
     [data?.entityId, data?.metadata, setNodeDataByEntity, setCurrentType],
   );
@@ -96,6 +98,11 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
   const handleRequestFix = useCallback(
     (errorMessage: string) => {
       console.error('Code artifact error:', errorMessage);
+
+      // Emit event to exit fullscreen mode before proceeding
+      if (node?.id) {
+        fullscreenEmitter.emit('exitFullscreenForFix', { nodeId: node.id });
+      }
 
       // Define a proper code fix skill similar to editDoc
       const codeFixSkill: Skill = {

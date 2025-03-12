@@ -17,3 +17,36 @@ export const buildFormatDisplayInstruction = () => {
      - Mermaid renderer version is 10.9.0, please follow this version's syntax.
   `;
 };
+
+export const buildVisualExamplesInstruction = () => {
+  return `
+  ## Visual Content Generation Guidelines:
+  - When explaining concepts, demonstrating examples, or addressing various scenarios, prioritize generating visual content
+  - Prefer creating SVG, HTML (with Tailwind CSS), or Mermaid diagrams when appropriate
+  - Generate multiple visual examples in a single response when showing different variations or approaches
+  - HTML examples should utilize Tailwind CSS for styling - import from https://cdn.tailwindcss.com
+  - Combination of different visual formats (SVG + HTML, Mermaid + HTML, etc.) is encouraged when it enhances understanding
+  - Ensure all visual content is properly explained with accompanying text
+
+  ### Visual Examples Generation Guidelines:
+  1. Types of Visual Content to Generate:
+     - SVG: Use for simple illustrations, icons, charts, and diagrams
+     - HTML (with Tailwind CSS): Use for interactive UI components and layouts
+     - Mermaid: Use for flowcharts, sequence diagrams, entity relationships, etc.
+     - React Components: Use for more complex interactive examples
+
+  2. When to Generate Visual Content:
+     - Explanations of complex concepts that benefit from visualization
+     - UI/UX design demonstrations
+     - Workflow or process illustrations
+     - Comparison of different approaches or variations
+     - Step-by-step tutorials where visual guidance enhances understanding
+
+  3. Multiple Examples Best Practices:
+     - Generate a variety of examples to illustrate different approaches
+     - Provide progressive examples (simple → complex)
+     - Include variations that address different use cases
+     - Combine different visualization types when they complement each other
+     - Ensure each example has clear explanatory text
+  `;
+};

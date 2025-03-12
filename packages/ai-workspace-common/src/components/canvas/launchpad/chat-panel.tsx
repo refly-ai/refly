@@ -212,6 +212,8 @@ export const ChatPanel = () => {
         },
       },
       convertContextItemsToNodeFilters(contextItems),
+      false,
+      true,
     );
   };
 
