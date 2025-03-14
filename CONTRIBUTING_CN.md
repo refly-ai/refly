@@ -80,7 +80,7 @@ pnpm build
 pnpm dev
 ```
 - 部署时可能会遇到`FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`
-  - 可能可以通过设置`NODE_OPTIONS='--max-old-space-size=8192'`解决
+  - 可能可以通过设置`$env:NODE_OPTIONS='--max-old-space-size=8192'`解决
 - 如无法看见登录注册页面 （CORS policy）
   - 如果需要跨域访问，请在`apps/api/.env`中设置`ORIGIN=http://localhost:5173`
 - 如无法注册

@@ -116,7 +116,7 @@ pnpm build
 pnpm dev
 ```
 - You may encounter the error `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`
-  - You may need to set `NODE_OPTIONS='--max-old-space-size=8192'` to solve this problem 
+  - You may need to set `$env:NODE_OPTIONS='--max-old-space-size=8192'` to solve this problem 
 - If you cannot see the login and registration page (CORS policy)
   - Please check `apps/api/.env` and set `ORIGIN=http://localhost:5173`
 - If you cannot register
