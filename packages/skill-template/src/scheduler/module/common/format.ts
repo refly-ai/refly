@@ -12,8 +12,10 @@ export const buildFormatDisplayInstruction = () => {
      - Keep content well-structured
      - Ensure consistent indentation
      - Follow heading level hierarchy strictly
+     - Always specify language identifiers in code blocks (e.g. \`\`\`js, \`\`\`ts, \`\`\`svg, \`\`\`mermaid)
 
    3. Mermaid Diagram Rules:
+     - Use \`\`\`mermaid code block for all Mermaid diagrams
      - Mermaid renderer version is 10.9.0, please follow this version's syntax.
   `;
 };
@@ -30,10 +32,10 @@ export const buildVisualExamplesInstruction = () => {
 
   ### Visual Examples Generation Guidelines:
   1. Types of Visual Content to Generate:
-     - SVG: Use for simple illustrations, icons, charts, and diagrams
-     - HTML (with Tailwind CSS): Use for interactive UI components and layouts
-     - Mermaid: Use for flowcharts, sequence diagrams, entity relationships, etc.
-     - React Components: Use for more complex interactive examples
+     - SVG: Use \`\`\`svg blocks for simple illustrations, icons, charts, and diagrams
+     - HTML: Use \`\`\`html blocks for interactive UI components and layouts with Tailwind CSS
+     - Mermaid: Use \`\`\`mermaid blocks for flowcharts, sequence diagrams, entity relationships, etc.
+     - React Components: Use \`\`\`tsx or \`\`\`jsx blocks for more complex interactive examples
 
   2. When to Generate Visual Content:
      - Explanations of complex concepts that benefit from visualization
@@ -48,5 +50,6 @@ export const buildVisualExamplesInstruction = () => {
      - Include variations that address different use cases
      - Combine different visualization types when they complement each other
      - Ensure each example has clear explanatory text
+     - Always use appropriate language identifiers in code blocks
   `;
 };

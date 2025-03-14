@@ -51,6 +51,7 @@ declare global {
       STATIC_PUBLIC_ENDPOINT?: string;
       STATIC_PRIVATE_ENDPOINT?: string;
       SUBSCRIPTION_ENABLED?: boolean;
+      SENTRY_ENABLED?: boolean;
     };
   }
 }

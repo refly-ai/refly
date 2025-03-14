@@ -67,6 +67,7 @@ export const DocumentNode = memo(
       id,
       node,
       sizeMode,
+      readonly,
       isOperating,
       minWidth: 100,
       maxWidth: 800,

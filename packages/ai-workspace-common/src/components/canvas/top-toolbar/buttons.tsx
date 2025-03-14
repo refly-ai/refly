@@ -2,7 +2,6 @@ import { useState, useCallback, memo } from 'react';
 import { Button, Tooltip, Popover } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { MdOutlineImage, MdOutlineAspectRatio } from 'react-icons/md';
-import { BiErrorCircle } from 'react-icons/bi';
 import {
   IconDownloadFile,
   IconSearch,
@@ -133,23 +132,3 @@ export const ToolbarButtons = memo(
     );
   },
 );
-
-export const WarningButton = memo(({ show }: { show: boolean }) => {
-  const { t } = useTranslation();
-
-  if (!show) return null;
-
-  return (
-    <Tooltip title={t('canvas.connectionTimeout.extra')}>
-      <Button
-        type="text"
-        danger
-        icon={<BiErrorCircle style={{ fontSize: '16px' }} />}
-        onClick={() => window.location.reload()}
-        className="flex items-center gap-1 ml-2 text-red-500 hover:text-red-600"
-      >
-        {t('canvas.connectionTimeout.title')}
-      </Button>
-    </Tooltip>
-  );
-});

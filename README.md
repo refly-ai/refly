@@ -130,6 +130,25 @@ Integrating advanced capabilities from Perplexity AI, Stanford Storm, and more:
 - Real-time website prototyping
 - Integration with modern web frameworks
 
+## 🛣️ Roadmap
+
+We're continuously improving Refly with exciting new features. For a detailed roadmap, visit our [complete roadmap documentation](https://docs.refly.ai/roadmap).
+
+- 🎨 Advanced image, audio, and video generation capabilities
+- 🎨 Cross-modal content transformation tools
+- 💻 High-performance desktop client with improved resource management
+- 💻 Enhanced offline capabilities
+- 📚 Advanced knowledge organization and visualization tools
+- 📚 Collaborative knowledge base features
+- 🔌 Open standard for third-party plugin development based on MCP
+- 🔌 Plugin marketplace and developer SDK
+- 🤖 Autonomous task completion with minimal supervision
+- 🤖 Multi-agent collaboration systems
+- ⚡️ Visual workflow builder for complex AI-powered processes
+- ⚡️ Advanced integration capabilities with external systems and API support
+- 🔒 Enhanced security and compliance tools
+- 🔒 Advanced team management and analytics
+
 ## How to Use?
 
 - **Cloud**

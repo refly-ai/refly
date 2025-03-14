@@ -12,3 +12,7 @@ export const staticPrivateEndpoint =
 export const subscriptionEnabled =
   Boolean(typeof window !== 'undefined' && window.ENV?.SUBSCRIPTION_ENABLED) ||
   Boolean(import.meta.env.VITE_SUBSCRIPTION_ENABLED);
+
+export const sentryEnabled =
+  Boolean(typeof window !== 'undefined' && window.ENV?.SENTRY_ENABLED) ||
+  Boolean(import.meta.env.VITE_SENTRY_ENABLED);

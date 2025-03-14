@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, message } from 'antd';
 import { ActionResult, ActionStep, Source } from '@refly/openapi-schema';
 import { FilePlus } from 'lucide-react';
-import { IconCheckCircle, IconCopy, IconImport } from '@arco-design/web-react/icon';
+import { IconCheckCircle, IconCopy, IconImport, IconShareAlt } from '@arco-design/web-react/icon';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { parseMarkdownCitationsAndCanvasTags, safeParseJSON } from '@refly/utils/parse';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
@@ -12,6 +12,8 @@ import { editorEmitter, EditorOperation } from '@refly-packages/utils/event-emit
 import { Dropdown, Menu } from '@arco-design/web-react';
 import { HiOutlineCircleStack } from 'react-icons/hi2';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 
 interface ActionContainerProps {
   step: ActionStep;
@@ -29,6 +31,11 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
 
   const { title } = result ?? {};
   const isPending = result?.status === 'executing';
+  const [isSharing, setIsSharing] = useState(false);
+
+  // Check if we're in share mode by checking if resultId exists
+  // This indicates a "proper" result vs a shared result that might be loaded from share data
+  const isShareMode = !result.resultId;
 
   const sources = useMemo(
     () =>
@@ -115,10 +122,51 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
     [step?.tokenUsage, t],
   );
 
+  const handleShare = useCallback(async () => {
+    setIsSharing(true);
+    const loadingMessage = message.loading(t('codeArtifact.sharing'), 0);
+
+    try {
+      // Create share using the API
+      const { data, error } = await getClient().createShare({
+        body: {
+          entityId: result.resultId,
+          entityType: 'skillResponse',
+          shareData: JSON.stringify(result),
+        },
+      });
+
+      if (!data.success || error) {
+        throw new Error(error ? String(error) : 'Failed to share skill response');
+      }
+
+      // Generate share link
+      const shareLink = getShareLink('skillResponse', data.data?.shareId ?? '');
+
+      // Copy the sharing link to clipboard
+      copyToClipboard(shareLink);
+
+      // Clear loading message and show success
+      loadingMessage();
+      message.success(
+        t(
+          'canvas.skillResponse.shareSuccess',
+          'Skill response shared successfully! Link copied to clipboard.',
+        ),
+      );
+    } catch (err) {
+      console.error('Failed to share skill response:', err);
+      loadingMessage();
+      message.error(t('canvas.skillResponse.shareError', 'Failed to share skill response'));
+    } finally {
+      setIsSharing(false);
+    }
+  }, [result, t]);
+
   return (
     <div className="flex items-center justify-between">
       <div className="-ml-1">
-        {step?.tokenUsage?.length > 0 && (
+        {step?.tokenUsage?.length > 0 && !isShareMode && (
           <Dropdown droplist={tokenUsageDropdownList}>
             <Button
               type="text"
@@ -131,21 +179,36 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
           </Dropdown>
         )}
       </div>
-      {!isPending && !readonly && (
+      {!isPending && !readonly && !isShareMode && (
         <div className="flex flex-row justify-between items-center text-sm">
           <div className="-ml-1 text-sm flex flex-row items-center">
             {step.content && (
-              <Button
-                type="text"
-                size="small"
-                icon={<IconCopy style={{ fontSize: 14 }} />}
-                className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
-                onClick={() => handleCopyToClipboard(step.content)}
-              >
-                <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
-                  {t('copilot.message.copy')}
-                </span>
-              </Button>
+              <>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<IconCopy style={{ fontSize: 14 }} />}
+                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
+                  onClick={() => handleCopyToClipboard(step.content)}
+                >
+                  <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
+                    {t('copilot.message.copy')}
+                  </span>
+                </Button>
+
+                <Button
+                  type="text"
+                  size="small"
+                  loading={isSharing}
+                  icon={<IconShareAlt style={{ fontSize: 14 }} />}
+                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
+                  onClick={handleShare}
+                >
+                  <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
+                    {t('canvas.skillResponse.share', 'Share')}
+                  </span>
+                </Button>
+              </>
             )}
             {editorActionList.map((item) => (
               <Button

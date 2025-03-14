@@ -58,14 +58,19 @@ const ActionDropdown = ({
 
   const handleAddToCanvas: MenuProps['onClick'] = ({ domEvent }) => {
     domEvent.stopPropagation();
-    addNode({
-      type: 'resource',
-      data: {
-        title: resource.title,
-        entityId: resource.resourceId,
-        contentPreview: resource.contentPreview,
+    addNode(
+      {
+        type: 'resource',
+        data: {
+          title: resource.title,
+          entityId: resource.resourceId,
+          contentPreview: resource.contentPreview,
+        },
       },
-    });
+      [],
+      true,
+      true,
+    );
     setShowLibraryModal(false);
     setPopupVisible(false);
   };

@@ -33,8 +33,9 @@ export const truncateContent = (
 export const processContentPreview = (
   contents: (string | undefined)[] = [],
   separator = '\n',
+  maxLength = MAX_CONTENT_PREVIEW_LENGTH,
 ): string => {
   const filteredContents = contents.filter(Boolean) as string[];
   const joinedContent = filteredContents.join(separator);
-  return joinedContent;
+  return truncateContent(joinedContent, maxLength);
 };

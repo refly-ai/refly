@@ -15,6 +15,7 @@ interface ReasoningContentPreviewProps {
   stepStatus: 'executing' | 'finish';
   className?: string;
   resultId?: string;
+  sizeMode?: 'compact' | 'adaptive';
 }
 
 export const ReasoningContentPreview = memo(
@@ -25,18 +26,22 @@ export const ReasoningContentPreview = memo(
     stepStatus,
     className = '',
     resultId,
+    sizeMode = 'adaptive',
   }: ReasoningContentPreviewProps) => {
     const { t } = useTranslation();
-    const [collapsed, setCollapsed] = useState(stepStatus !== 'executing');
+    const [collapsed, setCollapsed] = useState(
+      stepStatus !== 'executing' || sizeMode === 'compact',
+    );
 
     // Auto-collapse when step status changes from executing to finish
+    // or when sizeMode changes to compact
     useEffect(() => {
-      if (stepStatus === 'executing') {
+      if (stepStatus === 'executing' && sizeMode !== 'compact') {
         setCollapsed(false);
       } else {
         setCollapsed(true);
       }
-    }, [stepStatus]);
+    }, [stepStatus, sizeMode]);
 
     // Memoize className to prevent re-renders when only isOperating changes
     const markdownClassName = useMemo(
@@ -54,20 +59,34 @@ export const ReasoningContentPreview = memo(
     return (
       <div>
         <div
-          className={cn('p-3 bg-gray-50 rounded-lg border border-gray-200 transition-all', {
+          className={cn('bg-gray-50 rounded-lg border border-gray-200 transition-all', {
             'cursor-pointer hover:bg-gray-100': collapsed,
+            'p-3': sizeMode !== 'compact',
+            'p-2': sizeMode === 'compact',
           })}
         >
           {collapsed ? (
             <div
               className="flex items-center justify-between text-xs"
-              onClick={() => setCollapsed(false)}
+              onClick={() => sizeMode !== 'compact' && setCollapsed(false)}
             >
               <div className="flex items-center gap-1">
-                <IconThinking className="w-4 h-4" />
-                {t('canvas.skillResponse.reasoningContent')}
+                <IconThinking
+                  className={cn('text-gray-500', {
+                    'w-4 h-4': sizeMode !== 'compact',
+                    'w-3 h-3': sizeMode === 'compact',
+                  })}
+                />
+                <span
+                  className={cn({
+                    truncate: sizeMode === 'compact',
+                    'max-w-[200px]': sizeMode === 'compact',
+                  })}
+                >
+                  {t('canvas.skillResponse.reasoningContent')}
+                </span>
               </div>
-              <ChevronDown className="w-4 h-4" />
+              {sizeMode !== 'compact' && <ChevronDown className="w-4 h-4" />}
             </div>
           ) : (
             <div>
@@ -102,6 +121,7 @@ export const ReasoningContentPreview = memo(
       prevProps.isOperating === nextProps.isOperating &&
       prevProps.stepStatus === nextProps.stepStatus &&
       prevProps.className === nextProps.className &&
+      prevProps.sizeMode === nextProps.sizeMode &&
       JSON.stringify(prevProps.sources) === JSON.stringify(nextProps.sources)
     );
   },

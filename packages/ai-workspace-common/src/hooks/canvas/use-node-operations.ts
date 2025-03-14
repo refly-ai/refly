@@ -5,6 +5,7 @@ import { useCanvasSync } from './use-canvas-sync';
 import { useContextPanelStoreShallow } from '../../stores/context-panel';
 import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
 import { useUploadMinimap } from '@refly-packages/ai-workspace-common/hooks/use-upload-minimap';
+import { truncateContent, MAX_CONTENT_PREVIEW_LENGTH } from '../../utils/content';
 
 export const useNodeOperations = () => {
   const canvasId = useCanvasId();
@@ -56,6 +57,53 @@ export const useNodeOperations = () => {
     },
     [canvasId, updateNodesWithSync],
   );
+
+  // New function to truncate content for skill-response nodes only
+  const truncateAllNodesContent = useCallback(() => {
+    const { data } = useCanvasStore.getState();
+    const nodes = data[canvasId]?.nodes ?? [];
+
+    // Filter only skill-response nodes that need truncation
+    const skillResponseNodes = nodes.filter(
+      (node) =>
+        node.type === 'skillResponse' &&
+        ((node.data?.contentPreview &&
+          node.data.contentPreview.length > MAX_CONTENT_PREVIEW_LENGTH) ||
+          (node.data?.metadata?.reasoningContent &&
+            node.data.metadata.reasoningContent.length > MAX_CONTENT_PREVIEW_LENGTH)),
+    );
+
+    if (skillResponseNodes.length === 0) return; // Skip if no updates needed
+
+    const updatedNodes = nodes.map((node) => {
+      // Only process skill-response nodes with content
+      if (
+        node.type === 'skillResponse' &&
+        (node.data?.contentPreview || node.data?.metadata?.reasoningContent)
+      ) {
+        const newNode = { ...node };
+        newNode.data = { ...node.data };
+
+        // Truncate main content preview if it exists
+        if (newNode.data.contentPreview) {
+          newNode.data.contentPreview = truncateContent(newNode.data.contentPreview);
+        }
+
+        // Truncate reasoning content if it exists
+        if (newNode.data.metadata?.reasoningContent) {
+          newNode.data.metadata = { ...newNode.data.metadata };
+          newNode.data.metadata.reasoningContent = truncateContent(
+            newNode.data.metadata.reasoningContent,
+          );
+        }
+
+        return newNode;
+      }
+      return node;
+    });
+
+    updateNodesWithSync(updatedNodes);
+  }, [canvasId, updateNodesWithSync]);
 
   const setNodeSizeMode = useCallback(
     (nodeId: string, mode: 'compact' | 'adaptive') => {
@@ -150,5 +198,6 @@ export const useNodeOperations = () => {
     updateNodesWithSync,
     setNodeSizeMode,
     updateAllNodesSizeMode,
+    truncateAllNodesContent,
   };
 };

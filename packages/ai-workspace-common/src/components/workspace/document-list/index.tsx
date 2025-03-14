@@ -47,14 +47,19 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
   };
 
   const handleAddToCanvas = () => {
-    addNode({
-      type: 'document',
-      data: {
-        title: doc.title,
-        entityId: doc.docId,
-        contentPreview: doc.contentPreview,
+    addNode(
+      {
+        type: 'document',
+        data: {
+          title: doc.title,
+          entityId: doc.docId,
+          contentPreview: doc.contentPreview,
+        },
       },
-    });
+      [],
+      true,
+      true,
+    );
     setShowLibraryModal(false);
   };
 

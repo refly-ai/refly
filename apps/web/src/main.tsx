@@ -33,11 +33,42 @@ import '@refly-packages/ai-workspace-common/i18n/config';
 import { getEnv, setRuntime } from '@refly/utils/env';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { SuspenseLoading } from '@refly-packages/ai-workspace-common/components/common/loading';
+import { sentryEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 
 // styles
 import '@/styles/style.css';
 
 setRuntime('web');
+
+// Global script error handler
+const handleScriptError = (event: ErrorEvent) => {
+  // Prevent promise rejection for script loading errors
+  if (
+    event.target &&
+    (event.target instanceof HTMLScriptElement || (event.target as any)?.nodeName === 'SCRIPT')
+  ) {
+    console.warn('Script loading error:', event);
+    // Prevent the error from being captured as unhandled promise rejection
+    event.preventDefault();
+    return true;
+  }
+  return false;
+};
+
+// Add global error handlers
+window.addEventListener('error', handleScriptError, true);
+window.addEventListener('unhandledrejection', (event) => {
+  // Check if the rejection is related to a script loading error
+  if (
+    event.reason?.target &&
+    (event.reason.target instanceof HTMLScriptElement ||
+      event.reason.target?.nodeName === 'SCRIPT' ||
+      (typeof event.reason.target === 'string' && event.reason.target.includes('script')))
+  ) {
+    console.warn('Unhandled script loading rejection:', event.reason);
+    event.preventDefault();
+  }
+});
 
 // Move Sentry initialization to a separate function
 const initSentry = async () => {
@@ -64,12 +95,27 @@ const initSentry = async () => {
       // Session Replay
       replaysSessionSampleRate: 0, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
       replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
+      beforeSend(event) {
+        // Filter out script loading errors that we've already handled
+        if (
+          event.exception?.values?.some(
+            (exception) =>
+              exception.value &&
+              (exception.value.includes('script') || exception.value.includes('font-inter')),
+          )
+        ) {
+          return null;
+        }
+        return event;
+      },
     });
   }
 };
 
-// Call Sentry initialization
-initSentry();
+// Call Sentry initialization if enabled
+if (sentryEnabled) {
+  initSentry();
+}
 
 // Update App component to remove Suspense (moved to router definition)
 export const App = () => {

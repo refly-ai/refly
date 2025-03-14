@@ -317,7 +317,7 @@ export const MemoNode = ({
           width: `${size.width}px`,
           height: `${size.height}px`,
           userSelect: 'none',
-          cursor: isOperating ? 'default' : 'grab',
+          cursor: readonly ? 'default' : isOperating ? 'default' : 'grab',
         }}
       >
         {!isPreview && selected && !readonly && (

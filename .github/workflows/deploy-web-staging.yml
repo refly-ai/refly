@@ -43,6 +43,7 @@ jobs:
           VITE_API_URL: https://staging-api.refly.ai
           VITE_COLLAB_URL: https://staging-collab.refly.ai
           VITE_SUBSCRIPTION_ENABLED: true
+          VITE_SENTRY_ENABLED: true
           VITE_STATIC_PUBLIC_ENDPOINT: https://static.refly.ai
           VITE_STATIC_PRIVATE_ENDPOINT: https://staging-api.refly.ai/v1/misc
 

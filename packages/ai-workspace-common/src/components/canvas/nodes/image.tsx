@@ -67,6 +67,7 @@ export const ImageNode = memo(
     const { containerStyle, handleResize } = useNodeSize({
       id,
       node,
+      readonly,
       isOperating,
       minWidth: 100,
       maxWidth: 800,
@@ -255,6 +256,7 @@ export const ImageNode = memo(
 
               <div className="w-full rounded-lg overflow-y-auto">
                 <img
+                  onClick={readonly ? handlePreview : undefined}
                   src={imageUrl}
                   alt={data.title || 'Image'}
                   className="w-full h-auto object-contain"

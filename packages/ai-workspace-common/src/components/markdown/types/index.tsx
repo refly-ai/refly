@@ -5,3 +5,5 @@ export interface MarkdownElementProps {
   id: string;
   type: string;
 }
+
+export type MarkdownMode = 'readonly' | 'interactive';

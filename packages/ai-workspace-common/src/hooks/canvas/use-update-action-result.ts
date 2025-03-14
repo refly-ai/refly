@@ -97,10 +97,7 @@ export const useUpdateActionResult = () => {
         if (event) {
           nodeData = generatePartialNodeDataUpdates(payload, event);
         }
-        setNodeDataByEntity<ResponseNodeMeta>(
-          { type: 'skillResponse', entityId: resultId },
-          nodeData,
-        );
+        setNodeDataByEntity({ type: 'skillResponse', entityId: resultId }, nodeData);
       }
     },
     [updateActionResult, setNodeDataByEntity],

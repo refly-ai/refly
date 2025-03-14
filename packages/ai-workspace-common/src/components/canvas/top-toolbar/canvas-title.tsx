@@ -15,12 +15,14 @@ export const CanvasTitle = memo(
     canvasId,
     canvasTitle,
     hasCanvasSynced,
+    providerStatus,
     debouncedUnsyncedChanges,
     language,
   }: {
     canvasId: string;
     canvasTitle?: string;
     hasCanvasSynced: boolean;
+    providerStatus: string;
     debouncedUnsyncedChanges: number;
     language: LOCALE;
   }) => {
@@ -56,6 +58,8 @@ export const CanvasTitle = memo(
       }
     }, [canvasTitle, hasCanvasSynced, canvasId]);
 
+    const isSyncing = providerStatus !== 'connected' || debouncedUnsyncedChanges > 0;
+
     return (
       <>
         <div
@@ -65,7 +69,7 @@ export const CanvasTitle = memo(
         >
           <Tooltip
             title={
-              debouncedUnsyncedChanges > 0
+              isSyncing
                 ? t('canvas.toolbar.syncingChanges')
                 : t('canvas.toolbar.synced', {
                     time: time(new Date(), language)?.utc()?.fromNow(),
@@ -76,7 +80,7 @@ export const CanvasTitle = memo(
               className={`
               relative w-2.5 h-2.5 rounded-full
               transition-colors duration-700 ease-in-out
-              ${debouncedUnsyncedChanges > 0 ? 'bg-yellow-500 animate-pulse' : 'bg-green-400'}
+              ${isSyncing ? 'bg-yellow-500 animate-pulse' : 'bg-green-400'}
             `}
             />
           </Tooltip>

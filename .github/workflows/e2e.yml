@@ -1,12 +1,10 @@
 name: End-to-End Tests
 
 on:
-  pull_request_review:
-    types: [submitted]
+  workflow_dispatch:
 
 jobs:
   e2e:
-    if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # https://github.com/cypress-io/github-action/issues/48

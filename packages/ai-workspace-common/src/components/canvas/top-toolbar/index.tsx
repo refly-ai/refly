@@ -11,7 +11,7 @@ import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/store
 import { Helmet } from 'react-helmet';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CanvasTitle, ReadonlyCanvasTitle } from './canvas-title';
-import { ToolbarButtons, WarningButton } from './buttons';
+import { ToolbarButtons } from './buttons';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import ShareSettings from './share-settings';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
@@ -65,33 +65,8 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
       setShowMaxRatio: state.setShowMaxRatio,
     }));
 
-  const [connectionTimeout, setConnectionTimeout] = useState(false);
-
-  useEffect(() => {
-    if (readonly) {
-      return;
-    }
-
-    let timeoutId: NodeJS.Timeout;
-
-    if (provider?.status !== 'connected') {
-      timeoutId = setTimeout(() => {
-        setConnectionTimeout(true);
-      }, 10000);
-    } else {
-      setConnectionTimeout(false);
-    }
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [readonly, provider?.status]);
-
   const canvasTitle = data?.title;
   const hasCanvasSynced = config?.localSyncedAt > 0 && config?.remoteSyncedAt > 0;
-  const showWarning = connectionTimeout && !hasCanvasSynced && provider?.status !== 'connected';
 
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
   const handleDuplicate = () => {
@@ -139,11 +114,11 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
               canvasId={canvasId}
               canvasTitle={canvasTitle}
               hasCanvasSynced={hasCanvasSynced}
+              providerStatus={provider?.status}
               debouncedUnsyncedChanges={debouncedUnsyncedChanges}
               language={language}
             />
           )}
-          <WarningButton show={showWarning} />
         </div>
 
         <div className="flex items-center gap-2 relative z-10">

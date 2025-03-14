@@ -130,9 +130,12 @@ export const SkillNode = memo(
     const isOperating = operatingNodeId === id;
     const isDragging = draggingNodeId === id;
     const node = useMemo(() => getNode(id), [id, getNode]);
+    const { canvasId, readonly } = useCanvasContext();
+
     const { containerStyle, handleResize, updateSize } = useNodeSize({
       id,
       node,
+      readonly,
       isOperating,
       minWidth: 100,
       maxWidth: 800,
@@ -178,7 +181,6 @@ export const SkillNode = memo(
     }));
 
     const { invokeAction, abortAction } = useInvokeAction();
-    const { canvasId, readonly } = useCanvasContext();
 
     const { handleUploadImage } = useUploadImage();
 

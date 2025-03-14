@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import { markdownElements } from './plugins';
 import { processWithArtifact } from '@refly-packages/ai-workspace-common/modules/artifacts/utils';
+import { MarkdownMode } from './types';
 
 const rehypePlugins = markdownElements.map((element) => element.rehypePlugin);
 
@@ -29,9 +30,10 @@ export const Markdown = memo(
       sources?: Source[];
       className?: string;
       resultId?: string;
+      mode?: MarkdownMode;
     } & React.DOMAttributes<HTMLDivElement>,
   ) => {
-    const { content: rawContent } = props;
+    const { content: rawContent, mode = 'interactive' } = props;
     const content = processWithArtifact(rawContent);
 
     const mdRef = useRef<HTMLDivElement>(null);
@@ -64,11 +66,11 @@ export const Markdown = memo(
 
           return [
             element.tag,
-            (innerProps: any) => <Component {...innerProps} id={outerResultId} />,
+            (innerProps: any) => <Component {...innerProps} id={outerResultId} mode={mode} />,
           ];
         }),
       );
-    }, [props.resultId]);
+    }, [props.resultId, mode]);
 
     // Dynamically import KaTeX CSS
     useEffect(() => {
@@ -131,6 +133,7 @@ export const Markdown = memo(
       prevProps.loading === nextProps.loading &&
       prevProps.className === nextProps.className &&
       prevProps.resultId === nextProps.resultId &&
+      prevProps.mode === nextProps.mode &&
       JSON.stringify(prevProps.sources) === JSON.stringify(nextProps.sources)
     );
   },

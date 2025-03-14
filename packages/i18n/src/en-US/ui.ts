@@ -9,6 +9,7 @@ const translations = {
     title: 'Terms of Service',
   },
   common: {
+    poweredBy: 'Powered by',
     confirm: 'Confirm',
     cancel: 'Cancel',
     delete: 'Delete',
@@ -73,6 +74,8 @@ const translations = {
     duplicate: 'Duplicate',
     shareSuccess: 'Share link copied to clipboard!',
     shareError: 'Share failed, please try again!',
+    readonlyWarning: 'Read-Only Mode',
+    readonlyDragDescription: 'Canvas is in read-only mode, modifications are not allowed.',
   },
   verifyRules: {
     emailRequired: 'Email cannot be empty',
@@ -773,6 +776,9 @@ const translations = {
   document: {
     setReadOnly: 'Set to Read-Only',
     enableEdit: 'Enable Edit',
+    shareLoading: 'Loading shared document...',
+    notFound: 'Document Not Found',
+    notFoundDesc: 'The document you are looking for does not exist or has been removed.',
   },
   artifact: {
     generating: 'Generating',
@@ -928,7 +934,7 @@ const translations = {
     },
     connectionTimeout: {
       title: 'Connection Timeout',
-      extra: 'The server seems to be busy, please try again.',
+      extra: 'We have some issues connecting to the Refly server, please refresh and try again.',
     },
     action: {
       nodeAlreadyExists: 'The {{type}} with the same entity already exists',
@@ -951,6 +957,9 @@ const translations = {
       startRerun: 'Skill is rerunning...',
       resultNotFound: 'Sorry, the execution result seems to be lost.',
       reasoningContent: 'AI Thinking Process',
+      shareLoading: 'Loading shared skill response...',
+      notFound: 'Skill Response Not Found',
+      notFoundDesc: 'The skill response you are looking for does not exist or has been removed.',
     },
     chatHistory: {
       alreadyAdded: 'Already added to chat history',
@@ -1219,6 +1228,13 @@ const translations = {
       closeErrorMessage: 'Close error message',
       copyErrorMessage: 'Copy error message',
       errorDismissed: 'Error message dismissed',
+    },
+    editor: {
+      fontFamily: 'Font Family',
+      fontSize: 'Font Size',
+      fontLigatures: 'Font Ligatures',
+      theme: 'Theme',
+      loading: 'Loading editor...',
     },
     copySuccess: 'Code copied to clipboard',
     copyError: 'Failed to copy code',

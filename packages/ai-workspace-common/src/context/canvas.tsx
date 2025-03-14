@@ -139,6 +139,7 @@ export const CanvasProvider = ({
       token,
       document: doc,
       connect: true,
+      forceSyncInterval: 5000,
       onAuthenticationFailed: (data) => {
         console.log('onAuthenticationFailed', data);
         refreshToken();

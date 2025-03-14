@@ -17,6 +17,7 @@ const translations = {
     title: '服务条款',
   },
   common: {
+    poweredBy: 'Powered by',
     confirm: '确认',
     cancel: '取消',
     delete: '删除',
@@ -81,6 +82,8 @@ const translations = {
     duplicate: '复制',
     shareSuccess: '分享链接已复制到剪贴板!',
     shareError: '分享失败，请重试！',
+    readonlyWarning: '只读模式',
+    readonlyDragDescription: '当前画布为只读模式，不支持修改',
   },
   verifyRules: {
     emailRequired: '邮箱地址不能为空',
@@ -763,6 +766,9 @@ const translations = {
   document: {
     setReadOnly: '设置为只读',
     enableEdit: '启用编辑',
+    shareLoading: '正在加载共享文档...',
+    notFound: '文档未找到',
+    notFoundDesc: '您查找的文档不存在或已被删除。',
   },
   artifact: {
     generating: '生成中',
@@ -912,7 +918,7 @@ const translations = {
     },
     connectionTimeout: {
       title: '连接超时',
-      extra: '服务器似乎繁忙，请稍后再试。',
+      extra: '似乎无法连接到 Refly 服务器，请刷新重试。',
     },
     action: {
       nodeAlreadyExists: '该{{type}}已存在于当前画布中',
@@ -925,16 +931,19 @@ const translations = {
     },
     skillResponse: {
       executionFailed: '执行失败，点击重试',
-      skillCompleted: '技能执行完成',
-      stepCompleted: '步骤执行完成',
+      skillCompleted: '技能已完成',
+      stepCompleted: '步骤已完成',
       stepTitle: '步骤 {{index}}',
-      aiThinking: 'AI 正在思考中...',
+      aiThinking: 'AI 正在思考...',
       sourcesCnt: '共找到 {{count}} 个来源',
-      executing: '技能正在执行中，请稍等...',
-      startRunning: '技能开始执行...',
-      startRerun: '技能开始重新执行...',
-      resultNotFound: '抱歉，执行结果似乎丢失了。',
+      executing: '技能正在执行，请稍候...',
+      startRunning: '技能正在运行...',
+      startRerun: '技能正在重新运行...',
+      resultNotFound: '抱歉，执行结果似乎已丢失。',
       reasoningContent: 'AI 思考过程',
+      shareLoading: '正在加载共享技能响应...',
+      notFound: '技能响应未找到',
+      notFoundDesc: '您查找的技能响应不存在或已被删除。',
     },
     chatHistory: {
       alreadyAdded: '已添加到对话历史',
@@ -1193,6 +1202,13 @@ const translations = {
       closeErrorMessage: '关闭错误信息',
       copyErrorMessage: '复制错误信息',
       errorDismissed: '已关闭错误信息',
+    },
+    editor: {
+      fontFamily: '字体',
+      fontSize: '字号',
+      fontLigatures: '连字',
+      theme: '主题',
+      loading: '编辑器加载中...',
     },
     copySuccess: '代码已复制到剪贴板',
     copyError: '复制代码失败',

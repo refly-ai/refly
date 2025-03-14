@@ -41,6 +41,8 @@ import { useCanvasTemplateModal } from '@refly-packages/ai-workspace-common/stor
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
+import './layout.scss';
+
 const Sider = Layout.Sider;
 const MenuItem = Menu.Item;
 const SubMenu = Menu.SubMenu;

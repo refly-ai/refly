@@ -8,6 +8,7 @@ import {
   IconCopy,
   IconLock,
   IconUnlock,
+  IconShare,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useTranslation } from 'react-i18next';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
@@ -25,6 +26,8 @@ import { time } from '@refly-packages/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useDocumentSync } from '@refly-packages/ai-workspace-common/hooks/use-document-sync';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 const StatusBar = memo(
   ({ docId }: { docId: string }) => {
@@ -35,6 +38,7 @@ const StatusBar = memo(
 
     const [unsyncedChanges, setUnsyncedChanges] = useState(provider?.unsyncedChanges || 0);
     const [debouncedUnsyncedChanges] = useDebounce(unsyncedChanges, 500);
+    const [isSharing, setIsSharing] = useState(false);
 
     const handleUnsyncedChanges = useCallback((data: number) => {
       setUnsyncedChanges(data);
@@ -108,6 +112,53 @@ const StatusBar = memo(
       message.success({ content: t('contentDetail.item.copySuccess') });
     };
 
+    const handleShare = useCallback(async () => {
+      if (!ydoc) return;
+
+      setIsSharing(true);
+      const loadingMessage = message.loading(t('document.sharing', 'Sharing document...'), 0);
+
+      try {
+        const title = ydoc.getText('title').toJSON();
+        const content = ydoc2Markdown(ydoc);
+        const documentData = {
+          title,
+          content,
+        };
+
+        // Create share using the API
+        const { data, error } = await getClient().createShare({
+          body: {
+            entityId: docId,
+            entityType: 'document',
+            shareData: JSON.stringify(documentData),
+          },
+        });
+
+        if (!data.success || error) {
+          throw new Error(error ? String(error) : 'Failed to share document');
+        }
+
+        // Generate share link
+        const shareLink = getShareLink('document', data.data?.shareId ?? '');
+
+        // Copy the sharing link to clipboard
+        copyToClipboard(shareLink);
+
+        // Clear loading message and show success
+        loadingMessage();
+        message.success(
+          t('document.shareSuccess', 'Document shared successfully! Link copied to clipboard.'),
+        );
+      } catch (err) {
+        console.error('Failed to share document:', err);
+        loadingMessage();
+        message.error(t('document.shareError', 'Failed to share document'));
+      } finally {
+        setIsSharing(false);
+      }
+    }, [ydoc, docId, t]);
+
     return (
       <div className="w-full h-10 p-3 border-x-0 border-t-0 border-b border-solid border-gray-100 flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
@@ -148,6 +199,15 @@ const StatusBar = memo(
               icon={<IconCopy className="text-gray-500" />}
               onClick={() => handleCopy()}
               title={t('common.copy.title')}
+            />
+          </Tooltip>
+          <Tooltip placement="bottom" title={t('document.share', 'Share document')}>
+            <Button
+              type="text"
+              icon={<IconShare className="text-gray-500" />}
+              onClick={handleShare}
+              loading={isSharing}
+              title={t('document.share', 'Share document')}
             />
           </Tooltip>
         </div>

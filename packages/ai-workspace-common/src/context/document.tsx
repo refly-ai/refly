@@ -97,6 +97,7 @@ export const DocumentProvider = ({
       token,
       document: doc,
       connect: true,
+      forceSyncInterval: 5000,
       onAuthenticationFailed: () => {
         console.log('Authentication failed, refreshing token');
         refreshToken();

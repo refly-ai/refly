@@ -11,18 +11,25 @@ import {
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { Artifact } from '@refly/openapi-schema';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { MarkdownMode } from '../../types';
 
 interface CanvasProps extends MarkdownElementProps {
   identifier: string;
   title: string;
   type: string;
   language: string;
+  mode?: MarkdownMode;
 }
 
 const Render = memo<CanvasProps>((props: CanvasProps) => {
-  const { title, id } = props;
+  const { title, id, mode = 'interactive' } = props;
   const { t } = useTranslation();
-  const { canvasId } = useCanvasContext();
+
+  const isInteractive = mode === 'interactive';
+
+  // Only use canvas context if in interactive mode
+  const canvasContext = isInteractive ? useCanvasContext() : { canvasId: undefined };
+  const canvasId = canvasContext?.canvasId;
 
   // Use action result store to get status and artifact
   const [isGenerating, artifact] = useActionResultStoreShallow((s) => {
@@ -43,12 +50,13 @@ const Render = memo<CanvasProps>((props: CanvasProps) => {
     ];
   });
 
-  const { addNodePreview } = useCanvasStoreShallow((state) => ({
-    addNodePreview: state.addNodePreview,
-  }));
+  // Only use canvas store if in interactive mode and not readonly
+  const addNodePreview = isInteractive
+    ? useCanvasStoreShallow((state) => state.addNodePreview)
+    : undefined;
 
   const handleClick = () => {
-    if (!artifact || !canvasId) return;
+    if (!artifact || !canvasId || !isInteractive || !addNodePreview) return;
 
     // Get canvas nodes to find if a node with this entity ID already exists
     const canvasData = useCanvasStore.getState().data[canvasId];
@@ -81,9 +89,12 @@ const Render = memo<CanvasProps>((props: CanvasProps) => {
     }
   };
 
+  // Determine the cursor style based on mode
+  const cursorStyle = isInteractive ? 'cursor-pointer' : 'cursor-default';
+
   return (
     <div className="my-3 rounded-lg overflow-hidden border border-solid border-gray-300 bg-white hover:shadow-sm hover:bg-gray-50 transition-all duration-200">
-      <div className="flex cursor-pointer transition-colors" onClick={handleClick}>
+      <div className={`flex ${cursorStyle} transition-colors`} onClick={handleClick}>
         {/* Left section with gray background */}
         <div className="flex items-center justify-center bg-gray-50 p-3">
           <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
@@ -104,7 +115,7 @@ const Render = memo<CanvasProps>((props: CanvasProps) => {
 
             <div className="flex items-center text-xs text-gray-500 mt-0.5">
               <span className="mr-2">
-                {artifact
+                {artifact && isInteractive
                   ? t('artifact.openComponent', 'Click to view code component')
                   : t('artifact.codeArtifact', 'Code artifact')}
               </span>

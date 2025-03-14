@@ -2,7 +2,7 @@ import { FiRefreshCw, FiDownload, FiCopy, FiCode, FiEye, FiShare2 } from 'react-
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Button, Tooltip, Divider, message, Select } from 'antd';
 import Renderer from './render';
-import Editor, { Monaco } from '@monaco-editor/react';
+import MonacoEditor from './render/MonacoEditor';
 import { useTranslation } from 'react-i18next';
 import { CodeArtifactType } from './types';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
@@ -37,20 +37,6 @@ const getArtifactTypeOptions = () => {
     value: value as CodeArtifactType,
     label,
   }));
-};
-
-// Function to map CodeArtifactType to appropriate Monaco editor language
-const getLanguageFromType = (type: CodeArtifactType, language: string): string => {
-  const languageMap: Record<CodeArtifactType, string> = {
-    'application/refly.artifacts.react': 'typescript',
-    'image/svg+xml': 'xml',
-    'application/refly.artifacts.mermaid': 'markdown',
-    'text/markdown': 'markdown',
-    'application/refly.artifacts.code': language, // Use provided language
-    'text/html': 'html',
-  };
-
-  return languageMap[type] ?? language;
 };
 
 // Function to get file extension based on artifact type
@@ -98,7 +84,6 @@ export default memo(
     type?: CodeArtifactType;
     onTypeChange?: (type: CodeArtifactType) => void;
   }) {
-    // console.log('code-artifact-viewer', code, language, title, type);
     const { t } = useTranslation();
     const [refresh, setRefresh] = useState(0);
     // Track editor content for controlled updates
@@ -108,17 +93,6 @@ export default memo(
     useEffect(() => {
       setEditorContent(code);
     }, [code]);
-
-    // Set up Monaco editor with proper language support
-    useEffect(() => {
-      // No need to configure loader without direct monaco import
-      // loader.config({ monaco });
-
-      // Setup will happen in beforeMount callback instead
-      return () => {
-        // Cleanup if needed
-      };
-    }, []);
 
     const handleCopyCode = useCallback(
       (event: React.MouseEvent) => {
@@ -139,7 +113,7 @@ export default memo(
     const handleDownload = useCallback(
       (event: React.MouseEvent) => {
         event.stopPropagation();
-        const fileExtension = getFileExtensionForLanguage(language);
+        const fileExtension = getFileExtensionFromType(type);
         const fileName = `${title}.${fileExtension}`;
         try {
           const blob = new Blob([editorContent], { type: 'text/plain' });
@@ -157,7 +131,7 @@ export default memo(
           message.error(t('codeArtifact.downloadError'));
         }
       },
-      [language, editorContent, title, t],
+      [type, editorContent, title, t],
     );
 
     // Handle content changes from editor
@@ -312,18 +286,8 @@ export default memo(
           </Tooltip>
         </div>
       ),
-      [
-        handleCopyCode,
-        handleDownload,
-        handleShare,
-        title,
-        language,
-        getFileExtensionForLanguage,
-        t,
-      ],
+      [handleCopyCode, handleDownload, title, type, t],
     );
-
-    // console.log('code-artifact-viewer', code, language, title, type);
 
     return (
       <div
@@ -386,76 +350,15 @@ export default memo(
         {/* Content area */}
         <div className="flex flex-grow flex-col overflow-auto rounded-md">
           {activeTab === 'code' ? (
-            <div className="h-full" style={{ minHeight: '500px' }}>
-              <Editor
-                height="100%"
-                value={editorContent}
-                onChange={handleEditorChange}
-                language={getLanguageFromType(type, language)}
-                beforeMount={(monaco: Monaco) => {
-                  // Configure Monaco instance before mounting
-                  monaco.editor.defineTheme('github-custom', {
-                    base: 'vs',
-                    inherit: true,
-                    rules: [
-                      { token: 'comment', foreground: '008000' },
-                      { token: 'keyword', foreground: '0000FF' },
-                      { token: 'string', foreground: 'A31515' },
-                      { token: 'number', foreground: '098658' },
-                      { token: 'regexp', foreground: '800000' },
-                    ],
-                    colors: {
-                      'editor.foreground': '#000000',
-                      'editor.background': '#ffffff',
-                      'editor.selectionBackground': '#b3d4fc',
-                      'editor.lineHighlightBackground': '#f5f5f5',
-                      'editorCursor.foreground': '#000000',
-                      'editorWhitespace.foreground': '#d3d3d3',
-                    },
-                  });
-                }}
-                onMount={(editor, monaco) => {
-                  // Configure TypeScript and other languages
-                  if (monaco.languages.typescript) {
-                    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-                      target: monaco.languages.typescript.ScriptTarget.Latest,
-                      allowNonTsExtensions: true,
-                      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-                      module: monaco.languages.typescript.ModuleKind.CommonJS,
-                      noEmit: true,
-                      esModuleInterop: true,
-                      jsx: monaco.languages.typescript.JsxEmit.React,
-                      reactNamespace: 'React',
-                      allowJs: true,
-                    });
-                  }
-
-                  // Set editor options if needed
-                  editor.updateOptions({
-                    tabSize: 2,
-                    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-                  });
-                }}
-                options={{
-                  automaticLayout: true,
-                  minimap: { enabled: true },
-                  scrollBeyondLastLine: false,
-                  fontSize: 14,
-                  lineNumbers: 'on',
-                  renderLineHighlight: 'all',
-                  readOnly: readOnly || isGenerating || canvasReadOnly,
-                  scrollbar: {
-                    vertical: 'visible',
-                    horizontal: 'visible',
-                  },
-                  formatOnPaste: true,
-                  formatOnType: true,
-                  autoIndent: 'full',
-                  colorDecorators: true,
-                }}
-                theme="github-custom"
-              />
-            </div>
+            <MonacoEditor
+              content={editorContent}
+              language={language}
+              type={type}
+              readOnly={readOnly || isGenerating || canvasReadOnly}
+              isGenerating={isGenerating}
+              canvasReadOnly={canvasReadOnly}
+              onChange={handleEditorChange}
+            />
           ) : (
             <div className="h-full flex items-center justify-center">
               {language && (

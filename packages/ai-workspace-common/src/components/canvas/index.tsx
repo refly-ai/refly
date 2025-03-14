@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useEffect, useState, useRef, memo } from 'react';
+import { Modal, Result } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
@@ -51,6 +52,7 @@ import NotFoundOverlay from './NotFoundOverlay';
 import { getFreshNodePreviews } from '../../utils/canvas';
 import { NODE_MINI_MAP_COLORS } from './nodes/shared/colors';
 import { useDragToCreateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-create-node';
+import { message } from 'antd';
 
 import '@xyflow/react/dist/style.css';
 import './index.scss';
@@ -154,11 +156,18 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   }));
   const selectedNodes = nodes.filter((node) => node.selected) || [];
 
-  const { onNodesChange } = useNodeOperations();
+  const { onNodesChange, truncateAllNodesContent } = useNodeOperations();
   const { setSelectedNode } = useNodeSelection();
 
   const { onEdgesChange, onConnect } = useEdgeOperations();
   const edgeStyles = useEdgeStyles();
+
+  // Call truncateAllNodesContent when nodes are loaded
+  useEffect(() => {
+    if (nodes.length > 0) {
+      truncateAllNodesContent();
+    }
+  }, [canvasId, truncateAllNodesContent]);
 
   const { showPreview, showLaunchpad, showMaxRatio } = useCanvasStoreShallow((state) => ({
     showPreview: state.showPreview,
@@ -385,19 +394,50 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
   const [connectionTimeout, setConnectionTimeout] = useState(false);
 
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+  // Track when provider first became unhealthy
+  const unhealthyStartTimeRef = useRef<number | null>(null);
 
-    if (provider?.status !== 'connected') {
-      timeoutId = setTimeout(() => {
-        setConnectionTimeout(true);
-      }, 10000);
+  useEffect(() => {
+    // Skip if no provider
+    if (!provider) return;
+
+    // Clear timeout state if provider becomes connected
+    if (provider.status === 'connected') {
+      setConnectionTimeout(false);
+      unhealthyStartTimeRef.current = null;
+      return;
     }
 
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+    // If provider is unhealthy and we haven't started tracking, start now
+    if (unhealthyStartTimeRef.current === null) {
+      unhealthyStartTimeRef.current = Date.now();
+    }
+
+    // Check status every two seconds after provider becomes unhealthy
+    const intervalId = setInterval(() => {
+      // Skip if provider is gone
+      if (!provider) return;
+
+      if (unhealthyStartTimeRef.current) {
+        const unhealthyDuration = Date.now() - unhealthyStartTimeRef.current;
+
+        // If provider has been unhealthy for more than 10 seconds, set timeout
+        if (unhealthyDuration > 10000) {
+          setConnectionTimeout(true);
+          clearInterval(intervalId);
+        }
       }
+
+      // Provider became healthy, reset everything
+      if (provider.status === 'connected') {
+        clearInterval(intervalId);
+        unhealthyStartTimeRef.current = null;
+        setConnectionTimeout(false);
+      }
+    }, 2000);
+
+    return () => {
+      clearInterval(intervalId);
     };
   }, [provider?.status]);
 
@@ -740,6 +780,37 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     );
   }, [selectedEdgeId, reactFlowInstance, edgeStyles]);
 
+  const [readonlyDragWarningDebounce, setReadonlyDragWarningDebounce] =
+    useState<NodeJS.Timeout | null>(null);
+
+  const handleReadonlyDrag = useCallback(
+    (event: React.MouseEvent) => {
+      if (readonly) {
+        if (!readonlyDragWarningDebounce) {
+          message.warning(t('common.readonlyDragDescription'));
+
+          const debounceTimeout = setTimeout(() => {
+            setReadonlyDragWarningDebounce(null);
+          }, 3000);
+
+          setReadonlyDragWarningDebounce(debounceTimeout);
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    [readonly, readonlyDragWarningDebounce, t],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (readonlyDragWarningDebounce) {
+        clearTimeout(readonlyDragWarningDebounce);
+      }
+    };
+  }, [readonlyDragWarningDebounce]);
+
   return (
     <Spin
       className="w-full h-full"
@@ -750,6 +821,20 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       }
       tip={connectionTimeout ? t('common.connectionFailed') : t('common.loading')}
     >
+      <Modal
+        centered
+        open={connectionTimeout}
+        onOk={() => window.location.reload()}
+        onCancel={() => setConnectionTimeout(false)}
+        okText={t('common.retry')}
+        cancelText={t('common.cancel')}
+      >
+        <Result
+          status="warning"
+          title={t('canvas.connectionTimeout.title')}
+          extra={t('canvas.connectionTimeout.extra')}
+        />
+      </Modal>
       <div className="w-full h-screen relative flex flex-col overflow-hidden">
         {!readonly && (
           <CanvasToolbar onToolSelect={handleToolSelect} nodeLength={nodes?.length || 0} />
@@ -757,6 +842,17 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         <TopToolbar canvasId={canvasId} />
         <div className="flex-grow relative">
           <style>{selectionStyles}</style>
+          {readonly && (
+            <style>{`
+              .react-flow__node {
+                cursor: not-allowed !important;
+                opacity: 0.9;
+              }
+              .react-flow__node:hover {
+                box-shadow: none !important;
+              }
+            `}</style>
+          )}
           <ReactFlow
             {...flowConfig}
             edgeTypes={edgeTypes}
@@ -778,7 +874,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             onPaneClick={handlePanelClick}
             onPaneContextMenu={readonly ? undefined : onPaneContextMenu}
             onNodeContextMenu={readonly ? undefined : onNodeContextMenu}
-            onNodeDragStart={readonly ? undefined : onNodeDragStart}
+            onNodeDragStart={readonly ? handleReadonlyDrag : onNodeDragStart}
             onNodeDragStop={readonly ? undefined : onNodeDragStop}
             nodeDragThreshold={10}
             nodesDraggable={!operatingNodeId && !readonly}
@@ -821,7 +917,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             }}
             onScroll={(e) => updateIndicators(e.currentTarget)}
           >
-            <div className="relative h-full">
+            <div className="relative h-full overflow-y-hidden">
               <div className="flex gap-2 h-full">
                 {nodePreviews?.filter(Boolean)?.map((node) => (
                   <NodePreview key={node?.id} node={node} canvasId={canvasId} />

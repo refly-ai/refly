@@ -20,6 +20,7 @@ interface UseNodeSizeProps {
   id: string;
   node: Node;
   sizeMode?: 'compact' | 'adaptive';
+  readonly?: boolean;
   isOperating?: boolean;
   minWidth?: number;
   maxWidth?: number;
@@ -31,6 +32,7 @@ interface UseNodeSizeProps {
 export const useNodeSize = ({
   id,
   node,
+  readonly = false,
   sizeMode = 'adaptive',
   isOperating = false,
   minWidth = 100,
@@ -151,9 +153,9 @@ export const useNodeSize = ({
       minWidth: sizeMode === 'compact' ? minWidth : defaultWidth,
       maxWidth,
       userSelect: isOperating ? 'text' : 'none',
-      cursor: isOperating ? 'text' : 'grab',
+      cursor: readonly ? 'default' : isOperating ? 'text' : 'grab',
     }),
-    [size, sizeMode, minWidth, maxWidth, defaultWidth, isOperating, sizeMode],
+    [size, sizeMode, minWidth, maxWidth, defaultWidth, isOperating, sizeMode, readonly],
   );
 
   return {

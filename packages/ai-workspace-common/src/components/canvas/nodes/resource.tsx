@@ -114,6 +114,7 @@ export const ResourceNode = memo(
       id,
       node,
       sizeMode,
+      readonly,
       isOperating,
       minWidth: 100,
       maxWidth: 800,
