@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useEffect, useMemo, useRef, memo, useCallback, useState } from 'react';
 import { useThrottledCallback } from 'use-debounce';
 import classNames from 'classnames';
 import wordsCount from 'words-count';
@@ -34,6 +34,8 @@ import {
   useDocumentStore,
   useDocumentStoreShallow,
 } from '@refly-packages/ai-workspace-common/stores/document';
+import UpdatedImage from '@refly-packages/ai-workspace-common/components/editor/core/extensions/updated-image';
+import { UploadImagesPlugin } from '@refly-packages/ai-workspace-common/components/editor/core/plugins';
 
 import { genUniqueId } from '@refly-packages/utils/id';
 import { useSelectionContext } from '@refly-packages/ai-workspace-common/modules/selection-menu/use-selection-context';
@@ -43,6 +45,7 @@ import { useEditorPerformance } from '@refly-packages/ai-workspace-common/contex
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 
 export const CollaborativeEditor = memo(
   ({ docId }: { docId: string }) => {
@@ -52,6 +55,42 @@ export const CollaborativeEditor = memo(
     const editorRef = useRef<EditorInstance>();
     const { provider, ydoc } = useDocumentContext();
     const forceUpdateRef = useRef<number>(0);
+    const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
+    const [imageUrl, setImageUrl] = useState<string>('');
+    const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
+
+    useEffect(() => {
+      const styleEl = document.createElement('style');
+      styleEl.innerHTML = `
+        .ProseMirror-selectednode {
+          outline: 2px solid #4299e1 !important;
+          .zoomin {
+            cursor: zoom-in !important;
+          }
+        }
+        .resizable-image {
+          transition: all 0.2s ease;
+        }
+        .resizable-image:hover {
+          cursor: pointer;
+          box-shadow: 0 0 0 2px rgba(0, 150, 143, 0.5);
+        }
+        .moveable-control {
+          background-color: #00968F !important;
+          border-color: #fff !important;
+        }
+        .moveable-line {
+          background-color: #00968F !important;
+        }
+      `;
+      document.head.appendChild(styleEl);
+
+      return () => {
+        if (styleEl && document.head.contains(styleEl)) {
+          document.head.removeChild(styleEl);
+        }
+      };
+    }, []);
 
     // Move hooks to top level
     const documentActions = useDocumentStoreShallow((state) => ({
@@ -132,9 +171,50 @@ export const CollaborativeEditor = memo(
       [docId],
     );
 
-    const extensions = useMemo(
-      () => [
-        ...defaultExtensions,
+    const extensions = useMemo(() => {
+      const centeredImage = UpdatedImage.extend({
+        addProseMirrorPlugins() {
+          return [
+            UploadImagesPlugin({
+              imageClass: 'opacity-40 rounded-lg border border-stone-200',
+            }),
+          ];
+        },
+        selectable: true,
+        draggable: true,
+        renderHTML({ HTMLAttributes }) {
+          const { width, height, style, ...rest } = HTMLAttributes;
+
+          const combinedStyle = [
+            width && !style?.includes('width') ? `width: ${width}px;` : '',
+            height && !style?.includes('height') ? `height: ${height}px;` : '',
+            style || '',
+          ]
+            .join(' ')
+            .trim();
+
+          const imgAttributes = {
+            ...rest,
+            style: combinedStyle || null,
+            class: 'border border-muted cursor-pointer max-w-full zoomin',
+          };
+
+          return [
+            'div',
+            { class: 'w-full flex justify-center my-0 !bg-transparent' },
+            ['img', imgAttributes],
+          ];
+        },
+      }).configure({
+        allowBase64: true,
+      });
+
+      // filter out the default image extension
+      const filteredExtensions = defaultExtensions.filter((ext) => ext.name !== 'image');
+
+      return [
+        ...filteredExtensions,
+        centeredImage,
         configureSlashCommand({
           entityId: docId,
           entityType: 'document',
@@ -149,9 +229,8 @@ export const CollaborativeEditor = memo(
             documentActions.updateTocItems(docId, content);
           },
         }),
-      ],
-      [ydoc, docId, documentActions, createPlaceholderExtension],
-    );
+      ];
+    }, [ydoc, docId, documentActions, createPlaceholderExtension]);
 
     const { addToContext, selectedText } = useSelectionContext({
       containerClass: 'ai-note-editor-content-container',
@@ -365,6 +444,27 @@ export const CollaborativeEditor = memo(
       };
     }, [provider, handleEditorUpdate]);
 
+    // Add handleNodeClick function
+    const handleNodeClick = useCallback(
+      (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+
+        if (target?.nodeName === 'IMG') {
+          if (selectedImage && selectedImage === target) {
+            const imgSrc = selectedImage.getAttribute('src');
+            if (imgSrc) {
+              setImageUrl(imgSrc);
+              setIsPreviewModalVisible(true);
+            }
+          }
+          setSelectedImage(target as HTMLImageElement);
+        } else {
+          setSelectedImage(null);
+        }
+      },
+      [selectedImage, setSelectedImage, setIsPreviewModalVisible, setImageUrl],
+    );
+
     return (
       <div className={classNames('w-full', 'ai-note-editor-content-container')}>
         <div className="w-full h-full">
@@ -384,13 +484,14 @@ export const CollaborativeEditor = memo(
               editorProps={{
                 handleDOMEvents: {
                   keydown: (_view, event) => handleCommandNavigation(event),
+                  click: (_view, event) => handleNodeClick(event),
                 },
                 handlePaste: (view, event) => handleImagePaste(view, event, uploadFn),
                 handleDrop: (view, event, _slice, moved) =>
                   handleImageDrop(view, event, moved, uploadFn),
                 attributes: {
                   class:
-                    'prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full',
+                    'prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full prose-img:cursor-pointer',
                   'data-doc-id': docId,
                 },
               }}
@@ -399,7 +500,13 @@ export const CollaborativeEditor = memo(
               onUpdate={({ editor }) => {
                 debouncedUpdates(editor);
               }}
-              slotAfter={<ImageResizer />}
+              slotAfter={
+                <ImageResizer
+                  readOnly={readOnly}
+                  selectedImage={selectedImage}
+                  setSelectedImage={setSelectedImage}
+                />
+              }
             >
               <CollabEditorCommand entityId={docId} entityType="document" />
               <CollabGenAIMenuSwitch
@@ -413,6 +520,12 @@ export const CollaborativeEditor = memo(
             </EditorContent>
           </EditorRoot>
         </div>
+        <ImagePreview
+          isPreviewModalVisible={isPreviewModalVisible}
+          setIsPreviewModalVisible={setIsPreviewModalVisible}
+          imageUrl={imageUrl}
+          imageTitle="image"
+        />
       </div>
     );
   },

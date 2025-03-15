@@ -77,6 +77,21 @@ export const NodePreview = memo(
     const [isMaximized, setIsMaximized] = useState(false);
     const previewRef = useRef<HTMLDivElement>(null);
 
+    // Add ESC key handler to exit fullscreen
+    useEffect(() => {
+      const handleEscKey = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && isMaximized) {
+          setIsMaximized(false);
+        }
+      };
+
+      document.addEventListener('keydown', handleEscKey);
+
+      return () => {
+        document.removeEventListener('keydown', handleEscKey);
+      };
+    }, [isMaximized]);
+
     const { removePinnedNode } = useCanvasStoreShallow((state) => ({
       removePinnedNode: state.removeNodePreview,
     }));

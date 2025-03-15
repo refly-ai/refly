@@ -18,9 +18,36 @@ import { useTranslation } from 'react-i18next';
 
 import { markdownElements } from './plugins';
 import { processWithArtifact } from '@refly-packages/ai-workspace-common/modules/artifacts/utils';
+import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { MarkdownMode } from './types';
 
 const rehypePlugins = markdownElements.map((element) => element.rehypePlugin);
+
+// Image component for handling preview
+const MarkdownImage = memo(({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+
+  return (
+    <>
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-full h-auto cursor-zoom-in rounded-lg hover:opacity-90 transition-opacity"
+        onClick={(e) => {
+          e.preventDefault();
+          setIsPreviewVisible(true);
+        }}
+        {...props}
+      />
+      <ImagePreview
+        isPreviewModalVisible={isPreviewVisible}
+        setIsPreviewModalVisible={setIsPreviewVisible}
+        imageUrl={src ?? ''}
+        imageTitle={alt}
+      />
+    </>
+  );
+});
 
 export const Markdown = memo(
   (
@@ -116,6 +143,7 @@ export const Markdown = memo(
                   components={{
                     ...artifactComponents,
                     a: (args) => LinkElement.Component(args, props?.sources || []),
+                    img: MarkdownImage,
                   }}
                   linkTarget={'_blank'}
                 >

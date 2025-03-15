@@ -1,6 +1,5 @@
 import { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useReactFlow, Position } from '@xyflow/react';
-import { Image, Button } from 'antd';
 import { CanvasNode, ImageNodeProps } from './shared/types';
 import { ActionButtons } from './shared/action-buttons';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
@@ -28,18 +27,10 @@ import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import Moveable from 'react-moveable';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
-import {
-  LuDownload,
-  LuRotateCcwSquare,
-  LuRotateCwSquare,
-  LuX,
-  LuZoomIn,
-  LuZoomOut,
-} from 'react-icons/lu';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
+import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 
-const ICON_CLASS = 'text-xl flex items-center justify-center text-gray-200 hover:text-white';
 export const ImageNode = memo(
   ({ id, data, isPreview, selected, hideActions, hideHandles, onNodeClick }: ImageNodeProps) => {
     const { metadata } = data ?? {};
@@ -132,18 +123,6 @@ export const ImageNode = memo(
     const handlePreview = useCallback(() => {
       setIsPreviewModalVisible(true);
     }, []);
-
-    const handleDownload = useCallback(() => {
-      if (!imageUrl) return;
-
-      // Create a temporary link element
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = data?.title ?? 'image';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }, [imageUrl, data?.title]);
 
     const onTitleChange = (newTitle: string) => {
       setNodeDataByEntity(
@@ -264,62 +243,11 @@ export const ImageNode = memo(
 
                 {/* only for preview image */}
                 {isPreviewModalVisible && !isPreview && (
-                  <Image
-                    className="w-0 h-0"
-                    preview={{
-                      visible: isPreviewModalVisible,
-                      src: imageUrl,
-                      destroyOnClose: true,
-                      onVisibleChange: (value) => {
-                        setIsPreviewModalVisible(value);
-                      },
-                      toolbarRender: (
-                        _,
-                        {
-                          transform: { scale },
-                          actions: { onRotateLeft, onRotateRight, onZoomIn, onZoomOut, onClose },
-                        },
-                      ) => (
-                        <div className="ant-image-preview-operations gap-4 py-2">
-                          <Button
-                            type="text"
-                            icon={<LuDownload className={ICON_CLASS} />}
-                            onClick={handleDownload}
-                          />
-                          <Button
-                            type="text"
-                            icon={<LuRotateCcwSquare className={ICON_CLASS} />}
-                            onClick={onRotateLeft}
-                          />
-                          <Button
-                            type="text"
-                            icon={<LuRotateCwSquare className={ICON_CLASS} />}
-                            onClick={onRotateRight}
-                          />
-                          <Button
-                            type="text"
-                            icon={<LuZoomIn className={ICON_CLASS} />}
-                            onClick={onZoomIn}
-                          />
-                          <Button
-                            disabled={scale === 1}
-                            type="text"
-                            icon={
-                              <LuZoomOut
-                                className={ICON_CLASS}
-                                style={{ color: scale === 1 ? 'rgba(255,255,255,0.3)' : '' }}
-                              />
-                            }
-                            onClick={onZoomOut}
-                          />
-                          <Button
-                            type="text"
-                            icon={<LuX className={ICON_CLASS} />}
-                            onClick={onClose}
-                          />
-                        </div>
-                      ),
-                    }}
+                  <ImagePreview
+                    isPreviewModalVisible={isPreviewModalVisible}
+                    setIsPreviewModalVisible={setIsPreviewModalVisible}
+                    imageUrl={imageUrl}
+                    imageTitle={data?.title}
                   />
                 )}
               </div>

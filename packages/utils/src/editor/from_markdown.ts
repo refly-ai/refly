@@ -52,6 +52,8 @@ export const defaultMarkdownParser = new MarkdownParser(
         src: tok.attrGet('src'),
         title: tok.attrGet('title') || null,
         alt: tok.children?.[0]?.content || null,
+        width: tok.attrGet('width') || null,
+        height: tok.attrGet('height') || null,
       }),
     },
     hardbreak: { node: 'hardBreak' },

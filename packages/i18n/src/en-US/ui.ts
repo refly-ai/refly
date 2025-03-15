@@ -76,6 +76,7 @@ const translations = {
     shareError: 'Share failed, please try again!',
     readonlyWarning: 'Read-Only Mode',
     readonlyDragDescription: 'Canvas is in read-only mode, modifications are not allowed.',
+    preview: 'Preview',
   },
   verifyRules: {
     emailRequired: 'Email cannot be empty',

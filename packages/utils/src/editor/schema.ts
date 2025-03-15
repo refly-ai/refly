@@ -170,6 +170,8 @@ export const schema = new Schema({
         src: {},
         alt: { default: null },
         title: { default: null },
+        width: { default: null },
+        height: { default: null },
       },
       group: 'inline',
       draggable: true,
@@ -181,6 +183,8 @@ export const schema = new Schema({
               src: (dom as HTMLElement).getAttribute('src'),
               title: (dom as HTMLElement).getAttribute('title'),
               alt: (dom as HTMLElement).getAttribute('alt'),
+              width: (dom as HTMLElement).getAttribute('width'),
+              height: (dom as HTMLElement).getAttribute('height'),
             };
           },
         },

@@ -142,7 +142,11 @@ export const defaultMarkdownSerializer = new MarkdownSerializer(
       const src =
         typeof node.attrs?.src === 'string' ? node.attrs.src : String(node.attrs?.src ?? '');
       state.write(
-        `![${state.esc(node.attrs?.alt ?? '')}](${src.replace(/[\(\)]/g, '\\$&')}${node.attrs?.title ? ` "${node.attrs.title.replace(/"/g, '\\"')}"` : ''})`,
+        `![${state.esc(node.attrs?.alt ?? '')}](${src.replace(/[\(\)]/g, '\\$&')}${
+          node.attrs?.title ? ` "${node.attrs.title.replace(/"/g, '\\"')}"` : ''
+        }${node.attrs?.width ? ` width="${node.attrs.width}"` : ''}${
+          node.attrs?.height ? ` height="${node.attrs.height}"` : ''
+        })`,
       );
     },
     hardBreak(state, node, parent, index) {

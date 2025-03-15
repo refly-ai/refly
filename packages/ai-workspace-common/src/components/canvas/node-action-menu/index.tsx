@@ -79,6 +79,9 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
   const { getNode } = useReactFlow();
   const { canvasId } = useCanvasContext();
   const { setNodeSizeMode } = useNodeOperations();
+  const { setShowPreview } = useCanvasStoreShallow((state) => ({
+    setShowPreview: state.setShowPreview,
+  }));
 
   const { activeDocumentId } = useDocumentStoreShallow((state) => ({
     activeDocumentId: state.activeDocumentId,
@@ -186,6 +189,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
   }, [node, nodeId, canvasId, onClose, addNodePreview]);
 
   const handleFullScreenPreview = useCallback(() => {
+    setShowPreview(true);
     const isPreviewOpen = nodePreviews?.some((preview) => preview.id === nodeId);
 
     if (!isPreviewOpen) {

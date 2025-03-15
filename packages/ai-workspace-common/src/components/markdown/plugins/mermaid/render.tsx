@@ -5,6 +5,7 @@ import debounce from 'lodash.debounce';
 import { cn, BRANDING_NAME } from '@refly/utils';
 import { CopyIcon, DownloadIcon } from 'lucide-react';
 import { Tooltip, Button, Space, message } from 'antd';
+import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { domToPng } from 'modern-screenshot';
 import copyToClipboard from 'copy-to-clipboard';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
@@ -12,6 +13,7 @@ import { genUniqueId } from '@refly-packages/utils/id';
 import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { IconCode, IconEye, IconCopy } from '@arco-design/web-react/icon';
 import { MarkdownMode } from '../../types';
+import { PiMagnifyingGlassPlusBold } from 'react-icons/pi';
 
 // Initialize mermaid config
 mermaid.initialize({
@@ -44,6 +46,8 @@ const MermaidComponent = memo(
     const [showOriginalCode, setShowOriginalCode] = useState(false);
     const [rendered, setRendered] = useState(false);
     const [viewMode, setViewMode] = useState<'code' | 'preview'>('preview');
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [zoomImageUrl, setZoomImageUrl] = useState<string>('');
 
     const isInteractive = mode === 'interactive';
 
@@ -321,6 +325,22 @@ const MermaidComponent = memo(
       }
     }, [mermaidCode, diagramTitle, addNode, id, t, isInteractive]);
 
+    // Handle opening zoom modal
+    const handleZoom = useCallback(async () => {
+      try {
+        const dataUrl = await generatePng();
+        if (dataUrl) {
+          setZoomImageUrl(dataUrl);
+          setIsModalVisible(true);
+        } else {
+          message.error('Failed to generate zoom image');
+        }
+      } catch (error) {
+        console.error('Error generating zoom image:', error);
+        message.error('Failed to generate zoom image');
+      }
+    }, [generatePng, t]);
+
     useEffect(() => {
       renderDiagram();
       return () => {
@@ -356,43 +376,63 @@ const MermaidComponent = memo(
           <div className="absolute top-2 right-2 z-50 flex transition-all duration-200 ease-in-out bg-white/80 backdrop-blur-sm rounded-md shadow-sm border border-gray-100">
             <Space>
               {viewMode === 'preview' && (
-                <Tooltip title={t('components.markdown.mermaid.downloadAsPng', 'Download as PNG')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    className="flex items-center justify-center hover:bg-gray-100"
-                    icon={<DownloadIcon className="w-4 h-4" />}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      downloadImage();
-                    }}
-                  />
-                </Tooltip>
+                <>
+                  <Tooltip title={t('common.preview')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      className="flex items-center justify-center hover:bg-gray-100"
+                      icon={
+                        <PiMagnifyingGlassPlusBold className="w-4 h-4 flex items-center justify-center" />
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleZoom();
+                      }}
+                    />
+                  </Tooltip>
+
+                  <Tooltip
+                    title={t('components.markdown.mermaid.downloadAsPng', 'Download as PNG')}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      className="flex items-center justify-center hover:bg-gray-100"
+                      icon={<DownloadIcon className="w-4 h-4 flex items-center justify-center" />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        downloadImage();
+                      }}
+                    />
+                  </Tooltip>
+
+                  <Tooltip
+                    title={t('components.markdown.mermaid.copyToClipboard', 'Copy to clipboard')}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      className="flex items-center justify-center hover:bg-gray-100"
+                      icon={<CopyIcon className="w-4 h-4 flex items-center justify-center" />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        copyImage();
+                      }}
+                    />
+                  </Tooltip>
+                </>
               )}
-              {viewMode === 'preview' && (
-                <Tooltip
-                  title={t('components.markdown.mermaid.copyToClipboard', 'Copy to clipboard')}
-                >
-                  <Button
-                    type="text"
-                    size="small"
-                    className="flex items-center justify-center hover:bg-gray-100"
-                    icon={<CopyIcon className="w-4 h-4" />}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      copyImage();
-                    }}
-                  />
-                </Tooltip>
-              )}
+
               <Tooltip title={t('components.markdown.mermaid.copySourceCode', 'Copy source code')}>
                 <Button
                   type="text"
                   size="small"
                   className="flex items-center justify-center hover:bg-gray-100"
-                  icon={<IconCopy className="w-4 h-4" />}
+                  icon={<IconCopy className="w-4 h-4 flex items-center justify-center" />}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -411,7 +451,13 @@ const MermaidComponent = memo(
                   type="text"
                   size="small"
                   className="flex items-center justify-center hover:bg-gray-100"
-                  icon={viewMode === 'code' ? <IconEye /> : <IconCode />}
+                  icon={
+                    viewMode === 'code' ? (
+                      <IconEye className="w-4 h-4 flex items-center justify-center" />
+                    ) : (
+                      <IconCode className="w-4 h-4 flex items-center justify-center" />
+                    )
+                  }
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -427,7 +473,7 @@ const MermaidComponent = memo(
                     type="text"
                     size="small"
                     className="flex items-center justify-center hover:bg-gray-100"
-                    icon={<IconCodeArtifact className="w-4 h-4" />}
+                    icon={<IconCodeArtifact className="w-4 h-4 flex items-center justify-center" />}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -439,6 +485,12 @@ const MermaidComponent = memo(
             </Space>
           </div>
         )}
+        <ImagePreview
+          isPreviewModalVisible={isModalVisible}
+          setIsPreviewModalVisible={setIsModalVisible}
+          imageUrl={zoomImageUrl}
+          imageTitle={`${BRANDING_NAME}_mermaid_${diagramTitle}`}
+        />
       </div>
     );
   },

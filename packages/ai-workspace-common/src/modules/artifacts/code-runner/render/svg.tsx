@@ -1,9 +1,11 @@
 import { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Space, Tooltip, message } from 'antd';
 import { CopyIcon, DownloadIcon } from 'lucide-react';
+import { PiMagnifyingGlassPlusBold } from 'react-icons/pi';
 import { BRANDING_NAME } from '@refly/utils';
 import { useTranslation } from 'react-i18next';
 import { domToPng } from 'modern-screenshot';
+import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 
 interface SVGRendererProps {
   content: string;
@@ -23,6 +25,8 @@ const SVGRenderer = memo(
     const [aspectRatio, setAspectRatio] = useState<number | null>(null);
     const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
     const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+    const [zoomImageUrl, setZoomImageUrl] = useState<string>('');
+    const [isModalVisible, setIsModalVisible] = useState(false);
 
     // Set up the iframe content when the component mounts or content changes
     useEffect(() => {
@@ -379,6 +383,22 @@ const SVGRenderer = memo(
       }
     }, [t]);
 
+    // Handle opening zoom modal
+    const handleZoom = useCallback(async () => {
+      try {
+        const dataUrl = await generatePng();
+        if (dataUrl) {
+          setZoomImageUrl(dataUrl);
+          setIsModalVisible(true);
+        } else {
+          message.error('Failed to generate zoom image');
+        }
+      } catch (error) {
+        console.error('Error generating zoom image:', error);
+        message.error('Failed to generate zoom image');
+      }
+    }, [generatePng, t]);
+
     // Calculate the style for the iframe
     const iframeStyle = useMemo(() => {
       if (!containerDimensions.width || !containerDimensions.height || !aspectRatio) {
@@ -445,6 +465,16 @@ const SVGRenderer = memo(
         {/* Action Buttons */}
         <div className="absolute bottom-2 right-2 z-10">
           <Space.Compact className="shadow-sm rounded-md overflow-hidden">
+            <Tooltip title={t('common.preview')}>
+              <Button
+                type="default"
+                className="flex items-center justify-center bg-white hover:bg-gray-50 hover:text-purple-600 hover:border-purple-600 border border-gray-200"
+                icon={<PiMagnifyingGlassPlusBold className="w-4 h-4" />}
+                onClick={handleZoom}
+              >
+                <span className="sr-only">Preview</span>
+              </Button>
+            </Tooltip>
             <Tooltip title={t('artifact.svg.downloadAsPng')}>
               <Button
                 type="default"
@@ -467,6 +497,13 @@ const SVGRenderer = memo(
             </Tooltip>
           </Space.Compact>
         </div>
+
+        <ImagePreview
+          isPreviewModalVisible={isModalVisible}
+          setIsPreviewModalVisible={setIsModalVisible}
+          imageUrl={zoomImageUrl}
+          imageTitle={title}
+        />
       </div>
     );
   },
