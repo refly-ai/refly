@@ -3929,6 +3929,9 @@ components:
         shareData:
           type: string
           description: Raw share data (JSON string)
+        shareDataStorageKey:
+          type: string
+          description: Share data storage key
     CreateShareResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

@@ -2843,6 +2843,10 @@ export const CreateShareRequestSchema = {
       type: 'string',
       description: 'Raw share data (JSON string)',
     },
+    shareDataStorageKey: {
+      type: 'string',
+      description: 'Share data storage key',
+    },
   },
 } as const;
 

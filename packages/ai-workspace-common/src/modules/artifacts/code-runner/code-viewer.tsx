@@ -192,32 +192,59 @@ export default memo(
         event.stopPropagation();
         const loadingMessage = message.loading(t('codeArtifact.sharing'), 0);
 
-        const { data, error } = await getClient().createShare({
-          body: {
-            entityId,
-            entityType: 'codeArtifact',
-            shareData: JSON.stringify({
-              content: editorContent,
-              type,
-              title,
-              language,
-            }),
-          },
-        });
+        try {
+          // Prepare the JSON content
+          const fileContent = JSON.stringify({
+            content: editorContent,
+            type,
+            title,
+            language,
+          });
 
-        if (!data?.success || error) {
-          loadingMessage();
-          console.error('Failed to share code:', error);
-          message.error(t('codeArtifact.shareError'));
-        } else {
-          const shareLink = getShareLink('codeArtifact', data.data?.shareId ?? '');
+          // Create a blob with the JSON content
+          const jsonBlob = new Blob([fileContent], { type: 'application/json' });
+
+          // Upload the file
+          const { data: uploadData, error: uploadError } = await getClient().upload({
+            body: {
+              file: jsonBlob,
+            },
+          });
+
+          if (uploadError || !uploadData?.data?.storageKey) {
+            throw new Error(
+              typeof uploadError === 'string' ? uploadError : 'Failed to upload code',
+            );
+          }
+
+          // Create the share
+          const { data, error } = await getClient().createShare({
+            body: {
+              entityId,
+              entityType: 'codeArtifact',
+              shareDataStorageKey: uploadData.data.storageKey,
+            },
+          });
+
+          if (!data?.success || error) {
+            throw new Error(typeof error === 'string' ? error : 'Failed to create share');
+          }
+
+          // Generate and copy the share link
+          const shareId = data.data?.shareId ?? '';
+          const shareLink = getShareLink('codeArtifact', shareId);
 
           // Copy the sharing link to clipboard
           copyToClipboard(shareLink);
 
-          // Clear loading message and show success with the link
+          // Clear loading message and show success
           loadingMessage();
           message.success(t('codeArtifact.shareSuccess'));
+        } catch (error) {
+          // Handle any errors that occurred during the process
+          loadingMessage();
+          console.error('Failed to share code:', error);
+          message.error(t('codeArtifact.shareError'));
         }
       },
       [editorContent, type, title, language, t, entityId],

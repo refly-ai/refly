@@ -435,7 +435,15 @@ export class ShareService {
   }
 
   async createShareForRawData(user: User, param: CreateShareRequest) {
-    const { entityId, entityType, title, shareData, parentShareId, allowDuplication } = param;
+    const {
+      entityId,
+      entityType,
+      title,
+      shareData,
+      shareDataStorageKey,
+      parentShareId,
+      allowDuplication,
+    } = param;
 
     // Check if shareRecord already exists
     const existingShareRecord = await this.prisma.shareRecord.findFirst({
@@ -451,9 +459,23 @@ export class ShareService {
     const shareId =
       existingShareRecord?.shareId ?? genShareId(entityType as keyof typeof SHARE_CODE_PREFIX);
 
+    let rawData: Buffer | null;
+    if (shareData) {
+      rawData = Buffer.from(shareData);
+    } else if (shareDataStorageKey) {
+      rawData = await this.miscService.downloadFile({
+        storageKey: shareDataStorageKey,
+        visibility: 'public',
+      });
+    }
+
+    if (!rawData) {
+      throw new ParamsError('Share data is required either by shareData or shareDataStorageKey');
+    }
+
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'rawData.json',
-      buf: Buffer.from(shareData),
+      buf: rawData,
       entityId,
       entityType,
       visibility: 'public',
