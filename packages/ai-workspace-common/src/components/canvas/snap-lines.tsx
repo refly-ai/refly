@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Node, useStore, useViewport } from '@xyflow/react';
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 
@@ -12,6 +12,13 @@ interface SnapLine {
 
 interface SnapLinesProps {
   snapThreshold?: number;
+}
+
+// Add last aligned positions concept
+interface AlignmentPosition {
+  nodeId: string;
+  lines: SnapLine[];
+  timestamp: number;
 }
 
 const getNodeBounds = (node: Node, viewport: { zoom: number; x: number; y: number }) => {
@@ -34,6 +41,8 @@ const getNodeBounds = (node: Node, viewport: { zoom: number; x: number; y: numbe
     bottom: position.y + nodeHeight,
     center: position.x + nodeWidth / 2,
     middle: position.y + nodeHeight / 2,
+    width: nodeWidth,
+    height: nodeHeight,
   };
 };
 
@@ -41,7 +50,11 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
   const nodes = useStore((state) => state.nodes);
   const { draggingNodeId } = useEditorPerformance();
   const viewport = useViewport();
+  const [lastAlignments, setLastAlignments] = useState<AlignmentPosition | null>(null);
+  // 使用 ref 存储当前计算出的线条，避免在 useMemo 中直接调用 setState
+  const currentLinesRef = useRef<SnapLine[]>([]);
 
+  // Convert flow coordinates to screen coordinates
   const flowToScreen = useMemo(() => {
     return ({ x, y }: { x: number; y: number }) => ({
       x: x * viewport.zoom + viewport.x,
@@ -49,8 +62,16 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
     });
   }, [viewport]);
 
+  // Calculate snap lines with smoother logic
   const snapLines = useMemo(() => {
-    if (!draggingNodeId) return [];
+    if (!draggingNodeId) {
+      // If no dragging but we have recent alignment, show it
+      if (lastAlignments && Date.now() - lastAlignments.timestamp < 1000) {
+        return lastAlignments.lines;
+      }
+      return [];
+    }
+
     const draggingNode = nodes.find((n) => n.id === draggingNodeId);
     if (!draggingNode) return [];
     const draggingBounds = getNodeBounds(draggingNode, viewport);
@@ -65,9 +86,10 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
       // Vertical alignments (left, center, right)
       for (const [draggingValue, targetValue, position] of [
         [draggingBounds.left, targetBounds.left, 'left'],
+        // [draggingBounds.center, targetBounds.center, 'center'],
         [draggingBounds.right, targetBounds.right, 'right'],
       ] as const) {
-        // Only show snap lines when nodes are close but not perfectly aligned
+        // Only show snap lines when nodes are close
         const diff = Math.abs(draggingValue - targetValue);
         if (diff <= snapThreshold) {
           const minY = Math.min(draggingBounds.top, targetBounds.top) - 50;
@@ -86,11 +108,12 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
       // Horizontal alignments (top, middle, bottom)
       for (const [draggingValue, targetValue, position] of [
         [draggingBounds.top, targetBounds.top, 'top'],
+        // [draggingBounds.middle, targetBounds.middle, 'middle'],
         [draggingBounds.bottom, targetBounds.bottom, 'bottom'],
       ] as const) {
-        // Only show snap lines when nodes are close but not perfectly aligned
+        // Only show snap lines when nodes are close
         const diff = Math.abs(draggingValue - targetValue);
-        if (diff > 0 && diff <= snapThreshold) {
+        if (diff <= snapThreshold) {
           const minX = Math.min(draggingBounds.left, targetBounds.left) - 50;
           const maxX = Math.max(draggingBounds.right, targetBounds.right) + 50;
 
@@ -105,8 +128,32 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
       }
     }
 
+    // 将计算出的线条保存到 ref 中，但不在 useMemo 中调用 setState
+    currentLinesRef.current = lines;
     return lines;
-  }, [nodes, draggingNodeId, snapThreshold, viewport]);
+  }, [nodes, draggingNodeId, snapThreshold, viewport, lastAlignments]);
+
+  // 使用一个单独的 useEffect 来处理 lastAlignments 的更新
+  useEffect(() => {
+    if (draggingNodeId && currentLinesRef.current.length > 0) {
+      setLastAlignments({
+        nodeId: draggingNodeId,
+        lines: [...currentLinesRef.current],
+        timestamp: Date.now(),
+      });
+    }
+  }, [draggingNodeId]); // 只依赖 draggingNodeId 变化
+
+  // Clear last alignments after some time
+  useEffect(() => {
+    if (!draggingNodeId && lastAlignments) {
+      const timer = setTimeout(() => {
+        setLastAlignments(null);
+      }, 2000); // 增加到2000毫秒，让辅助线有更长的可见时间
+
+      return () => clearTimeout(timer);
+    }
+  }, [draggingNodeId, lastAlignments]);
 
   return (
     <>
@@ -132,6 +179,8 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
               height: isVertical ? screenToY - screenY : '1px',
               transform: isVertical ? 'translateX(-0.5px)' : 'translateY(-0.5px)',
               zIndex: 1000,
+              opacity: draggingNodeId ? 1 : 0.7,
+              transition: draggingNodeId ? 'none' : 'opacity 0.3s ease-out',
             }}
           />
         );

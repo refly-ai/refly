@@ -65,6 +65,8 @@ import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-up
 import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 import { EmptyGuide } from './empty-guide';
 
+const snapThreshold = 10;
+
 const selectionStyles = `
   .react-flow__selection {
     background: rgba(0, 150, 143, 0.03) !important;
@@ -649,8 +651,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   );
 
   const onNodeDragStop = useCallback(() => {
-    setIsNodeDragging(false);
-    setDraggingNodeId(null);
+    // Allow the node to settle in its final position before clearing dragging state
+    // This ensures that any final position adjustments are properly applied
+    requestAnimationFrame(() => {
+      setIsNodeDragging(false);
+      setDraggingNodeId(null);
+    });
   }, [setIsNodeDragging, setDraggingNodeId]);
 
   const onSelectionContextMenu = useCallback(
@@ -817,126 +823,135 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   // Add snap-to-grid functionality
   const snapToGrid = useCallback(
     (node: Node) => {
-      const snapThreshold = 10;
       const otherNodes = nodes.filter((n) => n.id !== node.id);
       const snappedPosition = { ...node.position };
 
-      // Track which alignments have been applied to avoid conflicting snaps
-      let hasHorizontalSnap = false;
-      let hasVerticalSnap = false;
+      // Calculate current node bounds once for performance
+      const nodeBounds = getNodeBounds(node, viewport);
 
-      // Remember best snap distances to prioritize closest alignments
-      let bestHorizontalSnapDistance = snapThreshold + 1;
-      let bestVerticalSnapDistance = snapThreshold + 1;
+      // Store best alignment options
+      let bestHorizontalAlignment = null;
+      let bestVerticalAlignment = null;
+      let bestHorizontalDistance = snapThreshold + 1;
+      let bestVerticalDistance = snapThreshold + 1;
 
+      // First pass: find the best alignments
       for (const targetNode of otherNodes) {
-        const nodeBounds = getNodeBounds(node, viewport);
         const targetBounds = getNodeBounds(targetNode, viewport);
 
-        // Only proceed if we haven't found better alignments yet
-        if (!hasHorizontalSnap || !hasVerticalSnap) {
-          // Horizontal edge alignments (left, right)
-          const horizontalAlignments = [
-            {
-              nodePos: 'left',
-              targetPos: 'left',
-              distance: Math.abs(nodeBounds.left - targetBounds.left),
-            },
-            {
-              nodePos: 'right',
-              targetPos: 'right',
-              distance: Math.abs(nodeBounds.right - targetBounds.right),
-            },
-            {
-              nodePos: 'left',
-              targetPos: 'right',
-              distance: Math.abs(nodeBounds.left - targetBounds.right),
-            },
-            {
-              nodePos: 'right',
-              targetPos: 'left',
-              distance: Math.abs(nodeBounds.right - targetBounds.left),
-            },
-            // Center alignment
-            {
-              nodePos: 'center',
-              targetPos: 'center',
-              distance: Math.abs(nodeBounds.center - targetBounds.center),
-            },
-          ];
+        // Define all possible horizontal alignments
+        const horizontalAlignments = [
+          {
+            nodePos: 'left',
+            targetPos: 'left',
+            nodeValue: nodeBounds.left,
+            targetValue: targetBounds.left,
+            offset: 0,
+          },
+          {
+            nodePos: 'right',
+            targetPos: 'right',
+            nodeValue: nodeBounds.right,
+            targetValue: targetBounds.right,
+            offset: nodeBounds.right - nodeBounds.left,
+          },
+          {
+            nodePos: 'left',
+            targetPos: 'right',
+            nodeValue: nodeBounds.left,
+            targetValue: targetBounds.right,
+            offset: 0,
+          },
+          {
+            nodePos: 'right',
+            targetPos: 'left',
+            nodeValue: nodeBounds.right,
+            targetValue: targetBounds.left,
+            offset: nodeBounds.right - nodeBounds.left,
+          },
+          {
+            nodePos: 'center',
+            targetPos: 'center',
+            nodeValue: nodeBounds.center,
+            targetValue: targetBounds.center,
+            offset: (nodeBounds.right - nodeBounds.left) / 2,
+          },
+        ];
 
-          // Find the best horizontal alignment
-          for (const align of horizontalAlignments) {
-            if (align.distance <= snapThreshold && align.distance < bestHorizontalSnapDistance) {
-              bestHorizontalSnapDistance = align.distance;
-              hasHorizontalSnap = true;
-
-              // Apply the horizontal snap
-              if (align.nodePos === 'left' && align.targetPos === 'left') {
-                snappedPosition.x = targetBounds.left;
-              } else if (align.nodePos === 'right' && align.targetPos === 'right') {
-                snappedPosition.x = targetBounds.right - (nodeBounds.right - nodeBounds.left);
-              } else if (align.nodePos === 'left' && align.targetPos === 'right') {
-                snappedPosition.x = targetBounds.right;
-              } else if (align.nodePos === 'right' && align.targetPos === 'left') {
-                snappedPosition.x = targetBounds.left - (nodeBounds.right - nodeBounds.left);
-              } else if (align.nodePos === 'center' && align.targetPos === 'center') {
-                snappedPosition.x = targetBounds.center - (nodeBounds.right - nodeBounds.left) / 2;
-              }
-            }
-          }
-
-          // Vertical edge alignments (top, bottom)
-          const verticalAlignments = [
-            {
-              nodePos: 'top',
-              targetPos: 'top',
-              distance: Math.abs(nodeBounds.top - targetBounds.top),
-            },
-            {
-              nodePos: 'bottom',
-              targetPos: 'bottom',
-              distance: Math.abs(nodeBounds.bottom - targetBounds.bottom),
-            },
-            {
-              nodePos: 'top',
-              targetPos: 'bottom',
-              distance: Math.abs(nodeBounds.top - targetBounds.bottom),
-            },
-            {
-              nodePos: 'bottom',
-              targetPos: 'top',
-              distance: Math.abs(nodeBounds.bottom - targetBounds.top),
-            },
-            // Middle alignment
-            {
-              nodePos: 'middle',
-              targetPos: 'middle',
-              distance: Math.abs(nodeBounds.middle - targetBounds.middle),
-            },
-          ];
-
-          // Find the best vertical alignment
-          for (const align of verticalAlignments) {
-            if (align.distance <= snapThreshold && align.distance < bestVerticalSnapDistance) {
-              bestVerticalSnapDistance = align.distance;
-              hasVerticalSnap = true;
-
-              // Apply the vertical snap
-              if (align.nodePos === 'top' && align.targetPos === 'top') {
-                snappedPosition.y = targetBounds.top;
-              } else if (align.nodePos === 'bottom' && align.targetPos === 'bottom') {
-                snappedPosition.y = targetBounds.bottom - (nodeBounds.bottom - nodeBounds.top);
-              } else if (align.nodePos === 'top' && align.targetPos === 'bottom') {
-                snappedPosition.y = targetBounds.bottom;
-              } else if (align.nodePos === 'bottom' && align.targetPos === 'top') {
-                snappedPosition.y = targetBounds.top - (nodeBounds.bottom - nodeBounds.top);
-              } else if (align.nodePos === 'middle' && align.targetPos === 'middle') {
-                snappedPosition.y = targetBounds.middle - (nodeBounds.bottom - nodeBounds.top) / 2;
-              }
-            }
+        // Find best horizontal alignment
+        for (const align of horizontalAlignments) {
+          const distance = Math.abs(align.nodeValue - align.targetValue);
+          if (distance <= snapThreshold && distance < bestHorizontalDistance) {
+            bestHorizontalDistance = distance;
+            bestHorizontalAlignment = {
+              ...align,
+              targetNode,
+              distance,
+            };
           }
         }
+
+        // Define all possible vertical alignments
+        const verticalAlignments = [
+          {
+            nodePos: 'top',
+            targetPos: 'top',
+            nodeValue: nodeBounds.top,
+            targetValue: targetBounds.top,
+            offset: 0,
+          },
+          {
+            nodePos: 'bottom',
+            targetPos: 'bottom',
+            nodeValue: nodeBounds.bottom,
+            targetValue: targetBounds.bottom,
+            offset: nodeBounds.bottom - nodeBounds.top,
+          },
+          {
+            nodePos: 'top',
+            targetPos: 'bottom',
+            nodeValue: nodeBounds.top,
+            targetValue: targetBounds.bottom,
+            offset: 0,
+          },
+          {
+            nodePos: 'bottom',
+            targetPos: 'top',
+            nodeValue: nodeBounds.bottom,
+            targetValue: targetBounds.top,
+            offset: nodeBounds.bottom - nodeBounds.top,
+          },
+          {
+            nodePos: 'middle',
+            targetPos: 'middle',
+            nodeValue: nodeBounds.middle,
+            targetValue: targetBounds.middle,
+            offset: (nodeBounds.bottom - nodeBounds.top) / 2,
+          },
+        ];
+
+        // Find best vertical alignment
+        for (const align of verticalAlignments) {
+          const distance = Math.abs(align.nodeValue - align.targetValue);
+          if (distance <= snapThreshold && distance < bestVerticalDistance) {
+            bestVerticalDistance = distance;
+            bestVerticalAlignment = {
+              ...align,
+              targetNode,
+              distance,
+            };
+          }
+        }
+      }
+
+      // Apply best horizontal alignment if found
+      if (bestHorizontalAlignment) {
+        snappedPosition.x = bestHorizontalAlignment.targetValue - bestHorizontalAlignment.offset;
+      }
+
+      // Apply best vertical alignment if found
+      if (bestVerticalAlignment) {
+        snappedPosition.y = bestVerticalAlignment.targetValue - bestVerticalAlignment.offset;
       }
 
       return snappedPosition;
@@ -955,9 +970,14 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       const snappedPosition = snapToGrid(node);
       const { setNodes } = reactFlowInstance;
 
+      // Apply the snapped position without triggering too many rerenders
       setNodes((nds) =>
         nds.map((n) => {
           if (n.id === node.id) {
+            // Only update if position actually changed
+            if (n.position.x === snappedPosition.x && n.position.y === snappedPosition.y) {
+              return n;
+            }
             return {
               ...n,
               position: snappedPosition,
@@ -1054,7 +1074,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
             {memoizedBackground}
             {memoizedMiniMap}
-            <SnapLines snapThreshold={10} />
+            <SnapLines snapThreshold={snapThreshold} />
           </ReactFlow>
 
           <LayoutControl
