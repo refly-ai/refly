@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Editor, { Monaco, loader } from '@monaco-editor/react';
 import { CodeArtifactType } from '../types';
 import debounce from 'lodash.debounce';
@@ -49,6 +49,7 @@ const MonacoEditor = ({
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   // Debounced onChange handler to prevent too frequent updates
   const debouncedOnChange = useCallback(
@@ -56,7 +57,7 @@ const MonacoEditor = ({
       if (value !== undefined) {
         onChange?.(value);
       }
-    }, 300),
+    }, 1000),
     [onChange],
   );
 
@@ -79,6 +80,10 @@ const MonacoEditor = ({
   const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+
+    // Add focus and blur event listeners
+    editor.onDidFocusEditorWidget(() => setIsFocused(true));
+    editor.onDidBlurEditorWidget(() => setIsFocused(false));
 
     // Configure TypeScript and other languages
     if (monaco.languages.typescript) {
@@ -168,7 +173,7 @@ const MonacoEditor = ({
       <Editor
         height="100%"
         value={content}
-        className="refly-code-editor"
+        className={`refly-code-editor ${isFocused ? 'refly-code-editor-focused' : ''}`}
         onChange={handleEditorChange}
         language={getLanguageFromType(type, language)}
         beforeMount={handleEditorWillMount}
@@ -220,4 +225,16 @@ const MonacoEditor = ({
   );
 };
 
-export default MonacoEditor;
+// Memoize the component to prevent unnecessary re-renders
+export default memo(MonacoEditor, (prevProps, nextProps) => {
+  // Only re-render if specific props have changed
+  return (
+    prevProps.language === nextProps.language &&
+    prevProps.type === nextProps.type &&
+    prevProps.readOnly === nextProps.readOnly &&
+    prevProps.isGenerating === nextProps.isGenerating &&
+    prevProps.canvasReadOnly === nextProps.canvasReadOnly &&
+    (document.activeElement?.closest('.refly-code-editor-focused') !== null || // If editor is focused
+      prevProps.content === nextProps.content) // Or if content hasn't changed
+  );
+});
