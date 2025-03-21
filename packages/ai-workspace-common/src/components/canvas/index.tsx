@@ -10,7 +10,6 @@ import {
   Node,
   Edge,
   useStoreApi,
-  useViewport,
 } from '@xyflow/react';
 import { nodeTypes, CanvasNode } from './nodes';
 import { LaunchPad } from './launchpad';
@@ -54,7 +53,8 @@ import { getFreshNodePreviews } from '../../utils/canvas';
 import { NODE_MINI_MAP_COLORS } from './nodes/shared/colors';
 import { useDragToCreateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-create-node';
 import { message } from 'antd';
-import { SnapLines, getNodeBounds } from './snap-lines';
+import { SnapLines } from './snap-lines';
+import { useNodeSnapping } from './snap-lines';
 
 import '@xyflow/react/dist/style.css';
 import './index.scss';
@@ -165,7 +165,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
   const { onEdgesChange, onConnect } = useEdgeOperations();
   const edgeStyles = useEdgeStyles();
-  const viewport = useViewport();
 
   // Call truncateAllNodesContent when nodes are loaded
   useEffect(() => {
@@ -820,146 +819,9 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     };
   }, [readonlyDragWarningDebounce]);
 
-  // Add snap-to-grid functionality
-  const snapToGrid = useCallback(
-    (node: Node) => {
-      const otherNodes = nodes.filter((n) => n.id !== node.id);
-      const snappedPosition = { ...node.position };
-
-      // Calculate current node bounds once for performance
-      const nodeBounds = getNodeBounds(node, viewport);
-
-      // Store best alignment options
-      let bestHorizontalAlignment = null;
-      let bestVerticalAlignment = null;
-      let bestHorizontalDistance = snapThreshold + 1;
-      let bestVerticalDistance = snapThreshold + 1;
-
-      // First pass: find the best alignments
-      for (const targetNode of otherNodes) {
-        const targetBounds = getNodeBounds(targetNode, viewport);
-
-        // Define all possible horizontal alignments
-        const horizontalAlignments = [
-          {
-            nodePos: 'left',
-            targetPos: 'left',
-            nodeValue: nodeBounds.left,
-            targetValue: targetBounds.left,
-            offset: 0,
-          },
-          {
-            nodePos: 'right',
-            targetPos: 'right',
-            nodeValue: nodeBounds.right,
-            targetValue: targetBounds.right,
-            offset: nodeBounds.right - nodeBounds.left,
-          },
-          {
-            nodePos: 'left',
-            targetPos: 'right',
-            nodeValue: nodeBounds.left,
-            targetValue: targetBounds.right,
-            offset: 0,
-          },
-          {
-            nodePos: 'right',
-            targetPos: 'left',
-            nodeValue: nodeBounds.right,
-            targetValue: targetBounds.left,
-            offset: nodeBounds.right - nodeBounds.left,
-          },
-          {
-            nodePos: 'center',
-            targetPos: 'center',
-            nodeValue: nodeBounds.center,
-            targetValue: targetBounds.center,
-            offset: (nodeBounds.right - nodeBounds.left) / 2,
-          },
-        ];
-
-        // Find best horizontal alignment
-        for (const align of horizontalAlignments) {
-          const distance = Math.abs(align.nodeValue - align.targetValue);
-          if (distance <= snapThreshold && distance < bestHorizontalDistance) {
-            bestHorizontalDistance = distance;
-            bestHorizontalAlignment = {
-              ...align,
-              targetNode,
-              distance,
-            };
-          }
-        }
-
-        // Define all possible vertical alignments
-        const verticalAlignments = [
-          {
-            nodePos: 'top',
-            targetPos: 'top',
-            nodeValue: nodeBounds.top,
-            targetValue: targetBounds.top,
-            offset: 0,
-          },
-          {
-            nodePos: 'bottom',
-            targetPos: 'bottom',
-            nodeValue: nodeBounds.bottom,
-            targetValue: targetBounds.bottom,
-            offset: nodeBounds.bottom - nodeBounds.top,
-          },
-          {
-            nodePos: 'top',
-            targetPos: 'bottom',
-            nodeValue: nodeBounds.top,
-            targetValue: targetBounds.bottom,
-            offset: 0,
-          },
-          {
-            nodePos: 'bottom',
-            targetPos: 'top',
-            nodeValue: nodeBounds.bottom,
-            targetValue: targetBounds.top,
-            offset: nodeBounds.bottom - nodeBounds.top,
-          },
-          {
-            nodePos: 'middle',
-            targetPos: 'middle',
-            nodeValue: nodeBounds.middle,
-            targetValue: targetBounds.middle,
-            offset: (nodeBounds.bottom - nodeBounds.top) / 2,
-          },
-        ];
-
-        // Find best vertical alignment
-        for (const align of verticalAlignments) {
-          const distance = Math.abs(align.nodeValue - align.targetValue);
-          if (distance <= snapThreshold && distance < bestVerticalDistance) {
-            bestVerticalDistance = distance;
-            bestVerticalAlignment = {
-              ...align,
-              targetNode,
-              distance,
-            };
-          }
-        }
-      }
-
-      // Apply best horizontal alignment if found
-      if (bestHorizontalAlignment) {
-        snappedPosition.x = bestHorizontalAlignment.targetValue - bestHorizontalAlignment.offset;
-      }
-
-      // Apply best vertical alignment if found
-      if (bestVerticalAlignment) {
-        snappedPosition.y = bestVerticalAlignment.targetValue - bestVerticalAlignment.offset;
-      }
-
-      return snappedPosition;
-    },
-    [nodes, viewport],
-  );
-
   // Modify onNodeDrag to include snapping
+  const { getSnappedPosition } = useNodeSnapping(snapThreshold);
+
   const onNodeDrag = useCallback(
     (event: React.MouseEvent, node: Node) => {
       if (readonly) {
@@ -967,7 +829,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         return;
       }
 
-      const snappedPosition = snapToGrid(node);
+      const snappedPosition = getSnappedPosition(node);
       const { setNodes } = reactFlowInstance;
 
       // Apply the snapped position without triggering too many rerenders
@@ -987,7 +849,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         }),
       );
     },
-    [snapToGrid, readonly, handleReadonlyDrag, reactFlowInstance],
+    [readonly, handleReadonlyDrag, reactFlowInstance, getSnappedPosition],
   );
 
   return (
