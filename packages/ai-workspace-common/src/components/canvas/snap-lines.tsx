@@ -86,8 +86,10 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
       // Vertical alignments (left, center, right)
       for (const [draggingValue, targetValue, position] of [
         [draggingBounds.left, targetBounds.left, 'left'],
-        // [draggingBounds.center, targetBounds.center, 'center'],
+        [draggingBounds.center, targetBounds.center, 'center'],
         [draggingBounds.right, targetBounds.right, 'right'],
+        [draggingBounds.left, targetBounds.right, 'left-to-right'],
+        [draggingBounds.right, targetBounds.left, 'right-to-left'],
       ] as const) {
         // Only show snap lines when nodes are close
         const diff = Math.abs(draggingValue - targetValue);
@@ -108,8 +110,10 @@ const SnapLines: React.FC<SnapLinesProps> = ({ snapThreshold = 5 }) => {
       // Horizontal alignments (top, middle, bottom)
       for (const [draggingValue, targetValue, position] of [
         [draggingBounds.top, targetBounds.top, 'top'],
-        // [draggingBounds.middle, targetBounds.middle, 'middle'],
+        [draggingBounds.middle, targetBounds.middle, 'middle'],
         [draggingBounds.bottom, targetBounds.bottom, 'bottom'],
+        [draggingBounds.top, targetBounds.bottom, 'top-to-bottom'],
+        [draggingBounds.bottom, targetBounds.top, 'bottom-to-top'],
       ] as const) {
         // Only show snap lines when nodes are close
         const diff = Math.abs(draggingValue - targetValue);

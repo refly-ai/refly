@@ -650,15 +650,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     [setIsNodeDragging, setDraggingNodeId],
   );
 
-  const onNodeDragStop = useCallback(() => {
-    // Allow the node to settle in its final position before clearing dragging state
-    // This ensures that any final position adjustments are properly applied
-    requestAnimationFrame(() => {
-      setIsNodeDragging(false);
-      setDraggingNodeId(null);
-    });
-  }, [setIsNodeDragging, setDraggingNodeId]);
-
   const onSelectionContextMenu = useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
@@ -957,6 +948,35 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       return snappedPosition;
     },
     [nodes, viewport],
+  );
+
+  // 将onNodeDragStop函数放在snapToGrid之后
+  const onNodeDragStop = useCallback(
+    (_, node: Node) => {
+      // 在放开节点之前，再次应用磁吸逻辑，确保节点位置始终保持对齐状态
+      const snappedPosition = snapToGrid(node);
+      const { setNodes } = reactFlowInstance;
+
+      // 应用最终的对齐位置
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === node.id) {
+            return {
+              ...n,
+              position: snappedPosition,
+            };
+          }
+          return n;
+        }),
+      );
+
+      // 延迟清除拖拽状态，确保位置更新已经应用
+      setTimeout(() => {
+        setIsNodeDragging(false);
+        setDraggingNodeId(null);
+      }, 100);
+    },
+    [setIsNodeDragging, setDraggingNodeId, snapToGrid, reactFlowInstance],
   );
 
   // Modify onNodeDrag to include snapping
