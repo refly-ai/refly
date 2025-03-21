@@ -10,6 +10,7 @@ import {
   Node,
   Edge,
   useStoreApi,
+  useViewport,
 } from '@xyflow/react';
 import { nodeTypes, CanvasNode } from './nodes';
 import { LaunchPad } from './launchpad';
@@ -53,6 +54,7 @@ import { getFreshNodePreviews } from '../../utils/canvas';
 import { NODE_MINI_MAP_COLORS } from './nodes/shared/colors';
 import { useDragToCreateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-create-node';
 import { message } from 'antd';
+import { SnapLines, getNodeBounds } from './snap-lines';
 
 import '@xyflow/react/dist/style.css';
 import './index.scss';
@@ -161,6 +163,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
   const { onEdgesChange, onConnect } = useEdgeOperations();
   const edgeStyles = useEdgeStyles();
+  const viewport = useViewport();
 
   // Call truncateAllNodesContent when nodes are loaded
   useEffect(() => {
@@ -811,6 +814,162 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     };
   }, [readonlyDragWarningDebounce]);
 
+  // Add snap-to-grid functionality
+  const snapToGrid = useCallback(
+    (node: Node) => {
+      const snapThreshold = 10;
+      const otherNodes = nodes.filter((n) => n.id !== node.id);
+      const snappedPosition = { ...node.position };
+
+      // Track which alignments have been applied to avoid conflicting snaps
+      let hasHorizontalSnap = false;
+      let hasVerticalSnap = false;
+
+      // Remember best snap distances to prioritize closest alignments
+      let bestHorizontalSnapDistance = snapThreshold + 1;
+      let bestVerticalSnapDistance = snapThreshold + 1;
+
+      for (const targetNode of otherNodes) {
+        const nodeBounds = getNodeBounds(node, viewport);
+        const targetBounds = getNodeBounds(targetNode, viewport);
+
+        // Only proceed if we haven't found better alignments yet
+        if (!hasHorizontalSnap || !hasVerticalSnap) {
+          // Horizontal edge alignments (left, right)
+          const horizontalAlignments = [
+            {
+              nodePos: 'left',
+              targetPos: 'left',
+              distance: Math.abs(nodeBounds.left - targetBounds.left),
+            },
+            {
+              nodePos: 'right',
+              targetPos: 'right',
+              distance: Math.abs(nodeBounds.right - targetBounds.right),
+            },
+            {
+              nodePos: 'left',
+              targetPos: 'right',
+              distance: Math.abs(nodeBounds.left - targetBounds.right),
+            },
+            {
+              nodePos: 'right',
+              targetPos: 'left',
+              distance: Math.abs(nodeBounds.right - targetBounds.left),
+            },
+            // Center alignment
+            {
+              nodePos: 'center',
+              targetPos: 'center',
+              distance: Math.abs(nodeBounds.center - targetBounds.center),
+            },
+          ];
+
+          // Find the best horizontal alignment
+          for (const align of horizontalAlignments) {
+            if (align.distance <= snapThreshold && align.distance < bestHorizontalSnapDistance) {
+              bestHorizontalSnapDistance = align.distance;
+              hasHorizontalSnap = true;
+
+              // Apply the horizontal snap
+              if (align.nodePos === 'left' && align.targetPos === 'left') {
+                snappedPosition.x = targetBounds.left;
+              } else if (align.nodePos === 'right' && align.targetPos === 'right') {
+                snappedPosition.x = targetBounds.right - (nodeBounds.right - nodeBounds.left);
+              } else if (align.nodePos === 'left' && align.targetPos === 'right') {
+                snappedPosition.x = targetBounds.right;
+              } else if (align.nodePos === 'right' && align.targetPos === 'left') {
+                snappedPosition.x = targetBounds.left - (nodeBounds.right - nodeBounds.left);
+              } else if (align.nodePos === 'center' && align.targetPos === 'center') {
+                snappedPosition.x = targetBounds.center - (nodeBounds.right - nodeBounds.left) / 2;
+              }
+            }
+          }
+
+          // Vertical edge alignments (top, bottom)
+          const verticalAlignments = [
+            {
+              nodePos: 'top',
+              targetPos: 'top',
+              distance: Math.abs(nodeBounds.top - targetBounds.top),
+            },
+            {
+              nodePos: 'bottom',
+              targetPos: 'bottom',
+              distance: Math.abs(nodeBounds.bottom - targetBounds.bottom),
+            },
+            {
+              nodePos: 'top',
+              targetPos: 'bottom',
+              distance: Math.abs(nodeBounds.top - targetBounds.bottom),
+            },
+            {
+              nodePos: 'bottom',
+              targetPos: 'top',
+              distance: Math.abs(nodeBounds.bottom - targetBounds.top),
+            },
+            // Middle alignment
+            {
+              nodePos: 'middle',
+              targetPos: 'middle',
+              distance: Math.abs(nodeBounds.middle - targetBounds.middle),
+            },
+          ];
+
+          // Find the best vertical alignment
+          for (const align of verticalAlignments) {
+            if (align.distance <= snapThreshold && align.distance < bestVerticalSnapDistance) {
+              bestVerticalSnapDistance = align.distance;
+              hasVerticalSnap = true;
+
+              // Apply the vertical snap
+              if (align.nodePos === 'top' && align.targetPos === 'top') {
+                snappedPosition.y = targetBounds.top;
+              } else if (align.nodePos === 'bottom' && align.targetPos === 'bottom') {
+                snappedPosition.y = targetBounds.bottom - (nodeBounds.bottom - nodeBounds.top);
+              } else if (align.nodePos === 'top' && align.targetPos === 'bottom') {
+                snappedPosition.y = targetBounds.bottom;
+              } else if (align.nodePos === 'bottom' && align.targetPos === 'top') {
+                snappedPosition.y = targetBounds.top - (nodeBounds.bottom - nodeBounds.top);
+              } else if (align.nodePos === 'middle' && align.targetPos === 'middle') {
+                snappedPosition.y = targetBounds.middle - (nodeBounds.bottom - nodeBounds.top) / 2;
+              }
+            }
+          }
+        }
+      }
+
+      return snappedPosition;
+    },
+    [nodes, viewport],
+  );
+
+  // Modify onNodeDrag to include snapping
+  const onNodeDrag = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (readonly) {
+        handleReadonlyDrag(event);
+        return;
+      }
+
+      const snappedPosition = snapToGrid(node);
+      const { setNodes } = reactFlowInstance;
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === node.id) {
+            return {
+              ...n,
+              position: snappedPosition,
+            };
+          }
+          return n;
+        }),
+      );
+    },
+    [snapToGrid, readonly, handleReadonlyDrag, reactFlowInstance],
+  );
+
   return (
     <Spin
       className="w-full h-full"
@@ -889,11 +1048,13 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             edgesFocusable={false}
             nodesFocusable={!readonly}
             onEdgeClick={readonly ? undefined : handleEdgeClick}
+            onNodeDrag={onNodeDrag}
           >
             {nodes?.length === 0 && hasCanvasSynced && <EmptyGuide canvasId={canvasId} />}
 
             {memoizedBackground}
             {memoizedMiniMap}
+            <SnapLines snapThreshold={10} />
           </ReactFlow>
 
           <LayoutControl
