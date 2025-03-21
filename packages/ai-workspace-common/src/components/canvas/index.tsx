@@ -64,8 +64,9 @@ import { useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 import { EmptyGuide } from './empty-guide';
+import { useThrottledCallback } from 'use-debounce';
 
-const snapThreshold = 10;
+const snapThreshold = 15;
 
 const selectionStyles = `
   .react-flow__selection {
@@ -860,13 +861,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             targetValue: targetBounds.left,
             offset: nodeBounds.right - nodeBounds.left,
           },
-          {
-            nodePos: 'center',
-            targetPos: 'center',
-            nodeValue: nodeBounds.center,
-            targetValue: targetBounds.center,
-            offset: (nodeBounds.right - nodeBounds.left) / 2,
-          },
         ];
 
         // Find best horizontal alignment
@@ -912,13 +906,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             targetValue: targetBounds.top,
             offset: nodeBounds.bottom - nodeBounds.top,
           },
-          {
-            nodePos: 'middle',
-            targetPos: 'middle',
-            nodeValue: nodeBounds.middle,
-            targetValue: targetBounds.middle,
-            offset: (nodeBounds.bottom - nodeBounds.top) / 2,
-          },
         ];
 
         // Find best vertical alignment
@@ -950,14 +937,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     [nodes, viewport],
   );
 
-  // 将onNodeDragStop函数放在snapToGrid之后
   const onNodeDragStop = useCallback(
     (_, node: Node) => {
-      // 在放开节点之前，再次应用磁吸逻辑，确保节点位置始终保持对齐状态
       const snappedPosition = snapToGrid(node);
       const { setNodes } = reactFlowInstance;
 
-      // 应用最终的对齐位置
+      // apply final alignment position after node is released
       setNodes((nds) =>
         nds.map((n) => {
           if (n.id === node.id) {
@@ -970,11 +955,10 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         }),
       );
 
-      // 延迟清除拖拽状态，确保位置更新已经应用
       setTimeout(() => {
         setIsNodeDragging(false);
         setDraggingNodeId(null);
-      }, 100);
+      }, 10);
     },
     [setIsNodeDragging, setDraggingNodeId, snapToGrid, reactFlowInstance],
   );
@@ -1009,6 +993,8 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     },
     [snapToGrid, readonly, handleReadonlyDrag, reactFlowInstance],
   );
+
+  const throttleOnNodeDrag = useThrottledCallback(onNodeDrag, 100);
 
   return (
     <Spin
@@ -1088,7 +1074,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             edgesFocusable={false}
             nodesFocusable={!readonly}
             onEdgeClick={readonly ? undefined : handleEdgeClick}
-            onNodeDrag={onNodeDrag}
+            onNodeDrag={throttleOnNodeDrag}
           >
             {nodes?.length === 0 && hasCanvasSynced && <EmptyGuide canvasId={canvasId} />}
 
