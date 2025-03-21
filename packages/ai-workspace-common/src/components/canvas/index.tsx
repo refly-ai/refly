@@ -65,7 +65,7 @@ import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-up
 import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 import { EmptyGuide } from './empty-guide';
 
-const snapThreshold = 10;
+const snapThreshold = 5;
 
 const selectionStyles = `
   .react-flow__selection {
@@ -639,7 +639,10 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   }, []);
 
   // Optimize node dragging performance
-  const { setIsNodeDragging, setDraggingNodeId } = useEditorPerformance();
+  const { setIsNodeDragging, setDraggingNodeId, draggingNodeId } = useEditorPerformance();
+
+  // 使用节点磁吸功能
+  const { getSnappedPosition } = useNodeSnapping(snapThreshold);
 
   const onNodeDragStart = useCallback(
     (_: React.MouseEvent, node: Node) => {
@@ -650,13 +653,33 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   );
 
   const onNodeDragStop = useCallback(() => {
-    // Allow the node to settle in its final position before clearing dragging state
-    // This ensures that any final position adjustments are properly applied
-    requestAnimationFrame(() => {
+    if (draggingNodeId) {
+      const draggedNode = reactFlowInstance.getNode(draggingNodeId);
+      if (draggedNode) {
+        const snappedPosition = getSnappedPosition(draggedNode);
+        reactFlowInstance.setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id === draggingNodeId) {
+              return {
+                ...n,
+                position: {
+                  ...snappedPosition,
+                  x: Math.round(snappedPosition.x * 100) / 100,
+                  y: Math.round(snappedPosition.y * 100) / 100,
+                },
+              };
+            }
+            return n;
+          }),
+        );
+      }
+    }
+
+    setTimeout(() => {
       setIsNodeDragging(false);
       setDraggingNodeId(null);
-    });
-  }, [setIsNodeDragging, setDraggingNodeId]);
+    }, 100);
+  }, [setIsNodeDragging, setDraggingNodeId, getSnappedPosition, reactFlowInstance]);
 
   const onSelectionContextMenu = useCallback(
     (event: React.MouseEvent) => {
@@ -818,9 +841,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       }
     };
   }, [readonlyDragWarningDebounce]);
-
-  // Modify onNodeDrag to include snapping
-  const { getSnappedPosition } = useNodeSnapping(snapThreshold);
 
   const onNodeDrag = useCallback(
     (event: React.MouseEvent, node: Node) => {

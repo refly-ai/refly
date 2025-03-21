@@ -75,6 +75,7 @@ export const useNodeSnapping = (snapThreshold = 5): AlignmentResult => {
   const { draggingNodeId } = useEditorPerformance();
   const viewport = useViewport();
   const [lastAlignments, setLastAlignments] = useState<AlignmentPosition | null>(null);
+
   const currentLinesRef = useRef<SnapLine[]>([]);
   const currentHorizontalAlignmentRef = useRef<any>(null);
   const currentVerticalAlignmentRef = useRef<any>(null);
@@ -290,30 +291,52 @@ export const useNodeSnapping = (snapThreshold = 5): AlignmentResult => {
   // 获取磁吸后的位置
   const getSnappedPosition = useCallback(
     (node: Node) => {
-      // 如果没有拖动或者节点ID不匹配，返回原始位置
-      if (!draggingNodeId || node.id !== draggingNodeId) {
-        return { ...node.position };
+      // 如果节点正在拖拽中
+      if (node.id === draggingNodeId) {
+        const snappedPosition = { ...node.position };
+
+        // 应用水平对齐
+        if (currentHorizontalAlignmentRef.current) {
+          snappedPosition.x =
+            currentHorizontalAlignmentRef.current.targetValue -
+            currentHorizontalAlignmentRef.current.offset;
+        }
+
+        // 应用垂直对齐
+        if (currentVerticalAlignmentRef.current) {
+          snappedPosition.y =
+            currentVerticalAlignmentRef.current.targetValue -
+            currentVerticalAlignmentRef.current.offset;
+        }
+
+        return snappedPosition;
       }
 
-      const snappedPosition = { ...node.position };
+      // 如果有最近的对齐记录，尝试应用它
+      if (
+        lastAlignments &&
+        lastAlignments.nodeId === node.id &&
+        Date.now() - lastAlignments.timestamp < 2000
+      ) {
+        // 重新计算磁吸位置
+        const { horizontalAlignment, verticalAlignment } = calculateSnapping(node.id);
 
-      // 应用水平对齐
-      if (currentHorizontalAlignmentRef.current) {
-        snappedPosition.x =
-          currentHorizontalAlignmentRef.current.targetValue -
-          currentHorizontalAlignmentRef.current.offset;
+        const snappedPosition = { ...node.position };
+
+        if (horizontalAlignment) {
+          snappedPosition.x = horizontalAlignment.targetValue - horizontalAlignment.offset;
+        }
+
+        if (verticalAlignment) {
+          snappedPosition.y = verticalAlignment.targetValue - verticalAlignment.offset;
+        }
+
+        return snappedPosition;
       }
 
-      // 应用垂直对齐
-      if (currentVerticalAlignmentRef.current) {
-        snappedPosition.y =
-          currentVerticalAlignmentRef.current.targetValue -
-          currentVerticalAlignmentRef.current.offset;
-      }
-
-      return snappedPosition;
+      return { ...node.position };
     },
-    [draggingNodeId],
+    [draggingNodeId, lastAlignments, calculateSnapping],
   );
 
   return {
