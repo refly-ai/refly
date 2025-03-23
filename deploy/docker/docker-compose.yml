@@ -2,7 +2,7 @@ include:
   - path: docker-compose.middleware.yml
 services:
   api:
-    image: reflyai/refly-api:latest
+    image: refly-api:local0.42-v4
     container_name: refly_api
     depends_on:
       elasticsearch:

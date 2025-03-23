@@ -26,16 +26,6 @@ interface JinaRerankerResponse {
   }[];
 }
 
-// 添加Xinference的响应接口
-interface XinferenceRerankerResponse {
-  id: string;
-  results: {
-    index: number;
-    relevance_score: number;
-    document: string;
-  }[];
-}
-
 // Define Avro schema for vector points (must match the one used for serialization)
 const avroSchema = avro.Type.forSchema({
   type: 'array',
@@ -473,7 +463,7 @@ export class RAGService {
   }
 
   /**
-   * Rerank search results using Xinference Reranker.
+   * Rerank search results using Jina Reranker.
    */
   async rerank(
     query: string,
@@ -489,48 +479,40 @@ export class RAGService {
       contentMap.set(r.snippets.map((s) => s.text).join('\n\n'), r);
     }
 
-    // 准备xinference请求负载
     const payload = JSON.stringify({
-      model: 'bge-reranker-v2-m3', // 使用指定的模型
-      query: query,
+      query,
+      model: this.config.get('reranker.model'),
+      top_n: topN,
       documents: Array.from(contentMap.keys()),
     });
 
     try {
-      // 调用xinference的rerank API
-      const res = await fetch('http://192.168.3.12:9997/v1/rerank', {
+      const res = await fetch('https://api.jina.ai/v1/rerank', {
         method: 'post',
         headers: {
+          Authorization: `Bearer ${this.config.getOrThrow('credentials.jina')}`,
           'Content-Type': 'application/json',
         },
         body: payload,
       });
+      const data: JinaRerankerResponse = await res.json();
+      this.logger.debug(`Jina reranker results: ${JSON.stringify(data)}`);
 
-      if (!res.ok) {
-        throw new Error(`Xinference API error: ${res.status} ${res.statusText}`);
-      }
-
-      // xinference返回的结果格式与Jina不同，需要适配
-      const data = await res.json();
-      this.logger.debug(`Xinference reranker results: ${JSON.stringify(data)}`);
-
-      // 处理xinference的响应结果
-      const xinferenceResponse = data as XinferenceRerankerResponse;
-      return xinferenceResponse.results
-         .filter((r) => r.relevance_score >= relevanceThreshold)
-         .map((r) => {
-           const originalResult = contentMap.get(r.document);
-           return {
-             ...originalResult,
-             relevanceScore: r.relevance_score, // 添加相关性得分到结果
-           } as SearchResult;
-         });
+      return data.results
+        .filter((r) => r.relevance_score >= relevanceThreshold)
+        .map((r) => {
+          const originalResult = contentMap.get(r.document.text);
+          return {
+            ...originalResult,
+            relevanceScore: r.relevance_score, // Add relevance score to the result
+          } as SearchResult;
+        });
     } catch (e) {
       this.logger.error(`Reranker failed, fallback to default: ${e.stack}`);
-      // 当失败时，保持原始顺序但添加默认的相关性分数
+      // When falling back, maintain the original order but add default relevance scores
       return results.map((result, index) => ({
         ...result,
-        relevanceScore: 1 - index * 0.1, // 简单的回退评分基于原始顺序
+        relevanceScore: 1 - index * 0.1, // Simple fallback scoring based on original order
       }));
     }
   }

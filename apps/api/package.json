@@ -54,6 +54,7 @@
     "@sentry/profiling-node": "^7.113.0",
     "argon2": "^0.41.1",
     "avsc": "^5.7.7",
+    "axios": "^1.8.4",
     "bullmq": "~5.34.4",
     "cheerio": "~1.0.0",
     "cookie-parser": "~1.4.6",

@@ -9,11 +9,11 @@
     ⭐️  The AI Native Creation Engine ⭐️ <br>
 </h1>
 
-Refly is an open-source AI-native creation engine powered by 13+ leading AI models. Its intuitive free-form canvas interface integrates multi-threaded conversations, multimodal inputs (text/images/files), RAG retrieval process, browser extension web clipper, contextual memory, AI document editing capabilities, code artifact generation (HTML/SVG/Mermaid/React), and website visualization engine, empowering you to effortlessly transform ideas into complete works with interactive visualizations and web applications.
+Refly是一个开源的AI原生创作引擎，由13+领先AI模型驱动。我们对原项目进行了本地化改进，使嵌入向量生成、排序模型和网页解析都能在本地完成，极大降低了部署成本和复杂度。其直观的自由形式画布界面集成了多线程对话、多模态输入（文本/图片/文件）、RAG检索、浏览器扩展网页剪藏、上下文记忆、AI文档编辑、代码生成（HTML/SVG/Mermaid/React）和网站可视化引擎，赋能您轻松将想法转化为完整作品。
 
-[🚀 v0.4.2 Released! Now Supporting Canvas template and document table⚡️](https://docs.refly.ai/changelog/v0.4.2)
+[🚀 v0.4.2 发布! 现已支持画布模板和文档表格⚡️](https://docs.refly.ai/changelog/v0.4.2)
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+[Refly Cloud](https://refly.ai/) · [自托管部署](https://docs.refly.ai/guide/self-deploy) · [论坛](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [文档](https://docs.refly.ai/)
 
 <p align="center">
     <a href="https://refly.ai" target="_blank">
@@ -35,204 +35,251 @@ Refly is an open-source AI-native creation engine powered by 13+ leading AI mode
 
 </div>
 
-## Quick Start
+## 🔥 本地化改进核心亮点
 
-> Before installing ReflyAI, ensure your machine meets these minimum system requirements:
+我们对Refly进行了三项关键本地化改进，极大降低了部署成本，提高了数据安全性：
+
+### 1️⃣ 高精度嵌入向量本地生成 (1024维)
+
+- **替换外部API**：不再依赖Jina/OpenAI/Fireworks等第三方嵌入API
+- **降低成本**：无需支付API调用费用
+- **改进文件**：`apps/api/src/providers/embeddings/jina.ts`
+- **改进内容**：实现本地嵌入服务调用，支持1024维高精度向量
+- **技术亮点**：维度匹配验证、批处理优化、错误恢复机制
+
+### 2️⃣ 本地化排序模型
+
+- **替换外部重排API**：从依赖外部重排API转为本地服务
+- **模型升级**：使用`bge-reranker-v2-m3`模型进行高精度排序
+- **改进文件**：`apps/api/src/rag/rag.service.ts`
+- **改进内容**：实现本地xinference服务调用，优化排序策略
+- **技术亮点**：基于向量相似度的混合排序，降级容错机制
+
+### 3️⃣ 本地化网页解析
+
+- **替换外部解析API**：从依赖外部解析服务转为本地实现
+- **双重备份策略**：Python/Trafilatura主解析 + Node.js/Cheerio备选解析
+- **改进文件**：`apps/api/src/knowledge/parsers/jina.parser.ts`
+- **改进内容**：实现本地网页抓取、解析和内容提取
+- **技术亮点**：多策略内容选择器，智能噪声过滤，元数据提取
+
+## 快速开始
+
+> 在安装ReflyAI之前，请确保您的机器满足以下最低系统要求：
 >
-> CPU >= 2 cores
+> CPU >= 2核
 >
-> Memory >= 4GB
+> 内存 >= 4GB
 
-### Self-deploy with Docker
+### 使用Docker自托管部署
 
-Deploy your own feature-rich, unlimited version of ReflyAI using Docker. Our team is working hard to keep up with the latest versions.
+借助本地化改进，您可以部署功能丰富且完全本地化的ReflyAI版本，无需依赖昂贵的第三方API。我们的团队正在努力跟进最新版本。
 
-To start deployment:
+#### 部署步骤
 
+1. 克隆代码库并进入部署目录
 ```bash
-cd deploy/docker
-cp ../../apps/api/.env.example .env # copy the example api env file
+git clone https://github.com/refly-ai/refly.git
+cd refly/deploy/docker
+```
+
+2. 复制并修改环境配置文件
+```bash
+cp ../../apps/api/.env.example .env
+```
+
+3. 修改配置文件中的向量嵌入设置
+```bash
+# 打开.env文件并设置以下参数
+EMBEDDINGS_PROVIDER=jina
+EMBEDDINGS_MODEL_NAME=jina-embeddings-v3
+EMBEDDINGS_DIMENSIONS=1024  # 必须在初始化前设置
+EMBEDDINGS_BATCH_SIZE=512
+REFLY_VEC_DIM=1024          # 必须与EMBEDDINGS_DIMENSIONS一致
+```
+
+4. 使用优化的Dockerfile构建镜像
+```bash
+# 使用优化的Dockerfile.new替代默认Dockerfile
+cp ../Dockerfile.new ../Dockerfile
+docker compose build
+```
+
+5. 启动服务
+```bash
 docker compose up -d
 ```
 
-For the following steps, you can visit [Self-deploy Guide](https://docs.refly.ai/guide/self-deploy) for more details.
+有关后续步骤，请访问[自托管部署指南](https://docs.refly.ai/guide/self-deploy)了解更多详情。
 
-For core deployment tutorials, environment variable configuration, and FAQs, please refer to 👉 [Deployment Guide](https://docs.refly.ai/guide/self-deploy).
+## ✨ 关键特性
 
-### Local Development
+### 多线程对话系统
+建立在创新的多线程架构上，实现并行管理独立对话上下文。通过高效的状态管理和上下文切换机制实现复杂的Agent工作流，超越传统对话模型的限制。
 
-View details in [CONTRIBUTING](./CONTRIBUTING.md).
+### 多模型集成框架（本地化增强）
+- 集成13+领先语言模型，包括DeepSeek R1、Claude 3.5 Sonnet、Gemini 2.0和O3-mini
+- **新增：支持本地化嵌入模型，无需外部API密钥**
+- **新增：降低部署成本，提高可靠性和隐私性**
+- 支持模型混合调度和并行处理
 
-## 🌟 Featured Showcases
+### 知识库引擎（本地化增强）
+- 支持多源异构数据导入
+- **新增：本地化RAG语义检索架构，1024维嵌入向量**
+- **新增：无需依赖第三方嵌入服务，降低运营成本**
+- 智能知识图谱构建
 
-### 🎨 Creative Canvas 
+### 智能内容捕获（本地化增强）
+- 主流平台（Github、Medium、Wikipedia、Arxiv）一键内容捕获
+- **新增：本地化网页解析和内容提取**
+- 智能内容解析和结构化
+- 深度知识库集成
 
-| Project | Description | Preview |
-|---------|-------------|----------|
-| [🧠 Build Card Library CATxPAPA in 3 Days](https://refly.ai/share/canvas/can-yu1t20ajt5adt7238i7aax0x) | Complete high-precision card visual asset library in 72 hours, creating industry benchmark with PAPA Lab | ![CATxPAPA](https://static.refly.ai/share-cover/can-yewsypawximvg5nn66a419iy.png) |
-| [🎮 Virtual Character Script Generator](https://refly.ai/share/canvas/can-v78ikqh7rvu6oc8b293e9b1c) | Dynamic difficulty adjustment system based on knowledge graph, covering 200+ core K12 knowledge points | ![Math Game](https://static.refly.ai/share-cover/can-iffblxq12invsh5fhv35acyy.png) |
-| [🔍 Understanding Large Models with 3D Visualization](https://refly.ai/share/canvas/can-qnn6vcnvt9o1go7px9axv7ea) | Interactive visualization analysis supporting architectures like Transformer, parameter-level neuron activity tracking | ![3D Vis](https://static.refly.ai/share-cover/can-yevuumd9spmqv7wvyvb1bl6x.png) |
+## 📝 技术实现详解
 
-[👉 Explore More Use Cases](https://refly.ai/use-cases-gallery)
+### 1. 嵌入向量模型集成
 
-### 🚀 Featured Artifacts
+我们通过修改`JinaEmbeddings`类实现了本地嵌入向量集成：
 
-| Project | Description | Preview |
-|---------|-------------|----------|
-| [📊 AI Teaching Assistant](https://refly.ai/share/code/cod-eiuua6fou3aci24dn0ljxzme) | Say goodbye to tedious manual organization, AI intelligently builds course knowledge framework to improve teaching efficiency | ![Course Outline](https://static.refly.ai/artifact-cover/course-outline.webp) |
-| [🎯 Interactive Math Tutoring](https://refly.ai/share/code/cod-i2nti1w421d7akwlyjgmyh2y) | Learning through play, AI-driven interactive Q&A helps children love math through games and improve grades | ![Math QA](https://static.refly.ai/artifact-cover/math-qa.webp) |
-| [🌐 One-Click Webpage Clone](https://refly.ai/share/code/cod-e2ufkvekg6ixndnombwamn9w) | No coding needed, quickly clone webpages by entering links, efficiently build event landing pages | ![Copy Web](https://static.refly.ai/artifact-cover/copy-web.webp) |
+```typescript
+// apps/api/src/providers/embeddings/jina.ts
+export class JinaEmbeddings extends Embeddings {
+  private config: JinaEmbeddingsConfig;
+  private readonly logger = new Logger(JinaEmbeddings.name);
 
-[👉 Explore More Artifacts](https://refly.ai/artifact-gallery)
+  constructor(config: JinaEmbeddingsConfig) {
+    super(config);
+    this.config = { ...defaultConfig, ...config };
+    this.logger.log(`初始化本地嵌入模型服务，维度: ${this.config.dimensions}`);
+  }
 
-## ✨ Key Features
+  private async fetch(input: string[]) {
+    // 调用本地嵌入服务API
+    const response = await fetch(`${this.config.serverBaseUrl}/api/embed`, {
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: input }),
+    });
+    
+    // 验证维度一致性
+    if (data.embeddings.length > 0) {
+      const actualDimensions = data.embeddings[0].length;
+      if (actualDimensions !== this.config.dimensions) {
+        throw new Error(`维度不匹配! 配置期望: ${this.config.dimensions}, 实际: ${actualDimensions}`);
+      }
+    }
+    
+    return {
+      data: data.embeddings.map((emb: number[]) => ({ embedding: emb }))
+    };
+  }
+}
+```
 
-### `1` 🧵 Multi-threaded Conversation System
-Built on an innovative multi-threaded architecture that enables parallel management of independent conversation contexts. Implements complex Agentic Workflows through efficient state management and context switching mechanisms, transcending traditional dialogue model limitations.
+**⚠️ 重要配置**：必须在项目初始化前在.env文件中设置正确的维度参数
+```
+EMBEDDINGS_DIMENSIONS=1024
+REFLY_VEC_DIM=1024  # 必须与EMBEDDINGS_DIMENSIONS保持一致
+```
 
-### `2` 🤖 Multi-model Integration Framework
-- Integration with 13+ leading language models, including DeepSeek R1, Claude 3.5 Sonnet, Google Gemini 2.0, and OpenAI O3-mini
-- Support for model hybrid scheduling and parallel processing
-- Flexible model switching mechanism with unified conversation interface
-- Multi-model knowledge base collaboration
+### 2. 排序模型本地化
 
-### `3` 🎨 Multimodal Processing Capabilities
-- File Format Support: 7+ formats including PDF, DOCX, RTF, TXT, MD, HTML, EPUB
-- Image Processing: Support for mainstream formats including PNG, JPG, JPEG, BMP, GIF, SVG, WEBP
-- Intelligent Batch Processing: Canvas multi-element selection and AI analysis
+排序模型使用了硬编码的本地服务地址：
 
-### `4` ⚡️ AI-Powered Skill System
-Integrating advanced capabilities from Perplexity AI, Stanford Storm, and more:
-- Intelligent web-wide search and information aggregation
-- Vector database-based knowledge retrieval
-- Smart query rewriting and recommendations
-- AI-assisted document generation workflow
+```typescript
+// apps/api/src/rag/rag.service.ts
+async rerank(query: string, results: SearchResult[]) {
+  // 准备xinference请求负载
+  const payload = JSON.stringify({
+    model: 'bge-reranker-v2-m3', // 使用指定的模型
+    query: query,
+    documents: Array.from(contentMap.keys()),
+  });
 
-### `5` 🔍 Context Management System
-- Precise temporary knowledge base construction
-- Flexible node selection mechanism
-- Multi-dimensional context correlation
-- Cursor-like intelligent context understanding
+  // 调用xinference的rerank API - 硬编码地址需要修改
+  const res = await fetch('http://192.168.3.12:9997/v1/rerank', {
+    method: 'post',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+  });
+  
+  // 错误处理及结果处理...
+}
+```
 
-### `6` 📚 Knowledge Base Engine
-- Support for multi-source heterogeneous data import
-- RAG-based semantic retrieval architecture
-- Intelligent knowledge graph construction
-- Personalized knowledge space management
+**修改提示**：如需更改排序服务地址，直接修改代码中的URL。建议将此URL改为环境变量配置。
 
-### `7` ✂️ Intelligent Content Capture
-- One-click content capture from mainstream platforms (Github, Medium, Wikipedia, Arxiv)
-- Intelligent content parsing and structuring
-- Automatic knowledge classification and tagging
-- Deep knowledge base integration
+### 3. 网页解析本地化
 
-### `8` 📌 Citation System
-- Flexible multi-source content referencing
-- Intelligent context correlation
-- One-click citation generation
-- Reference source tracking
+我们实现了双重备份的网页解析策略：
 
-### `9` ✍️ AI-Enhanced Editor
-- Real-time Markdown rendering
-- AI-assisted content optimization
-- Intelligent content analysis
-- Notion-like editing experience
+```typescript
+// apps/api/src/knowledge/parsers/jina.parser.ts
+async parse(input: string | Buffer): Promise<ParseResult> {
+  const url = input.toString();
 
-### `10` 🎨 Code Artifact Generation
-- Generate HTML, SVG, Mermaid diagrams, and React applications
-- Smart code structure optimization
-- Component-based architecture support
-- Real-time code preview and debugging
+  try {
+    // 优先使用Python/Trafilatura解析（高质量结果）
+    const isPythonReady = await this.ensureTrafilaturaScript();
+    
+    if (isPythonReady) {
+      // 使用Python脚本处理
+      const process = spawn(this.pythonCommand, [this.pythonScriptPath, url]);
+      // 处理输出...
+    } else {
+      // 备选方案：使用Node.js解析
+      return this.parseWithNode(url);
+    }
+  } catch (error) {
+    // 兜底：所有方法失败后使用Node.js备选方案
+    return this.parseWithNode(url);
+  }
+}
 
-### `11` 🌐 Website Visualization Engine
-- Interactive web page rendering and preview
-- Complex concept visualization support
-- Dynamic SVG and diagram generation
-- Responsive design templates
-- Real-time website prototyping
-- Integration with modern web frameworks
+// Node.js备选解析实现
+async parseWithNode(url: string): Promise<ParseResult> {
+  // 使用axios获取网页内容
+  const response = await axios.get(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36...',
+    },
+  });
+  
+  const html = response.data;
+  const $ = cheerio.load(html);
+  
+  // 智能内容提取算法
+  // 尝试多种选择器策略提取高质量内容...
+}
+```
 
-## 🛣️ Roadmap
+**功能亮点**：
+- 自动降级：从Python到Node.js的无缝切换
+- 多策略选择器：确保内容提取成功率
+- 智能噪音过滤：自动清理导航栏、广告等
 
-We're continuously improving Refly with exciting new features. For a detailed roadmap, visit our [complete roadmap documentation](https://docs.refly.ai/roadmap).
+## 🛣️ 路线图与贡献指南
 
-- 🎨 Advanced image, audio, and video generation capabilities
-- 🎨 Cross-modal content transformation tools
-- 💻 High-performance desktop client with improved resource management
-- 💻 Enhanced offline capabilities
-- 📚 Advanced knowledge organization and visualization tools
-- 📚 Collaborative knowledge base features
-- 🔌 Open standard for third-party plugin development based on MCP
-- 🔌 Plugin marketplace and developer SDK
-- 🤖 Autonomous task completion with minimal supervision
-- 🤖 Multi-agent collaboration systems
-- ⚡️ Visual workflow builder for complex AI-powered processes
-- ⚡️ Advanced integration capabilities with external systems and API support
-- 🔒 Enhanced security and compliance tools
-- 🔒 Advanced team management and analytics
+我们不断改进Refly，添加令人兴奋的新功能。有关详细路线图，请访问[完整路线图文档](https://docs.refly.ai/roadmap)。欢迎所有开发者参与贡献，请查看我们的[CONTRIBUTING.md](./CONTRIBUTING.md)。
 
-## How to Use?
+## 上游项目
 
-- **Cloud**
-  - We've deployed a Refly Cloud version that allows zero-configuration usage, offering all capabilities of the self-hosted version, including free access to GPT-4o-mini and limited trials of GPT-4o and Claude-3.5-Sonnet. Visit [https://refly.ai/](https://refly.ai/) to get started.
-- **Self-hosting Refly Community Edition**
-  - Get started quickly with our [Getting Started Guide](./CONTRIBUTING.md) to run Refly in your environment. For more detailed references and in-depth instructions, please refer to our documentation.
-- **Refly for enterprise / organizations**
-  - Please contact us at [support@refly.ai](mailto:support@refly.ai) for private deployment solutions.
+我们感谢以下使ReflyAI成为可能的开源项目：
 
-## Stay Updated
+1. [LangChain](https://github.com/langchain-ai/langchainjs) - 用于构建AI应用程序的库
+2. [ReactFlow](https://github.com/xyflow/xyflow) - 用于构建可视化工作流的库
+3. [QDrant](https://github.com/qdrant/qdrant) - 用于构建向量搜索功能的库
+4. 其他上游依赖项
 
-Star Refly on GitHub to receive instant notifications about new version releases.
+## 许可证
 
-![stay-tuned](https://github.com/user-attachments/assets/877dfeb7-1088-41f1-9176-468d877ded0a)
+本仓库根据[ReflyAI开源许可证](./LICENSE)授权，本质上是Apache 2.0许可证加上一些额外限制。
 
-## Contributing Guidelines
+## 📱 联系作者
 
-| Bug Reports                                                              | Feature Requests                                                  | Issues/Discussions                                                       | ReflyAI Community                                                     |
-| ------------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| [Create Bug Report](https://github.com/refly-ai/refly/issues/new/choose) | [Submit Feature Request](https://github.com/refly-ai/refly/pulls) | [View GitHub Discussions](https://github.com/refly-ai/refly/discussions) | [Visit ReflyAI Community](https://docs.refly.ai/community/contact-us) |
-| Something isn't working as expected                                      | Ideas for new features or improvements                            | Discuss and raise questions                                              | A place to ask questions, learn, and connect with others              |
+如果您对本项目有任何问题或建议，欢迎通过以下方式联系作者：
 
-Calling all developers, testers, tech writers and more! Contributions of all types are more than welcome, please check our [CONTRIBUTING.md](./CONTRIBUTING.md) and feel free to browse our [GitHub issues](https://github.com/refly-ai/refly/issues) to show us what you can do.
-
-For bug reports, feature requests, and other suggestions, you can also [create a new issue](https://github.com/refly-ai/refly/issues/new/choose) and choose the most appropriate template to provide feedback.
-
-If you have any questions, feel free to reach out to us. One of the best places to get more information and learn is the [ReflyAI Community](https://docs.refly.ai/community/contact-us), where you can connect with other like-minded individuals.
-
-## Community and Contact
-
-- [GitHub Discussion](https://github.com/refly-ai/refly/discussions): Best for sharing feedback and asking questions.
-- [GitHub Issues](https://github.com/refly-ai/refly/issues): Best for reporting bugs and suggesting features when using ReflyAI. Please refer to our contribution guidelines.
-- [Discord](https://discord.gg/bWjffrb89h): Best for sharing your applications and interacting with the community.
-- [X(Twitter)](https://x.com/reflyai): Best for sharing your applications and staying connected with the community.
-
-## Upstream Projects
-
-We would also like to thank the following open-source projects that make ReflyAI possible:
-
-1. [LangChain](https://github.com/langchain-ai/langchainjs) - Library for building AI applications.
-2. [ReactFlow](https://github.com/xyflow/xyflow) - Library for building visual workflows.
-3. [Tiptap](https://github.com/ueberdosis/tiptap) - Library for building collaborative editors.
-4. [Ant Design](https://github.com/ant-design/ant-design) - UI library.
-5. [yjs](https://github.com/yjs/yjs) - Provides CRDT foundation for our state management and data sync implementation.
-6. [React](https://github.com/facebook/react) - Library for web and native user interfaces.
-7. [NestJS](https://github.com/nestjs/nest) - Library for building Node.js servers.
-8. [Zustand](https://github.com/pmndrs/zustand) - Primitive and flexible state management for React.
-9. [Vite](https://github.com/vitejs/vite) - Next generation frontend tooling.
-10. [TailwindCSS](https://github.com/tailwindcss/tailwindcss) - CSS library for writing beautiful styles.
-11. [Tanstack Query](https://github.com/tanstack/query) - Library for frontend request handling.
-12. [Radix-UI](https://github.com/radix-ui) - Library for building accessible React UI.
-13. [Elasticsearch](https://github.com/elastic/elasticsearch) - Library for building search functionality.
-14. [QDrant](https://github.com/qdrant/qdrant) - Library for building vector search functionality.
-15. [Resend](https://github.com/resend/react-email) - Library for building email sending functionality.
-16. Other upstream dependencies.
-
-We are deeply grateful to the community for providing such powerful yet simple libraries that allow us to focus more on implementing product logic. We hope that our project will also provide an easier-to-use AI Native content creation engine for everyone in the future.
-
-## Security Issues
-
-To protect your privacy, please avoid posting security-related issues on GitHub. Instead, send your questions to [support@refly.ai](mailto:support@refly.ai), and we will provide you with a more detailed response.
-
-## License
-
-This repository is licensed under the [ReflyAI Open Source License](./LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.
+<div align="center">
+  <img src="data/erwei.jpg" alt="微信二维码" width="300" />
+  <p>扫描上方二维码添加作者微信</p>
+</div>

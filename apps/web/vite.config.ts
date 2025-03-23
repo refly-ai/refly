@@ -63,6 +63,16 @@ export default defineConfig(({ mode }) => {
           drop_debugger: !isDev,
         },
       },
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor': ['react', 'react-dom'],
+            'ui': ['@arco-design/web-react'],
+            'utils': ['@refly/utils'],
+          }
+        }
+      }
     },
     esbuild: {
       drop: isDev ? [] : ['console', 'debugger'],
