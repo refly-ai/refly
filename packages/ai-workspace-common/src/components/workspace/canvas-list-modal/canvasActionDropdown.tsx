@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { Button, Dropdown, DropdownProps, MenuProps, Modal, Checkbox, CheckboxProps } from 'antd';
 import {
   IconMoreHorizontal,
@@ -26,7 +26,7 @@ interface CanvasActionDropdown {
   handleUseCanvas?: () => void;
 }
 
-export const CanvasActionDropdown = (props: CanvasActionDropdown) => {
+export const CanvasActionDropdown = memo((props: CanvasActionDropdown) => {
   const {
     canvasId,
     canvasName,
@@ -235,4 +235,6 @@ export const CanvasActionDropdown = (props: CanvasActionDropdown) => {
       </div>
     </>
   );
-};
+});
+
+CanvasActionDropdown.displayName = 'CanvasActionDropdown';

@@ -3,7 +3,8 @@ import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
-import { Edge } from '@xyflow/react';
+import { Node, Edge, useStoreApi, InternalNode } from '@xyflow/react';
+import { adoptUserNodes, updateConnectionLookup } from '@xyflow/system';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useCollabToken } from '@refly-packages/ai-workspace-common/hooks/use-collab-token';
 import { wsServerOrigin } from '@refly-packages/ai-workspace-common/utils/env';
@@ -27,11 +28,6 @@ const providerCache = new Map<
   { remote: HocuspocusProvider; local: IndexeddbPersistence }
 >();
 
-const getTitleFromYDoc = (ydoc: Y.Doc) => {
-  const title = ydoc.getText('title');
-  return title.toJSON();
-};
-
 const getNodesFromYDoc = (ydoc: Y.Doc) => {
   const nodesArray = ydoc.getArray<CanvasNode>('nodes');
   const nodes = nodesArray.toJSON();
@@ -52,6 +48,32 @@ const getEdgesFromYDoc = (ydoc: Y.Doc) => {
   return Array.from(uniqueEdgesMap.values());
 };
 
+const getInternalState = ({
+  nodes,
+  edges,
+  nodeLookup = new Map<string, InternalNode>(),
+  parentLookup = new Map(),
+  connectionLookup = new Map(),
+  edgeLookup = new Map(),
+}: {
+  nodes?: Node[];
+  edges?: Edge[];
+  nodeLookup?: Map<string, InternalNode>;
+  parentLookup?: Map<string, any>;
+  connectionLookup?: Map<string, any>;
+  edgeLookup?: Map<string, any>;
+} = {}) => {
+  updateConnectionLookup(connectionLookup, edgeLookup, edges);
+  adoptUserNodes(nodes, nodeLookup, parentLookup, {
+    elevateNodesOnSelect: false,
+  });
+
+  return {
+    nodes,
+    edges,
+  };
+};
+
 export const CanvasProvider = ({
   canvasId,
   readonly = false,
@@ -66,16 +88,10 @@ export const CanvasProvider = ({
   const RETRY_DELAY = 2000;
 
   const { token, refreshToken } = useCollabToken();
-
+  const { setState, getState } = useStoreApi();
   const { setCanvasLocalSynced, setCanvasRemoteSynced } = useCanvasStoreShallow((state) => ({
     setCanvasLocalSynced: state.setCanvasLocalSynced,
     setCanvasRemoteSynced: state.setCanvasRemoteSynced,
-  }));
-
-  const { setTitle, setNodes, setEdges } = useCanvasStoreShallow((state) => ({
-    setTitle: state.setTitle,
-    setNodes: state.setNodes,
-    setEdges: state.setEdges,
   }));
 
   // Use the hook to fetch canvas data when in readonly mode
@@ -97,27 +113,29 @@ export const CanvasProvider = ({
   // Set canvas data from API response when in readonly mode
   useEffect(() => {
     if (readonly && canvasData) {
-      const { title, nodes, edges } = canvasData;
-      setTitle(canvasId, title ?? '');
-
-      // Type casting to handle the type mismatch
-      if (nodes && Array.isArray(nodes)) {
-        setNodes(canvasId, nodes as unknown as CanvasNode[]);
-      }
-
-      if (edges && Array.isArray(edges)) {
-        setEdges(canvasId, edges as unknown as Edge[]);
-      }
+      const { nodes, edges } = canvasData;
+      const internalState = getInternalState({
+        nodes: nodes && Array.isArray(nodes) ? (nodes as unknown as Node[]) : [],
+        edges: edges && Array.isArray(edges) ? (edges as unknown as Edge[]) : [],
+      });
+      setState(internalState);
     }
-  }, [readonly, canvasData, canvasId, setTitle, setNodes, setEdges]);
+  }, [readonly, canvasData, canvasId]);
 
   const setCanvasDataFromYDoc = useCallback(
     (ydoc: Y.Doc) => {
-      setTitle(canvasId, getTitleFromYDoc(ydoc));
-      setNodes(canvasId, getNodesFromYDoc(ydoc));
-      setEdges(canvasId, getEdgesFromYDoc(ydoc));
+      const { nodeLookup, parentLookup, connectionLookup, edgeLookup } = getState();
+      const internalState = getInternalState({
+        nodes: getNodesFromYDoc(ydoc),
+        edges: getEdgesFromYDoc(ydoc),
+        nodeLookup,
+        parentLookup,
+        connectionLookup,
+        edgeLookup,
+      });
+      setState(internalState);
     },
-    [canvasId, setTitle, setNodes, setEdges],
+    [canvasId],
   );
 
   const { remote: provider, local: localProvider } = useMemo(() => {
@@ -216,7 +234,6 @@ export const CanvasProvider = ({
     let isDestroyed = false;
 
     // Get references to the shared types
-    const title = ydoc.getText('title');
     const nodesArray = ydoc.getArray<CanvasNode>('nodes');
     const edgesArray = ydoc.getArray<Edge>('edges');
 
@@ -228,32 +245,29 @@ export const CanvasProvider = ({
         setCanvasDataFromYDoc(ydoc);
       }
 
-      const titleObserverCallback = () => {
-        if (provider.status === 'connected') {
-          setTitle(canvasId, getTitleFromYDoc(ydoc));
-        }
-      };
-
       const nodesObserverCallback = () => {
         if (provider.status === 'connected') {
-          setNodes(canvasId, getNodesFromYDoc(ydoc));
+          const nodes = getNodesFromYDoc(ydoc);
+          const { nodeLookup, parentLookup } = getState();
+          adoptUserNodes(nodes, nodeLookup, parentLookup, {
+            elevateNodesOnSelect: false,
+          });
+          setState({ nodes });
         }
       };
 
       const edgesObserverCallback = () => {
         if (provider.status === 'connected') {
-          setEdges(canvasId, getEdgesFromYDoc(ydoc));
+          setState({ edges: getEdgesFromYDoc(ydoc) as unknown as Edge[] });
         }
       };
 
       // Add observers
-      title.observe(titleObserverCallback);
       nodesArray.observe(nodesObserverCallback);
       edgesArray.observe(edgesObserverCallback);
 
       // Store cleanup functions
       return () => {
-        title.unobserve(titleObserverCallback);
         nodesArray.unobserve(nodesObserverCallback);
         edgesArray.unobserve(edgesObserverCallback);
       };
@@ -267,13 +281,16 @@ export const CanvasProvider = ({
       cleanup?.(); // Clean up observers
       provider.off('connect', handleConnect);
     };
-  }, [provider, canvasId, setNodes, setEdges, setTitle, setCanvasDataFromYDoc, readonly]);
+  }, [provider, canvasId, setCanvasDataFromYDoc, readonly]);
 
   // Add cleanup on unmount
   useEffect(() => {
     if (readonly) return;
 
     return () => {
+      // Force clear the nodes and edges
+      setState({ nodes: [], edges: [] });
+
       const providers = providerCache.get(canvasId);
       if (providers) {
         if (providers.remote.status === 'connected') {

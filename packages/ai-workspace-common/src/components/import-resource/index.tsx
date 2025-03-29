@@ -11,7 +11,7 @@ import { ImportFromExtension } from './intergrations/import-from-extension';
 import { useTranslation } from 'react-i18next';
 
 import './index.scss';
-import { useEffect } from 'react';
+import { useEffect, memo } from 'react';
 import { getRuntime } from '@refly/utils/env';
 import MultilingualSearch from '@refly-packages/ai-workspace-common/modules/multilingual-search';
 import { TbClipboard, TbWorldSearch, TbBrowserPlus, TbFile } from 'react-icons/tb';
@@ -20,7 +20,7 @@ import { ImportFromFile } from '@refly-packages/ai-workspace-common/components/i
 
 const MenuItem = Menu.Item;
 
-export const ImportResourceModal = () => {
+export const ImportResourceModal = memo(() => {
   const { t } = useTranslation();
   const {
     importResourceModalVisible,
@@ -130,4 +130,6 @@ export const ImportResourceModal = () => {
       </div>
     </Modal>
   );
-};
+});
+
+ImportResourceModal.displayName = 'ImportResourceModal';

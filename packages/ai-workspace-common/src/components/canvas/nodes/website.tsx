@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNode, CanvasNodeData, WebsiteNodeMeta, WebsiteNodeProps } from './shared/types';
@@ -404,21 +404,20 @@ export const WebsiteNode = memo(
 
     const { addToContext } = useAddToContext();
     const { deleteNode } = useDeleteNode();
-    const { getNode } = useReactFlow();
+    const { getNode, getEdges } = useReactFlow();
     const { addNode } = useAddNode();
 
     // Hover effect
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
-    const { edges, operatingNodeId } = useCanvasStoreShallow((state) => ({
-      edges: state.data[state.currentCanvasId]?.edges ?? [],
+    const { operatingNodeId } = useCanvasStoreShallow((state) => ({
       operatingNodeId: state.operatingNodeId,
     }));
 
     const { draggingNodeId } = useEditorPerformance();
     const isOperating = operatingNodeId === id;
     const isDragging = draggingNodeId === id;
-    const node = useMemo(() => getNode(id), [id, getNode]);
+    const node = getNode(id);
 
     const { readonly } = useCanvasContext();
 
@@ -437,6 +436,7 @@ export const WebsiteNode = memo(
     });
 
     // Check if node has any connections
+    const edges = getEdges();
     const isTargetConnected = edges?.some((edge) => edge.target === id);
     const isSourceConnected = edges?.some((edge) => edge.source === id);
 

@@ -3,9 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import Dagre from '@dagrejs/dagre';
 import { CanvasNode } from '../../components/canvas/nodes';
 import { Edge } from '@xyflow/react';
-import { useCanvasStoreShallow } from '../../stores/canvas';
 import { useCanvasSync } from './use-canvas-sync';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 const getLayoutedElements = (
   nodes: CanvasNode<any>[],
@@ -47,24 +45,19 @@ const getLayoutedElements = (
 };
 
 export const useCanvasLayout = () => {
-  const { canvasId } = useCanvasContext();
-  const { data, setNodes, setEdges } = useCanvasStoreShallow((state) => ({
-    data: state.data,
-    setNodes: state.setNodes,
-    setEdges: state.setEdges,
-  }));
+  const { getNodes, getEdges, setNodes, setEdges } = useReactFlow<CanvasNode<any>>();
 
   const { syncNodesToYDoc, syncEdgesToYDoc } = useCanvasSync();
   const { fitView } = useReactFlow();
 
   const onLayout = useCallback(
     (direction: 'TB' | 'LR') => {
-      const nodes = data[canvasId]?.nodes ?? [];
-      const edges = data[canvasId]?.edges ?? [];
+      const nodes = getNodes();
+      const edges = getEdges();
       const layouted = getLayoutedElements(nodes, edges, { direction });
 
-      setNodes(canvasId, layouted.nodes);
-      setEdges(canvasId, layouted.edges);
+      setNodes(layouted.nodes);
+      setEdges(layouted.edges);
       syncNodesToYDoc(layouted.nodes);
       syncEdgesToYDoc(layouted.edges);
 
@@ -76,7 +69,7 @@ export const useCanvasLayout = () => {
         });
       });
     },
-    [canvasId, fitView, setNodes, setEdges, data, syncNodesToYDoc, syncEdgesToYDoc],
+    [fitView, setNodes, setEdges, syncNodesToYDoc, syncEdgesToYDoc],
   );
 
   return {

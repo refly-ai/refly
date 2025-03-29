@@ -1,29 +1,22 @@
 import { useCallback } from 'react';
-import { Connection, Edge, applyEdgeChanges, EdgeChange } from '@xyflow/react';
-import { useCanvasStore, useCanvasStoreShallow } from '../../stores/canvas';
+import { Connection, Edge, applyEdgeChanges, EdgeChange, useReactFlow } from '@xyflow/react';
 import { genUniqueId } from '@refly-packages/utils/id';
 import { useEdgeStyles, getEdgeStyles } from '../../components/canvas/constants';
 import { useCanvasSync } from './use-canvas-sync';
-import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
 
 export const useEdgeOperations = (_selectedCanvasId?: string) => {
-  const canvasId = useCanvasId();
-  const { setEdges } = useCanvasStoreShallow((state) => ({
-    setEdges: state.setEdges,
-  }));
-
+  const { getEdges, setEdges } = useReactFlow();
   const edgeStyles = useEdgeStyles();
   const { throttledSyncEdgesToYDoc } = useCanvasSync();
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange<Edge>[]) => {
-      const { data } = useCanvasStore.getState();
-      const edges = data[canvasId]?.edges ?? [];
+      const edges = getEdges();
       const updatedEdges = applyEdgeChanges(changes, edges);
-      setEdges(canvasId, updatedEdges);
+      setEdges(updatedEdges);
       throttledSyncEdgesToYDoc(updatedEdges);
     },
-    [canvasId, setEdges, throttledSyncEdgesToYDoc],
+    [setEdges, throttledSyncEdgesToYDoc],
   );
 
   const onConnect = useCallback(
@@ -33,8 +26,7 @@ export const useEdgeOperations = (_selectedCanvasId?: string) => {
         return;
       }
 
-      const { data } = useCanvasStore.getState();
-      const edges = data[canvasId]?.edges ?? [];
+      const edges = getEdges();
 
       // check if the edge already exists
       const connectionExists = edges?.some(
@@ -54,25 +46,24 @@ export const useEdgeOperations = (_selectedCanvasId?: string) => {
       };
 
       const updatedEdges = [...edges, newEdge];
-      setEdges(canvasId, updatedEdges);
+      setEdges(updatedEdges);
       throttledSyncEdgesToYDoc(updatedEdges);
     },
-    [canvasId, setEdges, edgeStyles, throttledSyncEdgesToYDoc],
+    [setEdges, edgeStyles, throttledSyncEdgesToYDoc],
   );
 
   const updateAllEdgesStyle = useCallback(
     (showEdges: boolean) => {
-      const { data } = useCanvasStore.getState();
-      const edges = data[canvasId]?.edges ?? [];
+      const edges = getEdges();
       const edgeStyles = getEdgeStyles(showEdges);
       const updatedEdges = edges.map((edge) => ({
         ...edge,
         style: edgeStyles.default,
       }));
-      setEdges(canvasId, updatedEdges);
+      setEdges(updatedEdges);
       throttledSyncEdgesToYDoc(updatedEdges);
     },
-    [canvasId, setEdges, throttledSyncEdgesToYDoc],
+    [setEdges, throttledSyncEdgesToYDoc],
   );
 
   return {

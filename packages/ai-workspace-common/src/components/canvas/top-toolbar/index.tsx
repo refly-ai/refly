@@ -56,9 +56,8 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
     };
   }, [provider, handleUnsyncedChanges]);
 
-  const { data, config, showPreview, setShowPreview, showMaxRatio, setShowMaxRatio } =
+  const { config, showPreview, setShowPreview, showMaxRatio, setShowMaxRatio } =
     useCanvasStoreShallow((state) => ({
-      data: state.data[canvasId],
       config: state.config[canvasId],
       showPreview: state.showPreview,
       setShowPreview: state.setShowPreview,
@@ -66,7 +65,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
       setShowMaxRatio: state.setShowMaxRatio,
     }));
 
-  const canvasTitle = data?.title;
+  const canvasTitle = shareData?.title || provider?.document.getText('title').toJSON() || '';
   const hasCanvasSynced = config?.localSyncedAt > 0 && config?.remoteSyncedAt > 0;
 
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();

@@ -1,6 +1,6 @@
 import { Button, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { FC, useEffect, useRef, useState } from 'react';
+import { FC, useEffect, useRef, useState, memo } from 'react';
 import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-selector/components';
 
 import { useImportResourceStoreShallow } from '@refly-packages/ai-workspace-common/stores/import-resource';
@@ -45,7 +45,7 @@ interface MenuPopperProps {
   setOpen: (open: boolean) => void;
 }
 
-export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => {
+export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }) => {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuHeight, setMenuHeight] = useState<number>(0);
@@ -409,4 +409,6 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
       </div>
     )
   );
-};
+});
+
+MenuPopper.displayName = 'MenuPopper';

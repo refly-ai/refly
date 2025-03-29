@@ -19,27 +19,33 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useDebouncedCallback } from 'use-debounce';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import { useNodesData } from '@xyflow/react';
 
 interface CodeArtifactNodePreviewProps {
-  node: CanvasNode<CodeArtifactNodeMeta>;
-  artifactId: string;
+  nodeId: string;
 }
 
-const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNodePreviewProps) => {
+const CodeArtifactNodePreviewComponent = ({ nodeId }: CodeArtifactNodePreviewProps) => {
   const { t } = useTranslation();
   const [isShowingCodeViewer, setIsShowingCodeViewer] = useState(true);
   const { addNode } = useAddNode();
   const { readonly: canvasReadOnly } = useCanvasContext();
   const isLogin = useUserStoreShallow((state) => state.isLogin);
 
-  // Use activeTab from node metadata with fallback to 'code'
-  const { activeTab = 'code', type = 'text/html', language = 'html' } = node.data?.metadata || {};
+  const { data } = useNodesData<CanvasNode<CodeArtifactNodeMeta>>(nodeId) ?? {};
+
+  const artifactId = data?.entityId ?? '';
+  const {
+    title,
+    status,
+    shareId,
+    activeTab = 'code',
+    type = 'text/html',
+    language = 'html',
+  } = data?.metadata || {};
+
   const [currentTab, setCurrentTab] = useState<'code' | 'preview'>(activeTab as 'code' | 'preview');
   const [currentType, setCurrentType] = useState<CodeArtifactType>(type as CodeArtifactType);
-
-  const status = node?.data?.metadata?.status;
-  const entityId = node?.data?.entityId ?? '';
-  const shareId = node?.data?.metadata?.shareId ?? '';
 
   const { data: remoteData, isLoading: isRemoteLoading } = useGetCodeArtifactDetail(
     {
@@ -48,7 +54,7 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
       },
     },
     null,
-    { enabled: isLogin && !shareId && artifactId && status?.startsWith('finish') },
+    { enabled: Boolean(isLogin && !shareId && artifactId && status?.startsWith('finish')) },
   );
   const { data: shareData, loading: isShareLoading } = useFetchShareData<CodeArtifact>(shareId);
 
@@ -62,7 +68,7 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
 
   useEffect(() => {
     const handleContentUpdate = (data: { artifactId: string; content: string }) => {
-      if (data.artifactId === artifactId && status === 'generating') {
+      if (data.artifactId === artifactId) {
         setContent(data.content);
       }
     };
@@ -100,11 +106,13 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
 
   const handleRequestFix = useCallback(
     (errorMessage: string) => {
-      console.error('Code artifact error:', errorMessage);
+      if (!data?.entityId) {
+        return;
+      }
 
       // Emit event to exit fullscreen mode before proceeding
-      if (node?.id) {
-        fullscreenEmitter.emit('exitFullscreenForFix', { nodeId: node.id });
+      if (nodeId) {
+        fullscreenEmitter.emit('exitFullscreenForFix', { nodeId });
       }
 
       // Define a proper code fix skill similar to editDoc
@@ -134,11 +142,9 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
               contextItems: [
                 {
                   type: 'codeArtifact',
-                  title: node?.data?.contentPreview
-                    ? `${node.data.title} - ${node.data.contentPreview?.slice(0, 10)}`
-                    : (node.data?.title ?? ''),
-                  entityId: node.data?.entityId ?? '',
-                  metadata: node.data?.metadata,
+                  title: data?.title,
+                  entityId: data?.entityId ?? '',
+                  metadata: data?.metadata,
                 },
               ] as IContextItem[],
               query: t('codeArtifact.fix.query', {
@@ -150,8 +156,8 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
                 codeErrorConfig: {
                   value: {
                     errorMessage,
-                    language: node.data?.metadata?.language || 'typescript',
-                    codeEntityId: node.data?.entityId || '',
+                    language: data?.metadata?.language || 'typescript',
+                    codeEntityId: data?.entityId || '',
                   },
                   configScope: 'runtime' as unknown as ConfigScope,
                   displayValue: t('codeArtifact.fix.errorConfig'),
@@ -162,12 +168,12 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
           },
         },
         // Connect the skill node to the code artifact node
-        [{ type: 'codeArtifact', entityId }],
+        [{ type: 'codeArtifact', entityId: data?.entityId }],
         false,
         true,
       );
     },
-    [node, addNode, t],
+    [data, addNode, t],
   );
 
   const handleClose = useCallback(() => {
@@ -220,8 +226,8 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
           <CodeViewer
             code={content}
             language={language}
-            title={node.data?.title || t('codeArtifact.defaultTitle', 'Code Artifact')}
-            entityId={entityId}
+            title={title || t('codeArtifact.defaultTitle', 'Code Artifact')}
+            entityId={artifactId}
             isGenerating={status === 'generating'}
             activeTab={currentTab}
             onTabChange={handleTabChange}
@@ -240,10 +246,5 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
 
 export const CodeArtifactNodePreview = memo(
   CodeArtifactNodePreviewComponent,
-  (prevProps, nextProps) =>
-    prevProps.artifactId === nextProps.artifactId &&
-    prevProps.node?.data?.metadata?.status === nextProps.node?.data?.metadata?.status &&
-    prevProps.node?.data?.metadata?.language === nextProps.node?.data?.metadata?.language &&
-    prevProps.node?.data?.metadata?.activeTab === nextProps.node?.data?.metadata?.activeTab &&
-    prevProps.node?.data?.metadata?.type === nextProps.node?.data?.metadata?.type,
+  (prevProps, nextProps) => prevProps.nodeId === nextProps.nodeId,
 );

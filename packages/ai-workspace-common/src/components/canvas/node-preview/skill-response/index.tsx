@@ -23,7 +23,6 @@ import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { EditChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/edit-chat-input';
 import { cn } from '@refly-packages/utils/cn';
 import { useReactFlow } from '@xyflow/react';
-import { usePatchNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-patch-node-data';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { IconRerun } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -32,6 +31,7 @@ import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -73,7 +73,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   }));
 
   const { getNodes } = useReactFlow();
-  const patchNodeData = usePatchNodeData();
+  const { setNodeData } = useNodeData();
   const { deleteNode } = useDeleteNode();
 
   const { canvasId, readonly } = useCanvasContext();
@@ -115,7 +115,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
     const remoteResult = data.data;
     const node = getNodes().find((node) => node.data?.entityId === resultId);
     if (node && remoteResult) {
-      patchNodeData(node.id, {
+      setNodeData(node.id, {
         title: remoteResult.title,
         contentPreview: processContentPreview(remoteResult.steps?.map((s) => s?.content || '')),
         metadata: {
@@ -195,7 +195,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
     resetFailedState(resultId);
 
     // Update node status immediately to show "waiting" state
-    patchNodeData(node.id, {
+    setNodeData(node.id, {
       ...node.data,
       metadata: {
         ...node.data?.metadata,
@@ -217,16 +217,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
         entityType: 'canvas',
       },
     );
-  }, [
-    resultId,
-    title,
-    canvasId,
-    invokeAction,
-    resetFailedState,
-    patchNodeData,
-    node.id,
-    node.data,
-  ]);
+  }, [resultId, title, canvasId, invokeAction, resetFailedState, setNodeData, node.id, node.data]);
 
   useEffect(() => {
     const handleLocateToPreview = (event: { id: string; type?: 'editResponse' }) => {
