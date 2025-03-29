@@ -52,7 +52,7 @@ import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canv
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 import cn from 'classnames';
 import { ReasoningContentPreview } from './shared/reasoning-content-preview';
-import { useUpdateSkillResponseTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-skill-response-title';
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { truncateContent } from '@refly-packages/ai-workspace-common/utils/content';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 
@@ -227,9 +227,9 @@ export const SkillResponseNode = memo(
     const { operatingNodeId } = useCanvasStoreShallow((state) => ({
       operatingNodeId: state.operatingNodeId,
     }));
-    const updateSkillResponseTitle = useUpdateSkillResponseTitle();
     const { setNodeData } = useNodeData();
     const { getNode, getEdges } = useReactFlow();
+    const updateNodeTitle = useUpdateNodeTitle();
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
     const targetRef = useRef<HTMLDivElement>(null);
@@ -536,7 +536,7 @@ export const SkillResponseNode = memo(
       if (newTitle === query) {
         return;
       }
-      updateSkillResponseTitle(newTitle, data.entityId, id);
+      updateNodeTitle(newTitle, data.entityId, id, 'skillResponse');
     };
 
     // Update size when content changes

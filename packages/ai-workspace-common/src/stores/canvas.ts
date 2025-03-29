@@ -178,7 +178,16 @@ export const useCanvasStore = create<CanvasState>()(
           state.config[canvasId] ??= defaultCanvasConfig();
           state.config[canvasId].nodePreviews ??= [];
           state.config[canvasId].nodePreviews = state.config[canvasId].nodePreviews.map((n) =>
-            n.id === node.id ? { ...n, ...node } : n,
+            n.id === node.id
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    ...(node.data || {}),
+                  },
+                  ...(node.data ? {} : node),
+                }
+              : n,
           );
         }),
       reorderNodePreviews: (canvasId, sourceIndex, targetIndex) =>

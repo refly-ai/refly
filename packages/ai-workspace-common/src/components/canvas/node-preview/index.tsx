@@ -271,7 +271,16 @@ export const DraggableNodePreview = memo(
         dragHandleProps: { ref: dragRef },
         isDragging,
       }),
-      [node, handleClose, handleMaximize, handleWideMode, isMaximized, isWideMode, isDragging],
+      [
+        node,
+        node.data?.title,
+        handleClose,
+        handleMaximize,
+        handleWideMode,
+        isMaximized,
+        isWideMode,
+        isDragging,
+      ],
     );
 
     // Memoize PreviewComponent to prevent unnecessary re-renders
@@ -390,9 +399,7 @@ export const NodePreviewContainer = memo(
       </DndProvider>
     );
   },
-  (prevProps, nextProps) =>
-    prevProps.canvasId === nextProps.canvasId &&
-    prevProps.nodes?.length === nextProps.nodes?.length,
+  (prevProps, nextProps) => prevProps.canvasId === nextProps.canvasId,
 );
 
 // Maintain the original NodePreview component for backward compatibility,

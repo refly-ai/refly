@@ -32,6 +32,7 @@ import { genSkillID } from '@refly-packages/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import cn from 'classnames';
 import Moveable from 'react-moveable';
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 
 const DEFAULT_WIDTH = 288;
 const DEFAULT_MIN_HEIGHT = 100;
@@ -406,6 +407,7 @@ export const WebsiteNode = memo(
     const { deleteNode } = useDeleteNode();
     const { getNode, getEdges } = useReactFlow();
     const { addNode } = useAddNode();
+    const updateNodeTitle = useUpdateNodeTitle();
 
     // Hover effect
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
@@ -519,6 +521,12 @@ export const WebsiteNode = memo(
       [handleResize],
     );
 
+    const updateTitle = (newTitle: string) => {
+      if (newTitle === node.data?.title) {
+        return;
+      }
+      updateNodeTitle(newTitle, data.entityId, id, 'website');
+    };
     // Add event handling
     useEffect(() => {
       // Create node-specific event handlers
@@ -584,8 +592,13 @@ export const WebsiteNode = memo(
             )}
 
             <div className={cn('flex flex-col h-full p-3 box-border', MAX_HEIGHT_CLASS)}>
-              <NodeHeader title={data?.title || t('canvas.nodeTypes.website')} Icon={IconWebsite} />
-
+              <NodeHeader
+                canEdit={!readonly}
+                fixedTitle={t('canvas.nodeTypes.website')}
+                title={data?.title}
+                Icon={IconWebsite}
+                updateTitle={updateTitle}
+              />
               <div
                 className={cn('relative flex-grow overflow-y-auto pr-2 -mr-2', {
                   'pointer-events-none': isResizing,
