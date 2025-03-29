@@ -6,10 +6,7 @@ import { ToolNodePreview } from './tool';
 import { DocumentNodePreview } from './document';
 import { NodePreviewHeader } from './node-preview-header';
 import { useState, useMemo, useCallback, useRef, memo, useEffect } from 'react';
-import {
-  useCanvasStore,
-  useCanvasStoreShallow,
-} from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { CodeArtifactNodePreview } from './code-artifact';
 import { WebsiteNodePreview } from './website';
 import { fullscreenEmitter } from '@refly-packages/ai-workspace-common/events/fullscreen';
@@ -21,6 +18,7 @@ import { useDrag, useDrop, DndProvider, XYCoord } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import withScrolling, { createHorizontalStrength } from 'react-dnd-scrolling';
 import { getFreshNodePreviews } from '@refly-packages/ai-workspace-common/utils/canvas';
+import { useReactFlow } from '@xyflow/react';
 
 // DnD item type constant
 const ITEM_TYPE = 'node-preview';
@@ -336,6 +334,7 @@ export const NodePreviewContainer = memo(
     canvasId: string;
     nodes: CanvasNode<any>[];
   }) => {
+    const { getNodes } = useReactFlow<CanvasNode<any>>();
     const { rawNodePreviews, reorderNodePreviews } = useCanvasStoreShallow((state) => ({
       rawNodePreviews: state.config[canvasId]?.nodePreviews ?? [],
       reorderNodePreviews: state.reorderNodePreviews,
@@ -344,8 +343,7 @@ export const NodePreviewContainer = memo(
     // Compute fresh node previews using the utility function
     const nodePreviews = useMemo(() => {
       // Prefer flowNodes from ReactFlow but fall back to canvas store nodes
-      const canvasNodes = useCanvasStore.getState().data[canvasId]?.nodes ?? [];
-      const nodesSource = nodes?.length > 0 ? nodes : canvasNodes;
+      const nodesSource = nodes?.length > 0 ? nodes : getNodes();
 
       return getFreshNodePreviews(nodesSource, rawNodePreviews);
     }, [nodes, rawNodePreviews, canvasId]);

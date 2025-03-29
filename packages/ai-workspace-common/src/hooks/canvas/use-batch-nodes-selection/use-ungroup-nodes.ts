@@ -1,18 +1,17 @@
 import { useCallback } from 'react';
-import { useCanvasStore } from '../../../stores/canvas';
 import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
-import { Node } from '@xyflow/react';
+import { Node, useReactFlow } from '@xyflow/react';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { PADDING, sortNodes } from './utils';
 
 export const useUngroupNodes = () => {
   const canvasId = useCanvasId();
+  const { getNodes } = useReactFlow();
   const { updateNodesWithSync } = useNodeOperations();
 
   const ungroupNodes = useCallback(
     (groupId: string) => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
+      const nodes = getNodes();
 
       // Find the group node
       const groupNode = nodes.find((n) => n.id === groupId && n.type === 'group');
