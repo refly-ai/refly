@@ -53,7 +53,7 @@ const PreviewComponent = memo(
         case 'codeArtifact':
           return <CodeArtifactNodePreview nodeId={node.id} />;
         case 'website':
-          return <WebsiteNodePreview node={node} />;
+          return <WebsiteNodePreview nodeId={node.id} />;
         default:
           return null;
       }
