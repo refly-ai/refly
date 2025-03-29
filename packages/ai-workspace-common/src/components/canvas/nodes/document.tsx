@@ -33,7 +33,7 @@ import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/can
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
-
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 export const DocumentNode = memo(
   ({
     data = { title: '', entityId: '' },
@@ -49,6 +49,7 @@ export const DocumentNode = memo(
     const { edges } = useCanvasData();
     const { i18n, t } = useTranslation();
     const language = i18n.languages?.[0];
+    const updateNodeTitle = useUpdateNodeTitle();
 
     const targetRef = useRef<HTMLDivElement>(null);
     const { getNode } = useReactFlow();
@@ -155,6 +156,13 @@ export const DocumentNode = memo(
       duplicateDocument(data.title, data.contentPreview || '', data.entityId, data.metadata);
     }, [data, duplicateDocument]);
 
+    const updateTitle = (newTitle: string) => {
+      if (newTitle === node.data?.title) {
+        return;
+      }
+      updateNodeTitle(newTitle, data.entityId, id, 'document');
+    };
+
     // Add event handling
     useEffect(() => {
       // Create node-specific event handlers
@@ -242,8 +250,11 @@ export const DocumentNode = memo(
             <div className={cn('flex flex-col h-full p-3 box-border', MAX_HEIGHT_CLASS)}>
               <NodeHeader
                 title={data.title || t('common.untitled')}
+                fixedTitle={t('canvas.nodeTypes.document')}
                 Icon={HiOutlineDocumentText}
                 iconBgColor="#00968F"
+                canEdit={!readonly}
+                updateTitle={updateTitle}
               />
 
               <div className="flex-grow overflow-y-auto pr-2 -mr-2">

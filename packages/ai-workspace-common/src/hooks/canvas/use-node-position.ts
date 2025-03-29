@@ -1,6 +1,5 @@
 import { Node, useReactFlow, XYPosition } from '@xyflow/react';
 import { useCallback } from 'react';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { CalculateNodePositionParams, LayoutBranchOptions } from './use-node-position-utils/types';
 import {
   getNodeHeight,
@@ -11,7 +10,6 @@ import {
   getNodeAbsolutePosition,
 } from './use-node-position-utils/utils';
 import { SPACING } from './use-node-position-utils/constants';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 export const calculateNodePosition = ({
   nodes,
@@ -168,9 +166,7 @@ export const calculateNodePosition = ({
 };
 
 export const useNodePosition = () => {
-  const { getNode, setCenter, getZoom, setNodes } = useReactFlow();
-  const { canvasId } = useCanvasContext();
-
+  const { getNode, getNodes, setCenter, getZoom, setNodes } = useReactFlow();
   const calculatePosition = useCallback(
     (params: CalculateNodePositionParams) => calculateNodePosition(params),
     [],
@@ -180,9 +176,8 @@ export const useNodePosition = () => {
     (nodeId: string, shouldSelect = false) => {
       requestAnimationFrame(() => {
         const renderedNode = getNode(nodeId);
-        const { data } = useCanvasStore.getState();
-        const nodes = data?.[canvasId]?.nodes || [];
-        if (!nodes) return;
+        const nodes = getNodes();
+        if (!nodes?.length) return;
 
         const renderedNodeAbsolute = getNodeAbsolutePosition(renderedNode, nodes);
 
@@ -203,7 +198,7 @@ export const useNodePosition = () => {
         }
       });
     },
-    [canvasId, setCenter, getNode, getZoom, setNodes],
+    [setCenter, getNode, getNodes, getZoom, setNodes],
   );
 
   const layoutBranchAndUpdatePositions = useCallback(
@@ -395,22 +390,21 @@ export const useNodePosition = () => {
 
       adjustOverlaps();
 
-      // Apply the calculated positions
-      const updatedNodes = allNodes.map((node) => {
-        if (!targetNodeIds.has(node.id)) {
-          return node; // Keep original position for non-target nodes
-        }
+      setNodes((nodes) =>
+        nodes.map((node) => {
+          if (!targetNodeIds.has(node.id)) {
+            return node; // Keep original position for non-target nodes
+          }
 
-        const newPosition = nodePositions.get(node.id);
-        if (!newPosition) return node;
+          const newPosition = nodePositions.get(node.id);
+          if (!newPosition) return node;
 
-        return {
-          ...node,
-          position: newPosition,
-        };
-      });
-
-      setNodes(updatedNodes);
+          return {
+            ...node,
+            position: newPosition,
+          };
+        }),
+      );
 
       // Set center on the specified target node
       if (needSetCenter.needSetCenter && needSetCenter.targetNodeId) {

@@ -243,6 +243,20 @@ const DocumentEditorHeader = memo(
       );
     };
 
+    useEffect(() => {
+      const handleSyncTitle = (data: { docId: string; title: string }) => {
+        if (data.docId === docId) {
+          syncTitleToYDoc(data.title);
+        }
+      };
+
+      editorEmitter.on('syncDocumentTitle', handleSyncTitle);
+
+      return () => {
+        editorEmitter.off('syncDocumentTitle', handleSyncTitle);
+      };
+    }, [docId, syncTitleToYDoc]);
+
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();

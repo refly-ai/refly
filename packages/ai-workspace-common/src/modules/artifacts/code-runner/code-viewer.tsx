@@ -339,7 +339,7 @@ export default memo(
                 options={getArtifactTypeOptions()}
                 size="small"
                 className="w-32"
-                dropdownMatchSelectWidth={false}
+                popupMatchSelectWidth={false}
               />
             ) : (
               <span className="text-sm text-gray-500">{getSimpleTypeDescription(type)}</span>

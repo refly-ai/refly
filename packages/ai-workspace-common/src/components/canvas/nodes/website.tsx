@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNode, CanvasNodeData, WebsiteNodeMeta, WebsiteNodeProps } from './shared/types';
@@ -32,6 +32,7 @@ import { genSkillID } from '@refly-packages/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import cn from 'classnames';
 import Moveable from 'react-moveable';
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 
 const DEFAULT_WIDTH = 288;
 const DEFAULT_MIN_HEIGHT = 100;
@@ -404,21 +405,21 @@ export const WebsiteNode = memo(
 
     const { addToContext } = useAddToContext();
     const { deleteNode } = useDeleteNode();
-    const { getNode } = useReactFlow();
+    const { getNode, getEdges } = useReactFlow();
     const { addNode } = useAddNode();
+    const updateNodeTitle = useUpdateNodeTitle();
 
     // Hover effect
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
-    const { edges, operatingNodeId } = useCanvasStoreShallow((state) => ({
-      edges: state.data[state.currentCanvasId]?.edges ?? [],
+    const { operatingNodeId } = useCanvasStoreShallow((state) => ({
       operatingNodeId: state.operatingNodeId,
     }));
 
     const { draggingNodeId } = useEditorPerformance();
     const isOperating = operatingNodeId === id;
     const isDragging = draggingNodeId === id;
-    const node = useMemo(() => getNode(id), [id, getNode]);
+    const node = getNode(id);
 
     const { readonly } = useCanvasContext();
 
@@ -437,6 +438,7 @@ export const WebsiteNode = memo(
     });
 
     // Check if node has any connections
+    const edges = getEdges();
     const isTargetConnected = edges?.some((edge) => edge.target === id);
     const isSourceConnected = edges?.some((edge) => edge.source === id);
 
@@ -519,6 +521,12 @@ export const WebsiteNode = memo(
       [handleResize],
     );
 
+    const updateTitle = (newTitle: string) => {
+      if (newTitle === node.data?.title) {
+        return;
+      }
+      updateNodeTitle(newTitle, data.entityId, id, 'website');
+    };
     // Add event handling
     useEffect(() => {
       // Create node-specific event handlers
@@ -584,8 +592,13 @@ export const WebsiteNode = memo(
             )}
 
             <div className={cn('flex flex-col h-full p-3 box-border', MAX_HEIGHT_CLASS)}>
-              <NodeHeader title={data?.title || t('canvas.nodeTypes.website')} Icon={IconWebsite} />
-
+              <NodeHeader
+                canEdit={!readonly}
+                fixedTitle={t('canvas.nodeTypes.website')}
+                title={data?.title}
+                Icon={IconWebsite}
+                updateTitle={updateTitle}
+              />
               <div
                 className={cn('relative flex-grow overflow-y-auto pr-2 -mr-2', {
                   'pointer-events-none': isResizing,

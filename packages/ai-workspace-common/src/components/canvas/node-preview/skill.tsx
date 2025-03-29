@@ -21,7 +21,6 @@ import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find
 import { genActionResultID } from '@refly-packages/utils/id';
 import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useReactFlow } from '@xyflow/react';
 
 // Memoized Header Component
@@ -67,7 +66,7 @@ const NodeHeader = memo(
 NodeHeader.displayName = 'NodeHeader';
 
 interface SkillNodePreviewProps {
-  node?: CanvasNode<SkillNodeMeta>;
+  node: CanvasNode<SkillNodeMeta>;
 }
 
 export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
@@ -76,19 +75,7 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
   const chatInputRef = useRef<HTMLDivElement>(null);
   const { deleteElements } = useReactFlow();
 
-  // Get the latest node data from the canvas store
-  const latestNode = useCanvasStoreShallow((state) => {
-    const nodeId = node?.id;
-    if (!nodeId) return node;
-
-    const canvasId = state.currentCanvasId;
-    if (!canvasId) return node;
-
-    const nodes = state.data[canvasId]?.nodes ?? [];
-    return (nodes.find((n) => n.id === nodeId) as CanvasNode<SkillNodeMeta> | undefined) || node;
-  });
-
-  const { entityId, metadata = {} } = latestNode?.data ?? {};
+  const { entityId, metadata = {} } = node?.data ?? {};
   const { query, selectedSkill, modelInfo, contextItems = [], tplConfig, runtimeConfig } = metadata;
   const skill = useFindSkill(selectedSkill?.name);
 
@@ -113,7 +100,7 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
   const setNodeDataByEntity = useSetNodeDataByEntity();
 
   const updateNodeData = useDebouncedCallback((data: Partial<CanvasNodeData<SkillNodeMeta>>) => {
-    if (latestNode?.id) {
+    if (node?.id) {
       setNodeDataByEntity({ entityId, type: 'skill' }, data);
     }
   }, 50);
@@ -192,14 +179,14 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
   );
 
   const handleSendMessage = useCallback(() => {
-    if (!latestNode) return;
+    if (!node) return;
 
-    const data = latestNode?.data as CanvasNodeData<SkillNodeMeta>;
+    const data = node?.data as CanvasNodeData<SkillNodeMeta>;
     const { query = '', contextItems = [] } = data?.metadata ?? {};
 
     const tplConfig = form.getFieldValue('tplConfig');
 
-    deleteElements({ nodes: [latestNode] });
+    deleteElements({ nodes: [node] });
 
     setTimeout(() => {
       const resultId = genActionResultID();
@@ -226,12 +213,12 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
               tplConfig,
             },
           },
-          position: latestNode.position,
+          position: node.position,
         },
         convertContextItemsToNodeFilters(contextItems),
       );
     });
-  }, [latestNode, deleteElements, invokeAction, canvasId, addNode, form]);
+  }, [node, deleteElements, invokeAction, canvasId, addNode, form]);
 
   const handleImageUpload = async (file: File) => {
     const nodeData = await handleUploadImage(file, canvasId);
@@ -254,7 +241,7 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
     [entityId, setNodeDataByEntity],
   );
 
-  if (!latestNode) return null;
+  if (!node) return null;
 
   return (
     <div className="flex flex-col gap-3 h-full p-3 box-border">

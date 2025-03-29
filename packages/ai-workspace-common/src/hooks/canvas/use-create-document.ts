@@ -11,13 +11,14 @@ import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { getAvailableFileCount } from '@refly-packages/utils/quota';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useReactFlow } from '@xyflow/react';
 
 export const useCreateDocument = () => {
   const [isCreating, setIsCreating] = useState(false);
   const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
   const { addNode } = useAddNode();
+  const { getNodes } = useReactFlow();
   const { storageUsage, refetchUsage } = useSubscriptionUsage();
 
   const { setStorageExceededModalVisible } = useSubscriptionStoreShallow((state) => ({
@@ -73,7 +74,7 @@ export const useCreateDocument = () => {
       refetchUsage();
 
       if (addToCanvas) {
-        const nodes = useCanvasStore.getState().data[canvasId]?.nodes ?? [];
+        const nodes = getNodes();
 
         // Find the source node
         const sourceNode = nodes.find((n) => n.data?.entityId === sourceNodeId);

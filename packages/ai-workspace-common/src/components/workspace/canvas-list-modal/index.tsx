@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, memo } from 'react';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
@@ -82,7 +82,7 @@ const CanvasItem = (props: {
   );
 };
 
-export const CanvasListModal = (props: CanvasListProps) => {
+export const CanvasListModal = memo((props: CanvasListProps) => {
   const { visible, setVisible } = props;
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -182,4 +182,6 @@ export const CanvasListModal = (props: CanvasListProps) => {
       </Spin>
     </Modal>
   );
-};
+});
+
+CanvasListModal.displayName = 'CanvasListModal';

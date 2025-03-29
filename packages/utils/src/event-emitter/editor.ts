@@ -34,6 +34,7 @@ export type Events = {
   activeAskAI: { value: boolean; docId?: string };
   editorSynced: undefined;
   exitFullScreen: undefined;
+  syncDocumentTitle: { docId: string; title: string };
 };
 
 export type EditorOperation =
@@ -44,6 +45,7 @@ export type EditorOperation =
   | 'streamEditCanvasContent'
   | 'activeAskAI'
   | 'editorSynced'
-  | 'exitFullScreen';
+  | 'exitFullScreen'
+  | 'syncDocumentTitle';
 
 export const editorEmitter = mitt<Events>();

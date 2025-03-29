@@ -9,8 +9,10 @@ import {
   useReactFlow,
   Node,
   Edge,
+  useStore,
   useStoreApi,
 } from '@xyflow/react';
+import { useShallow } from 'zustand/react/shallow';
 import { nodeTypes, CanvasNode } from './nodes';
 import { LaunchPad } from './launchpad';
 import { CanvasToolbar } from './canvas-toolbar';
@@ -152,11 +154,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const { addNode } = useAddNode();
-  const { nodes, edges } = useCanvasStoreShallow((state) => ({
-    nodes: state.data[canvasId]?.nodes ?? [],
-    edges: state.data[canvasId]?.edges ?? [],
-  }));
-
+  const { nodes, edges } = useStore(
+    useShallow((state) => ({
+      nodes: state.nodes,
+      edges: state.edges,
+    })),
+  );
   const selectedNodes = nodes.filter((node) => node.selected) || [];
 
   const {
@@ -209,38 +212,42 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const { handleNodePreview } = useNodePreviewControl({ canvasId });
 
   const interactionMode = useUserStore.getState().localSettings.canvasMode;
-  const { localSettings, setLocalSettings } = useUserStore.getState();
-  const { mutate: updateSettings } = useUpdateSettings();
-  const { isLogin } = useUserStoreShallow((state) => ({
+  const { isLogin, setLocalSettings } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
+    setLocalSettings: state.setLocalSettings,
   }));
+  const { mutate: updateSettings } = useUpdateSettings();
 
-  const toggleInteractionMode = (mode: 'mouse' | 'touchpad') => {
-    setLocalSettings({
-      ...localSettings,
-      canvasMode: mode,
-    });
-    if (isLogin) {
-      updateSettings({
-        body: {
-          preferences: {
-            operationMode: mode,
-          },
-        },
+  const toggleInteractionMode = useCallback(
+    (mode: 'mouse' | 'touchpad') => {
+      const { localSettings } = useUserStore.getState();
+      setLocalSettings({
+        ...localSettings,
+        canvasMode: mode,
       });
-    }
-  };
+      if (isLogin) {
+        updateSettings({
+          body: {
+            preferences: {
+              operationMode: mode,
+            },
+          },
+        });
+      }
+    },
+    [setLocalSettings, isLogin, updateSettings],
+  );
 
   useEffect(() => {
     return () => {
-      setInitialFitViewCompleted(canvasId, false);
+      setInitialFitViewCompleted(false);
     };
   }, [canvasId, setInitialFitViewCompleted]);
 
   useEffect(() => {
     // Only run fitView if we have nodes and this is the initial render
     const timeoutId = setTimeout(() => {
-      const { initialFitViewCompleted } = useCanvasStore.getState().data[canvasId] ?? {};
+      const { initialFitViewCompleted } = useCanvasStore.getState();
       if (nodes?.length > 0 && !initialFitViewCompleted) {
         reactFlowInstance.fitView({
           padding: 0.2,
@@ -248,7 +255,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           minZoom: 0.1,
           maxZoom: 1,
         });
-        setInitialFitViewCompleted(canvasId, true);
+        setInitialFitViewCompleted(true);
       }
     }, 100);
 
@@ -937,7 +944,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             onScroll={(e) => updateIndicators(e.currentTarget)}
           >
             <div className="relative h-full overflow-y-hidden">
-              <NodePreviewContainer canvasId={canvasId} nodes={nodes} />
+              <NodePreviewContainer canvasId={canvasId} nodes={nodes as unknown as CanvasNode[]} />
             </div>
           </div>
         )}
@@ -1002,11 +1009,11 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
 
   return (
     <EditorPerformanceProvider>
-      <CanvasProvider readonly={readonly} canvasId={canvasId}>
-        <ReactFlowProvider>
+      <ReactFlowProvider>
+        <CanvasProvider readonly={readonly} canvasId={canvasId}>
           <Flow canvasId={canvasId} />
-        </ReactFlowProvider>
-      </CanvasProvider>
+        </CanvasProvider>
+      </ReactFlowProvider>
     </EditorPerformanceProvider>
   );
 };

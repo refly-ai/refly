@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Menu } from '@arco-design/web-react';
 import { Avatar, Button, Layout, Skeleton, Divider, Tag } from 'antd';
 import {
@@ -237,6 +237,10 @@ const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
   const location = useLocation();
   const selectedKey = useMemo(() => getSelectedKey(location.pathname), [location.pathname]);
 
+  const handleUpdateShowStatus = useCallback((canvasId: string | null) => {
+    setShowCanvasIdActionDropdown(canvasId);
+  }, []);
+
   return (
     <MenuItem
       key={canvas.id}
@@ -265,9 +269,7 @@ const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
             btnSize="small"
             canvasId={canvas.id}
             canvasName={canvas.name}
-            updateShowStatus={(canvasId) => {
-              setShowCanvasIdActionDropdown(canvasId);
-            }}
+            updateShowStatus={handleUpdateShowStatus}
           />
         </div>
       </div>
