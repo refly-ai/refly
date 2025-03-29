@@ -106,6 +106,8 @@ const getNodeFixedTitle = (node: CanvasNode<any>, t: TFunction) => {
 
 const getNodeTitle = (node: CanvasNode<any>, t: TFunction) => {
   switch (node.type) {
+    case 'document':
+      return t('canvas.nodeTypes.document');
     case 'toolResponse':
       return t('canvas.nodeTypes.toolResponse');
     case 'skill':
@@ -343,7 +345,7 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
                 fixedTitle={getNodeFixedTitle(node, t)}
                 Icon={IconComponent}
                 iconBgColor={nodeColor}
-                canEdit={!readonly}
+                canEdit={node.type !== 'document' && !readonly}
                 updateTitle={handleTitleUpdate}
               />
             )}
