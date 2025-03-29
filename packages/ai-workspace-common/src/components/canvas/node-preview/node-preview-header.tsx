@@ -390,3 +390,5 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
     );
   },
 );
+
+NodePreviewHeader.displayName = 'NodePreviewHeader';

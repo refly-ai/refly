@@ -47,7 +47,7 @@ const PreviewComponent = memo(
         case 'document':
           return <DocumentNodePreview node={node} />;
         case 'skill':
-          return <SkillNodePreview />;
+          return <SkillNodePreview node={node} />;
         case 'tool':
           return <ToolNodePreview />;
         case 'skillResponse':

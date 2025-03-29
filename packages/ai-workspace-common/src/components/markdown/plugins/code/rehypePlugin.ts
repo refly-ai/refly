@@ -147,17 +147,6 @@ function rehypePlugin() {
             'data-is-mermaid': isMermaid,
           };
 
-          // Log debugging information
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`Processing code block:
-            - Language class: ${languageClass}
-            - Detected type: ${codeType}
-            - Detected language: ${language}
-            - Should preview: ${shouldPreview}
-            - Is mermaid: ${isMermaid}
-            - Content length: ${codeContent.length}`);
-          }
-
           return SKIP;
         }
       }
