@@ -839,7 +839,7 @@ const translations = {
     file: 'File',
   },
   canvas: {
-    emptyText: 'Double-click canvas to ask AI, or select ',
+    emptyText: 'Double-click canvas to open menu or select ',
     shareNotFound: 'Canvas Not Found',
     shareNotFoundHint:
       "The shared canvas you're trying to access could not be found. It might have been deleted or the link may be incorrect.",
@@ -1124,6 +1124,22 @@ const translations = {
         openInNewTab: 'Open in new tab',
         edit: 'Edit',
         noUrlProvided: 'No website URL provided',
+      },
+    },
+    reflyPilot: {
+      title: 'Ask AI',
+      newConversation: 'New conversation',
+      clearConversation: 'Clear conversation',
+      welcome: {
+        title: 'Hello, {{name}}!',
+        subtitle: 'What can I help you with today?',
+        suggestions: [
+          'Summarize this article',
+          'Generate ideas for my project',
+          'Help me write a blog post',
+          'Explain this concept',
+          'Draft an email for me',
+        ],
       },
     },
   },

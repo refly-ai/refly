@@ -828,7 +828,7 @@ const translations = {
     file: '文件',
   },
   canvas: {
-    emptyText: '双击画布向 AI 提问, 或选择',
+    emptyText: '双击画布打开菜单或选择',
     shareNotFound: '画布不存在',
     shareNotFoundHint: '你尝试访问的共享画布无法找到。它可能已被删除，或者链接可能有误。',
     nodeTypes: {
@@ -1100,6 +1100,22 @@ const translations = {
         openInNewTab: '在新标签页打开',
         edit: '编辑',
         noUrlProvided: '未提供网站 URL',
+      },
+    },
+    reflyPilot: {
+      title: '问问 AI',
+      newConversation: '新会话',
+      clearConversation: '清空会话',
+      welcome: {
+        title: '你好，{{name}}!',
+        subtitle: '今天我能帮您做什么？',
+        suggestions: [
+          '总结这篇文章',
+          '为我的项目生成创意',
+          '帮我写一篇博客',
+          '解释这个概念',
+          '为我起草一封电子邮件',
+        ],
       },
     },
   },

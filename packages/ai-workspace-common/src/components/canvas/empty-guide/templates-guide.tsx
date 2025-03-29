@@ -40,7 +40,7 @@ export const TemplatesGuide = ({ canvasId }: { canvasId: string }) => {
 
   return (
     showTemplates && (
-      <div className="mt-20">
+      <div className="mt-20" style={{ pointerEvents: 'none' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {/* <Input
@@ -54,7 +54,11 @@ export const TemplatesGuide = ({ canvasId }: { canvasId: string }) => {
             )}
           </div>
 
-          <Button type="text" onClick={() => setShowTemplates(false)}>
+          <Button
+            type="text"
+            onClick={() => setShowTemplates(false)}
+            style={{ pointerEvents: 'auto' }}
+          >
             {t('template.hideTemplates')}
           </Button>
         </div>
@@ -63,13 +67,16 @@ export const TemplatesGuide = ({ canvasId }: { canvasId: string }) => {
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-1">
           {data?.data?.length > 0 &&
             data.data.map((template) => (
-              <TemplateCard key={template.templateId} template={template} showUser={false} />
+              <div key={template.templateId} style={{ pointerEvents: 'auto' }}>
+                <TemplateCard template={template} showUser={false} />
+              </div>
             ))}
           <div
             className={`text-center font-bold bg-white rounded-lg m-2 flex flex-col items-center justify-center cursor-pointer shadow-[0_2px_8px_0_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_0_rgba(0,0,0,0.12)] transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out text-gray-500 hover:text-green-600 ${
               data?.data?.length > 0 ? '' : 'h-[200px]'
             }`}
             onClick={() => setVisible(true)}
+            style={{ pointerEvents: 'auto' }}
           >
             <VscNotebookTemplate className="mb-3" size={35} />
             {t('template.moreTemplates')}

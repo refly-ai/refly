@@ -8,7 +8,7 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useContextFilterErrorTip } from './context-manager/hooks/use-context-filter-errror-tip';
-import { genActionResultID } from '@refly-packages/utils/id';
+import { genActionResultID, genUniqueId } from '@refly-packages/utils/id';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { useChatStore, useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 
@@ -33,6 +33,8 @@ import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { omit } from '@refly-packages/utils/index';
+import { cn } from '@refly-packages/utils/cn';
+import { ActionStatus, SkillTemplateConfig } from '@refly/openapi-schema';
 
 const PremiumBanner = () => {
   const { t } = useTranslation();
@@ -78,7 +80,25 @@ const PremiumBanner = () => {
   );
 };
 
-export const ChatPanel = () => {
+interface ChatPanelProps {
+  embeddedMode?: boolean;
+  onAddMessage?: (
+    message: { id: string; resultId: string; nodeId: string; data?: any },
+    query?: string,
+    contextItems?: any[],
+  ) => void;
+  onGenerateMessageIds?: () => { resultId: string; nodeId: string };
+  tplConfig?: SkillTemplateConfig | null;
+  onUpdateTplConfig?: (config: SkillTemplateConfig | null) => void;
+}
+
+export const ChatPanel = ({
+  embeddedMode = false,
+  onAddMessage,
+  onGenerateMessageIds,
+  tplConfig: initialTplConfig,
+  onUpdateTplConfig,
+}: ChatPanelProps) => {
   const { t } = useTranslation();
   const { formErrors, setFormErrors } = useContextPanelStore((state) => ({
     formErrors: state.formErrors,
@@ -99,10 +119,6 @@ export const ChatPanel = () => {
       runtimeConfig: state.runtimeConfig,
       setRuntimeConfig: state.setRuntimeConfig,
     }));
-  const skillStore = useSkillStoreShallow((state) => ({
-    selectedSkill: state.selectedSkill,
-    setSelectedSkill: state.setSelectedSkill,
-  }));
   const chatStore = useChatStoreShallow((state) => ({
     newQAText: state.newQAText,
     setNewQAText: state.setNewQAText,
@@ -133,8 +149,12 @@ export const ChatPanel = () => {
       for (const item of selectedSkill?.configSchema?.items || []) {
         const key = item.key;
 
+        // Priority 0: Use external tplConfig if provided
+        if (initialTplConfig && initialTplConfig[key] !== undefined) {
+          newConfig[key] = initialTplConfig[key];
+        }
         // Priority 1: Check if the key exists in selectedSkill.tplConfig
-        if (selectedSkill?.tplConfig && selectedSkill.tplConfig[key] !== undefined) {
+        else if (selectedSkill?.tplConfig && selectedSkill.tplConfig[key] !== undefined) {
           newConfig[key] = selectedSkill.tplConfig[key];
         }
         // Priority 2: Fall back to schema default value
@@ -150,7 +170,7 @@ export const ChatPanel = () => {
       // Set the form value with the properly prioritized config
       form.setFieldValue('tplConfig', newConfig);
     }
-  }, [selectedSkill, form]);
+  }, [selectedSkill, form, initialTplConfig]);
 
   const handleSendMessage = (userInput?: string) => {
     const error = handleFilterErrorTip();
@@ -169,20 +189,54 @@ export const ChatPanel = () => {
 
     const tplConfig = form?.getFieldValue('tplConfig');
 
+    // Update external tplConfig if available
+    if (onUpdateTplConfig) {
+      onUpdateTplConfig(tplConfig);
+    }
+
     const { selectedSkill } = useSkillStore.getState();
     const { newQAText, selectedModel } = useChatStore.getState();
     const query = userInput || newQAText.trim();
 
     const { contextItems } = useContextPanelStore.getState();
 
-    const resultId = genActionResultID();
+    // Generate new message IDs using the provided function
+    const { resultId, nodeId } = onGenerateMessageIds?.() ?? {
+      resultId: genActionResultID(),
+      nodeId: genUniqueId(),
+    };
+
+    // Call onAddMessage callback with all required data
+    if (onAddMessage) {
+      onAddMessage(
+        {
+          id: resultId,
+          resultId,
+          nodeId,
+          data: {
+            title: query,
+            entityId: resultId,
+            metadata: {
+              status: 'executing' as ActionStatus,
+              contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
+              tplConfig,
+              modelInfo: selectedModel,
+              selectedSkill,
+              runtimeConfig,
+              structuredData: {
+                query,
+              },
+            },
+          },
+        },
+        query,
+        contextItems,
+      );
+    }
 
     chatStore.setNewQAText('');
 
-    // Reset selected skill after sending message
-    skillStore.setSelectedSkill(null);
-    setContextItems([]);
-
+    // Invoke the action with the API
     invokeAction(
       {
         query,
@@ -199,6 +253,10 @@ export const ChatPanel = () => {
       },
     );
 
+    // Create node in the canvas
+    const nodeFilters = [...convertContextItemsToNodeFilters(contextItems)];
+
+    // Add node to canvas
     addNode(
       {
         type: 'skillResponse',
@@ -208,11 +266,19 @@ export const ChatPanel = () => {
           metadata: {
             status: 'executing',
             contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
+            selectedSkill,
+            modelInfo: selectedModel,
+            runtimeConfig,
+            tplConfig,
+            structuredData: {
+              query,
+            },
           },
         },
+        id: nodeId,
       },
-      convertContextItemsToNodeFilters(contextItems),
-      true,
+      nodeFilters,
+      false,
       true,
     );
   };
@@ -258,76 +324,135 @@ export const ChatPanel = () => {
     }
   };
 
+  // Memoize the context manager component to prevent unnecessary re-renders
+  const contextManagerComponent = useMemo(() => {
+    return (
+      <ContextManager
+        className="py-2"
+        contextItems={contextItems}
+        setContextItems={setContextItems}
+        filterErrorInfo={filterErrorInfo}
+      />
+    );
+  }, [contextItems, setContextItems, filterErrorInfo]);
+
+  // Memoize the chat input component
+  const chatInputComponent = useMemo(() => {
+    return (
+      <ChatInput
+        query={chatStore.newQAText}
+        setQuery={chatStore.setNewQAText}
+        selectedSkillName={selectedSkill?.name}
+        autoCompletionPlacement={'topLeft'}
+        handleSendMessage={handleSendMessage}
+        onUploadImage={handleImageUpload}
+      />
+    );
+  }, [
+    chatStore.newQAText,
+    chatStore.setNewQAText,
+    selectedSkill?.name,
+    handleSendMessage,
+    handleImageUpload,
+  ]);
+
+  // Memoize chat actions component
+  const chatActionsComponent = useMemo(() => {
+    return (
+      <ChatActions
+        className="py-2"
+        query={chatStore.newQAText}
+        model={chatStore.selectedModel}
+        setModel={chatStore.setSelectedModel}
+        runtimeConfig={runtimeConfig}
+        setRuntimeConfig={setRuntimeConfig}
+        form={form}
+        handleSendMessage={handleSendMessage}
+        handleAbort={handleAbort}
+        customActions={customActions}
+        onUploadImage={handleImageUpload}
+        contextItems={contextItems}
+      />
+    );
+  }, [
+    chatStore.newQAText,
+    chatStore.selectedModel,
+    chatStore.setSelectedModel,
+    runtimeConfig,
+    setRuntimeConfig,
+    form,
+    handleSendMessage,
+    handleAbort,
+    customActions,
+    handleImageUpload,
+    contextItems,
+  ]);
+
+  // Memoize the config manager component to prevent unnecessary re-renders
+  const configManagerComponent = useMemo(() => {
+    if (!selectedSkill?.configSchema?.items?.length) {
+      return null;
+    }
+
+    return (
+      <ConfigManager
+        key={selectedSkill?.name}
+        form={form}
+        formErrors={formErrors}
+        setFormErrors={setFormErrors}
+        tplConfig={initialTplConfig}
+        onFormValuesChange={(_, allValues) => {
+          // Debounce form value changes to prevent cascading updates
+          const newConfig = allValues.tplConfig;
+          if (JSON.stringify(newConfig) !== JSON.stringify(initialTplConfig)) {
+            onUpdateTplConfig?.(newConfig);
+          }
+        }}
+        schema={selectedSkill?.configSchema}
+        fieldPrefix="tplConfig"
+        configScope="runtime"
+        resetConfig={() => {
+          if (selectedSkill?.tplConfig) {
+            form.setFieldValue('tplConfig', selectedSkill.tplConfig);
+          } else {
+            const defaultConfig = {};
+            for (const item of selectedSkill?.configSchema?.items || []) {
+              if (item.defaultValue !== undefined) {
+                defaultConfig[item.key] = {
+                  value: item.defaultValue,
+                  label: item.labelDict?.en ?? item.key,
+                  displayValue: String(item.defaultValue),
+                };
+              }
+            }
+            form.setFieldValue('tplConfig', defaultConfig);
+          }
+        }}
+      />
+    );
+  }, [selectedSkill, form, formErrors, setFormErrors]);
+
   return (
     <div className="relative w-full" data-cy="launchpad-chat-panel">
-      <div className="ai-copilot-chat-container chat-input-container rounded-[7px] overflow-hidden">
+      <div
+        className={cn(
+          'ai-copilot-chat-container chat-input-container rounded-[7px] overflow-hidden',
+          embeddedMode && 'embedded-chat-panel border border-gray-100',
+        )}
+      >
         <SelectedSkillHeader
           skill={selectedSkill}
           setSelectedSkill={setSelectedSkill}
           onClose={() => setSelectedSkill(null)}
         />
         {subscriptionEnabled && !userProfile?.subscription && <PremiumBanner />}
-        <div className="px-3">
-          <ContextManager
-            className="py-2"
-            contextItems={contextItems}
-            setContextItems={setContextItems}
-            filterErrorInfo={filterErrorInfo}
-          />
-          <div>
-            <ChatInput
-              query={chatStore.newQAText}
-              setQuery={chatStore.setNewQAText}
-              selectedSkillName={selectedSkill?.name}
-              autoCompletionPlacement={'topLeft'}
-              handleSendMessage={handleSendMessage}
-              onUploadImage={handleImageUpload}
-            />
-          </div>
+        <div className={cn('px-3', embeddedMode && 'px-2')}>
+          {contextManagerComponent}
+          <div>{chatInputComponent}</div>
 
-          {selectedSkill?.configSchema?.items?.length > 0 && (
-            <ConfigManager
-              key={selectedSkill?.name}
-              form={form}
-              formErrors={formErrors}
-              setFormErrors={setFormErrors}
-              schema={selectedSkill?.configSchema}
-              fieldPrefix="tplConfig"
-              configScope="runtime"
-              resetConfig={() => {
-                if (selectedSkill?.tplConfig) {
-                  form.setFieldValue('tplConfig', selectedSkill.tplConfig);
-                } else {
-                  const defaultConfig = {};
-                  for (const item of selectedSkill?.configSchema?.items || []) {
-                    if (item.defaultValue !== undefined) {
-                      defaultConfig[item.key] = {
-                        value: item.defaultValue,
-                        label: item.labelDict?.en ?? item.key,
-                        displayValue: String(item.defaultValue),
-                      };
-                    }
-                  }
-                  form.setFieldValue('tplConfig', defaultConfig);
-                }
-              }}
-            />
-          )}
+          {configManagerComponent}
 
-          <ChatActions
-            className="py-2"
-            query={chatStore.newQAText}
-            model={chatStore.selectedModel}
-            setModel={chatStore.setSelectedModel}
-            runtimeConfig={runtimeConfig}
-            setRuntimeConfig={setRuntimeConfig}
-            form={form}
-            handleSendMessage={handleSendMessage}
-            handleAbort={handleAbort}
-            customActions={customActions}
-            onUploadImage={handleImageUpload}
-            contextItems={contextItems}
-          />
+          {chatActionsComponent}
         </div>
       </div>
     </div>

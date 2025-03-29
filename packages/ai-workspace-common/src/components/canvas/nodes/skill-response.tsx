@@ -461,35 +461,65 @@ export const SkillResponseNode = memo(
 
     const handleAskAI = useCallback(() => {
       const { metadata } = data;
-      const { actionMeta, modelInfo } = metadata;
-      addNode(
+      const {
+        actionMeta,
+        modelInfo,
+        contextItems: responseContextItems = [],
+        tplConfig,
+      } = metadata;
+
+      // Create new context items array that includes both the response and its context
+      const mergedContextItems = [
         {
-          type: 'skill',
-          data: {
-            title: 'Skill',
-            entityId: genSkillID(),
-            metadata: {
-              contextItems: [
-                {
-                  type: 'skillResponse',
-                  title: data.title,
-                  entityId: data.entityId,
-                  metadata: {
-                    ...data.metadata,
-                    withHistory: true,
-                  },
-                },
-              ],
-              selectedSkill: actionMeta,
-              modelInfo,
-            },
+          type: 'skillResponse' as CanvasNodeType,
+          title: data.title,
+          entityId: data.entityId,
+          metadata: {
+            withHistory: true,
           },
         },
-        [{ type: 'skillResponse', entityId: data.entityId }],
-        false,
-        true,
-      );
-    }, [data, addNode]); // Add new handler for compare run
+        // Include the original context items from the response
+        ...responseContextItems.map((item) => ({
+          ...item,
+          metadata: {
+            ...item.metadata,
+            withHistory: undefined,
+          },
+        })),
+      ];
+
+      // Create node connect filters - include both the response and its context items
+      const connectFilters = [
+        { type: 'skillResponse' as CanvasNodeType, entityId: data.entityId },
+        ...responseContextItems.map((item) => ({
+          type: item.type as CanvasNodeType,
+          entityId: item.entityId,
+        })),
+      ];
+
+      // Add a small delay to avoid race conditions with context items
+      setTimeout(() => {
+        addNode(
+          {
+            type: 'skill',
+            data: {
+              title: 'Skill',
+              entityId: genSkillID(),
+              metadata: {
+                ...metadata,
+                contextItems: mergedContextItems,
+                selectedSkill: actionMeta,
+                modelInfo,
+                tplConfig,
+              },
+            },
+          },
+          connectFilters,
+          false,
+          true,
+        );
+      }, 10);
+    }, [data, addNode]);
 
     const handleCloneAskAI = useCallback(async () => {
       // Fetch action result to get context

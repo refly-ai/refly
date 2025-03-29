@@ -86,6 +86,33 @@ export const convertContextItemsToNodeFilters = (items: IContextItem[]): CanvasN
   return Array.from(uniqueItems.values());
 };
 
+/**
+ * Remove duplicates from an array based on a key function
+ * @param array Array to deduplicate
+ * @param keyFn Function to extract the key for deduplication
+ * @returns Deduplicated array
+ */
+const deduplicate = <T>(array: T[] | null | undefined, keyFn: (item: T) => string): T[] => {
+  if (!array || !Array.isArray(array)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  return array.filter((item) => {
+    // Skip nullish items
+    if (item == null) {
+      return false;
+    }
+
+    const key = keyFn(item);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
 export const convertContextItemsToInvokeParams = (
   items: IContextItem[],
   getHistory: (item: IContextItem) => ActionResult[],
@@ -97,105 +124,141 @@ export const convertContextItemsToInvokeParams = (
   getWebsite?: (item: IContextItem) => { url: string; title: string }[],
 ): { context: SkillContext; resultHistory: ActionResult[]; images: string[] } => {
   const purgedItems = purgeContextItems(items);
-  const context = {
-    contentList: [
-      ...(purgedItems
-        ?.filter((item) => item.selection)
-        ?.map((item) => ({
-          content: item.selection?.content ?? '',
-          metadata: {
-            domain: item.selection?.sourceEntityType ?? '',
-            entityId: item.selection?.sourceEntityId ?? '',
-            title: item.selection?.sourceTitle ?? '',
-            ...(item.metadata?.sourceType === 'extensionWeblinkSelection' && {
-              url: item.metadata?.url || getClientOrigin(),
-            }),
-          },
-        })) ?? []),
-      ...(purgedItems
-        ?.filter((item) => item.type === 'memo' && getMemo)
-        ?.flatMap((item) =>
-          getMemo(item).map((memo) => ({
-            content: memo.content,
-            metadata: {
-              domain: 'memo',
-              entityId: item.entityId,
-              title: memo.title,
-            },
-          })),
-        ) ?? []),
-      ...(purgedItems
-        ?.filter((item) => item.type === 'codeArtifact' && getCodeArtifact)
-        ?.flatMap((item) =>
-          getCodeArtifact(item).map((code) => ({
-            content: code.content,
-            metadata: {
-              domain: 'codeArtifact',
-              entityId: item.entityId,
-              title: code.title,
-            },
-          })),
-        ) ?? []),
-    ],
-    resources: purgedItems
-      ?.filter((item) => item?.type === 'resource')
-      .map((item) => ({
-        resourceId: item.entityId,
-        resource: {
-          resourceId: item.entityId,
-          resourceType: item.metadata?.resourceType,
-          title: item.title,
-        },
-        isCurrent: item.isCurrentContext,
-        metadata: {
-          ...item.metadata,
-        },
-      })),
-    documents: purgedItems
-      ?.filter((item) => item?.type === 'document')
-      .map((item) => ({
-        docId: item.entityId,
-        document: {
-          docId: item.entityId,
-          title: item.title,
-        },
-        isCurrent: item.isCurrentContext,
-        metadata: {
-          ...item.metadata,
-          url: getClientOrigin(),
-        },
-      })),
-    urls: purgedItems
-      ?.filter((item) => item?.type === 'website')
-      .flatMap((item) => {
-        if (getWebsite) {
-          return getWebsite(item).map((site) => ({
-            url: site.url || '',
-            metadata: {
-              title: site.title,
-              ...item.metadata,
-            },
-          }));
-        }
 
-        return [
-          {
-            url: item.metadata?.url || '',
-            metadata: {
-              title: item.title,
-              ...item.metadata,
-            },
+  // Create content list with selections
+  const selectionContentList =
+    purgedItems
+      ?.filter((item) => item.selection)
+      ?.map((item) => ({
+        content: item.selection?.content ?? '',
+        metadata: {
+          domain: item.selection?.sourceEntityType ?? '',
+          entityId: item.selection?.sourceEntityId ?? '',
+          title: item.selection?.sourceTitle ?? '',
+          ...(item.metadata?.sourceType === 'extensionWeblinkSelection' && {
+            url: item.metadata?.url || getClientOrigin(),
+          }),
+        },
+      })) ?? [];
+
+  // Create content list with memos
+  const memoContentList =
+    purgedItems
+      ?.filter((item) => item.type === 'memo' && getMemo)
+      ?.flatMap((item) =>
+        getMemo(item).map((memo) => ({
+          content: memo.content,
+          metadata: {
+            domain: 'memo',
+            entityId: item.entityId,
+            title: memo.title,
           },
-        ];
-      }),
+        })),
+      ) ?? [];
+
+  // Create content list with code artifacts
+  const codeArtifactContentList =
+    purgedItems
+      ?.filter((item) => item.type === 'codeArtifact' && getCodeArtifact)
+      ?.flatMap((item) =>
+        getCodeArtifact(item).map((code) => ({
+          content: code.content,
+          metadata: {
+            domain: 'codeArtifact',
+            entityId: item.entityId,
+            title: code.title,
+          },
+        })),
+      ) ?? [];
+
+  // Combine all content lists and deduplicate by content and entityId
+  const combinedContentList = deduplicate(
+    [...selectionContentList, ...memoContentList, ...codeArtifactContentList],
+    (item) => `${item.metadata.entityId}-${item.content.substring(0, 100)}`,
+  );
+
+  const context = {
+    contentList: combinedContentList,
+    resources: deduplicate(
+      purgedItems
+        ?.filter((item) => item?.type === 'resource')
+        .map((item) => ({
+          resourceId: item.entityId,
+          resource: {
+            resourceId: item.entityId,
+            resourceType: item.metadata?.resourceType,
+            title: item.title,
+          },
+          isCurrent: item.isCurrentContext,
+          metadata: {
+            ...item.metadata,
+          },
+        })),
+      (item) => item.resourceId,
+    ),
+    documents: deduplicate(
+      purgedItems
+        ?.filter((item) => item?.type === 'document')
+        .map((item) => ({
+          docId: item.entityId,
+          document: {
+            docId: item.entityId,
+            title: item.title,
+          },
+          isCurrent: item.isCurrentContext,
+          metadata: {
+            ...item.metadata,
+            url: getClientOrigin(),
+          },
+        })),
+      (item) => item.docId,
+    ),
+    urls: deduplicate(
+      purgedItems
+        ?.filter((item) => item?.type === 'website')
+        .flatMap((item) => {
+          if (getWebsite) {
+            return getWebsite(item).map((site) => ({
+              url: site.url || '',
+              metadata: {
+                title: site.title,
+                ...item.metadata,
+              },
+            }));
+          }
+
+          return [
+            {
+              url: item.metadata?.url || '',
+              metadata: {
+                title: item.title,
+                ...item.metadata,
+              },
+            },
+          ];
+        }),
+      (item) => item.url,
+    ),
   };
-  const resultHistory = purgedItems
-    ?.filter((item) => item.type === 'skillResponse')
-    .flatMap((item) => {
-      return item.metadata?.withHistory
-        ? getHistory(item)
-        : [{ title: item.title, resultId: item.entityId }];
-    });
+  // Process history items - get all skill responses
+  const skillResponseItems = purgedItems.filter((item) => item.type === 'skillResponse');
+
+  // Process items with history differently than single items
+  const historyItems = skillResponseItems
+    .filter((item) => item.metadata?.withHistory)
+    .flatMap((item) => getHistory(item));
+
+  // Process single items (without history)
+  const singleHistoryItems = skillResponseItems
+    .filter((item) => !item.metadata?.withHistory)
+    .map((item) => ({ title: item.title, resultId: item.entityId }));
+
+  // Combine and deduplicate by resultId
+  const resultHistory = deduplicate(
+    [...historyItems, ...singleHistoryItems],
+    (item) => item.resultId,
+  );
+
   const images = purgedItems
     ?.filter((item) => item.type === 'image')
     .flatMap((item) => {

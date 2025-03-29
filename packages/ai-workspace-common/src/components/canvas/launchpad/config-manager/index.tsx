@@ -232,6 +232,21 @@ interface ConfigManagerProps {
   onExpandChange?: (expanded: boolean) => void;
 }
 
+// Add a utility function for safe form updates outside of React's render cycle
+const safeFormUpdate = (form: FormInstance, updates: Record<string, any>) => {
+  // Create a queue of updates to process outside of React's render cycle
+  const queuedUpdates = Object.entries(updates);
+
+  if (queuedUpdates.length === 0) return;
+
+  // Process queue outside of React's render cycle
+  setTimeout(() => {
+    for (const [field, value] of queuedUpdates) {
+      form.setFieldValue(field, value);
+    }
+  }, 0);
+};
+
 export const ConfigManager = (props: ConfigManagerProps) => {
   const { i18n, t } = useTranslation();
   const locale = i18n.languages?.[0] || 'en';
@@ -252,6 +267,10 @@ export const ConfigManager = (props: ConfigManagerProps) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const { readonly } = useCanvasContext();
 
+  // Use refs to track initialization state
+  const initializedRef = useRef(false);
+  const prevTplConfigRef = useRef<SkillTemplateConfig | undefined>();
+
   const isConfigItemRequired = useCallback(
     (schemaItem: DynamicConfigItem) => {
       return schemaItem?.required?.value && schemaItem?.required?.configScope.includes(configScope);
@@ -259,21 +278,7 @@ export const ConfigManager = (props: ConfigManagerProps) => {
     [configScope],
   );
 
-  const validateField = (field: string, value: any) => {
-    const { formErrors: prevFormErrors } = useContextPanelStore.getState();
-    const schemaItem = schema.items?.find((item) => getFormField(fieldPrefix, item.key) === field);
-    if (isConfigItemRequired(schemaItem)) {
-      const value_ = value?.value;
-      if ((!value_ && value_ !== 0) || (Array.isArray(value_) && !value_.length)) {
-        setFormErrors({ ...prevFormErrors, [field]: t('common.emptyInput') });
-      } else {
-        const newErrors = { ...prevFormErrors };
-        delete newErrors[field];
-        setFormErrors(newErrors);
-      }
-    }
-  };
-
+  // Memoize the validateTplConfig function to prevent recreation on each render
   const validateTplConfig = useCallback(
     (tplConfig: SkillTemplateConfig) => {
       const errors = {};
@@ -291,53 +296,90 @@ export const ConfigManager = (props: ConfigManagerProps) => {
     [fieldPrefix, t, schema.items, isConfigItemRequired],
   );
 
+  const validateField = (field: string, value: any) => {
+    const { formErrors: prevFormErrors } = useContextPanelStore.getState();
+    const schemaItem = schema.items?.find((item) => getFormField(fieldPrefix, item.key) === field);
+    if (isConfigItemRequired(schemaItem)) {
+      const value_ = value?.value;
+      if ((!value_ && value_ !== 0) || (Array.isArray(value_) && !value_.length)) {
+        setFormErrors({ ...prevFormErrors, [field]: t('common.emptyInput') });
+      } else {
+        const newErrors = { ...prevFormErrors };
+        delete newErrors[field];
+        setFormErrors(newErrors);
+      }
+    }
+  };
+
   const getItemError = (key: string) => {
     const field = getFormField(fieldPrefix, key);
     return formErrors?.[field];
   };
 
-  useEffect(() => {
-    // Initialize form with default values if no config exists
-    if (!tplConfig || Object.keys(tplConfig).length === 0) {
-      const defaultConfig = {};
+  console.log('tplConfig', tplConfig);
 
-      // Create default values for all items in the schema
+  // Handle initial setup - only run on mount and when tplConfig changes significantly
+  useEffect(() => {
+    // Skip if already initialized with this config
+    if (initializedRef.current) {
+      return;
+    }
+
+    console.log('Initializing ConfigManager with tplConfig:', tplConfig);
+
+    // Track this initialization
+    initializedRef.current = true;
+    prevTplConfigRef.current = tplConfig ? { ...tplConfig } : undefined;
+
+    // Create a map for form updates
+    const formUpdates = {};
+
+    // Create new form values to update state
+    const newFormValues: Record<string, DynamicConfigValue> = {};
+
+    if (!tplConfig || Object.keys(tplConfig).length === 0) {
+      // Setup default values from schema
       for (const item of schema.items || []) {
-        if (item.defaultValue !== undefined) {
-          defaultConfig[getFormField(fieldPrefix, item.key)] = {
+        if (item.defaultValue !== undefined && item.key) {
+          const field = getFormField(fieldPrefix, item.key);
+          const value = {
             value: item.defaultValue,
             label: getDictValue(item.labelDict, locale),
             displayValue: String(item.defaultValue),
           };
-        }
-      }
 
-      if (Object.keys(defaultConfig).length > 0) {
-        // Set each field individually to ensure proper form initialization
-        for (const [field, value] of Object.entries(defaultConfig)) {
-          form.setFieldValue(field, value);
+          formUpdates[field] = value;
+          newFormValues[item.key] = value;
         }
-        setFormValues(defaultConfig);
       }
     } else {
-      // Use the provided tplConfig
-      const formattedConfig = {};
+      // Use provided tplConfig
       for (const [key, value] of Object.entries(tplConfig)) {
-        formattedConfig[getFormField(fieldPrefix, key)] = value;
+        if (value !== undefined) {
+          const field = getFormField(fieldPrefix, key);
+          formUpdates[field] = value;
+          newFormValues[key] = value as DynamicConfigValue;
+        }
       }
-
-      // Set each field individually
-      for (const [field, value] of Object.entries(formattedConfig)) {
-        form.setFieldValue(field, value);
-      }
-      setFormValues(formattedConfig);
     }
 
+    // Only update if we have changes to make
+    if (Object.keys(formUpdates).length > 0) {
+      // Update form state outside of React's rendering cycle
+      safeFormUpdate(form, formUpdates);
+
+      // Update component state
+      setFormValues(newFormValues);
+    }
+
+    // Validate if needed
     if (tplConfig && Object.keys(tplConfig).length > 0) {
       const errors = validateTplConfig(tplConfig);
-      setFormErrors(errors);
+      if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
+      }
     }
-  }, [tplConfig, fieldPrefix, form, setFormErrors, validateTplConfig, schema.items, locale]);
+  }, [tplConfig, schema.items, fieldPrefix, locale, form, validateTplConfig, setFormErrors]);
 
   const handleReset = (key: string) => {
     const schemaItem = schema.items?.find((item) => item.key === key);
@@ -352,9 +394,10 @@ export const ConfigManager = (props: ConfigManagerProps) => {
           }
         : undefined;
 
-    form.setFieldValue(getFormField(fieldPrefix, key), resetValue);
+    // Use safe form update to avoid render cycles
+    safeFormUpdate(form, { [getFormField(fieldPrefix, key)]: resetValue });
 
-    // 更新本地状态
+    // Update local state
     setFormValues((prev) => ({
       ...prev,
       [key]: resetValue,
@@ -367,13 +410,14 @@ export const ConfigManager = (props: ConfigManagerProps) => {
   // Optimize value change to prevent losing focus
   const handleValueChange = useCallback(
     (field?: string) => {
-      // 当值变化时，更新本地状态
+      // When value changes, update local state
       if (field) {
         const key = field.split('.').pop();
         if (key) {
+          const value = form.getFieldValue(field);
           setFormValues((prev) => ({
             ...prev,
-            [key]: form.getFieldValue(field),
+            [key]: value,
           }));
         }
       }
@@ -408,11 +452,24 @@ export const ConfigManager = (props: ConfigManagerProps) => {
         <Form
           form={form}
           className="config-manager__form"
-          onValuesChange={(changedValues, _allValues) => {
+          onValuesChange={(changedValues, allValues) => {
+            // Validate any changed fields
             for (const field of Object.keys(changedValues)) {
               validateField(field, changedValues[field]);
             }
-            onFormValuesChange?.(changedValues, _allValues);
+
+            // Handle config updates
+            if (allValues.tplConfig && onFormValuesChange) {
+              const newConfig = allValues.tplConfig;
+
+              // Deep comparison with current tplConfig
+              const currentConfigStr = JSON.stringify(tplConfig || {});
+              const newConfigStr = JSON.stringify(newConfig);
+
+              if (currentConfigStr !== newConfigStr) {
+                onFormValuesChange(changedValues, allValues);
+              }
+            }
           }}
         >
           <Space direction="vertical" style={{ width: '100%' }}>

@@ -4,6 +4,10 @@ import { useShallow } from 'zustand/react/shallow';
 import { persist } from 'zustand/middleware';
 import { Edge } from '@xyflow/react';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import {
+  CanvasNodeData,
+  ResponseNodeMeta,
+} from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
 
 interface CanvasData {
   nodes: CanvasNode<any>[];
@@ -27,6 +31,14 @@ interface CanvasConfig {
   nodePreviews: NodePreview[];
 }
 
+export interface LinearThreadMessage {
+  id: string;
+  resultId: string;
+  nodeId: string;
+  timestamp: number;
+  data: CanvasNodeData<ResponseNodeMeta>;
+}
+
 export interface CanvasState {
   data: Record<string, CanvasData>;
   config: Record<string, CanvasConfig>;
@@ -40,6 +52,9 @@ export interface CanvasState {
   nodeSizeMode: 'compact' | 'adaptive';
   autoLayout: boolean;
   showTemplates: boolean;
+  showReflyPilot: boolean;
+  linearThreadMessages: LinearThreadMessage[];
+  tplConfig: Record<string, any> | null;
 
   setNodes: (canvasId: string, nodes: CanvasNode<any>[]) => void;
   setEdges: (canvasId: string, edges: Edge[]) => void;
@@ -63,6 +78,12 @@ export interface CanvasState {
   setNodeSizeMode: (mode: 'compact' | 'adaptive') => void;
   setAutoLayout: (enabled: boolean) => void;
   setShowTemplates: (show: boolean) => void;
+  setShowReflyPilot: (show: boolean) => void;
+  addLinearThreadMessage: (message: Omit<LinearThreadMessage, 'timestamp'>) => void;
+  removeLinearThreadMessage: (id: string) => void;
+  removeLinearThreadMessageByNodeId: (nodeId: string) => void;
+  clearLinearThreadMessages: () => void;
+  setTplConfig: (config: Record<string, any> | null) => void;
   clearState: () => void;
 }
 
@@ -90,6 +111,9 @@ const defaultCanvasState = () => ({
   nodeSizeMode: 'compact' as const,
   autoLayout: false,
   showTemplates: true,
+  showReflyPilot: false,
+  linearThreadMessages: [],
+  tplConfig: null,
 });
 
 export const useCanvasStore = create<CanvasState>()(
@@ -248,6 +272,37 @@ export const useCanvasStore = create<CanvasState>()(
         set((state) => {
           state.showTemplates = show;
         }),
+      setShowReflyPilot: (show) =>
+        set((state) => {
+          state.showReflyPilot = show;
+        }),
+      addLinearThreadMessage: (message) =>
+        set((state) => {
+          state.linearThreadMessages.push({
+            ...message,
+            timestamp: Date.now(),
+          });
+        }),
+      removeLinearThreadMessage: (id) =>
+        set((state) => {
+          state.linearThreadMessages = state.linearThreadMessages.filter(
+            (message) => message.id !== id,
+          );
+        }),
+      removeLinearThreadMessageByNodeId: (nodeId) =>
+        set((state) => {
+          state.linearThreadMessages = state.linearThreadMessages.filter(
+            (message) => message.nodeId !== nodeId,
+          );
+        }),
+      clearLinearThreadMessages: () =>
+        set((state) => {
+          state.linearThreadMessages = [];
+        }),
+      setTplConfig: (config) =>
+        set((state) => {
+          state.tplConfig = config;
+        }),
       clearState: () => set(defaultCanvasState()),
     })),
     {
@@ -259,6 +314,8 @@ export const useCanvasStore = create<CanvasState>()(
         showLaunchpad: state.showLaunchpad,
         clickToPreview: state.clickToPreview,
         nodeSizeMode: state.nodeSizeMode,
+        showReflyPilot: state.showReflyPilot,
+        linearThreadMessages: state.linearThreadMessages,
       }),
     },
   ),

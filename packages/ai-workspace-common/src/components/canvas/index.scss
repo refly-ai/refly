@@ -19,6 +19,21 @@
   }
 }
 
+// Add embedded launchpad styles
+.embedded-launchpad {
+  margin: 0;
+  box-shadow: none;
+  border-radius: 0;
+
+  .embedded-chat-panel {
+    box-shadow: none;
+  }
+
+  .ai-copilot-operation-body {
+    padding: 0.5rem;
+  }
+}
+
 .react-flow__node-group {
   padding: 0;
 }

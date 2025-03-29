@@ -1,32 +1,45 @@
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, message } from 'antd';
+import { Button, message, Dropdown } from 'antd';
+import type { MenuProps } from 'antd';
 import { ActionResult, ActionStep, Source } from '@refly/openapi-schema';
-import { FilePlus } from 'lucide-react';
+import { FilePlus, MoreHorizontal, Target, Trash2 } from 'lucide-react';
 import { IconCheckCircle, IconCopy, IconImport, IconShareAlt } from '@arco-design/web-react/icon';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { parseMarkdownCitationsAndCanvasTags, safeParseJSON } from '@refly/utils/parse';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { editorEmitter, EditorOperation } from '@refly-packages/utils/event-emitter/editor';
-import { Dropdown, Menu } from '@arco-design/web-react';
-import { HiOutlineCircleStack } from 'react-icons/hi2';
+import { Dropdown as ArcoDropdown, Menu } from '@arco-design/web-react';
+import { HiOutlineCircleStack, HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
+import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
+import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
+import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
+import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
 
 interface ActionContainerProps {
   step: ActionStep;
   result: ActionResult;
+  nodeId?: string;
 }
 
-const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
+const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps) => {
   const { t } = useTranslation();
   const { debouncedCreateDocument, isCreating } = useCreateDocument();
   const { readonly } = useCanvasContext();
   const { hasEditorSelection, activeDocumentId } = useDocumentStoreShallow((state) => ({
     hasEditorSelection: state.hasEditorSelection,
     activeDocumentId: state.activeDocumentId,
+  }));
+
+  const { addToContext } = useAddToContext();
+  const { setNodeCenter } = useNodePosition();
+  const { deleteNode } = useDeleteNode();
+  const { removeLinearThreadMessageByNodeId } = useCanvasStore((state) => ({
+    removeLinearThreadMessageByNodeId: state.removeLinearThreadMessageByNodeId,
   }));
 
   const { title } = result ?? {};
@@ -163,11 +176,89 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
     }
   }, [result, t]);
 
+  const handleAddToContext = useCallback(() => {
+    if (!result.resultId) return;
+
+    addToContext({
+      type: 'skillResponse',
+      title: result.title,
+      entityId: result.resultId,
+      // Safely pass metadata as any to avoid type errors
+      metadata: (result as any)?.metadata,
+    });
+  }, [result, addToContext]);
+
+  const handleLocateNode = useCallback(() => {
+    if (nodeId) {
+      setNodeCenter(nodeId, true);
+    }
+  }, [nodeId, setNodeCenter]);
+
+  const handleDeleteNode = useCallback(() => {
+    if (nodeId) {
+      // Remove the Refly Pilot message first
+      removeLinearThreadMessageByNodeId(nodeId);
+
+      // Then delete the node
+      deleteNode({
+        id: nodeId,
+        type: 'skillResponse',
+        position: { x: 0, y: 0 },
+        data: {
+          title: result.title,
+          entityId: result.resultId,
+        },
+      });
+    }
+  }, [nodeId, deleteNode, result, removeLinearThreadMessageByNodeId]);
+
+  // More menu items
+  const moreMenuItems: MenuProps['items'] = useMemo(() => {
+    if (!nodeId || isShareMode || readonly) return [];
+
+    return [
+      {
+        key: 'locateNode',
+        label: (
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <Target className="w-4 h-4 flex-shrink-0" />
+            {t('canvas.nodeActions.centerNode')}
+          </div>
+        ),
+        onClick: handleLocateNode,
+      },
+      {
+        key: 'addToContext',
+        label: (
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <HiOutlineSquare3Stack3D className="w-4 h-4 flex-shrink-0" />
+            {t('canvas.nodeActions.addToContext')}
+          </div>
+        ),
+        onClick: handleAddToContext,
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'delete',
+        label: (
+          <div className="flex items-center gap-2 text-red-600 whitespace-nowrap">
+            <Trash2 className="w-4 h-4 flex-shrink-0" />
+            {t('canvas.nodeActions.delete')}
+          </div>
+        ),
+        onClick: handleDeleteNode,
+        className: 'hover:bg-red-50',
+      },
+    ];
+  }, [nodeId, isShareMode, readonly, t, handleLocateNode, handleAddToContext, handleDeleteNode]);
+
   return (
     <div className="flex items-center justify-between">
       <div className="-ml-1">
         {step?.tokenUsage?.length > 0 && !isShareMode && (
-          <Dropdown droplist={tokenUsageDropdownList}>
+          <ArcoDropdown droplist={tokenUsageDropdownList}>
             <Button
               type="text"
               size="small"
@@ -176,13 +267,13 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
             >
               {tokenUsage} tokens
             </Button>
-          </Dropdown>
+          </ArcoDropdown>
         )}
       </div>
-      {!isPending && !readonly && !isShareMode && (
+      {!isPending && step?.content && (
         <div className="flex flex-row justify-between items-center text-sm">
           <div className="-ml-1 text-sm flex flex-row items-center">
-            {step.content && (
+            {!readonly && !isShareMode && step.content && (
               <>
                 <Button
                   type="text"
@@ -210,25 +301,46 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
                 </Button>
               </>
             )}
-            {editorActionList.map((item) => (
-              <Button
-                key={item.key}
-                size="small"
-                type="text"
-                className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
-                icon={item.icon}
-                disabled={!item.enabled}
-                loading={isCreating}
-                onClick={() => {
-                  const parsedText = parseMarkdownCitationsAndCanvasTags(step.content, sources);
-                  handleEditorOperation(item.key as EditorOperation, parsedText || '');
-                }}
+            {!readonly &&
+              !isShareMode &&
+              editorActionList.map((item) => (
+                <Button
+                  key={item.key}
+                  size="small"
+                  type="text"
+                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
+                  icon={item.icon}
+                  disabled={!item.enabled}
+                  loading={isCreating}
+                  onClick={() => {
+                    const parsedText = parseMarkdownCitationsAndCanvasTags(step.content, sources);
+                    handleEditorOperation(item.key as EditorOperation, parsedText || '');
+                  }}
+                >
+                  <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
+                    {t(`copilot.message.${item.key}`)}
+                  </span>
+                </Button>
+              ))}
+
+            {/* More actions dropdown button */}
+            {nodeId && moreMenuItems.length > 0 && (
+              <Dropdown
+                menu={{ items: moreMenuItems }}
+                trigger={['click']}
+                placement="bottomRight"
+                getPopupContainer={(triggerNode) => triggerNode.parentNode as HTMLElement}
+                overlayClassName="min-w-[160px] w-max"
               >
-                <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
-                  {t(`copilot.message.${item.key}`)}
-                </span>
-              </Button>
-            ))}
+                <Button
+                  type="text"
+                  size="small"
+                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </Dropdown>
+            )}
           </div>
         </div>
       )}
@@ -237,5 +349,9 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
 };
 
 export const ActionContainer = memo(ActionContainerComponent, (prevProps, nextProps) => {
-  return prevProps.step === nextProps.step && prevProps.result === nextProps.result;
+  return (
+    prevProps.step === nextProps.step &&
+    prevProps.result === nextProps.result &&
+    prevProps.nodeId === nextProps.nodeId
+  );
 });

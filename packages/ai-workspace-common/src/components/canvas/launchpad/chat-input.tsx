@@ -1,5 +1,5 @@
 import { AutoComplete, AutoCompleteProps, Input } from 'antd';
-import { memo, useRef, useMemo, useState, useCallback, forwardRef } from 'react';
+import { memo, useRef, useMemo, useState, useCallback, forwardRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { RefTextAreaType } from '@arco-design/web-react/es/Input/textarea';
 import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/stores/search';
@@ -100,68 +100,56 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
 
     const [options, setOptions] = useState<AutoCompleteProps['options']>([]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (readonly) {
-        e.preventDefault();
-        return;
-      }
-
-      if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !showSkillSelector) {
-        e.stopPropagation();
-        return;
-      }
-
-      if (e.key === '/') {
-        setShowSkillSelector(true);
-      } else if (!['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
-        showSkillSelector && setShowSkillSelector(false);
-      }
-
-      if (e.keyCode === 13) {
-        if (showSkillSelector && hasMatchedOptions.current) {
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (readonly) {
           e.preventDefault();
           return;
         }
 
-        if (e.ctrlKey || e.shiftKey || e.metaKey) {
-          e.preventDefault();
-          if (e.target instanceof HTMLTextAreaElement) {
-            const cursorPos = e.target.selectionStart ?? 0;
-            const newValue = `${query.slice(0, cursorPos)}\n${query.slice(cursorPos)}`;
-            setQuery(newValue);
-            setTimeout(() => {
-              if (e.target instanceof HTMLTextAreaElement) {
-                e.target.selectionStart = e.target.selectionEnd = cursorPos + 1;
-              }
-            }, 0);
+        if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !showSkillSelector) {
+          e.stopPropagation();
+          return;
+        }
+
+        if (e.key === '/') {
+          setShowSkillSelector(true);
+        } else if (!['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
+          showSkillSelector && setShowSkillSelector(false);
+        }
+
+        if (e.keyCode === 13) {
+          if (showSkillSelector && hasMatchedOptions.current) {
+            e.preventDefault();
+            return;
           }
-        } else {
-          e.preventDefault();
-          if (query?.trim()) {
-            handleSendMessage();
+
+          if (e.ctrlKey || e.shiftKey || e.metaKey) {
+            e.preventDefault();
+            if (e.target instanceof HTMLTextAreaElement) {
+              const cursorPos = e.target.selectionStart ?? 0;
+              const newValue = `${query.slice(0, cursorPos)}\n${query.slice(cursorPos)}`;
+              setQuery(newValue);
+              setTimeout(() => {
+                if (e.target instanceof HTMLTextAreaElement) {
+                  e.target.selectionStart = e.target.selectionEnd = cursorPos + 1;
+                }
+              }, 0);
+            }
+          } else {
+            e.preventDefault();
+            if (query?.trim()) {
+              handleSendMessage();
+            }
           }
         }
-      }
 
-      if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        searchStore.setIsSearchOpen(true);
-      }
-    };
-
-    const handleSearch = useCallback(
-      (value: string) => {
-        hasMatchedOptions.current = false;
-        const lastSlashIndex = value.lastIndexOf('/');
-        if (lastSlashIndex !== -1) {
-          setOptions(skillOptions);
-          setShowSkillSelector(true);
-        } else {
-          setOptions([]);
-          setShowSkillSelector(false);
+        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          searchStore.setIsSearchOpen(true);
         }
       },
-      [skillOptions],
+      [query, readonly, showSkillSelector, setQuery, handleSendMessage, searchStore],
     );
 
     const handleInputChange = useCallback(
@@ -190,6 +178,40 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
         }
       },
       [skills, setSelectedSkill, handleSelectSkill, query, setQuery],
+    );
+
+    // Update options when query changes and contains a slash
+    useEffect(() => {
+      const lastSlashIndex = query.lastIndexOf('/');
+      if (lastSlashIndex !== -1) {
+        setOptions(skillOptions);
+        setShowSkillSelector(true);
+      } else if (showSkillSelector) {
+        setOptions([]);
+        setShowSkillSelector(false);
+      }
+    }, [query, skillOptions, showSkillSelector]);
+
+    const filterOption = useCallback((inputValue: string, option: any) => {
+      const lastSlashIndex = inputValue.lastIndexOf('/');
+      const searchText = lastSlashIndex !== -1 ? inputValue.slice(lastSlashIndex + 1) : inputValue;
+      const searchVal = searchText.toLowerCase();
+      const isMatch =
+        !searchVal ||
+        option.value.toString().toLowerCase().includes(searchVal) ||
+        option.textLabel.toLowerCase().includes(searchVal);
+
+      if (isMatch) {
+        hasMatchedOptions.current = true;
+      }
+      return isMatch;
+    }, []);
+
+    const onSelect = useCallback(
+      (value: string) => {
+        if (!readonly) handleSearchListConfirm(value);
+      },
+      [readonly, handleSearchListConfirm],
     );
 
     return (
@@ -244,25 +266,10 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           options={options}
           popupMatchSelectWidth={false}
           placement={autoCompletionPlacement}
-          value={query ?? ''}
+          value={query}
           disabled={readonly}
-          filterOption={(inputValue, option) => {
-            const lastSlashIndex = inputValue.lastIndexOf('/');
-            const searchText =
-              lastSlashIndex !== -1 ? inputValue.slice(lastSlashIndex + 1) : inputValue;
-            const searchVal = searchText.toLowerCase();
-            const isMatch =
-              !searchVal ||
-              option.value.toString().toLowerCase().includes(searchVal) ||
-              option.textLabel.toLowerCase().includes(searchVal);
-
-            if (isMatch) {
-              hasMatchedOptions.current = true;
-            }
-            return isMatch;
-          }}
-          onSelect={(value) => !readonly && handleSearchListConfirm(value)}
-          onSearch={(value) => !readonly && handleSearch(value)}
+          filterOption={filterOption}
+          onSelect={onSelect}
         >
           <TextArea
             style={{ paddingLeft: 0, paddingRight: 0, height: '100%' }}
@@ -276,7 +283,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
             }}
             value={query ?? ''}
             onChange={handleInputChange}
-            onKeyDownCapture={(e) => handleKeyDown(e)}
+            onKeyDownCapture={handleKeyDown}
             onPaste={(e) => {
               if (readonly) return;
               if (e.clipboardData?.items) {
