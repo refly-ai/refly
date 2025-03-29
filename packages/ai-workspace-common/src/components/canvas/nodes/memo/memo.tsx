@@ -36,7 +36,6 @@ import {
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { MemoEditor } from './memo-editor';
-import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly-packages/utils/id';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
@@ -53,13 +52,12 @@ export const MemoNode = ({
   onNodeClick,
 }: MemoNodeProps) => {
   const [isHovered, setIsHovered] = useState(false);
-  const { edges } = useCanvasData();
   const setNodeDataByEntity = useSetNodeDataByEntity();
   const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
   const { addNode } = useAddNode();
 
-  const { getNode } = useReactFlow();
+  const { getNode, getEdges } = useReactFlow();
   const node = getNode(id);
   const targetRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({
@@ -78,6 +76,7 @@ export const MemoNode = ({
   const isOperating = operatingNodeId === id;
 
   // Check if node has any connections
+  const edges = getEdges();
   const isTargetConnected = edges?.some((edge) => edge.target === id);
   const isSourceConnected = edges?.some((edge) => edge.source === id);
 

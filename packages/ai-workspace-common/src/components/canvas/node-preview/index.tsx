@@ -51,7 +51,7 @@ const PreviewComponent = memo(
         case 'skillResponse':
           return <SkillResponseNodePreview node={node} resultId={node.data?.entityId} />;
         case 'codeArtifact':
-          return <CodeArtifactNodePreview node={node} artifactId={node.data?.entityId} />;
+          return <CodeArtifactNodePreview nodeId={node.id} />;
         case 'website':
           return <WebsiteNodePreview node={node} />;
         default:

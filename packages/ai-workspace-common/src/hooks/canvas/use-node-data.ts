@@ -1,59 +1,36 @@
 import { useCallback } from 'react';
-import { useCanvasStore, useCanvasStoreShallow } from '../../stores/canvas';
-import { useCanvasContext } from '../../context/canvas';
-import { useParams } from 'react-router-dom';
-import { CanvasNodeData } from '../../components/canvas/nodes';
-import { useCanvasSync } from './use-canvas-sync';
+import { CanvasNode, CanvasNodeData } from '../../components/canvas/nodes';
 import { CSSProperties } from 'react';
+import { useReactFlow } from '@xyflow/react';
 
 export const useNodeData = () => {
-  const { canvasId: contextCanvasId } = useCanvasContext();
-  const { canvasId: routeCanvasId } = useParams();
-  const { setNodes } = useCanvasStoreShallow((state) => ({
-    setNodes: state.setNodes,
-  }));
-
-  const { syncNodesToYDoc } = useCanvasSync();
+  const { setNodes } = useReactFlow<CanvasNode<any>>();
 
   const setNodeData = useCallback(
-    <T = any>(nodeId: string, nodeData: Partial<CanvasNodeData<T>>, selectedCanvasId?: string) => {
-      const { data } = useCanvasStore.getState();
-
-      const canvasId = selectedCanvasId ?? contextCanvasId ?? routeCanvasId;
-      const currentNodes = data[canvasId]?.nodes ?? [];
-      const updatedNodes = currentNodes.map((n) => ({
-        ...n,
-        data: n.id === nodeId ? { ...n.data, ...nodeData } : n.data,
-      }));
-      setNodes(canvasId, updatedNodes);
-      syncNodesToYDoc(updatedNodes);
+    <T = any>(nodeId: string, nodeData: Partial<CanvasNodeData<T>>) => {
+      setNodes((nodes) =>
+        nodes.map((n) => ({
+          ...n,
+          data:
+            n.id === nodeId
+              ? { ...n.data, ...nodeData, metadata: { ...n.data?.metadata, ...nodeData?.metadata } }
+              : n.data,
+        })),
+      );
     },
-    [contextCanvasId, routeCanvasId, setNodes, syncNodesToYDoc],
+    [setNodes],
   );
 
   const setNodeStyle = useCallback(
-    (nodeId: string, style: Partial<CSSProperties>, selectedCanvasId?: string) => {
-      const { data } = useCanvasStore.getState();
-      const canvasId = selectedCanvasId ?? contextCanvasId ?? routeCanvasId;
-      const currentNodes = data[canvasId]?.nodes ?? [];
-
-      const updatedNodes = currentNodes.map((n) => {
-        if (n.id === nodeId) {
-          return {
-            ...n,
-            style: {
-              ...(n.style ?? {}),
-              ...style,
-            },
-          };
-        }
-        return n;
-      });
-
-      setNodes(canvasId, updatedNodes);
-      syncNodesToYDoc(updatedNodes);
+    (nodeId: string, style: Partial<CSSProperties>) => {
+      setNodes((nodes) =>
+        nodes.map((n) => ({
+          ...n,
+          style: n.id === nodeId ? { ...n.style, ...style } : n.style,
+        })),
+      );
     },
-    [contextCanvasId, routeCanvasId, setNodes, syncNodesToYDoc],
+    [setNodes],
   );
 
   return {

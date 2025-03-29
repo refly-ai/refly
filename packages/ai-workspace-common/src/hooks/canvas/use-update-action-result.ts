@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useReactFlow } from '@xyflow/react';
 import { ActionResult, SkillEvent } from '@refly/openapi-schema';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
@@ -80,10 +81,40 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
   return nodeData;
 };
 
+const isNodeDataEqual = (
+  oldData: CanvasNodeData<ResponseNodeMeta>,
+  newData: Partial<CanvasNodeData<ResponseNodeMeta>>,
+): boolean => {
+  // Compare basic properties
+  if (oldData.title !== newData.title || oldData.entityId !== newData.entityId) {
+    return false;
+  }
+
+  // Compare contentPreview
+  if (oldData.contentPreview !== newData.contentPreview) {
+    return false;
+  }
+
+  // Compare metadata
+  const oldMetadata = oldData.metadata ?? {};
+  const newMetadata = newData.metadata ?? {};
+
+  // Compare all metadata properties
+  const allMetadataKeys = new Set([...Object.keys(oldMetadata), ...Object.keys(newMetadata)]);
+  for (const key of allMetadataKeys) {
+    if (JSON.stringify(oldMetadata[key]) !== JSON.stringify(newMetadata[key])) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 export const useUpdateActionResult = () => {
   const { updateActionResult } = useActionResultStoreShallow((state) => ({
     updateActionResult: state.updateActionResult,
   }));
+  const { getNodes } = useReactFlow();
   const setNodeDataByEntity = useSetNodeDataByEntity();
 
   return useCallback(
@@ -97,7 +128,20 @@ export const useUpdateActionResult = () => {
         if (event) {
           nodeData = generatePartialNodeDataUpdates(payload, event);
         }
-        setNodeDataByEntity({ type: 'skillResponse', entityId: resultId }, nodeData);
+
+        // Get current node data from the store
+        const nodes = getNodes();
+        const currentNode = nodes.find(
+          (n) => n.type === 'skillResponse' && n.data?.entityId === resultId,
+        );
+
+        // Only update if the data has changed
+        if (
+          !currentNode?.data ||
+          !isNodeDataEqual(currentNode.data as CanvasNodeData<ResponseNodeMeta>, nodeData)
+        ) {
+          setNodeDataByEntity({ type: 'skillResponse', entityId: resultId }, nodeData);
+        }
       }
     },
     [updateActionResult, setNodeDataByEntity],

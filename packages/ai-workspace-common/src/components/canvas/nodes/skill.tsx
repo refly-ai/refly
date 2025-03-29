@@ -31,7 +31,6 @@ import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
-import { usePatchNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-patch-node-data';
 import { useEdgeStyles } from '@refly-packages/ai-workspace-common/components/canvas/constants';
 import { genActionResultID } from '@refly-packages/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
@@ -47,6 +46,7 @@ import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-up
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 
 type SkillNode = Node<CanvasNodeData<SkillNodeMeta>, 'skill'>;
 
@@ -96,7 +96,7 @@ export const SkillNode = memo(
   ({ data, selected, id }: NodeProps<SkillNode>) => {
     const [isHovered, setIsHovered] = useState(false);
     const { edges } = useCanvasData();
-    const patchNodeData = usePatchNodeData();
+    const { setNodeData } = useNodeData();
     const edgeStyles = useEdgeStyles();
     const { getNode, getNodes, getEdges, addEdges, deleteElements } = useReactFlow();
     const { addNode } = useAddNode();
@@ -172,7 +172,7 @@ export const SkillNode = memo(
     const isSourceConnected = useMemo(() => edges?.some((edge) => edge.source === id), [edges, id]);
 
     const updateNodeData = useDebouncedCallback((data: Partial<CanvasNodeData<SkillNodeMeta>>) => {
-      patchNodeData(id, data);
+      setNodeData(id, data);
     }, 50);
 
     const { skillSelectedModel, setSkillSelectedModel } = useChatStoreShallow((state) => ({
@@ -194,15 +194,15 @@ export const SkillNode = memo(
 
     const setModelInfo = useCallback(
       (modelInfo: ModelInfo | null) => {
-        patchNodeData(id, { metadata: { modelInfo } });
+        setNodeData(id, { metadata: { modelInfo } });
         setSkillSelectedModel(modelInfo);
       },
-      [id, patchNodeData, setSkillSelectedModel],
+      [id, setNodeData, setSkillSelectedModel],
     );
 
     const setContextItems = useCallback(
       (items: IContextItem[]) => {
-        patchNodeData(id, { metadata: { contextItems: items } });
+        setNodeData(id, { metadata: { contextItems: items } });
 
         const nodes = getNodes() as CanvasNode<any>[];
         const entityNodeMap = new Map(nodes.map((node) => [node.data?.entityId, node]));
@@ -232,14 +232,14 @@ export const SkillNode = memo(
           deleteElements({ edges: edgesToRemove });
         }
       },
-      [id, patchNodeData, addEdges, getNodes, getEdges, deleteElements, edgeStyles.hover],
+      [id, setNodeData, addEdges, getNodes, getEdges, deleteElements, edgeStyles.hover],
     );
 
     const setRuntimeConfig = useCallback(
       (runtimeConfig: SkillRuntimeConfig) => {
-        patchNodeData(id, { metadata: { runtimeConfig } });
+        setNodeData(id, { metadata: { runtimeConfig } });
       },
-      [id, patchNodeData],
+      [id, setNodeData],
     );
 
     const resizeMoveable = useCallback((width: number, height: number) => {
@@ -288,9 +288,9 @@ export const SkillNode = memo(
           form.setFieldValue('tplConfig', undefined);
         }
 
-        patchNodeData(id, { metadata: { selectedSkill } });
+        setNodeData(id, { metadata: { selectedSkill } });
       },
-      [id, form, patchNodeData],
+      [id, form, setNodeData],
     );
 
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
@@ -428,7 +428,7 @@ export const SkillNode = memo(
       }
 
       if (JSON.stringify(updatedContextItems) !== JSON.stringify(contextItems)) {
-        patchNodeData(id, { metadata: { contextItems: updatedContextItems } });
+        setNodeData(id, { metadata: { contextItems: updatedContextItems } });
       }
     };
 

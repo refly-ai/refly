@@ -6,7 +6,6 @@ export * from './use-node-size';
 export * from './use-node-position';
 export * from './use-node-operations';
 export * from './use-set-node-data-by-entity';
-export * from './use-patch-node-data';
 
 // Find node operations
 export * from './use-find-memo';

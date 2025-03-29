@@ -1,20 +1,22 @@
 import { useCallback, useState } from 'react';
-import { applyNodeChanges, NodeChange } from '@xyflow/react';
-import { useCanvasStore, useCanvasStoreShallow } from '../../stores/canvas';
+import { applyNodeChanges, NodeChange, useStoreApi } from '@xyflow/react';
+import { useCanvasStoreShallow } from '../../stores/canvas';
 import { useCanvasSync } from './use-canvas-sync';
 import { useContextPanelStoreShallow } from '../../stores/context-panel';
 import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
 import { useUploadMinimap } from '@refly-packages/ai-workspace-common/hooks/use-upload-minimap';
 import { truncateContent, MAX_CONTENT_PREVIEW_LENGTH } from '../../utils/content';
 import { getHelperLines } from '../../components/canvas/common/helper-line/util';
+import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { adoptUserNodes } from '@xyflow/system';
 
 // Add snap threshold constant
 const SNAP_THRESHOLD = 10;
 
 export const useNodeOperations = () => {
   const canvasId = useCanvasId();
-  const { setNodes, removeNodePreview } = useCanvasStoreShallow((state) => ({
-    setNodes: state.setNodes,
+  const { setState, getState } = useStoreApi<CanvasNode<any>>();
+  const { removeNodePreview } = useCanvasStoreShallow((state) => ({
     removeNodePreview: state.removeNodePreview,
   }));
   const { removeContextItem } = useContextPanelStoreShallow((state) => ({
@@ -82,18 +84,20 @@ export const useNodeOperations = () => {
   );
 
   const updateNodesWithSync = useCallback(
-    (updatedNodes: any[]) => {
-      setNodes(canvasId, updatedNodes);
-      throttledSyncNodesToYDoc(updatedNodes);
+    (nodes: any[]) => {
+      const { nodeLookup, parentLookup } = getState();
+      adoptUserNodes(nodes, nodeLookup, parentLookup, {
+        elevateNodesOnSelect: false,
+      });
+      setState({ nodes });
+      throttledSyncNodesToYDoc(nodes);
     },
-    [canvasId, setNodes, throttledSyncNodesToYDoc],
+    [throttledSyncNodesToYDoc],
   );
 
   const onNodesChange = useCallback(
     (changes: NodeChange<any>[]) => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
-
+      const { nodes } = getState();
       const mutableNodes = nodes.map((node) => ({
         ...node,
         measured: node.measured ? { ...node.measured } : undefined,
@@ -140,9 +144,7 @@ export const useNodeOperations = () => {
     (nodeId: string) => {
       // Apply the last snap position if it exists
       if (lastSnapPosition[nodeId]) {
-        const { data } = useCanvasStore.getState();
-        const nodes = data[canvasId]?.nodes ?? [];
-
+        const { nodes } = getState();
         const updatedNodes = nodes.map((node) => {
           if (node.id === nodeId) {
             return {
@@ -172,8 +174,7 @@ export const useNodeOperations = () => {
 
   // New function to truncate content for skill-response nodes only
   const truncateAllNodesContent = useCallback(() => {
-    const { data } = useCanvasStore.getState();
-    const nodes = data[canvasId]?.nodes ?? [];
+    const { nodes } = getState();
 
     // Filter only skill-response nodes that need truncation
     const skillResponseNodes = nodes.filter(
@@ -219,8 +220,7 @@ export const useNodeOperations = () => {
 
   const setNodeSizeMode = useCallback(
     (nodeId: string, mode: 'compact' | 'adaptive') => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
+      const { nodes } = getState();
 
       const updatedNodes = nodes.map((node) => {
         if (node.id === nodeId) {
@@ -264,8 +264,7 @@ export const useNodeOperations = () => {
 
   const updateAllNodesSizeMode = useCallback(
     (mode: 'compact' | 'adaptive') => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
+      const { nodes } = getState();
 
       const updatedNodes = nodes.map((node) => {
         if (node.data.metadata?.sizeMode === mode) {

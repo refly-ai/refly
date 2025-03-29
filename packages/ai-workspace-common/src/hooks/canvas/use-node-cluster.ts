@@ -1,59 +1,51 @@
 import { useCallback } from 'react';
-import { Node } from '@xyflow/react';
-import { useCanvasStore } from '../../stores/canvas';
+import { Node, useStoreApi } from '@xyflow/react';
 import { useGroupNodes } from './use-batch-nodes-selection/use-group-nodes';
 import { useNodePosition } from './use-node-position';
 import { useNodeOperations } from './use-node-operations';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 export const useNodeCluster = () => {
-  const { canvasId } = useCanvasContext();
+  const { getState } = useStoreApi();
   const { createGroupFromSelectedNodes } = useGroupNodes();
   const { layoutBranchAndUpdatePositions } = useNodePosition();
   const { updateNodesWithSync } = useNodeOperations();
 
   // Helper function to get all target nodes recursively
-  const getTargetNodesCluster = useCallback(
-    (canvasId: string, nodeIds: string | string[]): Node[] => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
-      const edges = data[canvasId]?.edges ?? [];
-      const visited = new Set<string>();
-      const cluster: Node[] = [];
+  const getTargetNodesCluster = useCallback((nodeIds: string | string[]): Node[] => {
+    const { nodes, edges } = getState();
+    const visited = new Set<string>();
+    const cluster: Node[] = [];
 
-      const traverse = (currentId: string) => {
-        if (visited.has(currentId)) return;
-        visited.add(currentId);
+    const traverse = (currentId: string) => {
+      if (visited.has(currentId)) return;
+      visited.add(currentId);
 
-        const node = nodes.find((n) => n.id === currentId);
-        if (node) {
-          cluster.push(node);
-          // Find all target nodes
-          for (const edge of edges) {
-            if (edge.source === currentId) {
-              traverse(edge.target);
-            }
+      const node = nodes.find((n) => n.id === currentId);
+      if (node) {
+        cluster.push(node);
+        // Find all target nodes
+        for (const edge of edges) {
+          if (edge.source === currentId) {
+            traverse(edge.target);
           }
         }
-      };
-
-      // Support both single nodeId and array of nodeIds
-      const sourceNodeIds = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
-      for (const nodeId of sourceNodeIds) {
-        traverse(nodeId);
       }
+    };
 
-      return cluster;
-    },
-    [],
-  );
+    // Support both single nodeId and array of nodeIds
+    const sourceNodeIds = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+    for (const nodeId of sourceNodeIds) {
+      traverse(nodeId);
+    }
+
+    return cluster;
+  }, []);
 
   // Select all target nodes in the cluster
   const selectNodeCluster = useCallback(
     (nodeIds: string | string[]) => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
-      const cluster = getTargetNodesCluster(canvasId, nodeIds);
+      const { nodes } = getState();
+      const cluster = getTargetNodesCluster(nodeIds);
 
       const updatedNodes = nodes.map((node) => ({
         ...node,
@@ -62,7 +54,7 @@ export const useNodeCluster = () => {
 
       updateNodesWithSync(updatedNodes);
     },
-    [getTargetNodesCluster, updateNodesWithSync, canvasId],
+    [getTargetNodesCluster, updateNodesWithSync],
   );
 
   // Create a group from the node cluster
@@ -79,9 +71,7 @@ export const useNodeCluster = () => {
   // Layout the node cluster
   const layoutNodeCluster = useCallback(
     (nodeIds: string | string[]) => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
-      const edges = data[canvasId]?.edges ?? [];
+      const { nodes, edges } = getState();
 
       const sourceNodeIds = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
       const sourceNodes = nodes.filter((node) => sourceNodeIds.includes(node.id));
@@ -97,7 +87,7 @@ export const useNodeCluster = () => {
         },
       );
     },
-    [layoutBranchAndUpdatePositions, canvasId],
+    [layoutBranchAndUpdatePositions],
   );
 
   return {

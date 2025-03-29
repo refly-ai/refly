@@ -67,6 +67,7 @@
     "@types/unist": "^3.0.3",
     "@types/uuid": "^9.0.1",
     "@xyflow/react": "^12.3.5",
+    "@xyflow/system": "0.0.46",
     "antd": "^5.21.5",
     "antd-img-crop": "^4.24.0",
     "class-variance-authority": "~0.7.0",

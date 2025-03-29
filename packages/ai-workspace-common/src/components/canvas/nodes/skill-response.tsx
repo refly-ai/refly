@@ -5,7 +5,7 @@ import classNames from 'classnames';
 import { Divider, Input, message, Typography } from 'antd';
 import type { InputRef } from 'antd';
 import { CanvasNode, SkillResponseNodeProps } from './shared/types';
-import { useState, useCallback, useRef, useEffect, useMemo, memo } from 'react';
+import { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { CustomHandle } from './shared/custom-handle';
 import { LuChevronRight } from 'react-icons/lu';
 import { getNodeCommonStyles } from './index';
@@ -36,7 +36,6 @@ import {
   createNodeEventName,
   cleanupNodeEvents,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
-import { usePatchNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-patch-node-data';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
@@ -55,6 +54,7 @@ import cn from 'classnames';
 import { ReasoningContentPreview } from './shared/reasoning-content-preview';
 import { useUpdateSkillResponseTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-skill-response-title';
 import { truncateContent } from '@refly-packages/ai-workspace-common/utils/content';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 
 const POLLING_WAIT_TIME = 15000;
 
@@ -224,13 +224,12 @@ export const SkillResponseNode = memo(
     const { draggingNodeId } = useEditorPerformance();
     const isDragging = draggingNodeId === id;
 
-    const { edges, operatingNodeId } = useCanvasStoreShallow((state) => ({
-      edges: state.data[state.currentCanvasId]?.edges ?? [],
+    const { operatingNodeId } = useCanvasStoreShallow((state) => ({
       operatingNodeId: state.operatingNodeId,
     }));
     const updateSkillResponseTitle = useUpdateSkillResponseTitle();
-    const patchNodeData = usePatchNodeData();
-    const { getNode } = useReactFlow();
+    const { setNodeData } = useNodeData();
+    const { getNode, getEdges } = useReactFlow();
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
     const targetRef = useRef<HTMLDivElement>(null);
@@ -243,7 +242,7 @@ export const SkillResponseNode = memo(
 
     const isOperating = operatingNodeId === id;
     const sizeMode = data?.metadata?.sizeMode || 'adaptive';
-    const node = useMemo(() => getNode(id), [id, getNode]);
+    const node = getNode(id);
 
     const { containerStyle, handleResize, updateSize } = useNodeSize({
       id,
@@ -310,6 +309,7 @@ export const SkillResponseNode = memo(
     const query = title;
 
     // Check if node has any connections
+    const edges = getEdges();
     const isTargetConnected = edges?.some((edge) => edge.target === id);
     const isSourceConnected = edges?.some((edge) => edge.source === id);
 
@@ -345,7 +345,7 @@ export const SkillResponseNode = memo(
         resetFailedState(entityId);
       }
 
-      patchNodeData(id, {
+      setNodeData(id, {
         ...data,
         contentPreview: '',
         metadata: {
@@ -375,7 +375,7 @@ export const SkillResponseNode = memo(
       t,
       updateSize,
       invokeAction,
-      patchNodeData,
+      setNodeData,
       readonly,
       resetFailedState,
     ]);

@@ -5,13 +5,6 @@ import { persist } from 'zustand/middleware';
 import { Edge } from '@xyflow/react';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 
-interface CanvasData {
-  nodes: CanvasNode<any>[];
-  edges: Edge[];
-  title: string;
-  initialFitViewCompleted?: boolean;
-}
-
 interface NodePreviewData {
   metadata?: Record<string, unknown>;
   [key: string]: any;
@@ -28,9 +21,11 @@ interface CanvasConfig {
 }
 
 export interface CanvasState {
-  data: Record<string, CanvasData>;
+  nodes: CanvasNode<any>[];
+  edges: Edge[];
   config: Record<string, CanvasConfig>;
   currentCanvasId: string | null;
+  initialFitViewCompleted?: boolean;
   showPreview: boolean;
   showMaxRatio: boolean;
   showLaunchpad: boolean;
@@ -41,10 +36,9 @@ export interface CanvasState {
   autoLayout: boolean;
   showTemplates: boolean;
 
-  setNodes: (canvasId: string, nodes: CanvasNode<any>[]) => void;
-  setEdges: (canvasId: string, edges: Edge[]) => void;
-  setTitle: (canvasId: string, title: string) => void;
-  setInitialFitViewCompleted: (canvasId: string, completed: boolean) => void;
+  setNodes: (nodes: CanvasNode<any>[]) => void;
+  setEdges: (edges: Edge[]) => void;
+  setInitialFitViewCompleted: (completed: boolean) => void;
   deleteCanvasData: (canvasId: string) => void;
   setCurrentCanvasId: (canvasId: string) => void;
   addNodePreview: (canvasId: string, node: NodePreview) => void;
@@ -66,21 +60,16 @@ export interface CanvasState {
   clearState: () => void;
 }
 
-const defaultCanvasData: () => CanvasData = () => ({
-  nodes: [],
-  edges: [],
-  title: '',
-  initialFitViewCompleted: false,
-});
-
 const defaultCanvasConfig: () => CanvasConfig = () => ({
   nodePreviews: [],
 });
 
 const defaultCanvasState = () => ({
-  data: {},
+  nodes: [],
+  edges: [],
   config: {},
   currentCanvasId: null,
+  initialFitViewCompleted: false,
   showPreview: true,
   showMaxRatio: true,
   showLaunchpad: true,
@@ -99,7 +88,6 @@ export const useCanvasStore = create<CanvasState>()(
 
       deleteCanvasData: (canvasId) =>
         set((state) => {
-          delete state.data[canvasId];
           delete state.config[canvasId];
         }),
       setCurrentCanvasId: (canvasId) =>
@@ -118,25 +106,17 @@ export const useCanvasStore = create<CanvasState>()(
         set((state) => {
           state.showLaunchpad = show;
         }),
-      setNodes: (canvasId, nodes) =>
+      setNodes: (nodes) =>
         set((state) => {
-          state.data[canvasId] ??= defaultCanvasData();
-          state.data[canvasId].nodes = nodes;
+          state.nodes = nodes;
         }),
-      setEdges: (canvasId, edges) =>
+      setEdges: (edges) =>
         set((state) => {
-          state.data[canvasId] ??= defaultCanvasData();
-          state.data[canvasId].edges = edges;
+          state.edges = edges;
         }),
-      setTitle: (canvasId, title) =>
+      setInitialFitViewCompleted: (completed) =>
         set((state) => {
-          state.data[canvasId] ??= defaultCanvasData();
-          state.data[canvasId].title = title;
-        }),
-      setInitialFitViewCompleted: (canvasId, completed) =>
-        set((state) => {
-          state.data[canvasId] ??= defaultCanvasData();
-          state.data[canvasId].initialFitViewCompleted = completed;
+          state.initialFitViewCompleted = completed;
         }),
       setCanvasLocalSynced: (canvasId, syncedAt) =>
         set((state) => {
