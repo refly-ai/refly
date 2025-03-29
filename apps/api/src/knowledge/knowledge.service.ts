@@ -291,6 +291,7 @@ export class KnowledgeService {
         storageKey,
         storageSize,
         rawFileKey: staticFile?.storageKey,
+        projectId: param.projectId,
         uid: user.uid,
         title: param.title || '',
         indexStatus,
@@ -301,6 +302,7 @@ export class KnowledgeService {
         storageKey,
         storageSize,
         rawFileKey: staticFile?.storageKey,
+        projectId: param.projectId,
         title: param.title || '',
         indexStatus,
       },
@@ -699,6 +701,14 @@ export class KnowledgeService {
     if (!resource.storageKey) {
       resource.storageKey = `resources/${resource.resourceId}.txt`;
       updates.storageKey = resource.storageKey;
+    }
+
+    if (param.projectId !== undefined) {
+      if (param.projectId) {
+        updates.project = { connect: { projectId: param.projectId } };
+      } else {
+        updates.project = { disconnect: true };
+      }
     }
 
     if (param.content) {

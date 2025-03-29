@@ -1,6 +1,5 @@
-import { useParams } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Canvas } from '@refly-packages/ai-workspace-common/components/canvas';
 import { Button, Empty } from 'antd';
 import { useTranslation } from 'react-i18next';

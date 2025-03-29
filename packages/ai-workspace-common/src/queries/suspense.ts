@@ -12,6 +12,7 @@ import {
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
+  getProjectDetail,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -24,6 +25,7 @@ import {
   listLabelClasses,
   listLabelInstances,
   listModels,
+  listProjects,
   listResources,
   listShares,
   listSkillInstances,
@@ -48,6 +50,8 @@ import {
   GetCollabTokenError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetProjectDetailData,
+  GetProjectDetailError,
   GetResourceDetailData,
   GetResourceDetailError,
   GetSettingsError,
@@ -66,6 +70,7 @@ import {
   ListLabelInstancesData,
   ListLabelInstancesError,
   ListModelsError,
+  ListProjectsError,
   ListResourcesData,
   ListResourcesError,
   ListSharesData,
@@ -258,6 +263,36 @@ export const useGetDocumentDetailSuspense = <
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getDocumentDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useListProjectsSuspense = <
+  TData = Common.ListProjectsDefaultResponse,
+  TError = ListProjectsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListProjectsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listProjects({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetProjectDetailSuspense = <
+  TData = Common.GetProjectDetailDefaultResponse,
+  TError = GetProjectDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetProjectDetailData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetProjectDetailKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getProjectDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCodeArtifactDetailSuspense = <

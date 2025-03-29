@@ -23,7 +23,7 @@ export interface SourceListDrawer {
   query?: string;
 }
 
-export type LibraryModalActiveKey = 'document' | 'resource';
+export type LibraryModalActiveKey = 'document' | 'resource' | 'project';
 
 export interface KnowledgeBaseState {
   isSaveKnowledgeBaseModalVisible: boolean;
@@ -92,7 +92,7 @@ export const defaultState = {
   hasMore: true,
   isRequesting: false,
 
-  libraryModalActiveKey: 'document' as LibraryModalActiveKey,
+  libraryModalActiveKey: 'project' as LibraryModalActiveKey,
 };
 
 export const useKnowledgeBaseStore = create<KnowledgeBaseState>()(
@@ -144,7 +144,7 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseState>()(
       set((state) => ({ ...state, resourcePanelVisible: visible })),
     updateNotePanelVisible: (visible: boolean) =>
       set((state) => ({ ...state, notePanelVisible: visible })),
-    updateLibraryModalActiveKey: (key: string) =>
+    updateLibraryModalActiveKey: (key: LibraryModalActiveKey) =>
       set((state) => ({ ...state, libraryModalActiveKey: key })),
   })),
 );

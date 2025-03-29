@@ -15,7 +15,6 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { UpsertResourceRequest } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { StorageLimit } from './storageLimit';
 import { getAvailableFileCount } from '@refly/utils/quota';
@@ -37,7 +36,6 @@ export const ImportFromWeblink = () => {
   const { refetchUsage, storageUsage } = useSubscriptionUsage();
 
   const [saveLoading, setSaveLoading] = useState(false);
-  const { getLibraryList } = useHandleSiderData();
 
   const scrapeSingleUrl = async (key: string, url: string) => {
     const { scrapeLinks } = useImportResourceStore.getState();
@@ -131,7 +129,6 @@ export const ImportFromWeblink = () => {
     }
 
     refetchUsage();
-    getLibraryList();
     message.success(t('common.putSuccess'));
     setScrapeLinks([]);
     setImportResourceModalVisible(false);

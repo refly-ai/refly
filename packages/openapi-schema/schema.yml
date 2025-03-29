@@ -17,6 +17,8 @@ tags:
     description: Canvas management endpoints
   - name: knowledge
     description: Knowledge base management endpoints
+  - name: project
+    description: Project management endpoints
   - name: share
     description: Share management endpoints
   - name: label
@@ -930,6 +932,121 @@ paths:
       responses:
         '200':
           description: Successful operation
+  /project/list:
+    get:
+      tags:
+        - project
+      summary: List projects
+      description: List all projects
+      operationId: listProjects
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProjectResponse'
+  /project/detail:
+    get:
+      tags:
+        - project
+      summary: Get project detail
+      description: Get project detail by project ID
+      operationId: getProjectDetail
+      parameters:
+        - name: projectId
+          in: query
+          description: Project ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProjectDetailResponse'
+  /project/new:
+    post:
+      tags:
+        - project
+      summary: Create new project
+      description: Create a new project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProjectRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertProjectResponse'
+  /project/update:
+    post:
+      tags:
+        - project
+      summary: Update project
+      description: Update an existing project
+      operationId: updateProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProjectRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertProjectResponse'
+  /project/updateItems:
+    post:
+      tags:
+        - project
+      summary: Update items in project
+      description: Update items in a project
+      operationId: updateProjectItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectItemsRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+  /project/delete:
+    post:
+      tags:
+        - project
+      summary: Delete project
+      description: Delete an existing project
+      operationId: deleteProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteProjectRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /codeArtifact/detail:
     get:
       tags:
@@ -2209,6 +2326,7 @@ components:
         - canvas
         - share
         - user
+        - project
         - skillResponse
         - codeArtifact
     Entity:
@@ -2221,6 +2339,71 @@ components:
         entityType:
           description: Entity type
           $ref: '#/components/schemas/EntityType'
+    ProjectSource:
+      type: object
+      description: Project source
+      properties:
+        entityId:
+          type: string
+          description: Entity ID
+        entityType:
+          description: Entity type
+          $ref: '#/components/schemas/EntityType'
+        title:
+          type: string
+          description: Project title
+        createdAt:
+          type: string
+          format: date-time
+          description: Project creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: Project update time
+    Project:
+      type: object
+      description: Project
+      required:
+        - projectId
+        - name
+      properties:
+        projectId:
+          type: string
+          description: Project ID
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          description: Project description
+        coverUrl:
+          type: string
+          description: Project cover URL
+        canvases:
+          type: array
+          description: Canvases
+          items:
+            $ref: '#/components/schemas/Canvas'
+        resources:
+          type: array
+          description: Resources
+          items:
+            $ref: '#/components/schemas/Resource'
+        documents:
+          type: array
+          description: Documents
+          items:
+            $ref: '#/components/schemas/Document'
+        customInstructions:
+          type: string
+          description: Custom instructions for the project
+        createdAt:
+          type: string
+          format: date-time
+          description: Project creation time
+        updatedAt:
+          type: string
+          format: date-time
     LabelClass:
       type: object
       description: Label class
@@ -2758,13 +2941,6 @@ components:
         result:
           type: object
           description: Step-specific result data
-    MessageType:
-      type: string
-      description: Chat message type
-      enum:
-        - ai
-        - human
-        - system
     ModelTier:
       type: string
       description: Model tier
@@ -3609,6 +3785,9 @@ components:
           type: string
           description: Canvas ID (only used for update)
           example: c-g30e1b80b5g1itbemc0g5jj3
+        projectId:
+          type: string
+          description: Project ID to bind with
         minimapStorageKey:
           type: string
           description: Minimap storage key
@@ -3747,6 +3926,9 @@ components:
           type: string
           description: Resource ID (only used for update)
           example: r-g30e1b80b5g1itbemc0g5jj3
+        projectId:
+          type: string
+          description: Project ID to bind with
         data:
           description: Resource metadata
           $ref: '#/components/schemas/ResourceMeta'
@@ -3851,6 +4033,9 @@ components:
           type: string
           description: Document ID (only used for update)
           example: d-g30e1b80b5g1itbemc0g5jj3
+        projectId:
+          type: string
+          description: Project ID to bind with
         readOnly:
           type: boolean
           description: Whether this document is read-only
@@ -3936,6 +4121,74 @@ components:
           description: Reference ID list
           items:
             type: string
+    ListProjectResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Project list
+              items:
+                $ref: '#/components/schemas/Project'
+    GetProjectDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Project'
+    UpsertProjectRequest:
+      type: object
+      properties:
+        projectId:
+          type: string
+          description: Project ID (only used for update)
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          description: Project description
+        coverStorageKey:
+          type: string
+          description: Project cover storage key
+        customInstructions:
+          type: string
+          description: Custom instructions
+    UpsertProjectResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Project'
+    UpdateProjectItemsRequest:
+      type: object
+      properties:
+        projectId:
+          type: string
+          description: Project ID
+        operation:
+          type: string
+          description: Operation type
+          enum:
+            - add
+            - remove
+        items:
+          type: array
+          description: Item list
+          items:
+            $ref: '#/components/schemas/Entity'
+    DeleteProjectRequest:
+      type: object
+      required:
+        - projectId
+      properties:
+        projectId:
+          type: string
+          description: Project ID to delete
+          example: p-g30e1b80b5g1itbemc0g5jj3
     SkillEventType:
       type: string
       description: Skill event type

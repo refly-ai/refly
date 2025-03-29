@@ -8,7 +8,6 @@ import { useImportResourceStoreShallow } from '@refly-packages/ai-workspace-comm
 import { UpsertResourceRequest } from '@refly/openapi-schema';
 import { useKnowledgeBaseStore } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { StorageLimit } from '@refly-packages/ai-workspace-common/components/import-resource/intergrations/storageLimit';
 import { getAvailableFileCount } from '@refly-packages/utils/quota';
@@ -28,7 +27,6 @@ interface ActionMenuProps {
 
 export const ActionMenu: React.FC<ActionMenuProps> = (props) => {
   const { t } = useTranslation();
-  const { getLibraryList } = useHandleSiderData();
 
   const { updateSourceListDrawer } = useKnowledgeBaseStore((state) => ({
     updateSourceListDrawer: state.updateSourceListDrawer,
@@ -81,7 +79,6 @@ export const ActionMenu: React.FC<ActionMenuProps> = (props) => {
 
       if (data?.success) {
         refetchUsage();
-        getLibraryList();
         message.success(t('common.putSuccess'));
         setSelectedItems([]);
 

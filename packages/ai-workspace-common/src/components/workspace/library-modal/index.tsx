@@ -2,12 +2,14 @@ import { useTranslation } from 'react-i18next';
 
 import { DocumentList } from '../document-list';
 import { ResourceList } from '../resource-list';
+import { ProjectList } from '../project-list';
 
 import { Modal, Tabs } from 'antd';
 import './index.scss';
 import {
   IconDocument,
   IconLibrary,
+  IconProject,
   IconResource,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useKnowledgeBaseStoreShallow } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
@@ -21,6 +23,12 @@ export const LibraryModal = (props: LibraryModalProps) => {
   const { visible, setVisible } = props;
   const { t } = useTranslation();
   const tabs = [
+    {
+      key: 'project',
+      label: t('common.project'),
+      icon: <IconProject style={{ transform: 'translateY(2px)' }} />,
+      children: <ProjectList />,
+    },
     {
       key: 'document',
       label: t('common.document'),

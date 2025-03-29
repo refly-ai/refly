@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useNavigate } from 'react-router-dom';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+// import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 
 type FieldType = {
   title: string;
@@ -28,7 +29,7 @@ export const DuplicateCanvasModal = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { getCanvasList } = useHandleSiderData();
-
+  // const { projectId } = useGetProjectCanvasId();
   const onSubmit = async () => {
     form.validateFields().then(async (values) => {
       if (loading) return;
@@ -36,6 +37,7 @@ export const DuplicateCanvasModal = ({
       const { title, duplicateEntities } = values;
       const { data } = await getClient().duplicateCanvas({
         body: {
+          // projectId,
           canvasId,
           title,
           duplicateEntities,

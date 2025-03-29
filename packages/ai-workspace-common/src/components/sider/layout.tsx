@@ -3,6 +3,7 @@ import { Menu } from '@arco-design/web-react';
 import { Avatar, Button, Layout, Skeleton, Divider, Tag } from 'antd';
 import {
   useLocation,
+  useMatch,
   useNavigate,
   useSearchParams,
 } from '@refly-packages/ai-workspace-common/utils/router';
@@ -46,6 +47,7 @@ import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/e
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
 import './layout.scss';
+import { ProjectDirectory } from '../project/project-directory';
 
 const Sider = Layout.Sider;
 const MenuItem = Menu.Item;
@@ -208,7 +210,7 @@ const MenuItemContent = (props: {
   return content;
 };
 
-const NewCanvasItem = () => {
+export const NewCanvasItem = () => {
   const { t } = useTranslation();
   const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas();
 
@@ -229,7 +231,7 @@ const NewCanvasItem = () => {
   );
 };
 
-const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
+export const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showCanvasIdActionDropdown, setShowCanvasIdActionDropdown] = useState<string | null>(null);
@@ -541,6 +543,16 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
+  const isProject = useMatch('/project/:projectId');
+  const projectId = location.pathname.split('/').pop();
 
-  return isLogin ? <SiderLoggedIn source={source} /> : <SiderLoggedOut source={source} />;
+  return isLogin ? (
+    isProject ? (
+      <ProjectDirectory projectId={projectId} source={source} />
+    ) : (
+      <SiderLoggedIn source={source} />
+    )
+  ) : (
+    <SiderLoggedOut source={source} />
+  );
 };

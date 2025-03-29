@@ -9,7 +9,6 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { UpsertResourceRequest } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { TbClipboard } from 'react-icons/tb';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { StorageLimit } from './storageLimit';
@@ -33,7 +32,6 @@ export const ImportFromText = () => {
   }));
 
   const [saveLoading, setSaveLoading] = useState(false);
-  const { getLibraryList } = useHandleSiderData();
 
   const canImportCount = getAvailableFileCount(storageUsage);
   const disableSave = () => {
@@ -66,7 +64,6 @@ export const ImportFromText = () => {
 
     if (data?.success) {
       refetchUsage();
-      getLibraryList();
       addNode({
         type: 'resource',
         data: {
