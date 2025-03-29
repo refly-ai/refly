@@ -338,6 +338,7 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
               />
             ) : (
               <CommonNodeHeader
+                source="preview"
                 title={getNodeTitle(node, t)}
                 fixedTitle={getNodeFixedTitle(node, t)}
                 Icon={IconComponent}

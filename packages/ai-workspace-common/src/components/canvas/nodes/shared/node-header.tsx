@@ -2,13 +2,14 @@ import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { IconType } from 'react-icons';
 import { Input, Typography } from 'antd';
 import type { InputRef } from 'antd';
-
+import cn from 'classnames';
 interface NodeHeaderProps {
   fixedTitle?: string;
   title: string;
   Icon?: IconType | React.ComponentType<{ className?: string }>;
   iconBgColor?: string;
   canEdit?: boolean;
+  source?: 'preview' | 'node';
   updateTitle?: (title: string) => void;
 }
 
@@ -20,6 +21,7 @@ export const NodeHeader = memo(
     iconBgColor = '#17B26A',
     canEdit = false,
     updateTitle,
+    source = 'node',
   }: NodeHeaderProps) => {
     const [editTitle, setEditTitle] = useState(title);
     const [isEditing, setIsEditing] = useState(false);
@@ -48,7 +50,7 @@ export const NodeHeader = memo(
     );
 
     return (
-      <div className="flex-shrink-0">
+      <div className={cn('flex-shrink-0', { 'mb-1': source === 'node' })}>
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded shadow-[0px_2px_4px_-2px_rgba(16,24,60,0.06),0px_4px_8px_-2px_rgba(16,24,60,0.1)] flex items-center justify-center flex-shrink-0"

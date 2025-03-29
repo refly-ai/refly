@@ -40,7 +40,7 @@ import { useGetCodeArtifactDetail } from '@refly-packages/ai-workspace-common/qu
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 interface NodeContentProps {
   status: 'generating' | 'finish' | 'failed';
   entityId: string;
@@ -104,6 +104,7 @@ export const CodeArtifactNode = memo(
     const { getNode } = useReactFlow();
     const { addNode } = useAddNode();
     const { t } = useTranslation();
+    const updateNodeTitle = useUpdateNodeTitle();
 
     const { sizeMode = 'adaptive' } = data?.metadata ?? {};
 
@@ -265,6 +266,13 @@ export const CodeArtifactNode = memo(
       );
     }, [data, addNode, t]);
 
+    const updateTitle = (newTitle: string) => {
+      if (newTitle === node.data?.title) {
+        return;
+      }
+      updateNodeTitle(newTitle, data.entityId, id, 'codeArtifact');
+    };
+
     // Add event handling
     useEffect(() => {
       // Create node-specific event handlers
@@ -337,9 +345,12 @@ export const CodeArtifactNode = memo(
 
             <div className={cn('flex flex-col h-full p-3 box-border', MAX_HEIGHT_CLASS)}>
               <NodeHeader
-                title={data?.title || t('canvas.nodeTypes.codeArtifact')}
+                title={data?.title}
+                fixedTitle={t('canvas.nodeTypes.codeArtifact')}
+                canEdit={!readonly}
                 Icon={IconCodeArtifact}
                 iconBgColor="#3E63DD"
+                updateTitle={updateTitle}
               />
 
               <div

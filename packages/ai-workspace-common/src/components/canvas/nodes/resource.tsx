@@ -40,6 +40,7 @@ import { useEditorPerformance } from '@refly-packages/ai-workspace-common/contex
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import cn from 'classnames';
 
 const NodeContent = memo(
@@ -88,6 +89,7 @@ export const ResourceNode = memo(
     const { edges } = useCanvasData();
     const setNodeDataByEntity = useSetNodeDataByEntity();
     const { getNode } = useReactFlow();
+    const updateNodeTitle = useUpdateNodeTitle();
 
     const { resourceType, indexStatus, sizeMode = 'adaptive' } = data?.metadata ?? {};
     const ResourceIcon =
@@ -242,6 +244,13 @@ export const ResourceNode = memo(
       }
     }, [data.title, data.entityId, remoteResult?.content, debouncedCreateDocument, t]);
 
+    const updateTitle = (newTitle: string) => {
+      if (newTitle === node.data?.title) {
+        return;
+      }
+      updateNodeTitle(newTitle, data.entityId, id, 'resource');
+    };
+
     useEffect(() => {
       if (['wait_parse', 'wait_index'].includes(indexStatus) && !shouldPoll) {
         setShouldPoll(true);
@@ -261,7 +270,7 @@ export const ResourceNode = memo(
             type: 'resource',
           },
           {
-            title,
+            title: data?.title || title,
             contentPreview,
             metadata: {
               indexStatus,
@@ -330,9 +339,12 @@ export const ResourceNode = memo(
           >
             <div className={cn('flex flex-col h-full relative p-3 box-border', MAX_HEIGHT_CLASS)}>
               <NodeHeader
-                title={data.title}
+                title={data?.title}
+                fixedTitle={t('canvas.nodeTypes.resource')}
                 Icon={ResourceIcon}
                 iconBgColor={NODE_COLORS.resource}
+                canEdit={!readonly}
+                updateTitle={updateTitle}
               />
 
               <div className="relative flex-grow min-h-0 overflow-y-auto pr-2 -mr-2">
