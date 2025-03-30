@@ -5,7 +5,9 @@ import {
   CodeArtifactNodeMeta,
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import CodeViewerLayout from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer-layout';
-import CodeViewer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
+import CodeViewer, {
+  detectTypeFromContent,
+} from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly-packages/utils/id';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
@@ -41,6 +43,21 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
   const entityId = node?.data?.entityId ?? '';
   const shareId = node?.data?.metadata?.shareId ?? '';
 
+  // Effect to update local state when node.data.metadata changes
+  useEffect(() => {
+    const metadata = node.data?.metadata;
+    if (metadata) {
+      // Only update if different from current state to prevent unnecessary renders
+      if (metadata.activeTab && metadata.activeTab !== currentTab) {
+        setCurrentTab(metadata.activeTab as 'code' | 'preview');
+      }
+      if (metadata.type && metadata.type !== currentType) {
+        const detectedType = detectTypeFromContent(metadata.type);
+        setCurrentType(detectedType as CodeArtifactType);
+      }
+    }
+  }, [node.data?.metadata, currentTab, currentType]);
+
   const { data: remoteData, isLoading: isRemoteLoading } = useGetCodeArtifactDetail(
     {
       query: {
@@ -69,7 +86,12 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
 
     const handleStatusUpdate = (data: { artifactId: string; status: 'finish' | 'generating' }) => {
       if (data.artifactId === artifactId) {
-        setCurrentTab(data.status === 'finish' ? 'preview' : 'code');
+        // Only update currentTab if status has changed to prevent unnecessary re-renders
+        if (data.status === 'finish' && currentTab !== 'preview') {
+          setCurrentTab('preview');
+        } else if (data.status === 'generating' && currentTab !== 'code') {
+          setCurrentTab('code');
+        }
       }
     };
 
@@ -80,7 +102,7 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
       codeArtifactEmitter.off('contentUpdate', handleContentUpdate);
       codeArtifactEmitter.off('statusUpdate', handleStatusUpdate);
     };
-  }, [status, artifactId]);
+  }, [status, artifactId, currentTab]);
 
   useEffect(() => {
     if (artifactData) {
@@ -88,7 +110,7 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
     }
   }, [artifactData]);
 
-  // Update node data when tab changes
+  // Update node data when tab changes - use callback to prevent re-creation
   const handleTabChange = useCallback((tab: 'code' | 'preview') => {
     setCurrentTab(tab);
   }, []);
@@ -167,32 +189,74 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
         true,
       );
     },
-    [node, addNode, t],
+    [node, addNode, t, entityId],
   );
 
   const handleClose = useCallback(() => {
     setIsShowingCodeViewer(false);
   }, []);
 
+  // Use debounced callback for updating remote artifact
   const updateRemoteArtifact = useDebouncedCallback(async (newCode: string) => {
-    await getClient().updateCodeArtifact({
-      body: {
-        artifactId,
-        content: newCode,
-      },
-    });
+    if (!artifactId) return;
+
+    try {
+      await getClient().updateCodeArtifact({
+        body: {
+          artifactId,
+          content: newCode,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to update code artifact:', error);
+    }
   }, 500);
 
-  // Handle code changes
+  // Handle code changes with improved performance
   const handleCodeChange = useCallback(
-    async (newCode: string) => {
+    (newCode: string) => {
       setContent(newCode);
 
       if (status !== 'generating' && !canvasReadOnly) {
         updateRemoteArtifact(newCode);
       }
     },
-    [status, canvasReadOnly],
+    [status, canvasReadOnly, updateRemoteArtifact],
+  );
+
+  // Create memoized CodeViewer props to prevent unnecessary re-renders
+  const codeViewerProps = useMemo(
+    () => ({
+      code: content,
+      language,
+      title: node.data?.title || t('codeArtifact.defaultTitle', 'Code Artifact'),
+      entityId,
+      isGenerating: status === 'generating',
+      activeTab: currentTab,
+      onTabChange: handleTabChange,
+      onTypeChange: handleTypeChange,
+      onClose: handleClose,
+      onRequestFix: handleRequestFix,
+      onChange: handleCodeChange,
+      canvasReadOnly,
+      type: currentType as CodeArtifactType,
+    }),
+    [
+      content,
+      language,
+      node.data?.title,
+      t,
+      entityId,
+      status,
+      currentTab,
+      handleTabChange,
+      handleTypeChange,
+      handleClose,
+      handleRequestFix,
+      handleCodeChange,
+      canvasReadOnly,
+      currentType,
+    ],
   );
 
   if (!artifactId) {
@@ -216,23 +280,7 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
   return (
     <div className="h-full bg-white rounded px-4">
       <CodeViewerLayout isShowing={isShowingCodeViewer}>
-        {isShowingCodeViewer && (
-          <CodeViewer
-            code={content}
-            language={language}
-            title={node.data?.title || t('codeArtifact.defaultTitle', 'Code Artifact')}
-            entityId={entityId}
-            isGenerating={status === 'generating'}
-            activeTab={currentTab}
-            onTabChange={handleTabChange}
-            onTypeChange={handleTypeChange}
-            onClose={handleClose}
-            onRequestFix={handleRequestFix}
-            onChange={handleCodeChange}
-            canvasReadOnly={canvasReadOnly}
-            type={currentType as CodeArtifactType}
-          />
-        )}
+        {isShowingCodeViewer && <CodeViewer {...codeViewerProps} />}
       </CodeViewerLayout>
     </div>
   );

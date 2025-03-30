@@ -66,6 +66,8 @@ const PreviewComponent = memo(
       node.data?.contentPreview,
       node.data?.title,
       node.data?.metadata?.status,
+      node.data?.metadata?.language,
+      node.data?.metadata?.type,
       node.data?.metadata?.activeTab,
       node.data?.metadata?.url,
       node.data?.metadata?.viewMode,
@@ -318,7 +320,9 @@ export const DraggableNodePreview = memo(
     let nodeSpecificEqual = true;
     if (prevProps.node?.type === 'codeArtifact') {
       nodeSpecificEqual =
-        prevProps.node?.data?.metadata?.activeTab === nextProps.node?.data?.metadata?.activeTab;
+        prevProps.node?.data?.metadata?.activeTab === nextProps.node?.data?.metadata?.activeTab &&
+        prevProps.node?.data?.metadata?.language === nextProps.node?.data?.metadata?.language &&
+        prevProps.node?.data?.metadata?.type === nextProps.node?.data?.metadata?.type;
     } else if (prevProps.node?.type === 'website') {
       nodeSpecificEqual =
         prevProps.node?.data?.metadata?.url === nextProps.node?.data?.metadata?.url &&

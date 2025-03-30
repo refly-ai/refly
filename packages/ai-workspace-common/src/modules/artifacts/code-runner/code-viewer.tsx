@@ -1,5 +1,6 @@
 import { FiRefreshCw, FiDownload, FiCopy, FiCode, FiEye, FiShare2 } from 'react-icons/fi';
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React from 'react';
 import { Button, Tooltip, Divider, message, Select } from 'antd';
 import Renderer from './render';
 import MonacoEditor from './render/MonacoEditor';
@@ -9,47 +10,110 @@ import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 
-// Function to get simple type description
-const getSimpleTypeDescription = (type: CodeArtifactType): string => {
-  const typeMap: Record<CodeArtifactType, string> = {
-    'application/refly.artifacts.react': 'React',
-    'image/svg+xml': 'SVG',
-    'application/refly.artifacts.mermaid': 'Mermaid',
-    'text/markdown': 'Markdown',
-    'application/refly.artifacts.code': 'Code',
-    'text/html': 'HTML',
-  };
-  return typeMap[type] ?? type;
+// Map of type keys to their full MIME types and display names
+const typeMapping: Record<string, { mime: CodeArtifactType; display: string }> = {
+  react: { mime: 'application/refly.artifacts.react', display: 'React' },
+  svg: { mime: 'image/svg+xml', display: 'SVG' },
+  mermaid: { mime: 'application/refly.artifacts.mermaid', display: 'Mermaid' },
+  markdown: { mime: 'text/markdown', display: 'Markdown' },
+  md: { mime: 'text/markdown', display: 'Markdown' },
+  code: { mime: 'application/refly.artifacts.code', display: 'Code' },
+  html: { mime: 'text/html', display: 'HTML' },
+};
+
+// Function to get simple type description with fuzzy matching
+export const getSimpleTypeDescription = (type: CodeArtifactType): string => {
+  // Check for exact match first
+  for (const [, value] of Object.entries(typeMapping)) {
+    if (value.mime === type) {
+      return value.display;
+    }
+  }
+
+  // If no exact match, try fuzzy matching
+  const typeStr = type.toLowerCase();
+  for (const [key, value] of Object.entries(typeMapping)) {
+    if (typeStr.includes(key.toLowerCase())) {
+      return value.display;
+    }
+  }
+
+  // Default fallback
+  return type;
 };
 
 // Function to get all available artifact types with labels
 const getArtifactTypeOptions = () => {
-  const typeMap: Record<CodeArtifactType, string> = {
-    'application/refly.artifacts.react': 'React',
-    'image/svg+xml': 'SVG',
-    'application/refly.artifacts.mermaid': 'Mermaid',
-    'text/markdown': 'Markdown',
-    'application/refly.artifacts.code': 'Code',
-    'text/html': 'HTML',
-  };
-
-  return Object.entries(typeMap).map(([value, label]) => ({
-    value: value as CodeArtifactType,
-    label,
+  return Object.values(typeMapping).map(({ mime, display }) => ({
+    value: mime,
+    label: display,
   }));
 };
 
-// Function to get file extension based on artifact type
+// Function to get file extension based on artifact type with fuzzy matching
 const getFileExtensionFromType = (type: CodeArtifactType): string => {
-  const extensionMap: Record<CodeArtifactType, string> = {
-    'application/refly.artifacts.react': 'tsx',
-    'image/svg+xml': 'svg',
-    'application/refly.artifacts.mermaid': 'mmd',
-    'text/markdown': 'md',
-    'application/refly.artifacts.code': '', // Will be determined by language
-    'text/html': 'html',
+  const extensionMap: Record<string, string> = {
+    react: 'tsx',
+    svg: 'svg',
+    mermaid: 'mmd',
+    markdown: 'md',
+    md: 'md',
+    code: '', // Will be determined by language
+    html: 'html',
   };
-  return extensionMap[type] ?? '';
+
+  // Try exact match first
+  for (const [key, value] of Object.entries(typeMapping)) {
+    if (value.mime === type) {
+      return extensionMap[key] ?? '';
+    }
+  }
+
+  // If no exact match, try fuzzy matching
+  const typeStr = type.toLowerCase();
+  for (const [key, extension] of Object.entries(extensionMap)) {
+    if (typeStr.includes(key.toLowerCase())) {
+      return extension;
+    }
+  }
+
+  // Default fallback
+  return '';
+};
+
+// Helper function to detect type from content (for external use)
+export const detectTypeFromContent = (content: string): CodeArtifactType => {
+  const lowerContent = content.toLowerCase();
+
+  if (
+    lowerContent.includes('react') &&
+    (lowerContent.includes('jsx') || lowerContent.includes('tsx'))
+  ) {
+    return typeMapping.react.mime;
+  }
+
+  if (lowerContent.includes('<svg') && lowerContent.includes('</svg>')) {
+    return typeMapping.svg.mime;
+  }
+
+  if (
+    lowerContent.includes('mermaid') ||
+    lowerContent.includes('graph ') ||
+    lowerContent.includes('flowchart ')
+  ) {
+    return typeMapping.mermaid.mime;
+  }
+
+  if (lowerContent.includes('# ') || lowerContent.includes('## ')) {
+    return typeMapping.markdown.mime;
+  }
+
+  if (lowerContent.includes('<html') || lowerContent.includes('<!doctype html')) {
+    return typeMapping.html.mime;
+  }
+
+  // Default to code if no specific type detected
+  return typeMapping.code.mime;
 };
 
 export default memo(
@@ -349,34 +413,52 @@ export default memo(
           {actionButtons}
         </div>
 
-        {/* Content area */}
+        {/* Content area - use React.memo for each view to prevent unnecessary re-renders */}
         <div className="flex flex-grow flex-col overflow-auto rounded-md">
-          {activeTab === 'code' ? (
-            <MonacoEditor
-              content={editorContent}
-              language={language}
-              type={type}
-              readOnly={readOnly || isGenerating || canvasReadOnly}
-              isGenerating={isGenerating}
-              canvasReadOnly={canvasReadOnly}
-              onChange={handleEditorChange}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              {language && (
-                <div className="w-full h-full">
-                  <Renderer
-                    content={editorContent}
-                    type={type}
-                    key={refresh}
-                    title={title}
-                    language={language}
-                    onRequestFix={onRequestFix}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          {useMemo(() => {
+            if (activeTab === 'code') {
+              return (
+                <MonacoEditor
+                  content={editorContent}
+                  language={language}
+                  type={type}
+                  readOnly={readOnly || isGenerating || canvasReadOnly}
+                  isGenerating={isGenerating}
+                  canvasReadOnly={canvasReadOnly}
+                  onChange={handleEditorChange}
+                />
+              );
+            }
+
+            return (
+              <div className="h-full flex items-center justify-center">
+                {language && (
+                  <div className="w-full h-full">
+                    <Renderer
+                      content={editorContent}
+                      type={type}
+                      key={refresh}
+                      title={title}
+                      language={language}
+                      onRequestFix={onRequestFix}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          }, [
+            activeTab,
+            editorContent,
+            language,
+            type,
+            readOnly,
+            isGenerating,
+            canvasReadOnly,
+            handleEditorChange,
+            refresh,
+            title,
+            onRequestFix,
+          ])}
         </div>
       </div>
     );
