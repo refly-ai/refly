@@ -1,3 +1,4 @@
+import { CodeArtifactType } from '@refly/openapi-schema';
 import mitt from 'mitt';
 
 export type Events = {
@@ -8,6 +9,7 @@ export type Events = {
   statusUpdate: {
     artifactId: string;
     status: 'finish' | 'generating';
+    type: CodeArtifactType;
   };
 };
 

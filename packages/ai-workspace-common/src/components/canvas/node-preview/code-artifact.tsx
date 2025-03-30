@@ -1,4 +1,4 @@
-import { useState, memo, useCallback, useEffect, useMemo } from 'react';
+import { useState, memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CanvasNode,
@@ -21,6 +21,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useDebouncedCallback } from 'use-debounce';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import { useNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node';
 
 interface CodeArtifactNodePreviewProps {
   node: CanvasNode<CodeArtifactNodeMeta>;
@@ -33,30 +34,42 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
   const { addNode } = useAddNode();
   const { readonly: canvasReadOnly } = useCanvasContext();
   const isLogin = useUserStoreShallow((state) => state.isLogin);
+  const prevContentRef = useRef('');
+  const { updateNodeMetadata, syncNodeWithServer } = useNode();
 
   // Use activeTab from node metadata with fallback to 'code'
-  const { activeTab = 'code', type = 'text/html', language = 'html' } = node.data?.metadata || {};
+  const {
+    activeTab = 'code',
+    type = 'text/html',
+    language = 'html',
+    status: nodeStatus,
+  } = node.data?.metadata || {};
   const [currentTab, setCurrentTab] = useState<'code' | 'preview'>(activeTab as 'code' | 'preview');
   const [currentType, setCurrentType] = useState<CodeArtifactType>(type as CodeArtifactType);
+  // Track status locally to ensure it syncs with node metadata
+  const [status, setStatus] = useState(nodeStatus);
 
-  const status = node?.data?.metadata?.status;
   const entityId = node?.data?.entityId ?? '';
   const shareId = node?.data?.metadata?.shareId ?? '';
 
-  // Effect to update local state when node.data.metadata changes
+  // Update local status when node metadata changes
   useEffect(() => {
-    const metadata = node.data?.metadata;
-    if (metadata) {
-      // Only update if different from current state to prevent unnecessary renders
-      if (metadata.activeTab && metadata.activeTab !== currentTab) {
-        setCurrentTab(metadata.activeTab as 'code' | 'preview');
-      }
-      if (metadata.type && metadata.type !== currentType) {
-        const detectedType = detectTypeFromContent(metadata.type);
-        setCurrentType(detectedType as CodeArtifactType);
+    if (nodeStatus && nodeStatus !== status) {
+      setStatus(nodeStatus);
+
+      // If node metadata shows finished but local state doesn't, update local state
+      if (nodeStatus === 'finish' && status === 'generating') {
+        setCurrentTab('preview');
       }
     }
-  }, [node.data?.metadata, currentTab, currentType]);
+  }, [nodeStatus, status, currentTab]);
+
+  // Ensure active tab is in sync with node metadata
+  useEffect(() => {
+    if (activeTab && activeTab !== currentTab) {
+      setCurrentTab(activeTab as 'code' | 'preview');
+    }
+  }, [activeTab, currentTab]);
 
   const { data: remoteData, isLoading: isRemoteLoading } = useGetCodeArtifactDetail(
     {
@@ -65,7 +78,7 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
       },
     },
     null,
-    { enabled: isLogin && !shareId && artifactId && status?.startsWith('finish') },
+    { enabled: isLogin && !shareId && artifactId && (!status || status?.startsWith('finish')) },
   );
   const { data: shareData, loading: isShareLoading } = useFetchShareData<CodeArtifact>(shareId);
 
@@ -75,22 +88,127 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
     () => shareData || remoteData?.data || null,
     [shareData, remoteData],
   );
+
+  // Use content state with useRef to track previous value - prevents unnecessary re-renders
   const [content, setContent] = useState(artifactData?.content ?? '');
+
+  // Update content and metadata when artifactData changes
+  useEffect(() => {
+    if (artifactData) {
+      // Update content if different
+      if (artifactData.content && artifactData.content !== prevContentRef.current) {
+        setContent(artifactData.content);
+        prevContentRef.current = artifactData.content;
+      }
+
+      // Sync with remote data (type, status)
+      if (node?.id) {
+        const metadataUpdates: Record<string, any> = {};
+        let shouldUpdate = false;
+
+        // Update type if different
+        if (artifactData.type && artifactData.type !== type) {
+          setCurrentType(artifactData.type as CodeArtifactType);
+          metadataUpdates.type = artifactData.type;
+          shouldUpdate = true;
+        }
+
+        // If remote data exists, ensure status is set to 'finish'
+        if (status !== 'finish') {
+          setStatus('finish');
+          metadataUpdates.status = 'finish';
+          shouldUpdate = true;
+        }
+
+        // Update node metadata if needed
+        if (shouldUpdate) {
+          updateNodeMetadata(node.id, {
+            ...node.data?.metadata,
+            ...metadataUpdates,
+          });
+        }
+      }
+    }
+  }, [artifactData, type, node?.id, updateNodeMetadata, node.data?.metadata, status]);
 
   useEffect(() => {
     const handleContentUpdate = (data: { artifactId: string; content: string }) => {
-      if (data.artifactId === artifactId && status === 'generating') {
+      if (data.artifactId === artifactId && data.content !== prevContentRef.current) {
         setContent(data.content);
+        prevContentRef.current = data.content;
       }
     };
 
-    const handleStatusUpdate = (data: { artifactId: string; status: 'finish' | 'generating' }) => {
+    const handleStatusUpdate = (data: {
+      artifactId: string;
+      status: 'finish' | 'generating';
+      type?: CodeArtifactType;
+    }) => {
       if (data.artifactId === artifactId) {
-        // Only update currentTab if status has changed to prevent unnecessary re-renders
-        if (data.status === 'finish' && currentTab !== 'preview') {
-          setCurrentTab('preview');
-        } else if (data.status === 'generating' && currentTab !== 'code') {
-          setCurrentTab('code');
+        // Update local status first for immediate UI feedback
+        setStatus(data.status);
+
+        // Update node metadata with new status
+        if (node?.id) {
+          const metadataUpdates: Record<string, any> = {
+            status: data.status,
+          };
+
+          // Update tab if status changes to finish
+          if (data.status === 'finish') {
+            // Always set to preview when finished
+            setCurrentTab('preview');
+            metadataUpdates.activeTab = 'preview';
+
+            // Sync with server to ensure tab persists across refreshes
+            const currentContent = content || prevContentRef.current;
+            const typeToUse = data.type || currentType;
+
+            // Use debounce for server sync to avoid too many calls
+            if (!canvasReadOnly && artifactId && currentContent) {
+              syncNodeWithServer(
+                artifactId,
+                currentContent,
+                typeToUse as CodeArtifactType,
+                canvasReadOnly,
+              );
+            }
+          } else if (data.status === 'generating' && currentTab !== 'code') {
+            setCurrentTab('code');
+            metadataUpdates.activeTab = 'code';
+          }
+
+          // Update type if provided and different
+          if (data.type && data.type !== currentType) {
+            try {
+              const detectedType = detectTypeFromContent(data.type);
+              setCurrentType(detectedType as CodeArtifactType);
+              metadataUpdates.type = detectedType;
+            } catch (e) {
+              console.error('Error updating type from status update:', e);
+            }
+          }
+
+          // Apply all metadata updates at once while preserving content
+          updateNodeMetadata(node.id, {
+            ...node.data?.metadata,
+            ...metadataUpdates,
+          });
+
+          // If we updated metadata and the status is finish, also update the content in the remote server
+          if (data.status === 'finish' && artifactId && !canvasReadOnly) {
+            // Ensure we have the latest content
+            const currentContent = content || prevContentRef.current;
+            if (currentContent) {
+              // Update the remote server with the current content and metadata
+              syncNodeWithServer(
+                artifactId,
+                currentContent,
+                metadataUpdates.type || (currentType as CodeArtifactType),
+                canvasReadOnly,
+              );
+            }
+          }
         }
       }
     };
@@ -102,23 +220,97 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
       codeArtifactEmitter.off('contentUpdate', handleContentUpdate);
       codeArtifactEmitter.off('statusUpdate', handleStatusUpdate);
     };
-  }, [status, artifactId, currentTab]);
-
-  useEffect(() => {
-    if (artifactData) {
-      setContent(artifactData.content);
-    }
-  }, [artifactData]);
+  }, [
+    artifactId,
+    currentTab,
+    currentType,
+    node?.id,
+    updateNodeMetadata,
+    node.data?.metadata,
+    content,
+    canvasReadOnly,
+    status,
+    syncNodeWithServer,
+  ]);
 
   // Update node data when tab changes - use callback to prevent re-creation
-  const handleTabChange = useCallback((tab: 'code' | 'preview') => {
-    setCurrentTab(tab);
-  }, []);
+  const handleTabChange = useCallback(
+    (tab: 'code' | 'preview') => {
+      setCurrentTab(tab);
 
-  const handleTypeChange = useCallback((newType: CodeArtifactType) => {
-    // Update local state first
-    setCurrentType(newType);
-  }, []);
+      // Update the node metadata to persist tab change
+      if (node?.id) {
+        // First update local node metadata
+        updateNodeMetadata(node.id, {
+          ...node.data?.metadata,
+          activeTab: tab,
+        });
+
+        // Then sync with server to ensure it persists across page refreshes
+        if (!canvasReadOnly && artifactId) {
+          const currentContent = content || prevContentRef.current;
+          const currentNodeType = node.data?.metadata?.type || currentType;
+
+          // Use the syncNodeWithServer function to ensure changes persist
+          syncNodeWithServer(
+            artifactId,
+            currentContent,
+            currentNodeType as CodeArtifactType,
+            canvasReadOnly,
+          );
+        }
+      }
+    },
+    [
+      node?.id,
+      updateNodeMetadata,
+      node.data?.metadata,
+      canvasReadOnly,
+      artifactId,
+      content,
+      currentType,
+      syncNodeWithServer,
+    ],
+  );
+
+  // Also ensure type changes are synchronized with the server
+  const handleTypeChange = useCallback(
+    async (newType: CodeArtifactType) => {
+      try {
+        // Update local state first
+        setCurrentType(newType);
+
+        // Update node metadata to persist the type change
+        if (node?.id) {
+          updateNodeMetadata(node.id, {
+            ...node.data?.metadata,
+            type: newType,
+          });
+        }
+
+        // Save the type change to the server if we're not in readonly mode
+        if (!canvasReadOnly && status !== 'generating' && artifactId) {
+          // Always include the current content to prevent it from being cleared
+          const currentContent = content || prevContentRef.current;
+
+          // Sync the changes with the server
+          syncNodeWithServer(artifactId, currentContent, newType, canvasReadOnly);
+        }
+      } catch (error) {
+        console.error('Failed to update code artifact type:', error);
+      }
+    },
+    [
+      artifactId,
+      canvasReadOnly,
+      status,
+      content,
+      node?.id,
+      updateNodeMetadata,
+      node.data?.metadata,
+      syncNodeWithServer,
+    ],
+  );
 
   const handleRequestFix = useCallback(
     (errorMessage: string) => {
@@ -196,7 +388,7 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
     setIsShowingCodeViewer(false);
   }, []);
 
-  // Use debounced callback for updating remote artifact
+  // Use debounced callback for updating remote artifact with cleanup
   const updateRemoteArtifact = useDebouncedCallback(async (newCode: string) => {
     if (!artifactId) return;
 
@@ -212,10 +404,12 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
     }
   }, 500);
 
-  // Handle code changes with improved performance
+  // Handle code changes with improved performance - always accept user edits
   const handleCodeChange = useCallback(
     (newCode: string) => {
+      // Always update state for user edits
       setContent(newCode);
+      prevContentRef.current = newCode;
 
       if (status !== 'generating' && !canvasReadOnly) {
         updateRemoteArtifact(newCode);
@@ -258,6 +452,13 @@ const CodeArtifactNodePreviewComponent = ({ node, artifactId }: CodeArtifactNode
       currentType,
     ],
   );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      updateRemoteArtifact.cancel();
+    };
+  }, [updateRemoteArtifact]);
 
   if (!artifactId) {
     return (

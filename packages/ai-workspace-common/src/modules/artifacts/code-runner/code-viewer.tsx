@@ -1,5 +1,5 @@
 import { FiRefreshCw, FiDownload, FiCopy, FiCode, FiEye, FiShare2 } from 'react-icons/fi';
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import React from 'react';
 import { Button, Tooltip, Divider, message, Select } from 'antd';
 import Renderer from './render';
@@ -16,7 +16,6 @@ const typeMapping: Record<string, { mime: CodeArtifactType; display: string }> =
   svg: { mime: 'image/svg+xml', display: 'SVG' },
   mermaid: { mime: 'application/refly.artifacts.mermaid', display: 'Mermaid' },
   markdown: { mime: 'text/markdown', display: 'Markdown' },
-  md: { mime: 'text/markdown', display: 'Markdown' },
   code: { mime: 'application/refly.artifacts.code', display: 'Code' },
   html: { mime: 'text/html', display: 'HTML' },
 };
@@ -44,9 +43,12 @@ export const getSimpleTypeDescription = (type: CodeArtifactType): string => {
 
 // Function to get all available artifact types with labels
 const getArtifactTypeOptions = () => {
-  return Object.values(typeMapping).map(({ mime, display }) => ({
+  // Use entries to get a unique array of options
+  return Object.entries(typeMapping).map(([key, { mime, display }]) => ({
     value: mime,
     label: display,
+    // Add a unique key to prevent React warnings about duplicate keys
+    key: key,
   }));
 };
 
@@ -60,6 +62,11 @@ const getFileExtensionFromType = (type: CodeArtifactType): string => {
     md: 'md',
     code: '', // Will be determined by language
     html: 'html',
+    javascript: 'js',
+    typescript: 'ts',
+    python: 'py',
+    css: 'css',
+    java: 'java',
   };
 
   // Try exact match first
@@ -85,14 +92,11 @@ const getFileExtensionFromType = (type: CodeArtifactType): string => {
 export const detectTypeFromContent = (content: string): CodeArtifactType => {
   const lowerContent = content.toLowerCase();
 
-  if (
-    lowerContent.includes('react') &&
-    (lowerContent.includes('jsx') || lowerContent.includes('tsx'))
-  ) {
+  if (lowerContent.includes('react')) {
     return typeMapping.react.mime;
   }
 
-  if (lowerContent.includes('<svg') && lowerContent.includes('</svg>')) {
+  if (lowerContent.includes('svg')) {
     return typeMapping.svg.mime;
   }
 
@@ -104,11 +108,11 @@ export const detectTypeFromContent = (content: string): CodeArtifactType => {
     return typeMapping.mermaid.mime;
   }
 
-  if (lowerContent.includes('# ') || lowerContent.includes('## ')) {
+  if (lowerContent.includes('markdown')) {
     return typeMapping.markdown.mime;
   }
 
-  if (lowerContent.includes('<html') || lowerContent.includes('<!doctype html')) {
+  if (lowerContent.includes('html')) {
     return typeMapping.html.mime;
   }
 
@@ -152,10 +156,23 @@ export default memo(
     const [refresh, setRefresh] = useState(0);
     // Track editor content for controlled updates
     const [editorContent, setEditorContent] = useState(code);
+    const prevEditorContentRef = useRef(code);
+    // Track the current type locally
+    const [currentType, setCurrentType] = useState<CodeArtifactType>(type);
 
-    // Update editor content when code prop changes
+    // Update current type when prop changes
     useEffect(() => {
-      setEditorContent(code);
+      if (type !== currentType) {
+        setCurrentType(type);
+      }
+    }, [type]);
+
+    // Update editor content when code prop changes - only when actually different
+    useEffect(() => {
+      if (code !== prevEditorContentRef.current) {
+        setEditorContent(code);
+        prevEditorContentRef.current = code;
+      }
     }, [code]);
 
     const handleCopyCode = useCallback(
@@ -198,11 +215,13 @@ export default memo(
       [type, editorContent, title, t],
     );
 
-    // Handle content changes from editor
+    // Handle content changes from editor with optimization to prevent unnecessary updates
     const handleEditorChange = useCallback(
       (value: string | undefined) => {
         if (value !== undefined) {
+          // Always update content for user edits
           setEditorContent(value);
+          prevEditorContentRef.current = value;
           onChange?.(value);
         }
       },
@@ -397,16 +416,31 @@ export default memo(
         <div className="flex justify-between items-center py-2 border-b border-gray-200 bg-white">
           <div className="flex items-center space-x-2">
             {onTypeChange ? (
-              <Select
-                value={type}
-                onChange={onTypeChange}
-                options={getArtifactTypeOptions()}
-                size="small"
-                className="w-32"
-                dropdownMatchSelectWidth={false}
-              />
+              <div>
+                <Select
+                  value={currentType}
+                  onChange={(newType) => {
+                    try {
+                      // Update local state first for immediate feedback
+                      setCurrentType(newType as CodeArtifactType);
+                      // Call the onTypeChange handler with the current content
+                      onTypeChange(newType as CodeArtifactType);
+                    } catch (error) {
+                      console.error('Error changing type:', error);
+                      // Revert to previous type if there was an error
+                      setCurrentType(type);
+                    }
+                  }}
+                  options={getArtifactTypeOptions()}
+                  size="small"
+                  className="w-40"
+                  dropdownMatchSelectWidth={false}
+                  disabled={readOnly || isGenerating || canvasReadOnly}
+                  placeholder={t('codeArtifact.selectType', 'Select type')}
+                />
+              </div>
             ) : (
-              <span className="text-sm text-gray-500">{getSimpleTypeDescription(type)}</span>
+              <span className="text-sm text-gray-500">{getSimpleTypeDescription(currentType)}</span>
             )}
           </div>
 
@@ -421,7 +455,7 @@ export default memo(
                 <MonacoEditor
                   content={editorContent}
                   language={language}
-                  type={type}
+                  type={currentType}
                   readOnly={readOnly || isGenerating || canvasReadOnly}
                   isGenerating={isGenerating}
                   canvasReadOnly={canvasReadOnly}
@@ -436,7 +470,7 @@ export default memo(
                   <div className="w-full h-full">
                     <Renderer
                       content={editorContent}
-                      type={type}
+                      type={currentType}
                       key={refresh}
                       title={title}
                       language={language}
@@ -450,7 +484,7 @@ export default memo(
             activeTab,
             editorContent,
             language,
-            type,
+            currentType,
             readOnly,
             isGenerating,
             canvasReadOnly,

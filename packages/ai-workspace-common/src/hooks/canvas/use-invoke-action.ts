@@ -3,6 +3,7 @@ import {
   ActionStep,
   ActionStepMeta,
   Artifact,
+  CodeArtifactType,
   Entity,
   InvokeSkillRequest,
   SkillEvent,
@@ -32,6 +33,7 @@ import { useFindImages } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@refly/utils/artifact';
 import { useFindWebsite } from './use-find-website';
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 export const useInvokeAction = () => {
   const { addNode } = useAddNode();
@@ -135,6 +137,9 @@ export const useInvokeAction = () => {
       // Check if artifact is closed using the ARTIFACT_TAG_CLOSED_REGEX
       const isArtifactClosed = ARTIFACT_TAG_CLOSED_REGEX.test(content);
 
+      // Force status to 'finish' if artifact is closed
+      const artifactStatus = isArtifactClosed ? 'finish' : 'generating';
+
       // If node doesn't exist, create it
       if (!existingNode) {
         addNode(
@@ -144,12 +149,13 @@ export const useInvokeAction = () => {
               // Use extracted title if available, fallback to artifact.title
               title: title || artifact.title,
               entityId: artifact.entityId,
-              // contentPreview: codeContent, // Set content preview for code artifact
+              contentPreview: codeContent, // Set content preview for code artifact
               metadata: {
-                status: 'generating',
+                status: artifactStatus,
                 language: language || 'typescript', // Use extracted language or default
                 type: type || '', // Use extracted type if available
                 title: title || artifact?.title || '',
+                activeTab: isArtifactClosed ? 'preview' : 'code',
               },
             },
           },
@@ -161,6 +167,18 @@ export const useInvokeAction = () => {
           ],
         );
       } else {
+        // Get existing node metadata to check current status
+        const currentStatus = existingNode.data?.metadata?.status;
+
+        // Only update if:
+        // 1. We're moving from generating -> finish (when artifact is closed)
+        // 2. Status is currently undefined
+        // 3. We're still in generating state (don't revert from finish to generating)
+        const shouldUpdateStatus =
+          (isArtifactClosed && currentStatus !== 'finish') ||
+          !currentStatus ||
+          (currentStatus === 'generating' && artifactStatus === 'finish');
+
         // Update existing node with new content and attributes
         setNodeDataByEntity(
           {
@@ -170,25 +188,32 @@ export const useInvokeAction = () => {
           {
             // Update title if available from extracted attributes
             ...(title && { title }),
-            // contentPreview: codeContent, // Update content preview
+            contentPreview: codeContent, // Always update content preview to keep in sync
             metadata: {
-              status: 'generating',
+              // Only update status if appropriate based on our logic above
+              ...(shouldUpdateStatus && { status: artifactStatus }),
               // Update language and type if available from extracted attributes
               ...(language && { language }),
               ...(type && { type }),
               title: title || artifact?.title || '',
+              // Set activeTab to preview if artifact is closed
+              ...(isArtifactClosed && { activeTab: 'preview' }),
             },
           },
         );
       }
 
-      if (isArtifactClosed) {
+      // Emit status update event for subscribers (like the CodeArtifactNodePreview component)
+      // Only emit if artifact is closed or if it's a new node
+      if (isArtifactClosed || !existingNode) {
         codeArtifactEmitter.emit('statusUpdate', {
           artifactId: artifact.entityId,
-          status: 'finish',
+          status: artifactStatus,
+          type: type as CodeArtifactType,
         });
       }
 
+      // Always emit content update
       codeArtifactEmitter.emit('contentUpdate', {
         artifactId: artifact.entityId,
         content: codeContent,
@@ -344,36 +369,74 @@ export const useInvokeAction = () => {
     };
     onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
 
-    const artifacts = result.steps?.flatMap((s) => s.artifacts);
-    if (artifacts?.length) {
-      for (const artifact of artifacts) {
-        // Special handling for code artifacts - set activeTab to preview
-        if (artifact.type === 'codeArtifact') {
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
-                activeTab: 'preview', // Set to preview when skill finishes
-              },
-            },
+    // Get all artifacts from all steps
+    const artifacts = result.steps?.flatMap((s) => s.artifacts) || [];
+
+    // Force all code artifacts to finish state
+    // This is crucial to ensure artifacts don't get stuck in 'generating' state
+    for (const artifact of artifacts) {
+      if (artifact?.type === 'codeArtifact' && artifact.entityId) {
+        // Get canvas state
+        const canvasState = useCanvasStore.getState();
+        const currentCanvasId = canvasState.currentCanvasId;
+
+        if (currentCanvasId) {
+          // Find the node in canvas
+          const canvasData = canvasState.data[currentCanvasId];
+          const node = canvasData?.nodes?.find(
+            (n) => n.data?.entityId === artifact.entityId && n.type === 'codeArtifact',
           );
-        } else {
-          // For other artifact types, just update status
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
+
+          // Update node metadata if found
+          if (node) {
+            // Current node metadata
+            const metadata = node.data?.metadata || {};
+            const contentPreview = node.data?.contentPreview;
+            const currentType = metadata.type || 'application/refly.artifacts.code';
+
+            // Always update to finished status
+            setNodeDataByEntity(
+              { type: artifact.type, entityId: artifact.entityId },
+              {
+                metadata: {
+                  ...metadata,
+                  status: 'finish',
+                  activeTab: 'preview',
+                },
+                // Preserve content preview
+                ...(contentPreview && { contentPreview }),
               },
-            },
-          );
+            );
+
+            // Always emit status update
+            codeArtifactEmitter.emit('statusUpdate', {
+              artifactId: artifact.entityId,
+              status: 'finish',
+              type: currentType as CodeArtifactType,
+            });
+
+            // Update remote artifact
+            if (contentPreview) {
+              getClient()
+                .updateCodeArtifact({
+                  body: {
+                    artifactId: artifact.entityId,
+                    content: contentPreview,
+                    type: currentType as CodeArtifactType,
+                  },
+                })
+                .catch((error) => {
+                  console.error('Failed to update remote artifact:', error);
+                });
+            }
+          } else {
+            // Node not found - just emit finish status with default type
+            codeArtifactEmitter.emit('statusUpdate', {
+              artifactId: artifact.entityId,
+              status: 'finish',
+              type: 'application/refly.artifacts.code' as CodeArtifactType,
+            });
+          }
         }
       }
     }

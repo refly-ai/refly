@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import React from 'react';
 import Editor, { Monaco, loader } from '@monaco-editor/react';
 import { CodeArtifactType } from '@refly/openapi-schema';
 import debounce from 'lodash.debounce';
@@ -26,6 +27,8 @@ loader.config({
   },
 });
 
+const DEFAULT_CONTENT = '\n\n';
+
 interface MonacoEditorProps {
   content: string;
   language: string;
@@ -49,31 +52,83 @@ const MonacoEditor = ({
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const prevContentRef = useRef(content);
+  const isUserEditingRef = useRef(false);
 
-  // Debounced onChange handler to prevent too frequent updates
-  const debouncedOnChange = useCallback(
-    debounce((value: string | undefined) => {
-      if (value !== undefined) {
-        onChange?.(value);
-      }
+  // Track pending update to avoid cursor jumping
+  const pendingUpdateRef = useRef(false);
+  const selectionRef = useRef<{ startLineNumber: number; startColumn: number } | null>(null);
+
+  // Create a more efficient debounced change handler that persists across renders
+  const debouncedOnChangeRef = useRef(
+    debounce((value: string) => {
+      onChange?.(value);
     }, 300),
-    [onChange],
   );
 
-  // Handle content changes from editor
-  const handleEditorChange = useCallback(
-    (value: string | undefined) => {
-      debouncedOnChange(value);
-    },
-    [debouncedOnChange],
-  );
+  // Handle content changes from Monaco editor
+  const handleEditorChange = useCallback((value: string | undefined) => {
+    if (value !== undefined) {
+      // Mark that the user is currently editing
+      isUserEditingRef.current = true;
+      // Update prevContentRef to prevent the content change from being overridden
+      prevContentRef.current = value;
+      // Send the change to parent component
+      debouncedOnChangeRef.current(value);
+
+      // Clear user editing flag after a short delay
+      setTimeout(() => {
+        isUserEditingRef.current = false;
+      }, 100);
+    }
+  }, []);
+
+  // Update editor content when external content changes
+  useEffect(() => {
+    // Only update if content has actually changed and isn't from local edit
+    if (content !== prevContentRef.current && editorRef.current && !isUserEditingRef.current) {
+      // Save current cursor position
+      if (editorRef.current.getSelection) {
+        selectionRef.current = editorRef.current.getSelection();
+      }
+
+      // Mark that we have a pending update
+      pendingUpdateRef.current = true;
+      prevContentRef.current = content;
+    }
+  }, [content]);
+
+  // Apply model updates in a controlled way to preserve cursor position
+  useEffect(() => {
+    if (isEditorReady && editorRef.current && pendingUpdateRef.current) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        const currentValue = model.getValue();
+        if (currentValue !== content) {
+          // Use setValueUnflushed for better performance
+          model.setValue(content);
+
+          // Restore cursor position if we have one saved
+          if (selectionRef.current && editorRef.current.setSelection) {
+            setTimeout(() => {
+              if (editorRef.current) {
+                editorRef.current.setSelection(selectionRef.current);
+                editorRef.current.revealPositionInCenter(selectionRef.current);
+              }
+            }, 0);
+          }
+        }
+      }
+      pendingUpdateRef.current = false;
+    }
+  }, [content, isEditorReady]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
-      debouncedOnChange.cancel();
+      debouncedOnChangeRef.current.cancel();
     };
-  }, [debouncedOnChange]);
+  }, []);
 
   // Configure editor when it's mounted
   const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
@@ -101,7 +156,7 @@ const MonacoEditor = ({
       });
     }
 
-    // Set editor options
+    // Set editor options with aggressive performance optimizations
     editor.updateOptions({
       tabSize: 2,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
@@ -122,8 +177,24 @@ const MonacoEditor = ({
       folding: false,
       // Enable lazy loading of content
       largeFileOptimizations: true,
-      // Reduce the max tokenization line length
+      // Reduce the max tokenization line length for large files
       maxTokenizationLineLength: 2000,
+      // Additional performance optimizations for large files
+      lineNumbersMinChars: 3,
+      scrollBeyondLastColumn: 0,
+      contextmenu: false,
+      cursorBlinking: 'blink',
+      cursorSmoothCaretAnimation: 'off',
+      // Disable widgets to improve performance
+      lightbulb: { enabled: false },
+      // Improve editing performance
+      wordWrap: 'on',
+      wrappingStrategy: 'simple',
+      // Disable features that could slow down editing
+      snippetSuggestions: 'none',
+      hover: { enabled: false, delay: 300 },
+      // Optimize undo stack
+      autoIndent: 'brackets',
     });
 
     setIsEditorReady(true);
@@ -131,6 +202,7 @@ const MonacoEditor = ({
 
   // Configure Monaco instance before mounting
   const handleEditorWillMount = useCallback((monaco: Monaco) => {
+    // Register a custom theme with minimal styling
     monaco.editor.defineTheme('github-custom', {
       base: 'vs',
       inherit: true,
@@ -150,25 +222,22 @@ const MonacoEditor = ({
         'editorWhitespace.foreground': '#d3d3d3',
       },
     });
+
+    // Configure editor to handle large files better
+    monaco.editor.setTheme('github-custom');
   }, []);
 
-  // Update editor content when prop changes
-  useEffect(() => {
-    if (isEditorReady && editorRef.current) {
-      const model = editorRef.current.getModel();
-      if (model && model.getValue() !== content) {
-        // Use setValueUnflushed for better performance when setting content
-        console.log('model', model);
-        model.setValueUnflushed?.(content);
-      }
-    }
-  }, [content, isEditorReady]);
+  // Memoize the readonly state to prevent unnecessary renders
+  const isReadOnly = useMemo(
+    () => readOnly || isGenerating || canvasReadOnly,
+    [readOnly, isGenerating, canvasReadOnly],
+  );
 
   return (
     <div className="h-full" style={{ minHeight: '500px' }}>
       <Editor
         height="100%"
-        value={content}
+        value={content || DEFAULT_CONTENT}
         className="refly-code-editor"
         onChange={handleEditorChange}
         language={getLanguageFromType(type, language)}
@@ -187,7 +256,7 @@ const MonacoEditor = ({
           fontLigatures: true,
           lineNumbers: 'on',
           renderLineHighlight: 'none',
-          readOnly: readOnly || isGenerating || canvasReadOnly,
+          readOnly: isReadOnly,
           scrollbar: {
             vertical: 'visible',
             horizontal: 'visible',
@@ -198,7 +267,7 @@ const MonacoEditor = ({
           // Performance optimizations
           formatOnPaste: false,
           formatOnType: false,
-          autoIndent: 'none',
+          autoIndent: 'brackets',
           colorDecorators: false,
           // Reduce editor features for better performance
           occurrencesHighlight: 'off',
@@ -214,6 +283,8 @@ const MonacoEditor = ({
           smoothScrolling: false,
           mouseWheelScrollSensitivity: 1.5,
           fastScrollSensitivity: 7,
+          wordWrap: 'on',
+          wrappingStrategy: 'simple',
         }}
         theme="github-custom"
       />
@@ -221,4 +292,14 @@ const MonacoEditor = ({
   );
 };
 
-export default MonacoEditor;
+export default React.memo(MonacoEditor, (prevProps, nextProps) => {
+  // Optimize re-renders by comparing only necessary props
+  return (
+    prevProps.content === nextProps.content &&
+    prevProps.language === nextProps.language &&
+    prevProps.type === nextProps.type &&
+    prevProps.readOnly === nextProps.readOnly &&
+    prevProps.isGenerating === nextProps.isGenerating &&
+    prevProps.canvasReadOnly === nextProps.canvasReadOnly
+  );
+});
