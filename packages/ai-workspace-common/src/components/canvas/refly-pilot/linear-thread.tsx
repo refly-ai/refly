@@ -79,7 +79,7 @@ export const LinearThreadContent = memo(
         style={{ height: contentHeight, width: '100%' }}
       >
         {messages.length === 0 ? (
-          <EmptyThreadWelcome />
+          <EmptyThreadWelcome key={'empty-thread-welcome'} />
         ) : (
           <div className="flex flex-col divide-y max-w-[1024px] mx-auto">
             {messages.map((message, index) => (
