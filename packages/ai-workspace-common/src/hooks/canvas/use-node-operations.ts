@@ -9,6 +9,7 @@ import { truncateContent, MAX_CONTENT_PREVIEW_LENGTH } from '../../utils/content
 import { getHelperLines } from '../../components/canvas/common/helper-line/util';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { adoptUserNodes } from '@xyflow/system';
+import { useHelperLineStoreShallow } from '../../stores/helper-line';
 
 // Add snap threshold constant
 const SNAP_THRESHOLD = 10;
@@ -26,8 +27,11 @@ export const useNodeOperations = () => {
   const { throttledSyncNodesToYDoc } = useCanvasSync();
 
   // Add helper line states
-  const [helperLineHorizontal, setHelperLineHorizontal] = useState<number | undefined>(undefined);
-  const [helperLineVertical, setHelperLineVertical] = useState<number | undefined>(undefined);
+  const { setHelperLineHorizontal, setHelperLineVertical } = useHelperLineStoreShallow((state) => ({
+    setHelperLineHorizontal: state.setHelperLineHorizontal,
+    setHelperLineVertical: state.setHelperLineVertical,
+  }));
+
   const [lastSnapPosition, setLastSnapPosition] = useState<
     Record<string, { x: number; y: number }>
   >({});
@@ -38,6 +42,7 @@ export const useNodeOperations = () => {
       // Reset helper lines
       setHelperLineHorizontal(undefined);
       setHelperLineVertical(undefined);
+      console.log(changes);
 
       // Check if it's a single node being dragged
       if (
@@ -311,9 +316,6 @@ export const useNodeOperations = () => {
     updateAllNodesSizeMode,
     truncateAllNodesContent,
     onNodeDragStop,
-    // Export helper line states for use in components
-    helperLineHorizontal,
-    helperLineVertical,
     // Reset helper lines method
     resetHelperLines: () => {
       setHelperLineHorizontal(undefined);

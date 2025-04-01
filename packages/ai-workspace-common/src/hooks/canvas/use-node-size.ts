@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Node } from '@xyflow/react';
+import { Node, useReactFlow } from '@xyflow/react';
 import { useNodeData } from './use-node-data';
+import { useHelperLineStoreShallow } from '@refly-packages/ai-workspace-common/stores/helper-line';
+import { getHelperLines } from '../../components/canvas/common/helper-line/util';
 
 export const MAX_HEIGHT = 1200;
 export const MAX_HEIGHT_CLASS = 'max-h-[1200px]';
@@ -42,6 +44,11 @@ export const useNodeSize = ({
   defaultHeight = 384,
 }: UseNodeSizeProps) => {
   const { setNodeStyle } = useNodeData();
+  const { getNodes } = useReactFlow();
+  const { setHelperLineHorizontal, setHelperLineVertical } = useHelperLineStoreShallow((state) => ({
+    setHelperLineHorizontal: state.setHelperLineHorizontal,
+    setHelperLineVertical: state.setHelperLineVertical,
+  }));
 
   const containerMaxHeight = useMemo(() => {
     return sizeMode === 'compact' ? COMPACT_MAX_HEIGHT : MAX_HEIGHT;
@@ -110,6 +117,15 @@ export const useNodeSize = ({
     }
   }, [sizeMode, updateSize]);
 
+  const handleGetHelperLine = () => {
+    const nodes = getNodes();
+    const currentNode = nodes.find((n) => n.id === node.id);
+    if (!currentNode) return;
+    const helperLines = getHelperLines(currentNode, nodes, 5);
+    setHelperLineHorizontal(helperLines.horizontal);
+    setHelperLineVertical(helperLines.vertical);
+  };
+
   // Handle resize event
   const handleResize = useCallback(
     ({ target, width, height, direction }) => {
@@ -139,6 +155,8 @@ export const useNodeSize = ({
         height: `${newHeight}px`,
         maxHeight: MAX_HEIGHT,
       });
+
+      handleGetHelperLine();
     },
     [id, minWidth, maxWidth, minHeight, setNodeStyle, updateSize],
   );

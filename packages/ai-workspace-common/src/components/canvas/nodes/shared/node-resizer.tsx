@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import Moveable from 'react-moveable';
+import { useHelperLineStoreShallow } from '@refly-packages/ai-workspace-common/stores/helper-line';
 
 interface NodeResizerProps {
   moveableRef?: React.RefObject<Moveable>;
@@ -23,6 +24,10 @@ export const NodeResizer: React.FC<NodeResizerProps> = ({
   onResizeEnd,
 }) => {
   const [isResizing, setIsResizing] = React.useState(false);
+  const { setHelperLineHorizontal, setHelperLineVertical } = useHelperLineStoreShallow((state) => ({
+    setHelperLineHorizontal: state.setHelperLineHorizontal,
+    setHelperLineVertical: state.setHelperLineVertical,
+  }));
 
   // Handle global mouse events
   const handleGlobalMouseUp = useCallback(() => {
@@ -81,6 +86,8 @@ export const NodeResizer: React.FC<NodeResizerProps> = ({
         for (const iframe of iframes) {
           iframe.style.pointerEvents = '';
         }
+        setHelperLineHorizontal(undefined);
+        setHelperLineVertical(undefined);
         onResizeEnd?.();
       }}
       hideDefaultLines={true}

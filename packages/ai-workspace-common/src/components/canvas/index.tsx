@@ -64,6 +64,7 @@ import { EmptyGuide } from './empty-guide';
 import { useReflyPilotReset } from '@refly-packages/ai-workspace-common/hooks/canvas/use-refly-pilot-reset';
 import HelperLines from './common/helper-line/index';
 import { useListenNodeOperationEvents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-listen-node-events';
+import { useHelperLineStoreShallow } from '@refly-packages/ai-workspace-common/stores/helper-line';
 
 const GRID_SIZE = 10;
 
@@ -162,13 +163,11 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   );
   const selectedNodes = nodes.filter((node) => node.selected) || [];
 
-  const {
-    onNodesChange,
-    truncateAllNodesContent,
-    onNodeDragStop,
-    helperLineHorizontal,
-    helperLineVertical,
-  } = useNodeOperations();
+  const { onNodesChange, truncateAllNodesContent, onNodeDragStop } = useNodeOperations();
+  const { helperLineHorizontal, helperLineVertical } = useHelperLineStoreShallow((state) => ({
+    helperLineHorizontal: state.helperLineHorizontal,
+    helperLineVertical: state.helperLineVertical,
+  }));
   const { setSelectedNode } = useNodeSelection();
 
   const { onEdgesChange, onConnect } = useEdgeOperations();
