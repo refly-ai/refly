@@ -7,11 +7,7 @@ import {
   useSearchParams,
 } from '@refly-packages/ai-workspace-common/utils/router';
 
-import {
-  IconCanvas,
-  IconPlus,
-  IconTemplate,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconCanvas, IconPlus } from '@refly-packages/ai-workspace-common/components/common/icon';
 import cn from 'classnames';
 
 import Logo from '@/assets/logo.svg';
@@ -46,6 +42,7 @@ import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/e
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
 import './layout.scss';
+import { IconApps } from '@arco-design/web-react/icon';
 
 const Sider = Layout.Sider;
 const MenuItem = Menu.Item;
@@ -341,7 +338,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     {
       key: 'Template',
       name: 'template',
-      icon: <IconTemplate key="template" className="arco-icon" style={{ fontSize: 20 }} />,
+      icon: <IconApps key="template" className="arco-icon" style={{ fontSize: 20 }} />,
     },
     {
       key: 'Canvas',
