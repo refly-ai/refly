@@ -232,244 +232,318 @@ interface ConfigManagerProps {
   onExpandChange?: (expanded: boolean) => void;
 }
 
-export const ConfigManager = (props: ConfigManagerProps) => {
-  const { i18n, t } = useTranslation();
-  const locale = i18n.languages?.[0] || 'en';
+// Add a utility function for safe form updates outside of React's render cycle
+const safeFormUpdate = (form: FormInstance, updates: Record<string, any>) => {
+  // Create a queue of updates to process outside of React's render cycle
+  const queuedUpdates = Object.entries(updates);
 
-  const {
-    schema,
-    fieldPrefix,
-    form,
-    tplConfig,
-    configScope,
-    formErrors,
-    setFormErrors,
-    onFormValuesChange,
-    onExpandChange,
-  } = props;
-  const [resetCounter, setResetCounter] = useState<number>(0);
-  const [formValues, setFormValues] = useState<Record<string, DynamicConfigValue>>({});
-  const [isExpanded, setIsExpanded] = useState<boolean>(true);
-  const { readonly } = useCanvasContext();
+  if (queuedUpdates.length === 0) return;
 
-  const isConfigItemRequired = useCallback(
-    (schemaItem: DynamicConfigItem) => {
-      return schemaItem?.required?.value && schemaItem?.required?.configScope.includes(configScope);
-    },
-    [configScope],
-  );
-
-  const validateField = (field: string, value: any) => {
-    const { formErrors: prevFormErrors } = useContextPanelStore.getState();
-    const schemaItem = schema.items?.find((item) => getFormField(fieldPrefix, item.key) === field);
-    if (isConfigItemRequired(schemaItem)) {
-      const value_ = value?.value;
-      if ((!value_ && value_ !== 0) || (Array.isArray(value_) && !value_.length)) {
-        setFormErrors({ ...prevFormErrors, [field]: t('common.emptyInput') });
-      } else {
-        const newErrors = { ...prevFormErrors };
-        delete newErrors[field];
-        setFormErrors(newErrors);
-      }
+  // Process queue outside of React's render cycle
+  setTimeout(() => {
+    for (const [field, value] of queuedUpdates) {
+      form.setFieldValue(field, value);
     }
-  };
-
-  const validateTplConfig = useCallback(
-    (tplConfig: SkillTemplateConfig) => {
-      const errors = {};
-      for (const key of Object.keys(tplConfig)) {
-        const schemaItem = (schema.items || []).find((item) => item.key === key);
-        if (isConfigItemRequired(schemaItem)) {
-          const value_ = tplConfig[key].value;
-          if ((!value_ && value_ !== 0) || (Array.isArray(value_) && !value_.length)) {
-            errors[getFormField(fieldPrefix, key)] = t('common.emptyInput');
-          }
-        }
-      }
-      return errors;
-    },
-    [fieldPrefix, t, schema.items, isConfigItemRequired],
-  );
-
-  const getItemError = (key: string) => {
-    const field = getFormField(fieldPrefix, key);
-    return formErrors?.[field];
-  };
-
-  useEffect(() => {
-    // Initialize form with default values if no config exists
-    if (!tplConfig || Object.keys(tplConfig).length === 0) {
-      const defaultConfig = {};
-
-      // Create default values for all items in the schema
-      for (const item of schema.items || []) {
-        if (item.defaultValue !== undefined) {
-          defaultConfig[getFormField(fieldPrefix, item.key)] = {
-            value: item.defaultValue,
-            label: getDictValue(item.labelDict, locale),
-            displayValue: String(item.defaultValue),
-          };
-        }
-      }
-
-      if (Object.keys(defaultConfig).length > 0) {
-        // Set each field individually to ensure proper form initialization
-        for (const [field, value] of Object.entries(defaultConfig)) {
-          form.setFieldValue(field, value);
-        }
-        setFormValues(defaultConfig);
-      }
-    } else {
-      // Use the provided tplConfig
-      const formattedConfig = {};
-      for (const [key, value] of Object.entries(tplConfig)) {
-        formattedConfig[getFormField(fieldPrefix, key)] = value;
-      }
-
-      // Set each field individually
-      for (const [field, value] of Object.entries(formattedConfig)) {
-        form.setFieldValue(field, value);
-      }
-      setFormValues(formattedConfig);
-    }
-
-    if (tplConfig && Object.keys(tplConfig).length > 0) {
-      const errors = validateTplConfig(tplConfig);
-      setFormErrors(errors);
-    }
-  }, [tplConfig, fieldPrefix, form, setFormErrors, validateTplConfig, schema.items, locale]);
-
-  const handleReset = (key: string) => {
-    const schemaItem = schema.items?.find((item) => item.key === key);
-    const defaultValue = schemaItem?.defaultValue;
-
-    const resetValue =
-      defaultValue !== undefined
-        ? {
-            value: defaultValue,
-            label: getDictValue(schemaItem.labelDict, locale),
-            displayValue: String(defaultValue),
-          }
-        : undefined;
-
-    form.setFieldValue(getFormField(fieldPrefix, key), resetValue);
-
-    // 更新本地状态
-    setFormValues((prev) => ({
-      ...prev,
-      [key]: resetValue,
-    }));
-
-    // Only update reset counter when explicitly resetting to avoid unnecessary re-renders
-    setResetCounter((prev) => prev + 1);
-  };
-
-  // Optimize value change to prevent losing focus
-  const handleValueChange = useCallback(
-    (field?: string) => {
-      // 当值变化时，更新本地状态
-      if (field) {
-        const key = field.split('.').pop();
-        if (key) {
-          setFormValues((prev) => ({
-            ...prev,
-            [key]: form.getFieldValue(field),
-          }));
-        }
-      }
-    },
-    [form],
-  );
-
-  return (
-    <div className="config-manager">
-      <div className="config-manager__header">
-        <div className="config-manager__header-left">
-          <GrDocumentConfig className="config-manager__header-icon" />
-          <span className="config-manager__header-title">{t('copilot.configManager.title')}</span>
-        </div>
-        <Button
-          type="text"
-          size="mini"
-          className="config-manager__toggle-button"
-          icon={isExpanded ? <IconUp /> : <IconDown />}
-          onClick={() => {
-            if (!readonly) {
-              setIsExpanded(!isExpanded);
-              onExpandChange?.(!isExpanded);
-            }
-          }}
-          disabled={readonly}
-          aria-label={isExpanded ? t('common.collapse') : t('common.expand')}
-        />
-      </div>
-
-      {isExpanded && (
-        <Form
-          form={form}
-          className="config-manager__form"
-          onValuesChange={(changedValues, _allValues) => {
-            for (const field of Object.keys(changedValues)) {
-              validateField(field, changedValues[field]);
-            }
-            onFormValuesChange?.(changedValues, _allValues);
-          }}
-        >
-          <Space direction="vertical" style={{ width: '100%' }}>
-            {(schema.items || []).map((item) => {
-              const field = getFormField(fieldPrefix, item.key);
-              const configValue = formValues[item.key] || form.getFieldValue(field);
-
-              return (
-                <div
-                  key={item.key}
-                  className={`config-manager__item-row ${getItemError(item.key) ? 'error' : ''}`}
-                >
-                  <Form.Item
-                    layout="vertical"
-                    field={field}
-                    label={
-                      <div className="config-manager__item-label">
-                        {item.required?.value &&
-                          item.required?.configScope.includes(configScope) && (
-                            <span style={{ color: 'red' }}>* </span>
-                          )}
-                        {getDictValue(item.labelDict, locale)}
-                        <Button
-                          type="text"
-                          size="mini"
-                          className="config-manager__reset-button"
-                          icon={<IconRefresh />}
-                          onClick={() => !readonly && handleReset(item.key)}
-                          disabled={readonly}
-                        >
-                          {t('common.reset')}
-                        </Button>
-                      </div>
-                    }
-                    required={
-                      item.required?.value && item.required?.configScope.includes(configScope)
-                    }
-                    validateStatus={formErrors[field] ? 'error' : undefined}
-                    help={formErrors[field]}
-                  >
-                    <ConfigItem
-                      key={`${item.key}-${resetCounter}`}
-                      item={item}
-                      form={form}
-                      field={field}
-                      locale={locale}
-                      configValue={configValue}
-                      onValueChange={handleValueChange}
-                      readonly={readonly}
-                    />
-                  </Form.Item>
-                </div>
-              );
-            })}
-          </Space>
-        </Form>
-      )}
-    </div>
-  );
+  }, 0);
 };
+
+export const ConfigManager = React.memo(
+  (props: ConfigManagerProps) => {
+    const { i18n, t } = useTranslation();
+    const locale = i18n.languages?.[0] || 'en';
+
+    const {
+      schema,
+      fieldPrefix,
+      form,
+      tplConfig,
+      configScope,
+      formErrors,
+      setFormErrors,
+      onFormValuesChange,
+      onExpandChange,
+    } = props;
+    const [resetCounter, setResetCounter] = useState<number>(0);
+    const [formValues, setFormValues] = useState<Record<string, DynamicConfigValue>>({});
+    const [isExpanded, setIsExpanded] = useState<boolean>(true);
+    const { readonly } = useCanvasContext();
+
+    // Use refs to track initialization state
+    const initializedRef = useRef(false);
+    const prevTplConfigRef = useRef<SkillTemplateConfig | undefined>();
+
+    const isConfigItemRequired = useCallback(
+      (schemaItem: DynamicConfigItem) => {
+        return (
+          schemaItem?.required?.value && schemaItem?.required?.configScope.includes(configScope)
+        );
+      },
+      [configScope],
+    );
+
+    // Memoize the validateTplConfig function to prevent recreation on each render
+    const validateTplConfig = useCallback(
+      (tplConfig: SkillTemplateConfig) => {
+        const errors = {};
+        for (const key of Object.keys(tplConfig)) {
+          const schemaItem = (schema.items || []).find((item) => item.key === key);
+          if (isConfigItemRequired(schemaItem)) {
+            const value_ = tplConfig[key].value;
+            if ((!value_ && value_ !== 0) || (Array.isArray(value_) && !value_.length)) {
+              errors[getFormField(fieldPrefix, key)] = t('common.emptyInput');
+            }
+          }
+        }
+        return errors;
+      },
+      [fieldPrefix, t, schema.items, isConfigItemRequired],
+    );
+
+    const validateField = (field: string, value: any) => {
+      const { formErrors: prevFormErrors } = useContextPanelStore.getState();
+      const schemaItem = schema.items?.find(
+        (item) => getFormField(fieldPrefix, item.key) === field,
+      );
+      if (isConfigItemRequired(schemaItem)) {
+        const value_ = value?.value;
+        if ((!value_ && value_ !== 0) || (Array.isArray(value_) && !value_.length)) {
+          setFormErrors({ ...prevFormErrors, [field]: t('common.emptyInput') });
+        } else {
+          const newErrors = { ...prevFormErrors };
+          delete newErrors[field];
+          setFormErrors(newErrors);
+        }
+      }
+    };
+
+    const getItemError = (key: string) => {
+      const field = getFormField(fieldPrefix, key);
+      return formErrors?.[field];
+    };
+
+    console.log('tplConfig', tplConfig);
+
+    // Handle initial setup - only run on mount and when tplConfig changes significantly
+    useEffect(() => {
+      // Skip if already initialized with this config
+      if (initializedRef.current) {
+        return;
+      }
+
+      console.log('Initializing ConfigManager with tplConfig:', tplConfig);
+
+      // Track this initialization
+      initializedRef.current = true;
+      prevTplConfigRef.current = tplConfig ? { ...tplConfig } : undefined;
+
+      // Create a map for form updates
+      const formUpdates = {};
+
+      // Create new form values to update state
+      const newFormValues: Record<string, DynamicConfigValue> = {};
+
+      if (!tplConfig || Object.keys(tplConfig).length === 0) {
+        // Setup default values from schema
+        for (const item of schema.items || []) {
+          if (item.defaultValue !== undefined && item.key) {
+            const field = getFormField(fieldPrefix, item.key);
+            const value = {
+              value: item.defaultValue,
+              label: getDictValue(item.labelDict, locale),
+              displayValue: String(item.defaultValue),
+            };
+
+            formUpdates[field] = value;
+            newFormValues[item.key] = value;
+          }
+        }
+      } else {
+        // Use provided tplConfig
+        for (const [key, value] of Object.entries(tplConfig)) {
+          if (value !== undefined) {
+            const field = getFormField(fieldPrefix, key);
+            formUpdates[field] = value;
+            newFormValues[key] = value as DynamicConfigValue;
+          }
+        }
+      }
+
+      // Only update if we have changes to make
+      if (Object.keys(formUpdates).length > 0) {
+        // Update form state outside of React's rendering cycle
+        safeFormUpdate(form, formUpdates);
+
+        // Update component state
+        setFormValues(newFormValues);
+      }
+
+      // Validate if needed
+      if (tplConfig && Object.keys(tplConfig).length > 0) {
+        const errors = validateTplConfig(tplConfig);
+        if (Object.keys(errors).length > 0) {
+          setFormErrors(errors);
+        }
+      }
+    }, [tplConfig, schema.items, fieldPrefix, locale, form, validateTplConfig, setFormErrors]);
+
+    const handleReset = (key: string) => {
+      const schemaItem = schema.items?.find((item) => item.key === key);
+      const defaultValue = schemaItem?.defaultValue;
+
+      const resetValue =
+        defaultValue !== undefined
+          ? {
+              value: defaultValue,
+              label: getDictValue(schemaItem.labelDict, locale),
+              displayValue: String(defaultValue),
+            }
+          : undefined;
+
+      // Use safe form update to avoid render cycles
+      safeFormUpdate(form, { [getFormField(fieldPrefix, key)]: resetValue });
+
+      // Update local state
+      setFormValues((prev) => ({
+        ...prev,
+        [key]: resetValue,
+      }));
+
+      // Only update reset counter when explicitly resetting to avoid unnecessary re-renders
+      setResetCounter((prev) => prev + 1);
+    };
+
+    // Optimize value change to prevent losing focus
+    const handleValueChange = useCallback(
+      (field?: string) => {
+        // When value changes, update local state
+        if (field) {
+          const key = field.split('.').pop();
+          if (key) {
+            const value = form.getFieldValue(field);
+            setFormValues((prev) => ({
+              ...prev,
+              [key]: value,
+            }));
+          }
+        }
+      },
+      [form],
+    );
+
+    return (
+      <div className="config-manager">
+        <div className="config-manager__header">
+          <div className="config-manager__header-left">
+            <GrDocumentConfig className="config-manager__header-icon" />
+            <span className="config-manager__header-title">{t('copilot.configManager.title')}</span>
+          </div>
+          <Button
+            type="text"
+            size="mini"
+            className="config-manager__toggle-button"
+            icon={isExpanded ? <IconUp /> : <IconDown />}
+            onClick={() => {
+              if (!readonly) {
+                setIsExpanded(!isExpanded);
+                onExpandChange?.(!isExpanded);
+              }
+            }}
+            disabled={readonly}
+            aria-label={isExpanded ? t('common.collapse') : t('common.expand')}
+          />
+        </div>
+
+        {isExpanded && (
+          <Form
+            form={form}
+            className="config-manager__form"
+            onValuesChange={(changedValues, allValues) => {
+              // Validate any changed fields
+              for (const field of Object.keys(changedValues)) {
+                validateField(field, changedValues[field]);
+              }
+
+              // Handle config updates
+              if (allValues.tplConfig && onFormValuesChange) {
+                const newConfig = allValues.tplConfig;
+
+                // Deep comparison with current tplConfig
+                const currentConfigStr = JSON.stringify(tplConfig || {});
+                const newConfigStr = JSON.stringify(newConfig);
+
+                if (currentConfigStr !== newConfigStr) {
+                  onFormValuesChange(changedValues, allValues);
+                }
+              }
+            }}
+          >
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {(schema.items || []).map((item) => {
+                const field = getFormField(fieldPrefix, item.key);
+                const configValue = formValues[item.key] || form.getFieldValue(field);
+
+                return (
+                  <div
+                    key={item.key}
+                    className={`config-manager__item-row ${getItemError(item.key) ? 'error' : ''}`}
+                  >
+                    <Form.Item
+                      layout="vertical"
+                      field={field}
+                      label={
+                        <div className="config-manager__item-label">
+                          {item.required?.value &&
+                            item.required?.configScope.includes(configScope) && (
+                              <span style={{ color: 'red' }}>* </span>
+                            )}
+                          {getDictValue(item.labelDict, locale)}
+                          <Button
+                            type="text"
+                            size="mini"
+                            className="config-manager__reset-button"
+                            icon={<IconRefresh />}
+                            onClick={() => !readonly && handleReset(item.key)}
+                            disabled={readonly}
+                          >
+                            {t('common.reset')}
+                          </Button>
+                        </div>
+                      }
+                      required={
+                        item.required?.value && item.required?.configScope.includes(configScope)
+                      }
+                      validateStatus={formErrors[field] ? 'error' : undefined}
+                      help={formErrors[field]}
+                    >
+                      <ConfigItem
+                        key={`${item.key}-${resetCounter}`}
+                        item={item}
+                        form={form}
+                        field={field}
+                        locale={locale}
+                        configValue={configValue}
+                        onValueChange={handleValueChange}
+                        readonly={readonly}
+                      />
+                    </Form.Item>
+                  </div>
+                );
+              })}
+            </Space>
+          </Form>
+        )}
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Only re-render if these props change
+    return (
+      prevProps.schema === nextProps.schema &&
+      prevProps.tplConfig === nextProps.tplConfig &&
+      prevProps.formErrors === nextProps.formErrors &&
+      prevProps.fieldPrefix === nextProps.fieldPrefix
+    );
+  },
+);
+
+ConfigManager.displayName = 'ConfigManager';

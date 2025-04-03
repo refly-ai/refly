@@ -6,34 +6,69 @@ import { lazy, Suspense } from 'react';
 // Dynamically import Moveable
 const Moveable = lazy(() => import('react-moveable'));
 
-export const ImageResizer: FC = () => {
+export const ImageResizer: FC<{
+  readOnly: boolean;
+  selectedImage: HTMLImageElement | null;
+  setSelectedImage: (image: HTMLImageElement | null) => void;
+}> = ({ readOnly, selectedImage, setSelectedImage }) => {
   const { editor } = useCurrentEditor();
 
-  if (!editor?.isActive('image')) return null;
+  const updateSelectedImage = () => {
+    const imageNode = document.querySelector(
+      '.ProseMirror-selectednode img',
+    ) as HTMLImageElement | null;
+
+    if (imageNode && imageNode.tagName === 'IMG') {
+      setSelectedImage(imageNode);
+    } else {
+      setSelectedImage(null);
+    }
+  };
+
+  if (!editor?.isActive('image') || !selectedImage) return null;
 
   const updateMediaSize = () => {
-    const imageInfo = document.querySelector('.ProseMirror-selectednode') as HTMLImageElement;
-    if (imageInfo) {
+    if (!selectedImage) return;
+
+    try {
       const selection = editor.state.selection;
+      const width = Number(selectedImage.style.width.replace('px', '')) || selectedImage.width;
+      const height = Number(selectedImage.style.height.replace('px', '')) || selectedImage.height;
+
       const setImage = editor.commands.setImage as (options: {
         src: string;
         width: number;
         height: number;
+        alt?: string;
+        title?: string;
       }) => boolean;
 
+      const imagePos = editor?.state.selection.from;
+      const imageNode = imagePos ? editor?.state.doc.nodeAt(imagePos) : null;
+      const nodeAttrs = imageNode?.attrs ?? {};
+
       setImage({
-        src: imageInfo.src,
-        width: Number(imageInfo.style.width.replace('px', '')),
-        height: Number(imageInfo.style.height.replace('px', '')),
+        ...nodeAttrs,
+        src: selectedImage.src,
+        width: width,
+        height: height,
+        alt: selectedImage.alt ?? nodeAttrs.alt ?? '',
+        title: selectedImage.title ?? nodeAttrs.title ?? '',
       });
-      editor.commands.setNodeSelection(selection.from);
+
+      editor?.commands.setNodeSelection(selection.from);
+
+      updateSelectedImage();
+    } catch (error) {
+      console.error('Error updating image size:', error);
     }
   };
 
   return (
     <Suspense fallback={<Spin />}>
       <Moveable
-        target={document.querySelector('.ProseMirror-selectednode') as HTMLDivElement}
+        key={`moveable-${selectedImage?.src}-${selectedImage?.width}-${selectedImage?.height}`}
+        target={selectedImage}
         container={null}
         origin={false}
         /* Resize event edges */
@@ -43,36 +78,26 @@ export const ImageResizer: FC = () => {
         keepRatio={true}
         /* resizable*/
         /* Only one of resizable, scalable, warpable can be used. */
-        resizable={true}
+        resizable={!readOnly}
         throttleResize={0}
-        onResize={({
-          target,
-          width,
-          height,
-          // dist,
-          delta,
-        }) => {
+        onResize={({ target, width, height, delta }) => {
           if (delta[0]) target.style.width = `${width}px`;
           if (delta[1]) target.style.height = `${height}px`;
         }}
-        // { target, isDrag, clientX, clientY }: any
         onResizeEnd={() => {
           updateMediaSize();
         }}
         /* scalable */
         /* Only one of resizable, scalable, warpable can be used. */
-        scalable={true}
+        scalable={!readOnly}
         throttleScale={0}
         /* Set the direction of resizable */
-        renderDirections={['w', 'e']}
-        onScale={({
-          target,
-          // scale,
-          // dist,
-          // delta,
-          transform,
-        }) => {
+        renderDirections={['nw', 'ne', 'se', 'sw']}
+        onScale={({ target, transform }) => {
           target.style.transform = transform;
+        }}
+        onScaleEnd={() => {
+          updateMediaSize();
         }}
       />
     </Suspense>

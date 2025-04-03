@@ -1,24 +1,24 @@
 import { useCallback } from 'react';
-import { useReactFlow, XYPosition } from '@xyflow/react';
+import { useStoreApi, XYPosition } from '@xyflow/react';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { genUniqueId } from '@refly-packages/utils/id';
-import {
-  useCanvasStore,
-  useCanvasStoreShallow,
-} from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
 import {
   CanvasNodeData,
   getNodeDefaultMetadata,
   prepareNodeData,
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { useEdgeStyles } from '../../components/canvas/constants';
-import { CanvasNodeFilter } from './use-node-selection';
+import { CanvasNodeFilter, useNodeSelection } from './use-node-selection';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { useNodePosition } from './use-node-position';
 import { purgeContextItems } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { adoptUserNodes } from '@xyflow/system';
 
 const deduplicateNodes = (nodes: any[]) => {
   const uniqueNodesMap = new Map();
@@ -36,68 +36,25 @@ const deduplicateEdges = (edges: any[]) => {
   return Array.from(uniqueEdgesMap.values());
 };
 
-const padding = 200;
-
 export const useAddNode = () => {
   const { t } = useTranslation();
   const edgeStyles = useEdgeStyles();
-  const { setCenter, getNode } = useReactFlow();
+  const { setSelectedNode } = useNodeSelection();
+  const { setNodeCenter } = useNodePosition();
+  const { getState, setState } = useStoreApi();
   const { canvasId } = useCanvasContext();
   const { calculatePosition, layoutBranchAndUpdatePositions } = useNodePosition();
-
-  const { setNodes, setEdges, addNodePreview } = useCanvasStoreShallow((state) => ({
-    setNodes: state.setNodes,
-    setEdges: state.setEdges,
-    addNodePreview: state.addNodePreview,
-  }));
-
-  const reactFlowInstance = useReactFlow();
-
-  const setNodeCenter = useCallback(
-    (nodeId: string) => {
-      // const currentZoom = reactFlowInstance.getZoom();
-      const zoomAdjustedPadding = padding;
-
-      requestAnimationFrame(() => {
-        const renderedNode = getNode(nodeId);
-        if (renderedNode) {
-          setCenter(
-            renderedNode.position.x + zoomAdjustedPadding,
-            renderedNode.position.y + zoomAdjustedPadding,
-            {
-              duration: 300,
-              zoom: 1,
-            },
-          );
-        }
-      });
-    },
-    [setCenter, reactFlowInstance],
-  );
-
-  const setSelectedNode = useCallback(
-    (node: any) => {
-      const { data } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
-      const updatedNodes = nodes.map((n) => ({
-        ...n,
-        selected: n.id === node?.id,
-      }));
-      setNodes(canvasId, updatedNodes);
-    },
-    [canvasId, setNodes],
-  );
+  const { previewNode } = useNodePreviewControl({ canvasId });
 
   const addNode = useCallback(
     (
-      node: { type: CanvasNodeType; data: CanvasNodeData<any>; position?: XYPosition },
+      node: { type: CanvasNodeType; data: CanvasNodeData<any>; position?: XYPosition; id?: string },
       connectTo?: CanvasNodeFilter[],
       shouldPreview = true,
       needSetCenter = false,
     ) => {
-      const { data, nodeSizeMode } = useCanvasStore.getState();
-      const nodes = data[canvasId]?.nodes ?? [];
-      const edges = data[canvasId]?.edges ?? [];
+      const { nodeSizeMode } = useCanvasStore.getState();
+      const { nodes, edges, nodeLookup, parentLookup } = getState();
 
       if (!node?.type || !node?.data) {
         console.warn('Invalid node data provided');
@@ -161,27 +118,9 @@ export const useAddNode = () => {
         type: node.type,
         data: enrichedData,
         position: newPosition,
-        selected: true,
+        selected: false,
+        id: node?.id,
       });
-
-      // Apply style based on nodeSizeMode
-      // if (nodeSizeMode === 'compact') {
-      //   newNode.style = {
-      //     ...newNode.style,
-      //     width: '288px',
-      //     height: 'auto',
-      //     maxHeight: '384px',
-      //   };
-      // } else if (nodeSizeMode === 'adaptive') {
-      //   // Safely access originalWidth with type checking
-      //   const width = (newNode.data.metadata as any)?.originalWidth || 288;
-      //   newNode.style = {
-      //     ...newNode.style,
-      //     width: `${width}px`,
-      //     height: 'auto',
-      //     maxHeight: undefined,
-      //   };
-      // }
 
       // Create updated nodes array with the new node
       const updatedNodes = deduplicateNodes([
@@ -213,53 +152,59 @@ export const useAddNode = () => {
         }
       }
 
-      // Update nodes and edges
-      setNodes(canvasId, updatedNodes);
-      setEdges(canvasId, updatedEdges);
+      // Update nodes to ensure they exist first
+      adoptUserNodes(updatedNodes, nodeLookup, parentLookup, {
+        elevateNodesOnSelect: false,
+      });
+      setState({ nodes: updatedNodes });
 
-      // Apply branch layout if we're connecting to existing nodes
-      if (sourceNodes?.length > 0) {
-        // Use setTimeout to ensure the new node and edges are added before layout
-        setTimeout(() => {
-          // const { autoLayout } = useCanvasStore.getState();
-          const autoLayout = false;
-          if (!autoLayout) {
-            if (needSetCenter) {
-              setNodeCenter(newNode.id);
+      // Then update edges with a slight delay to ensure nodes are registered first
+      // This helps prevent the race condition where edges are created but nodes aren't ready
+      setTimeout(() => {
+        // Update edges separately
+        setState({ edges: updatedEdges });
+
+        // Apply branch layout if we're connecting to existing nodes
+        if (sourceNodes?.length > 0) {
+          // Use setTimeout to ensure the new node and edges are added before layout
+          setTimeout(() => {
+            // const { autoLayout } = useCanvasStore.getState();
+            const autoLayout = false;
+            if (!autoLayout) {
+              if (needSetCenter) {
+                setNodeCenter(newNode.id);
+              }
+
+              return;
             }
 
-            return;
-          }
-
-          layoutBranchAndUpdatePositions(
-            sourceNodes,
-            updatedNodes,
-            updatedEdges,
-            {},
-            { needSetCenter: needSetCenter, targetNodeId: newNode.id },
-          );
-        }, 0);
-      } else if (needSetCenter) {
-        setNodeCenter(newNode.id);
-      }
+            layoutBranchAndUpdatePositions(
+              sourceNodes,
+              updatedNodes,
+              updatedEdges,
+              {},
+              { needSetCenter: needSetCenter, targetNodeId: newNode.id },
+            );
+          }, 50);
+        } else if (needSetCenter) {
+          setNodeCenter(newNode.id);
+        }
+      }, 10);
 
       if (
         newNode.type === 'document' ||
         (newNode.type === 'resource' && shouldPreview) ||
         (['skillResponse', 'codeArtifact', 'website'].includes(newNode.type) && shouldPreview)
       ) {
-        addNodePreview(canvasId, newNode);
+        previewNode(newNode as unknown as CanvasNode);
         locateToNodePreviewEmitter.emit('locateToNodePreview', { canvasId, id: newNode.id });
       }
     },
     [
       canvasId,
-      setNodes,
-      setEdges,
       edgeStyles,
-      setSelectedNode,
       setNodeCenter,
-      addNodePreview,
+      previewNode,
       t,
       calculatePosition,
       layoutBranchAndUpdatePositions,

@@ -1,5 +1,5 @@
 import Logo from '@/assets/logo.svg';
-import { Button, Badge, Dropdown } from 'antd';
+import { Button, Dropdown } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import { useState, useEffect, useMemo } from 'react';
@@ -58,31 +58,84 @@ function Header() {
     [t],
   );
 
+  const galleryItems = useMemo(
+    () => [
+      {
+        key: 'use-cases',
+        label: (
+          <div className="flex items-center gap-2">
+            <span>{t('landingPage.tab.useCases')}</span>
+          </div>
+        ),
+        onClick: () => navigate('/use-cases-gallery'),
+      },
+      {
+        key: 'artifacts',
+        label: (
+          <div className="flex items-center gap-2">
+            <span>{t('landingPage.tab.artifacts')}</span>
+          </div>
+        ),
+        onClick: () => navigate('/artifact-gallery'),
+      },
+    ],
+    [t, navigate],
+  );
+
+  const docsItems = useMemo(
+    () => [
+      {
+        key: 'docs',
+        label: (
+          <div className="flex items-center gap-2">
+            <span>{t('landingPage.tab.docs')}</span>
+          </div>
+        ),
+        onClick: () => window.open('https://docs.refly.ai', '_blank'),
+      },
+      {
+        key: 'video-tutorials',
+        label: (
+          <div className="flex items-center gap-2">
+            <span>{t('landingPage.tab.videoTutorials') || 'Video Tutorials'}</span>
+          </div>
+        ),
+        onClick: () => window.open('https://docs.refly.ai/guide/video-tutorials', '_blank'),
+      },
+    ],
+    [t],
+  );
+
   const tabOptions = [
     {
       label: t('landingPage.tab.product'),
       value: 'product',
     },
     {
-      label: (
-        <Badge
-          count={t('landingPage.tab.priceTag')}
-          style={{
-            fontSize: '10px',
-            padding: '0 4px',
-            opacity: 0.8,
-            boxShadow: 'none',
-          }}
-          offset={[0, -4]}
-        >
-          <span className="mr-3">{t('landingPage.tab.price')}</span>
-        </Badge>
-      ),
+      label: t('landingPage.tab.price'),
       value: 'pricing',
     },
     {
-      label: t('landingPage.tab.docs'),
+      label: (
+        <Dropdown menu={{ items: docsItems }} placement="bottom">
+          <div className="flex cursor-pointer items-center gap-1">
+            <span>{t('landingPage.tab.docs')}</span>
+            <FaCaretDown className="text-xs" />
+          </div>
+        </Dropdown>
+      ),
       value: 'docs',
+    },
+    {
+      label: (
+        <Dropdown menu={{ items: galleryItems }} placement="bottom">
+          <div className="flex cursor-pointer items-center gap-1">
+            <span>{t('landingPage.tab.gallery')}</span>
+            <FaCaretDown className="text-xs" />
+          </div>
+        </Dropdown>
+      ),
+      value: 'gallery',
     },
     {
       label: (
@@ -143,16 +196,13 @@ function Header() {
                 key={item.value}
                 className={`${value === item.value ? 'font-bold text-[#00968f]' : ''}`}
                 onClick={() => {
-                  if (item.value === 'community') return;
+                  if (['community', 'docs', 'gallery'].includes(item.value)) return;
                   switch (item.value) {
                     case 'product':
                       navigate('/');
                       break;
                     case 'pricing':
                       navigate('/pricing');
-                      break;
-                    case 'docs':
-                      window.open('https://docs.refly.ai', '_blank');
                       break;
                   }
                 }}

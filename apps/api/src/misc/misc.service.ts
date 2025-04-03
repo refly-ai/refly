@@ -1,4 +1,11 @@
-import { Inject, Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Queue } from 'bullmq';
 import sharp from 'sharp';
 import mime from 'mime';
@@ -10,6 +17,7 @@ import {
   UploadResponse,
   User,
   FileVisibility,
+  Entity,
 } from '@refly-packages/openapi-schema';
 import { PrismaService } from '@/common/prisma.service';
 import { MINIO_EXTERNAL, MINIO_INTERNAL, MinioService } from '@/common/minio.service';
@@ -23,6 +31,7 @@ import {
   ParamsError,
   ResourceNotFoundError,
   DocumentNotFoundError,
+  CodeArtifactNotFoundError,
 } from '@refly-packages/errors';
 import { FileObject } from '@/misc/misc.dto';
 import { createId } from '@paralleldrive/cuid2';
@@ -140,6 +149,15 @@ export class MiscService implements OnModuleInit {
       if (!document) {
         throw new DocumentNotFoundError();
       }
+    } else if (entityType === 'codeArtifact') {
+      const codeArtifact = await this.prisma.codeArtifact.findUnique({
+        where: {
+          artifactId: entityId,
+        },
+      });
+      if (!codeArtifact) {
+        throw new CodeArtifactNotFoundError();
+      }
     } else {
       throw new ParamsError(`Invalid entity type: ${entityType}`);
     }
@@ -201,8 +219,24 @@ export class MiscService implements OnModuleInit {
     }
   }
 
-  generateFileURL(object: FileObject, options?: { download?: boolean }) {
-    const { visibility, storageKey } = object;
+  async findFileAndBindEntity(storageKey: string, entity: Entity) {
+    const staticFile = await this.prisma.staticFile.findFirst({
+      where: { storageKey, deletedAt: null },
+    });
+    if (!staticFile) {
+      return null;
+    }
+    return this.prisma.staticFile.update({
+      where: { pk: staticFile.pk },
+      data: {
+        entityId: entity.entityId,
+        entityType: entity.entityType,
+      },
+    });
+  }
+
+  generateFileURL(file: FileObject, options?: { download?: boolean }) {
+    const { visibility, storageKey } = file;
 
     let endpoint = '';
     if (visibility === 'public') {
@@ -216,6 +250,12 @@ export class MiscService implements OnModuleInit {
     }
 
     return `${endpoint}/${storageKey}`;
+  }
+
+  async downloadFile(file: FileObject) {
+    const { storageKey, visibility = 'private' } = file;
+    const stream = await this.minioClient(visibility).getObject(storageKey);
+    return streamToBuffer(stream);
   }
 
   /**
@@ -296,10 +336,13 @@ export class MiscService implements OnModuleInit {
       existingFile = await this.prisma.staticFile.findFirst({
         where: {
           storageKey: param.storageKey,
-          uid: user.uid,
           deletedAt: null,
         },
       });
+    }
+    if (existingFile && existingFile.uid !== user.uid) {
+      this.logger.warn(`User ${user.uid} is not allowed to upload file with ${param.storageKey}`);
+      throw new ForbiddenException();
     }
 
     const objectKey = randomUUID();
@@ -663,7 +706,7 @@ export class MiscService implements OnModuleInit {
     this.logger.log(`Found ${orphanedFiles.length} orphaned files to clean up`);
 
     // Collect all storage keys to delete (including processed images)
-    const storageKeysToDelete = orphanedFiles.reduce<
+    const objectsToDelete = orphanedFiles.reduce<
       { storageKey: string; visibility: FileVisibility }[]
     >((acc, file) => {
       acc.push({ storageKey: file.storageKey, visibility: file.visibility as FileVisibility });
@@ -677,7 +720,7 @@ export class MiscService implements OnModuleInit {
     }, []);
 
     // Delete files from storage
-    await this.batchRemoveObjects(null, storageKeysToDelete);
+    await this.batchRemoveObjects(null, objectsToDelete);
 
     // Mark files as deleted in database
     await this.prisma.staticFile.updateMany({
@@ -705,6 +748,37 @@ export class MiscService implements OnModuleInit {
     }
   }
 
+  async duplicateFile(param: {
+    sourceFile: FileObject;
+    targetFile: FileObject;
+  }) {
+    const { sourceFile, targetFile } = param;
+
+    if (!sourceFile) {
+      throw new NotFoundException(`File with key ${sourceFile?.storageKey} not found`);
+    }
+
+    if (!targetFile) {
+      throw new ParamsError('Target file information is required');
+    }
+
+    try {
+      // Use the appropriate Minio service based on visibility
+      const minioService =
+        sourceFile.visibility === 'public' ? this.externalMinio : this.internalMinio;
+
+      // Use the duplicateFile method from MinioService instead of copyObject
+      await minioService.duplicateFile(sourceFile.storageKey, targetFile.storageKey);
+
+      this.logger.log(
+        `Successfully duplicated file from ${sourceFile.storageKey} to ${targetFile.storageKey}`,
+      );
+    } catch (error) {
+      this.logger.error(`Duplicate file failed: ${error?.stack}`);
+      throw error; // Re-throw the error to properly handle it upstream
+    }
+  }
+
   /**
    * Duplicates all files associated with an entity for a different user
    * Only creates new database records, doesn't duplicate the actual files in storage
@@ -713,7 +787,7 @@ export class MiscService implements OnModuleInit {
    * @param param - Parameters specifying source entity and optional target entity
    * @returns Object containing counts of files processed and duplicated
    */
-  async duplicateFilesByEntity(
+  async duplicateFilesNoCopy(
     user: User,
     param: {
       sourceEntityId: string;

@@ -159,6 +159,7 @@ export class CommonQnA extends BaseSkill {
       originalQuery: query,
       optimizedQuery,
       rewrittenQueries,
+      modelInfo: config?.configurable?.modelInfo,
     });
 
     return { requestMessages, sources };

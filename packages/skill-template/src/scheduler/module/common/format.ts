@@ -16,7 +16,7 @@ export const buildFormatDisplayInstruction = () => {
 
    3. Mermaid Diagram Rules:
      - Use \`\`\`mermaid code block for all Mermaid diagrams
-     - Mermaid renderer version is 10.9.0, please follow this version's syntax.
+     - Mermaid renderer version is 11.6.0, please follow this version's syntax.
   `;
 };
 

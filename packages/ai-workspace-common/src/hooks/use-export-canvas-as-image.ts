@@ -2,9 +2,11 @@ import { useReactFlow } from '@xyflow/react';
 import { useCallback, useState } from 'react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import html2canvas from 'html2canvas';
+import html2canvas, { Options } from 'html2canvas';
+import { UploadResponse } from '@refly/openapi-schema';
 import { useSiderStore } from '@refly-packages/ai-workspace-common/stores/sider';
 import { staticPrivateEndpoint } from '@refly-packages/ai-workspace-common/utils/env';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 export const useExportCanvasAsImage = () => {
   const { t } = useTranslation();
@@ -33,8 +35,8 @@ export const useExportCanvasAsImage = () => {
     }
   }, []);
 
-  const exportCanvasAsImage = useCallback(
-    async (canvasName = 'canvas') => {
+  const getCanvasElement = useCallback(
+    async (options?: Partial<Options>) => {
       if (isLoading) return;
       setIsLoading(true);
       try {
@@ -70,6 +72,7 @@ export const useExportCanvasAsImage = () => {
           logging: false, // disable logging
           imageTimeout: 0, // do not timeout
           foreignObjectRendering: true,
+          ...options,
           onclone: async (clonedDoc) => {
             // handle the cloned document, ensure all styles are applied correctly
             const clonedContainer = clonedDoc.querySelector('.react-flow');
@@ -113,6 +116,22 @@ export const useExportCanvasAsImage = () => {
             }
           },
         });
+        return canvas;
+      } catch (error) {
+        console.error('Error exporting canvas as image:', error);
+        message.error(t('canvas.export.error'));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [reactFlowInstance],
+  );
+
+  const exportCanvasAsImage = useCallback(
+    async (canvasName = 'canvas', options?: Partial<Options>) => {
+      try {
+        // use html2canvas to create an image
+        const canvas = await getCanvasElement(options);
 
         // convert the canvas to an image
         const dataUrl = canvas.toDataURL('image/png');
@@ -129,8 +148,6 @@ export const useExportCanvasAsImage = () => {
       } catch (error) {
         console.error('Error exporting canvas as image:', error);
         message.error(t('canvas.export.error'));
-      } finally {
-        setIsLoading(false);
       }
     },
     [reactFlowInstance, t, imageToBase64],
@@ -365,5 +382,34 @@ export const useExportCanvasAsImage = () => {
     [],
   );
 
-  return { exportCanvasAsImage, isLoading, getMinimap, isMinimapLoading, svgBlobToPngBlob };
+  const uploadCanvasCover = useCallback(async () => {
+    const canvas = await getCanvasElement({ scale: 1 });
+    return new Promise<UploadResponse['data']>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          getClient()
+            .upload({
+              body: { file: blob, visibility: 'public' },
+            })
+            .then(({ data }) => {
+              if (!data?.success) {
+                reject(new Error('Failed to upload canvas cover'));
+              }
+              resolve(data?.data);
+            })
+            .catch(reject);
+        }
+      });
+    });
+  }, [getCanvasElement]);
+
+  return {
+    getCanvasElement,
+    exportCanvasAsImage,
+    isLoading,
+    getMinimap,
+    isMinimapLoading,
+    svgBlobToPngBlob,
+    uploadCanvasCover,
+  };
 };

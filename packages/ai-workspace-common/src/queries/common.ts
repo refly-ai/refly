@@ -13,6 +13,7 @@ import {
   createCanvas,
   createCanvasTemplate,
   createCheckoutSession,
+  createCodeArtifact,
   createDocument,
   createLabelClass,
   createLabelInstance,
@@ -41,6 +42,7 @@ import {
   getAuthConfig,
   getCanvasData,
   getCanvasDetail,
+  getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
   getResourceDetail,
@@ -76,6 +78,7 @@ import {
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
+  updateCodeArtifact,
   updateDocument,
   updateLabelClass,
   updateLabelInstance,
@@ -213,6 +216,18 @@ export const UseGetDocumentDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetDocumentDetailKey, ...(queryKey ?? [clientOptions])];
+export type GetCodeArtifactDetailDefaultResponse = Awaited<
+  ReturnType<typeof getCodeArtifactDetail>
+>['data'];
+export type GetCodeArtifactDetailQueryResult<
+  TData = GetCodeArtifactDetailDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetCodeArtifactDetailKey = 'GetCodeArtifactDetail';
+export const UseGetCodeArtifactDetailKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetCodeArtifactDetailKey, ...(queryKey ?? [clientOptions])];
 export type ListSharesDefaultResponse = Awaited<ReturnType<typeof listShares>>['data'];
 export type ListSharesQueryResult<
   TData = ListSharesDefaultResponse,
@@ -533,6 +548,18 @@ export type DeleteReferencesMutationResult = Awaited<ReturnType<typeof deleteRef
 export const useDeleteReferencesKey = 'DeleteReferences';
 export const UseDeleteReferencesKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteReferencesKey,
+  ...(mutationKey ?? []),
+];
+export type CreateCodeArtifactMutationResult = Awaited<ReturnType<typeof createCodeArtifact>>;
+export const useCreateCodeArtifactKey = 'CreateCodeArtifact';
+export const UseCreateCodeArtifactKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateCodeArtifactKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateCodeArtifactMutationResult = Awaited<ReturnType<typeof updateCodeArtifact>>;
+export const useUpdateCodeArtifactKey = 'UpdateCodeArtifact';
+export const UseUpdateCodeArtifactKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateCodeArtifactKey,
   ...(mutationKey ?? []),
 ];
 export type CreateShareMutationResult = Awaited<ReturnType<typeof createShare>>;

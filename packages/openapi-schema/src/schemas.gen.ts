@@ -166,17 +166,17 @@ export const CanvasTemplateCategorySchema = {
 
 export const CanvasTemplateSchema = {
   type: 'object',
-  required: ['templateId', 'title', 'description', 'language', 'createdAt', 'updatedAt'],
+  required: ['templateId', 'shareId', 'title', 'description', 'language', 'createdAt', 'updatedAt'],
   properties: {
     templateId: {
       type: 'string',
       description: 'Canvas template ID',
       example: 'ct-g30e1b80b5g1itbemc0g5jj3',
     },
-    originCanvasId: {
+    shareId: {
       type: 'string',
-      description: 'Origin canvas ID',
-      example: 'c-g30e1b80b5g1itbemc0g5jj3',
+      description: 'Share ID',
+      example: 'can-g30e1b80b5g1itbemc0g5jj3',
     },
     shareUser: {
       description: 'Share user',
@@ -402,7 +402,7 @@ export const DocumentSchema = {
 export const EntityTypeSchema = {
   type: 'string',
   description: 'Entity type',
-  enum: ['document', 'resource', 'canvas', 'user', 'skillResponse', 'codeArtifact'],
+  enum: ['document', 'resource', 'canvas', 'share', 'user', 'skillResponse', 'codeArtifact'],
 } as const;
 
 export const EntitySchema = {
@@ -1189,6 +1189,24 @@ export const ArtifactSchema = {
       description: 'Artifact status',
       $ref: '#/components/schemas/ArtifactStatus',
     },
+    content: {
+      type: 'string',
+      description: 'Artifact content',
+    },
+    metadata: {
+      type: 'object',
+      description: 'Artifact metadata',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Artifact creation time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Artifact update time',
+    },
   },
 } as const;
 
@@ -1269,6 +1287,57 @@ export const ActionStepSchema = {
       items: {
         $ref: '#/components/schemas/TokenUsageItem',
       },
+    },
+  },
+} as const;
+
+export const CodeArtifactTypeSchema = {
+  type: 'string',
+  description: 'Code artifact type',
+  enum: [
+    'application/refly.artifacts.react',
+    'image/svg+xml',
+    'application/refly.artifacts.mermaid',
+    'text/markdown',
+    'application/refly.artifacts.code',
+    'text/html',
+    'application/refly.artifacts.mindmap',
+  ],
+} as const;
+
+export const CodeArtifactSchema = {
+  type: 'object',
+  description: 'Code artifact',
+  required: ['type', 'artifactId', 'title'],
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Artifact type',
+      $ref: '#/components/schemas/CodeArtifactType',
+    },
+    artifactId: {
+      type: 'string',
+      description: 'Artifact ID',
+    },
+    title: {
+      type: 'string',
+      description: 'Artifact title',
+    },
+    content: {
+      type: 'string',
+      description: 'Code artifact content',
+    },
+    language: {
+      type: 'string',
+      description: 'Code artifact language',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
     },
   },
 } as const;
@@ -2283,6 +2352,10 @@ export const CreateCanvasTemplateRequestSchema = {
       type: 'string',
       description: 'Canvas template language code',
     },
+    coverStorageKey: {
+      type: 'string',
+      description: 'Cover storage key',
+    },
   },
 } as const;
 
@@ -2771,6 +2844,11 @@ export const SkillEventSchema = {
     error: {
       description: 'Error data. Only present when `event` is `error`.',
       $ref: '#/components/schemas/BaseResponse',
+      deprecated: true,
+    },
+    originError: {
+      type: 'string',
+      description: 'Original error message. Only present when `event` is `error`.',
     },
   },
 } as const;
@@ -2803,6 +2881,10 @@ export const ShareRecordSchema = {
       type: 'string',
       description: 'Parent share ID',
     },
+    templateId: {
+      type: 'string',
+      description: 'Canvas template ID',
+    },
     createdAt: {
       type: 'string',
       description: 'Create timestamp',
@@ -2812,6 +2894,73 @@ export const ShareRecordSchema = {
       description: 'Update timestamp',
     },
   },
+} as const;
+
+export const UpsertCodeArtifactRequestSchema = {
+  type: 'object',
+  properties: {
+    artifactId: {
+      type: 'string',
+      description: 'Code artifact ID (not needed for creation)',
+    },
+    title: {
+      type: 'string',
+      description: 'Code artifact title',
+    },
+    type: {
+      type: 'string',
+      description: 'Code artifact type',
+    },
+    content: {
+      type: 'string',
+      description: 'Code artifact content',
+    },
+    language: {
+      type: 'string',
+      description: 'Code artifact language',
+    },
+    previewStorageKey: {
+      type: 'string',
+      description: 'Code artifact preview storage key',
+    },
+    createIfNotExists: {
+      type: 'boolean',
+      description: 'Whether to create the code artifact if it does not exist',
+      default: false,
+    },
+  },
+} as const;
+
+export const UpsertCodeArtifactResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CodeArtifact',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetCodeArtifactDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CodeArtifact',
+        },
+      },
+    },
+  ],
 } as const;
 
 export const CreateShareRequestSchema = {
@@ -2842,6 +2991,14 @@ export const CreateShareRequestSchema = {
     shareData: {
       type: 'string',
       description: 'Raw share data (JSON string)',
+    },
+    shareDataStorageKey: {
+      type: 'string',
+      description: 'Share data storage key',
+    },
+    coverStorageKey: {
+      type: 'string',
+      description: 'Cover storage key',
     },
   },
 } as const;
@@ -3850,7 +4007,10 @@ export const UpdateUserSettingsRequestSchema = {
     avatar: {
       type: 'string',
       description: 'User avatar',
-      example: 'https://example.com/avatar.png',
+    },
+    avatarStorageKey: {
+      type: 'string',
+      description: 'User avatar storage key',
     },
     uiLocale: {
       type: 'string',
@@ -4535,6 +4695,10 @@ export const ModelCapabilitiesSchema = {
       type: 'boolean',
       description: 'Whether this model includes reasoning content',
     },
+    contextCaching: {
+      type: 'boolean',
+      description: 'Whether this model supports context caching',
+    },
   },
 } as const;
 
@@ -4651,6 +4815,7 @@ export const CanvasNodeTypeSchema = {
     'memo',
     'group',
     'image',
+    'mindMap',
   ],
 } as const;
 

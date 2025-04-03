@@ -17,6 +17,8 @@ export const useUploadMinimap = (canvasId: string) => {
       body: {
         file: image,
         storageKey: storageKey,
+        entityId: canvasId,
+        entityType: 'canvas',
       },
     });
     return data;

@@ -1,9 +1,11 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Popover, Select, Button, Divider, message } from 'antd';
+import { ButtonProps } from 'antd/es/button';
 import {
   IconShare,
   IconClose,
   IconLink,
+  IconTemplate,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { RiUserForbidLine } from 'react-icons/ri';
 import { GrLanguage } from 'react-icons/gr';
@@ -12,11 +14,13 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { CreateTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template/create-template-modal';
 import { useListShares } from '@refly-packages/ai-workspace-common/queries';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
+import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
 
 type ShareAccess = 'off' | 'anyone';
 
 interface ShareSettingsProps {
   canvasId: string;
+  canvasTitle: string;
 }
 
 const labelRender = (props: any) => {
@@ -57,13 +61,12 @@ const optionRender = (props: any) => {
 };
 
 // Memoized ShareSettings component for better performance
-const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
+const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [createTemplateModalVisible, setCreateTemplateModalVisible] = useState(false);
   const [access, setAccess] = useState<ShareAccess>('off');
 
-  const [title, setTitle] = useState('');
   const accessOptions = useMemo(
     () => [
       {
@@ -86,11 +89,18 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
   } = useListShares({
     query: { entityId: canvasId, entityType: 'canvas' },
   });
-  const shareRecord = useMemo(() => data?.data?.[0], [data]);
+
+  // Get the latest share record that is not a template
+  const shareRecord = useMemo(
+    () => data?.data?.filter((shareRecord) => !shareRecord.templateId)[0],
+    [data],
+  );
   const shareLink = useMemo(
     () => getShareLink('canvas', shareRecord?.shareId ?? ''),
     [shareRecord],
   );
+
+  const { uploadCanvasCover } = useExportCanvasAsImage();
 
   // Memoized function to re-share latest content before copying link
   const reshareAndCopyLink = useCallback(async () => {
@@ -104,11 +114,13 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
     // Asynchronously create new share with latest content
     (async () => {
       try {
+        const { storageKey } = await uploadCanvasCover();
         const { data, error } = await getClient().createShare({
           body: {
             entityId: canvasId,
             entityType: 'canvas',
             allowDuplication: true,
+            coverStorageKey: storageKey,
           },
         });
 
@@ -128,24 +140,24 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
         icon: <IconLink className="w-3.5 h-3.5 flex items-center justify-center" />,
         onClick: () => reshareAndCopyLink(),
         disabled: access === 'off',
+        type: 'default',
       },
-      // TODO: do not delete this
-      // {
-      //   label: 'publishTemplate',
-      //   icon: <MdOutlinePublish className="w-4 h-4 flex items-center justify-center" />,
-      //   onClick: () => {
-      //     setCreateTemplateModalVisible(true);
-      //     setOpen(false);
-      //   },
-      //   disabled: false,
-      // },
+      {
+        label: 'publishTemplate',
+        icon: <IconTemplate className="w-3 h-3 flex items-center justify-center" />,
+        onClick: () => {
+          setCreateTemplateModalVisible(true);
+          setOpen(false);
+        },
+        disabled: false,
+        type: 'primary',
+      },
     ],
     [access, reshareAndCopyLink, t],
   );
 
   useEffect(() => {
     setAccess(shareRecord ? 'anyone' : 'off');
-    setTitle(''); // TODO: set title from shareRecord
   }, [shareRecord]);
 
   const [updateLoading, setUpdateLoading] = useState(false);
@@ -160,43 +172,39 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
         const latestSharesData = await getClient().listShares({
           query: { entityId: canvasId, entityType: 'canvas' },
         });
-        const latestShareRecord = latestSharesData?.data?.data?.[0];
+        const shareRecords = latestSharesData?.data?.data;
+        const latestShareRecord = shareRecords?.filter((shareRecord) => !shareRecord.templateId)[0];
 
         if (value === 'off') {
           if (latestShareRecord?.shareId) {
             const { data, error } = await getClient().deleteShare({
               body: { shareId: latestShareRecord.shareId },
             });
-            success = data.success && !error;
+            success = data?.success && !error;
           } else {
             // No share to delete
             success = true;
           }
         } else {
+          const { storageKey } = await uploadCanvasCover();
           const { data, error } = await getClient().createShare({
             body: {
               entityId: canvasId,
               entityType: 'canvas',
               allowDuplication: true,
+              coverStorageKey: storageKey,
             },
           });
-          success = data.success && !error;
+          success = data?.success && !error;
         }
 
         if (success) {
           message.success(t('shareContent.updateCanvasPermissionSuccess'));
           setAccess(value);
           await refetchShares();
-        } else {
-          message.error(
-            t('shareContent.updateCanvasPermissionError') || 'Failed to update sharing settings',
-          );
         }
       } catch (err) {
         console.error('Error updating canvas permission:', err);
-        message.error(
-          t('shareContent.updateCanvasPermissionError') || 'Failed to update sharing settings',
-        );
         success = false;
       } finally {
         setUpdateLoading(false);
@@ -215,7 +223,7 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
   // Memoize content to prevent unnecessary re-renders
   const content = useMemo(
     () => (
-      <div className="w-[300px]">
+      <div className="w-[320px]">
         <div className="flex justify-between items-center p-3">
           <div className="flex items-center gap-2">
             <IconShare className="w-4 h-4 flex items-center justify-center" />
@@ -249,7 +257,7 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
           {buttons.map((button) => (
             <Button
               className="w-full"
-              type="primary"
+              type={button.type as ButtonProps['type']}
               key={button.label}
               icon={button.icon}
               disabled={button.disabled || updateLoading}
@@ -269,7 +277,7 @@ const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
     <div>
       <CreateTemplateModal
         canvasId={canvasId}
-        title={title}
+        title={canvasTitle}
         visible={createTemplateModalVisible}
         setVisible={setCreateTemplateModalVisible}
       />

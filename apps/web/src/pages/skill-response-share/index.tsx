@@ -5,7 +5,6 @@ import { Button, Result } from 'antd';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { PreviewChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/preview-chat-input';
 import { ActionStep, Source } from '@refly/openapi-schema';
-import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useEffect, useCallback } from 'react';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import {
@@ -194,41 +193,39 @@ const SkillResponseSharePage = () => {
   const { title, steps = [], actionMeta } = skillResponseData;
 
   return (
-    <CanvasProvider canvasId="" readonly>
-      <div className="flex h-full w-full grow relative">
-        {collapse && <PoweredByRefly onClick={toggleSidebar} />}
+    <div className="flex h-full w-full grow relative">
+      {collapse && <PoweredByRefly onClick={toggleSidebar} />}
 
-        <div
-          className={`absolute h-16 bottom-0 left-0 right-0 box-border flex justify-between items-center py-2 px-4 pr-0 bg-transparent ${
-            collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-232px)]'
-          }`}
-        >
-          {/* Removed the collapse button since we now use PoweredByRefly for toggling */}
-        </div>
+      <div
+        className={`absolute h-16 bottom-0 left-0 right-0 box-border flex justify-between items-center py-2 px-4 pr-0 bg-transparent ${
+          collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-232px)]'
+        }`}
+      >
+        {/* Removed the collapse button since we now use PoweredByRefly for toggling */}
+      </div>
 
-        {/* Main content */}
-        <div className="flex h-full w-full grow bg-white overflow-auto">
-          <div className="flex flex-col space-y-4 p-4 h-full max-w-[1024px] mx-auto w-full">
-            {title && (
-              <PreviewChatInput
-                enabled={true}
-                readonly={true}
-                contextItems={[]}
-                query={title}
-                actionMeta={actionMeta}
-                setEditMode={() => {}}
-              />
-            )}
+      {/* Main content */}
+      <div className="flex h-full w-full grow bg-white overflow-auto">
+        <div className="flex flex-col space-y-4 p-4 h-full max-w-[1024px] mx-auto w-full">
+          {title && (
+            <PreviewChatInput
+              enabled={true}
+              readonly={true}
+              contextItems={[]}
+              query={title}
+              actionMeta={actionMeta}
+              setEditMode={() => {}}
+            />
+          )}
 
-            <div className="flex-grow">
-              {steps.map((step: ActionStep, index: number) => (
-                <SimpleStepCard key={step.name} step={step} index={index + 1} />
-              ))}
-            </div>
+          <div className="flex-grow">
+            {steps.map((step: ActionStep, index: number) => (
+              <SimpleStepCard key={step.name} step={step} index={index + 1} />
+            ))}
           </div>
         </div>
       </div>
-    </CanvasProvider>
+    </div>
   );
 };
 

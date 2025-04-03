@@ -76,6 +76,7 @@ const translations = {
     shareError: 'Share failed, please try again!',
     readonlyWarning: 'Read-Only Mode',
     readonlyDragDescription: 'Canvas is in read-only mode, modifications are not allowed.',
+    preview: 'Preview',
   },
   verifyRules: {
     emailRequired: 'Email cannot be empty',
@@ -109,6 +110,8 @@ const translations = {
       codeDescription: 'Capture a code snippet',
       image: 'Image',
       imageDescription: 'Upload an image from your computer',
+      table: 'Table',
+      tableDescription: 'Create a table',
     },
     nodeSelector: {
       text: 'Text',
@@ -136,6 +139,15 @@ const translations = {
       orange: 'Orange',
       pink: 'Pink',
       gray: 'Gray',
+    },
+    table: {
+      addRowBefore: 'Add Row Before',
+      addRowAfter: 'Add Row After',
+      deleteRow: 'Delete Row',
+      addColumnBefore: 'Add Column Before',
+      addColumnAfter: 'Add Column After',
+      deleteColumn: 'Delete Column',
+      deleteTable: 'Delete Table',
     },
   },
   systemMaintenanceShutdown: {
@@ -170,13 +182,14 @@ const translations = {
     description:
       'Refly is the best way to transform ideas into quality content through multi-threaded dialogue, knowledge integration, context memory, and intelligent search.',
     anotherDescription:
-      'A free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.',
+      'A free-form canvas creation platform powered by multi-threaded dialogue, artifacts, knowledge integration, context memory, and intelligent search, easily transforms ideas into quality content.',
     simplyDescription: {
       first:
-        'Powered by multi-threaded dialogue, knowledge integration, context memory, and intelligent search, ',
+        'Powered by multi-threaded dialogue, artifacts, knowledge integration, context memory, and intelligent search, ',
       second: 'Refly is the best way to transform ideas into quality content.',
     },
-    messageText: 'v0.4.0 Released: Code Artifact, Canvas Sharing & Subscription Price Update 🚀',
+    messageText: 'v0.4.2 Released: Canvas template, document table, and more 🚀',
+    simpleMessageText: 'v0.4.2: Canvas template 🚀',
     tryForFree: 'Get Started',
     tryItNow: 'Try It Now',
     creationEngine: 'Creation Engine',
@@ -227,6 +240,7 @@ const translations = {
           'Customize your writing environment with flexible context selection',
           'N+ professional writing tools to enhance academic/technical writing efficiency',
           'AI editing assistant for quality professional output',
+          'Support for multiple artifact types, including documents, PPTs, SVGs, HTML, React and more',
         ],
       },
       workflowFive: {
@@ -371,12 +385,14 @@ const translations = {
         ],
       },
       featureFive: {
-        tag: 'WYSIWYG AI Document Editor',
-        title: 'Intelligent AI-Assisted Editor',
+        tag: 'WYSIWYG AI Artifacts',
+        title:
+          'Intelligent AI-Assisted Artifact Editor, including documents, PPTs, SVGs, HTML, React and more',
         bulletPoints: [
           'Real-time AI writing suggestions and refinements',
           'Support for multiple writing styles and format adjustments',
           'Intelligent text analysis and improvement recommendations',
+          'Support for multiple artifact types, including documents, PPTs, SVGs, HTML, React and more',
         ],
       },
     },
@@ -478,17 +494,25 @@ const translations = {
       priceTag: '-50%',
       community: 'Community',
       wechat: 'WeChat',
+      gallery: 'Use Cases',
+      useCases: 'Canvas Use Cases',
+      artifacts: 'Artifacts Use Cases',
+      videoTutorials: 'Video Tutorials',
     },
     faq: {
       title: 'Frequently Asked Questions',
       Q1: 'Can Refly be used for free?',
-      A1: 'To enable more users to quickly start and experience Refly, we provide all registered users with knowledge base quota of 10 files and daily access to 3 pro model requests and 30 standard model requests. If you wish to experience advanced models or increase the usage amount, you can upgrade to a paid subscription plan.',
+      A1: 'As an open-source project, for individual users, you can self-deploy the community version to use all our  features. To enable more users to quickly start and experience Refly, we provide all registered users with knowledge base quota of 10 files and daily access to 3 pro model requests and 30 standard model requests. If you wish to experience advanced models or increase the usage amount, you can upgrade to a paid subscription plan.',
       Q2: 'What payment methods do you support?',
       A2: 'We support bank cards, Alipay, Amazon Pay, and Cash App Pay. The supported payment methods may be subject to change at any time. Please refer to the payment methods displayed in the Stripe checkout page for the most accurate information.',
       Q3: 'How can I change or cancel my subscription plan?',
-      A3: 'Changing the subscription plan is not supported at present. If you need to cancel your subscription, please click the "Settings - Subscription - Manage Billing and Subscription" button and then proceed to the Stripe platform to manage your subscription. Once the cancellation is successful, your account will be automatically downgraded to the free version upon the expiration of the current plan.',
+      A3: `To upgrade or downgrade your subscription plan, please contact the Refly team for assistance. If you need to cancel your subscription, please click the 'Settings - Subscription - Manage Billing and Subscription' button and then proceed to the Stripe platform to manage your subscription. Once the cancellation is successful, your account will be automatically downgraded to the free version upon the expiration of the current plan.`,
       Q4: 'Is a refund available?',
       A4: 'Currently, there is no refund option available. If you have a strong demand for a refund, please contact the Refly team, and we will assist you in resolving the issue.',
+      Q5: 'As a Refly user, where is my data stored?',
+      A5: 'If you are using the Refly Cloud service, your data is securely stored in the United States. If you choose to self-deploy, the data is stored on the machine where you deploy Refly. We do not collect any data from self-deployed Refly services.',
+      Q6: 'Can I deploy Refly privately within enterprises?',
+      A6: 'To deploy Refly privately within your enterprise, a commercial license is required. Please contact us at support@refly.ai for further discussion.',
     },
     testimonials: {
       tag: 'User Testimonials',
@@ -519,6 +543,11 @@ const translations = {
         highlight: 'standard models',
         after: '',
       },
+      {
+        before: 'Create PPT, SVG, visual web pages, tables, and Mermaid charts with ',
+        highlight: 'standard models',
+        after: '',
+      },
     ],
     premiumCapabilities: [
       {
@@ -539,6 +568,11 @@ const translations = {
       },
       {
         before: 'Content creation with AI markdown editor, powered by ',
+        highlight: 'pro models',
+        after: '',
+      },
+      {
+        before: 'Create PPT, SVG, visual web pages, tables, and Mermaid charts with ',
         highlight: 'pro models',
         after: '',
       },
@@ -774,11 +808,17 @@ const translations = {
     },
   },
   document: {
+    share: 'Share Document',
     setReadOnly: 'Set to Read-Only',
     enableEdit: 'Enable Edit',
     shareLoading: 'Loading shared document...',
     notFound: 'Document Not Found',
     notFoundDesc: 'The document you are looking for does not exist or has been removed.',
+    tableOfContents: 'Table of contents',
+    sharing: 'Sharing document...',
+    shareSuccess: 'Document shared successfully! Link copied to clipboard.',
+    shareError: 'Failed to share document',
+    noHeadings: 'No headings found',
   },
   artifact: {
     generating: 'Generating',
@@ -805,7 +845,7 @@ const translations = {
     file: 'File',
   },
   canvas: {
-    emptyText: 'Double-click to ask AI, or',
+    emptyText: 'Double-click canvas to open menu or select ',
     shareNotFound: 'Canvas Not Found',
     shareNotFoundHint:
       "The shared canvas you're trying to access could not be found. It might have been deleted or the link may be incorrect.",
@@ -818,6 +858,7 @@ const translations = {
       image: 'Image',
       codeArtifact: 'Code Artifact',
       website: 'Website',
+      mindMap: 'Mind Map',
     },
     export: {
       success: 'Image exported successfully',
@@ -931,6 +972,8 @@ const translations = {
       copyLink: 'Copy Link',
       createWebsite: 'Create Website Node',
       createWebsiteDescription: 'Create a website node to embed a website in your canvas',
+      createMindMap: 'Create Mind Map Node',
+      createMindMapDescription: 'Create a mind map node to embed a mind map in your canvas',
     },
     connectionTimeout: {
       title: 'Connection Timeout',
@@ -1091,6 +1134,40 @@ const translations = {
         edit: 'Edit',
         noUrlProvided: 'No website URL provided',
       },
+      mindMap: {
+        defaultTitle: 'Mind Map',
+        edit: 'Edit Mind Map',
+        preview: 'Preview',
+        jsonData: 'Mind Map JSON Data',
+        jsonRequired: 'Please enter valid JSON data',
+        save: 'Save and View Mind Map',
+        export: 'Export Mind Map',
+        clickToView: 'Click to view mind map',
+        compactMode: 'Mind map in compact mode',
+        nodesCount: '{{count}} nodes',
+        invalidJson: 'Invalid JSON structure',
+        exportFailed: 'Failed to export mind map',
+        addChild: 'Add Child Card',
+        addSibling: 'Add Sibling Card',
+        delete: 'Delete Card',
+        invalidMindMapData: 'Invalid mind map data format. Please check your JSON structure.',
+      },
+    },
+    reflyPilot: {
+      title: 'Ask AI',
+      newConversation: 'New conversation',
+      clearConversation: 'Clear conversation',
+      welcome: {
+        title: 'Hello, {{name}}!',
+        subtitle: 'What can I help you with today?',
+        suggestions: [
+          'Summarize this article',
+          'Generate ideas for my project',
+          'Help me write a blog post',
+          'Explain this concept',
+          'Draft an email for me',
+        ],
+      },
     },
   },
   resource: {
@@ -1241,13 +1318,24 @@ const translations = {
     downloadSuccess: 'Downloaded {{fileName}}',
     downloadError: 'Failed to download file',
     refreshing: 'Refreshing preview...',
+    creating: 'Creating code artifact...',
+    loading: 'Loading code artifact...',
     sharing: 'Sharing code...',
     shareLoading: 'Loading shared code...',
     noCodeFound: 'No code content found to display',
+    noSelection: 'No code artifact selected',
     shareSuccess: 'Share link copied to clipboard!',
     shareError: 'Failed to share code!',
     errorCopySuccess: 'Error message copied to clipboard',
     errorCopyFailed: 'Failed to copy error message',
+    layout: {
+      split: 'Split View',
+      tabs: 'Tab View',
+    },
+    layoutChanged: {
+      split: 'Changed to split view mode',
+      tabs: 'Changed to tab view mode',
+    },
     tabs: {
       preview: 'Preview',
       code: 'Code',
@@ -1577,10 +1665,10 @@ const translations = {
       currentPlan: 'Current Plan',
       t1Requests: 'Pro Requests',
       t1RequestsDescription:
-        'Pro models include DeepSeek R1, GPT-4o, Claude 3.5 Sonnet and others. Each successful skill call to pro models counts as one request.',
+        'Pro models include Claude 3.7 Sonnet (Thinking), DeepSeek R1, o3 Mini, GPT-4o and others. Each successful skill call to pro models counts as one request.',
       t2Requests: 'Standard Requests',
       t2RequestsDescription:
-        'Standard models include GPT-4o Mini, DeepSeek V3 and others. Each successful skill call to standard models counts as one request.',
+        'Standard models include Gemini Flash 2.0, DeepSeek V3, Claude 3.5 Haiku and others. Each successful skill call to standard models counts as one request.',
       requestsRefresh: 'Request count will be reset every day for users on free plan.',
       libraryStorage: 'Library Storage',
       libraryStorageDescription: 'Each resource and document in your library counts as one file.',
@@ -1658,7 +1746,7 @@ const translations = {
           },
         },
         max: {
-          description: 'Unlimited creativity without boundaries',
+          description: 'The pinnacle of creative freedom',
           serviceSupport: {
             name: 'Service Support',
             details: 'Exclusive WeChat/Discord Group',
@@ -2053,6 +2141,8 @@ const translations = {
       premium: 'Pro Models',
       standard: 'Standard Models',
       free: 'Free Models',
+      freeModelHint:
+        'Free models are susceptible to downtime and usage restrictions. We recommend utilizing them solely for testing purposes.',
       tokenUsed: 'Used {{used}} / {{quota}}',
       upgrade: 'Upgrade',
       quotaExceeded: 'Quota exceeded, click to upgrade subscription',
@@ -2079,7 +2169,7 @@ const translations = {
     },
     premiumBanner: {
       message: 'Need more requests? Get higher limits with Premium.',
-      upgrade: 'Upgrade Plan',
+      upgrade: 'Upgrade',
     },
   },
   hooks: {
@@ -2169,14 +2259,15 @@ const translations = {
   template: {
     templateLibrary: 'Template Library',
     myTemplates: 'My Templates',
+    allTemplates: 'All',
     createTemplate: 'Create Template',
-    templateTitle: 'Template Name',
+    templateTitle: 'Name',
     templateTitlePlaceholder: 'Please enter template name',
-    templateDescription: 'Template Description',
+    templateDescription: 'Description',
     templateDescriptionPlaceholder: 'Please enter template description',
     createSuccess: 'Template created successfully, please view in template library',
     preview: 'Preview',
-    use: 'Use',
+    use: 'Use Template',
     duplicateCanvas: 'Duplicate Canvas',
     canvasTitle: 'Canvas Name',
     duplicateCanvasTitlePlaceholder: 'Please enter canvas name',
@@ -2185,6 +2276,7 @@ const translations = {
     noRelatedTemplates: 'No related templates',
     hideTemplates: 'Hide Template',
     duplicateCanvasEntities: 'Duplicate the canvas entities',
+    noDescription: 'No description',
   },
 };
 

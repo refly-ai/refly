@@ -2,19 +2,19 @@ import { useEffect, useState } from 'react';
 import { Form, Input, message, Modal } from 'antd';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
 
 interface CreateTemplateModalProps {
   title: string;
-  description?: string;
   categoryId?: string;
   canvasId: string;
   visible: boolean;
   setVisible: (visible: boolean) => void;
 }
+
 export const CreateTemplateModal = ({
   canvasId,
   title,
-  description,
   categoryId,
   visible,
   setVisible,
@@ -22,11 +22,13 @@ export const CreateTemplateModal = ({
   const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const { uploadCanvasCover } = useExportCanvasAsImage();
 
   const createTemplate = async ({ title, description }: { title: string; description: string }) => {
     if (confirmLoading) return;
 
     setConfirmLoading(true);
+    const { storageKey } = await uploadCanvasCover();
     const { data } = await getClient().createCanvasTemplate({
       body: {
         title,
@@ -34,10 +36,11 @@ export const CreateTemplateModal = ({
         language: i18n.language,
         categoryId,
         canvasId,
+        coverStorageKey: storageKey,
       },
     });
     setConfirmLoading(false);
-    if (data.success) {
+    if (data?.success) {
       setVisible(false);
       message.success(t('template.createSuccess'));
     }
@@ -54,7 +57,7 @@ export const CreateTemplateModal = ({
     if (visible) {
       form.setFieldsValue({
         title,
-        description,
+        description: '',
       });
     }
   }, [visible]);
@@ -70,8 +73,8 @@ export const CreateTemplateModal = ({
       cancelText={t('common.cancel')}
       title={t('template.createTemplate')}
     >
-      <div className="w-full h-full overflow-y-auto">
-        <Form form={form}>
+      <div className="w-full h-full pt-4 overflow-y-auto">
+        <Form form={form} labelCol={{ span: 5 }}>
           <Form.Item
             required
             label={t('template.templateTitle')}
@@ -80,11 +83,7 @@ export const CreateTemplateModal = ({
           >
             <Input placeholder={t('template.templateTitlePlaceholder')} />
           </Form.Item>
-          <Form.Item
-            label={t('template.templateDescription')}
-            name="description"
-            rules={[{ required: true, message: t('common.required') }]}
-          >
+          <Form.Item label={t('template.templateDescription')} name="description">
             <Input.TextArea
               autoSize={{ minRows: 3, maxRows: 6 }}
               placeholder={t('template.templateDescriptionPlaceholder')}

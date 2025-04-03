@@ -13,6 +13,7 @@ import {
   createCanvas,
   createCanvasTemplate,
   createCheckoutSession,
+  createCodeArtifact,
   createDocument,
   createLabelClass,
   createLabelInstance,
@@ -41,6 +42,7 @@ import {
   getAuthConfig,
   getCanvasData,
   getCanvasDetail,
+  getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
   getResourceDetail,
@@ -76,6 +78,7 @@ import {
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
+  updateCodeArtifact,
   updateDocument,
   updateLabelClass,
   updateLabelInstance,
@@ -106,6 +109,8 @@ import {
   CreateCanvasTemplateError,
   CreateCheckoutSessionData,
   CreateCheckoutSessionError,
+  CreateCodeArtifactData,
+  CreateCodeArtifactError,
   CreateDocumentData,
   CreateDocumentError,
   CreateLabelClassData,
@@ -160,6 +165,8 @@ import {
   GetCanvasDataError,
   GetCanvasDetailData,
   GetCanvasDetailError,
+  GetCodeArtifactDetailData,
+  GetCodeArtifactDetailError,
   GetCollabTokenError,
   GetDocumentDetailData,
   GetDocumentDetailError,
@@ -219,6 +226,8 @@ import {
   UpdateCanvasError,
   UpdateCanvasTemplateData,
   UpdateCanvasTemplateError,
+  UpdateCodeArtifactData,
+  UpdateCodeArtifactError,
   UpdateDocumentData,
   UpdateDocumentError,
   UpdateLabelClassData,
@@ -417,6 +426,23 @@ export const useGetDocumentDetail = <
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getDocumentDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetCodeArtifactDetail = <
+  TData = Common.GetCodeArtifactDetailDefaultResponse,
+  TError = GetCodeArtifactDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetCodeArtifactDetailData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetCodeArtifactDetailKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getCodeArtifactDetail({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useListShares = <
@@ -1108,6 +1134,40 @@ export const useDeleteReferences = <
   useMutation<TData, TError, Options<DeleteReferencesData, true>, TContext>({
     mutationKey: Common.UseDeleteReferencesKeyFn(mutationKey),
     mutationFn: (clientOptions) => deleteReferences(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useCreateCodeArtifact = <
+  TData = Common.CreateCodeArtifactMutationResult,
+  TError = CreateCodeArtifactError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreateCodeArtifactData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreateCodeArtifactData, true>, TContext>({
+    mutationKey: Common.UseCreateCodeArtifactKeyFn(mutationKey),
+    mutationFn: (clientOptions) => createCodeArtifact(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdateCodeArtifact = <
+  TData = Common.UpdateCodeArtifactMutationResult,
+  TError = UpdateCodeArtifactError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateCodeArtifactData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateCodeArtifactData, true>, TContext>({
+    mutationKey: Common.UseUpdateCodeArtifactKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateCodeArtifact(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateShare = <

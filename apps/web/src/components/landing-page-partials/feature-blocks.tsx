@@ -54,6 +54,49 @@ export default function FeatureBlocks() {
     t('landingPage.features.fileFormats.png', { returnObjects: true }) as FileFormat,
   ];
 
+  const artifacts = [
+    {
+      name: 'Document',
+      description: 'Rich text documents with markdown support',
+      icon: '📄',
+    },
+    {
+      name: 'HTML',
+      description: 'Interactive web content and layouts',
+      icon: '🌐',
+    },
+    {
+      name: 'SVG',
+      description: 'Scalable vector graphics and illustrations',
+      icon: '🎨',
+    },
+    {
+      name: 'Mermaid',
+      description: 'Diagrams and flowcharts as code',
+      icon: '📊',
+    },
+    {
+      name: 'React',
+      description: 'Interactive UI components and applications',
+      icon: '⚛️',
+    },
+    {
+      name: 'Markdown',
+      description: 'Simple and powerful text formatting',
+      icon: '📝',
+    },
+    {
+      name: 'Code',
+      description: 'Syntax highlighted code blocks',
+      icon: '💻',
+    },
+    {
+      name: 'Math',
+      description: 'LaTeX math equations and formulas',
+      icon: '🔢',
+    },
+  ] as const;
+
   const features: FeatureItem[] = [
     {
       Icon: RiFile2Fill,
@@ -151,7 +194,34 @@ export default function FeatureBlocks() {
       cta: 'Learn more',
       color: '#F1A62D',
       tagShadow: '0 2px 4px 0 rgba(0,0,0,0.10), inset 0 -4px 0 0 rgba(200,140,44,0.20)',
-      background: <div> </div>,
+      background: (
+        <Marquee
+          pauseOnHover
+          className="absolute top-10 [--duration:20s] [mask-image:linear-gradient(to_top,transparent_40%,#000_100%)]"
+        >
+          {artifacts.map((artifact, idx) => (
+            <figure
+              key={idx}
+              className={cn(
+                'relative w-40 cursor-pointer overflow-hidden rounded-xl border p-4',
+                'border-gray-950/[.1] bg-gray-950/[.01] hover:bg-gray-950/[.05]',
+              )}
+            >
+              <div className="flex flex-row items-center gap-2">
+                <div className="flex flex-col">
+                  <figcaption className="text-sm font-medium flex items-center gap-2">
+                    <span>{artifact.icon}</span>
+                    <span>{artifact.name}</span>
+                  </figcaption>
+                </div>
+              </div>
+              <blockquote className="mt-2 text-xs text-neutral-600">
+                {artifact.description}
+              </blockquote>
+            </figure>
+          ))}
+        </Marquee>
+      ),
     },
   ];
 

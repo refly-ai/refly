@@ -8,6 +8,7 @@ import { OpenAIEmbeddings } from '@langchain/openai';
 import { FireworksEmbeddings } from '@langchain/community/embeddings/fireworks';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { cleanMarkdownForIngest } from '@refly-packages/utils';
+import * as avro from 'avsc';
 
 import { SearchResult, User } from '@refly-packages/openapi-schema';
 import { HybridSearchParam, ContentPayload, ReaderResult, NodeMeta } from './rag.dto';
@@ -24,6 +25,32 @@ interface JinaRerankerResponse {
     relevance_score: number;
   }[];
 }
+
+// Define Avro schema for vector points (must match the one used for serialization)
+const avroSchema = avro.Type.forSchema({
+  type: 'array',
+  items: {
+    type: 'record',
+    name: 'Point',
+    fields: [
+      { name: 'id', type: 'string' },
+      { name: 'vector', type: { type: 'array', items: 'float' } },
+      { name: 'payload', type: 'string' }, // JSON string of payload
+      {
+        name: 'metadata',
+        type: {
+          type: 'record',
+          name: 'Metadata',
+          fields: [
+            { name: 'nodeType', type: 'string' },
+            { name: 'entityId', type: 'string' },
+            { name: 'originalUid', type: 'string' },
+          ],
+        },
+      },
+    ],
+  },
+});
 
 @Injectable()
 export class RAGService {
@@ -487,6 +514,177 @@ export class RAGService {
         ...result,
         relevanceScore: 1 - index * 0.1, // Simple fallback scoring based on original order
       }));
+    }
+  }
+
+  /**
+   * Serializes all vector points for a document into Avro binary format.
+   * @param user The user that owns the document
+   * @param param Parameters object containing document/resource details
+   * @param param.docId The document ID to export (use either docId or resourceId)
+   * @param param.resourceId The resource ID to export (use either docId or resourceId)
+   * @param param.nodeType The node type ('document' or 'resource')
+   * @returns Binary data in Avro format and metadata about the export
+   */
+  async serializeToAvro(
+    user: User,
+    param: {
+      docId?: string;
+      resourceId?: string;
+      nodeType?: 'document' | 'resource';
+    },
+  ): Promise<{ data: Buffer; pointsCount: number; size: number }> {
+    const { docId, resourceId, nodeType = docId ? 'document' : 'resource' } = param;
+    const entityId = nodeType === 'document' ? docId : resourceId;
+
+    if (!entityId) {
+      throw new Error('Either docId or resourceId must be provided');
+    }
+
+    try {
+      this.logger.log(`Serializing ${nodeType} ${entityId} from user ${user.uid} to Avro binary`);
+
+      // Fetch all points for the document
+      const points = await this.qdrant.scroll({
+        filter: {
+          must: [
+            { key: 'tenantId', match: { value: user.uid } },
+            { key: nodeType === 'document' ? 'docId' : 'resourceId', match: { value: entityId } },
+          ],
+        },
+        with_payload: true,
+        with_vector: true,
+      });
+
+      if (!points?.length) {
+        this.logger.warn(`No points found for ${nodeType} ${entityId}`);
+        return { data: Buffer.from([]), pointsCount: 0, size: 0 };
+      }
+
+      // Prepare points for serialization
+      const pointsForAvro = points.map((point) => ({
+        id: point.id,
+        vector: point.vector,
+        payload: JSON.stringify(point.payload),
+        metadata: {
+          nodeType,
+          entityId,
+          originalUid: user.uid,
+        },
+      }));
+
+      // Serialize points to Avro binary
+      const avroBuffer = Buffer.from(avroSchema.toBuffer(pointsForAvro));
+      const size = avroBuffer.length;
+
+      this.logger.log(
+        `Successfully serialized ${points.length} points for ${nodeType} ${entityId} to Avro binary (${size} bytes)`,
+      );
+
+      return {
+        data: avroBuffer,
+        pointsCount: points.length,
+        size,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to serialize ${nodeType} ${entityId} from user ${user.uid} to Avro binary: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Deserializes Avro binary data and saves the vector points to Qdrant with new IDs.
+   * @param user The target user to save the points for
+   * @param param Parameters object containing target details
+   * @param param.data The Avro binary data to deserialize
+   * @param param.targetDocId The target document ID (use either targetDocId or targetResourceId)
+   * @param param.targetResourceId The target resource ID (use either targetDocId or targetResourceId)
+   * @returns Metadata about the import operation
+   */
+  async deserializeFromAvro(
+    user: User,
+    param: {
+      data: Buffer;
+      targetDocId?: string;
+      targetResourceId?: string;
+    },
+  ): Promise<{ size: number; pointsCount: number }> {
+    const { data, targetDocId, targetResourceId } = param;
+    const targetNodeType = targetDocId ? 'document' : 'resource';
+    const targetEntityId = targetNodeType === 'document' ? targetDocId : targetResourceId;
+
+    if (!targetEntityId) {
+      throw new Error('Either targetDocId or targetResourceId must be provided');
+    }
+
+    if (!data || data.length === 0) {
+      this.logger.warn('No Avro data provided for deserialization');
+      return { size: 0, pointsCount: 0 };
+    }
+
+    try {
+      this.logger.log(
+        `Deserializing Avro binary to ${targetNodeType} ${targetEntityId} for user ${user.uid}`,
+      );
+
+      // Deserialize Avro binary to points
+      const deserializedPoints = avroSchema.fromBuffer(data);
+
+      if (!deserializedPoints?.length) {
+        this.logger.warn('No points found in Avro data');
+        return { size: 0, pointsCount: 0 };
+      }
+
+      // Prepare points for saving to Qdrant with new IDs and tenant
+      const pointsToUpsert = deserializedPoints.map((point, index) => {
+        const payload = JSON.parse(point.payload);
+
+        // Generate a new ID for the point
+        const id = genResourceUuid(`${targetEntityId}-${index}`);
+
+        // Update payload with new tenant ID and entity ID
+        const updatedPayload = {
+          ...payload,
+          tenantId: user.uid,
+        };
+
+        // If the point refers to a document or resource, update its ID
+        if (targetNodeType === 'document' && payload.docId) {
+          updatedPayload.docId = targetDocId;
+        } else if (targetNodeType === 'resource' && payload.resourceId) {
+          updatedPayload.resourceId = targetResourceId;
+        }
+
+        return {
+          id,
+          vector: point.vector,
+          payload: updatedPayload,
+        };
+      });
+
+      // Calculate the size of points
+      const size = QdrantService.estimatePointsSize(pointsToUpsert);
+
+      // Save points to Qdrant
+      await this.qdrant.batchSaveData(pointsToUpsert);
+
+      this.logger.log(
+        `Successfully deserialized ${pointsToUpsert.length} points from Avro binary to ${targetNodeType} ${targetEntityId} for user ${user.uid}`,
+      );
+
+      return {
+        size,
+        pointsCount: pointsToUpsert.length,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to deserialize Avro binary to ${targetNodeType} ${targetEntityId} for user ${user.uid}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
     }
   }
 }

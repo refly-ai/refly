@@ -46,7 +46,7 @@ export const LibraryModal = (props: LibraryModalProps) => {
           <IconLibrary /> {t('common.library')}
         </span>
       }
-      width={1000}
+      width={1200}
       footer={null}
       open={visible}
       onCancel={() => setVisible(false)}

@@ -1,29 +1,22 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCanvasTemplateModal } from '@refly-packages/ai-workspace-common/stores/canvas-template-modal';
 import { IconTemplate } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Modal, Input, Divider, Select } from 'antd';
-import { CanvasTemplateCategory } from '@refly/openapi-schema';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
+import { Modal, Divider, Select } from 'antd';
 
 import { cn } from '@refly-packages/utils/cn';
 import './index.scss';
 import { TemplateList } from './template-list';
 import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries';
-import { LuFilter } from 'react-icons/lu';
 
 type Language = 'en' | 'zh-CN';
 
-const dict = {
-  en: { en: 'English', 'zh-CN': '英文' },
-  'zh-CN': { en: 'Chinese', 'zh-CN': '中文' },
-};
-
 const TitleRender = ({
-  searchQuery,
-  uiLocale,
   language,
   setLanguage,
-  setSearchQuery,
+  // searchQuery,
+  // setSearchQuery,
 }: {
   uiLocale: Language;
   language: Language;
@@ -35,7 +28,7 @@ const TitleRender = ({
 
   const languageOptions = [
     { label: '中文', value: 'zh-CN' },
-    { label: '英文', value: 'en' },
+    { label: 'English', value: 'en' },
   ];
 
   const handleLanguageChange = (value: Language) => {
@@ -48,28 +41,18 @@ const TitleRender = ({
         <div className="flex items-center gap-2 text-lg font-medium">
           <IconTemplate /> {t('template.templateLibrary')}
         </div>
-        <Input
+        {/* <Input
           className="w-80"
           placeholder={t('template.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-        />
+        /> */}
         <div className="flex items-center">
-          <LuFilter className="text-lg flex items-center -mr-2" />
           <Select
-            className="flex-1"
-            variant="borderless"
+            className="flex-1 w-24 hidden"
             options={languageOptions}
             value={language}
             onChange={handleLanguageChange}
-            optionRender={(props) => {
-              const { value } = props;
-              return <div>{dict[value][uiLocale]}</div>;
-            }}
-            labelRender={(props) => {
-              const { value } = props;
-              return <div>{dict[value][uiLocale]}</div>;
-            }}
           />
         </div>
       </div>
@@ -79,49 +62,57 @@ const TitleRender = ({
 };
 
 const TemplateCategoryList = ({
-  categories,
+  visible,
   currentCategory,
   setCurrentCategory,
   uiLocale,
 }: {
-  categories: CanvasTemplateCategory[];
+  visible: boolean;
   currentCategory: string;
   setCurrentCategory: (category: string) => void;
   uiLocale: Language;
 }) => {
+  const { t } = useTranslation();
+  const { data, isLoading } = useListCanvasTemplateCategories(null, null, {
+    enabled: visible,
+  });
+  const categories = data?.data ?? [];
+  const categoryStyle = useCallback(
+    (isActive: boolean) =>
+      cn('cursor-pointer p-2 rounded-md hover:bg-gray-100 w-full truncate flex items-center', {
+        'bg-gray-100 font-medium': isActive,
+      }),
+    [],
+  );
+
   return (
-    <div className="h-full w-[40%] max-w-[200px] overflow-y-auto p-4 box-border flex-shrink-0 flex flex-col gap-2">
-      {categories.map((category) => (
-        <div key={category.categoryId}>
+    <div className="h-full w-[40%] max-w-[200px] overflow-y-auto p-4 box-border flex-shrink-0 flex flex-col gap-1">
+      <div
+        className={categoryStyle(currentCategory === 'my-templates')}
+        onClick={() => setCurrentCategory('my-templates')}
+      >
+        {t('template.myTemplates')}
+      </div>
+
+      <Divider className="my-1" />
+
+      <div className={categoryStyle(currentCategory === '')} onClick={() => setCurrentCategory('')}>
+        {t('template.allTemplates')}
+      </div>
+
+      <Spin spinning={isLoading}>
+        {categories.map((category) => (
           <div
-            className={cn(
-              'cursor-pointer px-2 py-1 rounded-md hover:bg-gray-100 w-full truncate',
-              currentCategory === category.categoryId && 'bg-gray-100',
-            )}
+            key={category.categoryId}
+            className={categoryStyle(currentCategory === category.categoryId)}
             onClick={() => setCurrentCategory(category.categoryId)}
           >
             {category.labelDict[uiLocale]}
           </div>
-          {category.categoryId === 'my-templates' && categories.length > 1 && (
-            <Divider className="mt-2 mb-0" />
-          )}
-        </div>
-      ))}
+        ))}
+      </Spin>
     </div>
   );
-};
-
-const myTemp: CanvasTemplateCategory = {
-  categoryId: 'my-templates',
-  labelDict: {
-    en: 'My Templates',
-    'zh-CN': '我的模板',
-  },
-  name: 'My Templates',
-  descriptionDict: {
-    en: 'My Templates',
-    'zh-CN': '我的模板',
-  },
 };
 
 export const CanvasTemplateModal = () => {
@@ -134,8 +125,6 @@ export const CanvasTemplateModal = () => {
   const { i18n } = useTranslation();
   const currentUiLocale = i18n.language as Language;
   const [language, setLanguage] = useState(currentUiLocale);
-
-  const { data } = useListCanvasTemplateCategories();
 
   return (
     <Modal
@@ -150,16 +139,16 @@ export const CanvasTemplateModal = () => {
           setSearchQuery={setSearchQuery}
         />
       }
-      width="80%"
+      width={1200}
       footer={null}
       open={visible}
       onCancel={() => setVisible(false)}
       focusTriggerAfterClose={false}
     >
-      <div className="canvas-template-modal flex h-[80vh] overflow-hidden">
+      <div className="canvas-template-modal flex h-[60vh] overflow-hidden">
         <TemplateCategoryList
+          visible={visible}
           uiLocale={currentUiLocale}
-          categories={[myTemp, ...(data?.data ?? [])]}
           currentCategory={currentCategory}
           setCurrentCategory={setCurrentCategory}
         />

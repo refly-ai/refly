@@ -206,8 +206,6 @@ const ActualContent = memo(
 
     if (!content) return null;
 
-    console.log('resultId', resultId);
-
     return (
       <div className="my-3 text-gray-600 text-base">
         <div className={`skill-response-content-${resultId}-${step.name}`}>
@@ -227,6 +225,8 @@ const ActualContent = memo(
 
 const ArtifactItem = memo(({ artifact, onSelect }: { artifact: any; onSelect: () => void }) => {
   const { t } = useTranslation();
+
+  if (!artifact?.title) return null;
 
   return (
     <div
@@ -268,12 +268,14 @@ export const ActionStepCard = memo(
     stepStatus,
     index,
     query,
+    nodeId,
   }: {
     result: ActionResult;
     step: ActionStep;
     stepStatus: 'executing' | 'finish';
     index: number;
     query: string;
+    nodeId?: string;
   }) => {
     const { t } = useTranslation();
     const { setSelectedNodeByEntity } = useNodeSelection();
@@ -327,6 +329,8 @@ export const ActionStepCard = memo(
       [setSelectedNodeByEntity],
     );
 
+    if (!step) return null;
+
     return (
       <div className="flex flex-col gap-1">
         <div className="my-1 text-gray-600 text-sm flex items-center gap-2 font-medium">
@@ -372,17 +376,18 @@ export const ActionStepCard = memo(
           />
         )}
 
-        {step.artifacts?.map((artifact) => (
-          <ArtifactItem
-            key={artifact.entityId}
-            artifact={artifact}
-            onSelect={() => handleArtifactSelect(artifact)}
-          />
-        ))}
+        {Array.isArray(step.artifacts) &&
+          step.artifacts.map((artifact) => (
+            <ArtifactItem
+              key={artifact.entityId}
+              artifact={artifact}
+              onSelect={() => handleArtifactSelect(artifact)}
+            />
+          ))}
 
         <RecommendQuestions relatedQuestions={parsedData.recommendedQuestions?.questions || []} />
 
-        <ActionContainer result={result} step={step} />
+        <ActionContainer result={result} step={step} nodeId={nodeId} />
       </div>
     );
   },

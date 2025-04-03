@@ -78,24 +78,6 @@ export class CustomPrompt extends BaseSkill {
           precision: 2,
         },
       },
-      {
-        key: 'maxTokens',
-        inputMode: 'inputNumber',
-        defaultValue: 2000,
-        labelDict: {
-          en: 'Max Output Tokens',
-          'zh-CN': '最大输出令牌数',
-        },
-        descriptionDict: {
-          en: 'Maximum number of tokens to generate',
-          'zh-CN': '生成的最大令牌数',
-        },
-        inputProps: {
-          min: 1,
-          step: 1,
-          precision: 0,
-        },
-      },
     ],
   };
 
@@ -246,13 +228,13 @@ export class CustomPrompt extends BaseSkill {
       originalQuery: query,
       optimizedQuery,
       rewrittenQueries,
+      modelInfo: config?.configurable?.modelInfo,
     });
 
     // Generate answer using the model
     const model = this.engine.chatModel({
       temperature: Number(tplConfig?.temperature?.value ?? 0.1),
       topP: Number(tplConfig?.topP?.value ?? 1),
-      maxTokens: Number(tplConfig?.maxTokens?.value ?? 2000),
     });
     const responseMessage = await model.invoke(requestMessages, {
       ...config,

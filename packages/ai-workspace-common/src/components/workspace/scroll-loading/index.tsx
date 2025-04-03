@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 export interface ScrollLoadingProps {
   isRequesting: boolean;
@@ -27,6 +28,23 @@ export const ScrollLoading = (props: ScrollLoadingProps) => {
   return (
     <div className="w-full flex justify-center my-6">
       <Button onClick={() => loadMore()}>{t('common.loadMore')}</Button>
+    </div>
+  );
+};
+
+export const Spinner = () => {
+  return (
+    <div className="flex justify-center py-4">
+      <Spin />
+    </div>
+  );
+};
+
+export const EndMessage = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="w-full flex justify-center py-6">
+      <span>{t('knowledgeLibrary.archive.item.noMoreText')}</span>
     </div>
   );
 };

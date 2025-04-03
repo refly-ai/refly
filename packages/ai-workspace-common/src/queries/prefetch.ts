@@ -9,6 +9,7 @@ import {
   getAuthConfig,
   getCanvasData,
   getCanvasDetail,
+  getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
   getResourceDetail,
@@ -36,6 +37,7 @@ import {
   GetActionResultData,
   GetCanvasDataData,
   GetCanvasDetailData,
+  GetCodeArtifactDetailData,
   GetDocumentDetailData,
   GetResourceDetailData,
   ListCanvasesData,
@@ -145,6 +147,14 @@ export const prefetchUseGetDocumentDetail = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions),
     queryFn: () => getDocumentDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetCodeArtifactDetail = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetCodeArtifactDetailData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetCodeArtifactDetailKeyFn(clientOptions),
+    queryFn: () => getCodeArtifactDetail({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListShares = (
   queryClient: QueryClient,

@@ -43,7 +43,7 @@ export const CanvasRename: React.FC<CanvasRenameProps> = ({
     });
     setIsLoading(false);
 
-    if (error || !data.success) {
+    if (error || !data?.success) {
       return;
     }
 

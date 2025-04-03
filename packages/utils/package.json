@@ -36,6 +36,7 @@
     "clsx": "^2.1.0",
     "dayjs": "~1.11.7",
     "js-cookie": "^3.0.5",
+    "jsonrepair": "^3.12.0",
     "linkify-it": "^5.0.0",
     "markdown-it": "~14.1.0",
     "md5": "^2.3.0",
@@ -59,6 +60,7 @@
     "@refly/common-types": "workspace:*",
     "@types/chrome": "0.0.227",
     "@types/linkify-it": "^5.0.0",
+    "@types/markdown-it": "~14.1.1",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19"
   }

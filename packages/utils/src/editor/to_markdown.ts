@@ -137,12 +137,67 @@ export const defaultMarkdownSerializer = new MarkdownSerializer(
       state.renderInline(node);
       state.closeBlock(node);
     },
+    table(state, node) {
+      // Each row is rendered with its own logic that handles the separator row
+      state.renderContent(node);
+      // Add an extra newline after the table
+      state.ensureNewLine();
+      state.closeBlock(node);
+    },
+    tableRow(state, node, _parent, index) {
+      // Write the cells with padding and pipe separators
+      state.write('| ');
+      node.forEach((cell, _, cellIndex) => {
+        state.render(cell, node, cellIndex);
+        if (cellIndex < node.childCount - 1) {
+          state.write(' | ');
+        }
+      });
+      state.write(' |');
 
+      // After the header row, write the separator row with alignment indicators
+      if (index === 0) {
+        state.ensureNewLine();
+        state.write('| ');
+        node.forEach((cell, _, cellIndex) => {
+          // Get alignment from cell attributes
+          const align = cell.attrs.align;
+          let separator = '---';
+          if (align === 'center') {
+            separator = ':---:';
+          } else if (align === 'left') {
+            separator = ':---';
+          } else if (align === 'right') {
+            separator = '---:';
+          }
+
+          state.write(separator);
+          if (cellIndex < node.childCount - 1) {
+            state.write(' | ');
+          }
+        });
+        state.write(' |');
+      }
+
+      // Don't close the block with closeBlock, but ensure there's a newline
+      // at the end of each row
+      state.ensureNewLine();
+    },
+    tableHeader(state, node) {
+      renderTableCellContent(state, node);
+    },
+    tableCell(state, node) {
+      renderTableCellContent(state, node);
+    },
     image(state, node) {
       const src =
         typeof node.attrs?.src === 'string' ? node.attrs.src : String(node.attrs?.src ?? '');
       state.write(
-        `![${state.esc(node.attrs?.alt ?? '')}](${src.replace(/[\(\)]/g, '\\$&')}${node.attrs?.title ? ` "${node.attrs.title.replace(/"/g, '\\"')}"` : ''})`,
+        `![${state.esc(node.attrs?.alt ?? '')}](${src.replace(/[\(\)]/g, '\\$&')}${
+          node.attrs?.title ? ` "${node.attrs.title.replace(/"/g, '\\"')}"` : ''
+        }${node.attrs?.width ? ` width="${node.attrs.width}"` : ''}${
+          node.attrs?.height ? ` height="${node.attrs.height}"` : ''
+        })`,
       );
     },
     hardBreak(state, node, parent, index) {
@@ -239,6 +294,21 @@ function isPlainURL(link: Mark, parent: Node, index: number) {
   )
     return false;
   return index === parent.childCount - 1 || !link.isInSet(parent.child(index + 1).marks);
+}
+
+// Helper function to render table cell content consistently
+function renderTableCellContent(state: MarkdownSerializerState, node: Node) {
+  // For table cells, we need to handle nested blocks appropriately
+  if (node.content.childCount === 1 && node.content.child(0).type.name === 'paragraph') {
+    // If it's just a single paragraph, render it inline
+    state.renderInline(node.content.child(0));
+  } else {
+    // Otherwise, render all content but try to keep it compact
+    const oldClosed = state.closed;
+    state.closed = null;
+    state.renderContent(node);
+    state.closed = oldClosed;
+  }
 }
 
 /// This is an object used to track state and expose

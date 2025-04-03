@@ -9,20 +9,26 @@ import { Server, Hocuspocus } from '@hocuspocus/server';
 import { MINIO_INTERNAL } from '@/common/minio.service';
 import { MinioService } from '@/common/minio.service';
 import { RAGService } from '@/rag/rag.service';
-import { Prisma } from '@prisma/client';
-import { User } from '@refly-packages/openapi-schema';
+import { CodeArtifact, Prisma } from '@prisma/client';
+import { UpsertCodeArtifactRequest, User } from '@refly-packages/openapi-schema';
 import { SubscriptionService } from '@/subscription/subscription.service';
 import { MiscService } from '@/misc/misc.service';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '@/common/redis.service';
 import { ElasticsearchService } from '@/common/elasticsearch.service';
 import { PrismaService } from '@/common/prisma.service';
-import { IDPrefix, incrementalMarkdownUpdate, state2Markdown } from '@refly-packages/utils';
+import {
+  genCodeArtifactID,
+  IDPrefix,
+  incrementalMarkdownUpdate,
+  state2Markdown,
+} from '@refly-packages/utils';
 import { streamToBuffer } from '@/utils/stream';
 import { CollabContext, isCanvasContext, isDocumentContext } from './collab.dto';
 import { Redis } from '@hocuspocus/extension-redis';
 import { QUEUE_SYNC_CANVAS_ENTITY } from '@/utils/const';
 import ms from 'ms';
+import pLimit from 'p-limit';
 
 @Injectable()
 export class CollabService {
@@ -246,7 +252,6 @@ export class CollabService {
   }
 
   private async storeCanvasEntity({
-    state,
     document,
     context,
   }: {
@@ -261,10 +266,12 @@ export class CollabService {
       return;
     }
 
-    const stateStorageKey = canvas.stateStorageKey || `state/${canvas.canvasId}`;
-    await this.minio.client.putObject(stateStorageKey, state);
+    const cleanedDocument = await this.cleanCanvasDocument(user, canvas.canvasId, document);
+    const cleanedState = Buffer.from(Y.encodeStateAsUpdate(cleanedDocument));
+    const title = cleanedDocument.getText('title').toJSON();
 
-    const title = document.getText('title').toJSON();
+    const stateStorageKey = canvas.stateStorageKey || `state/${canvas.canvasId}`;
+    await this.minio.client.putObject(stateStorageKey, cleanedState);
 
     const stateStorageStat = await this.minio.client.statObject(stateStorageKey);
 
@@ -315,6 +322,118 @@ export class CollabService {
     }
     this.logger.warn(`unknown context entity type: ${JSON.stringify(context)}`);
     return null;
+  }
+
+  /**
+   * Clean canvas document by removing legacy code artifact nodes and processing them
+   * @param user - The user performing the cleanup
+   * @param canvasId - The canvas id
+   * @param document - The canvas document to clean
+   * @returns The cleaned document
+   */
+  async cleanCanvasDocument(user: User, canvasId: string, document: Y.Doc) {
+    const nodes = document.getArray('nodes').toJSON() ?? [];
+    const legacyArtifactNodes = nodes.filter(
+      (node) =>
+        node.type === 'codeArtifact' &&
+        node.data?.entityId &&
+        (node.data?.contentPreview || node.data?.metadata?.code),
+    );
+
+    if (!legacyArtifactNodes.length) {
+      return document;
+    }
+
+    // Acquire lock to prevent concurrent processing
+    const releaseLock = await this.redis.acquireLock(`code-artifact-process:${canvasId}`);
+
+    if (!releaseLock) {
+      this.logger.warn(`failed to acquire lock to clean canvas: ${canvasId}`);
+      return document;
+    }
+
+    try {
+      const limit = pLimit(5);
+      const processedArtifacts = await Promise.all(
+        legacyArtifactNodes.map((node) =>
+          limit(() =>
+            this.processLegacyCodeArtifact(user, node.data?.entityId, {
+              title: node.data?.metadata?.title,
+              type: node.data?.metadata?.type,
+              language: node.data?.metadata?.language,
+              content: node.data?.contentPreview || node.data?.metadata?.code,
+            }),
+          ),
+        ),
+      );
+      const processedArtifactMap = new Map<string, CodeArtifact>();
+      for (const artifact of processedArtifacts) {
+        const { originArtifactId, newArtifact } = artifact;
+        if (newArtifact) {
+          processedArtifactMap.set(originArtifactId, newArtifact);
+        }
+      }
+
+      const cleanNodes = nodes.map((node: any) => {
+        if (node.type === 'codeArtifact' && processedArtifactMap.has(node.data?.entityId)) {
+          const newArtifact = processedArtifactMap.get(node.data?.entityId);
+          const status = node.data?.metadata?.status;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              entityId: newArtifact.artifactId,
+              contentPreview: undefined,
+              metadata: {
+                ...node.data.metadata,
+                code: undefined,
+                status: status === 'finished' ? 'finish' : status, // convert 'finished' to 'finish'
+              },
+            },
+          };
+        }
+        return node;
+      });
+
+      document.transact(() => {
+        document.getArray('nodes').delete(0, document.getArray('nodes').length);
+        document.getArray('nodes').insert(0, cleanNodes);
+      });
+
+      return document;
+    } finally {
+      await releaseLock();
+    }
+  }
+
+  async processLegacyCodeArtifact(
+    user: User,
+    artifactId: string,
+    param: UpsertCodeArtifactRequest,
+  ) {
+    try {
+      const newArtifactId = genCodeArtifactID();
+      const storageKey = `code-artifact/${newArtifactId}`;
+      const newArtifact = await this.prisma.codeArtifact.upsert({
+        where: { artifactId },
+        create: {
+          artifactId: newArtifactId,
+          uid: user.uid,
+          storageKey,
+          type: param.type,
+          language: param.language,
+          title: param.title,
+        },
+        update: {},
+      });
+      if (param.content) {
+        await this.minio.client.putObject(storageKey, param.content);
+      }
+      return { originArtifactId: artifactId, newArtifact };
+    } catch (err) {
+      this.logger.error(`failed to process legacy code artifact: ${artifactId}, err: ${err.stack}`);
+      return { originArtifactId: artifactId, newArtifact: null };
+    }
   }
 
   async openDirectConnection(documentName: string, context?: CollabContext) {

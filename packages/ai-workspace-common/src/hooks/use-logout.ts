@@ -6,7 +6,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 const deleteIndexedDB = async () => {
   try {
     const databases = await window.indexedDB.databases?.();
-    for (const db of databases) {
+    for (const db of databases ?? []) {
       window.indexedDB.deleteDatabase(db.name ?? '');
     }
   } catch (error) {
@@ -14,10 +14,42 @@ const deleteIndexedDB = async () => {
   }
 };
 
+// Flag to track post-logout reload
+const AUTH_RELOAD_FLAG = 'rf_auth_last_reload';
+// Set expiration to 5 minutes (in milliseconds)
+const AUTH_RELOAD_EXPIRY_TIME = 5 * 60 * 1000;
+
+/**
+ * Sets the auth reload flag
+ */
+const setAuthReloadFlag = () => {
+  localStorage.setItem(AUTH_RELOAD_FLAG, String(Date.now()));
+};
+
+/**
+ * Checks if the auth reload flag exists and is not expired
+ * @returns {boolean} Whether the flag exists and is valid
+ */
+const hasValidAuthReloadFlag = (): boolean => {
+  const flagExists = localStorage.getItem(AUTH_RELOAD_FLAG) !== null;
+  if (!flagExists) return false;
+
+  const lastReloadTime = Number(localStorage.getItem(AUTH_RELOAD_FLAG) ?? '0');
+  const isExpired = lastReloadTime + AUTH_RELOAD_EXPIRY_TIME < Date.now();
+
+  return !isExpired;
+};
+
 // Add flag to track logout status
 let isLoggingOut = false;
 
-export const logout = async ({ callRemoteLogout }: { callRemoteLogout?: boolean } = {}) => {
+export const logout = async ({
+  callRemoteLogout,
+  skipReload = false,
+}: {
+  callRemoteLogout?: boolean;
+  skipReload?: boolean;
+} = {}) => {
   // Return early if already logging out
   if (isLoggingOut) {
     console.log('Logout already in progress');
@@ -35,11 +67,27 @@ export const logout = async ({ callRemoteLogout }: { callRemoteLogout?: boolean 
     // Clear IndexedDB
     await deleteIndexedDB();
 
-    // Clear all local storage
-    localStorage.clear();
+    // Clear rest of localStorage (except our flags if we just set them)
+    const itemsToKeep = [AUTH_RELOAD_FLAG];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && !itemsToKeep.includes(key)) {
+        localStorage.removeItem(key);
+      }
+    }
 
-    // Reload page
-    window.location.reload();
+    // Reload page only if not explicitly skipped
+    if (!skipReload) {
+      // Check for valid auth reload flag
+      if (hasValidAuthReloadFlag()) {
+        // We've already tried reloading once after auth failure, don't reload again
+        console.log('Preventing reload loop after authentication failure');
+        return;
+      }
+
+      setAuthReloadFlag();
+      window.location.reload();
+    }
   } catch (error) {
     console.error('Failed to logout:', error);
   } finally {

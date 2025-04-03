@@ -22,7 +22,7 @@ export const showErrorNotification = (res: BaseResponse, locale: LOCALE) => {
   }
 
   const isUnknownError = !errCode || errCode === new UnknownError().code;
-  const errMsg = getErrorMessage(isUnknownError ? new UnknownError().code : errCode, locale);
+  const errMsg = getErrorMessage(errCode, locale);
 
   const description = React.createElement(
     'div',

@@ -122,6 +122,15 @@ import type {
   DeleteReferencesData,
   DeleteReferencesError,
   DeleteReferencesResponse,
+  GetCodeArtifactDetailData,
+  GetCodeArtifactDetailError,
+  GetCodeArtifactDetailResponse2,
+  CreateCodeArtifactData,
+  CreateCodeArtifactError,
+  CreateCodeArtifactResponse,
+  UpdateCodeArtifactData,
+  UpdateCodeArtifactError,
+  UpdateCodeArtifactResponse,
   CreateShareData,
   CreateShareError,
   CreateShareResponse2,
@@ -529,7 +538,7 @@ export const listCanvasTemplates = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: '/canvas/template/list',
+    url: '/template/list',
   });
 };
 
@@ -546,7 +555,7 @@ export const createCanvasTemplate = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: '/canvas/template/create',
+    url: '/template/create',
   });
 };
 
@@ -563,7 +572,7 @@ export const updateCanvasTemplate = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: '/canvas/template/update',
+    url: '/template/update',
   });
 };
 
@@ -580,7 +589,7 @@ export const listCanvasTemplateCategories = <ThrowOnError extends boolean = fals
     ThrowOnError
   >({
     ...options,
-    url: '/canvas/template/category/list',
+    url: '/template/category/list',
   });
 };
 
@@ -865,6 +874,57 @@ export const deleteReferences = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/knowledge/reference/delete',
+  });
+};
+
+/**
+ * Get code artifact detail
+ * Get code artifact detail by artifact ID
+ */
+export const getCodeArtifactDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetCodeArtifactDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetCodeArtifactDetailResponse2,
+    GetCodeArtifactDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/detail',
+  });
+};
+
+/**
+ * Create code artifact
+ * Create new code artifact
+ */
+export const createCodeArtifact = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCodeArtifactData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateCodeArtifactResponse,
+    CreateCodeArtifactError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/new',
+  });
+};
+
+/**
+ * Update code artifact
+ * Update code artifact by artifact ID
+ */
+export const updateCodeArtifact = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateCodeArtifactData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateCodeArtifactResponse,
+    UpdateCodeArtifactError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/update',
   });
 };
 

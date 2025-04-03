@@ -2,7 +2,7 @@ include:
   - path: docker-compose.middleware.yml
 services:
   api:
-    image: reflyai/refly-api:latest
+    image: reflyai/refly-api:nightly
     container_name: refly_api
     depends_on:
       elasticsearch:
@@ -41,8 +41,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    networks:
+      - refly_network  
   web:
-    image: reflyai/refly-web:latest
+    image: reflyai/refly-web:nightly
     container_name: refly_web
     ports:
       - 5700:80
@@ -58,3 +60,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    networks:
+      - refly_network  
+
+
+

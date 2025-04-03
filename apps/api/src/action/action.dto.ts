@@ -13,6 +13,11 @@ import {
 import { pick } from '@/utils';
 import { modelInfoPO2DTO } from '@/misc/misc.dto';
 
+export type ActionDetail = ActionResultModel & {
+  steps?: ActionStepModel[];
+  modelInfo?: ModelInfoModel;
+};
+
 export function actionStepPO2DTO(step: ActionStepModel): ActionStep {
   return {
     ...pick(step, ['name', 'content', 'reasoningContent']),
@@ -23,9 +28,7 @@ export function actionStepPO2DTO(step: ActionStepModel): ActionStep {
   };
 }
 
-export function actionResultPO2DTO(
-  result: ActionResultModel & { steps?: ActionStepModel[]; modelInfo?: ModelInfoModel },
-): ActionResult {
+export function actionResultPO2DTO(result: ActionDetail): ActionResult {
   return {
     ...pick(result, ['resultId', 'version', 'title', 'targetId', 'status']),
     type: result.type as ActionType,

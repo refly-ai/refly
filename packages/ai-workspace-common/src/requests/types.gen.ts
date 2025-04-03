@@ -146,9 +146,9 @@ export type CanvasTemplate = {
    */
   templateId: string;
   /**
-   * Origin canvas ID
+   * Share ID
    */
-  originCanvasId?: string;
+  shareId: string;
   /**
    * Share user
    */
@@ -345,6 +345,7 @@ export type EntityType =
   | 'document'
   | 'resource'
   | 'canvas'
+  | 'share'
   | 'user'
   | 'skillResponse'
   | 'codeArtifact';
@@ -1001,6 +1002,24 @@ export type Artifact = {
    * Artifact status
    */
   status?: ArtifactStatus;
+  /**
+   * Artifact content
+   */
+  content?: string;
+  /**
+   * Artifact metadata
+   */
+  metadata?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Artifact creation time
+   */
+  createdAt?: string;
+  /**
+   * Artifact update time
+   */
+  updatedAt?: string;
 };
 
 /**
@@ -1069,6 +1088,46 @@ export type ActionStep = {
    * Token usage
    */
   tokenUsage?: Array<TokenUsageItem>;
+};
+
+/**
+ * Code artifact type
+ */
+export type CodeArtifactType =
+  | 'application/refly.artifacts.react'
+  | 'image/svg+xml'
+  | 'application/refly.artifacts.mermaid'
+  | 'text/markdown'
+  | 'application/refly.artifacts.code'
+  | 'text/html'
+  | 'application/refly.artifacts.mindmap';
+
+/**
+ * Code artifact
+ */
+export type CodeArtifact = {
+  /**
+   * Artifact type
+   */
+  type: CodeArtifactType;
+  /**
+   * Artifact ID
+   */
+  artifactId: string;
+  /**
+   * Artifact title
+   */
+  title: string;
+  /**
+   * Code artifact content
+   */
+  content?: string;
+  /**
+   * Code artifact language
+   */
+  language?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 /**
@@ -1768,6 +1827,10 @@ export type CreateCanvasTemplateRequest = {
    * Canvas template language code
    */
   language: string;
+  /**
+   * Cover storage key
+   */
+  coverStorageKey?: string;
 };
 
 export type UpdateCanvasTemplateRequest = {
@@ -2042,8 +2105,13 @@ export type SkillEvent = {
   node?: CanvasNode;
   /**
    * Error data. Only present when `event` is `error`.
+   * @deprecated
    */
   error?: BaseResponse;
+  /**
+   * Original error message. Only present when `event` is `error`.
+   */
+  originError?: string;
 };
 
 export type ShareRecord = {
@@ -2072,6 +2140,10 @@ export type ShareRecord = {
    */
   parentShareId?: string;
   /**
+   * Canvas template ID
+   */
+  templateId?: string;
+  /**
    * Create timestamp
    */
   createdAt?: string;
@@ -2079,6 +2151,45 @@ export type ShareRecord = {
    * Update timestamp
    */
   updatedAt?: string;
+};
+
+export type UpsertCodeArtifactRequest = {
+  /**
+   * Code artifact ID (not needed for creation)
+   */
+  artifactId?: string;
+  /**
+   * Code artifact title
+   */
+  title?: string;
+  /**
+   * Code artifact type
+   */
+  type?: string;
+  /**
+   * Code artifact content
+   */
+  content?: string;
+  /**
+   * Code artifact language
+   */
+  language?: string;
+  /**
+   * Code artifact preview storage key
+   */
+  previewStorageKey?: string;
+  /**
+   * Whether to create the code artifact if it does not exist
+   */
+  createIfNotExists?: boolean;
+};
+
+export type UpsertCodeArtifactResponse = BaseResponse & {
+  data?: CodeArtifact;
+};
+
+export type GetCodeArtifactDetailResponse = BaseResponse & {
+  data?: CodeArtifact;
 };
 
 export type CreateShareRequest = {
@@ -2106,6 +2217,14 @@ export type CreateShareRequest = {
    * Raw share data (JSON string)
    */
   shareData?: string;
+  /**
+   * Share data storage key
+   */
+  shareDataStorageKey?: string;
+  /**
+   * Cover storage key
+   */
+  coverStorageKey?: string;
 };
 
 export type CreateShareResponse = BaseResponse & {
@@ -2744,6 +2863,10 @@ export type UpdateUserSettingsRequest = {
    */
   avatar?: string;
   /**
+   * User avatar storage key
+   */
+  avatarStorageKey?: string;
+  /**
    * UI locale
    */
   uiLocale?: string;
@@ -3183,6 +3306,10 @@ export type ModelCapabilities = {
    * Whether this model includes reasoning content
    */
   reasoning?: boolean;
+  /**
+   * Whether this model supports context caching
+   */
+  contextCaching?: boolean;
 };
 
 export type ModelInfo = {
@@ -3259,7 +3386,8 @@ export type CanvasNodeType =
   | 'toolResponse'
   | 'memo'
   | 'group'
-  | 'image';
+  | 'image'
+  | 'mindMap';
 
 export type CanvasNodeData = {
   /**
@@ -3718,6 +3846,35 @@ export type DeleteReferencesData = {
 export type DeleteReferencesResponse = unknown;
 
 export type DeleteReferencesError = unknown;
+
+export type GetCodeArtifactDetailData = {
+  query: {
+    /**
+     * Artifact ID
+     */
+    artifactId: string;
+  };
+};
+
+export type GetCodeArtifactDetailResponse2 = GetCodeArtifactDetailResponse;
+
+export type GetCodeArtifactDetailError = unknown;
+
+export type CreateCodeArtifactData = {
+  body: UpsertCodeArtifactRequest;
+};
+
+export type CreateCodeArtifactResponse = UpsertCodeArtifactResponse;
+
+export type CreateCodeArtifactError = unknown;
+
+export type UpdateCodeArtifactData = {
+  body: UpsertCodeArtifactRequest;
+};
+
+export type UpdateCodeArtifactResponse = UpsertCodeArtifactResponse;
+
+export type UpdateCodeArtifactError = unknown;
 
 export type CreateShareData = {
   body: CreateShareRequest;

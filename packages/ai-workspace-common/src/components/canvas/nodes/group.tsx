@@ -239,13 +239,13 @@ export const GroupNode = memo(
 
     const handleMouseEnter = useCallback(() => {
       setIsHovered(true);
-      onHoverStart();
-    }, [onHoverStart]);
+      onHoverStart(selected);
+    }, [onHoverStart, selected]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
-      onHoverEnd();
-    }, [onHoverEnd]);
+      onHoverEnd(selected);
+    }, [onHoverEnd, selected]);
 
     const handleDelete = useCallback(() => {
       const childNodes = getNodes().filter((node) => {
@@ -321,6 +321,18 @@ export const GroupNode = memo(
         cleanupNodeEvents(id);
       };
     }, [id, handleDelete]);
+
+    useEffect(() => {
+      const newZIndex = selected ? 1000 : -1;
+      setNodes((nodes) =>
+        nodes.map((node) => {
+          if (node.id === id) {
+            return { ...node, zIndex: newZIndex };
+          }
+          return node;
+        }),
+      );
+    }, [selected, setNodes]);
 
     return (
       <div>

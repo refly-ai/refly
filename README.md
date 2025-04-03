@@ -11,7 +11,7 @@
 
 Refly is an open-source AI-native creation engine powered by 13+ leading AI models. Its intuitive free-form canvas interface integrates multi-threaded conversations, multimodal inputs (text/images/files), RAG retrieval process, browser extension web clipper, contextual memory, AI document editing capabilities, code artifact generation (HTML/SVG/Mermaid/React), and website visualization engine, empowering you to effortlessly transform ideas into complete works with interactive visualizations and web applications.
 
-[🚀 v0.3.0 Released! Now Supporting Multimodal Images and File Uploads ⚡️](https://docs.refly.ai/changelog/v0.3.0)
+[🚀 v0.4.2 Released! Now Supporting Canvas template and document table⚡️](https://docs.refly.ai/changelog/v0.4.2)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
@@ -62,6 +62,28 @@ For core deployment tutorials, environment variable configuration, and FAQs, ple
 ### Local Development
 
 View details in [CONTRIBUTING](./CONTRIBUTING.md).
+
+## 🌟 Featured Showcases
+
+### 🎨 Creative Canvas 
+
+| Project | Description | Preview |
+|---------|-------------|----------|
+| [🧠 Build Card Library CATxPAPA in 3 Days](https://refly.ai/share/canvas/can-yu1t20ajt5adt7238i7aax0x) | Complete high-precision card visual asset library in 72 hours, creating industry benchmark with PAPA Lab | ![CATxPAPA](https://static.refly.ai/share-cover/can-yewsypawximvg5nn66a419iy.png) |
+| [🎮 Virtual Character Script Generator](https://refly.ai/share/canvas/can-v78ikqh7rvu6oc8b293e9b1c) | Dynamic difficulty adjustment system based on knowledge graph, covering 200+ core K12 knowledge points | ![Math Game](https://static.refly.ai/share-cover/can-iffblxq12invsh5fhv35acyy.png) |
+| [🔍 Understanding Large Models with 3D Visualization](https://refly.ai/share/canvas/can-qnn6vcnvt9o1go7px9axv7ea) | Interactive visualization analysis supporting architectures like Transformer, parameter-level neuron activity tracking | ![3D Vis](https://static.refly.ai/share-cover/can-yevuumd9spmqv7wvyvb1bl6x.png) |
+
+[👉 Explore More Use Cases](https://refly.ai/use-cases-gallery)
+
+### 🚀 Featured Artifacts
+
+| Project | Description | Preview |
+|---------|-------------|----------|
+| [📊 AI Teaching Assistant](https://refly.ai/share/code/cod-eiuua6fou3aci24dn0ljxzme) | Say goodbye to tedious manual organization, AI intelligently builds course knowledge framework to improve teaching efficiency | ![Course Outline](https://static.refly.ai/artifact-cover/course-outline.webp) |
+| [🎯 Interactive Math Tutoring](https://refly.ai/share/code/cod-i2nti1w421d7akwlyjgmyh2y) | Learning through play, AI-driven interactive Q&A helps children love math through games and improve grades | ![Math QA](https://static.refly.ai/artifact-cover/math-qa.webp) |
+| [🌐 One-Click Webpage Clone](https://refly.ai/share/code/cod-e2ufkvekg6ixndnombwamn9w) | No coding needed, quickly clone webpages by entering links, efficiently build event landing pages | ![Copy Web](https://static.refly.ai/artifact-cover/copy-web.webp) |
+
+[👉 Explore More Artifacts](https://refly.ai/artifact-gallery)
 
 ## ✨ Key Features
 

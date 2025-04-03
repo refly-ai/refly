@@ -5,6 +5,7 @@ import Magic from './ui/icons/magic';
 import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
 import { Editor, Range } from '@tiptap/core';
 import i18next from 'i18next';
+import { IconTable } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 export const configureSuggestionItems = (param: { entityId: string; entityType: string }) => {
   const t = (key: string) => i18next.t(key);
@@ -146,6 +147,19 @@ export const configureSuggestionItems = (param: { entityId: string; entityType: 
             }
           };
           input.click();
+        });
+      },
+    },
+    {
+      title: t('editor.command.table'),
+      description: t('editor.command.tableDescription'),
+      searchTerms: ['table'],
+      icon: <IconTable size={18} />,
+      command: ({ editor, range }) => {
+        if (!editor) return;
+
+        createBlockAfterCurrent(editor, range, () => {
+          editor.chain().focus().insertTable({ rows: 3, cols: 3 }).run();
         });
       },
     },

@@ -21,6 +21,7 @@ export const AccountSetting = () => {
   const { showSettingModal } = useSiderStoreShallow((state) => ({
     showSettingModal: state.showSettingModal,
   }));
+  const [avatarKey, setAvatarKey] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarError, setAvatarError] = useState(false);
 
@@ -46,8 +47,9 @@ export const AccountSetting = () => {
       body: { file, visibility: 'public' },
     });
     setLoadingAvatar(false);
-    if (data?.data?.url) {
+    if (data?.data?.storageKey) {
       setAvatarError(false);
+      setAvatarKey(data.data.storageKey);
       setAvatarUrl(data.data.url);
     }
   };
@@ -119,7 +121,7 @@ export const AccountSetting = () => {
         body: {
           name,
           nickname,
-          avatar: avatarUrl,
+          avatarStorageKey: avatarKey,
         },
       });
       if (error) {
@@ -137,7 +139,7 @@ export const AccountSetting = () => {
       form.setFieldsValue({
         ...userStore.userProfile,
       });
-      setAvatarUrl(userStore.userProfile?.avatar ?? '');
+      setAvatarKey(userStore.userProfile?.avatar ?? '');
       setAvatarError(false);
     }
   }, [showSettingModal]);
@@ -171,7 +173,7 @@ export const AccountSetting = () => {
                     </div>
                   )}
 
-                  {avatarUrl && !avatarError ? (
+                  {avatarKey && !avatarError ? (
                     <img
                       src={avatarUrl}
                       alt="avatar"

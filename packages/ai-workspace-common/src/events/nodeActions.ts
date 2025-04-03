@@ -5,6 +5,7 @@ export type NodeActionEvents = {
   [key: `node:${string}:delete`]: undefined;
   [key: `node:${string}:addToContext`]: undefined;
   [key: `node:${string}:createDocument`]: undefined;
+  [key: `node:${string}:createDocument.completed`]: undefined;
   [key: `node:${string}:ungroup`]: undefined;
   [key: `node:${string}:insertToDoc`]: {
     content?: string;

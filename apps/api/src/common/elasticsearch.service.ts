@@ -172,6 +172,7 @@ export class ElasticsearchService implements OnModuleInit {
           doc: document,
           doc_as_upsert: true,
         },
+        retry_on_conflict: 3,
       });
       this.logger.log(`Document upserted successfully, index: ${index}, id: ${document.id}`);
       return result;

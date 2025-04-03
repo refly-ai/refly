@@ -10,6 +10,7 @@ import {
   OpenAIClient,
 } from '@langchain/openai';
 import { z } from 'zod';
+import { MAX_OUTPUT_TOKENS_LEVEL0 } from '../scheduler/utils/constants';
 
 export interface ChatDeepSeekCallOptions extends ChatOpenAICallOptions {
   headers?: Record<string, string>;
@@ -441,6 +442,7 @@ export class ChatDeepSeek extends ChatOpenAI<ChatDeepSeekCallOptions> {
       },
       modelKwargs: {
         include_reasoning: fields?.include_reasoning || undefined,
+        reasoning: fields?.include_reasoning ? { max_tokens: MAX_OUTPUT_TOKENS_LEVEL0 } : undefined,
       },
     });
   }

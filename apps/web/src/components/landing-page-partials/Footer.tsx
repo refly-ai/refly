@@ -56,8 +56,8 @@ function Footer() {
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
     const elem = document.querySelector('.scroll-tag');
-    if (elem) {
-      elem.scrollIntoView({ behavior: 'smooth' });
+    if (elem?.scrollIntoView) {
+      elem?.scrollIntoView?.({ behavior: 'smooth' });
     }
   };
 

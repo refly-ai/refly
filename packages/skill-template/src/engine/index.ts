@@ -51,7 +51,8 @@ export type ContentNodeType =
   | 'document'
   | 'extensionWeblink'
   | 'resourceSelection'
-  | 'documentSelection';
+  | 'documentSelection'
+  | 'urlSource';
 
 export interface NodeMeta {
   title: string;

@@ -1,5 +1,10 @@
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { Dropdown, Button, Popconfirm, message, Empty, Divider, Typography } from 'antd';
+import InfiniteScroll from 'react-infinite-scroll-component';
+import {
+  Spinner,
+  EndMessage,
+} from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
 import type { MenuProps, DropdownProps } from 'antd';
 
 import {
@@ -9,7 +14,7 @@ import {
   IconCreateDocument,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import type { Document } from '@refly/openapi-schema';
 import { LOCALE } from '@refly/common-types';
@@ -17,7 +22,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { ScrollLoading } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-document';
@@ -148,7 +152,7 @@ const DocumentCard = ({ item, onDelete }: { item: Document; onDelete: () => void
   );
 };
 
-export const DocumentList = () => {
+const DocumentList = () => {
   const { t } = useTranslation();
   const { createSingleDocumentInCanvas } = useCreateDocument();
   const { showLibraryModal, setShowLibraryModal } = useSiderStoreShallow((state) => ({
@@ -166,45 +170,69 @@ export const DocumentList = () => {
     pageSize: 12,
   });
 
+  const documentCards = useMemo(() => {
+    return dataList?.map((item) => (
+      <DocumentCard
+        key={item.docId}
+        item={item}
+        onDelete={() => setDataList(dataList.filter((n) => n.docId !== item.docId))}
+      />
+    ));
+  }, [dataList, setDataList]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!isRequesting && hasMore) {
+      loadMore();
+    }
+  }, [isRequesting, hasMore, loadMore]);
+
   useEffect(() => {
     if (showLibraryModal) {
       reload();
+    } else {
+      setDataList([]);
     }
   }, [showLibraryModal]);
 
+  const emptyState = (
+    <div className="h-full flex items-center justify-center">
+      <Empty description={t('common.empty')}>
+        <Button
+          className="text-[#00968F]"
+          icon={<IconCreateDocument className="-mr-1 flex items-center justify-center" />}
+          onClick={() => {
+            createSingleDocumentInCanvas();
+            setShowLibraryModal(false);
+          }}
+        >
+          {t('canvas.toolbar.createDocument')}
+        </Button>
+      </Empty>
+    </div>
+  );
+
   return (
-    <Spin className="w-full h-full" spinning={isRequesting}>
-      <div className="w-full h-[calc(50vh-60px)] overflow-y-auto">
-        {isRequesting || dataList.length > 0 ? (
-          <>
+    <Spin className="w-full h-full" spinning={isRequesting && dataList.length === 0}>
+      <div id="documentScrollableDiv" className="w-full h-[calc(60vh-60px)] overflow-y-auto">
+        {dataList.length > 0 ? (
+          <InfiniteScroll
+            dataLength={dataList.length}
+            next={handleLoadMore}
+            hasMore={hasMore}
+            loader={<Spinner />}
+            endMessage={<EndMessage />}
+            scrollableTarget="documentScrollableDiv"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-              {dataList.map((item) => (
-                <DocumentCard
-                  key={item.docId}
-                  item={item}
-                  onDelete={() => setDataList(dataList.filter((n) => n.docId !== item.docId))}
-                />
-              ))}
+              {documentCards}
             </div>
-            <ScrollLoading isRequesting={isRequesting} hasMore={hasMore} loadMore={loadMore} />
-          </>
+          </InfiniteScroll>
         ) : (
-          <div className="h-full flex items-center justify-center">
-            <Empty description={t('common.empty')}>
-              <Button
-                className="text-[#00968F]"
-                icon={<IconCreateDocument className="-mr-1 flex items-center justify-center" />}
-                onClick={() => {
-                  createSingleDocumentInCanvas();
-                  setShowLibraryModal(false);
-                }}
-              >
-                {t('canvas.toolbar.createDocument')}
-              </Button>
-            </Empty>
-          </div>
+          !isRequesting && emptyState
         )}
       </div>
     </Spin>
   );
 };
+
+export { DocumentList };

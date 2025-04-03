@@ -92,7 +92,9 @@ export const SelectionActionMenu: FC<SelectionActionMenuProps> = ({ onClose }) =
                 entityId: node.data?.entityId,
                 metadata: {
                   ...node.data?.metadata,
-                  ...(node.type === 'skillResponse' ? { withHistory: true } : {}),
+                  ...(node.type === 'skillResponse' && selectedNodes.length <= 1
+                    ? { withHistory: true }
+                    : {}),
                 },
               })),
             },

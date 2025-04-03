@@ -127,7 +127,7 @@ export const Search = (props: SearchProps) => {
       });
       setLoading(false);
 
-      if (error || !data.success) {
+      if (error || !data?.success) {
         return;
       }
 

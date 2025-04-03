@@ -43,6 +43,8 @@ import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
 import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
+import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useGetNodeContent } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-content';
 
 interface MenuItem {
   key?: string;
@@ -79,6 +81,10 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
   const { getNode } = useReactFlow();
   const { canvasId } = useCanvasContext();
   const { setNodeSizeMode } = useNodeOperations();
+  const { setShowPreview } = useCanvasStoreShallow((state) => ({
+    setShowPreview: state.setShowPreview,
+  }));
+  const { previewNode } = useNodePreviewControl({ canvasId });
 
   const { activeDocumentId } = useDocumentStoreShallow((state) => ({
     activeDocumentId: state.activeDocumentId,
@@ -86,18 +92,22 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
 
   const node = useMemo(() => getNode(nodeId) as CanvasNode, [nodeId, getNode]);
   const nodeData = useMemo(() => node?.data, [node]);
+  const { fetchNodeContent } = useGetNodeContent(node);
   const [localSizeMode, setLocalSizeMode] = useState(
     () => nodeData?.metadata?.sizeMode || 'adaptive',
   );
 
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
   const [cloneAskAIRunning, setCloneAskAIRunning] = useState(false);
+  const [beforeCopying, setBeforeCopying] = useState(false);
+  const [beforeInserting, setBeforeInserting] = useState(false);
+  const [beforeDuplicatingDocument, setBeforeDuplicatingDocument] = useState(false);
 
   useEffect(() => {
     setLocalSizeMode(nodeData?.metadata?.sizeMode || 'adaptive');
   }, [nodeData?.metadata?.sizeMode]);
 
-  const { addNodePreview, nodePreviews, clickToPreview } = useCanvasStoreShallow((state) => ({
-    addNodePreview: state.addNodePreview,
+  const { nodePreviews, clickToPreview } = useCanvasStoreShallow((state) => ({
     nodePreviews: state.config[canvasId]?.nodePreviews ?? [],
     clickToPreview: state.clickToPreview,
   }));
@@ -161,35 +171,45 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
   }, [nodeId, onClose]);
 
   const handleCreateDocument = useCallback(() => {
+    setIsCreatingDocument(true);
+    const closeLoading = message.loading(t('canvas.nodeStatus.isCreatingDocument'));
     nodeActionEmitter.emit(createNodeEventName(nodeId, 'createDocument'));
+    nodeActionEmitter.on(createNodeEventName(nodeId, 'createDocument.completed'), () => {
+      setIsCreatingDocument(false);
+      closeLoading();
+    });
     onClose?.();
   }, [nodeId, onClose]);
 
-  const handleInsertToDoc = useCallback(() => {
+  const handleInsertToDoc = useCallback(async () => {
+    setBeforeInserting(true);
+    const content = (await fetchNodeContent()) as string;
     nodeActionEmitter.emit(createNodeEventName(nodeId, 'insertToDoc'), {
-      content: nodeData?.contentPreview,
+      content,
     });
+    setBeforeInserting(false);
     onClose?.();
-  }, [nodeId, nodeData?.contentPreview, onClose]);
+  }, [nodeId, fetchNodeContent, onClose]);
 
   const handlePreview = useCallback(() => {
     if (nodeType === 'image') {
       nodeActionEmitter.emit(createNodeEventName(nodeId, 'preview'));
     } else {
-      addNodePreview(canvasId, node);
+      previewNode(node);
       locateToNodePreviewEmitter.emit('locateToNodePreview', {
         id: nodeId,
         canvasId,
       });
     }
     onClose?.();
-  }, [node, nodeId, canvasId, onClose, addNodePreview]);
+  }, [node, nodeId, canvasId, onClose, previewNode]);
 
   const handleFullScreenPreview = useCallback(() => {
+    setShowPreview(true);
     const isPreviewOpen = nodePreviews?.some((preview) => preview.id === nodeId);
 
     if (!isPreviewOpen) {
-      addNodePreview(canvasId, node);
+      previewNode(node);
     }
 
     requestAnimationFrame(() => {
@@ -197,7 +217,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     });
 
     onClose?.();
-  }, [node, nodeId, canvasId, onClose, addNodePreview, nodeType, nodePreviews]);
+  }, [node, nodeId, canvasId, onClose, previewNode, nodeType, nodePreviews]);
 
   const handleUngroup = useCallback(() => {
     ungroupNodes(nodeId);
@@ -240,15 +260,17 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     onClose?.();
   }, [nodeId, nodeType, layoutNodeCluster, onClose]);
 
-  const handleCopy = useCallback(() => {
-    const content = nodeData?.contentPreview;
+  const handleCopy = useCallback(async () => {
+    setBeforeCopying(true);
+    const content = (await fetchNodeContent()) as string;
+    setBeforeCopying(false);
     copyToClipboard(content || '');
     message.success(t('copilot.message.copySuccess'));
     onClose?.();
-  }, [nodeData?.contentPreview, nodeData?.metadata?.imageUrl, onClose, t, nodeType]);
+  }, [fetchNodeContent, nodeData?.metadata?.imageUrl, onClose, t, nodeType]);
 
   const handleEditQuery = useCallback(() => {
-    addNodePreview(canvasId, node);
+    previewNode(node);
 
     setTimeout(() => {
       locateToNodePreviewEmitter.emit('locateToNodePreview', {
@@ -259,7 +281,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     }, 100);
 
     onClose?.();
-  }, [nodeId, canvasId, node, addNodePreview, onClose]);
+  }, [nodeId, canvasId, node, previewNode, onClose]);
   const { createMemo } = useCreateMemo();
 
   const handleCreateMemo = useCallback(() => {
@@ -274,10 +296,15 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     onClose?.();
   }, [nodeData, nodeType, createMemo, onClose]);
 
-  const handleDuplicateDocument = useCallback(() => {
-    nodeActionEmitter.emit(createNodeEventName(nodeId, 'duplicateDocument'));
+  const handleDuplicateDocument = useCallback(async () => {
+    setBeforeDuplicatingDocument(true);
+    const content = (await fetchNodeContent()) as string;
+    nodeActionEmitter.emit(createNodeEventName(nodeId, 'duplicateDocument'), {
+      content,
+    });
+    setBeforeDuplicatingDocument(false);
     onClose?.();
-  }, [nodeId, onClose]);
+  }, [nodeId, fetchNodeContent, onClose]);
 
   const getMenuItems = useCallback(
     (activeDocumentId: string): MenuItem[] => {
@@ -451,6 +478,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
             icon: FilePlus,
             label: t('canvas.nodeStatus.createDocument'),
             onClick: handleCreateDocument,
+            loading: isCreatingDocument,
             type: 'button' as const,
             hoverContent: {
               title: t('canvas.nodeStatus.createDocument'),
@@ -466,6 +494,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
             key: 'insertToDoc',
             icon: FileInput,
             label: t('canvas.nodeActions.insertToDoc'),
+            loading: beforeInserting,
             onClick: handleInsertToDoc,
             type: 'button' as const,
             disabled: !activeDocumentId,
@@ -482,6 +511,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
             key: 'insertToDoc',
             icon: FileInput,
             label: t('canvas.nodeActions.insertToDoc'),
+            loading: beforeInserting,
             onClick: handleInsertToDoc,
             type: 'button' as const,
             disabled: !activeDocumentId,
@@ -528,6 +558,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
             key: 'insertToDoc',
             icon: FileInput,
             label: t('canvas.nodeActions.insertToDoc'),
+            loading: beforeInserting,
             onClick: handleInsertToDoc,
             type: 'button' as const,
             disabled: !activeDocumentId,
@@ -544,6 +575,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
                 icon: FilePlus,
                 label: t('canvas.nodeStatus.createDocument'),
                 onClick: handleCreateDocument,
+                loading: isCreatingDocument,
                 type: 'button' as const,
                 hoverContent: {
                   title: t('canvas.nodeStatus.createDocument'),
@@ -565,6 +597,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
                       key: 'duplicateDocument',
                       icon: GrClone,
                       label: t('canvas.nodeActions.duplicateDocument'),
+                      loading: beforeDuplicatingDocument,
                       onClick: handleDuplicateDocument,
                       type: 'button' as const,
                       hoverContent: {
@@ -589,12 +622,13 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
                     'https://static.refly.ai/onboarding/nodeAction/nodeAction-createEmptyMemo.webm',
                 },
               },
-              ...(nodeType !== 'image'
+              ...(!['image', 'website'].includes(nodeType)
                 ? [
                     {
                       key: 'copy',
                       icon: IconCopy,
                       label: t('canvas.nodeActions.copy'),
+                      loading: beforeCopying,
                       onClick: handleCopy,
                       type: 'button' as const,
                       hoverContent: {
@@ -712,6 +746,10 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     },
     [
       cloneAskAIRunning,
+      isCreatingDocument,
+      beforeInserting,
+      beforeCopying,
+      beforeDuplicatingDocument,
       nodeType,
       nodeData?.contentPreview,
       handleRerun,

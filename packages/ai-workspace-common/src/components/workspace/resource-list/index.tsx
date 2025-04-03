@@ -1,5 +1,10 @@
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { Dropdown, Button, Popconfirm, message, Empty, Divider, Typography } from 'antd';
+import InfiniteScroll from 'react-infinite-scroll-component';
+import {
+  Spinner,
+  EndMessage,
+} from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
 import type { MenuProps, DropdownProps } from 'antd';
 import {
   IconMoreHorizontal,
@@ -9,14 +14,13 @@ import {
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LuPlus, LuExternalLink } from 'react-icons/lu';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { LOCALE } from '@refly/common-types';
 import { useTranslation } from 'react-i18next';
 
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { ScrollLoading } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { Resource } from '@refly/openapi-schema';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
@@ -234,7 +238,7 @@ const ResourceCard = ({ item, onDelete }: { item: Resource; onDelete: () => void
   );
 };
 
-export const ResourceList = () => {
+const ResourceList = () => {
   const { t } = useTranslation();
   const { showLibraryModal, setShowLibraryModal } = useSiderStoreShallow((state) => ({
     showLibraryModal: state.showLibraryModal,
@@ -253,47 +257,69 @@ export const ResourceList = () => {
     pageSize: 12,
   });
 
+  const resourceCards = useMemo(() => {
+    return dataList?.map((item) => (
+      <ResourceCard
+        key={item.resourceId}
+        item={item}
+        onDelete={() => setDataList(dataList.filter((n) => n.resourceId !== item.resourceId))}
+      />
+    ));
+  }, [dataList, setDataList]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!isRequesting && hasMore) {
+      loadMore();
+    }
+  }, [isRequesting, hasMore, loadMore]);
+
   useEffect(() => {
     if (showLibraryModal) {
       reload();
+    } else {
+      setDataList([]);
     }
   }, [showLibraryModal]);
 
+  const emptyState = (
+    <div className="h-full flex items-center justify-center">
+      <Empty description={t('common.empty')}>
+        <Button
+          className="text-[#00968F]"
+          icon={<IconImportResource className="-mr-1 flex items-center justify-center" />}
+          onClick={() => {
+            setShowLibraryModal(false);
+            setImportResourceModalVisible(true);
+          }}
+        >
+          {t('canvas.toolbar.importResource')}
+        </Button>
+      </Empty>
+    </div>
+  );
+
   return (
-    <Spin className="w-full h-full" spinning={isRequesting}>
-      <div className="w-full h-[calc(50vh-60px)] overflow-y-auto">
-        {isRequesting || dataList.length > 0 ? (
-          <>
+    <Spin className="w-full h-full" spinning={isRequesting && dataList.length === 0}>
+      <div id="resourceScrollableDiv" className="w-full h-[calc(60vh-60px)] overflow-y-auto">
+        {dataList.length > 0 ? (
+          <InfiniteScroll
+            dataLength={dataList.length}
+            next={handleLoadMore}
+            hasMore={hasMore}
+            loader={<Spinner />}
+            endMessage={<EndMessage />}
+            scrollableTarget="resourceScrollableDiv"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-              {dataList.map((item) => (
-                <ResourceCard
-                  key={item.resourceId}
-                  item={item}
-                  onDelete={() =>
-                    setDataList(dataList.filter((n) => n.resourceId !== item.resourceId))
-                  }
-                />
-              ))}
+              {resourceCards}
             </div>
-            <ScrollLoading isRequesting={isRequesting} hasMore={hasMore} loadMore={loadMore} />
-          </>
+          </InfiniteScroll>
         ) : (
-          <div className="h-full flex items-center justify-center">
-            <Empty description={t('common.empty')}>
-              <Button
-                className="text-[#00968F]"
-                icon={<IconImportResource className="-mr-1 flex items-center justify-center" />}
-                onClick={() => {
-                  setShowLibraryModal(false);
-                  setImportResourceModalVisible(true);
-                }}
-              >
-                {t('canvas.toolbar.importResource')}
-              </Button>
-            </Empty>
-          </div>
+          !isRequesting && emptyState
         )}
       </div>
     </Spin>
   );
 };
+
+export { ResourceList };

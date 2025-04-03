@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { Button, Dropdown, DropdownProps, MenuProps, Progress, Skeleton, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { IconDown } from '@arco-design/web-react/icon';
+import { AiOutlineExperiment } from 'react-icons/ai';
 
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
@@ -161,7 +162,12 @@ const GroupHeader = memo(
 
     return (
       <div className="flex justify-between items-center">
-        <span className="text-sm">{t('copilot.modelSelector.free')}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm">{t('copilot.modelSelector.free')}</span>
+          <Tooltip title={t('copilot.modelSelector.freeModelHint')}>
+            <AiOutlineExperiment className="w-3.5 h-3.5 text-orange-500" />
+          </Tooltip>
+        </div>
         {subscriptionEnabled && (
           <UsageProgress used={-1} quota={-1} setDropdownOpen={setDropdownOpen} />
         )}

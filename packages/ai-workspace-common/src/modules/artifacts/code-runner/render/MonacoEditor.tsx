@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor, { Monaco, loader } from '@monaco-editor/react';
-import { CodeArtifactType } from '../types';
+import { CodeArtifactType } from '@refly/openapi-schema';
 import debounce from 'lodash.debounce';
 import { useTranslation } from 'react-i18next';
 import './monaco-editor.scss';
 
 // Function to map CodeArtifactType to appropriate Monaco editor language
 const getLanguageFromType = (type: CodeArtifactType, language: string): string => {
-  const languageMap: Record<CodeArtifactType, string> = {
+  const languageMap: Record<string, string> = {
     'application/refly.artifacts.react': 'typescript',
     'image/svg+xml': 'xml',
     'application/refly.artifacts.mermaid': 'markdown',
     'text/markdown': 'markdown',
     'application/refly.artifacts.code': language,
     'text/html': 'html',
+    'application/refly.artifacts.mindmap': 'json',
   };
 
   return languageMap[type] ?? language;
@@ -158,7 +159,8 @@ const MonacoEditor = ({
       const model = editorRef.current.getModel();
       if (model && model.getValue() !== content) {
         // Use setValueUnflushed for better performance when setting content
-        model.setValueUnflushed(content);
+        console.log('model', model);
+        model.setValueUnflushed?.(content);
       }
     }
   }, [content, isEditorReady]);

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore, useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { InvalidVerificationSession } from '@refly/errors';
-import { useIsSharePage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 
 const RESEND_INTERVAL = 30;
 
@@ -16,7 +16,7 @@ export const VerificationModal = () => {
     setVerificationModalOpen: state.setVerificationModalOpen,
     reset: state.reset,
   }));
-  const isSharePage = useIsSharePage();
+  const isPublicAccessPage = usePublicAccessPage();
   const [isLoading, setIsLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [otp, setOtp] = useState('');
@@ -62,7 +62,7 @@ export const VerificationModal = () => {
 
     if (data?.success) {
       authStore.reset();
-      window.location.replace(isSharePage ? window.location.href : '/');
+      window.location.replace(isPublicAccessPage ? window.location.href : '/');
     }
   };
 

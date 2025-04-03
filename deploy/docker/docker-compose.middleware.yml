@@ -3,7 +3,7 @@ services:
     container_name: refly_db
     image: postgres:16-alpine
     ports:
-      - 5432:5432
+      - 5435:5432
     restart: always
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -17,14 +17,16 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    networks:
+      - refly_network
   minio:
     container_name: refly_minio
     image: minio/minio:RELEASE.2025-01-20T14-49-07Z
     command: server /data --console-address ":9001"
     restart: always
     ports:
-      - 9000:9000
-      - 9001:9001
+      - 9002:9000
+      - 9003:9001
     volumes:
       - minio_data:/data
     environment:
@@ -36,12 +38,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - refly_network
   redis:
     container_name: refly_redis
     image: redis/redis-stack:latest
     restart: always
     ports:
-      - 6379:6379
+      - 6381:6379
       - 8001:8001
     volumes:
       - redis_data:/data
@@ -51,6 +55,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    networks:
+      - refly_network
   qdrant:
     container_name: refly_qdrant
     image: reflyai/qdrant:v1.13.1
@@ -66,11 +72,13 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - refly_network
   elasticsearch:
     container_name: refly_elasticsearch
     image: reflyai/elasticsearch:7.10.2
     ports:
-      - 9200:9200
+      - 9210:9200
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -83,6 +91,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+    networks:
+      - refly_network
+
+networks:
+  refly_network:
+    driver: bridge
 
 volumes:
   db_data:

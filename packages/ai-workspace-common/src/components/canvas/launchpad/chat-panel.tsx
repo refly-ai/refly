@@ -8,7 +8,7 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useContextFilterErrorTip } from './context-manager/hooks/use-context-filter-errror-tip';
-import { genActionResultID } from '@refly-packages/utils/id';
+import { genActionResultID, genUniqueId } from '@refly-packages/utils/id';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { useChatStore, useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 
@@ -33,6 +33,9 @@ import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { omit } from '@refly-packages/utils/index';
+import { cn } from '@refly-packages/utils/cn';
+import { ActionStatus, SkillTemplateConfig } from '@refly/openapi-schema';
+import { ContextTarget } from '@refly-packages/ai-workspace-common/stores/context-panel';
 
 const PremiumBanner = () => {
   const { t } = useTranslation();
@@ -78,7 +81,27 @@ const PremiumBanner = () => {
   );
 };
 
-export const ChatPanel = () => {
+interface ChatPanelProps {
+  embeddedMode?: boolean;
+  onAddMessage?: (
+    message: { id: string; resultId: string; nodeId: string; data?: any },
+    query?: string,
+    contextItems?: any[],
+  ) => void;
+  onGenerateMessageIds?: () => { resultId: string; nodeId: string };
+  tplConfig?: SkillTemplateConfig | null;
+  onUpdateTplConfig?: (config: SkillTemplateConfig | null) => void;
+  resultId?: string;
+}
+
+export const ChatPanel = ({
+  embeddedMode = false,
+  onAddMessage,
+  onGenerateMessageIds,
+  tplConfig: initialTplConfig,
+  onUpdateTplConfig,
+  resultId = ContextTarget.Global,
+}: ChatPanelProps) => {
   const { t } = useTranslation();
   const { formErrors, setFormErrors } = useContextPanelStore((state) => ({
     formErrors: state.formErrors,
@@ -99,15 +122,16 @@ export const ChatPanel = () => {
       runtimeConfig: state.runtimeConfig,
       setRuntimeConfig: state.setRuntimeConfig,
     }));
-  const skillStore = useSkillStoreShallow((state) => ({
-    selectedSkill: state.selectedSkill,
-    setSelectedSkill: state.setSelectedSkill,
-  }));
   const chatStore = useChatStoreShallow((state) => ({
     newQAText: state.newQAText,
     setNewQAText: state.setNewQAText,
     selectedModel: state.selectedModel,
     setSelectedModel: state.setSelectedModel,
+  }));
+
+  // Get setActiveResultId from context panel store
+  const { setActiveResultId } = useContextPanelStoreShallow((state) => ({
+    setActiveResultId: state.setActiveResultId,
   }));
 
   const [form] = Form.useForm();
@@ -118,6 +142,11 @@ export const ChatPanel = () => {
   const { addNode } = useAddNode();
   const { invokeAction, abortAction } = useInvokeAction();
   const { handleUploadImage } = useUploadImage();
+
+  // Handle input focus
+  const handleInputFocus = useCallback(() => {
+    setActiveResultId(resultId);
+  }, [resultId, setActiveResultId]);
 
   // automatically sync selected nodes to context
   useSyncSelectedNodesToContext();
@@ -133,8 +162,12 @@ export const ChatPanel = () => {
       for (const item of selectedSkill?.configSchema?.items || []) {
         const key = item.key;
 
+        // Priority 0: Use external tplConfig if provided
+        if (initialTplConfig && initialTplConfig[key] !== undefined) {
+          newConfig[key] = initialTplConfig[key];
+        }
         // Priority 1: Check if the key exists in selectedSkill.tplConfig
-        if (selectedSkill?.tplConfig && selectedSkill.tplConfig[key] !== undefined) {
+        else if (selectedSkill?.tplConfig && selectedSkill.tplConfig[key] !== undefined) {
           newConfig[key] = selectedSkill.tplConfig[key];
         }
         // Priority 2: Fall back to schema default value
@@ -150,9 +183,12 @@ export const ChatPanel = () => {
       // Set the form value with the properly prioritized config
       form.setFieldValue('tplConfig', newConfig);
     }
-  }, [selectedSkill, form]);
+  }, [selectedSkill, form, initialTplConfig]);
 
   const handleSendMessage = (userInput?: string) => {
+    // Set active resultId when sending a message
+    setActiveResultId(resultId);
+
     const error = handleFilterErrorTip();
     if (error) {
       return;
@@ -169,24 +205,58 @@ export const ChatPanel = () => {
 
     const tplConfig = form?.getFieldValue('tplConfig');
 
+    // Update external tplConfig if available
+    if (onUpdateTplConfig) {
+      onUpdateTplConfig(tplConfig);
+    }
+
     const { selectedSkill } = useSkillStore.getState();
     const { newQAText, selectedModel } = useChatStore.getState();
     const query = userInput || newQAText.trim();
 
     const { contextItems } = useContextPanelStore.getState();
 
-    const resultId = genActionResultID();
+    // Generate new message IDs using the provided function
+    const { resultId: newResultId, nodeId } = onGenerateMessageIds?.() ?? {
+      resultId: genActionResultID(),
+      nodeId: genUniqueId(),
+    };
+
+    // Call onAddMessage callback with all required data
+    if (onAddMessage) {
+      onAddMessage(
+        {
+          id: resultId,
+          resultId: newResultId,
+          nodeId,
+          data: {
+            title: query,
+            entityId: newResultId,
+            metadata: {
+              status: 'executing' as ActionStatus,
+              contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
+              tplConfig,
+              modelInfo: selectedModel,
+              selectedSkill,
+              runtimeConfig,
+              structuredData: {
+                query,
+              },
+            },
+          },
+        },
+        query,
+        contextItems,
+      );
+    }
 
     chatStore.setNewQAText('');
 
-    // Reset selected skill after sending message
-    skillStore.setSelectedSkill(null);
-    setContextItems([]);
-
+    // Invoke the action with the API
     invokeAction(
       {
         query,
-        resultId,
+        resultId: newResultId,
         selectedSkill,
         modelInfo: selectedModel,
         contextItems,
@@ -199,19 +269,31 @@ export const ChatPanel = () => {
       },
     );
 
+    // Create node in the canvas
+    const nodeFilters = [...convertContextItemsToNodeFilters(contextItems)];
+
+    // Add node to canvas
     addNode(
       {
         type: 'skillResponse',
         data: {
           title: query,
-          entityId: resultId,
+          entityId: newResultId,
           metadata: {
             status: 'executing',
             contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
+            selectedSkill,
+            modelInfo: selectedModel,
+            runtimeConfig,
+            tplConfig,
+            structuredData: {
+              query,
+            },
           },
         },
+        id: nodeId,
       },
-      convertContextItemsToNodeFilters(contextItems),
+      nodeFilters,
       false,
       true,
     );
@@ -246,6 +328,9 @@ export const ChatPanel = () => {
   );
 
   const handleImageUpload = async (file: File) => {
+    // Set active resultId when uploading an image
+    setActiveResultId(resultId);
+
     const nodeData = await handleUploadImage(file, canvasId);
     if (nodeData) {
       setContextItems([
@@ -260,20 +345,26 @@ export const ChatPanel = () => {
 
   return (
     <div className="relative w-full" data-cy="launchpad-chat-panel">
-      <div className="ai-copilot-chat-container chat-input-container rounded-[7px] overflow-hidden">
+      <div
+        className={cn(
+          'ai-copilot-chat-container chat-input-container rounded-[7px] overflow-hidden',
+          embeddedMode && 'embedded-chat-panel border border-gray-100',
+        )}
+      >
         <SelectedSkillHeader
           skill={selectedSkill}
           setSelectedSkill={setSelectedSkill}
           onClose={() => setSelectedSkill(null)}
         />
         {subscriptionEnabled && !userProfile?.subscription && <PremiumBanner />}
-        <div className="px-3">
+        <div className={cn('px-3', embeddedMode && 'px-2')}>
           <ContextManager
             className="py-2"
             contextItems={contextItems}
             setContextItems={setContextItems}
             filterErrorInfo={filterErrorInfo}
           />
+
           <div>
             <ChatInput
               query={chatStore.newQAText}
@@ -282,15 +373,24 @@ export const ChatPanel = () => {
               autoCompletionPlacement={'topLeft'}
               handleSendMessage={handleSendMessage}
               onUploadImage={handleImageUpload}
+              onFocus={handleInputFocus}
             />
           </div>
 
-          {selectedSkill?.configSchema?.items?.length > 0 && (
+          {selectedSkill?.configSchema?.items?.length ? (
             <ConfigManager
               key={selectedSkill?.name}
               form={form}
               formErrors={formErrors}
               setFormErrors={setFormErrors}
+              tplConfig={initialTplConfig}
+              onFormValuesChange={(_, allValues) => {
+                // Debounce form value changes to prevent cascading updates
+                const newConfig = allValues.tplConfig;
+                if (JSON.stringify(newConfig) !== JSON.stringify(initialTplConfig)) {
+                  onUpdateTplConfig?.(newConfig);
+                }
+              }}
               schema={selectedSkill?.configSchema}
               fieldPrefix="tplConfig"
               configScope="runtime"
@@ -312,7 +412,7 @@ export const ChatPanel = () => {
                 }
               }}
             />
-          )}
+          ) : null}
 
           <ChatActions
             className="py-2"

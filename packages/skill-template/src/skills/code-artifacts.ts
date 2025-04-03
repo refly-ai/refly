@@ -9,7 +9,6 @@ import {
   Artifact,
 } from '@refly-packages/openapi-schema';
 import { GraphState } from '../scheduler/types';
-import { randomUUID } from 'node:crypto';
 
 // Import prompt sections
 import { reactiveArtifactInstructions } from '../scheduler/module/artifacts/prompt';
@@ -19,7 +18,7 @@ import { buildFinalRequestMessages } from '../scheduler/utils/message';
 import { prepareContext } from '../scheduler/utils/context';
 import { processQuery } from '../scheduler/utils/queryProcessor';
 import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { genCodeArtifactID, safeStringifyJSON } from '@refly-packages/utils';
 import { truncateSource } from '../scheduler/utils/truncator';
 import { checkModelContextLenSupport } from '../scheduler/utils/model';
 import { processContextUrls } from '../utils/url-processing';
@@ -30,6 +29,25 @@ import {
   buildArtifactsContextUserPrompt,
   buildArtifactsFullSystemPrompt,
 } from '../scheduler/module/artifacts';
+
+// Helper function to get artifact type options
+const getArtifactTypeOptions = () => {
+  return [
+    { value: 'application/refly.artifacts.react', labelDict: { en: 'React', 'zh-CN': 'React' } },
+    { value: 'image/svg+xml', labelDict: { en: 'SVG', 'zh-CN': 'SVG' } },
+    {
+      value: 'application/refly.artifacts.mermaid',
+      labelDict: { en: 'Mermaid', 'zh-CN': 'Mermaid' },
+    },
+    { value: 'text/markdown', labelDict: { en: 'Markdown', 'zh-CN': 'Markdown' } },
+    { value: 'application/refly.artifacts.code', labelDict: { en: 'Code', 'zh-CN': 'Code' } },
+    { value: 'text/html', labelDict: { en: 'HTML', 'zh-CN': 'HTML' } },
+    {
+      value: 'application/refly.artifacts.mindmap',
+      labelDict: { en: 'Mind Map', 'zh-CN': '思维导图' },
+    },
+  ];
+};
 
 /**
  * Code Artifacts Skill
@@ -42,7 +60,28 @@ export class CodeArtifacts extends BaseSkill {
   icon: Icon = { type: 'emoji', value: '🧩' };
 
   configSchema: SkillTemplateConfigDefinition = {
-    items: [],
+    items: [
+      {
+        key: 'artifactType',
+        inputMode: 'select',
+        defaultValue: 'auto',
+        labelDict: {
+          en: 'Artifact Type',
+          'zh-CN': '组件类型',
+        },
+        descriptionDict: {
+          en: 'Select the type of artifact to generate',
+          'zh-CN': '选择要生成的组件类型',
+        },
+        options: [
+          {
+            value: 'auto',
+            labelDict: { en: 'Auto Detect', 'zh-CN': '自动检测' },
+          },
+          ...getArtifactTypeOptions(),
+        ],
+      },
+    ],
   };
 
   invocationConfig: SkillInvocationConfig = {};
@@ -66,7 +105,10 @@ export class CodeArtifacts extends BaseSkill {
 
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
-    const { locale = 'en', modelInfo } = config.configurable;
+    const { locale = 'en', modelInfo, tplConfig } = config.configurable;
+
+    // Get configuration values
+    const artifactType = tplConfig?.artifactType?.value ?? 'auto';
 
     config.metadata.step = { name: 'analyzeQuery' };
 
@@ -142,6 +184,15 @@ export class CodeArtifacts extends BaseSkill {
       sources = preparedRes.sources;
     }
 
+    // Prepare additional instructions based on selected artifact type
+    let typeInstructions = '';
+    if (artifactType !== 'auto') {
+      typeInstructions = `Please generate the artifact using the "${artifactType}" type specifically.`;
+    }
+
+    // Combine user instructions with type instructions
+    const combinedInstructions = typeInstructions;
+
     // Custom module for building messages
     const module = {
       // Custom system prompt that includes examples
@@ -152,6 +203,12 @@ export class CodeArtifacts extends BaseSkill {
       buildUserPrompt: buildArtifactsUserPrompt,
     };
 
+    // Modify query to include instructions if provided
+    const enhancedQuery = combinedInstructions
+      ? `${optimizedQuery}\n\n${combinedInstructions}`
+      : optimizedQuery;
+    const originalQuery = combinedInstructions ? `${query}\n\n${combinedInstructions}` : query;
+
     const requestMessages = buildFinalRequestMessages({
       module,
       locale,
@@ -160,9 +217,10 @@ export class CodeArtifacts extends BaseSkill {
       needPrepareContext: needPrepareContext && isModelContextLenSupport,
       context,
       images,
-      originalQuery: query,
-      optimizedQuery,
+      originalQuery: originalQuery,
+      optimizedQuery: enhancedQuery, // Use enhanced query with instructions
       rewrittenQueries,
+      modelInfo: config.configurable.modelInfo,
     });
 
     return { requestMessages, sources, context, query };
@@ -182,7 +240,7 @@ export class CodeArtifacts extends BaseSkill {
 
     // Create a code artifact entity
     const title = '';
-    const codeEntityId = randomUUID();
+    const codeEntityId = genCodeArtifactID();
 
     // Create and emit the code artifact
     const artifact: Artifact = {
@@ -219,7 +277,7 @@ export class CodeArtifacts extends BaseSkill {
     }
 
     // Use a slightly higher temperature for more creative code generation
-    const model = this.engine.chatModel({ temperature: 0.7 });
+    const model = this.engine.chatModel({ temperature: 0.1 });
 
     // Let the front-end know we're generating an artifact
     this.emitEvent(

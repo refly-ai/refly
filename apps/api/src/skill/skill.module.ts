@@ -19,6 +19,7 @@ import { SkillProcessor, SkillTimeoutCheckProcessor } from '@/skill/skill.proces
 import { SubscriptionModule } from '@/subscription/subscription.module';
 import { CollabModule } from '@/collab/collab.module';
 import { MiscModule } from '@/misc/misc.module';
+import { CodeArtifactModule } from '@/code-artifact/code-artifact.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { MiscModule } from '@/misc/misc.module';
     SubscriptionModule,
     CollabModule,
     MiscModule,
+    CodeArtifactModule,
     BullModule.registerQueue({ name: QUEUE_SKILL }),
     BullModule.registerQueue({ name: QUEUE_SKILL_TIMEOUT_CHECK }),
     BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_USAGE }),

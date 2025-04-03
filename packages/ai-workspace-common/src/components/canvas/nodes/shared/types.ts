@@ -1,4 +1,4 @@
-import { Node, NodeProps } from '@xyflow/react';
+import { Node, NodeProps, XYPosition } from '@xyflow/react';
 import {
   ActionLog,
   ActionMeta,
@@ -15,7 +15,7 @@ import {
   TokenUsageItem,
 } from '@refly/openapi-schema';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
-import { CodeArtifactType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/types';
+import { CodeArtifactType } from '@refly/openapi-schema';
 
 export type CanvasNodeData<T = Record<string, unknown>> = {
   title: string;
@@ -31,6 +31,7 @@ export type CanvasNodeData<T = Record<string, unknown>> = {
 export type CanvasNode<T = Record<string, unknown>> = Node<CanvasNodeData<T>, CanvasNodeType> & {
   className?: string;
   style?: React.CSSProperties;
+  position?: XYPosition;
 };
 
 // Node specific metadata types
@@ -54,6 +55,9 @@ export interface ResourceNodeMeta {
 
 export interface CodeArtifactNodeMeta {
   status?: 'generating' | 'finish' | 'failed';
+  shareId?: string;
+  previewUrl?: string;
+  previewStorageKey?: string;
   language?: string;
   type?: CodeArtifactType;
   title?: string;
@@ -61,6 +65,7 @@ export interface CodeArtifactNodeMeta {
   style?: React.CSSProperties;
   originalWidth?: number;
   activeTab?: 'code' | 'preview';
+  code?: string; // @deprecated
 }
 
 export type SkillNodeMeta = {
@@ -92,7 +97,9 @@ export type ResponseNodeMeta = {
   actionMeta?: ActionMeta;
   artifacts?: Artifact[];
   currentLog?: ActionLog;
+  errors?: string[];
   structuredData?: Record<string, unknown>;
+  selectedSkill?: Skill;
   contextItems?: IContextItem[];
   tplConfig?: SkillTemplateConfig;
   runtimeConfig?: SkillRuntimeConfig;

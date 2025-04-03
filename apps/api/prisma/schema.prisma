@@ -105,7 +105,7 @@ model ActionResult {
   /// Action result version
   version       Int          @default(0) @map("version")
   /// Action type
-  type          String       @map("type")
+  type          String       @default("skill") @map("type")
   /// UID
   uid           String       @default("") @map("uid")
   /// Result title
@@ -136,6 +136,8 @@ model ActionResult {
   locale        String?      @default("") @map("locale")
   /// Action result status
   status        ActionStatus @default(waiting) @map("status")
+  /// Duplicate from another action result id
+  duplicateFrom String?      @map("duplicate_from")
   /// Create timestamp
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
@@ -283,10 +285,12 @@ model CanvasTemplate {
   pk             BigInt                  @id @default(autoincrement())
   /// Canvas template id
   templateId     String                  @unique @map("template_id")
+  /// Origin canvas id (deprecated)
+  originCanvasId String                  @default("") @map("origin_canvas_id")
   /// Category id
   categoryId     String?                 @map("category_id")
-  /// Origin canvas id
-  originCanvasId String                  @map("origin_canvas_id")
+  /// Share id
+  shareId        String                  @default("") @map("share_id")
   /// Version
   version        Int                     @default(0) @map("version")
   /// UID
@@ -458,6 +462,33 @@ model Document {
   @@map("documents")
 }
 
+model CodeArtifact {
+  /// Primary key
+  pk                BigInt    @id @default(autoincrement())
+  /// Code artifact id
+  artifactId        String    @unique @map("artifact_id")
+  /// UID
+  uid               String    @map("uid")
+  /// Title
+  title             String    @default("") @map("title")
+  /// Type
+  type              String?   @map("type")
+  /// Language
+  language          String?   @map("language")
+  /// Code content storage key
+  storageKey        String    @map("storage_key")
+  /// Preview storage key
+  previewStorageKey String?   @map("preview_storage_key")
+  /// Create timestamp
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@map("code_artifacts")
+}
+
 model ShareRecord {
   /// Primary key
   pk               BigInt    @id @default(autoincrement())
@@ -477,6 +508,10 @@ model ShareRecord {
   entityId         String    @map("entity_id")
   /// Entity type
   entityType       String    @map("entity_type")
+  /// Extra data
+  extraData        String?   @map("extra_data")
+  /// Canvas template id
+  templateId       String?   @map("template_id")
   /// Create timestamp
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
@@ -486,6 +521,34 @@ model ShareRecord {
 
   @@index([entityType, entityId, deletedAt])
   @@map("share_records")
+}
+
+model DuplicateRecord {
+  /// Primary key
+  pk         BigInt    @id @default(autoincrement())
+  /// Source entity ID
+  sourceId   String    @map("source_id")
+  /// Target entity ID
+  targetId   String    @map("target_id")
+  /// Entity type
+  entityType String    @map("entity_type")
+  /// UID of the user who created the duplicate record
+  uid        String    @map("uid")
+  /// Share id related to the duplication
+  shareId    String?   @map("share_id")
+  /// Status (pending, finish, failed)
+  status     String    @default("pending") @map("status")
+  /// Create timestamp
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@unique([sourceId, targetId])
+  @@index([targetId])
+  @@index([shareId])
+  @@map("duplicate_records")
 }
 
 model Reference {

@@ -9,7 +9,7 @@ import { buildQueryPriorityInstruction, buildSpecificQueryInstruction } from '..
 import { buildContextFormat } from './context';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
 import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
-import { buildFormatDisplayInstruction, buildVisualExamplesInstruction } from '../common/format';
+import { buildFormatDisplayInstruction } from '../common/format';
 import { buildSimpleDetailedExplanationInstruction } from '../common/personalization';
 
 export const buildLibrarySearchSystemPrompt = () => {
@@ -98,7 +98,6 @@ ${buildQueryProcessAndChatHistoryInstructions()}
 ${buildLocaleFollowInstruction(locale)}
 
 ${buildFormatDisplayInstruction()}
-${buildVisualExamplesInstruction()}
 ${buildSimpleDetailedExplanationInstruction()}
 `;
 };

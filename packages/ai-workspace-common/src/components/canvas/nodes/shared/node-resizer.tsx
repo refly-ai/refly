@@ -9,6 +9,7 @@ interface NodeResizerProps {
   isPreview?: boolean;
   sizeMode?: 'compact' | 'adaptive';
   onResize: (params: any) => void;
+  onResizeEnd?: () => void;
 }
 
 export const NodeResizer: React.FC<NodeResizerProps> = ({
@@ -19,6 +20,7 @@ export const NodeResizer: React.FC<NodeResizerProps> = ({
   isPreview = false,
   sizeMode = 'adaptive',
   onResize,
+  onResizeEnd,
 }) => {
   const [isResizing, setIsResizing] = React.useState(false);
 
@@ -79,6 +81,7 @@ export const NodeResizer: React.FC<NodeResizerProps> = ({
         for (const iframe of iframes) {
           iframe.style.pointerEvents = '';
         }
+        onResizeEnd?.();
       }}
       hideDefaultLines={true}
       className={`!pointer-events-auto ${!isHovered ? 'moveable-control-hidden' : 'moveable-control-show'}`}

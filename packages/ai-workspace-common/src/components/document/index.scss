@@ -15,7 +15,8 @@
   --editor-yellow-light: #fffae5;
   --editor-red: #ff5c33;
   --editor-red-light: #ffebe5;
-  --editor-shadow: 0px 12px 33px 0px rgba(0, 0, 0, 0.06), 0px 3.618px 9.949px 0px rgba(0, 0, 0, 0.04);
+  --editor-shadow: 0px 12px 33px 0px rgba(0, 0, 0, 0.06),
+    0px 3.618px 9.949px 0px rgba(0, 0, 0, 0.04);
 }
 
 /* Basic editor styles */
@@ -57,7 +58,7 @@
     background: #f1f1f1;
     border-radius: 0.5rem;
     color: black;
-    font-family: 'JetBrainsMono', monospace;
+    font-family: "JetBrainsMono", monospace;
     padding: 0.75rem 1rem;
 
     code {
@@ -93,7 +94,7 @@
     margin: 2rem 0;
   }
 
-  ul[data-type='taskList'] {
+  ul[data-type="taskList"] {
     list-style: none;
     padding: 0;
 
@@ -172,7 +173,7 @@
     &::before {
       background: rgba(#0d0d0d, 0.5);
       border-radius: 50%;
-      content: ' ';
+      content: " ";
       display: inline-block;
       flex: 0 0 auto;
       height: 0.5rem;
@@ -324,7 +325,7 @@
         }
 
         &:not(:first-child):before {
-          content: '';
+          content: "";
           clear: both;
           position: absolute;
           left: 0;
@@ -378,7 +379,7 @@
         }
 
         &::before {
-          content: '';
+          content: "";
           clear: both;
           position: absolute;
           top: 0;
@@ -419,6 +420,94 @@
     .arco-spin-children {
       height: 100%;
       width: 100%;
+    }
+  }
+}
+
+/* Table of contents styles */
+.toc-container {
+  position: sticky;
+  top: 16px;
+  padding: 0.75rem 1rem;
+  height: calc(100vh - 32px);
+  border-left: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+
+  .text-lg {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+  }
+
+  .toc-list {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 14px;
+    color: #4b5563;
+
+    /* Custom scrollbar styles */
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #e5e7eb;
+      border-radius: 4px;
+    }
+
+    .toc-item {
+      padding: 4px 8px;
+      margin: 2px 0;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      position: relative;
+      cursor: pointer;
+      color: #6b7280; // Default light color
+
+      &:hover {
+        background-color: #f3f4f6;
+        color: #111827;
+      }
+
+      &.active {
+        background-color: #f3f4f6;
+        color: #111827;
+        font-weight: 500;
+
+        // All items after the active item become darker
+        & ~ .toc-item {
+          color: #374151;
+        }
+      }
+
+      // Different styles based on heading level
+      &[data-level="1"] {
+        font-weight: 500;
+      }
+
+      &[data-level="2"] {
+        font-weight: normal;
+      }
+
+      &[data-level="3"] {
+        font-weight: normal;
+        font-size: 13px;
+      }
+
+      // Add numbering style
+      &::before {
+        content: attr(data-index);
+        margin-right: 0.5rem;
+        color: inherit;
+        opacity: 0.75;
+      }
     }
   }
 }

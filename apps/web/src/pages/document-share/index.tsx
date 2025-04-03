@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { Result } from 'antd';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useEffect, useCallback } from 'react';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import PoweredByRefly from '@/components/common/PoweredByRefly';
@@ -55,22 +54,20 @@ const DocumentSharePage = () => {
   const { title, content } = documentData;
 
   return (
-    <CanvasProvider canvasId="" readonly>
-      <div className="flex h-full w-full grow relative">
-        {collapse && <PoweredByRefly onClick={toggleSidebar} />}
+    <div className="flex h-full w-full grow relative">
+      {collapse && <PoweredByRefly onClick={toggleSidebar} />}
 
-        {/* Main content */}
-        <div className="flex h-full w-full grow bg-white overflow-auto">
-          <div className="flex flex-col space-y-4 p-4 h-full max-w-[1024px] mx-auto w-full">
-            {title && <h1 className="text-3xl font-bold text-gray-800 mt-6 mb-4">{title}</h1>}
+      {/* Main content */}
+      <div className="flex h-full w-full grow bg-white overflow-auto">
+        <div className="flex flex-col space-y-4 p-4 h-full max-w-[1024px] mx-auto w-full">
+          {title && <h1 className="text-3xl font-bold text-gray-800 mt-6 mb-4">{title}</h1>}
 
-            <div className="flex-grow prose prose-lg max-w-full">
-              {content && <Markdown content={content} mode="readonly" />}
-            </div>
+          <div className="flex-grow prose prose-lg max-w-full">
+            {content && <Markdown content={content} mode="readonly" />}
           </div>
         </div>
       </div>
-    </CanvasProvider>
+    </div>
   );
 };
 

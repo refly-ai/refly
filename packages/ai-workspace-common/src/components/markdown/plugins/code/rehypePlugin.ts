@@ -1,5 +1,5 @@
 import { SKIP, visit } from 'unist-util-visit';
-import { CodeArtifactType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/types';
+import { CodeArtifactType } from '@refly/openapi-schema';
 
 // Special handling for SVG blocks - make sure to recognize them properly
 const SVG_INDICATORS = ['<svg', '<circle', '<rect', '<line', '<text', '<path'];
@@ -146,17 +146,6 @@ function rehypePlugin() {
             'data-should-preview': shouldPreview,
             'data-is-mermaid': isMermaid,
           };
-
-          // Log debugging information
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`Processing code block:
-            - Language class: ${languageClass}
-            - Detected type: ${codeType}
-            - Detected language: ${language}
-            - Should preview: ${shouldPreview}
-            - Is mermaid: ${isMermaid}
-            - Content length: ${codeContent.length}`);
-          }
 
           return SKIP;
         }

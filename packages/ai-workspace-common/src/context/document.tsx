@@ -104,15 +104,23 @@ export const DocumentProvider = ({
       },
     });
 
+    const localProvider = new IndexeddbPersistence(docId, doc);
+
+    const providers = { remote: remoteProvider, local: localProvider };
+    providerCache.set(docId, providers);
+
+    return { remote: remoteProvider, local: localProvider, doc };
+  }, [docId, token, readonly, updateDocumentData]);
+
+  // Register event handlers for sync events
+  useEffect(() => {
+    if (readonly || !provider || !localProvider) return;
+
     const handleRemoteSync = () => {
       setDocumentRemoteSyncedAt(docId, Date.now());
       editorEmitter.emit('editorSynced');
       setIsLoading(false);
     };
-
-    remoteProvider.on('synced', handleRemoteSync);
-
-    const localProvider = new IndexeddbPersistence(docId, doc);
 
     const handleLocalSync = () => {
       updateDocumentData(doc);
@@ -120,13 +128,23 @@ export const DocumentProvider = ({
       setIsLoading(false);
     };
 
+    provider.on('synced', handleRemoteSync);
     localProvider.on('synced', handleLocalSync);
 
-    const providers = { remote: remoteProvider, local: localProvider };
-    providerCache.set(docId, providers);
-
-    return { remote: remoteProvider, local: localProvider, doc };
-  }, [docId, token, readonly, updateDocumentData]);
+    return () => {
+      provider.off('synced', handleRemoteSync);
+      localProvider.off('synced', handleLocalSync);
+    };
+  }, [
+    docId,
+    provider,
+    localProvider,
+    doc,
+    setDocumentRemoteSyncedAt,
+    setDocumentLocalSyncedAt,
+    updateDocumentData,
+    readonly,
+  ]);
 
   // Handle connection retries
   useEffect(() => {
@@ -158,7 +176,7 @@ export const DocumentProvider = ({
       clearTimeout(timeoutId);
       provider.off('status', handleStatus);
     };
-  }, [provider, connectionAttempts, readonly]);
+  }, [provider, connectionAttempts, readonly, MAX_RETRIES]);
 
   // Subscribe to yjs document changes
   useEffect(() => {

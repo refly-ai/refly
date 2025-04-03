@@ -1,4 +1,4 @@
-import { useRef, forwardRef } from 'react';
+import { useRef, forwardRef, useMemo, memo } from 'react';
 import { EditorProvider } from '@tiptap/react';
 import { Provider } from 'jotai';
 import tunnel from 'tunnel-rat';
@@ -35,21 +35,22 @@ export type EditorContentProps = Omit<EditorProviderProps, 'content'> & {
   readonly initialContent?: JSONContent;
 };
 
-export const EditorContent = forwardRef<HTMLDivElement, EditorContentProps>(
-  ({ className, children, initialContent, ...rest }, ref) => {
-    // const extensions = useMemo(() => {
-    //   return [...simpleExtensions, ...(rest.extensions ?? [])];
-    // }, [rest.extensions]);
-    const extensions = [...simpleExtensions, ...(rest.extensions ?? [])];
+export const EditorContent = memo(
+  forwardRef<HTMLDivElement, EditorContentProps>(
+    ({ className, children, initialContent, ...rest }, ref) => {
+      const extensions = useMemo(() => {
+        return [...simpleExtensions, ...(rest.extensions ?? [])];
+      }, [rest.extensions]);
 
-    return (
-      <div ref={ref} className={className}>
-        <EditorProvider {...rest} content={initialContent} extensions={extensions}>
-          {children}
-        </EditorProvider>
-      </div>
-    );
-  },
+      return (
+        <div ref={ref} className={className}>
+          <EditorProvider {...rest} content={initialContent} extensions={extensions}>
+            {children}
+          </EditorProvider>
+        </div>
+      );
+    },
+  ),
 );
 
 EditorContent.displayName = 'EditorContent';

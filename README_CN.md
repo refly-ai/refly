@@ -11,7 +11,7 @@
 
 Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型。其直观的自由画布界面支持多线程对话、多模态输入（文本/图片/文件）、RAG 检索流程、浏览器插件剪藏、上下文记忆、AI 文档编辑、代码生成（HTML/SVG/Mermaid/React）以及网站可视化引擎等功能，让您轻松地将创意转化为完整作品，并通过交互式可视化和网页应用进行展示。
 
-[🚀 v0.3.0 正式发布！支持多模态图片、文件上传等能力⚡️ ](https://docs.refly.ai/zh/changelog/v0.3.0)
+[🚀 v0.4.2 正式发布！支持画布模板和文档表格⚡️ ](https://docs.refly.ai/zh/changelog/v0.4.2)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
@@ -62,6 +62,29 @@ docker compose up -d
 ### 本地开发
 
 查看 [CONTRIBUTING](./CONTRIBUTING_CN.md) 了解更多信息。
+
+## 🌟 精选案例展示
+
+### 🎨 创意画布案例
+
+| 项目 | 描述 | 预览 |
+|---------|-------------|----------|
+| [🧠 三天打造纸牌图库CATxPAPA](https://refly.ai/share/canvas/can-yu1t20ajt5adt7238i7aax0x) | 72小时完成高精度纸牌视觉资产库建设，联合PAPA实验室打造行业标杆案例 | ![CATxPAPA](https://static.refly.ai/share-cover/can-yewsypawximvg5nn66a419iy.png) |
+| [🎮 数字人台词生成之哪吒](https://refly.ai/share/canvas/can-v78ikqh7rvu6oc8b293e9b1c) | 基于知识图谱的动态难度调节系统，覆盖K12阶段200+核心知识点 | ![Math Game](https://static.refly.ai/share-cover/can-iffblxq12invsh5fhv35acyy.png) |
+| [🔍 理解大模型 3D 可视化](https://refly.ai/share/canvas/can-qnn6vcnvt9o1go7px9axv7ea) | 支持Transformer等架构的交互式可视化分析，参数级神经元活动追踪 | ![3D Vis](https://static.refly.ai/share-cover/can-yevuumd9spmqv7wvyvb1bl6x.png) |
+
+[👉 探索更多应用案例](https://refly.ai/use-cases)
+
+### 🚀 精选作品展示
+
+| 项目 | 描述 | 预览 |
+|---------|-------------|----------|
+| [📊 AI 助教：讲师课程知识体系一键搭建](https://refly.ai/share/code/cod-eiuua6fou3aci24dn0ljxzme) | 告别繁琐的手动整理，AI 智能构建课程知识框架，提升教学效率 | ![Course Outline](https://static.refly.ai/artifact-cover/course-outline.webp) |
+| [🎯 AI 互动小学数学辅导](https://refly.ai/share/code/cod-i2nti1w421d7akwlyjgmyh2y) | 寓教于乐，AI 驱动的互动问答，让孩子在游戏中爱上数学，提升成绩 | ![Math QA](https://static.refly.ai/artifact-cover/math-qa.webp) |
+| [🌐 网页一键复刻](https://refly.ai/share/code/cod-e2ufkvekg6ixndnombwamn9w) | 无需编码，输入链接即可快速复刻网页，高效搭建活动落地页 | ![Copy Web](https://static.refly.ai/artifact-cover/copy-web.webp) |
+
+[👉 探索更多精选作品](https://refly.ai/artifacts)
+
 
 ## 核心特性
 

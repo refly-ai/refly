@@ -91,7 +91,7 @@ export const ChatActions = memo(
       (checked: boolean) => {
         setRuntimeConfig({
           ...runtimeConfig,
-          disableLinkParsing: !checked,
+          disableLinkParsing: checked,
         });
       },
       [runtimeConfig, setRuntimeConfig],
@@ -114,7 +114,7 @@ export const ChatActions = memo(
             <div className="flex items-center gap-1 ml-2">
               <Switch
                 size="small"
-                checked={!runtimeConfig?.disableLinkParsing}
+                checked={runtimeConfig?.disableLinkParsing}
                 onChange={handleAutoParseLinksChange}
               />
               <span className="text-xs text-gray-500">{t('skill.runtimeConfig.parseLinks')}</span>

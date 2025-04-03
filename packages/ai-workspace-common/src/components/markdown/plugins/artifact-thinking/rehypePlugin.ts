@@ -1,8 +1,7 @@
 import type { Node } from 'unist';
 import { visit } from 'unist-util-visit';
 
-import { ARTIFACT_THINKING_TAG } from '@refly-packages/ai-workspace-common/modules/artifacts/const';
-import { getReflyThinkingContent } from '@refly-packages/ai-workspace-common/modules/artifacts/utils';
+import { ARTIFACT_THINKING_TAG, getReflyThinkingContent } from '@refly/utils/artifact';
 
 // eslint-disable-next-line unicorn/consistent-function-scoping
 const rehypePlugin = () => (tree: Node) => {

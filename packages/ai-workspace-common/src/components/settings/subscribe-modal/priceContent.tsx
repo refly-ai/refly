@@ -17,10 +17,8 @@ import { SubscriptionPlanType } from '@refly/openapi-schema';
 export type SubscriptionInterval = 'monthly' | 'yearly';
 export type PriceSource = 'page' | 'modal';
 
-const premiumModels =
-  'DeepSeek R1, GPT-4o, Claude 3.5 Sonnet, Gemini 1.5 Pro, Claude 3.7 Sonnet, o3 Mini and more';
-const basicModels =
-  'GPT-4o Mini, DeepSeek V3, Llama 3.1 70B, Qwen 2.5 72B, Gemini Flash 2.0, DeepSeek V3, GPT-4o Mini and more';
+const premiumModels = 'Claude 3.7 Sonnet (Thinking), DeepSeek R1, o3 Mini, GPT-4o and more';
+const basicModels = 'Gemini Flash 2.0, DeepSeek V3, Claude 3.5 Haiku and more';
 
 const gridSpan = {
   xs: 24,
@@ -68,11 +66,11 @@ const PlanItem = (props: {
   const getPrice = (plan: SubscriptionPlanType) => {
     switch (plan) {
       case 'max':
-        return interval === 'monthly' ? 19.9 : 99.5;
+        return interval === 'monthly' ? 24.9 : 249;
       case 'pro':
-        return interval === 'monthly' ? 9.9 : 49.5;
+        return interval === 'monthly' ? 12.9 : 129;
       case 'plus':
-        return interval === 'monthly' ? 4.9 : 24.5;
+        return interval === 'monthly' ? 6.9 : 69;
       case 'free':
         return 0;
     }
@@ -151,13 +149,8 @@ const PlanItem = (props: {
           </div>
 
           {interval === 'yearly' && title !== 'free' && (
-            <div className="">
-              <span className="price text-base">
-                ${getPrice(title)}
-                <span className="text-sm text-gray-500 ml-1">
-                  <span className="line-through decoration-gray-700 ">${getPrice(title) * 2}</span>
-                </span>
-              </span>
+            <div>
+              <span className="price text-base">${getPrice(title)}</span>
               <span className="period !text-xs">
                 {' '}
                 /{' '}
@@ -300,7 +293,7 @@ export const PriceContent = (props: { source: PriceSource }) => {
       },
       pro: {
         t1Count: 300,
-        t2Count: -1,
+        t2Count: 3000,
         fileLimit: 500,
         t1Period: 'monthly',
         t2Period: 'monthly',
@@ -308,8 +301,8 @@ export const PriceContent = (props: { source: PriceSource }) => {
         fileSizeLimit: 20,
       },
       max: {
-        t1Count: -1,
-        t2Count: -1,
+        t1Count: 800,
+        t2Count: 8000,
         fileLimit: 2000,
         t1Period: 'monthly',
         t2Period: 'monthly',
@@ -410,15 +403,6 @@ export const PriceContent = (props: { source: PriceSource }) => {
 
   return (
     <div className="subscribe-content w-full">
-      <div className="flex items-center justify-center">
-        <div className="text-base ml-1 border border-solid border-yellow-500 rounded-xl px-4 py-1 w-fit mb-4 flex items-center gap-2">
-          <span>🎉</span>
-          <span className="inline bg-gradient-to-r from-[#ffaa40] via-[#9c40ff] to-[#ffaa40] bg-[length:200%_100%] bg-clip-text text-transparent animate-[gradient-animation_1s_ease-in-out_infinite]">
-            {t('landingPage.pricing.limitedOffer')}
-          </span>
-        </div>
-      </div>
-
       <div className="subscribe-content-type">
         <div className="subscribe-content-type-inner">
           <div

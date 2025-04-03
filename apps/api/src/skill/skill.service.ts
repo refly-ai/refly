@@ -56,6 +56,7 @@ import {
   genSkillTriggerID,
   incrementalMarkdownUpdate,
   safeParseJSON,
+  getArtifactContentAndAttributes,
 } from '@refly-packages/utils';
 import { PrismaService } from '@/common/prisma.service';
 import {
@@ -97,6 +98,9 @@ import { modelInfoPO2DTO } from '@/misc/misc.dto';
 import { MiscService } from '@/misc/misc.service';
 import { AutoNameCanvasJobData } from '@/canvas/canvas.dto';
 import { ParserFactory } from '@/knowledge/parsers/factory';
+import { MINIO_INTERNAL, MinioService } from '@/common/minio.service';
+import { Inject } from '@nestjs/common';
+import { CodeArtifactService } from '@/code-artifact/code-artifact.service';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -127,6 +131,8 @@ export class SkillService {
     private subscription: SubscriptionService,
     private collabService: CollabService,
     private misc: MiscService,
+    private codeArtifact: CodeArtifactService,
+    @Inject(MINIO_INTERNAL) private minio: MinioService,
     @InjectQueue(QUEUE_SKILL) private skillQueue: Queue<InvokeSkillJobData>,
     @InjectQueue(QUEUE_SKILL_TIMEOUT_CHECK)
     private timeoutCheckQueue: Queue<SkillTimeoutCheckJobData>,
@@ -462,7 +468,7 @@ export class SkillService {
 
     const purgeResultHistory = (resultHistory: ActionResult[] = []) => {
       // remove extra unnecessary fields from result history to save storage
-      return resultHistory?.map((r) => pick(r, ['resultId', 'title', 'steps']));
+      return resultHistory?.map((r) => pick(r, ['resultId', 'title']));
     };
 
     const data: InvokeSkillJobData = {
@@ -957,6 +963,31 @@ export class SkillService {
       },
     );
 
+    const throttledCodeArtifactUpdate = throttle(
+      async ({ entityId, content }: ArtifactOutput) => {
+        this.logger.log(`Updating code artifact ${entityId}, content: ${content}`);
+
+        // Extract code content and attributes from content string
+        const {
+          content: codeContent,
+          language,
+          type,
+          title,
+        } = getArtifactContentAndAttributes(content);
+
+        await this.codeArtifact.updateCodeArtifact(user, {
+          artifactId: entityId,
+          title,
+          type,
+          language,
+          content: codeContent,
+          createIfNotExists: true,
+        });
+      },
+      1000,
+      { leading: true, trailing: true },
+    );
+
     writeSSEResponse(res, { event: 'start', resultId, version });
 
     try {
@@ -1004,8 +1035,10 @@ export class SkillService {
                   // For document artifacts, update the yjs document
                   throttledMarkdownUpdate(artifact);
                 } else if (artifact.type === 'codeArtifact') {
-                  // For code artifacts, send stream and stream_artifact event
-                  // Update result content and forward stream events to client
+                  // For code artifacts, save to MinIO and database
+                  throttledCodeArtifactUpdate(artifact);
+
+                  // Send stream and stream_artifact event to client
                   resultAggregator.handleStreamContent(runMeta, content, reasoningContent);
                   writeSSEResponse(res, {
                     event: 'stream',
@@ -1074,7 +1107,8 @@ export class SkillService {
           event: 'error',
           resultId,
           version,
-          error: genBaseRespDataFromError(err),
+          error: genBaseRespDataFromError(err.message),
+          originError: err.message,
         });
       }
       result.errors.push(err.message);

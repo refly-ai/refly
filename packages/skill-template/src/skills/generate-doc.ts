@@ -156,6 +156,7 @@ export class GenerateDoc extends BaseSkill {
       originalQuery: query,
       optimizedQuery,
       rewrittenQueries,
+      modelInfo: config?.configurable?.modelInfo,
     });
 
     return { optimizedQuery, requestMessages, context, sources, usedChatHistory, rewrittenQueries };

@@ -1,7 +1,7 @@
 import { prosemirrorToYXmlFragment, yXmlFragmentToProseMirrorRootNode } from 'y-prosemirror';
 import { Node } from '@tiptap/pm/model';
 import * as Y from 'yjs';
-import { defaultSchema } from './schema';
+import { schema } from './schema';
 import { defaultMarkdownSerializer } from './to_markdown';
 import { defaultMarkdownParser } from './from_markdown';
 
@@ -13,7 +13,7 @@ export const state2Markdown = (stateUpdate: Uint8Array) => {
 
 export const ydoc2Markdown = (ydoc: Y.Doc) => {
   const xmlFragment = ydoc.getXmlFragment('default');
-  const node = yXmlFragmentToProseMirrorRootNode(xmlFragment, defaultSchema);
+  const node = yXmlFragmentToProseMirrorRootNode(xmlFragment, schema);
   return defaultMarkdownSerializer.serialize(node);
 };
 

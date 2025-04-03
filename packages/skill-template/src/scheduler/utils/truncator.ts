@@ -344,3 +344,42 @@ export function truncateSource<T extends Source | Source[]>(sources: T): T {
     })),
   } as T;
 }
+
+/**
+ * Truncate sources by token limit
+ * @param sources Array of sources
+ * @param maxTokens Maximum number of tokens allowed for all sources combined
+ * @returns Truncated sources array that fits within token limit
+ */
+export function truncateSourcesByTokenLimit(sources: Source[], maxTokens: number): Source[] {
+  if (!sources || sources.length === 0 || maxTokens <= 0) {
+    return [];
+  }
+
+  let remainingTokens = maxTokens;
+  const truncatedSources: Source[] = [];
+
+  for (const source of sources) {
+    // Calculate tokens for this source
+    const sourceTokens = countToken(source.pageContent);
+
+    if (sourceTokens <= remainingTokens) {
+      // Source fits completely
+      truncatedSources.push(source);
+      remainingTokens -= sourceTokens;
+    } else if (remainingTokens > 0) {
+      // Source needs to be truncated
+      const truncatedContent = truncateTextWithToken(source.pageContent, remainingTokens);
+      truncatedSources.push({
+        ...source,
+        pageContent: truncatedContent,
+      });
+      remainingTokens = 0;
+    } else {
+      // No tokens left
+      break;
+    }
+  }
+
+  return truncatedSources;
+}

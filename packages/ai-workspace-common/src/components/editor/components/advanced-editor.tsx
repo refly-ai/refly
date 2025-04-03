@@ -19,6 +19,7 @@ import { configureSuggestionItems } from './slash-command';
 
 import './styles/globals.css';
 import './styles/prosemirror.css';
+import './styles/table.css';
 import { CreateMemoSelector } from '@refly-packages/ai-workspace-common/components/editor/components/selectors/create-memo-selector';
 
 export const CollabEditorCommand = (props: { entityId: string; entityType: string }) => {

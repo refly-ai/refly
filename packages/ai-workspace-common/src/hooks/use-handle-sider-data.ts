@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
-const DATA_NUM = 10;
+const DATA_NUM = 6;
 
 export const useHandleSiderData = (initData?: boolean) => {
   const { canvasList, libraryList, updateCanvasList, updateLibraryList } = useSiderStoreShallow(

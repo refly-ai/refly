@@ -11,7 +11,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import { serverOrigin } from '@refly-packages/ai-workspace-common/utils/env';
 import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
-import { useIsSharePage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 
 interface FormValues {
   email: string;
@@ -36,7 +36,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
     reset: state.reset,
   }));
 
-  const isSharePage = useIsSharePage();
+  const isPublicAccessPage = usePublicAccessPage();
 
   const { t } = useTranslation();
 
@@ -84,7 +84,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
 
         if (data.data?.skipVerification) {
           authStore.reset();
-          window.location.replace(isSharePage ? window.location.href : '/');
+          window.location.replace(isPublicAccessPage ? window.location.href : '/');
         } else {
           authStore.setEmail(values.email);
           authStore.setSessionId(data.data?.sessionId ?? null);
@@ -103,7 +103,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
       if (data?.success) {
         authStore.setLoginModalOpen(false);
         authStore.reset();
-        window.location.replace(isSharePage ? window.location.href : '/');
+        window.location.replace(isPublicAccessPage ? window.location.href : '/');
       }
     }
   };

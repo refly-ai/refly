@@ -30,6 +30,15 @@ export interface ResourcePrepareResult {
   metadata?: ResourceMeta;
 }
 
+export type DocumentDetail = DocumentModel & {
+  content?: string;
+};
+
+export type ResourceDetail = ResourceModel & {
+  content?: string;
+  downloadURL?: string;
+};
+
 export type FinalizeResourceParam = {
   resourceId: string;
   uid: string;
@@ -41,12 +50,7 @@ export type DeleteKnowledgeEntityJobData = {
   entityType: EntityType;
 };
 
-export const resourcePO2DTO = (
-  resource: ResourceModel & {
-    content?: string;
-    downloadURL?: string;
-  },
-): Resource => {
+export const resourcePO2DTO = (resource: ResourceDetail): Resource => {
   if (!resource) {
     return null;
   }
@@ -70,11 +74,7 @@ export const resourcePO2DTO = (
   };
 };
 
-export const documentPO2DTO = (
-  doc: DocumentModel & {
-    content?: string;
-  },
-): Document => {
+export const documentPO2DTO = (doc: DocumentDetail): Document => {
   if (!doc) {
     return null;
   }

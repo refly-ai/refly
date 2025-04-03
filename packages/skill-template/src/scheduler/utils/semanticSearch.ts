@@ -23,7 +23,9 @@ import {
   MAX_SHORT_DOCUMENTS_RATIO,
   MAX_RAG_RELEVANT_RESOURCES_RATIO,
   MAX_SHORT_RESOURCES_RATIO,
+  MAX_URL_SOURCES_TOKENS,
 } from './constants';
+import { Source } from '@refly-packages/openapi-schema';
 
 // TODO:替换成实际的 Chunk 定义，然后进行拼接，拼接时包含元数据和分隔符
 export function assembleChunks(chunks: DocumentInterface[] = []): string {
@@ -560,29 +562,35 @@ export async function knowledgeBaseSearchGetRelevantChunks(
   metadata: { entities: Entity[]; domains: SearchDomain[]; limit: number },
   ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
 ): Promise<DocumentInterface[]> {
-  // 1. search relevant chunks
-  const res = await ctx.ctxThis.engine.service.search(
-    ctx.config.configurable.user,
-    {
-      query,
-      entities: metadata.entities,
-      mode: 'vector',
-      limit: metadata.limit,
-      domains: metadata.domains,
-    },
-    { enableReranker: false },
-  );
-  const relevantChunks = res?.data?.map((item) => ({
-    id: item.id,
-    pageContent: item?.snippets?.map((s) => s.text).join('\n\n') || '',
-    metadata: {
-      ...item.metadata,
-      title: item.title,
-      domain: item.domain,
-    },
-  }));
+  try {
+    // 1. search relevant chunks
+    const res = await ctx.ctxThis.engine.service.search(
+      ctx.config.configurable.user,
+      {
+        query,
+        entities: metadata.entities,
+        mode: 'vector',
+        limit: metadata.limit,
+        domains: metadata.domains,
+      },
+      { enableReranker: false },
+    );
+    const relevantChunks = res?.data?.map((item) => ({
+      id: item.id,
+      pageContent: item?.snippets?.map((s) => s.text).join('\n\n') || '',
+      metadata: {
+        ...item.metadata,
+        title: item.title,
+        domain: item.domain,
+      },
+    }));
 
-  return relevantChunks || [];
+    return relevantChunks || [];
+  } catch (error) {
+    // If search fails, log error and return empty array as fallback
+    ctx.ctxThis.engine.logger.error(`Error in knowledgeBaseSearchGetRelevantChunks: ${error}`);
+    return [];
+  }
 }
 
 // TODO: 召回有问题，需要优化
@@ -592,31 +600,50 @@ export async function inMemoryGetRelevantChunks(
   metadata: { entityId: string; title: string; entityType: ContentNodeType },
   ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
 ): Promise<DocumentInterface[]> {
-  // 1. 获取 relevantChunks
-  const doc: Document<NodeMeta> = {
-    pageContent: content,
-    metadata: {
-      nodeType: metadata.entityType,
-      entityType: metadata.entityType,
-      title: metadata.title,
-      entityId: metadata.entityId,
-      tenantId: ctx.config.configurable.user.uid,
-    },
-  };
-  const res = await ctx.ctxThis.engine.service.inMemorySearchWithIndexing(
-    ctx.config.configurable.user,
-    {
-      content: doc,
-      query,
-      k: 10,
-      filter: undefined,
-      needChunk: true,
-      additionalMetadata: {},
-    },
-  );
-  const relevantChunks = res.data as DocumentInterface[];
+  try {
+    // 1. 获取 relevantChunks
+    const doc: Document<NodeMeta> = {
+      pageContent: content,
+      metadata: {
+        nodeType: metadata.entityType,
+        entityType: metadata.entityType,
+        title: metadata.title,
+        entityId: metadata.entityId,
+        tenantId: ctx.config.configurable.user.uid,
+      },
+    };
+    const res = await ctx.ctxThis.engine.service.inMemorySearchWithIndexing(
+      ctx.config.configurable.user,
+      {
+        content: doc,
+        query,
+        k: 10,
+        filter: undefined,
+        needChunk: true,
+        additionalMetadata: {},
+      },
+    );
+    const relevantChunks = res.data as DocumentInterface[];
 
-  return relevantChunks;
+    return relevantChunks;
+  } catch (error) {
+    // If vector processing fails, return truncated content as fallback
+    ctx.ctxThis.engine.logger.error(`Error in inMemoryGetRelevantChunks: ${error}`);
+
+    // Provide truncated content as fallback
+    const truncatedContent = truncateTextWithToken(content, MAX_NEED_RECALL_TOKEN);
+    return [
+      {
+        pageContent: truncatedContent,
+        metadata: {
+          nodeType: metadata.entityType,
+          entityType: metadata.entityType,
+          title: metadata.title,
+          entityId: metadata.entityId,
+        },
+      } as DocumentInterface,
+    ];
+  }
 }
 
 export function truncateChunks(
@@ -636,5 +663,95 @@ export function truncateChunks(
     }
   }
 
+  return result;
+}
+
+export async function processUrlSourcesWithSimilarity(
+  query: string,
+  urlSources: Source[],
+  maxTokens: number,
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+): Promise<Source[]> {
+  // set the appropriate maximum token ratio, similar to the processing of contentList
+  const MAX_RAG_RELEVANT_URLS_RATIO = 0.7; // 70% of tokens used for high-related URL content
+  const MAX_RAG_RELEVANT_URLS_MAX_TOKENS = Math.floor(maxTokens * MAX_RAG_RELEVANT_URLS_RATIO);
+
+  if (urlSources.length === 0) {
+    return [];
+  }
+
+  const result: Source[] = [];
+  let usedTokens = 0;
+  const sortedSources = urlSources;
+
+  // 2. process URL sources in order of relevance
+  for (const source of sortedSources) {
+    const sourceTokens = countToken(source.pageContent || '');
+
+    if (sourceTokens > MAX_NEED_RECALL_TOKEN) {
+      // 2.1 large content, use inMemoryGetRelevantChunks for recall
+      const relevantChunks = await inMemoryGetRelevantChunks(
+        query,
+        source?.pageContent?.slice(0, MAX_URL_SOURCES_TOKENS) || '',
+        {
+          entityId: source.url || '',
+          title: source.title || '',
+          entityType: 'urlSource' as ContentNodeType,
+        },
+        ctx,
+      );
+      const relevantContent = assembleChunks(relevantChunks);
+      result.push({
+        ...source,
+        pageContent: relevantContent,
+      });
+      usedTokens += countToken(relevantContent);
+    } else if (usedTokens + sourceTokens <= MAX_RAG_RELEVANT_URLS_MAX_TOKENS) {
+      // 2.2 small content, add directly
+      result.push(source);
+      usedTokens += sourceTokens;
+    } else {
+      // 2.3 reach MAX_RAG_RELEVANT_URLS_MAX_TOKENS, process the remaining content
+      break;
+    }
+
+    if (usedTokens >= MAX_RAG_RELEVANT_URLS_MAX_TOKENS) break;
+  }
+
+  // 3. process the remaining URL sources
+  for (let i = result.length; i < sortedSources.length; i++) {
+    const remainingSource = sortedSources[i];
+    const sourceTokens = countToken(remainingSource.pageContent || '');
+
+    // all short content added directly
+    if (sourceTokens < SHORT_CONTENT_THRESHOLD) {
+      result.push(remainingSource);
+      usedTokens += sourceTokens;
+    } else {
+      // remaining long content use inMemoryGetRelevantChunks for recall
+      const remainingTokens = maxTokens - usedTokens;
+      let relevantChunks = await inMemoryGetRelevantChunks(
+        query,
+        remainingSource?.pageContent?.slice(0, MAX_URL_SOURCES_TOKENS) || '',
+        {
+          entityId: remainingSource.url || '',
+          title: remainingSource.title || '',
+          entityType: 'urlSource' as ContentNodeType,
+        },
+        ctx,
+      );
+      relevantChunks = truncateChunks(relevantChunks, remainingTokens);
+      const relevantContent = assembleChunks(relevantChunks);
+      result.push({
+        ...remainingSource,
+        pageContent: relevantContent,
+      });
+      usedTokens += countToken(relevantContent);
+    }
+
+    if (usedTokens >= maxTokens) break;
+  }
+
+  ctx.ctxThis.engine.logger.log(`Processed URL sources: ${result.length} of ${urlSources.length}`);
   return result;
 }

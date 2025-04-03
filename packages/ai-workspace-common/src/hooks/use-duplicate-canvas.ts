@@ -24,7 +24,7 @@ export const useDuplicateCanvas = () => {
       },
     });
     setLoading(false);
-    if (data.success) {
+    if (data?.success) {
       message.success(t('common.putSuccess'));
       const canvasData = data.data;
       getCanvasList();

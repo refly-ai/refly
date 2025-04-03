@@ -52,6 +52,7 @@ import {
   RiExpandDiagonalLine,
   RiGuideLine,
 } from 'react-icons/ri';
+import { RxEnterFullScreen } from 'react-icons/rx';
 import { PiAtom } from 'react-icons/pi';
 import { TiDocumentDelete } from 'react-icons/ti';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
@@ -70,6 +71,7 @@ import { TbWorldSearch } from 'react-icons/tb';
 import { GrCircleQuestion } from 'react-icons/gr';
 import { TbInputSpark } from 'react-icons/tb';
 import { AiOutlineLink } from 'react-icons/ai';
+import { HiOutlineTableCells } from 'react-icons/hi2';
 
 import OpenAIIcon from '@refly-packages/ai-workspace-common/assets/openai.svg';
 import ClaudeIcon from '@refly-packages/ai-workspace-common/assets/claude.svg';
@@ -83,6 +85,7 @@ import { MdOutlineMouse } from 'react-icons/md';
 
 import ReflyLogo from '@refly-packages/ai-workspace-common/assets/logo.svg';
 import { memo } from 'react';
+import { IoGitNetworkOutline } from 'react-icons/io5';
 
 export const IconReflyLogo = ReflyLogo;
 export const IconCanvas = TfiBlackboard;
@@ -134,12 +137,14 @@ export const IconSubscription = LuGift;
 export const IconExit = RxExit;
 export const IconExpand = RiExpandDiagonalLine;
 export const IconShrink = AiOutlineShrink;
+export const IconWideMode = RxEnterFullScreen;
 export const IconDocumentation = LuBookOpen;
 export const IconMouse = MdOutlineMouse;
 export const IconTouchpad = LuTouchpad;
 export const IconThinking = PiAtom;
 export const IconCodeArtifact = FiCode;
 export const IconWebsite = AiOutlineLink;
+export const IconTable = HiOutlineTableCells;
 
 export const IconX = BsTwitterX;
 export const IconGithub = BsGithub;
@@ -195,3 +200,7 @@ export const getSkillIcon = (skillName: string, className?: string) => {
 export const MemoizedIcon = memo(({ icon, className }: { icon: string; className?: string }) => (
   <img className={`w-4 h-4 ${className}`} src={icon} alt={icon} />
 ));
+
+export const IconMindMap = (props: React.ComponentProps<typeof IoGitNetworkOutline>) => {
+  return <IoGitNetworkOutline {...props} />;
+};

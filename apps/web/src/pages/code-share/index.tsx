@@ -61,6 +61,7 @@ const ShareCodePage = () => {
               key={renderKey}
               title={codeData.title}
               language={codeData.language}
+              readonly
               onRequestFix={handleRequestFix}
             />
           </div>

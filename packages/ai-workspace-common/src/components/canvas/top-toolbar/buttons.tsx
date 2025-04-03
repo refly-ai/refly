@@ -1,7 +1,7 @@
 import { useState, useCallback, memo } from 'react';
 import { Button, Tooltip, Popover } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { MdOutlineImage, MdOutlineAspectRatio } from 'react-icons/md';
+import { MdOutlineImage } from 'react-icons/md';
 import {
   IconDownloadFile,
   IconSearch,
@@ -13,14 +13,14 @@ import { useReactFlow } from '@xyflow/react';
 import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-card';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
+import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { IconAskAI } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 export const ToolbarButtons = memo(
   ({
     canvasTitle,
     showPreview,
-    showMaxRatio,
     setShowPreview,
-    setShowMaxRatio,
   }: {
     canvasTitle: string;
     showPreview: boolean;
@@ -34,6 +34,11 @@ export const ToolbarButtons = memo(
     const { setNodeCenter } = useNodePosition();
     const { getNodes } = useReactFlow();
     const { hoverCardEnabled } = useHoverCard();
+
+    const { showReflyPilot, setShowReflyPilot } = useCanvasStoreShallow((state) => ({
+      showReflyPilot: state.showReflyPilot,
+      setShowReflyPilot: state.setShowReflyPilot,
+    }));
 
     const handleNodeSelect = useCallback(
       (item: IContextItem) => {
@@ -54,10 +59,13 @@ export const ToolbarButtons = memo(
       placement: 'bottom' as const,
     };
 
-    const maxRatioButtonConfig = {
-      title: t(`canvas.toolbar.${showMaxRatio ? 'hideMaxRatio' : 'showMaxRatio'}`),
-      description: t('canvas.toolbar.toggleMaxRatioDescription'),
-      videoUrl: 'https://static.refly.ai/onboarding/top-toolbar/topToolbar-toogleMaxRatio.webm',
+    const pilotButtonConfig = {
+      title: t(`canvas.toolbar.${showReflyPilot ? 'hideLaunchpad' : 'showLaunchpad'}`, {
+        defaultValue: showReflyPilot ? 'Hide Ask AI' : 'Show Ask AI',
+      }),
+      description: t('canvas.toolbar.toggleLaunchpadTitle', {
+        defaultValue: 'Toggle the visibility of Ask AI',
+      }),
       placement: 'bottom' as const,
     };
 
@@ -70,12 +78,21 @@ export const ToolbarButtons = memo(
       />
     );
 
-    const maxRatioButton = (
+    const pilotButton = (
       <Button
         type="text"
-        icon={<MdOutlineAspectRatio style={{ color: showMaxRatio ? '#000' : '#9CA3AF' }} />}
-        onClick={() => setShowMaxRatio(!showMaxRatio)}
-        className="w-8 h-6 flex items-center justify-center"
+        icon={
+          <span
+            className={`flex items-center justify-center text-xs font-semibold ${
+              showReflyPilot ? 'text-green-600' : 'text-gray-500'
+            }`}
+          >
+            <IconAskAI className="w-3 h-3 mr-1" />
+            {t('canvas.reflyPilot.title', { defaultValue: 'Ask AI' })}
+          </span>
+        }
+        onClick={() => setShowReflyPilot(!showReflyPilot)}
+        className="!w-16 h-6 flex items-center justify-center"
       />
     );
 
@@ -90,45 +107,48 @@ export const ToolbarButtons = memo(
     );
 
     return (
-      <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
-        <Popover
-          open={searchOpen}
-          onOpenChange={setSearchOpen}
-          overlayInnerStyle={{ padding: 0, boxShadow: 'none' }}
-          trigger="click"
-          placement="bottomRight"
-          content={
-            <NodeSelector
-              onSelect={handleNodeSelect}
-              showFooterActions={true}
-              onClickOutside={() => setSearchOpen(false)}
-            />
-          }
-          overlayClassName="node-search-popover"
-        >
-          <Tooltip title={t('canvas.toolbar.searchNode')}>
-            <Button
-              type="text"
-              icon={<IconSearch style={{ color: '#000' }} />}
-              className="w-8 h-6 flex items-center justify-center mr-1"
-            />
-          </Tooltip>
-        </Popover>
+      <>
+        <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
+          {hoverCardEnabled ? (
+            <HoverCard {...pilotButtonConfig}>{pilotButton}</HoverCard>
+          ) : (
+            <Tooltip title={pilotButtonConfig.title}>{pilotButton}</Tooltip>
+          )}
+        </div>
+        <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
+          <Popover
+            open={searchOpen}
+            onOpenChange={setSearchOpen}
+            overlayInnerStyle={{ padding: 0, boxShadow: 'none' }}
+            trigger="click"
+            placement="bottomRight"
+            content={
+              <NodeSelector
+                onSelect={handleNodeSelect}
+                showFooterActions={true}
+                onClickOutside={() => setSearchOpen(false)}
+              />
+            }
+            overlayClassName="node-search-popover"
+          >
+            <Tooltip title={t('canvas.toolbar.searchNode')}>
+              <Button
+                type="text"
+                icon={<IconSearch style={{ color: '#000' }} />}
+                className="w-8 h-6 flex items-center justify-center mr-1"
+              />
+            </Tooltip>
+          </Popover>
 
-        {hoverCardEnabled ? (
-          <HoverCard {...previewButtonConfig}>{previewButton}</HoverCard>
-        ) : (
-          <Tooltip title={previewButtonConfig.title}>{previewButton}</Tooltip>
-        )}
+          {hoverCardEnabled ? (
+            <HoverCard {...previewButtonConfig}>{previewButton}</HoverCard>
+          ) : (
+            <Tooltip title={previewButtonConfig.title}>{previewButton}</Tooltip>
+          )}
 
-        {hoverCardEnabled ? (
-          <HoverCard {...maxRatioButtonConfig}>{maxRatioButton}</HoverCard>
-        ) : (
-          <Tooltip title={maxRatioButtonConfig.title}>{maxRatioButton}</Tooltip>
-        )}
-
-        <Tooltip title={t('canvas.toolbar.exportImage')}>{exportImageButton}</Tooltip>
-      </div>
+          <Tooltip title={t('canvas.toolbar.exportImage')}>{exportImageButton}</Tooltip>
+        </div>
+      </>
     );
   },
 );

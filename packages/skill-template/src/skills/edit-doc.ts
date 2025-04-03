@@ -196,6 +196,7 @@ export class EditDoc extends BaseSkill {
       images,
       originalQuery: query,
       optimizedQuery,
+      modelInfo: config?.configurable?.modelInfo,
     });
 
     return { requestMessages };

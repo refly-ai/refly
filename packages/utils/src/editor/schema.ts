@@ -1,11 +1,4 @@
 import { Schema, MarkSpec } from '@tiptap/pm/model';
-import { getSchema } from '@tiptap/core';
-import StarterKit from '@tiptap/starter-kit';
-import Highlight from '@tiptap/extension-highlight';
-import TaskItem from '@tiptap/extension-task-item';
-import TaskList from '@tiptap/extension-task-list';
-import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
 
 /// Document schema for the data model used by CommonMark.
 export const schema = new Schema({
@@ -170,6 +163,8 @@ export const schema = new Schema({
         src: {},
         alt: { default: null },
         title: { default: null },
+        width: { default: null },
+        height: { default: null },
       },
       group: 'inline',
       draggable: true,
@@ -181,6 +176,8 @@ export const schema = new Schema({
               src: (dom as HTMLElement).getAttribute('src'),
               title: (dom as HTMLElement).getAttribute('title'),
               alt: (dom as HTMLElement).getAttribute('alt'),
+              width: (dom as HTMLElement).getAttribute('width'),
+              height: (dom as HTMLElement).getAttribute('height'),
             };
           },
         },
@@ -197,6 +194,50 @@ export const schema = new Schema({
       parseDOM: [{ tag: 'br' }],
       toDOM() {
         return ['br'];
+      },
+    },
+
+    table: {
+      content: 'tableRow+',
+      group: 'block',
+      tableRole: 'table',
+      isolating: true,
+      parseDOM: [{ tag: 'table' }],
+      toDOM() {
+        return ['table', 0];
+      },
+    },
+
+    tableRow: {
+      content: '(tableCell | tableHeader)*',
+      tableRole: 'row',
+      parseDOM: [{ tag: 'tr' }],
+      toDOM() {
+        return ['tr', 0];
+      },
+    },
+
+    tableHeader: {
+      content: 'block+',
+      tableRole: 'header_cell',
+      isolating: true,
+      parseDOM: [{ tag: 'th' }],
+      toDOM() {
+        return ['th', 0];
+      },
+    },
+
+    tableCell: {
+      content: 'block+',
+      tableRole: 'cell',
+      isolating: true,
+      attrs: {
+        header: { default: false },
+        align: { default: null },
+      },
+      parseDOM: [{ tag: 'td' }],
+      toDOM(node) {
+        return [node.attrs.header ? 'th' : 'td', 0];
       },
     },
   },
@@ -262,7 +303,3 @@ export const schema = new Schema({
     },
   },
 });
-
-export const defaultExtensions = [StarterKit, Highlight, TaskList, TaskItem, Link, Image];
-
-export const defaultSchema: Schema = getSchema(defaultExtensions);

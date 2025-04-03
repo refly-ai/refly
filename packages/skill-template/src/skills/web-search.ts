@@ -176,6 +176,7 @@ export class WebSearch extends BaseSkill {
       originalQuery: query,
       optimizedQuery,
       rewrittenQueries,
+      modelInfo: config?.configurable?.modelInfo,
     });
 
     // Generate answer using the model

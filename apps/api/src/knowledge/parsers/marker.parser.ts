@@ -126,7 +126,7 @@ export class MarkerParser extends BaseParser {
       const initialData: MarkerParseResponse = await response.json();
       this.logger.log(`Marker parse response: ${JSON.stringify(initialData)}`);
 
-      if (!initialData.success) {
+      if (!initialData?.success) {
         throw new Error(`Marker parse not successful, error: ${initialData.error}`);
       }
 

@@ -1,18 +1,18 @@
 import { useCallback } from 'react';
-import { useCanvasStore } from '../../../stores/canvas';
 import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { calculateGroupBoundaries, sortNodes, getAbsolutePosition } from './utils';
-import { prepareNodeData } from '../../../components/canvas/nodes';
+import { CanvasNode, prepareNodeData } from '../../../components/canvas/nodes';
 import { genUniqueId } from '@refly-packages/utils/id';
+import { useReactFlow } from '@xyflow/react';
 
 export const useGroupNodes = () => {
   const canvasId = useCanvasId();
+  const { getNodes } = useReactFlow<CanvasNode<any>>();
   const { updateNodesWithSync } = useNodeOperations();
 
   const createGroupFromSelectedNodes = useCallback(() => {
-    const { data } = useCanvasStore.getState();
-    const beforeNodes = data[canvasId]?.nodes ?? [];
+    const beforeNodes = getNodes();
     const selectedNodes = beforeNodes.filter((n) => n.selected);
 
     if (selectedNodes.length < 2) return;

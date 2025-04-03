@@ -1,12 +1,8 @@
 import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
-import {
-  CanvasNode,
-  CanvasNodeData,
-  CodeArtifactNodeMeta,
-  CodeArtifactNodeProps,
-} from './shared/types';
+import Moveable from 'react-moveable';
+import { CanvasNode, CodeArtifactNodeProps } from './shared/types';
 import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './index';
 import { ActionButtons } from './shared/action-buttons';
@@ -36,211 +32,59 @@ import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly-packages/utils/id';
-import CodeViewer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
-import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
-import { CodeArtifactType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/types';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
-import { ConfigScope, Skill } from '@refly/openapi-schema';
-import Moveable from 'react-moveable';
-
+import { CodeArtifact, Skill } from '@refly/openapi-schema';
+import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
+import { useGetCodeArtifactDetail } from '@refly-packages/ai-workspace-common/queries/queries';
+import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
+import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 interface NodeContentProps {
-  data: CanvasNodeData<CodeArtifactNodeMeta>;
-  isOperating?: boolean;
+  status: 'generating' | 'finish' | 'failed';
+  entityId: string;
+  shareId?: string;
+  legacyData?: CodeArtifact;
 }
 
 const NodeContent = memo(
-  ({ data, isOperating }: NodeContentProps) => {
-    const { language = 'html', activeTab = 'code', type = 'text/html' } = data?.metadata ?? {};
-    const [_, setIsShowingCodeViewer] = useState(true);
-    const [currentTab, setCurrentTab] = useState<'code' | 'preview'>(
-      activeTab as 'code' | 'preview',
-    );
-    const [currentType, setCurrentType] = useState<CodeArtifactType>(type as CodeArtifactType);
-    const { t } = useTranslation();
-
-    // Use isOperating for UI state (disabled controls when operating)
-    const isReadOnly = !!isOperating;
-    const { readonly: canvasReadOnly } = useCanvasContext();
-
-    // Sync local state with metadata changes
-    useEffect(() => {
-      // Only update if activeTab changes and is different from current state
-      const metadataActiveTab = data?.metadata?.activeTab as 'code' | 'preview';
-      if (metadataActiveTab && metadataActiveTab !== currentTab) {
-        setCurrentTab(metadataActiveTab);
-      }
-
-      // Update type if it changes in metadata
-      const metadataType = data?.metadata?.type as CodeArtifactType;
-      if (metadataType && metadataType !== currentType) {
-        setCurrentType(metadataType);
-      }
-    }, [data?.metadata?.activeTab, currentTab, data?.metadata?.type, currentType]);
-
-    const setNodeDataByEntity = useSetNodeDataByEntity();
-    const { addNode } = useAddNode();
-
-    // Update node data when tab changes
-    const handleTabChange = useCallback(
-      (tab: 'code' | 'preview') => {
-        setCurrentTab(tab);
-
-        if (data?.entityId) {
-          setNodeDataByEntity(
-            {
-              type: 'codeArtifact',
-              entityId: data.entityId,
-            },
-            {
-              metadata: {
-                ...data.metadata,
-                activeTab: tab,
-              },
-            },
-          );
-        }
+  ({ status, entityId, shareId, legacyData }: NodeContentProps) => {
+    const isLogin = useUserStoreShallow((state) => state.isLogin);
+    const { data: remoteData } = useGetCodeArtifactDetail(
+      {
+        query: {
+          artifactId: entityId,
+        },
       },
-      [data?.entityId, data?.metadata, setNodeDataByEntity],
+      null,
+      { enabled: isLogin && !shareId && status === 'finish' },
+    );
+    const { data: shareData } = useFetchShareData<CodeArtifact>(shareId);
+    const artifactData = useMemo(
+      () => shareData || remoteData?.data || legacyData || null,
+      [shareData, remoteData, legacyData],
     );
 
-    // Handle type changes
-    const handleTypeChange = useCallback(
-      (newType: CodeArtifactType) => {
-        // Update local state first
-        setCurrentType(newType);
-
-        // Ensure newType is a valid CodeArtifactType
-        if (data?.entityId && newType) {
-          setNodeDataByEntity(
-            {
-              type: 'codeArtifact',
-              entityId: data.entityId,
-            },
-            {
-              metadata: {
-                ...data?.metadata,
-                type: newType,
-              },
-            },
-          );
-        }
-      },
-      [data?.entityId, data?.metadata, setNodeDataByEntity, setCurrentType],
-    );
-
-    // Always show the content, even when generating
     return (
-      <div className="h-full min-h-[384px]">
-        <CodeViewer
-          code={data?.contentPreview || ''}
-          language={language}
-          title={data?.title || t('codeArtifact.defaultTitle', 'Code Artifact')}
-          isGenerating={data?.metadata?.status === 'generating'}
-          activeTab={currentTab}
-          entityId={data?.entityId ?? ''}
-          onTabChange={handleTabChange}
-          onTypeChange={handleTypeChange}
-          onClose={() => {
-            setIsShowingCodeViewer(false);
-          }}
-          onRequestFix={(error) => {
-            if (!data.entityId) return;
-
-            // Define a proper code fix skill similar to editDoc
-            const codeFixSkill: Skill = {
-              name: 'codeArtifacts',
-              icon: {
-                type: 'emoji',
-                value: '🔧',
-              },
-              description: t('codeArtifact.fix.title'),
-              configSchema: {
-                items: [],
-              },
-            };
-
-            // Get the current model
-            const { selectedModel } = useChatStore.getState();
-
-            addNode(
-              {
-                type: 'skill',
-                data: {
-                  title: t('codeArtifact.fix.title'),
-                  entityId: genSkillID(),
-                  metadata: {
-                    contextItems: [
-                      {
-                        type: 'codeArtifact',
-                        title: data?.contentPreview
-                          ? `${data.title} - ${data.contentPreview?.slice(0, 10)}`
-                          : data.title,
-                        entityId: data.entityId,
-                        metadata: data.metadata,
-                      },
-                    ] as IContextItem[],
-                    query: t('codeArtifact.fix.query', {
-                      errorMessage: error,
-                    }),
-                    selectedSkill: codeFixSkill,
-                    modelInfo: selectedModel,
-                    tplConfig: {
-                      codeErrorConfig: {
-                        value: {
-                          errorMessage: error,
-                          language: data?.metadata?.language || 'typescript',
-                          codeEntityId: data.entityId,
-                        },
-                        configScope: 'runtime' as unknown as ConfigScope,
-                        displayValue: t('codeArtifact.fix.errorConfig'),
-                        label: t('codeArtifact.fix.errorConfig'),
-                      },
-                    },
-                  },
-                },
-              },
-              [{ type: 'codeArtifact', entityId: data.entityId }],
-              false,
-              true,
-            );
-          }}
-          onChange={(updatedCode) => {
-            if (data.entityId) {
-              setNodeDataByEntity(
-                {
-                  type: 'codeArtifact',
-                  entityId: data.entityId,
-                },
-                {
-                  contentPreview: updatedCode,
-                },
-              );
-            }
-          }}
-          readOnly={isReadOnly}
-          canvasReadOnly={canvasReadOnly}
-          type={currentType}
+      <div className="h-full h-full flex justify-center items-center">
+        <Renderer
+          content={artifactData?.content}
+          type={artifactData?.type}
+          key={artifactData?.artifactId}
+          title={artifactData?.title}
+          language={artifactData?.language}
+          onRequestFix={() => {}}
         />
       </div>
     );
   },
-  (prevProps, nextProps) => {
-    // Compare content
-    const contentEqual = prevProps.data?.contentPreview === nextProps.data?.contentPreview;
-
-    // Compare metadata properties
-    const languageEqual = prevProps.data?.metadata?.language === nextProps.data?.metadata?.language;
-    const statusEqual = prevProps.data?.metadata?.status === nextProps.data?.metadata?.status;
-    const activeTabEqual =
-      prevProps.data?.metadata?.activeTab === nextProps.data?.metadata?.activeTab;
-    const sizeModeEqual = prevProps.data?.metadata?.sizeMode === nextProps.data?.metadata?.sizeMode;
-    const typeEqual = prevProps.data?.metadata?.type === nextProps.data?.metadata?.type;
-
-    return (
-      contentEqual && languageEqual && statusEqual && activeTabEqual && sizeModeEqual && typeEqual
-    );
-  },
+  (prevProps, nextProps) =>
+    prevProps.entityId === nextProps.entityId &&
+    prevProps.status === nextProps.status &&
+    prevProps.legacyData?.content === nextProps.legacyData?.content &&
+    prevProps.legacyData?.type === nextProps.legacyData?.type &&
+    prevProps.legacyData?.title === nextProps.legacyData?.title &&
+    prevProps.legacyData?.language === nextProps.legacyData?.language,
 );
 
 export const CodeArtifactNode = memo(
@@ -259,6 +103,7 @@ export const CodeArtifactNode = memo(
     const { getNode } = useReactFlow();
     const { addNode } = useAddNode();
     const { t } = useTranslation();
+    const updateNodeTitle = useUpdateNodeTitle();
 
     const { sizeMode = 'adaptive' } = data?.metadata ?? {};
 
@@ -303,6 +148,12 @@ export const CodeArtifactNode = memo(
       [handleResize],
     );
 
+    const handleResizeEnd = useCallback(() => {
+      if (codeViewerRef.current) {
+        codeViewerRef.current.style.pointerEvents = '';
+      }
+    }, []);
+
     // Check if node has any connections
     const isTargetConnected = edges?.some((edge) => edge.target === id);
     const isSourceConnected = edges?.some((edge) => edge.source === id);
@@ -345,11 +196,24 @@ export const CodeArtifactNode = memo(
       } as CanvasNode);
     }, [id, data, deleteNode]);
 
+    // Legacy code artifact data
+    const legacyData = useMemo<CodeArtifact | null>(() => {
+      return {
+        content: data.contentPreview,
+        type: data.metadata?.type,
+        artifactId: data.entityId,
+        title: data.title,
+        language: data.metadata?.language,
+      };
+    }, [data]);
+
     const insertToDoc = useInsertToDocument(data.entityId);
-    const handleInsertToDoc = useCallback(async () => {
-      if (!data?.contentPreview) return;
-      await insertToDoc('insertBelow', data?.contentPreview);
-    }, [insertToDoc, data]);
+    const handleInsertToDoc = useCallback(
+      async (content: string) => {
+        await insertToDoc('insertBelow', content);
+      },
+      [insertToDoc],
+    );
 
     const handleAskAI = useCallback(() => {
       // Get the current model
@@ -378,9 +242,7 @@ export const CodeArtifactNode = memo(
               contextItems: [
                 {
                   type: 'codeArtifact',
-                  title: data?.contentPreview
-                    ? `${data.title} - ${data?.contentPreview?.slice(0, 10)}`
-                    : data.title,
+                  title: data.title,
                   entityId: data.entityId,
                   metadata: {
                     ...data.metadata,
@@ -400,25 +262,36 @@ export const CodeArtifactNode = memo(
       );
     }, [data, addNode, t]);
 
+    const updateTitle = (newTitle: string) => {
+      if (newTitle === node.data?.title) {
+        return;
+      }
+      updateNodeTitle(newTitle, data.entityId, id, 'codeArtifact');
+    };
+
     // Add event handling
     useEffect(() => {
       // Create node-specific event handlers
       const handleNodeAddToContext = () => handleAddToContext();
       const handleNodeDelete = () => handleDelete();
-      const handleNodeInsertToDoc = () => handleInsertToDoc();
+      const handleNodeInsertToDoc = (content: string) => handleInsertToDoc(content);
       const handleNodeAskAI = () => handleAskAI();
 
       // Register events with node ID
       nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
-      nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
+      nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), (event) =>
+        handleNodeInsertToDoc(event.content),
+      );
       nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
 
       return () => {
         // Cleanup events when component unmounts
         nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
-        nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
+        nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), (event) =>
+          handleNodeInsertToDoc(event.content),
+        );
         nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
 
         // Clean up all node events
@@ -433,6 +306,8 @@ export const CodeArtifactNode = memo(
       >
         <div
           ref={targetRef}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           className={classNames({
             'relative nodrag nopan select-text': isOperating,
             'pointer-events-none': isResizing,
@@ -445,8 +320,6 @@ export const CodeArtifactNode = memo(
           )}
 
           <div
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
             className={`h-full flex flex-col ${getNodeCommonStyles({ selected, isHovered })} ${isResizing ? 'pointer-events-none' : ''}`}
           >
             {!isPreview && !hideHandles && (
@@ -472,9 +345,12 @@ export const CodeArtifactNode = memo(
 
             <div className={cn('flex flex-col h-full p-3 box-border', MAX_HEIGHT_CLASS)}>
               <NodeHeader
-                title={data?.title || t('canvas.nodeTypes.codeArtifact')}
+                title={data?.title}
+                fixedTitle={t('canvas.nodeTypes.codeArtifact')}
+                canEdit={!readonly}
                 Icon={IconCodeArtifact}
                 iconBgColor="#3E63DD"
+                updateTitle={updateTitle}
               />
 
               <div
@@ -493,7 +369,12 @@ export const CodeArtifactNode = memo(
                     }}
                     className={isResizing ? 'pointer-events-none' : ''}
                   >
-                    <NodeContent data={data} isOperating={isOperating} />
+                    <NodeContent
+                      status={data.metadata?.status}
+                      entityId={data.entityId}
+                      shareId={data.metadata?.shareId}
+                      legacyData={legacyData}
+                    />
                   </div>
                 )}
               </div>
@@ -515,6 +396,7 @@ export const CodeArtifactNode = memo(
             isPreview={isPreview}
             sizeMode={sizeMode}
             onResize={handleEnhancedResize}
+            onResizeEnd={handleResizeEnd}
           />
         )}
       </div>

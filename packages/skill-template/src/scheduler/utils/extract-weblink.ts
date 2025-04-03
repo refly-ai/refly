@@ -3,6 +3,7 @@ import { Source } from '@refly-packages/openapi-schema';
 import { BaseSkill } from '../../base';
 import pLimit from 'p-limit';
 import { isValidUrl, extractUrlsWithLinkify } from '@refly-packages/utils';
+import { filterStaticResources } from './cdn-filter';
 
 // Default concurrency limit and batch size
 const DEFAULT_CONCURRENCY_LIMIT = 5;
@@ -79,6 +80,7 @@ export async function crawlExtractedUrls(
   options?: {
     concurrencyLimit?: number;
     batchSize?: number;
+    skipCdnFilter?: boolean;
   },
 ): Promise<Source[]> {
   if (!urls || urls.length === 0) {
@@ -86,6 +88,7 @@ export async function crawlExtractedUrls(
   }
 
   const { user, runtimeConfig } = config.configurable;
+  const { skipCdnFilter = false } = options || {};
 
   if (runtimeConfig?.disableLinkParsing) {
     return [];
@@ -111,12 +114,24 @@ export async function crawlExtractedUrls(
     logger.warn(`Filtered out ${urls.length - validUrls.length} invalid URLs`);
   }
 
+  // Filter out static resources and CDN links unless explicitly skipped
+  let filteredUrls = validUrls;
+  if (!skipCdnFilter) {
+    logger.log(`Filtering out static resources and CDN links from ${validUrls.length} URLs`);
+    filteredUrls = await filterStaticResources(validUrls, { config, ctxThis: skill });
+    if (filteredUrls.length < validUrls.length) {
+      logger.log(
+        `${validUrls.length - filteredUrls.length} static resource URLs filtered out, ${filteredUrls.length} URLs remaining`,
+      );
+    }
+  }
+
   // Split URLs into batches for processing
   const batchSize = options?.batchSize || DEFAULT_BATCH_SIZE;
-  const batches = chunk(validUrls, batchSize);
+  const batches = chunk(filteredUrls, batchSize);
 
   logger.log(
-    `Starting to crawl ${validUrls.length} URLs with concurrency limit of ${concurrencyLimit} in ${batches.length} batches`,
+    `Starting to crawl ${filteredUrls.length} URLs with concurrency limit of ${concurrencyLimit} in ${batches.length} batches`,
   );
 
   const sources: Source[] = [];
@@ -149,7 +164,7 @@ export async function crawlExtractedUrls(
  * @param query The user's query text
  * @param config The skill runnable configuration
  * @param skill The BaseSkill instance
- * @param model The language model to use (unused but kept for API compatibility)
+ * @param options Optional configuration for concurrency and batch size
  * @returns Array of sources with content from the URLs
  */
 export async function extractAndCrawlUrls(
@@ -159,6 +174,7 @@ export async function extractAndCrawlUrls(
   options?: {
     concurrencyLimit?: number;
     batchSize?: number;
+    skipCdnFilter?: boolean;
   },
 ): Promise<{
   sources: Source[];

@@ -10,7 +10,7 @@ function FrequentlyAskedQuestions() {
     border: 'none',
   };
 
-  const items = [1, 2, 3, 4].map((item) => ({
+  const items = [1, 2, 3, 4, 5, 6].map((item) => ({
     key: item,
     label: <div className="text-lg font-bold">{t(`landingPage.faq.Q${item}`)}</div>,
     children: <p className="text-base text-gray-600">{t(`landingPage.faq.A${item}`)}</p>,
