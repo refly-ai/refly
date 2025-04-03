@@ -347,6 +347,7 @@ export type EntityType =
   | 'canvas'
   | 'share'
   | 'user'
+  | 'project'
   | 'skillResponse'
   | 'codeArtifact';
 
@@ -362,6 +363,66 @@ export type Entity = {
    * Entity type
    */
   entityType?: EntityType;
+};
+
+/**
+ * Project source
+ */
+export type ProjectSource = {
+  /**
+   * Entity ID
+   */
+  entityId?: string;
+  /**
+   * Entity type
+   */
+  entityType?: EntityType;
+  /**
+   * Project title
+   */
+  title?: string;
+  /**
+   * Project creation time
+   */
+  createdAt?: string;
+  /**
+   * Project update time
+   */
+  updatedAt?: string;
+};
+
+/**
+ * Project
+ */
+export type Project = {
+  /**
+   * Project ID
+   */
+  projectId: string;
+  /**
+   * Project name
+   */
+  name: string;
+  /**
+   * Project description
+   */
+  description?: string;
+  /**
+   * Project cover URL
+   */
+  coverUrl?: string;
+  /**
+   * Custom instructions for the project
+   */
+  customInstructions?: string;
+  /**
+   * Project creation time
+   */
+  createdAt?: string;
+  /**
+   * Project update time
+   */
+  updatedAt?: string;
 };
 
 /**
@@ -930,11 +991,6 @@ export type SearchStep = {
     [key: string]: unknown;
   };
 };
-
-/**
- * Chat message type
- */
-export type MessageType = 'ai' | 'human' | 'system';
 
 /**
  * Model tier
@@ -1719,6 +1775,10 @@ export type DuplicateCanvasRequest = {
    */
   title?: string;
   /**
+   * Project ID to bind with
+   */
+  projectId?: string;
+  /**
    * Whether to duplicate entities within the canvas
    */
   duplicateEntities?: boolean;
@@ -1755,6 +1815,10 @@ export type UpsertCanvasRequest = {
    * Canvas ID (only used for update)
    */
   canvasId?: string;
+  /**
+   * Project ID to bind with
+   */
+  projectId?: string;
   /**
    * Minimap storage key
    */
@@ -1884,6 +1948,10 @@ export type UpsertResourceRequest = {
    */
   resourceId?: string;
   /**
+   * Project ID to bind with
+   */
+  projectId?: string;
+  /**
    * Resource metadata
    */
   data?: ResourceMeta;
@@ -1967,6 +2035,10 @@ export type UpsertDocumentRequest = {
    */
   docId?: string;
   /**
+   * Project ID to bind with
+   */
+  projectId?: string;
+  /**
    * Whether this document is read-only
    */
   readOnly?: boolean;
@@ -2036,6 +2108,82 @@ export type DeleteReferencesRequest = {
    * Reference ID list
    */
   referenceIds: Array<string>;
+};
+
+export type ListProjectResponse = BaseResponse & {
+  /**
+   * Project list
+   */
+  data?: Array<Project>;
+};
+
+export type GetProjectDetailResponse = BaseResponse & {
+  data?: Project;
+};
+
+export type UpsertProjectRequest = {
+  /**
+   * Project ID (only used for update)
+   */
+  projectId?: string;
+  /**
+   * Project name
+   */
+  name?: string;
+  /**
+   * Project description
+   */
+  description?: string;
+  /**
+   * Project cover storage key
+   */
+  coverStorageKey?: string;
+  /**
+   * Custom instructions
+   */
+  customInstructions?: string;
+};
+
+export type UpsertProjectResponse = BaseResponse & {
+  data?: Project;
+};
+
+export type UpdateProjectItemsRequest = {
+  /**
+   * Project ID
+   */
+  projectId?: string;
+  /**
+   * Operation type
+   */
+  operation?: 'add' | 'remove';
+  /**
+   * Item list
+   */
+  items?: Array<Entity>;
+};
+
+/**
+ * Operation type
+ */
+export type operation = 'add' | 'remove';
+
+export type DeleteProjectRequest = {
+  /**
+   * Project ID to delete
+   */
+  projectId: string;
+};
+
+export type DeleteProjectItemsRequest = {
+  /**
+   * Project ID
+   */
+  projectId: string;
+  /**
+   * Item list
+   */
+  items: Array<Entity>;
 };
 
 /**
@@ -2736,6 +2884,10 @@ export type InvokeSkillRequest = {
    */
   target?: Entity;
   /**
+   * Project ID
+   */
+  projectId?: string;
+  /**
    * Result ID associated with this invocation.
    * 1) If not provided, a new resultId will be generated.
    * 2) If there is no existing result with this resultId, it will be created and run.
@@ -3131,6 +3283,10 @@ export type SearchRequest = {
    */
   mode?: SearchMode;
   /**
+   * Project ID
+   */
+  projectId?: string;
+  /**
    * Search result limit for each domain
    */
   limit?: number;
@@ -3488,6 +3644,10 @@ export type ListCanvasesData = {
      * Page size
      */
     pageSize?: number;
+    /**
+     * Related project ID
+     */
+    projectId?: string;
   };
 };
 
@@ -3646,6 +3806,10 @@ export type ListResourcesData = {
      */
     pageSize?: number;
     /**
+     * Related project ID
+     */
+    projectId?: string;
+    /**
      * Resource ID
      */
     resourceId?: string;
@@ -3765,6 +3929,10 @@ export type ListDocumentsData = {
      * Page size
      */
     pageSize?: number;
+    /**
+     * Related project ID
+     */
+    projectId?: string;
   };
 };
 
@@ -3846,6 +4014,80 @@ export type DeleteReferencesData = {
 export type DeleteReferencesResponse = unknown;
 
 export type DeleteReferencesError = unknown;
+
+export type ListProjectsData = {
+  query?: {
+    /**
+     * Order by
+     */
+    order?: ListOrder;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+  };
+};
+
+export type ListProjectsResponse = ListProjectResponse;
+
+export type ListProjectsError = unknown;
+
+export type GetProjectDetailData = {
+  query: {
+    /**
+     * Project ID
+     */
+    projectId: string;
+  };
+};
+
+export type GetProjectDetailResponse2 = GetProjectDetailResponse;
+
+export type GetProjectDetailError = unknown;
+
+export type CreateProjectData = {
+  body: UpsertProjectRequest;
+};
+
+export type CreateProjectResponse = UpsertProjectResponse;
+
+export type CreateProjectError = unknown;
+
+export type UpdateProjectData = {
+  body: UpsertProjectRequest;
+};
+
+export type UpdateProjectResponse = UpsertProjectResponse;
+
+export type UpdateProjectError = unknown;
+
+export type UpdateProjectItemsData = {
+  body: UpdateProjectItemsRequest;
+};
+
+export type UpdateProjectItemsResponse = BaseResponse;
+
+export type UpdateProjectItemsError = unknown;
+
+export type DeleteProjectData = {
+  body: DeleteProjectRequest;
+};
+
+export type DeleteProjectResponse = BaseResponse;
+
+export type DeleteProjectError = unknown;
+
+export type DeleteProjectItemsData = {
+  body: DeleteProjectItemsRequest;
+};
+
+export type DeleteProjectItemsResponse = BaseResponse;
+
+export type DeleteProjectItemsError = unknown;
 
 export type GetCodeArtifactDetailData = {
   query: {

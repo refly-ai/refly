@@ -26,6 +26,7 @@ const SkillResponseSharePage = lazy(() => import('@/pages/skill-response-share')
 const DocumentSharePage = lazy(() => import('@/pages/document-share'));
 const ArtifactGalleryPage = lazy(() => import('@/pages/artifact-gallery'));
 const UseCasesGalleryPage = lazy(() => import('@/pages/use-cases-gallery'));
+const ProjectPage = lazy(() => import('@/pages/project'));
 
 const prefetchRoutes = () => {
   // Prefetch common routes
@@ -104,6 +105,7 @@ export const AppRouter = (props: { layout?: any }) => {
             path="/canvas/:canvasId"
             element={<BetaProtectedRoute component={Canvas} hasBetaAccess={hasBetaAccess} />}
           />
+          <Route path="/project/:projectId" element={<ProjectPage />} />
           <Route
             path="/request-access"
             element={<RequestAccessRoute hasBetaAccess={hasBetaAccess} />}

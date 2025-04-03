@@ -79,6 +79,19 @@ export class QdrantService implements OnModuleInit {
     ]);
   }
 
+  /**
+   * Updates only the payload for points matching the filter without modifying vectors
+   * @param filter Filter to identify which points to update
+   * @param payload New payload or partial payload to apply
+   * @returns Result of the update operation
+   */
+  async updatePayload(filter: Filter, payload: Record<string, any>) {
+    return this.client.setPayload(this.collectionName, {
+      filter,
+      payload,
+    });
+  }
+
   async batchSaveData(points: PointStruct[]) {
     return this.client.upsert(this.collectionName, {
       wait: true,

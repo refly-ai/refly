@@ -17,6 +17,8 @@ tags:
     description: Canvas management endpoints
   - name: knowledge
     description: Knowledge base management endpoints
+  - name: project
+    description: Project management endpoints
   - name: share
     description: Share management endpoints
   - name: label
@@ -202,6 +204,11 @@ paths:
           schema:
             type: number
             default: 10
+        - name: projectId
+          in: query
+          description: Related project ID
+          schema:
+            type: string
         - name: order
           in: query
           description: Order
@@ -530,6 +537,11 @@ paths:
           schema:
             type: number
             default: 10
+        - name: projectId
+          in: query
+          description: Related project ID
+          schema:
+            type: string
         - name: order
           in: query
           description: Order
@@ -751,6 +763,11 @@ paths:
           schema:
             type: number
             default: 10
+        - name: projectId
+          in: query
+          description: Related project ID
+          schema:
+            type: string
         - name: order
           in: query
           description: Order by
@@ -930,6 +947,162 @@ paths:
       responses:
         '200':
           description: Successful operation
+  /project/list:
+    get:
+      tags:
+        - project
+      summary: List projects
+      description: List all projects
+      operationId: listProjects
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          required: false
+          schema:
+            type: number
+            default: 10
+        - name: order
+          in: query
+          description: Order by
+          required: false
+          schema:
+            $ref: '#/components/schemas/ListOrder'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProjectResponse'
+  /project/detail:
+    get:
+      tags:
+        - project
+      summary: Get project detail
+      description: Get project detail by project ID
+      operationId: getProjectDetail
+      parameters:
+        - name: projectId
+          in: query
+          description: Project ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProjectDetailResponse'
+  /project/new:
+    post:
+      tags:
+        - project
+      summary: Create new project
+      description: Create a new project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProjectRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertProjectResponse'
+  /project/update:
+    post:
+      tags:
+        - project
+      summary: Update project
+      description: Update an existing project
+      operationId: updateProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProjectRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertProjectResponse'
+  /project/updateItems:
+    post:
+      tags:
+        - project
+      summary: Update items in project
+      description: Update items in a project
+      operationId: updateProjectItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectItemsRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+  /project/delete:
+    post:
+      tags:
+        - project
+      summary: Delete project
+      description: Delete an existing project
+      operationId: deleteProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteProjectRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+  /project/deleteItems:
+    post:
+      tags:
+        - project
+      summary: Delete items in project
+      description: Delete items in a project
+      operationId: deleteProjectItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteProjectItemsRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /codeArtifact/detail:
     get:
       tags:
@@ -2209,6 +2382,7 @@ components:
         - canvas
         - share
         - user
+        - project
         - skillResponse
         - codeArtifact
     Entity:
@@ -2221,6 +2395,57 @@ components:
         entityType:
           description: Entity type
           $ref: '#/components/schemas/EntityType'
+    ProjectSource:
+      type: object
+      description: Project source
+      properties:
+        entityId:
+          type: string
+          description: Entity ID
+        entityType:
+          description: Entity type
+          $ref: '#/components/schemas/EntityType'
+        title:
+          type: string
+          description: Project title
+        createdAt:
+          type: string
+          format: date-time
+          description: Project creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: Project update time
+    Project:
+      type: object
+      description: Project
+      required:
+        - projectId
+        - name
+      properties:
+        projectId:
+          type: string
+          description: Project ID
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          description: Project description
+        coverUrl:
+          type: string
+          description: Project cover URL
+        customInstructions:
+          type: string
+          description: Custom instructions for the project
+        createdAt:
+          type: string
+          format: date-time
+          description: Project creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: Project update time
     LabelClass:
       type: object
       description: Label class
@@ -2758,13 +2983,6 @@ components:
         result:
           type: object
           description: Step-specific result data
-    MessageType:
-      type: string
-      description: Chat message type
-      enum:
-        - ai
-        - human
-        - system
     ModelTier:
       type: string
       description: Model tier
@@ -3574,6 +3792,9 @@ components:
         title:
           type: string
           description: Custom canvas title
+        projectId:
+          type: string
+          description: Project ID to bind with
         duplicateEntities:
           type: boolean
           description: Whether to duplicate entities within the canvas
@@ -3610,6 +3831,9 @@ components:
           type: string
           description: Canvas ID (only used for update)
           example: c-g30e1b80b5g1itbemc0g5jj3
+        projectId:
+          type: string
+          description: Project ID to bind with
         minimapStorageKey:
           type: string
           description: Minimap storage key
@@ -3748,6 +3972,9 @@ components:
           type: string
           description: Resource ID (only used for update)
           example: r-g30e1b80b5g1itbemc0g5jj3
+        projectId:
+          type: string
+          description: Project ID to bind with
         data:
           description: Resource metadata
           $ref: '#/components/schemas/ResourceMeta'
@@ -3852,6 +4079,9 @@ components:
           type: string
           description: Document ID (only used for update)
           example: d-g30e1b80b5g1itbemc0g5jj3
+        projectId:
+          type: string
+          description: Project ID to bind with
         readOnly:
           type: boolean
           description: Whether this document is read-only
@@ -3937,6 +4167,88 @@ components:
           description: Reference ID list
           items:
             type: string
+    ListProjectResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Project list
+              items:
+                $ref: '#/components/schemas/Project'
+    GetProjectDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Project'
+    UpsertProjectRequest:
+      type: object
+      properties:
+        projectId:
+          type: string
+          description: Project ID (only used for update)
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          description: Project description
+        coverStorageKey:
+          type: string
+          description: Project cover storage key
+        customInstructions:
+          type: string
+          description: Custom instructions
+    UpsertProjectResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Project'
+    UpdateProjectItemsRequest:
+      type: object
+      properties:
+        projectId:
+          type: string
+          description: Project ID
+        operation:
+          type: string
+          description: Operation type
+          enum:
+            - add
+            - remove
+        items:
+          type: array
+          description: Item list
+          items:
+            $ref: '#/components/schemas/Entity'
+    DeleteProjectRequest:
+      type: object
+      required:
+        - projectId
+      properties:
+        projectId:
+          type: string
+          description: Project ID to delete
+          example: p-g30e1b80b5g1itbemc0g5jj3
+    DeleteProjectItemsRequest:
+      type: object
+      required:
+        - projectId
+        - items
+      properties:
+        projectId:
+          type: string
+          description: Project ID
+        items:
+          type: array
+          description: Item list
+          items:
+            $ref: '#/components/schemas/Entity'
     SkillEventType:
       type: string
       description: Skill event type
@@ -4643,6 +4955,9 @@ components:
         target:
           description: Skill invocation target
           $ref: '#/components/schemas/Entity'
+        projectId:
+          type: string
+          description: Project ID
         resultId:
           type: string
           description: |
@@ -5057,6 +5372,9 @@ components:
           description: Search mode
           $ref: '#/components/schemas/SearchMode'
           default: keyword
+        projectId:
+          type: string
+          description: Project ID
         limit:
           type: number
           description: Search result limit for each domain

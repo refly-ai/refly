@@ -83,6 +83,7 @@ import {
   ModelNotSupportedError,
   ModelUsageQuotaExceeded,
   ParamsError,
+  ProjectNotFoundError,
   SkillNotFoundError,
 } from '@refly-packages/errors';
 import { genBaseRespDataFromError } from '@/utils/exception';
@@ -101,6 +102,7 @@ import { ParserFactory } from '@/knowledge/parsers/factory';
 import { MINIO_INTERNAL, MinioService } from '@/common/minio.service';
 import { Inject } from '@nestjs/common';
 import { CodeArtifactService } from '@/code-artifact/code-artifact.service';
+import { projectPO2DTO } from '@/project/project.dto';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -443,6 +445,18 @@ export class SkillService {
     if (param.resultHistory) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
     }
+    if (param.projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: {
+          projectId: param.projectId,
+          uid: user.uid,
+          deletedAt: null,
+        },
+      });
+      if (!project) {
+        throw new ProjectNotFoundError(`project ${param.projectId} not found`);
+      }
+    }
 
     param.skillName ||= 'commonQnA';
     const skill = this.skillInventory.find((s) => s.name === param.skillName);
@@ -492,6 +506,7 @@ export class SkillService {
             targetId: param.target?.entityId,
             targetType: param.target?.entityType,
             modelName,
+            projectId: param.projectId ?? null,
             actionMeta: JSON.stringify({
               type: 'skill',
               name: param.skillName,
@@ -530,6 +545,7 @@ export class SkillService {
             name: param.skillName,
             icon: skill.icon,
           } as ActionMeta),
+          projectId: param.projectId,
           input: JSON.stringify(param.input),
           context: JSON.stringify(purgeContext(param.context)),
           tplConfig: JSON.stringify(param.tplConfig),
@@ -692,7 +708,15 @@ export class SkillService {
       eventListener?: (data: SkillEvent) => void;
     },
   ): Promise<SkillRunnableConfig> {
-    const { context, tplConfig, runtimeConfig, modelInfo, resultHistory, eventListener } = data;
+    const {
+      context,
+      tplConfig,
+      runtimeConfig,
+      modelInfo,
+      resultHistory,
+      projectId,
+      eventListener,
+    } = data;
     const userPo = await this.prisma.user.findUnique({
       select: { uiLocale: true, outputLocale: true },
       where: { uid: user.uid },
@@ -719,6 +743,17 @@ export class SkillService {
         resultId: data.result?.resultId,
       },
     };
+
+    // Add project info if projectId is provided
+    if (projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { projectId, uid: user.uid, deletedAt: null },
+      });
+      if (!project) {
+        throw new ProjectNotFoundError(`project ${projectId} not found`);
+      }
+      config.configurable.project = projectPO2DTO(project);
+    }
 
     if (resultHistory?.length > 0) {
       config.configurable.chatHistory = await Promise.all(

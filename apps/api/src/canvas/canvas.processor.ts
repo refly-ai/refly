@@ -7,11 +7,13 @@ import {
   QUEUE_CLEAR_CANVAS_ENTITY,
   QUEUE_SYNC_CANVAS_ENTITY,
   QUEUE_AUTO_NAME_CANVAS,
+  QUEUE_POST_DELETE_CANVAS,
 } from '@/utils/const';
 import {
   DeleteCanvasNodesJobData,
   SyncCanvasEntityJobData,
   AutoNameCanvasJobData,
+  DeleteCanvasJobData,
 } from './canvas.dto';
 
 @Processor(QUEUE_SYNC_CANVAS_ENTITY)
@@ -66,5 +68,25 @@ export class AutoNameCanvasProcessor extends WorkerHost {
   async process(job: Job<AutoNameCanvasJobData>) {
     this.logger.log(`Processing auto name canvas job ${job.id} for canvas ${job.data.canvasId}`);
     await this.canvasService.autoNameCanvasFromQueue(job.data);
+  }
+}
+
+@Processor(QUEUE_POST_DELETE_CANVAS)
+export class PostDeleteCanvasProcessor extends WorkerHost {
+  private logger = new Logger(PostDeleteCanvasProcessor.name);
+
+  constructor(private canvasService: CanvasService) {
+    super();
+  }
+
+  async process(job: Job<DeleteCanvasJobData>) {
+    this.logger.log(`Processing canvas deletion job ${job.id} for canvas ${job.data.canvasId}`);
+
+    try {
+      await this.canvasService.postDeleteCanvas(job.data);
+    } catch (error) {
+      this.logger.error(`[${QUEUE_POST_DELETE_CANVAS}] error ${job.id}: ${error?.stack}`);
+      throw error;
+    }
   }
 }

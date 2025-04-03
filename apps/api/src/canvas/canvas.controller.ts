@@ -30,10 +30,11 @@ export class CanvasController {
   @Get('list')
   async listCanvases(
     @LoginedUser() user: User,
+    @Query('projectId') projectId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
   ) {
-    const canvases = await this.canvasService.listCanvases(user, { page, pageSize });
+    const canvases = await this.canvasService.listCanvases(user, { page, pageSize, projectId });
     return buildSuccessResponse(canvases.map(canvasPO2DTO));
   }
 

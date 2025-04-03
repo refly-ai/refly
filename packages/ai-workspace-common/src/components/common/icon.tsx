@@ -40,7 +40,12 @@ import {
   LuShare2,
   LuCirclePlay,
   LuPencilLine,
+  LuChevronLeft,
+  LuChevronRight,
+  LuUserRound,
+  LuFileStack,
 } from 'react-icons/lu';
+
 import {
   RiErrorWarningLine,
   RiDoubleQuotesL,
@@ -58,7 +63,7 @@ import { TiDocumentDelete } from 'react-icons/ti';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { BiText } from 'react-icons/bi';
 import { BsDiscord, BsTwitterX, BsGithub, BsEnvelope } from 'react-icons/bs';
-import { VscNotebookTemplate } from 'react-icons/vsc';
+import { VscNotebookTemplate, VscFolderLibrary } from 'react-icons/vsc';
 
 import { TfiBlackboard } from 'react-icons/tfi';
 
@@ -81,7 +86,7 @@ import MetaLlamaIcon from '@refly-packages/ai-workspace-common/assets/meta.svg';
 import DeepSeekIcon from '@refly-packages/ai-workspace-common/assets/deepseek.svg';
 import MistralIcon from '@refly-packages/ai-workspace-common/assets/mistral.svg';
 import ChromeIcon from '@refly-packages/ai-workspace-common/assets/chrome.svg';
-import { MdOutlineMouse } from 'react-icons/md';
+import { MdOutlineMouse, MdOutlineRemoveCircleOutline } from 'react-icons/md';
 
 import ReflyLogo from '@refly-packages/ai-workspace-common/assets/logo.svg';
 import { memo } from 'react';
@@ -158,6 +163,12 @@ export const IconDownloadFile = LuDownload;
 export const IconShare = LuShare2;
 export const IconClose = LuX;
 export const IconLink = LuLink;
+export const IconProject = VscFolderLibrary;
+export const IconLeft = LuChevronLeft;
+export const IconRight = LuChevronRight;
+export const IconUser = LuUserRound;
+export const IconRemove = MdOutlineRemoveCircleOutline;
+export const IconFiles = LuFileStack;
 
 export const IconChrome = ChromeIcon;
 export const ModelProviderIcons = {

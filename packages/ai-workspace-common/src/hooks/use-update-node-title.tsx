@@ -7,11 +7,18 @@ import {
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
+import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 
 export const useUpdateNodeTitle = () => {
+  const { projectId } = useGetProjectCanvasId();
   const { canvasId } = useCanvasContext();
   const { updateNodePreview } = useCanvasStoreShallow((state) => ({
     updateNodePreview: state.updateNodePreview,
+  }));
+  const { sourceList, setSourceList } = useSiderStoreShallow((state) => ({
+    sourceList: state.sourceList,
+    setSourceList: state.setSourceList,
   }));
 
   const setNodeDataByEntity = useSetNodeDataByEntity();
@@ -44,8 +51,17 @@ export const useUpdateNodeTitle = () => {
       if (nodeType === 'document') {
         editorEmitter.emit('syncDocumentTitle', { docId: entityId, title: newTitle });
       }
+
+      if (nodeType === 'document' && projectId) {
+        const source = sourceList.find((s) => s.entityId === entityId);
+        if (source) {
+          setSourceList(
+            sourceList.map((s) => (s.entityId === entityId ? { ...s, title: newTitle } : s)),
+          );
+        }
+      }
     },
-    [setNodeDataByEntity, updateNodePreview, canvasId],
+    [setNodeDataByEntity, updateNodePreview, canvasId, sourceList, setSourceList, projectId],
   );
 
   return handleTitleUpdate;

@@ -30,6 +30,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
+import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 
 // Define the table of contents item type
 interface TocItem {
@@ -329,8 +331,13 @@ const StatusBar = memo(
 const DocumentEditorHeader = memo(
   ({ docId, readonly }: { docId: string; readonly?: boolean }) => {
     const { t } = useTranslation();
+    const { projectId } = useGetProjectCanvasId();
     const { document } = useDocumentStoreShallow((state) => ({
       document: state.data[docId]?.document,
+    }));
+    const { sourceList, setSourceList } = useSiderStoreShallow((state) => ({
+      sourceList: state.sourceList,
+      setSourceList: state.setSourceList,
     }));
     const { syncTitleToYDoc } = useDocumentSync();
 
@@ -347,6 +354,15 @@ const DocumentEditorHeader = memo(
           title: newTitle,
         },
       );
+
+      if (projectId) {
+        const source = sourceList.find((s) => s.entityId === docId);
+        if (source) {
+          setSourceList(
+            sourceList.map((s) => (s.entityId === docId ? { ...s, title: newTitle } : s)),
+          );
+        }
+      }
     };
 
     useEffect(() => {

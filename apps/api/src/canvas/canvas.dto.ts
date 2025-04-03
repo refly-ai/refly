@@ -15,6 +15,12 @@ export interface AutoNameCanvasJobData {
   canvasId: string;
 }
 
+export interface DeleteCanvasJobData {
+  uid: string;
+  canvasId: string;
+  deleteAllFiles: boolean;
+}
+
 export function canvasPO2DTO(canvas: CanvasModel & { minimapUrl?: string }): Canvas {
   return {
     ...pick(canvas, ['canvasId', 'title', 'minimapUrl', 'minimapStorageKey']),

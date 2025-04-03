@@ -15,6 +15,8 @@ import { useUpdateCanvas } from '@refly-packages/ai-workspace-common/queries';
 import { IoAlertCircle } from 'react-icons/io5';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { DuplicateCanvasModal } from '@refly-packages/ai-workspace-common/components/canvas-template/duplicate-canvas-modal';
+import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 
 interface CanvasActionDropdown {
   canvasId: string;
@@ -50,6 +52,8 @@ export const CanvasActionDropdown = memo((props: CanvasActionDropdown) => {
   const [isDeleteFile, setIsDeleteFile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const { getSourceList } = useHandleSiderData();
+  const { projectId } = useGetProjectCanvasId();
 
   const onChange: CheckboxProps['onChange'] = (e) => {
     setIsDeleteFile(e.target.checked);
@@ -65,6 +69,11 @@ export const CanvasActionDropdown = memo((props: CanvasActionDropdown) => {
         setIsDeleteModalOpen(false);
         afterDelete?.();
         refetchUsage();
+        if (isDeleteFile && projectId) {
+          setTimeout(() => {
+            getSourceList();
+          }, 1000);
+        }
       }
     } finally {
       setIsLoading(false);

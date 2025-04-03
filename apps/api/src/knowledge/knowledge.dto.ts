@@ -50,6 +50,12 @@ export type DeleteKnowledgeEntityJobData = {
   entityType: EntityType;
 };
 
+export type PostDeleteKnowledgeEntityJobData = {
+  uid: string;
+  entityId: string;
+  entityType: EntityType;
+};
+
 export const resourcePO2DTO = (resource: ResourceDetail): Resource => {
   if (!resource) {
     return null;

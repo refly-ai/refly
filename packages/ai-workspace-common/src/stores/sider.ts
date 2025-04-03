@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
+import { sourceObject } from '@refly-packages/ai-workspace-common/components/project/project-directory';
 
 export interface SiderData {
   id: string;
@@ -20,7 +21,7 @@ interface SiderState {
   collapse: boolean;
   showSiderDrawer: boolean;
   canvasList: SiderData[];
-  libraryList: SiderData[];
+  sourceList: sourceObject[];
   showCanvasListModal: boolean;
   showLibraryModal: boolean;
   showSettingModal: boolean;
@@ -30,7 +31,7 @@ interface SiderState {
   setCollapse: (val: boolean) => void;
   setShowSiderDrawer: (val: boolean) => void;
   setCanvasList: (val: SiderData[]) => void;
-  setLibraryList: (val: SiderData[]) => void;
+  setSourceList: (val: sourceObject[]) => void;
   setShowCanvasListModal: (val: boolean) => void;
   setShowLibraryModal: (val: boolean) => void;
   setShowSettingModal: (val: boolean) => void;
@@ -43,7 +44,7 @@ export const useSiderStore = create<SiderState>()(
     collapse: false,
     showSiderDrawer: false,
     canvasList: [],
-    libraryList: [],
+    sourceList: [],
     showLibraryModal: false,
     showCanvasListModal: false,
     showSettingModal: false,
@@ -52,7 +53,7 @@ export const useSiderStore = create<SiderState>()(
     setCollapse: (val: boolean) => set({ collapse: val }),
     setShowSiderDrawer: (val: boolean) => set({ showSiderDrawer: val }),
     setCanvasList: (val: SiderData[]) => set({ canvasList: val }),
-    setLibraryList: (val: SiderData[]) => set({ libraryList: val }),
+    setSourceList: (val: sourceObject[]) => set({ sourceList: val }),
     setShowCanvasListModal: (val: boolean) => set({ showCanvasListModal: val }),
     setShowLibraryModal: (val: boolean) => set({ showLibraryModal: val }),
     setShowSettingModal: (val: boolean) => set({ showSettingModal: val }),

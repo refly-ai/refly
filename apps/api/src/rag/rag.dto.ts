@@ -2,7 +2,7 @@ import { ResourceType } from '@refly-packages/openapi-schema';
 
 export type ContentNodeType = 'resource' | 'document';
 
-export interface NodeMeta {
+export interface DocumentPayload {
   title: string;
   nodeType: ContentNodeType;
   url?: string;
@@ -13,7 +13,7 @@ export interface NodeMeta {
   [key: string]: any; // any other fields
 }
 
-export interface ContentPayload extends NodeMeta {
+export interface ContentPayload extends DocumentPayload {
   seq: number;
   content: string;
 }

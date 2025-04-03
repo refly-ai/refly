@@ -1,0 +1,14 @@
+.add-sources-modal {
+  .ant-modal-body {
+    height: 50vh;
+    overflow: hidden;
+    .ant-tabs {
+      width: 100%;
+      height: 100%;
+      .source-list {
+        height: calc(50vh - 62px);
+        overflow-y: auto;
+      }
+    }
+  }
+}
