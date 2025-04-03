@@ -51,7 +51,7 @@ Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型�
 
 ```bash
 cd deploy/docker
-cp .env.example .env # 确保所有必须的环境变量均已设置
+cp ../../apps/api/.env.example .env # 确保所有必须的环境变量均已设置
 docker compose up -d
 ```
 
@@ -165,7 +165,7 @@ docker compose up -d
 - 📚 协作知识库功能
 - 🔌 基于 MCP 的第三方插件开发的开放标准
 - 🔌 插件市场和开发者 SDK
-- 🤖 最少监督下的自主任务 Agent 
+- 🤖 最少监督下的自主任务 Agent
 - 🤖 多代理协作系统
 - ⚡️ 复杂 AI 流程的可视化工作流构建器与 API 支持
 - ⚡️ 与外部系统的高级集成能力
