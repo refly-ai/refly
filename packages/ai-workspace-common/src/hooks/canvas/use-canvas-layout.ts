@@ -4,6 +4,11 @@ import Dagre from '@dagrejs/dagre';
 import { CanvasNode } from '../../components/canvas/nodes';
 import { Edge } from '@xyflow/react';
 import { useCanvasSync } from './use-canvas-sync';
+import { GroupData } from '../../components/canvas/nodes/group';
+
+const NODE_DEFAULT_WIDTH = 288;
+const NODE_DEFAULT_HEIGHT = 320;
+const GROUP_NODE_DEFAULT_HEIGHT = 384;
 
 // Helper function to check if two rectangles overlap
 const doRectanglesOverlap = (
@@ -50,8 +55,8 @@ const doRectanglesOverlap = (
 
 // Helper function to get node dimensions
 const getNodeDimensions = (node: CanvasNode<any>) => {
-  const defaultWidth = 288;
-  const defaultHeight = 320;
+  const defaultWidth = NODE_DEFAULT_WIDTH;
+  const defaultHeight = NODE_DEFAULT_HEIGHT;
 
   // Handle nullish or undefined node
   if (!node) {
@@ -364,8 +369,8 @@ const getLayoutedElements = (
   for (const node of nodes) {
     g.setNode(node.id, {
       ...node,
-      width: node.measured?.width ?? 288,
-      height: node.measured?.height ?? 320,
+      width: node.measured?.width ?? NODE_DEFAULT_WIDTH,
+      height: node.measured?.height ?? NODE_DEFAULT_HEIGHT,
     });
   }
 
@@ -405,7 +410,7 @@ const getLayoutedElements = (
 };
 
 export const useCanvasLayout = () => {
-  const { getNodes, getEdges, setNodes, setEdges } = useReactFlow<CanvasNode<any>>();
+  const { getNodes, getEdges, setNodes, setEdges, getNode } = useReactFlow<CanvasNode<any>>();
 
   const { syncNodesToYDoc, syncEdgesToYDoc } = useCanvasSync();
   const { fitView } = useReactFlow();
@@ -432,7 +437,134 @@ export const useCanvasLayout = () => {
     [fitView, setNodes, setEdges, syncNodesToYDoc, syncEdgesToYDoc],
   );
 
+  const getChildNodes = (id: string, nodes: CanvasNode[]) => {
+    const childNodes = nodes.filter((node) => {
+      const isInGroup = node.parentId === id;
+      return isInGroup && !['group'].includes(node.type);
+    }) as CanvasNode[];
+
+    return childNodes;
+  };
+
+  const onLayoutWithGroup = useCallback(
+    (id: string, data: GroupData) => {
+      const childNodes = getChildNodes(id, getNodes() as CanvasNode[]);
+      const allNodes = getNodes();
+      const allEdges = getEdges();
+
+      if (childNodes.length === 0) return;
+
+      // Get group dimensions
+      const groupNode = getNode(id);
+      if (!groupNode) return;
+
+      const groupWidth = groupNode.measured?.width ?? data.metadata?.width ?? NODE_DEFAULT_WIDTH;
+      const groupHeight =
+        groupNode.measured?.height ?? data.metadata?.height ?? GROUP_NODE_DEFAULT_HEIGHT;
+
+      // Calculate node sizes for overlap prevention
+      const nodeSizes = new Map<string, { width: number; height: number }>();
+      for (const node of childNodes) {
+        nodeSizes.set(node.id, {
+          width: node.measured?.width ?? NODE_DEFAULT_WIDTH,
+          height: node.measured?.height ?? NODE_DEFAULT_HEIGHT,
+        });
+      }
+
+      // Create a Dagre graph instance for LR layout
+      const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+      g.setGraph({
+        rankdir: 'LR', // Left to right direction
+        nodesep: 80, // Vertical spacing between nodes in the same rank
+        ranksep: 150, // Horizontal spacing between ranks
+        marginx: 40,
+        marginy: 40,
+      });
+
+      // Add all nodes to the graph
+      for (const node of childNodes) {
+        const nodeSize = nodeSizes.get(node.id) ?? {
+          width: NODE_DEFAULT_WIDTH,
+          height: NODE_DEFAULT_HEIGHT,
+        };
+        g.setNode(node.id, {
+          width: nodeSize.width,
+          height: nodeSize.height,
+        });
+      }
+
+      // Add all edges between child nodes to the graph
+      for (const edge of allEdges) {
+        const sourceNode = allNodes.find((n) => n.id === edge.source);
+        const targetNode = allNodes.find((n) => n.id === edge.target);
+
+        if (sourceNode?.parentId === id && targetNode?.parentId === id) {
+          g.setEdge(edge.source, edge.target);
+        }
+      }
+
+      // Run the Dagre layout algorithm
+      Dagre.layout(g);
+
+      // Calculate bounds to center the layout within the group
+      let minX = Number.POSITIVE_INFINITY;
+      let minY = Number.POSITIVE_INFINITY;
+      let maxX = Number.NEGATIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+
+      for (const node of childNodes) {
+        const nodeWithPosition = g.node(node.id);
+        if (nodeWithPosition) {
+          const nodeWidth = nodeSizes.get(node.id)?.width ?? NODE_DEFAULT_WIDTH;
+          const nodeHeight = nodeSizes.get(node.id)?.height ?? NODE_DEFAULT_HEIGHT;
+
+          minX = Math.min(minX, nodeWithPosition.x - nodeWidth / 2);
+          minY = Math.min(minY, nodeWithPosition.y - nodeHeight / 2);
+          maxX = Math.max(maxX, nodeWithPosition.x + nodeWidth / 2);
+          maxY = Math.max(maxY, nodeWithPosition.y + nodeHeight / 2);
+        }
+      }
+
+      // Calculate layout dimensions and scaling factor if needed
+      const layoutWidth = maxX - minX;
+      const layoutHeight = maxY - minY;
+
+      // Calculate translation to center the layout
+      const translateX = (groupWidth - layoutWidth) / 2 - minX;
+      const translateY = (groupHeight - layoutHeight) / 2 - minY;
+
+      // Apply the calculated positions to nodes
+      const updatedNodes = allNodes.map((node) => {
+        if (node.parentId === id) {
+          const nodeWithPosition = g.node(node.id);
+          if (nodeWithPosition) {
+            const nodeSize = nodeSizes.get(node.id) ?? {
+              width: NODE_DEFAULT_WIDTH,
+              height: NODE_DEFAULT_HEIGHT,
+            };
+
+            // Dagre positions nodes at their center, adjust to top-left for React Flow
+            return {
+              ...node,
+              position: {
+                // Center the layout by applying the translation
+                x: nodeWithPosition.x - nodeSize.width / 2 + translateX,
+                y: nodeWithPosition.y - nodeSize.height / 2 + translateY,
+              },
+            };
+          }
+        }
+        return node;
+      });
+
+      setNodes(updatedNodes);
+      syncNodesToYDoc(updatedNodes);
+    },
+    [getNodes, getNode, getEdges, setNodes, syncNodesToYDoc],
+  );
+
   return {
     onLayout,
+    onLayoutWithGroup,
   };
 };
