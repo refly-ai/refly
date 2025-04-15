@@ -16,6 +16,7 @@ import {
   FilePlus,
   Trash2,
   Target,
+  GripVertical,
 } from 'lucide-react';
 import { NODE_COLORS } from '../nodes/shared/colors';
 import { CanvasNode } from '../nodes/shared/types';
@@ -31,8 +32,9 @@ import {
   IconDownloadFile,
   IconCodeArtifact,
   IconWebsite,
+  IconWideMode,
+  IconResource,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { useTranslation } from 'react-i18next';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-preview-control';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -40,8 +42,9 @@ import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/can
 import { useDeleteResource } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-resource';
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/use-download-file';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useUpdateSkillResponseTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-skill-response-title';
+import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { NodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/skill-response';
+import { NodeHeader as CommonNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-header';
 
 // Get icon component based on node type and metadata
 const getNodeIcon = (node: CanvasNode<any>) => {
@@ -49,7 +52,7 @@ const getNodeIcon = (node: CanvasNode<any>) => {
     case 'document':
       return IconDocument;
     case 'resource':
-      return HiOutlineSquare3Stack3D;
+      return IconResource;
     case 'skillResponse':
       return IconResponse;
     case 'toolResponse':
@@ -78,7 +81,7 @@ const getNodeIcon = (node: CanvasNode<any>) => {
 };
 
 // Get node title based on node type and metadata
-const getNodeTitle = (node: CanvasNode<any>, t: TFunction) => {
+const getNodeFixedTitle = (node: CanvasNode<any>, t: TFunction) => {
   switch (node.type) {
     case 'document':
       return t('canvas.nodeTypes.document');
@@ -101,15 +104,43 @@ const getNodeTitle = (node: CanvasNode<any>, t: TFunction) => {
   }
 };
 
+const getNodeTitle = (node: CanvasNode<any>, t: TFunction) => {
+  switch (node.type) {
+    case 'document':
+      return t('canvas.nodeTypes.document');
+    case 'toolResponse':
+      return t('canvas.nodeTypes.toolResponse');
+    case 'skill':
+      return t('canvas.nodeTypes.skill');
+    case 'memo':
+      return t('canvas.nodeTypes.memo');
+    default:
+      return node.data?.title;
+  }
+};
+
 interface NodePreviewHeaderProps {
   node: CanvasNode<any>;
   onClose: () => void;
   onMaximize?: () => void;
+  onWideMode?: () => void;
   isMaximized?: boolean;
+  isWideMode?: boolean;
+  dragHandleProps?: any;
+  isDragging?: boolean;
 }
 
 export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
-  ({ node, onClose, onMaximize, isMaximized = false }) => {
+  ({
+    node,
+    onClose,
+    onMaximize,
+    onWideMode,
+    isMaximized = false,
+    isWideMode = false,
+    dragHandleProps,
+    isDragging = false,
+  }) => {
     const { t } = useTranslation();
     const IconComponent = getNodeIcon(node);
     const nodeColor = NODE_COLORS[node.type];
@@ -151,7 +182,7 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
     }, [node, addToContext]);
 
     const { canvasId, readonly } = useCanvasContext();
-    const updateSkillResponseTitle = useUpdateSkillResponseTitle();
+    const updateNodePreviewTitle = useUpdateNodeTitle();
 
     const { pinNode, unpinNode, isNodePinned } = useNodePreviewControl({ canvasId });
     const isPinned = isNodePinned(node.id);
@@ -277,28 +308,27 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
       handleDeleteFile,
     ]);
 
-    const nodeTitle = useMemo(() => {
-      return node.type === 'skillResponse' ? node.data?.title || '' : getNodeTitle(node, t);
-    }, [node.type, node.data?.title, t]);
-
     const handleTitleUpdate = (newTitle: string) => {
       if (newTitle === node.data?.title) {
         return;
       }
-      updateSkillResponseTitle(newTitle, node.data.entityId, node.id);
+      updateNodePreviewTitle(newTitle, node.data.entityId, node.id, node.type);
     };
 
     return (
-      <div className="flex justify-between items-center py-2 px-4 border-b border-[#EAECF0]">
+      <div
+        className={`flex justify-between items-center py-2 px-4 border-b border-[#EAECF0] ${isDragging ? 'bg-gray-50' : ''} relative`}
+      >
+        {dragHandleProps && (
+          <div
+            {...dragHandleProps}
+            className="absolute top-4 left-1/2 transform -translate-x-1/2 -translate-y-3 w-10 h-5 flex items-center justify-center cursor-move text-gray-300 hover:text-gray-500 bg-white border border-gray-100 rounded-b-md z-10 transition-colors duration-150 opacity-0 hover:opacity-100"
+          >
+            <GripVertical className="w-3 h-3 rotate-90" />
+          </div>
+        )}
         {/* Left: Icon and Title */}
         <div className="flex items-center gap-2 flex-grow overflow-hidden">
-          <div
-            className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: nodeColor }}
-          >
-            <IconComponent className="w-4 h-4 text-white" />
-          </div>
-
           <div className="flex-grow overflow-hidden">
             {node.type === 'skillResponse' ? (
               <NodeHeader
@@ -306,16 +336,34 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
                 source="skillResponsePreview"
                 query={node.data?.title || ''}
                 disabled={readonly}
+                showIcon
                 updateTitle={handleTitleUpdate}
               />
             ) : (
-              <span className="text-lg font-semibold text-gray-900 truncate">{nodeTitle}</span>
+              <CommonNodeHeader
+                source="preview"
+                title={getNodeTitle(node, t)}
+                fixedTitle={getNodeFixedTitle(node, t)}
+                Icon={IconComponent}
+                iconBgColor={nodeColor}
+                canEdit={node.type !== 'document' && !readonly}
+                updateTitle={handleTitleUpdate}
+              />
             )}
           </div>
         </div>
 
         {/* Right: Action Buttons */}
         <div className="flex items-center gap-1 flex-shrink-0">
+          {onWideMode && (
+            <Button
+              type="text"
+              className={`p-1.5 hover:bg-gray-100 ${isWideMode ? 'text-primary-600' : 'text-gray-500'}`}
+              onClick={() => onWideMode()}
+            >
+              <IconWideMode className="w-4 h-4" />
+            </Button>
+          )}
           {onMaximize && (
             <Button
               type="text"
@@ -356,3 +404,5 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
     );
   },
 );
+
+NodePreviewHeader.displayName = 'NodePreviewHeader';

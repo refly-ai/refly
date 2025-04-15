@@ -5,6 +5,7 @@ import { Skill } from '@refly/openapi-schema';
 import classNames from 'classnames';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import './index.scss';
+import { memo } from 'react';
 
 interface SelectedSkillHeaderProps {
   readonly?: boolean;
@@ -14,7 +15,7 @@ interface SelectedSkillHeaderProps {
   setSelectedSkill?: (skill: Skill | null) => void;
 }
 
-export const SelectedSkillHeader = ({
+const SelectedSkillHeaderComponent = ({
   readonly,
   skill,
   className,
@@ -45,3 +46,13 @@ export const SelectedSkillHeader = ({
     </div>
   ) : null;
 };
+
+export const SelectedSkillHeader = memo(SelectedSkillHeaderComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.skill === nextProps.skill &&
+    prevProps.className === nextProps.className &&
+    prevProps.readonly === nextProps.readonly
+  );
+});
+
+SelectedSkillHeader.displayName = 'SelectedSkillHeader';

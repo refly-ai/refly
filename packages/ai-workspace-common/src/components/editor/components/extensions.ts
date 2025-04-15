@@ -1,7 +1,6 @@
 import {
   AIHighlight,
   CharacterCount,
-  CodeBlockLowlight,
   HorizontalRule,
   StarterKit,
   TaskItem,
@@ -19,7 +18,6 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { DOMParser } from '@tiptap/pm/model';
 import MarkdownIt from 'markdown-it';
 import { cx } from 'class-variance-authority';
-import { common, createLowlight } from 'lowlight';
 import {
   Table,
   TableCell,
@@ -350,12 +348,6 @@ const starterKit = StarterKit.configure({
   },
   gapcursor: false,
   history: false,
-});
-
-const _codeBlockLowlight = CodeBlockLowlight.configure({
-  // configure lowlight: common /  all / use highlightJS in case there is a need to specify certain language grammars only
-  // common: covers 37 language grammars which should be good enough in most cases
-  lowlight: createLowlight(common),
 });
 
 const youtube = Youtube.configure({

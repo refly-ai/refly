@@ -15,10 +15,11 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { UpsertResourceRequest } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { StorageLimit } from './storageLimit';
 import { getAvailableFileCount } from '@refly/utils/quota';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
+import { useUpdateSourceList } from '@refly-packages/ai-workspace-common/hooks/canvas/use-update-source-list';
 
 const { TextArea } = Input;
 
@@ -33,11 +34,14 @@ export const ImportFromWeblink = () => {
       insertNodePosition: state.insertNodePosition,
     }));
 
+  const { projectId } = useGetProjectCanvasId();
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(projectId || null);
+  const { updateSourceList } = useUpdateSourceList();
+
   const { addNode } = useAddNode();
   const { refetchUsage, storageUsage } = useSubscriptionUsage();
 
   const [saveLoading, setSaveLoading] = useState(false);
-  const { getLibraryList } = useHandleSiderData();
 
   const scrapeSingleUrl = async (key: string, url: string) => {
     const { scrapeLinks } = useImportResourceStore.getState();
@@ -111,6 +115,7 @@ export const ImportFromWeblink = () => {
 
     const batchCreateResourceData: UpsertResourceRequest[] = scrapeLinks.map((link) => {
       return {
+        projectId: currentProjectId,
         resourceType: 'weblink',
         title: link?.title,
         data: {
@@ -131,7 +136,6 @@ export const ImportFromWeblink = () => {
     }
 
     refetchUsage();
-    getLibraryList();
     message.success(t('common.putSuccess'));
     setScrapeLinks([]);
     setImportResourceModalVisible(false);
@@ -163,6 +167,8 @@ export const ImportFromWeblink = () => {
         position: nodePosition,
       });
     });
+
+    updateSourceList(data && Array.isArray(data.data) ? data.data : [], currentProjectId);
   };
 
   const canImportCount = getAvailableFileCount(storageUsage);
@@ -228,7 +234,11 @@ export const ImportFromWeblink = () => {
           <p className="font-bold whitespace-nowrap text-md text-[#00968f]">
             {t('resource.import.linkCount', { count: scrapeLinks?.length || 0 })}
           </p>
-          <StorageLimit resourceCount={scrapeLinks?.length || 0} />
+          <StorageLimit
+            resourceCount={scrapeLinks?.length || 0}
+            projectId={currentProjectId}
+            onSelectProject={setCurrentProjectId}
+          />
         </div>
 
         <div className="flex items-center gap-x-[8px] flex-shrink-0">

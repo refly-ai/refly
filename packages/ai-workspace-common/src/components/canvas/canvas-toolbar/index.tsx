@@ -20,6 +20,7 @@ import {
   IconTemplate,
   IconCodeArtifact,
   IconWebsite,
+  IconMindMap,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import TooltipWrapper from '@refly-packages/ai-workspace-common/components/common/tooltip-button';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
@@ -28,8 +29,11 @@ import { useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common
 import { useEdgeVisible } from '@refly-packages/ai-workspace-common/hooks/canvas/use-edge-visible';
 import { ToolButton, type ToolbarItem } from './tool-button';
 import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-card';
-import { genMemoID, genSkillID, genCodeArtifactID } from '@refly-packages/utils/id';
+import { genMemoID, genSkillID } from '@refly-packages/utils/id';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
+import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
+import { getDefaultContentForType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
+import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface ToolbarProps {
   onToolSelect?: (tool: string) => void;
@@ -101,6 +105,22 @@ const useToolbarConfig = (nodeLength: number) => {
             description: t(
               'canvas.toolbar.createWebsiteDescription',
               'Create a website node to embed a website in your canvas',
+            ),
+            videoUrl:
+              'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
+          },
+        },
+        {
+          icon: IconMindMap,
+          value: 'createMindMap',
+          type: 'button',
+          domain: 'mindMap',
+          tooltip: t('canvas.toolbar.createMindMap', 'Create Mind Map'),
+          hoverContent: {
+            title: t('canvas.toolbar.createMindMap', 'Create Mind Map'),
+            description: t(
+              'canvas.toolbar.createMindMapDescription',
+              'Create a mind map to visualize and organize ideas',
             ),
             videoUrl:
               'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
@@ -322,28 +342,7 @@ export const CanvasToolbar = memo<ToolbarProps>(({ onToolSelect, nodeLength }) =
     );
   }, [addNode, t]);
 
-  const createCodeArtifactNode = useCallback(() => {
-    // For code artifacts, we'll use a resource ID since there's no specific prefix for code artifacts
-    const codeArtifactId = genCodeArtifactID();
-    addNode(
-      {
-        type: 'codeArtifact',
-        data: {
-          title: t('canvas.nodeTypes.codeArtifact', 'Code Artifact'),
-          entityId: codeArtifactId,
-          contentPreview: '',
-          metadata: {
-            status: 'finish',
-            language: 'typescript',
-            activeTab: 'code',
-          },
-        },
-      },
-      [],
-      true,
-      true,
-    );
-  }, [addNode, t]);
+  const createCodeArtifactNode = useCreateCodeArtifact();
 
   const createWebsiteNode = useCallback(() => {
     addNode(
@@ -363,6 +362,16 @@ export const CanvasToolbar = memo<ToolbarProps>(({ onToolSelect, nodeLength }) =
     );
   }, [addNode, t]);
 
+  const createMindMapArtifact = useCallback(() => {
+    createCodeArtifactNode({
+      codeContent: getDefaultContentForType('application/refly.artifacts.mindmap'),
+      language: 'json',
+      type: 'application/refly.artifacts.mindmap',
+      title: t('canvas.nodes.mindMap.defaultTitle', 'Mind Map'),
+      activeTab: 'preview',
+    });
+  }, [createCodeArtifactNode, t]);
+
   const handleToolSelect = useCallback(
     (_event: React.MouseEvent, tool: string) => {
       switch (tool) {
@@ -371,6 +380,9 @@ export const CanvasToolbar = memo<ToolbarProps>(({ onToolSelect, nodeLength }) =
           break;
         case 'createWebsite':
           createWebsiteNode();
+          break;
+        case 'createMindMap':
+          createMindMapArtifact();
           break;
         case 'createDocument':
           createSingleDocumentInCanvas();
@@ -405,34 +417,71 @@ export const CanvasToolbar = memo<ToolbarProps>(({ onToolSelect, nodeLength }) =
       createSkillNode,
       createMemo,
       createCodeArtifactNode,
+      createWebsiteNode,
+      createMindMapArtifact,
       onToolSelect,
       setShowTemplates,
+      showTemplates,
     ],
   );
 
-  const handleConfirm = useCallback(
-    (selectedItems: ContextItem[]) => {
-      for (const item of selectedItems) {
+  const handleConfirm = useCallback(async (selectedItems: ContextItem[]) => {
+    if (!selectedItems || selectedItems.length === 0) return;
+
+    // Store the reference position for node placement
+    let referencePosition = null;
+
+    try {
+      for (let i = 0; i < selectedItems.length; i++) {
+        const item = selectedItems[i];
         const contentPreview = item?.snippets?.map((snippet) => snippet?.text || '').join('\n');
-        addNode(
-          {
-            type: item.domain as CanvasNodeType,
-            data: {
-              title: item.title,
-              entityId: item.id,
-              contentPreview: item?.contentPreview || contentPreview,
-              metadata:
-                item.domain === 'resource' ? { resourceType: item?.metadata?.resourceType } : {},
-            },
-          },
-          undefined,
-          false,
-          true,
-        );
+
+        // For the first node, let the system calculate the position
+        // For subsequent nodes, provide an offset based on the previous node
+        const position = referencePosition
+          ? {
+              x: referencePosition.x,
+              y: referencePosition.y + 150, // Add vertical spacing between nodes
+            }
+          : undefined;
+
+        await new Promise<void>((resolve, reject) => {
+          try {
+            // Use the event emitter to add nodes with proper spacing
+            nodeOperationsEmitter.emit('addNode', {
+              node: {
+                type: item.domain as CanvasNodeType,
+                data: {
+                  title: item.title,
+                  entityId: item.id,
+                  contentPreview: item?.contentPreview || contentPreview,
+                  metadata:
+                    item.domain === 'resource'
+                      ? { resourceType: item?.metadata?.resourceType }
+                      : {},
+                },
+                position,
+              },
+              shouldPreview: i === selectedItems.length - 1, // Only preview the last node
+              needSetCenter: i === selectedItems.length - 1, // Only center on the last node
+              positionCallback: (newPosition) => {
+                referencePosition = newPosition;
+                resolve();
+              },
+            });
+
+            // Add a timeout in case the callback doesn't fire
+            setTimeout(() => resolve(), 100);
+          } catch (e) {
+            console.error('Error adding node:', e);
+            reject(e);
+          }
+        });
       }
-    },
-    [addNode],
-  );
+    } catch (error) {
+      console.error('Error in handleConfirm:', error);
+    }
+  }, []);
 
   return (
     <div

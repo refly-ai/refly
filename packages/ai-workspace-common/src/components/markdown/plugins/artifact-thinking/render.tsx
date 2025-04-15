@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
-import { ARTIFACT_THINKING_TAG } from '@refly-packages/ai-workspace-common/modules/artifacts/const';
+import { ARTIFACT_THINKING_TAG } from '@refly/utils/artifact';
 import {
   IconThinking,
   IconLoading,

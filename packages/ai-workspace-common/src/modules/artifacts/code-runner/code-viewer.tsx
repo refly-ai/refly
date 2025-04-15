@@ -1,56 +1,20 @@
 import { FiRefreshCw, FiDownload, FiCopy, FiCode, FiEye, FiShare2 } from 'react-icons/fi';
+
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Button, Tooltip, Divider, message, Select } from 'antd';
 import Renderer from './render';
 import MonacoEditor from './render/MonacoEditor';
 import { useTranslation } from 'react-i18next';
-import { CodeArtifactType } from './types';
+import { CodeArtifactType } from '@refly/openapi-schema';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
-
-// Function to get simple type description
-const getSimpleTypeDescription = (type: CodeArtifactType): string => {
-  const typeMap: Record<CodeArtifactType, string> = {
-    'application/refly.artifacts.react': 'React',
-    'image/svg+xml': 'SVG',
-    'application/refly.artifacts.mermaid': 'Mermaid',
-    'text/markdown': 'Markdown',
-    'application/refly.artifacts.code': 'Code',
-    'text/html': 'HTML',
-  };
-  return typeMap[type] ?? type;
-};
-
-// Function to get all available artifact types with labels
-const getArtifactTypeOptions = () => {
-  const typeMap: Record<CodeArtifactType, string> = {
-    'application/refly.artifacts.react': 'React',
-    'image/svg+xml': 'SVG',
-    'application/refly.artifacts.mermaid': 'Mermaid',
-    'text/markdown': 'Markdown',
-    'application/refly.artifacts.code': 'Code',
-    'text/html': 'HTML',
-  };
-
-  return Object.entries(typeMap).map(([value, label]) => ({
-    value: value as CodeArtifactType,
-    label,
-  }));
-};
-
-// Function to get file extension based on artifact type
-const getFileExtensionFromType = (type: CodeArtifactType): string => {
-  const extensionMap: Record<CodeArtifactType, string> = {
-    'application/refly.artifacts.react': 'tsx',
-    'image/svg+xml': 'svg',
-    'application/refly.artifacts.mermaid': 'mmd',
-    'text/markdown': 'md',
-    'application/refly.artifacts.code': '', // Will be determined by language
-    'text/html': 'html',
-  };
-  return extensionMap[type] ?? '';
-};
+import {
+  getFileExtensionFromType,
+  getArtifactTypeOptions,
+  getSimpleTypeDescription,
+} from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
+import { GoColumns } from 'react-icons/go';
 
 export default memo(
   function CodeViewer({
@@ -88,6 +52,8 @@ export default memo(
     const [refresh, setRefresh] = useState(0);
     // Track editor content for controlled updates
     const [editorContent, setEditorContent] = useState(code);
+    // Layout mode: 'tabs' (default) or 'split'
+    const [layoutMode, setLayoutMode] = useState<'tabs' | 'split'>('tabs');
 
     // Update editor content when code prop changes
     useEffect(() => {
@@ -193,37 +159,11 @@ export default memo(
         const loadingMessage = message.loading(t('codeArtifact.sharing'), 0);
 
         try {
-          // Prepare the JSON content
-          const fileContent = JSON.stringify({
-            content: editorContent,
-            type,
-            title,
-            language,
-          });
-
-          // Create a blob with the JSON content
-          const jsonBlob = new Blob([fileContent], { type: 'application/json' });
-
-          // Upload the file
-          const { data: uploadData, error: uploadError } = await getClient().upload({
-            body: {
-              file: jsonBlob,
-              visibility: 'public',
-            },
-          });
-
-          if (uploadError || !uploadData?.data?.storageKey) {
-            throw new Error(
-              typeof uploadError === 'string' ? uploadError : 'Failed to upload code',
-            );
-          }
-
           // Create the share
           const { data, error } = await getClient().createShare({
             body: {
               entityId,
               entityType: 'codeArtifact',
-              shareDataStorageKey: uploadData.data.storageKey,
             },
           });
 
@@ -251,38 +191,78 @@ export default memo(
       [editorContent, type, title, language, t, entityId],
     );
 
+    // Toggle layout mode between tabs and split
+    const toggleLayoutMode = useCallback(
+      (event: React.MouseEvent) => {
+        event.stopPropagation();
+        setLayoutMode((current) => (current === 'tabs' ? 'split' : 'tabs'));
+        message.info(
+          t(
+            layoutMode === 'tabs'
+              ? 'codeArtifact.layoutChanged.split'
+              : 'codeArtifact.layoutChanged.tabs',
+          ),
+        );
+      },
+      [layoutMode, t],
+    );
+
     // Memoize the render tabs
     const renderTabs = useMemo(
       () => (
         <div className="flex items-center space-x-3" onClick={(e) => e.stopPropagation()}>
-          <Button
-            type={activeTab === 'preview' ? 'primary' : 'text'}
-            icon={<FiEye className="size-4 mr-1" />}
-            onClick={(e) => {
-              e.stopPropagation();
-              onTabChange?.('preview');
-            }}
-            className={`${activeTab === 'preview' ? 'bg-green-600' : 'text-gray-600'}`}
-            size="small"
-          >
-            {t('codeArtifact.tabs.preview')}
-          </Button>
+          {layoutMode === 'tabs' && (
+            <>
+              <Button
+                type={activeTab === 'preview' ? 'primary' : 'text'}
+                icon={<FiEye className="size-4 mr-1" />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTabChange?.('preview');
+                }}
+                className={`${activeTab === 'preview' ? 'bg-green-600' : 'text-gray-600'}`}
+                size="small"
+              >
+                {t('codeArtifact.tabs.preview')}
+              </Button>
 
-          <Button
-            type={activeTab === 'code' ? 'primary' : 'text'}
-            icon={<FiCode className="size-4 mr-1" />}
-            onClick={(e) => {
-              e.stopPropagation();
-              onTabChange?.('code');
-            }}
-            className={`${activeTab === 'code' ? 'bg-green-600' : 'text-gray-600'}`}
-            size="small"
+              <Button
+                type={activeTab === 'code' ? 'primary' : 'text'}
+                icon={<FiCode className="size-4 mr-1" />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTabChange?.('code');
+                }}
+                className={`${activeTab === 'code' ? 'bg-green-600' : 'text-gray-600'}`}
+                size="small"
+              >
+                {t('codeArtifact.tabs.code')}
+              </Button>
+            </>
+          )}
+
+          <Tooltip
+            title={
+              layoutMode === 'tabs' ? t('codeArtifact.layout.split') : t('codeArtifact.layout.tabs')
+            }
           >
-            {t('codeArtifact.tabs.code')}
-          </Button>
+            <Button
+              type="text"
+              icon={
+                <GoColumns
+                  className={`size-4 ${
+                    layoutMode === 'split' ? 'text-green-600' : 'text-gray-600'
+                  }`}
+                />
+              }
+              onClick={toggleLayoutMode}
+              size="small"
+              className="hover:text-blue-600"
+            />
+          </Tooltip>
         </div>
       ),
-      [activeTab, onTabChange, t],
+      [activeTab, onTabChange, t, layoutMode, toggleLayoutMode],
     );
 
     // Memoize action buttons
@@ -314,7 +294,7 @@ export default memo(
           </Tooltip>
         </div>
       ),
-      [handleCopyCode, handleDownload, title, type, t],
+      [handleCopyCode, handleDownload, title, getFileExtensionForLanguage, language, t],
     );
 
     return (
@@ -365,7 +345,7 @@ export default memo(
                 options={getArtifactTypeOptions()}
                 size="small"
                 className="w-32"
-                dropdownMatchSelectWidth={false}
+                popupMatchSelectWidth={false}
               />
             ) : (
               <span className="text-sm text-gray-500">{getSimpleTypeDescription(type)}</span>
@@ -376,32 +356,80 @@ export default memo(
         </div>
 
         {/* Content area */}
-        <div className="flex flex-grow flex-col overflow-auto rounded-md">
-          {activeTab === 'code' ? (
-            <MonacoEditor
-              content={editorContent}
-              language={language}
-              type={type}
-              readOnly={readOnly || isGenerating || canvasReadOnly}
-              isGenerating={isGenerating}
-              canvasReadOnly={canvasReadOnly}
-              onChange={handleEditorChange}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              {language && (
-                <div className="w-full h-full">
-                  <Renderer
-                    content={editorContent}
-                    type={type}
-                    key={refresh}
-                    title={title}
-                    language={language}
-                    onRequestFix={onRequestFix}
-                  />
+        <div
+          className={`flex flex-grow overflow-auto ${layoutMode === 'split' ? 'flex-row' : 'flex-col '} rounded-md`}
+        >
+          {layoutMode === 'tabs' ? (
+            <>
+              {/* Tabs layout */}
+              {activeTab === 'code' ? (
+                <MonacoEditor
+                  content={editorContent}
+                  language={language}
+                  type={type as CodeArtifactType}
+                  readOnly={readOnly || isGenerating || canvasReadOnly}
+                  isGenerating={isGenerating}
+                  canvasReadOnly={canvasReadOnly}
+                  onChange={handleEditorChange}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  {language && (
+                    <div className="w-full h-full">
+                      <Renderer
+                        content={editorContent}
+                        type={type}
+                        key={refresh}
+                        title={title}
+                        language={language}
+                        onRequestFix={onRequestFix}
+                        onChange={
+                          type === 'application/refly.artifacts.mindmap'
+                            ? (newContent, _type) => handleEditorChange(newContent)
+                            : undefined
+                        }
+                        readonly={readOnly || canvasReadOnly}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
+          ) : (
+            <>
+              {/* Split layout */}
+              <div className="w-1/2 h-full border-r border-gray-200">
+                <MonacoEditor
+                  content={editorContent}
+                  language={language}
+                  type={type as CodeArtifactType}
+                  readOnly={readOnly || isGenerating || canvasReadOnly}
+                  isGenerating={isGenerating}
+                  canvasReadOnly={canvasReadOnly}
+                  onChange={handleEditorChange}
+                />
+              </div>
+              <div className="w-1/2 h-full overflow-auto">
+                {language && (
+                  <div className="w-full h-full">
+                    <Renderer
+                      content={editorContent}
+                      type={type}
+                      key={refresh}
+                      title={title}
+                      language={language}
+                      onRequestFix={onRequestFix}
+                      onChange={
+                        type === 'application/refly.artifacts.mindmap'
+                          ? (newContent, _type) => handleEditorChange(newContent)
+                          : undefined
+                      }
+                      readonly={readOnly || canvasReadOnly}
+                    />
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -19,7 +19,6 @@ import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
 import { processContextUrls } from '../utils/url-processing';
 // prompts
 import * as customPrompt from '../scheduler/module/customPrompt/index';
-import { MAX_OUTPUT_TOKENS_LEVEL2 } from '../scheduler/utils/constants';
 
 export class CustomPrompt extends BaseSkill {
   name = 'customPrompt';
@@ -100,13 +99,28 @@ export class CustomPrompt extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { messages = [], images = [] } = state;
-    const { currentSkill, tplConfig, locale = 'en' } = config.configurable;
+    const { currentSkill, tplConfig, locale = 'en', project } = config.configurable;
 
     // Set current step
     config.metadata.step = { name: 'analyzeQuery' };
 
-    // Get custom system prompt from config
+    // process projectId based knowledge base search
+    const projectId = project?.projectId;
+    const enableKnowledgeBaseSearch = !!projectId;
+
+    // Get custom system prompt and instructions
     let customSystemPrompt = (tplConfig?.customSystemPrompt?.value as string) || '';
+    const customInstructions = project?.customInstructions;
+
+    // Update tplConfig with knowledge base search setting
+    config.configurable.tplConfig = {
+      ...config.configurable.tplConfig,
+      enableKnowledgeBaseSearch: {
+        value: enableKnowledgeBaseSearch,
+        label: 'Knowledge Base Search',
+        displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
+      },
+    };
 
     // If customSystemPrompt is empty, look for it in chat history
     if (!customSystemPrompt && config.configurable.chatHistory?.length > 0) {
@@ -230,13 +244,13 @@ export class CustomPrompt extends BaseSkill {
       optimizedQuery,
       rewrittenQueries,
       modelInfo: config?.configurable?.modelInfo,
+      customInstructions,
     });
 
     // Generate answer using the model
     const model = this.engine.chatModel({
       temperature: Number(tplConfig?.temperature?.value ?? 0.1),
       topP: Number(tplConfig?.topP?.value ?? 1),
-      maxTokens: MAX_OUTPUT_TOKENS_LEVEL2,
     });
     const responseMessage = await model.invoke(requestMessages, {
       ...config,

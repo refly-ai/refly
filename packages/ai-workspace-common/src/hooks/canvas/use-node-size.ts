@@ -70,12 +70,14 @@ export const useNodeSize = ({
   }, []);
 
   useEffect(() => {
+    const height = size.height === 'auto' ? 'auto' : `${Math.max(size.height, minHeight)}px`;
+
     setNodeStyle(id, {
       width: `${size.width}px`,
-      height: `${size.height}px`,
+      height,
       maxHeight: size.maxHeight,
     });
-  }, []);
+  }, [id]);
 
   // Monitor node style changes
   useEffect(() => {

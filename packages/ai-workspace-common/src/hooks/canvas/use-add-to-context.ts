@@ -5,18 +5,20 @@ import {
   IContextItem,
   useContextPanelStore,
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
-import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { ContextTarget } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import {
+  emitAddToContext,
+  emitAddToContextCompleted,
+} from '@refly-packages/ai-workspace-common/utils/event-emitter/context';
 import AddToContextMessageContent from '../../components/message/add-to-context-message';
 
 export const useAddToContext = () => {
   const { t } = useTranslation();
-  const { showLaunchpad, setShowLaunchpad } = useCanvasStoreShallow((state) => ({
-    showLaunchpad: state.showLaunchpad,
-    setShowLaunchpad: state.setShowLaunchpad,
-  }));
 
   const addSingleNodeToContext = useCallback(
     (item: IContextItem) => {
+      const { activeResultId } = useContextPanelStore.getState();
+      const resultId = activeResultId || ContextTarget.Global;
       const contextStore = useContextPanelStore.getState();
       const selectedContextItems = contextStore.contextItems;
       const nodeType = item?.type;
@@ -36,10 +38,6 @@ export const useAddToContext = () => {
         nodeTitle = item?.title ?? t('knowledgeBase.context.untitled');
       }
 
-      if (!showLaunchpad) {
-        setShowLaunchpad(true);
-      }
-
       if (isAlreadyAdded) {
         message.warning({
           content: React.createElement(AddToContextMessageContent, {
@@ -49,11 +47,18 @@ export const useAddToContext = () => {
           }),
           key: 'already-added-warning',
         });
+
+        // Emit event that adding to context is completed (but failed)
+        emitAddToContext(item, resultId);
+        emitAddToContextCompleted(item, resultId, false);
         return false;
       }
 
+      // Emit event that we're adding to context
+      emitAddToContext(item, resultId);
+
       // Add to context
-      contextStore.addContextItem(item);
+      // contextStore.addContextItem(item);
 
       message.success({
         content: React.createElement(AddToContextMessageContent, {
@@ -64,9 +69,11 @@ export const useAddToContext = () => {
         key: 'add-success',
       });
 
+      // Emit event that adding to context is completed
+      emitAddToContextCompleted(item, resultId, true);
       return true;
     },
-    [showLaunchpad, setShowLaunchpad, t],
+    [t],
   );
 
   const addContextItems = useCallback(
@@ -74,16 +81,12 @@ export const useAddToContext = () => {
       // Filter out memo, skill, and group nodes
       const validNodes = items.filter((item) => !['skill', 'group'].includes(item.type));
 
-      if (!showLaunchpad) {
-        setShowLaunchpad(true);
-      }
-
       // Add each valid node to context
       const results = validNodes.map((node) => addSingleNodeToContext(node));
 
       return results.filter(Boolean).length; // Return number of successfully added nodes
     },
-    [showLaunchpad, setShowLaunchpad, addSingleNodeToContext],
+    [addSingleNodeToContext],
   );
 
   return {

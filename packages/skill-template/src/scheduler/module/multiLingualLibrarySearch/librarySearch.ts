@@ -17,6 +17,7 @@ interface BatchSearchParams {
   engine: SkillEngine;
   enableTranslateQuery: boolean;
   enableSearchWholeSpace?: boolean;
+  projectId?: string;
 }
 
 // Helper to chunk array into batches
@@ -109,42 +110,63 @@ const convertToSources = (
   query: { hl: string; q: string; originalQuery?: string },
   enableTranslateQuery: boolean,
 ): Source[] => {
+  // Basic validation
+  if (!items || !Array.isArray(items)) {
+    return [];
+  }
+
   return items.map((item) => {
-    let url = '';
-    let title = '';
-    let pageContent = '';
-    let domain = '';
-    let id = '';
+    try {
+      let url = '';
+      let title = '';
+      let pageContent = '';
+      let domain = '';
+      let id = '';
 
-    if ('resource' in item && item.resource) {
-      url = item.resource.data?.url || '';
-      title = item.resource.title || '';
-      pageContent = item.resource.content || '';
-      domain = 'resource';
-      id = item.resource.resourceId;
-    } else if ('document' in item && item.document) {
-      url = ''; // Documents may not have URLs
-      title = item.document.title || '';
-      pageContent = item.document.content || '';
-      domain = 'document';
-      id = item.document.docId;
+      if ('resource' in item && item.resource) {
+        url = item.resource.data?.url || '';
+        title = item.resource.title || '';
+        pageContent = item.resource.content || '';
+        domain = 'resource';
+        id = item.resource.resourceId;
+      } else if ('document' in item && item.document) {
+        url = ''; // Documents may not have URLs
+        title = item.document.title || '';
+        pageContent = item.document.content || '';
+        domain = 'document';
+        id = item.document.docId;
+      }
+
+      return {
+        url,
+        title,
+        pageContent,
+        metadata: {
+          originalLocale: query?.hl || 'unknown',
+          originalQuery: query?.originalQuery || query?.q,
+          translatedQuery: enableTranslateQuery && query ? query.q : undefined,
+          isTranslated: enableTranslateQuery,
+          source: 'library',
+          sourceType: 'library',
+          entityId: id,
+          entityType: domain,
+        },
+      };
+    } catch (error) {
+      console.error('Error converting item to source:', error);
+      // Return a minimal valid source in case of error
+      return {
+        url: '',
+        title: 'Error Processing Item',
+        pageContent: '',
+        metadata: {
+          entityType: 'error',
+          entityId: 'error',
+          source: 'library',
+          sourceType: 'library',
+        },
+      };
     }
-
-    return {
-      url,
-      title,
-      pageContent,
-      metadata: {
-        originalLocale: query?.hl || 'unknown',
-        originalQuery: query?.originalQuery || query?.q,
-        translatedQuery: enableTranslateQuery && query ? query.q : undefined,
-        isTranslated: enableTranslateQuery,
-        source: 'library',
-        sourceType: 'library',
-        entityId: id,
-        entityType: domain,
-      },
-    };
   });
 };
 
@@ -156,40 +178,58 @@ const performBatchLibrarySearch = async ({
   engine,
   enableTranslateQuery,
   enableSearchWholeSpace,
+  projectId,
 }: BatchSearchParams): Promise<Source[]> => {
   // Use the general search method with appropriate options
   const results = await Promise.all(
-    queries.map((query) => {
-      // Prepare search request based on semanticSearch.ts implementation
-      return engine.service.search(
-        user,
-        {
-          query: query.q,
-          limit,
-          mode: 'vector',
-          domains: ['resource', 'document'] as SearchDomain[],
-          // If enableSearchWholeSpace is true, don't specify entities to search the whole space
-          entities: enableSearchWholeSpace ? [] : undefined,
-        },
-        // Pass options as any to avoid type errors with locale
-        { enableReranker: false } as any,
-      );
+    queries.map(async (query) => {
+      try {
+        // Validate query parameters
+        if (!query || !query.q || query.q.trim() === '') {
+          engine.logger.warn('Empty query in batch library search');
+          return { data: [] };
+        }
+
+        // Prepare search request based on semanticSearch.ts implementation
+        return await engine.service.search(
+          user,
+          {
+            query: query.q,
+            limit,
+            mode: 'vector',
+            domains: ['resource', 'document'] as SearchDomain[],
+            // If enableSearchWholeSpace is true, don't specify entities to search the whole space
+            entities: enableSearchWholeSpace ? [] : undefined,
+            projectId,
+          },
+          // Pass options as any to avoid type errors with locale
+          { enableReranker: false } as any,
+        );
+      } catch (error) {
+        engine.logger.error(`Error in individual search query (${query.q}): ${error.message}`);
+        return { data: [] };
+      }
     }),
   );
 
   // Process and flatten results
   return results.flatMap((result, index) => {
-    const query = queries[index];
+    try {
+      const query = queries[index];
 
-    if (!result.data || result.data.length === 0) {
-      return [];
+      if (!result?.data || result.data.length === 0) {
+        return [];
+      }
+
+      // Process search results into grouped documents and resources
+      const processedItems = processSearchResults(result.data);
+
+      // Convert to Source format for compatibility with the rest of the system
+      return convertToSources(processedItems, query, enableTranslateQuery);
+    } catch (error) {
+      console.error('Error processing search result:', error);
+      return []; // Return empty array for this result to not break the chain
     }
-
-    // Process search results into grouped documents and resources
-    const processedItems = processSearchResults(result.data);
-
-    // Convert to Source format for compatibility with the rest of the system
-    return convertToSources(processedItems, query, enableTranslateQuery);
   });
 };
 
@@ -202,6 +242,7 @@ export const performConcurrentLibrarySearch = async ({
   engine,
   enableTranslateQuery,
   enableSearchWholeSpace,
+  projectId,
 }: {
   queryMap: Record<string, string[]>;
   searchLimit: number;
@@ -210,15 +251,35 @@ export const performConcurrentLibrarySearch = async ({
   engine: any;
   enableTranslateQuery: boolean;
   enableSearchWholeSpace?: boolean;
+  projectId?: string;
 }): Promise<Source[]> => {
-  // Convert queryMap to array of query objects
-  const allQueries = Object.entries(queryMap).flatMap(([locale, queries]) =>
-    queries.map((query, index) => ({
-      q: query,
-      hl: locale.toLowerCase(),
-      originalQuery: enableTranslateQuery ? queryMap[locale][index] : undefined,
-    })),
-  );
+  // Validate queryMap
+  if (!queryMap || typeof queryMap !== 'object' || Object.keys(queryMap).length === 0) {
+    engine.logger.warn('Invalid or empty queryMap provided to performConcurrentLibrarySearch');
+    return [];
+  }
+
+  // Convert queryMap to array of query objects, filtering out empty queries
+  const allQueries = Object.entries(queryMap).flatMap(([locale, queries]) => {
+    if (!Array.isArray(queries) || queries.length === 0) {
+      engine.logger.warn(`Empty queries array for locale ${locale} in queryMap`);
+      return [];
+    }
+
+    return queries
+      .filter((query) => query && typeof query === 'string' && query.trim() !== '')
+      .map((query, index) => ({
+        q: query,
+        hl: locale.toLowerCase(),
+        originalQuery: enableTranslateQuery ? queryMap[locale][index] : undefined,
+      }));
+  });
+
+  // Check if we have any valid queries after filtering
+  if (allQueries.length === 0) {
+    engine.logger.warn('No valid queries found in queryMap');
+    return [];
+  }
 
   // Split into batches
   const batches = chunk(allQueries, BATCH_SIZE);
@@ -237,6 +298,7 @@ export const performConcurrentLibrarySearch = async ({
           engine,
           enableTranslateQuery,
           enableSearchWholeSpace,
+          projectId,
         }),
       ),
     );
@@ -252,7 +314,8 @@ export const performConcurrentLibrarySearch = async ({
         self.findIndex(
           (s) =>
             s.metadata.entityType === source.metadata.entityType &&
-            s.metadata.entityId === source.metadata.entityId,
+            s.metadata.entityId === source.metadata.entityId &&
+            s?.pageContent === source.pageContent,
         ),
     );
 

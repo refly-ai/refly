@@ -200,6 +200,22 @@ export class StaticFileNotFoundError extends BaseError {
   };
 }
 
+export class CodeArtifactNotFoundError extends BaseError {
+  code = 'E1013';
+  messageDict = {
+    en: 'Code artifact not found, please refresh',
+    'zh-CN': '代码组件不存在，请刷新重试',
+  };
+}
+
+export class ProjectNotFoundError extends BaseError {
+  code = 'E1014';
+  messageDict = {
+    en: 'Project not found, please refresh',
+    'zh-CN': '项目不存在，请刷新重试',
+  };
+}
+
 export class StorageQuotaExceeded extends BaseError {
   code = 'E2001';
   messageDict = {
@@ -221,6 +237,30 @@ export class ModelNotSupportedError extends BaseError {
   messageDict = {
     en: 'Model not supported, please select other models',
     'zh-CN': '不支持当前模型，请选择其他模型',
+  };
+}
+
+export class ModelProviderError extends BaseError {
+  code = 'E3001';
+  messageDict = {
+    en: 'Model provider error, please try again later',
+    'zh-CN': '模型提供方出错，请稍后重试',
+  };
+}
+
+export class ModelProviderRateLimitExceeded extends BaseError {
+  code = 'E3002';
+  messageDict = {
+    en: 'Request rate limit exceeded for the model provider. Please try again later.',
+    'zh-CN': '已超出模型提供方请求速率限制，请稍后重试',
+  };
+}
+
+export class ModelProviderTimeout extends BaseError {
+  code = 'E3003';
+  messageDict = {
+    en: 'Model provider timed out, please try again later',
+    'zh-CN': '模型提供方响应超时，请稍后重试',
   };
 }
 
@@ -249,11 +289,16 @@ const errorMap = {
   E1009: ShareNotFoundError,
   E1011: ActionResultNotFoundError,
   E1012: StaticFileNotFoundError,
+  E1013: CodeArtifactNotFoundError,
+  E1014: ProjectNotFoundError,
   E2001: StorageQuotaExceeded,
   E2002: ModelUsageQuotaExceeded,
   E2003: ModelNotSupportedError,
   E2004: ContentTooLargeError,
   E2005: PayloadTooLargeError,
+  E3001: ModelProviderError,
+  E3002: ModelProviderRateLimitExceeded,
+  E3003: ModelProviderTimeout,
 };
 
 export function getErrorMessage(code: string, locale: string): string {

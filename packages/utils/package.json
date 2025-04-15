@@ -36,6 +36,7 @@
     "clsx": "^2.1.0",
     "dayjs": "~1.11.7",
     "js-cookie": "^3.0.5",
+    "jsonrepair": "^3.12.0",
     "linkify-it": "^5.0.0",
     "markdown-it": "~14.1.0",
     "md5": "^2.3.0",

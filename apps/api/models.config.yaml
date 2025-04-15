@@ -1,0 +1,135 @@
+# Refly Models Configuration (Unified)
+# ====================================
+# This file centralizes the configuration for LLM, Embedding, and Rerank models.
+
+# --- Large Language Models (LLM) ---
+llm:
+  endpoints:
+    # Example: DeepSeek API (replace with actual key if needed)
+    - name: deepseek
+      api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # Replace with your DeepSeek API Key or use environment variable override
+      models:
+        - deepseek/deepseek-chat
+        - deepseek/deepseek-coder
+        # Add other DeepSeek models supported by this endpoint
+      configuration:
+        defaultHeaders:
+          # Example header if needed
+          X-My-Header: deepseek-header
+    # Example: OpenAI API (replace with actual key if needed)
+    - name: openai
+      api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # Replace with your OpenAI API Key or use environment variable override
+      models:
+        - gpt-4
+        - gpt-4-turbo
+        - gpt-3.5-turbo
+        # Add other OpenAI models supported by this endpoint
+    # Example: OpenRouter API (replace with actual key if needed)
+    - name: openrouter
+      api_key: sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # Replace with your OpenRouter API Key or use environment variable override
+      base_url: https://openrouter.ai/api/v1 # Required for OpenRouter
+      models:
+        # List models available via OpenRouter that you want to use
+        - mistralai/mistral-7b-instruct
+        - google/gemini-pro
+        - anthropic/claude-3-opus
+      configuration:
+        defaultHeaders:
+          HTTP-Referer: https://refly.ai # Required by OpenRouter
+          X-Title: Refly # Required by OpenRouter
+    # Example: Local Ollama (No API Key needed)
+    - name: ollama-local
+      api_key: ollama # Placeholder, not used by Ollama provider itself
+      base_url: http://ollama:11434 # Default Ollama service name and port in Docker
+      models:
+        - llama3:latest
+        - mistral:latest
+        # Add other Ollama models you have pulled locally
+
+# --- Embedding Models ---
+embedding:
+  providers:
+    # Example: Ollama (Local)
+    ollama:
+      baseUrl: http://ollama:11434 # Default Ollama service name and port
+      defaultModel: mxbai-embed-large:latest # Specify a default model pulled in Ollama
+      # You can add other Ollama-specific config here if needed in the future
+    # Example: Jina AI Embeddings
+    jina:
+      # No baseUrl needed if using default Jina API endpoint
+      # defaultModel can be specified if Jina provider supports multiple models
+      # apiKey will be sourced from environment variable JINA_API_KEY by the JinaEmbeddings class
+      # batchSize, dimensions etc. are typically configured via environment variables (.env)
+      # but could be added here if needed for overrides
+      pass: 1 # Example placeholder value
+    # Example: Fireworks AI Embeddings
+    fireworks:
+      # Similar to Jina, apiKey, modelName, batchSize configured via .env usually
+      pass: 1 # Example placeholder value
+    # Example: OpenAI Embeddings
+    openai:
+      # apiKey, modelName, batchSize, dimensions configured via .env usually
+      pass: 1 # Example placeholder value
+
+# --- Rerank Models ---
+rerank:
+  defaultProvider: jina # Specify the default reranker to use ('jina' or 'xinference')
+  providers:
+    # Example: Jina AI Reranker
+    jina:
+      # Configuration for Jina Reranker (API key is usually sourced from .env)
+      modelName: jina-reranker-v1-base-en # Or the model you intend to use
+      topN: 5 # Default top N results to return after reranking
+      relevanceThreshold: 0.1 # Default relevance threshold
+      # apiKey: null # API key sourced from JINA_API_KEY env var by JinaReranker class
+    # Example: Xinference Reranker (Local)
+    xinference:
+      baseUrl: http://xinference:9997 # Default Xinference service name and port
+      modelName: bge-reranker-base # Specify the reranker model UID deployed in Xinference
+      apiKey: null # Xinference typically doesn't require an API key locally
+      topN: 5
+      relevanceThreshold: 0.1
+      # Add other Xinference-specific config here if needed
+
+# --- PDF Parser Configuration ---
+pdf_parser:
+  # (必需) 切换解析器: "mineru", "marker" (API), "marker_local" (CLI)
+  provider: "marker_local"
+
+  # --- MinerU API Config (仅当 provider = "mineru" 时需要) ---
+  mineru:
+    api_key: "YOUR_MINERU_API_KEY_HERE" # 必需。在此处直接填入 MinerU API Key
+    api_base: "https://mineru.net/api/v4" # 可选，或在代码中设置默认值
+    # 可选的 MinerU 参数 (可在代码中设置默认值)
+    is_ocr: false
+    enable_formula: true
+    enable_table: true
+    layout_model: "doclayout_yolo"
+    language: "auto"
+    max_polls: 30             # 默认轮询次数
+    poll_interval: 2000       # 默认轮询间隔 (毫秒)
+    # callback: "YOUR_CALLBACK_URL_HERE" # 可选的回调URL
+    # seed: "YOUR_CALLBACK_SEED_HERE"    # 如果使用回调，则必需
+    # extra_formats: ["docx"]            # 可选的额外导出格式
+
+  # --- Marker API Config (仅当 provider = "marker" 时需要) ---
+  # (配置通过 .env 管理, 此处无需显式添加)
+  # marker:
+  #   # 相关配置从 .env 读取 (MARKER_API_KEY, MARKER_API_URL 等)
+
+  # --- Marker Local CLI Config (仅当 provider = "marker_local" 时需要) ---
+  marker_local:
+    # (必需) marker_single 输出格式 ("markdown", "json", "html")
+    output_format: "markdown"
+    # (可选) 是否启用 LLM 增强 (需要额外配置环境变量, 如 GOOGLE_API_KEY)
+    use_llm: false
+    # (可选) 是否强制 OCR
+    force_ocr: false
+    # (可选) 指定 OCR 语言 (逗号分隔, 如 "en,zh")
+    # languages: "en"
+    # (可选) 如果 use_llm=true, 指定 LLM 服务 (如 "gemini", "ollama", "openai")
+    # llm_service: "gemini"
+    # (可选, 高级) 指定 marker_single 命令路径 (如果不在系统 PATH 中)
+    # executable_path: "/usr/local/bin/marker_single"
+    device: "cuda" # 启用 CUDA 加速 (需要正确配置环境)
+    cli_options: {}  # 传递给 marker_single 的其他命令行参数

@@ -122,6 +122,36 @@ import type {
   DeleteReferencesData,
   DeleteReferencesError,
   DeleteReferencesResponse,
+  ListProjectsData,
+  ListProjectsError,
+  ListProjectsResponse,
+  GetProjectDetailData,
+  GetProjectDetailError,
+  GetProjectDetailResponse2,
+  CreateProjectData,
+  CreateProjectError,
+  CreateProjectResponse,
+  UpdateProjectData,
+  UpdateProjectError,
+  UpdateProjectResponse,
+  UpdateProjectItemsData,
+  UpdateProjectItemsError,
+  UpdateProjectItemsResponse,
+  DeleteProjectData,
+  DeleteProjectError,
+  DeleteProjectResponse,
+  DeleteProjectItemsData,
+  DeleteProjectItemsError,
+  DeleteProjectItemsResponse,
+  GetCodeArtifactDetailData,
+  GetCodeArtifactDetailError,
+  GetCodeArtifactDetailResponse2,
+  CreateCodeArtifactData,
+  CreateCodeArtifactError,
+  CreateCodeArtifactResponse,
+  UpdateCodeArtifactData,
+  UpdateCodeArtifactError,
+  UpdateCodeArtifactResponse,
   CreateShareData,
   CreateShareError,
   CreateShareResponse2,
@@ -865,6 +895,160 @@ export const deleteReferences = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/knowledge/reference/delete',
+  });
+};
+
+/**
+ * List projects
+ * List all projects
+ */
+export const listProjects = <ThrowOnError extends boolean = false>(
+  options?: Options<ListProjectsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<ListProjectsResponse, ListProjectsError, ThrowOnError>({
+    ...options,
+    url: '/project/list',
+  });
+};
+
+/**
+ * Get project detail
+ * Get project detail by project ID
+ */
+export const getProjectDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetProjectDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetProjectDetailResponse2,
+    GetProjectDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/project/detail',
+  });
+};
+
+/**
+ * Create new project
+ * Create a new project
+ */
+export const createProject = <ThrowOnError extends boolean = false>(
+  options: Options<CreateProjectData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<CreateProjectResponse, CreateProjectError, ThrowOnError>({
+    ...options,
+    url: '/project/new',
+  });
+};
+
+/**
+ * Update project
+ * Update an existing project
+ */
+export const updateProject = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateProjectData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<UpdateProjectResponse, UpdateProjectError, ThrowOnError>({
+    ...options,
+    url: '/project/update',
+  });
+};
+
+/**
+ * Update items in project
+ * Update items in a project
+ */
+export const updateProjectItems = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateProjectItemsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateProjectItemsResponse,
+    UpdateProjectItemsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/project/updateItems',
+  });
+};
+
+/**
+ * Delete project
+ * Delete an existing project
+ */
+export const deleteProject = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteProjectData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<DeleteProjectResponse, DeleteProjectError, ThrowOnError>({
+    ...options,
+    url: '/project/delete',
+  });
+};
+
+/**
+ * Delete items in project
+ * Delete items in a project
+ */
+export const deleteProjectItems = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteProjectItemsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DeleteProjectItemsResponse,
+    DeleteProjectItemsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/project/deleteItems',
+  });
+};
+
+/**
+ * Get code artifact detail
+ * Get code artifact detail by artifact ID
+ */
+export const getCodeArtifactDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetCodeArtifactDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetCodeArtifactDetailResponse2,
+    GetCodeArtifactDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/detail',
+  });
+};
+
+/**
+ * Create code artifact
+ * Create new code artifact
+ */
+export const createCodeArtifact = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCodeArtifactData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateCodeArtifactResponse,
+    CreateCodeArtifactError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/new',
+  });
+};
+
+/**
+ * Update code artifact
+ * Update code artifact by artifact ID
+ */
+export const updateCodeArtifact = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateCodeArtifactData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateCodeArtifactResponse,
+    UpdateCodeArtifactError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/update',
   });
 };
 

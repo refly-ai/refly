@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { LlmEndpointConfigLoader } from '../../../../packages/skill-template/src/config/llm-endpoint-config-loader';
+import { YamlLlmEndpointConfigLoader } from '../config/yaml-llm-endpoint-config-loader';
 import { BullModule } from '@nestjs/bullmq';
 import { KnowledgeModule } from '@/knowledge/knowledge.module';
 import { SkillService } from './skill.service';
@@ -19,9 +21,11 @@ import { SkillProcessor, SkillTimeoutCheckProcessor } from '@/skill/skill.proces
 import { SubscriptionModule } from '@/subscription/subscription.module';
 import { CollabModule } from '@/collab/collab.module';
 import { MiscModule } from '@/misc/misc.module';
+import { CodeArtifactModule } from '@/code-artifact/code-artifact.module';
 
 @Module({
   imports: [
+    BullModule.forRoot({ connection: { host: 'localhost', port: 6379 } }),
     CommonModule,
     LabelModule,
     SearchModule,
@@ -31,14 +35,26 @@ import { MiscModule } from '@/misc/misc.module';
     SubscriptionModule,
     CollabModule,
     MiscModule,
+    CodeArtifactModule,
     BullModule.registerQueue({ name: QUEUE_SKILL }),
     BullModule.registerQueue({ name: QUEUE_SKILL_TIMEOUT_CHECK }),
     BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_USAGE }),
     BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
     BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
   ],
-  providers: [SkillService, SkillProcessor, SkillTimeoutCheckProcessor],
+  providers: [
+    SkillService,
+    SkillProcessor,
+    SkillTimeoutCheckProcessor,
+    {
+      provide: 'LLM_ENDPOINT_CONFIG_LOADER', // 改用字符串令牌
+      useClass: YamlLlmEndpointConfigLoader,
+    },
+  ],
   controllers: [SkillController],
-  exports: [SkillService],
+  exports: [
+    BullModule,   // 导出队列模块
+    SkillService, // 保持原有服务导出
+  ],
 })
 export class SkillModule {}

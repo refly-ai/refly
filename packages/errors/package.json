@@ -5,15 +5,11 @@
   "main": "src/index.ts",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {},
-  "devDependencies": {
-    "typescript": "^5.3.3",
-    "rimraf": "^5.0.10"
-  }
+  "devDependencies": {}
 }

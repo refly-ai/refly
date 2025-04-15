@@ -9,8 +9,10 @@ import {
   getAuthConfig,
   getCanvasData,
   getCanvasDetail,
+  getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
+  getProjectDetail,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -23,6 +25,7 @@ import {
   listLabelClasses,
   listLabelInstances,
   listModels,
+  listProjects,
   listResources,
   listShares,
   listSkillInstances,
@@ -36,13 +39,16 @@ import {
   GetActionResultData,
   GetCanvasDataData,
   GetCanvasDetailData,
+  GetCodeArtifactDetailData,
   GetDocumentDetailData,
+  GetProjectDetailData,
   GetResourceDetailData,
   ListCanvasesData,
   ListCanvasTemplatesData,
   ListDocumentsData,
   ListLabelClassesData,
   ListLabelInstancesData,
+  ListProjectsData,
   ListResourcesData,
   ListSharesData,
   ListSkillInstancesData,
@@ -145,6 +151,30 @@ export const ensureUseGetDocumentDetailData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions),
     queryFn: () => getDocumentDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListProjectsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListProjectsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListProjectsKeyFn(clientOptions),
+    queryFn: () => listProjects({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetProjectDetailData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetProjectDetailData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetProjectDetailKeyFn(clientOptions),
+    queryFn: () => getProjectDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetCodeArtifactDetailData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetCodeArtifactDetailData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetCodeArtifactDetailKeyFn(clientOptions),
+    queryFn: () => getCodeArtifactDetail({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListSharesData = (
   queryClient: QueryClient,

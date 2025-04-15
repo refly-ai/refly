@@ -1,9 +1,6 @@
 import { SKIP, visit } from 'unist-util-visit';
 
-import {
-  ARTIFACT_TAG,
-  ARTIFACT_TAG_REGEX,
-} from '@refly-packages/ai-workspace-common/modules/artifacts/const';
+import { ARTIFACT_TAG, ARTIFACT_TAG_REGEX } from '@refly/utils/artifact';
 
 function rehypePlugin() {
   return (tree: any) => {

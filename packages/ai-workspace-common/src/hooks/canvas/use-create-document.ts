@@ -11,15 +11,23 @@ import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { getAvailableFileCount } from '@refly-packages/utils/quota';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useReactFlow } from '@xyflow/react';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
+import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
+import { Document } from '@refly/openapi-schema';
 
 export const useCreateDocument = () => {
   const [isCreating, setIsCreating] = useState(false);
   const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
   const { addNode } = useAddNode();
+  const { getNodes } = useReactFlow();
   const { storageUsage, refetchUsage } = useSubscriptionUsage();
-
+  const { projectId } = useGetProjectCanvasId();
+  const { sourceList, setSourceList } = useSiderStoreShallow((state) => ({
+    sourceList: state.sourceList,
+    setSourceList: state.setSourceList,
+  }));
   const { setStorageExceededModalVisible } = useSubscriptionStoreShallow((state) => ({
     setStorageExceededModalVisible: state.setStorageExceededModalVisible,
   }));
@@ -28,6 +36,22 @@ export const useCreateDocument = () => {
       setDocumentLocalSyncedAt: state.setDocumentLocalSyncedAt,
       setDocumentRemoteSyncedAt: state.setDocumentRemoteSyncedAt,
     }),
+  );
+
+  const pushDocumentToSourceList = useCallback(
+    (data: Document) => {
+      if (projectId) {
+        setSourceList([
+          {
+            ...data,
+            entityId: data.docId,
+            entityType: 'document',
+          },
+          ...sourceList,
+        ]);
+      }
+    },
+    [projectId, sourceList, setSourceList],
   );
 
   const checkStorageUsage = useCallback(() => {
@@ -57,6 +81,7 @@ export const useCreateDocument = () => {
       setIsCreating(true);
       const { data, error } = await getClient().createDocument({
         body: {
+          projectId,
           title,
           initialContent: parsedContent,
         },
@@ -72,8 +97,10 @@ export const useCreateDocument = () => {
       message.success(t('common.putSuccess'));
       refetchUsage();
 
+      pushDocumentToSourceList(data?.data);
+
       if (addToCanvas) {
-        const nodes = useCanvasStore.getState().data[canvasId]?.nodes ?? [];
+        const nodes = getNodes();
 
         // Find the source node
         const sourceNode = nodes.find((n) => n.data?.entityId === sourceNodeId);
@@ -132,6 +159,7 @@ export const useCreateDocument = () => {
       setIsCreating(true);
       const { data, error } = await getClient().createDocument({
         body: {
+          projectId,
           title,
         },
       });
@@ -141,10 +169,11 @@ export const useCreateDocument = () => {
         return;
       }
 
-      const docId = data?.data?.docId;
+      const doc = data?.data;
+      const docId = doc?.docId;
 
       message.success(t('common.putSuccess'));
-
+      pushDocumentToSourceList(doc);
       if (canvasId && canvasId !== 'empty') {
         const newNode = {
           type: 'document' as CanvasNodeType,
@@ -181,6 +210,7 @@ export const useCreateDocument = () => {
       setIsCreating(true);
       const { data, error } = await getClient().createDocument({
         body: {
+          projectId,
           title: newTitle,
           initialContent: content,
         },
@@ -194,7 +224,7 @@ export const useCreateDocument = () => {
       const docId = data?.data?.docId;
 
       message.success(t('common.putSuccess'));
-
+      pushDocumentToSourceList(data?.data);
       if (canvasId && canvasId !== 'empty') {
         const newNode = {
           type: 'document' as CanvasNodeType,

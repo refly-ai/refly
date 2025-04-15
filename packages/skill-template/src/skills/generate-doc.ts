@@ -65,8 +65,24 @@ export class GenerateDoc extends BaseSkill {
   ) => {
     config.metadata.step = { name: 'analyzeQuery' };
     const { messages = [], images = [] } = state;
-    const { locale = 'en', modelInfo } = config.configurable;
-    const { tplConfig } = config?.configurable || {};
+    const { locale = 'en', modelInfo, project } = config.configurable;
+
+    // Extract customInstructions from project if available
+    const customInstructions = project?.customInstructions;
+
+    // Process projectId based knowledge base search
+    const projectId = project?.projectId;
+    const enableKnowledgeBaseSearch = !!projectId;
+
+    // Update tplConfig with knowledge base search setting
+    config.configurable.tplConfig = {
+      ...config.configurable.tplConfig,
+      enableKnowledgeBaseSearch: {
+        value: enableKnowledgeBaseSearch,
+        label: 'Knowledge Base Search',
+        displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
+      },
+    };
 
     // Use shared query processor
     const {
@@ -109,7 +125,8 @@ export class GenerateDoc extends BaseSkill {
 
     // Consider URL sources for context preparation
     const hasUrlSources = urlSources.length > 0;
-    const needPrepareContext = (hasContext || hasUrlSources) && remainingTokens > 0;
+    const needPrepareContext =
+      (hasContext || hasUrlSources || enableKnowledgeBaseSearch) && remainingTokens > 0;
     const isModelContextLenSupport = checkModelContextLenSupport(modelInfo);
 
     this.engine.logger.log(`optimizedQuery: ${optimizedQuery}`);
@@ -131,7 +148,14 @@ export class GenerateDoc extends BaseSkill {
           config,
           ctxThis: this,
           state,
-          tplConfig,
+          tplConfig: {
+            ...(config?.configurable?.tplConfig || {}),
+            enableKnowledgeBaseSearch: {
+              value: enableKnowledgeBaseSearch,
+              label: 'Knowledge Base Search',
+              displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
+            },
+          },
         },
       );
 
@@ -157,6 +181,7 @@ export class GenerateDoc extends BaseSkill {
       optimizedQuery,
       rewrittenQueries,
       modelInfo: config?.configurable?.modelInfo,
+      customInstructions,
     });
 
     return { optimizedQuery, requestMessages, context, sources, usedChatHistory, rewrittenQueries };
@@ -251,7 +276,8 @@ ${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.conte
     const model = this.engine.chatModel({ temperature: 0.1 });
 
     const module = {
-      buildSystemPrompt: generateDocument.buildGenerateDocumentSystemPrompt,
+      buildSystemPrompt: (locale: string, needPrepareContext: boolean) =>
+        generateDocument.buildGenerateDocumentSystemPrompt(locale, needPrepareContext),
       buildUserPrompt: generateDocument.buildGenerateDocumentUserPrompt,
       buildContextUserPrompt: generateDocument.buildGenerateDocumentContextUserPrompt,
     };

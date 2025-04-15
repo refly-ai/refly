@@ -19,7 +19,6 @@ import * as librarySearch from '../scheduler/module/librarySearch';
 import { processQuery } from '../scheduler/utils/queryProcessor';
 import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
 import { processContextUrls } from '../utils/url-processing';
-import { MAX_OUTPUT_TOKENS_LEVEL2 } from '../scheduler/utils/constants';
 
 export class LibrarySearch extends BaseSkill {
   name = 'librarySearch';
@@ -48,7 +47,12 @@ export class LibrarySearch extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { messages = [], images = [] } = state;
-    const { locale = 'en', currentSkill } = config.configurable;
+    const { locale = 'en', currentSkill, project } = config.configurable;
+
+    // Extract customInstructions from project if available
+    const customInstructions = project?.customInstructions;
+
+    // Process projectId based knowledge base search
 
     // Set current step
     config.metadata.step = { name: 'analyzeQuery' };
@@ -126,7 +130,8 @@ export class LibrarySearch extends BaseSkill {
 
     // Build messages for the model
     const module = {
-      buildSystemPrompt: librarySearch.buildLibrarySearchSystemPrompt,
+      buildSystemPrompt: (locale: string, needPrepareContext: boolean) =>
+        librarySearch.buildLibrarySearchSystemPrompt(locale, needPrepareContext),
       buildContextUserPrompt: librarySearch.buildLibrarySearchContextUserPrompt,
       buildUserPrompt: librarySearch.buildLibrarySearchUserPrompt,
     };
@@ -163,10 +168,11 @@ export class LibrarySearch extends BaseSkill {
       optimizedQuery,
       rewrittenQueries,
       modelInfo: config?.configurable?.modelInfo,
+      customInstructions,
     });
 
     // Generate answer using the model
-    const model = this.engine.chatModel({ temperature: 0.1, maxTokens: MAX_OUTPUT_TOKENS_LEVEL2 });
+    const model = this.engine.chatModel({ temperature: 0.1 });
     const responseMessage = await model.invoke(requestMessages, {
       ...config,
       metadata: {

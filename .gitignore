@@ -4,6 +4,8 @@
 **/node_modules/**
 .DS_Store
 *.tsbuildinfo
+apps/api/.env_llm_models.yaml # Added to ignore the actual LLM config file
+apps/api/.env_emb_models.yaml # Added to ignore the actual Embedding config file
 
 dist
 .turbo
@@ -27,3 +29,6 @@ common/autoinstallers/*/.npmrc
 
 # mise
 mise.toml
+.vscode/
+deploy/docker/datalab/
+marker_output/

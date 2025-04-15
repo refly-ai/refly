@@ -1,0 +1,94 @@
+# Use Node.js 22 on Debian Bookworm as the base image
+FROM hub.rat.dev/node:22-bookworm-slim
+
+# Define build-time argument for architecture
+ARG TARGETARCH
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install necessary system packages (wget, build-essential, git, curl, openssl, pkg-config are needed for Miniconda and potential builds)
+# Pandoc is still needed
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    pandoc \
+    build-essential \
+    git \
+    curl \
+    openssl \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Miniconda Installation ---
+# Set Conda path
+ENV CONDA_DIR=/opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
+
+# Download and install Miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p $CONDA_DIR && \
+    rm ~/miniconda.sh && \
+    # Update Conda and create the environment
+    conda update -n base -c defaults conda && \
+    conda create -n py310 python=3.10 -y && \
+    # Initialize Conda for shell interaction
+    conda init bash
+
+# --- Activate Conda environment and install Python dependencies ---
+# Make RUN commands use the Conda environment
+SHELL ["conda", "run", "-n", "py310", "/bin/bash", "-c"]
+
+# Verify Python version in Conda env
+RUN python --version
+
+# Configure pip to use a mirror (Using Tencent mirror for pip)
+# Note: This config might need to be set within the conda env's pip
+RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple/
+
+# Install Python dependencies within the Conda environment
+RUN pip install --upgrade pip && \
+    # Pre-install numpy and pin pdftext based on GitHub issue feedback
+    pip install numpy==1.26.4 pdftext==0.3.7 && \
+    # --- BEGIN: Install PyTorch with CUDA 12.6 support ---
+    # IMPORTANT: This relies on the host environment providing CUDA Toolkit 12.6 libraries via NVIDIA Container Toolkit.
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126 && \
+    # --- END: Install PyTorch ---
+    # Install marker-pdf and other dependencies
+    # Ensure scikit-learn builds correctly in this env
+    pip install trafilatura setuptools marker-pdf[full]
+
+# --- Node.js/pnpm steps ---
+# Switch back to default shell for Node.js steps
+SHELL ["/bin/bash", "-c"]
+
+# Configure npm registry
+RUN npm config set registry https://mirrors.cloud.tencent.com/npm/
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm globally (Node.js is already in the base image)
+RUN npm install -g pnpm@8.15.8
+
+# Copy application files
+# Need to copy files after setting up python env if build process needs python
+COPY . .
+
+# Install Node.js dependencies
+RUN pnpm install
+
+# Build the API application
+RUN pnpm build:api
+
+# Expose the application port
+EXPOSE 3000
+
+# Define the command to run the application
+# Ensure the entrypoint uses the correct python from conda env if needed, or runs the node app directly
+# If the node app calls python, the conda env needs to be activated or the python path specified.
+# Sticking with node start for now.
+CMD [ "node", "apps/api/dist/main.js" ]
+
+# --- Cleanup ---
+# Reset shell to default at the end (good practice)
+SHELL ["/bin/bash", "-c"]

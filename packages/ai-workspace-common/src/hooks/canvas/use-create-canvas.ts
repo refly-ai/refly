@@ -5,36 +5,41 @@ import { useDebouncedCallback } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
 import { useSiderStore } from '@refly-packages/ai-workspace-common/stores/sider';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 
 const CANVAS_NUM = 6;
 
-export const useCreateCanvas = () => {
+export const useCreateCanvas = ({
+  projectId,
+  afterCreateSuccess,
+}: { projectId?: string; afterCreateSuccess?: () => void } = {}) => {
   const [isCreating, setIsCreating] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setTitle } = useCanvasStoreShallow((state) => ({
-    setTitle: state.setTitle,
-  }));
+
+  const createCanvas = async (canvasTitle: string) => {
+    setIsCreating(true);
+    const { data, error } = await getClient().createCanvas({
+      body: {
+        projectId,
+        title: canvasTitle,
+      },
+    });
+    setIsCreating(false);
+
+    if (!data?.success || error) {
+      return;
+    }
+    return data?.data?.canvasId;
+  };
 
   const debouncedCreateCanvas = useDebouncedCallback(
     async () => {
       const { canvasList, setCanvasList } = useSiderStore.getState();
       const canvasTitle = '';
-
-      setIsCreating(true);
-      const { data, error } = await getClient().createCanvas({
-        body: {
-          title: canvasTitle,
-        },
-      });
-      setIsCreating(false);
-
-      if (!data?.success || error) {
+      const canvasId = await createCanvas(canvasTitle);
+      if (!canvasId) {
         return;
       }
-
-      const canvasId = data?.data?.canvasId;
 
       setCanvasList(
         [
@@ -47,10 +52,14 @@ export const useCreateCanvas = () => {
           ...canvasList,
         ].slice(0, CANVAS_NUM),
       );
-      setTitle(canvasId, canvasTitle);
 
       message.success(t('canvas.action.addSuccess'));
-      navigate(`/canvas/${canvasId}`);
+      if (projectId) {
+        navigate(`/project/${projectId}?canvasId=${canvasId}`);
+      } else {
+        navigate(`/canvas/${canvasId}`);
+      }
+      afterCreateSuccess?.();
     },
     300,
     { leading: true },

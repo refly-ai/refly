@@ -67,6 +67,12 @@ const ContextManagerComponent = ({
   );
 };
 
-export const ContextManager = memo(ContextManagerComponent);
+export const ContextManager = memo(ContextManagerComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.className === nextProps.className &&
+    prevProps.contextItems === nextProps.contextItems &&
+    prevProps.filterErrorInfo === nextProps.filterErrorInfo
+  );
+});
 
 ContextManager.displayName = 'ContextManager';

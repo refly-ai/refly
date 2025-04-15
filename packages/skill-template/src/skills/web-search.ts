@@ -19,7 +19,6 @@ import { processQuery } from '../scheduler/utils/queryProcessor';
 import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
 import { safeStringifyJSON } from '@refly-packages/utils';
 import { processContextUrls } from '../utils/url-processing';
-import { MAX_OUTPUT_TOKENS_LEVEL2 } from '../scheduler/utils/constants';
 
 export class WebSearch extends BaseSkill {
   name = 'webSearch';
@@ -62,18 +61,26 @@ export class WebSearch extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { messages = [], images = [] } = state;
-    const { locale = 'en', currentSkill } = config.configurable;
+    const { locale = 'en', currentSkill, project } = config.configurable;
+
+    // Extract customInstructions from project if available
+    const customInstructions = project?.customInstructions;
+
     // Set current step
     config.metadata.step = { name: 'analyzeQuery' };
 
-    // Force enable web search and disable knowledge base search
+    // process projectId based knowledge base search
+    const projectId = project?.projectId;
+    const enableKnowledgeBaseSearch = !!projectId;
+
+    // Force enable web search
     config.configurable.tplConfig = {
       ...config.configurable.tplConfig,
       enableWebSearch: { value: true, label: 'Web Search', displayValue: 'true' },
       enableKnowledgeBaseSearch: {
-        value: false,
+        value: enableKnowledgeBaseSearch,
         label: 'Knowledge Base Search',
-        displayValue: 'false',
+        displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
       },
     };
 
@@ -138,7 +145,8 @@ export class WebSearch extends BaseSkill {
 
     // Build messages for the model
     const module = {
-      buildSystemPrompt: webSearch.buildWebSearchSystemPrompt,
+      buildSystemPrompt: (locale: string, needPrepareContext: boolean) =>
+        webSearch.buildWebSearchSystemPrompt(locale, needPrepareContext),
       buildContextUserPrompt: webSearch.buildWebSearchContextUserPrompt,
       buildUserPrompt: webSearch.buildWebSearchUserPrompt,
     };
@@ -178,10 +186,11 @@ export class WebSearch extends BaseSkill {
       optimizedQuery,
       rewrittenQueries,
       modelInfo: config?.configurable?.modelInfo,
+      customInstructions,
     });
 
     // Generate answer using the model
-    const model = this.engine.chatModel({ temperature: 0.1, maxTokens: MAX_OUTPUT_TOKENS_LEVEL2 });
+    const model = this.engine.chatModel({ temperature: 0.1 });
     const responseMessage = await model.invoke(requestMessages, {
       ...config,
       metadata: {

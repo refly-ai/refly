@@ -29,7 +29,6 @@ import {
   handleImageDrop,
   handleImagePaste,
 } from '@refly-packages/ai-workspace-common/components/editor/core/plugins';
-import { getHierarchicalIndexes, TableOfContents } from '@tiptap-pro/extension-table-of-contents';
 import {
   useDocumentStore,
   useDocumentStoreShallow,
@@ -102,7 +101,6 @@ export const CollaborativeEditor = memo(
     const documentActions = useDocumentStoreShallow((state) => ({
       setHasEditorSelection: state.setHasEditorSelection,
       updateDocumentCharsCount: state.updateDocumentCharsCount,
-      updateTocItems: state.updateTocItems,
       updateLastCursorPosRef: state.updateLastCursorPosRef,
       setActiveDocumentId: state.setActiveDocumentId,
     }));
@@ -233,12 +231,6 @@ export const CollaborativeEditor = memo(
         Collaboration.configure({
           document: ydoc,
         }),
-        TableOfContents.configure({
-          getIndex: getHierarchicalIndexes,
-          onUpdate(content) {
-            documentActions.updateTocItems(docId, content);
-          },
-        }),
       ];
     }, [ydoc, docId, documentActions, createPlaceholderExtension]);
 
@@ -334,8 +326,20 @@ export const CollaborativeEditor = memo(
         }
 
         const isFocused = editor.isFocused;
-
         const { activeDocumentId } = useDocumentStore.getState();
+
+        if (content === '\n' && !isFocused) {
+          editor
+            ?.chain()
+            .focus(0)
+            .insertContentAt(0, { type: 'paragraph' })
+            .setTextSelection(1)
+            .run();
+
+          documentActions.setActiveDocumentId(docId);
+          return;
+        }
+
         if (activeDocumentId !== docId) {
           return;
         }

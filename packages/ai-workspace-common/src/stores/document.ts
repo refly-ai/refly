@@ -16,13 +16,13 @@ export interface TableOfContentsItem {
   id: string;
   itemIndex: number;
   textContent: string;
+  level: number;
 }
 
 interface DocumentData {
   document?: Document;
   documentCharsCount?: number;
   lastCursorPosRef?: number;
-  tocItems?: TableOfContentsItem[];
 }
 
 interface DocumentConfig {
@@ -42,7 +42,6 @@ interface DocumentBaseState {
   updateDocument: (docId: string, document: Document) => void;
   updateDocumentCharsCount: (docId: string, count: number) => void;
   updateLastCursorPosRef: (docId: string, pos: number) => void;
-  updateTocItems: (docId: string, items: TableOfContentsItem[]) => void;
   setActiveDocumentId: (docId: string) => void;
 
   setDocumentReadOnly: (docId: string, readOnly: boolean) => void;
@@ -88,12 +87,6 @@ export const useDocumentStore = create<DocumentBaseState>()(
         set((state) => {
           state.data[docId] ??= {};
           state.data[docId].lastCursorPosRef = pos;
-        }),
-
-      updateTocItems: (docId: string, items: TableOfContentsItem[]) =>
-        set((state) => {
-          state.data[docId] ??= {};
-          state.data[docId].tocItems = items;
         }),
 
       setActiveDocumentId: (docId: string) =>

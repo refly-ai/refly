@@ -6,14 +6,17 @@ import { Button, Form, Input, message, Tooltip } from 'antd';
 import { FiCode, FiEye, FiExternalLink, FiCopy } from 'react-icons/fi';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useNodesData } from '@xyflow/react';
 
 interface WebsiteNodePreviewProps {
-  node: CanvasNode<WebsiteNodeMeta>;
+  nodeId: string;
 }
 
-const WebsiteNodePreviewComponent = memo(({ node }: WebsiteNodePreviewProps) => {
+const WebsiteNodePreviewComponent = memo(({ nodeId }: WebsiteNodePreviewProps) => {
   const { t } = useTranslation();
-  const { url = '', viewMode = 'form' } = node.data?.metadata ?? {};
+  const { data } = useNodesData<CanvasNode<WebsiteNodeMeta>>(nodeId) || {};
+
+  const { url = '', viewMode = 'form' } = data?.metadata ?? {};
   const [isEditing, setIsEditing] = useState(viewMode === 'form' || !url);
   const formRef = useRef<any>(null);
   const setNodeDataByEntity = useSetNodeDataByEntity();
@@ -21,11 +24,11 @@ const WebsiteNodePreviewComponent = memo(({ node }: WebsiteNodePreviewProps) => 
 
   // Sync editing state with metadata changes
   useEffect(() => {
-    const shouldBeEditing = node.data?.metadata?.viewMode === 'form' || !node.data?.metadata?.url;
+    const shouldBeEditing = data?.metadata?.viewMode === 'form' || !data?.metadata?.url;
     if (isEditing !== shouldBeEditing) {
       setIsEditing(shouldBeEditing);
     }
-  }, [node.data?.metadata?.url, node.data?.metadata?.viewMode, isEditing]);
+  }, [data?.metadata?.url, data?.metadata?.viewMode, isEditing]);
 
   // Initialize form with current URL when entering edit mode
   useEffect(() => {
@@ -40,16 +43,16 @@ const WebsiteNodePreviewComponent = memo(({ node }: WebsiteNodePreviewProps) => 
     setNodeDataByEntity(
       {
         type: 'website',
-        entityId: node.data.entityId,
+        entityId: data?.entityId,
       },
       {
         metadata: {
-          ...node.data.metadata,
+          ...data?.metadata,
           viewMode: isEditing ? 'preview' : 'form',
         },
       },
     );
-  }, [node.data.entityId, node.data.metadata, isEditing, setNodeDataByEntity]);
+  }, [data?.entityId, data?.metadata, isEditing, setNodeDataByEntity]);
 
   // Handle form submission to save URL
   const handleSubmit = useCallback(
@@ -68,11 +71,11 @@ const WebsiteNodePreviewComponent = memo(({ node }: WebsiteNodePreviewProps) => 
       setNodeDataByEntity(
         {
           type: 'website',
-          entityId: node.data.entityId,
+          entityId: data?.entityId,
         },
         {
           metadata: {
-            ...node.data.metadata,
+            ...data?.metadata,
             url: formattedUrl,
             viewMode: 'preview',
           },
@@ -80,7 +83,7 @@ const WebsiteNodePreviewComponent = memo(({ node }: WebsiteNodePreviewProps) => 
       );
       setIsEditing(false);
     },
-    [node.data.entityId, node.data.metadata, setNodeDataByEntity, t],
+    [data?.entityId, data?.metadata, setNodeDataByEntity, t],
   );
 
   // Open website in a new tab
@@ -171,7 +174,7 @@ const WebsiteNodePreviewComponent = memo(({ node }: WebsiteNodePreviewProps) => 
         <iframe
           key={url}
           src={url}
-          title={node.data.title || url}
+          title={data?.title || url}
           className="w-full h-full border-0"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
           allow="fullscreen"
@@ -303,12 +306,10 @@ const WebsiteNodePreviewComponent = memo(({ node }: WebsiteNodePreviewProps) => 
 
 export const WebsiteNodePreview = memo(WebsiteNodePreviewComponent, (prevProps, nextProps) => {
   // Optimize re-renders by only updating when necessary node data changes
-  const prevUrl = prevProps.node.data?.metadata?.url;
-  const nextUrl = nextProps.node.data?.metadata?.url;
-  const prevViewMode = prevProps.node.data?.metadata?.viewMode;
-  const nextViewMode = nextProps.node.data?.metadata?.viewMode;
+  const prevUrl = prevProps.nodeId;
+  const nextUrl = nextProps.nodeId;
 
-  return prevUrl === nextUrl && prevViewMode === nextViewMode;
+  return prevUrl === nextUrl;
 });
 
 WebsiteNodePreview.displayName = 'WebsiteNodePreview';

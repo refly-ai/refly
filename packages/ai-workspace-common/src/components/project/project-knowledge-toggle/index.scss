@@ -1,0 +1,18 @@
+.project-kb-toggle {
+  .project-selector {
+    overflow: hidden;
+
+    .ant-select-selector {
+      padding-left: 0 !important;
+    }
+
+    .ant-select-selection-item {
+      height: 32px !important;
+      padding-left: 0 !important;
+    }
+  }
+
+  .ant-switch.ant-switch-checked {
+    background-color: #00968f !important;
+  }
+}

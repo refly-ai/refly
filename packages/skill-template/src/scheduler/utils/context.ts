@@ -42,200 +42,208 @@ export async function prepareContext(
     tplConfig: SkillTemplateConfig;
   },
 ): Promise<{ contextStr: string; sources: Source[] }> {
-  const enableWebSearch = ctx.tplConfig?.enableWebSearch?.value;
-  const enableKnowledgeBaseSearch = ctx.tplConfig?.enableKnowledgeBaseSearch?.value;
-  ctx.ctxThis.engine.logger.log(`Enable Web Search: ${enableWebSearch}`);
-  ctx.ctxThis.engine.logger.log(`Enable Knowledge Base Search: ${enableKnowledgeBaseSearch}`);
-  ctx.ctxThis.engine.logger.log(`URL Sources Count: ${urlSources?.length || 0}`);
+  try {
+    const enableWebSearch = ctx.tplConfig?.enableWebSearch?.value;
+    const enableKnowledgeBaseSearch = ctx.tplConfig?.enableKnowledgeBaseSearch?.value;
+    ctx.ctxThis.engine.logger.log(`Enable Web Search: ${enableWebSearch}`);
+    ctx.ctxThis.engine.logger.log(`Enable Knowledge Base Search: ${enableKnowledgeBaseSearch}`);
+    ctx.ctxThis.engine.logger.log(`URL Sources Count: ${urlSources?.length || 0}`);
 
-  const maxContextTokens = Math.floor(maxTokens * MAX_CONTEXT_RATIO);
+    const maxContextTokens = Math.floor(maxTokens * MAX_CONTEXT_RATIO);
 
-  // Process URL sources with similarity search
-  const MAX_URL_SOURCES_TOKENS = Math.floor(maxContextTokens * MAX_URL_SOURCES_RATIO);
+    // Process URL sources with similarity search
+    const MAX_URL_SOURCES_TOKENS = Math.floor(maxContextTokens * MAX_URL_SOURCES_RATIO);
 
-  let processedUrlSources: Source[] = [];
-  if (urlSources?.length > 0) {
-    processedUrlSources = await processUrlSourcesWithSimilarity(
-      query,
-      urlSources,
-      MAX_URL_SOURCES_TOKENS,
-      ctx,
-    );
-  }
-
-  // Calculate tokens used by processed URL sources
-  const urlSourcesTokens = countSourcesTokens(processedUrlSources);
-  let remainingTokens = maxContextTokens - urlSourcesTokens;
-  ctx.ctxThis.engine.logger.log(`URL Sources Tokens: ${urlSourcesTokens}`);
-
-  const { modelInfo } = ctx.config.configurable;
-  const isSupportedModel = checkIsSupportedModel(modelInfo);
-
-  // 1. web search context
-  let processedWebSearchContext: IContext = {
-    contentList: [],
-    resources: [],
-    documents: [],
-    webSearchSources: [],
-  };
-  if (enableWebSearch) {
-    const preparedRes = await prepareWebSearchContext(
-      {
+    let processedUrlSources: Source[] = [];
+    if (urlSources?.length > 0) {
+      processedUrlSources = await processUrlSourcesWithSimilarity(
         query,
-        rewrittenQueries,
-        enableQueryRewrite: isSupportedModel,
-      },
-      ctx,
-    );
-    processedWebSearchContext = preparedRes.processedWebSearchContext;
-  }
-  const webSearchContextTokens = countSourcesTokens(processedWebSearchContext.webSearchSources);
-  remainingTokens -= webSearchContextTokens;
-  ctx.ctxThis.engine.logger.log(`Web Search Context Tokens: ${webSearchContextTokens}`);
-  ctx.ctxThis.engine.logger.log(`Remaining Tokens after web search: ${remainingTokens}`);
-
-  // 2. library search context
-  let processedLibrarySearchContext: IContext = {
-    contentList: [],
-    resources: [],
-    documents: [],
-    librarySearchSources: [],
-  };
-  if (enableKnowledgeBaseSearch) {
-    const librarySearchRes = await performLibrarySearchContext(
-      {
-        query,
-        rewrittenQueries,
-        enableQueryRewrite: isSupportedModel,
-        enableSearchWholeSpace: true,
-      },
-      ctx,
-    );
-    processedLibrarySearchContext = librarySearchRes.processedLibrarySearchContext;
-    // Adjust remaining tokens based on library search results
-    const librarySearchContextTokens = countSourcesTokens(
-      processedLibrarySearchContext.librarySearchSources,
-    );
-    remainingTokens -= librarySearchContextTokens;
-    ctx.ctxThis.engine.logger.log(`Library Search Context Tokens: ${librarySearchContextTokens}`);
-    ctx.ctxThis.engine.logger.log(`Remaining Tokens after library search: ${remainingTokens}`);
-  }
-
-  // 3. mentioned context
-  let processedMentionedContext: IContext = {
-    contentList: [],
-    resources: [],
-    documents: [],
-  };
-  if (enableMentionedContext && isSupportedModel) {
-    const mentionContextRes = await prepareMentionedContext(
-      {
-        query,
-        mentionedContext,
-        maxMentionedContextTokens: remainingTokens,
-      },
-      ctx,
-    );
-
-    processedMentionedContext = mentionContextRes.processedMentionedContext;
-    remainingTokens -= mentionContextRes.mentionedContextTokens || 0;
-    ctx.ctxThis.engine.logger.log(
-      `Mentioned Context Tokens: ${mentionContextRes.mentionedContextTokens || 0}`,
-    );
-    ctx.ctxThis.engine.logger.log(`Remaining Tokens after mentioned context: ${remainingTokens}`);
-  }
-
-  // 4. relevant context from user-provided content (if there are tokens remaining)
-  let relevantContext: IContext = {
-    contentList: [],
-    resources: [],
-    documents: [],
-  };
-  if (
-    remainingTokens > 0 &&
-    (ctx.config.configurable.contentList?.length > 0 ||
-      ctx.config.configurable.resources?.length > 0 ||
-      ctx.config.configurable.documents?.length > 0)
-  ) {
-    const { contentList = [], resources = [], documents = [] } = ctx.config.configurable;
-
-    // Remove overlapping items with mentioned context
-    const filteredContext = removeOverlappingContextItems(processedMentionedContext, {
-      contentList,
-      resources,
-      documents,
-    });
-
-    // Get relevant context directly
-    relevantContext = await prepareRelevantContext(
-      {
-        query,
-        context: filteredContext,
-      },
-      ctx,
-    );
-
-    // Calculate tokens before truncation
-    const relevantContextTokensBeforeTruncation = countContextTokens(relevantContext);
-    ctx.ctxThis.engine.logger.log(
-      `Relevant Context Tokens Before Truncation: ${relevantContextTokensBeforeTruncation}`,
-    );
-
-    // Truncate to fit within token limits
-    if (relevantContextTokensBeforeTruncation > remainingTokens) {
-      relevantContext = truncateContext(relevantContext, remainingTokens);
-      const relevantContextTokensAfterTruncation = countContextTokens(relevantContext);
-      ctx.ctxThis.engine.logger.log(
-        `Relevant Context Tokens After Truncation: ${relevantContextTokensAfterTruncation}`,
+        urlSources,
+        MAX_URL_SOURCES_TOKENS,
+        ctx,
       );
-      remainingTokens -= relevantContextTokensAfterTruncation;
-    } else {
-      remainingTokens -= relevantContextTokensBeforeTruncation;
     }
 
-    ctx.ctxThis.engine.logger.log(`Remaining Tokens after relevant context: ${remainingTokens}`);
-  }
+    // Calculate tokens used by processed URL sources
+    const urlSourcesTokens = countSourcesTokens(processedUrlSources);
+    let remainingTokens = maxContextTokens - urlSourcesTokens;
+    ctx.ctxThis.engine.logger.log(`URL Sources Tokens: ${urlSourcesTokens}`);
 
-  ctx.ctxThis.engine.logger.log(`Prepared Relevant Context: ${safeStringifyJSON(relevantContext)}`);
+    const { modelInfo } = ctx.config.configurable;
+    const isSupportedModel = checkIsSupportedModel(modelInfo);
 
-  // Merge all contexts with proper deduplication
-  const deduplicatedRelevantContext = deduplicateContexts(relevantContext);
-  const mergedContext = {
-    urlSources: processedUrlSources,
-    mentionedContext: processedMentionedContext,
-    relevantContext: deduplicatedRelevantContext,
-    webSearchSources: processedWebSearchContext.webSearchSources,
-    librarySearchSources: removeOverlappingLibrarySearchSources(
-      processedLibrarySearchContext.librarySearchSources,
-      processedMentionedContext,
-      deduplicatedRelevantContext,
-      ctx.ctxThis.engine.logger,
-    ),
-  };
+    // 1. web search context
+    let processedWebSearchContext: IContext = {
+      contentList: [],
+      resources: [],
+      documents: [],
+      webSearchSources: [],
+    };
+    if (enableWebSearch) {
+      const preparedRes = await prepareWebSearchContext(
+        {
+          query,
+          rewrittenQueries,
+          enableQueryRewrite: isSupportedModel,
+        },
+        ctx,
+      );
+      processedWebSearchContext = preparedRes.processedWebSearchContext;
+    }
+    const webSearchContextTokens = countSourcesTokens(processedWebSearchContext.webSearchSources);
+    remainingTokens -= webSearchContextTokens;
+    ctx.ctxThis.engine.logger.log(`Web Search Context Tokens: ${webSearchContextTokens}`);
+    ctx.ctxThis.engine.logger.log(`Remaining Tokens after web search: ${remainingTokens}`);
 
-  ctx.ctxThis.engine.logger.log(`Merged Context: ${safeStringifyJSON(mergedContext)}`);
+    // 2. library search context
+    let processedLibrarySearchContext: IContext = {
+      contentList: [],
+      resources: [],
+      documents: [],
+      librarySearchSources: [],
+    };
+    if (enableKnowledgeBaseSearch) {
+      const librarySearchRes = await performLibrarySearchContext(
+        {
+          query,
+          rewrittenQueries,
+          enableQueryRewrite: true,
+          enableSearchWholeSpace: true,
+        },
+        ctx,
+      );
+      processedLibrarySearchContext = librarySearchRes.processedLibrarySearchContext;
+      // Adjust remaining tokens based on library search results
+      const librarySearchContextTokens = countSourcesTokens(
+        processedLibrarySearchContext.librarySearchSources,
+      );
+      remainingTokens -= librarySearchContextTokens;
+      ctx.ctxThis.engine.logger.log(`Library Search Context Tokens: ${librarySearchContextTokens}`);
+      ctx.ctxThis.engine.logger.log(`Remaining Tokens after library search: ${remainingTokens}`);
+    }
 
-  const hasMentionedContext = checkHasContext(processedMentionedContext);
-  const hasRelevantContext = checkHasContext(relevantContext);
+    // 3. mentioned context
+    let processedMentionedContext: IContext = {
+      contentList: [],
+      resources: [],
+      documents: [],
+    };
+    if (enableMentionedContext && isSupportedModel) {
+      const mentionContextRes = await prepareMentionedContext(
+        {
+          query,
+          mentionedContext,
+          maxMentionedContextTokens: remainingTokens,
+        },
+        ctx,
+      );
 
-  // Limit search sources count when we have other context
-  const LIMIT_SEARCH_SOURCES_COUNT = 10;
-  if (hasMentionedContext || hasRelevantContext) {
-    mergedContext.webSearchSources = mergedContext.webSearchSources.slice(
-      0,
-      LIMIT_SEARCH_SOURCES_COUNT,
+      processedMentionedContext = mentionContextRes.processedMentionedContext;
+      remainingTokens -= mentionContextRes.mentionedContextTokens || 0;
+      ctx.ctxThis.engine.logger.log(
+        `Mentioned Context Tokens: ${mentionContextRes.mentionedContextTokens || 0}`,
+      );
+      ctx.ctxThis.engine.logger.log(`Remaining Tokens after mentioned context: ${remainingTokens}`);
+    }
+
+    // 4. relevant context from user-provided content (if there are tokens remaining)
+    let relevantContext: IContext = {
+      contentList: [],
+      resources: [],
+      documents: [],
+    };
+    if (
+      remainingTokens > 0 &&
+      (ctx.config.configurable.contentList?.length > 0 ||
+        ctx.config.configurable.resources?.length > 0 ||
+        ctx.config.configurable.documents?.length > 0)
+    ) {
+      const { contentList = [], resources = [], documents = [] } = ctx.config.configurable;
+
+      // Remove overlapping items with mentioned context
+      const filteredContext = removeOverlappingContextItems(processedMentionedContext, {
+        contentList,
+        resources,
+        documents,
+      });
+
+      // Get relevant context directly
+      relevantContext = await prepareRelevantContext(
+        {
+          query,
+          context: filteredContext,
+        },
+        ctx,
+      );
+
+      // Calculate tokens before truncation
+      const relevantContextTokensBeforeTruncation = countContextTokens(relevantContext);
+      ctx.ctxThis.engine.logger.log(
+        `Relevant Context Tokens Before Truncation: ${relevantContextTokensBeforeTruncation}`,
+      );
+
+      // Truncate to fit within token limits
+      if (relevantContextTokensBeforeTruncation > remainingTokens) {
+        relevantContext = truncateContext(relevantContext, remainingTokens);
+        const relevantContextTokensAfterTruncation = countContextTokens(relevantContext);
+        ctx.ctxThis.engine.logger.log(
+          `Relevant Context Tokens After Truncation: ${relevantContextTokensAfterTruncation}`,
+        );
+        remainingTokens -= relevantContextTokensAfterTruncation;
+      } else {
+        remainingTokens -= relevantContextTokensBeforeTruncation;
+      }
+
+      ctx.ctxThis.engine.logger.log(`Remaining Tokens after relevant context: ${remainingTokens}`);
+    }
+
+    ctx.ctxThis.engine.logger.log(
+      `Prepared Relevant Context: ${safeStringifyJSON(relevantContext)}`,
     );
-    mergedContext.librarySearchSources = mergedContext.librarySearchSources.slice(
-      0,
-      LIMIT_SEARCH_SOURCES_COUNT,
-    );
+
+    // Merge all contexts with proper deduplication
+    const deduplicatedRelevantContext = deduplicateContexts(relevantContext);
+    const mergedContext = {
+      urlSources: processedUrlSources,
+      mentionedContext: processedMentionedContext,
+      relevantContext: deduplicatedRelevantContext,
+      webSearchSources: processedWebSearchContext.webSearchSources,
+      librarySearchSources: removeOverlappingLibrarySearchSources(
+        processedLibrarySearchContext.librarySearchSources,
+        processedMentionedContext,
+        deduplicatedRelevantContext,
+        ctx.ctxThis.engine.logger,
+      ),
+    };
+
+    ctx.ctxThis.engine.logger.log(`Merged Context: ${safeStringifyJSON(mergedContext)}`);
+
+    const hasMentionedContext = checkHasContext(processedMentionedContext);
+    const hasRelevantContext = checkHasContext(relevantContext);
+
+    // Limit search sources count when we have other context
+    const LIMIT_SEARCH_SOURCES_COUNT = 10;
+    if (hasMentionedContext || hasRelevantContext) {
+      mergedContext.webSearchSources = mergedContext.webSearchSources.slice(
+        0,
+        LIMIT_SEARCH_SOURCES_COUNT,
+      );
+      mergedContext.librarySearchSources = mergedContext.librarySearchSources.slice(
+        0,
+        LIMIT_SEARCH_SOURCES_COUNT,
+      );
+    }
+
+    // Generate final context string and sources
+    const contextStr = concatMergedContextToStr(mergedContext);
+    const sources = flattenMergedContextToSources(mergedContext);
+
+    return { contextStr, sources };
+  } catch (error) {
+    // If any unexpected error occurs at the top level, log and return empty results
+    ctx.ctxThis.engine.logger.error(`Unexpected error in prepareContext: ${error}`);
+    return { contextStr: '', sources: [] };
   }
-
-  // Generate final context string and sources
-  const contextStr = concatMergedContextToStr(mergedContext);
-  const sources = flattenMergedContextToSources(mergedContext);
-
-  return { contextStr, sources };
 }
 
 export async function prepareWebSearchContext(

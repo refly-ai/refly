@@ -82,6 +82,30 @@ function Header() {
     [t, navigate],
   );
 
+  const docsItems = useMemo(
+    () => [
+      {
+        key: 'docs',
+        label: (
+          <div className="flex items-center gap-2">
+            <span>{t('landingPage.tab.docs')}</span>
+          </div>
+        ),
+        onClick: () => window.open('https://docs.refly.ai', '_blank'),
+      },
+      {
+        key: 'video-tutorials',
+        label: (
+          <div className="flex items-center gap-2">
+            <span>{t('landingPage.tab.videoTutorials') || 'Video Tutorials'}</span>
+          </div>
+        ),
+        onClick: () => window.open('https://docs.refly.ai/guide/video-tutorials', '_blank'),
+      },
+    ],
+    [t],
+  );
+
   const tabOptions = [
     {
       label: t('landingPage.tab.product'),
@@ -92,7 +116,14 @@ function Header() {
       value: 'pricing',
     },
     {
-      label: t('landingPage.tab.docs'),
+      label: (
+        <Dropdown menu={{ items: docsItems }} placement="bottom">
+          <div className="flex cursor-pointer items-center gap-1">
+            <span>{t('landingPage.tab.docs')}</span>
+            <FaCaretDown className="text-xs" />
+          </div>
+        </Dropdown>
+      ),
       value: 'docs',
     },
     {
@@ -165,16 +196,13 @@ function Header() {
                 key={item.value}
                 className={`${value === item.value ? 'font-bold text-[#00968f]' : ''}`}
                 onClick={() => {
-                  if (item.value === 'community') return;
+                  if (['community', 'docs', 'gallery'].includes(item.value)) return;
                   switch (item.value) {
                     case 'product':
                       navigate('/');
                       break;
                     case 'pricing':
                       navigate('/pricing');
-                      break;
-                    case 'docs':
-                      window.open('https://docs.refly.ai', '_blank');
                       break;
                   }
                 }}

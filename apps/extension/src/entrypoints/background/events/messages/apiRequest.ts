@@ -126,13 +126,28 @@ export const handleRequestReflect = async (msg: BackgroundMessage) => {
     });
   }
 
-  // @ts-ignore
-  const res = await requestModule[msg.name as keyof typeof requestModule]?.call?.(null, {
-    ...args?.[0],
-    client,
-  });
+  let res: any; // Declare res outside try block
+  console.log(`[Background API Request] Attempting to call: ${String(msg.name)}`);
+  try {
+    // @ts-ignore
+    res = await requestModule[msg.name as keyof typeof requestModule]?.call?.(null, {
+      ...args?.[0],
+      client,
+    });
+    console.log(`[Background API Request] Call successful for ${String(msg.name)}.`);
+  } catch (error) {
+    console.error(`[Background API Request] Error calling ${String(msg.name)}:`, error);
+    // res remains undefined if error occurs
+  }
 
   // Process the response before sending through messaging
+  if (res === undefined) {
+    console.error(
+      `[Background API Request] 'res' is undefined before processing, likely due to caught error during API call.`,
+    );
+    // Consider creating a default error response structure here if needed later
+    // For now, let processResponse handle undefined res.response
+  }
   const processedResponse = await processResponse(res?.response, res?.data);
   const lastActiveTab = await getLastActiveTab();
 

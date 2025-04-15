@@ -2,7 +2,7 @@ include:
   - path: docker-compose.middleware.yml
 services:
   api:
-    image: refly-api:local0.42-v4
+    image: refly-rerank-api:1.0.6
     container_name: refly_api
     depends_on:
       elasticsearch:
@@ -26,7 +26,11 @@ services:
     restart: always
     env_file:
       - .env
+      # - .env_llm_models.yaml
     environment:
+      # - HTTP_PROXY=http://192.168.3.12:7897
+      # - HTTPS_PROXY=http://192.168.3.12:7897
+      # - NO_PROXY=localhost,127.0.0.1,elasticsearch,db,minio,redis,qdrant,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
       - MINIO_INTERNAL_ENDPOINT=minio
       - MINIO_EXTERNAL_ENDPOINT=minio
       - REDIS_HOST=redis
@@ -35,20 +39,35 @@ services:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
       - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
+    volumes: # Add volumes section
+      # Removed old model config mounts
+      # Mount the new unified models config file
+      - ./models.config.yaml:/app/apps/api/models.config.yaml:ro # Mount the unified config from the docker deploy directory
+      - ~/.cache/datalab/models:/root/.cache/datalab/models # Mount datalab models cache directory
+    deploy: # Add deploy section for resource allocation
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all # Request access to all available GPUs
+              capabilities: [gpu] # Specify GPU capabilities
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5800"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
+    networks:
+      - refly_network
   web:
-    image: reflyai/refly-web:latest
+    image: reflyai/refly-web:0.5.0
     container_name: refly_web
     ports:
       - 5700:80
     restart: always
     environment:
-      - API_URL=/api
+      - API_URL=http://refly.yuantianze.com:5800
+      # - API_URL=/api
       - COLLAB_URL=/collab
       - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
       - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
@@ -58,3 +77,5 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    networks:
+      - refly_network

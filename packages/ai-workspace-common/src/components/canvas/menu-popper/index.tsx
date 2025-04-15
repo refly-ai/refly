@@ -1,6 +1,6 @@
 import { Button, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { FC, useEffect, useRef, useState } from 'react';
+import { FC, useEffect, useRef, useState, memo } from 'react';
 import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-selector/components';
 
 import { useImportResourceStoreShallow } from '@refly-packages/ai-workspace-common/stores/import-resource';
@@ -15,14 +15,17 @@ import {
   IconMemo,
   IconResource,
   IconWebsite,
+  IconMindMap,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { genMemoID, genSkillID, genResourceID } from '@refly-packages/utils/id';
+import { genMemoID, genSkillID } from '@refly-packages/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useReactFlow } from '@xyflow/react';
 import { cn } from '@refly-packages/utils/cn';
 import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
+import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
+import { getDefaultContentForType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
 
 // Define toolbar item interface
 interface ToolbarItem {
@@ -44,7 +47,7 @@ interface MenuPopperProps {
   setOpen: (open: boolean) => void;
 }
 
-export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => {
+export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }) => {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuHeight, setMenuHeight] = useState<number>(0);
@@ -84,6 +87,20 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
       hoverContent: {
         title: t('canvas.toolbar.createCodeArtifact'),
         description: t('canvas.toolbar.createCodeArtifactDescription'),
+        videoUrl:
+          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
+      },
+    },
+    {
+      key: 'createMindMap',
+      icon: IconMindMap,
+      type: 'button',
+      hoverContent: {
+        title: t('canvas.toolbar.createMindMap', 'Create Mind Map'),
+        description: t(
+          'canvas.toolbar.createMindMapDescription',
+          'Create a mind map to visualize and organize ideas',
+        ),
         videoUrl:
           'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
       },
@@ -231,29 +248,7 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
     );
   };
 
-  const createCodeArtifactNode = (position: { x: number; y: number }) => {
-    // For code artifacts, we'll use a resource ID since there's no specific prefix for code artifacts
-    const codeArtifactId = genResourceID();
-    addNode(
-      {
-        type: 'codeArtifact',
-        data: {
-          title: t('canvas.nodeTypes.codeArtifact', 'Code Artifact'),
-          entityId: codeArtifactId,
-          contentPreview: '',
-          metadata: {
-            status: 'finish',
-            language: 'typescript',
-            activeTab: 'code',
-          },
-        },
-        position: position,
-      },
-      [],
-      true,
-      true,
-    );
-  };
+  const createCodeArtifactNode = useCreateCodeArtifact();
 
   const createWebsiteNode = (position: { x: number; y: number }) => {
     addNode(
@@ -275,6 +270,18 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
     setOpen(false);
   };
 
+  const createMindMapArtifact = (position: { x: number; y: number }) => {
+    createCodeArtifactNode({
+      position,
+      codeContent: getDefaultContentForType('application/refly.artifacts.mindmap'),
+      language: 'json',
+      type: 'application/refly.artifacts.mindmap',
+      title: t('canvas.nodes.mindMap.defaultTitle', 'Mind Map'),
+      activeTab: 'preview',
+    });
+    setOpen(false);
+  };
+
   const handleMenuClick = async ({ key }: { key: string }) => {
     setActiveKey(key);
     switch (key) {
@@ -291,8 +298,11 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
         setOpen(false);
         break;
       case 'createCodeArtifact':
-        createCodeArtifactNode(position);
+        createCodeArtifactNode({ position });
         setOpen(false);
+        break;
+      case 'createMindMap':
+        createMindMapArtifact(position);
         break;
       case 'createWebsite':
         createWebsiteNode(position);
@@ -430,4 +440,6 @@ export const MenuPopper: FC<MenuPopperProps> = ({ open, position, setOpen }) => 
       </div>
     )
   );
-};
+});
+
+MenuPopper.displayName = 'MenuPopper';

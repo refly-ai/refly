@@ -27,6 +27,7 @@
     "@hocuspocus/server": "~2.15.0",
     "@langchain/community": "0.3.29",
     "@langchain/core": "0.3.29",
+    "@langchain/ollama": "^0.2.0",
     "@langchain/openai": "0.4.3",
     "@nest-lab/throttler-storage-redis": "^1.0.0",
     "@nestjs/bullmq": "~10.2.3",
@@ -97,6 +98,8 @@
     "zod-to-json-schema": "^3.24.3"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
+    "adm-zip": "^0.5.10",
     "@golevelup/ts-jest": "^0.6.2",
     "@nestjs/testing": "~10.3.9",
     "@types/cookie-parser": "~1.4.3",

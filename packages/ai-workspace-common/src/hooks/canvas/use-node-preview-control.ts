@@ -4,6 +4,7 @@ import { CanvasNode } from '../../components/canvas/nodes';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { useReactFlow } from '@xyflow/react';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 
 interface UseNodePreviewControlOptions {
   canvasId: string;
@@ -28,6 +29,7 @@ export const useNodePreviewControl = ({
 }: UseNodePreviewControlOptions): NodePreviewControl => {
   const { getNodes } = useReactFlow();
   const { provider } = useCanvasContext();
+  const { setSelectedNode } = useNodeSelection();
   const {
     clickToPreview,
     setClickToPreview,
@@ -73,8 +75,9 @@ export const useNodePreviewControl = ({
   const previewNode = useCallback(
     (node: CanvasNode) => {
       addNodePreview(canvasId, node);
+      setSelectedNode(node);
     },
-    [canvasId, addNodePreview],
+    [canvasId, addNodePreview, setSelectedNode],
   );
 
   const closeNodePreview = useCallback(
@@ -141,10 +144,11 @@ export const useNodePreviewControl = ({
         return false;
       }
       addNodePreview(canvasId, node);
+      setSelectedNode(node);
       locateToNodePreviewEmitter.emit('locateToNodePreview', { canvasId, id: node.id });
       return true;
     },
-    [canvasId, clickToPreview, addNodePreview],
+    [canvasId, clickToPreview, addNodePreview, setSelectedNode],
   );
 
   return {

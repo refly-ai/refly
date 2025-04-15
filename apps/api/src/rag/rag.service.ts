@@ -11,28 +11,35 @@ import { cleanMarkdownForIngest } from '@refly-packages/utils';
 import * as avro from 'avsc';
 
 import { SearchResult, User } from '@refly-packages/openapi-schema';
-import { HybridSearchParam, ContentPayload, ReaderResult, NodeMeta } from './rag.dto';
+import { HybridSearchParam, ContentPayload, ReaderResult, DocumentPayload } from './rag.dto';
 import { QdrantService } from '@/common/qdrant.service';
 import { Condition, PointStruct } from '@/common/qdrant.dto';
 import { genResourceUuid } from '@/utils';
 import { JinaEmbeddings } from '@/utils/embeddings/jina';
+// Removed fs and yaml imports for embedding config
+import { OllamaEmbeddings } from '@langchain/ollama';
+// Import unified config loader functions
+import {
+  getEmbeddingProviderConfig,
+  getRerankDefaultProvider,
+  getRerankProviderConfig,
+} from '@/config/yaml-config.loader';
+// Removed fs and yaml imports for reranker config
+import { RerankerInterface } from './rerankers/reranker.interface';
+import { JinaReranker } from './rerankers/jina.reranker';
+import { XinferenceReranker } from './rerankers/xinference.reranker';
+// --- End: Added Imports ---
 
 const READER_URL = 'https://r.jina.ai/';
+
+// Removed old module-level embedding YAML config loading logic
+
+// Removed old module-level reranker YAML config loading logic
 
 interface JinaRerankerResponse {
   results: {
     document: { text: string };
     relevance_score: number;
-  }[];
-}
-
-// 添加Xinference的响应接口
-interface XinferenceRerankerResponse {
-  id: string;
-  results: {
-    index: number;
-    relevance_score: number;
-    document: string;
   }[];
 }
 
@@ -64,16 +71,19 @@ const avroSchema = avro.Type.forSchema({
 
 @Injectable()
 export class RAGService {
-  private embeddings: Embeddings;
+  private embeddings: Embeddings | null = null; // Allow null for initialization failures, initialize
   private splitter: RecursiveCharacterTextSplitter;
   private cache: LRUCache<string, ReaderResult>; // url -> reader result
   private logger = new Logger(RAGService.name);
+  private reranker: RerankerInterface; // Reranker instance
+  // Note: cachedRerankModelsConfig is now loaded at module level (see above)
 
   constructor(
     private config: ConfigService,
     private qdrant: QdrantService,
   ) {
     const provider = this.config.get('embeddings.provider');
+    // Note: this.embeddings initialized to null above
     if (provider === 'fireworks') {
       this.embeddings = new FireworksEmbeddings({
         modelName: this.config.getOrThrow('embeddings.modelName'),
@@ -96,8 +106,72 @@ export class RAGService {
         timeout: 5000,
         maxRetries: 3,
       });
-    } else {
-      throw new Error(`Unsupported embeddings provider: ${provider}`);
+    } else if (provider === 'ollama') {
+      // Use unified loader to get Ollama config
+      const ollamaConfig = getEmbeddingProviderConfig('ollama');
+
+      if (!ollamaConfig) {
+        this.logger.warn(
+          `Ollama provider selected, but configuration is missing in models.config.yaml. Ollama embeddings will be unavailable.`,
+        );
+        this.embeddings = null;
+      } else {
+        const baseUrl = ollamaConfig.baseUrl;
+        const defaultModel = ollamaConfig.defaultModel;
+        // const modelNameFromEnv = this.config.get('embeddings.modelName'); // No longer read/prioritize .env for Ollama model
+        const finalModelName = defaultModel; // Always use YAML default for Ollama
+
+        if (!baseUrl) {
+          this.logger.error(
+            `Ollama 'baseUrl' is missing in the configuration (models.config.yaml). Ollama embeddings cannot be initialized.`,
+          );
+          this.embeddings = null;
+        } else if (!finalModelName) {
+          this.logger.error(
+            `Ollama model name is missing (neither EMBEDDINGS_MODEL_NAME in .env nor defaultModel in models.config.yaml is set). Ollama embeddings cannot be initialized.`,
+          );
+          this.embeddings = null;
+        } else {
+          this.logger.log(
+            `Initializing Ollama embeddings with model: ${finalModelName}, baseUrl: ${baseUrl}`,
+          );
+          try {
+            this.embeddings = new OllamaEmbeddings({
+              model: finalModelName,
+              baseUrl: baseUrl,
+              // Add other relevant parameters if needed and supported by OllamaEmbeddings
+            });
+          } catch (initError) {
+            this.logger.error(
+              `Failed to initialize OllamaEmbeddings: ${initError.message}`,
+              initError.stack,
+            );
+            this.embeddings = null; // Ensure it's null on init error
+          }
+        }
+      }
+      // Check specifically for Ollama initialization failure
+      if (this.embeddings === null && provider === 'ollama') {
+        this.logger.error(
+          'Ollama embeddings could not be initialized due to configuration issues or instantiation error.',
+        );
+        // Decide if this is a fatal error for the service. If so:
+        // throw new Error('Ollama embeddings failed to initialize.');
+      }
+    }
+
+    // Final check after all providers attempted
+    if (this.embeddings === null) {
+      // Modified final check
+      // If embeddings is still null after trying all providers (or the selected one failed)
+      this.logger.error(`Embeddings provider '${provider}' could not be initialized successfully.`);
+      // Depending on requirements, either throw an error or allow service to run with null embeddings
+      // Option 1: Throw error to prevent service start/usage without embeddings
+      // throw new Error(`Embeddings provider '${provider}' failed to initialize.`);
+      // Option 2: Log warning and continue (downstream methods need to handle null this.embeddings)
+      this.logger.warn(
+        `RAGService initialized, but embeddings are unavailable for provider '${provider}'.`,
+      );
     }
 
     this.splitter = RecursiveCharacterTextSplitter.fromLanguage('markdown', {
@@ -105,6 +179,100 @@ export class RAGService {
       chunkOverlap: 0,
     });
     this.cache = new LRUCache({ max: 1000 });
+
+    // --- Start: Reranker Initialization Logic ---
+    this.initializeReranker();
+    // --- End: Reranker Initialization Logic ---
+  }
+
+  private initializeReranker(): void {
+    // Determine the provider using the unified loader
+    let provider = getRerankDefaultProvider();
+
+    if (!provider) {
+      this.logger.log(`Default reranker provider not defined in models.config.yaml. Defaulting to 'jina'.`);
+      provider = 'jina'; // Fallback default
+    } else {
+      this.logger.log(`Using default reranker provider from config: ${provider}`);
+    }
+
+
+    // Instantiate the Reranker based on the provider
+    try {
+      if (provider === 'xinference') {
+        // Get Xinference config using the unified loader
+        const xinferenceConfig = getRerankProviderConfig('xinference');
+
+        if (!xinferenceConfig) {
+          throw new Error(
+            `Provider 'xinference' selected, but its configuration is missing in models.config.yaml.`,
+          );
+        }
+
+        // Validate required fields for Xinference (as per final plan)
+        if (
+            !xinferenceConfig.baseUrl ||
+            !xinferenceConfig.modelName ||
+            xinferenceConfig.topN === undefined ||
+            xinferenceConfig.relevanceThreshold === undefined
+           ) {
+             throw new Error(
+               'Xinference configuration in models.config.yaml is missing required fields: baseUrl, modelName, topN, relevanceThreshold.',
+             );
+        }
+
+        // Pass required fields explicitly after validation to satisfy XinferenceRerankerConfig type
+        this.reranker = new XinferenceReranker({
+          type: 'xinference',
+          baseUrl: xinferenceConfig.baseUrl, // Guaranteed to exist due to check above
+          modelName: xinferenceConfig.modelName,
+          topN: xinferenceConfig.topN,
+          relevanceThreshold: xinferenceConfig.relevanceThreshold,
+          apiKey: xinferenceConfig.apiKey, // Pass apiKey (optional)
+          // Pass any other optional fields defined in RerankProviderConfig if needed
+          // (assuming XinferenceRerankerConfig handles extra fields or they are not needed)
+        });
+        this.logger.log('Successfully initialized XinferenceReranker.');
+
+      } else if (provider === 'jina') {
+         // Jina is the default or explicitly selected
+         this.reranker = new JinaReranker(this.config);
+         this.logger.log('Successfully initialized JinaReranker (default or selected).');
+      }
+      // Add else if blocks here for other providers like 'ollama' when implemented
+      else {
+        // Unsupported provider explicitly set in YAML
+        throw new Error(`Unsupported reranker provider specified: ${provider}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to initialize selected reranker provider '${provider}': ${error.message}. Falling back to Jina Reranker.`,
+        error.stack,
+      );
+      // Fallback to JinaReranker
+      try {
+        this.reranker = new JinaReranker(this.config);
+        this.logger.warn('Initialized JinaReranker as fallback.');
+      } catch (fallbackError) {
+         // If even Jina fails (e.g., missing JINA_API_KEY), log critical error.
+         // The application might not function correctly without any reranker.
+         this.logger.error(
+             `CRITICAL: Failed to initialize fallback JinaReranker: ${fallbackError.message}. Reranking will likely fail.`,
+             fallbackError.stack
+         );
+         // Assign null or a dummy implementation if necessary to prevent crashes,
+         // though ideally the service should handle this state gracefully.
+         // For now, let's assume Jina constructor might throw but we proceed.
+         // this.reranker = null; // Or a NoOpReranker implementation
+      }
+    }
+
+    // Final check if reranker is somehow still undefined (shouldn't happen with fallback)
+     if (!this.reranker) {
+        this.logger.error("CRITICAL: Reranker instance could not be initialized.");
+        // Handle this critical state, maybe throw an error to stop service startup
+        // throw new Error("Failed to initialize any reranker provider.");
+     }
   }
 
   async crawlFromRemoteReader(url: string): Promise<ReaderResult> {
@@ -158,7 +326,7 @@ export class RAGService {
       content: string | Document<any> | Array<Document<any>>;
       query?: string;
       k?: number;
-      filter?: (doc: Document<NodeMeta>) => boolean;
+      filter?: (doc: Document<DocumentPayload>) => boolean;
       needChunk?: boolean;
       additionalMetadata?: Record<string, any>;
     },
@@ -229,7 +397,7 @@ export class RAGService {
     await tempMemoryVectorStore.addDocuments(documents);
 
     // Perform the search
-    const wrapperFilter = (doc: Document<NodeMeta>) => {
+    const wrapperFilter = (doc: Document<DocumentPayload>) => {
       // Always check for tenantId
       const tenantIdMatch = doc.metadata.tenantId === uid;
 
@@ -245,7 +413,7 @@ export class RAGService {
     return tempMemoryVectorStore.similaritySearch(query, k, wrapperFilter);
   }
 
-  async indexDocument(user: User, doc: Document<NodeMeta>): Promise<{ size: number }> {
+  async indexDocument(user: User, doc: Document<DocumentPayload>): Promise<{ size: number }> {
     const { uid } = user;
     const { pageContent, metadata } = doc;
     const { nodeType, docId, resourceId } = metadata;
@@ -473,64 +641,44 @@ export class RAGService {
   }
 
   /**
-   * Rerank search results using Xinference Reranker.
+   * Rerank search results using Jina Reranker.
    */
   async rerank(
     query: string,
     results: SearchResult[],
     options?: { topN?: number; relevanceThreshold?: number },
   ): Promise<SearchResult[]> {
-    const topN = options?.topN || this.config.get('reranker.topN');
-    const relevanceThreshold =
-      options?.relevanceThreshold || this.config.get('reranker.relevanceThreshold');
+    // Note: topN and relevanceThreshold are now primarily handled by the specific
+    // RerankerInterface implementation based on its configuration source (env or YAML).
+    // However, we still pass the options down, as the interface allows it,
+    // potentially for overriding configured defaults if an implementation supports it.
+    // JinaReranker uses them as fallbacks if options are provided.
+    // XinferenceReranker (as planned) ignores these options and uses its own config.
 
-    const contentMap = new Map<string, SearchResult>();
-    for (const r of results) {
-      contentMap.set(r.snippets.map((s) => s.text).join('\n\n'), r);
+    // Old contentMap logic is removed as it's handled within specific reranker implementations now.
+    // <<< Extraneous closing brace removed here to fix syntax errors.
+
+    // Ensure the reranker instance is available
+    if (!this.reranker) {
+        this.logger.error("Reranker instance is not initialized. Cannot perform reranking. Falling back.");
+        // Fallback similar to catch block
+        return results.map((result, index) => ({
+            ...result,
+            relevanceScore: 1 - index * 0.1,
+        }));
     }
 
-    // 准备xinference请求负载
-    const payload = JSON.stringify({
-      model: 'bge-reranker-v2-m3', // 使用指定的模型
-      query: query,
-      documents: Array.from(contentMap.keys()),
-    });
-
     try {
-      // 调用xinference的rerank API
-      const res = await fetch('http://192.168.3.12:9997/v1/rerank', {
-        method: 'post',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: payload,
-      });
+      // Delegate the reranking task to the initialized reranker instance
+      this.logger.debug(`Delegating rerank call to ${this.reranker.constructor.name}`);
+      return await this.reranker.rerank(query, results, options);
 
-      if (!res.ok) {
-        throw new Error(`Xinference API error: ${res.status} ${res.statusText}`);
-      }
-
-      // xinference返回的结果格式与Jina不同，需要适配
-      const data = await res.json();
-      this.logger.debug(`Xinference reranker results: ${JSON.stringify(data)}`);
-
-      // 处理xinference的响应结果
-      const xinferenceResponse = data as XinferenceRerankerResponse;
-      return xinferenceResponse.results
-         .filter((r) => r.relevance_score >= relevanceThreshold)
-         .map((r) => {
-           const originalResult = contentMap.get(r.document);
-           return {
-             ...originalResult,
-             relevanceScore: r.relevance_score, // 添加相关性得分到结果
-           } as SearchResult;
-         });
     } catch (e) {
       this.logger.error(`Reranker failed, fallback to default: ${e.stack}`);
-      // 当失败时，保持原始顺序但添加默认的相关性分数
+      // When falling back, maintain the original order but add default relevance scores
       return results.map((result, index) => ({
         ...result,
-        relevanceScore: 1 - index * 0.1, // 简单的回退评分基于原始顺序
+        relevanceScore: 1 - index * 0.1, // Simple fallback scoring based on original order
       }));
     }
   }
@@ -704,5 +852,68 @@ export class RAGService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Updates arbitrary metadata for all points of a given document or resource.
+   * @param user The user that owns the document/resource
+   * @param params Parameters for the update operation
+   * @param params.docId The document ID to update (use either docId or resourceId)
+   * @param params.resourceId The resource ID to update (use either docId or resourceId)
+   * @param params.metadata The metadata fields to update
+   * @returns Metadata about the update operation
+   */
+  async updateDocumentPayload(
+    user: User,
+    params: {
+      docId?: string | string[];
+      resourceId?: string | string[];
+      metadata: Record<string, any>;
+    },
+  ) {
+    const { docId, resourceId, metadata } = params;
+
+    // Determine if we're dealing with documents, resources, or both
+    const hasDocIds = docId && (typeof docId === 'string' ? [docId].length > 0 : docId.length > 0);
+    const hasResourceIds =
+      resourceId &&
+      (typeof resourceId === 'string' ? [resourceId].length > 0 : resourceId.length > 0);
+
+    // Convert single values to arrays
+    const docIds = typeof docId === 'string' ? [docId] : (docId ?? []);
+    const resourceIds = typeof resourceId === 'string' ? [resourceId] : (resourceId ?? []);
+
+    if (!hasDocIds && !hasResourceIds) {
+      throw new Error('Either docId or resourceId must be provided');
+    }
+
+    if (!metadata || Object.keys(metadata).length === 0) {
+      throw new Error('No metadata fields provided for update');
+    }
+
+    this.logger.log(
+      `Updating metadata ${JSON.stringify(metadata)} for ${JSON.stringify(
+        hasDocIds ? docIds : resourceIds,
+      )} from user ${user.uid}`,
+    );
+
+    // Prepare filter conditions
+    const conditions: Condition[] = [{ key: 'tenantId', match: { value: user.uid } }];
+
+    // Add conditions for documents and resources
+    if (hasDocIds) {
+      conditions.push({ key: 'docId', match: { any: docIds } });
+    }
+
+    if (hasResourceIds) {
+      conditions.push({ key: 'resourceId', match: { any: resourceIds } });
+    }
+
+    return await this.qdrant.updatePayload(
+      {
+        must: conditions,
+      },
+      metadata,
+    );
   }
 }

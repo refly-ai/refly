@@ -1,5 +1,3 @@
-import { join } from 'path';
-
 export interface MinioConfig {
   endPoint: string;
   port: number;
@@ -53,7 +51,7 @@ export default () => ({
     host: process.env.QDRANT_HOST || 'localhost',
     port: Number.parseInt(process.env.QDRANT_PORT) || 6333,
     apiKey: process.env.QDRANT_API_KEY,
-    vectorDim: Number.parseInt(process.env.REFLY_VEC_DIM) || 1024,
+    vectorDim: Number.parseInt(process.env.REFLY_VEC_DIM) || 768,
   },
   elasticsearch: {
     url: process.env.ELASTICSEARCH_URL || 'http://localhost:9200',
@@ -100,7 +98,7 @@ export default () => ({
   embeddings: {
     provider: process.env.EMBEDDINGS_PROVIDER || 'jina',
     modelName: process.env.EMBEDDINGS_MODEL_NAME || 'jina-embeddings-v3',
-    dimensions: Number.parseInt(process.env.EMBEDDINGS_DIMENSIONS) || 1024,
+    dimensions: Number.parseInt(process.env.EMBEDDINGS_DIMENSIONS) || 768,
     batchSize: Number.parseInt(process.env.EMBEDDINGS_BATCH_SIZE) || 512,
   },
   reranker: {

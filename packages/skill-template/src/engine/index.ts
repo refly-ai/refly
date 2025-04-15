@@ -1,5 +1,9 @@
+// Removed fs, path, yaml imports
+// TODO: Refactor - SkillEngine should ideally receive pre-configured model instance instead of loading config itself.
+// Removed direct import of yaml-config.loader from apps/api
 import { SkillRunnableConfig } from '../base';
 import { FakeListChatModel } from '@langchain/core/utils/testing';
+// Ensure ChatDeepSeek import is correct as per plan (it seems correct based on previous read)
 import { ChatDeepSeek, ChatDeepSeekInput } from './chat-deepseek';
 import { Document } from '@langchain/core/documents';
 import {
@@ -44,6 +48,9 @@ import {
   DeleteDocumentRequest,
 } from '@refly-packages/openapi-schema';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { LlmEndpointConfigLoader } from '../config/llm-endpoint-config-loader'; // Import the interface
+
+// Removed local EndpointConfig interface and module-level cache
 
 // TODO: unify with frontend
 export type ContentNodeType =
@@ -150,12 +157,15 @@ export interface Logger {
 
 export class SkillEngine {
   private config: SkillRunnableConfig;
+  private configLoader: LlmEndpointConfigLoader; // Store the injected config loader
 
   constructor(
     public logger: Logger,
     public service: ReflyService,
+    configLoader: LlmEndpointConfigLoader, // Add configLoader to constructor parameters
     private options?: SkillEngineOptions,
   ) {
+    this.configLoader = configLoader; // Save the injected instance
     this.options = options;
   }
 
@@ -168,29 +178,111 @@ export class SkillEngine {
   }
 
   chatModel(params?: Partial<ChatDeepSeekInput>, useDefaultChatModel = false): BaseChatModel {
+    // Added: Check for potentially conflicting environment variables
+    this.logger.log(`Checking environment variables: OPENAI_API_KEY=${process.env.OPENAI_API_KEY ? '***' : 'Not Set'}, OPENROUTER_API_KEY=${process.env.OPENROUTER_API_KEY ? '***' : 'Not Set'}, DEEPSEEK_API_KEY=${process.env.DEEPSEEK_API_KEY ? '***' : 'Not Set'}`, 'SkillEngine');
+    // Removed old file loading logic. Configuration is now loaded by the unified loader.
+
+    // Handle mock response (existing logic)
     if (process.env.MOCK_LLM_RESPONSE) {
+      this.logger.log('Using mock LLM response.', 'SkillEngine');
       return new FakeListChatModel({
         responses: ['This is a test'],
         sleep: 100,
       });
     }
 
+    // Determine the requested model name
     const config = this.config?.configurable;
+    const requestedModelName = useDefaultChatModel
+      ? this.options.defaultModel
+      : config?.modelInfo?.name || this.options.defaultModel;
 
-    return new ChatDeepSeek({
-      model: useDefaultChatModel
-        ? this.options.defaultModel
-        : config.modelInfo?.name || this.options.defaultModel,
-      apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
+    if (!requestedModelName) {
+      this.logger.error('No model name specified (neither in config nor default).', undefined, 'SkillEngine');
+      throw new Error('Cannot instantiate chat model: No model name specified.');
+    }
+    this.logger.log(`Attempting to find configuration for model: ${requestedModelName}`, 'SkillEngine');
+
+    // Find the endpoint configuration using the unified loader
+    // Use the injected configLoader to find the endpoint config
+    const foundEndpoint = this.configLoader.findLlmEndpointConfig(requestedModelName);
+
+    if (!foundEndpoint) {
+      // Updated error message to refer to the unified config file
+      this.logger.error(`Configuration not found for model "${requestedModelName}" in models.config.yaml`, undefined, 'SkillEngine');
+      // Keep error message consistent, referring to the central config file
+      this.logger.error(`Configuration not found for model "${requestedModelName}" in models.config.yaml`, undefined, 'SkillEngine');
+      throw new Error(`Configuration not found for model: ${requestedModelName} in models.config.yaml`);
+    }
+
+    this.logger.log(`Found endpoint "${foundEndpoint.name}" for model "${requestedModelName}". Instantiating ChatDeepSeek.`, 'SkillEngine');
+
+    // Instantiate ChatDeepSeek using the found configuration
+    // Note: ChatDeepSeek constructor takes ChatDeepSeekInput, which doesn't directly have 'configuration'.
+    // However, its own constructor internally creates a 'configuration' object for the super(ChatOpenAI) call.
+    // We need to pass baseURL and headers in a way that ChatOpenAIFields (which ChatDeepSeekInput extends) or ChatOpenAI constructor expects.
+    // ChatOpenAIFields includes 'configuration' which takes 'basePath' (alias for baseURL) and 'baseOptions.headers'.
+
+    const chatDeepSeekParams: Partial<ChatDeepSeekInput> & { configuration?: Record<string, any> } = {
+      // Core parameters from config file directly supported by ChatDeepSeekInput
+      model: requestedModelName,
+      apiKey: foundEndpoint.api_key,
+
+      // Merge runtime parameters supported by ChatDeepSeekInput
+      temperature: params?.temperature,
+      maxTokens: params?.maxTokens,
+      streaming: params?.streaming,
+      stop: params?.stop, // Pass stop sequences if provided
+
+      // Specific parameters for ChatDeepSeek
+      include_reasoning: params?.include_reasoning ?? config?.modelInfo?.capabilities?.reasoning,
+
+      // Pass other runtime params if they exist in ChatDeepSeekInput
+      // (Example: Assuming other relevant params might be in params)
+      // ...params, // Be cautious with spreading params directly
+
+      // Handle configuration (baseURL, headers) via the 'configuration' field expected by ChatOpenAIFields/ChatOpenAI constructor
       configuration: {
-        baseURL: process.env.OPENROUTER_API_KEY && 'https://openrouter.ai/api/v1',
-        defaultHeaders: {
-          'HTTP-Referer': 'https://refly.ai',
-          'X-Title': 'Refly',
+        // Use 'basePath' for baseURL as expected by ChatOpenAI's configuration
+        baseURL: foundEndpoint.base_url, // Map base_url from EndpointConfig
+        // Pass headers within 'baseOptions' as expected by ChatOpenAI's configuration
+        baseOptions: {
+          headers: {
+            ...(foundEndpoint.configuration?.defaultHeaders || {}), // Merge headers from endpoint config
+            // Removed attempt to merge headers from params.configuration as params type doesn't support it
+            // ...((params?.configuration as any)?.headers || {}),
+          },
         },
+        // Merge other potential configuration options from endpoint config's 'configuration' field
+        // Be careful not to overwrite basePath or baseOptions handled above
+        ...(foundEndpoint.configuration || {}),
+        // Ensure defaultHeaders isn't duplicated if already handled in baseOptions
+        defaultHeaders: undefined,
       },
-      ...params,
-      include_reasoning: config?.modelInfo?.capabilities?.reasoning,
-    });
+    };
+
+    // Clean up undefined/empty configuration fields to avoid passing potentially problematic values
+    if (!chatDeepSeekParams.configuration?.basePath) {
+      delete chatDeepSeekParams.configuration?.basePath;
+    }
+    if (Object.keys(chatDeepSeekParams.configuration?.baseOptions?.headers ?? {}).length === 0) {
+       if (chatDeepSeekParams.configuration?.baseOptions) {
+          delete chatDeepSeekParams.configuration.baseOptions.headers;
+       }
+       // If baseOptions is now empty (only had headers), remove it too
+       if (Object.keys(chatDeepSeekParams.configuration?.baseOptions ?? {}).length === 0) {
+         delete chatDeepSeekParams.configuration?.baseOptions;
+       }
+    }
+    // Remove the entire configuration object if it's effectively empty after cleanup
+    if (chatDeepSeekParams.configuration && Object.keys(chatDeepSeekParams.configuration).length === 0) {
+        delete chatDeepSeekParams.configuration;
+    }
+
+    // Added log to inspect parameters before instantiation
+    this.logger.log(`Instantiating ChatDeepSeek with params: ${JSON.stringify(chatDeepSeekParams, null, 2)}`, 'SkillEngine');
+    const modelInstance = new ChatDeepSeek(chatDeepSeekParams);
+
+    return modelInstance;
   }
 }

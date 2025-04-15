@@ -20,8 +20,13 @@ import {
 import { RAGService } from '@/rag/rag.service';
 import { ElasticsearchService } from '@/common/elasticsearch.service';
 import { ParamsError } from '@refly-packages/errors';
-import { detectLanguage, TimeTracker } from '@refly-packages/utils';
+import { detectLanguage, TimeTracker } from '@refly-packages/utils'; // 移除 safeJsonParse
 import { searchResultsToSources, sourcesToSearchResults } from '@refly-packages/utils';
+import {
+  getWebSearchDefaultProvider,
+  getWebSearchProviderConfig,
+  WebSearchProviderConfig, // 现在可以正确导入
+} from '@/config/yaml-config.loader';
 
 interface ProcessedSearchRequest extends SearchRequest {
   user?: User; // search user on behalf of
@@ -73,6 +78,31 @@ interface SerperSearchResult {
   relatedSearches?: Array<{
     query: string;
   }>;
+}
+
+// --- 添加 safeJsonParse 辅助函数 ---
+function safeJsonParse<T>(jsonString: string): T | null {
+  try {
+    return JSON.parse(jsonString);
+  } catch (e) {
+    // logger is not accessible here, handle error silently or pass logger
+    console.error('Failed to parse JSON string:', e);
+    return null;
+  }
+}
+
+// --- 新增 SearxNG 结果接口 ---
+interface SearxngResultItem {
+  title: string;
+  url: string;
+  content?: string; // SearxNG 可能使用 'content' 或 'snippet'
+  snippet?: string;
+  // 其他可能的字段...
+}
+
+interface SearxngResponse {
+  results?: SearxngResultItem[];
+  // 其他可能的顶层字段...
 }
 
 @Injectable()
@@ -265,6 +295,7 @@ export class SearchService {
       filter: {
         nodeTypes: ['resource'],
         resourceIds: req.entities?.map((entity) => entity.entityId),
+        projectIds: req.projectId ? [req.projectId] : undefined,
       },
     });
     if (nodes.length === 0) {
@@ -374,6 +405,7 @@ export class SearchService {
       filter: {
         nodeTypes: ['document'],
         docIds: req.entities?.map((entity) => entity.entityId),
+        projectIds: req.projectId ? [req.projectId] : undefined,
       },
     });
     if (nodes.length === 0) {
@@ -580,6 +612,97 @@ export class SearchService {
     return results.flat();
   }
 
+  // --- 新增: 调用 SearxNG API 的私有方法 ---
+  private async _callSearxngApi(
+    query: string,
+    locale: string,
+    limit: number, // 添加 limit 参数
+    config: WebSearchProviderConfig,
+  ): Promise<SearxngResponse | null> {
+    if (!config?.baseUrl) {
+      this.logger.error('SearxNG baseUrl not configured in models.config.yaml');
+      return null;
+    }
+    const params = new URLSearchParams({
+      q: query,
+      format: 'json',
+      language: locale, // 假设参数名为 language, 需要根据实际情况调整
+      // 注意: SearxNG 可能不支持直接的 'limit' 参数, 可能需要通过分页或在结果中截取
+    });
+    const url = `${config.baseUrl}/search?${params.toString()}`;
+    this.logger.debug(`Calling SearxNG API: ${url}`); // Debug log
+
+    const timeoutMs = config.requestTimeoutMs ?? 15000; // Default timeout 15s
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    // --- 添加请求头 ---
+    const headers = {
+        'Accept': 'application/json',
+        'User-Agent': 'ReflyApp/1.0 (Compatible; Fetch API)', // 添加通用 User-Agent
+    };
+    this.logger.debug(`Calling SearxNG with headers: ${JSON.stringify(headers)}`); // 记录请求头
+
+    try {
+      const res = await fetch(url, {
+          signal: controller.signal,
+          headers: headers, // <--- 应用请求头
+       });
+      clearTimeout(timeoutId); // 清除超时
+
+      if (!res.ok) {
+        // 在抛出错误前记录状态码和文本
+        const errorText = await res.text().catch(() => 'Failed to read error response text');
+        this.logger.error(`SearxNG API returned status ${res.status} ${res.statusText}. Body: ${errorText}`);
+        throw new Error(`SearxNG API error: ${res.status} ${res.statusText}`);
+      }
+      const responseText = await res.text();
+      // --- 添加原始响应日志 ---
+      this.logger.debug(`SearxNG raw response for ${url}: ${responseText}`);
+
+      // SearxNG 可能返回非标准 JSON (e.g., with comments), 尝试安全解析
+      const jsonData = safeJsonParse<SearxngResponse>(responseText);
+      if (!jsonData) {
+         this.logger.warn(`SearxNG response for ${url} was not valid JSON or empty after parsing.`);
+         // 即使解析失败，也可能包含有用信息，但我们接口期望 T | null
+         // 返回空结果符合预期行为
+         return { results: [] };
+      }
+      return jsonData;
+
+    } catch (e) {
+      clearTimeout(timeoutId); // 确保超时被清除
+      if (e.name === 'AbortError') {
+        this.logger.error(`SearxNG API call timed out after ${timeoutMs}ms: ${url}`);
+      } else {
+        this.logger.error(`Error calling SearxNG API (${url}): ${e.message}`);
+      }
+      return null; // 返回 null 表示调用失败
+    }
+  }
+
+  // --- 新增: 解析 SearxNG 结果的私有方法 ---
+  private _parseSearxngResult(response: SearxngResponse | null, locale: string, limit: number): WebSearchResult[] {
+    if (!response?.results) {
+        return [];
+    }
+    const contexts: WebSearchResult[] = [];
+    for (const item of response.results) {
+        if (contexts.length >= limit) break; // 应用 limit
+        if (item.url && item.title) { // 确保基本字段存在
+             contexts.push({
+                name: item.title,
+                url: item.url,
+                snippet: item.content ?? item.snippet ?? '', // 兼容 content 或 snippet
+                locale: locale,
+            });
+        }
+    }
+    return contexts;
+  }
+
+
+  // --- 修改后的 multiLingualWebSearch ---
   async multiLingualWebSearch(
     user: User,
     req: MultiLingualWebSearchRequest,
@@ -588,7 +711,7 @@ export class SearchService {
       query,
       searchLocaleList = ['en', 'zh-CN'],
       displayLocale = 'auto',
-      searchLimit = 10,
+      searchLimit = 10, // 保留 searchLimit
       enableRerank = false,
       rerankLimit,
       rerankRelevanceThreshold = 0.1,
@@ -597,37 +720,73 @@ export class SearchService {
     const timeTracker = new TimeTracker();
     let finalResults: Source[] = [];
     const searchSteps: SearchStep[] = [];
+    let webSearchDuration = 0;
+    let combinedSearchResults: WebSearchResult[] = []; // 用于合并各语言结果
+
+    // 获取默认提供商，如果 YAML 未配置，默认为 'serper'
+    const provider = getWebSearchDefaultProvider() ?? 'serper';
+    this.logger.log(`Using web search provider: ${provider}`);
 
     try {
       const translatedDisplayLocale =
         displayLocale === 'auto' ? await detectLanguage(query) : displayLocale;
 
-      // Step 1: Prepare queries for each locale
-      const queries = searchLocaleList.map((locale) => ({
-        q: query,
-        hl: locale,
-      }));
-
-      // Step 2: Perform web search
+      // Step 1 & 2: Perform web search based on provider
       timeTracker.startStep('webSearch');
-      const searchResults = await this.webSearch(user, {
-        queries,
-        limit: searchLimit,
-      });
-      const webSearchDuration = timeTracker.endStep('webSearch');
-      this.logger.log(`Web search completed in ${webSearchDuration}ms`);
+
+      if (provider === 'searxng') {
+        const searxngConfig = getWebSearchProviderConfig('searxng');
+        if (!searxngConfig?.baseUrl) {
+          this.logger.error(`SearxNG provider selected, but baseUrl is missing in config. Falling back to serper.`);
+          // Fallback to serper logic (or throw error) - Here we choose fallback
+          const serperResults = await this.webSearch(user, {
+              queries: searchLocaleList.map(locale => ({ q: query, hl: locale })),
+              limit: searchLimit
+          });
+          combinedSearchResults = serperResults;
+
+        } else {
+            // Call SearxNG for each locale
+            const promises = searchLocaleList.map(async (locale) => {
+                const response = await this._callSearxngApi(query, locale, searchLimit, searxngConfig);
+                return this._parseSearxngResult(response, locale, searchLimit);
+            });
+            const resultsByLocale = await Promise.all(promises);
+            combinedSearchResults = resultsByLocale.flat(); // 合并所有语言的结果
+             // TODO: Consider deduplication or better merging strategy if needed
+        }
+
+      } else if (provider === 'serper') {
+         // Use existing Serper logic
+         const queries = searchLocaleList.map((locale) => ({
+            q: query,
+            hl: locale,
+          }));
+         combinedSearchResults = await this.webSearch(user, {
+            queries,
+            limit: searchLimit,
+          });
+      } else {
+         this.logger.error(`Unknown web search provider configured: ${provider}. Cannot perform web search.`);
+         // Handle unknown provider - perhaps return empty results or throw error
+         combinedSearchResults = [];
+      }
+
+      webSearchDuration = timeTracker.endStep('webSearch');
+      this.logger.log(`Web search (${provider}) completed in ${webSearchDuration}ms. Found ${combinedSearchResults.length} initial results.`);
 
       searchSteps.push({
         step: 'webSearch',
+        // provider: provider, // 移除 provider 属性，因为它不在 SearchStep 类型中
         duration: webSearchDuration,
         result: {
-          length: searchResults?.length,
+          length: combinedSearchResults?.length,
           localeLength: searchLocaleList?.length,
         },
       });
 
-      // Convert to Source format
-      finalResults = searchResults.map((result) => ({
+      // Step 2.5: Convert to Source format (moved after search logic)
+      finalResults = combinedSearchResults.map((result) => ({
         url: result.url,
         title: result.name,
         pageContent: result.snippet,
@@ -637,11 +796,13 @@ export class SearchService {
         },
       }));
 
-      if (enableRerank) {
-        // Step 3: Rerank results if enabled
+      // Step 3: Rerank results if enabled (remains the same)
+      if (enableRerank && finalResults.length > 0) { // Added check for non-empty results
         timeTracker.startStep('rerank');
         try {
           const rerankResults = sourcesToSearchResults(finalResults);
+          // --- 添加日志: 打印传递给 Reranker 的数据 ---
+          this.logger.debug(`Data passed to Reranker (rerankResults): ${JSON.stringify(rerankResults, null, 2)}`);
 
           const rerankResponse = await this.rag.rerank(query, rerankResults, {
             topN: rerankLimit || rerankResults.length,
@@ -683,7 +844,8 @@ export class SearchService {
       };
     } catch (error) {
       this.logger.error(`Error in multilingual web search: ${error.stack}`);
-      throw error;
+      // Consider more specific error handling or re-throwing
+      throw error; // Re-throw for now
     }
   }
 }

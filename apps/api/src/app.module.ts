@@ -28,6 +28,8 @@ import { ActionModule } from './action/action.module';
 import { RedisService } from '@/common/redis.service';
 import { ShareModule } from './share/share.module';
 import { TemplateModule } from './template/template.module';
+import { CodeArtifactModule } from './code-artifact/code-artifact.module';
+import { ProjectModule } from './project/project.module';
 
 class CustomThrottlerGuard extends ThrottlerGuard {
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
@@ -71,6 +73,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     }),
     LoggerModule.forRoot({
       pinoHttp: {
+        level: 'debug', // <--- Explicitly set log level to debug
         redact: {
           paths: ['pid', 'hostname', 'req.headers'],
           remove: true,
@@ -125,6 +128,8 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     ActionModule,
     ShareModule,
     TemplateModule,
+    CodeArtifactModule,
+    ProjectModule,
   ],
   controllers: [AppController],
   providers: [

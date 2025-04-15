@@ -8,6 +8,7 @@ import { MiscModule } from '@/misc/misc.module';
 import { ActionModule } from '@/action/action.module';
 import { RAGModule } from '@/rag/rag.module';
 import { SubscriptionModule } from '@/subscription/subscription.module';
+import { CodeArtifactModule } from '@/code-artifact/code-artifact.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SubscriptionModule } from '@/subscription/subscription.module';
     RAGModule,
     MiscModule,
     ActionModule,
+    CodeArtifactModule,
     SubscriptionModule,
   ],
   providers: [ShareService],

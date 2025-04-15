@@ -12,6 +12,10 @@ export interface FilterErrorInfo {
   };
 }
 
+export enum ContextTarget {
+  Global = 'global',
+}
+
 export interface Selection {
   content: string;
   sourceTitle?: string;
@@ -32,6 +36,9 @@ export interface IContextItem {
 interface ContextPanelState {
   // Canvas selected context items
   contextItems: IContextItem[];
+
+  activeResultId: string;
+  setActiveResultId: (resultId: string) => void;
 
   // selection text
   enableMultiSelect: boolean;
@@ -67,6 +74,8 @@ export const defaultState = {
   checkedKeys: [],
   expandedKeys: [],
   runtimeConfig: {} as SkillRuntimeConfig,
+
+  activeResultId: ContextTarget.Global,
 
   ...defaultSelectedTextCardState,
 };
@@ -115,6 +124,12 @@ export const useContextPanelStore = create<ContextPanelState>()(
         contextItems: state.contextItems.filter((item) => item.entityId !== entityId),
       })),
     clearContextItems: () => set((state) => ({ ...state, contextItems: [] })),
+
+    setActiveResultId: (resultId: string) =>
+      set((state) => ({
+        ...state,
+        activeResultId: resultId,
+      })),
 
     resetState: () => set((state) => ({ ...state, ...defaultState })),
   })),

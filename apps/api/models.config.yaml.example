@@ -1,0 +1,119 @@
+# /app/apps/api/models.config.yaml.example (新路径, 模板文件)
+# !!! 警告: 实际部署使用的 models.config.yaml 必须加入 .gitignore !!!
+
+# === LLM 配置 ===
+llm:
+  endpoints:
+    - name: "openrouter"
+      # api_key: "env:OPENROUTER_API_KEY" # 推荐使用环境变量引用
+      api_key: "sk-or-..." # 或者直接提供示例 Key (仅用于示例)
+      base_url: "https://openrouter.ai/api/v1"
+      models:
+        - "openai/gpt-4-turbo" # 示例模型
+        - "anthropic/claude-3-opus-20240229" # 示例模型
+      configuration:
+        defaultHeaders:
+          'HTTP-Referer': 'https://refly.ai' # 示例 Header
+    - name: "gemini" # 其他端点示例
+      api_key: "YOUR_GEMINI_API_KEY"
+      base_url: "http://localhost:7001/v1" # 示例本地代理
+      models:
+        - "gemini-2.0-flash" # 示例模型
+
+# === Embedding 配置 ===
+# 注意: 选择哪个 Embedding 提供商由 .env 中的 EMBEDDINGS_PROVIDER 控制
+embedding:
+  providers:
+    ollama:
+      baseUrl: http://localhost:11434 # Ollama 服务地址示例
+      defaultModel: "nomic-embed-text" # Ollama 默认模型示例
+    jina: {} # Jina Embedding 配置示例 (如果需要)，配置来自 .env
+    fireworks: {} # Fireworks Embedding 配置示例 (如果需要), 配置来自 .env
+    openai: {} # OpenAI Embedding 配置示例 (如果需要), 配置来自 .env
+
+# === Rerank 配置 ===
+rerank:
+  # defaultProvider: 指定默认使用的 Reranker 提供商 (例如: "xinference", "jina", "disabled")
+  defaultProvider: xinference # 默认使用 Xinference, 可设置为 disabled
+  providers:
+    xinference:
+      baseUrl: "http://localhost:9997" # Xinference 服务地址示例
+      modelName: "bge-reranker-base" # Reranker 模型名称示例
+      apiKey: null # Xinference 通常不需要 Key
+      topN: 30 # 返回结果数量
+      relevanceThreshold: 0.6 # 相关性阈值
+    jina:
+      # 注意: Jina Rerank API Key 建议通过环境变量 JINA_API_KEY 提供
+      # apiKey: "env:JINA_API_KEY"
+      modelName: "jina-reranker-v1-base-en"
+      topN: 5
+      relevanceThreshold: 0.1
+    # disabled: {} # 可以添加一个空的 disabled 提供商
+
+# === Parser 配置 ===
+parsers:
+  # 选择默认解析器: 'jina' (Cloud API, API Key 来自 .env) 或 'trafilatura' (Python/Node, 参数来自下方)
+  defaultProvider: trafilatura
+  providers:
+    jina:
+      # Jina Cloud API 的非敏感配置（如果未来需要）
+      # 注意: JINA_API_KEY 必须在 .env 文件中设置!
+      # example_config: value
+      {} # 通常为空，因为关键配置在 .env
+    trafilatura:
+      # Trafilatura (Python/Node) 解析器的特定配置
+      # useNodeFallback: 是否强制使用 Node.js 实现 (默认 false, 即优先尝试 Python)
+      useNodeFallback: false
+      # requestTimeoutMs: 使用 Node.js 实现时，请求网页的超时时间 (毫秒, 默认 10000)
+      requestTimeoutMs: 10000
+
+# === PDF Parser 配置 ===
+pdf_parser:
+  # (必需) 切换解析器: "mineru", "marker" (API), "marker_local" (CLI)
+  provider: "marker_local"
+
+  # --- MinerU API Config (仅当 provider = "mineru" 时需要) ---
+  mineru:
+    api_key: "YOUR_MINERU_API_KEY_HERE_IF_USING_MINERU" # Replace if using mineru
+    api_base: "https://mineru.net/api/v4"
+    is_ocr: false
+    enable_formula: true
+    enable_table: true
+    layout_model: "doclayout_yolo"
+    language: "auto"
+    max_polls: 30
+    poll_interval: 2000
+
+  # --- Marker API Config (仅当 provider = "marker" 时需要) ---
+  # (配置通过 .env 管理, 此处无需显式添加)
+  # marker:
+  #   # 相关配置从 .env 读取 (MARKER_API_KEY, MARKER_API_URL 等)
+
+  # --- Marker Local CLI Config (仅当 provider = "marker_local" 时需要) ---
+  marker_local:
+    # (必需) marker_single 输出格式 ("markdown", "json", "html")
+    output_format: "markdown"
+    # (可选) 是否启用 LLM 增强 (需要额外配置环境变量, 如 GOOGLE_API_KEY)
+    use_llm: false
+    # (可选) 是否强制 OCR
+    force_ocr: false
+    # (可选) 指定 OCR 语言 (逗号分隔, 如 "en,zh")
+    # languages: "en"
+    # (可选) 如果 use_llm=true, 指定 LLM 服务 (如 "gemini", "ollama", "openai")
+    # llm_service: "gemini"
+    # (可选, 高级) 指定 marker_single 命令路径 (如果不在系统 PATH 中)
+    # executable_path: "/usr/local/bin/marker_single"
+    # --- 新增用于测试的参数 ---
+    debug: true
+    page_range: "1-2"
+    disable_image_extraction: true
+    # extra_cli_args: ["--debug"]
+
+# === Web Search 配置 ===
+web_search:
+  defaultProvider: searxng # 指定 SearxNG 为默认
+  providers:
+    searxng: # 只有 searxng 的配置在这里定义
+      baseUrl: http://YOUR_SEARXNG_HOST:8080 # SearxNG 服务地址示例
+      requestTimeoutMs: 10000 # 可选超时设置
+    # 没有 serper 条目

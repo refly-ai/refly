@@ -12,14 +12,14 @@ export const SENTRY_DSN =
 export const EXTENSION_DOWNLOAD_LINK =
   'https://chromewebstore.google.com/detail/lecbjbapfkinmikhadakbclblnemmjpd';
 
-export const SERVER_PROD_DOMAIN = 'https://api.refly.ai';
-export const SERVER_DEV_DOMAIN = 'http://localhost:5800';
+export const SERVER_PROD_DOMAIN = 'http://refly.yuantianze.com:5800';
+export const SERVER_DEV_DOMAIN = 'http://refly.yuantianze.com:5800';
 
-export const CLIENT_PROD_APP_DOMAIN = 'https://refly.ai';
-export const CLIENT_DEV_APP_DOMAIN = 'http://localhost:5173';
+export const CLIENT_PROD_APP_DOMAIN = 'refly.yuantianze.com:5700';
+export const CLIENT_DEV_APP_DOMAIN = 'refly.yuantianze.com:5700';
 
-export const CLIENT_DEV_COOKIE_DOMAIN = 'http://localhost:3000';
-export const CLIENT_PROD_COOKIE_DOMAIN = '.refly.ai';
+export const CLIENT_DEV_COOKIE_DOMAIN = '.yuantianze.com';
+export const CLIENT_PROD_COOKIE_DOMAIN = '.yuantianze.com';
 
 export const getExtensionId = () => {
   if (overrideLocalDev) {

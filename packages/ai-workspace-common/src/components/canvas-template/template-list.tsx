@@ -46,7 +46,7 @@ export const TemplateCard = ({
 
   return (
     <div
-      className={`${className} m-2 group relative bg-white rounded-lg overflow-hidden cursor-pointer shadow-[0_2px_8px_0_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_0_rgba(0,0,0,0.12)] transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out`}
+      className={`${className} m-2 group relative bg-white rounded-lg overflow-hidden cursor-pointer shadow-[0_2px_8px_0_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_0_rgba(0,0,0,0.12)] transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out h-[260px]`}
     >
       <div className="h-40 bg-gray-100 flex items-center justify-center">
         <img
@@ -57,10 +57,10 @@ export const TemplateCard = ({
       </div>
 
       <div className="mx-2 mt-1 p-2 flex justify-between items-center gap-2">
-        <div className="text-sm font-medium truncate">{template.title || 'common.untitled'}</div>
+        <div className="text-sm font-medium truncate">{template.title || t('common.untitled')}</div>
       </div>
 
-      {showUser && (
+      {showUser ? (
         <div className="mx-2 mb-2 px-2 flex justify-between items-center gap-2">
           <div className="flex items-center gap-1">
             <Avatar
@@ -71,9 +71,9 @@ export const TemplateCard = ({
             <div className="font-light truncate text-xs text-gray-500">{`@${template.shareUser?.name}`}</div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      <div className="mx-2 px-2">
+      <div className="mx-2 px-2 h-[50px]">
         <Typography.Paragraph
           className="text-gray-500 text-xs"
           ellipsis={{ tooltip: true, rows: 2 }}

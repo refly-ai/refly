@@ -8,7 +8,9 @@ export const QUEUE_SYNC_STORAGE_USAGE = 'syncStorageUsage';
 export const QUEUE_SYNC_CANVAS_ENTITY = 'syncCanvasEntity';
 export const QUEUE_CLEAR_CANVAS_ENTITY = 'clearCanvasEntity';
 export const QUEUE_DELETE_KNOWLEDGE_ENTITY = 'deleteKnowledgeEntity';
+export const QUEUE_POST_DELETE_KNOWLEDGE_ENTITY = 'postDeleteKnowledgeEntity';
 export const QUEUE_AUTO_NAME_CANVAS = 'autoNameCanvas';
+export const QUEUE_POST_DELETE_CANVAS = 'postDeleteCanvas';
 
 export const QUEUE_SEND_VERIFICATION_EMAIL = 'sendVerificationEmail';
 export const QUEUE_CHECK_CANCELED_SUBSCRIPTIONS = 'checkCanceledSubscriptions';

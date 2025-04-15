@@ -18,12 +18,11 @@ import {
 
 import { PreviewChatInput } from './preview-chat-input';
 import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
-import { useKnowledgeBaseStore } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
+import { useKnowledgeBaseStoreShallow } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { EditChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/edit-chat-input';
 import { cn } from '@refly-packages/utils/cn';
 import { useReactFlow } from '@xyflow/react';
-import { usePatchNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-patch-node-data';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { IconRerun } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -31,6 +30,9 @@ import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
+import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useSkillError } from '@refly-packages/ai-workspace-common/hooks/use-skill-error';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -38,7 +40,12 @@ interface SkillResponseNodePreviewProps {
 }
 
 const StepsList = memo(
-  ({ steps, result, title }: { steps: ActionStep[]; result: ActionResult; title: string }) => {
+  ({
+    steps,
+    result,
+    title,
+    nodeId,
+  }: { steps: ActionStep[]; result: ActionResult; title: string; nodeId: string }) => {
     return (
       <>
         {steps.map((step, index) => (
@@ -54,6 +61,7 @@ const StepsList = memo(
               }
               index={index + 1}
               query={title}
+              nodeId={nodeId}
             />
           </div>
         ))}
@@ -67,16 +75,17 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
     result: state.resultMap[resultId],
     updateActionResult: state.updateActionResult,
   }));
-  const knowledgeBaseStore = useKnowledgeBaseStore((state) => ({
+  const knowledgeBaseStore = useKnowledgeBaseStoreShallow((state) => ({
     sourceListDrawerVisible: state.sourceListDrawer.visible,
   }));
 
   const { getNodes } = useReactFlow();
-  const patchNodeData = usePatchNodeData();
+  const { setNodeData } = useNodeData();
   const { deleteNode } = useDeleteNode();
 
   const { canvasId, readonly } = useCanvasContext();
   const { invokeAction } = useInvokeAction();
+  const { resetFailedState } = useActionPolling();
 
   const { t } = useTranslation();
   const [editMode, setEditMode] = useState(false);
@@ -113,7 +122,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
     const remoteResult = data.data;
     const node = getNodes().find((node) => node.data?.entityId === resultId);
     if (node && remoteResult) {
-      patchNodeData(node.id, {
+      setNodeData(node.id, {
         title: remoteResult.title,
         contentPreview: processContentPreview(remoteResult.steps?.map((s) => s?.content || '')),
         metadata: {
@@ -168,11 +177,13 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   const tplConfig = result?.tplConfig ?? data?.metadata?.tplConfig;
   const runtimeConfig = result?.runtimeConfig ?? data?.metadata?.runtimeConfig;
 
+  const { errCode, errMsg } = useSkillError(result?.errors?.[0]);
+
   const { steps = [], context, history = [] } = result ?? {};
   const contextItems = useMemo(() => {
     // Prefer contextItems from node metadata
-    if (data.metadata?.contextItems) {
-      return purgeContextItems(data.metadata?.contextItems);
+    if (data?.metadata?.contextItems) {
+      return purgeContextItems(data?.metadata?.contextItems);
     }
 
     // Fallback to contextItems from context (could be legacy nodes)
@@ -189,6 +200,18 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   }, [node, deleteNode]);
 
   const handleRetry = useCallback(() => {
+    // Reset failed state before retrying
+    resetFailedState(resultId);
+
+    // Update node status immediately to show "waiting" state
+    setNodeData(node.id, {
+      ...node.data,
+      metadata: {
+        ...node.data?.metadata,
+        status: 'waiting',
+      },
+    });
+
     invokeAction(
       {
         resultId,
@@ -203,7 +226,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
         entityType: 'canvas',
       },
     );
-  }, [resultId, title, canvasId, invokeAction]);
+  }, [resultId, title, canvasId, invokeAction, resetFailedState, setNodeData, node.id, node.data]);
 
   useEffect(() => {
     const handleLocateToPreview = (event: { id: string; type?: 'editResponse' }) => {
@@ -251,7 +274,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
           />
           <PreviewChatInput
             enabled={!editMode}
-            readonly
+            readonly={readonly}
             contextItems={contextItems}
             query={title}
             actionMeta={actionMeta}
@@ -272,7 +295,9 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
           <div className="h-full w-full flex items-center justify-center">
             <Result
               status="500"
-              subTitle={t('canvas.skillResponse.executionFailed')}
+              subTitle={
+                errCode ? `[${errCode}] ${errMsg}` : t('canvas.skillResponse.executionFailed')
+              }
               extra={
                 <Button
                   disabled={readonly}
@@ -289,7 +314,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
             {steps.length === 0 && isPending && (
               <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
             )}
-            <StepsList steps={steps} result={result} title={title} />
+            <StepsList steps={steps} result={result} title={title} nodeId={node.id} />
           </>
         )}
       </div>

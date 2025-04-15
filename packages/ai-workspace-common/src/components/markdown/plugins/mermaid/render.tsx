@@ -9,11 +9,11 @@ import { ImagePreview } from '@refly-packages/ai-workspace-common/components/com
 import { domToPng } from 'modern-screenshot';
 import copyToClipboard from 'copy-to-clipboard';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genUniqueId } from '@refly-packages/utils/id';
 import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { IconCode, IconEye, IconCopy } from '@arco-design/web-react/icon';
 import { MarkdownMode } from '../../types';
 import { PiMagnifyingGlassPlusBold } from 'react-icons/pi';
+import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 
 // Initialize mermaid config
 mermaid.initialize({
@@ -274,6 +274,8 @@ const MermaidComponent = memo(
       }
     }, [mermaidCode, t]);
 
+    const createCodeArtifact = useCreateCodeArtifact();
+
     // Handle creating a mermaid code artifact node
     const handleCreateMermaidArtifact = useCallback(() => {
       if (!mermaidCode) {
@@ -283,46 +285,17 @@ const MermaidComponent = memo(
         return;
       }
 
-      if (!addNode || !isInteractive) {
+      if (!isInteractive) {
         return;
       }
 
-      try {
-        const nodeId = `mermaid-artifact-${genUniqueId()}`;
-
-        // Create node data with mermaid-specific settings
-        addNode(
-          {
-            type: 'codeArtifact',
-            data: {
-              entityId: nodeId,
-              title: `Mermaid Diagram (${diagramTitle})`,
-              contentPreview: mermaidCode,
-              metadata: {
-                code: mermaidCode,
-                language: 'mermaid',
-                type: 'application/refly.artifacts.mermaid',
-                activeTab: 'preview', // Default to preview for Mermaid
-                width: 600,
-                height: 400,
-                status: 'finished',
-              },
-            },
-          },
-          id ? [{ type: 'skillResponse', entityId: id }] : undefined,
-          false,
-          true,
-        );
-
-        message.success(
-          t('components.markdown.mermaid.artifactCreated', 'Mermaid diagram artifact created'),
-        );
-      } catch (error) {
-        console.error('Error creating Mermaid artifact:', error);
-        message.error(
-          t('components.markdown.mermaid.artifactError', 'Error creating Mermaid artifact'),
-        );
-      }
+      createCodeArtifact({
+        codeContent: mermaidCode,
+        title: `Mermaid Diagram (${diagramTitle})`,
+        language: 'mermaid',
+        type: 'application/refly.artifacts.mermaid',
+        connectTo: [{ type: 'skillResponse', entityId: id }],
+      });
     }, [mermaidCode, diagramTitle, addNode, id, t, isInteractive]);
 
     // Handle opening zoom modal
@@ -352,7 +325,7 @@ const MermaidComponent = memo(
     const containerClassName = useMemo(
       () =>
         cn(
-          'mermaid-diagram w-full flex justify-center items-center overflow-x-auto relative group',
+          'mermaid-diagram w-full flex justify-center items-center overflow-x-auto relative group pt-8',
           showOriginalCode && 'bg-gray-50 rounded',
         ),
       [showOriginalCode],
@@ -373,7 +346,7 @@ const MermaidComponent = memo(
 
         {/* Action Buttons - Only show when successfully rendered or in code view */}
         {(rendered || viewMode === 'code') && (
-          <div className="absolute top-2 right-2 z-50 flex transition-all duration-200 ease-in-out bg-white/80 backdrop-blur-sm rounded-md shadow-sm border border-gray-100">
+          <div className="absolute top-0 right-2 z-50 flex transition-all duration-200 ease-in-out bg-white/80 backdrop-blur-sm rounded-md shadow-sm border border-gray-100">
             <Space>
               {viewMode === 'preview' && (
                 <>

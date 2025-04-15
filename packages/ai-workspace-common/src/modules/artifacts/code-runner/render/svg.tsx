@@ -33,7 +33,7 @@ const SVGRenderer = memo(
       if (!iframeRef.current) return;
 
       const doc = iframeRef.current.contentDocument;
-      if (!doc) return;
+      if (!doc || !content) return;
 
       // Process the SVG content to add an ID to the SVG element
       let processedContent = content;

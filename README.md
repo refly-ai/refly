@@ -1,285 +1,205 @@
-![refly-cover](https://github.com/user-attachments/assets/2930c555-09a7-4ea2-a18a-2b1d8a7ef4ae)
+# Refly-Local 增强版
 
-<div align="center">
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-<h1 align="center" style="border-bottom: none">
-    <b>
-        <a href="https://www.refly.ai">Refly.AI</a><br>
-    </b>
-    ⭐️  The AI Native Creation Engine ⭐️ <br>
-</h1>
+## 简介
 
-Refly是一个开源的AI原生创作引擎，由13+领先AI模型驱动。我们对原项目进行了本地化改进，使嵌入向量生成、排序模型和网页解析都能在本地完成，极大降低了部署成本和复杂度。其直观的自由形式画布界面集成了多线程对话、多模态输入（文本/图片/文件）、RAG检索、浏览器扩展网页剪藏、上下文记忆、AI文档编辑、代码生成（HTML/SVG/Mermaid/React）和网站可视化引擎，赋能您轻松将想法转化为完整作品。
+本项目是基于 [reflyai](https://github.com/refly-ai/refly) 的二次开发版本。
 
-[🚀 v0.4.2 发布! 现已支持画布模板和文档表格⚡️](https://docs.refly.ai/changelog/v0.4.2)
+进行二次开发的主要目的是为了解决原版在配置灵活性和本地化部署方面的一些限制，特别是针对 LLM、Embedding、Rerank 等核心组件，并优化了浏览器插件的剪存功能，使其能够更好地适应私有化部署场景。
 
-[Refly Cloud](https://refly.ai/) · [自托管部署](https://docs.refly.ai/guide/self-deploy) · [论坛](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [文档](https://docs.refly.ai/)
+## 核心改进
 
-<p align="center">
-    <a href="https://refly.ai" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/badge/Product-F04438"></a>
-    <a href="https://refly.ai/pricing" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff"></a>
-    <a href="https://discord.gg/bWjffrb89h" target="_blank">
-        <img alt="Discord Chat" src="https://img.shields.io/discord/1323513432686989362?label=chat&logo=discord&logoColor=white&style=flat&color=5865F2"></a>
-    <a href="https://x.com/reflyai" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/twitter/follow/reflyai"></a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-        <img alt="TypeScript-version-icon" src="https://img.shields.io/badge/TypeScript-^5.3.3-blue"></a>
-</p>
+以下是本项目相对于原版的主要增强功能：
 
-<p align="center">
-  <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
-  <a href="./README_CN.md"><img alt="简体中文版自述文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
-</p>
+*   **灵活的 LLM 配置:**
+    *   **解决了原版仅支持少数 LLM 服务的问题。** 现在可以通过统一的 `models.config.yaml` 文件灵活配置和切换不同的 LLM 端点，包括 OpenAI、OpenRouter、Ollama 以及其他兼容 OpenAI API 的本地或云端服务。
+    *   *参考技术方案: `LLM-CHANGE-PLAN.md`*
 
-</div>
+*   **本地化 Embedding 支持:**
+    *   **新增了对本地 Ollama Embedding 的支持。** 这解决了原版强制依赖 Jina API 可能带来的成本和网络问题，使得 Embedding 过程可以完全在本地进行。同时，用户仍然可以选择使用原有的 Embedding 方案 (如 Jina, OpenAI)。
+    *   配置通过 `models.config.yaml` (`embedding.providers.ollama`) 和 `.env` 文件 (`EMBEDDINGS_PROVIDER`) 共同控制。
+    *   *参考技术方案: `EMB_CHANGE_PLAN_FINAL.md`*
 
-## 🔥 本地化改进核心亮点
+*   **扩展的 Rerank 选项:**
+    *   **增加了对 Xinference Reranker 的支持，** 为用户提供了除 Jina Reranker 之外的另一种选择，特别是方便与本地部署的 Xinference 服务集成。
+    *   可以通过 `models.config.yaml` (`rerank.defaultProvider`, `rerank.providers.xinference`) 和 `.env` (Jina 相关配置) 进行选择和配置。
+    *   *参考技术方案: `RERANK_CHANGE_PLAN.md`*
 
-我们对Refly进行了三项关键本地化改进，极大降低了部署成本，提高了数据安全性：
+*   **可配置的网页解析器:**
+    *   **新增了基于 Trafilatura (Python/Node.js 回退) 的本地网页内容解析器。** 用户可以通过 `models.config.yaml` (`parsers.defaultProvider`) 在原有的 Jina Cloud API 解析器和新增的本地解析器之间进行选择，提高了网页抓取和处理的灵活性。
+    *   *参考技术方案: `PARSERS_CHANGE_PLAN.md`*
 
-### 1️⃣ 高精度嵌入向量本地生成 (1024维)
+*   **多样的 PDF 解析器:**
+    *   **提供了三种 PDF 解析方案：MinerU API、Marker API 以及 Marker Local CLI。** 用户可以根据需求（如云服务便利性、本地处理能力、对特定格式的支持）通过 `models.config.yaml` (`pdf_parser.provider`) 选择最合适的 PDF 解析引擎。
+    *   *参考技术方案: `PARSERS_CHANGE_PLAN.md`, `PDF_MINERU_PARSER.md`*
 
-- **替换外部API**：不再依赖Jina/OpenAI/Fireworks等第三方嵌入API
-- **降低成本**：无需支付API调用费用
-- **改进文件**：`apps/api/src/providers/embeddings/jina.ts`
-- **改进内容**：实现本地嵌入服务调用，支持1024维高精度向量
-- **技术亮点**：维度匹配验证、批处理优化、错误恢复机制
+*   **可选的 Web 搜索服务:**
+    *   **集成了 SearxNG 作为主要的本地化/自托管 Web 搜索选项，** 并保留了 Serper API 作为备选。用户可以通过 `models.config.yaml` (`web_search.defaultProvider`) 在两者之间切换，方便在不同网络环境下进行网页搜索。
+    *   *参考技术方案: `WEB_SEARCH_PLAN.md`*
 
-### 2️⃣ 本地化排序模型
+*   **插件剪存私有化:**
+    *   **修改了浏览器插件，使其能够将剪存数据发送到用户自己部署的 API 服务器，** 而不是默认的官方服务器。这对于希望完全掌控数据的用户至关重要。配置涉及修改插件源码和正确设置后端/前端环境。
+    *   *参考技术方案: `CHAJIANJIANCUN_PLAN.md`*
 
-- **替换外部重排API**：从依赖外部重排API转为本地服务
-- **模型升级**：使用`bge-reranker-v2-m3`模型进行高精度排序
-- **改进文件**：`apps/api/src/rag/rag.service.ts`
-- **改进内容**：实现本地xinference服务调用，优化排序策略
-- **技术亮点**：基于向量相似度的混合排序，降级容错机制
+## 配置指南
 
-### 3️⃣ 本地化网页解析
+本项目的配置主要通过两个文件进行管理：
 
-- **替换外部解析API**：从依赖外部解析服务转为本地实现
-- **双重备份策略**：Python/Trafilatura主解析 + Node.js/Cheerio备选解析
-- **改进文件**：`apps/api/src/knowledge/parsers/jina.parser.ts`
-- **改进内容**：实现本地网页抓取、解析和内容提取
-- **技术亮点**：多策略内容选择器，智能噪声过滤，元数据提取
+1.  **核心配置文件 (`models.config.yaml`):**
+    *   **位置:** 部署时通常位于 `deploy/docker/models.config.yaml`，并挂载到 API 容器内的 `/app/apps/api/models.config.yaml`。
+    *   **作用:** 控制 LLM、Embedding (Ollama)、Rerank (Xinference)、HTML/PDF 解析器、Web 搜索 (SearxNG) 等核心 AI 功能的提供商选择和详细参数。
+    *   **示例结构 (简化):**
+        ```yaml
+        llm:
+          endpoints:
+            # ... 定义你的 LLM 服务 ...
+        embedding:
+          providers:
+            ollama:
+              baseUrl: http://host.docker.internal:11434 # 示例
+              defaultModel: nomic-embed-text
+        rerank:
+          defaultProvider: xinference # 或 jina
+          providers:
+            xinference:
+              baseUrl: http://host.docker.internal:9997 # 示例
+              modelName: bge-reranker-base
+            # jina 配置主要在 .env
+        parsers:
+          defaultProvider: trafilatura # 或 jina
+          providers:
+            trafilatura:
+              # ... trafilatura 配置 ...
+        pdf_parser:
+          provider: marker_local # 或 mineru, marker
+          marker_local:
+            output_format: markdown
+            # ... marker_local 配置 ...
+        web_search:
+          defaultProvider: searxng # 或 serper
+          providers:
+            searxng:
+              baseUrl: http://host.docker.internal:8080 # 示例
+        ```
+    *   **参考:** 请查阅 `apps/api/models.config.yaml.example` 获取完整的配置结构和说明。
 
-## 快速开始
+2.  **环境变量 (`.env`):**
+    *   **位置:** 部署时通常位于 `deploy/docker/.env`。
+    *   **作用:**
+        *   配置基础服务的连接信息 (PostgreSQL, Elasticsearch, Minio, Redis, Qdrant)。
+        *   设置部分云服务的 API Key (如 Jina, Serper, Marker API)。
+        *   配置身份验证 Cookie 的行为 (`REFLY_COOKIE_DOMAIN`, `REFLY_COOKIE_SECURE`, `REFLY_COOKIE_SAME_SITE`)。**`REFLY_COOKIE_DOMAIN` 必须正确设置，以便浏览器插件能够成功识别登录状态。**
+    *   **参考:** 请查阅 `deploy/docker/.env.example` 获取所需的环境变量列表。
 
-> 在安装ReflyAI之前，请确保您的机器满足以下最低系统要求：
->
-> CPU >= 2核
->
-> 内存 >= 4GB
+## 运行项目
 
-### 使用Docker自托管部署
+本项目提供两种主要的运行方式：
 
-借助本地化改进，您可以部署功能丰富且完全本地化的ReflyAI版本，无需依赖昂贵的第三方API。我们的团队正在努力跟进最新版本。
+### 1. Docker 部署 (推荐)
 
-#### 部署步骤
+这是最推荐的生产环境和便捷体验方式，可以确保环境一致性。
 
-1. 克隆代码库并进入部署目录
-```bash
-git clone https://github.com/refly-ai/refly.git
-cd refly/deploy/docker
-```
+1.  **前提条件:**
+    *   安装 Docker 和 Docker Compose。
+    *   **GPU 支持:** API 服务 (`api`) 的运行**需要 NVIDIA GPU** 支持，因为它依赖于需要 CUDA 的库 (例如 `marker-pdf` 或其他模型)。请确保 Docker 主机已正确安装 NVIDIA 驱动和 NVIDIA Container Toolkit。Docker Compose 文件中已包含 GPU 请求配置。
+2.  **依赖服务:** Docker Compose 文件会自动拉取并启动所需的依赖服务：
+    *   PostgreSQL (数据库)
+    *   Elasticsearch (全文搜索)
+    *   Minio (对象存储)
+    *   Redis (缓存)
+    *   Qdrant (向量数据库)
+    确保你的 Docker 环境有足够资源运行这些服务。
+3.  **配置:**
+    *   **环境变量:** 复制 `deploy/docker/.env.example` 为 `deploy/docker/.env`，并根据你的环境修改数据库连接、Minio、Redis、Qdrant 地址、以及所需的 API Keys 等配置。**特别注意 `REFLY_COOKIE_DOMAIN` 的设置，它对插件登录至关重要。**
+    *   **模型配置:** 复制 `apps/api/models.config.yaml.example` 为 `deploy/docker/models.config.yaml`，并根据你的需求配置 LLM、Embedding、Rerank、解析器等模型。此文件会被挂载到 API 容器中。
+4.  **启动:** 在 `deploy/docker/` 目录下运行：
+    ```bash
+    docker compose up -d
+    ```
+    API 服务将运行在 `http://localhost:5800` (默认)，Web 服务运行在 `http://localhost:5700` (默认)。
+5.  **参考:** `DOCKE_BUILD_PLAY.md` 提供了更详细的 Docker 构建和部署流程解析。
 
-2. 复制并修改环境配置文件
-```bash
-cp ../../apps/api/.env.example .env
-```
+### 2. 本地源码运行 (开发/调试)
 
-3. 修改配置文件中的向量嵌入设置
-```bash
-# 打开.env文件并设置以下参数
-EMBEDDINGS_PROVIDER=jina
-EMBEDDINGS_MODEL_NAME=jina-embeddings-v3
-EMBEDDINGS_DIMENSIONS=1024  # 必须在初始化前设置
-EMBEDDINGS_BATCH_SIZE=512
-REFLY_VEC_DIM=1024          # 必须与EMBEDDINGS_DIMENSIONS一致
-```
+适合开发者进行代码修改和调试。
 
-4. 使用优化的Dockerfile构建镜像
-```bash
-# 使用优化的Dockerfile.new替代默认Dockerfile
-cp ../Dockerfile.new ../Dockerfile
-docker compose build
-```
+1.  **前提条件:**
+    *   Node.js (推荐 v18 或更高版本)
+    *   pnpm (推荐使用 `corepack enable`)
+    *   Miniconda 或 Anaconda (用于管理 API 的 Python 环境)
+    *   Git
+    *   (可选但推荐) NVIDIA GPU 及相应的驱动程序 (如果需要运行依赖 GPU 的功能)
+    *   **依赖服务:** 你需要**手动**启动并配置 PostgreSQL, Elasticsearch, Minio, Redis, Qdrant 服务，或者配置连接到已有的服务实例。
+2.  **克隆仓库:**
+    ```bash
+    git clone <your-repo-url>
+    cd refly-local-enhanced # 或者你的仓库名
+    ```
+3.  **安装 Node.js 依赖:**
+    ```bash
+    pnpm install
+    ```
+4.  **设置 Python 环境 (API):**
+    *   API 服务依赖于特定的 Python 环境 (名为 `py310`) 和库 (如 PyTorch, marker-pdf)。你需要手动创建并配置此环境。
+    *   参考 `apps/api/DockerfileV1` 中 Conda 环境创建和依赖安装部分，执行类似的操作：
+        *   创建 Conda 环境: `conda create -n py310 python=3.10 -y`
+        *   激活环境: `conda activate py310`
+        *   安装依赖: 根据 Dockerfile 中的 `pip install` 命令安装必要的 Python 包 (可能需要调整 CUDA 版本以匹配你的 GPU)。
+5.  **配置:**
+    *   **API 配置:**
+        *   将 `deploy/docker/.env.example` (或相关部分) 复制到 `apps/api/.env` 并修改配置，确保数据库、Minio 等连接信息指向你手动启动或已有的服务。
+        *   将 `apps/api/models.config.yaml.example` 复制到 `apps/api/models.config.yaml` 并修改配置。
+    *   **Web 配置:** (可能需要) 为 `apps/web` 配置环境变量，通常可以在 `apps/web` 目录下创建 `.env` 文件，至少需要配置 `API_URL` 指向本地运行的 API 服务 (例如 `http://localhost:3000`)。
+6.  **构建 (可选但推荐):**
+    ```bash
+    pnpm build
+    ```
+7.  **启动开发服务器:**
+    *   **启动 API 服务 (需要激活 `py310` Conda 环境):**
+        ```bash
+        conda activate py310
+        pnpm --filter api dev
+        ```
+        API 默认运行在 `http://localhost:3000`。
+    *   **启动 Web 服务 (在另一个终端):**
+        ```bash
+        pnpm --filter web dev
+        ```
+        Web 服务默认运行在 `http://localhost:5173`。
 
-5. 启动服务
-```bash
-docker compose up -d
-```
+**注意:** 本地运行需要手动管理 Python 环境和依赖，并确保所有基础服务已启动且配置正确。对于 API 服务，如果使用了需要 GPU 的模型或功能，本地环境同样需要满足 GPU 要求。
 
-有关后续步骤，请访问[自托管部署指南](https://docs.refly.ai/guide/self-deploy)了解更多详情。
+## 插件使用 (私有化部署)
 
-## ✨ 关键特性
+如果你希望浏览器插件连接到你自己部署的服务器，你需要：
 
-### 多线程对话系统
-建立在创新的多线程架构上，实现并行管理独立对话上下文。通过高效的状态管理和上下文切换机制实现复杂的Agent工作流，超越传统对话模型的限制。
+1.  **修改插件源代码:**
+    *   编辑 `packages/utils/src/url.ts`，修改以下常量为你私有部署的地址 (需要包含 `http://` 或 `https://`):
+        *   `SERVER_PROD_DOMAIN`: 指向你的后端 API 地址 (例如 `http://yourdomain.com:5800`)
+        *   `SERVER_DEV_DOMAIN`: (同上，或你的开发环境 API 地址)
+        *   `CLIENT_PROD_APP_DOMAIN`: 指向你的前端 Web 应用地址 (例如 `http://yourdomain.com:5700`)
+        *   `CLIENT_DEV_APP_DOMAIN`: (同上，或你的开发环境前端地址)
+        *   `CLIENT_PROD_COOKIE_DOMAIN`: 设置为你的主域名 (例如 `.yourdomain.com`)
+        *   `CLIENT_DEV_COOKIE_DOMAIN`: (同上)
+    *   编辑 `apps/extension/wxt.config.ts`，在 `manifest.externally_connectable.matches` 数组中添加你的前端 Web 应用地址 (需要包含协议和 `/*` 通配符，例如 `http://yourdomain.com:5700/*`)。
+2.  **重新编译插件:**
+    *   确保 `pnpm` 已安装。
+    *   在项目根目录运行：
+        ```bash
+        pnpm --filter @refly/extension build
+        ```
+3.  **加载插件:**
+    *   打开浏览器的扩展管理页面 (`chrome://extensions` 或 `edge://extensions`)。
+    *   启用“开发者模式”。
+    *   点击“加载已解压的扩展程序”。
+    *   选择编译输出目录 (通常是 `apps/extension/.output/chrome-mv3`)。
+*   *参考排错过程: `CHAJIANJIANCUN_PLAN.md`*
 
-### 多模型集成框架（本地化增强）
-- 集成13+领先语言模型，包括DeepSeek R1、Claude 3.5 Sonnet、Gemini 2.0和O3-mini
-- **新增：支持本地化嵌入模型，无需外部API密钥**
-- **新增：降低部署成本，提高可靠性和隐私性**
-- 支持模型混合调度和并行处理
+## 授权协议
 
-### 知识库引擎（本地化增强）
-- 支持多源异构数据导入
-- **新增：本地化RAG语义检索架构，1024维嵌入向量**
-- **新增：无需依赖第三方嵌入服务，降低运营成本**
-- 智能知识图谱构建
+本项目遵循 `MarcusYuan/refly-local` 项目的原有授权协议：[MIT License](LICENSE)。
 
-### 智能内容捕获（本地化增强）
-- 主流平台（Github、Medium、Wikipedia、Arxiv）一键内容捕获
-- **新增：本地化网页解析和内容提取**
-- 智能内容解析和结构化
-- 深度知识库集成
+## 贡献
 
-## 📝 技术实现详解
-
-### 1. 嵌入向量模型集成
-
-我们通过修改`JinaEmbeddings`类实现了本地嵌入向量集成：
-
-```typescript
-// apps/api/src/providers/embeddings/jina.ts
-export class JinaEmbeddings extends Embeddings {
-  private config: JinaEmbeddingsConfig;
-  private readonly logger = new Logger(JinaEmbeddings.name);
-
-  constructor(config: JinaEmbeddingsConfig) {
-    super(config);
-    this.config = { ...defaultConfig, ...config };
-    this.logger.log(`初始化本地嵌入模型服务，维度: ${this.config.dimensions}`);
-  }
-
-  private async fetch(input: string[]) {
-    // 调用本地嵌入服务API
-    const response = await fetch(`${this.config.serverBaseUrl}/api/embed`, {
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: input }),
-    });
-    
-    // 验证维度一致性
-    if (data.embeddings.length > 0) {
-      const actualDimensions = data.embeddings[0].length;
-      if (actualDimensions !== this.config.dimensions) {
-        throw new Error(`维度不匹配! 配置期望: ${this.config.dimensions}, 实际: ${actualDimensions}`);
-      }
-    }
-    
-    return {
-      data: data.embeddings.map((emb: number[]) => ({ embedding: emb }))
-    };
-  }
-}
-```
-
-**⚠️ 重要配置**：必须在项目初始化前在.env文件中设置正确的维度参数
-```
-EMBEDDINGS_DIMENSIONS=1024
-REFLY_VEC_DIM=1024  # 必须与EMBEDDINGS_DIMENSIONS保持一致
-```
-
-### 2. 排序模型本地化
-
-排序模型使用了硬编码的本地服务地址：
-
-```typescript
-// apps/api/src/rag/rag.service.ts
-async rerank(query: string, results: SearchResult[]) {
-  // 准备xinference请求负载
-  const payload = JSON.stringify({
-    model: 'bge-reranker-v2-m3', // 使用指定的模型
-    query: query,
-    documents: Array.from(contentMap.keys()),
-  });
-
-  // 调用xinference的rerank API - 硬编码地址需要修改
-  const res = await fetch('http://192.168.3.12:9997/v1/rerank', {
-    method: 'post',
-    headers: { 'Content-Type': 'application/json' },
-    body: payload,
-  });
-  
-  // 错误处理及结果处理...
-}
-```
-
-**修改提示**：如需更改排序服务地址，直接修改代码中的URL。建议将此URL改为环境变量配置。
-
-### 3. 网页解析本地化
-
-我们实现了双重备份的网页解析策略：
-
-```typescript
-// apps/api/src/knowledge/parsers/jina.parser.ts
-async parse(input: string | Buffer): Promise<ParseResult> {
-  const url = input.toString();
-
-  try {
-    // 优先使用Python/Trafilatura解析（高质量结果）
-    const isPythonReady = await this.ensureTrafilaturaScript();
-    
-    if (isPythonReady) {
-      // 使用Python脚本处理
-      const process = spawn(this.pythonCommand, [this.pythonScriptPath, url]);
-      // 处理输出...
-    } else {
-      // 备选方案：使用Node.js解析
-      return this.parseWithNode(url);
-    }
-  } catch (error) {
-    // 兜底：所有方法失败后使用Node.js备选方案
-    return this.parseWithNode(url);
-  }
-}
-
-// Node.js备选解析实现
-async parseWithNode(url: string): Promise<ParseResult> {
-  // 使用axios获取网页内容
-  const response = await axios.get(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36...',
-    },
-  });
-  
-  const html = response.data;
-  const $ = cheerio.load(html);
-  
-  // 智能内容提取算法
-  // 尝试多种选择器策略提取高质量内容...
-}
-```
-
-**功能亮点**：
-- 自动降级：从Python到Node.js的无缝切换
-- 多策略选择器：确保内容提取成功率
-- 智能噪音过滤：自动清理导航栏、广告等
-
-## 🛣️ 路线图与贡献指南
-
-我们不断改进Refly，添加令人兴奋的新功能。有关详细路线图，请访问[完整路线图文档](https://docs.refly.ai/roadmap)。欢迎所有开发者参与贡献，请查看我们的[CONTRIBUTING.md](./CONTRIBUTING.md)。
-
-## 上游项目
-
-我们感谢以下使ReflyAI成为可能的开源项目：
-
-1. [LangChain](https://github.com/langchain-ai/langchainjs) - 用于构建AI应用程序的库
-2. [ReactFlow](https://github.com/xyflow/xyflow) - 用于构建可视化工作流的库
-3. [QDrant](https://github.com/qdrant/qdrant) - 用于构建向量搜索功能的库
-4. 其他上游依赖项
-
-## 许可证
-
-本仓库根据[ReflyAI开源许可证](./LICENSE)授权，本质上是Apache 2.0许可证加上一些额外限制。
-
-## 📱 联系作者
-
-如果您对本项目有任何问题或建议，欢迎通过以下方式联系作者：
-
-<div align="center">
-  <img src="data/erwei.jpg" alt="微信二维码" width="300" />
-  <p>扫描上方二维码添加作者微信</p>
-</div>
+欢迎对本项目进行贡献！请参考 [CONTRIBUTING_CN.md](CONTRIBUTING_CN.md) (中文) 或 [CONTRIBUTING.md](CONTRIBUTING.md) (英文) 了解详情。

@@ -1,6 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
-import { Logger } from '@nestjs/common';
+import { Logger, Injectable } from '@nestjs/common'; // Injectable might be needed if this becomes a service
+import { findLlmEndpointConfig } from '@/config/yaml-config.loader'; // Import unified loader
 import { z } from 'zod';
 import { jsonrepair } from 'jsonrepair';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -326,18 +327,54 @@ export async function generateCanvasTitle(
       return '';
     }
 
-    const model = new ChatOpenAI({
-      model: modelInfo?.name,
-      apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-      temperature: 0.2, // Lower temperature for more consistent titles
-      configuration: {
-        baseURL: process.env.OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : undefined,
-        defaultHeaders: {
-          'HTTP-Referer': 'https://refly.ai',
-          'X-Title': 'Refly',
-        },
+    const modelName = modelInfo?.name;
+    if (!modelName) {
+      logger.error('No model name provided in modelInfo for title generation.');
+      throw new Error('Cannot generate title: Model name is missing.');
+    }
+
+    const endpointConfig = findLlmEndpointConfig(modelName);
+    if (!endpointConfig) {
+      logger.error(`Configuration not found for model "${modelName}" in models.config.yaml for title generation.`);
+      throw new Error(`Configuration not found for model: ${modelName}`);
+    }
+
+    logger.log(`Using endpoint "${endpointConfig.name}" for model "${modelName}" in title generation.`);
+
+    // Prepare configuration object before passing to constructor
+    const chatConfig: Record<string, any> = {
+      baseURL: endpointConfig.base_url,
+      defaultHeaders: {
+        ...(endpointConfig.configuration?.defaultHeaders || {}),
+        'HTTP-Referer': 'https://refly.ai',
+        'X-Title': 'Refly',
       },
+      // Merge other potential configurations, ensuring not to overwrite baseURL or defaultHeaders handled above
+      // We need to be careful here. If endpointConfig.configuration has baseURL or defaultHeaders, it will overwrite the ones defined above.
+      // Let's merge manually to prioritize specific ones if they exist.
+      ...(Object.fromEntries(
+           Object.entries(endpointConfig.configuration || {}).filter(([key]) => key !== 'baseURL' && key !== 'defaultHeaders')
+      )),
+    };
+
+    // Clean up the configuration object *before* passing it
+    if (!chatConfig.baseURL) {
+      delete chatConfig.baseURL;
+    }
+    // Ensure defaultHeaders is an object before checking keys
+    if (chatConfig.defaultHeaders && typeof chatConfig.defaultHeaders === 'object' && Object.keys(chatConfig.defaultHeaders).length === 0) {
+      delete chatConfig.defaultHeaders;
+    }
+
+    const model = new ChatOpenAI({
+      model: modelName,
+      apiKey: endpointConfig.api_key,
+      temperature: 0.2, // Lower temperature for more consistent titles
+      // Pass the cleaned configuration object only if it's not empty
+      ...(Object.keys(chatConfig).length > 0 ? { configuration: chatConfig } : {}),
     });
+
+    // Removed post-instantiation cleanup logic as 'model.configuration' is not directly accessible/modifiable.
 
     logger.log(`Generating title from ${contentItems.length} content items`);
 

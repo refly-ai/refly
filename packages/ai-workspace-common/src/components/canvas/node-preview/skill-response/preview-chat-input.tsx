@@ -3,7 +3,6 @@ import { PreviewContextManager } from './preview-context-manager';
 import { useMemo, memo } from 'react';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { SelectedSkillHeader } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/selected-skill-header';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 interface PreviewChatInputProps {
   enabled: boolean;
@@ -18,8 +17,7 @@ interface PreviewChatInputProps {
 }
 
 const PreviewChatInputComponent = (props: PreviewChatInputProps) => {
-  const { enabled, contextItems, query, actionMeta, setEditMode } = props;
-  const { readonly } = useCanvasContext();
+  const { enabled, contextItems, query, readonly, actionMeta, setEditMode } = props;
 
   const hideSelectedSkillHeader = useMemo(
     () => !actionMeta || actionMeta?.name === 'commonQnA' || !actionMeta?.name,

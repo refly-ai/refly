@@ -2,6 +2,8 @@
 set -e
 
 # Start Elasticsearch in the background
+echo "discovery.type: ${discovery.type}"
+echo "xpack.security.enabled: ${xpack.security.enabled}"
 /usr/local/bin/docker-entrypoint.sh eswrapper &
 
 # Wait for Elasticsearch to become available

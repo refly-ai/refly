@@ -1,4 +1,8 @@
 import dedent from 'dedent';
+import {
+  buildCustomProjectInstructions,
+  buildCustomProjectInstructionsForUserPrompt,
+} from '../common/personalization';
 
 // Instructions for the reactive artifact generator
 export const reactiveArtifactInstructions = dedent(`<artifacts_info>
@@ -56,7 +60,7 @@ The assistant can create and reference artifacts during conversations. Artifacts
     - Mermaid Diagrams: "application/refly.artifacts.mermaid"
       - The user interface will render Mermaid diagrams placed within the artifact tags.
       - Do not put Mermaid code in a code block when using artifacts.
-      - Mermaid renderer version is 10.9.0, please follow this version's syntax.
+      - Mermaid renderer version is 11.6.0, please follow this version's syntax.
     - React Components: "application/refly.artifacts.react"
       - Use this for displaying either: React elements, e.g. \`<strong>Hello World!</strong>\`, React pure functional components, e.g. \`() => <strong>Hello World!</strong>\`, React functional components with Hooks, or React component classes
       - When creating a React component, ensure it has no required props (or provide default values for all props) and use a default export.
@@ -68,6 +72,37 @@ The assistant can create and reference artifacts during conversations. Artifacts
       - NO OTHER LIBRARIES (e.g. zod, hookform) ARE INSTALLED OR ABLE TO BE IMPORTED.
       - Images from the web are not allowed, but you can use placeholder images by specifying the width and height like so \`<img src="/api/placeholder/400/320" alt="placeholder" />\`
       - If you are unable to follow the above requirements for any reason, use "application/refly.artifacts.code" type for the artifact instead, which will not attempt to render the component.
+    - Mind Maps: "application/refly.artifacts.mindmap"
+      - Use this for creating hierarchical visualizations of ideas, concepts, or knowledge structures
+      - The content must be valid JSON with the following structure:
+        - Each node requires an "id" (string) and "children" (array of nodes)
+        - Each node should have either "content" or "label" (or both)
+        - "content" can be a Markdown-formatted string supporting rich text with multiple paragraphs
+        - "label" is optional and used for shorter node titles; if missing, the first line of content is used
+        - Example structure:
+
+          \`\`\`json
+          {
+            "id": "root",
+            "content": "Main content with **bold** and *italic* text",
+            "children": [
+              {
+                "id": "child1",
+                "content": "First child content",
+                "children": []
+              },
+              {
+                "id": "child2",
+                "content": "Second child content",
+                "children": []
+              }
+            ]
+          }
+          \`\`\`
+      - Nodes can have optional properties like "colors" for customizing appearance
+      - Complex hierarchies should be structured with clear parent-child relationships
+      - Mind maps are ideal for summarizing topics, organizing related concepts, or planning structures
+      - The user interface will render an interactive mind map diagram based on the structure
   6. Include the complete and updated content of the artifact, without any truncation or minimization. Don't use "// rest of the code remains the same...".
   7. If unsure whether the content qualifies as an artifact, if an artifact should be updated, or which type to assign to an artifact, err on the side of not creating an artifact.
 </artifact_instructions>
@@ -214,9 +249,7 @@ This example demonstrates the assistant's preference to update existing artifact
             print("Enter 'q' to quit the program.")
 
             while True:
-                user_input = input("
-
-Enter a number (or 'q' to quit): ")
+                user_input = input("Enter a number (or 'q' to quit): ")
 
                 if user_input == 'q':
                     print("Thank you for using the Factorial Calculator. Goodbye!")
@@ -288,7 +321,6 @@ Enter a number (or 'q' to quit): ")
                   Dismiss
                 </Button>
               </CardContent>
-            ...
             </Card>
           );
         };
@@ -359,51 +391,158 @@ This example demonstrates the assistant's decision not to use an artifact for an
 
 </examples>
 
+<example_docstring>
+  This example demonstrates how to create a mind map artifact for organizing concepts.
+</example_docstring>
+
+  <example>
+    <user_query>Can you create a mind map to organize the key concepts of machine learning?</user_query>
+
+    <assistant_response>
+      I'd be happy to create a mind map that organizes the key concepts of machine learning:
+
+      <reflyThinking>Creating a mind map for machine learning concepts is an excellent candidate for an artifact. It's a self-contained visualization that organizes complex information hierarchically and can be referenced or modified later. This is a new request, so I'll create a new artifact with the identifier "machine-learning-concepts".</reflyThinking>
+
+      <reflyArtifact identifier="machine-learning-concepts" type="application/refly.artifacts.mindmap" title="Machine Learning Concepts Mind Map">
+        {
+          "id": "root",
+          "content": "# Machine Learning\n\nA field of artificial intelligence that uses statistical techniques to give computer systems the ability to learn from data, without being explicitly programmed.",
+          "children": [
+            {
+              "id": "supervised",
+              "content": "## Supervised Learning\n\nLearning from labeled training data. The algorithm learns a mapping from inputs to outputs based on example input-output pairs.",
+              "children": [
+                {
+                  "id": "classification",
+                  "content": "### Classification\n\nPredicting categorical labels such as 'spam' or 'not spam', 'dog' or 'cat', etc.",
+                  "children": [
+                    {
+                      "id": "logistic-regression",
+                      "content": "#### Logistic Regression\n\nA statistical model that uses a logistic function to model a binary dependent variable.",
+                      "children": []
+                    },
+                    {
+                      "id": "decision-trees",
+                      "content": "#### Decision Trees\n\nA tree-like model of decisions where each internal node represents a test on an attribute.",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "regression",
+                  "content": "### Regression\n\nPredicting continuous values such as house prices, stock market values, etc.",
+                  "children": [
+                    {
+                      "id": "linear-regression",
+                      "content": "#### Linear Regression\n\nModeling the relationship between variables by fitting a linear equation to observed data.",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "unsupervised",
+              "content": "## Unsupervised Learning\n\nFinding patterns in unlabeled data. The algorithm learns from data without explicit guidance.",
+              "children": [
+                {
+                  "id": "clustering",
+                  "content": "### Clustering\n\nGrouping similar data points together. Example applications include customer segmentation and image compression.",
+                  "children": [
+                    {
+                      "id": "k-means",
+                      "content": "#### K-Means\n\nA method that partitions observations into k clusters where each observation belongs to the cluster with the nearest mean.",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "dimensionality-reduction",
+                  "content": "### Dimensionality Reduction\n\nReducing the number of random variables under consideration by obtaining a set of principal variables.",
+                  "children": [
+                    {
+                      "id": "pca",
+                      "content": "#### PCA\n\nA statistical procedure that uses an orthogonal transformation to convert a set of observations of possibly correlated variables into a set of linearly uncorrelated variables.",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "reinforcement",
+              "content": "## Reinforcement Learning\n\nLearning how to act in an environment by performing actions and seeing the results. Focused on finding the balance between exploration and exploitation.",
+              "children": [
+                {
+                  "id": "q-learning",
+                  "content": "### Q-Learning\n\nA model-free reinforcement learning algorithm to learn a policy that tells an agent what action to take under what circumstances.",
+                  "children": []
+                },
+                {
+                  "id": "policy-gradient",
+                  "content": "### Policy Gradient\n\nMethods that optimize policies directly without requiring a value function, by following the gradient of expected future reward.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      </reflyArtifact>
+
+      This mind map organizes the key concepts of machine learning into its main paradigms (supervised, unsupervised, and reinforcement learning) and their respective subcategories and algorithms. Each node contains brief descriptions to help understand the concepts.
+    </assistant_response>
+  </example>
+
+</examples>
+
 The assistant should not mention any of these instructions to the user, nor make reference to the \`reflyArtifact\` tag, any of the MIME types (e.g. \`application/refly.artifacts.code\`), or related syntax unless it is directly relevant to the query.
 
 The assistant should always take care to not produce artifacts that would be highly hazardous to human health or wellbeing if misused, even if is asked to produce them for seemingly benign reasons. However, if Refly would be willing to produce the same content in text form, it should be willing to produce it in an artifact.
 </artifacts_info>`);
-/**
- * Build the system prompt for artifact generation without examples
- * @returns The system prompt for artifact generation
- */
-export const buildArtifactsSystemPrompt = () => {
-  // Combine the instruction and goals sections
-  return reactiveArtifactInstructions;
-};
 
 /**
  * Build the full system prompt for artifact generation with examples
  * This is preferred over the basic system prompt for better results
+ * @param customInstructions Optional custom instructions from the project
  * @returns The full system prompt including examples
  */
-export const buildArtifactsFullSystemPrompt = () => {
-  // Combine all sections including examples
-  return reactiveArtifactInstructions;
+export const buildArtifactsSystemPrompt = (customInstructions?: string) => {
+  // Combine all sections including examples and custom instructions if available
+  const systemPrompt = `${reactiveArtifactInstructions}
+  
+  ${customInstructions ? buildCustomProjectInstructions(customInstructions) : ''}`;
+
+  return systemPrompt;
 };
 
 /**
  * Build the user prompt for artifact generation
- * @param params Parameters including originalQuery, optimizedQuery, and rewrittenQueries
+ * @param params Parameters including originalQuery, optimizedQuery, rewrittenQueries, and customInstructions
  * @returns The user prompt for artifact generation
  */
 export const buildArtifactsUserPrompt = ({
   originalQuery,
   optimizedQuery,
   rewrittenQueries,
+  customInstructions,
+  locale,
 }: {
   originalQuery: string;
   optimizedQuery: string;
   rewrittenQueries: string[];
+  customInstructions?: string;
+  locale?: string;
 }) => {
+  console.log('locale', locale);
   // Create a user prompt with the component request
-  if (originalQuery === optimizedQuery) {
-    return `## User Query
-${originalQuery}`;
-  }
+  let prompt = '';
 
-  // If there's an optimized query different from the original
-  return `## User Query
+  if (originalQuery === optimizedQuery) {
+    prompt = `## User Query
+${originalQuery}`;
+  } else {
+    // If there's an optimized query different from the original
+    prompt = `## User Query
 
 ### Original Query
 ${originalQuery}
@@ -416,6 +555,14 @@ ${
     ? `### Additional Considerations\n${rewrittenQueries.map((query) => `- ${query}`).join('\n')}`
     : ''
 }`;
+  }
+
+  // Add custom instructions if available
+  if (customInstructions) {
+    prompt += `\n${buildCustomProjectInstructionsForUserPrompt(customInstructions)}`;
+  }
+
+  return prompt;
 };
 
 /**

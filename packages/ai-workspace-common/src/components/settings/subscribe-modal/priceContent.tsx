@@ -66,7 +66,7 @@ const PlanItem = (props: {
   const getPrice = (plan: SubscriptionPlanType) => {
     switch (plan) {
       case 'max':
-        return interval === 'monthly' ? 24.9 : 249;
+        return interval === 'monthly' ? 19.9 : 199;
       case 'pro':
         return interval === 'monthly' ? 12.9 : 129;
       case 'plus':
@@ -301,8 +301,8 @@ export const PriceContent = (props: { source: PriceSource }) => {
         fileSizeLimit: 20,
       },
       max: {
-        t1Count: 800,
-        t2Count: 8000,
+        t1Count: 600,
+        t2Count: 6000,
         fileLimit: 2000,
         t1Period: 'monthly',
         t2Period: 'monthly',

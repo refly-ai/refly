@@ -29,6 +29,7 @@ export const useGetUserSettings = () => {
   const [loginNotification, _setLoginNotification] = useStorage('refly-login-notify', '', 'sync');
 
   const getLoginStatus = async () => {
+    console.log('[UserSettingsHook] Entering getLoginStatus');
     try {
       let { localSettings, userProfile } = useUserStore.getState();
       const lastStatusIsLogin = !!userProfile?.uid;
@@ -38,7 +39,10 @@ export const useGetUserSettings = () => {
       }
 
       userStore.setIsCheckingLoginStatus(true);
-      const res = await getClient().getSettings();
+      console.log('[UserSettingsHook] About to call getClient().getSettings()');
+      const apiClient = getClient();
+      console.log('[UserSettingsHook] apiClient instance:', apiClient);
+      const res = await apiClient.getSettings();
 
       console.log('loginStatus', res);
 
@@ -97,6 +101,8 @@ export const useGetUserSettings = () => {
       userStore.resetState();
 
       navigate('/login');
+    } finally {
+      console.log('[UserSettingsHook] Exiting getLoginStatus');
     }
   };
 

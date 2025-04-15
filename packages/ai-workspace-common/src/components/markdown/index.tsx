@@ -17,7 +17,7 @@ import { Source } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 
 import { markdownElements } from './plugins';
-import { processWithArtifact } from '@refly-packages/ai-workspace-common/modules/artifacts/utils';
+import { processWithArtifact } from '@refly/utils/artifact';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { MarkdownMode } from './types';
 

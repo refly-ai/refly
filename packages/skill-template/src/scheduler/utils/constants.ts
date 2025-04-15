@@ -33,5 +33,8 @@ export const MAX_OUTPUT_TOKENS_LEVEL1 = 4096;
 export const MAX_OUTPUT_TOKENS_LEVEL2 = 8192;
 export const MAX_OUTPUT_TOKENS_LEVEL3 = 16384;
 
+// max tokens for url sources
+export const MAX_URL_SOURCES_TOKENS = MAX_OUTPUT_TOKENS_LEVEL3 * 2;
+
 // url
 export const MAX_URL_SOURCES_RATIO = 0.3;

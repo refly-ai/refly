@@ -3,17 +3,15 @@ import {
   ActionStep,
   ActionStepMeta,
   Artifact,
+  CodeArtifactType,
   Entity,
   InvokeSkillRequest,
   SkillEvent,
 } from '@refly/openapi-schema';
-import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
-import { LOCALE } from '@refly/common-types';
 import { getRuntime } from '@refly/utils/env';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
-import { showErrorNotification } from '@refly-packages/ai-workspace-common/utils/notification';
 import { useActionResultStore } from '@refly-packages/ai-workspace-common/stores/action-result';
 import { aggregateTokenUsage, genActionResultID } from '@refly-packages/utils/index';
 import {
@@ -26,15 +24,17 @@ import { useActionPolling } from './use-action-polling';
 import { useFindMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-memo';
 import { useUpdateActionResult } from './use-update-action-result';
 import { useSubscriptionUsage } from '../use-subscription-usage';
-import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { getArtifactContentAndAttributes } from '@refly-packages/ai-workspace-common/modules/artifacts/utils';
 import { useFindCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-code-artifact';
 import { useFindImages } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-images';
-import { ARTIFACT_TAG_CLOSED_REGEX } from '@refly-packages/ai-workspace-common/modules/artifacts/const';
+import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@refly/utils/artifact';
 import { useFindWebsite } from './use-find-website';
+import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
+import { useReactFlow } from '@xyflow/react';
+import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
 
 export const useInvokeAction = () => {
   const { addNode } = useAddNode();
+  const { getNodes } = useReactFlow();
   const setNodeDataByEntity = useSetNodeDataByEntity();
 
   const globalAbortControllerRef = { current: null as AbortController | null };
@@ -121,19 +121,12 @@ export const useInvokeAction = () => {
       } = getArtifactContentAndAttributes(content);
 
       // Check if the node exists and create it if not
-      const canvasState = useCanvasStore.getState();
-      const currentCanvasId = canvasState.currentCanvasId;
-
-      // Skip if no active canvas
-      if (!currentCanvasId) return;
-
-      const canvasData = canvasState.data[currentCanvasId];
-      const existingNode = canvasData?.nodes?.find(
+      const currentNodes = getNodes();
+      const existingNode = currentNodes?.find(
         (node) => node.data?.entityId === artifact.entityId && node.type === artifact.type,
       );
 
-      // Check if artifact is closed using the ARTIFACT_TAG_CLOSED_REGEX
-      const isArtifactClosed = ARTIFACT_TAG_CLOSED_REGEX.test(content);
+      const actualType = detectActualTypeFromType(type as CodeArtifactType);
 
       // If node doesn't exist, create it
       if (!existingNode) {
@@ -144,14 +137,11 @@ export const useInvokeAction = () => {
               // Use extracted title if available, fallback to artifact.title
               title: title || artifact.title,
               entityId: artifact.entityId,
-              contentPreview: codeContent, // Set content preview for code artifact
               metadata: {
                 status: 'generating',
                 language: language || 'typescript', // Use extracted language or default
-                type: type || '', // Use extracted type if available
+                type: actualType || 'text/markdown', // Use extracted type if available
                 title: title || artifact?.title || '',
-                // If artifact is closed, set activeTab to preview
-                ...(isArtifactClosed && { activeTab: 'preview' }),
               },
             },
           },
@@ -162,29 +152,22 @@ export const useInvokeAction = () => {
             },
           ],
         );
-      } else {
-        // Update existing node with new content and attributes
-        setNodeDataByEntity(
-          {
-            type: artifact.type,
-            entityId: artifact.entityId,
-          },
-          {
-            // Update title if available from extracted attributes
-            ...(title && { title }),
-            contentPreview: codeContent, // Update content preview
-            metadata: {
-              status: 'generating',
-              // Update language and type if available from extracted attributes
-              ...(language && { language }),
-              ...(type && { type }),
-              title: title || artifact?.title || '',
-              // If artifact is closed, set activeTab to preview
-              ...(isArtifactClosed && { activeTab: 'preview' }),
-            },
-          },
-        );
       }
+
+      // Check if artifact is closed using the ARTIFACT_TAG_CLOSED_REGEX
+      const isArtifactClosed = ARTIFACT_TAG_CLOSED_REGEX.test(content);
+      if (isArtifactClosed) {
+        codeArtifactEmitter.emit('statusUpdate', {
+          artifactId: artifact.entityId,
+          status: 'finish',
+          type: actualType || 'text/markdown',
+        });
+      }
+
+      codeArtifactEmitter.emit('contentUpdate', {
+        artifactId: artifact.entityId,
+        content: codeContent,
+      });
     }
   };
 
@@ -375,11 +358,7 @@ export const useInvokeAction = () => {
 
   const onSkillError = (skillEvent: SkillEvent) => {
     const runtime = getRuntime();
-    const { localSettings } = useUserStore.getState();
-    const locale = localSettings?.uiLocale as LOCALE;
-
-    const { error, resultId } = skillEvent;
-    showErrorNotification(error, locale);
+    const { originError, resultId } = skillEvent;
 
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
@@ -391,7 +370,7 @@ export const useInvokeAction = () => {
     const updatedResult = {
       ...result,
       status: 'failed' as const,
-      errors: [error?.errMsg],
+      errors: [originError],
     };
     onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
 
@@ -406,7 +385,7 @@ export const useInvokeAction = () => {
       }
     }
 
-    abortAction(error?.errMsg);
+    abortAction(originError);
   };
 
   const abortAction = useCallback(
@@ -429,128 +408,133 @@ export const useInvokeAction = () => {
   const findCodeArtifact = useFindCodeArtifact();
   const findImages = useFindImages();
 
-  const invokeAction = (payload: SkillNodeMeta, target: Entity) => {
-    payload.resultId ||= genActionResultID();
-    payload.selectedSkill ||= { name: 'commonQnA' };
+  const invokeAction = useCallback(
+    (payload: SkillNodeMeta, target: Entity) => {
+      payload.resultId ||= genActionResultID();
+      payload.selectedSkill ||= { name: 'commonQnA' };
 
-    const {
-      query,
-      modelInfo,
-      contextItems,
-      selectedSkill,
-      resultId,
-      version = 0,
-      tplConfig = {},
-      runtimeConfig = {},
-    } = payload;
-    const { context, resultHistory, images } = convertContextItemsToInvokeParams(
-      contextItems,
-      (item) =>
-        findThreadHistory({ resultId: item.entityId }).map((node) => ({
-          title: node.data?.title,
-          resultId: node.data?.entityId,
-        })),
-      (item) => {
-        if (item.type === 'memo') {
-          return findMemo({ resultId: item.entityId }).map((node) => ({
-            content: node.data?.contentPreview ?? '',
-            title: node.data?.title ?? 'Memo',
-          }));
-        }
-        return [];
-      },
-      (item) => {
-        if (item.type === 'codeArtifact') {
-          return findCodeArtifact({ resultId: item.entityId }).map((node) => ({
-            content: node.data?.contentPreview ?? '',
-            title: node.data?.title ?? 'Code',
-          }));
-        }
-        return [];
-      },
-      (item) => {
-        if (item.type === 'image') {
-          return findImages({ resultId: item.entityId });
-        }
-        return [];
-      },
-      (item) => {
-        if (item.type === 'website') {
-          return findWebsite({ resultId: item.entityId }).map((node) => ({
-            url: node.data?.metadata?.url ?? '',
-            title: node.data?.title ?? 'Website',
-          }));
-        }
-        return [];
-      },
-    );
-
-    const param: InvokeSkillRequest = {
-      resultId,
-      input: {
+      const {
         query,
-        images,
-      },
-      target,
-      modelName: modelInfo?.name,
-      context,
-      resultHistory,
-      skillName: selectedSkill?.name,
-      tplConfig,
-      runtimeConfig,
-    };
+        modelInfo,
+        contextItems,
+        selectedSkill,
+        resultId,
+        version = 0,
+        tplConfig = {},
+        runtimeConfig = {},
+        projectId,
+      } = payload;
+      const { context, resultHistory, images } = convertContextItemsToInvokeParams(
+        contextItems,
+        (item) =>
+          findThreadHistory({ resultId: item.entityId }).map((node) => ({
+            title: node.data?.title,
+            resultId: node.data?.entityId,
+          })),
+        (item) => {
+          if (item.type === 'memo') {
+            return findMemo({ resultId: item.entityId }).map((node) => ({
+              content: node.data?.contentPreview ?? '',
+              title: node.data?.title ?? 'Memo',
+            }));
+          }
+          return [];
+        },
+        (item) => {
+          if (item.type === 'codeArtifact') {
+            return findCodeArtifact({ resultId: item.entityId }).map((node) => ({
+              content: node.data?.contentPreview ?? '',
+              title: node.data?.title ?? 'Code',
+            }));
+          }
+          return [];
+        },
+        (item) => {
+          if (item.type === 'image') {
+            return findImages({ resultId: item.entityId });
+          }
+          return [];
+        },
+        (item) => {
+          if (item.type === 'website') {
+            return findWebsite({ resultId: item.entityId }).map((node) => ({
+              url: node.data?.metadata?.url ?? '',
+              title: node.data?.title ?? 'Website',
+            }));
+          }
+          return [];
+        },
+      );
 
-    onUpdateResult(resultId, {
-      resultId,
-      version,
-      type: 'skill',
-      actionMeta: selectedSkill,
-      modelInfo,
-      title: query,
-      targetId: target?.entityId,
-      targetType: target?.entityType,
-      context,
-      history: resultHistory,
-      tplConfig,
-      runtimeConfig,
-      status: 'waiting',
-      steps: [],
-      errors: [],
-    });
-
-    globalAbortControllerRef.current = new AbortController();
-
-    // Create timeout handler for this action
-    const { resetTimeout, cleanup } = createTimeoutHandler(resultId, version);
-
-    // Wrap event handlers to reset timeout
-    const wrapEventHandler =
-      (handler: (...args: any[]) => void) =>
-      (...args: any[]) => {
-        resetTimeout();
-        handler(...args);
+      const param: InvokeSkillRequest = {
+        resultId,
+        input: {
+          query,
+          images,
+        },
+        target,
+        modelName: modelInfo?.name,
+        context,
+        resultHistory,
+        skillName: selectedSkill?.name,
+        tplConfig,
+        runtimeConfig,
+        projectId,
       };
 
-    resetTimeout();
+      onUpdateResult(resultId, {
+        resultId,
+        version,
+        type: 'skill',
+        actionMeta: selectedSkill,
+        modelInfo,
+        title: query,
+        targetId: target?.entityId,
+        targetType: target?.entityType,
+        context,
+        history: resultHistory,
+        tplConfig,
+        runtimeConfig,
+        status: 'waiting',
+        steps: [],
+        errors: [],
+      });
 
-    ssePost({
-      controller: globalAbortControllerRef.current,
-      payload: param,
-      onStart: wrapEventHandler(onStart),
-      onSkillStart: wrapEventHandler(onSkillStart),
-      onSkillStream: wrapEventHandler(onSkillStream),
-      onSkillLog: wrapEventHandler(onSkillLog),
-      onSkillArtifact: wrapEventHandler(onSkillArtifact),
-      onSkillStructedData: wrapEventHandler(onSkillStructedData),
-      onSkillCreateNode: wrapEventHandler(onSkillCreateNode),
-      onSkillEnd: wrapEventHandler(onSkillEnd),
-      onCompleted: wrapEventHandler(onCompleted),
-      onSkillError: wrapEventHandler(onSkillError),
-      onSkillTokenUsage: wrapEventHandler(onSkillTokenUsage),
-    });
+      globalAbortControllerRef.current = new AbortController();
 
-    return cleanup;
-  };
+      // Create timeout handler for this action
+      const { resetTimeout, cleanup } = createTimeoutHandler(resultId, version);
+
+      // Wrap event handlers to reset timeout
+      const wrapEventHandler =
+        (handler: (...args: any[]) => void) =>
+        (...args: any[]) => {
+          resetTimeout();
+          handler(...args);
+        };
+
+      resetTimeout();
+
+      ssePost({
+        controller: globalAbortControllerRef.current,
+        payload: param,
+        onStart: wrapEventHandler(onStart),
+        onSkillStart: wrapEventHandler(onSkillStart),
+        onSkillStream: wrapEventHandler(onSkillStream),
+        onSkillLog: wrapEventHandler(onSkillLog),
+        onSkillArtifact: wrapEventHandler(onSkillArtifact),
+        onSkillStructedData: wrapEventHandler(onSkillStructedData),
+        onSkillCreateNode: wrapEventHandler(onSkillCreateNode),
+        onSkillEnd: wrapEventHandler(onSkillEnd),
+        onCompleted: wrapEventHandler(onCompleted),
+        onSkillError: wrapEventHandler(onSkillError),
+        onSkillTokenUsage: wrapEventHandler(onSkillTokenUsage),
+      });
+
+      return cleanup;
+    },
+    [addNode, setNodeDataByEntity, onUpdateResult, createTimeoutHandler],
+  );
 
   return { invokeAction, abortAction };
 };

@@ -11,6 +11,9 @@ const POLLING_INTERVAL = 3000;
 const TIMEOUT_DURATION = 10000;
 const MAX_NOT_FOUND_RETRIES = 3;
 
+// Track globally failed result IDs to prevent auto-restarting polling for failed actions
+const failedResultIds = new Set<string>();
+
 export const useActionPolling = () => {
   const {
     startPolling: startPollingState,
@@ -68,6 +71,7 @@ export const useActionPolling = () => {
             if (newErrorCount >= MAX_NOT_FOUND_RETRIES) {
               stopPolling(resultId);
               const currentResult = resultMap[resultId];
+              failedResultIds.add(resultId);
               onUpdateResult(resultId, {
                 ...currentResult,
                 status: 'failed',
@@ -84,9 +88,16 @@ export const useActionPolling = () => {
 
           const status = result.data?.status;
 
-          if (status === 'finish' || status === 'failed') {
+          if (status === 'finish') {
             onUpdateResult(resultId, result.data);
             stopPolling(resultId);
+            return;
+          }
+
+          if (status === 'failed') {
+            onUpdateResult(resultId, result.data);
+            stopPolling(resultId);
+            failedResultIds.add(resultId);
             return;
           }
         }
@@ -109,8 +120,14 @@ export const useActionPolling = () => {
 
   const startPolling = useCallback(
     async (resultId: string, version: number) => {
-      const { pollingStateMap } = useActionResultStore.getState();
+      const { pollingStateMap, resultMap } = useActionResultStore.getState();
       const pollingState = pollingStateMap[resultId];
+      const currentResult = resultMap[resultId];
+
+      // Don't restart polling for results that are already marked as failed
+      if (failedResultIds.has(resultId) || currentResult?.status === 'failed') {
+        return;
+      }
 
       if (pollingState?.isPolling) {
         return;
@@ -124,6 +141,10 @@ export const useActionPolling = () => {
     },
     [clearTimeoutState, startPollingState, pollActionResult],
   );
+
+  const resetFailedState = useCallback((resultId: string) => {
+    failedResultIds.delete(resultId);
+  }, []);
 
   // Cleanup all polling on unmount
   useEffect(() => {
@@ -145,7 +166,13 @@ export const useActionPolling = () => {
 
         timeoutId = setTimeout(() => {
           const result = useActionResultStore.getState().resultMap[resultId];
-          if (result?.status !== 'finish' && result?.status !== 'failed') {
+
+          // Don't restart polling for failed results via timeout
+          if (failedResultIds.has(resultId) || result?.status === 'failed') {
+            return;
+          }
+
+          if (result?.status !== 'finish') {
             console.log('start polling', resultId, result);
             startPolling(resultId, version);
           }
@@ -167,19 +194,13 @@ export const useActionPolling = () => {
         },
       };
     },
-    [
-      startTimeout,
-      updateLastEventTime,
-      startPolling,
-      onUpdateResult,
-      clearTimeoutState,
-      stopPolling,
-    ],
+    [startTimeout, updateLastEventTime, startPolling, clearTimeoutState, stopPolling],
   );
 
   return {
     startPolling,
     stopPolling,
     createTimeoutHandler,
+    resetFailedState,
   };
 };

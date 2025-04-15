@@ -29,8 +29,7 @@
     "composite": true,
     "noEmit": false,
     "declaration": true,
-    "declarationMap": true,
-    "declarationDir": "./dist"
+    "declarationMap": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

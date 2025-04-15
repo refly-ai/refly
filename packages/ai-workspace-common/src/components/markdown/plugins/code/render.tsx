@@ -4,15 +4,14 @@ import { Button, Tooltip } from 'antd';
 import copyToClipboard from 'copy-to-clipboard';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
-import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genUniqueId } from '@refly-packages/utils/id';
-import { CodeArtifactType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/types';
+import { CodeArtifactType } from '@refly/openapi-schema';
 import { IconCopy, IconCode, IconEye } from '@arco-design/web-react/icon';
 import { cn } from '@refly/utils';
 import MermaidComponent from '../mermaid/render';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
 import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { MarkdownMode } from '../../types';
+import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 
 // Language mapping for Monaco editor
 const mapToMonacoLanguage = (lang: string): string => {
@@ -97,67 +96,35 @@ const PreCode = React.memo(
       [dataCodeType],
     );
 
-    // Initialize add node hook only if interactive and not readonly
-    const { addNode } = isInteractive ? useAddNode() : { addNode: undefined };
-
     // Handle copy button click
     const handleCopy = useCallback(() => {
       copyToClipboard(codeContent);
       message.success(t('components.markdown.copySuccess'));
     }, [codeContent, t]);
 
+    const createCodeArtifact = useCreateCodeArtifact();
+
     // Handle creating a code artifact node
     const handleCreateCodeArtifact = useCallback(() => {
-      if (!codeContent) {
-        message.error(t('components.markdown.emptyCode', 'Cannot create empty code artifact'));
+      if (!isInteractive) {
         return;
       }
 
-      if (!addNode || !isInteractive) {
-        return;
-      }
+      // Determine if this is mermaid content and set appropriate defaults
+      const isMermaidDiagram =
+        isMermaid || codeType === 'application/refly.artifacts.mermaid' || language === 'mermaid';
+      const artifactType = isMermaidDiagram ? 'application/refly.artifacts.mermaid' : codeType;
+      const artifactLanguage = isMermaidDiagram ? 'mermaid' : language;
+      const title = isMermaidDiagram ? 'Mermaid Diagram' : `Code (${language})`;
 
-      try {
-        const nodeId = `code-artifact-${genUniqueId()}`;
-
-        // Determine if this is mermaid content and set appropriate defaults
-        const isMermaidDiagram =
-          isMermaid || codeType === 'application/refly.artifacts.mermaid' || language === 'mermaid';
-        const artifactType = isMermaidDiagram ? 'application/refly.artifacts.mermaid' : codeType;
-        const artifactLanguage = isMermaidDiagram ? 'mermaid' : language;
-        const activeTab = isMermaidDiagram ? 'preview' : 'code';
-        const title = isMermaidDiagram ? 'Mermaid Diagram' : `Code (${language})`;
-
-        // Create node data
-        addNode(
-          {
-            type: 'codeArtifact',
-            data: {
-              entityId: nodeId,
-              title,
-              contentPreview: codeContent,
-              metadata: {
-                code: codeContent,
-                language: artifactLanguage,
-                type: artifactType,
-                activeTab,
-                width: 600,
-                height: 400,
-                status: 'finished',
-              },
-            },
-          },
-          id ? [{ type: 'skillResponse', entityId: id }] : undefined,
-          false,
-          true,
-        );
-
-        message.success(t('components.markdown.codeArtifactCreated', 'Code artifact created'));
-      } catch (error) {
-        console.error('Error creating code artifact:', error);
-        message.error(t('components.markdown.codeArtifactError', 'Error creating code artifact'));
-      }
-    }, [language, codeType, addNode, id, t, codeContent, isInteractive, isMermaid]);
+      createCodeArtifact({
+        codeContent,
+        language: artifactLanguage,
+        type: artifactType,
+        title,
+        connectTo: [{ type: 'skillResponse', entityId: id }],
+      });
+    }, [language, codeType, id, t, codeContent, isInteractive, isMermaid]);
 
     // Toggle between code and preview mode
     const toggleViewMode = useCallback(() => {

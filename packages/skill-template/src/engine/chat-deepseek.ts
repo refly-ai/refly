@@ -433,24 +433,26 @@ export class ChatDeepSeek extends ChatOpenAI<ChatDeepSeekCallOptions> {
       );
     }
 
+    // Directly pass merged configuration, assuming caller provided correct baseURL
     super({
       ...fields,
-      apiKey,
+      apiKey, // Use the resolved apiKey from line 429
       configuration: {
-        baseURL: 'https://api.deepseek.com',
-        ...fields?.configuration,
+        // No default baseURL here! Rely on fields.configuration.baseURL set by caller (chatModel)
+        ...(fields?.configuration || {}),
       },
       modelKwargs: {
         include_reasoning: fields?.include_reasoning || undefined,
         reasoning: fields?.include_reasoning ? { max_tokens: MAX_OUTPUT_TOKENS_LEVEL0 } : undefined,
       },
     });
+    // Removed the previous console.log statement
   }
 
   protected override _convertOpenAIDeltaToBaseMessageChunk(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delta: Record<string, any>,
-    rawResponse: OpenAIClient.ChatCompletionChunk,
+    rawResponse: OpenAIClient.ChatCompletionChunk, // Original line 453
     defaultRole?: 'function' | 'user' | 'system' | 'developer' | 'assistant' | 'tool',
   ) {
     const messageChunk = super._convertOpenAIDeltaToBaseMessageChunk(

@@ -9,7 +9,6 @@ import {
 
 import { handleCommandNavigation } from '@refly-packages/ai-workspace-common/components/editor/core/extensions';
 import { defaultExtensions } from '@refly-packages/ai-workspace-common/components/editor/components/extensions';
-import { getHierarchicalIndexes, TableOfContents } from '@tiptap-pro/extension-table-of-contents';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import UpdatedImage from '@refly-packages/ai-workspace-common/components/editor/core/extensions/updated-image';
@@ -82,12 +81,7 @@ export const ReadonlyEditor = memo(
 
       const filteredExtensions = defaultExtensions.filter((ext) => ext.name !== 'image');
 
-      return [
-        ...filteredExtensions,
-        centeredImage,
-        Markdown,
-        TableOfContents.configure({ getIndex: getHierarchicalIndexes }),
-      ];
+      return [...filteredExtensions, centeredImage, Markdown];
     }, [docId]);
 
     useEffect(() => {

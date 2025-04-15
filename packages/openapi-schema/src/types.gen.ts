@@ -347,6 +347,7 @@ export type EntityType =
   | 'canvas'
   | 'share'
   | 'user'
+  | 'project'
   | 'skillResponse'
   | 'codeArtifact';
 
@@ -362,6 +363,66 @@ export type Entity = {
    * Entity type
    */
   entityType?: EntityType;
+};
+
+/**
+ * Project source
+ */
+export type ProjectSource = {
+  /**
+   * Entity ID
+   */
+  entityId?: string;
+  /**
+   * Entity type
+   */
+  entityType?: EntityType;
+  /**
+   * Project title
+   */
+  title?: string;
+  /**
+   * Project creation time
+   */
+  createdAt?: string;
+  /**
+   * Project update time
+   */
+  updatedAt?: string;
+};
+
+/**
+ * Project
+ */
+export type Project = {
+  /**
+   * Project ID
+   */
+  projectId: string;
+  /**
+   * Project name
+   */
+  name: string;
+  /**
+   * Project description
+   */
+  description?: string;
+  /**
+   * Project cover URL
+   */
+  coverUrl?: string;
+  /**
+   * Custom instructions for the project
+   */
+  customInstructions?: string;
+  /**
+   * Project creation time
+   */
+  createdAt?: string;
+  /**
+   * Project update time
+   */
+  updatedAt?: string;
 };
 
 /**
@@ -932,11 +993,6 @@ export type SearchStep = {
 };
 
 /**
- * Chat message type
- */
-export type MessageType = 'ai' | 'human' | 'system';
-
-/**
  * Model tier
  */
 export type ModelTier = 't1' | 't2' | 'free';
@@ -1002,6 +1058,24 @@ export type Artifact = {
    * Artifact status
    */
   status?: ArtifactStatus;
+  /**
+   * Artifact content
+   */
+  content?: string;
+  /**
+   * Artifact metadata
+   */
+  metadata?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Artifact creation time
+   */
+  createdAt?: string;
+  /**
+   * Artifact update time
+   */
+  updatedAt?: string;
 };
 
 /**
@@ -1070,6 +1144,46 @@ export type ActionStep = {
    * Token usage
    */
   tokenUsage?: Array<TokenUsageItem>;
+};
+
+/**
+ * Code artifact type
+ */
+export type CodeArtifactType =
+  | 'application/refly.artifacts.react'
+  | 'image/svg+xml'
+  | 'application/refly.artifacts.mermaid'
+  | 'text/markdown'
+  | 'application/refly.artifacts.code'
+  | 'text/html'
+  | 'application/refly.artifacts.mindmap';
+
+/**
+ * Code artifact
+ */
+export type CodeArtifact = {
+  /**
+   * Artifact type
+   */
+  type: CodeArtifactType;
+  /**
+   * Artifact ID
+   */
+  artifactId: string;
+  /**
+   * Artifact title
+   */
+  title: string;
+  /**
+   * Code artifact content
+   */
+  content?: string;
+  /**
+   * Code artifact language
+   */
+  language?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 /**
@@ -1661,6 +1775,10 @@ export type DuplicateCanvasRequest = {
    */
   title?: string;
   /**
+   * Project ID to bind with
+   */
+  projectId?: string;
+  /**
    * Whether to duplicate entities within the canvas
    */
   duplicateEntities?: boolean;
@@ -1697,6 +1815,10 @@ export type UpsertCanvasRequest = {
    * Canvas ID (only used for update)
    */
   canvasId?: string;
+  /**
+   * Project ID to bind with
+   */
+  projectId?: string;
   /**
    * Minimap storage key
    */
@@ -1826,6 +1948,10 @@ export type UpsertResourceRequest = {
    */
   resourceId?: string;
   /**
+   * Project ID to bind with
+   */
+  projectId?: string;
+  /**
    * Resource metadata
    */
   data?: ResourceMeta;
@@ -1909,6 +2035,10 @@ export type UpsertDocumentRequest = {
    */
   docId?: string;
   /**
+   * Project ID to bind with
+   */
+  projectId?: string;
+  /**
    * Whether this document is read-only
    */
   readOnly?: boolean;
@@ -1980,6 +2110,82 @@ export type DeleteReferencesRequest = {
   referenceIds: Array<string>;
 };
 
+export type ListProjectResponse = BaseResponse & {
+  /**
+   * Project list
+   */
+  data?: Array<Project>;
+};
+
+export type GetProjectDetailResponse = BaseResponse & {
+  data?: Project;
+};
+
+export type UpsertProjectRequest = {
+  /**
+   * Project ID (only used for update)
+   */
+  projectId?: string;
+  /**
+   * Project name
+   */
+  name?: string;
+  /**
+   * Project description
+   */
+  description?: string;
+  /**
+   * Project cover storage key
+   */
+  coverStorageKey?: string;
+  /**
+   * Custom instructions
+   */
+  customInstructions?: string;
+};
+
+export type UpsertProjectResponse = BaseResponse & {
+  data?: Project;
+};
+
+export type UpdateProjectItemsRequest = {
+  /**
+   * Project ID
+   */
+  projectId?: string;
+  /**
+   * Operation type
+   */
+  operation?: 'add' | 'remove';
+  /**
+   * Item list
+   */
+  items?: Array<Entity>;
+};
+
+/**
+ * Operation type
+ */
+export type operation = 'add' | 'remove';
+
+export type DeleteProjectRequest = {
+  /**
+   * Project ID to delete
+   */
+  projectId: string;
+};
+
+export type DeleteProjectItemsRequest = {
+  /**
+   * Project ID
+   */
+  projectId: string;
+  /**
+   * Item list
+   */
+  items: Array<Entity>;
+};
+
 /**
  * Skill event type
  */
@@ -2047,8 +2253,13 @@ export type SkillEvent = {
   node?: CanvasNode;
   /**
    * Error data. Only present when `event` is `error`.
+   * @deprecated
    */
   error?: BaseResponse;
+  /**
+   * Original error message. Only present when `event` is `error`.
+   */
+  originError?: string;
 };
 
 export type ShareRecord = {
@@ -2088,6 +2299,45 @@ export type ShareRecord = {
    * Update timestamp
    */
   updatedAt?: string;
+};
+
+export type UpsertCodeArtifactRequest = {
+  /**
+   * Code artifact ID (not needed for creation)
+   */
+  artifactId?: string;
+  /**
+   * Code artifact title
+   */
+  title?: string;
+  /**
+   * Code artifact type
+   */
+  type?: string;
+  /**
+   * Code artifact content
+   */
+  content?: string;
+  /**
+   * Code artifact language
+   */
+  language?: string;
+  /**
+   * Code artifact preview storage key
+   */
+  previewStorageKey?: string;
+  /**
+   * Whether to create the code artifact if it does not exist
+   */
+  createIfNotExists?: boolean;
+};
+
+export type UpsertCodeArtifactResponse = BaseResponse & {
+  data?: CodeArtifact;
+};
+
+export type GetCodeArtifactDetailResponse = BaseResponse & {
+  data?: CodeArtifact;
 };
 
 export type CreateShareRequest = {
@@ -2634,6 +2884,10 @@ export type InvokeSkillRequest = {
    */
   target?: Entity;
   /**
+   * Project ID
+   */
+  projectId?: string;
+  /**
    * Result ID associated with this invocation.
    * 1) If not provided, a new resultId will be generated.
    * 2) If there is no existing result with this resultId, it will be created and run.
@@ -2760,6 +3014,10 @@ export type UpdateUserSettingsRequest = {
    * User avatar
    */
   avatar?: string;
+  /**
+   * User avatar storage key
+   */
+  avatarStorageKey?: string;
   /**
    * UI locale
    */
@@ -3025,6 +3283,10 @@ export type SearchRequest = {
    */
   mode?: SearchMode;
   /**
+   * Project ID
+   */
+  projectId?: string;
+  /**
    * Search result limit for each domain
    */
   limit?: number;
@@ -3280,7 +3542,8 @@ export type CanvasNodeType =
   | 'toolResponse'
   | 'memo'
   | 'group'
-  | 'image';
+  | 'image'
+  | 'mindMap';
 
 export type CanvasNodeData = {
   /**
@@ -3381,6 +3644,10 @@ export type ListCanvasesData = {
      * Page size
      */
     pageSize?: number;
+    /**
+     * Related project ID
+     */
+    projectId?: string;
   };
 };
 
@@ -3539,6 +3806,10 @@ export type ListResourcesData = {
      */
     pageSize?: number;
     /**
+     * Related project ID
+     */
+    projectId?: string;
+    /**
      * Resource ID
      */
     resourceId?: string;
@@ -3658,6 +3929,10 @@ export type ListDocumentsData = {
      * Page size
      */
     pageSize?: number;
+    /**
+     * Related project ID
+     */
+    projectId?: string;
   };
 };
 
@@ -3739,6 +4014,109 @@ export type DeleteReferencesData = {
 export type DeleteReferencesResponse = unknown;
 
 export type DeleteReferencesError = unknown;
+
+export type ListProjectsData = {
+  query?: {
+    /**
+     * Order by
+     */
+    order?: ListOrder;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+  };
+};
+
+export type ListProjectsResponse = ListProjectResponse;
+
+export type ListProjectsError = unknown;
+
+export type GetProjectDetailData = {
+  query: {
+    /**
+     * Project ID
+     */
+    projectId: string;
+  };
+};
+
+export type GetProjectDetailResponse2 = GetProjectDetailResponse;
+
+export type GetProjectDetailError = unknown;
+
+export type CreateProjectData = {
+  body: UpsertProjectRequest;
+};
+
+export type CreateProjectResponse = UpsertProjectResponse;
+
+export type CreateProjectError = unknown;
+
+export type UpdateProjectData = {
+  body: UpsertProjectRequest;
+};
+
+export type UpdateProjectResponse = UpsertProjectResponse;
+
+export type UpdateProjectError = unknown;
+
+export type UpdateProjectItemsData = {
+  body: UpdateProjectItemsRequest;
+};
+
+export type UpdateProjectItemsResponse = BaseResponse;
+
+export type UpdateProjectItemsError = unknown;
+
+export type DeleteProjectData = {
+  body: DeleteProjectRequest;
+};
+
+export type DeleteProjectResponse = BaseResponse;
+
+export type DeleteProjectError = unknown;
+
+export type DeleteProjectItemsData = {
+  body: DeleteProjectItemsRequest;
+};
+
+export type DeleteProjectItemsResponse = BaseResponse;
+
+export type DeleteProjectItemsError = unknown;
+
+export type GetCodeArtifactDetailData = {
+  query: {
+    /**
+     * Artifact ID
+     */
+    artifactId: string;
+  };
+};
+
+export type GetCodeArtifactDetailResponse2 = GetCodeArtifactDetailResponse;
+
+export type GetCodeArtifactDetailError = unknown;
+
+export type CreateCodeArtifactData = {
+  body: UpsertCodeArtifactRequest;
+};
+
+export type CreateCodeArtifactResponse = UpsertCodeArtifactResponse;
+
+export type CreateCodeArtifactError = unknown;
+
+export type UpdateCodeArtifactData = {
+  body: UpsertCodeArtifactRequest;
+};
+
+export type UpdateCodeArtifactResponse = UpsertCodeArtifactResponse;
+
+export type UpdateCodeArtifactError = unknown;
 
 export type CreateShareData = {
   body: CreateShareRequest;

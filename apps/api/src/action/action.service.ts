@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { ActionResultNotFoundError } from '@refly-packages/errors';
 import { ActionResult } from '@prisma/client';
 import { EntityType, GetActionResultData, User } from '@refly-packages/openapi-schema';
-import { genActionResultID, pick } from '@refly-packages/utils';
+import { batchReplaceRegex, genActionResultID, pick } from '@refly-packages/utils';
 import pLimit from 'p-limit';
 
 @Injectable()
@@ -112,11 +112,13 @@ export class ActionService {
     // Process each original result in parallel
     const newResultsPromises = filteredOriginalResults.map((originalResult) =>
       limit(async () => {
+        const { resultId, version, context, history } = originalResult;
+
         // Check if the user has access to the result
         if (options?.checkOwnership && user.uid !== originalResult.uid) {
           const shareCnt = await this.prisma.shareRecord.count({
             where: {
-              entityId: originalResult.resultId,
+              entityId: resultId,
               entityType: 'skillResponse',
               deletedAt: null,
             },
@@ -127,41 +129,17 @@ export class ActionService {
           }
         }
 
-        const newResultId = replaceEntityMap[originalResult.resultId];
+        const newResultId = replaceEntityMap[resultId];
 
         // Get the original steps
         const originalSteps = await this.prisma.actionStep.findMany({
           where: {
-            resultId: originalResult.resultId,
-            version: originalResult.version,
+            resultId,
+            version,
             deletedAt: null,
           },
           orderBy: { order: 'asc' },
         });
-
-        // Process content with replaceEntityMap if needed
-        let processedContext = originalResult.context;
-        let processedHistory = originalResult.history;
-
-        // Apply entity replacements if needed
-        if (replaceEntityMap && Object.keys(replaceEntityMap).length > 0) {
-          try {
-            // Replace entity IDs in context if it's a string
-            if (typeof processedContext === 'string') {
-              for (const [oldId, newId] of Object.entries(replaceEntityMap)) {
-                processedContext = processedContext.replace(new RegExp(oldId, 'g'), newId);
-              }
-            }
-            // Replace entity IDs in history if it's a string
-            if (typeof processedHistory === 'string') {
-              for (const [oldId, newId] of Object.entries(replaceEntityMap)) {
-                processedHistory = processedHistory.replace(new RegExp(oldId, 'g'), newId);
-              }
-            }
-          } catch (error) {
-            console.error('Error applying entity replacements:', error);
-          }
-        }
 
         // Create new action result with a new resultId
         const newResult = await this.prisma.actionResult.create({
@@ -179,13 +157,13 @@ export class ActionService {
               'status',
               'errors',
             ]),
-            context: processedContext,
-            history: processedHistory,
+            context: batchReplaceRegex(JSON.stringify(context), replaceEntityMap),
+            history: batchReplaceRegex(JSON.stringify(history), replaceEntityMap),
             resultId: newResultId,
             uid: user.uid,
             targetId,
             targetType,
-            duplicateFrom: originalResult.resultId,
+            duplicateFrom: resultId,
             version: 0, // Reset version to 0 for the new duplicate
           },
         });
@@ -201,10 +179,10 @@ export class ActionService {
                 'reasoningContent',
                 'structuredData',
                 'logs',
-                'artifacts',
                 'tokenUsage',
               ]),
               resultId: newResult.resultId,
+              artifacts: batchReplaceRegex(JSON.stringify(step.artifacts), replaceEntityMap),
               version: 0, // Reset version to 0 for the new duplicate
             })),
           });

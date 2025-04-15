@@ -11,6 +11,7 @@ interface ResourceDocument {
   createdAt?: string;
   updatedAt?: string;
   uid: string;
+  projectId?: string;
 }
 
 interface DocumentDocument {
@@ -20,6 +21,7 @@ interface DocumentDocument {
   createdAt?: string;
   updatedAt?: string;
   uid: string;
+  projectId?: string;
 }
 
 interface CanvasDocument {
@@ -28,6 +30,7 @@ interface CanvasDocument {
   createdAt?: string;
   updatedAt?: string;
   uid: string;
+  projectId?: string;
 }
 
 const commonSettings = {
@@ -172,6 +175,7 @@ export class ElasticsearchService implements OnModuleInit {
           doc: document,
           doc_as_upsert: true,
         },
+        retry_on_conflict: 3,
       });
       this.logger.log(`Document upserted successfully, index: ${index}, id: ${document.id}`);
       return result;
@@ -286,7 +290,7 @@ export class ElasticsearchService implements OnModuleInit {
   }
 
   async searchResources(user: User, req: SearchRequest) {
-    const { query, limit, entities } = req;
+    const { query, limit, entities, projectId } = req;
     const { body } = await this.client.search<SearchResponse<ResourceDocument>>({
       index: indexConfig.resource.index,
       body: {
@@ -305,6 +309,9 @@ export class ElasticsearchService implements OnModuleInit {
             ...(entities?.length > 0 && {
               filter: [{ terms: { _id: entities.map((entity) => entity.entityId) } }],
             }),
+            ...(projectId && {
+              filter: [{ term: { projectId } }],
+            }),
           },
         },
         size: limit,
@@ -321,7 +328,7 @@ export class ElasticsearchService implements OnModuleInit {
   }
 
   async searchDocuments(user: User, req: SearchRequest) {
-    const { query, limit, entities } = req;
+    const { query, limit, entities, projectId } = req;
     const { body } = await this.client.search<SearchResponse<DocumentDocument>>({
       index: indexConfig.document.index,
       body: {
@@ -340,6 +347,9 @@ export class ElasticsearchService implements OnModuleInit {
             ...(entities?.length > 0 && {
               filter: [{ terms: { _id: entities.map((entity) => entity.entityId) } }],
             }),
+            ...(projectId && {
+              filter: [{ term: { projectId } }],
+            }),
           },
         },
         size: limit,
@@ -356,7 +366,7 @@ export class ElasticsearchService implements OnModuleInit {
   }
 
   async searchCanvases(user: User, req: SearchRequest) {
-    const { query, limit, entities } = req;
+    const { query, limit, entities, projectId } = req;
     const { body } = await this.client.search<SearchResponse<CanvasDocument>>({
       index: indexConfig.canvas.index,
       body: {
@@ -374,6 +384,9 @@ export class ElasticsearchService implements OnModuleInit {
             ],
             ...(entities?.length > 0 && {
               filter: [{ terms: { _id: entities.map((entity) => entity.entityId) } }],
+            }),
+            ...(projectId && {
+              filter: [{ term: { projectId } }],
             }),
           },
         },

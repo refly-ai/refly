@@ -46,6 +46,7 @@ import {
   QUEUE_SYNC_STORAGE_USAGE,
   QUEUE_CLEAR_CANVAS_ENTITY,
   streamToBuffer,
+  QUEUE_POST_DELETE_KNOWLEDGE_ENTITY,
 } from '@/utils';
 import {
   genResourceID,
@@ -58,6 +59,7 @@ import {
   DocumentDetail,
   ExtendedReferenceModel,
   FinalizeResourceParam,
+  PostDeleteKnowledgeEntityJobData,
   ResourcePrepareResult,
 } from './knowledge.dto';
 import { pick } from '../utils';
@@ -76,7 +78,7 @@ import {
 import { DeleteCanvasNodesJobData } from '@/canvas/canvas.dto';
 import { ParserFactory } from '@/knowledge/parsers/factory';
 import { ConfigService } from '@nestjs/config';
-import { ParseResult, ParserOptions } from './parsers/base';
+import { BaseParser, ParseResult, ParserOptions } from './parsers/base'; // Import BaseParser
 
 @Injectable()
 export class KnowledgeService {
@@ -94,6 +96,8 @@ export class KnowledgeService {
     @InjectQueue(QUEUE_SIMPLE_EVENT) private simpleEventQueue: Queue<SimpleEventData>,
     @InjectQueue(QUEUE_SYNC_STORAGE_USAGE) private ssuQueue: Queue<SyncStorageUsageJobData>,
     @InjectQueue(QUEUE_CLEAR_CANVAS_ENTITY) private canvasQueue: Queue<DeleteCanvasNodesJobData>,
+    @InjectQueue(QUEUE_POST_DELETE_KNOWLEDGE_ENTITY)
+    private postDeleteKnowledgeQueue: Queue<PostDeleteKnowledgeEntityJobData>,
   ) {}
 
   async syncStorageUsage(user: User) {
@@ -112,12 +116,25 @@ export class KnowledgeService {
   }
 
   async listResources(user: User, param: ListResourcesData['query']) {
-    const { resourceId, resourceType, page = 1, pageSize = 10, order = 'creationDesc' } = param;
+    const {
+      resourceId,
+      resourceType,
+      projectId,
+      page = 1,
+      pageSize = 10,
+      order = 'creationDesc',
+    } = param;
 
     const resourceIdFilter: Prisma.StringFilter<'Resource'> = { equals: resourceId };
 
     const resources = await this.prisma.resource.findMany({
-      where: { resourceId: resourceIdFilter, resourceType, uid: user.uid, deletedAt: null },
+      where: {
+        resourceId: resourceIdFilter,
+        resourceType,
+        uid: user.uid,
+        deletedAt: null,
+        projectId,
+      },
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { pk: order === 'creationAsc' ? 'asc' : 'desc' },
@@ -291,6 +308,7 @@ export class KnowledgeService {
         storageKey,
         storageSize,
         rawFileKey: staticFile?.storageKey,
+        projectId: param.projectId,
         uid: user.uid,
         title: param.title || '',
         indexStatus,
@@ -301,6 +319,7 @@ export class KnowledgeService {
         storageKey,
         storageSize,
         rawFileKey: staticFile?.storageKey,
+        projectId: param.projectId,
         title: param.title || '',
         indexStatus,
       },
@@ -470,6 +489,8 @@ export class KnowledgeService {
    * Currently only weblinks are supported.
    */
   async parseResource(user: UserModel, resource: ResourceModel): Promise<ResourceModel> {
+    this.logger.log(`[Debug Log] Entering parseResource for resourceId: ${resource.resourceId}, current indexStatus: ${resource.indexStatus}`); // 新增日志
+
     if (resource.indexStatus !== 'wait_parse' && resource.indexStatus !== 'parse_failed') {
       this.logger.warn(
         `Resource ${resource.resourceId} is not in wait_parse or parse_failed status, skip parse`,
@@ -478,59 +499,87 @@ export class KnowledgeService {
     }
 
     const { resourceId, resourceType, rawFileKey, meta } = resource;
-    const { url, contentType } = JSON.parse(meta) as ResourceMeta;
+    const { url, contentType: originalContentType } = JSON.parse(meta || '{}') as ResourceMeta; // Extract original contentType
+    this.logger.log(`[Debug Log] Resource ${resourceId}: Detected originalContentType='${originalContentType}', resourceType='${resourceType}', url='${url}'`); // Log original
 
     const parserFactory = new ParserFactory(this.config);
     const parserOptions: ParserOptions = { resourceId };
 
-    let result: ParseResult;
+    // Determine the effective content type to use for parser creation
+    let effectiveContentType = originalContentType; // Default to original
+    if (resourceType === 'weblink') {
+      effectiveContentType = 'text/html'; // Override to 'text/html' for weblinks
+      this.logger.log(`[Debug Log] Overriding contentType to 'text/html' for weblink resource ${resourceId}`);
+    }
+
+    let result: ParseResult; // Define result variable
+
+    // The ParserFactory will handle selection based on the effectiveContentType.
+    // For 'text/html' (used for weblinks), it selects based on parsers.defaultProvider.
+    // For other types (files), it selects based on the actual file contentType.
+    const parser = parserFactory.createParserByContentType(effectiveContentType, parserOptions);
 
     if (resourceType === 'weblink') {
-      const parser = parserFactory.createParser('jina', parserOptions);
-      result = await parser.parse(url);
+      // Weblinks are treated as HTML content for parsing
+      if (!url) {
+        throw new Error(`URL is missing for weblink resource ${resourceId}`);
+      }
+      result = await parser.parse(url); // Pass URL to the HTML parser
     } else if (rawFileKey) {
-      const parser = parserFactory.createParserByContentType(contentType, parserOptions);
+      // For file types, read the buffer and pass it to the parser
       const fileStream = await this.minio.client.getObject(rawFileKey);
       const fileBuffer = await streamToBuffer(fileStream);
 
+      // PDF page limit check (remains necessary before parsing)
       let numPages = 0;
-      if (contentType === 'application/pdf') {
-        const { numpages } = await pdf(fileBuffer);
-        numPages = numpages;
+      if (originalContentType === 'application/pdf') { // Use originalContentType for file type check
+        try {
+            const { numpages } = await pdf(fileBuffer); // Use pdf-parse just for page count
+            numPages = numpages;
 
-        const { available, pageUsed, pageLimit } =
-          await this.subscriptionService.checkFileParseUsage(user);
+            const { available, pageUsed, pageLimit } =
+              await this.subscriptionService.checkFileParseUsage(user);
 
-        if (numPages > available) {
-          this.logger.log(
-            `Resource ${resourceId} parse failed due to page limit, numpages: ${numPages}, available: ${available}`,
-          );
-          return this.prisma.resource.update({
-            where: { resourceId },
-            data: {
-              indexStatus: 'parse_failed',
-              indexError: JSON.stringify({
-                type: 'pageLimitExceeded',
-                metadata: { numPages, pageLimit, pageUsed },
-              } as IndexError),
-            },
-          });
+            if (numPages > available) {
+              this.logger.log(
+                `Resource ${resourceId} parse failed due to page limit, numpages: ${numPages}, available: ${available}`,
+              );
+              // Update status and error info, then return the resource object
+              return await this.prisma.resource.update({
+                where: { resourceId },
+                data: {
+                  indexStatus: 'parse_failed',
+                  indexError: JSON.stringify({
+                    type: 'pageLimitExceeded',
+                    metadata: { numPages, pageLimit, pageUsed },
+                  } as IndexError),
+                },
+              });
+            }
+        } catch (pdfError) {
+             this.logger.error(`Failed to get page count for PDF ${resourceId}: ${pdfError.message}`, pdfError.stack);
+             // Decide if we should proceed without page count or fail here
+             // For now, let's proceed but log the error. The parser might still work or fail later.
         }
       }
+
+      // Call the parser selected by the factory
       result = await parser.parse(fileBuffer);
 
+      // Record the parse attempt
       await this.prisma.fileParseRecord.create({
         data: {
           resourceId,
           uid: user.uid,
-          contentType,
+          contentType: originalContentType, // Use originalContentType for recording
           storageKey: rawFileKey,
-          parser: parser.name,
-          numPages,
+          parser: parser.name, // Get the actual parser name used
+          numPages, // Record page count if available
         },
       });
     } else {
-      throw new Error(`Cannot parse resource ${resourceId} with no content or rawFileKey`);
+      // This case should ideally not happen if prepareResource worked correctly
+      throw new Error(`Cannot parse resource ${resourceId}: missing URL for weblink or rawFileKey for file.`);
     }
 
     if (result.error) {
@@ -561,7 +610,7 @@ export class KnowledgeService {
         meta: JSON.stringify({
           url,
           title,
-          contentType,
+          contentType: originalContentType, // Use originalContentType in updated meta
         } as ResourceMeta),
       },
     });
@@ -572,7 +621,7 @@ export class KnowledgeService {
       url,
       createdAt: resource.createdAt.toJSON(),
       updatedAt: resource.updatedAt.toJSON(),
-      ...pick(updatedResource, ['title', 'uid']),
+      ...pick(updatedResource, ['title', 'uid', 'projectId']),
     });
 
     return updatedResource;
@@ -605,6 +654,7 @@ export class KnowledgeService {
           title,
           resourceType: resourceType as ResourceType,
           resourceId,
+          projectId: resource.projectId,
         },
       });
       updates.vectorSize = size;
@@ -701,6 +751,14 @@ export class KnowledgeService {
       updates.storageKey = resource.storageKey;
     }
 
+    if (param.projectId !== undefined) {
+      if (param.projectId) {
+        updates.project = { connect: { projectId: param.projectId } };
+      } else {
+        updates.project = { disconnect: true };
+      }
+    }
+
     if (param.content) {
       await this.minio.client.putObject(resource.storageKey, param.content);
       updates.storageSize = (await this.minio.client.statObject(resource.storageKey)).size;
@@ -711,12 +769,20 @@ export class KnowledgeService {
       data: updates,
     });
 
+    // Update projectId for vector store
+    if (param.projectId !== undefined) {
+      await this.ragService.updateDocumentPayload(user, {
+        resourceId: updatedResource.resourceId,
+        metadata: { projectId: param.projectId },
+      });
+    }
+
     await this.elasticsearch.upsertResource({
       id: updatedResource.resourceId,
       content: param.content || undefined,
       createdAt: updatedResource.createdAt.toJSON(),
       updatedAt: updatedResource.updatedAt.toJSON(),
-      ...pick(updatedResource, ['title', 'uid']),
+      ...pick(updatedResource, ['title', 'uid', 'projectId']),
     });
 
     return updatedResource;
@@ -740,21 +806,32 @@ export class KnowledgeService {
       throw new ResourceNotFoundError(`resource ${resourceId} not found`);
     }
 
-    await this.prisma.$transaction([
-      this.prisma.resource.update({
-        where: { resourceId, uid, deletedAt: null },
-        data: { deletedAt: new Date() },
-      }),
-      this.prisma.labelInstance.updateMany({
-        where: { entityType: 'resource', entityId: resourceId, uid, deletedAt: null },
-        data: { deletedAt: new Date() },
-      }),
-    ]);
+    await this.prisma.resource.update({
+      where: { resourceId, uid, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+
+    await this.syncStorageUsage(user);
+
+    await this.postDeleteKnowledgeQueue.add('postDeleteKnowledgeEntity', {
+      uid,
+      entityId: resourceId,
+      entityType: 'resource',
+    });
+  }
+
+  async postDeleteResource(user: User, resourceId: string) {
+    const resource = await this.prisma.resource.findFirst({
+      where: { resourceId, uid: user.uid, deletedAt: { not: null } },
+    });
+    if (!resource) {
+      this.logger.warn(`Deleted resource ${resourceId} not found`);
+      return;
+    }
 
     const cleanups: Promise<any>[] = [
       this.ragService.deleteResourceNodes(user, resourceId),
       this.elasticsearch.deleteResource(resourceId),
-      this.syncStorageUsage(user),
       this.canvasQueue.add('deleteNodes', {
         entities: [{ entityId: resourceId, entityType: 'resource' }],
       }),
@@ -771,7 +848,7 @@ export class KnowledgeService {
   }
 
   async listDocuments(user: User, param: ListDocumentsData['query']) {
-    const { page = 1, pageSize = 10, order = 'creationDesc' } = param;
+    const { page = 1, pageSize = 10, order = 'creationDesc', projectId } = param;
 
     const orderBy: Prisma.DocumentOrderByWithRelationInput = {};
     if (order === 'creationAsc') {
@@ -784,6 +861,7 @@ export class KnowledgeService {
       where: {
         uid: user.uid,
         deletedAt: null,
+        projectId,
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -871,6 +949,7 @@ export class KnowledgeService {
           nodeType: 'document',
           docId: param.docId,
           title: param.title,
+          projectId: param.projectId,
         },
       });
       createInput.vectorSize = size;
@@ -879,12 +958,12 @@ export class KnowledgeService {
     const doc = await this.prisma.document.upsert({
       where: { docId: param.docId },
       create: createInput,
-      update: pick(param, ['title', 'readOnly']),
+      update: pick(param, ['title', 'readOnly', 'projectId']),
     });
 
     await this.elasticsearch.upsertDocument({
       id: param.docId,
-      ...pick(doc, ['title', 'uid']),
+      ...pick(doc, ['title', 'uid', 'projectId']),
       content: param.initialContent,
       createdAt: doc.createdAt.toJSON(),
       updatedAt: doc.updatedAt.toJSON(),
@@ -932,18 +1011,34 @@ export class KnowledgeService {
       throw new DocumentNotFoundError();
     }
 
-    await this.prisma.$transaction([
-      this.prisma.document.update({
-        where: { docId },
-        data: { deletedAt: new Date() },
-      }),
-      this.prisma.labelInstance.updateMany({
-        where: { entityType: 'document', entityId: docId, uid, deletedAt: null },
-        data: { deletedAt: new Date() },
-      }),
-    ]);
+    await this.prisma.document.update({
+      where: { docId },
+      data: { deletedAt: new Date() },
+    });
+
+    await this.syncStorageUsage(user);
+
+    await this.postDeleteKnowledgeQueue.add('postDeleteKnowledgeEntity', {
+      uid,
+      entityId: docId,
+      entityType: 'document',
+    });
+  }
+
+  async postDeleteDocument(user: User, docId: string) {
+    const doc = await this.prisma.document.findFirst({
+      where: { docId, deletedAt: { not: null } },
+    });
+    if (!doc) {
+      this.logger.warn(`Deleted document ${docId} not found`);
+      return;
+    }
 
     const cleanups: Promise<any>[] = [
+      this.prisma.labelInstance.updateMany({
+        where: { entityType: 'document', entityId: docId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      }),
       this.ragService.deleteDocumentNodes(user, docId),
       this.elasticsearch.deleteDocument(docId),
       this.canvasQueue.add('deleteNodes', {
@@ -960,9 +1055,6 @@ export class KnowledgeService {
     }
 
     await Promise.all(cleanups);
-
-    // Sync storage usage after all the cleanups
-    await this.syncStorageUsage(user);
   }
 
   /**

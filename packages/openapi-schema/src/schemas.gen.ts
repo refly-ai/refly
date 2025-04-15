@@ -402,7 +402,16 @@ export const DocumentSchema = {
 export const EntityTypeSchema = {
   type: 'string',
   description: 'Entity type',
-  enum: ['document', 'resource', 'canvas', 'share', 'user', 'skillResponse', 'codeArtifact'],
+  enum: [
+    'document',
+    'resource',
+    'canvas',
+    'share',
+    'user',
+    'project',
+    'skillResponse',
+    'codeArtifact',
+  ],
 } as const;
 
 export const EntitySchema = {
@@ -416,6 +425,73 @@ export const EntitySchema = {
     entityType: {
       description: 'Entity type',
       $ref: '#/components/schemas/EntityType',
+    },
+  },
+} as const;
+
+export const ProjectSourceSchema = {
+  type: 'object',
+  description: 'Project source',
+  properties: {
+    entityId: {
+      type: 'string',
+      description: 'Entity ID',
+    },
+    entityType: {
+      description: 'Entity type',
+      $ref: '#/components/schemas/EntityType',
+    },
+    title: {
+      type: 'string',
+      description: 'Project title',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Project creation time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Project update time',
+    },
+  },
+} as const;
+
+export const ProjectSchema = {
+  type: 'object',
+  description: 'Project',
+  required: ['projectId', 'name'],
+  properties: {
+    projectId: {
+      type: 'string',
+      description: 'Project ID',
+    },
+    name: {
+      type: 'string',
+      description: 'Project name',
+    },
+    description: {
+      type: 'string',
+      description: 'Project description',
+    },
+    coverUrl: {
+      type: 'string',
+      description: 'Project cover URL',
+    },
+    customInstructions: {
+      type: 'string',
+      description: 'Custom instructions for the project',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Project creation time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Project update time',
     },
   },
 } as const;
@@ -1109,12 +1185,6 @@ export const SearchStepSchema = {
   },
 } as const;
 
-export const MessageTypeSchema = {
-  type: 'string',
-  description: 'Chat message type',
-  enum: ['ai', 'human', 'system'],
-} as const;
-
 export const ModelTierSchema = {
   type: 'string',
   description: 'Model tier',
@@ -1188,6 +1258,24 @@ export const ArtifactSchema = {
     status: {
       description: 'Artifact status',
       $ref: '#/components/schemas/ArtifactStatus',
+    },
+    content: {
+      type: 'string',
+      description: 'Artifact content',
+    },
+    metadata: {
+      type: 'object',
+      description: 'Artifact metadata',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Artifact creation time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Artifact update time',
     },
   },
 } as const;
@@ -1269,6 +1357,57 @@ export const ActionStepSchema = {
       items: {
         $ref: '#/components/schemas/TokenUsageItem',
       },
+    },
+  },
+} as const;
+
+export const CodeArtifactTypeSchema = {
+  type: 'string',
+  description: 'Code artifact type',
+  enum: [
+    'application/refly.artifacts.react',
+    'image/svg+xml',
+    'application/refly.artifacts.mermaid',
+    'text/markdown',
+    'application/refly.artifacts.code',
+    'text/html',
+    'application/refly.artifacts.mindmap',
+  ],
+} as const;
+
+export const CodeArtifactSchema = {
+  type: 'object',
+  description: 'Code artifact',
+  required: ['type', 'artifactId', 'title'],
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Artifact type',
+      $ref: '#/components/schemas/CodeArtifactType',
+    },
+    artifactId: {
+      type: 'string',
+      description: 'Artifact ID',
+    },
+    title: {
+      type: 'string',
+      description: 'Artifact title',
+    },
+    content: {
+      type: 'string',
+      description: 'Code artifact content',
+    },
+    language: {
+      type: 'string',
+      description: 'Code artifact language',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
     },
   },
 } as const;
@@ -2110,6 +2249,10 @@ export const DuplicateCanvasRequestSchema = {
       type: 'string',
       description: 'Custom canvas title',
     },
+    projectId: {
+      type: 'string',
+      description: 'Project ID to bind with',
+    },
     duplicateEntities: {
       type: 'boolean',
       description: 'Whether to duplicate entities within the canvas',
@@ -2159,6 +2302,10 @@ export const UpsertCanvasRequestSchema = {
       type: 'string',
       description: 'Canvas ID (only used for update)',
       example: 'c-g30e1b80b5g1itbemc0g5jj3',
+    },
+    projectId: {
+      type: 'string',
+      description: 'Project ID to bind with',
     },
     minimapStorageKey: {
       type: 'string',
@@ -2372,6 +2519,10 @@ export const UpsertResourceRequestSchema = {
       description: 'Resource ID (only used for update)',
       example: 'r-g30e1b80b5g1itbemc0g5jj3',
     },
+    projectId: {
+      type: 'string',
+      description: 'Project ID to bind with',
+    },
     data: {
       description: 'Resource metadata',
       $ref: '#/components/schemas/ResourceMeta',
@@ -2558,6 +2709,10 @@ export const UpsertDocumentRequestSchema = {
       description: 'Document ID (only used for update)',
       example: 'd-g30e1b80b5g1itbemc0g5jj3',
     },
+    projectId: {
+      type: 'string',
+      description: 'Project ID to bind with',
+    },
     readOnly: {
       type: 'boolean',
       description: 'Whether this document is read-only',
@@ -2704,6 +2859,136 @@ export const DeleteReferencesRequestSchema = {
   },
 } as const;
 
+export const ListProjectResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Project list',
+          items: {
+            $ref: '#/components/schemas/Project',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetProjectDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/Project',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpsertProjectRequestSchema = {
+  type: 'object',
+  properties: {
+    projectId: {
+      type: 'string',
+      description: 'Project ID (only used for update)',
+    },
+    name: {
+      type: 'string',
+      description: 'Project name',
+    },
+    description: {
+      type: 'string',
+      description: 'Project description',
+    },
+    coverStorageKey: {
+      type: 'string',
+      description: 'Project cover storage key',
+    },
+    customInstructions: {
+      type: 'string',
+      description: 'Custom instructions',
+    },
+  },
+} as const;
+
+export const UpsertProjectResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/Project',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpdateProjectItemsRequestSchema = {
+  type: 'object',
+  properties: {
+    projectId: {
+      type: 'string',
+      description: 'Project ID',
+    },
+    operation: {
+      type: 'string',
+      description: 'Operation type',
+      enum: ['add', 'remove'],
+    },
+    items: {
+      type: 'array',
+      description: 'Item list',
+      items: {
+        $ref: '#/components/schemas/Entity',
+      },
+    },
+  },
+} as const;
+
+export const DeleteProjectRequestSchema = {
+  type: 'object',
+  required: ['projectId'],
+  properties: {
+    projectId: {
+      type: 'string',
+      description: 'Project ID to delete',
+      example: 'p-g30e1b80b5g1itbemc0g5jj3',
+    },
+  },
+} as const;
+
+export const DeleteProjectItemsRequestSchema = {
+  type: 'object',
+  required: ['projectId', 'items'],
+  properties: {
+    projectId: {
+      type: 'string',
+      description: 'Project ID',
+    },
+    items: {
+      type: 'array',
+      description: 'Item list',
+      items: {
+        $ref: '#/components/schemas/Entity',
+      },
+    },
+  },
+} as const;
+
 export const SkillEventTypeSchema = {
   type: 'string',
   description: 'Skill event type',
@@ -2775,6 +3060,11 @@ export const SkillEventSchema = {
     error: {
       description: 'Error data. Only present when `event` is `error`.',
       $ref: '#/components/schemas/BaseResponse',
+      deprecated: true,
+    },
+    originError: {
+      type: 'string',
+      description: 'Original error message. Only present when `event` is `error`.',
     },
   },
 } as const;
@@ -2820,6 +3110,73 @@ export const ShareRecordSchema = {
       description: 'Update timestamp',
     },
   },
+} as const;
+
+export const UpsertCodeArtifactRequestSchema = {
+  type: 'object',
+  properties: {
+    artifactId: {
+      type: 'string',
+      description: 'Code artifact ID (not needed for creation)',
+    },
+    title: {
+      type: 'string',
+      description: 'Code artifact title',
+    },
+    type: {
+      type: 'string',
+      description: 'Code artifact type',
+    },
+    content: {
+      type: 'string',
+      description: 'Code artifact content',
+    },
+    language: {
+      type: 'string',
+      description: 'Code artifact language',
+    },
+    previewStorageKey: {
+      type: 'string',
+      description: 'Code artifact preview storage key',
+    },
+    createIfNotExists: {
+      type: 'boolean',
+      description: 'Whether to create the code artifact if it does not exist',
+      default: false,
+    },
+  },
+} as const;
+
+export const UpsertCodeArtifactResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CodeArtifact',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetCodeArtifactDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CodeArtifact',
+        },
+      },
+    },
+  ],
 } as const;
 
 export const CreateShareRequestSchema = {
@@ -3660,6 +4017,10 @@ export const InvokeSkillRequestSchema = {
       description: 'Skill invocation target',
       $ref: '#/components/schemas/Entity',
     },
+    projectId: {
+      type: 'string',
+      description: 'Project ID',
+    },
     resultId: {
       type: 'string',
       description: `Result ID associated with this invocation.
@@ -3866,7 +4227,10 @@ export const UpdateUserSettingsRequestSchema = {
     avatar: {
       type: 'string',
       description: 'User avatar',
-      example: 'https://example.com/avatar.png',
+    },
+    avatarStorageKey: {
+      type: 'string',
+      description: 'User avatar storage key',
     },
     uiLocale: {
       type: 'string',
@@ -4290,6 +4654,10 @@ export const SearchRequestSchema = {
       $ref: '#/components/schemas/SearchMode',
       default: 'keyword',
     },
+    projectId: {
+      type: 'string',
+      description: 'Project ID',
+    },
     limit: {
       type: 'number',
       description: 'Search result limit for each domain',
@@ -4671,6 +5039,7 @@ export const CanvasNodeTypeSchema = {
     'memo',
     'group',
     'image',
+    'mindMap',
   ],
 } as const;
 

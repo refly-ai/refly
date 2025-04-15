@@ -17,6 +17,7 @@ import {
   UploadResponse,
   User,
   FileVisibility,
+  Entity,
 } from '@refly-packages/openapi-schema';
 import { PrismaService } from '@/common/prisma.service';
 import { MINIO_EXTERNAL, MINIO_INTERNAL, MinioService } from '@/common/minio.service';
@@ -30,6 +31,7 @@ import {
   ParamsError,
   ResourceNotFoundError,
   DocumentNotFoundError,
+  CodeArtifactNotFoundError,
 } from '@refly-packages/errors';
 import { FileObject } from '@/misc/misc.dto';
 import { createId } from '@paralleldrive/cuid2';
@@ -147,6 +149,15 @@ export class MiscService implements OnModuleInit {
       if (!document) {
         throw new DocumentNotFoundError();
       }
+    } else if (entityType === 'codeArtifact') {
+      const codeArtifact = await this.prisma.codeArtifact.findUnique({
+        where: {
+          artifactId: entityId,
+        },
+      });
+      if (!codeArtifact) {
+        throw new CodeArtifactNotFoundError();
+      }
     } else {
       throw new ParamsError(`Invalid entity type: ${entityType}`);
     }
@@ -208,8 +219,24 @@ export class MiscService implements OnModuleInit {
     }
   }
 
-  generateFileURL(object: FileObject, options?: { download?: boolean }) {
-    const { visibility, storageKey } = object;
+  async findFileAndBindEntity(storageKey: string, entity: Entity) {
+    const staticFile = await this.prisma.staticFile.findFirst({
+      where: { storageKey, deletedAt: null },
+    });
+    if (!staticFile) {
+      return null;
+    }
+    return this.prisma.staticFile.update({
+      where: { pk: staticFile.pk },
+      data: {
+        entityId: entity.entityId,
+        entityType: entity.entityType,
+      },
+    });
+  }
+
+  generateFileURL(file: FileObject, options?: { download?: boolean }) {
+    const { visibility, storageKey } = file;
 
     let endpoint = '';
     if (visibility === 'public') {

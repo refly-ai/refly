@@ -15,3 +15,5 @@ export * from './translate';
 export * from './cookie';
 export * from './content-parser';
 export * from './brand';
+export * from './str';
+export * from './artifact';

@@ -11,9 +11,13 @@ import { buildContextFormat } from './context';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
 import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 import { buildFormatDisplayInstruction } from '../common/format';
-import { buildSimpleDetailedExplanationInstruction } from '../common/personalization';
-export const buildWebSearchSystemPrompt = () => {
-  return `You are an AI assistant developed by Refly, specializing in providing accurate information based on web search results and internal knowledge base. Your task is to synthesize information from multiple sources to provide comprehensive, actionable, and accurate answers.
+import {
+  buildSimpleDetailedExplanationInstruction,
+  buildCustomProjectInstructionsForUserPrompt,
+} from '../common/personalization';
+
+export const buildWebSearchSystemPrompt = (_locale: string, _needPrepareContext: boolean) => {
+  const systemPrompt = `You are an AI assistant developed by Refly, specializing in providing accurate information based on web search results and internal knowledge base. Your task is to synthesize information from multiple sources to provide comprehensive, actionable, and accurate answers.
 
 ${buildCitationRules()}
 
@@ -95,6 +99,8 @@ ${buildContextFormat()}
 
 ${buildSpecificQueryInstruction()}
 `;
+
+  return systemPrompt;
 };
 
 export const buildWebSearchUserPrompt = ({
@@ -102,14 +108,18 @@ export const buildWebSearchUserPrompt = ({
   optimizedQuery,
   rewrittenQueries,
   locale,
+  customInstructions,
 }: {
   originalQuery: string;
   optimizedQuery: string;
   rewrittenQueries: string[];
   locale: string;
+  customInstructions?: string;
 }) => {
+  let prompt = '';
+
   if (originalQuery === optimizedQuery) {
-    return `## Search Query
+    prompt = `## Search Query
 ${originalQuery}
 
 ${buildCitationReminder()}
@@ -118,9 +128,8 @@ ${chatHistoryReminder()}
 
 ${buildLocaleFollowInstruction(locale)}
 `;
-  }
-
-  return `## User Query
+  } else {
+    prompt = `## User Query
 
 ### Original Search Query
 ${originalQuery}
@@ -142,6 +151,14 @@ ${buildLocaleFollowInstruction(locale)}
 ${buildFormatDisplayInstruction()}
 ${buildSimpleDetailedExplanationInstruction()}
 `;
+  }
+
+  // Add custom instructions to user prompt if available
+  if (customInstructions) {
+    prompt += `\n${buildCustomProjectInstructionsForUserPrompt(customInstructions)}`;
+  }
+
+  return prompt;
 };
 
 export const buildWebSearchContextUserPrompt = (context: string, needPrepareContext: boolean) => {
