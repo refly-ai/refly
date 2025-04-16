@@ -1,6 +1,7 @@
 import { Button, Modal, Divider, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import React from 'react';
 
 import Logo from '@/assets/logo.svg';
 import Google from '@/assets/google.svg';
@@ -18,7 +19,7 @@ interface FormValues {
   password: string;
 }
 
-export const LoginModal = (props: { visible?: boolean; from?: string }) => {
+const LoginModal = (props: { visible?: boolean; from?: string }) => {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [form] = Form.useForm<FormValues>();
 
@@ -40,11 +41,21 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
 
   const { t } = useTranslation();
 
-  const { data: authConfig } = useGetAuthConfig();
+  const { data: authConfig, isLoading: isAuthConfigLoading } = useGetAuthConfig();
 
-  const isGithubEnabled = authConfig?.data?.some((item) => item.provider === 'github');
-  const isGoogleEnabled = authConfig?.data?.some((item) => item.provider === 'google');
-  const isEmailEnabled = authConfig?.data?.some((item) => item.provider === 'email');
+  // Provide default values if config is not loaded
+  const { isGithubEnabled, isGoogleEnabled, isEmailEnabled } = useMemo(() => {
+    // Default to showing email login if config is not available
+    if (!authConfig?.data || isAuthConfigLoading) {
+      return { isGithubEnabled: false, isGoogleEnabled: false, isEmailEnabled: true };
+    }
+
+    return {
+      isGithubEnabled: authConfig.data.some((item) => item.provider === 'github'),
+      isGoogleEnabled: authConfig.data.some((item) => item.provider === 'google'),
+      isEmailEnabled: authConfig.data.some((item) => item.provider === 'email') || true, // Always enable email as fallback
+    };
+  }, [authConfig?.data, isAuthConfigLoading]);
 
   /**
    * 0. Get the login status from the main site. If not logged in, visit the Login page; after logging in, display the home page
@@ -52,13 +63,16 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
    * 2. After logging in, use Chrome's API to send a message to the extension. Upon receiving the message, reload the page to get the login status, then persist it
    * 3. Subsequently, make requests with the cookie or login status
    */
-  const handleLogin = (provider: 'github' | 'google') => {
-    authStore.setLoginInProgress(true);
-    authStore.setLoginProvider(provider);
-    location.href = `${serverOrigin}/v1/auth/${provider}`;
-  };
+  const handleLogin = useCallback(
+    (provider: 'github' | 'google') => {
+      authStore.setLoginInProgress(true);
+      authStore.setLoginProvider(provider);
+      location.href = `${serverOrigin}/v1/auth/${provider}`;
+    },
+    [authStore],
+  );
 
-  const handleEmailAuth = async () => {
+  const handleEmailAuth = useCallback(async () => {
     let values: FormValues;
     try {
       values = await form.validateFields();
@@ -106,17 +120,20 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
         window.location.replace(isPublicAccessPage ? window.location.href : '/');
       }
     }
-  };
+  }, [authStore, form, isPublicAccessPage, isSignUpMode]);
 
-  const handleResetPassword = () => {
+  const handleResetPassword = useCallback(() => {
     authStore.setLoginModalOpen(false);
     authStore.setResetPasswordModalOpen(true);
-  };
+  }, [authStore]);
 
-  const handleModeSwitch = (signUp: boolean) => {
-    setIsSignUpMode(signUp);
-    form.resetFields();
-  };
+  const handleModeSwitch = useCallback(
+    (signUp: boolean) => {
+      setIsSignUpMode(signUp);
+      form.resetFields();
+    },
+    [form],
+  );
 
   return (
     <Modal
@@ -147,36 +164,38 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
             ? t('landingPage.loginModal.signupSubtitle')
             : t('landingPage.loginModal.signinSubtitle')}
         </div>
-        <div className="mt-4 px-4 flex flex-row items-center justify-center gap-2 w-full">
-          {isGithubEnabled && (
-            <Button
-              onClick={() => handleLogin('github')}
-              className="mt-2 h-8 w-full"
-              data-cy="github-login-button"
-              loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
-              disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
-            >
-              <img src={GitHub} alt="github" className="mr-1 h-4 w-4" />
-              {authStore.loginInProgress && authStore.loginProvider === 'github'
-                ? t('landingPage.loginModal.loggingStatus')
-                : t('landingPage.loginModal.oauthBtn.github')}
-            </Button>
-          )}
-          {isGoogleEnabled && (
-            <Button
-              onClick={() => handleLogin('google')}
-              className="mt-2 h-8 w-full"
-              data-cy="google-login-button"
-              loading={authStore.loginInProgress && authStore.loginProvider === 'google'}
-              disabled={authStore.loginInProgress && authStore.loginProvider !== 'google'}
-            >
-              <img src={Google} alt="google" className="mr-1 h-4 w-4" />
-              {authStore.loginInProgress && authStore.loginProvider === 'google'
-                ? t('landingPage.loginModal.loggingStatus')
-                : t('landingPage.loginModal.oauthBtn.google')}
-            </Button>
-          )}
-        </div>
+        {(isGithubEnabled || isGoogleEnabled) && (
+          <div className="mt-4 px-4 flex flex-row items-center justify-center gap-2 w-full">
+            {isGithubEnabled && (
+              <Button
+                onClick={() => handleLogin('github')}
+                className="mt-2 h-8 w-full"
+                data-cy="github-login-button"
+                loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
+                disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
+              >
+                <img src={GitHub} alt="github" className="mr-1 h-4 w-4" />
+                {authStore.loginInProgress && authStore.loginProvider === 'github'
+                  ? t('landingPage.loginModal.loggingStatus')
+                  : t('landingPage.loginModal.oauthBtn.github')}
+              </Button>
+            )}
+            {isGoogleEnabled && (
+              <Button
+                onClick={() => handleLogin('google')}
+                className="mt-2 h-8 w-full"
+                data-cy="google-login-button"
+                loading={authStore.loginInProgress && authStore.loginProvider === 'google'}
+                disabled={authStore.loginInProgress && authStore.loginProvider !== 'google'}
+              >
+                <img src={Google} alt="google" className="mr-1 h-4 w-4" />
+                {authStore.loginInProgress && authStore.loginProvider === 'google'
+                  ? t('landingPage.loginModal.loggingStatus')
+                  : t('landingPage.loginModal.oauthBtn.google')}
+              </Button>
+            )}
+          </div>
+        )}
 
         <div className="w-full px-4">
           {(isGithubEnabled || isGoogleEnabled) && isEmailEnabled && (
@@ -328,3 +347,7 @@ export const LoginModal = (props: { visible?: boolean; from?: string }) => {
     </Modal>
   );
 };
+
+// Optimize with memo to prevent unnecessary re-renders
+export const MemoizedLoginModal = React.memo(LoginModal);
+export { MemoizedLoginModal as LoginModal };

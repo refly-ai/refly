@@ -52,13 +52,13 @@ export const useAddNode = () => {
       connectTo?: CanvasNodeFilter[],
       shouldPreview = true,
       needSetCenter = false,
-    ) => {
+    ): XYPosition | undefined => {
       const { nodeSizeMode } = useCanvasStore.getState();
       const { nodes, edges, nodeLookup, parentLookup } = getState();
 
       if (!node?.type || !node?.data) {
         console.warn('Invalid node data provided');
-        return;
+        return undefined;
       }
 
       // Check for existing node
@@ -71,7 +71,7 @@ export const useAddNode = () => {
         }
         setSelectedNode(existingNode);
         setNodeCenter(existingNode.id);
-        return;
+        return existingNode.position;
       }
 
       // Purge context items if they exist
@@ -199,6 +199,9 @@ export const useAddNode = () => {
         previewNode(newNode as unknown as CanvasNode);
         locateToNodePreviewEmitter.emit('locateToNodePreview', { canvasId, id: newNode.id });
       }
+
+      // Return the calculated position
+      return newPosition;
     },
     [
       canvasId,

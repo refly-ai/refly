@@ -1093,8 +1093,13 @@ export class ShareService {
   async duplicateSharedSkillResponse(
     user: User,
     shareId: string,
-    replaceEntityMap?: Record<string, string>,
+    extra?: {
+      target?: Entity;
+      replaceEntityMap?: Record<string, string>;
+    },
   ): Promise<Entity> {
+    const { replaceEntityMap, target } = extra ?? {};
+
     // Find the source record
     const record = await this.prisma.shareRecord.findFirst({
       where: { shareId, deletedAt: null },
@@ -1121,17 +1126,21 @@ export class ShareService {
     await this.prisma.$transaction([
       this.prisma.actionResult.create({
         data: {
-          ...pick(result, ['version', 'title', 'targetId', 'targetType', 'tier', 'status']),
+          ...pick(result, ['version', 'title', 'tier', 'status']),
           resultId: newResultId,
           uid: user.uid,
           type: result.type,
           input: JSON.stringify(result.input),
+          targetId: target?.entityId,
+          targetType: target?.entityType,
           actionMeta: JSON.stringify(result.actionMeta),
           context: batchReplaceRegex(JSON.stringify(result.context), replaceEntityMap),
           history: batchReplaceRegex(JSON.stringify(result.history), replaceEntityMap),
           tplConfig: JSON.stringify(result.tplConfig),
           runtimeConfig: JSON.stringify(result.runtimeConfig),
           errors: JSON.stringify(result.errors),
+          modelName: result.modelInfo?.name,
+          duplicateFrom: result.resultId,
         },
       }),
       ...(result.steps?.length > 0
@@ -1210,7 +1219,9 @@ export class ShareService {
 
     // Duplicate library entities
     const limit = pLimit(5); // Limit concurrent operations
-    const replaceEntityMap: Record<string, string> = {};
+    const replaceEntityMap: Record<string, string> = {
+      [record.entityId]: newCanvasId,
+    };
 
     await Promise.all(
       libEntityNodes.map((node) =>
@@ -1271,7 +1282,10 @@ export class ShareService {
             const shareId = node.data.metadata.shareId as string;
             if (!shareId) return;
 
-            const result = await this.duplicateSharedSkillResponse(user, shareId, replaceEntityMap);
+            const result = await this.duplicateSharedSkillResponse(user, shareId, {
+              replaceEntityMap,
+              target: { entityId: newCanvasId, entityType: 'canvas' },
+            });
             if (result) {
               node.data.entityId = result.entityId;
             }

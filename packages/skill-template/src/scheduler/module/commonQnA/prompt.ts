@@ -11,7 +11,10 @@ import { buildCitationRules } from '../common/citationRules';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
 import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 import { buildFormatDisplayInstruction } from '../common/format';
-import { buildSimpleDetailedExplanationInstruction } from '../common/personalization';
+import {
+  buildSimpleDetailedExplanationInstruction,
+  buildCustomProjectInstructionsForUserPrompt,
+} from '../common/personalization';
 
 export const buildNoContextCommonQnASystemPrompt = () => {
   return `You are an AI assistant developed by Refly. Your task is to provide helpful, accurate, and concise information to users' queries.
@@ -119,14 +122,18 @@ export const buildCommonQnAUserPrompt = ({
   optimizedQuery,
   rewrittenQueries,
   locale,
+  customInstructions,
 }: {
   originalQuery: string;
   optimizedQuery: string;
   rewrittenQueries: string[];
   locale: string;
+  customInstructions?: string;
 }) => {
+  let prompt = '';
+
   if (originalQuery === optimizedQuery) {
-    return `## User Query
+    prompt = `## User Query
     ${originalQuery}
 
     ## Important
@@ -138,9 +145,8 @@ export const buildCommonQnAUserPrompt = ({
     ${buildFormatDisplayInstruction()}
     ${buildSimpleDetailedExplanationInstruction()}
     `;
-  }
-
-  return `## User Query
+  } else {
+    prompt = `## User Query
 
 ### Original User Query
 ${originalQuery}
@@ -160,6 +166,14 @@ ${chatHistoryReminder()}
 ## Hint
 ${buildLocaleFollowInstruction(locale)}
 `;
+  }
+
+  // Add custom instructions to user prompt if available
+  if (customInstructions) {
+    prompt += `\n${buildCustomProjectInstructionsForUserPrompt(customInstructions)}`;
+  }
+
+  return prompt;
 };
 
 export const buildCommonQnAContextUserPrompt = (context: string, needPrepareContext: boolean) => {

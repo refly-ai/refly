@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useNavigate } from 'react-router-dom';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 
 type FieldType = {
   title: string;
@@ -24,6 +25,7 @@ export const DuplicateCanvasModal = memo(
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const { getCanvasList } = useHandleSiderData();
+    const { projectId } = useGetProjectCanvasId();
 
     const onSubmit = async () => {
       form.validateFields().then(async (values) => {
@@ -32,6 +34,7 @@ export const DuplicateCanvasModal = memo(
         const { title, duplicateEntities } = values;
         const { data } = await getClient().duplicateCanvas({
           body: {
+            projectId,
             canvasId,
             title,
             duplicateEntities,
@@ -43,7 +46,11 @@ export const DuplicateCanvasModal = memo(
           message.success(t('canvas.action.duplicateSuccess'));
           setVisible(false);
           getCanvasList();
-          navigate(`/canvas/${data.data.canvasId}`);
+          const newCanvasId = data.data.canvasId;
+          const url = projectId
+            ? `/project/${projectId}?canvasId=${newCanvasId}`
+            : `/canvas/${newCanvasId}`;
+          navigate(url);
         }
       });
     };

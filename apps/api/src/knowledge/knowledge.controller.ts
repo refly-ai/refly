@@ -51,6 +51,7 @@ export class KnowledgeController {
     @LoginedUser() user: User,
     @Query('resourceId') resourceId: string,
     @Query('resourceType') resourceType: ResourceType,
+    @Query('projectId') projectId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
     @Query('order', new DefaultValuePipe('creationDesc')) order: ListOrder,
@@ -58,6 +59,7 @@ export class KnowledgeController {
     const resources = await this.knowledgeService.listResources(user, {
       resourceId,
       resourceType,
+      projectId,
       page,
       pageSize,
       order,
@@ -177,6 +179,7 @@ export class KnowledgeController {
   @Get('document/list')
   async listDocuments(
     @LoginedUser() user: User,
+    @Query('projectId') projectId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
     @Query('order', new DefaultValuePipe('creationDesc')) order: ListOrder,
@@ -185,6 +188,7 @@ export class KnowledgeController {
       page,
       pageSize,
       order,
+      projectId,
     });
     return buildSuccessResponse((documents ?? []).map(documentPO2DTO));
   }

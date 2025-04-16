@@ -25,6 +25,7 @@ export const RecommendQuestionsPanel: React.FC<RecommendQuestionsPanelProps> = (
   const [loading, setLoading] = useState(false);
   const { invokeAction } = useInvokeAction();
   const { setNewQAText } = useChatStore();
+  const { runtimeConfig } = useContextPanelStore.getState();
 
   const skill = useFindSkill('recommendQuestions');
 
@@ -41,6 +42,7 @@ export const RecommendQuestionsPanel: React.FC<RecommendQuestionsPanelProps> = (
         contextItems,
         selectedSkill: skill,
         modelInfo: selectedModel,
+        runtimeConfig,
         tplConfig: {
           refresh: {
             value: refresh,

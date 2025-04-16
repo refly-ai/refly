@@ -265,6 +265,7 @@ export class SearchService {
       filter: {
         nodeTypes: ['resource'],
         resourceIds: req.entities?.map((entity) => entity.entityId),
+        projectIds: req.projectId ? [req.projectId] : undefined,
       },
     });
     if (nodes.length === 0) {
@@ -374,6 +375,7 @@ export class SearchService {
       filter: {
         nodeTypes: ['document'],
         docIds: req.entities?.map((entity) => entity.entityId),
+        projectIds: req.projectId ? [req.projectId] : undefined,
       },
     });
     if (nodes.length === 0) {

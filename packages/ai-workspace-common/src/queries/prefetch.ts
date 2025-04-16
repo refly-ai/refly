@@ -12,6 +12,7 @@ import {
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
+  getProjectDetail,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -24,6 +25,7 @@ import {
   listLabelClasses,
   listLabelInstances,
   listModels,
+  listProjects,
   listResources,
   listShares,
   listSkillInstances,
@@ -39,12 +41,14 @@ import {
   GetCanvasDetailData,
   GetCodeArtifactDetailData,
   GetDocumentDetailData,
+  GetProjectDetailData,
   GetResourceDetailData,
   ListCanvasesData,
   ListCanvasTemplatesData,
   ListDocumentsData,
   ListLabelClassesData,
   ListLabelInstancesData,
+  ListProjectsData,
   ListResourcesData,
   ListSharesData,
   ListSkillInstancesData,
@@ -147,6 +151,22 @@ export const prefetchUseGetDocumentDetail = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions),
     queryFn: () => getDocumentDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListProjects = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListProjectsData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListProjectsKeyFn(clientOptions),
+    queryFn: () => listProjects({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetProjectDetail = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetProjectDetailData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetProjectDetailKeyFn(clientOptions),
+    queryFn: () => getProjectDetail({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetCodeArtifactDetail = (
   queryClient: QueryClient,

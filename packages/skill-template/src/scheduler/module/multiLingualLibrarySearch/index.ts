@@ -82,6 +82,7 @@ export const callMultiLingualLibrarySearch = async (
   const enableDeepSearch = params.enableDeepSearch || false;
   const enableSearchWholeSpace = params.enableSearchWholeSpace || false;
   const timeTracker = new TimeTracker();
+  const projectId = config.configurable.project?.projectId;
   let finalResults: Source[] = [];
 
   const model = engine.chatModel({ temperature: 0.1 }, true);
@@ -90,6 +91,19 @@ export const callMultiLingualLibrarySearch = async (
 
   try {
     let queries = rewrittenQueries || [query]; // Use rewrittenQueries if available
+
+    // Ensure queries is always a valid array with at least one non-empty string
+    if (
+      !Array.isArray(queries) ||
+      queries.length === 0 ||
+      !queries.some((q) => q && q.trim() !== '')
+    ) {
+      engine.logger.warn('No valid queries provided, using original query as fallback');
+      queries = [query];
+    }
+
+    // Remove any invalid queries
+    queries = queries.filter((q) => q && typeof q === 'string' && q.trim() !== '');
 
     // Step 1: Rewrite query (only if no rewrittenQueries provided)
     if (
@@ -148,15 +162,25 @@ export const callMultiLingualLibrarySearch = async (
     }
 
     // Determine display locale
-    const displayLocale = resultDisplayLocale;
+    const displayLocale = resultDisplayLocale || 'auto';
     const searchLocaleListLen = enableDeepSearch ? 3 : 2;
     const optimizedSearchLocales = getOptimizedSearchLocales(displayLocale, searchLocaleListLen);
-    searchLocaleList = optimizedSearchLocales;
 
+    // Make sure searchLocaleList is valid
+    searchLocaleList =
+      optimizedSearchLocales && optimizedSearchLocales.length > 0 ? optimizedSearchLocales : ['en'];
+
+    engine.logger.log(`Using search locales: ${searchLocaleList.join(', ')}`);
     engine.logger.log(`Recommended display locale: ${displayLocale}`);
 
     // Step 2: Translate query (if enabled)
     const queryMap: Record<string, string[]> = {};
+
+    // Initialize queryMap with default values
+    if (!queries || queries.length === 0) {
+      // Ensure we have at least one query to work with
+      queries = [query];
+    }
 
     if (enableTranslateQuery) {
       timeTracker.startStep('translateQuery');
@@ -195,7 +219,9 @@ export const callMultiLingualLibrarySearch = async (
               key: 'translateQuery',
               descriptionArgs: {
                 duration: translateQueryDuration,
-                translatedQueries: Object.values(queryMap).join(', '),
+                translatedQueries: Object.entries(queryMap)
+                  .map(([locale, qs]) => `${locale}: ${qs.join(', ')}`)
+                  .join(' | '),
               },
             },
           },
@@ -216,13 +242,26 @@ export const callMultiLingualLibrarySearch = async (
       }
     }
 
+    // Validate queryMap before proceeding
+    if (Object.keys(queryMap).length === 0) {
+      engine.logger.warn('QueryMap is empty, initializing with default values');
+      // Initialize with at least one locale and query
+      for (const locale of searchLocaleList) {
+        queryMap[locale] = [query];
+      }
+    }
+
     // Step 3: Perform concurrent library search
     timeTracker.startStep('librarySearch');
     let allResults = [];
     try {
+      // Log queryMap for debugging
+      engine.logger.log(`QueryMap for library search: ${JSON.stringify(queryMap)}`);
+
       allResults = await performConcurrentLibrarySearch({
         queryMap,
         searchLimit,
+        projectId,
         concurrencyLimit: libraryConcurrencyLimit,
         user: config.configurable.user,
         engine: engine,
@@ -252,9 +291,18 @@ export const callMultiLingualLibrarySearch = async (
     }
 
     // Make merging results optional
-    finalResults = mergeSearchResults(allResults);
+    try {
+      finalResults = mergeSearchResults(allResults);
+      engine.logger.log(
+        `Merged ${allResults.length} search results into ${finalResults.length} final results`,
+      );
+    } catch (error) {
+      engine.logger.error(`Error merging search results: ${error.stack}`);
+      // If merging fails, use the raw results
+      finalResults = allResults || [];
+    }
 
-    if (enableTranslateResult && finalResults.length > 0) {
+    if (enableTranslateResult && finalResults && finalResults.length > 0) {
       // Step 4: Translate merged results to display locale
       timeTracker.startStep('translateResults');
       try {
@@ -347,10 +395,22 @@ export const callMultiLingualLibrarySearch = async (
 
     // Deduplicate sources by title
     try {
-      finalResults = deduplicateSourcesByTitle(finalResults);
+      if (finalResults && finalResults.length > 0) {
+        const originalCount = finalResults.length;
+        finalResults = deduplicateSourcesByTitle(finalResults);
+        engine.logger.log(
+          `Deduplicated ${originalCount} results to ${finalResults.length} final results`,
+        );
+      }
     } catch (error) {
       engine.logger.error(`Error in deduplicating results: ${error.stack}`);
       // Keep original results if deduplication fails
+    }
+
+    // Ensure we return a valid array
+    if (!finalResults || !Array.isArray(finalResults)) {
+      finalResults = [];
+      engine.logger.warn('Reset finalResults to empty array due to invalid state');
     }
 
     // Return results with analysis

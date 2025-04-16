@@ -71,7 +71,7 @@ function HeroHome() {
                   <div
                     onClick={() => {
                       window.open(
-                        'https://github.com/refly-ai/refly/releases/tag/v0.4.2',
+                        'https://github.com/refly-ai/refly/releases/tag/v0.5.0',
                         '_blank',
                       );
                     }}

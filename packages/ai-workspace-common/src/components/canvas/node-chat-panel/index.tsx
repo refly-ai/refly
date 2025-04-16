@@ -23,6 +23,7 @@ import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/e
 import { cn } from '@refly-packages/utils/cn';
 import classNames from 'classnames';
 import { ContextTarget } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { ProjectKnowledgeToggle } from '@refly-packages/ai-workspace-common/components/project/project-knowledge-toggle';
 
 // Memoized Premium Banner Component
 const PremiumBanner = memo(() => {
@@ -35,11 +36,11 @@ const PremiumBanner = memo(() => {
     (state) => state.setSubscribeModalVisible,
   );
 
-  if (!showPremiumBanner) return null;
-
   const handleUpgrade = useCallback(() => {
     setSubscribeModalVisible(true);
   }, [setSubscribeModalVisible]);
+
+  if (!showPremiumBanner) return null;
 
   return (
     <div className="flex items-center justify-between px-2 py-0.5 bg-gray-100 border-b">
@@ -134,6 +135,8 @@ export interface ChatPanelProps {
   className?: string;
   mode?: 'node' | 'list';
   resultId?: string;
+  projectId?: string;
+  handleProjectChange?: (newProjectId: string) => void;
 }
 
 export const ChatPanel = memo(
@@ -158,6 +161,8 @@ export const ChatPanel = memo(
     className = '',
     mode = 'node',
     resultId,
+    projectId,
+    handleProjectChange,
   }: ChatPanelProps) => {
     const [form] = Form.useForm();
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -345,6 +350,11 @@ export const ChatPanel = memo(
             {subscriptionEnabled && !userProfile?.subscription && <PremiumBanner />}
             <div className={cn('px-3')}>{renderContent()}</div>
           </div>
+          <ProjectKnowledgeToggle
+            className="!pb-0"
+            currentProjectId={projectId}
+            onProjectChange={handleProjectChange}
+          />
         </div>
       );
     }
@@ -359,6 +369,11 @@ export const ChatPanel = memo(
           setSelectedSkill={setSelectedSkill}
         />
         {renderContent()}
+        <ProjectKnowledgeToggle
+          className="!pb-0 !pt-0"
+          currentProjectId={projectId}
+          onProjectChange={handleProjectChange}
+        />
       </div>
     );
   },

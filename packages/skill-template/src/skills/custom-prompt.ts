@@ -99,13 +99,32 @@ export class CustomPrompt extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { messages = [], images = [] } = state;
-    const { currentSkill, tplConfig, locale = 'en' } = config.configurable;
+    const { currentSkill, tplConfig, locale = 'en', project, runtimeConfig } = config.configurable;
 
     // Set current step
     config.metadata.step = { name: 'analyzeQuery' };
 
-    // Get custom system prompt from config
+    // Only enable knowledge base search if both projectId AND runtimeConfig.enabledKnowledgeBase are true
+    const projectId = project?.projectId;
+    const enableKnowledgeBaseSearch = !!projectId && !!runtimeConfig?.enabledKnowledgeBase;
+
+    this.engine.logger.log(
+      `ProjectId: ${projectId}, Enable KB Search: ${enableKnowledgeBaseSearch}`,
+    );
+
+    // Get custom system prompt and instructions
     let customSystemPrompt = (tplConfig?.customSystemPrompt?.value as string) || '';
+    const customInstructions = project?.customInstructions;
+
+    // Update tplConfig with knowledge base search setting
+    config.configurable.tplConfig = {
+      ...config.configurable.tplConfig,
+      enableKnowledgeBaseSearch: {
+        value: enableKnowledgeBaseSearch,
+        label: 'Knowledge Base Search',
+        displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
+      },
+    };
 
     // If customSystemPrompt is empty, look for it in chat history
     if (!customSystemPrompt && config.configurable.chatHistory?.length > 0) {
@@ -229,6 +248,7 @@ export class CustomPrompt extends BaseSkill {
       optimizedQuery,
       rewrittenQueries,
       modelInfo: config?.configurable?.modelInfo,
+      customInstructions,
     });
 
     // Generate answer using the model

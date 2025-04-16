@@ -3,6 +3,7 @@ import { Menu } from '@arco-design/web-react';
 import { Avatar, Button, Layout, Skeleton, Divider, Tag } from 'antd';
 import {
   useLocation,
+  useMatch,
   useNavigate,
   useSearchParams,
 } from '@refly-packages/ai-workspace-common/utils/router';
@@ -33,7 +34,10 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/sider';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 // icons
-import { IconLibrary } from '@refly-packages/ai-workspace-common/components/common/icon';
+import {
+  IconLibrary,
+  IconProject,
+} from '@refly-packages/ai-workspace-common/components/common/icon';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { AiOutlineMenuFold, AiOutlineUser } from 'react-icons/ai';
 import { SubscriptionHint } from '@refly-packages/ai-workspace-common/components/subscription/hint';
@@ -45,7 +49,10 @@ import { useCanvasTemplateModal } from '@refly-packages/ai-workspace-common/stor
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
+import { CreateProjectModal } from '@refly-packages/ai-workspace-common/components/project/project-create';
+
 import './layout.scss';
+import { ProjectDirectory } from '../project/project-directory';
 
 const Sider = Layout.Sider;
 const MenuItem = Menu.Item;
@@ -153,6 +160,7 @@ const MenuItemContent = (props: {
   collapse?: boolean;
   position?: 'left' | 'right';
   hoverContent?: HoverContent;
+  canvasId?: string;
 }) => {
   const { position = 'left', type, hoverContent } = props;
   const { hoverCardEnabled } = useHoverCard();
@@ -208,7 +216,7 @@ const MenuItemContent = (props: {
   return content;
 };
 
-const NewCanvasItem = () => {
+export const NewCanvasItem = () => {
   const { t } = useTranslation();
   const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas();
 
@@ -229,7 +237,35 @@ const NewCanvasItem = () => {
   );
 };
 
-const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
+export const NewProjectItem = () => {
+  const { t } = useTranslation();
+  const [createProjectModalVisible, setCreateProjectModalVisible] = useState(false);
+  const { loadSiderData } = useHandleSiderData();
+
+  return (
+    <>
+      <MenuItem
+        key="newProject"
+        className="ml-2.5 flex h-8 items-center"
+        onClick={() => setCreateProjectModalVisible(true)}
+      >
+        <Button type="text" icon={<IconPlus className="text-green-600" />} />
+
+        <span className="text-green-600">{t('project.create')}</span>
+      </MenuItem>
+      <CreateProjectModal
+        mode="create"
+        visible={createProjectModalVisible}
+        setVisible={setCreateProjectModalVisible}
+        onSuccess={() => {
+          loadSiderData(true);
+        }}
+      />
+    </>
+  );
+};
+
+export const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showCanvasIdActionDropdown, setShowCanvasIdActionDropdown] = useState<string | null>(null);
@@ -277,6 +313,31 @@ const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
   );
 };
 
+export const ProjectListItem = ({ project }: { project: SiderData }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const handleProjectClick = async () => {
+    // Navigate to the project page
+    navigate(`/project/${project.id}?canvasId=empty`);
+  };
+
+  return (
+    <MenuItem
+      key={project.id}
+      className="group relative ml-4 h-8 rounded text-sm leading-8 hover:bg-gray-50"
+      onClick={handleProjectClick}
+    >
+      <div className="flex h-8 w-40 items-center justify-between">
+        <div className="flex items-center gap-3">
+          <IconProject className="text-gray-500" />
+          <div className="w-28 truncate">{project?.name || t('common.untitled')}</div>
+        </div>
+      </div>
+    </MenuItem>
+  );
+};
+
 const getSelectedKey = (pathname: string) => {
   if (pathname.startsWith('/canvas')) {
     const arr = pathname?.split('?')[0]?.split('/');
@@ -305,6 +366,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
   const {
     collapse,
     canvasList,
+    projectsList,
     setCollapse,
     showSettingModal,
     setShowSettingModal,
@@ -313,12 +375,14 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     showSettingModal: state.showSettingModal,
     collapse: state.collapse,
     canvasList: state.canvasList,
+    projectsList: state.projectsList,
     setCollapse: state.setCollapse,
     setShowSettingModal: state.setShowSettingModal,
     setShowLibraryModal: state.setShowLibraryModal,
+    showLibraryModal: state.showLibraryModal,
   }));
 
-  const { isLoadingCanvas } = useHandleSiderData(true);
+  const { isLoadingCanvas, isLoadingProjects } = useHandleSiderData(true);
 
   const { t } = useTranslation();
 
@@ -327,6 +391,14 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
   const selectedKey = useMemo(() => getSelectedKey(location.pathname), [location.pathname]);
 
   const defaultOpenKeys = useMemo(() => ['Canvas', 'Library', 'Template'], []);
+
+  const canvasId = location.pathname.split('/').pop();
+  const { debouncedCreateCanvas } = useCreateCanvas({
+    projectId: null,
+    afterCreateSuccess: () => {
+      setShowLibraryModal(true);
+    },
+  });
 
   interface SiderCenterProps {
     key: string;
@@ -373,7 +445,12 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     const settingsTab = searchParams.get('settingsTab');
 
     if (shouldOpenLibrary === 'true' && userProfile?.uid) {
-      setShowLibraryModal(true);
+      if (canvasId && canvasId !== 'empty') {
+        setShowLibraryModal(true);
+      } else {
+        debouncedCreateCanvas();
+      }
+
       // Remove the parameter from URL
       searchParams.delete('openLibrary');
       const newSearch = searchParams.toString();
@@ -433,6 +510,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
                       className="[&_.arco-menu-icon-suffix_.arco-icon-down]:z-[1] [&_.arco-menu-icon-suffix_.arco-icon-down]:rotate-90 [&_.arco-menu-inline-header]:pr-0"
                       title={
                         <MenuItemContent
+                          canvasId={canvasId}
                           type={item.key}
                           icon={item.icon}
                           title={t(`loggedHomePage.siderMenu.${item.name}`)}
@@ -472,12 +550,45 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
                           )}
                         </>
                       )}
+
+                      {item.key === 'Library' && (
+                        <>
+                          <NewProjectItem />
+
+                          {isLoadingProjects ? (
+                            <>
+                              <Skeleton.Input
+                                key="skeleton-1"
+                                active
+                                size="small"
+                                style={{ width: 204 }}
+                              />
+                              <Skeleton.Input
+                                key="skeleton-2"
+                                active
+                                size="small"
+                                style={{ marginTop: 8, width: 204 }}
+                              />
+                              <Skeleton.Input
+                                key="skeleton-3"
+                                active
+                                size="small"
+                                style={{ marginTop: 8, width: 204 }}
+                              />
+                            </>
+                          ) : (
+                            projectsList.map((project) => (
+                              <ProjectListItem key={project.id} project={project} />
+                            ))
+                          )}
+                        </>
+                      )}
                     </SubMenu>
                     {itemIndex < siderSections.length - 1 && (
                       <Divider
                         key={`divider-${item.key}`}
                         style={{
-                          margin: '8px 0',
+                          margin: '6px 0',
                         }}
                       />
                     )}
@@ -487,7 +598,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             </div>
 
             <div className="mt-auto">
-              <Divider style={{ margin: '8px 0' }} />
+              <Divider style={{ margin: '6px 0' }} />
 
               {subscriptionEnabled && planType === 'free' && (
                 <div className="mb-2 flex flex-col gap-2">
@@ -497,7 +608,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
               <span
                 onClick={() =>
-                  window.open('https://github.com/refly-ai/refly/releases/tag/v0.4.2', '_blank')
+                  window.open('https://github.com/refly-ai/refly/releases/tag/v0.5.0', '_blank')
                 }
                 className="mb-2 flex items-start text-[#00968F] hover:bg-gray-50 whitespace-normal h-auto cursor-pointer"
               >
@@ -528,11 +639,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         </Menu>
 
         <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
-
-        <SettingsGuideModal />
-        <TourModal />
-        <StorageExceededModal />
-        <CanvasTemplateModal />
       </div>
     </Sider>
   );
@@ -543,6 +649,25 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
+  const isProject = useMatch('/project/:projectId');
+  const projectId = location.pathname.split('/').pop();
 
-  return isLogin ? <SiderLoggedIn source={source} /> : <SiderLoggedOut source={source} />;
+  return (
+    <>
+      <SettingsGuideModal />
+      <TourModal />
+      <StorageExceededModal />
+      <CanvasTemplateModal />
+
+      {isLogin ? (
+        isProject ? (
+          <ProjectDirectory projectId={projectId} source={source} />
+        ) : (
+          <SiderLoggedIn source={source} />
+        )
+      ) : (
+        <SiderLoggedOut source={source} />
+      )}
+    </>
+  );
 };

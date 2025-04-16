@@ -22,6 +22,7 @@ export enum IDPrefix {
   MEMO = 'm-',
   VERIFICATION_SESSION = 'vs-',
   IMAGE = 'img-',
+  PROJECT = 'p-',
   CODE_ARTIFACT = 'ca-',
 }
 
@@ -99,6 +100,10 @@ export function genContentSelectorID(): string {
 
 export function genVerificationSessionID(): string {
   return IDPrefix.VERIFICATION_SESSION + createId();
+}
+
+export function genProjectID(): string {
+  return IDPrefix.PROJECT + createId();
 }
 
 export const genUniqueId = () => {

@@ -31,4 +31,8 @@ VALUES
     ('openai/gpt-4o-mini', 'GPT-4o Mini', 'openai', 't2', 't', 't', 128000, 16384, '{"vision":true}'),
 
     -- Qwen models
-    ('qwen/qwen-2.5-72b-instruct', 'Qwen 2.5 72B', 'qwen', 't2', 't', 'f', 32000, 4096, '{}');
+    ('qwen/qwen-2.5-72b-instruct', 'Qwen 2.5 72B', 'qwen', 't2', 't', 'f', 32000, 4096, '{}'),
+
+    -- Grok models
+    ('x-ai/grok-3-beta', 'Grok 3 Beta', 'xai', 't2', 't', 'f', 131072, 131072, '{}'),
+    ('x-ai/grok-3-mini-beta', 'Grok 3 Mini Beta', 'xai', 't2', 't', 'f', 131072, 131072, '{}');

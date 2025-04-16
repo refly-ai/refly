@@ -10,10 +10,13 @@ import { buildContextFormat } from './context';
 import { buildLocaleFollowInstruction } from '../common/locale-follow';
 import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 import { buildFormatDisplayInstruction } from '../common/format';
-import { buildSimpleDetailedExplanationInstruction } from '../common/personalization';
+import {
+  buildSimpleDetailedExplanationInstruction,
+  buildCustomProjectInstructionsForUserPrompt,
+} from '../common/personalization';
 
-export const buildLibrarySearchSystemPrompt = () => {
-  return `You are an AI assistant developed by Refly, specializing in knowledge base search and information retrieval. Your task is to provide accurate answers based on the organization's internal knowledge base.
+export const buildLibrarySearchSystemPrompt = (_locale: string, _needPrepareContext: boolean) => {
+  const systemPrompt = `You are an AI assistant developed by Refly, specializing in knowledge base search and information retrieval. Your task is to provide accurate answers based on the organization's internal knowledge base.
 
 ${buildCitationRules()}
 
@@ -53,6 +56,8 @@ ${buildContextFormat()}
 
 ${buildSpecificQueryInstruction()}
 `;
+
+  return systemPrompt;
 };
 
 export const buildLibrarySearchUserPrompt = ({
@@ -60,14 +65,18 @@ export const buildLibrarySearchUserPrompt = ({
   optimizedQuery,
   rewrittenQueries,
   locale,
+  customInstructions,
 }: {
   originalQuery: string;
   optimizedQuery: string;
   rewrittenQueries: string[];
   locale: string;
+  customInstructions?: string;
 }) => {
+  let prompt = '';
+
   if (originalQuery === optimizedQuery) {
-    return `## Knowledge Base Query
+    prompt = `## Knowledge Base Query
 ${originalQuery}
 
 ${buildCitationReminder()}
@@ -76,9 +85,8 @@ ${chatHistoryReminder()}
 
 ${buildLocaleFollowInstruction(locale)}
 `;
-  }
-
-  return `## User Query
+  } else {
+    prompt = `## User Query
 
 ### Original User Query
 ${originalQuery}
@@ -100,6 +108,14 @@ ${buildLocaleFollowInstruction(locale)}
 ${buildFormatDisplayInstruction()}
 ${buildSimpleDetailedExplanationInstruction()}
 `;
+  }
+
+  // Add custom instructions to user prompt if available
+  if (customInstructions) {
+    prompt += `\n${buildCustomProjectInstructionsForUserPrompt(customInstructions)}`;
+  }
+
+  return prompt;
 };
 
 export const buildLibrarySearchContextUserPrompt = (

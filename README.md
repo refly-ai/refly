@@ -11,7 +11,7 @@
 
 Refly is an open-source AI-native creation engine powered by 13+ leading AI models. Its intuitive free-form canvas interface integrates multi-threaded conversations, multimodal inputs (text/images/files), RAG retrieval process, browser extension web clipper, contextual memory, AI document editing capabilities, code artifact generation (HTML/SVG/Mermaid/React), and website visualization engine, empowering you to effortlessly transform ideas into complete works with interactive visualizations and web applications.
 
-[🚀 v0.4.2 Released! Now Supporting Canvas template and document table⚡️](https://docs.refly.ai/changelog/v0.4.2)
+[🚀 v0.5.0 Released! Now Supporting knowledge base partition management and linear conversations ⚡️](https://docs.refly.ai/changelog/v0.5.0)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 

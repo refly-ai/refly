@@ -25,6 +25,7 @@ import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-up
 import { Form } from '@arco-design/web-react';
 import { notification } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
+import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
 
 interface EditChatInputProps {
   enabled: boolean;
@@ -72,6 +73,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   } | null>(actionMeta);
 
   const [form] = Form.useForm();
+  const { getFinalProjectId } = useAskProject();
 
   const hideSelectedSkillHeader = useMemo(
     () => !localActionMeta || localActionMeta?.name === 'commonQnA' || !localActionMeta?.name,
@@ -139,6 +141,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
 
     // Get tplConfig from form
     const tplConfig = form?.getFieldValue('tplConfig');
+    const finalProjectId = getFinalProjectId();
 
     // Synchronize edges with latest context items
     const nodes = getNodes();
@@ -166,6 +169,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
         modelInfo: editModelInfo,
         selectedSkill: skill,
         tplConfig,
+        projectId: finalProjectId,
       },
       {
         entityId: canvasId,
@@ -190,6 +194,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
     formErrors,
     t,
     form,
+    getFinalProjectId,
   ]);
 
   const customActions: CustomAction[] = useMemo(

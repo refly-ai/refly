@@ -422,6 +422,7 @@ export const useInvokeAction = () => {
         version = 0,
         tplConfig = {},
         runtimeConfig = {},
+        projectId,
       } = payload;
       const { context, resultHistory, images } = convertContextItemsToInvokeParams(
         contextItems,
@@ -478,6 +479,7 @@ export const useInvokeAction = () => {
         skillName: selectedSkill?.name,
         tplConfig,
         runtimeConfig,
+        projectId,
       };
 
       onUpdateResult(resultId, {

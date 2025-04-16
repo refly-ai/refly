@@ -60,13 +60,14 @@ const NodeContent = memo(
       { enabled: isLogin && !shareId && status === 'finish' },
     );
     const { data: shareData } = useFetchShareData<CodeArtifact>(shareId);
-    const artifactData = useMemo(
-      () => shareData || remoteData?.data || legacyData || null,
-      [shareData, remoteData, legacyData],
-    );
+    const artifactData = useMemo(() => {
+      const data = shareData || remoteData?.data || legacyData || null;
+
+      return data ? { ...data, type: legacyData?.type || data.type } : null;
+    }, [shareData, remoteData, legacyData]);
 
     return (
-      <div className="h-full h-full flex justify-center items-center">
+      <div className="h-full w-full">
         <Renderer
           content={artifactData?.content}
           type={artifactData?.type}
@@ -268,6 +269,19 @@ export const CodeArtifactNode = memo(
       }
       updateNodeTitle(newTitle, data.entityId, id, 'codeArtifact');
     };
+
+    const resizeMoveable = useCallback((width: number, height: number) => {
+      moveableRef.current?.request('resizable', { width, height });
+    }, []);
+
+    // Update size when content changes
+    useEffect(() => {
+      requestAnimationFrame(() => {
+        if (!targetRef.current) return;
+        const { offsetWidth, offsetHeight } = targetRef.current;
+        resizeMoveable(offsetWidth, offsetHeight);
+      });
+    }, [resizeMoveable, targetRef.current?.offsetHeight]);
 
     // Add event handling
     useEffect(() => {

@@ -72,9 +72,7 @@ export const TemplatesGuide = ({ canvasId }: { canvasId: string }) => {
               </div>
             ))}
           <div
-            className={`text-center font-bold bg-white rounded-lg m-2 flex flex-col items-center justify-center cursor-pointer shadow-[0_2px_8px_0_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_0_rgba(0,0,0,0.12)] transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out text-gray-500 hover:text-green-600 ${
-              data?.data?.length > 0 ? '' : 'h-[200px]'
-            }`}
+            className="text-center font-bold bg-white rounded-lg m-2 flex flex-col items-center justify-center cursor-pointer shadow-[0_2px_8px_0_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_0_rgba(0,0,0,0.12)] transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out text-gray-500 hover:text-green-600 h-[260px]"
             onClick={() => setVisible(true)}
             style={{ pointerEvents: 'auto' }}
           >

@@ -134,6 +134,8 @@ model ActionResult {
   errors        String?      @map("errors")
   /// Locale setting
   locale        String?      @default("") @map("locale")
+  /// Project id
+  projectId     String?      @map("project_id")
   /// Action result status
   status        ActionStatus @default(waiting) @map("status")
   /// Duplicate from another action result id
@@ -275,6 +277,10 @@ model Canvas {
   updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
+  /// Project id
+  projectId         String?   @map("project_id")
+  /// Project
+  project           Project?  @relation(fields: [projectId], references: [projectId])
 
   @@index([uid, updatedAt])
   @@map("canvases")
@@ -423,6 +429,10 @@ model Resource {
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
+  /// Project id
+  projectId      String?   @map("project_id")
+  /// Project
+  project        Project?  @relation(fields: [projectId], references: [projectId])
 
   @@index([uid, identifier, deletedAt, updatedAt])
   @@map("resources")
@@ -457,6 +467,10 @@ model Document {
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+  /// Project id
+  projectId       String?   @map("project_id")
+  /// Project
+  project         Project?  @relation(fields: [projectId], references: [projectId])
 
   @@index([uid, deletedAt, updatedAt])
   @@map("documents")
@@ -487,6 +501,38 @@ model CodeArtifact {
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@map("code_artifacts")
+}
+
+model Project {
+  /// Primary key
+  pk                 BigInt     @id @default(autoincrement())
+  /// Project id
+  projectId          String     @unique @map("project_id")
+  /// Project name
+  name               String     @map("name")
+  /// UID
+  uid                String     @map("uid")
+  /// Description
+  description        String?    @map("description")
+  /// Cover storage key
+  coverStorageKey    String?    @map("cover_storage_key")
+  /// Custom instructions
+  customInstructions String?    @map("custom_instructions")
+  /// Create timestamp
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt          DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt          DateTime?  @map("deleted_at") @db.Timestamptz()
+  /// Documents
+  documents          Document[]
+  /// Resources
+  resources          Resource[]
+  /// Canvases
+  canvases           Canvas[]
+
+  @@index([uid, deletedAt, updatedAt])
+  @@map("projects")
 }
 
 model ShareRecord {
@@ -909,12 +955,6 @@ model CheckoutSession {
 
   @@index([sessionId])
   @@map("checkout_sessions")
-}
-
-enum MessageType {
-  ai
-  human
-  system
 }
 
 model RefreshToken {

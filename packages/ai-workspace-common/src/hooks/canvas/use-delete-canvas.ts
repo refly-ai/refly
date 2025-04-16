@@ -8,13 +8,14 @@ import { useNavigate } from 'react-router-dom';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { IndexeddbPersistence } from 'y-indexeddb';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 
 export const useDeleteCanvas = () => {
   const [isRemoving, setIsRemoving] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
-
+  const { projectId } = useGetProjectCanvasId();
   const deleteCanvas = async (canvasId: string, deleteAllFiles = false) => {
     if (isRemoving) return;
     let success = false;
@@ -56,9 +57,15 @@ export const useDeleteCanvas = () => {
           // Use setTimeout to ensure all state updates are processed
           setTimeout(() => {
             if (remainingCanvas?.id) {
-              navigate(`/canvas/${remainingCanvas.id}`, { replace: true });
+              projectId
+                ? navigate(`/project/${projectId}?canvasId=${remainingCanvas.id}`, {
+                    replace: true,
+                  })
+                : navigate(`/canvas/${remainingCanvas.id}`, { replace: true });
             } else {
-              navigate('/canvas/empty', { replace: true });
+              projectId
+                ? navigate(`/project/${projectId}`, { replace: true })
+                : navigate('/canvas/empty', { replace: true });
             }
           }, 0);
         }

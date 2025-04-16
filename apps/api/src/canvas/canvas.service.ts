@@ -26,8 +26,8 @@ import {
 import { Prisma } from '@prisma/client';
 import { genCanvasID } from '@refly-packages/utils';
 import { DeleteKnowledgeEntityJobData } from '@/knowledge/knowledge.dto';
-import { QUEUE_DELETE_KNOWLEDGE_ENTITY } from '@/utils/const';
-import { AutoNameCanvasJobData } from './canvas.dto';
+import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '@/utils/const';
+import { AutoNameCanvasJobData, DeleteCanvasJobData } from './canvas.dto';
 import { streamToBuffer } from '@/utils';
 import { SubscriptionService } from '@/subscription/subscription.service';
 import { KnowledgeService } from '@/knowledge/knowledge.service';
@@ -50,15 +50,18 @@ export class CanvasService {
     @Inject(MINIO_INTERNAL) private minio: MinioService,
     @InjectQueue(QUEUE_DELETE_KNOWLEDGE_ENTITY)
     private deleteKnowledgeQueue: Queue<DeleteKnowledgeEntityJobData>,
+    @InjectQueue(QUEUE_POST_DELETE_CANVAS)
+    private postDeleteCanvasQueue: Queue<DeleteCanvasJobData>,
   ) {}
 
   async listCanvases(user: User, param: ListCanvasesData['query']) {
-    const { page, pageSize } = param;
+    const { page = 1, pageSize = 10, projectId } = param;
 
     const canvases = await this.prisma.canvas.findMany({
       where: {
         uid: user.uid,
         deletedAt: null,
+        projectId: projectId || null,
       },
       orderBy: { updatedAt: 'desc' },
       skip: (page - 1) * pageSize,
@@ -171,7 +174,7 @@ export class CanvasService {
     param: DuplicateCanvasRequest,
     options?: { checkOwnership?: boolean },
   ) {
-    const { title, canvasId, duplicateEntities } = param;
+    const { title, canvasId, projectId, duplicateEntities } = param;
 
     const canvas = await this.prisma.canvas.findFirst({
       where: { canvasId, deletedAt: null, uid: options?.checkOwnership ? user.uid : undefined },
@@ -215,6 +218,7 @@ export class CanvasService {
         title: newTitle,
         status: 'duplicating',
         stateStorageKey,
+        projectId,
       },
     });
 
@@ -352,6 +356,7 @@ export class CanvasService {
         uid: user.uid,
         canvasId,
         title: param.title,
+        projectId: param.projectId,
         stateStorageKey,
       },
     });
@@ -369,13 +374,14 @@ export class CanvasService {
       createdAt: canvas.createdAt.toJSON(),
       updatedAt: canvas.updatedAt.toJSON(),
       uid: canvas.uid,
+      projectId: canvas.projectId,
     });
 
     return canvas;
   }
 
   async updateCanvas(user: User, param: UpsertCanvasRequest) {
-    const { canvasId, title, minimapStorageKey } = param;
+    const { canvasId, title, minimapStorageKey, projectId } = param;
 
     const canvas = await this.prisma.canvas.findUnique({
       where: { canvasId, uid: user.uid, deletedAt: null },
@@ -390,6 +396,13 @@ export class CanvasService {
     if (title !== undefined) {
       updates.title = title;
     }
+    if (projectId !== undefined) {
+      if (projectId) {
+        updates.project = { connect: { projectId } };
+      } else {
+        updates.project = { disconnect: true };
+      }
+    }
     if (minimapStorageKey !== undefined) {
       const minimapFile = await this.miscService.findFileAndBindEntity(minimapStorageKey, {
         entityId: canvasId,
@@ -401,12 +414,9 @@ export class CanvasService {
       updates.minimapStorageKey = minimapFile.storageKey;
     }
 
-    const updatedCanvas = await this.prisma.$transaction(async (tx) => {
-      const canvas = await tx.canvas.update({
-        where: { canvasId, uid: user.uid, deletedAt: null },
-        data: updates,
-      });
-      return canvas;
+    const updatedCanvas = await this.prisma.canvas.update({
+      where: { canvasId, uid: user.uid, deletedAt: null },
+      data: updates,
     });
 
     if (!updatedCanvas) {
@@ -442,6 +452,7 @@ export class CanvasService {
       title: updatedCanvas.title,
       updatedAt: updatedCanvas.updatedAt.toJSON(),
       uid: updatedCanvas.uid,
+      projectId: updatedCanvas.projectId,
     });
 
     return updatedCanvas;
@@ -458,19 +469,57 @@ export class CanvasService {
       throw new CanvasNotFoundError();
     }
 
-    const cleanups: Promise<any>[] = [
-      this.prisma.canvas.update({
-        where: { canvasId },
-        data: { deletedAt: new Date() },
-      }),
-      this.elasticsearch.deleteCanvas(canvas.canvasId),
-    ];
+    // Mark the canvas as deleted immediately
+    await this.prisma.canvas.update({
+      where: { canvasId },
+      data: { deletedAt: new Date() },
+    });
+
+    // Add canvas deletion to queue for async processing
+    await this.postDeleteCanvasQueue.add(
+      'postDeleteCanvas',
+      {
+        uid,
+        canvasId,
+        deleteAllFiles: param.deleteAllFiles,
+      },
+      {
+        jobId: `canvas-cleanup-${canvasId}`,
+        removeOnComplete: true,
+        removeOnFail: true,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
+    );
+  }
+
+  async postDeleteCanvas(jobData: DeleteCanvasJobData) {
+    const { uid, canvasId, deleteAllFiles } = jobData;
+    this.logger.log(`Processing canvas cleanup for ${canvasId}, deleteAllFiles: ${deleteAllFiles}`);
+
+    const canvas = await this.prisma.canvas.findFirst({
+      where: { canvasId, uid, deletedAt: { not: null } }, // Make sure it's already marked as deleted
+    });
+
+    if (!canvas) {
+      this.logger.warn(`Canvas ${canvasId} not found or not deleted`);
+      return;
+    }
+
+    const cleanups: Promise<any>[] = [this.elasticsearch.deleteCanvas(canvas.canvasId)];
 
     if (canvas.stateStorageKey) {
       cleanups.push(this.minio.client.removeObject(canvas.stateStorageKey));
     }
 
-    if (param.deleteAllFiles) {
+    if (canvas.minimapStorageKey) {
+      cleanups.push(this.minio.client.removeObject(canvas.minimapStorageKey));
+    }
+
+    if (deleteAllFiles) {
       const relations = await this.prisma.canvasEntityRelation.findMany({
         where: { canvasId, deletedAt: null },
       });
@@ -481,26 +530,36 @@ export class CanvasService {
       this.logger.log(`Entities to be deleted: ${JSON.stringify(entities)}`);
 
       for (const entity of entities) {
-        cleanups.push(
-          this.deleteKnowledgeQueue.add(
-            'deleteKnowledgeEntity',
-            {
-              uid: canvas.uid,
-              entityId: entity.entityId,
-              entityType: entity.entityType,
-            },
-            {
-              jobId: entity.entityId,
-              removeOnComplete: true,
-              removeOnFail: true,
-              attempts: 3,
-            },
-          ),
+        await this.deleteKnowledgeQueue.add(
+          'deleteKnowledgeEntity',
+          {
+            uid: canvas.uid,
+            entityId: entity.entityId,
+            entityType: entity.entityType,
+          },
+          {
+            jobId: entity.entityId,
+            removeOnComplete: true,
+            removeOnFail: true,
+            attempts: 3,
+          },
         );
       }
+
+      // Mark relations as deleted
+      await this.prisma.canvasEntityRelation.updateMany({
+        where: { canvasId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
     }
 
-    await Promise.all(cleanups);
+    try {
+      await Promise.all(cleanups);
+      this.logger.log(`Successfully cleaned up canvas ${canvasId}`);
+    } catch (error) {
+      this.logger.error(`Error cleaning up canvas ${canvasId}: ${error?.message}`);
+      throw error; // Re-throw to trigger BullMQ retry
+    }
   }
 
   async syncCanvasEntityRelation(canvasId: string) {

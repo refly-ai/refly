@@ -14,7 +14,10 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import {
+  IContextItem,
+  useContextPanelStore,
+} from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
@@ -182,7 +185,8 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
     if (!node) return;
 
     const data = node?.data as CanvasNodeData<SkillNodeMeta>;
-    const { query = '', contextItems = [] } = data?.metadata ?? {};
+    const { query = '', contextItems = [], runtimeConfig = {} } = data?.metadata ?? {};
+    const { runtimeConfig: contextRuntimeConfig = {} } = useContextPanelStore.getState();
 
     const tplConfig = form.getFieldValue('tplConfig');
 
@@ -195,6 +199,10 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
           resultId,
           ...data?.metadata,
           tplConfig,
+          runtimeConfig: {
+            ...contextRuntimeConfig,
+            ...runtimeConfig,
+          },
         },
         {
           entityId: canvasId,

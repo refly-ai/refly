@@ -217,7 +217,6 @@ export const ThreadContainer = memo(
       () => `
         flex-shrink-0 
         bg-white 
-        shadow-lg 
         border 
         border-gray-200 
         flex 
@@ -296,7 +295,7 @@ export const ThreadContainer = memo(
     return (
       <div
         ref={ref}
-        className="border border-solid border-gray-100 rounded-lg shadow-lg bg-transparent"
+        className="border border-solid border-gray-100 rounded-lg bg-transparent"
         style={outerContainerStyles}
       >
         <div className={cn(containerClassName, className)} style={containerStyles}>

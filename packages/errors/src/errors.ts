@@ -208,6 +208,14 @@ export class CodeArtifactNotFoundError extends BaseError {
   };
 }
 
+export class ProjectNotFoundError extends BaseError {
+  code = 'E1014';
+  messageDict = {
+    en: 'Project not found, please refresh',
+    'zh-CN': '项目不存在，请刷新重试',
+  };
+}
+
 export class StorageQuotaExceeded extends BaseError {
   code = 'E2001';
   messageDict = {
@@ -282,6 +290,7 @@ const errorMap = {
   E1011: ActionResultNotFoundError,
   E1012: StaticFileNotFoundError,
   E1013: CodeArtifactNotFoundError,
+  E1014: ProjectNotFoundError,
   E2001: StorageQuotaExceeded,
   E2002: ModelUsageQuotaExceeded,
   E2003: ModelNotSupportedError,

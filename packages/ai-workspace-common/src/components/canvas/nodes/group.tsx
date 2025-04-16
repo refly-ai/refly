@@ -25,6 +25,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useThrottledCallback } from 'use-debounce';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
+import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 
 interface GroupMetadata {
   label?: string;
@@ -34,7 +35,7 @@ interface GroupMetadata {
   bgColor?: string;
 }
 
-interface GroupData {
+export interface GroupData {
   title: string;
   entityId: string;
   metadata?: GroupMetadata;
@@ -70,9 +71,10 @@ export const GroupNode = memo(
     const { deleteNodes, deleteNode } = useDeleteNode();
     const { addContextItems } = useAddToContext();
     const { addNode } = useAddNode();
-    const { selectNodeCluster, groupNodeCluster, layoutNodeCluster } = useNodeCluster();
+    const { selectNodeCluster, groupNodeCluster } = useNodeCluster();
     const setNodeDataByEntity = useSetNodeDataByEntity();
     const { setNodeStyle } = useNodeData();
+    const { onLayoutWithGroup } = useCanvasLayout();
 
     // Memoize node and its measurements
     const node = useMemo(() => getNode(id), [id, getNode]);
@@ -193,12 +195,8 @@ export const GroupNode = memo(
     }, [id, getNodes, groupNodeCluster]);
 
     const handleLayoutCluster = useCallback(() => {
-      const childNodes = getChildNodes(id, getNodes() as CanvasNode[]);
-
-      if (childNodes.length > 0) {
-        layoutNodeCluster(childNodes.map((node) => node.id));
-      }
-    }, [id, getNodes, layoutNodeCluster]);
+      onLayoutWithGroup(id, data);
+    }, [id, data, onLayoutWithGroup]);
 
     useEffect(() => {
       const handleNodeUngroup = () => {

@@ -53,9 +53,16 @@ export const useListenNodeOperationEvents = () => {
   );
 
   useEffect(() => {
-    const handleAddNode = ({ node, connectTo, shouldPreview, needSetCenter }) => {
+    const handleAddNode = ({ node, connectTo, shouldPreview, needSetCenter, positionCallback }) => {
       if (readonly) return;
-      addNode(node, connectTo, shouldPreview, needSetCenter);
+
+      // Add the node and get the calculated position
+      const position = addNode(node, connectTo, shouldPreview, needSetCenter);
+
+      // If a position callback was provided and we have a position, call it
+      if (positionCallback && typeof positionCallback === 'function' && position) {
+        positionCallback(position);
+      }
     };
 
     const handleJumpToNode = ({ entityId, descendantNodeType, shouldPreview }) => {

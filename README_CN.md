@@ -11,7 +11,7 @@
 
 Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型。其直观的自由画布界面支持多线程对话、多模态输入（文本/图片/文件）、RAG 检索流程、浏览器插件剪藏、上下文记忆、AI 文档编辑、代码生成（HTML/SVG/Mermaid/React）以及网站可视化引擎等功能，让您轻松地将创意转化为完整作品，并通过交互式可视化和网页应用进行展示。
 
-[🚀 v0.4.2 正式发布！支持画布模板和文档表格⚡️ ](https://docs.refly.ai/zh/changelog/v0.4.2)
+[🚀 v0.5.0 正式发布！支持知识库分区管理和线性对话 ⚡️](https://docs.refly.ai/zh/changelog/v0.5.0)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
@@ -51,7 +51,7 @@ Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型�
 
 ```bash
 cd deploy/docker
-cp .env.example .env # 确保所有必须的环境变量均已设置
+cp ../../apps/api/.env.example .env # 确保所有必须的环境变量均已设置
 docker compose up -d
 ```
 
@@ -165,7 +165,7 @@ docker compose up -d
 - 📚 协作知识库功能
 - 🔌 基于 MCP 的第三方插件开发的开放标准
 - 🔌 插件市场和开发者 SDK
-- 🤖 最少监督下的自主任务 Agent 
+- 🤖 最少监督下的自主任务 Agent
 - 🤖 多代理协作系统
 - ⚡️ 复杂 AI 流程的可视化工作流构建器与 API 支持
 - ⚡️ 与外部系统的高级集成能力

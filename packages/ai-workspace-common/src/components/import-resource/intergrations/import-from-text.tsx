@@ -9,11 +9,12 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { UpsertResourceRequest } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { TbClipboard } from 'react-icons/tb';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { StorageLimit } from './storageLimit';
 import { getAvailableFileCount } from '@refly-packages/utils/quota';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
+import { useUpdateSourceList } from '@refly-packages/ai-workspace-common/hooks/canvas/use-update-source-list';
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -26,6 +27,9 @@ export const ImportFromText = () => {
       setImportResourceModalVisible: state.setImportResourceModalVisible,
       setCopiedTextPayload: state.setCopiedTextPayload,
     }));
+  const { projectId } = useGetProjectCanvasId();
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(projectId || null);
+  const { updateSourceList } = useUpdateSourceList();
   const { addNode } = useAddNode();
   const { refetchUsage, storageUsage } = useSubscriptionUsage();
   const { insertNodePosition } = useImportResourceStoreShallow((state) => ({
@@ -33,7 +37,6 @@ export const ImportFromText = () => {
   }));
 
   const [saveLoading, setSaveLoading] = useState(false);
-  const { getLibraryList } = useHandleSiderData();
 
   const canImportCount = getAvailableFileCount(storageUsage);
   const disableSave = () => {
@@ -47,6 +50,7 @@ export const ImportFromText = () => {
     }
 
     const createResourceData: UpsertResourceRequest = {
+      projectId: currentProjectId,
       resourceType: 'text',
       title: copiedTextPayload?.title || 'Untitled',
       content: copiedTextPayload?.content || '',
@@ -66,7 +70,6 @@ export const ImportFromText = () => {
 
     if (data?.success) {
       refetchUsage();
-      getLibraryList();
       addNode({
         type: 'resource',
         data: {
@@ -79,6 +82,7 @@ export const ImportFromText = () => {
         },
         position: insertNodePosition,
       });
+      updateSourceList([data?.data], currentProjectId);
     }
   };
 
@@ -138,7 +142,11 @@ export const ImportFromText = () => {
       {/* footer */}
       <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] border-x-0 border-b-0 p-[16px] rounded-none">
         <div className="flex items-center gap-x-[8px]">
-          <StorageLimit resourceCount={1} />
+          <StorageLimit
+            resourceCount={1}
+            projectId={currentProjectId}
+            onSelectProject={setCurrentProjectId}
+          />
         </div>
         <div className="flex items-center gap-x-[8px] flex-shrink-0">
           <Button onClick={() => setImportResourceModalVisible(false)}>{t('common.cancel')}</Button>

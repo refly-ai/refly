@@ -1,4 +1,4 @@
-import { NodeProps, Position, useReactFlow } from '@xyflow/react';
+import { Edge, NodeProps, Position, useReactFlow } from '@xyflow/react';
 import { CanvasNode, CanvasNodeData, SkillNodeMeta } from './shared/types';
 import { Node } from '@xyflow/react';
 import { Form } from '@arco-design/web-react';
@@ -35,6 +35,9 @@ import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hook
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useDebouncedCallback } from 'use-debounce';
+import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 
 type SkillNode = Node<CanvasNodeData<SkillNodeMeta>, 'skill'>;
 
@@ -59,6 +62,8 @@ export const SkillNode = memo(
     const isDragging = draggingNodeId === id;
     const node = useMemo(() => getNode(id), [id, getNode]);
     const { canvasId, readonly } = useCanvasContext();
+
+    const { projectId, handleProjectChange, getFinalProjectId } = useAskProject();
 
     const { containerStyle, handleResize, updateSize } = useNodeSize({
       id,
@@ -249,9 +254,12 @@ export const SkillNode = memo(
         contextItems = [],
         selectedSkill,
         modelInfo,
-        runtimeConfig,
+        runtimeConfig = {},
         tplConfig,
+        projectId,
       } = data?.metadata ?? {};
+      const { runtimeConfig: contextRuntimeConfig } = useContextPanelStore.getState();
+      const finalProjectId = getFinalProjectId(projectId);
 
       deleteElements({ nodes: [node] });
 
@@ -262,7 +270,11 @@ export const SkillNode = memo(
             resultId,
             ...data?.metadata,
             tplConfig,
-            runtimeConfig,
+            runtimeConfig: {
+              ...contextRuntimeConfig,
+              ...runtimeConfig,
+            },
+            projectId: finalProjectId,
           },
           {
             entityId: canvasId,
@@ -286,6 +298,7 @@ export const SkillNode = memo(
                 structuredData: {
                   query,
                 },
+                projectId: finalProjectId,
               },
             },
             position: node.position,
@@ -337,19 +350,22 @@ export const SkillNode = memo(
     const { debouncedUpdateContextItems } = useContextUpdateByEdges({
       readonly,
       nodeId: id,
-      contextItems,
       updateNodeData: (data) => updateNodeData(data),
     });
 
     // listen to edges changes and automatically update contextItems
     useEffect(() => {
-      // Add a delay to ensure edges have been properly updated in React Flow
-      const timer = setTimeout(() => {
-        debouncedUpdateContextItems();
-      }, 150);
+      const handleEdgeChange = (data: { newEdges: Edge[] }) => {
+        const node = getNode(id) as CanvasNode<SkillNodeMeta>;
+        if (!node) return;
+        const contextItems = node.data?.metadata?.contextItems ?? [];
+        debouncedUpdateContextItems(contextItems, data.newEdges ?? []);
+      };
 
-      return () => clearTimeout(timer);
-    }, [edges?.length, id, contextItems, getNodes()?.length, debouncedUpdateContextItems]);
+      edgeEventsEmitter.on('edgeChange', handleEdgeChange);
+
+      return () => edgeEventsEmitter.off('edgeChange', handleEdgeChange);
+    }, [id, debouncedUpdateContextItems]);
 
     return (
       <div className={classNames({ nowheel: isOperating && isHovered })}>
@@ -406,6 +422,11 @@ export const SkillNode = memo(
               handleAbortAction={abortAction}
               handleUploadImage={handleImageUpload}
               onInputHeightChange={() => updateSize({ height: 'auto' })}
+              projectId={projectId}
+              handleProjectChange={(projectId) => {
+                handleProjectChange(projectId);
+                updateNodeData({ metadata: { projectId } });
+              }}
             />
           </div>
         </div>

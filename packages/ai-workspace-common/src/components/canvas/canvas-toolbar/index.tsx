@@ -33,6 +33,7 @@ import { genMemoID, genSkillID } from '@refly-packages/utils/id';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 import { getDefaultContentForType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
+import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface ToolbarProps {
   onToolSelect?: (tool: string) => void;
@@ -424,29 +425,63 @@ export const CanvasToolbar = memo<ToolbarProps>(({ onToolSelect, nodeLength }) =
     ],
   );
 
-  const handleConfirm = useCallback(
-    (selectedItems: ContextItem[]) => {
-      for (const item of selectedItems) {
+  const handleConfirm = useCallback(async (selectedItems: ContextItem[]) => {
+    if (!selectedItems || selectedItems.length === 0) return;
+
+    // Store the reference position for node placement
+    let referencePosition = null;
+
+    try {
+      for (let i = 0; i < selectedItems.length; i++) {
+        const item = selectedItems[i];
         const contentPreview = item?.snippets?.map((snippet) => snippet?.text || '').join('\n');
-        addNode(
-          {
-            type: item.domain as CanvasNodeType,
-            data: {
-              title: item.title,
-              entityId: item.id,
-              contentPreview: item?.contentPreview || contentPreview,
-              metadata:
-                item.domain === 'resource' ? { resourceType: item?.metadata?.resourceType } : {},
-            },
-          },
-          undefined,
-          false,
-          true,
-        );
+
+        // For the first node, let the system calculate the position
+        // For subsequent nodes, provide an offset based on the previous node
+        const position = referencePosition
+          ? {
+              x: referencePosition.x,
+              y: referencePosition.y + 150, // Add vertical spacing between nodes
+            }
+          : undefined;
+
+        await new Promise<void>((resolve, reject) => {
+          try {
+            // Use the event emitter to add nodes with proper spacing
+            nodeOperationsEmitter.emit('addNode', {
+              node: {
+                type: item.domain as CanvasNodeType,
+                data: {
+                  title: item.title,
+                  entityId: item.id,
+                  contentPreview: item?.contentPreview || contentPreview,
+                  metadata:
+                    item.domain === 'resource'
+                      ? { resourceType: item?.metadata?.resourceType }
+                      : {},
+                },
+                position,
+              },
+              shouldPreview: i === selectedItems.length - 1, // Only preview the last node
+              needSetCenter: i === selectedItems.length - 1, // Only center on the last node
+              positionCallback: (newPosition) => {
+                referencePosition = newPosition;
+                resolve();
+              },
+            });
+
+            // Add a timeout in case the callback doesn't fire
+            setTimeout(() => resolve(), 100);
+          } catch (e) {
+            console.error('Error adding node:', e);
+            reject(e);
+          }
+        });
       }
-    },
-    [addNode],
-  );
+    } catch (error) {
+      console.error('Error in handleConfirm:', error);
+    }
+  }, []);
 
   return (
     <div

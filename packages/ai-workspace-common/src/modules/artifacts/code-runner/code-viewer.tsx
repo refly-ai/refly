@@ -357,7 +357,7 @@ export default memo(
 
         {/* Content area */}
         <div
-          className={`flex flex-grow ${layoutMode === 'split' ? 'flex-row' : 'flex-col'} rounded-md`}
+          className={`flex flex-grow overflow-auto ${layoutMode === 'split' ? 'flex-row' : 'flex-col '} rounded-md`}
         >
           {layoutMode === 'tabs' ? (
             <>
@@ -409,7 +409,7 @@ export default memo(
                   onChange={handleEditorChange}
                 />
               </div>
-              <div className="w-1/2 h-full">
+              <div className="w-1/2 h-full overflow-auto">
                 {language && (
                   <div className="w-full h-full">
                     <Renderer

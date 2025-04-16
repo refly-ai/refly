@@ -7,18 +7,24 @@ import {
 import { ModelInfo } from '@refly-packages/openapi-schema';
 
 export interface SkillPromptModule {
-  buildSystemPrompt: (locale: string, needPrepareContext: boolean) => string;
+  buildSystemPrompt: (
+    locale: string,
+    needPrepareContext: boolean,
+    customInstructions?: string,
+  ) => string;
   buildContextUserPrompt: (context: string, needPrepareContext: boolean) => string;
   buildUserPrompt: ({
     originalQuery,
     optimizedQuery,
     rewrittenQueries,
     locale,
+    customInstructions,
   }: {
     originalQuery: string;
     optimizedQuery: string;
     rewrittenQueries: string[];
     locale: string;
+    customInstructions?: string;
   }) => string;
 }
 
@@ -55,6 +61,7 @@ export const buildFinalRequestMessages = ({
   optimizedQuery,
   rewrittenQueries,
   modelInfo,
+  customInstructions,
 }: {
   module: SkillPromptModule;
   locale: string;
@@ -67,6 +74,7 @@ export const buildFinalRequestMessages = ({
   optimizedQuery: string;
   rewrittenQueries?: string[];
   modelInfo?: ModelInfo;
+  customInstructions?: string;
 }) => {
   const systemPrompt = module.buildSystemPrompt(locale, needPrepareContext);
   const contextUserPrompt = module.buildContextUserPrompt?.(context, needPrepareContext) || '';
@@ -75,6 +83,7 @@ export const buildFinalRequestMessages = ({
     optimizedQuery,
     rewrittenQueries,
     locale,
+    customInstructions,
   });
 
   // Create context messages

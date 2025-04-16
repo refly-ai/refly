@@ -16,6 +16,8 @@ export const isRowGripSelected = ({
   state: EditorState;
   from: number;
 }) => {
+  if (!view) return false;
+
   const domAtPos = view.domAtPos(from).node as HTMLElement;
   const nodeDOM = view.nodeDOM(from) as HTMLElement;
   const node = nodeDOM || domAtPos;

@@ -34,7 +34,6 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { BigSearchModal } from '@refly-packages/ai-workspace-common/components/search/modal';
 import { CanvasListModal } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal';
-import { LibraryModal } from '@refly-packages/ai-workspace-common/components/workspace/library-modal';
 import { useCanvasNodesStore } from '@refly-packages/ai-workspace-common/stores/canvas-nodes';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { LayoutControl } from './layout-control';
@@ -64,6 +63,7 @@ import { EmptyGuide } from './empty-guide';
 import { useReflyPilotReset } from '@refly-packages/ai-workspace-common/hooks/canvas/use-refly-pilot-reset';
 import HelperLines from './common/helper-line/index';
 import { useListenNodeOperationEvents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-listen-node-events';
+import { LibraryModal } from '@refly-packages/ai-workspace-common/components/workspace/library-modal';
 
 const GRID_SIZE = 10;
 
@@ -185,13 +185,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     showPreview: state.showPreview,
   }));
 
-  const { showCanvasListModal, showLibraryModal, setShowCanvasListModal, setShowLibraryModal } =
-    useSiderStoreShallow((state) => ({
-      showCanvasListModal: state.showCanvasListModal,
-      showLibraryModal: state.showLibraryModal,
-      setShowCanvasListModal: state.setShowCanvasListModal,
-      setShowLibraryModal: state.setShowLibraryModal,
-    }));
+  const { showCanvasListModal, setShowCanvasListModal } = useSiderStoreShallow((state) => ({
+    showCanvasListModal: state.showCanvasListModal,
+    showLibraryModal: state.showLibraryModal,
+    setShowCanvasListModal: state.setShowCanvasListModal,
+    setShowLibraryModal: state.setShowLibraryModal,
+  }));
 
   const reactFlowInstance = useReactFlow();
 
@@ -931,7 +930,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         )}
 
         <CanvasListModal visible={showCanvasListModal} setVisible={setShowCanvasListModal} />
-        <LibraryModal visible={showLibraryModal} setVisible={setShowLibraryModal} />
         <BigSearchModal />
 
         <MenuPopper open={menuOpen} position={menuPosition} setOpen={setMenuOpen} />
@@ -976,6 +974,11 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
   const { canvasId, readonly } = props;
   const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
 
+  const { showLibraryModal, setShowLibraryModal } = useSiderStoreShallow((state) => ({
+    showLibraryModal: state.showLibraryModal,
+    setShowLibraryModal: state.setShowLibraryModal,
+  }));
+
   useEffect(() => {
     if (readonly) {
       return;
@@ -993,6 +996,7 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
       <ReactFlowProvider>
         <CanvasProvider readonly={readonly} canvasId={canvasId}>
           <Flow canvasId={canvasId} />
+          <LibraryModal visible={showLibraryModal} setVisible={setShowLibraryModal} />
         </CanvasProvider>
       </ReactFlowProvider>
     </EditorPerformanceProvider>

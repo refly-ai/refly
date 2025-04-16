@@ -6,9 +6,10 @@ import {
   ClearCanvasEntityProcessor,
   SyncCanvasEntityProcessor,
   AutoNameCanvasProcessor,
+  PostDeleteCanvasProcessor,
 } from './canvas.processor';
 import { CollabModule } from '@/collab/collab.module';
-import { QUEUE_DELETE_KNOWLEDGE_ENTITY } from '@/utils/const';
+import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '@/utils/const';
 import { CommonModule } from '@/common/common.module';
 import { MiscModule } from '@/misc/misc.module';
 import { SubscriptionModule } from '@/subscription/subscription.module';
@@ -28,6 +29,9 @@ import { CodeArtifactModule } from '@/code-artifact/code-artifact.module';
     BullModule.registerQueue({
       name: QUEUE_DELETE_KNOWLEDGE_ENTITY,
     }),
+    BullModule.registerQueue({
+      name: QUEUE_POST_DELETE_CANVAS,
+    }),
   ],
   controllers: [CanvasController],
   providers: [
@@ -35,6 +39,7 @@ import { CodeArtifactModule } from '@/code-artifact/code-artifact.module';
     SyncCanvasEntityProcessor,
     ClearCanvasEntityProcessor,
     AutoNameCanvasProcessor,
+    PostDeleteCanvasProcessor,
   ],
   exports: [CanvasService],
 })

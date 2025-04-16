@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { ContextItem } from './context-item';
 
 import { AddBaseMarkContext } from './components/add-base-mark-context';
@@ -38,13 +38,16 @@ const ContextManagerComponent = ({
     );
   }, [contextItems, getNodes]);
 
-  const handleRemoveItem = (item: IContextItem) => {
-    setContextItems(contextItems.filter((contextItem) => contextItem.entityId !== item.entityId));
+  const handleRemoveItem = useCallback(
+    (item: IContextItem) => {
+      setContextItems(contextItems.filter((contextItem) => contextItem.entityId !== item.entityId));
 
-    if (activeItemId === item.entityId) {
-      setActiveItemId(null);
-    }
-  };
+      if (activeItemId === item.entityId) {
+        setActiveItemId(null);
+      }
+    },
+    [contextItems, setContextItems, activeItemId],
+  );
 
   return (
     <div className={cn('flex flex-col', className)}>

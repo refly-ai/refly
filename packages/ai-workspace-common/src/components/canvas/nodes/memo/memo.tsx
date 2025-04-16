@@ -318,7 +318,7 @@ export const MemoNode = ({
           width: `${size.width}px`,
           height: `${size.height}px`,
           userSelect: 'none',
-          cursor: readonly ? 'default' : isOperating ? 'default' : 'grab',
+          cursor: readonly ? 'default' : isOperating || isFocused ? 'default' : 'grab',
         }}
       >
         {!isPreview && selected && !readonly && (
@@ -330,6 +330,9 @@ export const MemoNode = ({
 
         <div
           style={{ backgroundColor: bgColor }}
+          onClick={() => {
+            editor?.commands.focus('end');
+          }}
           className={`
             h-full
             ${getNodeCommonStyles({ selected: !isPreview && selected, isHovered })}
@@ -358,7 +361,7 @@ export const MemoNode = ({
           <div className="flex flex-col h-full p-3 box-border">
             <div className="relative flex-grow overflow-y-auto pr-2 -mr-2">
               <div
-                className="editor-wrapper"
+                className="editor-wrapper h-full"
                 style={{ userSelect: 'text', cursor: isPreview || readonly ? 'default' : 'text' }}
               >
                 <EditorContent

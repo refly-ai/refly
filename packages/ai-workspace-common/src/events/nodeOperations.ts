@@ -10,6 +10,7 @@ export type Events = {
     connectTo?: CanvasNodeFilter[];
     shouldPreview?: boolean;
     needSetCenter?: boolean;
+    positionCallback?: (position: XYPosition) => void;
   };
   jumpToDescendantNode: {
     entityId: string;

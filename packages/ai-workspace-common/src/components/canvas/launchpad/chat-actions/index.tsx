@@ -2,7 +2,7 @@ import { Button, Tooltip, Upload, Switch } from 'antd';
 import { FormInstance } from '@arco-design/web-react';
 import { memo, useMemo, useRef, useCallback } from 'react';
 import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { IconSend } from '@arco-design/web-react/icon';
+import { IconLink, IconSend } from '@arco-design/web-react/icon';
 import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { getRuntime } from '@refly/utils/env';
@@ -13,7 +13,6 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
-import { HiOutlineQuestionMarkCircle } from 'react-icons/hi';
 
 export interface CustomAction {
   icon: React.ReactNode;
@@ -117,14 +116,13 @@ export const ChatActions = memo(
                 checked={runtimeConfig?.disableLinkParsing}
                 onChange={handleAutoParseLinksChange}
               />
-              <span className="text-xs text-gray-500">{t('skill.runtimeConfig.parseLinks')}</span>
               <Tooltip
                 className="flex flex-row items-center gap-1 cursor-pointer"
                 title={t('skill.runtimeConfig.parseLinksHint', {
                   count: detectedUrls?.length,
                 })}
               >
-                <HiOutlineQuestionMarkCircle className="text-sm text-gray-500 flex items-center justify-center cursor-pointer" />
+                <IconLink className="text-sm text-gray-500 flex items-center justify-center cursor-pointer" />
               </Tooltip>
             </div>
           )}

@@ -46,6 +46,7 @@ import {
   QUEUE_SYNC_STORAGE_USAGE,
   QUEUE_CLEAR_CANVAS_ENTITY,
   streamToBuffer,
+  QUEUE_POST_DELETE_KNOWLEDGE_ENTITY,
 } from '@/utils';
 import {
   genResourceID,
@@ -58,6 +59,7 @@ import {
   DocumentDetail,
   ExtendedReferenceModel,
   FinalizeResourceParam,
+  PostDeleteKnowledgeEntityJobData,
   ResourcePrepareResult,
 } from './knowledge.dto';
 import { pick } from '../utils';
@@ -94,6 +96,8 @@ export class KnowledgeService {
     @InjectQueue(QUEUE_SIMPLE_EVENT) private simpleEventQueue: Queue<SimpleEventData>,
     @InjectQueue(QUEUE_SYNC_STORAGE_USAGE) private ssuQueue: Queue<SyncStorageUsageJobData>,
     @InjectQueue(QUEUE_CLEAR_CANVAS_ENTITY) private canvasQueue: Queue<DeleteCanvasNodesJobData>,
+    @InjectQueue(QUEUE_POST_DELETE_KNOWLEDGE_ENTITY)
+    private postDeleteKnowledgeQueue: Queue<PostDeleteKnowledgeEntityJobData>,
   ) {}
 
   async syncStorageUsage(user: User) {
@@ -112,12 +116,25 @@ export class KnowledgeService {
   }
 
   async listResources(user: User, param: ListResourcesData['query']) {
-    const { resourceId, resourceType, page = 1, pageSize = 10, order = 'creationDesc' } = param;
+    const {
+      resourceId,
+      resourceType,
+      projectId,
+      page = 1,
+      pageSize = 10,
+      order = 'creationDesc',
+    } = param;
 
     const resourceIdFilter: Prisma.StringFilter<'Resource'> = { equals: resourceId };
 
     const resources = await this.prisma.resource.findMany({
-      where: { resourceId: resourceIdFilter, resourceType, uid: user.uid, deletedAt: null },
+      where: {
+        resourceId: resourceIdFilter,
+        resourceType,
+        uid: user.uid,
+        deletedAt: null,
+        projectId,
+      },
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { pk: order === 'creationAsc' ? 'asc' : 'desc' },
@@ -291,6 +308,7 @@ export class KnowledgeService {
         storageKey,
         storageSize,
         rawFileKey: staticFile?.storageKey,
+        projectId: param.projectId,
         uid: user.uid,
         title: param.title || '',
         indexStatus,
@@ -301,6 +319,7 @@ export class KnowledgeService {
         storageKey,
         storageSize,
         rawFileKey: staticFile?.storageKey,
+        projectId: param.projectId,
         title: param.title || '',
         indexStatus,
       },
@@ -572,7 +591,7 @@ export class KnowledgeService {
       url,
       createdAt: resource.createdAt.toJSON(),
       updatedAt: resource.updatedAt.toJSON(),
-      ...pick(updatedResource, ['title', 'uid']),
+      ...pick(updatedResource, ['title', 'uid', 'projectId']),
     });
 
     return updatedResource;
@@ -605,6 +624,7 @@ export class KnowledgeService {
           title,
           resourceType: resourceType as ResourceType,
           resourceId,
+          projectId: resource.projectId,
         },
       });
       updates.vectorSize = size;
@@ -701,6 +721,14 @@ export class KnowledgeService {
       updates.storageKey = resource.storageKey;
     }
 
+    if (param.projectId !== undefined) {
+      if (param.projectId) {
+        updates.project = { connect: { projectId: param.projectId } };
+      } else {
+        updates.project = { disconnect: true };
+      }
+    }
+
     if (param.content) {
       await this.minio.client.putObject(resource.storageKey, param.content);
       updates.storageSize = (await this.minio.client.statObject(resource.storageKey)).size;
@@ -711,12 +739,20 @@ export class KnowledgeService {
       data: updates,
     });
 
+    // Update projectId for vector store
+    if (param.projectId !== undefined) {
+      await this.ragService.updateDocumentPayload(user, {
+        resourceId: updatedResource.resourceId,
+        metadata: { projectId: param.projectId },
+      });
+    }
+
     await this.elasticsearch.upsertResource({
       id: updatedResource.resourceId,
       content: param.content || undefined,
       createdAt: updatedResource.createdAt.toJSON(),
       updatedAt: updatedResource.updatedAt.toJSON(),
-      ...pick(updatedResource, ['title', 'uid']),
+      ...pick(updatedResource, ['title', 'uid', 'projectId']),
     });
 
     return updatedResource;
@@ -740,21 +776,32 @@ export class KnowledgeService {
       throw new ResourceNotFoundError(`resource ${resourceId} not found`);
     }
 
-    await this.prisma.$transaction([
-      this.prisma.resource.update({
-        where: { resourceId, uid, deletedAt: null },
-        data: { deletedAt: new Date() },
-      }),
-      this.prisma.labelInstance.updateMany({
-        where: { entityType: 'resource', entityId: resourceId, uid, deletedAt: null },
-        data: { deletedAt: new Date() },
-      }),
-    ]);
+    await this.prisma.resource.update({
+      where: { resourceId, uid, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+
+    await this.syncStorageUsage(user);
+
+    await this.postDeleteKnowledgeQueue.add('postDeleteKnowledgeEntity', {
+      uid,
+      entityId: resourceId,
+      entityType: 'resource',
+    });
+  }
+
+  async postDeleteResource(user: User, resourceId: string) {
+    const resource = await this.prisma.resource.findFirst({
+      where: { resourceId, uid: user.uid, deletedAt: { not: null } },
+    });
+    if (!resource) {
+      this.logger.warn(`Deleted resource ${resourceId} not found`);
+      return;
+    }
 
     const cleanups: Promise<any>[] = [
       this.ragService.deleteResourceNodes(user, resourceId),
       this.elasticsearch.deleteResource(resourceId),
-      this.syncStorageUsage(user),
       this.canvasQueue.add('deleteNodes', {
         entities: [{ entityId: resourceId, entityType: 'resource' }],
       }),
@@ -771,7 +818,7 @@ export class KnowledgeService {
   }
 
   async listDocuments(user: User, param: ListDocumentsData['query']) {
-    const { page = 1, pageSize = 10, order = 'creationDesc' } = param;
+    const { page = 1, pageSize = 10, order = 'creationDesc', projectId } = param;
 
     const orderBy: Prisma.DocumentOrderByWithRelationInput = {};
     if (order === 'creationAsc') {
@@ -784,6 +831,7 @@ export class KnowledgeService {
       where: {
         uid: user.uid,
         deletedAt: null,
+        projectId,
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -871,6 +919,7 @@ export class KnowledgeService {
           nodeType: 'document',
           docId: param.docId,
           title: param.title,
+          projectId: param.projectId,
         },
       });
       createInput.vectorSize = size;
@@ -879,12 +928,12 @@ export class KnowledgeService {
     const doc = await this.prisma.document.upsert({
       where: { docId: param.docId },
       create: createInput,
-      update: pick(param, ['title', 'readOnly']),
+      update: pick(param, ['title', 'readOnly', 'projectId']),
     });
 
     await this.elasticsearch.upsertDocument({
       id: param.docId,
-      ...pick(doc, ['title', 'uid']),
+      ...pick(doc, ['title', 'uid', 'projectId']),
       content: param.initialContent,
       createdAt: doc.createdAt.toJSON(),
       updatedAt: doc.updatedAt.toJSON(),
@@ -932,18 +981,34 @@ export class KnowledgeService {
       throw new DocumentNotFoundError();
     }
 
-    await this.prisma.$transaction([
-      this.prisma.document.update({
-        where: { docId },
-        data: { deletedAt: new Date() },
-      }),
-      this.prisma.labelInstance.updateMany({
-        where: { entityType: 'document', entityId: docId, uid, deletedAt: null },
-        data: { deletedAt: new Date() },
-      }),
-    ]);
+    await this.prisma.document.update({
+      where: { docId },
+      data: { deletedAt: new Date() },
+    });
+
+    await this.syncStorageUsage(user);
+
+    await this.postDeleteKnowledgeQueue.add('postDeleteKnowledgeEntity', {
+      uid,
+      entityId: docId,
+      entityType: 'document',
+    });
+  }
+
+  async postDeleteDocument(user: User, docId: string) {
+    const doc = await this.prisma.document.findFirst({
+      where: { docId, deletedAt: { not: null } },
+    });
+    if (!doc) {
+      this.logger.warn(`Deleted document ${docId} not found`);
+      return;
+    }
 
     const cleanups: Promise<any>[] = [
+      this.prisma.labelInstance.updateMany({
+        where: { entityType: 'document', entityId: docId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      }),
       this.ragService.deleteDocumentNodes(user, docId),
       this.elasticsearch.deleteDocument(docId),
       this.canvasQueue.add('deleteNodes', {
@@ -960,9 +1025,6 @@ export class KnowledgeService {
     }
 
     await Promise.all(cleanups);
-
-    // Sync storage usage after all the cleanups
-    await this.syncStorageUsage(user);
   }
 
   /**

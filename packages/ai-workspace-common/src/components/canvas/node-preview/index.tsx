@@ -307,7 +307,7 @@ export const DraggableNodePreview = memo(
     return (
       <div
         data-preview-id={node?.id}
-        className="pointer-events-none border border-solid border-gray-100 rounded-lg shadow-lg bg-transparent"
+        className="pointer-events-none border border-solid border-gray-100 rounded-lg bg-transparent"
         ref={previewRef}
         style={containerStyle}
       >
@@ -315,7 +315,7 @@ export const DraggableNodePreview = memo(
           <div ref={dragRef} className="pointer-events-auto">
             <NodePreviewHeader {...headerProps} />
           </div>
-          <div className="h-[calc(100%-52px)] overflow-auto rounded-b-lg pointer-events-auto preview-container">
+          <div className="h-[calc(100%-48px)] overflow-auto rounded-b-lg pointer-events-auto preview-container">
             {previewComponent}
           </div>
         </div>
@@ -558,7 +558,7 @@ export const NodePreview = memo(
           <div className="pointer-events-auto">
             <NodePreviewHeader {...headerProps} />
           </div>
-          <div className="h-[calc(100%-52px)] overflow-auto rounded-b-lg pointer-events-auto preview-container">
+          <div className="h-[calc(100%-48px)] overflow-auto rounded-b-lg pointer-events-auto preview-container">
             {previewComponent}
           </div>
         </div>

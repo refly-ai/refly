@@ -107,7 +107,7 @@ export async function prepareContext(
         {
           query,
           rewrittenQueries,
-          enableQueryRewrite: isSupportedModel,
+          enableQueryRewrite: true,
           enableSearchWholeSpace: true,
         },
         ctx,

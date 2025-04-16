@@ -65,7 +65,30 @@ export class RecommendQuestions extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { messages = [], query } = state;
-    const { locale = 'en', chatHistory = [], modelInfo, tplConfig } = config.configurable || {};
+    const {
+      locale = 'en',
+      chatHistory = [],
+      modelInfo,
+      tplConfig,
+      project,
+    } = config.configurable || {};
+
+    // Extract customInstructions from project if available
+    const customInstructions = project?.customInstructions;
+
+    // Process projectId based knowledge base search
+    const projectId = project?.projectId;
+    const enableKnowledgeBaseSearch = !!projectId;
+
+    // Update tplConfig with knowledge base search setting
+    config.configurable.tplConfig = {
+      ...config.configurable.tplConfig,
+      enableKnowledgeBaseSearch: {
+        value: enableKnowledgeBaseSearch,
+        label: 'Knowledge Base Search',
+        displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
+      },
+    };
 
     const isRefresh = tplConfig?.refresh?.value;
 
@@ -78,7 +101,7 @@ export class RecommendQuestions extends BaseSkill {
     let context = '';
     let sources: Source[] = [];
 
-    const needPrepareContext = remainingTokens > 0;
+    const needPrepareContext = remainingTokens > 0 && enableKnowledgeBaseSearch;
 
     if (needPrepareContext) {
       config.metadata.step = { name: 'analyzeContext' };
@@ -97,7 +120,14 @@ export class RecommendQuestions extends BaseSkill {
           config,
           ctxThis: this,
           state,
-          tplConfig: config?.configurable?.tplConfig || {},
+          tplConfig: {
+            ...(config?.configurable?.tplConfig || {}),
+            enableKnowledgeBaseSearch: {
+              value: enableKnowledgeBaseSearch,
+              label: 'Knowledge Base Search',
+              displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
+            },
+          },
         },
       );
 
@@ -110,6 +140,7 @@ export class RecommendQuestions extends BaseSkill {
 
     const model = this.engine.chatModel({ temperature: 0.1 });
 
+    // Build the system prompt with customInstructions if available
     const systemPrompt = `## Role
 You are an expert at analyzing conversations and generating relevant recommended questions.
 
@@ -173,6 +204,8 @@ ${
     ? 'NOTE: No context or query provided. Generate interesting general knowledge questions that could spark engaging conversations.\n'
     : ''
 }
+
+${customInstructions ? `## Custom Instructions:\n${customInstructions}\n` : ''}
 
 Please generate relevant recommended questions in ${locale} language.`;
 

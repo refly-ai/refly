@@ -80,6 +80,7 @@ export type SkillNodeMeta = {
   sizeMode?: 'compact' | 'adaptive';
   style?: React.CSSProperties;
   originalWidth?: number;
+  projectId?: string;
 };
 
 export type ToolNodeMeta = {

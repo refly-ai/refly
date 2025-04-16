@@ -47,7 +47,12 @@ export class LibrarySearch extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { messages = [], images = [] } = state;
-    const { locale = 'en', currentSkill } = config.configurable;
+    const { locale = 'en', currentSkill, project } = config.configurable;
+
+    // Extract customInstructions from project if available
+    const customInstructions = project?.customInstructions;
+
+    // Process projectId based knowledge base search
 
     // Set current step
     config.metadata.step = { name: 'analyzeQuery' };
@@ -125,7 +130,8 @@ export class LibrarySearch extends BaseSkill {
 
     // Build messages for the model
     const module = {
-      buildSystemPrompt: librarySearch.buildLibrarySearchSystemPrompt,
+      buildSystemPrompt: (locale: string, needPrepareContext: boolean) =>
+        librarySearch.buildLibrarySearchSystemPrompt(locale, needPrepareContext),
       buildContextUserPrompt: librarySearch.buildLibrarySearchContextUserPrompt,
       buildUserPrompt: librarySearch.buildLibrarySearchUserPrompt,
     };
@@ -162,6 +168,7 @@ export class LibrarySearch extends BaseSkill {
       optimizedQuery,
       rewrittenQueries,
       modelInfo: config?.configurable?.modelInfo,
+      customInstructions,
     });
 
     // Generate answer using the model

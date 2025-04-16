@@ -61,18 +61,30 @@ export class WebSearch extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { messages = [], images = [] } = state;
-    const { locale = 'en', currentSkill } = config.configurable;
+    const { locale = 'en', currentSkill, project, runtimeConfig } = config.configurable;
+
+    // Extract customInstructions from project if available
+    const customInstructions = project?.customInstructions;
+
     // Set current step
     config.metadata.step = { name: 'analyzeQuery' };
 
-    // Force enable web search and disable knowledge base search
+    // Only enable knowledge base search if both projectId AND runtimeConfig.enabledKnowledgeBase are true
+    const projectId = project?.projectId;
+    const enableKnowledgeBaseSearch = !!projectId && !!runtimeConfig?.enabledKnowledgeBase;
+
+    this.engine.logger.log(
+      `ProjectId: ${projectId}, Enable KB Search: ${enableKnowledgeBaseSearch}`,
+    );
+
+    // Force enable web search
     config.configurable.tplConfig = {
       ...config.configurable.tplConfig,
       enableWebSearch: { value: true, label: 'Web Search', displayValue: 'true' },
       enableKnowledgeBaseSearch: {
-        value: false,
+        value: enableKnowledgeBaseSearch,
         label: 'Knowledge Base Search',
-        displayValue: 'false',
+        displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
       },
     };
 
@@ -137,7 +149,8 @@ export class WebSearch extends BaseSkill {
 
     // Build messages for the model
     const module = {
-      buildSystemPrompt: webSearch.buildWebSearchSystemPrompt,
+      buildSystemPrompt: (locale: string, needPrepareContext: boolean) =>
+        webSearch.buildWebSearchSystemPrompt(locale, needPrepareContext),
       buildContextUserPrompt: webSearch.buildWebSearchContextUserPrompt,
       buildUserPrompt: webSearch.buildWebSearchUserPrompt,
     };
@@ -177,6 +190,7 @@ export class WebSearch extends BaseSkill {
       optimizedQuery,
       rewrittenQueries,
       modelInfo: config?.configurable?.modelInfo,
+      customInstructions,
     });
 
     // Generate answer using the model

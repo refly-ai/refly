@@ -21,7 +21,10 @@ import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { CanvasNodeData } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import {
+  IContextItem,
+  useContextPanelStore,
+} from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
 import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-cluster';
 import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
@@ -147,10 +150,11 @@ export const SelectionActionMenu: FC<SelectionActionMenuProps> = ({ onClose }) =
   const handleBatchAskAI = useCallback(() => {
     // Get all selected skill nodes
     const selectedSkillNodes = getNodes().filter((node) => node.selected && node.type === 'skill');
+    const { runtimeConfig: contextRuntimeConfig = {} } = useContextPanelStore.getState();
 
     for (const node of selectedSkillNodes) {
       const { metadata } = node.data as CanvasNodeData<SkillNodeMeta>;
-      const { query, modelInfo, selectedSkill, contextItems = [] } = metadata;
+      const { query, modelInfo, selectedSkill, contextItems = [], runtimeConfig = {} } = metadata;
 
       const resultId = genActionResultID();
 
@@ -160,6 +164,10 @@ export const SelectionActionMenu: FC<SelectionActionMenuProps> = ({ onClose }) =
           resultId,
           query,
           modelInfo,
+          runtimeConfig: {
+            ...contextRuntimeConfig,
+            ...runtimeConfig,
+          },
           contextItems,
           selectedSkill,
         },

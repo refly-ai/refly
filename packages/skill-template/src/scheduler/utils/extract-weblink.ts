@@ -181,6 +181,18 @@ export async function extractAndCrawlUrls(
   analysis: { hasUrls: boolean; queryIntent: string };
 }> {
   const logger = skill.engine.logger;
+  const disableLinkParsing = config?.configurable?.runtimeConfig?.disableLinkParsing;
+
+  if (disableLinkParsing !== false) {
+    logger.log('disableLinkParsing is on');
+    return {
+      sources: [],
+      analysis: {
+        hasUrls: false,
+        queryIntent: query,
+      },
+    };
+  }
 
   // Use linkify-it for fast and reliable URL extraction
   const { hasUrls, detectedUrls } = extractUrlsWithLinkify(query);

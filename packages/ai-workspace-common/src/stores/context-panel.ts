@@ -73,7 +73,10 @@ export const defaultState = {
   contextItems: [],
   checkedKeys: [],
   expandedKeys: [],
-  runtimeConfig: {} as SkillRuntimeConfig,
+  runtimeConfig: {
+    disableLinkParsing: true,
+    enabledKnowledgeBase: false,
+  } as SkillRuntimeConfig,
 
   activeResultId: ContextTarget.Global,
 
@@ -93,7 +96,7 @@ export const useContextPanelStore = create<ContextPanelState>()(
       set((state) => ({ ...state, formErrors: errors })),
 
     setRuntimeConfig: (runtimeConfig: SkillRuntimeConfig) =>
-      set((state) => ({ ...state, runtimeConfig })),
+      set((state) => ({ ...state, runtimeConfig: { ...state.runtimeConfig, ...runtimeConfig } })),
     addContextItem: (item: IContextItem) =>
       set((state) => {
         const existingIndex = state.contextItems.findIndex(

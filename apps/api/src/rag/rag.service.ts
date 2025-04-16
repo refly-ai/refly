@@ -11,7 +11,7 @@ import { cleanMarkdownForIngest } from '@refly-packages/utils';
 import * as avro from 'avsc';
 
 import { SearchResult, User } from '@refly-packages/openapi-schema';
-import { HybridSearchParam, ContentPayload, ReaderResult, NodeMeta } from './rag.dto';
+import { HybridSearchParam, ContentPayload, ReaderResult, DocumentPayload } from './rag.dto';
 import { QdrantService } from '@/common/qdrant.service';
 import { Condition, PointStruct } from '@/common/qdrant.dto';
 import { genResourceUuid } from '@/utils';
@@ -148,7 +148,7 @@ export class RAGService {
       content: string | Document<any> | Array<Document<any>>;
       query?: string;
       k?: number;
-      filter?: (doc: Document<NodeMeta>) => boolean;
+      filter?: (doc: Document<DocumentPayload>) => boolean;
       needChunk?: boolean;
       additionalMetadata?: Record<string, any>;
     },
@@ -219,7 +219,7 @@ export class RAGService {
     await tempMemoryVectorStore.addDocuments(documents);
 
     // Perform the search
-    const wrapperFilter = (doc: Document<NodeMeta>) => {
+    const wrapperFilter = (doc: Document<DocumentPayload>) => {
       // Always check for tenantId
       const tenantIdMatch = doc.metadata.tenantId === uid;
 
@@ -235,7 +235,7 @@ export class RAGService {
     return tempMemoryVectorStore.similaritySearch(query, k, wrapperFilter);
   }
 
-  async indexDocument(user: User, doc: Document<NodeMeta>): Promise<{ size: number }> {
+  async indexDocument(user: User, doc: Document<DocumentPayload>): Promise<{ size: number }> {
     const { uid } = user;
     const { pageContent, metadata } = doc;
     const { nodeType, docId, resourceId } = metadata;
@@ -686,5 +686,68 @@ export class RAGService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Updates arbitrary metadata for all points of a given document or resource.
+   * @param user The user that owns the document/resource
+   * @param params Parameters for the update operation
+   * @param params.docId The document ID to update (use either docId or resourceId)
+   * @param params.resourceId The resource ID to update (use either docId or resourceId)
+   * @param params.metadata The metadata fields to update
+   * @returns Metadata about the update operation
+   */
+  async updateDocumentPayload(
+    user: User,
+    params: {
+      docId?: string | string[];
+      resourceId?: string | string[];
+      metadata: Record<string, any>;
+    },
+  ) {
+    const { docId, resourceId, metadata } = params;
+
+    // Determine if we're dealing with documents, resources, or both
+    const hasDocIds = docId && (typeof docId === 'string' ? [docId].length > 0 : docId.length > 0);
+    const hasResourceIds =
+      resourceId &&
+      (typeof resourceId === 'string' ? [resourceId].length > 0 : resourceId.length > 0);
+
+    // Convert single values to arrays
+    const docIds = typeof docId === 'string' ? [docId] : (docId ?? []);
+    const resourceIds = typeof resourceId === 'string' ? [resourceId] : (resourceId ?? []);
+
+    if (!hasDocIds && !hasResourceIds) {
+      throw new Error('Either docId or resourceId must be provided');
+    }
+
+    if (!metadata || Object.keys(metadata).length === 0) {
+      throw new Error('No metadata fields provided for update');
+    }
+
+    this.logger.log(
+      `Updating metadata ${JSON.stringify(metadata)} for ${JSON.stringify(
+        hasDocIds ? docIds : resourceIds,
+      )} from user ${user.uid}`,
+    );
+
+    // Prepare filter conditions
+    const conditions: Condition[] = [{ key: 'tenantId', match: { value: user.uid } }];
+
+    // Add conditions for documents and resources
+    if (hasDocIds) {
+      conditions.push({ key: 'docId', match: { any: docIds } });
+    }
+
+    if (hasResourceIds) {
+      conditions.push({ key: 'resourceId', match: { any: resourceIds } });
+    }
+
+    return await this.qdrant.updatePayload(
+      {
+        must: conditions,
+      },
+      metadata,
+    );
   }
 }

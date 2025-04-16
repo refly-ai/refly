@@ -83,6 +83,7 @@ import {
   ModelNotSupportedError,
   ModelUsageQuotaExceeded,
   ParamsError,
+  ProjectNotFoundError,
   SkillNotFoundError,
 } from '@refly-packages/errors';
 import { genBaseRespDataFromError } from '@/utils/exception';
@@ -101,6 +102,7 @@ import { ParserFactory } from '@/knowledge/parsers/factory';
 import { MINIO_INTERNAL, MinioService } from '@/common/minio.service';
 import { Inject } from '@nestjs/common';
 import { CodeArtifactService } from '@/code-artifact/code-artifact.service';
+import { projectPO2DTO } from '@/project/project.dto';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -413,6 +415,7 @@ export class SkillService {
       param.resultHistory ??= safeParseJSON(existingResult.history);
       param.tplConfig ??= safeParseJSON(existingResult.tplConfig);
       param.runtimeConfig ??= safeParseJSON(existingResult.runtimeConfig);
+      param.projectId ??= existingResult.projectId;
     }
 
     param.input ||= { query: '' };
@@ -442,6 +445,18 @@ export class SkillService {
     }
     if (param.resultHistory) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
+    }
+    if (param.projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: {
+          projectId: param.projectId,
+          uid: user.uid,
+          deletedAt: null,
+        },
+      });
+      if (!project) {
+        throw new ProjectNotFoundError(`project ${param.projectId} not found`);
+      }
     }
 
     param.skillName ||= 'commonQnA';
@@ -492,6 +507,7 @@ export class SkillService {
             targetId: param.target?.entityId,
             targetType: param.target?.entityType,
             modelName,
+            projectId: param.projectId ?? null,
             actionMeta: JSON.stringify({
               type: 'skill',
               name: param.skillName,
@@ -530,6 +546,7 @@ export class SkillService {
             name: param.skillName,
             icon: skill.icon,
           } as ActionMeta),
+          projectId: param.projectId,
           input: JSON.stringify(param.input),
           context: JSON.stringify(purgeContext(param.context)),
           tplConfig: JSON.stringify(param.tplConfig),
@@ -692,7 +709,15 @@ export class SkillService {
       eventListener?: (data: SkillEvent) => void;
     },
   ): Promise<SkillRunnableConfig> {
-    const { context, tplConfig, runtimeConfig, modelInfo, resultHistory, eventListener } = data;
+    const {
+      context,
+      tplConfig,
+      runtimeConfig,
+      modelInfo,
+      resultHistory,
+      projectId,
+      eventListener,
+    } = data;
     const userPo = await this.prisma.user.findUnique({
       select: { uiLocale: true, outputLocale: true },
       where: { uid: user.uid },
@@ -719,6 +744,17 @@ export class SkillService {
         resultId: data.result?.resultId,
       },
     };
+
+    // Add project info if projectId is provided
+    if (projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { projectId, uid: user.uid, deletedAt: null },
+      });
+      if (!project) {
+        throw new ProjectNotFoundError(`project ${projectId} not found`);
+      }
+      config.configurable.project = projectPO2DTO(project);
+    }
 
     if (resultHistory?.length > 0) {
       config.configurable.chatHistory = await Promise.all(
@@ -757,16 +793,16 @@ export class SkillService {
     this.skillEngine.setOptions({ defaultModel: defaultModel?.name });
 
     try {
-      await this.timeoutCheckQueue.add(
-        `execution_timeout_check:${resultId}`,
-        {
-          uid: user.uid,
-          resultId,
-          version,
-          type: 'execution',
-        },
-        { delay: this.config.get('skill.executionTimeout') },
-      );
+      // await this.timeoutCheckQueue.add(
+      //   `execution_timeout_check:${resultId}`,
+      //   {
+      //     uid: user.uid,
+      //     resultId,
+      //     version,
+      //     type: 'execution',
+      //   },
+      //   { delay: this.config.get('skill.executionTimeout') },
+      // );
 
       await this._invokeSkill(user, data, res);
     } catch (err) {
@@ -836,34 +872,34 @@ export class SkillService {
       });
     }
 
-    const job = await this.timeoutCheckQueue.add(
-      `idle_timeout_check:${resultId}`,
-      {
-        uid: user.uid,
-        resultId,
-        version,
-        type: 'idle',
-      },
-      { delay: Number.parseInt(this.config.get('skill.idleTimeout')) },
-    );
+    // const job = await this.timeoutCheckQueue.add(
+    //   `idle_timeout_check:${resultId}`,
+    //   {
+    //     uid: user.uid,
+    //     resultId,
+    //     version,
+    //     type: 'idle',
+    //   },
+    //   { delay: Number.parseInt(this.config.get('skill.idleTimeout')) },
+    // );
 
-    const throttledResetIdleTimeout = throttle(
-      async () => {
-        try {
-          // Get current job state
-          const jobState = await job.getState();
+    // const throttledResetIdleTimeout = throttle(
+    //   async () => {
+    //     try {
+    //       // Get current job state
+    //       const jobState = await job.getState();
 
-          // Only attempt to change delay if job is in delayed state
-          if (jobState === 'delayed') {
-            await job.changeDelay(this.config.get('skill.idleTimeout'));
-          }
-        } catch (err) {
-          this.logger.warn(`Failed to reset idle timeout: ${err.message}`);
-        }
-      },
-      100,
-      { leading: true, trailing: true },
-    );
+    //       // Only attempt to change delay if job is in delayed state
+    //       if (jobState === 'delayed') {
+    //         await job.changeDelay(this.config.get('skill.idleTimeout'));
+    //       }
+    //     } catch (err) {
+    //       this.logger.warn(`Failed to reset idle timeout: ${err.message}`);
+    //     }
+    //   },
+    //   100,
+    //   { leading: true, trailing: true },
+    // );
 
     const resultAggregator = new ResultAggregator();
 
@@ -882,7 +918,7 @@ export class SkillService {
           return;
         }
 
-        await throttledResetIdleTimeout();
+        // await throttledResetIdleTimeout();
 
         if (res) {
           writeSSEResponse(res, { ...data, resultId, version });
@@ -1000,7 +1036,7 @@ export class SkillService {
         }
 
         // reset idle timeout check when events are received
-        await throttledResetIdleTimeout();
+        // await throttledResetIdleTimeout();
 
         runMeta = event.metadata as SkillRunnableMeta;
         const chunk: AIMessageChunk = event.data?.chunk ?? event.data?.output;
