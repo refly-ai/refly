@@ -1,6 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { FiFile, FiCode, FiImage, FiLink, FiMessageSquare } from 'react-icons/fi';
+import { useCollabToken } from '@refly-packages/ai-workspace-common/hooks/use-collab-token';
 
 /**
  * Get icon based on node type
@@ -28,6 +29,7 @@ const getNodeTypeIcon = (type: string) => {
 export const useAvailableContextItems = () => {
   // Move the useCanvasContext call to the top level of the hook
   const { canvasId, readonly, provider } = useCanvasContext();
+  const { refreshToken } = useCollabToken();
 
   /**
    * Check if a context item is already selected
@@ -41,8 +43,15 @@ export const useAvailableContextItems = () => {
    */
   const getAvailableContextItems = useCallback(
     (selectedContextItems: any[] = []) => {
-      if (!canvasId || readonly || !provider?.document) {
+      if (!canvasId || readonly) {
         return [];
+      }
+
+      if (!provider?.document) {
+        console.warn('Provider document not available, trying to reconnect...');
+        // Try to refresh token and reconnect
+        refreshToken();
+        return []; // Return empty array as fallback
       }
 
       try {
@@ -67,11 +76,38 @@ export const useAvailableContextItems = () => {
         return [];
       }
     },
-    [canvasId, readonly, provider],
+    [canvasId, readonly, provider, refreshToken],
+  );
+
+  // At appropriate component mount
+  useEffect(() => {
+    refreshToken(); // Force token refresh
+  }, [refreshToken]);
+
+  // Add local cache
+  const [cachedContextItems, setCachedContextItems] = useState([]);
+
+  useEffect(() => {
+    if (provider?.document) {
+      const items = getAvailableContextItems([]);
+      if (items.length > 0) {
+        setCachedContextItems(items);
+      }
+    }
+  }, [provider, getAvailableContextItems]);
+
+  // Use cache in return function
+  const getAvailableContextItemsWithFallback = useCallback(
+    (selectedItems = []) => {
+      const items = getAvailableContextItems(selectedItems);
+      return items.length > 0 ? items : cachedContextItems;
+    },
+    [getAvailableContextItems, cachedContextItems],
   );
 
   return {
     getAvailableContextItems,
     isContextItemSelected,
+    getAvailableContextItemsWithFallback,
   };
 };
