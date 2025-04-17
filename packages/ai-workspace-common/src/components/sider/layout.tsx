@@ -39,7 +39,7 @@ import {
   IconRight,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
-import { AiOutlineMenuUnfold, AiOutlineUser } from 'react-icons/ai';
+import { AiOutlineMenuFold, AiOutlineUser } from 'react-icons/ai';
 import { SubscriptionHint } from '@refly-packages/ai-workspace-common/components/subscription/hint';
 import { FaGithub } from 'react-icons/fa6';
 import { useKnowledgeBaseStoreShallow } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
@@ -79,16 +79,6 @@ export const SiderLogo = (props: {
 
   return (
     <div className="flex items-center justify-between p-3">
-      {source === 'sider' && (
-        <div>
-          <Button
-            type="text"
-            icon={<AiOutlineMenuUnfold size={16} className="text-gray-500" />}
-            onClick={() => setCollapse(true)}
-          />
-        </div>
-      )}
-
       <div className="flex items-center gap-2">
         <div
           className="flex cursor-pointer flex-row items-center gap-1.5"
@@ -109,6 +99,15 @@ export const SiderLogo = (props: {
           {starCount}
         </Button>
       </div>
+      {source === 'sider' && (
+        <div>
+          <Button
+            type="text"
+            icon={<AiOutlineMenuFold size={16} className="text-gray-500" />}
+            onClick={() => setCollapse(true)}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -214,9 +213,12 @@ export const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
   return (
     <div
       key={canvas.id}
-      className={cn('group relative m-1 px-2 rounded text-sm leading-7 hover:bg-gray-50', {
-        '!bg-gray-100 font-medium !text-green-600': selectedKey === canvas.id,
-      })}
+      className={cn(
+        'group relative my-1 px-2 rounded text-sm leading-8 text-gray-600 hover:bg-gray-50',
+        {
+          '!bg-gray-100 font-medium !text-green-600': selectedKey === canvas.id,
+        },
+      )}
       onClick={() => {
         navigate(`/canvas/${canvas.id}`);
       }}
@@ -259,7 +261,7 @@ export const ProjectListItem = ({ project }: { project: SiderData }) => {
   return (
     <div
       key={project.id}
-      className="group relative m-1 px-2 rounded text-sm leading-7 hover:bg-gray-50"
+      className="group relative my-1 px-2 rounded text-sm leading-8 text-gray-600 hover:bg-gray-50"
       onClick={handleProjectClick}
     >
       <div className="flex w-40 items-center justify-between">
@@ -447,7 +449,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         <SearchQuickOpenBtn />
 
         <div
-          className="flex-shrink-0 h-10 m-1 flex items-center justify-between pl-6 pr-3 text-gray-600 hover:bg-gray-100 cursor-pointer rounded-lg"
+          className="flex-shrink-0 h-10 my-1 mx-2 flex items-center justify-between pl-6 pr-3 text-gray-600 hover:bg-gray-100 cursor-pointer rounded-lg"
           onClick={() => setShowCanvasTemplateModal(true)}
         >
           <div className="flex justify-between items-center w-full">
@@ -455,21 +457,13 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
               <IconTemplate key="template" style={{ fontSize: 20 }} />
               <span>{t('loggedHomePage.siderMenu.template')}</span>
             </div>
-            <Button
-              type="text"
-              size="small"
-              className="px-1 text-gray-500"
-              icon={
-                <LuList size={16} className="flex items-center text-gray-900 hover:text-gray-700" />
-              }
-            />
           </div>
         </div>
 
         {/* Main menu section with flexible layout */}
         <div className="flex-1 overflow-hidden flex flex-col min-h-[250px]">
           <Menu
-            className="flex-1 border-r-0 bg-transparent overflow-hidden flex flex-col"
+            className="flex-1 !border-none bg-transparent overflow-hidden flex flex-col"
             mode="inline"
             defaultOpenKeys={defaultOpenKeys}
             selectedKeys={selectedKey ? [selectedKey] : []}
@@ -563,7 +557,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
           </Menu>
         </div>
 
-        <div className="sider-footer mt-auto px-2">
+        <div className="sider-footer mt-auto px-2 pb-2">
           <Divider style={{ margin: '6px 0' }} />
           {subscriptionEnabled && planType === 'free' && (
             <div className="mb-2 flex flex-col gap-2">
