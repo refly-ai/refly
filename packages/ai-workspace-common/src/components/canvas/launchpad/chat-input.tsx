@@ -109,36 +109,33 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           return;
         }
 
-        if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !showSkillSelector) {
-          e.stopPropagation();
-          return;
-        }
-
+        // When the user presses the '/' key, open the skill selector
         if (e.key === '/') {
           setShowSkillSelector(true);
-        } else if (!['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
-          showSkillSelector && setShowSkillSelector(false);
         }
 
+        // Handle Ctrl+K or Cmd+K to open search
+        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          searchStore.setIsSearchOpen(true);
+        }
+
+        // Handle the Enter key
         if (e.keyCode === 13) {
-          if (showSkillSelector && hasMatchedOptions.current) {
-            e.preventDefault();
+          // Shift + Enter creates a new line (let default behavior handle it)
+          if (e.shiftKey) {
             return;
           }
 
-          if (e.ctrlKey || e.shiftKey || e.metaKey) {
-            e.preventDefault();
-            if (e.target instanceof HTMLTextAreaElement) {
-              const cursorPos = e.target.selectionStart ?? 0;
-              const newValue = `${query.slice(0, cursorPos)}\n${query.slice(cursorPos)}`;
-              setQuery(newValue);
-              setTimeout(() => {
-                if (e.target instanceof HTMLTextAreaElement) {
-                  e.target.selectionStart = e.target.selectionEnd = cursorPos + 1;
-                }
-              }, 0);
+          // Default Enter or Ctrl/Meta + Enter sends the message
+          if (!e.shiftKey) {
+            // Only use Enter to select when the skill selector is active and has options
+            if (showSkillSelector && hasMatchedOptions.current && options.length > 0) {
+              e.preventDefault();
+              return;
             }
-          } else {
+
+            // Send message on Enter (without any modifiers) or Ctrl/Meta + Enter
             e.preventDefault();
             if (query?.trim()) {
               handleSendMessage();
@@ -146,12 +143,12 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           }
         }
 
-        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          searchStore.setIsSearchOpen(true);
+        // Update the skill selector state
+        if (!['ArrowUp', 'ArrowDown', 'Enter', '/'].includes(e.key) && showSkillSelector) {
+          setShowSkillSelector(false);
         }
       },
-      [query, readonly, showSkillSelector, setQuery, handleSendMessage, searchStore],
+      [query, readonly, showSkillSelector, options, setQuery, handleSendMessage, searchStore],
     );
 
     const handleInputChange = useCallback(
