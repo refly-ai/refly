@@ -21,9 +21,7 @@ const CanvasPage = () => {
   }));
 
   useEffect(() => {
-    if (canvasId === 'empty' && canvasList.length > 0) {
-      navigate(`/canvas/${canvasList[0].id}`, { replace: true });
-    }
+    // Removed automatic navigation logic
   }, [canvasId, canvasList, navigate]);
 
   return canvasId && canvasId !== 'empty' ? (
