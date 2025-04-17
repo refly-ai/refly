@@ -1,6 +1,6 @@
 -- Provider: openai
 -- Default model: gpt-4o-mini
--- OPENAI_BASE_URL: https://api.openai.com
+-- OPENAI_BASE_URL: https://api.openai.com/v1
 INSERT INTO "refly"."model_infos" ("name", "label", "provider", "tier", "enabled", "is_default", "context_limit", "max_output", "capabilities")
 VALUES 
     ('o3-mini', 'o3 Mini', 'openai', 't1', 't', 'f', 200000, 100000, '{}'),
