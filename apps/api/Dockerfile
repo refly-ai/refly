@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine@sha256:b5b9467fe7b33aad47f1ec3f6e0646a658f85f05c18d4243024212a91f3b7554 AS builder
 WORKDIR /app
 COPY . .
 RUN npm install -g pnpm
@@ -7,7 +7,7 @@ RUN pnpm install
 RUN pnpm build:api
 
 # Production stage
-FROM node:20-alpine
+FROM node:20-alpine@sha256:b5b9467fe7b33aad47f1ec3f6e0646a658f85f05c18d4243024212a91f3b7554
 WORKDIR /app
 RUN apk add --no-cache curl gcompat
 
