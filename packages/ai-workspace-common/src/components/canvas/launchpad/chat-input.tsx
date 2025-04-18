@@ -109,36 +109,49 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           return;
         }
 
-        if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !showSkillSelector) {
-          e.stopPropagation();
-          return;
-        }
-
+        // When the user presses the '/' key, open the skill selector
         if (e.key === '/') {
           setShowSkillSelector(true);
-        } else if (!['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
-          showSkillSelector && setShowSkillSelector(false);
         }
 
+        // Handle Ctrl+K or Cmd+K to open search
+        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          searchStore.setIsSearchOpen(true);
+        }
+
+        // Handle the Enter key
         if (e.keyCode === 13) {
-          if (showSkillSelector && hasMatchedOptions.current) {
-            e.preventDefault();
+          // Shift + Enter creates a new line (let default behavior handle it)
+          if (e.shiftKey) {
             return;
           }
 
-          if (e.ctrlKey || e.shiftKey || e.metaKey) {
+          // Ctrl/Meta + Enter should always send the message regardless of skill selector
+          if ((e.ctrlKey || e.metaKey) && query?.trim()) {
             e.preventDefault();
-            if (e.target instanceof HTMLTextAreaElement) {
-              const cursorPos = e.target.selectionStart ?? 0;
-              const newValue = `${query.slice(0, cursorPos)}\n${query.slice(cursorPos)}`;
-              setQuery(newValue);
-              setTimeout(() => {
-                if (e.target instanceof HTMLTextAreaElement) {
-                  e.target.selectionStart = e.target.selectionEnd = cursorPos + 1;
-                }
-              }, 0);
+            handleSendMessage();
+            return;
+          }
+
+          // For regular Enter key
+          if (!e.shiftKey) {
+            // enter should not be used to select when the skill selector is active and has options
+            if (showSkillSelector && hasMatchedOptions.current && options.length > 0) {
+              e.preventDefault();
+              return;
             }
-          } else {
+
+            // enter should send message when the query contains '//'
+            if (query?.includes('//')) {
+              e.preventDefault();
+              if (query?.trim()) {
+                handleSendMessage();
+              }
+              return;
+            }
+
+            // Otherwise send message on Enter
             e.preventDefault();
             if (query?.trim()) {
               handleSendMessage();
@@ -146,12 +159,12 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           }
         }
 
-        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          searchStore.setIsSearchOpen(true);
+        // Update the skill selector state
+        if (!['ArrowUp', 'ArrowDown', 'Enter', '/'].includes(e.key) && showSkillSelector) {
+          setShowSkillSelector(false);
         }
       },
-      [query, readonly, showSkillSelector, setQuery, handleSendMessage, searchStore],
+      [query, readonly, showSkillSelector, options, setQuery, handleSendMessage, searchStore],
     );
 
     const handleInputChange = useCallback(
@@ -185,9 +198,14 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
     // Update options when query changes and contains a slash
     useEffect(() => {
       const lastSlashIndex = query.lastIndexOf('/');
-      if (lastSlashIndex !== -1) {
+      // only open skill selector when the slash is not followed by another slash
+      const afterSlash = lastSlashIndex !== -1 ? query.slice(lastSlashIndex + 1) : '';
+
+      if (lastSlashIndex !== -1 && !afterSlash.includes('/')) {
         setOptions(skillOptions);
         setShowSkillSelector(true);
+        // ensure hasMatchedOptions is false initially until there is a match
+        hasMatchedOptions.current = false;
       } else if (showSkillSelector) {
         setOptions([]);
         setShowSkillSelector(false);

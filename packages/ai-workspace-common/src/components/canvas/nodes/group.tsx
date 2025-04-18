@@ -67,7 +67,7 @@ export const GroupNode = memo(
     const [isHovered, setIsHovered] = useState(false);
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const { ungroupNodes } = useUngroupNodes();
-    const { getNode, getNodes, setNodes } = useReactFlow();
+    const { getNode, getNodes, setNodes, setEdges } = useReactFlow();
     const { deleteNodes, deleteNode } = useDeleteNode();
     const { addContextItems } = useAddToContext();
     const { addNode } = useAddNode();
@@ -320,17 +320,51 @@ export const GroupNode = memo(
       };
     }, [id, handleDelete]);
 
-    useEffect(() => {
-      const newZIndex = selected ? 1000 : -1;
+    const setNodeAndEdgeIndex = (zIndexForGroup: number, type: 'create' | 'destory') => {
+      const newZIndex = type === 'destory' ? 0 : selected ? 1000 : -1;
       setNodes((nodes) =>
         nodes.map((node) => {
-          if (node.id === id) {
-            return { ...node, zIndex: newZIndex };
+          if (node.id === id || type === 'destory') {
+            return { ...node, style: { ...node.style, zIndex: newZIndex } };
+          }
+          // Also set child nodes zIndex when parent group is selected
+          if (node.parentId === id && selected) {
+            return { ...node, style: { ...node.style, zIndex: zIndexForGroup } };
           }
           return node;
         }),
       );
-    }, [selected, setNodes]);
+
+      // Also update edges between children of this group
+      const childNodeIds = getNodes()
+        .filter((node) => node.parentId === id)
+        .map((node) => node.id);
+
+      setEdges((edges) =>
+        edges.map((edge) => {
+          if (type === 'destory') {
+            return { ...edge, zIndex: newZIndex };
+          }
+
+          const sourceInGroup = childNodeIds.includes(edge.source);
+          const targetInGroup = childNodeIds.includes(edge.target);
+
+          if (sourceInGroup && targetInGroup && selected) {
+            return { ...edge, zIndex: zIndexForGroup };
+          }
+
+          return edge;
+        }),
+      );
+    };
+
+    // Uncomment and modify the useEffect for zIndex management
+    useEffect(() => {
+      setNodeAndEdgeIndex(1001, 'create');
+      return () => {
+        setNodeAndEdgeIndex(0, 'destory');
+      };
+    }, [selected, setNodes, id, getNodes, setEdges]);
 
     return (
       <div>
@@ -398,7 +432,6 @@ export const GroupNode = memo(
               className="absolute top-0 left-0 w-full h-full"
               style={{
                 backgroundColor: data.metadata?.bgColor || 'transparent',
-                opacity: selected ? 0.5 : 1,
               }}
             />
           </div>

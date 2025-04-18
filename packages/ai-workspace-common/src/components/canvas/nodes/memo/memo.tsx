@@ -13,7 +13,6 @@ import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
-import Moveable from 'react-moveable';
 import classNames from 'classnames';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { Markdown } from 'tiptap-markdown';
@@ -41,6 +40,8 @@ import { genSkillID } from '@refly-packages/utils/id';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
+import { NodeResizer as NodeResizerComponent } from '../shared/node-resizer';
 
 export const MemoNode = ({
   data,
@@ -60,10 +61,7 @@ export const MemoNode = ({
   const { getNode, getEdges } = useReactFlow();
   const node = getNode(id);
   const targetRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({
-    width: node?.measured?.width ?? 288,
-    height: node?.measured?.height ?? 284,
-  });
+
   const [isFocused, setIsFocused] = useState(false);
   const { operatingNodeId } = useCanvasStoreShallow((state) => ({
     operatingNodeId: state.operatingNodeId,
@@ -81,6 +79,19 @@ export const MemoNode = ({
   const isSourceConnected = edges?.some((edge) => edge.source === id);
 
   const { readonly } = useCanvasContext();
+
+  const { containerStyle, handleResize } = useNodeSize({
+    id,
+    node,
+    sizeMode: 'adaptive',
+    readonly,
+    isOperating,
+    minWidth: 100,
+    maxWidth: 800,
+    minHeight: 80,
+    defaultWidth: 288,
+    defaultHeight: 284,
+  });
 
   // Handle node hover events
   const handleMouseEnter = useCallback(() => {
@@ -314,12 +325,20 @@ export const MemoNode = ({
         onMouseLeave={!isPreview ? handleMouseLeave : undefined}
         className="relative"
         onClick={onNodeClick}
-        style={{
-          width: `${size.width}px`,
-          height: `${size.height}px`,
-          userSelect: 'none',
-          cursor: readonly ? 'default' : isOperating || isFocused ? 'default' : 'grab',
-        }}
+        style={
+          isPreview
+            ? {
+                width: 288,
+                height: 200,
+                userSelect: 'none',
+                cursor: readonly ? 'default' : isOperating || isFocused ? 'default' : 'grab',
+              }
+            : {
+                ...containerStyle,
+                userSelect: 'none',
+                cursor: readonly ? 'default' : isOperating || isFocused ? 'default' : 'grab',
+              }
+        }
       >
         {!isPreview && selected && !readonly && (
           <MemoEditor editor={editor} bgColor={bgColor} onChangeBackground={onUpdateBgColor} />
@@ -381,45 +400,13 @@ export const MemoNode = ({
       </div>
 
       {!isPreview && selected && !readonly && (
-        <Moveable
-          target={targetRef}
-          resizable={true}
-          edge={false}
-          throttleResize={1}
-          renderDirections={['nw', 'ne', 'sw', 'se']}
-          onResizeStart={({ setOrigin, dragStart }) => {
-            setOrigin(['%', '%']);
-            if (dragStart && dragStart instanceof MouseEvent) {
-              dragStart.preventDefault();
-            }
-          }}
-          onResize={({ target, width, height, direction }) => {
-            const newWidth = Math.max(200, width);
-            const newHeight = Math.max(80, height);
-
-            let newLeft = (target as HTMLElement).offsetLeft;
-            let newTop = (target as HTMLElement).offsetTop;
-
-            if (direction[0] === -1) {
-              newLeft =
-                (target as HTMLElement).offsetLeft -
-                (newWidth - (target as HTMLElement).offsetWidth);
-            }
-            if (direction[1] === -1) {
-              newTop =
-                (target as HTMLElement).offsetTop -
-                (newHeight - (target as HTMLElement).offsetHeight);
-            }
-
-            target.style.width = `${newWidth}px`;
-            target.style.height = `${newHeight}px`;
-            target.style.left = `${newLeft}px`;
-            target.style.top = `${newTop}px`;
-
-            setSize({ width: newWidth, height: newHeight });
-          }}
-          hideDefaultLines={true}
-          className={`!pointer-events-auto ${!isHovered ? 'moveable-control-hidden' : 'moveable-control-show'}`}
+        <NodeResizerComponent
+          targetRef={targetRef}
+          isSelected={selected}
+          isHovered={isHovered}
+          isPreview={isPreview}
+          sizeMode="adaptive"
+          onResize={handleResize}
         />
       )}
     </div>

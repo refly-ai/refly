@@ -151,7 +151,7 @@ export const NewCanvasItem = () => {
   const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas();
 
   return (
-    <div className="w-full px-1" onClick={debouncedCreateCanvas}>
+    <div className="w-full" onClick={debouncedCreateCanvas}>
       <Button
         className="w-full justify-start px-2"
         key="newCanvas"
@@ -172,11 +172,7 @@ export const NewProjectItem = () => {
 
   return (
     <>
-      <div
-        key="newProject"
-        className="w-full px-1"
-        onClick={() => setCreateProjectModalVisible(true)}
-      >
+      <div key="newProject" className="w-full" onClick={() => setCreateProjectModalVisible(true)}>
         <Button
           type="text"
           icon={<IconPlus className="text-green-600" />}

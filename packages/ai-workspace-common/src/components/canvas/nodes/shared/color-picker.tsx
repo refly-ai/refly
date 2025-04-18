@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 
 // 预设颜色
 export const presetColors = [
-  '#FFFFFF', // White
-  '#e2defc', // Purple
-  '#d6ebfd', // Blue
+  'rgba(0,0,0,0)', // transparent
+  '#eae7fa', // Purple
+  '#e5f3ff', // Blue
   '#cff9fe', // Cyan
   '#d1f9e8', // Light Green
   '#e3fbcc', // Green
@@ -15,6 +15,7 @@ export const presetColors = [
   '#fee1c7', // Orange
   '#ffede7', // Pink
   '#f2f4f7', // Gray
+  '#ffffff', // White
 ];
 
 interface CommonColorPickerProps {

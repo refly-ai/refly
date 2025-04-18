@@ -380,6 +380,11 @@ const DocumentEditorHeader = memo(
     }, [docId, syncTitleToYDoc]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Skip custom handling when IME composition is in progress
+      if (e.nativeEvent.isComposing || e.key === 'Process') {
+        return;
+      }
+
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         editorEmitter.emit('insertBelow', '\n');

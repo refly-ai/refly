@@ -274,9 +274,9 @@ export const PriceContent = (props: { source: PriceSource }) => {
   const createFeatures = (plan: 'free' | 'plus' | 'pro' | 'max'): ModelFeatures[] => {
     const configs = {
       free: {
-        t1Count: 3,
-        t2Count: 30,
-        fileLimit: 10,
+        t1Count: 5,
+        t2Count: 50,
+        fileLimit: 100,
         t1Period: 'daily',
         t2Period: 'daily',
         fileParseLimit: 50,
