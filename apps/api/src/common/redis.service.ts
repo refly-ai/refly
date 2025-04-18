@@ -11,7 +11,8 @@ export class RedisService extends Redis implements OnModuleInit {
     super({
       host: configService.getOrThrow('redis.host'),
       port: configService.getOrThrow('redis.port'),
-      password: configService.get('redis.password') || undefined,
+      username: configService.get('redis.username'),
+      password: configService.get('redis.password'),
     });
   }
 
