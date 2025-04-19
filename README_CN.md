@@ -28,6 +28,8 @@ Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型�
         <img alt="TypeScript-version-icon" src="https://img.shields.io/badge/TypeScript-^5.3.3-blue"></a>
 </p>
 
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
+
 <p align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README_CN.md"><img alt="简体中文版自述文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
@@ -35,7 +37,6 @@ Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型�
 
 </div>
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
 ## 快速开始
 
 > 在安装 ReflyAI 之前，请确保您的机器满足以下最低系统要求：

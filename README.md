@@ -28,6 +28,8 @@ Refly is an open-source AI-native creation engine powered by 13+ leading AI mode
         <img alt="TypeScript-version-icon" src="https://img.shields.io/badge/TypeScript-^5.3.3-blue"></a>
 </p>
 
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
+
 <p align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README_CN.md"><img alt="简体中文版自述文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
@@ -35,7 +37,6 @@ Refly is an open-source AI-native creation engine powered by 13+ leading AI mode
 
 </div>
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
 ## Quick Start
 
 > Before installing ReflyAI, ensure your machine meets these minimum system requirements:
