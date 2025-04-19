@@ -1,0 +1,44 @@
+image:
+  file: .gitpod.Dockerfile
+
+tasks:
+  - name: Setup
+    init: |
+      # Get the current repository URL
+      REPO_URL=$(git config --get remote.origin.url)
+      echo "Repository URL: $REPO_URL"
+      
+      # Start services
+      cd deploy/docker
+      docker-compose up -d
+
+ports:
+  - port: 5700
+    name: API
+    onOpen: open-preview
+    visibility: public
+    protocol: http
+  - port: 5432
+    name: PostgreSQL
+    visibility: private
+  - port: 6379
+    name: Redis
+    visibility: private
+  - port: 9000
+    name: MinIO
+    visibility: private
+  - port: 9001
+    name: MinIO Console
+    visibility: private
+  - port: 9200
+    name: Elasticsearch
+    visibility: private
+  - port: 6333
+    name: Qdrant
+    visibility: private
+
+vscode:
+  extensions:
+    - dbaeumer.vscode-eslint
+    - esbenp.prettier-vscode
+    - prisma.prisma 
