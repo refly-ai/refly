@@ -2,17 +2,8 @@ image:
   file: .gitpod.Dockerfile
 
 tasks:
-  - name: Setup
-    init: |
-      # Get the current repository URL and branch
-      REPO_URL=${GITPOD_REPO_ROOT##*/}
-      BRANCH_NAME=${GITPOD_GIT_BRANCH:-main}
-      echo "Current Repository: $REPO_URL"
-      echo "Current Branch: $BRANCH_NAME"
-      
-      # Start services
-      cd deploy/docker
-      docker-compose up -d
+  - name: Deploy Services
+    init: cd deploy/docker && docker compose up -d
 
 ports:
   - port: 5700
