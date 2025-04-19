@@ -35,6 +35,7 @@ Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型�
 
 </div>
 
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
 ## 快速开始
 
 > 在安装 ReflyAI 之前，请确保您的机器满足以下最低系统要求：
