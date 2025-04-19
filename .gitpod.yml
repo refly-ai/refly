@@ -3,7 +3,7 @@ image:
 
 tasks:
   - name: Deploy Services
-    init: cd deploy/docker && docker compose up -d
+    init: cd deploy/docker && cp ../../apps/api/.env.example .env &&   docker compose up -d
 
 ports:
   - port: 5700
@@ -34,4 +34,4 @@ vscode:
   extensions:
     - dbaeumer.vscode-eslint
     - esbenp.prettier-vscode
-    - prisma.prisma 
+    - prisma.prisma
