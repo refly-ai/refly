@@ -4,9 +4,11 @@ image:
 tasks:
   - name: Setup
     init: |
-      # Get the current repository URL
+      # Get the current repository URL and branch
       REPO_URL=$(git config --get remote.origin.url)
+      BRANCH_NAME=${GITPOD_GIT_BRANCH:-main}
       echo "Repository URL: $REPO_URL"
+      echo "Current Branch: $BRANCH_NAME"
       
       # Start services
       cd deploy/docker
