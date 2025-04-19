@@ -1,5 +1,5 @@
 import { AutoComplete, AutoCompleteProps, Input } from 'antd';
-import { memo, useRef, useMemo, useState, useCallback, forwardRef, useEffect } from 'react';
+import { memo, useRef, useMemo, useState, useCallback, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { RefTextAreaType } from '@arco-design/web-react/es/Input/textarea';
 import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/stores/search';
@@ -9,6 +9,8 @@ import { cn } from '@refly-packages/utils/cn';
 import { useListSkills } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { useAvailableContextItems } from './context-manager/hooks/use-available-context-items';
 
 const TextArea = Input.TextArea;
 
@@ -23,6 +25,7 @@ interface ChatInputProps {
   handleSelectSkill?: (skill: Skill) => void;
   onUploadImage?: (file: File) => Promise<void>;
   onFocus?: () => void;
+  contextItems?: any[];
 }
 
 const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
@@ -38,6 +41,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       handleSelectSkill,
       onUploadImage,
       onFocus,
+      contextItems = [],
     },
     ref,
   ) => {
@@ -54,7 +58,17 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
     const { setSelectedSkill } = useSkillStoreShallow((state) => ({
       setSelectedSkill: state.setSelectedSkill,
     }));
+    const { setContextItems } = useContextPanelStoreShallow((state) => ({
+      setContextItems: state.setContextItems,
+      contextItems: state.contextItems,
+    }));
+
     const [showSkillSelector, setShowSkillSelector] = useState(false);
+    const [showContextSelector, setShowContextSelector] = useState(false);
+    const [options, setOptions] = useState<AutoCompleteProps['options']>([]);
+
+    // Use our custom hook to get available context items
+    const { getAvailableContextItems } = useAvailableContextItems();
 
     const handlePaste = useCallback(
       async (e: React.ClipboardEvent<HTMLDivElement | HTMLTextAreaElement>) => {
@@ -100,8 +114,12 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       }));
     }, [t, skills]);
 
-    const [options, setOptions] = useState<AutoCompleteProps['options']>([]);
+    // 确保引用稳定的上下文选项
+    const computedContextOptions = useMemo(() => {
+      return getAvailableContextItems(contextItems);
+    }, [contextItems, getAvailableContextItems]);
 
+    // 更新为一个更简单的处理键盘输入的方法
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (readonly) {
@@ -111,13 +129,27 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
 
         // When the user presses the '/' key, open the skill selector
         if (e.key === '/') {
+          setOptions(skillOptions);
           setShowSkillSelector(true);
+          setShowContextSelector(false);
+          hasMatchedOptions.current = false;
+          return;
+        }
+
+        // When the user presses the '@' key, open the context selector
+        if (e.key === '@') {
+          setOptions(computedContextOptions);
+          setShowContextSelector(true);
+          setShowSkillSelector(false);
+          hasMatchedOptions.current = false;
+          return;
         }
 
         // Handle Ctrl+K or Cmd+K to open search
         if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();
           searchStore.setIsSearchOpen(true);
+          return;
         }
 
         // Handle the Enter key
@@ -136,8 +168,12 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
 
           // For regular Enter key
           if (!e.shiftKey) {
-            // enter should not be used to select when the skill selector is active and has options
-            if (showSkillSelector && hasMatchedOptions.current && options.length > 0) {
+            // enter should not be used to select when selectors are active and have options
+            if (
+              (showSkillSelector || showContextSelector) &&
+              hasMatchedOptions.current &&
+              options.length > 0
+            ) {
               e.preventDefault();
               return;
             }
@@ -159,20 +195,63 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           }
         }
 
-        // Update the skill selector state
-        if (!['ArrowUp', 'ArrowDown', 'Enter', '/'].includes(e.key) && showSkillSelector) {
-          setShowSkillSelector(false);
+        // Update selector states for keys other than navigation and special keys
+        if (!['ArrowUp', 'ArrowDown', 'Enter', '/', '@'].includes(e.key)) {
+          if (showSkillSelector) {
+            setShowSkillSelector(false);
+          }
+          if (showContextSelector) {
+            setShowContextSelector(false);
+          }
         }
       },
-      [query, readonly, showSkillSelector, options, setQuery, handleSendMessage, searchStore],
+      [
+        query,
+        readonly,
+        skillOptions,
+        computedContextOptions,
+        showSkillSelector,
+        showContextSelector,
+        options,
+        searchStore,
+        handleSendMessage,
+      ],
     );
 
     const handleInputChange = useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const value = e.target.value;
         setQuery(value);
+
+        // 检测输入中的 / 和 @，并实时更新选项
+        const lastSlashIndex = value.lastIndexOf('/');
+        const lastAtIndex = value.lastIndexOf('@');
+
+        if (lastSlashIndex !== -1) {
+          const afterSlash = value.slice(lastSlashIndex + 1);
+          if (!afterSlash.includes('/')) {
+            setOptions(skillOptions);
+            setShowSkillSelector(true);
+            setShowContextSelector(false);
+          } else {
+            setShowSkillSelector(false);
+          }
+        } else if (lastAtIndex !== -1) {
+          const afterAt = value.slice(lastAtIndex + 1);
+          if (!afterAt.includes('@')) {
+            setOptions(computedContextOptions);
+            setShowContextSelector(true);
+            setShowSkillSelector(false);
+          } else {
+            setShowContextSelector(false);
+          }
+        } else {
+          setOptions([]);
+          setShowSkillSelector(false);
+          setShowContextSelector(false);
+        }
       },
-      [setQuery],
+      [setQuery, skillOptions, computedContextOptions],
     );
 
     const handleSearchListConfirm = useCallback(
@@ -195,43 +274,81 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       [skills, setSelectedSkill, handleSelectSkill, query, setQuery],
     );
 
-    // Update options when query changes and contains a slash
-    useEffect(() => {
-      const lastSlashIndex = query.lastIndexOf('/');
-      // only open skill selector when the slash is not followed by another slash
-      const afterSlash = lastSlashIndex !== -1 ? query.slice(lastSlashIndex + 1) : '';
-
-      if (lastSlashIndex !== -1 && !afterSlash.includes('/')) {
-        setOptions(skillOptions);
-        setShowSkillSelector(true);
-        // ensure hasMatchedOptions is false initially until there is a match
-        hasMatchedOptions.current = false;
-      } else if (showSkillSelector) {
+    const handleContextSelect = useCallback(
+      (value: string) => {
         setOptions([]);
-        setShowSkillSelector(false);
-      }
-    }, [query, skillOptions, showSkillSelector]);
+        setShowContextSelector(false);
 
-    const filterOption = useCallback((inputValue: string, option: any) => {
-      const lastSlashIndex = inputValue.lastIndexOf('/');
-      const searchText = lastSlashIndex !== -1 ? inputValue.slice(lastSlashIndex + 1) : inputValue;
-      const searchVal = searchText.toLowerCase();
-      const isMatch =
-        !searchVal ||
-        option.value.toString().toLowerCase().includes(searchVal) ||
-        option.textLabel.toLowerCase().includes(searchVal);
+        // Find the selected node from computedContextOptions
+        const contextOption = computedContextOptions.find((opt) => opt.value === value);
+        if (!contextOption || !contextOption.nodeData) {
+          return;
+        }
 
-      if (isMatch) {
-        hasMatchedOptions.current = true;
-      }
-      return isMatch;
-    }, []);
+        // Add the node to context items
+        const node = contextOption.nodeData;
+        const newContextItem = {
+          title: node.data?.title || 'Untitled',
+          entityId: node.id,
+          type: node.type,
+          metadata: node.data?.metadata,
+        };
+
+        // Add to context items and update the store
+        setContextItems([...contextItems, newContextItem]);
+
+        // Replace @mention with empty text
+        const lastAtIndex = query.lastIndexOf('@');
+        const prefix = lastAtIndex !== -1 ? query.slice(0, lastAtIndex) : query;
+        const suffix = lastAtIndex !== -1 ? query.slice(lastAtIndex + value.length + 1) : '';
+        setQuery(prefix + suffix);
+      },
+      [computedContextOptions, contextItems, setContextItems, query, setQuery],
+    );
+
+    const filterOption = useCallback(
+      (inputValue: string, option: any) => {
+        let searchVal = '';
+
+        if (showSkillSelector) {
+          const lastSlashIndex = inputValue.lastIndexOf('/');
+          searchVal =
+            lastSlashIndex !== -1 ? inputValue.slice(lastSlashIndex + 1).toLowerCase() : '';
+        } else if (showContextSelector) {
+          const lastAtIndex = inputValue.lastIndexOf('@');
+          searchVal = lastAtIndex !== -1 ? inputValue.slice(lastAtIndex + 1).toLowerCase() : '';
+        }
+
+        const isMatch =
+          !searchVal ||
+          option.value.toString().toLowerCase().includes(searchVal) ||
+          option.textLabel.toLowerCase().includes(searchVal);
+
+        if (isMatch) {
+          hasMatchedOptions.current = true;
+        }
+        return isMatch;
+      },
+      [showSkillSelector, showContextSelector],
+    );
 
     const onSelect = useCallback(
       (value: string) => {
-        if (!readonly) handleSearchListConfirm(value);
+        if (readonly) return;
+
+        if (showSkillSelector) {
+          handleSearchListConfirm(value);
+        } else if (showContextSelector) {
+          handleContextSelect(value);
+        }
       },
-      [readonly, handleSearchListConfirm],
+      [
+        readonly,
+        showSkillSelector,
+        showContextSelector,
+        handleSearchListConfirm,
+        handleContextSelect,
+      ],
     );
 
     // Handle focus event and propagate it upward
@@ -289,7 +406,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
         <AutoComplete
           className="h-full"
           autoFocus={!readonly}
-          open={showSkillSelector && !readonly}
+          open={(showSkillSelector || showContextSelector) && !readonly}
           options={options}
           popupMatchSelectWidth={false}
           placement={autoCompletionPlacement}
@@ -307,6 +424,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
             onBlur={() => {
               setTimeout(() => {
                 setShowSkillSelector(false);
+                setShowContextSelector(false);
               }, 100);
             }}
             value={query ?? ''}
@@ -357,7 +475,8 @@ export const ChatInput = memo(ChatInputComponent, (prevProps, nextProps) => {
     prevProps.selectedSkillName === nextProps.selectedSkillName &&
     prevProps.handleSelectSkill === nextProps.handleSelectSkill &&
     prevProps.onUploadImage === nextProps.onUploadImage &&
-    prevProps.onFocus === nextProps.onFocus
+    prevProps.onFocus === nextProps.onFocus &&
+    JSON.stringify(prevProps.contextItems) === JSON.stringify(nextProps.contextItems)
   );
 }) as typeof ChatInputComponent;
 

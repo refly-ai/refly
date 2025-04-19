@@ -381,6 +381,7 @@ export const ChatPanel = ({
                 handleSendMessage={handleSendMessage}
                 onUploadImage={handleImageUpload}
                 onFocus={handleInputFocus}
+                contextItems={contextItems}
               />
             </div>
 
