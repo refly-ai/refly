@@ -1,6 +1,3 @@
-image:
-  file: .gitpod.Dockerfile
-
 tasks:
   - name: Deploy Services
     init: cd deploy/docker && cp ../../apps/api/.env.example .env &&   docker compose up -d
