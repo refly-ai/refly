@@ -23,7 +23,6 @@
     "rootDir": "./src",
     "paths": {
       "@refly-packages/ai-workspace-common/*": ["./src/*"],
-      "@refly-packages/utils/*": ["../utils/src/*"],
       "@refly/utils/*": ["../utils/src/*"]
     },
     "composite": true,

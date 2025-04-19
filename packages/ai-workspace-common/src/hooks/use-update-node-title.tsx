@@ -6,7 +6,7 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CanvasNodeType } from '@refly/openapi-schema';
-import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { editorEmitter } from '@refly/utils/event-emitter/editor';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 

@@ -1,5 +1,5 @@
 import { Tool } from '@langchain/core/tools';
-import { SearchDomain, SearchMode, User, Entity } from '@refly-packages/openapi-schema';
+import { SearchDomain, SearchMode, User, Entity } from '@refly/openapi-schema';
 import { BaseToolParams } from '../../base';
 import { SkillEngine } from '../../engine';
 

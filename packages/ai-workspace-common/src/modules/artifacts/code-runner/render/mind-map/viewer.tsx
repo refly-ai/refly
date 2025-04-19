@@ -8,7 +8,7 @@ import { nodeTypes } from './nodes';
 import { useMindMapOperation } from './hooks/use-mind-map-operation';
 import { useMindMapData } from './hooks/use-mind-map-data';
 import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
-import { safeStringifyJSON } from '@refly-packages/utils/parse';
+import { safeStringifyJSON } from '@refly/utils/parse';
 
 interface MindMapProps {
   data: NodeData;

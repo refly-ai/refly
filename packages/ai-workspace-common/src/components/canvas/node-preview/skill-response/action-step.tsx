@@ -5,19 +5,19 @@ import { ActionResult, ActionStep, Source } from '@refly/openapi-schema';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { IconCheckCircle } from '@arco-design/web-react/icon';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import { IconCheck, IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { genUniqueId } from '@refly-packages/utils/id';
+import { genUniqueId } from '@refly/utils/id';
 import { SelectionContext } from '@refly-packages/ai-workspace-common/modules/selection-menu/selection-context';
 import { ActionContainer } from './action-container';
-import { safeParseJSON } from '@refly-packages/utils/parse';
+import { safeParseJSON } from '@refly/utils/parse';
 import { SourceViewer } from './source-viewer';
 import { getArtifactIcon } from '@refly-packages/ai-workspace-common/components/common/result-display';
 import { RecommendQuestions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/recommend-questions';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { getParsedReasoningContent } from '@refly-packages/utils/content-parser';
+import { getParsedReasoningContent } from '@refly/utils/content-parser';
 import { IconThinking } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 const parseStructuredData = (structuredData: Record<string, unknown>, field: string) => {

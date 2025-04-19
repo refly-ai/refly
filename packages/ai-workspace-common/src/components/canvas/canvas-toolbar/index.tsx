@@ -29,7 +29,7 @@ import { useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common
 import { useEdgeVisible } from '@refly-packages/ai-workspace-common/hooks/canvas/use-edge-visible';
 import { ToolButton, type ToolbarItem } from './tool-button';
 import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-card';
-import { genMemoID, genSkillID } from '@refly-packages/utils/id';
+import { genMemoID, genSkillID } from '@refly/utils/id';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 import { getDefaultContentForType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';

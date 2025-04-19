@@ -21,7 +21,7 @@ import {
   CodeArtifactNodeMeta,
 } from './shared/types';
 import { t } from 'i18next';
-import { genUniqueId } from '@refly-packages/utils/id';
+import { genUniqueId } from '@refly/utils/id';
 
 // Export all components and types
 export * from './shared/types';

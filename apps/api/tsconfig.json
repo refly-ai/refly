@@ -22,12 +22,11 @@
     "noFallthroughCasesInSwitch": false,
     "inlineSources": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@refly-packages/*": ["../../packages/*/src"]
+      "@/*": ["./src/*"]
     },
     "sourceRoot": "/",
     "composite": true,
-    "types": ["jest", "node", "express", "multer"],
+    "types": ["jest", "node", "express", "multer", "electron"],
     "resolveJsonModule": true
   },
   "include": ["src/**/*", "*.json"],

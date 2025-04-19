@@ -17,17 +17,11 @@ function getPreloadModules(): string[] {
 
 if (!getPreloadModules().includes('tsconfig-paths/register')) {
   moduleAlias.addAliases({
-    '@refly-packages/openapi-schema': path.resolve(
-      __dirname,
-      '../../../packages/openapi-schema/dist',
-    ),
-    '@refly-packages/errors': path.resolve(__dirname, '../../../packages/errors/dist'),
-    '@refly-packages/common-types': path.resolve(__dirname, '../../../packages/common-types/dist'),
-    '@refly-packages/utils': path.resolve(__dirname, '../../../packages/utils/dist'),
-    '@refly-packages/skill-template': path.resolve(
-      __dirname,
-      '../../../packages/skill-template/dist',
-    ),
+    '@refly/openapi-schema': path.resolve(__dirname, '../../../packages/openapi-schema/dist'),
+    '@refly/errors': path.resolve(__dirname, '../../../packages/errors/dist'),
+    '@refly/common-types': path.resolve(__dirname, '../../../packages/common-types/dist'),
+    '@refly/utils': path.resolve(__dirname, '../../../packages/utils/dist'),
+    '@refly/skill-template': path.resolve(__dirname, '../../../packages/skill-template/dist'),
     '@': __dirname,
   });
 }

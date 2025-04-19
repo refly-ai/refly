@@ -20,7 +20,7 @@ import {
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genSkillID } from '@refly-packages/utils/id';
+import { genSkillID } from '@refly/utils/id';
 import {
   useNodeSize,
   MAX_HEIGHT_CLASS,

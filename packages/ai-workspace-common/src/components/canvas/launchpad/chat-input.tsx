@@ -5,7 +5,7 @@ import type { RefTextAreaType } from '@arco-design/web-react/es/Input/textarea';
 import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/stores/search';
 import type { Skill } from '@refly/openapi-schema';
 import { useSkillStoreShallow } from '@refly-packages/ai-workspace-common/stores/skill';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import { useListSkills } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';

@@ -6,6 +6,7 @@ import { CanvasNode } from '../../components/canvas/nodes';
 import { UndoManager } from 'yjs';
 import { omit } from '@refly/utils';
 import { purgeContextItems } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { isDesktop } from '@refly-packages/ai-workspace-common/utils/env';
 
 export const useCanvasSync = () => {
   const { provider } = useCanvasContext();
@@ -25,7 +26,7 @@ export const useCanvasSync = () => {
 
   const syncFunctions = useMemo(() => {
     const isProviderActive = () => {
-      return ydoc && provider?.status === 'connected';
+      return ydoc && (provider?.status === 'connected' || isDesktop());
     };
 
     const safeTransaction = (transactionFn: () => void) => {

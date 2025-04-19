@@ -3,7 +3,7 @@ import {
   SkillContextDocumentItem,
   SkillContextResourceItem,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import { BaseSkill, SkillRunnableConfig } from '../../base';
 import { sortContentBySimilarity } from './semanticSearch';
 

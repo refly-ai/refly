@@ -1,6 +1,7 @@
 {
   "watch": [
-    "src",
+    "src/modules",
+    "src/server",
     "../../packages/openapi-schema",
     "../../packages/common-types",
     "../../packages/skill-template",
@@ -8,5 +9,5 @@
   ],
   "ext": "ts",
   "ignore": ["src/**/*.spec.ts"],
-  "exec": "ts-node -r tsconfig-paths/register src/main.ts"
+  "exec": "prisma format && prisma generate && ts-node -r tsconfig-paths/register src/server/main.ts"
 }

@@ -1,8 +1,8 @@
-import { Prisma } from '@prisma/client';
-import { ActionLog, Artifact, SkillEvent, TokenUsageItem } from '@refly-packages/openapi-schema';
-import { SkillRunnableMeta } from '@refly-packages/skill-template';
+import { Prisma } from '@/generated/client';
+import { ActionLog, Artifact, SkillEvent, TokenUsageItem } from '@refly/openapi-schema';
+import { SkillRunnableMeta } from '@refly/skill-template';
 
-import { aggregateTokenUsage } from '@refly-packages/utils';
+import { aggregateTokenUsage } from '@refly/utils';
 interface StepData {
   name: string;
   content: string;

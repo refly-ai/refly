@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useState, forwardRef, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import {
   IconClose,
   IconExitWideMode,

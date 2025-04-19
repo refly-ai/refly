@@ -1,6 +1,6 @@
-import { Document } from '@refly-packages/openapi-schema';
+import { Document } from '@refly/openapi-schema';
 import { HighlightSelection } from './types';
-import { InPlaceEditType } from '@refly-packages/utils';
+import { InPlaceEditType } from '@refly/utils';
 import {
   buildBlockEditDocumentSystemPrompt,
   buildBlockEditDocumentUserPrompt,

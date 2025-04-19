@@ -19,7 +19,7 @@ import { createNodeEventName } from '@refly-packages/ai-workspace-common/events/
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useEdgeStyles } from '@refly-packages/ai-workspace-common/components/canvas/constants';
-import { genActionResultID } from '@refly-packages/utils/id';
+import { genActionResultID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
 import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';

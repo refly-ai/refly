@@ -14,7 +14,7 @@ import {
   SkillNodeMeta,
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { MessageSquareDiff, Group, Target, Layout } from 'lucide-react';
-import { genActionResultID, genSkillID } from '@refly-packages/utils/id';
+import { genActionResultID, genSkillID } from '@refly/utils/id';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useGroupNodes } from '@refly-packages/ai-workspace-common/hooks/canvas/use-batch-nodes-selection/use-group-nodes';

@@ -1,7 +1,7 @@
 import { Tool } from '@langchain/core/tools';
 import { BaseToolParams } from '../../base';
 import { SkillEngine } from '../../engine';
-import { User } from '@refly-packages/openapi-schema';
+import { User } from '@refly/openapi-schema';
 
 export interface SerperSearchParameters extends BaseToolParams {
   user: User;

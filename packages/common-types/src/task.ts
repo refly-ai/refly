@@ -1,5 +1,5 @@
 import { type OutputLocale } from './i18n';
-import { Source } from '@refly-packages/openapi-schema';
+import { Source } from '@refly/openapi-schema';
 
 export interface Mode {
   id: string;

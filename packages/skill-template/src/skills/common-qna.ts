@@ -2,13 +2,13 @@ import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { safeStringifyJSON } from '@refly/utils';
 import {
   Icon,
   SkillInvocationConfig,
   SkillTemplateConfigDefinition,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import { createSkillTemplateInventory } from '../inventory';
 
 // types
@@ -19,7 +19,7 @@ import { truncateSource } from '../scheduler/utils/truncator';
 import { buildFinalRequestMessages, SkillPromptModule } from '../scheduler/utils/message';
 import { processQuery } from '../scheduler/utils/queryProcessor';
 import { extractAndCrawlUrls, crawlExtractedUrls } from '../scheduler/utils/extract-weblink';
-import { isValidUrl } from '@refly-packages/utils';
+import { isValidUrl } from '@refly/utils';
 
 // prompts
 import * as commonQnA from '../scheduler/module/commonQnA';

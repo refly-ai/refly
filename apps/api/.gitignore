@@ -1,5 +1,6 @@
 # compiled output
 /dist
+/dist-electron
 /node_modules
 /app/models/__pycache__/**
 /app/__pycache__/**
@@ -40,3 +41,9 @@ lerna-debug.log*
 
 # Sentry Config File
 .sentryclirc
+
+# Prisma generated files and sqlite db
+src/generated
+prisma/app.db
+
+.qdrant-initialized

@@ -42,7 +42,7 @@ import {
   DeleteCanvasRequest,
   DeleteDocumentResponse,
   DeleteDocumentRequest,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 // TODO: unify with frontend

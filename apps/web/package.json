@@ -6,6 +6,7 @@
   "scripts": {
     "copy-env": "ncp .env.example .env",
     "dev": "vite",
+    "dev:electron": "VITE_RUNTIME=desktop vite",
     "start": "serve dist -p 5700",
     "build": "rimraf dist && vite build",
     "preview": "vite preview",

@@ -1,4 +1,4 @@
-import { SearchDomain, Source } from '@refly-packages/openapi-schema';
+import { SearchDomain, Source } from '@refly/openapi-schema';
 import { SyncMarkEventName } from './extension-messaging';
 
 export type MarkScope = 'block' | 'inline';

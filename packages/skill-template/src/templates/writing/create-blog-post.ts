@@ -10,13 +10,9 @@ import {
   SkillTemplateConfigDefinition,
   DynamicConfigValue,
   Icon,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 // utils
-import {
-  languageNameToLocale,
-  localeToLanguageName,
-  zhCNLocale,
-} from '@refly-packages/common-types';
+import { languageNameToLocale, localeToLanguageName, zhCNLocale } from '@refly/common-types';
 
 interface GraphState extends BaseSkillState {
   documents: Document[];

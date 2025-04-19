@@ -4,7 +4,7 @@ import {
   SkillContextDocumentItem,
   SearchDomain,
   Entity,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import { BaseSkill, SkillRunnableConfig } from '../../base';
 import { IContext, GraphState, SkillContextContentItemMetadata } from '../types';
 import { countToken } from './token';
@@ -25,7 +25,7 @@ import {
   MAX_SHORT_RESOURCES_RATIO,
   MAX_URL_SOURCES_TOKENS,
 } from './constants';
-import { Source } from '@refly-packages/openapi-schema';
+import { Source } from '@refly/openapi-schema';
 
 // TODO:替换成实际的 Chunk 定义，然后进行拼接，拼接时包含元数据和分隔符
 export function assembleChunks(chunks: DocumentInterface[] = []): string {

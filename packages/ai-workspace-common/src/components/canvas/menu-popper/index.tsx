@@ -17,11 +17,11 @@ import {
   IconWebsite,
   IconMindMap,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { genMemoID, genSkillID } from '@refly-packages/utils/id';
+import { genMemoID, genSkillID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useReactFlow } from '@xyflow/react';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';

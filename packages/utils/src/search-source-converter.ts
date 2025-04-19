@@ -1,4 +1,4 @@
-import { SearchDomain, SearchResult, Source, SourceMeta } from '@refly-packages/openapi-schema';
+import { SearchDomain, SearchResult, Source, SourceMeta } from '@refly/openapi-schema';
 
 // Helper function to generate unique key for a source
 const getSourceKey = (source: Source): string => {

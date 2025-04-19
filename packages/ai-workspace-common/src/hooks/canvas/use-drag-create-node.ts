@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { addEdge, useReactFlow } from '@xyflow/react';
-import { genUniqueId } from '@refly-packages/utils/id';
-import { genSkillID } from '@refly-packages/utils/id';
+import { genUniqueId } from '@refly/utils/id';
+import { genSkillID } from '@refly/utils/id';
 import { useTranslation } from 'react-i18next';
 
 /**

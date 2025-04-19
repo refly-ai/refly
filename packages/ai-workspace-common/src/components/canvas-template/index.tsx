@@ -5,7 +5,7 @@ import { IconTemplate } from '@refly-packages/ai-workspace-common/components/com
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { Modal, Divider, Select } from 'antd';
 
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import './index.scss';
 import { TemplateList } from './template-list';
 import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries';

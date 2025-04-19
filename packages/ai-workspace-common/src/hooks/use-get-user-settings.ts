@@ -15,9 +15,10 @@ import {
 import { safeStringifyJSON } from '@refly-packages/ai-workspace-common/utils/parse';
 import { mapDefaultLocale } from '@refly-packages/ai-workspace-common/utils/locale';
 import { LOCALE } from '@refly/common-types';
-import { GetUserSettingsResponse } from '@refly/openapi-schema';
-import { UID_COOKIE } from '@refly-packages/utils/cookie';
+import { UserSettings } from '@refly/openapi-schema';
+import { UID_COOKIE } from '@refly/utils/cookie';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { isDesktop } from '@refly-packages/ai-workspace-common/utils/env';
 
 export const useGetUserSettings = () => {
   const userStore = useUserStoreShallow((state) => ({
@@ -36,7 +37,7 @@ export const useGetUserSettings = () => {
 
   const [uid] = useCookie(UID_COOKIE);
 
-  const hasLoginCredentials = !!uid;
+  const hasLoginCredentials = !!uid || isDesktop();
 
   const { i18n } = useTranslation();
 
@@ -45,18 +46,18 @@ export const useGetUserSettings = () => {
 
   const getLoginStatus = async () => {
     let error: any;
-    let res: GetUserSettingsResponse;
+    let settings: UserSettings;
 
     userStore.setIsCheckingLoginStatus(true);
     if (hasLoginCredentials) {
       const resp = await getClient().getSettings();
       error = resp.error;
-      res = resp.data;
+      settings = resp.data?.data;
     }
     let { localSettings } = userStore;
 
     // Handle
-    if (!hasLoginCredentials || error || !res?.data) {
+    if (!hasLoginCredentials || error || !settings) {
       userStore.setIsCheckingLoginStatus(false);
       userStore.setUserProfile(undefined);
       userStore.setIsLogin(false);
@@ -68,22 +69,22 @@ export const useGetUserSettings = () => {
       return;
     }
 
-    userStore.setUserProfile(res.data);
-    localStorage.setItem('refly-user-profile', safeStringifyJSON(res.data));
+    userStore.setUserProfile(settings);
+    localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     userStore.setIsLogin(true);
 
     // set tour guide
     const showSettingsGuideModal = !['skipped', 'completed'].includes(
-      res?.data?.onboarding?.settings,
+      settings?.onboarding?.settings,
     );
     userStore.setShowSettingsGuideModal(showSettingsGuideModal);
     const showTourModal =
-      !showSettingsGuideModal && !['skipped', 'completed'].includes(res?.data?.onboarding?.tour);
+      !showSettingsGuideModal && !['skipped', 'completed'].includes(settings?.onboarding?.tour);
     userStore.setShowTourModal(showTourModal);
 
     // Add localSettings
-    let uiLocale = mapDefaultLocale(res?.data?.uiLocale as LOCALE) as LOCALE;
-    let outputLocale = res?.data?.outputLocale as LOCALE;
+    let uiLocale = mapDefaultLocale(settings?.uiLocale as LOCALE) as LOCALE;
+    let outputLocale = settings?.outputLocale as LOCALE;
 
     // Write back first
     localSettings = {
@@ -91,8 +92,8 @@ export const useGetUserSettings = () => {
       uiLocale,
       outputLocale,
       isLocaleInitialized: true,
-      canvasMode: res?.data?.preferences?.operationMode || 'mouse',
-      disableHoverCard: res?.data?.preferences?.disableHoverCard || false,
+      canvasMode: settings?.preferences?.operationMode || 'mouse',
+      disableHoverCard: settings?.preferences?.disableHoverCard || false,
     };
 
     // This indicates it's the first time registering and using, so there's no locale set. We need to write it back.
@@ -117,7 +118,7 @@ export const useGetUserSettings = () => {
     i18n.changeLanguage(uiLocale);
 
     userStore.setLocalSettings(localSettings);
-    localStorage.setItem('refly-user-profile', safeStringifyJSON(res?.data));
+    localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     localStorage.setItem('refly-local-settings', safeStringifyJSON(localSettings));
     userStore.setIsCheckingLoginStatus(false);
   };

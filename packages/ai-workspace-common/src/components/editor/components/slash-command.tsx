@@ -2,7 +2,7 @@ import { CheckSquare, Code, Heading1, ImageIcon, List, Text, TextQuote } from 'l
 import { createSuggestionItems, Command, renderItems } from '../core/extensions';
 import { createUploadFn } from './image-upload';
 import Magic from './ui/icons/magic';
-import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { editorEmitter } from '@refly/utils/event-emitter/editor';
 import { Editor, Range } from '@tiptap/core';
 import i18next from 'i18next';
 import { IconTable } from '@refly-packages/ai-workspace-common/components/common/icon';

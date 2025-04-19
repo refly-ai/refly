@@ -32,14 +32,12 @@ export const AppLayout = (props: AppLayoutProps) => {
 
   useBindCommands();
 
-  const hasBetaAccess = userStore.isLogin ? userStore.userProfile?.hasBetaAccess || false : true;
-
   const showSider = isPublicAccessPage || (!!userStore.userProfile && !matchPricing && !matchLogin);
 
   return (
     <ErrorBoundary>
       <Layout className="app-layout main">
-        {showSider && hasBetaAccess ? <SiderLayout source="sider" /> : null}
+        {showSider ? <SiderLayout source="sider" /> : null}
         <Layout
           className="content-layout"
           style={{

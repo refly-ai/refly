@@ -3,9 +3,9 @@ import {
   SkillContextDocumentItem,
   SkillContextResourceItem,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import { BaseMessage } from '@langchain/core/messages';
-import { LOCALE } from '@refly-packages/common-types';
+import { LOCALE } from '@refly/common-types';
 import { BaseSkillState } from '../../base';
 import { ContentNodeType } from '../../engine';
 

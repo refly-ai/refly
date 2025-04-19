@@ -9,10 +9,10 @@ import {
 import { BaseSkill, SkillRunnableConfig } from '../../base';
 import { truncateContext } from './truncator';
 import { flattenMergedContextToSources, concatMergedContextToStr } from './summarizer';
-import { SkillTemplateConfig, Source } from '@refly-packages/openapi-schema';
+import { SkillTemplateConfig, Source } from '@refly/openapi-schema';
 import { uniqBy } from 'lodash';
 import { MAX_CONTEXT_RATIO, MAX_URL_SOURCES_RATIO } from './constants';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { safeStringifyJSON } from '@refly/utils';
 import { callMultiLingualWebSearch } from '../module/multiLingualSearch';
 import { callMultiLingualLibrarySearch } from '../module/multiLingualLibrarySearch';
 import { checkIsSupportedModel, checkModelContextLenSupport } from './model';

@@ -1,5 +1,5 @@
 import { HighlightSelection } from '../types';
-import { Document } from '@refly-packages/openapi-schema';
+import { Document } from '@refly/openapi-schema';
 
 export const buildContextualBlockEditDocumentDocumentContext = (documentContext: {
   document: Document;

@@ -7,7 +7,7 @@ import {
   CanvasNodeData,
   ResponseNodeMeta,
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
-import { aggregateTokenUsage } from '@refly-packages/utils/models';
+import { aggregateTokenUsage } from '@refly/utils/models';
 import { useSetNodeDataByEntity } from './use-set-node-data-by-entity';
 import { processContentPreview } from '../../utils/content';
 

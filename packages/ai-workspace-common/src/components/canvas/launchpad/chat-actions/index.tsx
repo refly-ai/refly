@@ -8,7 +8,7 @@ import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/
 import { getRuntime } from '@refly/utils/env';
 import { ModelSelector } from './model-selector';
 import { ModelInfo } from '@refly/openapi-schema';
-import { cn, extractUrlsWithLinkify } from '@refly-packages/utils/index';
+import { cn, extractUrlsWithLinkify } from '@refly/utils/index';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';

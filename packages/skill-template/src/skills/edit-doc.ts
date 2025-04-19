@@ -6,13 +6,13 @@ import { z } from 'zod';
 // types
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, SkillRunnableConfig, baseStateGraphArgs } from '../base';
-import { CanvasEditConfig, safeStringifyJSON } from '@refly-packages/utils';
+import { CanvasEditConfig, safeStringifyJSON } from '@refly/utils';
 import {
   Icon,
   SkillInvocationConfig,
   SkillTemplateConfigDefinition,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 // types
 import { GraphState, IContext } from '../scheduler/types';
 // utils
@@ -28,8 +28,8 @@ import * as editDocument from '../scheduler/module/editDocument';
 // types
 import { HighlightSelection, SelectedRange } from '../scheduler/module/editDocument/types';
 
-import { InPlaceEditType } from '@refly-packages/utils';
-import { DocumentNotFoundError } from '@refly-packages/errors';
+import { InPlaceEditType } from '@refly/utils';
+import { DocumentNotFoundError } from '@refly/errors';
 import { DEFAULT_MODEL_CONTEXT_LIMIT } from '../scheduler/utils/constants';
 import { checkModelContextLenSupport } from '../scheduler/utils/model';
 

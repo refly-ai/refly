@@ -3,7 +3,7 @@ import { BackgroundMessage, IRuntime } from '@refly/common-types';
 
 export const sendToBackground = async (message: BackgroundMessage, needResponse = true) => {
   try {
-    const { browser } = await import('wxt/browser');
+    const { browser } = require('wxt/browser');
     const waitForResponse = new Promise((resolve) => {
       const listener = (response: any) => {
         if (response?.name === message?.name) {

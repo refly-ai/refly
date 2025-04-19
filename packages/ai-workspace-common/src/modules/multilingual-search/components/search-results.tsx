@@ -6,7 +6,7 @@ import './search-results.scss';
 import { Source } from '@refly/openapi-schema';
 import { TranslationWrapper } from '@refly-packages/ai-workspace-common/components/translation-wrapper';
 import { SearchLocale } from '../stores/multilingual-search';
-import { safeParseURL } from '@refly-packages/utils/url';
+import { safeParseURL } from '@refly/utils/url';
 import { AiOutlineGlobal, AiOutlineTranslation } from 'react-icons/ai';
 import { defaultLocalesMap } from '../stores/multilingual-search';
 

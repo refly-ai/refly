@@ -4,7 +4,7 @@ import {
   BaseMessage,
   BaseMessageFields,
 } from '@langchain/core/messages';
-import { ModelInfo } from '@refly-packages/openapi-schema';
+import { ModelInfo } from '@refly/openapi-schema';
 
 export interface SkillPromptModule {
   buildSystemPrompt: (

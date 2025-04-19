@@ -21,7 +21,7 @@ import {
   ActionStepMeta,
   ModelInfo,
   Project,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import { EventEmitter } from 'node:stream';
 
 export abstract class BaseSkill extends StructuredTool {

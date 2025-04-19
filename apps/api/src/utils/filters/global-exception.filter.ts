@@ -11,9 +11,9 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 
 import * as Sentry from '@sentry/node';
-import { OAuthError, UnknownError } from '@refly-packages/errors';
-import { genBaseRespDataFromError } from '@/utils/exception';
-import { User } from '@prisma/client';
+import { OAuthError, UnknownError } from '@refly/errors';
+import { genBaseRespDataFromError } from '../exception';
+import { User } from '@/generated/client';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

@@ -3,7 +3,7 @@ import { BaseSkill, SkillRunnableConfig } from '../../base';
 import { checkHasContext, countToken, countMessagesTokens } from './token';
 import { isEmptyMessage, truncateMessages } from './truncator';
 import { analyzeQueryAndContext, preprocessQuery } from './query-rewrite/index';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { safeStringifyJSON } from '@refly/utils';
 import { QueryProcessorResult } from '../types';
 
 interface QueryProcessorOptions {

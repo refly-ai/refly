@@ -1,5 +1,5 @@
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { genImageID } from '@refly-packages/utils/id';
+import { genImageID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 
 export const useUploadImage = () => {

@@ -2,10 +2,10 @@ import { memo, useMemo, useState, useEffect } from 'react';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { Source } from '@refly/openapi-schema';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
-import { getParsedReasoningContent } from '@refly-packages/utils/content-parser';
+import { getParsedReasoningContent } from '@refly/utils/content-parser';
 import { IconThinking } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 interface ReasoningContentPreviewProps {

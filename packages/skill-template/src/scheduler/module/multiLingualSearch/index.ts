@@ -1,18 +1,14 @@
 import { SkillRunnableConfig, BaseSkill } from '../../../base';
 import { GraphState } from '../../types';
-import { deduplicateSourcesByTitle, TimeTracker, batchTranslateText } from '@refly-packages/utils';
-import { Source } from '@refly-packages/openapi-schema';
+import { deduplicateSourcesByTitle, TimeTracker, batchTranslateText } from '@refly/utils';
+import { Source } from '@refly/openapi-schema';
 
 import {
   buildRewriteQuerySystemPrompt,
   buildRewriteQueryUserPrompt,
   rewriteQueryOutputSchema,
 } from './rewriteQuery';
-import {
-  mergeSearchResults,
-  searchResultsToSources,
-  sourcesToSearchResults,
-} from '@refly-packages/utils';
+import { mergeSearchResults, searchResultsToSources, sourcesToSearchResults } from '@refly/utils';
 import { translateResults } from './translateResult';
 import { performConcurrentWebSearch } from './webSearch';
 import { getOptimizedSearchLocales, normalizeLocale } from './locale';

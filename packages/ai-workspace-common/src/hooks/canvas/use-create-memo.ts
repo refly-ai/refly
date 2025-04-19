@@ -1,5 +1,5 @@
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genMemoID } from '@refly-packages/utils/id';
+import { genMemoID } from '@refly/utils/id';
 import { XYPosition } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNodeType } from '@refly/openapi-schema';

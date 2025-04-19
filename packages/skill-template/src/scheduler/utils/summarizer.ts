@@ -1,8 +1,8 @@
 import { IContext, SelectedContentDomain, SkillContextContentItemMetadata } from '../types';
-import { Source, ResourceType } from '@refly-packages/openapi-schema';
+import { Source, ResourceType } from '@refly/openapi-schema';
 import { truncateContext, truncateMessages } from './truncator';
 import { BaseMessage, HumanMessage } from '@langchain/core/messages';
-import { getClientOrigin } from '@refly-packages/utils';
+import { getClientOrigin } from '@refly/utils';
 import { MAX_NEED_RECALL_TOKEN } from './constants';
 
 export const concatChatHistoryToStr = (messages: BaseMessage[]) => {

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { checkIsSupportedModel } from './model';
 import { AIMessage, AIMessageChunk } from '@langchain/core/messages';
 import { ToolCall } from '@langchain/core/messages/tool';
-import { ModelInfo } from '@refly-packages/openapi-schema';
+import { ModelInfo } from '@refly/openapi-schema';
 import parseJson from 'json-parse-even-better-errors';
 import { jsonrepair } from 'jsonrepair';
 import { zodToJsonSchema } from 'zod-to-json-schema';

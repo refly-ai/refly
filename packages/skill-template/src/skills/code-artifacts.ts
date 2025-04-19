@@ -7,7 +7,7 @@ import {
   SkillInvocationConfig,
   SkillTemplateConfigDefinition,
   Artifact,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import { GraphState } from '../scheduler/types';
 
 // Import prompt sections
@@ -18,7 +18,7 @@ import { buildFinalRequestMessages } from '../scheduler/utils/message';
 import { prepareContext } from '../scheduler/utils/context';
 import { processQuery } from '../scheduler/utils/queryProcessor';
 import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
-import { genCodeArtifactID, safeStringifyJSON } from '@refly-packages/utils';
+import { genCodeArtifactID, safeStringifyJSON } from '@refly/utils';
 import { truncateSource } from '../scheduler/utils/truncator';
 import { checkModelContextLenSupport } from '../scheduler/utils/model';
 import { processContextUrls } from '../utils/url-processing';

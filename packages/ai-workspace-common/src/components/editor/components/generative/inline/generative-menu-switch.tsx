@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import type { Instance } from 'tippy.js';
 
 import { AISelector } from '../common/ai-selector';
-import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { editorEmitter } from '@refly/utils/event-emitter/editor';
 
 interface GenerativeMenuSwitchProps {
   children: ReactNode;

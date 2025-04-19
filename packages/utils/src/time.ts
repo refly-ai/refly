@@ -1,4 +1,4 @@
-import { LOCALE } from '@refly-packages/common-types';
+import { LOCALE } from '@refly/common-types';
 import dayjsConfig from './dayjsConfig';
 
 export const time = (

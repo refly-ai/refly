@@ -2,7 +2,7 @@ import { useEffect, memo, useCallback, useMemo } from 'react';
 
 import { ChatPanel } from './chat-panel';
 import { SkillDisplay } from './skill-display';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 
 // stores
 import { useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common/stores/context-panel';

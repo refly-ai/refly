@@ -22,14 +22,14 @@ import {
 } from '@refly-packages/ai-workspace-common/context/document';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
-import { ydoc2Markdown } from '@refly-packages/utils/editor';
-import { time } from '@refly-packages/utils/time';
+import { ydoc2Markdown } from '@refly/utils/editor';
+import { time } from '@refly/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useDocumentSync } from '@refly-packages/ai-workspace-common/hooks/use-document-sync';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { editorEmitter } from '@refly/utils/event-emitter/editor';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 

@@ -1,4 +1,4 @@
-import { Source } from '@refly-packages/openapi-schema';
+import { Source } from '@refly/openapi-schema';
 
 export type RelatedQuestion = string;
 

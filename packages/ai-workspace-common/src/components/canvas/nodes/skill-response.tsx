@@ -39,7 +39,7 @@ import {
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genSkillID } from '@refly-packages/utils/id';
+import { genSkillID } from '@refly/utils/id';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { convertResultContextToItems } from '@refly-packages/ai-workspace-common/utils/map-context-items';
 import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';

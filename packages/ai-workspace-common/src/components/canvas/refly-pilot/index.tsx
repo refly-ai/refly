@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { genActionResultID, genUniqueId } from '@refly-packages/utils/id';
+import { genActionResultID, genUniqueId } from '@refly/utils/id';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { ThreadContainer } from './thread-container';
 import { useReflyPilotReset } from '@refly-packages/ai-workspace-common/hooks/canvas/use-refly-pilot-reset';

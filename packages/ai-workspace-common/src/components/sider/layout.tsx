@@ -62,7 +62,7 @@ export const SiderLogo = (props: {
   setCollapse: (collapse: boolean) => void;
 }) => {
   const { navigate, setCollapse, source } = props;
-  const [starCount, setStarCount] = useState('913');
+  const [starCount, setStarCount] = useState('');
 
   useEffect(() => {
     // Fetch GitHub star count
@@ -90,14 +90,16 @@ export const SiderLogo = (props: {
           </span>
         </div>
 
-        <Button
-          type="default"
-          icon={<FaGithub className="h-3.5 w-3.5" />}
-          onClick={() => window.open('https://github.com/refly-ai/refly', '_blank')}
-          className="flex h-6 items-center gap-0.5 bg-white px-1.5 text-xs font-bold"
-        >
-          {starCount}
-        </Button>
+        {starCount && (
+          <Button
+            type="default"
+            icon={<FaGithub className="h-3.5 w-3.5" />}
+            onClick={() => window.open('https://github.com/refly-ai/refly', '_blank')}
+            className="flex h-6 items-center gap-0.5 bg-white px-1.5 text-xs font-bold"
+          >
+            {starCount}
+          </Button>
+        )}
       </div>
       {source === 'sider' && (
         <div>

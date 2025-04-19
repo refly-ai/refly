@@ -4,7 +4,7 @@ import { message } from 'antd';
 import { useDocumentStore } from '@refly-packages/ai-workspace-common/stores/document';
 import { useActionResultStore } from '@refly-packages/ai-workspace-common/stores/action-result';
 import { parseMarkdownCitationsAndCanvasTags, safeParseJSON } from '@refly/utils/parse';
-import { EditorOperation, editorEmitter } from '@refly-packages/utils/event-emitter/editor';
+import { EditorOperation, editorEmitter } from '@refly/utils/event-emitter/editor';
 import { Source } from '@refly/openapi-schema';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 

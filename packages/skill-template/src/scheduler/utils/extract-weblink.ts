@@ -1,8 +1,8 @@
 import { SkillRunnableConfig } from '../../base';
-import { Source } from '@refly-packages/openapi-schema';
+import { Source } from '@refly/openapi-schema';
 import { BaseSkill } from '../../base';
 import pLimit from 'p-limit';
-import { isValidUrl, extractUrlsWithLinkify } from '@refly-packages/utils';
+import { isValidUrl, extractUrlsWithLinkify } from '@refly/utils';
 import { filterStaticResources } from './cdn-filter';
 
 // Default concurrency limit and batch size

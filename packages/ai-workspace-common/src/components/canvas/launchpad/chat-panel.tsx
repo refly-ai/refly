@@ -8,7 +8,7 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useContextFilterErrorTip } from './context-manager/hooks/use-context-filter-errror-tip';
-import { genActionResultID, genUniqueId } from '@refly-packages/utils/id';
+import { genActionResultID, genUniqueId } from '@refly/utils/id';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { useChatStore, useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 
@@ -32,8 +32,8 @@ import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
-import { omit } from '@refly-packages/utils/index';
-import { cn } from '@refly-packages/utils/cn';
+import { omit } from '@refly/utils/index';
+import { cn } from '@refly/utils/cn';
 import { ActionStatus, SkillTemplateConfig } from '@refly/openapi-schema';
 import { ContextTarget } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { ProjectKnowledgeToggle } from '@refly-packages/ai-workspace-common/components/project/project-knowledge-toggle';

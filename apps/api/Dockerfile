@@ -5,6 +5,9 @@ COPY . .
 RUN npm install -g pnpm
 RUN pnpm install
 RUN pnpm build:api
+RUN rm -rf node_modules && \
+    find . -type d -name node_modules -exec rm -rf {} + 2>/dev/null || true
+RUN pnpm install --prod --ignore-scripts
 
 # Production stage
 FROM node:20-alpine@sha256:b5b9467fe7b33aad47f1ec3f6e0646a658f85f05c18d4243024212a91f3b7554
@@ -30,4 +33,4 @@ COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/packages/ ./packages/
 
 EXPOSE 3000
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["node", "apps/api/dist/server/main.js"]

@@ -1,4 +1,4 @@
-import { Document } from '@refly-packages/openapi-schema';
+import { Document } from '@refly/openapi-schema';
 
 export const rewriteCanvasSystemPrompt = `# AI Content Rewriting Assistant
 

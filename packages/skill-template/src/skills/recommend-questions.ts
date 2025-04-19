@@ -10,7 +10,7 @@ import {
   SkillInvocationConfig,
   SkillTemplateConfigDefinition,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import { prepareContext } from '../scheduler/utils/context';
 
 // Schema for recommended questions with reasoning

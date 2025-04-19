@@ -8,13 +8,13 @@ import { SystemMessage } from '@langchain/core/messages';
 import { HumanMessage } from '@langchain/core/messages';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, SkillRunnableConfig, baseStateGraphArgs } from '../base';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { safeStringifyJSON } from '@refly/utils';
 import {
   Icon,
   SkillInvocationConfig,
   SkillTemplateConfigDefinition,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 // types
 import { GraphState, IContext } from '../scheduler/types';
 // utils

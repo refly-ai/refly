@@ -3,7 +3,7 @@ import { scrollToBottom } from '@refly-packages/ai-workspace-common/utils/ui';
 import { extractBaseResp } from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { ConnectionError, AuthenticationExpiredError } from '@refly/errors';
 import { refreshToken } from './auth';
-import { serverOrigin } from './env';
+import { isDesktop, serverOrigin } from './env';
 
 const makeSSERequest = async (
   payload: InvokeSkillRequest,
@@ -15,7 +15,7 @@ const makeSSERequest = async (
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
+    credentials: isDesktop ? 'omit' : 'include',
     signal: controller.signal,
     body: JSON.stringify(payload),
   });

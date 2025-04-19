@@ -5,7 +5,7 @@ import { useListSkills } from '@refly-packages/ai-workspace-common/hooks/use-fin
 import { Skill } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { Dropdown, MenuProps } from 'antd';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import { LuLayoutGrid } from 'react-icons/lu';
 
 const skillItemTitleClasses =

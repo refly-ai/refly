@@ -1,4 +1,4 @@
-import { safeParseJSON } from '@refly-packages/utils/parse';
+import { safeParseJSON } from '@refly/utils/parse';
 
 export const mapDefaultLocale = (locale: string) => {
   if (locale?.toLocaleLowerCase()?.startsWith('zh')) {

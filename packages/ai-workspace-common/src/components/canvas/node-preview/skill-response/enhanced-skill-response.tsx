@@ -5,9 +5,9 @@ import {
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { LinearThreadContent } from '@refly-packages/ai-workspace-common/components/canvas/refly-pilot/linear-thread';
 import { LinearThreadMessage } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import { useFindThreadHistory } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-thread-history';
-import { genActionResultID, genUniqueId } from '@refly-packages/utils/id';
+import { genActionResultID, genUniqueId } from '@refly/utils/id';
 import { ChatPanel } from '@refly-packages/ai-workspace-common/components/canvas/node-chat-panel';
 import {
   IContextItem,

@@ -9,7 +9,7 @@ import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { parseMarkdownCitationsAndCanvasTags, safeParseJSON } from '@refly/utils/parse';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
-import { editorEmitter, EditorOperation } from '@refly-packages/utils/event-emitter/editor';
+import { editorEmitter, EditorOperation } from '@refly/utils/event-emitter/editor';
 import { Dropdown as ArcoDropdown, Menu } from '@arco-design/web-react';
 import { HiOutlineCircleStack, HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';

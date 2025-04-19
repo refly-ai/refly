@@ -53,6 +53,17 @@ declare global {
       SUBSCRIPTION_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
     };
+
+    ipcRenderer?: {
+      invoke: (channel: string, args: any) => Promise<any>;
+    };
+
+    electronEnv?: {
+      getApiBaseUrl: () => string;
+      getCollabUrl: () => string;
+      getPublicStaticEndpoint: () => string;
+      getPrivateStaticEndpoint: () => string;
+    };
   }
 }
 

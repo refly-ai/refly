@@ -2,14 +2,14 @@ import { GraphState, IContext, MentionedContextItem, QueryAnalysis } from '../..
 import { summarizeChatHistory, summarizeContext } from '../summarizer';
 import { z } from 'zod';
 import { BaseSkill, SkillRunnableConfig } from '../../../base';
-import { SkillTemplateConfig } from '@refly-packages/openapi-schema';
+import { SkillTemplateConfig } from '@refly/openapi-schema';
 import {
   MAX_CONTEXT_RATIO,
   MAX_QUERY_TOKENS_RATIO,
   DEFAULT_MODEL_CONTEXT_LIMIT,
 } from '../constants';
 import { truncateTextWithToken } from '../truncator';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { safeStringifyJSON } from '@refly/utils';
 import { extractStructuredData } from '../extractor';
 import { buildNormalQueryRewriteExamples, buildVagueQueryRewriteExamples } from './examples';
 

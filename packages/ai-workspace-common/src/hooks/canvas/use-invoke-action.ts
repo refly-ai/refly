@@ -13,7 +13,7 @@ import { getRuntime } from '@refly/utils/env';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useActionResultStore } from '@refly-packages/ai-workspace-common/stores/action-result';
-import { aggregateTokenUsage, genActionResultID } from '@refly-packages/utils/index';
+import { aggregateTokenUsage, genActionResultID } from '@refly/utils/index';
 import {
   CanvasNodeData,
   SkillNodeMeta,

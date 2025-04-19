@@ -1,4 +1,4 @@
-import { SimpleEvent } from '@refly-packages/openapi-schema';
+import { SimpleEvent } from '@refly/openapi-schema';
 
 export const SimpleEvents: SimpleEvent[] = [
   {

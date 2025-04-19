@@ -6,7 +6,7 @@ import {
   SkillContextContentItem,
   SkillContextResourceItem,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 
 // const enc_p50k_base = get_encoding('p50k_base');
 const enc_cl100k_base = get_encoding('cl100k_base');

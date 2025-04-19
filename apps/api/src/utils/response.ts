@@ -1,4 +1,4 @@
-import { SkillEvent } from '@refly-packages/openapi-schema';
+import { SkillEvent } from '@refly/openapi-schema';
 import { Response } from 'express';
 
 export const buildSuccessResponse = <T>(data?: T) => {

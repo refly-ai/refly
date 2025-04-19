@@ -15,7 +15,7 @@ import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useTranslation } from 'react-i18next';
 import { ActionResult, ActionStatus, ConfigScope, Skill } from '@refly/openapi-schema';
 import { useChatStore, useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
-import { genActionResultID } from '@refly-packages/utils/index';
+import { genActionResultID } from '@refly/utils/index';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { HiCheck, HiXMark } from 'react-icons/hi2';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';

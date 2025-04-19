@@ -11,13 +11,13 @@ import {
   SkillInvocationConfig,
   SkillTemplateConfigDefinition,
   Icon,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 import {
   languageNameToLocale,
   localeToLanguageName,
   SelectedTextDomain,
   zhCNLocale,
-} from '@refly-packages/common-types';
+} from '@refly/common-types';
 
 interface GraphState extends BaseSkillState {
   documents: Document[];

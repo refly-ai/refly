@@ -1,5 +1,5 @@
 import pLimit from 'p-limit';
-import { BatchWebSearchRequest, Source, User } from '@refly-packages/openapi-schema';
+import { BatchWebSearchRequest, Source, User } from '@refly/openapi-schema';
 import { SkillEngine } from '../../../engine';
 
 const BATCH_SIZE = 100; // Serper's batch limit

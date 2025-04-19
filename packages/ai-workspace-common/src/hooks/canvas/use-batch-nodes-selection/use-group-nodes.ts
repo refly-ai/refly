@@ -3,7 +3,7 @@ import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/us
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { calculateGroupBoundaries, sortNodes, getAbsolutePosition } from './utils';
 import { CanvasNode, prepareNodeData } from '../../../components/canvas/nodes';
-import { genUniqueId } from '@refly-packages/utils/id';
+import { genUniqueId } from '@refly/utils/id';
 import { useReactFlow } from '@xyflow/react';
 
 export const useGroupNodes = () => {

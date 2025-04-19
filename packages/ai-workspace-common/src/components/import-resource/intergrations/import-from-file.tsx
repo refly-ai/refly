@@ -10,9 +10,9 @@ import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { StorageLimit } from './storageLimit';
 import type { RcFile } from 'antd/es/upload/interface';
-import { genResourceID } from '@refly-packages/utils/id';
+import { genResourceID } from '@refly/utils/id';
 import { LuInfo } from 'react-icons/lu';
-import { getAvailableFileCount } from '@refly-packages/utils/quota';
+import { getAvailableFileCount } from '@refly/utils/quota';
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { GrUnlock } from 'react-icons/gr';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';

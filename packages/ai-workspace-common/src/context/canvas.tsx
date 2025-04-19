@@ -7,9 +7,9 @@ import { Node, Edge, useStoreApi, InternalNode } from '@xyflow/react';
 import { adoptUserNodes, updateConnectionLookup } from '@xyflow/system';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useCollabToken } from '@refly-packages/ai-workspace-common/hooks/use-collab-token';
-import { wsServerOrigin } from '@refly-packages/ai-workspace-common/utils/env';
 import { RawCanvasData } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
+import { wsServerOrigin } from '@refly-packages/ai-workspace-common/utils/env';
 
 interface CanvasContextType {
   canvasId: string;

@@ -1,7 +1,7 @@
 import { client, BaseResponse } from '@refly/openapi-schema';
 import * as requestModule from '@refly/openapi-schema';
 
-import { serverOrigin } from '@refly-packages/ai-workspace-common/utils/env';
+import { isDesktop, serverOrigin } from '@refly-packages/ai-workspace-common/utils/env';
 import { getRuntime } from '@refly/utils/env';
 import {
   AuthenticationExpiredError,
@@ -11,7 +11,7 @@ import {
 } from '@refly/errors';
 import { sendToBackground } from '@refly-packages/ai-workspace-common/utils/extension/messaging';
 import { MessageName } from '@refly/common-types';
-import { safeStringifyJSON } from '@refly-packages/utils/parse';
+import { safeStringifyJSON } from '@refly/utils/parse';
 import { responseInterceptorWithTokenRefresh } from '@refly-packages/ai-workspace-common/utils/auth';
 import { getLocale } from '@refly-packages/ai-workspace-common/utils/locale';
 import { showErrorNotification } from '@refly-packages/ai-workspace-common/utils/notification';
@@ -33,7 +33,10 @@ export const getAndClearCachedRequest = (originalRequest: Request): Request | un
   return cachedRequest;
 };
 
-client.setConfig({ baseUrl: `${serverOrigin}/v1`, credentials: 'include' });
+client.setConfig({
+  baseUrl: `${serverOrigin}/v1`,
+  credentials: isDesktop() ? 'omit' : 'include',
+});
 
 export interface CheckResponseResult {
   isError: boolean;

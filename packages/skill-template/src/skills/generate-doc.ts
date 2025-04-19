@@ -3,14 +3,14 @@ import { z } from 'zod';
 // types
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
-import { safeStringifyJSON } from '@refly-packages/utils';
+import { safeStringifyJSON } from '@refly/utils';
 import {
   Artifact,
   Icon,
   SkillInvocationConfig,
   SkillTemplateConfigDefinition,
   Source,
-} from '@refly-packages/openapi-schema';
+} from '@refly/openapi-schema';
 // types
 import { GraphState } from '../scheduler/types';
 // utils

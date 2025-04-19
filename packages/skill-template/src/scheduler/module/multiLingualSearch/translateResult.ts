@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { Source } from '@refly-packages/openapi-schema';
+import { Source } from '@refly/openapi-schema';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import pLimit from 'p-limit';
 import chunk from 'lodash/chunk';

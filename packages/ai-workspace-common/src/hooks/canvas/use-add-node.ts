@@ -3,7 +3,7 @@ import { useStoreApi, XYPosition } from '@xyflow/react';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { genUniqueId } from '@refly-packages/utils/id';
+import { genUniqueId } from '@refly/utils/id';
 import { useCanvasStore } from '@refly-packages/ai-workspace-common/stores/canvas';
 import {
   CanvasNodeData,

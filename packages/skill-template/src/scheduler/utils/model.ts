@@ -1,4 +1,4 @@
-import { ModelInfo } from '@refly-packages/openapi-schema';
+import { ModelInfo } from '@refly/openapi-schema';
 
 export const checkIsSupportedModel = (modelInfo: ModelInfo) => {
   return !!modelInfo.capabilities.functionCall;

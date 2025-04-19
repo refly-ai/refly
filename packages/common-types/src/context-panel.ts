@@ -1,3 +1,3 @@
-import { SearchDomain } from '@refly-packages/openapi-schema';
+import { SearchDomain } from '@refly/openapi-schema';
 
 export type ContextPanelDomain = SearchDomain | 'weblink';

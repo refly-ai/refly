@@ -1,4 +1,4 @@
-import { Document } from '@refly-packages/openapi-schema';
+import { Document } from '@refly/openapi-schema';
 import { HighlightSelection } from '../types';
 
 export const buildContextualInlineEditDocumentDocumentContext = (documentContext: {

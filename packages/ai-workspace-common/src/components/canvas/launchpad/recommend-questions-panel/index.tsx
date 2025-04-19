@@ -5,7 +5,7 @@ import { IconRefresh } from '@arco-design/web-react/icon';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
-import { genActionResultID } from '@refly-packages/utils/id';
+import { genActionResultID } from '@refly/utils/id';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';

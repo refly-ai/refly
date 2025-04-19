@@ -1,8 +1,8 @@
 import pLimit from 'p-limit';
-import { Source, User, SearchDomain } from '@refly-packages/openapi-schema';
+import { Source, User, SearchDomain } from '@refly/openapi-schema';
 import { SkillEngine } from '../../../engine';
 import { assembleChunks } from '../../utils/semanticSearch';
-import { SkillContextDocumentItem, SkillContextResourceItem } from '@refly-packages/openapi-schema';
+import { SkillContextDocumentItem, SkillContextResourceItem } from '@refly/openapi-schema';
 
 const BATCH_SIZE = 100; // Maximum batch size for library search
 

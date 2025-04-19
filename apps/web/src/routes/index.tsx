@@ -14,6 +14,7 @@ import { useHandleUrlParamsCallback } from '@refly-packages/ai-workspace-common/
 import { SuspenseLoading } from '@refly-packages/ai-workspace-common/components/common/loading';
 import { HomeRedirect } from '@refly-packages/ai-workspace-common/components/home-redirect';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { isDesktop } from '@refly-packages/ai-workspace-common/utils/env';
 
 // Lazy load components
 const Home = lazy(() => import('@/pages/home'));
@@ -77,7 +78,7 @@ export const AppRouter = (props: { layout?: any }) => {
   const isPublicAccessPage = usePublicAccessPage();
   const isPricing = useMatch('/pricing');
 
-  if (!isPublicAccessPage && !isPricing) {
+  if (!isPublicAccessPage && !isPricing && !isDesktop()) {
     if (!userStore.isCheckingLoginStatus === undefined || userStore.isCheckingLoginStatus) {
       return <SuspenseLoading />;
     }
@@ -87,7 +88,7 @@ export const AppRouter = (props: { layout?: any }) => {
     }
   }
 
-  const hasBetaAccess = userStore?.isLogin ? userStore?.userProfile?.hasBetaAccess || false : true;
+  const hasBetaAccess = true;
 
   return (
     <Suspense fallback={<SuspenseLoading />}>

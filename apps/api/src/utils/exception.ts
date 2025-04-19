@@ -1,5 +1,5 @@
 import api from '@opentelemetry/api';
-import { BaseError, UnknownError } from '@refly-packages/errors';
+import { BaseError, UnknownError } from '@refly/errors';
 
 export const genBaseRespDataFromError = (exception: any) => {
   let err: BaseError;

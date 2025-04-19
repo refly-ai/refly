@@ -8,7 +8,7 @@ import {
   IContextItem,
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useReactFlow } from '@xyflow/react';
-import { cn } from '@refly-packages/utils/cn';
+import { cn } from '@refly/utils/cn';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 interface ContextManagerProps {

@@ -8,7 +8,7 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { IconLoading, IconRefresh } from '@arco-design/web-react/icon';
 import { IconSubscription } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ResourceIcon } from '@refly-packages/ai-workspace-common/components/common/resourceIcon';
-import { genUniqueId } from '@refly-packages/utils/id';
+import { genUniqueId } from '@refly/utils/id';
 import { SelectionContext } from '@refly-packages/ai-workspace-common/modules/selection-menu/selection-context';
 import { useGetResourceDetail } from '@refly-packages/ai-workspace-common/queries';
 import { IndexError, Resource } from '@refly/openapi-schema';

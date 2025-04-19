@@ -4,7 +4,7 @@ import { HiLink } from 'react-icons/hi';
 import { HiOutlineXMark } from 'react-icons/hi2';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { isUrl } from '@refly/utils/isUrl';
-import { genUniqueId } from '@refly-packages/utils/id';
+import { genUniqueId } from '@refly/utils/id';
 import {
   LinkMeta,
   useImportResourceStore,

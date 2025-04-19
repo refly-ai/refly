@@ -1,4 +1,4 @@
-import { TokenUsageItem } from '@refly-packages/openapi-schema';
+import { TokenUsageItem } from '@refly/openapi-schema';
 
 /**
  * Aggregate token usage items by model tier and name
