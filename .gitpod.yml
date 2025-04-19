@@ -5,9 +5,9 @@ tasks:
   - name: Setup
     init: |
       # Get the current repository URL and branch
-      REPO_URL=$(git config --get remote.origin.url)
+      REPO_URL=${GITPOD_REPO_ROOT##*/}
       BRANCH_NAME=${GITPOD_GIT_BRANCH:-main}
-      echo "Repository URL: $REPO_URL"
+      echo "Current Repository: $REPO_URL"
       echo "Current Branch: $BRANCH_NAME"
       
       # Start services
