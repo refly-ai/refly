@@ -62,39 +62,40 @@ model VerificationSession {
 
 model User {
   /// Primary key
-  pk             BigInt    @id @default(autoincrement())
+  pk             BigInt      @id @default(autoincrement())
   /// UID
-  uid            String    @unique @map("uid")
+  uid            String      @unique @map("uid")
   /// Username
-  name           String    @unique @map("name")
+  name           String      @unique @map("name")
   /// Nickname
-  nickname       String?   @map("nickname")
+  nickname       String?     @map("nickname")
   /// Email
-  email          String?   @unique @map("email")
+  email          String?     @unique @map("email")
   /// Avatar url
-  avatar         String?   @map("avatar")
+  avatar         String?     @map("avatar")
   /// Email verified timestamp
-  emailVerified  DateTime? @map("email_verified") @db.Timestamptz()
+  emailVerified  DateTime?   @map("email_verified") @db.Timestamptz()
   /// Password
-  password       String?   @map("password")
+  password       String?     @map("password")
   /// UI language setting
-  uiLocale       String?   @map("ui_locale")
+  uiLocale       String?     @map("ui_locale")
   /// Output language setting
-  outputLocale   String?   @map("output_locale")
+  outputLocale   String?     @map("output_locale")
   /// Whether the user has beta access
-  hasBetaAccess  Boolean   @default(true) @map("has_beta_access")
+  hasBetaAccess  Boolean     @default(true) @map("has_beta_access")
   /// User preferences (JSON)
-  preferences    String?   @map("preferences")
+  preferences    String?     @map("preferences")
   /// Onboarding config (JSON of `OnboardingConfig`)
-  onboarding     String?   @map("onboarding")
+  onboarding     String?     @map("onboarding")
   /// Stripe customer ID
-  customerId     String?   @map("customer_id")
+  customerId     String?     @map("customer_id")
   /// Stripe subscription ID
-  subscriptionId String?   @map("subscription_id")
+  subscriptionId String?     @map("subscription_id")
   /// Create timestamp
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt      DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  MCPServer      MCPServer[]
 
   @@map("users")
 }
@@ -1066,4 +1067,69 @@ model PageVersion {
 
   @@index([pageId, version])
   @@map("page_versions")
+}
+
+model MCPServer {
+  /// Primary key
+  pk            BigInt    @id @default(autoincrement())
+  /// MCP Server id
+  id            String    @unique @map("id")
+  /// Server name
+  name          String    @map("name")
+  /// Server type ('sse' or 'streamableHttp')
+  type          String    @map("type")
+  /// Server description
+  description   String?   @map("description")
+  /// Server base URL
+  baseUrl       String    @map("base_url")
+  /// Custom request headers
+  headers       Json?     @map("headers")
+  /// Whether this server is active
+  isActive      Boolean   @default(true) @map("is_active")
+  /// Whether this server is built-in
+  isBuiltin     Boolean   @default(false) @map("is_builtin")
+  /// Whether this server is global (accessible to all users)
+  isGlobal      Boolean   @default(false) @map("is_global")
+  /// List of disabled tool names
+  disabledTools String[]  @default([]) @map("disabled_tools")
+  /// UID of the owner (null for global servers)
+  userId        String?   @map("user_id")
+  /// User relationship
+  user          User?     @relation(fields: [userId], references: [uid])
+  /// Create timestamp
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+
+  /// Tool cache records
+  toolCache MCPToolCache[]
+
+  @@index([userId])
+  @@index([isGlobal])
+  @@map("mcp_servers")
+}
+
+model MCPToolCache {
+  /// Primary key
+  pk        BigInt    @id @default(autoincrement())
+  /// Cache id
+  cacheId   String    @unique @map("cache_id")
+  /// MCP Server id
+  serverId  String    @map("server_id")
+  /// Server relationship
+  server    MCPServer @relation(fields: [serverId], references: [id])
+  /// Cached tools data
+  toolsData Json      @map("tools_data")
+  /// Cache expiration timestamp
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([serverId])
+  @@index([expiresAt])
+  @@map("mcp_tool_cache")
 }

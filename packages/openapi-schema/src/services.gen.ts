@@ -7,6 +7,32 @@ import {
   formDataBodySerializer,
 } from '@hey-api/client-fetch';
 import type {
+  PostMcpTestConnectionData,
+  PostMcpTestConnectionError,
+  PostMcpTestConnectionResponse,
+  GetMcpServersError,
+  GetMcpServersResponse,
+  PostMcpServersData,
+  PostMcpServersError,
+  PostMcpServersResponse,
+  GetMcpServersByIdData,
+  GetMcpServersByIdError,
+  GetMcpServersByIdResponse,
+  PutMcpServersByIdData,
+  PutMcpServersByIdError,
+  PutMcpServersByIdResponse,
+  DeleteMcpServersByIdData,
+  DeleteMcpServersByIdError,
+  DeleteMcpServersByIdResponse,
+  PutMcpServersByIdActiveData,
+  PutMcpServersByIdActiveError,
+  PutMcpServersByIdActiveResponse,
+  PostMcpImportConfigData,
+  PostMcpImportConfigError,
+  PostMcpImportConfigResponse,
+  GetMcpExportConfigData,
+  GetMcpExportConfigError,
+  GetMcpExportConfigResponse,
   ListPagesData,
   ListPagesError,
   ListPagesResponse2,
@@ -294,6 +320,155 @@ import type {
 } from './types.gen';
 
 export const client = createClient(createConfig());
+
+/**
+ * Test connection to an MCP server
+ * Tests if a connection to the specified MCP server configuration can be established
+ */
+export const postMcpTestConnection = <ThrowOnError extends boolean = false>(
+  options: Options<PostMcpTestConnectionData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    PostMcpTestConnectionResponse,
+    PostMcpTestConnectionError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/test-connection',
+  });
+};
+
+/**
+ * Get all MCP servers
+ * Retrieves all MCP servers configured for the current user
+ */
+export const getMcpServers = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<GetMcpServersResponse, GetMcpServersError, ThrowOnError>({
+    ...options,
+    url: '/mcp/servers',
+  });
+};
+
+/**
+ * Create a new MCP server
+ * Creates a new MCP server configuration
+ */
+export const postMcpServers = <ThrowOnError extends boolean = false>(
+  options: Options<PostMcpServersData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    PostMcpServersResponse,
+    PostMcpServersError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/servers',
+  });
+};
+
+/**
+ * Get an MCP server by ID
+ * Retrieves a specific MCP server by its ID
+ */
+export const getMcpServersById = <ThrowOnError extends boolean = false>(
+  options: Options<GetMcpServersByIdData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetMcpServersByIdResponse,
+    GetMcpServersByIdError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/servers/{id}',
+  });
+};
+
+/**
+ * Update an MCP server
+ * Updates an existing MCP server configuration
+ */
+export const putMcpServersById = <ThrowOnError extends boolean = false>(
+  options: Options<PutMcpServersByIdData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).put<
+    PutMcpServersByIdResponse,
+    PutMcpServersByIdError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/servers/{id}',
+  });
+};
+
+/**
+ * Delete an MCP server
+ * Deletes an MCP server configuration
+ */
+export const deleteMcpServersById = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteMcpServersByIdData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).delete<
+    DeleteMcpServersByIdResponse,
+    DeleteMcpServersByIdError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/servers/{id}',
+  });
+};
+
+/**
+ * Set a server's active state
+ * Updates the active state of an MCP server
+ */
+export const putMcpServersByIdActive = <ThrowOnError extends boolean = false>(
+  options: Options<PutMcpServersByIdActiveData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).put<
+    PutMcpServersByIdActiveResponse,
+    PutMcpServersByIdActiveError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/servers/{id}/active',
+  });
+};
+
+/**
+ * Import MCP server configurations
+ * Imports MCP server configurations from a JSON string
+ */
+export const postMcpImportConfig = <ThrowOnError extends boolean = false>(
+  options: Options<PostMcpImportConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    PostMcpImportConfigResponse,
+    PostMcpImportConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/import-config',
+  });
+};
+
+/**
+ * Export MCP server configurations
+ * Exports MCP server configurations as a JSON string
+ */
+export const getMcpExportConfig = <ThrowOnError extends boolean = false>(
+  options?: Options<GetMcpExportConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetMcpExportConfigResponse,
+    GetMcpExportConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp/export-config',
+  });
+};
 
 /**
  * List user pages

@@ -35,7 +35,241 @@ tags:
     description: Search related endpoints
   - name: misc
     description: Miscellaneous endpoints
+
 paths:
+  /mcp/test-connection:
+    post:
+      summary: Test connection to an MCP server
+      description: Tests if a connection to the specified MCP server configuration can be established
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPServer'
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestConnectionResponse'
+        '401':
+          description: Unauthorized
+  
+  /mcp/servers:
+    get:
+      summary: Get all MCP servers
+      description: Retrieves all MCP servers configured for the current user
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      responses:
+        '200':
+          description: List of MCP servers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MCPServer'
+        '401':
+          description: Unauthorized
+    
+    post:
+      summary: Create a new MCP server
+      description: Creates a new MCP server configuration
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewMCPServer'
+      responses:
+        '200':
+          description: Created MCP server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPServer'
+        '401':
+          description: Unauthorized
+  
+  /mcp/servers/{id}:
+    get:
+      summary: Get an MCP server by ID
+      description: Retrieves a specific MCP server by its ID
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the MCP server to retrieve
+      responses:
+        '200':
+          description: MCP server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPServer'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Server not found
+    
+    put:
+      summary: Update an MCP server
+      description: Updates an existing MCP server configuration
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the MCP server to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPServer'
+      responses:
+        '200':
+          description: Updated MCP server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPServer'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Server not found
+    
+    delete:
+      summary: Delete an MCP server
+      description: Deletes an MCP server configuration
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the MCP server to delete
+      responses:
+        '200':
+          description: Deletion status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteServerResponse'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Server not found
+  
+  /mcp/servers/{id}/active:
+    put:
+      summary: Set a server's active state
+      description: Updates the active state of an MCP server
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the MCP server to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActiveRequest'
+      responses:
+        '200':
+          description: Updated MCP server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPServer'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Server not found
+  
+  /mcp/import-config:
+    post:
+      summary: Import MCP server configurations
+      description: Imports MCP server configurations from a JSON string
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportConfigRequest'
+      responses:
+        '200':
+          description: Import results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportConfigResponse'
+        '401':
+          description: Unauthorized
+  
+  /mcp/export-config:
+    get:
+      summary: Export MCP server configurations
+      description: Exports MCP server configurations as a JSON string
+      security:
+        - bearerAuth: []
+      tags:
+        - MCP
+      parameters:
+        - name: ids
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of server IDs to export
+      responses:
+        '200':
+          description: Export results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportConfigResponse'
+        '401':
+          description: Unauthorized 
   /pages:
     get:
       tags:
@@ -2245,8 +2479,144 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConvertResponse'
 
-components:
+components:  
   schemas:
+    MCPServer:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the server
+        name:
+          type: string
+          description: Display name of the server
+        type:
+          type: string
+          enum: [sse, streamableHttp]
+          description: Transport type for the server connection
+        description:
+          type: string
+          description: Optional description of the server
+        baseUrl:
+          type: string
+          description: Base URL for the server
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional HTTP headers to include with requests
+        isActive:
+          type: boolean
+          description: Whether the server is currently active
+        isBuiltin:
+          type: boolean
+          description: Whether this is a built-in server (cannot be deleted)
+        disabledTools:
+          type: array
+          items:
+            type: string
+          description: Array of tool names that are disabled for this server
+      required:
+        - id
+        - name
+        - type
+        - baseUrl
+        - isActive
+    
+    NewMCPServer:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Display name of the server
+        type:
+          type: string
+          enum: [sse, streamableHttp]
+          description: Transport type for the server connection
+        description:
+          type: string
+          description: Optional description of the server
+        baseUrl:
+          type: string
+          description: Base URL for the server
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional HTTP headers to include with requests
+        isActive:
+          type: boolean
+          description: Whether the server is currently active
+        isBuiltin:
+          type: boolean
+          description: Whether this is a built-in server (cannot be deleted)
+        disabledTools:
+          type: array
+          items:
+            type: string
+          description: Array of tool names that are disabled for this server
+      required:
+        - name
+        - type
+        - baseUrl
+        - isActive
+    
+    TestConnectionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the connection test was successful
+    
+    DeleteServerResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the deletion was successful
+    
+    ImportConfigRequest:
+      type: object
+      properties:
+        config:
+          type: string
+          description: JSON string containing server configurations to import
+      required:
+        - config
+    
+    ImportConfigResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the import was successful
+        count:
+          type: integer
+          description: Number of servers imported
+        servers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MCPServer'
+          description: List of imported servers
+        error:
+          type: string
+          description: Error message if import failed
+    
+    ExportConfigResponse:
+      type: object
+      properties:
+        config:
+          type: string
+          description: JSON string containing exported server configurations
+    
+    SetActiveRequest:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+          description: Whether the server should be active
+      required:
+        - isActive
 
     Page:
       type: object
