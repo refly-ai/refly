@@ -14,6 +14,7 @@ export interface ParseResult {
   images?: Record<string, Buffer>; // pathname to image buffer
   metadata?: Record<string, any>;
   error?: string;
+  buffer?: Buffer;
 }
 
 @Injectable()

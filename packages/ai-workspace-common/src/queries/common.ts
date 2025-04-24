@@ -44,6 +44,9 @@ import {
   emailLogin,
   emailSignup,
   exportCanvas,
+  exportDocumentToDocx,
+  exportDocumentToMarkdown,
+  exportDocumentToPdf,
   getActionResult,
   getAuthConfig,
   getCanvasData,
@@ -263,6 +266,42 @@ export const UseGetDocumentDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetDocumentDetailKey, ...(queryKey ?? [clientOptions])];
+export type ExportDocumentToMarkdownDefaultResponse = Awaited<
+  ReturnType<typeof exportDocumentToMarkdown>
+>['data'];
+export type ExportDocumentToMarkdownQueryResult<
+  TData = ExportDocumentToMarkdownDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useExportDocumentToMarkdownKey = 'ExportDocumentToMarkdown';
+export const UseExportDocumentToMarkdownKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useExportDocumentToMarkdownKey, ...(queryKey ?? [clientOptions])];
+export type ExportDocumentToDocxDefaultResponse = Awaited<
+  ReturnType<typeof exportDocumentToDocx>
+>['data'];
+export type ExportDocumentToDocxQueryResult<
+  TData = ExportDocumentToDocxDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useExportDocumentToDocxKey = 'ExportDocumentToDocx';
+export const UseExportDocumentToDocxKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useExportDocumentToDocxKey, ...(queryKey ?? [clientOptions])];
+export type ExportDocumentToPdfDefaultResponse = Awaited<
+  ReturnType<typeof exportDocumentToPdf>
+>['data'];
+export type ExportDocumentToPdfQueryResult<
+  TData = ExportDocumentToPdfDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useExportDocumentToPdfKey = 'ExportDocumentToPdf';
+export const UseExportDocumentToPdfKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useExportDocumentToPdfKey, ...(queryKey ?? [clientOptions])];
 export type ListProjectsDefaultResponse = Awaited<ReturnType<typeof listProjects>>['data'];
 export type ListProjectsQueryResult<
   TData = ListProjectsDefaultResponse,

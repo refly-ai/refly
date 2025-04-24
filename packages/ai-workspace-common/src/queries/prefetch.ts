@@ -5,6 +5,9 @@ import { type QueryClient } from '@tanstack/react-query';
 import {
   checkSettingsField,
   exportCanvas,
+  exportDocumentToDocx,
+  exportDocumentToMarkdown,
+  exportDocumentToPdf,
   getActionResult,
   getAuthConfig,
   getCanvasData,
@@ -39,6 +42,9 @@ import {
 import {
   CheckSettingsFieldData,
   ExportCanvasData,
+  ExportDocumentToDocxData,
+  ExportDocumentToMarkdownData,
+  ExportDocumentToPdfData,
   GetActionResultData,
   GetCanvasDataData,
   GetCanvasDetailData,
@@ -181,6 +187,30 @@ export const prefetchUseGetDocumentDetail = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions),
     queryFn: () => getDocumentDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseExportDocumentToMarkdown = (
+  queryClient: QueryClient,
+  clientOptions: Options<ExportDocumentToMarkdownData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseExportDocumentToMarkdownKeyFn(clientOptions),
+    queryFn: () => exportDocumentToMarkdown({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseExportDocumentToDocx = (
+  queryClient: QueryClient,
+  clientOptions: Options<ExportDocumentToDocxData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseExportDocumentToDocxKeyFn(clientOptions),
+    queryFn: () => exportDocumentToDocx({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseExportDocumentToPdf = (
+  queryClient: QueryClient,
+  clientOptions: Options<ExportDocumentToPdfData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseExportDocumentToPdfKeyFn(clientOptions),
+    queryFn: () => exportDocumentToPdf({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListProjects = (
   queryClient: QueryClient,

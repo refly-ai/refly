@@ -820,6 +820,9 @@ const translations = {
   workspace: {
     addToCanvas: 'Add to Canvas',
     noCanvasSelected: 'Please create or select a canvas',
+    exportDocumentToMarkdown: 'Export to Markdown',
+    exportDocumentToDocx: 'Export to DOCX',
+    exportDocumentToPdf: 'Export to PDF',   
     openWebpage: 'Open Original Webpage',
     downloadFile: 'Download File',
     canvasListModal: {

@@ -125,6 +125,15 @@ import type {
   GetDocumentDetailData,
   GetDocumentDetailError,
   GetDocumentDetailResponse2,
+  ExportDocumentToMarkdownData,
+  ExportDocumentToMarkdownError,
+  ExportDocumentToMarkdownResponse2,
+  ExportDocumentToDocxData,
+  ExportDocumentToDocxError,
+  ExportDocumentToDocxResponse,
+  ExportDocumentToPdfData,
+  ExportDocumentToPdfError,
+  ExportDocumentToPdfResponse,
   UpdateDocumentData,
   UpdateDocumentError,
   UpdateDocumentResponse,
@@ -918,6 +927,57 @@ export const getDocumentDetail = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/knowledge/document/detail',
+  });
+};
+
+/**
+ * Export document to Markdown
+ * Export document to Markdown
+ */
+export const exportDocumentToMarkdown = <ThrowOnError extends boolean = false>(
+  options: Options<ExportDocumentToMarkdownData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ExportDocumentToMarkdownResponse2,
+    ExportDocumentToMarkdownError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/knowledge/document/export-document-to-markdown',
+  });
+};
+
+/**
+ * Export document to DOCX
+ * Export document to DOCX
+ */
+export const exportDocumentToDocx = <ThrowOnError extends boolean = false>(
+  options: Options<ExportDocumentToDocxData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ExportDocumentToDocxResponse,
+    ExportDocumentToDocxError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/knowledge/document/export-document-to-docx',
+  });
+};
+
+/**
+ * Export document to PDF
+ * Export document to PDF
+ */
+export const exportDocumentToPdf = <ThrowOnError extends boolean = false>(
+  options: Options<ExportDocumentToPdfData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ExportDocumentToPdfResponse,
+    ExportDocumentToPdfError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/knowledge/document/export-document-to-pdf',
   });
 };
 

@@ -648,6 +648,9 @@ const translations = {
   workspace: {
     addToCanvas: '添加到画布',
     noCanvasSelected: '请先创建或选择一个画布',
+    exportDocumentToMarkdown: '导出为 Markdown',
+    exportDocumentToDocx: '导出为 Docx',
+    exportDocumentToPdf: '导出为 PDF',
     openWebpage: '打开原网页',
     downloadFile: '下载文件',
     canvasListModal: {

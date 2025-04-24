@@ -1,5 +1,5 @@
-import { FC, useCallback, useMemo, memo } from 'react';
-import { Button, Dropdown, Modal } from 'antd';
+import { FC, useCallback, useMemo, useState,memo } from 'react';
+import { Button, Dropdown, Modal , message  } from 'antd';
 import type { MenuProps } from 'antd';
 import { TFunction } from 'i18next';
 import {
@@ -46,6 +46,11 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { NodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/skill-response';
 import { NodeHeader as CommonNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-header';
+import { useExportDocumentToMarkdown } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-markdown';
+import { useExportDocumentToPdf } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-pdf';
+import { useExportDocumentToDocx } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-docx';
+import { useDebouncedCallback } from 'use-debounce';
+
 
 // Get icon component based on node type and metadata
 const getNodeIcon = (node: CanvasNode<any>) => {
@@ -152,6 +157,11 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
     const { deleteResource } = useDeleteResource();
     const { deleteDocument } = useDeleteDocument();
     const { downloadFile } = useDownloadFile();
+    const { exportDocumentToMarkdown } = useExportDocumentToMarkdown();
+    const { exportDocumentToDocx } = useExportDocumentToDocx();
+    const { exportDocumentToPdf } = useExportDocumentToPdf();
+    const [isExporting, setIsExporting] = useState(false);
+    const [_popupVisible, setPopupVisible] = useState(false);
 
     const handleDeleteFile = useCallback(() => {
       Modal.confirm({
@@ -181,6 +191,88 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
         metadata: node.data?.metadata,
       });
     }, [node, addToContext]);
+
+    const handleExportDocumentToMarkdown = useDebouncedCallback(async () => {
+      if (isExporting) return;
+  
+      try {
+        setIsExporting(true);
+        const content = await exportDocumentToMarkdown(node.data?.entityId);
+  
+        // 创建Blob对象
+        const blob = new Blob([content], { type: 'text/markdown' });
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${node.data?.title || t('common.untitled')}.md`;
+        document.body.appendChild(a);
+        a.click();
+  
+        // 清理
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        message.success(t('common.exportSuccess'));
+      } catch (error) {
+        console.error('Export error:', error);
+        message.error(t('common.exportFailed'));
+      } finally {
+        setIsExporting(false);
+        setPopupVisible(false);
+      }
+    }, 300);
+  
+    const handleExportDocumentToDocx = useDebouncedCallback(async () => {
+      if (isExporting) return;
+      const data = await exportDocumentToDocx(node.data?.entityId);
+  
+      const blob = new Blob([data], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${node.data?.title || t('common.untitled')}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      message.success(t('common.exportSuccess'));
+      try {
+        setIsExporting(true);
+      } catch (error) {
+        console.error('Export error:', error);
+        message.error(t('common.exportFailed'));
+      } finally {
+        setIsExporting(false);
+        setPopupVisible(false);
+      }
+    }, 300);
+  
+    const handleExportDocumentToPdf = useDebouncedCallback(async () => {
+      if (isExporting) return;
+      const content = await exportDocumentToPdf(node.data?.entityId);
+  
+      const blob = new Blob([content], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${node.data?.title || t('common.untitled')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      message.success(t('common.exportSuccess'));
+      try {
+        setIsExporting(true);
+      } catch (error) {
+        console.error('Export error:', error);
+        message.error(t('common.exportFailed'));
+      } finally {
+        setIsExporting(false);
+        setPopupVisible(false);
+      }
+    });
 
     const { canvasId, readonly } = useCanvasContext();
     const updateNodePreviewTitle = useUpdateNodeTitle();
@@ -282,6 +374,39 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
             handleDeleteFile();
           },
           className: 'hover:bg-red-50',
+        },
+        {
+          type: 'divider',
+        },
+        node.type === 'document' && {
+          key: 'exportDocumentToMarkdown',
+          label: (
+            <div className="flex items-center flex-grow">
+            <IconDownloadFile size={16} className="mr-2" />
+            {t('workspace.exportDocumentToMarkdown')}
+          </div>
+          ),
+          onClick: () => handleExportDocumentToMarkdown(),
+        },
+        node.type === 'document' && {
+          key: 'exportDocumentToDocx',
+          label: (
+            <div className="flex items-center flex-grow">
+            <IconDownloadFile size={16} className="mr-2" />
+            {t('workspace.exportDocumentToDocx')}
+          </div>
+          ),
+          onClick: () => handleExportDocumentToDocx(),
+        },
+        node.type === 'document' && {
+          key: 'exportDocumentToPdf',
+          label: (
+            <div className="flex items-center flex-grow">
+            <IconDownloadFile size={16} className="mr-2" />
+            {t('workspace.exportDocumentToPdf')}
+          </div>
+          ),
+          onClick: () => handleExportDocumentToPdf(),
         },
         node.type === 'resource' && {
           key: 'deleteFile',

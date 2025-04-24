@@ -37,6 +37,9 @@ import {
   IndexError,
   DuplicateDocumentRequest,
   DuplicateResourceRequest,
+  ExportDocumentToMarkdownData,
+  ExportDocumentToDocxData,
+  ExportDocumentToPdfData,
 } from '@refly/openapi-schema';
 import {
   QUEUE_SIMPLE_EVENT,
@@ -356,6 +359,65 @@ export class KnowledgeService {
     return Promise.all(tasks);
   }
 
+  private async processContentImages2(content: string) {
+    // Extract all markdown image references: ![alt](url)
+    const images = content?.match(/!\[.*?\]\((.*?)\)/g);
+    if (!images?.length) {
+      return content;
+    }
+
+    // Set up concurrency limit for image processing
+    const limit = pLimit(5); // Limit to 5 concurrent operations
+
+    const privateStaticEndpoint = this.config.get('static.private.endpoint')?.replace(/\/$/, '');
+
+    // Create an array to store all image processing operations and their results
+    const imageProcessingTasks = images.map((imageRef) => {
+      return limit(async () => {
+        // Extract the URL from the markdown image syntax
+        const urlMatch = imageRef.match(/!\[.*?\]\((.*?)\)/);
+        if (!urlMatch?.[1]) return null;
+
+        const originalUrl = urlMatch[1];
+
+        // Extract the storage key only if private
+        if (!originalUrl.startsWith(privateStaticEndpoint)) return null;
+
+        const storageKey = originalUrl.replace(`${privateStaticEndpoint}/`, '');
+        if (!storageKey) return null;
+
+        try {
+          // Publish the file to public bucket
+          const publicUrl = await this.miscService.publishFile(storageKey);
+
+          // Return info needed for replacement
+          return {
+            originalImageRef: imageRef,
+            originalUrl,
+            publicUrl,
+          };
+        } catch (error) {
+          this.logger.error(`Failed to publish image for storageKey: ${storageKey}`, error);
+          return null;
+        }
+      });
+    });
+
+    // Wait for all image processing tasks to complete
+    const processedImages = await Promise.all(imageProcessingTasks);
+
+    // Apply all replacements to the content
+    let updatedContent = content;
+    for (const result of processedImages) {
+      if (result) {
+        const { originalImageRef, originalUrl, publicUrl } = result;
+        const newImageRef = originalImageRef.replace(originalUrl, publicUrl);
+        updatedContent = updatedContent.replace(originalImageRef, newImageRef);
+      }
+    }
+
+    return updatedContent;
+  }
   /**
    * Process images in the markdown content and replace them with uploaded URLs.
    * 1) if the imagePath is present in parse result, replace it with uploaded path
@@ -868,6 +930,121 @@ export class KnowledgeService {
     }
 
     return { ...doc, content };
+  }
+
+  async exportDocumentToMarkdown(
+    user: User,
+    params: ExportDocumentToMarkdownData['query'],
+  ): Promise<DocumentDetail> {
+    const { docId } = params;
+
+    if (!docId) {
+      throw new ParamsError('Document ID is required');
+    }
+
+    const doc = await this.prisma.document.findFirst({
+      where: {
+        docId,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    if (!doc) {
+      throw new DocumentNotFoundError('Document not found');
+    }
+
+    let content: string;
+    if (doc.storageKey) {
+      const contentStream = await this.oss.getObject(doc.storageKey);
+      content = await streamToString(contentStream);
+    }
+
+    // Process images in the document content
+    if (content) {
+      content = await this.processContentImages2(content);
+    }
+    return { ...doc, content };
+  }
+
+  async exportDocumentToDocx(
+    user: User,
+    params: ExportDocumentToDocxData['query'], 
+  ): Promise<Buffer> {
+    const { docId } = params;
+
+    if (!docId) {
+      throw new ParamsError('Document ID is required');
+    }
+
+    const doc = await this.prisma.document.findFirst({
+      where: {
+        docId,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    if (!doc) {
+      throw new DocumentNotFoundError('Document not found');
+    }
+
+    let content: string;
+    if (doc.storageKey) {
+      const contentStream = await this.oss.getObject(doc.storageKey);
+      content = await streamToString(contentStream);
+    }
+
+    // Process images in the document content
+    if (content) {
+      content = await this.processContentImages2(content);
+    }
+    // Convert Markdown to Docx
+    const parserFactory = new ParserFactory(this.config);
+    const docxParser = parserFactory.createParser('docx');
+    const data = await docxParser.parse(content);
+    return data.buffer;
+
+  }
+
+  async exportDocumentToPdf(
+    user: User,
+    params: ExportDocumentToPdfData['query'], 
+  ): Promise<Buffer> {
+    const { docId } = params;
+
+    if (!docId) {
+      throw new ParamsError('Document ID is required');
+    }
+
+    const doc = await this.prisma.document.findFirst({
+      where: {
+        docId,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    if (!doc) {
+      throw new DocumentNotFoundError('Document not found');
+    }
+
+    let content: string;
+    if (doc.storageKey) {
+      const contentStream = await this.oss.getObject(doc.storageKey);
+      content = await streamToString(contentStream);
+    }
+
+    // Process images in the document content
+    if (content) {
+      content = await this.processContentImages2(content);
+    }
+
+    // Convert content to PDF
+    const parserFactory = new ParserFactory(this.config);
+    const pdfParser = parserFactory.createParser('pdf');
+    const data = await pdfParser.parse(content);
+    return data.buffer;
   }
 
   async createDocument(

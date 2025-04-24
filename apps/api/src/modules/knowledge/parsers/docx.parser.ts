@@ -6,10 +6,10 @@ import path from 'node:path';
 import os from 'node:os';
 
 @Injectable()
-export class PandocParser extends BaseParser {
-  private readonly logger = new Logger(PandocParser.name);
+export class DocxParser extends BaseParser {
+  private readonly logger = new Logger(DocxParser.name);
 
-  name = 'pandoc';
+  name = 'docx';
 
   constructor(options: ParserOptions = {}) {
     super({
@@ -33,56 +33,34 @@ export class PandocParser extends BaseParser {
     }
   }
 
-  private async readImagesFromDir(mediaDir: string): Promise<Record<string, Buffer>> {
-    const images: Record<string, Buffer> = {};
-    try {
-      const files = await fs.readdir(mediaDir);
-      for (const file of files) {
-        const filePath = path.join(mediaDir, file);
-        const stats = await fs.stat(filePath);
-        if (stats.isFile()) {
-          const buffer = await fs.readFile(filePath);
-          images[path.join(mediaDir, file)] = buffer;
-        }
-      }
-    } catch {
-      // If media directory doesn't exist or can't be read, return empty images object
-    }
-    return images;
-  }
-
   private isWarning(stderr: string): boolean {
     return stderr.toLowerCase().includes('warning');
   }
 
   async parse(input: string | Buffer): Promise<ParseResult> {
     if (this.options.mockMode) {
-      return {
-        content: 'Mocked pandoc content',
-        metadata: { format: this.options.format },
-      };
+        return {
+            content: '', // 可以为空或包含文本预览
+            buffer: Buffer.from('Mocked pandoc docx content'), // 存储二进制数据
+            metadata: { format: 'docx' }
+          };
     }
 
     const tempDir = await this.createTempDir();
-    const mediaDir = path.join(tempDir, 'media');
+    const outputFile = path.join(tempDir, 'output.docx');
 
     try {
-      const pandocArgs = ['-f', this.options.format, '-t', 'commonmark-raw_html', '--wrap=none'];
-
-      // Only add extract-media option if enabled
-      if (this.options.extractMedia) {
-        pandocArgs.push('--extract-media', tempDir);
-      }
+      // 设置 pandoc 参数，从 markdown 转换为 docx
+      const pandocArgs = [
+        '-f', 'markdown',
+        '-o', outputFile,
+        '--standalone'
+      ];
 
       const pandoc = spawn('pandoc', pandocArgs);
 
       return new Promise((resolve, reject) => {
-        let stdout = '';
         let stderr = '';
-
-        pandoc.stdout.on('data', (data) => {
-          stdout += data.toString();
-        });
 
         pandoc.stderr.on('data', (data) => {
           stderr += data.toString();
@@ -90,25 +68,24 @@ export class PandocParser extends BaseParser {
 
         pandoc.on('close', async (code) => {
           try {
-            // Handle warnings in stderr
+            // 处理 stderr 中的警告
             if (stderr) {
               if (this.isWarning(stderr)) {
                 this.logger.warn(`Pandoc warning: ${stderr}`);
               } else if (code !== 0) {
-                // Only reject if it's an actual error (not a warning) and the process failed
+                // 只有在实际错误（非警告）且进程失败时才拒绝
                 reject(new Error(`Pandoc failed with code ${code}: ${stderr}`));
                 return;
               }
             }
 
-            // Only process images if extractMedia is enabled
-            const images = this.options.extractMedia ? await this.readImagesFromDir(mediaDir) : {};
-
+            // 读取生成的 docx 文件
+            const docxBuffer = await fs.readFile(outputFile);
             resolve({
-              content: stdout,
-              images,
-              metadata: { format: this.options.format },
-            });
+                content: '', // 可以为空或包含文本预览
+                buffer: docxBuffer, // 存储二进制数据
+                metadata: { format: 'docx' }
+              });
           } finally {
             await this.cleanupTempDir(tempDir);
           }
@@ -119,7 +96,7 @@ export class PandocParser extends BaseParser {
           reject(error);
         });
 
-        // Handle timeout
+        // 处理超时
         const timeout = setTimeout(async () => {
           pandoc.kill();
           await this.cleanupTempDir(tempDir);
@@ -130,14 +107,13 @@ export class PandocParser extends BaseParser {
           clearTimeout(timeout);
         });
 
-        // Write input to stdin and close it
+        // 将输入写入 stdin 并关闭它
         pandoc.stdin.write(input);
         pandoc.stdin.end();
       });
     } catch (error) {
       await this.cleanupTempDir(tempDir);
-      return this.handleError(error);
+      throw error;
     }
   }
-  
 }

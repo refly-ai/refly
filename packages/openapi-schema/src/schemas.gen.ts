@@ -3074,6 +3074,24 @@ export const GetDocumentDetailResponseSchema = {
   ],
 } as const;
 
+export const ExportDocumentToMarkdownResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Document data',
+          $ref: '#/components/schemas/Document',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const UpsertDocumentRequestSchema = {
   type: 'object',
   properties: {

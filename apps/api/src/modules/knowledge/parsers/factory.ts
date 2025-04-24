@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { UnsupportedFileTypeError } from '@refly/errors';
 import { BaseParser, ParserOptions } from './base';
 import { PandocParser } from './pandoc.parser';
+import { DocxParser } from './docx.parser';
+import { PdfParser } from './pdf.parser';
 import { MarkerParser } from './marker.parser';
 import { JinaParser } from './jina.parser';
 import { PlainTextParser } from '../../knowledge/parsers/plain-text.parser';
@@ -13,7 +15,7 @@ export class ParserFactory {
   constructor(private readonly config: ConfigService) {}
 
   createParser(
-    type: 'pandoc' | 'marker' | 'jina' | 'plain-text',
+    type: 'pandoc' | 'marker' | 'jina' | 'plain-text' | 'docx' | 'pdf',
     options?: ParserOptions,
   ): BaseParser {
     const mockMode = this.config.get('env') === 'test';
@@ -21,6 +23,10 @@ export class ParserFactory {
     switch (type) {
       case 'pandoc':
         return new PandocParser({ mockMode, ...options });
+      case 'docx':
+        return new DocxParser({ mockMode,...options });
+      case 'pdf':
+        return new PdfParser({ mockMode,...options });
       case 'marker':
         return new MarkerParser({ mockMode, ...options });
       case 'jina':

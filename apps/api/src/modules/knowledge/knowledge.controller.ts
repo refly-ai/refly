@@ -9,6 +9,9 @@ import {
   DefaultValuePipe,
   UseInterceptors,
   UploadedFile,
+  Res,
+  Req,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -32,6 +35,8 @@ import {
   UpsertDocumentRequest,
   UpsertDocumentResponse,
   DeleteDocumentRequest,
+  ExportDocumentToMarkdownResponse,
+  ExportDocumentToPdfResponse,
 } from '@refly/openapi-schema';
 import { KnowledgeService } from './knowledge.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -40,6 +45,7 @@ import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { documentPO2DTO, resourcePO2DTO, referencePO2DTO } from './knowledge.dto';
 import { ParamsError } from '@refly/errors';
 import { safeParseJSON } from '@refly/utils';
+import { Response, Request } from 'express';
 
 @Controller('v1/knowledge')
 export class KnowledgeController {
@@ -201,6 +207,54 @@ export class KnowledgeController {
   ): Promise<GetDocumentDetailResponse> {
     const document = await this.knowledgeService.getDocumentDetail(user, { docId });
     return buildSuccessResponse(documentPO2DTO(document));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('document/export-document-to-markdown')
+  async exportDocumentToMarkdown(
+    @LoginedUser() user: User,
+    @Query('docId') docId: string, 
+  ): Promise<ExportDocumentToMarkdownResponse>{
+    const document = await this.knowledgeService.exportDocumentToMarkdown(user, { docId });
+    return buildSuccessResponse(documentPO2DTO(document));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('document/export-document-to-docx')
+  async exportDocumentToDocx(
+    @LoginedUser() user: User,
+    @Query('docId') docId: string, 
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+  ): Promise<StreamableFile> {
+    const data= await this.knowledgeService.exportDocumentToDocx(user, { docId });
+    const origin = req.headers.origin;
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    });
+    return new StreamableFile(data);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('document/export-document-to-pdf')
+  async exportDocumentToPdf(
+    @LoginedUser() user: User,
+    @Query('docId') docId: string, 
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+  ): Promise<StreamableFile> {
+    const data = await this.knowledgeService.exportDocumentToPdf(user, { docId });
+    const origin = req.headers.origin;
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    });
+    return new StreamableFile(data);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -44,6 +44,9 @@ import {
   emailLogin,
   emailSignup,
   exportCanvas,
+  exportDocumentToDocx,
+  exportDocumentToMarkdown,
+  exportDocumentToPdf,
   getActionResult,
   getAuthConfig,
   getCanvasData,
@@ -185,6 +188,12 @@ import {
   EmailSignupError,
   ExportCanvasData,
   ExportCanvasError,
+  ExportDocumentToDocxData,
+  ExportDocumentToDocxError,
+  ExportDocumentToMarkdownData,
+  ExportDocumentToMarkdownError,
+  ExportDocumentToPdfData,
+  ExportDocumentToPdfError,
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
@@ -516,6 +525,55 @@ export const useGetDocumentDetail = <
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getDocumentDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useExportDocumentToMarkdown = <
+  TData = Common.ExportDocumentToMarkdownDefaultResponse,
+  TError = ExportDocumentToMarkdownError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ExportDocumentToMarkdownData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseExportDocumentToMarkdownKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      exportDocumentToMarkdown({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useExportDocumentToDocx = <
+  TData = Common.ExportDocumentToDocxDefaultResponse,
+  TError = ExportDocumentToDocxError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ExportDocumentToDocxData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseExportDocumentToDocxKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      exportDocumentToDocx({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useExportDocumentToPdf = <
+  TData = Common.ExportDocumentToPdfDefaultResponse,
+  TError = ExportDocumentToPdfError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ExportDocumentToPdfData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseExportDocumentToPdfKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      exportDocumentToPdf({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListProjects = <
