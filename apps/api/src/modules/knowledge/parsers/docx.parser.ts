@@ -39,11 +39,11 @@ export class DocxParser extends BaseParser {
 
   async parse(input: string | Buffer): Promise<ParseResult> {
     if (this.options.mockMode) {
-        return {
-            content: '', // 可以为空或包含文本预览
-            buffer: Buffer.from('Mocked pandoc docx content'), // 存储二进制数据
-            metadata: { format: 'docx' }
-          };
+      return {
+        content: '', // 可以为空或包含文本预览
+        buffer: Buffer.from('Mocked pandoc docx content'), // 存储二进制数据
+        metadata: { format: 'docx' },
+      };
     }
 
     const tempDir = await this.createTempDir();
@@ -51,11 +51,7 @@ export class DocxParser extends BaseParser {
 
     try {
       // 设置 pandoc 参数，从 markdown 转换为 docx
-      const pandocArgs = [
-        '-f', 'markdown',
-        '-o', outputFile,
-        '--standalone'
-      ];
+      const pandocArgs = ['-f', 'markdown', '-o', outputFile, '--standalone'];
 
       const pandoc = spawn('pandoc', pandocArgs);
 
@@ -82,10 +78,10 @@ export class DocxParser extends BaseParser {
             // 读取生成的 docx 文件
             const docxBuffer = await fs.readFile(outputFile);
             resolve({
-                content: '', // 可以为空或包含文本预览
-                buffer: docxBuffer, // 存储二进制数据
-                metadata: { format: 'docx' }
-              });
+              content: '', // 可以为空或包含文本预览
+              buffer: docxBuffer, // 存储二进制数据
+              metadata: { format: 'docx' },
+            });
           } finally {
             await this.cleanupTempDir(tempDir);
           }

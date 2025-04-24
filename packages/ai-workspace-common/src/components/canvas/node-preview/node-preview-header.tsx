@@ -1,5 +1,5 @@
-import { FC, useCallback, useMemo, useState,memo } from 'react';
-import { Button, Dropdown, Modal , message  } from 'antd';
+import { FC, useCallback, useMemo, useState, memo } from 'react';
+import { Button, Dropdown, Modal, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { TFunction } from 'i18next';
 import {
@@ -50,7 +50,6 @@ import { useExportDocumentToMarkdown } from '@refly-packages/ai-workspace-common
 import { useExportDocumentToPdf } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-pdf';
 import { useExportDocumentToDocx } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-docx';
 import { useDebouncedCallback } from 'use-debounce';
-
 
 // Get icon component based on node type and metadata
 const getNodeIcon = (node: CanvasNode<any>) => {
@@ -194,11 +193,11 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
 
     const handleExportDocumentToMarkdown = useDebouncedCallback(async () => {
       if (isExporting) return;
-  
+
       try {
         setIsExporting(true);
         const content = await exportDocumentToMarkdown(node.data?.entityId);
-  
+
         // 创建Blob对象
         const blob = new Blob([content], { type: 'text/markdown' });
         // 创建下载链接
@@ -208,7 +207,7 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
         a.download = `${node.data?.title || t('common.untitled')}.md`;
         document.body.appendChild(a);
         a.click();
-  
+
         // 清理
         URL.revokeObjectURL(url);
         document.body.removeChild(a);
@@ -221,11 +220,11 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
         setPopupVisible(false);
       }
     }, 300);
-  
+
     const handleExportDocumentToDocx = useDebouncedCallback(async () => {
       if (isExporting) return;
       const data = await exportDocumentToDocx(node.data?.entityId);
-  
+
       const blob = new Blob([data], {
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
@@ -248,11 +247,11 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
         setPopupVisible(false);
       }
     }, 300);
-  
+
     const handleExportDocumentToPdf = useDebouncedCallback(async () => {
       if (isExporting) return;
       const content = await exportDocumentToPdf(node.data?.entityId);
-  
+
       const blob = new Blob([content], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -382,9 +381,9 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
           key: 'exportDocumentToMarkdown',
           label: (
             <div className="flex items-center flex-grow">
-            <IconDownloadFile size={16} className="mr-2" />
-            {t('workspace.exportDocumentToMarkdown')}
-          </div>
+              <IconDownloadFile size={16} className="mr-2" />
+              {t('workspace.exportDocumentToMarkdown')}
+            </div>
           ),
           onClick: () => handleExportDocumentToMarkdown(),
         },
@@ -392,9 +391,9 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
           key: 'exportDocumentToDocx',
           label: (
             <div className="flex items-center flex-grow">
-            <IconDownloadFile size={16} className="mr-2" />
-            {t('workspace.exportDocumentToDocx')}
-          </div>
+              <IconDownloadFile size={16} className="mr-2" />
+              {t('workspace.exportDocumentToDocx')}
+            </div>
           ),
           onClick: () => handleExportDocumentToDocx(),
         },
@@ -402,9 +401,9 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
           key: 'exportDocumentToPdf',
           label: (
             <div className="flex items-center flex-grow">
-            <IconDownloadFile size={16} className="mr-2" />
-            {t('workspace.exportDocumentToPdf')}
-          </div>
+              <IconDownloadFile size={16} className="mr-2" />
+              {t('workspace.exportDocumentToPdf')}
+            </div>
           ),
           onClick: () => handleExportDocumentToPdf(),
         },

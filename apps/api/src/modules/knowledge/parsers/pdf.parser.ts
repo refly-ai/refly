@@ -36,83 +36,80 @@ export class PdfParser extends BaseParser {
   private isWarning(stderr: string): boolean {
     return stderr.toLowerCase().includes('warning');
   }
-  
-  async parse(input: string | Buffer): Promise<ParseResult> {if (this.options.mockMode) {
-    return {
+
+  async parse(input: string | Buffer): Promise<ParseResult> {
+    if (this.options.mockMode) {
+      return {
         content: '', // 可以为空或包含文本预览
         buffer: Buffer.from('Mocked pandoc pdf content'), // 存储二进制数据
-        metadata: { format: 'pdf' }
+        metadata: { format: 'pdf' },
       };
-  }
+    }
 
-  const tempDir = await this.createTempDir();
-  const outputFile = path.join(tempDir, 'output.pdf');
+    const tempDir = await this.createTempDir();
+    const outputFile = path.join(tempDir, 'output.pdf');
 
-  try {
-    // 设置 pandoc 参数，从 markdown 转换为 pdf
-    const pandocArgs = [
-      '-f', 'markdown',
-      '-o', outputFile,
-      '--pdf-engine=wkhtmltopdf'
-    ];
+    try {
+      // 设置 pandoc 参数，从 markdown 转换为 pdf
+      const pandocArgs = ['-f', 'markdown', '-o', outputFile, '--pdf-engine=wkhtmltopdf'];
 
-    const pandoc = spawn('pandoc', pandocArgs);
+      const pandoc = spawn('pandoc', pandocArgs);
 
-    return new Promise((resolve, reject) => {
-      let stderr = '';
+      return new Promise((resolve, reject) => {
+        let stderr = '';
 
-      pandoc.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+        pandoc.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
 
-      pandoc.on('close', async (code) => {
-        try {
-          // 处理 stderr 中的警告
-          if (stderr) {
-            if (this.isWarning(stderr)) {
-              this.logger.warn(`Pandoc warning: ${stderr}`);
-            } else if (code !== 0) {
-              // 只有在实际错误（非警告）且进程失败时才拒绝
-              reject(new Error(`Pandoc failed with code ${code}: ${stderr}`));
-              return;
+        pandoc.on('close', async (code) => {
+          try {
+            // 处理 stderr 中的警告
+            if (stderr) {
+              if (this.isWarning(stderr)) {
+                this.logger.warn(`Pandoc warning: ${stderr}`);
+              } else if (code !== 0) {
+                // 只有在实际错误（非警告）且进程失败时才拒绝
+                reject(new Error(`Pandoc failed with code ${code}: ${stderr}`));
+                return;
+              }
             }
+
+            // 读取生成的 pdf 文件
+            const pdfBuffer = await fs.readFile(outputFile);
+            resolve({
+              content: '', // 可以为空或包含文本预览
+              buffer: pdfBuffer, // 存储二进制数据
+              metadata: { format: 'docx' },
+            });
+          } finally {
+            await this.cleanupTempDir(tempDir);
           }
+        });
 
-          // 读取生成的 pdf 文件
-          const pdfBuffer = await fs.readFile(outputFile);
-          resolve({
-            content: '', // 可以为空或包含文本预览
-            buffer: pdfBuffer, // 存储二进制数据
-            metadata: { format: 'docx' }
-          });
-        } finally {
+        pandoc.on('error', async (error) => {
           await this.cleanupTempDir(tempDir);
-        }
+          reject(error);
+        });
+
+        // 处理超时
+        const timeout = setTimeout(async () => {
+          pandoc.kill();
+          await this.cleanupTempDir(tempDir);
+          reject(new Error(`Pandoc process timed out after ${this.options.timeout}ms`));
+        }, this.options.timeout);
+
+        pandoc.on('close', () => {
+          clearTimeout(timeout);
+        });
+
+        // 将输入写入 stdin 并关闭它
+        pandoc.stdin.write(input);
+        pandoc.stdin.end();
       });
-
-      pandoc.on('error', async (error) => {
-        await this.cleanupTempDir(tempDir);
-        reject(error);
-      });
-
-      // 处理超时
-      const timeout = setTimeout(async () => {
-        pandoc.kill();
-        await this.cleanupTempDir(tempDir);
-        reject(new Error(`Pandoc process timed out after ${this.options.timeout}ms`));
-      }, this.options.timeout);
-
-      pandoc.on('close', () => {
-        clearTimeout(timeout);
-      });
-
-      // 将输入写入 stdin 并关闭它
-      pandoc.stdin.write(input);
-      pandoc.stdin.end();
-    });
-  } catch (error) {
-    await this.cleanupTempDir(tempDir);
-    throw error;
-  }
+    } catch (error) {
+      await this.cleanupTempDir(tempDir);
+      throw error;
+    }
   }
 }

@@ -969,7 +969,7 @@ export class KnowledgeService {
 
   async exportDocumentToDocx(
     user: User,
-    params: ExportDocumentToDocxData['query'], 
+    params: ExportDocumentToDocxData['query'],
   ): Promise<Buffer> {
     const { docId } = params;
 
@@ -1004,13 +1004,9 @@ export class KnowledgeService {
     const docxParser = parserFactory.createParser('docx');
     const data = await docxParser.parse(content);
     return data.buffer;
-
   }
 
-  async exportDocumentToPdf(
-    user: User,
-    params: ExportDocumentToPdfData['query'], 
-  ): Promise<Buffer> {
+  async exportDocumentToPdf(user: User, params: ExportDocumentToPdfData['query']): Promise<Buffer> {
     const { docId } = params;
 
     if (!docId) {

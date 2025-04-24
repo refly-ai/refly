@@ -139,5 +139,4 @@ export class PandocParser extends BaseParser {
       return this.handleError(error);
     }
   }
-  
 }

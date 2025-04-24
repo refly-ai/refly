@@ -36,7 +36,6 @@ import {
   UpsertDocumentResponse,
   DeleteDocumentRequest,
   ExportDocumentToMarkdownResponse,
-  ExportDocumentToPdfResponse,
 } from '@refly/openapi-schema';
 import { KnowledgeService } from './knowledge.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -213,8 +212,8 @@ export class KnowledgeController {
   @Get('document/export-document-to-markdown')
   async exportDocumentToMarkdown(
     @LoginedUser() user: User,
-    @Query('docId') docId: string, 
-  ): Promise<ExportDocumentToMarkdownResponse>{
+    @Query('docId') docId: string,
+  ): Promise<ExportDocumentToMarkdownResponse> {
     const document = await this.knowledgeService.exportDocumentToMarkdown(user, { docId });
     return buildSuccessResponse(documentPO2DTO(document));
   }
@@ -223,11 +222,11 @@ export class KnowledgeController {
   @Get('document/export-document-to-docx')
   async exportDocumentToDocx(
     @LoginedUser() user: User,
-    @Query('docId') docId: string, 
+    @Query('docId') docId: string,
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
   ): Promise<StreamableFile> {
-    const data= await this.knowledgeService.exportDocumentToDocx(user, { docId });
+    const data = await this.knowledgeService.exportDocumentToDocx(user, { docId });
     const origin = req.headers.origin;
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -242,7 +241,7 @@ export class KnowledgeController {
   @Get('document/export-document-to-pdf')
   async exportDocumentToPdf(
     @LoginedUser() user: User,
-    @Query('docId') docId: string, 
+    @Query('docId') docId: string,
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
   ): Promise<StreamableFile> {

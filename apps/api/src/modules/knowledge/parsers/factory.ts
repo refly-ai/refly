@@ -24,9 +24,9 @@ export class ParserFactory {
       case 'pandoc':
         return new PandocParser({ mockMode, ...options });
       case 'docx':
-        return new DocxParser({ mockMode,...options });
+        return new DocxParser({ mockMode, ...options });
       case 'pdf':
-        return new PdfParser({ mockMode,...options });
+        return new PdfParser({ mockMode, ...options });
       case 'marker':
         return new MarkerParser({ mockMode, ...options });
       case 'jina':
