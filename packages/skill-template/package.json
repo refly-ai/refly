@@ -17,12 +17,14 @@
     "@langchain/deepseek": "^0.0.1",
     "@langchain/langgraph": "0.2.45",
     "@langchain/openai": "0.4.3",
+    "@modelcontextprotocol/sdk": "^1.10.2",
     "@refly/common-types": "workspace:*",
     "@refly/errors": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/utils": "workspace:*",
     "@types/lodash": "~4.17.10",
     "better-sqlite3": "^9.5.0",
+    "dedent": "^1.5.3",
     "dotenv": "~16.4.5",
     "duck-duck-scrape": "~2.2.5",
     "is-url": "~1.2.4",
@@ -34,7 +36,6 @@
     "p-limit": "3.1.0",
     "tsx": "^4.6.2",
     "zod": "3.23.8",
-    "dedent": "^1.5.3",
     "zod-to-json-schema": "^3.24.3"
   }
 }

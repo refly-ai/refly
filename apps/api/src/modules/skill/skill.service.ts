@@ -976,7 +976,8 @@ export class SkillService {
       },
     });
 
-    const skill = this.skillInventory.find((s) => s.name === data.skillName);
+    // const skill = this.skillInventory.find((s) => s.name === data.skillName);
+    const skill = this.skillInventory.find((s) => s.name === 'mcpConnector');
 
     let runMeta: SkillRunnableMeta | null = null;
     const basicUsageData = {
