@@ -316,6 +316,32 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
           ),
           onClick: handleDownload,
         },
+        node.type === 'document' && {
+          key: 'exportDocument',
+          label: (
+            <div className="flex items-center flex-grow">
+              <IconDownloadFile size={16} className="mr-2" />
+              {t('workspace.exportAs')}
+            </div>
+          ),
+          children: [
+            {
+              key: 'exportDocumentToMarkdown',
+              label: t('workspace.exportDocumentToMarkdown'),
+              onClick: () => handleExportDocument('markdown'),
+            },
+            {
+              key: 'exportDocumentToDocx',
+              label: t('workspace.exportDocumentToDocx'),
+              onClick: () => handleExportDocument('docx'),
+            },
+            {
+              key: 'exportDocumentToPdf',
+              label: t('workspace.exportDocumentToPdf'),
+              onClick: () => handleExportDocument('pdf'),
+            },
+          ],
+        },
         {
           type: 'divider',
         },
@@ -342,35 +368,6 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
             handleDeleteFile();
           },
           className: 'hover:bg-red-50',
-        },
-        {
-          type: 'divider',
-        },
-        node.type === 'document' && {
-          key: 'exportDocument',
-          label: (
-            <div className="flex items-center flex-grow">
-              <IconDownloadFile size={16} className="mr-2" />
-              {t('workspace.exportAs')}
-            </div>
-          ),
-          children: [
-            {
-              key: 'exportDocumentToMarkdown',
-              label: t('workspace.exportDocumentToMarkdown'),
-              onClick: () => handleExportDocument('markdown'),
-            },
-            {
-              key: 'exportDocumentToDocx',
-              label: t('workspace.exportDocumentToDocx'),
-              onClick: () => handleExportDocument('docx'),
-            },
-            {
-              key: 'exportDocumentToPdf',
-              label: t('workspace.exportDocumentToPdf'),
-              onClick: () => handleExportDocument('pdf'),
-            },
-          ],
         },
         node.type === 'resource' && {
           key: 'deleteFile',
