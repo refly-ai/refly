@@ -5,9 +5,7 @@ import { UseQueryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import {
   checkSettingsField,
   exportCanvas,
-  exportDocumentToDocx,
-  exportDocumentToMarkdown,
-  exportDocumentToPdf,
+  exportDocument,
   getActionResult,
   getAuthConfig,
   getCanvasData,
@@ -44,12 +42,8 @@ import {
   CheckSettingsFieldError,
   ExportCanvasData,
   ExportCanvasError,
-  ExportDocumentToDocxData,
-  ExportDocumentToDocxError,
-  ExportDocumentToMarkdownData,
-  ExportDocumentToMarkdownError,
-  ExportDocumentToPdfData,
-  ExportDocumentToPdfError,
+  ExportDocumentData,
+  ExportDocumentError,
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
@@ -329,53 +323,19 @@ export const useGetDocumentDetailSuspense = <
       getDocumentDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
-export const useExportDocumentToMarkdownSuspense = <
-  TData = Common.ExportDocumentToMarkdownDefaultResponse,
-  TError = ExportDocumentToMarkdownError,
+export const useExportDocumentSuspense = <
+  TData = Common.ExportDocumentDefaultResponse,
+  TError = ExportDocumentError,
   TQueryKey extends Array<unknown> = unknown[],
 >(
-  clientOptions: Options<ExportDocumentToMarkdownData, true>,
+  clientOptions: Options<ExportDocumentData, true>,
   queryKey?: TQueryKey,
   options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
 ) =>
   useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseExportDocumentToMarkdownKeyFn(clientOptions, queryKey),
+    queryKey: Common.UseExportDocumentKeyFn(clientOptions, queryKey),
     queryFn: () =>
-      exportDocumentToMarkdown({ ...clientOptions }).then(
-        (response) => response.data as TData,
-      ) as TData,
-    ...options,
-  });
-export const useExportDocumentToDocxSuspense = <
-  TData = Common.ExportDocumentToDocxDefaultResponse,
-  TError = ExportDocumentToDocxError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ExportDocumentToDocxData, true>,
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseExportDocumentToDocxKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      exportDocumentToDocx({ ...clientOptions }).then(
-        (response) => response.data as TData,
-      ) as TData,
-    ...options,
-  });
-export const useExportDocumentToPdfSuspense = <
-  TData = Common.ExportDocumentToPdfDefaultResponse,
-  TError = ExportDocumentToPdfError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ExportDocumentToPdfData, true>,
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseExportDocumentToPdfKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      exportDocumentToPdf({ ...clientOptions }).then((response) => response.data as TData) as TData,
+      exportDocument({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListProjectsSuspense = <

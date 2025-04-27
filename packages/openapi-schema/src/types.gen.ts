@@ -2242,13 +2242,6 @@ export type GetDocumentDetailResponse = BaseResponse & {
   data?: Document;
 };
 
-export type ExportDocumentToMarkdownResponse = BaseResponse & {
-  /**
-   * Document data
-   */
-  data?: Document;
-};
-
 export type UpsertDocumentRequest = {
   /**
    * Canvas title
@@ -4291,44 +4284,22 @@ export type GetDocumentDetailResponse2 = GetDocumentDetailResponse;
 
 export type GetDocumentDetailError = unknown;
 
-export type ExportDocumentToMarkdownData = {
+export type ExportDocumentData = {
   query: {
     /**
-     * Document ID to export
+     * 要导出的文档 ID
      */
     docId: string;
+    /**
+     * 导出格式 (markdown, docx, pdf)
+     */
+    format?: 'markdown' | 'docx' | 'pdf';
   };
 };
 
-export type ExportDocumentToMarkdownResponse2 = ExportDocumentToMarkdownResponse;
+export type ExportDocumentResponse = Blob | File;
 
-export type ExportDocumentToMarkdownError = unknown;
-
-export type ExportDocumentToDocxData = {
-  query: {
-    /**
-     * Document ID to export
-     */
-    docId: string;
-  };
-};
-
-export type ExportDocumentToDocxResponse = Blob | File;
-
-export type ExportDocumentToDocxError = unknown;
-
-export type ExportDocumentToPdfData = {
-  query: {
-    /**
-     * Document ID to export
-     */
-    docId: string;
-  };
-};
-
-export type ExportDocumentToPdfResponse = Blob | File;
-
-export type ExportDocumentToPdfError = unknown;
+export type ExportDocumentError = unknown;
 
 export type UpdateDocumentData = {
   /**

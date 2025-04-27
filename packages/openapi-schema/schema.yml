@@ -1000,70 +1000,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetDocumentDetailResponse'
-  /knowledge/document/export-document-to-markdown:
+  /knowledge/document/export-document:
     get:
       tags:
         - knowledge
-      summary: Export document to Markdown
-      description: Export document to Markdown
-      operationId: exportDocumentToMarkdown
+      summary: 导出文档到指定格式
+      description: 导出文档到 Markdown、DOCX 或 PDF 格式
+      operationId: exportDocument
       parameters:
         - name: docId
           in: query
-          description: Document ID to export
+          description: 要导出的文档 ID
           required: true
           schema:
             type: string
             example: d-g30e1b80b5g1itbemc0g5jj3
+        - name: format
+          in: query
+          description: 导出格式 (markdown, docx, pdf)
+          required: false
+          schema:
+            type: string
+            enum: [markdown, docx, pdf]
+            default: markdown
+            example: markdown
       responses:
         '200':
-          description: Successful operation
+          description: 成功操作
           content:
-            application/json:
+            text/markdown:
               schema:
-                $ref: '#/components/schemas/ExportDocumentToMarkdownResponse'
-  /knowledge/document/export-document-to-docx:
-    get:
-      tags:
-        - knowledge
-      summary: Export document to DOCX
-      description: Export document to DOCX
-      operationId: exportDocumentToDocx
-      parameters:
-        - name: docId
-          in: query
-          required: true
-          schema:
-            type: string
-            example: d-g30e1b80b5g1itbemc0g5jj3
-          description: Document ID to export            
-      responses:
-        '200':
-          description: DOCX file successfully generated and returned
-          content:
+                type: string
+                format: binary
             application/vnd.openxmlformats-officedocument.wordprocessingml.document:
               schema:
                 type: string
                 format: binary
-  /knowledge/document/export-document-to-pdf:
-    get:
-      tags:
-        - knowledge
-      summary: Export document to PDF
-      description: Export document to PDF
-      operationId: exportDocumentToPdf
-      parameters:
-        - name: docId
-          in: query
-          description: Document ID to export
-          required: true
-          schema:
-            type: string
-            example: d-g30e1b80b5g1itbemc0g5jj3   
-      responses:
-        '200':
-          description: Successful operation
-          content:
             application/pdf:
               schema:
                 type: string
@@ -4578,15 +4550,6 @@ components:
               items:
                 $ref: '#/components/schemas/Document'
     GetDocumentDetailResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              description: Document data
-              $ref: '#/components/schemas/Document'
-    ExportDocumentToMarkdownResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
         - type: object

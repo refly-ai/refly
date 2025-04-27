@@ -5,9 +5,7 @@ import { type QueryClient } from '@tanstack/react-query';
 import {
   checkSettingsField,
   exportCanvas,
-  exportDocumentToDocx,
-  exportDocumentToMarkdown,
-  exportDocumentToPdf,
+  exportDocument,
   getActionResult,
   getAuthConfig,
   getCanvasData,
@@ -42,9 +40,7 @@ import {
 import {
   CheckSettingsFieldData,
   ExportCanvasData,
-  ExportDocumentToDocxData,
-  ExportDocumentToMarkdownData,
-  ExportDocumentToPdfData,
+  ExportDocumentData,
   GetActionResultData,
   GetCanvasDataData,
   GetCanvasDetailData,
@@ -188,29 +184,13 @@ export const prefetchUseGetDocumentDetail = (
     queryKey: Common.UseGetDocumentDetailKeyFn(clientOptions),
     queryFn: () => getDocumentDetail({ ...clientOptions }).then((response) => response.data),
   });
-export const prefetchUseExportDocumentToMarkdown = (
+export const prefetchUseExportDocument = (
   queryClient: QueryClient,
-  clientOptions: Options<ExportDocumentToMarkdownData, true>,
+  clientOptions: Options<ExportDocumentData, true>,
 ) =>
   queryClient.prefetchQuery({
-    queryKey: Common.UseExportDocumentToMarkdownKeyFn(clientOptions),
-    queryFn: () => exportDocumentToMarkdown({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseExportDocumentToDocx = (
-  queryClient: QueryClient,
-  clientOptions: Options<ExportDocumentToDocxData, true>,
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseExportDocumentToDocxKeyFn(clientOptions),
-    queryFn: () => exportDocumentToDocx({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseExportDocumentToPdf = (
-  queryClient: QueryClient,
-  clientOptions: Options<ExportDocumentToPdfData, true>,
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseExportDocumentToPdfKeyFn(clientOptions),
-    queryFn: () => exportDocumentToPdf({ ...clientOptions }).then((response) => response.data),
+    queryKey: Common.UseExportDocumentKeyFn(clientOptions),
+    queryFn: () => exportDocument({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListProjects = (
   queryClient: QueryClient,

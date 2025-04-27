@@ -349,7 +349,7 @@ export class ShareService {
     const document = documentPO2DTO(documentDetail);
 
     // Process document images
-    document.content = await this.processContentImages(document.content ?? '');
+    document.content = await this.miscService.processContentImages(document.content ?? '');
     document.contentPreview = document.content.slice(0, 500);
 
     const { storageKey } = await this.miscService.uploadBuffer(user, {
@@ -438,7 +438,7 @@ export class ShareService {
     const resource = resourcePO2DTO(resourceDetail);
 
     // Process resource images
-    resource.content = await this.processContentImages(resource.content ?? '');
+    resource.content = await this.miscService.processContentImages(resource.content ?? '');
     resource.contentPreview = resource.content.slice(0, 500);
 
     const { storageKey } = await this.miscService.uploadBuffer(user, {
@@ -1644,71 +1644,6 @@ export class ShareService {
     }
 
     throw new ParamsError(`Unsupported share type ${shareId}`);
-  }
-
-  /**
-   * Process content images and replace them with public URLs
-   * @param content - The content to process
-   * @returns The processed content with public URLs
-   */
-  async processContentImages(content: string) {
-    // Extract all markdown image references: ![alt](url)
-    const images = content?.match(/!\[.*?\]\((.*?)\)/g);
-    if (!images?.length) {
-      return content;
-    }
-
-    // Set up concurrency limit for image processing
-    const limit = pLimit(5); // Limit to 5 concurrent operations
-
-    const privateStaticEndpoint = this.config.get('static.private.endpoint')?.replace(/\/$/, '');
-
-    // Create an array to store all image processing operations and their results
-    const imageProcessingTasks = images.map((imageRef) => {
-      return limit(async () => {
-        // Extract the URL from the markdown image syntax
-        const urlMatch = imageRef.match(/!\[.*?\]\((.*?)\)/);
-        if (!urlMatch?.[1]) return null;
-
-        const originalUrl = urlMatch[1];
-
-        // Extract the storage key only if private
-        if (!originalUrl.startsWith(privateStaticEndpoint)) return null;
-
-        const storageKey = originalUrl.replace(`${privateStaticEndpoint}/`, '');
-        if (!storageKey) return null;
-
-        try {
-          // Publish the file to public bucket
-          const publicUrl = await this.miscService.publishFile(storageKey);
-
-          // Return info needed for replacement
-          return {
-            originalImageRef: imageRef,
-            originalUrl,
-            publicUrl,
-          };
-        } catch (error) {
-          this.logger.error(`Failed to publish image for storageKey: ${storageKey}`, error);
-          return null;
-        }
-      });
-    });
-
-    // Wait for all image processing tasks to complete
-    const processedImages = await Promise.all(imageProcessingTasks);
-
-    // Apply all replacements to the content
-    let updatedContent = content;
-    for (const result of processedImages) {
-      if (result) {
-        const { originalImageRef, originalUrl, publicUrl } = result;
-        const newImageRef = originalImageRef.replace(originalUrl, publicUrl);
-        updatedContent = updatedContent.replace(originalImageRef, newImageRef);
-      }
-    }
-
-    return updatedContent;
   }
 
   /**

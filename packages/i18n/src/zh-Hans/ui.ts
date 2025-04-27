@@ -648,6 +648,10 @@ const translations = {
   workspace: {
     addToCanvas: '添加到画布',
     noCanvasSelected: '请先创建或选择一个画布',
+    exporting: '正在导出文档...',
+    exportSuccess: '文档导出成功',
+    exportFailed: '文档导出失败',
+    exportAs: '导出为',
     exportDocumentToMarkdown: '导出为 Markdown',
     exportDocumentToDocx: '导出为 Docx',
     exportDocumentToPdf: '导出为 PDF',

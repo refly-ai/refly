@@ -37,9 +37,6 @@ import {
   IndexError,
   DuplicateDocumentRequest,
   DuplicateResourceRequest,
-  ExportDocumentToMarkdownData,
-  ExportDocumentToDocxData,
-  ExportDocumentToPdfData,
 } from '@refly/openapi-schema';
 import {
   QUEUE_SIMPLE_EVENT,
@@ -932,82 +929,11 @@ export class KnowledgeService {
     return { ...doc, content };
   }
 
-  async exportDocumentToMarkdown(
+  async exportDocument(
     user: User,
-    params: ExportDocumentToMarkdownData['query'],
-  ): Promise<DocumentDetail> {
-    const { docId } = params;
-
-    if (!docId) {
-      throw new ParamsError('Document ID is required');
-    }
-
-    const doc = await this.prisma.document.findFirst({
-      where: {
-        docId,
-        uid: user.uid,
-        deletedAt: null,
-      },
-    });
-
-    if (!doc) {
-      throw new DocumentNotFoundError('Document not found');
-    }
-
-    let content: string;
-    if (doc.storageKey) {
-      const contentStream = await this.oss.getObject(doc.storageKey);
-      content = await streamToString(contentStream);
-    }
-
-    // Process images in the document content
-    if (content) {
-      content = await this.processContentImages2(content);
-    }
-    return { ...doc, content };
-  }
-
-  async exportDocumentToDocx(
-    user: User,
-    params: ExportDocumentToDocxData['query'],
+    params: { docId: string; format: 'markdown' | 'docx' | 'pdf' },
   ): Promise<Buffer> {
-    const { docId } = params;
-
-    if (!docId) {
-      throw new ParamsError('Document ID is required');
-    }
-
-    const doc = await this.prisma.document.findFirst({
-      where: {
-        docId,
-        uid: user.uid,
-        deletedAt: null,
-      },
-    });
-
-    if (!doc) {
-      throw new DocumentNotFoundError('Document not found');
-    }
-
-    let content: string;
-    if (doc.storageKey) {
-      const contentStream = await this.oss.getObject(doc.storageKey);
-      content = await streamToString(contentStream);
-    }
-
-    // Process images in the document content
-    if (content) {
-      content = await this.processContentImages2(content);
-    }
-    // Convert Markdown to Docx
-    const parserFactory = new ParserFactory(this.config);
-    const docxParser = parserFactory.createParser('docx');
-    const data = await docxParser.parse(content);
-    return data.buffer;
-  }
-
-  async exportDocumentToPdf(user: User, params: ExportDocumentToPdfData['query']): Promise<Buffer> {
-    const { docId } = params;
+    const { docId, format } = params;
 
     if (!docId) {
       throw new ParamsError('Document ID is required');
@@ -1036,11 +962,27 @@ export class KnowledgeService {
       content = await this.processContentImages2(content);
     }
 
-    // Convert content to PDF
-    const parserFactory = new ParserFactory(this.config);
-    const pdfParser = parserFactory.createParser('pdf');
-    const data = await pdfParser.parse(content);
-    return data.buffer;
+    // 添加文档标题作为 H1 标题
+    const title = doc.title || 'Untitled';
+    const markdownContent = `# ${title}\n\n${content || ''}`;
+
+    // 根据格式转换内容
+    switch (format) {
+      case 'markdown':
+        return Buffer.from(markdownContent);
+      case 'docx': {
+        const docxParser = new ParserFactory(this.config).createParser('docx');
+        const docxData = await docxParser.parse(markdownContent);
+        return docxData.buffer;
+      }
+      case 'pdf': {
+        const pdfParser = new ParserFactory(this.config).createParser('pdf');
+        const pdfData = await pdfParser.parse(markdownContent);
+        return pdfData.buffer;
+      }
+      default:
+        throw new ParamsError('Unsupported format');
+    }
   }
 
   async createDocument(

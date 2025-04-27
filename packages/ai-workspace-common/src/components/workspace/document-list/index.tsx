@@ -30,9 +30,7 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { LuPlus } from 'react-icons/lu';
 import { useMatch } from 'react-router-dom';
-import { useExportDocumentToMarkdown } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-markdown';
-import { useExportDocumentToPdf } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-pdf';
-import { useExportDocumentToDocx } from '@refly-packages/ai-workspace-common/hooks/use-export-document-to-docx';
+import { useExportDocument } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useCreateDocumentPurely } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document-purely';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
@@ -41,9 +39,11 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
   const [popupVisible, setPopupVisible] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const { deleteDocument } = useDeleteDocument();
-  const { exportDocumentToMarkdown } = useExportDocumentToMarkdown();
-  const { exportDocumentToDocx } = useExportDocumentToDocx();
-  const { exportDocumentToPdf } = useExportDocumentToPdf();
+  const { exportDocument } = useExportDocument();
+  // 替换原来的三个解构
+  // const { exportDocumentToMarkdown } = useExportDocumentToMarkdown();
+  // const { exportDocumentToDocx } = useExportDocumentToDocx();
+  // const { exportDocumentToPdf } = useExportDocumentToPdf();
   const { setShowLibraryModal } = useSiderStoreShallow((state) => ({
     setShowLibraryModal: state.setShowLibraryModal,
   }));
@@ -59,87 +59,60 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
     }
   };
 
-  const handleExportDocumentToMarkdown = useDebouncedCallback(async () => {
+  const handleExportDocument = useDebouncedCallback(async (type: 'markdown' | 'docx' | 'pdf') => {
     if (isExporting) return;
 
     try {
       setIsExporting(true);
-      const content = await exportDocumentToMarkdown(doc.docId);
+      let mimeType = '';
+      let extension = '';
+
+      // 添加加载提示
+      const loadingMessage = message.loading({
+        content: t('workspace.exporting'),
+        duration: 0,
+      });
+      const content = await exportDocument(doc.docId, type);
+      // 关闭加载提示
+      loadingMessage();
+
+      switch (type) {
+        case 'markdown':
+          mimeType = 'text/markdown';
+          extension = 'md';
+          break;
+        case 'docx':
+          mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          extension = 'docx';
+          break;
+        case 'pdf':
+          mimeType = 'application/pdf';
+          extension = 'pdf';
+          break;
+      }
 
       // 创建Blob对象
-      const blob = new Blob([content], { type: 'text/markdown' });
+      const blob = new Blob([content], { type: mimeType });
       // 创建下载链接
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${doc.title || t('common.untitled')}.md`;
+      a.download = `${doc.title || t('common.untitled')}.${extension}`;
       document.body.appendChild(a);
       a.click();
 
       // 清理
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      message.success(t('common.exportSuccess'));
+      message.success(t('workspace.exportSuccess'));
     } catch (error) {
       console.error('Export error:', error);
-      message.error(t('common.exportFailed'));
+      message.error(t('workspace.exportFailed'));
     } finally {
       setIsExporting(false);
       setPopupVisible(false);
     }
   }, 300);
-
-  const handleExportDocumentToDocx = useDebouncedCallback(async () => {
-    if (isExporting) return;
-    const data = await exportDocumentToDocx(doc.docId);
-
-    const blob = new Blob([data], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${doc.title || t('common.untitled')}.docx`;
-    document.body.appendChild(a);
-    a.click();
-    URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-    message.success(t('common.exportSuccess'));
-    try {
-      setIsExporting(true);
-    } catch (error) {
-      console.error('Export error:', error);
-      message.error(t('common.exportFailed'));
-    } finally {
-      setIsExporting(false);
-      setPopupVisible(false);
-    }
-  }, 300);
-
-  const handleExportDocumentToPdf = useDebouncedCallback(async () => {
-    if (isExporting) return;
-    const content = await exportDocumentToPdf(doc.docId);
-
-    const blob = new Blob([content], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${doc.title || t('common.untitled')}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-    message.success(t('common.exportSuccess'));
-    try {
-      setIsExporting(true);
-    } catch (error) {
-      console.error('Export error:', error);
-      message.error(t('common.exportFailed'));
-    } finally {
-      setIsExporting(false);
-      setPopupVisible(false);
-    }
-  });
 
   const handleAddToCanvas = () => {
     nodeOperationsEmitter.emit('addNode', {
@@ -178,61 +151,27 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
       label: (
         <div className="flex items-center flex-grow">
           <IconDownloadFile size={16} className="mr-2" />
-          {t('workspace.exportDocumentToMarkdown')}
+          {t('workspace.exportAs')}
         </div>
       ),
-      key: 'exportDocumentToMarkdown',
-      onClick: () => handleExportDocumentToMarkdown(),
-    },
-    {
-      label: (
-        <div className="flex items-center flex-grow">
-          <IconDownloadFile size={16} className="mr-2" />
-          {t('workspace.exportDocumentToDocx')}
-        </div>
-      ),
-      key: 'exportDocumentToDocx',
-      onClick: () => handleExportDocumentToDocx(),
-    },
-    {
-      label: (
-        <div className="flex items-center flex-grow">
-          <IconDownloadFile size={16} className="mr-2" />
-          {t('workspace.exportDocumentToPdf')}
-        </div>
-      ),
-      key: 'exportDocumentToPdf',
-      onClick: () => handleExportDocumentToPdf(),
-    },
-    {
-      label: (
-        <div className="flex items-center flex-grow">
-          <IconDownloadFile size={16} className="mr-2" />
-          {t('workspace.exportDocumentToMarkdown')}
-        </div>
-      ),
-      key: 'exportDocumentToMarkdown',
-      onClick: () => handleExportDocumentToMarkdown(),
-    },
-    {
-      label: (
-        <div className="flex items-center flex-grow">
-          <IconDownloadFile size={16} className="mr-2" />
-          {t('workspace.exportDocumentToDocx')}
-        </div>
-      ),
-      key: 'exportDocumentToDocx',
-      onClick: () => handleExportDocumentToDocx(),
-    },
-    {
-      label: (
-        <div className="flex items-center flex-grow">
-          <IconDownloadFile size={16} className="mr-2" />
-          {t('workspace.exportDocumentToPdf')}
-        </div>
-      ),
-      key: 'exportDocumentToPdf',
-      onClick: () => handleExportDocumentToPdf(),
+      key: 'exportDocument',
+      children: [
+        {
+          label: t('workspace.exportDocumentToMarkdown'),
+          key: 'exportDocumentToMarkdown',
+          onClick: () => handleExportDocument('markdown'),
+        },
+        {
+          label: t('workspace.exportDocumentToDocx'),
+          key: 'exportDocumentToDocx',
+          onClick: () => handleExportDocument('docx'),
+        },
+        {
+          label: t('workspace.exportDocumentToPdf'),
+          key: 'exportDocumentToPdf',
+          onClick: () => handleExportDocument('pdf'),
+        },
+      ],
     },
     {
       label: (

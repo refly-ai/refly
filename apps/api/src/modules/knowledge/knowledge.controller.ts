@@ -35,7 +35,6 @@ import {
   UpsertDocumentRequest,
   UpsertDocumentResponse,
   DeleteDocumentRequest,
-  ExportDocumentToMarkdownResponse,
 } from '@refly/openapi-schema';
 import { KnowledgeService } from './knowledge.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -209,50 +208,32 @@ export class KnowledgeController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('document/export-document-to-markdown')
-  async exportDocumentToMarkdown(
+  @Get('document/export-document')
+  async exportDocument(
     @LoginedUser() user: User,
     @Query('docId') docId: string,
-  ): Promise<ExportDocumentToMarkdownResponse> {
-    const document = await this.knowledgeService.exportDocumentToMarkdown(user, { docId });
-    return buildSuccessResponse(documentPO2DTO(document));
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('document/export-document-to-docx')
-  async exportDocumentToDocx(
-    @LoginedUser() user: User,
-    @Query('docId') docId: string,
+    @Query('format') format: 'markdown' | 'docx' | 'pdf',
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
   ): Promise<StreamableFile> {
-    const data = await this.knowledgeService.exportDocumentToDocx(user, { docId });
+    const data = await this.knowledgeService.exportDocument(user, { docId, format });
+
     const origin = req.headers.origin;
+    let contentType = 'text/markdown';
+
+    if (format === 'docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (format === 'pdf') {
+      contentType = 'application/pdf';
+    }
+
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Type': contentType,
       'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
     });
-    return new StreamableFile(data);
-  }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('document/export-document-to-pdf')
-  async exportDocumentToPdf(
-    @LoginedUser() user: User,
-    @Query('docId') docId: string,
-    @Res({ passthrough: true }) res: Response,
-    @Req() req: Request,
-  ): Promise<StreamableFile> {
-    const data = await this.knowledgeService.exportDocumentToPdf(user, { docId });
-    const origin = req.headers.origin;
-    res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Access-Control-Allow-Origin': origin || '*',
-      'Access-Control-Allow-Credentials': 'true',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-    });
     return new StreamableFile(data);
   }
 
