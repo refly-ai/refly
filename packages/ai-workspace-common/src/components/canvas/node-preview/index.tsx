@@ -22,6 +22,7 @@ import { Slideshow } from '@refly-packages/ai-workspace-common/components/canvas
 import { EnhancedSkillResponse } from './skill-response/enhanced-skill-response';
 import { useReactFlow } from '@xyflow/react';
 import { useSearchParams } from 'react-router-dom';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 // DnD item type constant
 const ITEM_TYPE = 'node-preview';
@@ -362,6 +363,7 @@ export const NodePreviewContainer = memo(
     canvasId: string;
     nodes: CanvasNode<any>[];
   }) => {
+    const { readonly } = useCanvasContext();
     const { getNodes } = useReactFlow<CanvasNode<any>>();
     const { rawNodePreviews, reorderNodePreviews, showReflyPilot, showSlideshow } =
       useCanvasStoreShallow((state) => ({
@@ -415,7 +417,7 @@ export const NodePreviewContainer = memo(
       <DndProvider backend={HTML5Backend}>
         <div className="flex h-full w-full">
           <ScrollingComponent {...scrollingComponentProps}>
-            {showSlideshow && <Slideshow canvasId={canvasId} />}
+            {showSlideshow && !readonly && <Slideshow canvasId={canvasId} />}
             {showReflyPilot && <ReflyPilot />}
             {nodePreviewsRendered}
           </ScrollingComponent>

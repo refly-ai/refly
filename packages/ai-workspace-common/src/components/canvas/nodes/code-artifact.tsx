@@ -40,6 +40,8 @@ import { useGetCodeArtifactDetail } from '@refly-packages/ai-workspace-common/qu
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
+import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
+
 interface NodeContentProps {
   status: 'generating' | 'finish' | 'failed';
   entityId: string;
@@ -105,6 +107,7 @@ export const CodeArtifactNode = memo(
     const { addNode } = useAddNode();
     const { t } = useTranslation();
     const updateNodeTitle = useUpdateNodeTitle();
+    useSelectedNodeZIndex(id, selected);
 
     const { sizeMode = 'adaptive' } = data?.metadata ?? {};
 

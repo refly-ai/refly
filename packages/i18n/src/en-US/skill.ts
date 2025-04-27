@@ -126,6 +126,49 @@ const translations = {
       },
     },
   },
+  imageGeneration: {
+    name: 'Image Generation',
+    description: 'Generate images based on text prompts using AI models',
+    placeholder: 'Describe the image you want to generate...',
+    steps: {
+      generateImage: {
+        name: 'Generate Image',
+      },
+    },
+    config: {
+      apiUrl: {
+        label: 'API URL',
+        description: 'The API endpoint for image generation',
+      },
+      apiKey: {
+        label: 'API Key',
+        description: 'Your API key for the image generation service',
+      },
+      imageRatio: {
+        label: 'Image Ratio',
+        description: 'The aspect ratio of generated images',
+        options: {
+          '1:1': '1:1 (Square)',
+          '16:9': '16:9 (Landscape)',
+          '9:16': '9:16 (Portrait)',
+        },
+      },
+      model: {
+        label: 'Model',
+        description: 'The model to use for image generation',
+        options: {
+          'gpt-4o-image-vip': 'GPT-4o-image-vip',
+          'gpt-4o-image': 'GPT-4o-image',
+        },
+      },
+    },
+    ui: {
+      generatedImage: 'Generated Image',
+      prompt: 'Prompt',
+      imageId: 'Image ID',
+      note: 'Note: If the image is not displayed on the canvas, please check your network connection or refresh the page. If the problem persists, you can try regenerating using the "Image ID".',
+    },
+  },
 };
 
 export default translations;

@@ -296,7 +296,7 @@ const DocumentList = () => {
           className="text-[#00968F]"
           icon={<IconCreateDocument className="-mr-1 flex items-center justify-center" />}
           onClick={() => {
-            createDocument(t('common.untitled'), '');
+            createDocument(t('common.untitled'), '', reload);
           }}
         >
           {t('canvas.toolbar.createDocument')}

@@ -16,6 +16,7 @@ import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hove
 import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { IconAskAI } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 export const ToolbarButtons = memo(
   ({
@@ -35,6 +36,7 @@ export const ToolbarButtons = memo(
     const { setNodeCenter } = useNodePosition();
     const { getNodes } = useReactFlow();
     const { hoverCardEnabled } = useHoverCard();
+    const { readonly } = useCanvasContext();
 
     const { showReflyPilot, setShowReflyPilot, showSlideshow, setShowSlideshow } =
       useCanvasStoreShallow((state) => ({
@@ -132,15 +134,18 @@ export const ToolbarButtons = memo(
 
     return (
       <>
+        {!readonly && (
+          <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
+            {hoverCardEnabled ? (
+              <HoverCard {...pilotButtonConfig}>{pilotButton}</HoverCard>
+            ) : (
+              <Tooltip title={pilotButtonConfig.title}>{pilotButton}</Tooltip>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
-          {!hoverCardEnabled ? (
-            <HoverCard {...pilotButtonConfig}>{pilotButton}</HoverCard>
-          ) : (
-            <Tooltip title={pilotButtonConfig.title}>{pilotButton}</Tooltip>
-          )}
-        </div>
-        <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)]">
-          <Tooltip title={t('canvas.toolbar.slideshow')}>{slideshowButton}</Tooltip>
+          {!readonly && <Tooltip title={t('canvas.toolbar.slideshow')}>{slideshowButton}</Tooltip>}
 
           <Popover
             open={searchOpen}

@@ -50,6 +50,7 @@ const ConfigItem = (props: {
     return (
       <Input
         placeholder={placeholder}
+        type={(item.inputProps?.passwordType ? 'password' : 'text') as 'text' | 'password'}
         defaultValue={(item?.defaultValue as string) || String(configValue?.value || '') || ''}
         onChange={(val) =>
           form.setFieldValue(field, {
@@ -117,7 +118,9 @@ const ConfigItem = (props: {
           value: option.value,
         }))}
         defaultValue={
-          item?.defaultValue || configValue?.value || (item.inputMode === 'multiSelect' ? [] : '')
+          (item?.defaultValue ||
+            configValue?.value ||
+            (item.inputMode === 'multiSelect' ? [] : '')) as string | string[]
         }
         placeholder={placeholder}
         onChange={(val) =>

@@ -27,6 +27,7 @@ import {
   RecommendQuestions,
   CustomPrompt,
   CodeArtifacts,
+  ImageGeneration,
 } from './skills';
 
 export const createSkillTemplateInventory = (engine: SkillEngine): BaseSkill[] => {
@@ -47,12 +48,14 @@ export const createSkillTemplateInventory = (engine: SkillEngine): BaseSkill[] =
     new LanguageSimplificationSkill(engine),
     new MakeShorterSkill(engine),
     new MakeLongerSkill(engine),
+    new ImageGeneration(engine),
   ];
 };
 
 export const createSkillInventory = (engine: SkillEngine): BaseSkill[] => {
   return [
     new CodeArtifacts(engine),
+    new ImageGeneration(engine),
     new WebSearch(engine),
     new LibrarySearch(engine),
     new CustomPrompt(engine),

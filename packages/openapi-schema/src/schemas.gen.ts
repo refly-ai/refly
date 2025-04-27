@@ -1071,6 +1071,10 @@ export const DynamicConfigItemSchema = {
           type: 'number',
           description: 'Decimal precision for number input',
         },
+        passwordType: {
+          type: 'boolean',
+          description: 'Whether to display as password input',
+        },
       },
     },
   },

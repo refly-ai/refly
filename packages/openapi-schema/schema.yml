@@ -3097,6 +3097,9 @@ components:
             precision:
               type: number
               description: Decimal precision for number input
+            passwordType:
+              type: boolean
+              description: Whether to display as password input
     DynamicConfigValue:
       type: object
       description: Dynamic config value

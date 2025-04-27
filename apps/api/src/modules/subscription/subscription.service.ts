@@ -153,6 +153,9 @@ export class SubscriptionService implements OnModuleInit {
       customer: customerId || undefined,
       customer_email: !customerId ? userPo?.email : undefined,
       allow_promotion_codes: true,
+      consent_collection: {
+        terms_of_service: 'required',
+      },
     });
 
     await this.prisma.$transaction([

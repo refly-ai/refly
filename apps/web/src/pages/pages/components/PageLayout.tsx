@@ -80,7 +80,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           {/* Button to show minimap */}
           {!showMinimap && (
             <div className="fixed left-0 top-60 z-500">
-              <Tooltip title={t('pages.preview.navigationDirectory')} placement="right">
+              <Tooltip title={t('pages.components.navigationDirectory')} placement="right">
                 <Button
                   type="default"
                   icon={<UnorderedListOutlined />}

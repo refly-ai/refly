@@ -796,6 +796,10 @@ export type DynamicConfigItem = {
      * Decimal precision for number input
      */
     precision?: number;
+    /**
+     * Whether to display as password input
+     */
+    passwordType?: boolean;
   };
 };
 

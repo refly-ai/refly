@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
-
-const ZINDEX_ON_GROUP = 1001;
+import { Node } from '@xyflow/react';
+const ZINDEX_ON_GROUP = 2;
 
 export const useNodeHoverEffect = (nodeId: string) => {
   const { setEdges, setNodes, getNodes } = useReactFlow();
@@ -19,23 +19,44 @@ export const useNodeHoverEffect = (nodeId: string) => {
           if (node.id === nodeId) {
             // For the target node itself
             if (isGroupNode) {
-              return { ...node, zIndex: selected ? 1000 : -1 };
+              return { ...node, style: { ...node.style, zIndex: selected ? 1 : -1 } };
             }
 
-            return { ...node, zIndex: newZIndex };
+            return {
+              ...node,
+              style: {
+                ...node.style,
+                zIndex: node.selected ? 1000 : newZIndex,
+              },
+            };
           }
 
           // For child nodes of the group
-          if (isGroupNode && selected && node.parentId === nodeId) {
-            return { ...node, zIndex: ZINDEX_ON_GROUP };
+          if (node.parentId === nodeId) {
+            if (selected) {
+              return { ...node, style: { ...node.style, zIndex: ZINDEX_ON_GROUP } };
+            }
+            return { ...node, style: { ...node.style, zIndex: node.selected ? 1000 : 0 } };
           }
 
-          // Reset other nodes when they're not part of the current operation
-          if (!isHovered && !selected && node.parentId === nodeId) {
-            return { ...node, zIndex: 0 };
-          }
+          const getIrrelevantNodeIndex = (node: Node) => {
+            if (!node.parentId) {
+              if (node.selected) {
+                return node.type === 'group' ? 2 : 1000;
+              }
+              return node.type === 'group' ? -1 : 0;
+            }
+            const parent = nodes.find((n) => n.id === node.parentId);
+            return parent?.selected ? 2 : 0;
+          };
 
-          return node;
+          return {
+            ...node,
+            style: {
+              ...node.style,
+              zIndex: getIrrelevantNodeIndex(node),
+            },
+          };
         });
       });
 

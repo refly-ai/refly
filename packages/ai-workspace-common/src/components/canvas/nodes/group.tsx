@@ -26,6 +26,7 @@ import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hook
 import { useThrottledCallback } from 'use-debounce';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
+import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 
 interface GroupMetadata {
   label?: string;
@@ -67,7 +68,7 @@ export const GroupNode = memo(
     const [isHovered, setIsHovered] = useState(false);
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const { ungroupNodes } = useUngroupNodes();
-    const { getNode, getNodes, setNodes, setEdges } = useReactFlow();
+    const { getNode, getNodes, setNodes } = useReactFlow();
     const { deleteNodes, deleteNode } = useDeleteNode();
     const { addContextItems } = useAddToContext();
     const { addNode } = useAddNode();
@@ -75,6 +76,7 @@ export const GroupNode = memo(
     const setNodeDataByEntity = useSetNodeDataByEntity();
     const { setNodeStyle } = useNodeData();
     const { onLayoutWithGroup } = useCanvasLayout();
+    useSelectedNodeZIndex(id, selected);
 
     // Memoize node and its measurements
     const node = useMemo(() => getNode(id), [id, getNode]);
@@ -319,52 +321,6 @@ export const GroupNode = memo(
         cleanupNodeEvents(id);
       };
     }, [id, handleDelete]);
-
-    const setNodeAndEdgeIndex = (zIndexForGroup: number, type: 'create' | 'destory') => {
-      const newZIndex = type === 'destory' ? 0 : selected ? 1000 : -1;
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === id || type === 'destory') {
-            return { ...node, style: { ...node.style, zIndex: newZIndex } };
-          }
-          // Also set child nodes zIndex when parent group is selected
-          if (node.parentId === id && selected) {
-            return { ...node, style: { ...node.style, zIndex: zIndexForGroup } };
-          }
-          return node;
-        }),
-      );
-
-      // Also update edges between children of this group
-      const childNodeIds = getNodes()
-        .filter((node) => node.parentId === id)
-        .map((node) => node.id);
-
-      setEdges((edges) =>
-        edges.map((edge) => {
-          if (type === 'destory') {
-            return { ...edge, zIndex: newZIndex };
-          }
-
-          const sourceInGroup = childNodeIds.includes(edge.source);
-          const targetInGroup = childNodeIds.includes(edge.target);
-
-          if (sourceInGroup && targetInGroup && selected) {
-            return { ...edge, zIndex: zIndexForGroup };
-          }
-
-          return edge;
-        }),
-      );
-    };
-
-    // Uncomment and modify the useEffect for zIndex management
-    useEffect(() => {
-      setNodeAndEdgeIndex(1001, 'create');
-      return () => {
-        setNodeAndEdgeIndex(0, 'destory');
-      };
-    }, [selected, setNodes, id, getNodes, setEdges]);
 
     return (
       <div>

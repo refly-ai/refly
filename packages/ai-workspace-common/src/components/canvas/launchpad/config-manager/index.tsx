@@ -104,6 +104,7 @@ const ConfigItem = React.memo(
           placeholder={placeholder}
           value={initialValue !== null ? String(initialValue) : undefined}
           className="bg-transparent hover:bg-transparent focus:bg-transparent"
+          type={item.inputProps?.passwordType ? 'password' : 'text'}
           onChange={(val) => {
             setInitialValue(val);
             onValueChange(val, String(val));

@@ -455,7 +455,9 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   }, [provider?.status]);
 
   useEffect(() => {
-    getPageByCanvasId();
+    if (!readonly) {
+      getPageByCanvasId();
+    }
     if (showSlideshow) {
       setShowSlideshow(false);
     }

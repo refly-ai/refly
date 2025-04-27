@@ -38,6 +38,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
 import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
+import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 
 type SkillNode = Node<CanvasNodeData<SkillNodeMeta>, 'skill'>;
 
@@ -51,6 +52,7 @@ export const SkillNode = memo(
     const { addNode } = useAddNode();
     const { deleteNode } = useDeleteNode();
     const [form] = Form.useForm();
+    useSelectedNodeZIndex(id, selected);
 
     const moveableRef = useRef<Moveable>(null);
     const targetRef = useRef<HTMLDivElement>(null);

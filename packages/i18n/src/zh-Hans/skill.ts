@@ -133,6 +133,49 @@ const translations = {
       },
     },
   },
+  imageGeneration: {
+    name: '图像生成',
+    description: '使用AI模型根据文本提示生成图像',
+    placeholder: '描述您想要生成的图像...',
+    steps: {
+      generateImage: {
+        name: '生成图像',
+      },
+    },
+    config: {
+      apiUrl: {
+        label: 'API 地址',
+        description: '图像生成API接口地址',
+      },
+      apiKey: {
+        label: 'API 密钥',
+        description: '图像生成服务的API密钥',
+      },
+      imageRatio: {
+        label: '图像比例',
+        description: '生成图像的宽高比',
+        options: {
+          '1:1': '1:1 (正方形)',
+          '16:9': '16:9 (横向)',
+          '9:16': '9:16 (纵向)',
+        },
+      },
+      model: {
+        label: '模型',
+        description: '用于图像生成的模型',
+        options: {
+          'gpt-4o-image-vip': 'GPT-4o-image-vip',
+          'gpt-4o-image': 'GPT-4o-image',
+        },
+      },
+    },
+    ui: {
+      generatedImage: '生成的图像',
+      prompt: '提示词',
+      imageId: '图像ID',
+      note: '注意: 如果图像未显示在画板中，请检查网络连接或刷新页面。如果问题仍然存在，可以尝试使用"图像ID"重新生成。',
+    },
+  },
 };
 
 export default translations;

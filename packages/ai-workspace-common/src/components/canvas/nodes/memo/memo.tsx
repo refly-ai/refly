@@ -42,6 +42,7 @@ import { useEditorPerformance } from '@refly-packages/ai-workspace-common/contex
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
 import { NodeResizer as NodeResizerComponent } from '../shared/node-resizer';
+import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 
 export const MemoNode = ({
   data,
@@ -57,6 +58,7 @@ export const MemoNode = ({
   const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
   const { addNode } = useAddNode();
+  useSelectedNodeZIndex(id, selected);
 
   const { getNode, getEdges } = useReactFlow();
   const node = getNode(id);

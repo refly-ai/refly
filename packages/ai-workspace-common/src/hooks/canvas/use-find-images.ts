@@ -22,7 +22,11 @@ export const useFindImages = () => {
         title: startNode.data?.title ?? 'Image',
         entityId: startNode.data?.entityId ?? '',
         // Include any other relevant image metadata
-        metadata: startNode.data?.metadata ?? {},
+        metadata: {
+          ...(startNode.data?.metadata ?? {}),
+          imageUrl: startNode.data?.metadata?.imageUrl ?? '',
+          storageKey: startNode.data?.metadata?.storageKey ?? '',
+        },
       };
 
       return [imageData];

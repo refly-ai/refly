@@ -49,7 +49,7 @@ export const useCreateDocumentPurely = () => {
   }, [storageUsage, setStorageExceededModalVisible]);
 
   const createDocument = useCallback(
-    async (title: string, content: string) => {
+    async (title: string, content: string, onSuccess?: () => void) => {
       if (!checkStorageUsage()) {
         return null;
       }
@@ -73,6 +73,7 @@ export const useCreateDocumentPurely = () => {
       const docId = data?.data?.docId;
 
       message.success(t('common.putSuccess'));
+      onSuccess?.();
       refetchUsage();
 
       pushDocumentToSourceList(data?.data);
@@ -83,8 +84,8 @@ export const useCreateDocumentPurely = () => {
   );
 
   const debouncedCreateDocument = useDebouncedCallback(
-    (title: string, content: string) => {
-      return createDocument(title, content);
+    (title: string, content: string, onSuccess?: () => void) => {
+      return createDocument(title, content, onSuccess);
     },
     300,
     { leading: true },

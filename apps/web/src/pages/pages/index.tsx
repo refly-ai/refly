@@ -736,7 +736,7 @@ export function SlideshowEdit(props: PageEditProps) {
                 size={minimalMode ? 'small' : 'middle'}
                 onClick={handleShare}
                 icon={<ShareAltOutlined />}
-                className={`flex items-center mr-2 text-gray-600 hover:!text-green-600 hover:bg-gray-50 ${
+                className={`flex items-center text-gray-600 hover:!text-green-600 hover:bg-gray-50 ${
                   minimalMode ? 'text-xs' : ''
                 }`}
               >

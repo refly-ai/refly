@@ -85,6 +85,19 @@ export function isValidUrl(url: string): boolean {
 }
 
 /**
+ * Extract URLs using regex for common URL patterns
+ * This is a fallback method when linkify-it fails
+ * @param text The text to extract URLs from
+ * @returns Array of extracted URLs
+ */
+function extractUrlsWithRegex(text: string): string[] {
+  // Updated regex to match more URL protocols (http, https, ftp, ftps, etc.)
+  const urlRegex = /((?:https?|ftp|ftps|file|ssh|sftp|mailto|tel|data):\/\/[^\s<>[\]"'()\{\}]+)/gi;
+  const matches = text.match(urlRegex);
+  return matches?.map((url) => url.trim()) || [];
+}
+
+/**
  * Extract URLs from text using linkify-it
  * Much faster and more reliable than regex or AI-based extraction
  * @param query The text to extract URLs from
@@ -101,34 +114,40 @@ export function extractUrlsWithLinkify(query: string): {
   // Find all links in text
   const matches = linkify.match(query);
 
-  if (!matches || matches.length === 0) {
-    return { hasUrls: false, detectedUrls: [] };
+  let detectedUrls: string[] = [];
+
+  // If linkify found matches, process them
+  if (matches && matches.length > 0) {
+    detectedUrls = matches
+      .map((match) => {
+        // Get the raw URL
+        let url = match.url;
+
+        // If schema is missing, add https://
+        if (!match.schema) {
+          url = `https://${url}`;
+        }
+
+        // Check if the original URL in the query had a trailing slash
+        // We need to use the match indices to extract the exact original string
+        const originalUrlText = query.substring(match.index, match.lastIndex);
+        const hasTrailingSlash = originalUrlText.endsWith('/');
+
+        // Add trailing slash if it was in the original URL but got removed
+        if (hasTrailingSlash && !url.endsWith('/')) {
+          url = `${url}/`;
+        }
+
+        return url;
+      })
+      .filter(isValidUrl); // Filter out any URLs that aren't valid
   }
 
-  // Extract URLs and normalize them
-  const detectedUrls = matches
-    .map((match) => {
-      // Get the raw URL
-      let url = match.url;
-
-      // If schema is missing, add https://
-      if (!match.schema) {
-        url = `https://${url}`;
-      }
-
-      // Check if the original URL in the query had a trailing slash
-      // We need to use the match indices to extract the exact original string
-      const originalUrlText = query.substring(match.index, match.lastIndex);
-      const hasTrailingSlash = originalUrlText.endsWith('/');
-
-      // Add trailing slash if it was in the original URL but got removed
-      if (hasTrailingSlash && !url.endsWith('/')) {
-        url = `${url}/`;
-      }
-
-      return url;
-    })
-    .filter(isValidUrl); // Filter out any URLs that aren't valid
+  // If linkify didn't find any URLs or found fewer than expected, try regex as fallback
+  if (detectedUrls.length === 0) {
+    const regexUrls = extractUrlsWithRegex(query);
+    detectedUrls = [...new Set([...detectedUrls, ...regexUrls])].filter(isValidUrl);
+  }
 
   return {
     hasUrls: detectedUrls.length > 0,

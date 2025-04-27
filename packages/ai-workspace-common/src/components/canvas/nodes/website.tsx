@@ -33,6 +33,7 @@ import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use
 import cn from 'classnames';
 import Moveable from 'react-moveable';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
+import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 
 const DEFAULT_WIDTH = 288;
 const DEFAULT_MIN_HEIGHT = 100;
@@ -402,6 +403,7 @@ export const WebsiteNode = memo(
     const targetRef = useRef<HTMLDivElement>(null);
     const moveableRef = useRef<Moveable>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    useSelectedNodeZIndex(id, selected);
 
     const { addToContext } = useAddToContext();
     const { deleteNode } = useDeleteNode();

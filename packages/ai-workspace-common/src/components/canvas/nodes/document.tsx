@@ -34,6 +34,7 @@ import { useEditorPerformance } from '@refly-packages/ai-workspace-common/contex
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
+import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 export const DocumentNode = memo(
   ({
     data = { title: '', entityId: '' },
@@ -53,6 +54,7 @@ export const DocumentNode = memo(
 
     const targetRef = useRef<HTMLDivElement>(null);
     const { getNode } = useReactFlow();
+    useSelectedNodeZIndex(id, selected);
 
     const { operatingNodeId } = useCanvasStoreShallow((state) => ({
       operatingNodeId: state.operatingNodeId,

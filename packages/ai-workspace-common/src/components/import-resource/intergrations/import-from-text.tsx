@@ -159,7 +159,7 @@ export const ImportFromText = () => {
             disabled={disableSave()}
             onClick={handleSave}
           >
-            {t('common.saveToCanvas')}
+            {isCanvasOpen ? t('common.saveToCanvas') : t('common.save')}
           </Button>
         </div>
       </div>

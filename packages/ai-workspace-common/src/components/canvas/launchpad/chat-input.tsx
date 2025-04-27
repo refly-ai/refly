@@ -267,7 +267,6 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           isDragging && 'ring-2 ring-green-500 ring-opacity-50 rounded-lg',
           readonly && 'opacity-70 cursor-not-allowed',
         )}
-        onPaste={handlePaste}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -331,18 +330,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
               value={query ?? ''}
               onChange={handleInputChange}
               onKeyDownCapture={handleKeyDown}
-              onPaste={(e) => {
-                if (readonly) return;
-                if (e.clipboardData?.items) {
-                  for (const item of e.clipboardData.items) {
-                    if (item.type.startsWith('image/')) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      break;
-                    }
-                  }
-                }
-              }}
+              onPaste={handlePaste}
               className={cn(
                 '!m-0 bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
                 inputClassName,
@@ -378,18 +366,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
             value={query ?? ''}
             onChange={handleInputChange}
             onKeyDownCapture={handleKeyDown}
-            onPaste={(e) => {
-              if (readonly) return;
-              if (e.clipboardData?.items) {
-                for (const item of e.clipboardData.items) {
-                  if (item.type.startsWith('image/')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    break;
-                  }
-                }
-              }
-            }}
+            onPaste={handlePaste}
             className={cn(
               '!m-0 bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
               inputClassName,

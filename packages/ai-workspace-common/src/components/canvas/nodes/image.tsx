@@ -30,11 +30,12 @@ import { useEditorPerformance } from '@refly-packages/ai-workspace-common/contex
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
+import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 
 export const ImageNode = memo(
   ({ id, data, isPreview, selected, hideActions, hideHandles, onNodeClick }: ImageNodeProps) => {
     const { metadata } = data ?? {};
-    const imageUrl = metadata?.imageUrl;
+    const imageUrl = metadata?.imageUrl ?? '';
     const showBorder = metadata?.showBorder ?? false;
     const showTitle = metadata?.showTitle ?? true;
     const [isHovered, setIsHovered] = useState(false);
@@ -42,6 +43,7 @@ export const ImageNode = memo(
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const targetRef = useRef<HTMLDivElement>(null);
     const { getNode } = useReactFlow();
+    useSelectedNodeZIndex(id, selected);
     const { addNode } = useAddNode();
     const { addToContext } = useAddToContext();
     const { deleteNode } = useDeleteNode();
@@ -236,7 +238,7 @@ export const ImageNode = memo(
               </>
             )}
 
-            <div className={cn('flex flex-col h-full relative p-3 box-border', MAX_HEIGHT_CLASS)}>
+            <div className={cn('flex flex-col h-full relative box-border', MAX_HEIGHT_CLASS)}>
               <div className="relative w-full rounded-lg overflow-y-auto">
                 {showTitle && isHovered && (
                   <div

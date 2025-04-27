@@ -273,7 +273,7 @@ export const ImportFromFile = () => {
         <div className="flex items-center gap-x-[8px] flex-shrink-0">
           <Button onClick={() => setImportResourceModalVisible(false)}>{t('common.cancel')}</Button>
           <Button type="primary" onClick={handleSave} disabled={disableSave} loading={saveLoading}>
-            {t('common.saveToCanvas')}
+            {isCanvasOpen ? t('common.saveToCanvas') : t('common.save')}
           </Button>
         </div>
       </div>

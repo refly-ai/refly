@@ -136,6 +136,12 @@ export class CollabService {
     context: CollabContext;
   }) {
     const { entity } = context;
+
+    if (!entity) {
+      this.logger.warn(`entity not found for ${documentName}`);
+      return null;
+    }
+
     const { stateStorageKey } = entity;
 
     if (!stateStorageKey) {
