@@ -925,8 +925,8 @@ export const getDocumentDetail = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * 导出文档到指定格式
- * 导出文档到 Markdown、DOCX 或 PDF 格式
+ * Export document to Markdown, DOCX or PDF format
+ * Export a document to Markdown, DOCX or PDF format
  */
 export const exportDocument = <ThrowOnError extends boolean = false>(
   options: Options<ExportDocumentData, ThrowOnError>,
@@ -934,7 +934,7 @@ export const exportDocument = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).get<ExportDocumentResponse, ExportDocumentError, ThrowOnError>(
     {
       ...options,
-      url: '/knowledge/document/export-document',
+      url: '/knowledge/document/export/document',
     },
   );
 };

@@ -1000,24 +1000,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetDocumentDetailResponse'
-  /knowledge/document/export-document:
+  /knowledge/document/export/document:
     get:
       tags:
         - knowledge
-      summary: 导出文档到指定格式
-      description: 导出文档到 Markdown、DOCX 或 PDF 格式
+      summary: Export document to Markdown, DOCX or PDF format
+      description: Export a document to Markdown, DOCX or PDF format
       operationId: exportDocument
       parameters:
         - name: docId
           in: query
-          description: 要导出的文档 ID
+          description: Export document ID to retrieve
           required: true
           schema:
             type: string
             example: d-g30e1b80b5g1itbemc0g5jj3
         - name: format
           in: query
-          description: 导出格式 (markdown, docx, pdf)
+          description: Export format
           required: false
           schema:
             type: string
@@ -1026,7 +1026,7 @@ paths:
             example: markdown
       responses:
         '200':
-          description: 成功操作
+          description: operation success
           content:
             text/markdown:
               schema:

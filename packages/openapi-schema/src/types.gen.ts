@@ -4291,11 +4291,11 @@ export type GetDocumentDetailError = unknown;
 export type ExportDocumentData = {
   query: {
     /**
-     * 要导出的文档 ID
+     * Export document ID to retrieve
      */
     docId: string;
     /**
-     * 导出格式 (markdown, docx, pdf)
+     * Export format
      */
     format?: 'markdown' | 'docx' | 'pdf';
   };

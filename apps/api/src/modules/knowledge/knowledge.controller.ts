@@ -208,7 +208,7 @@ export class KnowledgeController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('document/export-document')
+  @Get('document/export/document')
   async exportDocument(
     @LoginedUser() user: User,
     @Query('docId') docId: string,
