@@ -40,10 +40,6 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
   const [isExporting, setIsExporting] = useState(false);
   const { deleteDocument } = useDeleteDocument();
   const { exportDocument } = useExportDocument();
-  // 替换原来的三个解构
-  // const { exportDocumentToMarkdown } = useExportDocumentToMarkdown();
-  // const { exportDocumentToDocx } = useExportDocumentToDocx();
-  // const { exportDocumentToPdf } = useExportDocumentToPdf();
   const { setShowLibraryModal } = useSiderStoreShallow((state) => ({
     setShowLibraryModal: state.setShowLibraryModal,
   }));
