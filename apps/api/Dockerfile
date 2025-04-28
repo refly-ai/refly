@@ -42,19 +42,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         && tar xvzf pandoc-3.6.3-linux-arm64.tar.gz --strip-components 1 -C /usr/local/ \
         && rm pandoc-3.6.3-linux-arm64.tar.gz; \
     fi
-# Install wkhtmltopdf
-RUN apk add --no-cache apt
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.buster_amd64.deb \
-        && apt-get update \
-        && apt-get install -y ./wkhtmltox_0.12.6-1.buster_amd64.deb \
-        && rm wkhtmltox_0.12.6-1.buster_amd64.deb; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.buster_arm64.deb \
-        && apt-get update \
-        && apt-get install -y ./wkhtmltox_0.12.6-1.buster_arm64.deb \
-        && rm wkhtmltox_0.12.6-1.buster_arm64.deb; \
-    fi
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/node_modules ./node_modules
