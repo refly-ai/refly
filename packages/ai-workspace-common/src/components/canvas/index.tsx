@@ -162,8 +162,10 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const selectedNodes = nodes.filter((node) => node.selected) || [];
 
   const getPageByCanvasId = useCallback(async () => {
+    if (!canvasId) return;
+
     const res = await getClient().getPageByCanvasId({
-      path: { canvasId: canvasId || 'placeholder' },
+      path: { canvasId },
     });
     if (res?.data?.success) {
       const pageData = res.data.data;
