@@ -11,11 +11,28 @@ import { Logger } from 'nestjs-pino';
 import { GlobalExceptionFilter } from '@/utils/filters/global-exception.filter';
 import { setTraceID } from '@/utils/middleware/set-trace-id';
 import { CustomWsAdapter } from '@/utils/adapters/ws-adapter';
+import { execSync } from 'node:child_process';
 
 let nestApp: NestExpressApplication | null = null;
 
 export const startApiServer = async () => {
   process.env.DATABASE_URL = `file:${app.getPath('userData')}/refly.db`;
+
+  // TODO: Properly look for prisma binary in distribution
+  const prismaPath = path.join(process.env.APP_ROOT, '..', 'node_modules', '.bin', 'prisma');
+  const prismaSchemaPath = path.join(process.env.APP_ROOT, 'prisma', 'sqlite-schema.prisma');
+  console.log('prismaPath', prismaPath);
+  console.log('prismaSchemaPath', prismaSchemaPath);
+
+  // TODO: Cache the migration result to optimize launch time
+  execSync(`${prismaPath} db push --schema=${prismaSchemaPath}`, {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL,
+    },
+  });
+
   process.env.FULLTEXT_SEARCH_BACKEND = 'prisma';
   process.env.OBJECT_STORAGE_BACKEND = 'fs';
   process.env.OBJECT_STORAGE_FS_ROOT = path.join(app.getPath('userData'), 'objectStorage');

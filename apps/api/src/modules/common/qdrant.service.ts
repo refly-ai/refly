@@ -7,6 +7,8 @@ import { Filter, PointStruct, ScrollRequest } from './qdrant.dto';
 export class QdrantService implements OnModuleInit {
   private readonly logger = new Logger(QdrantService.name);
   private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout
+  private readonly MAX_RETRIES = 5; // Maximum number of retries
+  private readonly INITIAL_RETRY_DELAY = 500; // Starting delay in ms
 
   private collectionName: string;
   private client: QdrantClient;
@@ -37,20 +39,73 @@ export class QdrantService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    const initPromise = this.initializeCollection();
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(`Qdrant initialization timed out after ${this.INIT_TIMEOUT}ms`);
-      }, this.INIT_TIMEOUT);
-    });
+    let initComplete = false;
+    const startTime = Date.now();
+    let lastError: Error | null = null;
 
-    try {
-      await Promise.race([initPromise, timeoutPromise]);
-      this.logger.log('Qdrant collection initialized successfully');
-    } catch (error) {
-      this.logger.error(`Failed to initialize Qdrant collection: ${error}`);
-      throw error;
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+      const remainingTime = this.INIT_TIMEOUT - (Date.now() - startTime);
+
+      // If we've exceeded the overall timeout, break out of the retry loop
+      if (remainingTime <= 0) {
+        break;
+      }
+
+      try {
+        // Set a timeout for this specific attempt
+        const attemptPromise = this.initializeCollection();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Attempt ${attempt} timed out after ${remainingTime}ms`));
+          }, remainingTime);
+        });
+
+        await Promise.race([attemptPromise, timeoutPromise]);
+
+        // If we get here, initialization was successful
+        initComplete = true;
+        this.logger.log(`Qdrant collection initialized successfully on attempt ${attempt}`);
+        break;
+      } catch (error) {
+        lastError = error as Error;
+        this.logger.warn(
+          `Attempt ${attempt}/${this.MAX_RETRIES} failed to initialize Qdrant collection: ${error}`,
+        );
+
+        // If this is the last attempt or we're out of time, don't wait
+        if (
+          attempt === this.MAX_RETRIES ||
+          Date.now() - startTime + this.getRetryDelay(attempt) >= this.INIT_TIMEOUT
+        ) {
+          break;
+        }
+
+        // Wait before trying again with exponential backoff
+        const delay = this.getRetryDelay(attempt);
+        this.logger.log(`Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
     }
+
+    if (!initComplete) {
+      const errorMessage = `Failed to initialize Qdrant collection after ${this.MAX_RETRIES} attempts: ${lastError}`;
+      this.logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Helper method for exponential backoff delay calculation
+  private getRetryDelay(attempt: number): number {
+    // Exponential backoff with jitter: base * 2^attempt + random jitter
+    return Math.min(
+      this.INITIAL_RETRY_DELAY * 2 ** (attempt - 1) + Math.random() * 100,
+      5000, // Cap at 5 seconds
+    );
+  }
+
+  // Helper method to wait a specified amount of time
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async initializeCollection() {
