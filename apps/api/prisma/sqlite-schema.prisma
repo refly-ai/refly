@@ -973,3 +973,90 @@ model RefreshToken {
   @@index([uid])
   @@map("refresh_tokens")
 }
+
+model Page {
+  /// Primary key
+  pk              Int       @id @default(autoincrement())
+  /// Page ID
+  pageId          String    @unique @map("page_id")
+  /// Owner UID
+  uid             String    @map("uid")
+  /// Canvas ID (Associated canvas ID)
+  canvasId        String    @map("canvas_id")
+  /// Page title
+  title           String    @default("Untitled Page") @map("title")
+  /// Page description
+  description     String?   @map("description")
+  /// Page state storage key (for storing edit state)
+  stateStorageKey String    @map("state_storage_key")
+  /// Cover storage key 
+  coverStorageKey String?   @map("cover_storage_key")
+  /// Page status
+  status          String    @default("draft") @map("status") // draft, publishing, published
+  /// Create timestamp
+  createdAt       DateTime  @default(now()) @map("created_at")
+  /// Update timestamp
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+  /// Soft delete timestamp
+  deletedAt       DateTime? @map("deleted_at")
+
+  /// Associated versions
+  versions PageVersion[]
+
+  @@index([uid, updatedAt])
+  @@index([canvasId, deletedAt])
+  @@map("pages")
+}
+
+model PageNodeRelation {
+  /// Primary key
+  pk         Int       @id @default(autoincrement())
+  /// Relation ID
+  relationId String    @unique @map("relation_id")
+  /// Page ID
+  pageId     String    @map("page_id")
+  /// Source node ID
+  nodeId     String    @map("node_id")
+  /// Node type (document, resource, skillResponse, etc.)
+  nodeType   String    @map("node_type")
+  /// Entity ID (associated entity ID)
+  entityId   String    @map("entity_id")
+  /// Order in page (sorting position)
+  orderIndex Int       @map("order_index")
+  /// Node data (storing node metadata)
+  nodeData   String    @default("{}") @map("node_data")
+  /// Create timestamp
+  createdAt  DateTime  @default(now()) @map("created_at")
+  /// Update timestamp
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
+  /// Soft delete timestamp
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([pageId, deletedAt])
+  @@map("page_node_relations")
+}
+
+model PageVersion {
+  /// Primary key
+  pk                Int      @id @default(autoincrement())
+  /// Version ID
+  versionId         String   @unique @map("version_id")
+  /// Page ID
+  pageId            String   @map("page_id")
+  /// Version number
+  version           Int      @map("version")
+  /// Page title at this version
+  title             String   @map("title")
+  /// Content storage key (storing complete content for a specific version)
+  contentStorageKey String   @map("content_storage_key")
+  /// Cover storage key
+  coverStorageKey   String?  @map("cover_storage_key")
+  /// Create timestamp
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  /// Page association
+  page Page @relation(fields: [pageId], references: [pageId])
+
+  @@index([pageId, version])
+  @@map("page_versions")
+}

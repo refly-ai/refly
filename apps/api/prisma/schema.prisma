@@ -101,51 +101,51 @@ model User {
 
 model ActionResult {
   /// Primary key
-  pk            BigInt       @id @default(autoincrement())
+  pk            BigInt   @id @default(autoincrement())
   /// Action result id
-  resultId      String       @map("result_id")
+  resultId      String   @map("result_id")
   /// Action result version
-  version       Int          @default(0) @map("version")
+  version       Int      @default(0) @map("version")
   /// Action type
-  type          String       @default("skill") @map("type")
+  type          String   @default("skill") @map("type")
   /// UID
-  uid           String       @default("") @map("uid")
+  uid           String   @default("") @map("uid")
   /// Result title
-  title         String       @default("") @map("title")
+  title         String   @default("") @map("title")
   /// Used model tier
-  tier          String       @default("") @map("tier")
+  tier          String   @default("") @map("tier")
   /// Used model
-  modelName     String?      @map("model_name")
+  modelName     String?  @map("model_name")
   /// Action target type
-  targetType    String?      @map("target_type")
+  targetType    String?  @map("target_type")
   /// Action target ID
-  targetId      String?      @map("target_id")
+  targetId      String?  @map("target_id")
   /// Action metadata
-  actionMeta    String?      @map("action_meta")
+  actionMeta    String?  @map("action_meta")
   /// Input (JSON)
-  input         String?      @map("input")
+  input         String?  @map("input")
   /// Context (JSON of `SkillContext`)
-  context       String?      @map("context")
+  context       String?  @map("context")
   /// Skill template config (JSON)
-  tplConfig     String?      @map("tpl_config")
+  tplConfig     String?  @map("tpl_config")
   /// Skill runtime config (JSON)
-  runtimeConfig String?      @map("runtime_config")
+  runtimeConfig String?  @map("runtime_config")
   /// Result history (JSON array of `ActionResult`)
-  history       String?      @map("history")
+  history       String?  @map("history")
   /// Errors
-  errors        String?      @map("errors")
+  errors        String?  @map("errors")
   /// Locale setting
-  locale        String?      @default("") @map("locale")
+  locale        String?  @default("") @map("locale")
   /// Project id
-  projectId     String?      @map("project_id")
+  projectId     String?  @map("project_id")
   /// Action result status
-  status        ActionStatus @default(waiting) @map("status")
+  status        String   @default("waiting") @map("status")
   /// Duplicate from another action result id
-  duplicateFrom String?      @map("duplicate_from")
+  duplicateFrom String?  @map("duplicate_from")
   /// Create timestamp
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt     DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@unique([resultId, version])
   @@index([targetType, targetId])
@@ -184,13 +184,6 @@ model ActionStep {
 
   @@index([resultId, version, order])
   @@map("action_steps")
-}
-
-enum ActionStatus {
-  waiting
-  executing
-  finish
-  failed
 }
 
 model TokenUsage {
