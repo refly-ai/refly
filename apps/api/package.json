@@ -19,7 +19,7 @@
     "dev:debug": "nodemon --inspect",
     "start": "node --env-file=.env dist/scripts/sync-db-schema.js && node --env-file=.env dist/server/main.js",
     "start:electron": "electron dist-electron/electron/main.js",
-    "package:electron": "electron-builder build --config electron-builder.json",
+    "package:electron": "electron-builder build --config electron-builder.yml",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

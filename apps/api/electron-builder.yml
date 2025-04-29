@@ -11,9 +11,7 @@ directories:
   buildResources: resources
   output: packed
 files:
-  - dist/**/*
   - dist-electron/**/*
-  - localization/!(locales)
   - prisma/**/*
   - "!prisma/app.db"
   - resources/**/*
