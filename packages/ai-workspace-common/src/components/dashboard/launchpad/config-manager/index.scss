@@ -1,0 +1,189 @@
+.config-manager {
+  padding: 12px 0px 4px 0px;
+  margin: 8px 0px 0;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    justify-content: space-between;
+
+    &-left {
+      display: flex;
+      align-items: center;
+    }
+
+    &-icon {
+      margin-right: 4px;
+    }
+
+    &-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.85);
+    }
+  }
+
+  &__toggle-button {
+    padding: 0 4px;
+    box-sizing: border-box;
+    font-size: 10px;
+    height: 18px;
+    border-radius: 4px;
+    margin-left: auto;
+  }
+
+  &__form {
+    font-size: 10px;
+  }
+
+  &__item-row {
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    background-color: #f6f6f6;
+
+    &.error {
+      border: 1px solid rgba(245, 63, 63, 0.3);
+      background-color: rgb(255, 236, 232);
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__item-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  &__reset-button {
+    margin-left: 4px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    font-size: 10px;
+    height: 18px;
+    border-radius: 4px;
+  }
+
+  .arco-input-inner-wrapper {
+    border: none !important;
+  }
+
+  .arco-input-number-step-button,
+  .arco-input-group-addbefore,
+  .arco-input-group-addafter {
+    border-radius: 4px !important;
+    border: none !important;
+  }
+
+  // 确保 input 和 textarea 背景透明
+  .arco-input,
+  .arco-textarea {
+    background-color: transparent !important;
+    outline: none !important;
+    border: none !important;
+
+    &:hover,
+    &:focus,
+    &:active,
+    &:disabled,
+    &[disabled],
+    &.arco-input-disabled {
+      background-color: transparent !important;
+    }
+  }
+
+  // 确保 input 和 textarea 容器也是透明的
+  .arco-input-inner-wrapper,
+  .arco-textarea-wrapper {
+    background-color: transparent !important;
+
+    &:hover,
+    &:focus-within,
+    &.arco-input-inner-wrapper-focus,
+    &.arco-input-inner-wrapper-disabled,
+    &.arco-textarea-wrapper-disabled {
+      background-color: transparent !important;
+      border-color: #e5e6eb;
+    }
+  }
+
+  .arco-checkbox {
+    font-size: 10px;
+  }
+
+  .arco-checkbox-mask {
+    border-radius: 0 !important;
+    width: 12px;
+    height: 12px;
+  }
+
+  .arco-radio {
+    font-size: 10px;
+  }
+
+  .arco-radio-mask {
+    width: 12px;
+    height: 12px;
+    &::after {
+      width: 8px;
+      height: 8px;
+    }
+  }
+
+  input {
+    font-size: 10px;
+  }
+
+  textarea {
+    padding: 4px;
+    margin: 0 !important;
+    font-size: 10px;
+  }
+
+  .arco-form-message {
+    font-size: 10px;
+  }
+
+  .arco-form-item {
+    margin-bottom: 0;
+  }
+
+  .arco-input[disabled], 
+  .arco-textarea[disabled],
+  .arco-input-disabled,
+  .arco-textarea-disabled {
+    color: rgba(0, 0, 0, 0.9) !important;
+    -webkit-text-fill-color: rgba(0, 0, 0, 0.9) !important;
+  }
+  
+  .arco-form-item-disabled .arco-form-item-label {
+    color: rgba(0, 0, 0, 0.9) !important;
+  }
+
+  .arco-select-disabled .arco-select-view-value {
+    color: rgba(0, 0, 0, 0.9) !important;
+  }
+
+  .arco-input-number-disabled .arco-input-number-input,
+  .arco-input-number[disabled] .arco-input-number-input,
+  .arco-input-number .arco-input-number-input[disabled] {
+    color: rgba(0, 0, 0, 0.9) !important;
+    -webkit-text-fill-color: rgba(0, 0, 0, 0.9) !important;
+  }
+
+  .arco-radio-disabled .arco-radio-label,
+  .arco-checkbox-disabled .arco-checkbox-label {
+    color: rgba(0, 0, 0, 0.9) !important;
+  }
+
+  .arco-switch-disabled.arco-switch-checked {
+    background-color: rgba(22, 93, 255, 0.5) !important;
+  }
+}

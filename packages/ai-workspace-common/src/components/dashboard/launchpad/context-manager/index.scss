@@ -1,0 +1,34 @@
+.context-preview-popover {
+  // max-height: 300px;
+  // overflow-y: auto;
+
+  // Remove default popover styles
+  .ant-popover-inner {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .ant-popover-inner-content {
+    padding: 0;
+  }
+
+  // Remove arrow
+  .ant-popover-arrow {
+    display: none;
+  }
+
+  // Style the preview content
+  .context-preview {
+    border: none;
+    background: transparent;
+
+    // If you want to add some spacing from the button
+    margin-top: 4px;
+  }
+
+  // Make preview content transparent
+  .preview-content {
+    background: transparent;
+  }
+}
