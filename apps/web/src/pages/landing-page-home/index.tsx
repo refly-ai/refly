@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Header from '@/components/landing-page-partials/Header';
 import HeroHome from '@/components/landing-page-partials/HeroHome';
 import WorkflowBlocks from '@/components/landing-page-partials/workflow-blocks';
@@ -10,12 +11,13 @@ import AOS from 'aos';
 
 import 'aos/dist/aos.css';
 import './index.scss';
-import { useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 
+// Main Home component
 function Home() {
   const { t } = useTranslation();
+
   useEffect(() => {
     AOS.init({
       once: true,

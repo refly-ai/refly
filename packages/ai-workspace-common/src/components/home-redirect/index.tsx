@@ -2,25 +2,14 @@ import { useEffect } from 'react';
 import { useState } from 'react';
 import { SuspenseLoading } from '@refly-packages/ai-workspace-common/components/common/loading';
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 
 export const HomeRedirect = ({ defaultNode }: { defaultNode: ReactNode }) => {
   const [element, setElement] = useState<ReactNode | null>(null);
-  const { isLogin } = useUserStoreShallow((state) => ({
-    isLogin: state.isLogin,
-  }));
-
-  const handleHomeRedirect = async () => {
-    if (isLogin) {
-      return <Navigate to={'/canvas/empty'} replace />;
-    }
-    return defaultNode;
-  };
 
   useEffect(() => {
-    handleHomeRedirect().then(setElement);
-  }, []);
+    // Just show the defaultNode, which now handles the login state internally
+    setElement(defaultNode);
+  }, [defaultNode]);
 
   return element ?? <SuspenseLoading />;
 };

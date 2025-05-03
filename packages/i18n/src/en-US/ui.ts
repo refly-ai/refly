@@ -1642,6 +1642,7 @@ const translations = {
     },
     siderMenu: {
       contactUs: 'Contact Us',
+      home: 'New Chat',
       addToChrome: 'Add to Chrome',
       canvasTitle: 'Canvas',
       canvasDescription:

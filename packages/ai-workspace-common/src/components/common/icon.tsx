@@ -13,6 +13,7 @@ import { IoIosMore } from 'react-icons/io';
 import { IoLanguage } from 'react-icons/io5';
 import { HiOutlineReply } from 'react-icons/hi';
 import { FiCode } from 'react-icons/fi';
+import { RiChatAiLine } from 'react-icons/ri';
 import {
   LuSearch,
   LuSettings,
@@ -153,6 +154,7 @@ export const IconThinking = PiAtom;
 export const IconCodeArtifact = FiCode;
 export const IconWebsite = AiOutlineLink;
 export const IconTable = HiOutlineTableCells;
+export const IconNewChat = RiChatAiLine;
 
 export const IconX = BsTwitterX;
 export const IconGithub = BsGithub;

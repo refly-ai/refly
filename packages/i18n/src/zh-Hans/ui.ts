@@ -1455,6 +1455,7 @@ const translations = {
     },
     siderMenu: {
       contactUs: '联系我们',
+      home: '新会话',
       addToChrome: '添加到 Chrome',
       canvasTitle: '画布',
       canvasDescription:

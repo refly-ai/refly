@@ -10,7 +10,10 @@ import {
 import {
   IconCanvas,
   IconPlus,
-  IconTemplate,
+  IconLibrary,
+  IconProject,
+  IconRight,
+  IconNewChat,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import cn from 'classnames';
 
@@ -33,17 +36,11 @@ import {
 } from '@refly-packages/ai-workspace-common/stores/sider';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 // icons
-import {
-  IconLibrary,
-  IconProject,
-  IconRight,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
-import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { AiOutlineMenuFold, AiOutlineUser } from 'react-icons/ai';
+import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { SubscriptionHint } from '@refly-packages/ai-workspace-common/components/subscription/hint';
 import { FaGithub } from 'react-icons/fa6';
 import { useKnowledgeBaseStoreShallow } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
-import { useCanvasTemplateModalShallow } from '@refly-packages/ai-workspace-common/stores/canvas-template-modal';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
@@ -334,10 +331,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
 
-  const { setVisible: setShowCanvasTemplateModal } = useCanvasTemplateModalShallow((state) => ({
-    setVisible: state.setVisible,
-  }));
-
   const { isLoadingCanvas, isLoadingProjects } = useHandleSiderData(true);
 
   const { t } = useTranslation();
@@ -447,13 +440,13 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         <SearchQuickOpenBtn />
 
         <div
-          className="flex-shrink-0 h-10 my-1 mx-2 flex items-center justify-between pl-6 pr-3 text-gray-600 hover:bg-gray-100 cursor-pointer rounded-lg"
-          onClick={() => setShowCanvasTemplateModal(true)}
+          className="flex-shrink-0 h-10 my-1 mx-2 flex items-center justify-between pl-3 pr-3 text-gray-600 hover:bg-gray-100 cursor-pointer rounded-lg"
+          onClick={() => navigate('/')}
         >
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center gap-2">
-              <IconTemplate key="template" style={{ fontSize: 20 }} />
-              <span>{t('loggedHomePage.siderMenu.template')}</span>
+              <IconNewChat key="home" style={{ fontSize: 20 }} />
+              <span>{t('loggedHomePage.siderMenu.home')}</span>
             </div>
           </div>
         </div>
@@ -493,12 +486,12 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
               const sectionContent = (
                 <div className="flex-1 overflow-hidden flex flex-col bg-white select-none">
-                  <div className="flex-none pl-5 pr-2">
+                  <div className="flex-none pl-1 pr-2">
                     {section.key === 'Canvas' && <NewCanvasItem />}
                     {section.key === 'Library' && <NewProjectItem />}
                   </div>
 
-                  <div className="flex-1 overflow-y-auto pl-5 pr-2 min-h-0">
+                  <div className="flex-1 overflow-y-auto pl-1 pr-2 min-h-0">
                     {section.key === 'Canvas' &&
                       (isLoadingCanvas ? (
                         <Skeleton

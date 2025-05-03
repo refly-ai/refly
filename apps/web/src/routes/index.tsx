@@ -17,7 +17,8 @@ import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/u
 import { isDesktop } from '@refly-packages/ai-workspace-common/utils/env';
 
 // Lazy load components
-const Home = lazy(() => import('@/pages/home'));
+const LandingPageHome = lazy(() => import('@/pages/landing-page-home'));
+const LoggedHome = lazy(() => import('@/pages/logged-home'));
 const Canvas = lazy(() => import('@/pages/canvas'));
 const Pricing = lazy(() => import('@/pages/pricing'));
 const ShareCanvasPage = lazy(() => import('@/pages/share'));
@@ -35,6 +36,7 @@ const prefetchRoutes = () => {
   import('@refly-packages/ai-workspace-common/components/request-access');
   import('@/pages/artifact-gallery');
   import('@/pages/use-cases-gallery');
+  import('@/pages/logged-home');
 };
 
 export const AppRouter = (props: { layout?: any }) => {
@@ -90,11 +92,14 @@ export const AppRouter = (props: { layout?: any }) => {
 
   const hasBetaAccess = true;
 
+  // Choose which component to show on the home page based on login status
+  const HomeComponent = userStore.isLogin ? LoggedHome : LandingPageHome;
+
   return (
     <Suspense fallback={<SuspenseLoading />}>
       <Layout>
         <Routes>
-          <Route path="/" element={<HomeRedirect defaultNode={<Home />} />} />
+          <Route path="/" element={<HomeRedirect defaultNode={<HomeComponent />} />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/share/canvas/:canvasId" element={<ShareCanvasPage />} />
           <Route path="/share/code/:shareId" element={<ShareCodePage />} />
