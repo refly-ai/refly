@@ -11,6 +11,10 @@ import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/store
 import { SkillTemplateConfig } from '@refly/openapi-schema';
 import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canvas';
 import { ReactFlowProvider } from '@xyflow/react';
+import {
+  usePendingActionStore,
+  PendingActionParams,
+} from '@refly-packages/ai-workspace-common/stores/pending-action';
 
 interface DashboardProps {
   title?: string;
@@ -21,7 +25,15 @@ interface DashboardProps {
 const DashboardComp = React.memo(
   ({ showTemplates = true, showRecentCanvases = true }: DashboardProps) => {
     const { t } = useTranslation();
-    const { debouncedCreateCanvas, isCreating } = useCreateCanvas();
+    const { debouncedCreateCanvas, isCreating } = useCreateCanvas({
+      onCreateCanvasId: (canvasId) => {
+        const { pendingActionParams } = usePendingActionStore.getState();
+        if (pendingActionParams) {
+          // Update the targetCanvasId in the pending action store
+          usePendingActionStore.getState().setPendingAction(pendingActionParams, canvasId);
+        }
+      },
+    });
     const { setVisible: setShowCanvasTemplateModal } = useCanvasTemplateModalShallow((state) => ({
       setVisible: state.setVisible,
     }));
@@ -35,6 +47,7 @@ const DashboardComp = React.memo(
       setTplConfig: state.setTplConfig,
     }));
     const tplConfigRef = useRef<SkillTemplateConfig | null>(null);
+    const { setPendingAction } = usePendingActionStore();
 
     // Sample template categories
     const templateCategories = useMemo(
@@ -73,6 +86,19 @@ const DashboardComp = React.memo(
       [setTplConfig],
     );
 
+    // Handler for initiating a dashboard action
+    const handleInitiateDashboardAction = useCallback(
+      (params: PendingActionParams) => {
+        // Store the action parameters in the pending action store
+        setPendingAction(params, null);
+
+        // Create a new canvas and navigate to it
+        // The onCreateCanvasId callback will update the targetCanvasId in the store
+        debouncedCreateCanvas('');
+      },
+      [debouncedCreateCanvas, setPendingAction],
+    );
+
     return (
       <div className="w-full max-w-[800px] mx-auto mt-[100px]">
         <Row gutter={[24, 24]}>
@@ -94,6 +120,7 @@ const DashboardComp = React.memo(
                   }}
                   tplConfig={tplConfig}
                   onUpdateTplConfig={handleUpdateTplConfig}
+                  onInitiateDashboardAction={handleInitiateDashboardAction}
                 />
               </div>
 
@@ -173,7 +200,7 @@ const DashboardComp = React.memo(
                 >
                   <Button
                     type="primary"
-                    onClick={debouncedCreateCanvas}
+                    onClick={() => debouncedCreateCanvas('')}
                     loading={isCreating}
                     icon={<IconPlus />}
                   >

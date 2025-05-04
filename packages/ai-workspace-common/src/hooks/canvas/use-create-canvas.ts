@@ -10,7 +10,12 @@ import { DATA_NUM } from '@refly-packages/ai-workspace-common/hooks/use-handle-s
 export const useCreateCanvas = ({
   projectId,
   afterCreateSuccess,
-}: { projectId?: string; afterCreateSuccess?: () => void } = {}) => {
+  onCreateCanvasId,
+}: {
+  projectId?: string;
+  afterCreateSuccess?: () => void;
+  onCreateCanvasId?: (canvasId: string) => void;
+} = {}) => {
   const [isCreating, setIsCreating] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -32,12 +37,16 @@ export const useCreateCanvas = ({
   };
 
   const debouncedCreateCanvas = useDebouncedCallback(
-    async () => {
+    async (title = '') => {
       const { canvasList, setCanvasList } = useSiderStore.getState();
-      const canvasTitle = '';
+      const canvasTitle = title;
       const canvasId = await createCanvas(canvasTitle);
       if (!canvasId) {
         return;
+      }
+
+      if (onCreateCanvasId) {
+        onCreateCanvasId(canvasId);
       }
 
       setCanvasList(

@@ -13,6 +13,7 @@ import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/st
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { RecommendQuestionsPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/recommend-questions-panel';
 import { SkillTemplateConfig } from '@refly/openapi-schema';
+import { PendingActionParams } from '@refly-packages/ai-workspace-common/stores/pending-action';
 
 interface LaunchPadProps {
   visible?: boolean;
@@ -26,6 +27,7 @@ interface LaunchPadProps {
   onGenerateMessageIds?: () => { resultId: string; nodeId: string };
   tplConfig?: SkillTemplateConfig | null;
   onUpdateTplConfig?: (config: SkillTemplateConfig | null) => void;
+  onInitiateDashboardAction?: (params: PendingActionParams) => void;
 }
 
 export const LaunchPad = memo(
@@ -37,6 +39,7 @@ export const LaunchPad = memo(
     onGenerateMessageIds,
     tplConfig,
     onUpdateTplConfig,
+    onInitiateDashboardAction,
   }: LaunchPadProps) => {
     // stores
     const contextPanelStore = useContextPanelStoreShallow((state) => ({
@@ -79,9 +82,17 @@ export const LaunchPad = memo(
           onGenerateMessageIds={onGenerateMessageIds}
           tplConfig={tplConfig}
           onUpdateTplConfig={onUpdateTplConfig}
+          onInitiateDashboardAction={onInitiateDashboardAction}
         />
       );
-    }, [inReflyPilot, onAddMessage, onGenerateMessageIds, tplConfig, onUpdateTplConfig]);
+    }, [
+      inReflyPilot,
+      onAddMessage,
+      onGenerateMessageIds,
+      tplConfig,
+      onUpdateTplConfig,
+      onInitiateDashboardAction,
+    ]);
 
     if (!visible) {
       return null;
@@ -115,5 +126,6 @@ export const LaunchPad = memo(
     prevProps.onAddMessage === nextProps.onAddMessage &&
     prevProps.onGenerateMessageIds === nextProps.onGenerateMessageIds &&
     prevProps.tplConfig === nextProps.tplConfig &&
-    prevProps.onUpdateTplConfig === nextProps.onUpdateTplConfig,
+    prevProps.onUpdateTplConfig === nextProps.onUpdateTplConfig &&
+    prevProps.onInitiateDashboardAction === nextProps.onInitiateDashboardAction,
 );

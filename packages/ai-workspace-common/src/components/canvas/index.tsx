@@ -64,6 +64,11 @@ import { useListenNodeOperationEvents } from '@refly-packages/ai-workspace-commo
 import { runtime } from '@refly-packages/ai-workspace-common/utils/env';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { usePendingActionStore } from '@refly-packages/ai-workspace-common/stores/pending-action';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
+import { genActionResultID, genUniqueId } from '@refly/utils/id';
+import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { omit } from '@refly/utils/index';
 
 const GRID_SIZE = 10;
 
@@ -154,6 +159,8 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const { addNode } = useAddNode();
+  const { invokeAction } = useInvokeAction();
+  const { consumePendingAction } = usePendingActionStore();
   const { nodes, edges } = useStore(
     useShallow((state) => ({
       nodes: state.nodes,
@@ -863,6 +870,83 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       nodeOperationsEmitter.off('openNodeContextMenu', handleOpenContextMenu);
     };
   }, [onNodeContextMenu]);
+
+  // Use effect to check for and execute pending actions
+  useEffect(() => {
+    const checkPendingAction = async () => {
+      // Get the pending action for this canvas
+      const pendingActionParams = consumePendingAction(canvasId);
+
+      if (pendingActionParams) {
+        // Generate unique IDs for the new message
+        const newResultId = genActionResultID();
+        const nodeId = genUniqueId();
+
+        const {
+          query,
+          selectedSkill,
+          selectedModel,
+          contextItems,
+          tplConfig,
+          runtimeConfig,
+          projectId,
+        } = pendingActionParams;
+
+        // Invoke the action with the API
+        invokeAction(
+          {
+            query,
+            resultId: newResultId,
+            selectedSkill,
+            modelInfo: selectedModel,
+            contextItems,
+            tplConfig,
+            runtimeConfig,
+            projectId,
+          },
+          {
+            entityType: 'canvas',
+            entityId: canvasId,
+          },
+        );
+
+        // Create node in the canvas
+        const nodeFilters = convertContextItemsToNodeFilters
+          ? [...convertContextItemsToNodeFilters(contextItems)]
+          : [];
+
+        // Add node to canvas
+        addNode(
+          {
+            type: 'skillResponse',
+            data: {
+              title: query,
+              entityId: newResultId,
+              metadata: {
+                status: 'executing',
+                contextItems: contextItems.map((item) => (omit ? omit(item, ['isPreview']) : item)),
+                selectedSkill,
+                modelInfo: selectedModel,
+                runtimeConfig,
+                tplConfig,
+                structuredData: {
+                  query,
+                },
+              },
+            },
+            id: nodeId,
+          },
+          nodeFilters,
+          false,
+          true,
+        );
+      }
+    };
+
+    if (canvasId) {
+      checkPendingAction();
+    }
+  }, [canvasId, consumePendingAction, addNode, invokeAction]);
 
   return (
     <Spin

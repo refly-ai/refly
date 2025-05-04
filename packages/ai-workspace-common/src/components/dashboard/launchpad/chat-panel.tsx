@@ -38,6 +38,7 @@ import { ActionStatus, SkillTemplateConfig } from '@refly/openapi-schema';
 import { ContextTarget } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { ProjectKnowledgeToggle } from '@refly-packages/ai-workspace-common/components/project/project-knowledge-toggle';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import { PendingActionParams } from '@refly-packages/ai-workspace-common/stores/pending-action';
 
 const PremiumBanner = () => {
   const { t } = useTranslation();
@@ -94,6 +95,7 @@ interface ChatPanelProps {
   tplConfig?: SkillTemplateConfig | null;
   onUpdateTplConfig?: (config: SkillTemplateConfig | null) => void;
   resultId?: string;
+  onInitiateDashboardAction?: (params: PendingActionParams) => void;
 }
 
 export const ChatPanel = ({
@@ -103,6 +105,7 @@ export const ChatPanel = ({
   tplConfig: initialTplConfig,
   onUpdateTplConfig,
   resultId = ContextTarget.Global,
+  onInitiateDashboardAction,
 }: ChatPanelProps) => {
   const { t } = useTranslation();
   const { formErrors, setFormErrors } = useContextPanelStore((state) => ({
@@ -219,6 +222,23 @@ export const ChatPanel = ({
 
     const { contextItems, runtimeConfig } = useContextPanelStore.getState();
     const finalProjectId = getFinalProjectId();
+
+    // If onInitiateDashboardAction is provided, use that instead of directly invoking the action
+    if (onInitiateDashboardAction) {
+      const actionParams: PendingActionParams = {
+        query,
+        selectedSkill,
+        selectedModel,
+        contextItems,
+        tplConfig,
+        runtimeConfig,
+        projectId: finalProjectId,
+      };
+
+      onInitiateDashboardAction(actionParams);
+      chatStore.setNewQAText('');
+      return;
+    }
 
     // Generate new message IDs using the provided function
     const { resultId: newResultId, nodeId } = onGenerateMessageIds?.() ?? {
