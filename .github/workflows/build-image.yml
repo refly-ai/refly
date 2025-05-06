@@ -60,4 +60,3 @@ jobs:
           push: true
           tags: |
             reflyai/refly-${{ matrix.app }}:${{ github.sha }}
-            reflyai/refly-${{ matrix.app }}:nightly
