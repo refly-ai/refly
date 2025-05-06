@@ -1,5 +1,4 @@
 import { Button, Modal, Divider, Input, Form } from 'antd';
-import { Link } from '@refly-packages/ai-workspace-common/utils/router';
 import { useState, useCallback, useMemo } from 'react';
 import React from 'react';
 
@@ -142,10 +141,11 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
       footer={null}
       width={410}
       onCancel={() => authStore.setLoginModalOpen(false)}
+      closable={false}
     >
       <div className="relative flex h-full w-full flex-col items-center justify-center">
         <div className="flex flex-row items-center">
-          <img src={Logo} alt="Refly" style={{ width: 24, height: 24 }} />
+          <img src={Logo} alt="AI Canvas" style={{ width: 24, height: 24 }} />
           <span
             style={{
               fontSize: 20,
@@ -318,31 +318,6 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
             </div>
           </>
         )}
-
-        <div className="mt-3 text-center text-xs text-gray-500">
-          {t('landingPage.loginModal.utilText')}
-          <Link
-            to="https://docs.refly.ai/about/terms-of-service"
-            target="_blank"
-            className="mx-1 text-xs text-green-600 underline"
-            onClick={() => {
-              authStore.setLoginModalOpen(false);
-            }}
-          >
-            {t('landingPage.loginModal.terms')}
-          </Link>
-          {t('landingPage.loginModal.and')}
-          <Link
-            to="https://docs.refly.ai/about/privacy-policy"
-            target="_blank"
-            className="mx-1 text-xs text-green-600 underline"
-            onClick={() => {
-              authStore.setLoginModalOpen(false);
-            }}
-          >
-            {t('landingPage.loginModal.privacyPolicy')}
-          </Link>
-        </div>
       </div>
     </Modal>
   );

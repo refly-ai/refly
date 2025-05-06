@@ -13,7 +13,6 @@ import {
   IconExpand,
   IconShrink,
   IconAskAIInput,
-  IconGuideLine,
   IconAskAI,
   IconCodeArtifact,
   IconCreateDocument,
@@ -292,17 +291,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
           : t('canvas.contextMenu.compactMode'),
       description: t('canvas.contextMenu.toggleNodeSizeModeDescription'),
       videoUrl: 'https://static.refly.ai/onboarding/contextMenu/contextMenu-toggleAdaptive.webm',
-    },
-    {
-      key: 'toggleHoverCard',
-      icon: IconGuideLine,
-      type: 'button',
-      active: hoverCardEnabled,
-      title: hoverCardEnabled
-        ? t('canvas.contextMenu.disableHoverCard')
-        : t('canvas.contextMenu.enableHoverCard'),
-      description: t('canvas.contextMenu.toggleHoverCardDescription'),
-      videoUrl: 'https://static.refly.ai/onboarding/contextMenu/contextMenu-toggleHoverCard.webm',
     },
   ];
 

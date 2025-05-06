@@ -1,5 +1,4 @@
 import { Layout, Button, Divider } from 'antd';
-import { Link } from 'react-router-dom';
 import cn from 'classnames';
 import { SiderLogo } from './layout';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
@@ -9,13 +8,7 @@ import { LuCheck } from 'react-icons/lu';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  IconX,
-  IconGithub,
-  IconDiscord,
-  IconEmail,
-  IconLanguage,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconLanguage } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
 import { IconDown } from '@arco-design/web-react/icon';
 
@@ -72,7 +65,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
         </div>
         <Divider className="my-2" />
         {/* Language Selector */}
-        <div className="h-10 px-3 flex cursor-pointer items-center text-gray-600 hover:text-[#00968f]">
+        <div className="h-10 px-3 mb-2 flex cursor-pointer items-center text-gray-600 hover:text-[#00968f]">
           <UILocaleList className="w-full">
             <Button
               type="text"
@@ -84,42 +77,6 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
               <IconDown className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
             </Button>
           </UILocaleList>
-        </div>
-
-        {/* Social Media Links */}
-        <div className="h-10 flex px-3 items-center justify-between">
-          <Link
-            to="https://twitter.com/reflyai"
-            target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
-            aria-label="Twitter"
-          >
-            <IconX className="flex items-center text-base" />
-          </Link>
-          <Link
-            to="https://github.com/refly-ai"
-            target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
-            aria-label="GitHub"
-          >
-            <IconGithub className="flex items-center text-base" />
-          </Link>
-          <Link
-            to="https://discord.gg/bWjffrb89h"
-            target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
-            aria-label="Discord"
-          >
-            <IconDiscord className="flex items-center text-base" />
-          </Link>
-          <Link
-            to="mailto:support@refly.ai"
-            target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
-            aria-label="Discord"
-          >
-            <IconEmail className="flex items-center text-base" />
-          </Link>
         </div>
       </div>
     </Layout.Sider>

@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import { Button, Dropdown, Space, Divider, Tooltip } from 'antd';
 import { UndoManager } from 'yjs';
-import { LuCompass, LuLayoutDashboard, LuLightbulb, LuShipWheel } from 'react-icons/lu';
+import { LuLayoutDashboard } from 'react-icons/lu';
 import { RiFullscreenFill } from 'react-icons/ri';
-import { FiHelpCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { LuUndo, LuRedo, LuZoomIn, LuZoomOut } from 'react-icons/lu';
 import {
-  IconDocumentation,
   IconDown,
   IconMouse,
   IconTouchpad,
@@ -15,14 +13,12 @@ import {
 import { useReactFlow, useOnViewportChange } from '@xyflow/react';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { TFunction } from 'i18next';
-import { HelpModal } from './help-modal';
 
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { IconExpand, IconShrink } from '@refly-packages/ai-workspace-common/components/common/icon';
 
 import './index.scss';
-import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 
 interface LayoutControlProps {
@@ -218,13 +214,6 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(
     const [currentZoom, setCurrentZoom] = useState(reactFlowInstance?.getZoom() ?? 1);
     const minZoom = 0.1;
     const maxZoom = 2;
-    const { helpModalVisible, setShowTourModal, setShowSettingsGuideModal, setHelpModalVisible } =
-      useUserStoreShallow((state) => ({
-        helpModalVisible: state.helpModalVisible,
-        setShowTourModal: state.setShowTourModal,
-        setShowSettingsGuideModal: state.setShowSettingsGuideModal,
-        setHelpModalVisible: state.setHelpModalVisible,
-      }));
 
     // Use ref to avoid recreating the timeout on each render
     const timeoutRef = useRef<NodeJS.Timeout>();
@@ -319,36 +308,6 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(
       updateAllNodesSizeMode(newMode);
     }, [nodeSizeMode, setNodeSizeMode, updateAllNodesSizeMode]);
 
-    const helpMenuItems = useMemo(
-      () => [
-        {
-          key: 'settings',
-          icon: <LuShipWheel className={iconClass} size={14} />,
-          label: <Space>{t('canvas.toolbar.openSettings')}</Space>,
-          onClick: () => setShowSettingsGuideModal(true),
-        },
-        {
-          key: 'tour',
-          icon: <LuLightbulb className={iconClass} size={14} />,
-          label: <Space>{t('canvas.toolbar.openTour')}</Space>,
-          onClick: () => setShowTourModal(true),
-        },
-        {
-          key: 'guide',
-          icon: <LuCompass className={iconClass} size={14} />,
-          label: <Space>{t('canvas.toolbar.openGuide')}</Space>,
-          onClick: () => setHelpModalVisible(true),
-        },
-        {
-          key: 'docs',
-          icon: <IconDocumentation className={iconClass} size={14} />,
-          label: <Space>{t('canvas.toolbar.openDocs')}</Space>,
-          onClick: () => window.open('https://docs.refly.ai', '_blank'),
-        },
-      ],
-      [t, setShowSettingsGuideModal, setShowTourModal, setHelpModalVisible],
-    );
-
     return (
       <>
         <div className="absolute bottom-2 left-2.5 px-1 h-[32px] border-box flex items-center justify-center bg-white rounded-md shadow-md">
@@ -383,20 +342,7 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(
             onModeChange={changeMode}
             t={t}
           />
-
-          <Divider type="vertical" className="h-full mx-0.5" />
-
-          <Dropdown menu={{ items: helpMenuItems }} trigger={['click']}>
-            <Tooltip title={t('canvas.toolbar.tooltip.help')} arrow={false}>
-              <Button type="text" className={buttonClass}>
-                <FiHelpCircle className={iconClass} size={16} />
-              </Button>
-            </Tooltip>
-          </Dropdown>
         </div>
-        {helpModalVisible ? (
-          <HelpModal visible={helpModalVisible} onClose={() => setHelpModalVisible(false)} />
-        ) : null}
       </>
     );
   },

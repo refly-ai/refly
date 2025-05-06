@@ -2,7 +2,7 @@ import { useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
 import { useUserStore, useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 
 export const useHoverCard = () => {
-  const { localSettings, setLocalSettings } = useUserStoreShallow((state) => ({
+  const { setLocalSettings } = useUserStoreShallow((state) => ({
     localSettings: state.localSettings,
     setLocalSettings: state.setLocalSettings,
   }));
@@ -24,7 +24,7 @@ export const useHoverCard = () => {
   };
 
   return {
-    hoverCardEnabled: !localSettings.disableHoverCard,
+    hoverCardEnabled: false,
     toggleHoverCard,
   };
 };

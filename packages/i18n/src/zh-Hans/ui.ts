@@ -441,7 +441,7 @@ const translations = {
       continue: '继续',
       signin: '登录',
       signup: '注册',
-      signinTitle: '登录 Refly',
+      signinTitle: '登录 AI Canvas',
       signinSubtitle: '欢迎回来！请登录以继续使用',
       signupTitle: '创建您的账户',
       signupSubtitle: '欢迎！请填写详细信息以开始使用',

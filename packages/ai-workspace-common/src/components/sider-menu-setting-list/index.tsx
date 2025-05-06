@@ -4,7 +4,6 @@ import { LuSettings, LuLogOut } from 'react-icons/lu';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { useLogout } from '@refly-packages/ai-workspace-common/hooks/use-logout';
-import { GrGroup } from 'react-icons/gr';
 import { MemoizedIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { IconChrome } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { EXTENSION_DOWNLOAD_LINK } from '@refly/utils/url';
@@ -36,11 +35,6 @@ export const SiderMenuSettingList = (props: { children: React.ReactNode }) => {
       key: 'settings',
       icon: <LuSettings size={14} />,
       label: t('loggedHomePage.siderMenu.settings'),
-    },
-    {
-      key: 'contactUs',
-      icon: <GrGroup size={14} />,
-      label: t('loggedHomePage.siderMenu.contactUs'),
     },
     {
       key: 'addToChrome',

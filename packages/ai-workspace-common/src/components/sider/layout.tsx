@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Avatar, Button, Layout, Skeleton, Divider, Tag, Menu } from 'antd';
+import { Avatar, Button, Layout, Skeleton, Divider, Menu } from 'antd';
 import {
   useLocation,
   useMatch,
@@ -41,7 +41,6 @@ import {
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { AiOutlineMenuFold, AiOutlineUser } from 'react-icons/ai';
 import { SubscriptionHint } from '@refly-packages/ai-workspace-common/components/subscription/hint';
-import { FaGithub } from 'react-icons/fa6';
 import { useKnowledgeBaseStoreShallow } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
 import { useCanvasTemplateModalShallow } from '@refly-packages/ai-workspace-common/stores/canvas-template-modal';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
@@ -62,44 +61,19 @@ export const SiderLogo = (props: {
   setCollapse: (collapse: boolean) => void;
 }) => {
   const { navigate, setCollapse, source } = props;
-  const [starCount, setStarCount] = useState('');
-
-  useEffect(() => {
-    // Fetch GitHub star count
-    fetch('https://api.github.com/repos/refly-ai/refly')
-      .then((res) => res.json())
-      .then((data) => {
-        const stars = data.stargazers_count;
-        setStarCount(stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : stars.toString());
-      })
-      .catch(() => {
-        // Keep default value if fetch fails
-      });
-  }, []);
 
   return (
     <div className="flex items-center justify-between p-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ">
         <div
           className="flex cursor-pointer flex-row items-center gap-1.5"
           onClick={() => navigate('/')}
         >
           <img src={Logo} alt="Refly" className="h-8 w-8" />
           <span className="text-xl font-bold text-black" translate="no">
-            Refly
+            AI Canvas
           </span>
         </div>
-
-        {starCount && (
-          <Button
-            type="default"
-            icon={<FaGithub className="h-3.5 w-3.5" />}
-            onClick={() => window.open('https://github.com/refly-ai/refly', '_blank')}
-            className="flex h-6 items-center gap-0.5 bg-white px-1.5 text-xs font-bold"
-          >
-            {starCount}
-          </Button>
-        )}
       </div>
       {source === 'sider' && (
         <div>
@@ -562,22 +536,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
               <SubscriptionHint />
             </div>
           )}
-
-          <div
-            onClick={() =>
-              window.open('https://github.com/refly-ai/refly/releases/tag/v0.5.0', '_blank')
-            }
-            className="mb-2 flex items-start text-[#00968F] hover:bg-gray-50 whitespace-normal h-auto cursor-pointer"
-          >
-            <span className="flex items-start gap-2 leading-6 w-full ">
-              <Tag
-                color="green"
-                className="w-full whitespace-normal !h-auto !py-1 !mr-0 text-center"
-              >
-                {t('landingPage.simpleMessageText')}
-              </Tag>
-            </span>
-          </div>
 
           {!!userProfile?.uid && (
             <div

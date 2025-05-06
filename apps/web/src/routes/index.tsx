@@ -19,15 +19,12 @@ import { isDesktop } from '@refly-packages/ai-workspace-common/utils/env';
 // Lazy load components
 const Home = lazy(() => import('@/pages/home'));
 const Canvas = lazy(() => import('@/pages/canvas'));
-const Pricing = lazy(() => import('@/pages/pricing'));
 const ShareCanvasPage = lazy(() => import('@/pages/share'));
 const ShareCodePage = lazy(() => import('@/pages/code-share'));
 const SharePagePage = lazy(() => import('@/pages/page-share'));
 const TemplatePreviewPage = lazy(() => import('@/pages/template-preview'));
 const SkillResponseSharePage = lazy(() => import('@/pages/skill-response-share'));
 const DocumentSharePage = lazy(() => import('@/pages/document-share'));
-const ArtifactGalleryPage = lazy(() => import('@/pages/artifact-gallery'));
-const UseCasesGalleryPage = lazy(() => import('@/pages/use-cases-gallery'));
 const ProjectPage = lazy(() => import('@/pages/project'));
 
 const prefetchRoutes = () => {
@@ -95,14 +92,11 @@ export const AppRouter = (props: { layout?: any }) => {
       <Layout>
         <Routes>
           <Route path="/" element={<HomeRedirect defaultNode={<Home />} />} />
-          <Route path="/pricing" element={<Pricing />} />
           <Route path="/share/canvas/:canvasId" element={<ShareCanvasPage />} />
           <Route path="/share/code/:shareId" element={<ShareCodePage />} />
           <Route path="/share/answer/:shareId" element={<SkillResponseSharePage />} />
           <Route path="/share/doc/:shareId" element={<DocumentSharePage />} />
           <Route path="/share/pages/:shareId" element={<SharePagePage />} />
-          <Route path="/artifact-gallery" element={<ArtifactGalleryPage />} />
-          <Route path="/use-cases-gallery" element={<UseCasesGalleryPage />} />
           <Route path="/preview/canvas/:shareId" element={<TemplatePreviewPage />} />
           <Route
             path="/canvas/:canvasId"

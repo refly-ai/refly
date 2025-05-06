@@ -219,7 +219,7 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
               textShadow: '0 1px 1px rgba(255, 255, 255, 0.5)',
             }}
           >
-            Refly
+            AI Canvas
           </span>
         </div>
       </div>
