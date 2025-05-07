@@ -36,8 +36,13 @@ jobs:
       - name: Check with Biome
         run: pnpm check
 
-      - name: Build
-        run: pnpm build
+      - name: Build with SWC
+        run: |
+          # 安装 SWC
+          npm install -D @swc/cli @swc/core
+          
+          # 使用 SWC 构建，同时保留 tsc 类型检查
+          npm run build:swc && npm run type-check
         env:
           NODE_OPTIONS: '--max_old_space_size=8192'
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
