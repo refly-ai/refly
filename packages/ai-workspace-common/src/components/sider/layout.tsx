@@ -21,7 +21,6 @@ import { SearchQuickOpenBtn } from '@refly-packages/ai-workspace-common/componen
 import { useTranslation } from 'react-i18next';
 import { SiderMenuSettingList } from '@refly-packages/ai-workspace-common/components/sider-menu-setting-list';
 import { SettingModal } from '@refly-packages/ai-workspace-common/components/settings';
-import { TourModal } from '@refly-packages/ai-workspace-common/components/tour-modal';
 import { SettingsGuideModal } from '@refly-packages/ai-workspace-common/components/settings-guide';
 import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
 // hooks
@@ -564,7 +563,6 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
   return (
     <>
       <SettingsGuideModal />
-      <TourModal />
       <StorageExceededModal />
       <CanvasTemplateModal />
 

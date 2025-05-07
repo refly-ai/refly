@@ -1,6 +1,6 @@
 const translations = {
   language: 'English',
-  productName: 'Refly',
+  productName: 'Canvas AI',
   welcomeMessage: 'What Can I Help You Write?',
   privacyPage: {
     title: 'Privacy Policy',
@@ -367,7 +367,7 @@ const translations = {
     landingPage: {
       title: 'The AI Native Creation Engine',
       description:
-        'Refly is a free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.',
+        'Canvas AI is a free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.',
     },
     threadLibrary: {
       title: 'Threads',
@@ -382,19 +382,19 @@ const translations = {
   landingPage: {
     title: 'The AI Native Creation Engine',
     subTitle:
-      'Powered by multi-threaded dialogue, knowledge integration, context memory, and intelligent search, Refly is the best way to transform ideas into quality content.',
+      'Powered by multi-threaded dialogue, knowledge integration, context memory, and intelligent search, Canvas AI is the best way to transform ideas into quality content.',
     getStarted: 'Get Started',
     login: 'Login',
     simplySlogan: 'Creation Engine',
     slogan: 'The AI Native Creation Engine',
     description:
-      'Refly is the best way to transform ideas into quality content through multi-threaded dialogue, knowledge integration, context memory, and intelligent search.',
+      'Canvas AI is the best way to transform ideas into quality content through multi-threaded dialogue, knowledge integration, context memory, and intelligent search.',
     anotherDescription:
       'A free-form canvas creation platform powered by multi-threaded dialogue, artifacts, knowledge integration, context memory, and intelligent search, easily transforms ideas into quality content.',
     simplyDescription: {
       first:
         'Powered by multi-threaded dialogue, artifacts, knowledge integration, context memory, and intelligent search, ',
-      second: 'Refly is the best way to transform ideas into quality content.',
+      second: 'Canvas AI is the best way to transform ideas into quality content.',
     },
     messageText: 'v0.5.0 Released: Project, Linear conversation and more 🚀',
     simpleMessageText: 'v0.5.0: Ask Project 🚀',
@@ -410,7 +410,7 @@ const translations = {
     dashboard: 'Dashboard',
     workflow: {
       tag: 'Workflow',
-      title: "An Overview of Refly's",
+      title: "An Overview of Canvas AI's",
       workflowOne: {
         tag: 'Planning',
         title:
@@ -464,7 +464,7 @@ const translations = {
     },
     features: {
       tag: 'Core Features',
-      title: "Refly's",
+      title: "Canvas AI's",
       fileFormats: {
         pdf: {
           name: 'document.pdf',
@@ -606,7 +606,7 @@ const translations = {
     },
     pricing: {
       title: 'Plans and Pricing',
-      subtitle: 'Embark on your AI content creation journey with Refly',
+      subtitle: 'Embark on your AI content creation journey with Canvas AI',
       description:
         'Sign up and enjoy a unlimited trial with 30 standard model calls per day. No credit card required.',
       limitedOffer:
@@ -619,8 +619,8 @@ const translations = {
         contactUs: 'Contact us',
       },
       description:
-        'Refly is a free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.',
-      right: 'Refly.ai. All rights reserved.',
+        'Canvas AI is a free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.',
+      right: 'Canvas AI.ai. All rights reserved.',
       product: {
         title: 'Products',
         list: [
@@ -663,7 +663,7 @@ const translations = {
       continue: 'Continue',
       signin: 'Sign in',
       signup: 'Sign up',
-      signinTitle: 'Sign in to Refly',
+      signinTitle: 'Sign in to Canvas AI',
       signinSubtitle: 'Welcome back! Sign in to continue.',
       signupTitle: 'Create your account',
       signupSubtitle: 'Welcome! Please fill in the details to get started.',
@@ -709,23 +709,24 @@ const translations = {
     },
     faq: {
       title: 'Frequently Asked Questions',
-      Q1: 'Can Refly be used for free?',
-      A1: 'As an open-source project, for individual users, you can self-deploy the community version to use all our  features. To enable more users to quickly start and experience Refly, we provide all registered users with knowledge base quota of 10 files and daily access to 3 pro model requests and 30 standard model requests. If you wish to experience advanced models or increase the usage amount, you can upgrade to a paid subscription plan.',
+      Q1: 'Can Canvas AI be used for free?',
+      A1: 'As an open-source project, for individual users, you can self-deploy the community version to use all our  features. To enable more users to quickly start and experience Canvas AI, we provide all registered users with knowledge base quota of 10 files and daily access to 3 pro model requests and 30 standard model requests. If you wish to experience advanced models or increase the usage amount, you can upgrade to a paid subscription plan.',
       Q2: 'What payment methods do you support?',
       A2: 'We support bank cards, Alipay, Amazon Pay, and Cash App Pay. The supported payment methods may be subject to change at any time. Please refer to the payment methods displayed in the Stripe checkout page for the most accurate information.',
       Q3: 'How can I change or cancel my subscription plan?',
-      A3: `To upgrade or downgrade your subscription plan, please contact the Refly team for assistance. If you need to cancel your subscription, please click the 'Settings - Subscription - Manage Billing and Subscription' button and then proceed to the Stripe platform to manage your subscription. Once the cancellation is successful, your account will be automatically downgraded to the free version upon the expiration of the current plan.`,
+      A3: `To upgrade or downgrade your subscription plan, please contact the Canvas AI team for assistance. If you need to cancel your subscription, please click the 'Settings - Subscription - Manage Billing and Subscription' button and then proceed to the Stripe platform to manage your subscription. Once the cancellation is successful, your account will be automatically downgraded to the free version upon the expiration of the current plan.`,
       Q4: 'Is a refund available?',
-      A4: 'Currently, there is no refund option available. If you have a strong demand for a refund, please contact the Refly team, and we will assist you in resolving the issue.',
-      Q5: 'As a Refly user, where is my data stored?',
-      A5: 'If you are using the Refly Cloud service, your data is securely stored in the United States. If you choose to self-deploy, the data is stored on the machine where you deploy Refly. We do not collect any data from self-deployed Refly services.',
-      Q6: 'Can I deploy Refly privately within enterprises?',
-      A6: 'To deploy Refly privately within your enterprise, a commercial license is required. Please contact us at support@refly.ai for further discussion.',
+      A4: 'Currently, there is no refund option available. If you have a strong demand for a refund, please contact the Canvas AI team, and we will assist you in resolving the issue.',
+      Q5: 'As a Canvas AI user, where is my data stored?',
+      A5: 'If you are using the Canvas AI Cloud service, your data is securely stored in the United States. If you choose to self-deploy, the data is stored on the machine where you deploy Canvas AI. We do not collect any data from self-deployed Canvas AI services.',
+      Q6: 'Can I deploy Canvas AI privately within enterprises?',
+      A6: 'To deploy Canvas AI privately within your enterprise, a commercial license is required. Please contact us at support@canvasai.ai for further discussion.',
     },
     testimonials: {
       tag: 'User Testimonials',
-      title: 'Thousands love their creation with Refly',
-      description: 'Join 10000+ Reflyers to unleash inspiration and accelerate creation 👩‍🎨🧑‍🎨',
+      title: 'Thousands love their creation with Canvas AI',
+      description:
+        'Join 10000+ Canvas AI players to unleash inspiration and accelerate creation 👩‍🎨🧑‍🎨',
     },
   },
   priceContent: {
@@ -807,7 +808,7 @@ const translations = {
   },
   shareContent: {
     title: 'Share',
-    login: 'Start Writing with Refly',
+    login: 'Start Writing with Canvas AI',
     updateShare: 'Sync',
     updateShareTooltip: 'Sync shared content',
     updateShareSuccess: '​​Latest canvas content synced and shared successfully!',
@@ -1142,7 +1143,7 @@ const translations = {
       createCodeArtifactDescription: 'Create an empty code artifact to write your code',
       addDocument: 'Add Document',
       addDocumentDescription:
-        'User-created content in Refly, created through AI writing or manually creating a new document, which can be searched and answered through the AI knowledge base.',
+        'User-created content in Canvas AI, created through AI writing or manually creating a new document, which can be searched and answered through the AI knowledge base.',
       addHighlight: 'Add Highlight',
       hidePreview: 'Hide Node Preview',
       showPreview: 'Show Node Preview',
@@ -1183,7 +1184,7 @@ const translations = {
       openGuide: 'Interactive Guide',
       openSettings: 'Settings Wizard',
       interativeTutorialLoading: 'Interactive tutorial loading... Estimated 3~6 seconds',
-      interativeTutorial: 'Refly Product Interactive Guide',
+      interativeTutorial: 'Canvas AI Product Interactive Guide',
       videoLoading: 'Video loading...',
       enterFullscreen: 'Enter Fullscreen',
       exitFullscreen: 'Exit Fullscreen',
@@ -1203,7 +1204,8 @@ const translations = {
     },
     connectionTimeout: {
       title: 'Connection Timeout',
-      extra: 'We have some issues connecting to the Refly server, please refresh and try again.',
+      extra:
+        'We have some issues connecting to the Canvas AI server, please refresh and try again.',
     },
     action: {
       nodeAlreadyExists: 'The {{type}} with the same entity already exists',
@@ -1618,7 +1620,7 @@ const translations = {
     },
     homePage: {
       title: 'The AI Native Creation Engine',
-      searchPlaceholder: 'Search for Refly',
+      searchPlaceholder: 'Search for Canvas AI',
       selectedWeblink: {
         title: 'Ask a Question Based on the Selected Web Page:',
       },
@@ -1650,7 +1652,7 @@ const translations = {
       addToChrome: 'Add to Chrome',
       canvasTitle: 'Canvas',
       canvasDescription:
-        'Create, edit, and view canvas, unlike traditional Chatbot applications, Refly completes the entire process of dialogue thinking, content consumption, and creation through an infinite two-dimensional canvas.',
+        'Create, edit, and view canvas, unlike traditional Chatbot applications, Canvas AI completes the entire process of dialogue thinking, content consumption, and creation through an infinite two-dimensional canvas.',
       libraryTitle: 'Knowledge Base',
       libraryDescription:
         'Create, edit, and view knowledge base, including all imported resources and created documents, supporting AI semantic search and answering.',
@@ -1856,7 +1858,7 @@ const translations = {
     title: 'Settings',
     guide: {
       title: 'Settings Wizard',
-      description: "👋 Welcome to Refly! Let's proceed with some necessary configurations.",
+      description: "👋 Welcome to Canvas AI! Let's proceed with some necessary configurations.",
     },
     tabs: {
       account: 'Account',
@@ -1894,7 +1896,7 @@ const translations = {
       title: 'Language Settings',
       uiLocale: {
         title: 'Interface Language',
-        description: 'Set the language of all interactive content in the Refly product.',
+        description: 'Set the language of all interactive content in the Canvas AI product.',
       },
       outputLocale: {
         title: 'Output Language',
@@ -1998,7 +2000,7 @@ const translations = {
           },
         },
 
-        description: "Cancel anytime. Subscribing means you agree to Refly's",
+        description: "Cancel anytime. Subscribing means you agree to Canvas AI's",
         and: 'and',
         privacy: 'privacy',
         terms: 'terms',
@@ -2018,10 +2020,10 @@ const translations = {
       putErrorNotify: 'Failed to update user configuration. Please try again!',
       paySuccessNotify: 'Payment successful!',
       paySuccessDescription:
-        'Thank you for your support of Refly! We will continue to iterate and make the product better! If you have any questions, please contact support@refly.ai',
+        'Thank you for your support of Canvas AI! We will continue to iterate and make the product better! If you have any questions, please contact support@canvasai.ai',
       payCancelNotify: 'Payment canceled!',
       payCancelDescription:
-        'We were unable to successfully receive your payment. If you have any questions, please contact support@refly.ai',
+        'We were unable to successfully receive your payment. If you have any questions, please contact support@canvasai.ai',
     },
   },
   contentDetail: {
@@ -2297,10 +2299,11 @@ const translations = {
       more: 'More',
     },
     chatInput: {
-      placeholder: 'Let Refly write something for you, or search anything you are interested in...',
+      placeholder:
+        'Let Canvas AI write something for you, or search anything you are interested in...',
       editPlaceholder: 'Ask AI to edit...',
       defaultQuestion: '[Call Skill: {{name}}]',
-      chatWithReflyAssistant: 'Chat with Refly Assistant',
+      chatWithReflyAssistant: 'Chat with Canvas AI Assistant',
     },
     chatActions: {
       send: 'Send',
@@ -2338,7 +2341,7 @@ const translations = {
       disable: 'Disable',
     },
     tokenUsage: 'Input {{inputCount}}, Output {{outputCount}}',
-    reflyAssistant: 'Refly Knowledge Curator',
+    reflyAssistant: 'Canvas AI Knowledge Curator',
     message: {
       copy: 'Copy code',
       copySuccess: 'Copied to clipboard',
@@ -2489,7 +2492,7 @@ const translations = {
         4: 'Seamlessly integrate external resources into your knowledge ecosystem, creating a comprehensive and personalized information network from scratch.',
         5: 'Effortlessly select quotes from various sources - resources, documents, memos, or skill responses - enriching your context with relevant references.',
         6: 'Beyond powerful real-time Markdown editing, enjoy AI-assisted document refinement by selecting specific content for intelligent modifications and enhancements.',
-        7: 'Refly provides comprehensive help documentation to help you get started quickly. Click the "Help" button in the bottom left corner of the canvas to view more help documents.',
+        7: 'Canvas AI provides comprehensive help documentation to help you get started quickly. Click the "Help" button in the bottom left corner of the canvas to view more help documents.',
       },
     },
   },

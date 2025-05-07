@@ -1,6 +1,6 @@
 const translations = {
   language: '简体中文',
-  productName: 'Refly',
+  productName: 'Canvas',
   welcomeMessage: '今天准备写点什么?',
   subscription: {
     storageExceeded: {
@@ -211,7 +211,7 @@ const translations = {
     landingPage: {
       title: 'AI 原生创作引擎',
       description:
-        '快速总结与形成洞察、自动化归档以及智能语义搜索——Refly 能够为你打造第二大脑，拓展你的知识视野，并赋予你超乎寻常的能力。',
+        '快速总结与形成洞察、自动化归档以及智能语义搜索——Canvas AI 能够为你打造第二大脑，拓展你的知识视野，并赋予你超乎寻常的能力。',
     },
     digestTopics: {
       title: '所有主题',
@@ -236,7 +236,7 @@ const translations = {
       '基于自由画布的创作平台，通过多线程对话、代码组件、知识库整合、上下文记忆和智能搜索，轻松将想法转化为优质内容。',
     simplyDescription: {
       first: '由多线程对话、代码组件、知识库集成、上下文记忆和智能搜索驱动，',
-      second: 'Refly 是将创意转化为优质内容的最佳方式。',
+      second: 'Canvas AI 是将创意转化为优质内容的最佳方式。',
     },
     messageText: 'v0.5.0 发布：知识库、线性会话和更多 🚀',
     simpleMessageText: 'v0.5.0: 知识库 🚀',
@@ -252,7 +252,7 @@ const translations = {
     dashboard: '主页',
     features: {
       tag: '核心功能',
-      title: 'Refly 的主要功能',
+      title: 'Canvas AI 的主要功能',
       fileFormats: {
         pdf: {
           name: 'document.pdf',
@@ -404,8 +404,8 @@ const translations = {
         contactUs: '联系我们',
       },
       description:
-        '快速总结与形成洞察、自动化归档以及智能语义搜索——Refly 能够为你打造第二大脑，拓展你的知识视野，并赋予你超乎寻常的能力。',
-      right: 'Refly.ai 版权所有。',
+        '快速总结与形成洞察、自动化归档以及智能语义搜索——Canvas AI 能够为你打造第二大脑，拓展你的知识视野，并赋予你超乎寻常的能力。',
+      right: 'Canvas AI.ai 版权所有。',
       product: {
         title: '产品',
         list: ['自由画布', '多线程会话', '知识库集成', '上下文记忆', '智能检索', 'AI 文档'],
@@ -487,27 +487,27 @@ const translations = {
     },
     faq: {
       title: '常见问题',
-      Q1: 'Refly 可以免费使用吗？',
-      A1: 'Refly 作为开源项目，对于个人用户，您可以通过自行部署社区版使用其所有功能。为了更多用户快速上手体验 Refly，我们为所有注册用户提供 10 个知识库文件存储额度，以及每天3次高级模型调用和30次基础模型调用。如果您需要体验进阶模型或扩大用量，可升级付费订阅套餐。',
+      Q1: 'Canvas AI 可以免费使用吗？',
+      A1: 'Canvas AI 作为开源项目，对于个人用户，您可以通过自行部署社区版使用其所有功能。为了更多用户快速上手体验 Canvas AI，我们为所有注册用户提供 10 个知识库文件存储额度，以及每天3次高级模型调用和30次基础模型调用。如果您需要体验进阶模型或扩大用量，可升级付费订阅套餐。',
       Q2: '你们支持哪些付款方式？',
       A2: '我们支持银行卡、支付宝、Amazon Pay 和 Cash App Pay。支持的付款方式可能随时有变，请以 Stripe 收银台显示的付款方式为准。',
       Q3: '如何更改或取消订阅方案？',
-      A3: '如需升级或降级订阅方案，请联系 Refly 团队为您处理。如果需要取消订阅方案，请点击「设置-订阅-管理账单及订阅」按钮后前往 Stripe 管理订阅计划。取消订阅成功后，在当前方案到期时将自动降级为免费版。',
+      A3: '如需升级或降级订阅方案，请联系 Canvas AI 团队为您处理。如果需要取消订阅方案，请点击「设置-订阅-管理账单及订阅」按钮后前往 Stripe 管理订阅计划。取消订阅成功后，在当前方案到期时将自动降级为免费版。',
       Q4: '是否支持退款？',
-      A4: '目前暂不开放退款入口，如果您有强烈的退款需求，请联系 Refly 团队为您解决。',
-      Q5: '作为 Refly 的用户，我的数据存储在哪里？',
-      A5: '如果您使用的是 Refly Cloud 服务，数据均安全存储在美国。如果您选择自行部署，则数据存储于您部署 Refly 的机器。我们不会收集任何自行部署 Refly 服务的数据。',
-      Q6: '我能否在企业内部私有化部署 Refly？',
-      A6: '在企业内部私有化部署 Refly 需要购买商业许可证，请电函 support@refly.ai 联系我们进行沟通。',
+      A4: '目前暂不开放退款入口，如果您有强烈的退款需求，请联系 Canvas AI 团队为您解决。',
+      Q5: '作为 Canvas AI 的用户，我的数据存储在哪里？',
+      A5: '如果您使用的是 Canvas AI Cloud 服务，数据均安全存储在美国。如果您选择自行部署，则数据存储于您部署 Canvas AI 的机器。我们不会收集任何自行部署 Canvas AI 服务的数据。',
+      Q6: '我能否在企业内部私有化部署 Canvas AI？',
+      A6: '在企业内部私有化部署 Canvas AI 需要购买商业许可证，请电函 support@canvasai.ai 联系我们进行沟通。',
     },
     testimonials: {
       tag: '用户评价',
-      title: '数千名用户在 Refly 创作',
-      description: '加入 10000+ Reflyer，一起释放灵感，加速创作 👩‍🎨🧑‍🎨',
+      title: '数千名用户在 Canvas AI 创作',
+      description: '加入 10000+ Canvas AI players，一起释放灵感，加速创作 👩‍🎨🧑‍🎨',
     },
     workflow: {
       tag: '工作流',
-      title: 'Refly 的',
+      title: 'Canvas AI 的',
       workflowOne: {
         tag: '规划',
         title: '在自由画布中梳理思路，让专业创作从混沌到有序',
@@ -634,7 +634,7 @@ const translations = {
   },
   shareContent: {
     title: '分享',
-    login: '开始用 Refly 写作',
+    login: '开始用 Canvas AI 写作',
     updateShare: '同步',
     updateShareTooltip: '同步分享内容',
     updateShareSuccess: '最新画布内容已同步分享',
@@ -964,7 +964,7 @@ const translations = {
       createCodeArtifactDescription: '创建一个空白代码组件用于编写您的代码',
       addDocument: '添加文档',
       addDocumentDescription:
-        '用户在 Refly 中创建的内容，通过 AI 写作创建，或手动创建新文档，可以通过 AI 知识库搜索问答。',
+        '用户在 Canvas AI 中创建的内容，通过 AI 写作创建，或手动创建新文档，可以通过 AI 知识库搜索问答。',
       addHighlight: '添加 Highlight',
       hidePreview: '隐藏节点预览',
       showPreview: '显示节点预览',
@@ -1003,7 +1003,7 @@ const translations = {
       openGuide: '交互式指南',
       openSettings: '设置向导',
       interativeTutorialLoading: '交互式教程加载中... 预计 3~6 秒',
-      interativeTutorial: 'Refly 产品交互式教程',
+      interativeTutorial: 'Canvas AI 产品交互式教程',
       videoLoading: '视频加载中...',
       enterFullscreen: '进入全屏',
       exitFullscreen: '退出全屏',
@@ -1022,7 +1022,7 @@ const translations = {
     },
     connectionTimeout: {
       title: '连接超时',
-      extra: '似乎无法连接到 Refly 服务器，请刷新重试。',
+      extra: '似乎无法连接到 Canvas AI 服务器，请刷新重试。',
     },
     action: {
       nodeAlreadyExists: '该{{type}}已存在于当前画布中',
@@ -1463,7 +1463,7 @@ const translations = {
       addToChrome: '添加到 Chrome',
       canvasTitle: '画布',
       canvasDescription:
-        '创建、编辑和查看画布, 不同于传统的 Chatbot 应用，Refly 通过无限延伸的二维画布来完成对话思考、内容消费和创作的全流程。',
+        '创建、编辑和查看画布, 不同于传统的 Chatbot 应用，Canvas AI 通过无限延伸的二维画布来完成对话思考、内容消费和创作的全流程。',
       libraryTitle: '知识库',
       libraryDescription:
         '创建、编辑和查看知识库，包含所有导入的资源以及创建的文档，支持 AI 语义搜索和回答。',
@@ -1659,7 +1659,7 @@ const translations = {
     },
     guide: {
       title: '设置向导',
-      description: '👋 欢迎使用 Refly！让我们开始进行一些必要的设置。',
+      description: '👋 欢迎使用 Canvas AI！让我们开始进行一些必要的设置。',
     },
     account: {
       title: '我的账号',
@@ -1690,7 +1690,7 @@ const translations = {
       title: '语言设置',
       uiLocale: {
         title: '界面语言',
-        description: '设置 Refly 产品中所有交互内容的语言。',
+        description: '设置 Canvas AI 产品中所有交互内容的语言。',
       },
       outputLocale: {
         title: '对话语言',
@@ -1791,7 +1791,7 @@ const translations = {
             details: '专属微信/ Discord 群聊',
           },
         },
-        description: '可随时取消订阅。订阅即表示您同意Refly的',
+        description: '可随时取消订阅。订阅即表示您同意Canvas AI的',
         and: '和',
         privacy: '隐私',
         terms: '条款',
@@ -1809,9 +1809,9 @@ const translations = {
       putErrorNotify: '修改用户配置失败，请尝试重试！',
       paySuccessNotify: '支付成功！',
       paySuccessDescription:
-        '感谢您对 Refly 的大力支持，我们会持续迭代，让产品变得更好！如有任何问题，请联系 support@refly.ai',
+        '感谢您对 Canvas AI 的大力支持，我们会持续迭代，让产品变得更好！如有任何问题，请联系 support@canvasai.ai',
       payCancelNotify: '支付取消！',
-      payCancelDescription: '我们未能成功收到您的付款，如有任何问题，请联系 support@refly.ai',
+      payCancelDescription: '我们未能成功收到您的付款，如有任何问题，请联系 support@canvasai.ai',
     },
   },
   contentDetail: {
@@ -2134,7 +2134,7 @@ const translations = {
       more: '更多',
     },
     chatInput: {
-      placeholder: '让 Refly 帮你写点什么，或者搜索任何感兴趣的内容...',
+      placeholder: '让 Canvas AI 帮你写点什么，或者搜索任何感兴趣的内容...',
       defaultQuestion: '[调用技能: {{name}}]',
       editPlaceholder: '让 AI 帮你编辑...',
       chatWithReflyAssistant: '和「知识管家」聊聊',
@@ -2175,7 +2175,7 @@ const translations = {
       disable: '禁用',
     },
     tokenUsage: '输入 {{inputCount}}，输出 {{outputCount}}',
-    reflyAssistant: 'Refly 知识管家',
+    reflyAssistant: 'Canvas AI 知识管家',
     message: {
       copy: '复制',
       copySuccess: '复制成功',
@@ -2299,13 +2299,13 @@ const translations = {
         7: '帮助文档',
       },
       description: {
-        1: 'Refly 采用创新的多线程对话机制，让您能够自由切换多个独立对话主题，实现更流畅自然的思维发散与深入探讨，有效突破传统对话的局限性。',
+        1: 'Canvas AI 采用创新的多线程对话机制，让您能够自由切换多个独立对话主题，实现更流畅自然的思维发散与深入探讨，有效突破传统对话的局限性。',
         2: '借助 AI 模型驱动，输入问题后，可灵活选取画布中的任一节点作为上下文，生成新的节点内容。',
         3: '为每次对话提供精确的临时知识库支持，确保AI模型能准确理解和回应您的问题。您可以灵活选择画布中的任意节点或添加引用作为上下文。',
         4: '支持导入多样化的外部资源，根据需求智能整合到画布中，构建完整的知识体系，打造个性化的思维空间。',
         5: '支持从各类资源、文档、备忘录或技能输出中灵活选取内容，一键添加为上下文引用，提升对话的准确性和深度。',
         6: '除提供强大的Markdown实时编辑功能外，支持智能选中文档内容，根据您的需求进行AI辅助的精准修改和润色。',
-        7: 'Refly 提供丰富的帮助文档，帮助您快速上手 Refly, 点击画布左下角「帮助」按钮，查看更多帮助文档。',
+        7: 'Canvas AI 提供丰富的帮助文档，帮助您快速上手 Canvas AI, 点击画布左下角「帮助」按钮，查看更多帮助文档。',
       },
     },
   },

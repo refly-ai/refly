@@ -17,7 +17,7 @@ const PricingPage = () => {
       {!isLogin && (
         <>
           <Helmet>
-            <title>{t('landingPage.slogan')} · Refly</title>
+            <title>{t('landingPage.slogan')} · Canvas AI</title>
             <meta name="description" content={t('landingPage.description')} />
           </Helmet>
 

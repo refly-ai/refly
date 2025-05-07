@@ -20,11 +20,11 @@ const PoweredByRefly = memo(({ onClick, className = '' }: PoweredByReflyProps) =
       style={{ borderWidth: '0.5px' }}
       onClick={onClick}
     >
-      <img src={Logo} alt={t('productName')} className="h-6 w-6" />
+      <img src={Logo} alt="Canvas AI" className="h-6 w-6" />
       <div className="flex items-center gap-1">
         <span className="text-sm text-gray-500 dark:text-gray-400">{t('common.poweredBy')}</span>
         <span className="text-sm font-bold text-gray-800 dark:text-white" translate="no">
-          {t('productName')}
+          Canvas AI
         </span>
       </div>
     </div>

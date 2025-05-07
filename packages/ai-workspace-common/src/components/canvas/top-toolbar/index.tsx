@@ -80,7 +80,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
   return (
     <>
       <Helmet>
-        <title>{canvasTitle?.toString() || t('common.untitled')} · Refly</title>
+        <title>{canvasTitle?.toString() || t('common.untitled')} · Canvas AI</title>
         {shareData?.minimapUrl && <meta property="og:image" content={shareData.minimapUrl} />}
       </Helmet>
       <div

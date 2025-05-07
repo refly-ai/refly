@@ -3,8 +3,8 @@ import { BaseError } from './base';
 export class UnknownError extends BaseError {
   code = 'E0000';
   messageDict = {
-    en: 'An unknown error has occurred. The Refly team is working quickly to resolve it. Please try again later.',
-    'zh-CN': '出现未知错误，Refly 团队正在火速处理中，请稍后重试。',
+    en: 'An unknown error has occurred. Please try again later.',
+    'zh-CN': '出现未知错误，请稍后重试。',
   };
 }
 
@@ -27,16 +27,16 @@ export class PayloadTooLargeError extends BaseError {
 export class ConnectionError extends BaseError {
   code = 'E0001';
   messageDict = {
-    en: 'Cannot connect to the Refly server, please try again later.',
-    'zh-CN': '无法连接到 Refly 服务器，请稍后重试。',
+    en: 'Cannot connect to the server, please try again later.',
+    'zh-CN': '无法连接到服务器，请稍后重试。',
   };
 }
 
 export class ParamsError extends BaseError {
   code = 'E0003';
   messageDict = {
-    en: 'System parameter error. The Refly team is working quickly to address it. Please try again later.',
-    'zh-CN': '系统参数错误，Refly 团队正在火速处理中，请稍后重试。',
+    en: 'System parameter error. Please try again later.',
+    'zh-CN': '系统参数错误，请稍后重试。',
   };
 }
 
