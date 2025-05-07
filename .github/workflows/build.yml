@@ -39,10 +39,10 @@ jobs:
       - name: Build with SWC
         run: |
           # 安装 SWC
-          npm install -D @swc/cli @swc/core
+          pnpm add -D @swc/cli @swc/core --no-frozen-lockfile
           
           # 使用 SWC 构建，同时保留 tsc 类型检查
-          npm run build:swc && npm run type-check
+          pnpm run build:swc && pnpm run type-check
         env:
           NODE_OPTIONS: '--max_old_space_size=8192'
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
@@ -54,6 +54,6 @@ jobs:
           path: |
             **/node_modules
             **/.next/cache
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-modules-
