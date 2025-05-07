@@ -38,10 +38,10 @@ jobs:
 
       - name: Build with SWC
         run: |
-          # 安装 SWC
+          # install SWC
           pnpm add -w -D @swc/cli @swc/core
           
-          # 使用 SWC 构建，同时保留 tsc 类型检查
+          # use SWC for build 
           SWC_BUILD=true pnpm  build 
         env:
           NODE_OPTIONS: '--max_old_space_size=8192'
