@@ -28,7 +28,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            **/.next/cache
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-
 
       - name: Install dependencies
         run: pnpm install
@@ -40,20 +50,10 @@ jobs:
         run: |
           # install SWC
           pnpm add -w -D @swc/cli @swc/core
-          
+
           # use SWC for build 
-          SWC_BUILD=true pnpm  build 
+          SWC_BUILD=true pnpm  build
         env:
-          NODE_OPTIONS: '--max_old_space_size=8192'
+          NODE_OPTIONS: "--max_old_space_size=8192"
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            **/node_modules
-            **/.next/cache
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-modules-
