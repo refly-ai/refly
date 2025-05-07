@@ -114,7 +114,7 @@ export const CollaborativeEditor = memo(
     // Memoize the update function to prevent unnecessary re-renders
     const handleEditorUpdate = useCallback(
       (editor: EditorInstance) => {
-        if (isNodeDragging || !provider?.status || provider.status !== 'connected') {
+        if (isNodeDragging || !provider?.status || provider?.status !== 'connected') {
           return;
         }
 
@@ -412,7 +412,7 @@ export const CollaborativeEditor = memo(
       if (!provider || !editorRef.current) return;
 
       const handleRemoteUpdate = () => {
-        if (editorRef.current && provider.status === 'connected') {
+        if (editorRef.current && provider?.status === 'connected') {
           try {
             // Force editor to re-render with latest content
             forceUpdateRef.current += 1;

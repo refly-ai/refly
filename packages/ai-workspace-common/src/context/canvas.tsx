@@ -204,7 +204,7 @@ export const CanvasProvider = ({
     let timeoutId: NodeJS.Timeout;
 
     const handleConnection = () => {
-      if (provider.status !== 'connected' && connectionAttempts < MAX_RETRIES) {
+      if (provider?.status !== 'connected' && connectionAttempts < MAX_RETRIES) {
         timeoutId = setTimeout(() => {
           console.log(`Retrying connection attempt ${connectionAttempts + 1}/${MAX_RETRIES}`);
           provider.connect();
@@ -246,12 +246,12 @@ export const CanvasProvider = ({
     const handleConnect = () => {
       if (isDestroyed) return;
 
-      if (provider.status === 'connected') {
+      if (provider?.status === 'connected') {
         setCanvasDataFromYDoc(ydoc);
       }
 
       const nodesObserverCallback = () => {
-        if (provider.status === 'connected') {
+        if (provider?.status === 'connected') {
           const nodes = getNodesFromYDoc(ydoc);
           const { nodeLookup, parentLookup } = getState();
           adoptUserNodes(nodes, nodeLookup, parentLookup, {
@@ -262,7 +262,7 @@ export const CanvasProvider = ({
       };
 
       const edgesObserverCallback = () => {
-        if (provider.status === 'connected') {
+        if (provider?.status === 'connected') {
           setState({ edges: getEdgesFromYDoc(ydoc) as unknown as Edge[] });
         }
       };
@@ -298,7 +298,7 @@ export const CanvasProvider = ({
 
       const providers = providerCache.get(canvasId);
       if (providers) {
-        if (providers.remote.status === 'connected') {
+        if (providers?.remote?.status === 'connected') {
           providers.remote.forceSync();
         }
         providers.remote.destroy();

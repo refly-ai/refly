@@ -94,7 +94,7 @@ const CodeArtifactNodePreviewComponent = ({ nodeId }: CodeArtifactNodePreviewPro
       type: CodeArtifactType;
     }) => {
       if (data.artifactId === artifactId) {
-        setCurrentTab(data.status === 'finish' ? 'preview' : 'code');
+        setCurrentTab(data?.status === 'finish' ? 'preview' : 'code');
 
         if (data?.type !== currentType) {
           setCurrentType(detectActualTypeFromType(data?.type));
@@ -106,7 +106,7 @@ const CodeArtifactNodePreviewComponent = ({ nodeId }: CodeArtifactNodePreviewPro
             { type: 'codeArtifact', entityId: artifactId },
             {
               metadata: {
-                activeTab: data.status === 'finish' ? 'preview' : 'code',
+                activeTab: data?.status === 'finish' ? 'preview' : 'code',
                 type: detectActualTypeFromType(data?.type),
               },
             },

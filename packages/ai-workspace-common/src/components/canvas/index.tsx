@@ -419,7 +419,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     if (!provider || runtime === 'desktop') return;
 
     // Clear timeout state if provider becomes connected
-    if (provider.status === 'connected') {
+    if (provider?.status === 'connected') {
       setConnectionTimeout(false);
       unhealthyStartTimeRef.current = null;
       return;
@@ -446,7 +446,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       }
 
       // Provider became healthy, reset everything
-      if (provider.status === 'connected') {
+      if (provider?.status === 'connected') {
         clearInterval(intervalId);
         unhealthyStartTimeRef.current = null;
         setConnectionTimeout(false);

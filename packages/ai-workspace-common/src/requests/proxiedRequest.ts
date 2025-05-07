@@ -45,7 +45,7 @@ export interface CheckResponseResult {
 
 export const extractBaseResp = async (response: Response, data: any): Promise<BaseResponse> => {
   if (!response.ok) {
-    switch (response.status) {
+    switch (response?.status) {
       case 429:
         return {
           success: false,

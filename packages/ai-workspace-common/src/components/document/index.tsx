@@ -413,7 +413,7 @@ const DocumentEditorHeader = memo(
 const DocumentBody = memo(
   ({ docId }: { docId: string }) => {
     const { t } = useTranslation();
-    const { readonly, isLoading, provider } = useDocumentContext();
+    const { readonly, isLoading, isShareDocumentLoading, provider } = useDocumentContext();
     const [searchParams] = useSearchParams();
     const isMaximized = searchParams.get('isMaximized') === 'true';
 
@@ -421,14 +421,14 @@ const DocumentBody = memo(
       config: state.config[docId],
     }));
     const hasDocumentSynced = config?.remoteSyncedAt > 0 && config?.localSyncedAt > 0;
-    const isStillLoading = (isLoading && !hasDocumentSynced) || provider.status !== 'connected';
+    const isStillLoading = (isLoading && !hasDocumentSynced) || provider?.status !== 'connected';
 
     return (
       <div className="overflow-auto flex-grow">
         <Spin
           className="document-editor-spin"
           tip={t('knowledgeBase.note.connecting')}
-          loading={isStillLoading}
+          loading={readonly ? isShareDocumentLoading : isStillLoading}
           style={{ height: '100%', width: '100%' }}
         >
           <div className="ai-note-editor">

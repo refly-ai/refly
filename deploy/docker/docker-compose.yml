@@ -19,7 +19,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: >
-      sh -c "node scripts/sync-db-schema.js && node main.js"
+      sh -c "node scripts/sync-db-schema.js && node server/main.js"
     ports:
       - 5800:5800
       - 5801:5801

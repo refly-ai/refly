@@ -44,7 +44,7 @@ const Render = memo((props: { id: string }) => {
     const hasClosedThinking = isReflyThinkingClosed(combinedContent);
 
     // Return false if thinking is closed or if not in executing/waiting state
-    if (hasClosedThinking || !['executing', 'waiting'].includes(result.status ?? '')) {
+    if (hasClosedThinking || !['executing', 'waiting'].includes(result?.status ?? '')) {
       return false;
     }
 

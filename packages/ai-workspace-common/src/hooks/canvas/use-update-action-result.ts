@@ -33,7 +33,7 @@ const generateFullNodeDataUpdates = (
     entityId: payload.resultId,
     contentPreview: processContentPreview((payload?.steps || []).map((s) => s?.content || '')),
     metadata: {
-      status: payload.status,
+      status: payload?.status,
       errors: payload.errors,
       actionMeta: payload.actionMeta,
       modelInfo: payload.modelInfo,
@@ -55,7 +55,7 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
     title,
     entityId: resultId,
     metadata: {
-      status: payload.status,
+      status: payload?.status,
       actionMeta: payload.actionMeta,
       modelInfo: payload.modelInfo,
       version: event?.version ?? payload.version,
@@ -77,7 +77,7 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
     case 'artifact':
       nodeData.metadata = {
         ...nodeData.metadata,
-        status: payload.status,
+        status: payload?.status,
         artifacts: steps.flatMap((s) => s.artifacts),
       };
       break;
@@ -85,7 +85,7 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
     case 'log':
       nodeData.metadata = {
         ...nodeData.metadata,
-        status: payload.status,
+        status: payload?.status,
         currentLog: log,
       };
       break;
@@ -93,7 +93,7 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
     case 'structured_data':
       nodeData.metadata = {
         ...nodeData.metadata,
-        status: payload.status,
+        status: payload?.status,
         structuredData: steps.reduce((acc, step) => Object.assign(acc, step.structuredData), {}),
       };
       break;
@@ -101,7 +101,7 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
     case 'token_usage':
       nodeData.metadata = {
         ...nodeData.metadata,
-        status: payload.status,
+        status: payload?.status,
         tokenUsage: memoizeTokenUsage(steps),
       };
       break;
@@ -109,7 +109,7 @@ const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEven
     case 'error':
       nodeData.metadata = {
         ...nodeData.metadata,
-        status: payload.status,
+        status: payload?.status,
         errors: payload.errors,
       };
       break;
@@ -230,8 +230,8 @@ export const useUpdateActionResult = () => {
       const isCriticalUpdate =
         event?.event === 'error' ||
         event?.event === 'end' ||
-        payload.status === 'failed' ||
-        payload.status === 'finish';
+        payload?.status === 'failed' ||
+        payload?.status === 'finish';
 
       // Use different update strategies based on update type
       if (isCriticalUpdate) {
@@ -255,7 +255,7 @@ export const useUpdateActionResult = () => {
                   payload.steps?.map((s) => s?.content || '') || [],
                 ),
                 metadata: {
-                  status: payload.status,
+                  status: payload?.status,
                   reasoningContent: processContentPreview(
                     payload.steps?.map((s) => s?.reasoningContent || '') || [],
                   ),

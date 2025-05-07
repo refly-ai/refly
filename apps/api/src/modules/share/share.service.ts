@@ -1037,7 +1037,9 @@ export class ShareService {
     );
   }
 
-  async duplicateSharedDocument(user: User, shareId: string): Promise<Entity> {
+  async duplicateSharedDocument(user: User, param: DuplicateShareRequest): Promise<Entity> {
+    const { shareId, projectId } = param;
+
     // Check storage quota
     const usageResult = await this.subscriptionService.checkStorageUsage(user);
     if (usageResult.available < 1) {
@@ -1077,6 +1079,7 @@ export class ShareService {
         uid: user.uid,
         storageKey: newStorageKey,
         stateStorageKey: newStateStorageKey,
+        projectId,
       },
     });
     const state = markdown2StateUpdate(documentDetail.content ?? '');
@@ -1122,7 +1125,9 @@ export class ShareService {
     return { entityId: newDocId, entityType: 'document' };
   }
 
-  async duplicateSharedResource(user: User, shareId: string): Promise<Entity> {
+  async duplicateSharedResource(user: User, param: DuplicateShareRequest): Promise<Entity> {
+    const { shareId, projectId } = param;
+
     // Check storage quota
     const usageResult = await this.subscriptionService.checkStorageUsage(user);
     if (usageResult.available < 1) {
@@ -1168,6 +1173,7 @@ export class ShareService {
         resourceId: newResourceId,
         uid: user.uid,
         storageKey: newStorageKey,
+        projectId,
       },
     });
 
@@ -1218,7 +1224,9 @@ export class ShareService {
     return { entityId: newResourceId, entityType: 'resource' };
   }
 
-  async duplicateSharedCodeArtifact(user: User, shareId: string): Promise<Entity> {
+  async duplicateSharedCodeArtifact(user: User, param: DuplicateShareRequest): Promise<Entity> {
+    const { shareId } = param;
+
     // Find the source record
     const record = await this.prisma.shareRecord.findFirst({
       where: { shareId, deletedAt: null },
@@ -1277,12 +1285,13 @@ export class ShareService {
 
   async duplicateSharedSkillResponse(
     user: User,
-    shareId: string,
+    param: DuplicateShareRequest,
     extra?: {
       target?: Entity;
       replaceEntityMap?: Record<string, string>;
     },
   ): Promise<Entity> {
+    const { shareId, projectId } = param;
     const { replaceEntityMap, target } = extra ?? {};
 
     // Find the source record
@@ -1326,6 +1335,7 @@ export class ShareService {
           errors: JSON.stringify(result.errors),
           modelName: result.modelInfo?.name,
           duplicateFrom: result.resultId,
+          projectId,
         },
       }),
       ...(result.steps?.length > 0
@@ -1360,7 +1370,9 @@ export class ShareService {
     return { entityId: newResultId, entityType: 'skillResponse' };
   }
 
-  async duplicateSharedCanvas(user: User, shareId: string): Promise<Entity> {
+  async duplicateSharedCanvas(user: User, param: DuplicateShareRequest): Promise<Entity> {
+    const { shareId, projectId } = param;
+
     const record = await this.prisma.shareRecord.findFirst({
       where: { shareId, deletedAt: null },
     });
@@ -1418,9 +1430,10 @@ export class ShareService {
           if (!shareId) return;
 
           // Create new entity based on type
+          const nodeDupParam = { shareId, projectId };
           switch (entityType) {
             case 'document': {
-              const doc = await this.duplicateSharedDocument(user, shareId);
+              const doc = await this.duplicateSharedDocument(user, nodeDupParam);
               if (doc) {
                 node.data.entityId = doc.entityId;
                 replaceEntityMap[entityId] = doc.entityId;
@@ -1428,7 +1441,7 @@ export class ShareService {
               break;
             }
             case 'resource': {
-              const resource = await this.duplicateSharedResource(user, shareId);
+              const resource = await this.duplicateSharedResource(user, nodeDupParam);
               if (resource) {
                 node.data.entityId = resource.entityId;
                 replaceEntityMap[entityId] = resource.entityId;
@@ -1436,7 +1449,7 @@ export class ShareService {
               break;
             }
             case 'codeArtifact': {
-              const codeArtifact = await this.duplicateSharedCodeArtifact(user, shareId);
+              const codeArtifact = await this.duplicateSharedCodeArtifact(user, nodeDupParam);
               if (codeArtifact) {
                 node.data.entityId = codeArtifact.entityId;
                 replaceEntityMap[entityId] = codeArtifact.entityId;
@@ -1447,6 +1460,9 @@ export class ShareService {
 
           // Remove the shareId from the metadata
           node.data.metadata.shareId = undefined;
+
+          // Replace the projectId with the new project ID
+          node.data.metadata.projectId = projectId;
         }),
       ),
     );
@@ -1467,16 +1483,43 @@ export class ShareService {
             const shareId = node.data.metadata.shareId as string;
             if (!shareId) return;
 
-            const result = await this.duplicateSharedSkillResponse(user, shareId, {
-              replaceEntityMap,
-              target: { entityId: newCanvasId, entityType: 'canvas' },
-            });
+            const result = await this.duplicateSharedSkillResponse(
+              user,
+              { shareId, projectId },
+              {
+                replaceEntityMap,
+                target: { entityId: newCanvasId, entityType: 'canvas' },
+              },
+            );
             if (result) {
               node.data.entityId = result.entityId;
             }
 
             // Remove the shareId from the metadata
             node.data.metadata.shareId = undefined;
+
+            // Replace the projectId with the new project ID
+            node.data.metadata.projectId = projectId;
+
+            // Replace the context with the new entity ID
+            if (node.data.metadata.contextItems) {
+              node.data.metadata.contextItems = JSON.parse(
+                batchReplaceRegex(
+                  JSON.stringify(node.data.metadata.contextItems),
+                  replaceEntityMap,
+                ),
+              );
+            }
+
+            // Replace the structuredData with the new entity ID
+            if (node.data.metadata.structuredData) {
+              node.data.metadata.structuredData = JSON.parse(
+                batchReplaceRegex(
+                  JSON.stringify(node.data.metadata.structuredData),
+                  replaceEntityMap,
+                ),
+              );
+            }
           }),
         ),
     );
@@ -1620,23 +1663,23 @@ export class ShareService {
 
     // 根据shareId前缀确定类型
     if (shareId.startsWith(SHARE_CODE_PREFIX.canvas)) {
-      return this.duplicateSharedCanvas(user, shareId);
+      return this.duplicateSharedCanvas(user, body);
     }
 
     if (shareId.startsWith(SHARE_CODE_PREFIX.document)) {
-      return this.duplicateSharedDocument(user, shareId);
+      return this.duplicateSharedDocument(user, body);
     }
 
     if (shareId.startsWith(SHARE_CODE_PREFIX.resource)) {
-      return this.duplicateSharedResource(user, shareId);
+      return this.duplicateSharedResource(user, body);
     }
 
     if (shareId.startsWith(SHARE_CODE_PREFIX.skillResponse)) {
-      return this.duplicateSharedSkillResponse(user, shareId);
+      return this.duplicateSharedSkillResponse(user, body);
     }
 
     if (shareId.startsWith(SHARE_CODE_PREFIX.codeArtifact)) {
-      return this.duplicateSharedCodeArtifact(user, shareId);
+      return this.duplicateSharedCodeArtifact(user, body);
     }
 
     if (shareId.startsWith(SHARE_CODE_PREFIX.page)) {

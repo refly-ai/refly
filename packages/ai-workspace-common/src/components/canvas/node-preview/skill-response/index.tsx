@@ -55,7 +55,7 @@ const StepsList = memo(
               result={result}
               step={step}
               stepStatus={
-                result.status === 'executing' && index === steps?.length - 1
+                result?.status === 'executing' && index === steps?.length - 1
                   ? 'executing'
                   : 'finish'
               }
@@ -126,7 +126,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
         title: remoteResult.title,
         contentPreview: processContentPreview(remoteResult.steps?.map((s) => s?.content || '')),
         metadata: {
-          status: remoteResult.status,
+          status: remoteResult?.status,
           reasoningContent: processContentPreview(
             remoteResult.steps?.map((s) => s?.reasoningContent || ''),
           ),
@@ -145,7 +145,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
 
   const scrollToBottom = useCallback(
     (event: { resultId: string; payload: ActionResult }) => {
-      if (event.resultId !== resultId || event.payload.status !== 'executing') {
+      if (event.resultId !== resultId || event.payload?.status !== 'executing') {
         return;
       }
 

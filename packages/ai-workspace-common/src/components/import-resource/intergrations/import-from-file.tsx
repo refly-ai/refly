@@ -86,7 +86,7 @@ export const ImportFromFile = () => {
     fileList: fileList.map((item) => ({
       uid: item.uid,
       name: item.title,
-      status: item.status,
+      status: item?.status,
       url: item.url,
     })),
     beforeUpload: async (file: File) => {

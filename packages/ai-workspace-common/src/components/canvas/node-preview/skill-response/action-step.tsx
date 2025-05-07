@@ -240,17 +240,17 @@ const ArtifactItem = memo(({ artifact, onSelect }: { artifact: any; onSelect: ()
       </div>
       <div
         className={cn('flex items-center space-x-1 text-xs', {
-          'text-yellow-500': artifact.status === 'generating',
-          'text-green-500': artifact.status === 'finish',
+          'text-yellow-500': artifact?.status === 'generating',
+          'text-green-500': artifact?.status === 'finish',
         })}
       >
-        {artifact.status === 'generating' && (
+        {artifact?.status === 'generating' && (
           <>
             <IconLoading />
             <span>{t('artifact.generating')}</span>
           </>
         )}
-        {artifact.status === 'finish' && (
+        {artifact?.status === 'finish' && (
           <>
             <IconCheckCircle />
             <span>{t('artifact.completed')}</span>

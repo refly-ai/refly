@@ -15,6 +15,7 @@ interface DocumentContextType {
   provider: HocuspocusProvider | null;
   localProvider: IndexeddbPersistence | null;
   isLoading: boolean;
+  isShareDocumentLoading: boolean;
   readonly: boolean;
 }
 
@@ -55,7 +56,8 @@ export const DocumentProvider = ({
     }));
 
   // Fetch document data from API when in readonly mode
-  const { data: documentData } = useFetchShareData<Document>(shareId);
+  const { data: documentData, loading: isShareDocumentLoading } =
+    useFetchShareData<Document>(shareId);
 
   // Set document data from API response when in readonly mode
   useEffect(() => {
@@ -153,7 +155,7 @@ export const DocumentProvider = ({
     let timeoutId: NodeJS.Timeout;
 
     const handleConnection = () => {
-      if (provider.status !== 'connected' && connectionAttempts < MAX_RETRIES) {
+      if (provider?.status !== 'connected' && connectionAttempts < MAX_RETRIES) {
         timeoutId = setTimeout(() => {
           console.log(`Retrying connection attempt ${connectionAttempts + 1}/${MAX_RETRIES}`);
           provider.connect();
@@ -191,12 +193,12 @@ export const DocumentProvider = ({
     const handleConnect = () => {
       if (isDestroyed) return;
 
-      if (provider.status === 'connected') {
+      if (provider?.status === 'connected') {
         updateDocumentData(doc);
       }
 
       const titleObserverCallback = () => {
-        if (provider.status === 'connected') {
+        if (provider?.status === 'connected') {
           updateDocumentData(doc);
         }
       };
@@ -227,7 +229,7 @@ export const DocumentProvider = ({
     return () => {
       const providers = providerCache.get(docId);
       if (providers) {
-        if (providers.remote.status === 'connected') {
+        if (providers?.remote?.status === 'connected') {
           providers.remote.forceSync();
         }
         providers.remote.destroy();
@@ -244,9 +246,10 @@ export const DocumentProvider = ({
       localProvider,
       ydoc: doc,
       isLoading,
+      isShareDocumentLoading,
       readonly,
     }),
-    [docId, provider, localProvider, doc, isLoading, readonly],
+    [docId, provider, localProvider, doc, isLoading, readonly, isShareDocumentLoading],
   );
 
   return <DocumentContext.Provider value={value}>{children}</DocumentContext.Provider>;

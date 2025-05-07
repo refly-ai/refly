@@ -17,7 +17,7 @@ export const useFetchShareData = <T = any>(shareId?: string) => {
     try {
       const response = await fetch(`${staticPublicEndpoint}/share/${id}.json`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch share data: ${response.status}`);
+        throw new Error(`Failed to fetch share data: ${response?.status}`);
       }
       const responseData = await response.json();
       return responseData as T;

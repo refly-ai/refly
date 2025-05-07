@@ -3657,6 +3657,10 @@ export const DuplicateShareRequestSchema = {
       type: 'string',
       description: 'Share ID',
     },
+    projectId: {
+      type: 'string',
+      description: 'Project ID to duplicate the share to',
+    },
   },
 } as const;
 

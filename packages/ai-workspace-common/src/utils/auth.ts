@@ -126,7 +126,7 @@ export const responseInterceptorWithTokenRefresh = async (response: Response, re
     return response;
   }
 
-  if (response.status === 401) {
+  if (response?.status === 401) {
     try {
       const retryResponse = await refreshTokenAndRetry(request);
       return retryResponse;

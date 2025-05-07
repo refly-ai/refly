@@ -4941,6 +4941,9 @@ components:
         shareId:
           type: string
           description: Share ID
+        projectId:
+          type: string
+          description: Project ID to duplicate the share to
     DuplicateShareResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

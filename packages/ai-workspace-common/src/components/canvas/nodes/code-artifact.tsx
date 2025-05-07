@@ -84,7 +84,7 @@ const NodeContent = memo(
   },
   (prevProps, nextProps) =>
     prevProps.entityId === nextProps.entityId &&
-    prevProps.status === nextProps.status &&
+    prevProps?.status === nextProps?.status &&
     prevProps.legacyData?.content === nextProps.legacyData?.content &&
     prevProps.legacyData?.type === nextProps.legacyData?.type &&
     prevProps.legacyData?.title === nextProps.legacyData?.title &&
@@ -133,9 +133,9 @@ export const CodeArtifactNode = memo(
             { type: 'codeArtifact', entityId: eventData.artifactId },
             {
               metadata: {
-                status: eventData.status,
-                activeTab: eventData.status === 'finish' ? 'preview' : 'code',
-                type: detectActualTypeFromType(eventData.type),
+                status: eventData?.status,
+                activeTab: eventData?.status === 'finish' ? 'preview' : 'code',
+                type: detectActualTypeFromType(eventData?.type),
               },
             },
           );
