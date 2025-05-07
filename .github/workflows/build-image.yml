@@ -10,7 +10,7 @@ jobs:
     if: github.repository == 'refly-ai/refly'
     strategy:
       matrix:
-        app: ['api', 'web']
+        app: ['web']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,4 +60,3 @@ jobs:
           push: true
           tags: |
             reflyai/refly-${{ matrix.app }}:${{ github.sha }}
-            reflyai/refly-${{ matrix.app }}:nightly
