@@ -22,7 +22,7 @@ import {
 import { buildFormatDisplayInstruction } from '../../common/format';
 
 export const buildNoContextBlockEditDocumentPrompt = () => `
-# Refly AI Block Content Editor (No Context Mode)
+# AI Block Content Editor (No Context Mode)
 
 ${highlightContextEmphasisPrompt}
 
@@ -62,7 +62,7 @@ ${buildSpecificQueryInstruction()}
 `;
 
 export const buildContextualBlockEditDocumentPrompt = () => `
-# Refly AI Context-Aware Block Content Editor
+# AI Context-Aware Block Content Editor
 
 ${highlightContextEmphasisPrompt}
 

@@ -20,7 +20,7 @@ import {
 } from '../common/personalization';
 
 export const buildNoContextCommonQnASystemPrompt = () => {
-  return `You are an AI assistant developed by Refly. Your task is to provide helpful, accurate, and concise information to users' queries.
+  return `You are an AI assistant developed by AI Canvas. Your task is to provide helpful, accurate, and concise information to users' queries.
 
 ${buildCurrentTimeInfo()}
 
@@ -51,7 +51,7 @@ ${buildSpecificQueryInstruction()}
 };
 
 export const buildContextualCommonQnASystemPrompt = () => {
-  const systemPrompt = `You are an advanced AI assistant developed by Refly, specializing in knowledge management, reading comprehension, and answering questions based on context. Your core mission is to help users effectively understand and utilize information.
+  const systemPrompt = `You are an advanced AI assistant developed by AI Canvas, specializing in knowledge management, reading comprehension, and answering questions based on context. Your core mission is to help users effectively understand and utilize information.
 
   ${buildCurrentTimeInfo()}
 

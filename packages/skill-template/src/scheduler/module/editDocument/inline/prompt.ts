@@ -22,7 +22,7 @@ import { buildFormatDisplayInstruction } from '../../common/format';
 
 // Update buildNoContextInlineEditDocumentPrompt
 export const buildNoContextInlineEditDocumentPrompt = () => `
-# Refly AI Inline Content Editor
+# AI Inline Content Editor
 
 ${inlineHighlightContextEmphasisPrompt}
 
@@ -64,7 +64,7 @@ ${buildSpecificQueryInstruction()}
 
 // Update buildContextualInlineEditDocumentPrompt
 export const buildContextualInlineEditDocumentPrompt = () => `
-# Refly AI Context-Aware Inline Editor
+# AI Context-Aware Inline Editor
 
 ${inlineHighlightContextEmphasisPrompt}
 

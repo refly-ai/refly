@@ -20,7 +20,7 @@ import {
 } from '../common/personalization';
 
 export const buildWebSearchSystemPrompt = (_locale: string, _needPrepareContext: boolean) => {
-  const systemPrompt = `You are an AI assistant developed by Refly, specializing in providing accurate information based on web search results and internal knowledge base. Your task is to synthesize information from multiple sources to provide comprehensive, actionable, and accurate answers.
+  const systemPrompt = `You are an AI assistant developed by AI Canvas, specializing in providing accurate information based on web search results and internal knowledge base. Your task is to synthesize information from multiple sources to provide comprehensive, actionable, and accurate answers.
 
 ${buildCurrentTimeInfo()}
 
