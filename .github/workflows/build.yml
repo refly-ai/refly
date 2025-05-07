@@ -31,7 +31,8 @@ jobs:
           cache: "pnpm"
 
       - name: Cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
+        id: cache-node-modules
         with:
           path: |
             **/node_modules
