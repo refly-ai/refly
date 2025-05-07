@@ -42,7 +42,7 @@ jobs:
           pnpm add -w -D @swc/cli @swc/core
           
           # 使用 SWC 构建，同时保留 tsc 类型检查
-          pnpm run build:swc && pnpm run type-check
+          SWC_BUILD=true pnpm run build && pnpm run type-check
         env:
           NODE_OPTIONS: '--max_old_space_size=8192'
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
