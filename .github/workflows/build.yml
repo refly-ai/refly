@@ -30,17 +30,6 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: cache-node-modules
-        with:
-          path: |
-            **/node_modules
-            **/.next/cache
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-modules-
-
       - name: Install dependencies
         run: pnpm install
 
@@ -49,9 +38,6 @@ jobs:
 
       - name: Build with SWC
         run: |
-          # install SWC
-          pnpm add -w -D @swc/cli @swc/core
-
           # use SWC for build 
           SWC_BUILD=true pnpm  build
         env:
