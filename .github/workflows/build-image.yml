@@ -10,7 +10,7 @@ jobs:
     if: github.repository == 'refly-ai/refly'
     strategy:
       matrix:
-        app: ['web']
+        app: ['api', 'web']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
