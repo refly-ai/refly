@@ -5,7 +5,7 @@ COPY . .
 ENV CYPRESS_INSTALL_BINARY=0
 RUN npm install -g pnpm
 RUN pnpm install
-RUN pnpm build:api
+RUN SWC_BUILD=true pnpm build:api
 RUN rm -rf node_modules && \
     find . -type d -name node_modules -exec rm -rf {} + 2>/dev/null || true
 RUN pnpm install --prod --ignore-scripts
