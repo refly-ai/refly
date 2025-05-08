@@ -15,7 +15,7 @@ COPY apps/api/prisma ./apps/api/prisma
 
 # Install dependencies
 ENV CYPRESS_INSTALL_BINARY=0
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Copy source code
 COPY . .
