@@ -11,7 +11,7 @@ COPY pnpm-workspace.yaml ./
 COPY package.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/*/package.json ./packages/
-COPY apps/api/src/prisma ./apps/api/src/prisma
+COPY apps/api/prisma ./apps/api/prisma
 
 # Install dependencies
 ENV CYPRESS_INSTALL_BINARY=0
