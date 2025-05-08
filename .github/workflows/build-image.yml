@@ -7,7 +7,7 @@ jobs:
   build-and-push:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
-    if: github.repository == 'refly-ai/refly'
+    # if: github.repository == 'refly-ai/refly'
     strategy:
       matrix:
         app: ["api", "web"]
@@ -51,14 +51,14 @@ jobs:
           username: reflyai
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # - name: Set Docker tags
-      #   id: docker_tags
-      #   run: |
-      #     TAGS="reflyai/refly-${{ matrix.app }}:${{ github.sha }}"
-      #     if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "stable" ]]; then
-      #       TAGS="$TAGS,reflyai/refly-${{ matrix.app }}:nightly"
-      #     fi
-      #     echo "tags=$TAGS" >> $GITHUB_OUTPUT
+      - name: Set Docker tags
+        id: docker_tags
+        run: |
+          TAGS="reflyai/refly-${{ matrix.app }}:${{ github.sha }}"
+          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "stable" ]]; then
+            TAGS="$TAGS,reflyai/refly-${{ matrix.app }}:nightly"
+          fi
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
