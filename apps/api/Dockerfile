@@ -21,7 +21,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build the application
-RUN SWC_BUILD=true pnpm build:api
+RUN pnpm build:api
 
 # Clean up development dependencies
 RUN rm -rf node_modules && \
