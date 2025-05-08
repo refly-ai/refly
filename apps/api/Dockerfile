@@ -5,17 +5,24 @@ WORKDIR /app
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Copy package files first to leverage Docker cache
-COPY pnpm-lock.yaml ./
+# Copy workspace configuration files first
 COPY pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml ./
 COPY package.json ./
-COPY apps/api/package.json ./apps/api/
+
+# Copy all package.json files from packages
 COPY packages/*/package.json ./packages/
+COPY apps/api/package.json ./apps/api/
+
+# Create necessary directories for packages
+RUN mkdir -p packages/errors
+
+# Copy prisma schema
 COPY apps/api/prisma ./apps/api/prisma
 
-# Install dependencies
+# Install dependencies with workspace support
 ENV CYPRESS_INSTALL_BINARY=0
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
