@@ -1,10 +1,16 @@
 # Build stage
 FROM node:20.19.1-alpine3.20 AS builder
 WORKDIR /app
-COPY . .
-ENV CYPRESS_INSTALL_BINARY=0
+
+# Install dependencies  for build cache friendly
 RUN npm install -g pnpm
+COPY pnpm-lock.yaml ./
+COPY package.json ./
+COPY apps/api/package.json ./apps/api/
+ENV CYPRESS_INSTALL_BINARY=0
 RUN pnpm install
+
+COPY . .
 RUN pnpm build:api
 RUN rm -rf node_modules && \
     find . -type d -name node_modules -exec rm -rf {} + 2>/dev/null || true
