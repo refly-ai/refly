@@ -7,8 +7,10 @@ RUN npm install -g pnpm
 COPY pnpm-lock.yaml ./
 COPY package.json ./
 COPY apps/api/package.json ./apps/api/
+
+
 ENV CYPRESS_INSTALL_BINARY=0
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm build:api
