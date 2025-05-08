@@ -21,17 +21,15 @@ RUN mkdir -p packages/errors packages/openapi-schema packages/providers packages
 COPY apps/api/prisma ./apps/api/prisma
 
 # Install dependencies with workspace support
-ENV CYPRESS_INSTALL_BINARY=0
-RUN pnpm install --frozen-lockfile
-
 # Copy source code
 COPY . .
+ENV CYPRESS_INSTALL_BINARY=0
+RUN pnpm install
+
+
 
 # Build packages in correct order
-RUN pnpm --filter "./packages/openapi-schema" build && \
-    pnpm --filter "./packages/providers" build && \
-    pnpm --filter "./packages/skill-template" build && \
-    pnpm --filter "./apps/api" build
+RUN pnpm build:api
 
 # Clean up development dependencies
 RUN rm -rf node_modules && \
