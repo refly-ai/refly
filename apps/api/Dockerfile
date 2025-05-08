@@ -24,7 +24,7 @@ COPY apps/api/prisma ./apps/api/prisma
 # Copy source code
 COPY . .
 ENV CYPRESS_INSTALL_BINARY=0
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+RUN pnpm install
 
 
 
@@ -32,8 +32,7 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 RUN pnpm build:api
 
 # Clean up development dependencies
-RUN rm -rf node_modules && \
-    find . -type d -name node_modules -exec rm -rf {} + 2>/dev/null || true
+RUN rm -rf node_modules
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # wkhtmltopdf stage
