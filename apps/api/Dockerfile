@@ -15,7 +15,7 @@ COPY packages/*/package.json ./packages/
 COPY apps/api/package.json ./apps/api/
 
 # Create necessary directories for packages
-RUN mkdir -p packages/errors
+RUN mkdir -p packages/errors packages/openapi-schema packages/providers packages/skill-template
 
 # Copy prisma schema
 COPY apps/api/prisma ./apps/api/prisma
@@ -27,8 +27,11 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build the application
-RUN pnpm build:api
+# Build packages in correct order
+RUN pnpm --filter "./packages/openapi-schema" build && \
+    pnpm --filter "./packages/providers" build && \
+    pnpm --filter "./packages/skill-template" build && \
+    pnpm --filter "./apps/api" build
 
 # Clean up development dependencies
 RUN rm -rf node_modules && \
