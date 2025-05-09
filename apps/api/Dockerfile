@@ -6,9 +6,9 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # Set environment variables to skip gyp-related installations
-ENV npm_config_build_from_source=true
+# ENV npm_config_build_from_source=true
 ENV npm_config_gyp_ignore=true
-ENV npm_config_ignore_scripts=true
+# ENV npm_config_ignore_scripts=true
 ENV CYPRESS_INSTALL_BINARY=0
 
 # Copy workspace configuration files first
