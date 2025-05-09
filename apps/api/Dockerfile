@@ -9,11 +9,13 @@ RUN npm install -g pnpm
 # ENV npm_config_build_from_source=true
 ENV npm_config_gyp_ignore=true
 ENV CYPRESS_INSTALL_BINARY=0
+ENV SWC_BUILD=true
 
 # Copy workspace configuration files first
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+COPY turbo.json  ./
 
 # Copy all package.json files and source code
 COPY apps/api/package.json ./apps/api/
@@ -26,8 +28,8 @@ RUN pnpm install --ignore-scripts
 # Copy remaining source code
 COPY . .
 
-# Build packages in correct order
-RUN pnpm build:api
+# Build packages in correct order using SWC
+RUN pnpm build:api:fast
 
 # # Clean up development dependencies
 # RUN rm -rf node_modules

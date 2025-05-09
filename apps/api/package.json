@@ -10,6 +10,7 @@
     "copy-env": "ncp .env.example .env",
     "copy-env:develop": "ncp .env.development .env",
     "build": "prisma generate && tsc --build --verbose && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated",
+    "build:fast": "prisma generate && swc src -d dist --config-file .swcrc && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated",
     "build:electron": "prisma generate --schema=prisma/sqlite-schema.prisma && tsc --build tsconfig.electron.json && ncp src/generated dist-electron/generated",
     "prisma:generate": "prisma format && prisma generate",
     "sync-db-schema": "prisma format && prisma generate && node -r ts-node/register --env-file=.env src/scripts/sync-db-schema.ts",
@@ -114,6 +115,8 @@
   "devDependencies": {
     "@golevelup/ts-jest": "^0.6.2",
     "@nestjs/testing": "~10.3.9",
+    "@swc/cli": "^0.3.10",
+    "@swc/core": "^1.4.8",
     "@types/cookie-parser": "~1.4.3",
     "@types/express": "^4.17.13",
     "@types/jest": "29.5.1",

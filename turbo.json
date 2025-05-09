@@ -41,6 +41,11 @@
       "outputs": ["dist/**"],
       "env": ["*"]
     },
+    "build:fast": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "env": ["*"]
+    },
     "build:electron": {
       "dependsOn": ["^build"],
       "outputs": ["dist-electron/**"],

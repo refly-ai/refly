@@ -12,6 +12,7 @@
     "start:electron": "turbo run start:electron --filter=@refly/api",
     "build": "turbo run build",
     "build:api": "turbo run build --filter=@refly/api",
+    "build:api:fast": "turbo run build:fast --filter=@refly/api",
     "build:web": "turbo run build --filter=@refly/web",
     "build:extension": "turbo run build --filter=@refly/extension",
     "build:electron": "turbo run build:electron --filter=@refly/api",
