@@ -28,10 +28,8 @@ COPY apps/api/prisma ./apps/api/prisma
 
 # Install dependencies with workspace support
 # Copy source code
-COPY . .
-ENV CYPRESS_INSTALL_BINARY=0
 RUN pnpm install --ignore-scripts
-
+COPY . .
 
 
 # Build packages in correct order
