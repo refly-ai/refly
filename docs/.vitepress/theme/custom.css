@@ -1,0 +1,108 @@
+:root {
+  --vp-layout-max-width: 1440px;
+}
+
+.VPDoc.has-aside .content-container {
+  max-width: 100% !important;
+}
+
+/* Navigation bar styles */
+.VPNav {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background-color: var(--vp-c-bg) !important;
+  border-bottom: 1px solid var(--vp-c-divider) !important;
+
+  .divider {
+    display: none !important;
+  }
+}
+
+.dark .VPNav {
+  background-color: var(--vp-c-bg) !important;
+}
+
+.VPNavBar {
+  border-bottom: none !important;
+  background: transparent !important;
+}
+
+.VPNavBar.has-sidebar .content {
+  background: transparent !important;
+}
+
+/* Hide sidebar on home page */
+.VPDoc:not(.has-sidebar) .VPSidebar {
+  display: none !important;
+}
+
+/* Adjust layout when no sidebar */
+.VPDoc:not(.has-sidebar) .VPContent {
+  padding-left: 0 !important;
+  /* Add padding to prevent content from being hidden under fixed header */
+  padding-top: 64px !important;
+}
+
+.VPDoc:not(.has-sidebar) .VPNavBar {
+  padding-left: 32px !important;
+}
+
+/* Center content on home page */
+.VPDoc:not(.has-sidebar) .container {
+  max-width: var(--vp-layout-max-width) !important;
+  margin: 0 auto !important;
+  padding: 0 32px !important;
+}
+
+/* Fix nav bar backdrop */
+.VPNavBar.fill:not(.has-sidebar) {
+  background-color: var(--vp-c-bg) !important;
+}
+
+.dark .VPNavBar.fill:not(.has-sidebar) {
+  background-color: var(--vp-c-bg) !important;
+}
+
+/* Add padding to content to prevent it from being hidden under fixed header */
+.VPContent {
+  padding-top: 64px !important;
+}
+
+/* Remove sidebar bottom border */
+.VPSidebar {
+  border-right: 1px solid var(--vp-c-divider) !important;
+  border-bottom: none !important;
+}
+
+/* Ensure header border is consistent */
+.VPNavBar .content {
+  border-bottom: none !important;
+}
+
+.VPNavBar.has-sidebar {
+  border-bottom: none !important;
+}
+
+/* Sidebar title styles */
+.VPSidebar .title {
+  border-bottom: 1px solid var(--vp-c-divider) !important;
+}
+
+/* Remove title bottom border */
+.VPNavBarTitle.has-sidebar {
+  border-bottom: none !important;
+
+  /* Remove bottom border from sidebar title */
+  a.title {
+    border-bottom: none !important;
+    border-bottom-color: transparent !important;
+  }
+}
+
+/* Dark mode specific styles */
+.dark .VPSidebar .title {
+  border-bottom-color: var(--vp-c-divider) !important;
+}
