@@ -73,12 +73,12 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         && rm pandoc-3.6.3-linux-arm64.tar.gz; \
     fi
 
-# Copy all necessary files from builder in one layer
-COPY --from=builder /app/apps/api/dist ./apps/api/dist \
-    --from=builder /app/node_modules ./node_modules \
-    --from=builder /app/apps/api/prisma ./apps/api/prisma \
-    --from=builder /app/apps/api/node_modules ./apps/api/node_modules \
-    --from=builder /app/packages/ ./packages/
+# Copy only necessary files from builder
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/packages/ ./packages/
 
 # Set environment variables
 ENV NODE_ENV=production
