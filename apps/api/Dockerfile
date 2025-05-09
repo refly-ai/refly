@@ -8,8 +8,6 @@ RUN npm install -g pnpm
 # Set environment variables to skip gyp-related installations
 # ENV npm_config_build_from_source=true
 ENV npm_config_gyp_ignore=true
-
-ENV NODE_ENV=production
 ENV CYPRESS_INSTALL_BINARY=0
 
 # Copy workspace configuration files first
@@ -84,6 +82,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/packages/ ./packages/
+
+# Set environment variables
+ENV NODE_ENV=production
 
 EXPOSE 3000
 CMD ["node", "apps/api/dist/server/main.js"]
