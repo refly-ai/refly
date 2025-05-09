@@ -152,7 +152,7 @@ export const useNodeSize = ({
       width: size.width,
       height: size.height,
       maxHeight: containerMaxHeight,
-      minWidth: sizeMode === 'compact' ? minWidth : defaultWidth,
+      minWidth: sizeMode === 'compact' ? defaultWidth : minWidth,
       maxWidth,
       userSelect: isOperating ? 'text' : 'none',
       cursor: readonly ? 'default' : isOperating ? 'text' : 'grab',

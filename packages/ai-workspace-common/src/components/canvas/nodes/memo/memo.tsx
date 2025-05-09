@@ -35,7 +35,7 @@ import {
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { MemoEditor } from './memo-editor';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genSkillID } from '@refly/utils/id';
+import { genSkillID, genMemoID } from '@refly/utils/id';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
@@ -86,8 +86,8 @@ export const MemoNode = ({
     minWidth: 100,
     maxWidth: 800,
     minHeight: 80,
-    defaultWidth: 288,
-    defaultHeight: 284,
+    defaultWidth: 200,
+    defaultHeight: 200,
   });
 
   // Handle node hover events
@@ -157,32 +157,6 @@ export const MemoNode = ({
       true,
     );
   }, [data, addNode]);
-
-  // Add event handling
-  useEffect(() => {
-    // Create node-specific event handlers
-    const handleNodeAddToContext = () => handleAddToContext();
-    const handleNodeDelete = () => handleDelete();
-    const handleNodeInsertToDoc = () => handleInsertToDoc();
-    const handleNodeAskAI = () => handleAskAI();
-
-    // Register events with node ID
-    nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
-    nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
-    nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
-    nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-
-    return () => {
-      // Cleanup events when component unmounts
-      nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
-      nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
-      nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
-      nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-
-      // Clean up all node events
-      cleanupNodeEvents(id);
-    };
-  }, [id, handleAddToContext, handleDelete, handleInsertToDoc, handleAskAI]);
 
   const editor = useEditor({
     extensions: [
@@ -313,6 +287,59 @@ export const MemoNode = ({
     },
     [data?.entityId, data?.metadata, setNodeDataByEntity],
   );
+
+  const handleDuplicate = useCallback(() => {
+    const memoId = genMemoID();
+    const jsonContent = editor?.getJSON();
+    const content = editor?.storage?.markdown?.getMarkdown() || data?.contentPreview || '';
+
+    addNode(
+      {
+        type: 'memo',
+        data: {
+          title: t('canvas.nodeTypes.memo'),
+          contentPreview: content,
+          entityId: memoId,
+          metadata: {
+            bgColor: data?.metadata?.bgColor || '#FFFEE7',
+            jsonContent,
+          },
+        },
+      },
+      [{ type: 'memo', entityId: data.entityId }],
+      false,
+      true,
+    );
+  }, [data, addNode, editor, t]);
+
+  // Add event handling
+  useEffect(() => {
+    // Create node-specific event handlers
+    const handleNodeAddToContext = () => handleAddToContext();
+    const handleNodeDelete = () => handleDelete();
+    const handleNodeInsertToDoc = () => handleInsertToDoc();
+    const handleNodeAskAI = () => handleAskAI();
+    const handleNodeDuplicate = () => handleDuplicate();
+
+    // Register events with node ID
+    nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+    nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
+    nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
+    nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
+    nodeActionEmitter.on(createNodeEventName(id, 'duplicate'), handleNodeDuplicate);
+
+    return () => {
+      // Cleanup events when component unmounts
+      nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
+      nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
+      nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
+      nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
+      nodeActionEmitter.off(createNodeEventName(id, 'duplicate'), handleNodeDuplicate);
+
+      // Clean up all node events
+      cleanupNodeEvents(id);
+    };
+  }, [id, handleAddToContext, handleDelete, handleInsertToDoc, handleAskAI, handleDuplicate]);
 
   return (
     <div className={classNames({ nowheel: isFocused && isHovered })}>

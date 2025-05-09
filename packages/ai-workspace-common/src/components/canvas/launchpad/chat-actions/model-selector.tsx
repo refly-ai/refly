@@ -22,6 +22,7 @@ import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
+import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/model';
 import './index.scss';
 
 interface ModelSelectorProps {
@@ -242,7 +243,11 @@ export const ModelSelector = memo(
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const { t } = useTranslation();
 
-    const { data: providerItemList, isLoading: isModelListLoading } = useListProviderItems(
+    const {
+      data: providerItemList,
+      isLoading: isModelListLoading,
+      refetch: refetchModelList,
+    } = useListProviderItems(
       {
         query: {
           category: 'llm',
@@ -256,6 +261,19 @@ export const ModelSelector = memo(
         refetchOnReconnect: true,
       },
     );
+
+    // Listen for model update events
+    useEffect(() => {
+      const handleModelRefetch = () => {
+        refetchModelList();
+      };
+
+      modelEmitter.on('model:list:refetch', handleModelRefetch);
+
+      return () => {
+        modelEmitter.off('model:list:refetch', handleModelRefetch);
+      };
+    }, [refetchModelList]);
 
     const { tokenUsage, isUsageLoading } = useSubscriptionUsage();
 

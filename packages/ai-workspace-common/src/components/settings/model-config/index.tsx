@@ -27,6 +27,7 @@ import {
 import { LLMModelConfig, ProviderCategory, ProviderItem } from '@refly/openapi-schema';
 import { ModelIcon } from '@lobehub/icons';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/model';
 import { ModelFormModal } from './model-form';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 
@@ -278,6 +279,9 @@ export const ModelConfig = ({ visible }: { visible: boolean }) => {
     });
     if (res.data.success) {
       message.success(t('common.saveSuccess'));
+
+      // Emit event to refresh model list in other components
+      modelEmitter.emit('model:list:refetch', null);
     }
   };
 
@@ -315,9 +319,12 @@ export const ModelConfig = ({ visible }: { visible: boolean }) => {
           modelItems.map((item) => (item.itemId === updatedModel.itemId ? updatedModel : item)),
         );
         message.success(t('common.saveSuccess'));
+
+        // Emit event to refresh model list in other components
+        modelEmitter.emit('model:list:refetch', null);
       }
     },
-    [modelItems],
+    [modelItems, t],
   );
 
   const beforeDeleteProviderItem = async (model: ProviderItem) => {
@@ -368,6 +375,9 @@ export const ModelConfig = ({ visible }: { visible: boolean }) => {
       if (types.length) {
         updateDefaultModel(types, null);
       }
+
+      // Emit event to refresh model list in other components
+      modelEmitter.emit('model:list:refetch', null);
     }
   };
 
@@ -440,6 +450,9 @@ export const ModelConfig = ({ visible }: { visible: boolean }) => {
     }
     setIsModalOpen(false);
     setEditingModel(null);
+
+    // Emit event to refresh model list in other components
+    modelEmitter.emit('model:list:refetch', null);
   };
 
   const handleDragEnd = useCallback(

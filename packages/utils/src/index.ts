@@ -9,6 +9,7 @@ export * from './url';
 export * from './scrape-weblink';
 export * from './models';
 export * from './event-emitter/editor';
+export * from './event-emitter/model';
 export * from './timeTracker';
 export * from './search-source-converter';
 export * from './translate';

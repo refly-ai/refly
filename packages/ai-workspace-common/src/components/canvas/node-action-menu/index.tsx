@@ -666,6 +666,16 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
                     'https://static.refly.ai/onboarding/nodeAction/nodeAction-createEmptyMemo.webm',
                 },
               },
+              {
+                key: 'duplicateMemo',
+                icon: GrClone,
+                label: t('canvas.nodeActions.duplicateMemo'),
+                onClick: () => {
+                  nodeActionEmitter.emit(createNodeEventName(nodeId, 'duplicate'));
+                  onClose?.();
+                },
+                type: 'button' as const,
+              },
               ...(!['image', 'website'].includes(nodeType)
                 ? [
                     {

@@ -118,7 +118,7 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
   // Memoize the render data transformation
   const sortedRenderData = useMemo(() => {
     return processedNodes.map((item) => ({
-      data: item,
+      data: { ...item, title: item?.title || t(`canvas.nodeTypes.${item?.type}`) },
       type: item?.type as CanvasNodeType,
       icon: getContextItemIcon(item.type, { width: 12, height: 12 }),
       isSelected: selectedItems?.some((selected) => selected?.entityId === item?.entityId),

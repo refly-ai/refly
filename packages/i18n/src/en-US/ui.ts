@@ -1068,7 +1068,8 @@ const translations = {
       copyToClipboard: 'Copy PNG to Clipboard',
       downloadStarted: 'Starting download...',
       downloadSuccess: 'Downloaded successfully',
-      downloadError: 'Failed to download',
+      downloadError:
+        'Download failed! The artifact does not contain SVG content. Please select the correct display type or verify the completeness of the source file code.',
       copyStarted: 'Starting to copy...',
       copySuccess: 'Copied to clipboard',
       copyError: 'Failed to copy',
@@ -1281,6 +1282,7 @@ const translations = {
     nodeActions: {
       dragToConnect: 'Drag to Connect',
       clickToAdd: 'Click to Add',
+      duplicateMemo: 'Duplicate Memo',
       createMemo: 'Create Empty Memo',
       createMemoDescription:
         'Create an empty memo for quick recording ideas, supporting Markdown format',

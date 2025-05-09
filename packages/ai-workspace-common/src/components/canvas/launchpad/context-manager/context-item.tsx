@@ -30,7 +30,7 @@ export const ContextItem = ({
 }) => {
   const { t } = useTranslation();
   const { readonly } = useCanvasContext();
-  const { title, entityId, selection, metadata } = item ?? {};
+  const { title, entityId, selection, metadata, type } = item ?? {};
   const icon = getContextItemIcon(item.type, null, { withHistory: metadata?.withHistory });
   const { setSelectedNode } = useNodeSelection();
   const { getNodes } = useReactFlow();
@@ -106,7 +106,7 @@ export const ContextItem = ({
               },
             )}
           >
-            {title}
+            {title || t(`canvas.nodeTypes.${type}`)}
           </span>
           {!canNotRemove && !readonly && (
             <IconClose

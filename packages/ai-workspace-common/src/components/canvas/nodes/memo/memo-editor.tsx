@@ -21,7 +21,7 @@ export const MemoEditor: FC<MemoEditorProps> = ({ editor, bgColor, onChangeBackg
   const [openColor, setOpenColor] = useState(false);
 
   return (
-    <div className="absolute left-0 -top-[48px] z-50 px-2 bg-white rounded-lg shadow-lg">
+    <div className="absolute left-0 -top-8 z-50 px-2 bg-white rounded-lg shadow-lg">
       <div className="flex gap-1">
         <CommonColorPicker color={bgColor} onChange={onChangeBackground} />
         <Divider className="mx-0 h-8" type="vertical" />

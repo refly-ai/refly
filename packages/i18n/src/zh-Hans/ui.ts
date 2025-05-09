@@ -890,7 +890,8 @@ const translations = {
       copyToClipboard: '复制 PNG 到剪贴板',
       downloadStarted: '开始下载...',
       downloadSuccess: '下载成功',
-      downloadError: '下载失败',
+      downloadError:
+        '下载失败！小组件内未包含 SVG 内容，请选择正确的展示类型，或者检查源文件代码是否完整',
       copyStarted: '开始复制...',
       copySuccess: '已复制到剪贴板',
       copyError: '复制失败',
@@ -1097,6 +1098,7 @@ const translations = {
     nodeActions: {
       dragToConnect: '拖拽连线',
       clickToAdd: '点击添加',
+      duplicateMemo: '复制备忘录',
       createMemo: '创建空备忘录',
       createMemoDescription: '创建一个空备忘录，用于快速记录想法，支持 Markdown 格式',
       copy: '复制节点内容',
