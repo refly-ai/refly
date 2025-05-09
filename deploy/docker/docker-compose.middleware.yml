@@ -74,23 +74,18 @@ services:
       start_period: 10s
     networks:
       - refly_network
-  elasticsearch:
-    container_name: refly_elasticsearch
-    image: reflyai/elasticsearch:7.10.2
+  searxng:
+    container_name: refly_searxng
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
     ports:
-      - 39200:9200
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
+      - 38080:8080
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    restart: always
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -s http://localhost:9200 >/dev/null || exit 1']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+      - ./searxng:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
+      - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}
+      - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
     networks:
       - refly_network
 
@@ -104,3 +99,4 @@ volumes:
   redis_data:
   qdrant_data:
   elasticsearch_data:
+  searxng_data:

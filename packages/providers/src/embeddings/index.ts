@@ -5,7 +5,11 @@ import { FireworksEmbeddings } from '@langchain/community/embeddings/fireworks';
 import { JinaEmbeddings } from './jina';
 import { BaseProvider } from '../types';
 
-export const getEmbeddings = (provider: BaseProvider, config: EmbeddingModelConfig): Embeddings => {
+export interface EmbeddingConfig extends EmbeddingModelConfig {
+  dimensions: number;
+}
+
+export const getEmbeddings = (provider: BaseProvider, config: EmbeddingConfig): Embeddings => {
   switch (provider.providerKey) {
     case 'fireworks':
       return new FireworksEmbeddings({

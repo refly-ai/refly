@@ -69,28 +69,5 @@ export const getOptimizedSearchLocales = (
     }
   }
 
-  // Convert Set back to array, maintaining LOCALE_PRIORITY order
-  // and convert back to internal format while deduplicating normalized forms
-  const seenNormalizedLocales = new Set<string>();
-  const result = LOCALE_PRIORITY.filter((locale) => {
-    const normalized = normalizeLocale(locale);
-    if (locales.has(normalized) && !seenNormalizedLocales.has(normalized)) {
-      seenNormalizedLocales.add(normalized);
-      return true;
-    }
-    return false;
-  }).map(denormalizeLocale);
-
-  // If we still don't have enough locales after deduplication,
-  // add more from the priority list
-  if (result.length < maxSearchLocaleLen) {
-    const additionalLocales = LOCALE_PRIORITY.filter((locale) => {
-      const normalized = normalizeLocale(locale);
-      return !seenNormalizedLocales.has(normalized);
-    }).map(denormalizeLocale);
-
-    result.push(...additionalLocales.slice(0, maxSearchLocaleLen - result.length));
-  }
-
-  return result;
+  return Array.from(locales);
 };

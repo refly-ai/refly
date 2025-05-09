@@ -6502,9 +6502,6 @@ components:
         batchSize:
           type: number
           description: Embedding model batch size
-        dimensions:
-          type: number
-          description: Embedding model dimensions
     RerankerModelConfig:
       type: object
       description: Provider config for rerankers

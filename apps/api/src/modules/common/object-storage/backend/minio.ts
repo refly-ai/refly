@@ -48,6 +48,13 @@ export class MinioStorageBackend implements ObjectStorageBackend {
       this.initialized = true;
       this.logger.log('Minio storage backend initialized');
     } catch (error) {
+      // If bucket already exists in any form, just log and continue
+      if (error?.code === 'BucketAlreadyExists' || error?.code === 'BucketAlreadyOwnedByYou') {
+        this.logger.log(`Bucket ${this.config.bucket} already exists`);
+        this.initialized = true;
+        return;
+      }
+
       this.logger.error(`Failed to initialize Minio storage backend: ${error}`);
       throw error;
     }

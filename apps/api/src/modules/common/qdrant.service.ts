@@ -37,7 +37,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    const initPromise = this.initializeCollection();
+    const initPromise = this.ensureCollectionExists();
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject(`Qdrant initialization timed out after ${this.INIT_TIMEOUT}ms`);
@@ -53,13 +53,13 @@ export class QdrantService implements OnModuleInit {
     }
   }
 
-  async initializeCollection() {
+  async ensureCollectionExists() {
     const { exists } = await this.client.collectionExists(this.collectionName);
 
     if (!exists) {
       const res = await this.client.createCollection(this.collectionName, {
         vectors: {
-          size: this.configService.getOrThrow<number>('embeddings.dimensions'),
+          size: this.configService.getOrThrow<number>('vectorStore.vectorDim'),
           distance: 'Cosine',
           on_disk: true,
         },
@@ -77,6 +77,11 @@ export class QdrantService implements OnModuleInit {
         field_schema: 'keyword',
       }),
     ]);
+  }
+
+  async isCollectionEmpty() {
+    const { count } = await this.client.count(this.collectionName);
+    return count === 0;
   }
 
   /**

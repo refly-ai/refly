@@ -24,7 +24,7 @@ export class SearXNGWebSearcher extends BaseWebSearcher {
   constructor(config?: WebSearchConfig) {
     super(config);
 
-    const apiUrl = config?.apiUrl || process.env.SEARXNG_API_URL || 'http://localhost:8080/';
+    const apiUrl = config?.apiUrl || process.env.SEARXNG_BASE_URL || 'http://localhost:8080/';
     this.client = new SearxngClient({ apiBaseUrl: apiUrl });
   }
 

@@ -5,8 +5,6 @@ services:
     image: reflyai/refly-api:latest
     container_name: refly_api
     depends_on:
-      elasticsearch:
-        condition: service_healthy
       db:
         condition: service_healthy
       minio:
@@ -32,7 +30,7 @@ services:
       - REDIS_HOST=redis
       - DATABASE_URL=postgresql://refly:test@db:5432/refly?schema=refly
       - QDRANT_HOST=qdrant
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SEARXNG_BASE_URL=http://searxng:8080
       - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
       - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
     healthcheck:

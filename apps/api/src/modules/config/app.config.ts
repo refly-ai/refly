@@ -63,7 +63,7 @@ export default () => ({
     vectorDim: Number.parseInt(process.env.REFLY_VEC_DIM) || 768,
   },
   fulltextSearch: {
-    backend: process.env.FULLTEXT_SEARCH_BACKEND || 'elasticsearch',
+    backend: process.env.FULLTEXT_SEARCH_BACKEND || 'prisma',
     elasticsearch: {
       url: process.env.ELASTICSEARCH_URL || 'http://localhost:9200',
       username: process.env.ELASTICSEARCH_USERNAME,

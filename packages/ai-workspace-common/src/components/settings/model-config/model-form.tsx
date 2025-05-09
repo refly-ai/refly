@@ -60,13 +60,29 @@ export const ModelFormModal = memo(
 
     const modelIdOptionsCache = useRef<Record<string, any[]>>({});
 
-    const getCachedOptions = useCallback((providerId: string) => {
-      return modelIdOptionsCache.current[providerId];
-    }, []);
+    // Generate a cache key combining providerId and category
+    const getCacheKey = useCallback(
+      (providerId: string) => {
+        return `${providerId}_${filterProviderCategory}`;
+      },
+      [filterProviderCategory],
+    );
 
-    const setCachedOptions = useCallback((providerId: string, options: any[]) => {
-      modelIdOptionsCache.current[providerId] = options;
-    }, []);
+    const getCachedOptions = useCallback(
+      (providerId: string) => {
+        const cacheKey = getCacheKey(providerId);
+        return modelIdOptionsCache.current[cacheKey];
+      },
+      [getCacheKey],
+    );
+
+    const setCachedOptions = useCallback(
+      (providerId: string, options: any[]) => {
+        const cacheKey = getCacheKey(providerId);
+        modelIdOptionsCache.current[cacheKey] = options;
+      },
+      [getCacheKey],
+    );
 
     const {
       data: providersResponse,
@@ -120,7 +136,6 @@ export const ModelFormModal = memo(
           return {
             ...baseConfig,
             batchSize: values.batchSize,
-            dimensions: values.dimensions,
           };
         }
 
@@ -379,7 +394,6 @@ export const ModelFormModal = memo(
             maxOutput?: number;
             capabilities?: string[];
             batchSize?: number;
-            dimensions?: number;
             topN?: number;
             relevanceThreshold?: number;
           }
@@ -399,7 +413,6 @@ export const ModelFormModal = memo(
             formValues.capabilities = capabilitiesArray;
           } else if (filterProviderCategory === 'embedding') {
             formValues.batchSize = config.batchSize;
-            formValues.dimensions = config.dimensions;
           } else if (filterProviderCategory === 'reranker') {
             formValues.topN = config.topN;
             formValues.relevanceThreshold = config.relevanceThreshold;
@@ -495,18 +508,6 @@ export const ModelFormModal = memo(
             >
               <InputNumber
                 placeholder={t('settings.modelConfig.batchSizePlaceholder')}
-                className="w-full"
-                min={1}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="dimensions"
-              label={t('settings.modelConfig.dimensions')}
-              rules={[{ type: 'number' }]}
-            >
-              <InputNumber
-                placeholder={t('settings.modelConfig.dimensionsPlaceholder')}
                 className="w-full"
                 min={1}
               />
