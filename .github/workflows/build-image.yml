@@ -14,11 +14,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for better caching
 
       - uses: pnpm/action-setup@v4
         if: matrix.app == 'web'
         with:
           run_install: false
+          version: 8
 
       - name: Use Node.js
         uses: actions/setup-node@v4
@@ -26,6 +29,22 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+
+      - name: Get pnpm store directory
+        if: matrix.app == 'web'
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        if: matrix.app == 'web'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         if: matrix.app == 'web'
@@ -68,6 +87,11 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.docker_tags.outputs.tags }}
-          # use cache from GitHub Actions
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: |
+            type=registry,ref=reflyai/refly-${{ matrix.app }}:buildcache
+            type=gha,scope=${{ github.workflow }}
+          cache-to: |
+            type=registry,ref=reflyai/refly-${{ matrix.app }}:buildcache,mode=max
+            type=gha,scope=${{ github.workflow }},mode=max
