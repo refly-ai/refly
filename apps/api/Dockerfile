@@ -16,20 +16,16 @@ COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
 
-# Copy all package.json files from packages
+# Copy all package.json files and source code
 COPY apps/api/package.json ./apps/api/
-
-# Create necessary directories for packages
-
-
-# Copy prisma schema
 COPY apps/api/prisma ./apps/api/prisma
-COPY packages/      ./packages/
-# Install dependencies with workspace support
-# Copy source code
-RUN pnpm install --ignore-scripts
-COPY . .
+COPY packages/ ./packages/
 
+# Install dependencies with workspace support
+RUN pnpm install --ignore-scripts
+
+# Copy remaining source code
+COPY . .
 
 # Build packages in correct order
 RUN pnpm build:api
