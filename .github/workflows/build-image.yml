@@ -69,5 +69,5 @@ jobs:
           push: true
           tags: ${{ steps.docker_tags.outputs.tags }}
           # use cache from GitHub Actions
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
