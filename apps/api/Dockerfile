@@ -17,15 +17,14 @@ COPY pnpm-lock.yaml ./
 COPY package.json ./
 
 # Copy all package.json files from packages
-COPY packages/*/package.json ./packages/
 COPY apps/api/package.json ./apps/api/
 
 # Create necessary directories for packages
-RUN mkdir -p packages/errors packages/openapi-schema packages/providers packages/skill-template
+
 
 # Copy prisma schema
 COPY apps/api/prisma ./apps/api/prisma
-
+COPY packages/      ./packages/
 # Install dependencies with workspace support
 # Copy source code
 RUN pnpm install --ignore-scripts
