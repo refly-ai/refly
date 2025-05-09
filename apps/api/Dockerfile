@@ -31,9 +31,9 @@ RUN pnpm install
 # Build packages in correct order
 RUN pnpm build:api
 
-# Clean up development dependencies
-RUN rm -rf node_modules
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+# # Clean up development dependencies
+# RUN rm -rf node_modules
+# RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # wkhtmltopdf stage
 FROM surnet/alpine-wkhtmltopdf:3.20.3-0.12.6-small AS wkhtmltopdf
