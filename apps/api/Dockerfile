@@ -11,13 +11,8 @@ ENV npm_config_gyp_ignore=true
 ENV CYPRESS_INSTALL_BINARY=0
 ENV SWC_BUILD=true
 
-# Copy workspace configuration files first
-COPY pnpm-workspace.yaml ./
-COPY pnpm-lock.yaml ./
-COPY package.json ./
-COPY turbo.json  ./
-
-# Copy all package.json files and source code
+# Copy all necessary files in one layer
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/api/prisma ./apps/api/prisma
 COPY packages/ ./packages/
@@ -78,12 +73,12 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         && rm pandoc-3.6.3-linux-arm64.tar.gz; \
     fi
 
-# Copy only necessary files from builder
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder /app/packages/ ./packages/
+# Copy all necessary files from builder in one layer
+COPY --from=builder /app/apps/api/dist ./apps/api/dist \
+    --from=builder /app/node_modules ./node_modules \
+    --from=builder /app/apps/api/prisma ./apps/api/prisma \
+    --from=builder /app/apps/api/node_modules ./apps/api/node_modules \
+    --from=builder /app/packages/ ./packages/
 
 # Set environment variables
 ENV NODE_ENV=production
