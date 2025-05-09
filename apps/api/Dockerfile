@@ -24,7 +24,7 @@ COPY apps/api/prisma ./apps/api/prisma
 # Copy source code
 COPY . .
 ENV CYPRESS_INSTALL_BINARY=0
-RUN pnpm install
+RUN pnpm install --ignore-scripts
 
 
 
