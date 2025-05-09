@@ -73,6 +73,7 @@
       "**/.output/**",
       "**/.turbo/**",
       "**/build/**",
+      "**/generated/**",
       "packages/wxt/**",
       "**/common/temp/**"
     ]
