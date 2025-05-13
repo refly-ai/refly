@@ -2,6 +2,10 @@
 FROM node:20.19.1-alpine3.20 AS builder
 WORKDIR /app
 
+# Define build arguments
+ARG APP_VERSION
+ARG COMMIT_HASH
+
 # Install pnpm globally
 RUN npm install -g pnpm
 
@@ -34,6 +38,10 @@ FROM surnet/alpine-wkhtmltopdf:3.20.3-0.12.6-small AS wkhtmltopdf
 # Production stage
 FROM node:20.19.1-alpine3.20 AS production
 WORKDIR /app
+
+# Define build arguments again for the production stage
+ARG APP_VERSION
+ARG COMMIT_HASH
 
 # Install system dependencies in a single layer
 RUN apk add --no-cache \
@@ -80,6 +88,8 @@ COPY --from=builder /app/packages/ ./packages/
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV APP_VERSION=${APP_VERSION}
+ENV COMMIT_HASH=${COMMIT_HASH}
 
 EXPOSE 3000
 CMD ["node", "apps/api/dist/main.js"]

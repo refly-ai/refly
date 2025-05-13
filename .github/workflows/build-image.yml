@@ -16,13 +16,11 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        if: matrix.app == 'web'
         with:
           run_install: false
 
       - name: Use Node.js
         uses: actions/setup-node@v4
-        if: matrix.app == 'web'
         with:
           node-version: 20
           cache: 'pnpm'
@@ -30,6 +28,14 @@ jobs:
       - name: Install dependencies
         if: matrix.app == 'web'
         run: pnpm install
+
+      - name: Extract version from package.json
+        id: package_version
+        if: matrix.app == 'api'
+        run: |
+          VERSION=$(node -p "require('./apps/api/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
 
       - name: Build
         run: pnpm build:web
@@ -68,6 +74,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.docker_tags.outputs.tags }}
+          build-args: |
+            ${{ matrix.app == 'api' && format('APP_VERSION={0}', steps.package_version.outputs.version) || '' }}
+            ${{ matrix.app == 'api' && format('COMMIT_HASH={0}', github.sha) || '' }}
           # use cache from GitHub Actions
           # cache-from: type=gha
           # cache-to: type=gha,mode=max

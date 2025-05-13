@@ -35,6 +35,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Extract version from package.json
+        id: package_version
+        run: |
+          VERSION=$(node -p "require('./apps/web/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
       - name: Build
         run: pnpm build:web
         env:
@@ -42,6 +49,8 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          VITE_APP_VERSION: ${{ steps.package_version.outputs.version }}
+          VITE_COMMIT_HASH: ${{ github.sha }}
           VITE_API_URL: https://api.refly.ai
           VITE_COLLAB_URL: https://collab.refly.ai
           VITE_SUBSCRIPTION_ENABLED: true
