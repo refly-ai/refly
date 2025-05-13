@@ -74,6 +74,7 @@ const translations = {
       failed: '复制失败，请重试！',
     },
     login: '登录',
+    signup: '注册',
     share: '分享',
     uploadImage: '上传图片',
     uploadSuccess: '上传成功',

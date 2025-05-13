@@ -79,7 +79,14 @@ export const Actions = memo(
     return (
       <div className={cn('flex justify-between items-center', className)} ref={containerRef}>
         <div className="flex items-center">
-          <ModelSelector model={model} setModel={setModel} briefMode={false} trigger={['click']} />
+          {userStore.isLogin && (
+            <ModelSelector
+              model={model}
+              setModel={setModel}
+              briefMode={false}
+              trigger={['click']}
+            />
+          )}
 
           {detectedUrls?.length > 0 && (
             <div className="flex items-center gap-1 ml-2">

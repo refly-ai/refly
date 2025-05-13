@@ -17,6 +17,8 @@ import { useNavigate } from 'react-router-dom';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { staticPublicEndpoint } from '@refly-packages/ai-workspace-common/utils/env';
 import cn from 'classnames';
+import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 
 export const TemplateCard = ({
   template,
@@ -29,6 +31,10 @@ export const TemplateCard = ({
     setVisible: state.setVisible,
   }));
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
+  const isLogin = useUserStoreShallow((state) => state.isLogin);
+  const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
+    setLoginModalOpen: state.setLoginModalOpen,
+  }));
 
   const handlePreview = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -40,6 +46,10 @@ export const TemplateCard = ({
 
   const handleUse = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (!isLogin) {
+      setLoginModalOpen(true);
+      return;
+    }
     if (template.shareId) {
       duplicateCanvas(template.shareId);
     }

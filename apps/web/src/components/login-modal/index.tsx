@@ -1,6 +1,6 @@
 import { Button, Modal, Divider, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import React from 'react';
 
 import Logo from '@/assets/logo.svg';
@@ -20,16 +20,17 @@ interface FormValues {
 }
 
 const LoginModal = (props: { visible?: boolean; from?: string }) => {
-  const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [form] = Form.useForm<FormValues>();
 
   const authStore = useAuthStoreShallow((state) => ({
     loginInProgress: state.loginInProgress,
     loginProvider: state.loginProvider,
     loginModalOpen: state.loginModalOpen,
+    isSignUpMode: state.isSignUpMode,
     setLoginInProgress: state.setLoginInProgress,
     setLoginProvider: state.setLoginProvider,
     setLoginModalOpen: state.setLoginModalOpen,
+    setIsSignUpMode: state.setIsSignUpMode,
     setVerificationModalOpen: state.setVerificationModalOpen,
     setResetPasswordModalOpen: state.setResetPasswordModalOpen,
     setSessionId: state.setSessionId,
@@ -84,7 +85,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
     authStore.setLoginProvider('email');
     authStore.setLoginInProgress(true);
 
-    if (isSignUpMode) {
+    if (authStore.isSignUpMode) {
       const { data } = await getClient().emailSignup({
         body: {
           email: values.email,
@@ -120,7 +121,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
         window.location.replace(isPublicAccessPage ? window.location.href : '/');
       }
     }
-  }, [authStore, form, isPublicAccessPage, isSignUpMode]);
+  }, [authStore, form, isPublicAccessPage]);
 
   const handleResetPassword = useCallback(() => {
     authStore.setLoginModalOpen(false);
@@ -129,11 +130,17 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
 
   const handleModeSwitch = useCallback(
     (signUp: boolean) => {
-      setIsSignUpMode(signUp);
+      authStore.setIsSignUpMode(signUp);
       form.resetFields();
     },
-    [form],
+    [form, authStore],
   );
+
+  useEffect(() => {
+    if (!authStore.loginModalOpen) {
+      authStore.setIsSignUpMode(false);
+    }
+  }, [authStore]);
 
   return (
     <Modal
@@ -154,13 +161,13 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
               marginLeft: 8,
             }}
           >
-            {isSignUpMode
+            {authStore.isSignUpMode
               ? t('landingPage.loginModal.signupTitle')
               : t('landingPage.loginModal.signinTitle')}
           </span>
         </div>
         <div className="mt-2 text-sm text-gray-500">
-          {isSignUpMode
+          {authStore.isSignUpMode
             ? t('landingPage.loginModal.signupSubtitle')
             : t('landingPage.loginModal.signinSubtitle')}
         </div>
@@ -242,7 +249,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
                 label={
                   <div className="flex w-96 flex-row items-center justify-between">
                     <span className="font-medium">{t('landingPage.loginModal.passwordLabel')}</span>
-                    {!isSignUpMode && (
+                    {!authStore.isSignUpMode && (
                       <Button
                         type="link"
                         className="p-0 text-green-600"
@@ -260,7 +267,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
                     required: true,
                     message: t('verifyRules.passwordRequired'),
                   },
-                  ...(isSignUpMode
+                  ...(authStore.isSignUpMode
                     ? [
                         {
                           min: 8,
@@ -290,7 +297,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
               </Form.Item>
             </Form>
             <div className="mt-6 text-sm">
-              {isSignUpMode ? (
+              {authStore.isSignUpMode ? (
                 <span>
                   {`${t('landingPage.loginModal.signinHint')} `}
                   <Button
