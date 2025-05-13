@@ -4,7 +4,7 @@ import { Skill } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { useFrontPageStoreShallow } from '@refly-packages/ai-workspace-common/stores/front-page';
 import { SkillDisplay } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/skill-display';
-import { getSkillIcon, IconPlus } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { getSkillIcon, IconDown, IconLanguage, IconPlus } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { Form } from '@arco-design/web-react';
 import { Button } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
@@ -14,6 +14,9 @@ import { TemplateList } from '@refly-packages/ai-workspace-common/components/can
 import { canvasTemplateEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/components/magicui/animated-grid-pattern';
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
+import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
+
+
 import cn from 'classnames';
 import Logo from '@/assets/logo.svg';
 
@@ -148,7 +151,6 @@ export const UnsignedFrontPage = memo(() => {
       />
       <div
         className="px-10 h-[52px] flex items-center justify-between dark:bg-gray-900/90"
-        style={{ borderBottom: '1px solid #f0f0f0' }}
       >
         <div className="flex flex-row items-center gap-1.5">
           <img src={Logo} alt="Refly" className="h-8 w-8" />
@@ -156,7 +158,18 @@ export const UnsignedFrontPage = memo(() => {
             Refly
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+        <UILocaleList>  
+            <Button
+              type="text"
+              size="middle"
+              className="px-2 text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-300 "
+            >
+              <IconLanguage className="h-4 w-4" />
+              {t('language')}{' '}
+              <IconDown className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
+            </Button>
+          </UILocaleList>
           <Button type="primary" onClick={handleLogin}>
             {t('common.login')}
           </Button>
@@ -299,8 +312,8 @@ export const UnsignedFrontPage = memo(() => {
             <div className="h-full flex flex-col mt-10">
               <div className="flex justify-between items-center pt-6 mx-2">
                 <div>
-                  <h3 className="text-base font-medium">{t('frontPage.fromCommunity')}</h3>
-                  <p className="text-xs text-gray-500 mt-1">{t('frontPage.fromCommunityDesc')}</p>
+                  <h3 className="text-base font-medium dark:text-gray-100">{t('frontPage.fromCommunity')}</h3>
+                  <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">{t('frontPage.fromCommunityDesc')}</p>
                 </div>
               </div>
               <div className="flex-1">
