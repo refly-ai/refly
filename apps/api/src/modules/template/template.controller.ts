@@ -23,10 +23,9 @@ import { TemplateService } from './template.service';
 export class TemplateController {
   constructor(private templateService: TemplateService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Get('list')
   async listCanvasTemplates(
-    @LoginedUser() user: User,
+    @LoginedUser() user: User | null,
     @Query('categoryId') categoryId: string,
     @Query('scope', new DefaultValuePipe('public')) scope: 'public' | 'private',
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
