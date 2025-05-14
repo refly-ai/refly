@@ -259,7 +259,10 @@ export const ImportFromFile = () => {
   }, [fileList, setStorageFileList]);
 
   const RenderItem = (props: { item: FileItem }) => {
-    const importResourceStore = useImportResourceStore();
+    const importResourceStore = useImportResourceStoreShallow((state) => ({
+      fileList: state.fileList,
+      setFileList: state.setFileList,
+    }));
     const { item } = props;
     const { t } = useTranslation();
 
@@ -378,6 +381,13 @@ export const ImportFromFile = () => {
               </div>
             )}
           </Dragger>
+          {fileList?.length > 0 && (
+            <List
+              className="mt-4"
+              dataSource={fileList}
+              renderItem={(item) => <RenderItem item={item} />}
+            />
+          )}
         </div>
       </div>
 
