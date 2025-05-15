@@ -86,16 +86,16 @@ const sidebar = {
               link: '/community-version/self-deploy/',
             },
             {
-              text: 'Gitpod Deployment',
-              link: '/guide/use-gitpod-deploy',
-            },
-            {
               text: 'Ollama Integration',
               link: '/community-version/self-deploy/ollama',
             },
             {
               text: 'Configuration Guide',
               link: '/community-version/self-deploy/configuration',
+            },
+            {
+              text: 'Gitpod Quick Deploy',
+              link: '/community-version/self-deploy/gitpod-quick-deploy',
             },
           ],
         },
@@ -195,16 +195,18 @@ const sidebar = {
           items: [
             { text: '部署指南', link: '/zh/community-version/self-deploy/' },
             {
-              text: 'Gitpod 部署',
-              link: '/zh/guide/use-gitpod-deploy',
-            },
-            {
               text: 'Ollama 集成',
               link: '/zh/community-version/self-deploy/ollama',
             },
             {
               text: '配置指南',
               link: '/zh/community-version/self-deploy/configuration',
+            },
+{ text: '个性化设置', link: '/zh/community-version/self-deploy/personalization.md' },
+            { text: '本地快速使用 Refly', link: '/zh/community-version/self-deploy/local-quick-start.md' },
+            {
+              text: 'Gitpod 快速部署',
+              link: '/zh/community-version/self-deploy/gitpod-quick-deploy',
             },
           ],
         },
@@ -305,6 +307,7 @@ export default defineConfig({
         nav: enNav,
         sidebar: sidebar.en,
         siteTitle: 'Refly Docs',
+        outline: [2, 4],
         outlineTitle: 'On this page',
         docFooter: {
           prev: 'Previous page',
@@ -344,6 +347,7 @@ export default defineConfig({
         nav: zhNav,
         sidebar: sidebar.zh,
         siteTitle: 'Refly 文档',
+        outline: [2, 4],
         outlineTitle: '本页目录',
         docFooter: {
           prev: '上一页',
@@ -393,5 +397,6 @@ export default defineConfig({
     search: {
       provider: 'local',
     },
+    outline: [2, 4], // 添加此行
   },
 });
