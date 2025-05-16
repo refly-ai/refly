@@ -18,6 +18,8 @@ export enum IDPrefix {
   SKILL = 'sk-',
   SKILL_TRIGGER = 'tr-',
   SKILL_JOB = 'sj-',
+  PILOT_SESSION = 'ps-',
+  PILOT_STEP = 'pst-',
   PROVIDER = 'pr-',
   PROVIDER_ITEM = 'pi-',
   CONTENT_SELECTOR = 'cs-',
@@ -43,6 +45,14 @@ export function genLabelClassID(): string {
 
 export function genLabelInstanceID(): string {
   return IDPrefix.LABEL_INSTANCE + createId();
+}
+
+export function genPilotSessionID(): string {
+  return IDPrefix.PILOT_SESSION + createId();
+}
+
+export function genPilotStepID(): string {
+  return IDPrefix.PILOT_STEP + createId();
 }
 
 export function genActionResultID(): string {

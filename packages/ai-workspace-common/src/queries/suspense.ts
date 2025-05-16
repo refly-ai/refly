@@ -15,6 +15,7 @@ import {
   getDocumentDetail,
   getPageByCanvasId,
   getPageDetail,
+  getPilotSessionDetail,
   getProjectDetail,
   getResourceDetail,
   getSettings,
@@ -30,6 +31,7 @@ import {
   listMcpServers,
   listModels,
   listPages,
+  listPilotSessions,
   listProjects,
   listProviderItemOptions,
   listProviderItems,
@@ -64,6 +66,8 @@ import {
   GetPageByCanvasIdError,
   GetPageDetailData,
   GetPageDetailError,
+  GetPilotSessionDetailData,
+  GetPilotSessionDetailError,
   GetProjectDetailData,
   GetProjectDetailError,
   GetResourceDetailData,
@@ -88,6 +92,8 @@ import {
   ListModelsError,
   ListPagesData,
   ListPagesError,
+  ListPilotSessionsData,
+  ListPilotSessionsError,
   ListProjectsData,
   ListProjectsError,
   ListProviderItemOptionsData,
@@ -530,6 +536,38 @@ export const useListSkillTriggersSuspense = <
     queryKey: Common.UseListSkillTriggersKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listSkillTriggers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useListPilotSessionsSuspense = <
+  TData = Common.ListPilotSessionsDefaultResponse,
+  TError = ListPilotSessionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListPilotSessionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListPilotSessionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listPilotSessions({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetPilotSessionDetailSuspense = <
+  TData = Common.GetPilotSessionDetailDefaultResponse,
+  TError = GetPilotSessionDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetPilotSessionDetailData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetPilotSessionDetailKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getPilotSessionDetail({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetSettingsSuspense = <

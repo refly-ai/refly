@@ -144,6 +144,10 @@ model ActionResult {
   duplicateFrom  String?      @map("duplicate_from")
   /// Provider item id
   providerItemId String?      @map("provider_item_id")
+  /// Pilot step id
+  pilotStepId    String?      @map("pilot_step_id")
+  /// Pilot session id
+  pilotSessionId String?      @map("pilot_session_id")
   /// Create timestamp
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
@@ -151,6 +155,7 @@ model ActionResult {
 
   @@unique([resultId, version])
   @@index([targetType, targetId])
+  @@index([pilotStepId])
   @@map("action_results")
 }
 
@@ -190,6 +195,68 @@ model ActionStep {
   @@map("action_steps")
 }
 
+model PilotSession {
+  /// Primary key
+  pk             BigInt   @id @default(autoincrement())
+  /// Session id
+  sessionId      String   @unique @map("session_id")
+  /// UID
+  uid            String   @map("uid")
+  /// Session current epoch
+  currentEpoch   Int      @default(0) @map("current_epoch")
+  /// Session max epoch
+  maxEpoch       Int      @default(2) @map("max_epoch")
+  /// Session title
+  title          String   @map("title")
+  /// Input (JSON)
+  input          String   @map("input")
+  /// Used model
+  modelName      String?  @map("model_name")
+  /// Action target type
+  targetType     String?  @map("target_type")
+  /// Action target ID
+  targetId       String?  @map("target_id")
+  /// Provider item id
+  providerItemId String?  @map("provider_item_id")
+  /// Status
+  status         String   @default("init") @map("status")
+  /// Create timestamp
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([uid, createdAt])
+  @@map("pilot_sessions")
+}
+
+model PilotStep {
+  /// Primary key
+  pk         BigInt   @id @default(autoincrement())
+  /// Pilot step id
+  stepId     String   @unique @map("step_id")
+  /// Pilot session id
+  sessionId  String   @map("session_id")
+  /// Step name
+  name       String   @map("name")
+  /// Epoch
+  epoch      Int      @map("epoch")
+  /// Entity id
+  entityId   String?  @map("entity_id")
+  /// Entity type
+  entityType String?  @map("entity_type")
+  /// Status
+  status     String   @default("init") @map("status")
+  /// Raw step output from LLM
+  rawOutput  String?  @map("raw_output")
+  /// Create timestamp
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([sessionId, createdAt])
+  @@map("pilot_steps")
+}
+
 enum ActionStatus {
   waiting
   executing
@@ -207,9 +274,9 @@ model TokenUsage {
   /// Model tier
   tier          String   @map("tier")
   /// Model provider
-  modelProvider String   @map("model_provider")
+  modelProvider String   @default("") @map("model_provider")
   /// Model name
-  modelName     String   @map("model_name")
+  modelName     String   @default("") @map("model_name")
   /// Input tokens
   inputTokens   Int      @default(0) @map("input_tokens")
   /// Output tokens

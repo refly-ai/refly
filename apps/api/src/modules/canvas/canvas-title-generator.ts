@@ -2,21 +2,9 @@ import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { Logger } from '@nestjs/common';
 import { BaseChatModel } from '@refly/providers';
 import { z } from 'zod';
-import { jsonrepair } from 'jsonrepair';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import parseJson from 'json-parse-even-better-errors';
-
-// Define a more flexible CanvasContentItem interface to accommodate different content types
-export interface CanvasContentItem {
-  // Question/answer content
-  question?: string;
-  answer?: string;
-
-  // Document/resource content
-  title?: string;
-  content?: string;
-  contentPreview?: string;
-}
+import { CanvasContentItem } from './canvas.dto';
+import { extractJsonFromMarkdown } from '@refly/utils';
 
 /**
  * Define Zod schema for title generation output
@@ -43,157 +31,6 @@ const titleSchema = z.object({
     ])
     .describe('The general category of the content'),
 });
-
-// Enhanced interface for extraction errors
-interface ExtractionError {
-  message: string;
-  pattern?: string;
-  content?: string;
-  cause?: Error;
-  attemptedRepair?: boolean;
-}
-
-// Helper functions to preprocess and fix common JSON issues
-function preprocessJsonString(str: string): string {
-  let result = str;
-
-  // Remove BOM characters that can appear at the start of some strings
-  result = result.replace(/^\uFEFF/, '');
-
-  // Normalize line endings
-  result = result.replace(/\r\n/g, '\n');
-
-  // Remove zero-width spaces and other invisible characters
-  result = result
-    .replace(/\u200B/g, '')
-    .replace(/\u200C/g, '')
-    .replace(/\u200D/g, '')
-    .replace(/\uFEFF/g, '');
-
-  // Replace "smart" quotes with straight quotes
-  result = result.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
-
-  // Fix trailing commas in arrays and objects (common LLM error)
-  result = result.replace(/,(\s*[\]}])/g, '$1');
-
-  // Fix unquoted property names
-  result = result.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
-
-  // Fix single-quoted strings (convert to double-quoted)
-  result = fixSingleQuotedStrings(result);
-
-  return result;
-}
-
-// Helper function to convert single quotes to double quotes
-function fixSingleQuotedStrings(str: string): string {
-  // This is a simplified approach - for complex cases we rely on jsonrepair
-  let inString = false;
-  let inDoubleQuoteString = false;
-  let result = '';
-
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    const prevChar = i > 0 ? str[i - 1] : '';
-
-    // Toggle string state based on quotes
-    if (char === '"' && prevChar !== '\\') {
-      inDoubleQuoteString = !inDoubleQuoteString;
-    } else if (char === "'" && prevChar !== '\\' && !inDoubleQuoteString) {
-      inString = !inString;
-      result += '"';
-      continue;
-    }
-
-    result += char;
-  }
-
-  return result;
-}
-
-// Helper function to extract JSON from markdown code blocks
-function extractJsonFromMarkdown(content: string): { result?: any; error?: ExtractionError } {
-  // Remove any escaped newlines and normalize line endings
-  const normalizedContent = content.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
-
-  // Try different JSON extraction patterns
-  const patterns = [
-    // Pattern 1: Standard markdown code block with json tag
-    /```(?:json)\s*\n([\s\S]*?)\n```/,
-    // Pattern 2: Standard markdown code block without language tag
-    /```\s*\n([\s\S]*?)\n```/,
-    // Pattern 3: Single-line code block
-    /`(.*?)`/,
-    // Pattern 4: Raw JSON in common structures
-    /({[\s\S]*}|\[[\s\S]*\])/,
-    // Pattern 5: Raw JSON (fallback)
-    /([\s\S]*)/,
-  ];
-
-  const errors: ExtractionError[] = [];
-
-  // First pass - try with the original patterns
-  for (const pattern of patterns) {
-    const match = normalizedContent.match(pattern);
-    if (match?.[1]) {
-      try {
-        const trimmed = match[1].trim();
-        const preprocessed = preprocessJsonString(trimmed);
-        return { result: parseJson(preprocessed) };
-      } catch (e) {
-        errors.push({
-          message: `Failed to parse JSON using pattern ${pattern}`,
-          pattern: pattern.toString(),
-          content: match[1].substring(0, 200) + (match[1].length > 200 ? '...' : ''),
-          cause: e instanceof Error ? e : new Error(String(e)),
-        });
-      }
-    }
-  }
-
-  // Second pass - try with jsonrepair
-  for (const pattern of patterns) {
-    const match = normalizedContent.match(pattern);
-    if (match?.[1]) {
-      try {
-        const trimmed = match[1].trim();
-        // First preprocess, then try to repair the JSON
-        const preprocessed = preprocessJsonString(trimmed);
-        const repaired = jsonrepair(preprocessed);
-        return {
-          result: parseJson(repaired),
-        };
-      } catch (e) {
-        errors.push({
-          message: `Failed to repair and parse JSON using pattern ${pattern}`,
-          pattern: pattern.toString(),
-          content: match[1].substring(0, 200) + (match[1].length > 200 ? '...' : ''),
-          cause: e instanceof Error ? e : new Error(String(e)),
-          attemptedRepair: true,
-        });
-      }
-    }
-  }
-
-  // Last resort - try to parse the entire content with repair
-  try {
-    // Try to repair the entire content
-    const preprocessed = preprocessJsonString(normalizedContent);
-    const repaired = jsonrepair(preprocessed);
-    return { result: parseJson(repaired) };
-  } catch (e) {
-    // If all attempts fail, return a detailed error
-    const finalError: ExtractionError = {
-      message:
-        'Failed to parse JSON from response after trying all extraction patterns and repair attempts',
-      content: normalizedContent.substring(0, 200) + (normalizedContent.length > 200 ? '...' : ''),
-      cause: e instanceof Error ? e : new Error(String(e)),
-      attemptedRepair: true,
-    };
-
-    return { error: finalError };
-  }
-}
 
 /**
  * Generates a detailed schema guide with example for LLM
@@ -291,8 +128,8 @@ Expected Output:
 function formatCanvasContent(contentItems: CanvasContentItem[]): string {
   return contentItems
     .map((item) => {
-      if (item.question && item.answer) {
-        return `Question: ${item.question}\nAnswer: ${item.answer}`;
+      if (item.type === 'skillResponse') {
+        return `Question: ${item.title}\nAnswer: ${item.content}`;
       }
 
       if (item.title && item.contentPreview) {

@@ -273,6 +273,18 @@ import type {
   DeleteSkillTriggerData,
   DeleteSkillTriggerError,
   DeleteSkillTriggerResponse,
+  CreatePilotSessionData,
+  CreatePilotSessionError,
+  CreatePilotSessionResponse,
+  UpdatePilotSessionData,
+  UpdatePilotSessionError,
+  UpdatePilotSessionResponse,
+  ListPilotSessionsData,
+  ListPilotSessionsError,
+  ListPilotSessionsResponse2,
+  GetPilotSessionDetailData,
+  GetPilotSessionDetailError,
+  GetPilotSessionDetailResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -1775,6 +1787,74 @@ export const deleteSkillTrigger = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/skill/trigger/delete',
+  });
+};
+
+/**
+ * Create new pilot session
+ * Create a new pilot session
+ */
+export const createPilotSession = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePilotSessionData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreatePilotSessionResponse,
+    CreatePilotSessionError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/pilot/session/new',
+  });
+};
+
+/**
+ * Update pilot session
+ * Update an existing pilot session
+ */
+export const updatePilotSession = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePilotSessionData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdatePilotSessionResponse,
+    UpdatePilotSessionError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/pilot/session/update',
+  });
+};
+
+/**
+ * List pilot sessions
+ * List all pilot sessions
+ */
+export const listPilotSessions = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPilotSessionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListPilotSessionsResponse2,
+    ListPilotSessionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/pilot/session/list',
+  });
+};
+
+/**
+ * Get pilot session detail
+ * Get detail for a pilot session
+ */
+export const getPilotSessionDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetPilotSessionDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetPilotSessionDetailResponse2,
+    GetPilotSessionDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/pilot/session/detail',
   });
 };
 

@@ -71,6 +71,7 @@ import {
   QUEUE_SKILL_TIMEOUT_CHECK,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_AUTO_NAME_CANVAS,
+  QUEUE_SYNC_PILOT_STEP,
 } from '../../utils';
 import { InvokeSkillJobData, SkillTimeoutCheckJobData } from './skill.dto';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -108,6 +109,7 @@ import { providerPO2DTO } from '@/modules/provider/provider.dto';
 import { codeArtifactPO2DTO } from '@/modules/code-artifact/code-artifact.dto';
 import { McpServerService } from '@/modules/mcp-server/mcp-server.service';
 import { mcpServerPO2DTO } from '@/modules/mcp-server/mcp-server.dto';
+import { SyncPilotStepJobData } from '@/modules/pilot/pilot.processor';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -150,6 +152,8 @@ export class SkillService {
     private requestUsageQueue: Queue<SyncRequestUsageJobData>,
     @InjectQueue(QUEUE_AUTO_NAME_CANVAS)
     private autoNameCanvasQueue: Queue<AutoNameCanvasJobData>,
+    @InjectQueue(QUEUE_SYNC_PILOT_STEP)
+    private pilotStepQueue: Queue<SyncPilotStepJobData>,
   ) {
     this.skillEngine = new SkillEngine(this.logger, this.buildReflyService());
     this.skillInventory = createSkillInventory(this.skillEngine);
@@ -263,16 +267,18 @@ export class SkillService {
     };
   };
 
-  listSkills(): Skill[] {
-    const skills = this.skillInventory
-      .map((skill) => ({
-        name: skill.name,
-        icon: skill.icon,
-        description: skill.description,
-        configSchema: skill.configSchema,
-      }))
+  listSkills(includeAll = false): Skill[] {
+    let skills = this.skillInventory.map((skill) => ({
+      name: skill.name,
+      icon: skill.icon,
+      description: skill.description,
+      configSchema: skill.configSchema,
+    }));
+
+    if (!includeAll) {
       // TODO: figure out a better way to filter applicable skills
-      .filter((skill) => !['commonQnA', 'editDoc'].includes(skill.name));
+      skills = skills.filter((skill) => !['commonQnA', 'editDoc'].includes(skill.name));
+    }
 
     return skills;
   }
@@ -540,41 +546,49 @@ export class SkillService {
     };
 
     if (existingResult) {
-      const [result] = await this.prisma.$transaction([
-        this.prisma.actionResult.create({
-          data: {
-            resultId,
-            uid,
-            version: (existingResult.version ?? 0) + 1,
-            type: 'skill',
-            tier: providerItem.tier ?? '',
-            status: 'executing',
-            title: param.input.query,
-            targetId: param.target?.entityId,
-            targetType: param.target?.entityType,
-            modelName: modelConfigMap.chat.modelId,
-            projectId: param.projectId ?? null,
-            actionMeta: JSON.stringify({
+      if (existingResult.pilotStepId) {
+        const result = await this.prisma.actionResult.update({
+          where: { pk: existingResult.pk },
+          data: { status: 'executing' },
+        });
+        data.result = actionResultPO2DTO(result);
+      } else {
+        const [result] = await this.prisma.$transaction([
+          this.prisma.actionResult.create({
+            data: {
+              resultId,
+              uid,
+              version: (existingResult.version ?? 0) + 1,
               type: 'skill',
-              name: param.skillName,
-              icon: skill.icon,
-            } as ActionMeta),
-            errors: JSON.stringify([]),
-            input: JSON.stringify(param.input),
-            context: JSON.stringify(purgeContext(param.context)),
-            tplConfig: JSON.stringify(param.tplConfig),
-            runtimeConfig: JSON.stringify(param.runtimeConfig),
-            history: JSON.stringify(purgeResultHistory(param.resultHistory)),
-            providerItemId: providerItem.itemId,
-          },
-        }),
-        // Delete existing step data
-        this.prisma.actionStep.updateMany({
-          where: { resultId },
-          data: { deletedAt: new Date() },
-        }),
-      ]);
-      data.result = actionResultPO2DTO(result);
+              tier: providerItem.tier ?? '',
+              status: 'executing',
+              title: param.input.query,
+              targetId: param.target?.entityId,
+              targetType: param.target?.entityType,
+              modelName: modelConfigMap.chat.modelId,
+              projectId: param.projectId ?? null,
+              actionMeta: JSON.stringify({
+                type: 'skill',
+                name: param.skillName,
+                icon: skill.icon,
+              } as ActionMeta),
+              errors: JSON.stringify([]),
+              input: JSON.stringify(param.input),
+              context: JSON.stringify(purgeContext(param.context)),
+              tplConfig: JSON.stringify(param.tplConfig),
+              runtimeConfig: JSON.stringify(param.runtimeConfig),
+              history: JSON.stringify(purgeResultHistory(param.resultHistory)),
+              providerItemId: providerItem.itemId,
+            },
+          }),
+          // Delete existing step data
+          this.prisma.actionStep.updateMany({
+            where: { resultId },
+            data: { deletedAt: new Date() },
+          }),
+        ]);
+        data.result = actionResultPO2DTO(result);
+      }
     } else {
       const result = await this.prisma.actionResult.create({
         data: {
@@ -1262,7 +1276,7 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
                 String(runMeta.ls_model_name),
               );
               if (!providerItem) {
-                this.logger.error(`model not found: ${String(runMeta.ls_model_name)}`);
+                this.logger.warn(`model not found: ${String(runMeta.ls_model_name)}`);
               }
               const usage: TokenUsageItem = {
                 tier: providerItem?.tier,
@@ -1310,16 +1324,21 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
       }
 
       const steps = resultAggregator.getSteps({ resultId, version });
+      const status = result.errors.length > 0 ? 'failed' : 'finish';
 
       await this.prisma.$transaction([
         this.prisma.actionResult.updateMany({
           where: { resultId, version },
           data: {
-            status: result.errors.length > 0 ? 'failed' : 'finish',
+            status,
             errors: JSON.stringify(result.errors),
           },
         }),
         this.prisma.actionStep.createMany({ data: steps }),
+        this.prisma.pilotStep.updateMany({
+          where: { stepId: result.pilotStepId },
+          data: { status },
+        }),
       ]);
 
       writeSSEResponse(res, { event: 'end', resultId, version });
@@ -1342,6 +1361,15 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
           uid: user.uid,
           tier,
           timestamp: new Date(),
+        });
+      }
+
+      // Sync pilot step if needed
+      this.logger.log(`Sync pilot step for result ${resultId}, pilotStepId: ${result.pilotStepId}`);
+      if (result.pilotStepId) {
+        await this.pilotStepQueue.add('syncPilotStep', {
+          user: { uid: user.uid },
+          stepId: result.pilotStepId,
         });
       }
     }

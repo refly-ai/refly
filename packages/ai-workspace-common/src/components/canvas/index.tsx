@@ -64,6 +64,7 @@ import { runtime } from '@refly-packages/ai-workspace-common/utils/env';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
+import { usePilotStoreShallow } from '@refly-packages/ai-workspace-common/stores/pilot';
 
 const GRID_SIZE = 10;
 
@@ -201,6 +202,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
   const { pendingNode, clearPendingNode } = useCanvasNodesStore();
   const { provider, readonly, shareNotFound, shareLoading } = useCanvasContext();
+
+  const { isPilotOpen, setIsPilotOpen, setActiveSessionId } = usePilotStoreShallow((state) => ({
+    isPilotOpen: state.isPilotOpen,
+    setIsPilotOpen: state.setIsPilotOpen,
+    setActiveSessionId: state.setActiveSessionId,
+  }));
 
   const {
     config,
@@ -464,8 +471,14 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     if (!readonly) {
       getPageByCanvasId();
     }
+
     if (showSlideshow) {
       setShowSlideshow(false);
+    }
+
+    if (isPilotOpen) {
+      setIsPilotOpen(false);
+      setActiveSessionId(null);
     }
 
     const unsubscribe = locateToNodePreviewEmitter.on(

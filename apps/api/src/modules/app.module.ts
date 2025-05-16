@@ -16,6 +16,7 @@ import configuration from './config/app.config';
 import { AppController } from './app.controller';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { SkillModule } from './skill/skill.module';
+import { PilotModule } from './pilot/pilot.module';
 import { SearchModule } from './search/search.module';
 import { LabelModule } from './label/label.module';
 import { EventModule } from './event/event.module';
@@ -120,6 +121,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     RAGModule,
     KnowledgeModule,
     SkillModule,
+    PilotModule,
     SearchModule,
     LabelModule,
     EventModule,

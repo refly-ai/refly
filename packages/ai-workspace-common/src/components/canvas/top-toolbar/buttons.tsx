@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { MdOutlineImage } from 'react-icons/md';
 import {
   IconDownloadFile,
+  IconPilot,
   IconSearch,
   IconSlideshow,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -15,8 +16,8 @@ import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { IconAskAI } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { usePilotStoreShallow } from '@refly-packages/ai-workspace-common/stores/pilot';
 
 export const ToolbarButtons = memo(
   ({
@@ -38,13 +39,14 @@ export const ToolbarButtons = memo(
     const { hoverCardEnabled } = useHoverCard();
     const { readonly } = useCanvasContext();
 
-    const { showReflyPilot, setShowReflyPilot, showSlideshow, setShowSlideshow } =
-      useCanvasStoreShallow((state) => ({
-        showReflyPilot: state.showReflyPilot,
-        setShowReflyPilot: state.setShowReflyPilot,
-        showSlideshow: state.showSlideshow,
-        setShowSlideshow: state.setShowSlideshow,
-      }));
+    const { showSlideshow, setShowSlideshow } = useCanvasStoreShallow((state) => ({
+      showSlideshow: state.showSlideshow,
+      setShowSlideshow: state.setShowSlideshow,
+    }));
+    const { isPilotOpen, setIsPilotOpen } = usePilotStoreShallow((state) => ({
+      isPilotOpen: state.isPilotOpen,
+      setIsPilotOpen: state.setIsPilotOpen,
+    }));
 
     const handleNodeSelect = useCallback(
       (item: IContextItem) => {
@@ -66,11 +68,11 @@ export const ToolbarButtons = memo(
     };
 
     const pilotButtonConfig = {
-      title: t(`canvas.toolbar.${showReflyPilot ? 'hideLaunchpad' : 'showLaunchpad'}`, {
-        defaultValue: showReflyPilot ? 'Hide Ask AI' : 'Show Ask AI',
+      title: t(`canvas.toolbar.${isPilotOpen ? 'hideLaunchpad' : 'showLaunchpad'}`, {
+        defaultValue: isPilotOpen ? 'Hide Pilot' : 'Show Pilot',
       }),
       description: t('canvas.toolbar.toggleLaunchpadTitle', {
-        defaultValue: 'Toggle the visibility of Ask AI',
+        defaultValue: 'Toggle the visibility of Pilot Panel',
       }),
       placement: 'bottom' as const,
     };
@@ -96,15 +98,15 @@ export const ToolbarButtons = memo(
         type="text"
         icon={
           <span
-            className={`flex items-center justify-center text-xs font-semibold ${
-              showReflyPilot ? 'text-green-500' : 'text-gray-400'
+            className={`flex items-center justify-center text-sm font-semibold ${
+              isPilotOpen ? 'text-green-600' : 'text-gray-700'
             }`}
           >
-            <IconAskAI className="w-3 h-3 mr-1" />
-            {t('canvas.reflyPilot.title', { defaultValue: 'Ask AI' })}
+            <IconPilot className="w-4 h-4 mr-2" />
+            {t('pilot.name', { defaultValue: 'Pilot' })}
           </span>
         }
-        onClick={() => setShowReflyPilot(!showReflyPilot)}
+        onClick={() => setIsPilotOpen(!isPilotOpen)}
         className="!w-16 h-6 flex items-center justify-center"
       />
     );

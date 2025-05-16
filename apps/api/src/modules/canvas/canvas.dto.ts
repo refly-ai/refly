@@ -1,5 +1,5 @@
 import { Canvas as CanvasModel } from '@/generated/client';
-import { Canvas, Entity } from '@refly/openapi-schema';
+import { Canvas, Entity, EntityType } from '@refly/openapi-schema';
 import { pick } from '../../utils';
 
 export interface SyncCanvasEntityJobData {
@@ -19,6 +19,14 @@ export interface DeleteCanvasJobData {
   uid: string;
   canvasId: string;
   deleteAllFiles: boolean;
+}
+
+export interface CanvasContentItem {
+  id: string;
+  title: string;
+  type: EntityType;
+  content?: string;
+  contentPreview?: string;
 }
 
 export function canvasPO2DTO(canvas: CanvasModel & { minimapUrl?: string }): Canvas {

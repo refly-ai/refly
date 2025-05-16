@@ -30,7 +30,8 @@ import { streamToBuffer } from '../../utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ActionService } from '../action/action.service';
-import { generateCanvasTitle, CanvasContentItem } from './canvas-title-generator';
+import { generateCanvasTitle } from './canvas-title-generator';
+import { CanvasContentItem } from './canvas.dto';
 import { RedisService } from '@/modules/common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
 import { ProviderService } from '@/modules/provider/provider.service';
@@ -725,9 +726,7 @@ export class CanvasService {
     );
   }
 
-  async autoNameCanvas(user: User, param: AutoNameCanvasRequest) {
-    const { canvasId, directUpdate = false } = param;
-
+  async getCanvasContentItems(user: User, canvasId: string) {
     const canvas = await this.prisma.canvas.findFirst({
       where: { canvasId, uid: user.uid, deletedAt: null },
     });
@@ -743,18 +742,19 @@ export class CanvasService {
     // Collect content items for title generation
     const contentItems: CanvasContentItem[] = await Promise.all(
       results.map(async (result) => {
-        const { resultId, version, input, title } = result;
+        const { resultId, version, title } = result;
         const steps = await this.prisma.actionStep.findMany({
           where: { resultId, version },
         });
-        const parsedInput = JSON.parse(input ?? '{}');
-        const question = parsedInput?.query ?? title;
         const answer = steps.map((s) => s.content.slice(0, 500)).join('\n');
 
         return {
-          question,
-          answer,
-        };
+          id: resultId,
+          title,
+          contentPreview: answer,
+          content: steps.map((s) => s.content).join('\n\n'),
+          type: 'skillResponse',
+        } as CanvasContentItem;
       }),
     );
 
@@ -765,30 +765,39 @@ export class CanvasService {
       });
 
       const documents = await this.prisma.document.findMany({
-        select: { title: true, contentPreview: true },
+        select: { docId: true, title: true, contentPreview: true },
         where: { docId: { in: relations.map((r) => r.entityId) } },
       });
 
       const resources = await this.prisma.resource.findMany({
-        select: { title: true, contentPreview: true },
+        select: { resourceId: true, title: true, contentPreview: true },
         where: { resourceId: { in: relations.map((r) => r.entityId) } },
       });
 
       contentItems.push(
         ...documents.map((d) => ({
+          id: d.docId,
           title: d.title,
           contentPreview: d.contentPreview,
+          content: d.contentPreview, // TODO: check if we need to get the whole content
+          type: 'document' as const,
         })),
         ...resources.map((r) => ({
+          id: r.resourceId,
           title: r.title,
           contentPreview: r.contentPreview,
+          content: r.contentPreview, // TODO: check if we need to get the whole content
+          type: 'resource' as const,
         })),
       );
     }
 
-    if (contentItems.length === 0) {
-      return { title: '' };
-    }
+    return contentItems;
+  }
+
+  async autoNameCanvas(user: User, param: AutoNameCanvasRequest) {
+    const { canvasId, directUpdate = false } = param;
+    const contentItems = await this.getCanvasContentItems(user, canvasId);
 
     const defaultModel = await this.providerService.findDefaultProviderItem(
       user,

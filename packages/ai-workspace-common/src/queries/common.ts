@@ -21,6 +21,7 @@ import {
   createLabelClass,
   createLabelInstance,
   createMcpServer,
+  createPilotSession,
   createPortalSession,
   createProject,
   createProvider,
@@ -62,6 +63,7 @@ import {
   getDocumentDetail,
   getPageByCanvasId,
   getPageDetail,
+  getPilotSessionDetail,
   getProjectDetail,
   getResourceDetail,
   getSettings,
@@ -79,6 +81,7 @@ import {
   listMcpServers,
   listModels,
   listPages,
+  listPilotSessions,
   listProjects,
   listProviderItemOptions,
   listProviderItems,
@@ -109,6 +112,7 @@ import {
   updateLabelInstance,
   updateMcpServer,
   updatePage,
+  updatePilotSession,
   updateProject,
   updateProjectItems,
   updateProvider,
@@ -418,6 +422,30 @@ export const UseListSkillTriggersKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListSkillTriggersKey, ...(queryKey ?? [clientOptions])];
+export type ListPilotSessionsDefaultResponse = Awaited<
+  ReturnType<typeof listPilotSessions>
+>['data'];
+export type ListPilotSessionsQueryResult<
+  TData = ListPilotSessionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListPilotSessionsKey = 'ListPilotSessions';
+export const UseListPilotSessionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListPilotSessionsKey, ...(queryKey ?? [clientOptions])];
+export type GetPilotSessionDetailDefaultResponse = Awaited<
+  ReturnType<typeof getPilotSessionDetail>
+>['data'];
+export type GetPilotSessionDetailQueryResult<
+  TData = GetPilotSessionDetailDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetPilotSessionDetailKey = 'GetPilotSessionDetail';
+export const UseGetPilotSessionDetailKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetPilotSessionDetailKey, ...(queryKey ?? [clientOptions])];
 export type GetSettingsDefaultResponse = Awaited<ReturnType<typeof getSettings>>['data'];
 export type GetSettingsQueryResult<
   TData = GetSettingsDefaultResponse,
@@ -878,6 +906,18 @@ export type DeleteSkillTriggerMutationResult = Awaited<ReturnType<typeof deleteS
 export const useDeleteSkillTriggerKey = 'DeleteSkillTrigger';
 export const UseDeleteSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteSkillTriggerKey,
+  ...(mutationKey ?? []),
+];
+export type CreatePilotSessionMutationResult = Awaited<ReturnType<typeof createPilotSession>>;
+export const useCreatePilotSessionKey = 'CreatePilotSession';
+export const UseCreatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreatePilotSessionKey,
+  ...(mutationKey ?? []),
+];
+export type UpdatePilotSessionMutationResult = Awaited<ReturnType<typeof updatePilotSession>>;
+export const useUpdatePilotSessionKey = 'UpdatePilotSession';
+export const UseUpdatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdatePilotSessionKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;

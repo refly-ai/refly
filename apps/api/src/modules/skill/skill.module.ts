@@ -13,6 +13,7 @@ import {
   QUEUE_SKILL_TIMEOUT_CHECK,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_AUTO_NAME_CANVAS,
+  QUEUE_SYNC_PILOT_STEP,
 } from '../../utils';
 import { LabelModule } from '../label/label.module';
 import { SkillProcessor, SkillTimeoutCheckProcessor } from '../skill/skill.processor';
@@ -42,6 +43,7 @@ import { McpServerModule } from '@/modules/mcp-server/mcp-server.module';
     BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_USAGE }),
     BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
     BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
+    BullModule.registerQueue({ name: QUEUE_SYNC_PILOT_STEP }),
   ],
   providers: [SkillService, SkillProcessor, SkillTimeoutCheckProcessor],
   controllers: [SkillController],
