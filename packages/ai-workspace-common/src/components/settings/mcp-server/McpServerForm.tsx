@@ -236,7 +236,6 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
     mcpServers[server.name] = {
       type: server.type,
       description: server.config?.description ?? '',
-      enabled: server.enabled,
       url: server.url ?? '',
       command: server.command ?? '',
       args: filteredArgs,
@@ -265,7 +264,6 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
         const server: McpServerFormData = {
           name: name,
           type: mapServerType(serverConfig.type, serverConfig),
-          enabled: serverConfig.enabled ?? false,
           url: serverConfig.url ?? '',
           command: serverConfig.command ?? '',
           args: serverConfig.args ?? [],

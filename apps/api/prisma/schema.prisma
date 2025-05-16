@@ -1151,7 +1151,7 @@ model McpServer {
   /// Primary key
   pk        Int       @id @default(autoincrement())
   /// Server name
-  name      String    @unique @map("name")
+  name      String    @map("name")
   /// Server type (sse, streamable, stdio)
   type      String    @map("type")
   /// Whether the server is global
@@ -1181,6 +1181,7 @@ model McpServer {
   /// Deletion timestamp
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
 
+  @@unique([uid, name])
   @@index([uid, deletedAt])
   @@index([isGlobal])
   @@map("mcp_servers")

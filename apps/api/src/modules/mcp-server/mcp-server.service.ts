@@ -158,6 +158,7 @@ export class McpServerService {
     const existingServer = await this.prisma.mcpServer.findFirst({
       where: {
         name,
+        uid: user.uid,
       },
     });
 
@@ -240,7 +241,7 @@ export class McpServerService {
     const server = await this.prisma.mcpServer.findFirst({
       where: {
         name,
-        OR: [{ uid: user.uid }, { isGlobal: true }],
+        uid: user.uid,
         deletedAt: null,
       },
     });
@@ -302,7 +303,7 @@ export class McpServerService {
     const server = await this.prisma.mcpServer.findFirst({
       where: {
         name,
-        OR: [{ uid: user.uid }, { isGlobal: true }],
+        uid: user.uid,
         deletedAt: null,
       },
     });
