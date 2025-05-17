@@ -14,7 +14,11 @@ const NAME_REGEX = /<name>([\s\S]*?)<\/name>/i;
 const ARGUMENTS_REGEX = /<arguments>([\s\S]*?)<\/arguments>/i;
 const RESULT_REGEX = /<result>([\s\S]*?)<\/result>/i;
 const BASE64_IMAGE_URL_REGEX =
-  /data:image\/(?<format>png|jpeg|gif|webp|svg\+xml);base64,(?<data>[A-Za-z0-9+/=]+)/i;
+  /data:image\/(?<format>png|jpeg|gif|webp|svg\+xml);base64,(?<data>[A-Za-z0-9+\/=]+)/i;
+
+// Regular expression to match HTTP/HTTPS image links
+const HTTP_IMAGE_URL_REGEX =
+  /https?:\/\/[^\s"'<>]+\.(?<format>png|jpeg|jpg|gif|webp|svg)[^\s"'<>]*/i;
 
 /**
  * Utility function to safely extract content from regex matches
@@ -28,6 +32,37 @@ const safeExtract = (content: string, regex: RegExp): string => {
     return match[1].trim();
   }
   return '';
+};
+
+/**
+ * Extract image URL from a string
+ * @param str The string to search in
+ * @returns The found image URL, format and whether it's an HTTP link
+ */
+const extractImageUrl = (
+  str: string,
+): { url: string | undefined; format: string | undefined; isHttp: boolean } => {
+  // First check if it contains a base64 image URL
+  const base64Match = BASE64_IMAGE_URL_REGEX.exec(str);
+  if (base64Match?.groups && base64Match[0]) {
+    return {
+      url: base64Match[0],
+      format: base64Match.groups.format,
+      isHttp: false,
+    };
+  }
+
+  // Then check if it contains an HTTP image URL
+  const httpMatch = HTTP_IMAGE_URL_REGEX.exec(str);
+  if (httpMatch?.groups && httpMatch[0]) {
+    return {
+      url: httpMatch[0],
+      format: httpMatch.groups.format,
+      isHttp: true,
+    };
+  }
+
+  return { url: undefined, format: undefined, isHttp: false };
 };
 
 /**
@@ -65,44 +100,42 @@ function rehypePlugin() {
             if (resultStr) {
               attributes['data-tool-result'] = resultStr;
 
-              // Attempt to find and process base64 image data in the result
-              let base64UrlFromDetails: string | undefined;
+              // Attempt to find and process image data (base64 or HTTP URL) in the result
+              let imageUrlFromDetails: string | undefined;
               let imageFormatFromDetails: string | undefined;
+              let isHttpUrl = false;
               let imageNameFromArgs = 'image'; // Default image name
 
-              // 1. Try to parse result as JSON (as per example structure)
-              try {
-                const resultObj = JSON.parse(resultStr);
-                if (resultObj.response && Array.isArray(resultObj.response)) {
-                  const imageResponse = resultObj.response.find(
-                    (r: any) =>
-                      r.type === 'image_url' && r.image_url && typeof r.image_url.url === 'string',
-                  );
-                  if (imageResponse) {
-                    const imageUrl = imageResponse.image_url.url;
-                    const imageMatch = BASE64_IMAGE_URL_REGEX.exec(imageUrl);
-                    if (imageMatch?.groups) {
-                      base64UrlFromDetails = imageUrl;
-                      imageFormatFromDetails = imageMatch.groups.format;
-                    }
+              // 1. Directly search for image URL in the result string
+              const { url, format, isHttp } = extractImageUrl(resultStr);
+              if (url) {
+                imageUrlFromDetails = url;
+                imageFormatFromDetails = format;
+                isHttpUrl = isHttp;
+              } else {
+                // 2. If direct search fails, try to parse JSON and search in the stringified JSON result
+                try {
+                  const resultObj = JSON.parse(resultStr);
+                  const resultJsonStr = JSON.stringify(resultObj);
+                  const jsonResult = extractImageUrl(resultJsonStr);
+
+                  if (jsonResult.url) {
+                    imageUrlFromDetails = jsonResult.url;
+                    imageFormatFromDetails = jsonResult.format;
+                    isHttpUrl = jsonResult.isHttp;
                   }
-                }
-              } catch (_e) {
-                // Not a JSON result with the expected structure, or resultStr is not JSON.
-                // Fallback to direct regex match will be attempted next.
-              }
-
-              // 2. If not found via JSON, try direct regex match on the raw result string
-              if (!base64UrlFromDetails) {
-                const directMatch = BASE64_IMAGE_URL_REGEX.exec(resultStr);
-                if (directMatch?.groups && directMatch[0]) {
-                  base64UrlFromDetails = directMatch[0]; // The full data URL
-                  imageFormatFromDetails = directMatch.groups.format;
+                } catch (_e) {
+                  // Not a JSON result, or JSON parsing failed
                 }
               }
 
-              if (base64UrlFromDetails && imageFormatFromDetails) {
-                attributes['data-tool-image-base64-url'] = base64UrlFromDetails;
+              if (imageUrlFromDetails && imageFormatFromDetails) {
+                // Set different attributes based on whether it's an HTTP link or not
+                if (isHttpUrl) {
+                  attributes['data-tool-image-http-url'] = imageUrlFromDetails;
+                } else {
+                  attributes['data-tool-image-base64-url'] = imageUrlFromDetails;
+                }
                 // attributes['data-tool-image-format'] = imageFormatFromDetails; // Format is in the URL
 
                 // Attempt to get image name from arguments
@@ -211,41 +244,42 @@ function rehypePlugin() {
             if (resultStr) {
               attributes['data-tool-result'] = resultStr;
 
-              // Attempt to find and process base64 image data in the result (similar to raw node block)
-              let base64UrlFromDetails: string | undefined;
+              // Attempt to find and process image data (base64 or HTTP URL) in the result (similar to raw node block)
+              let imageUrlFromDetails: string | undefined;
               let imageFormatFromDetails: string | undefined;
+              let isHttpUrl = false;
               let imageNameFromArgs = 'image'; // Default image name
 
-              try {
-                const resultObj = JSON.parse(resultStr);
-                if (resultObj.response && Array.isArray(resultObj.response)) {
-                  const imageResponse = resultObj.response.find(
-                    (r: any) =>
-                      r.type === 'image_url' && r.image_url && typeof r.image_url.url === 'string',
-                  );
-                  if (imageResponse) {
-                    const imageUrl = imageResponse.image_url.url;
-                    const imageMatch = BASE64_IMAGE_URL_REGEX.exec(imageUrl);
-                    if (imageMatch?.groups) {
-                      base64UrlFromDetails = imageUrl;
-                      imageFormatFromDetails = imageMatch.groups.format;
-                    }
+              // Directly search for image URL in the result string
+              const { url, format, isHttp } = extractImageUrl(resultStr);
+              if (url) {
+                imageUrlFromDetails = url;
+                imageFormatFromDetails = format;
+                isHttpUrl = isHttp;
+              } else {
+                // If direct search fails, try to parse JSON and search in the stringified JSON result
+                try {
+                  const resultObj = JSON.parse(resultStr);
+                  const resultJsonStr = JSON.stringify(resultObj);
+                  const jsonResult = extractImageUrl(resultJsonStr);
+
+                  if (jsonResult.url) {
+                    imageUrlFromDetails = jsonResult.url;
+                    imageFormatFromDetails = jsonResult.format;
+                    isHttpUrl = jsonResult.isHttp;
                   }
-                }
-              } catch (_e) {
-                // Not JSON or different structure
-              }
-
-              if (!base64UrlFromDetails) {
-                const directMatch = BASE64_IMAGE_URL_REGEX.exec(resultStr);
-                if (directMatch?.groups && directMatch[0]) {
-                  base64UrlFromDetails = directMatch[0];
-                  imageFormatFromDetails = directMatch.groups.format;
+                } catch (_e) {
+                  // Not a JSON result, or JSON parsing failed
                 }
               }
 
-              if (base64UrlFromDetails && imageFormatFromDetails) {
-                attributes['data-tool-image-base64-url'] = base64UrlFromDetails;
+              if (imageUrlFromDetails && imageFormatFromDetails) {
+                // Set different attributes based on whether it's an HTTP link or not
+                if (isHttpUrl) {
+                  attributes['data-tool-image-http-url'] = imageUrlFromDetails;
+                } else {
+                  attributes['data-tool-image-base64-url'] = imageUrlFromDetails;
+                }
 
                 if (argsStr) {
                   try {

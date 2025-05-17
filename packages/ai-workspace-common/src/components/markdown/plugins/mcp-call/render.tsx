@@ -28,6 +28,7 @@ interface MCPCallProps {
   'data-tool-result'?: string;
   'data-tool-type'?: 'use' | 'result';
   'data-tool-image-base64-url'?: string;
+  'data-tool-image-http-url'?: string;
   'data-tool-image-name'?: string;
   id?: string;
   mode?: MarkdownMode;
@@ -66,7 +67,10 @@ const MCPCall: React.FC<MCPCallProps> = (props) => {
   const hasResult = !!resultContent;
 
   const imageBase64Url = props['data-tool-image-base64-url'];
+  const imageHttpUrl = props['data-tool-image-http-url'];
   const imageName = props['data-tool-image-name'];
+
+  const imageUrl = imageBase64Url || imageHttpUrl;
 
   return (
     <>
@@ -133,15 +137,15 @@ const MCPCall: React.FC<MCPCallProps> = (props) => {
       </div>
 
       {/* Image Preview section - styled as a separate card below the main MCPCall card */}
-      {imageBase64Url && imageName && (
+      {imageUrl && imageName && (
         <div className="my-3 rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden cursor-pointer bg-white dark:bg-gray-800">
           <div className="px-4 flex flex-col items-center py-2">
             <img
-              src={imageBase64Url}
+              src={imageUrl}
               alt={imageName}
               className="max-w-full h-auto rounded-md mb-2 shadow-md max-h-[300px]"
               onClick={() => {
-                setPreviewImageUrl(imageBase64Url);
+                setPreviewImageUrl(imageUrl);
                 setIsPreviewModalVisible(true);
               }}
             />
