@@ -1,5 +1,5 @@
 // components
-import { Message } from '@arco-design/web-react';
+import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 
 // requests
@@ -15,7 +15,7 @@ export const useCreateTrigger = () => {
     if (error) {
       return error;
     }
-    Message.success({ content: t('common.putSuccess') });
+    message.success({ content: t('common.putSuccess') });
   };
 
   const updateTrigger = async (trigger: SkillTrigger) => {
@@ -41,7 +41,7 @@ export const useCreateTrigger = () => {
       },
     });
     if (!error && data?.success) {
-      Message.success({ content: t('common.putSuccess') });
+      message.success({ content: t('common.putSuccess') });
       return;
     }
     return error;

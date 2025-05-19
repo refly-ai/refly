@@ -1,6 +1,6 @@
 import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useTranslation } from 'react-i18next';
-import { Notification } from '@arco-design/web-react';
+import { notification } from 'antd';
 
 export const useContextFilterErrorTip = () => {
   const { t } = useTranslation();
@@ -27,10 +27,10 @@ export const useContextFilterErrorTip = () => {
           ))}
         </div>
       );
-      Notification.error({
+      notification.error({
         style: { width: 400 },
-        title: t('knowledgeBase.context.contextLimitTipTitle'),
-        content: Content,
+        message: t('knowledgeBase.context.contextLimitTipTitle'),
+        description: Content,
       });
       return true;
     }

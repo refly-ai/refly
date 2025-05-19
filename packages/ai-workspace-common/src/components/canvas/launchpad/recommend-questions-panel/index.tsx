@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Empty, message, Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { IconRefresh } from '@arco-design/web-react/icon';
+import { ReloadOutlined } from '@ant-design/icons';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
@@ -155,7 +155,7 @@ export const RecommendQuestionsPanel: React.FC<RecommendQuestionsPanelProps> = (
             <Button
               type="text"
               size="small"
-              icon={<IconRefresh className="w-4 h-4 text-gray-400 text-[12px]" />}
+              icon={<ReloadOutlined className="w-4 h-4 text-gray-400 text-[12px]" />}
               onClick={() => fetchRecommendQuestions(true)}
               loading={loading}
               className="text-[12px] text-[rgba(0,0,0,0.5)] dark:text-gray-400"

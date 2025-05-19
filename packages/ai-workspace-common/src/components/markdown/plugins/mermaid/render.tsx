@@ -9,7 +9,7 @@ import { ImagePreview } from '@refly-packages/ai-workspace-common/components/com
 import { domToPng } from 'modern-screenshot';
 import copyToClipboard from 'copy-to-clipboard';
 import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { IconCode, IconEye, IconCopy } from '@arco-design/web-react/icon';
+import { CopyOutlined, CodeOutlined, EyeOutlined } from '@ant-design/icons';
 import { MarkdownMode } from '../../types';
 import { PiMagnifyingGlassPlusBold } from 'react-icons/pi';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
@@ -401,7 +401,7 @@ const MermaidComponent = memo(
                   type="text"
                   size="small"
                   className="flex items-center justify-center hover:bg-gray-100"
-                  icon={<IconCopy className="w-4 h-4 flex items-center justify-center" />}
+                  icon={<CopyOutlined className="w-4 h-4 flex items-center justify-center" />}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -422,9 +422,9 @@ const MermaidComponent = memo(
                   className="flex items-center justify-center hover:bg-gray-100"
                   icon={
                     viewMode === 'code' ? (
-                      <IconEye className="w-4 h-4 flex items-center justify-center" />
+                      <EyeOutlined className="w-4 h-4 flex items-center justify-center" />
                     ) : (
-                      <IconCode className="w-4 h-4 flex items-center justify-center" />
+                      <CodeOutlined className="w-4 h-4 flex items-center justify-center" />
                     )
                   }
                   onClick={(e) => {

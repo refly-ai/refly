@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Spin } from 'antd';
 import cn from 'classnames';
 import './index.scss';
-import { IconLoading } from '@arco-design/web-react/icon';
+import { LoadingOutlined } from '@ant-design/icons';
 
 // Enhance cache with pending promises to prevent duplicate requests
 const translationCache: Record<string, string | Promise<string>> = {};
@@ -130,7 +130,7 @@ export const TranslationWrapper: React.FC<TranslationWrapperProps> = ({
         {isLoading ? (
           <>
             <span className="original-text">{content}</span>
-            <Spin indicator={<IconLoading style={{ fontSize: 12, marginLeft: 4 }} spin />} />
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 12, marginLeft: 4 }} spin />} />
           </>
         ) : (
           <span>{translatedContent ?? content}</span>

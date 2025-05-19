@@ -8,7 +8,7 @@ import { Command } from 'cmdk';
 import { Home } from './home';
 import { getContextItemIcon } from '../../utils/icon';
 import { CanvasNodeType } from '@refly/openapi-schema';
-import { IconRefresh } from '@arco-design/web-react/icon';
+import { ReloadOutlined } from '@ant-design/icons';
 import {
   IContextItem,
   useContextPanelStoreShallow,
@@ -183,7 +183,7 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
               </div>
             </div>
             <div className="cmdk-footer-action">
-              <Button size="small" icon={<IconRefresh />} onClick={handleClear}>
+              <Button size="small" icon={<ReloadOutlined />} onClick={handleClear}>
                 {t('knowledgeBase.context.clearContext')}
               </Button>
             </div>

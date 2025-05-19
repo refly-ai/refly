@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Command } from 'cmdk';
-import { IconApps, IconFolderAdd } from '@arco-design/web-react/icon';
+import { AppstoreAddOutlined, FolderAddOutlined } from '@ant-design/icons';
 
 import './index.scss';
 import { Item } from './item';
@@ -76,7 +76,7 @@ export function Home({
                 }}
                 activeValue={activeValue}
               >
-                <IconApps style={{ fontSize: 12 }} />
+                <AppstoreAddOutlined style={{ fontSize: 12 }} />
                 {t('loggedHomePage.quickSearch.home.showAll', { heading: renderItem?.heading })}
               </Item>
             ) : null}
@@ -89,7 +89,7 @@ export function Home({
                 }}
                 activeValue={activeValue}
               >
-                <IconFolderAdd style={{ fontSize: 12 }} />
+                <FolderAddOutlined style={{ fontSize: 12 }} />
                 {renderItem?.actionHeading?.create}
               </Item>
             ) : null}

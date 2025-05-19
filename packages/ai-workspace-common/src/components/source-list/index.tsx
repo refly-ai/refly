@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 // 样式
 import './index.scss';
-import { IconRight } from '@arco-design/web-react/icon';
+import { RightOutlined } from '@ant-design/icons';
 import { useKnowledgeBaseStoreShallow } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
 import { getRuntime } from '@refly/utils/env';
 
@@ -156,7 +156,7 @@ const ViewMoreItem = ({
         className="w-full overflow-hidden font-medium whitespace-nowrap text-ellipsis text-zinc-500 dark:text-zinc-400"
         title={t('copilot.sourceListModal.moreSources', { count: extraCnt })}
       >
-        {t('copilot.sourceListModal.moreSources', { count: extraCnt })} <IconRight />
+        {t('copilot.sourceListModal.moreSources', { count: extraCnt })} <RightOutlined />
       </div>
       <div className="flex flex-wrap gap-1 max-w-full overflow-hidden">
         {extraSources.map((item, index) => {

@@ -1,4 +1,4 @@
-import { IconLoading } from '@arco-design/web-react/icon';
+import { LoadingOutlined } from '@ant-design/icons';
 import { memo, useEffect, useRef, useState, Suspense, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 
@@ -119,7 +119,7 @@ export const Markdown = memo(
     return (
       <div className={markdownClassName} ref={mdRef}>
         {props.loading ? (
-          <IconLoading />
+          <LoadingOutlined />
         ) : (
           <Suspense fallback={<div>{t('common.loading')}</div>}>
             {isKatexLoaded &&

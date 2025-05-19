@@ -1,7 +1,7 @@
 import { Edge, NodeProps, Position, useReactFlow } from '@xyflow/react';
 import { CanvasNode, CanvasNodeData, SkillNodeMeta } from './shared/types';
 import { Node } from '@xyflow/react';
-import { Form } from '@arco-design/web-react';
+import { Form } from 'antd';
 import { CustomHandle } from './shared/custom-handle';
 import { useState, useCallback, useEffect, useMemo, memo, useRef } from 'react';
 

@@ -1,7 +1,7 @@
 import { RiDeleteBinLine, RiMoreFill } from 'react-icons/ri';
 import { TbEdit } from 'react-icons/tb';
 
-import { Dropdown, Menu, Button, Popconfirm, Message } from '@arco-design/web-react';
+import { Dropdown, Menu, Button, Popconfirm, message } from 'antd';
 import { useState } from 'react';
 import { useLocation, useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 import { useSkillStore } from '@refly-packages/ai-workspace-common/stores/skill';
@@ -30,7 +30,7 @@ const DropList = (props: DropListProps) => {
   const { t } = useTranslation();
 
   return (
-    <Menu onClick={(e) => e.stopPropagation()}>
+    <Menu onClick={(e) => e.domEvent.stopPropagation()}>
       <Menu.Item key="edit">
         <div onClick={(e) => handlUpdateInstance(e)}>
           <TbEdit style={iconStyle} />
@@ -39,13 +39,12 @@ const DropList = (props: DropListProps) => {
       </Menu.Item>
       <Menu.Item key="delete">
         <Popconfirm
-          focusLock
           title={t('common.deleteConfirmMessage')}
-          position="br"
+          placement="bottomRight"
           okText={t('common.confirm')}
           cancelText={t('common.cancel')}
           getPopupContainer={getPopupContainer}
-          onOk={(e) => {
+          onConfirm={(e) => {
             handleDeleteInstance(e);
           }}
           onCancel={(e) => {
@@ -93,7 +92,7 @@ export const InstanceDropdownMenu = (props: InstanceDropdownMenuProps) => {
       console.error(error);
       return;
     }
-    Message.success({ content: t('common.putSuccess') });
+    message.success(t('common.putSuccess'));
 
     if (postDeleteList) {
       postDeleteList(data);
@@ -125,10 +124,10 @@ export const InstanceDropdownMenu = (props: InstanceDropdownMenuProps) => {
 
   return (
     <Dropdown
-      position="br"
-      popupVisible={popupVisible}
-      droplist={droplist}
-      triggerProps={{ onClickOutside: () => setPopupVisible(false) }}
+      placement="bottomRight"
+      open={popupVisible}
+      dropdownRender={() => droplist}
+      onOpenChange={(visible) => setPopupVisible(visible)}
       getPopupContainer={getPopupContainer}
     >
       <Button

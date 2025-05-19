@@ -1,7 +1,7 @@
 import { AutoComplete, AutoCompleteProps, Input } from 'antd';
 import { memo, useRef, useMemo, useState, useCallback, forwardRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { RefTextAreaType } from '@arco-design/web-react/es/Input/textarea';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/stores/search';
 import type { Skill } from '@refly/openapi-schema';
 import { useSkillStoreShallow } from '@refly-packages/ai-workspace-common/stores/skill';
@@ -55,7 +55,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
     }, []);
 
-    const inputRef = useRef<RefTextAreaType>(null);
+    const inputRef = useRef<TextAreaRef>(null);
     const hasMatchedOptions = useRef(false);
 
     const searchStore = useSearchStoreShallow((state) => ({

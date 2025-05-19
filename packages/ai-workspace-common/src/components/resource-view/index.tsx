@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
-import { IconLoading, IconRefresh } from '@arco-design/web-react/icon';
+import { LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
 import { IconSubscription } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ResourceIcon } from '@refly-packages/ai-workspace-common/components/common/resourceIcon';
 import { genUniqueId } from '@refly/utils/id';
@@ -57,7 +57,7 @@ const ResourceMeta = memo(
             showIcon
             icon={
               ['wait_index', 'wait_parse'].includes(resourceDetail?.indexStatus) ? (
-                <IconLoading />
+                <LoadingOutlined />
               ) : null
             }
             description={
@@ -71,7 +71,7 @@ const ResourceMeta = memo(
                 <Button
                   size="small"
                   loading={isReindexing}
-                  icon={<IconRefresh />}
+                  icon={<ReloadOutlined />}
                   className="retry-btn"
                   onClick={() => onReindex(resourceDetail.resourceId)}
                 >
@@ -286,7 +286,7 @@ export const ResourceView = memo(
                       !readonly && (
                         <div className="flex justify-center items-center gap-2">
                           <Button
-                            icon={<IconRefresh />}
+                            icon={<ReloadOutlined />}
                             onClick={() => handleReindexResource(resourceId)}
                           >
                             {t('common.retry')}

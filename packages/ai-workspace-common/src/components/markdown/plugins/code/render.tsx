@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Message as message, Space } from '@arco-design/web-react';
+import { message, Space } from 'antd';
 import { Button, Tooltip } from 'antd';
 import copyToClipboard from 'copy-to-clipboard';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { CodeArtifactType } from '@refly/openapi-schema';
-import { IconCopy, IconCode, IconEye } from '@arco-design/web-react/icon';
+import { CopyOutlined, CodeOutlined, EyeOutlined } from '@ant-design/icons';
 import { cn } from '@refly/utils';
 import MermaidComponent from '../mermaid/render';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
@@ -151,7 +151,7 @@ const PreCode = React.memo(
                   type="default"
                   size="small"
                   className="flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700"
-                  icon={<IconCopy />}
+                  icon={<CopyOutlined />}
                   onClick={handleCopy}
                 />
               </Tooltip>
@@ -160,7 +160,7 @@ const PreCode = React.memo(
                   type="default"
                   size="small"
                   className="flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700"
-                  icon={<IconCode />}
+                  icon={<CodeOutlined />}
                   onClick={toggleViewMode}
                 />
               </Tooltip>
@@ -199,7 +199,7 @@ const PreCode = React.memo(
                 type="text"
                 size="small"
                 className="flex items-center justify-center hover:bg-gray-100"
-                icon={<IconCopy />}
+                icon={<CopyOutlined />}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -213,7 +213,7 @@ const PreCode = React.memo(
                   type="text"
                   size="small"
                   className="flex items-center justify-center hover:bg-gray-100"
-                  icon={<IconEye />}
+                  icon={<EyeOutlined />}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

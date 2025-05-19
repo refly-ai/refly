@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Input, Form, FormInstance, InputNumber, Select } from '@arco-design/web-react';
+import { Input, Form, FormInstance, InputNumber, Select } from 'antd';
 import {
   DynamicConfigItem,
   DynamicConfigValue,
@@ -52,11 +52,11 @@ const ConfigItem = (props: {
         placeholder={placeholder}
         type={(item.inputProps?.passwordType ? 'password' : 'text') as 'text' | 'password'}
         defaultValue={(item?.defaultValue as string) || String(configValue?.value || '') || ''}
-        onChange={(val) =>
+        onChange={(e) =>
           form.setFieldValue(field, {
-            value: val,
+            value: e.target.value,
             label,
-            displayValue: String(val),
+            displayValue: String(e.target.value),
           } as DynamicConfigValue)
         }
       />
@@ -78,11 +78,11 @@ const ConfigItem = (props: {
           minRows: 4,
           maxRows: 10,
         }}
-        onChange={(val) =>
+        onChange={(e) =>
           form.setFieldValue(field, {
-            value: val,
+            value: e.target.value,
             label,
-            displayValue: String(val),
+            displayValue: String(e.target.value),
           } as DynamicConfigValue)
         }
       />
@@ -92,7 +92,6 @@ const ConfigItem = (props: {
   if (item.inputMode === 'inputNumber') {
     return (
       <InputNumber
-        mode="button"
         defaultValue={(item?.defaultValue as number) || Number(configValue?.value) || 1}
         onChange={(val) =>
           form.setFieldValue(field, {
@@ -189,20 +188,19 @@ export const TemplateConfigFormItems = (props: {
                 layout="vertical"
                 label={item.labelDict[locale]}
                 key={item.key}
-                field={field}
+                name={field}
                 required={item.required?.value}
                 rules={[
                   {
-                    validator(value, cb) {
+                    validator(_, value) {
                       if (
                         !value?.value &&
                         item?.required?.value &&
                         item?.required?.configScope.includes(configScope)
                       ) {
-                        return cb(t('common.emptyInput'));
+                        return Promise.reject(t('common.emptyInput'));
                       }
-
-                      return cb();
+                      return Promise.resolve();
                     },
                   },
                 ]}

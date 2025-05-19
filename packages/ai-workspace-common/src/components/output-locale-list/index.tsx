@@ -11,7 +11,7 @@ import {
   localeToLanguageName,
 } from '@refly-packages/ai-workspace-common/utils/i18n';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
-import { IconDown, IconTranslate } from '@arco-design/web-react/icon';
+import { DownOutlined, TranslationOutlined } from '@ant-design/icons';
 import classNames from 'classnames';
 
 export const OutputLocaleList = (props: {
@@ -73,8 +73,8 @@ export const OutputLocaleList = (props: {
     >
       {props.children || (
         <span className={classNames('output-locale-list-btn', 'chat-action-item')}>
-          <IconDown /> {displayLocale}{' '}
-          {outputLocale === 'auto' && <IconTranslate style={{ marginLeft: 4 }} />}
+          <DownOutlined /> {displayLocale}{' '}
+          {outputLocale === 'auto' && <TranslationOutlined style={{ marginLeft: 4 }} />}
         </span>
       )}
     </Dropdown>

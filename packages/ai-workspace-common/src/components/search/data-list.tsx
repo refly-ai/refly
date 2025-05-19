@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Command } from 'cmdk';
 import { useSearchStore } from '@refly-packages/ai-workspace-common/stores/search';
-import { IconFolderAdd } from '@arco-design/web-react/icon';
+import { FolderAddOutlined } from '@ant-design/icons';
 
 import './index.scss';
-import { Button } from '@arco-design/web-react';
+import { Button } from 'antd';
 import { Item } from './item';
 
 // request
@@ -139,7 +139,7 @@ export function DataList({
           onSelect={() => onCreateClick?.()}
           activeValue={activeValue}
         >
-          <IconFolderAdd style={{ fontSize: 12 }} />
+          <FolderAddOutlined style={{ fontSize: 12 }} />
           {t('knowledgeBase.quickSearch.new', { domain })}
         </Item>
       </Command.Group>

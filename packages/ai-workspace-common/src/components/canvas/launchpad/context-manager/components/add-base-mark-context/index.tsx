@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Badge, Button, Popover, Tooltip } from 'antd';
-import { IconPlus } from '@arco-design/web-react/icon';
+import { PlusOutlined } from '@ant-design/icons';
 import { BaseMarkContextSelector } from '../base-mark-context-selector';
 import { useTranslation } from 'react-i18next';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
@@ -66,7 +66,7 @@ export const AddBaseMarkContext = ({ contextItems, setContextItems }: AddBaseMar
           getPopupContainer={getPopupContainer}
         >
           <Button
-            icon={<IconPlus className="w-3 h-3" />}
+            icon={<PlusOutlined className="w-3 h-3" />}
             size="small"
             type="default"
             className="text-xs h-6 rounded border text-gray-500 gap-1"

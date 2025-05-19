@@ -1,5 +1,5 @@
 import { useSkillStore } from '@refly-packages/ai-workspace-common/stores/skill';
-import { Modal } from '@arco-design/web-react';
+import { Modal } from 'antd';
 
 // 组件
 import { SkillInstanceList } from '@refly-packages/ai-workspace-common/components/skill/skill-intance-list';
@@ -19,9 +19,9 @@ export const SkillManagementModal = (_props: any) => {
 
   return (
     <Modal
-      visible={skillStore.skillManagerModalVisible}
+      open={skillStore.skillManagerModalVisible}
       title={t('copilot.skillDisplay.skillManager')}
-      getPopupContainer={() => {
+      getContainer={() => {
         const elem = getPopupContainer();
 
         return elem;
@@ -30,7 +30,7 @@ export const SkillManagementModal = (_props: any) => {
       className="skill-management-modal-wrap"
       footer={null}
       onCancel={onCancel}
-      escToExit
+      keyboard={true}
     >
       <div className="skill-management-modal-content">
         <SkillInstanceList source="skill-management-modal" />

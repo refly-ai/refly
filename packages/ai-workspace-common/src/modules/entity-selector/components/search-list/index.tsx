@@ -7,7 +7,7 @@ import { useFetchOrSearchList } from '@refly-packages/ai-workspace-common/module
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { ContextItem } from '@refly-packages/ai-workspace-common/types/context';
 import throttle from 'lodash.throttle';
-import { IconCheck } from '@arco-design/web-react/icon';
+import { CheckOutlined } from '@ant-design/icons';
 import { FileText, Link2 } from 'lucide-react';
 
 interface SearchListProps {
@@ -176,7 +176,7 @@ export const SearchList = (props: SearchListProps) => {
                 <span className="flex-grow truncate">{option.title || t('common.untitled')}</span>
                 {mode === 'multiple' && option.isSelected && (
                   <div className="flex-shrink-0">
-                    <IconCheck className="text-[#00968F] w-4 h-4" />
+                    <CheckOutlined className="text-[#00968F] w-4 h-4" />
                   </div>
                 )}
               </div>

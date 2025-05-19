@@ -1,7 +1,7 @@
 import { Button, Tooltip, Upload, Switch, FormInstance } from 'antd';
 import { memo, useMemo, useRef, useCallback } from 'react';
 import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { IconLink, IconSend } from '@arco-design/web-react/icon';
+import { LinkOutlined, SendOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { getRuntime } from '@refly/utils/env';
@@ -112,7 +112,7 @@ export const ChatActions = memo(
                   count: detectedUrls?.length,
                 })}
               >
-                <IconLink className="text-sm text-gray-500 flex items-center justify-center cursor-pointer" />
+                <LinkOutlined className="text-sm text-gray-500 flex items-center justify-center cursor-pointer" />
               </Tooltip>
             </div>
           )}
@@ -153,7 +153,7 @@ export const ChatActions = memo(
               className="text-xs flex items-center gap-1"
               onClick={handleSendClick}
             >
-              <IconSend />
+              <SendOutlined />
               <span>{t('copilot.chatActions.send')}</span>
             </Button>
           )}

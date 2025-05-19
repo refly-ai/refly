@@ -6,7 +6,7 @@ import { ActionMenu, ImportActionMode } from './components/action-menu';
 import { SearchHome } from './components/search-home';
 import { useMultilingualSearchStoreShallow } from './stores/multilingual-search';
 import './index.scss';
-import { IconSearch } from '@arco-design/web-react/icon';
+import { SearchOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { TbWorldSearch } from 'react-icons/tb';
 
@@ -42,7 +42,7 @@ function MultilingualSearch() {
             <>
               <div className="breadcrumb-item clickable" onClick={handleHomeClick}>
                 <span className="menu-item-icon">
-                  <IconSearch />
+                  <SearchOutlined />
                 </span>
                 <span className="intergration-header-title">
                   {t('resource.import.fromWebSearch')}

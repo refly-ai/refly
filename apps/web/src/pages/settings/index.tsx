@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tabs } from '@arco-design/web-react';
+import { Tabs } from 'antd';
 import { Helmet } from 'react-helmet';
 
 // styles
@@ -19,7 +19,7 @@ import { MdOutlineSubscriptions } from 'react-icons/md';
 
 import PageTitle from '@/pages/page-title';
 
-const TabPane = Tabs.TabPane;
+const { TabPane } = Tabs;
 const iconStyle = { fontSize: 16, marginRight: 8 };
 
 const Settings = () => {
@@ -47,11 +47,11 @@ const Settings = () => {
       </Helmet>
       <PageTitle title={t('settings.title')} />
       <div className="settings-inner-container pt-4">
-        <Tabs activeTab={tab} tabPosition="left" size="large" onChange={handleTabChange}>
+        <Tabs activeKey={tab} tabPosition="left" size="large" onChange={handleTabChange}>
           <TabPane
             key="account"
             className="settings-tab"
-            title={
+            tab={
               <span className="settings-tab-title">
                 <RiAccountBoxLine style={iconStyle} />
                 {t('settings.tabs.account')}
@@ -64,7 +64,7 @@ const Settings = () => {
           <TabPane
             key="subscription"
             className="settings-tab"
-            title={
+            tab={
               <span className="settings-tab-title">
                 <MdOutlineSubscriptions style={iconStyle} />
                 {t('settings.tabs.subscription')}
@@ -77,7 +77,7 @@ const Settings = () => {
           <TabPane
             key="language"
             className="settings-tab"
-            title={
+            tab={
               <span className="settings-tab-title">
                 <HiOutlineLanguage style={iconStyle} />
                 {t('settings.tabs.language')}

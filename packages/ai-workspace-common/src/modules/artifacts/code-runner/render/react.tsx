@@ -7,7 +7,7 @@ import * as shadcnComponents from './shadcn';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import { useState, useCallback, memo, useMemo } from 'react';
 import { Button, message } from 'antd';
-import { IconClose } from '@arco-design/web-react/icon';
+import { CloseOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
 const ReactCodeRunner = memo(
@@ -135,7 +135,7 @@ const ErrorMessage = memo(
               className="rounded-full p-1 text-white hover:bg-red-700 hover:text-white"
               aria-label={t('codeArtifact.fix.closeErrorMessage')}
             >
-              <IconClose className="hover:text-white text-white" />
+              <CloseOutlined className="hover:text-white text-white" />
             </Button>
           </div>
 

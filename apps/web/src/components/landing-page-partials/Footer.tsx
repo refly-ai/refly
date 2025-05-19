@@ -3,7 +3,7 @@ import Logo from '@/assets/logo.svg';
 import { useTranslation } from 'react-i18next';
 import './footer.scss';
 import { Button } from 'antd';
-import { IconDown } from '@arco-design/web-react/icon';
+import { DownOutlined } from '@ant-design/icons';
 import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import {
@@ -169,7 +169,7 @@ function Footer() {
                       >
                         <IconLanguage className="h-4 w-4" />
                         {t('language')}{' '}
-                        <IconDown className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
+                        <DownOutlined className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
                       </Button>
                     </UILocaleList>
                   </div>

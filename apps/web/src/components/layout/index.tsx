@@ -1,4 +1,4 @@
-import { Layout } from '@arco-design/web-react';
+import { Layout } from 'antd';
 import { useMatch } from 'react-router-dom';
 import { SiderLayout } from '@refly-packages/ai-workspace-common/components/sider/layout';
 import { useBindCommands } from '@refly-packages/ai-workspace-common/hooks/use-bind-commands';
