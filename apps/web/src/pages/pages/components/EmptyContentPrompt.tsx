@@ -64,7 +64,10 @@ const EmptyContentPrompt: FC<EmptyContentPromptProps> = ({
   // Filter out already existing nodes
   const filteredAvailableNodes = useMemo(() => {
     if (!excludeNodeIds.length) return availableNodes;
-    return availableNodes.filter((node) => !excludeNodeIds.includes(node.data?.entityId));
+    return availableNodes.filter(
+      (node) =>
+        !excludeNodeIds.includes(node.data?.entityId) && !['skill', 'group'].includes(node?.type),
+    );
   }, [availableNodes, excludeNodeIds]);
 
   // Filtered nodes based on search term
@@ -239,11 +242,11 @@ const EmptyContentPrompt: FC<EmptyContentPromptProps> = ({
 
   return (
     <div
-      className="refly-node-selector bg-white rounded-lg flex flex-col"
+      className="refly-node-selector bg-white dark:bg-gray-900 rounded-lg flex flex-col"
       style={{ width: '100%', height, maxHeight: '80vh', maxWidth: '100%' }}
     >
       {/* Search bar */}
-      <div className="p-4 border-b border-gray-200 flex items-center gap-2 bg-white sticky top-0 z-10">
+      <div className="p-4 border-b border-gray-200 flex items-center bg-white dark:bg-gray-900 gap-2 sticky top-0 z-10">
         <Input
           ref={inputRef}
           placeholder={t('common.searchNodes', 'Search nodes')}
@@ -260,7 +263,7 @@ const EmptyContentPrompt: FC<EmptyContentPromptProps> = ({
       </div>
 
       {/* Node list */}
-      <div className="flex-1 overflow-y-auto relative bg-gray-50 dark:bg-gray-950" ref={listRef}>
+      <div className="flex-1 overflow-y-auto relative bg-gray-50 dark:bg-gray-900" ref={listRef}>
         {isLoadingCanvas ? (
           <div className="flex items-center justify-center h-full">
             <Spinner size="large" />
@@ -273,18 +276,18 @@ const EmptyContentPrompt: FC<EmptyContentPromptProps> = ({
                 key={node.id}
                 data-index={index}
                 className={classNames(
-                  'relative rounded-lg transition overflow-hidden shadow-sm hover:shadow-md',
+                  'relative rounded-lg transition overflow-hidden shadow-sm hover:shadow-md dark:hover:shadow-gray-600 bg-white dark:bg-gray-700 ring-1',
                   'cursor-pointer',
                   selectedNodeIds.includes(node.data?.entityId)
-                    ? 'bg-white shadow-md dark:bg-gray-900'
-                    : 'bg-white border border-gray-200 hover:border-blue-200 dark:bg-gray-900 dark:border-gray-700 dark:hover:border-blue-700',
+                    ? 'ring-green-600'
+                    : 'ring-transparent dark:ring-gray-700',
                 )}
                 onClick={() => handleNodeToggle(node.data?.entityId)}
               >
                 {/* Card title */}
                 <div
                   className={classNames(
-                    'py-2 px-3 bg-white z-10 relative flex items-center justify-between',
+                    'py-2 px-3 z-10 relative flex items-center justify-between',
                     selectedNodeIds.includes(node.data?.entityId)
                       ? 'border-b border-blue-100 dark:border-blue-800'
                       : 'border-b border-gray-100 dark:border-gray-800',
@@ -295,13 +298,13 @@ const EmptyContentPrompt: FC<EmptyContentPromptProps> = ({
                       className={classNames(
                         'flex items-center justify-center w-5 h-5 rounded-full text-xs',
                         selectedNodeIds.includes(node.data?.entityId)
-                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-300'
+                          ? 'bg-green-600 text-white'
                           : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
                       )}
                     >
                       {index + 1}
                     </span>
-                    <span className="truncate text-sm font-medium text-gray-700">
+                    <span className="truncate text-sm font-medium text-gray-700 dark:text-gray-300">
                       {node.data?.title || t('common.untitled', 'Untitled')}
                     </span>
                   </div>
@@ -320,7 +323,7 @@ const EmptyContentPrompt: FC<EmptyContentPromptProps> = ({
                   </div>
 
                   {/* Gradient mask */}
-                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent dark:from-gray-950 dark:to-transparent" />
                 </div>
               </div>
             ))}
@@ -333,7 +336,7 @@ const EmptyContentPrompt: FC<EmptyContentPromptProps> = ({
       </div>
 
       {/* Action bar - fixed at bottom */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 left-0 right-0 z-10">
+      <div className="p-4 border-t border-solid border-1 border-x-0 border-b-0 border-transparent dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 left-0 right-0 z-10">
         <div className="text-sm text-gray-500">
           {selectedNodeIds.length > 0
             ? t('common.selectedItems', `Selected ${selectedNodeIds.length} items`, {

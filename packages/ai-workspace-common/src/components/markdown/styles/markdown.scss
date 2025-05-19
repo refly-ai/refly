@@ -171,6 +171,7 @@
 .markdown-body b,
 .markdown-body strong {
   font-weight: var(--base-text-weight-semibold, 600);
+  color: inherit;
 }
 
 .markdown-body dfn {

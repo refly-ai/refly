@@ -52,7 +52,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           <Layout.Sider
             width={180}
             theme="light"
-            className="bg-[#f7f9fc] border-r border-gray-200 overflow-hidden relative dark:bg-gray-900 dark:border-gray-700"
+            className="bg-[#f7f9fc] border-r border-gray-200 overflow-hidden relative dark:bg-gray-700/80 dark:border-gray-700"
           >
             <SidebarMinimap
               nodes={nodes}
@@ -66,14 +66,14 @@ const PageLayout: React.FC<PageLayoutProps> = ({
               type="text"
               icon={<LeftOutlined />}
               onClick={toggleMinimap}
-              className="absolute top-2 right-2 z-10 bg-white shadow-sm hover:bg-gray-100 border border-gray-200 rounded-full h-6 w-6 flex items-center justify-center p-0"
+              className="absolute top-2 right-2 z-10 bg-white shadow-sm hover:bg-gray-100 border border-gray-200 rounded-full h-6 w-6 flex items-center justify-center p-0 dark:bg-gray-900 dark:border-gray-700 dark:hover:bg-gray-950"
               size="small"
             />
           </Layout.Sider>
         )}
 
         {/* Middle content area */}
-        <Layout.Content className="relative overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 ">
+        <Layout.Content className="relative overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-800/90 ">
           {/* Button to show minimap */}
           {!showMinimap && (
             <div className="fixed left-0 top-60 z-500">
@@ -95,7 +95,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
               type="text"
               icon={<MenuUnfoldOutlined />}
               onClick={toggleSidebar}
-              className="absolute top-4 right-4 z-10 bg-white shadow-sm hover:bg-gray-100 border border-gray-200 h-8 w-8 flex items-center justify-center p-0 rounded-md"
+              className="absolute top-4 right-4 z-10 bg-white dark:bg-gray-900 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 h-8 w-8 flex items-center justify-center p-0 rounded-md"
             />
           )}
 

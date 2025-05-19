@@ -139,7 +139,7 @@ const ArtifactRenderer = memo(
       >
         <div className="h-full w-full overflow-hidden flex flex-col">
           {isMinimap ? (
-            <div className="flex-1 bg-white overflow-hidden">
+            <div className="flex-1 bg-white dark:bg-gray-900 overflow-hidden">
               {status === 'generating' ? (
                 <div className="flex h-full w-full items-center justify-center">
                   <div className="text-xs text-gray-500">
@@ -147,7 +147,7 @@ const ArtifactRenderer = memo(
                   </div>
                 </div>
               ) : (
-                <div className="transform scale-[0.5] origin-top-left w-[200%] h-[200%] overflow-hidden bg-white rounded shadow-sm">
+                <div className="transform scale-[0.5] origin-top-left w-[200%] h-[200%] overflow-hidden bg-white dark:bg-gray-900 rounded shadow-sm">
                   <Renderer
                     content={content}
                     type={currentType}

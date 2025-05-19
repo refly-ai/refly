@@ -36,13 +36,13 @@ const ImageRenderer = memo(
 
     return (
       <div
-        className={`h-full bg-white ${!isFullscreen ? 'rounded' : 'w-full'} ${
+        className={`h-full bg-white dark:bg-gray-900 ${!isFullscreen ? 'rounded' : 'w-full'} ${
           isMinimap ? 'p-1' : ''
         }`}
       >
         <div className="h-full w-full overflow-hidden flex flex-col">
           {/* Image content area */}
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-auto p-4 dark:bg-gray-900">
             <div
               className="cursor-pointer hover:opacity-90 transition-opacity"
               onClick={handleOpenPreview}

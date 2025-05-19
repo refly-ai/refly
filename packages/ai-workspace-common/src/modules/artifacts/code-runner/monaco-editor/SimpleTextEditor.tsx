@@ -54,7 +54,7 @@ const SimpleTextEditor = React.memo(
 
         <textarea
           ref={textareaRef}
-          className="w-full flex-1 p-4 font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900 dark:focus:ring-blue-400"
+          className="w-full flex-1 p-4 font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900 dark:focus:ring-blue-400 dark:text-gray-300"
           value={displayContent}
           onChange={handleChange}
           readOnly={readOnly || isGenerating || canvasReadOnly}

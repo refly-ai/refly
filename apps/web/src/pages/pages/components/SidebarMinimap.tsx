@@ -104,7 +104,7 @@ function SidebarMinimap({
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-2 border-b border-gray-200">
-        <span className="text-sm font-medium text-gray-600">
+        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
           {t('pages.components.navigationDirectory')}
         </span>
       </div>
@@ -132,19 +132,19 @@ function SidebarMinimap({
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                           style={getItemStyle(snapshot.isDragging, provided.draggableProps.style)}
-                          className={`relative rounded ${!readonly ? 'cursor-grab' : 'cursor-pointer'} transition border overflow-hidden shadow-sm hover:shadow-md ${
+                          className={`relative rounded ${!readonly ? 'cursor-grab' : 'cursor-pointer'} transition border overflow-hidden shadow-sm dark:shadow-gray-700/30 hover:shadow-md dark:hover:shadow-gray-600 ${
                             activeNodeIndex === index
-                              ? 'ring-2 ring-green-600 bg-green-50'
+                              ? 'ring-2 ring-green-600 bg-green-50 dark:bg-green-950'
                               : 'border-gray-200 hover:border-green-300'
                           } ${snapshot.isDragging ? 'z-50' : ''}`}
                           onClick={() => handleNodeSelect(index)}
                         >
                           {/* Card title */}
-                          <div className="py-1.5 px-2 bg-white border-b border-gray-100 z-10 relative flex items-center justify-between">
+                          <div className="py-1.5 px-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 z-10 relative flex items-center justify-between">
                             <div className="flex items-center gap-1.5 truncate">
                               <span className="text-xs text-gray-500">{index + 1}.</span>
                               <Tooltip title={getNodeTitle(node)}>
-                                <span className="truncate text-xs font-medium text-gray-600 max-w-[100px]">
+                                <span className="truncate text-xs font-medium text-gray-600 dark:text-gray-300 max-w-[100px]">
                                   {getNodeTitle(node)}
                                 </span>
                               </Tooltip>
@@ -158,7 +158,7 @@ function SidebarMinimap({
                             </div>
 
                             {/* Gradient mask */}
-                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent dark:from-black dark:to-transparent" />
                           </div>
                         </div>
                       )}

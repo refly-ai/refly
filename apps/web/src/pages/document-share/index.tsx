@@ -64,7 +64,7 @@ const DocumentSharePage = () => {
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white mt-6 mb-4">{title}</h1>
           )}
 
-          <div className="flex-grow prose prose-lg max-w-full">
+          <div className="flex-grow prose prose-lg max-w-full pb-16">
             {content && <Markdown content={content} mode="readonly" />}
           </div>
         </div>

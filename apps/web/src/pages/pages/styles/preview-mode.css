@@ -108,10 +108,10 @@
 }
 
 .preview-minimap-slide.active {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(0, 150, 143, 0.2);
+  border-color: rgba(0, 150, 143, 0.5);
   transform: translateX(5px) scale(1.02);
-  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 3px 10px rgba(0, 150, 143, 0.3);
 }
 
 .preview-minimap-number {
@@ -156,7 +156,7 @@
 
 .preview-minimap-slide.active .preview-minimap-thumbnail {
   transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 150, 143, 0.5);
 }
 
 .preview-minimap-title {
@@ -175,7 +175,7 @@
 }
 
 .preview-minimap-slide.active .preview-minimap-title {
-  color: rgba(59, 130, 246, 0.9);
+  color: rgba(0, 150, 143, 0.9);
   font-weight: 500;
 }
 
@@ -440,14 +440,12 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background-color: rgba(255, 255, 255, 0.9);
   border-radius: 50%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
 .wide-mode-modal .ant-modal-close-x:hover {
-  background-color: rgba(255, 255, 255, 1);
   transform: scale(1.05);
 }
 

@@ -257,11 +257,11 @@ const SharePage = () => {
         headerContent={
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center">
-              <div className="text-xl font-semibold text-gray-800 mr-2">
+              <div className="text-xl font-semibold text-gray-800 dark:text-gray-200 mr-2">
                 {pageData?.page?.title || t('common.untitled')}
               </div>
               {pageData?.shareInfo && (
-                <div className="text-sm text-gray-500 ml-2">
+                <div className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                   {t('pages.share.sharedAt')}:{' '}
                   {new Date(pageData.shareInfo.sharedAt).toLocaleString()}
                 </div>
@@ -274,7 +274,7 @@ const SharePage = () => {
                   type="text"
                   onClick={togglePreviewMode}
                   icon={<PlayCircleOutlined />}
-                  className="flex items-center mx-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  className="flex items-center mx-2 text-green-600 hover:text-green-700 hover:bg-green-50"
                 >
                   {t('pages.share.slideshow')}
                 </Button>
@@ -314,10 +314,10 @@ const SharePage = () => {
                     // Enable scrolling for this specific card
                     handleCardClick(`content-block-${index}`);
                   }}
-                  className={`transition-all duration-300 h-[400px] rounded-lg bg-white ${
+                  className={`transition-all duration-300 h-[400px] rounded-lg bg-white dark:bg-gray-900 ${
                     activeNodeIndex === index
-                      ? 'shadow-[0_10px_30px_rgba(0,0,0,0.15)] transform -translate-y-1 border border-blue-400'
-                      : 'shadow-md hover:shadow-lg'
+                      ? 'shadow-[0_10px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_30px_rgba(255,255,255,0.15)] transform -translate-y-1 border border-blue-400'
+                      : 'shadow-md hover:shadow-lg dark:hover:shadow-gray-600'
                   }`}
                 >
                   <NodeRenderer
