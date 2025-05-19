@@ -8,24 +8,12 @@ import { useTranslation } from 'react-i18next';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import type { RcFile } from 'antd/es/upload/interface';
 import { genResourceID, genImageID } from '@refly/utils/id';
-import { LuInfo } from 'react-icons/lu';
-import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
-import { GrUnlock } from 'react-icons/gr';
-import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
-import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { cn } from '@refly/utils/cn';
+import { ImageItem } from '@refly-packages/ai-workspace-common/stores/import-resource';
 
 const { Dragger } = Upload;
-
-interface ImageItem {
-  title: string;
-  url: string;
-  storageKey: string;
-  uid?: string;
-  status?: 'uploading' | 'done' | 'error';
-}
 
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.bmp'];
 
@@ -34,16 +22,13 @@ export const ImportFromImage = () => {
   const {
     setImportResourceModalVisible,
     insertNodePosition,
-    fileList: storageFileList,
-    setFileList: setStorageFileList,
+    imageList: storageImageList,
+    setImageList: setStorageImageList,
   } = useImportResourceStoreShallow((state) => ({
     setImportResourceModalVisible: state.setImportResourceModalVisible,
     insertNodePosition: state.insertNodePosition,
-    setFileList: state.setFileList,
-    fileList: state.fileList,
-  }));
-  const { setSubscribeModalVisible } = useSubscriptionStoreShallow((state) => ({
-    setSubscribeModalVisible: state.setSubscribeModalVisible,
+    imageList: state.imageList,
+    setImageList: state.setImageList,
   }));
 
   const { isCanvasOpen, canvasId } = useGetProjectCanvasId();
@@ -51,14 +36,9 @@ export const ImportFromImage = () => {
   const { refetchUsage, fileParsingUsage } = useSubscriptionUsage();
 
   const [saveLoading, setSaveLoading] = useState(false);
-  const [imageList, setImageList] = useState<ImageItem[]>(storageFileList);
+  const [imageList, setImageList] = useState<ImageItem[]>(storageImageList);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { userProfile } = useUserStoreShallow((state) => ({
-    userProfile: state.userProfile,
-  }));
-
-  const planType = userProfile?.subscription?.planType || 'free';
   const uploadLimit = fileParsingUsage?.fileUploadLimit ?? -1;
   const maxFileSize = `${uploadLimit}MB`;
   const maxFileSizeBytes = uploadLimit * 1024 * 1024;
@@ -229,8 +209,8 @@ export const ImportFromImage = () => {
   };
 
   useEffect(() => {
-    setStorageFileList(imageList);
-  }, [imageList, setStorageFileList]);
+    setStorageImageList(imageList);
+  }, [imageList, setStorageImageList]);
 
   return (
     <div
@@ -253,16 +233,6 @@ export const ImportFromImage = () => {
           <TbPhoto className="text-lg" />
         </span>
         <div className="text-base font-bold">{t('resource.import.fromImage')}</div>
-        {subscriptionEnabled && planType === 'free' && (
-          <Button
-            type="text"
-            icon={<GrUnlock className="flex items-center justify-center" />}
-            onClick={() => setSubscribeModalVisible(true)}
-            className="text-green-600 font-medium"
-          >
-            {t('resource.import.unlockUploadLimit')}
-          </Button>
-        )}
       </div>
 
       {/* content */}
@@ -281,21 +251,12 @@ export const ImportFromImage = () => {
             <p className="ant-upload-hint text-gray-400 dark:text-gray-500 mt-2">
               {genUploadHint()}
             </p>
-            {fileParsingUsage?.pagesLimit >= 0 && (
-              <div className="text-green-500 dark:text-green-400 mt-2 text-xs font-medium flex items-center justify-center gap-1">
-                <LuInfo />
-                {t('resource.import.imageParsingUsage', {
-                  used: fileParsingUsage?.pagesParsed,
-                  limit: fileParsingUsage?.pagesLimit,
-                })}
-              </div>
-            )}
           </Dragger>
         </div>
       </div>
 
       {/* footer */}
-      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] border-x-0 border-b-0 p-[16px] rounded-none">
+      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] dark:border-[#2f2f2f] border-x-0 border-b-0 p-[16px] rounded-none">
         <div className="flex items-center gap-x-[8px]">
           <p className="font-bold whitespace-nowrap text-md text-[#00968f]">
             {t('resource.import.imageCount', {

@@ -9,11 +9,11 @@ import {
   InputNumber,
   Input,
   Form,
-  FormInstance,
   Switch,
   Space,
-} from '@arco-design/web-react';
-import { IconRefresh, IconUp, IconDown } from '@arco-design/web-react/icon';
+  FormInstance,
+} from 'antd';
+import { ReloadOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
 import { GrDocumentConfig } from 'react-icons/gr';
 
 import {
@@ -25,7 +25,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
 
-const TextArea = Input.TextArea;
+const { TextArea } = Input;
 
 const getFormField = (fieldPrefix: string, key: string) => {
   return `${fieldPrefix ? `${fieldPrefix}.` : ''}${key}`;
@@ -104,7 +104,8 @@ const ConfigItem = React.memo(
           value={initialValue !== null ? String(initialValue) : undefined}
           className="bg-transparent hover:bg-transparent focus:bg-transparent"
           type={item.inputProps?.passwordType ? 'password' : 'text'}
-          onChange={(val) => {
+          onChange={(e) => {
+            const val = e.target.value;
             setInitialValue(val);
             onValueChange(val, String(val));
           }}
@@ -125,7 +126,8 @@ const ConfigItem = React.memo(
             minRows: 4,
             maxRows: 10,
           }}
-          onChange={(val) => {
+          onChange={(e) => {
+            const val = e.target.value;
             setInitialValue(val);
             onValueChange(val, String(val));
           }}
@@ -138,10 +140,9 @@ const ConfigItem = React.memo(
       return (
         <InputNumber
           ref={inputRef}
-          mode="button"
+          controls
           value={initialValue !== null ? Number(initialValue) : undefined}
-          className="w-full bg-transparent hover:bg-transparent focus:bg-transparent border-none hover:border-none focus:border-none"
-          {...(item?.inputProps || {})}
+          className="w-full bg-transparent hover:bg-transparent focus:bg-transparent"
           onChange={(val) => {
             setInitialValue(val);
             onValueChange(val, val || val === 0 ? String(val) : '');
@@ -185,13 +186,14 @@ const ConfigItem = React.memo(
       return (
         <Radio.Group
           value={configValue?.value || defaultValue}
-          onChange={(checkedValue) => {
+          onChange={(e) => {
+            const checkedValue = e.target.value;
             onValueChange(checkedValue, optionValToDisplay.get(checkedValue));
           }}
           disabled={readonly}
         >
           {item.options.map((option) => (
-            <Radio key={option.value} value={option.value}>
+            <Radio key={option.value} value={option.value} className="config-radio text-[10px]">
               {getDictValue(option.labelDict, locale)}
             </Radio>
           ))}
@@ -203,7 +205,6 @@ const ConfigItem = React.memo(
       return (
         <Switch
           size="small"
-          type="round"
           checked={Boolean(configValue?.value)}
           onChange={(checked) => {
             onValueChange(checked, String(checked));
@@ -343,29 +344,25 @@ export const ConfigManager = React.memo(
       // Create new form values to update state
       const newFormValues: Record<string, DynamicConfigValue> = {};
 
-      if (!tplConfig || Object.keys(tplConfig).length === 0) {
-        // Setup default values from schema
-        for (const item of schema.items || []) {
-          if (item.defaultValue !== undefined && item.key) {
-            const field = getFormField(fieldPrefix, item.key);
-            const value = {
-              value: item.defaultValue,
-              label: getDictValue(item.labelDict, locale),
-              displayValue: String(item.defaultValue),
-            };
-
-            formUpdates[field] = value;
-            newFormValues[item.key] = value;
-          }
-        }
-      } else {
-        // Use provided tplConfig
+      if (tplConfig) {
         for (const [key, value] of Object.entries(tplConfig)) {
           if (value !== undefined) {
             const field = getFormField(fieldPrefix, key);
             formUpdates[field] = value;
             newFormValues[key] = value as DynamicConfigValue;
           }
+        }
+      }
+
+      for (const item of schema.items || []) {
+        const field = getFormField(fieldPrefix, item.key);
+        if (tplConfig?.[item.key] === undefined) {
+          formUpdates[field] = item.defaultValue;
+          newFormValues[item.key] = {
+            value: item.defaultValue,
+            label: getDictValue(item.labelDict, locale),
+            displayValue: String(item.defaultValue),
+          } as DynamicConfigValue;
         }
       }
 
@@ -385,7 +382,18 @@ export const ConfigManager = React.memo(
           setFormErrors(errors);
         }
       }
-    }, [tplConfig, schema.items, fieldPrefix, locale, form, validateTplConfig, setFormErrors]);
+
+      onFormValuesChange?.({ ...formUpdates }, { tplConfig: { ...newFormValues } });
+    }, [
+      tplConfig,
+      schema.items,
+      fieldPrefix,
+      locale,
+      form,
+      validateTplConfig,
+      setFormErrors,
+      onFormValuesChange,
+    ]);
 
     const handleReset = (key: string) => {
       const schemaItem = schema.items?.find((item) => item.key === key);
@@ -409,40 +417,75 @@ export const ConfigManager = React.memo(
         [key]: resetValue,
       }));
 
+      // Manually trigger form change to ensure parent components are updated
+      const newTplConfig = { ...(tplConfig || {}) };
+      newTplConfig[key] = resetValue;
+      onFormValuesChange?.({ [key]: resetValue }, { tplConfig: newTplConfig });
+
       // Only update reset counter when explicitly resetting to avoid unnecessary re-renders
       setResetCounter((prev) => prev + 1);
     };
 
     // Optimize value change to prevent losing focus
     const handleValueChange = useCallback(
-      (field?: string) => {
+      (field?: string, val?: any, displayValue?: string) => {
         // When value changes, update local state
         if (field) {
+          validateField(field, val);
           const key = field.split('.').pop();
           if (key) {
-            const value = form.getFieldValue(field);
-            setFormValues((prev) => ({
-              ...prev,
-              [key]: value,
-            }));
+            if (val !== undefined && displayValue !== undefined) {
+              const schemaItem = schema.items?.find((item) => item.key === key);
+              const label = getDictValue(schemaItem?.labelDict || {}, locale);
+
+              const newValue = {
+                value: val,
+                label,
+                displayValue,
+              };
+
+              // Update local state
+              setFormValues((prev) => ({
+                ...prev,
+                [key]: newValue,
+              }));
+
+              const newTplConfig = { ...(tplConfig || {}) };
+              newTplConfig[key] = newValue;
+
+              const currentConfigStr = JSON.stringify(tplConfig || {});
+              const newConfigStr = JSON.stringify(newTplConfig);
+
+              if (currentConfigStr !== newConfigStr) {
+                onFormValuesChange?.({ [key]: newValue }, { tplConfig: newTplConfig });
+              }
+            } else {
+              const value = form.getFieldValue(field);
+              setFormValues((prev) => ({
+                ...prev,
+                [key]: value,
+              }));
+            }
           }
         }
       },
-      [form],
+      [form, schema.items, locale, onFormValuesChange, validateField, tplConfig],
     );
 
     return (
-      <div className="config-manager">
+      <div className="config-manager border-t border-b-0 border-l-0 border-r-0 border-dashed border-gray-200 dark:border-[rgba(255,255,255,0.3)]">
         <div className="config-manager__header">
           <div className="config-manager__header-left">
-            <GrDocumentConfig className="config-manager__header-icon" />
-            <span className="config-manager__header-title">{t('copilot.configManager.title')}</span>
+            <GrDocumentConfig className="config-manager__header-icon text-gray-600 dark:text-gray-300" />
+            <span className="config-manager__header-title text-gray-600 dark:text-gray-300">
+              {t('copilot.configManager.title')}
+            </span>
           </div>
           <Button
             type="text"
-            size="mini"
+            size="small"
             className="config-manager__toggle-button"
-            icon={isExpanded ? <IconUp /> : <IconDown />}
+            icon={isExpanded ? <UpOutlined /> : <DownOutlined />}
             onClick={() => {
               if (!readonly) {
                 setIsExpanded(!isExpanded);
@@ -455,29 +498,7 @@ export const ConfigManager = React.memo(
         </div>
 
         {isExpanded && (
-          <Form
-            form={form}
-            className="config-manager__form"
-            onValuesChange={(changedValues, allValues) => {
-              // Validate any changed fields
-              for (const field of Object.keys(changedValues)) {
-                validateField(field, changedValues[field]);
-              }
-
-              // Handle config updates
-              if (allValues.tplConfig && onFormValuesChange) {
-                const newConfig = allValues.tplConfig;
-
-                // Deep comparison with current tplConfig
-                const currentConfigStr = JSON.stringify(tplConfig || {});
-                const newConfigStr = JSON.stringify(newConfig);
-
-                if (currentConfigStr !== newConfigStr) {
-                  onFormValuesChange(changedValues, allValues);
-                }
-              }
-            }}
-          >
+          <Form form={form} className="config-manager__form" layout="vertical">
             <Space direction="vertical" style={{ width: '100%' }}>
               {(schema.items || []).map((item) => {
                 const field = getFormField(fieldPrefix, item.key);
@@ -489,20 +510,21 @@ export const ConfigManager = React.memo(
                     className={`config-manager__item-row ${getItemError(item.key) ? 'error' : ''}`}
                   >
                     <Form.Item
-                      layout="vertical"
-                      field={field}
+                      className="config-item"
                       label={
                         <div className="config-manager__item-label">
-                          {item.required?.value &&
-                            item.required?.configScope.includes(configScope) && (
-                              <span style={{ color: 'red' }}>* </span>
-                            )}
-                          {getDictValue(item.labelDict, locale)}
+                          <div>
+                            {item.required?.value &&
+                              item.required?.configScope.includes(configScope) && (
+                                <span style={{ color: 'red' }}>* </span>
+                              )}
+                            {getDictValue(item.labelDict, locale)}
+                          </div>
                           <Button
                             type="text"
-                            size="mini"
-                            className="config-manager__reset-button"
-                            icon={<IconRefresh />}
+                            size="small"
+                            className="config-manager__reset-button text-green-500"
+                            icon={<ReloadOutlined />}
                             onClick={() => !readonly && handleReset(item.key)}
                             disabled={readonly}
                           >
@@ -510,6 +532,7 @@ export const ConfigManager = React.memo(
                           </Button>
                         </div>
                       }
+                      name={field}
                       required={
                         item.required?.value && item.required?.configScope.includes(configScope)
                       }

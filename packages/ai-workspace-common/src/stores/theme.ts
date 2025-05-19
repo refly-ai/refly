@@ -9,9 +9,13 @@ interface ThemeState {
   themeMode: ThemeMode;
   // 是否为暗色模式
   isDarkMode: boolean;
+  // 是否强制使用亮色模式
+  isForcedLightMode: boolean;
 
   // 设置主题模式
   setThemeMode: (mode: ThemeMode) => void;
+  // 设置强制亮色模式状态
+  setForcedLightMode: (isForcedLight: boolean) => void;
   // 初始化主题
   initTheme: () => void;
 }
@@ -22,8 +26,8 @@ const isSystemDarkMode = () => {
 };
 
 // 应用暗色模式到文档
-const applyDarkMode = (isDark: boolean) => {
-  if (isDark) {
+const applyDarkMode = (isDark: boolean, isForcedLight: boolean) => {
+  if (isDark && !isForcedLight) {
     document.documentElement.classList.add('dark');
   } else {
     document.documentElement.classList.remove('dark');
@@ -35,6 +39,14 @@ export const useThemeStore = create<ThemeState>()(
     (set, get) => ({
       themeMode: 'system',
       isDarkMode: false,
+      isForcedLightMode: false,
+
+      setForcedLightMode: (isForcedLight: boolean) => {
+        set({ isForcedLightMode: isForcedLight });
+
+        // Apply dark mode considering forced light mode
+        applyDarkMode(get().isDarkMode, isForcedLight);
+      },
 
       setThemeMode: (mode: ThemeMode) => {
         set({ themeMode: mode });
@@ -48,11 +60,11 @@ export const useThemeStore = create<ThemeState>()(
         }
 
         set({ isDarkMode: isDark });
-        applyDarkMode(isDark);
+        applyDarkMode(isDark, get().isForcedLightMode);
       },
 
       initTheme: () => {
-        const { themeMode } = get();
+        const { themeMode, isForcedLightMode } = get();
 
         // 根据当前主题模式初始化
         let isDark = false;
@@ -66,7 +78,7 @@ export const useThemeStore = create<ThemeState>()(
           const handleChange = (e: MediaQueryListEvent) => {
             if (get().themeMode === 'system') {
               set({ isDarkMode: e.matches });
-              applyDarkMode(e.matches);
+              applyDarkMode(e.matches, get().isForcedLightMode);
             }
           };
 
@@ -74,7 +86,7 @@ export const useThemeStore = create<ThemeState>()(
         }
 
         set({ isDarkMode: isDark });
-        applyDarkMode(isDark);
+        applyDarkMode(isDark, isForcedLightMode);
       },
     }),
     {

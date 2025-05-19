@@ -122,9 +122,10 @@ if (sentryEnabled) {
 // Update App component to remove Suspense (moved to router definition)
 export const App = () => {
   const setRuntime = useUserStoreShallow((state) => state.setRuntime);
-  const { isDarkMode, initTheme } = useThemeStoreShallow((state) => ({
+  const { isDarkMode, initTheme, isForcedLightMode } = useThemeStoreShallow((state) => ({
     isDarkMode: state.isDarkMode,
     initTheme: state.initTheme,
+    isForcedLightMode: state.isForcedLightMode,
   }));
 
   useEffect(() => {
@@ -133,16 +134,26 @@ export const App = () => {
     initTheme();
   }, [setRuntime, initTheme]);
 
+  // Use light theme when forced, otherwise use the user's preference
+  const shouldUseDarkTheme = isDarkMode && !isForcedLightMode;
+
   return (
     <ConfigProvider
       theme={{
         token: {
           colorPrimary: '#00968F',
           borderRadius: 6,
-          controlItemBgActive: '#f1f1f0',
-          controlItemBgActiveHover: '#e0e0e0',
+          ...(shouldUseDarkTheme
+            ? {
+                controlItemBgActive: 'rgba(255, 255, 255, 0.08)',
+                controlItemBgActiveHover: 'rgba(255, 255, 255, 0.12)',
+              }
+            : {
+                controlItemBgActive: '#f1f1f0',
+                controlItemBgActiveHover: '#e0e0e0',
+              }),
         },
-        algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
+        algorithm: shouldUseDarkTheme ? theme.darkAlgorithm : theme.defaultAlgorithm,
       }}
     >
       <Outlet />

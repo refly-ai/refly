@@ -55,15 +55,15 @@ const Render = memo((props: { id: string }) => {
   if (!isThinking) return null;
 
   return (
-    <div className="my-3 p-3 bg-gray-50 rounded-lg border border-gray-200 transition-all">
+    <div className="my-3 p-3 bg-gray-50 rounded-lg border border-gray-200 transition-all dark:bg-gray-900 dark:border-gray-700">
       <div className="flex items-center gap-1">
         <div className="flex items-center gap-2">
           <IconThinking className="w-4 h-4" />
-          <span className="text-sm text-gray-700 font-medium">
+          <span className="text-sm text-gray-700 font-medium dark:text-gray-200">
             {t('artifact.thinking', 'Thinking...')}
           </span>
         </div>
-        <IconLoading className="w-3 h-3 ml-1 text-gray-500 animate-spin" />
+        <IconLoading className="w-3 h-3 ml-1 text-gray-500 animate-spin dark:text-gray-400" />
       </div>
     </div>
   );

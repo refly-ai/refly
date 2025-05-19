@@ -19,7 +19,7 @@ import {
   MakeLongerSkill,
 } from './templates';
 import {
-  CommonQnA,
+  // CommonQnA,
   GenerateDoc,
   EditDoc,
   WebSearch,
@@ -29,6 +29,7 @@ import {
   CodeArtifacts,
   ImageGeneration,
 } from './skills';
+import { Agent } from './skills/agent';
 
 export const createSkillTemplateInventory = (engine: SkillEngine): BaseSkill[] => {
   return [
@@ -61,8 +62,9 @@ export const createSkillInventory = (engine: SkillEngine): BaseSkill[] => {
     new CustomPrompt(engine),
     new GenerateDoc(engine),
     new RecommendQuestions(engine),
-    new CommonQnA(engine),
+    // new CommonQnA(engine),
     // new RewriteDoc(engine),
     new EditDoc(engine),
+    new Agent(engine),
   ];
 };

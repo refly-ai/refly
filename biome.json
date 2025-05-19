@@ -26,7 +26,8 @@
         "useConst": "error",
         "useTemplate": "error",
         "useImportType": "off",
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noUselessElse": "off"
       },
       "complexity": {
         "useOptionalChain": "error"
@@ -64,7 +65,6 @@
   "files": {
     "ignoreUnknown": true,
     "maxSize": 3000000,
-    "include": ["**/*.{js,jsx,ts,tsx,json,css}"],
     "ignore": [
       "**/node_modules/**",
       "**/release/**",

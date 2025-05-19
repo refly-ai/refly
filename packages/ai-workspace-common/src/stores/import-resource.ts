@@ -22,6 +22,14 @@ export interface FileItem {
   status?: 'uploading' | 'done' | 'error';
 }
 
+export interface ImageItem {
+  title: string;
+  url: string;
+  storageKey: string;
+  uid?: string;
+  status?: 'uploading' | 'done' | 'error';
+}
+
 export type ImportResourceMenuItem =
   | 'import-from-file'
   | 'import-from-weblink'
@@ -37,12 +45,14 @@ interface ImportResourceState {
   // scrape
   scrapeLinks: LinkMeta[];
   fileList: FileItem[];
+  imageList: ImageItem[];
   copiedTextPayload: { content: string; title: string; url?: string };
   insertNodePosition: XYPosition | null;
 
   setImportResourceModalVisible: (visible: boolean) => void;
   setScrapeLinks: (links: LinkMeta[]) => void;
   setFileList: (fileList: FileItem[]) => void;
+  setImageList: (imageList: ImageItem[]) => void;
   setCopiedTextPayload: (
     payload: Partial<{ content: string; title: string; url?: string }>,
   ) => void;
@@ -55,6 +65,7 @@ export const defaultState = {
   copiedTextPayload: { content: '', title: '', url: '' },
   scrapeLinks: [],
   fileList: [],
+  imageList: [],
   importResourceModalVisible: false,
   selectedMenuItem: 'import-from-web-search' as ImportResourceMenuItem,
   insertNodePosition: null,
@@ -71,6 +82,7 @@ export const useImportResourceStore = create<ImportResourceState>()(
       set((state) => ({ ...state, copiedTextPayload: { ...state.copiedTextPayload, ...payload } })),
     resetState: () => set((state) => ({ ...state, ...defaultState })),
     setFileList: (fileList: FileItem[]) => set((state) => ({ ...state, fileList })),
+    setImageList: (imageList: ImageItem[]) => set((state) => ({ ...state, imageList })),
     setSelectedMenuItem: (menuItem: ImportResourceMenuItem) =>
       set((state) => ({ ...state, selectedMenuItem: menuItem })),
     setInsertNodePosition: (position: XYPosition) =>

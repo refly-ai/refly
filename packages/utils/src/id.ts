@@ -26,6 +26,7 @@ export enum IDPrefix {
   IMAGE = 'img-',
   PROJECT = 'p-',
   CODE_ARTIFACT = 'ca-',
+  MCP_SERVER = 'mcp-',
 }
 
 export function genUID(): string {
@@ -114,6 +115,10 @@ export function genVerificationSessionID(): string {
 
 export function genProjectID(): string {
   return IDPrefix.PROJECT + createId();
+}
+
+export function genMcpServerID(): string {
+  return IDPrefix.MCP_SERVER + createId();
 }
 
 export const genUniqueId = () => {

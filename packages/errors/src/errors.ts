@@ -248,6 +248,14 @@ export class ProviderItemNotFoundError extends BaseError {
   };
 }
 
+export class McpServerNotFoundError extends BaseError {
+  code = 'E1017';
+  messageDict = {
+    en: 'MCP server not found, please refresh',
+    'zh-CN': 'MCP 服务器不存在，请刷新重试',
+  };
+}
+
 export class StorageQuotaExceeded extends BaseError {
   code = 'E2001';
   messageDict = {
@@ -345,6 +353,7 @@ const errorMap = {
   E1014: ProjectNotFoundError,
   E1015: ProviderNotFoundError,
   E1016: ProviderItemNotFoundError,
+  E1017: McpServerNotFoundError,
   E2001: StorageQuotaExceeded,
   E2002: ModelUsageQuotaExceeded,
   E2003: ModelNotSupportedError,

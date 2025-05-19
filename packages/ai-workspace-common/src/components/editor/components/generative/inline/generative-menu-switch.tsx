@@ -66,7 +66,7 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
           maxWidth: '90vw',
           appendTo: containerRef.current || 'parent',
         }}
-        className="flex items-center overflow-hidden z-50 max-w-full rounded-md border border-solid border-gray-200 shadow-xl bg-background"
+        className="flex items-center overflow-hidden z-50 max-w-full rounded-md border border-solid border-gray-200 dark:border-gray-700 shadow-xl bg-background"
       >
         {open && (
           <AISelector

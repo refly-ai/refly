@@ -1,4 +1,5 @@
 import { SkillRunnableConfig } from '../base';
+
 import { FakeListChatModel } from '@langchain/core/utils/testing';
 import { OpenAIBaseInput } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
@@ -43,6 +44,8 @@ import {
   DeleteDocumentResponse,
   DeleteDocumentRequest,
   ModelScene,
+  ListMcpServersData,
+  ListMcpServersResponse,
 } from '@refly/openapi-schema';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { getChatModel } from '@refly/providers';
@@ -67,6 +70,8 @@ export interface NodeMeta {
 }
 
 export interface ReflyService {
+  listMcpServers: (user: User, req: ListMcpServersData['query']) => Promise<ListMcpServersResponse>;
+
   createCanvas: (user: User, req: UpsertCanvasRequest) => Promise<CreateCanvasResponse>;
   listCanvases: (user: User, param: ListCanvasesData['query']) => Promise<ListCanvasesResponse>;
   deleteCanvas: (user: User, req: DeleteCanvasRequest) => Promise<DeleteCanvasResponse>;

@@ -65,7 +65,7 @@ const HeaderActions = ({
         <>
           {isMultiSelectMode && (
             <div className="flex items-center justify-between gap-2 mt-2">
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 {t('project.sourceList.selectedCount', { count: selectedItems?.length ?? 0 })}
               </div>
               <div className="flex items-center gap-1">
@@ -92,7 +92,11 @@ const HeaderActions = ({
                     <Button
                       type="text"
                       size="small"
-                      icon={<IconRemove className={cn(iconClassName, 'text-gray-500')} />}
+                      icon={
+                        <IconRemove
+                          className={cn(iconClassName, 'text-gray-500 dark:text-gray-400"')}
+                        />
+                      }
                     />
                   </Popconfirm>
                 </Tooltip>
@@ -102,7 +106,11 @@ const HeaderActions = ({
                     <Button
                       type="text"
                       size="small"
-                      icon={<IconPlus className={cn(iconClassName, 'text-gray-500')} />}
+                      icon={
+                        <IconPlus
+                          className={cn(iconClassName, 'text-gray-500 dark:text-gray-400"')}
+                        />
+                      }
                       onClick={() => {
                         if (isCanvasOpen) {
                           onAddSelectedSourcesToCanvas?.();
@@ -118,7 +126,11 @@ const HeaderActions = ({
                   <Button
                     type="text"
                     size="small"
-                    icon={<IconExit className={cn(iconClassName, 'text-gray-500')} />}
+                    icon={
+                      <IconExit
+                        className={cn(iconClassName, 'text-gray-500 dark:text-gray-400"')}
+                      />
+                    }
                     onClick={onExitMultiSelectMode}
                   />
                 </Tooltip>
@@ -131,7 +143,7 @@ const HeaderActions = ({
               <Input
                 autoFocus
                 type="text"
-                className="text-xs px-2 py-1 border border-gray-200 rounded-md flex-grow focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="text-xs px-2 py-1 border border-gray-200 rounded-md flex-grow focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700"
                 placeholder={t('project.sourceList.searchPlaceholder')}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
@@ -158,14 +170,14 @@ const HeaderActions = ({
           <Button
             type="text"
             size="small"
-            icon={<IconPlus className={cn(iconClassName, 'text-gray-500')} />}
+            icon={<IconPlus className={cn(iconClassName, 'text-gray-500 dark:text-gray-400"')} />}
             onClick={onAddItem}
           />
         )}
         <Button
           type="text"
           size="small"
-          icon={<IconSearch className={cn(iconClassName, 'text-gray-500')} />}
+          icon={<IconSearch className={cn(iconClassName, 'text-gray-500 dark:text-gray-400"')} />}
           onClick={onToggleSearchMode}
         />
       </div>

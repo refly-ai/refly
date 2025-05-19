@@ -4,8 +4,7 @@ import { addAIHighlight } from '../../../core/extensions';
 import CrazySpinner from '../../ui/icons/crazy-spinner';
 import Magic from '../../ui/icons/magic';
 import { InPlaceEditType, CanvasEditConfig } from '@refly/utils/event-emitter/editor';
-import { Input } from '@arco-design/web-react';
-import { Button, message } from 'antd';
+import { Button, message, Input } from 'antd';
 import { cn } from '@refly/utils/cn';
 import { getOsType } from '@refly/utils/env';
 import { AddBaseMarkContext } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager/components/add-base-mark-context';
@@ -348,14 +347,14 @@ export const AISelector = memo(({ onOpenChange, inPlaceEditType }: AISelectorPro
                 maxRows: 5,
               }}
               ref={(input) => {
-                if (input?.dom && inPlaceEditType === 'block') {
+                if (input && inPlaceEditType === 'block') {
                   setTimeout(() => {
-                    input.dom.focus();
+                    input.focus();
                   }, 0);
                 }
               }}
-              onChange={(val) => {
-                setInputValue(val);
+              onChange={(e) => {
+                setInputValue(e.target.value);
               }}
               style={{
                 borderRadius: 8,

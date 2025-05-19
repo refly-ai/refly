@@ -32,12 +32,12 @@ const Render = memo<CanvasProps>((props: CanvasProps) => {
   const cursorStyle = isInteractive ? 'cursor-pointer' : 'cursor-default';
 
   return (
-    <div className="my-3 rounded-lg overflow-hidden border border-solid border-gray-300 bg-white hover:shadow-sm hover:bg-gray-50 transition-all duration-200">
+    <div className="my-3 rounded-lg overflow-hidden border border-solid border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200">
       <div className={`flex ${cursorStyle} transition-colors`} onClick={handleClick}>
         {/* Left section with gray background */}
-        <div className="flex items-center justify-center bg-gray-50 p-3">
+        <div className="flex items-center justify-center bg-gray-50 p-3 dark:bg-gray-700">
           <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-            <FiCode className="text-gray-500 text-sm" />
+            <FiCode className="text-gray-500 dark:text-gray-200 text-sm" />
           </div>
         </div>
 

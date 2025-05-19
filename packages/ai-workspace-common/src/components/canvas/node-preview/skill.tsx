@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect, memo, useRef } from 'react';
-import { Form } from '@arco-design/web-react';
 import { useDebouncedCallback } from 'use-debounce';
 import { useTranslation } from 'react-i18next';
 import { IconClose } from '@arco-design/web-react/icon';
-import { Button } from 'antd';
+import { Button, Form } from 'antd';
 import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
 import { CanvasNode, CanvasNodeData, SkillNodeMeta } from '../nodes/shared/types';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';

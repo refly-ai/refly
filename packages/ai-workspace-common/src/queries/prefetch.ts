@@ -27,6 +27,7 @@ import {
   listDocuments,
   listLabelClasses,
   listLabelInstances,
+  listMcpServers,
   listModels,
   listPages,
   listProjects,
@@ -58,6 +59,7 @@ import {
   ListDocumentsData,
   ListLabelClassesData,
   ListLabelInstancesData,
+  ListMcpServersData,
   ListPagesData,
   ListProjectsData,
   ListProviderItemOptionsData,
@@ -69,6 +71,14 @@ import {
   ListSkillTriggersData,
 } from '../requests/types.gen';
 import * as Common from './common';
+export const prefetchUseListMcpServers = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListMcpServersData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListMcpServersKeyFn(clientOptions),
+    queryFn: () => listMcpServers({ ...clientOptions }).then((response) => response.data),
+  });
 export const prefetchUseListPages = (
   queryClient: QueryClient,
   clientOptions: Options<ListPagesData, true> = {},

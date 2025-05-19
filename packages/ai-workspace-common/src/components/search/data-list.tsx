@@ -125,42 +125,48 @@ export function DataList({
   }, [data]);
   useEffect(() => {
     setValue(`create${domain}`);
-  }, [domain]);
+  }, [domain, setValue]);
 
   return (
     <>
-      <Command.Group heading={t('knowledgeBase.quickSearch.suggest')}>
+      <Command.Group
+        heading={t('knowledgeBase.quickSearch.suggest')}
+        className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 mb-2"
+      >
         <Item
           value={`create${domain}`}
           keywords={[`create${domain}`]}
-          onSelect={() => onCreateClick()}
+          onSelect={() => onCreateClick?.()}
           activeValue={activeValue}
         >
           <IconFolderAdd style={{ fontSize: 12 }} />
           {t('knowledgeBase.quickSearch.new', { domain })}
         </Item>
       </Command.Group>
-      <Command.Group heading={heading}>
+      <Command.Group
+        heading={heading}
+        className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 mb-2"
+      >
         {stateDataList?.map((item, index) => (
           <Item
             key={index}
             value={`${domain}-${index}-${item?.title}-${item?.snippets?.[0]?.text || ''}`}
             activeValue={activeValue}
             onSelect={() => {
-              onItemClick(item);
+              onItemClick?.(item);
               searchStore.setIsSearchOpen(false);
             }}
           >
             {icon}
-            <div className="search-res-container">
+            <div className="search-res-container max-w-[calc(100%-60px)]">
               <p
-                className="search-res-title"
+                className="search-res-title text-gray-900 dark:text-gray-100 text-sm font-medium break-words"
                 // biome-ignore lint/security/noDangerouslySetInnerHtml: trust server highlights
                 dangerouslySetInnerHTML={{ __html: item?.highlightedTitle }}
               />
               {item?.snippets?.length > 0 && (
                 <p
-                  className="search-res-desc"
+                  className="search-res-desc text-gray-500 dark:text-gray-400 text-xs mt-1 break-words"
                   // biome-ignore lint/security/noDangerouslySetInnerHtml: trust server highlights
                   dangerouslySetInnerHTML={{ __html: item?.snippets?.[0]?.highlightedText || '' }}
                 />
@@ -170,8 +176,13 @@ export function DataList({
         ))}
       </Command.Group>
       {hasMore && displayMode === 'list' ? (
-        <div className="search-load-more">
-          <Button type="text" loading={isRequesting} onClick={() => loadMore(currentPage)}>
+        <div className="flex justify-center w-full py-2">
+          <Button
+            type="text"
+            loading={isRequesting}
+            onClick={() => loadMore(currentPage)}
+            className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          >
             {t('common.loadMore')}
           </Button>
         </div>

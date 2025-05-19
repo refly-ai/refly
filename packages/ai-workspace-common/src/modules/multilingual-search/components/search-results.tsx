@@ -49,7 +49,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       <div className="search-result-popover-content">
         {/* Title section */}
         <div className="flex items-center gap-2 mb-2">
-          <h4 className="font-medium text-base m-0 break-words">
+          <h4 className="font-medium text-base m-0 break-words dark:border-gray-700">
             <TranslationWrapper
               content={item.title || ''}
               targetLanguage={
@@ -57,6 +57,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   ? item.metadata?.translatedDisplayLocale
                   : outputLocale.code
               }
+              className="dark:!text-gray-200"
               originalLocale={item.metadata?.originalLocale}
               enableTranslation={config.enableTranslation}
             />
@@ -132,6 +133,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           </div>
         ) : (
           <List
+            bordered={false}
             dataSource={results}
             renderItem={(item, index) => (
               <List.Item className="result-item">
@@ -154,7 +156,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     <div className="result-details" onClick={() => config.handleItemClick?.(item)}>
                       {config.showIndex && (
                         <div className="w-5">
-                          <span className="h-8 w-8 inline-flex items-center justify-center origin-top-left scale-[60%] transform cursor-pointer rounded-full bg-zinc-100 text-center text-base font-medium no-underline hover:bg-zinc-300">
+                          <span className="h-8 w-8 inline-flex items-center justify-center origin-top-left scale-[60%] transform cursor-pointer rounded-full bg-zinc-100 text-center text-base font-medium no-underline hover:bg-zinc-300 dark:bg-gray-800 dark:hover:bg-gray-700">
                             {(config.startIndex || 1) + index}
                           </span>
                         </div>
@@ -171,7 +173,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                                 />
                                 <div className="site-meta">
                                   <a
-                                    className="site-url"
+                                    className="site-url text-gray-800 dark:text-gray-200"
                                     href={item.url}
                                     target="_blank"
                                     rel="noreferrer"

@@ -117,7 +117,7 @@ const ArtifactGallery = memo(
                 <div className="p-6 flex flex-col h-[calc(100%-12rem)]">
                   <Title
                     level={4}
-                    className="!mb-2 !mt-0 line-clamp-2 bg-gray-700 text-white dark:bg-gray-200 dark:text-black"
+                    className="!mb-2 !mt-0 line-clamp-2 text-white dark:bg-gray-200 dark:text-black"
                   >
                     {artifact.title[currentLang]}
                   </Title>

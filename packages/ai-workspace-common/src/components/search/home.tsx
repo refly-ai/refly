@@ -34,27 +34,31 @@ export function Home({
       {data
         .filter((item) => item?.data?.length > 0)
         .map((renderItem, index) => (
-          <Command.Group heading={renderItem?.heading} key={index}>
+          <Command.Group
+            heading={renderItem?.heading}
+            key={index}
+            className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 mb-2"
+          >
             {renderItem?.data?.slice(0, 5)?.map((item, index) => (
               <Item
                 key={index}
                 value={`${renderItem?.domain}-${index}-${item?.title}-${item?.snippets?.[0]?.text || ''}`}
                 activeValue={activeValue}
                 onSelect={() => {
-                  renderItem?.onItemClick(item);
+                  renderItem?.onItemClick?.(item);
                 }}
               >
                 {renderItem?.icon}
                 <div className="search-res-container">
                   <p
-                    className="search-res-title"
+                    className="text-gray-900 dark:text-gray-100 text-sm font-medium break-words"
                     // biome-ignore lint/security/noDangerouslySetInnerHtml: trust server highlights
                     dangerouslySetInnerHTML={{ __html: item?.highlightedTitle }}
                   />
                   {item?.snippets?.length > 0 &&
                     item.snippets.map((snippet, index) => (
                       <p
-                        className="search-res-desc"
+                        className="text-gray-500 dark:text-gray-400 text-xs mt-1 break-words"
                         key={index}
                         // biome-ignore lint/security/noDangerouslySetInnerHtml: trust server highlights
                         dangerouslySetInnerHTML={{ __html: snippet.highlightedText }}
@@ -81,7 +85,7 @@ export function Home({
                 value={`create ${renderItem?.domain}`}
                 keywords={[`create ${renderItem?.domain}`]}
                 onSelect={() => {
-                  renderItem?.onCreateClick();
+                  renderItem?.onCreateClick?.();
                 }}
                 activeValue={activeValue}
               >

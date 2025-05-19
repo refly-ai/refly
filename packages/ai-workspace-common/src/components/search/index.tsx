@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Command } from 'cmdk';
 import {
@@ -13,7 +13,7 @@ import { DataList } from './data-list';
 
 // request
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { SearchDomain, SearchResult } from '@refly/openapi-schema';
+import { CanvasNodeType, SearchDomain, SearchResult } from '@refly/openapi-schema';
 import { RenderItem } from '@refly-packages/ai-workspace-common/components/search/types';
 import classNames from 'classnames';
 
@@ -24,7 +24,9 @@ import {
   IconDocument,
   IconResource,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
+import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
+import { message } from 'antd';
 
 export interface SearchProps extends React.ComponentProps<'div'> {
   showList?: boolean;
@@ -32,11 +34,12 @@ export interface SearchProps extends React.ComponentProps<'div'> {
   onSearchValueChange?: (value: string) => void;
 }
 
-export const Search = (props: SearchProps) => {
+export const Search = React.memo((props: SearchProps) => {
   const { showList, onClickOutside, onSearchValueChange, ...divProps } = props;
 
   const navigate = useNavigate();
-  const { addNode } = useAddNode();
+  const { isCanvasOpen } = useGetProjectCanvasId();
+  // const { addNode } = useAddNode();
 
   const ref = React.useRef<HTMLDivElement | null>(null);
   const [searchValue, setSearchValue] = useState('');
@@ -146,6 +149,21 @@ export const Search = (props: SearchProps) => {
     200,
   );
 
+  const handleAddToCanvas = useCallback(
+    (type: CanvasNodeType, data: any) => {
+      searchStore.setIsSearchOpen(false);
+      nodeOperationsEmitter.emit('addNode', {
+        node: {
+          type,
+          data: data,
+        },
+        shouldPreview: true,
+        needSetCenter: true,
+      });
+    },
+    [searchStore],
+  );
+
   useEffect(() => {
     inputRef?.current?.focus();
 
@@ -164,84 +182,110 @@ export const Search = (props: SearchProps) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [onClickOutside]);
 
-  const renderData: RenderItem[] = [
-    {
-      domain: 'canvas',
-      heading: t('loggedHomePage.quickSearch.canvas'),
-      action: false,
-      data: searchStore.searchedCanvases || [],
-      actionHeading: {
-        create: t('loggedHomePage.quickSearch.newCanvas'),
+  const renderData: RenderItem[] = useMemo(
+    () => [
+      {
+        domain: 'canvas',
+        heading: t('loggedHomePage.quickSearch.canvas'),
+        action: false,
+        data: searchStore.searchedCanvases || [],
+        actionHeading: {
+          create: t('loggedHomePage.quickSearch.newCanvas'),
+        },
+        icon: <IconCanvas style={{ fontSize: 12 }} />,
+        onItemClick: (item: SearchResult) => {
+          searchStore.setIsSearchOpen(false);
+          navigate(`/canvas/${item.id}`);
+        },
       },
-      icon: <IconCanvas style={{ fontSize: 12 }} />,
-      onItemClick: (item: SearchResult) => {
-        searchStore.setIsSearchOpen(false);
-        navigate(`/canvas/${item.id}`);
-      },
-    },
-    {
-      domain: 'document',
-      heading: t('loggedHomePage.quickSearch.document'),
-      action: false,
-      actionHeading: {
-        create: t('loggedHomePage.quickSearch.newDocument'),
-      },
-      data: searchStore.searchedDocuments || [],
-      icon: <IconDocument style={{ fontSize: 12 }} />,
-      onItemClick: (item: SearchResult) => {
-        searchStore.setIsSearchOpen(false);
-        addNode({
-          type: 'document',
-          data: {
+      {
+        domain: 'document',
+        heading: t('loggedHomePage.quickSearch.document'),
+        action: false,
+        actionHeading: {
+          create: t('loggedHomePage.quickSearch.newDocument'),
+        },
+        data: searchStore.searchedDocuments || [],
+        icon: <IconDocument style={{ fontSize: 12 }} />,
+        onItemClick: (item: SearchResult) => {
+          if (!isCanvasOpen) {
+            message.error(t('workspace.noCanvasSelected'));
+            return;
+          }
+
+          handleAddToCanvas('document', {
             entityId: item.id,
             title: item.title,
             contentPreview: item.contentPreview,
-          },
-        });
+          });
+        },
       },
-    },
-    {
-      domain: 'resource',
-      heading: t('loggedHomePage.quickSearch.resource'),
-      action: false,
-      actionHeading: {
-        create: t('loggedHomePage.quickSearch.newResource'),
-      },
-      data: searchStore.searchedResources || [],
-      icon: <IconResource style={{ fontSize: 12 }} />,
-      onItemClick: (item: SearchResult) => {
-        searchStore.setIsSearchOpen(false);
-        addNode({
-          type: 'resource',
-          data: {
+      {
+        domain: 'resource',
+        heading: t('loggedHomePage.quickSearch.resource'),
+        action: false,
+        actionHeading: {
+          create: t('loggedHomePage.quickSearch.newResource'),
+        },
+        data: searchStore.searchedResources || [],
+        icon: <IconResource style={{ fontSize: 12 }} />,
+        onItemClick: (item: SearchResult) => {
+          if (!isCanvasOpen) {
+            message.error(t('workspace.noCanvasSelected'));
+            return;
+          }
+
+          handleAddToCanvas('resource', {
             entityId: item.id,
             title: item.title,
             contentPreview: item.contentPreview,
-          },
-        });
+          });
+        },
       },
+    ],
+    [
+      searchStore.searchedCanvases,
+      searchStore.searchedDocuments,
+      searchStore.searchedResources,
+      t,
+      navigate,
+      isCanvasOpen,
+      handleAddToCanvas,
+    ],
+  );
+
+  const getRenderData = useCallback(
+    (domain: string) => {
+      return renderData?.find((item) => item.domain === domain);
     },
-  ];
+    [renderData],
+  );
 
-  const getRenderData = (domain: string) => {
-    return renderData?.find((item) => item.domain === domain);
-  };
-
-  const getInputPlaceholder = (domain: string) => {
-    if (domain === 'home') {
-      return t('loggedHomePage.quickSearch.placeholderForHome');
-    }
-    if (domain === 'skill-execute') {
-      return t('loggedHomePage.quickSearch.placeholderForSkillExecute');
-    }
-    const data = getRenderData(domain);
-    return t('loggedHomePage.quickSearch.placeholderForWeblink', { domain: data?.heading });
-  };
+  const getInputPlaceholder = useCallback(
+    (domain: string) => {
+      if (domain === 'home') {
+        return t('loggedHomePage.quickSearch.placeholderForHome');
+      }
+      if (domain === 'skill-execute') {
+        return t('loggedHomePage.quickSearch.placeholderForSkillExecute');
+      }
+      const data = getRenderData(domain);
+      return t('loggedHomePage.quickSearch.placeholderForWeblink', { domain: data?.heading });
+    },
+    [getRenderData, t],
+  );
 
   return (
-    <div {...divProps} className={classNames('vercel', divProps.className)}>
+    <div
+      {...divProps}
+      className={classNames(
+        'vercel',
+        'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm',
+        divProps.className,
+      )}
+    >
       <Command
         value={value}
         onValueChange={setValue}
@@ -249,7 +293,7 @@ export const Search = (props: SearchProps) => {
         filter={() => {
           return 1; // we can safely rely on the server filter
         }}
-        className={classNames(showList ? 'search-active' : '')}
+        className={classNames(showList ? 'search-active' : '', 'transition-all duration-200')}
         onKeyDownCapture={(e: React.KeyboardEvent) => {
           if (e.key === 'Enter' && !isComposing) {
             bounce();
@@ -266,9 +310,13 @@ export const Search = (props: SearchProps) => {
           }
         }}
       >
-        <div>
+        <div className="flex gap-1 px-3 py-2">
           {pages.map((p) => (
-            <div key={p} cmdk-vercel-badge="">
+            <div
+              key={p}
+              cmdk-vercel-badge=""
+              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs py-1 px-2 rounded-md capitalize"
+            >
               {p}
             </div>
           ))}
@@ -288,11 +336,14 @@ export const Search = (props: SearchProps) => {
             setSearchValue(val);
             handleBigSearchValueChange(val, activePage);
           }}
+          className="w-full px-4 py-2 text-base outline-none border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 bg-transparent"
         />
         {showList && (
           <Spin spinning={loading} className="w-full h-full">
-            <Command.List>
-              <Command.Empty>No results found.</Command.Empty>
+            <Command.List className="max-h-[400px] overflow-auto px-2 py-2">
+              <Command.Empty className="py-6 text-center text-gray-500 dark:text-gray-400">
+                No results found.
+              </Command.Empty>
               {activePage === 'home' && (
                 <Home
                   key={'search'}
@@ -319,4 +370,4 @@ export const Search = (props: SearchProps) => {
       </Command>
     </div>
   );
-};
+});

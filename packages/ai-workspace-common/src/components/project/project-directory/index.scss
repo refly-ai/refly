@@ -41,4 +41,12 @@
       border-radius: 0 !important;
     }
   }
+
+  .dark-custom-collapse {
+    .ant-collapse-header {
+      &:hover {
+        background-color: rgb(37 40 44);
+      }
+    }
+  }
 }

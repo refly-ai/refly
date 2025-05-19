@@ -49,6 +49,7 @@ import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hook
 import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
+import { useThemeStoreShallow } from '@refly-packages/ai-workspace-common/stores/theme';
 
 export const CollaborativeEditor = memo(
   ({ docId }: { docId: string }) => {
@@ -63,6 +64,9 @@ export const CollaborativeEditor = memo(
     const [imageUrl, setImageUrl] = useState<string>('');
     const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
     const menuContainerRef = useRef<HTMLDivElement>(null);
+    const { isDarkMode } = useThemeStoreShallow((state) => ({
+      isDarkMode: state.isDarkMode,
+    }));
 
     useEffect(() => {
       const styleEl = document.createElement('style');
@@ -87,6 +91,20 @@ export const CollaborativeEditor = memo(
         .moveable-line {
           background-color: #00968F !important;
         }
+        
+        ${
+          isDarkMode
+            ? `
+        /* Dark mode placeholder style */
+        .ProseMirror .is-editor-empty:first-child::before {
+          color: rgba(255, 255, 255, 0.4) !important;
+        }
+        .ProseMirror .is-empty::before {
+          color: rgba(255, 255, 255, 0.4) !important;
+        }
+        `
+            : ''
+        }
       `;
       document.head.appendChild(styleEl);
 
@@ -95,7 +113,7 @@ export const CollaborativeEditor = memo(
           document.head.removeChild(styleEl);
         }
       };
-    }, []);
+    }, [isDarkMode]);
 
     // Move hooks to top level
     const documentActions = useDocumentStoreShallow((state) => ({
@@ -515,8 +533,8 @@ export const CollaborativeEditor = memo(
                 handleDrop: (view, event, _slice, moved) =>
                   handleImageDrop(view, event, moved, uploadFn),
                 attributes: {
-                  class:
-                    'prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full prose-img:cursor-pointer',
+                  class: `prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full prose-img:cursor-pointer ${isDarkMode ? '!text-white' : '!text-black'}`,
+
                   'data-doc-id': docId,
                 },
               }}

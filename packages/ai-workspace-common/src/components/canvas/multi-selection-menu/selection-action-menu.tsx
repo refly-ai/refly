@@ -381,10 +381,10 @@ export const SelectionActionMenu: FC<SelectionActionMenuProps> = ({ onClose }) =
   const menuItems = useMemo(() => getMenuItems(), [getMenuItems]);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-2 w-[200px] border border-[rgba(0,0,0,0.06)]">
+    <div className="bg-white rounded-lg shadow-lg p-2 w-[200px] border border-[rgba(0,0,0,0.06)] dark:bg-gray-900">
       {menuItems.map((item) => {
         if (item.type === 'divider') {
-          return <Divider key={item.key} className="my-1 h-[1px] bg-gray-100" />;
+          return <Divider key={item.key} className="my-1 h-[1px] bg-gray-100 dark:bg-gray-800" />;
         }
 
         const button = (
@@ -400,7 +400,7 @@ export const SelectionActionMenu: FC<SelectionActionMenuProps> = ({ onClose }) =
               rounded
               text-sm
               transition-colors
-              text-gray-700 hover:bg-gray-50 hover:text-gray-700
+              text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-gray-100
               ${item.danger ? '!text-red-600 hover:bg-red-50' : ''}
               ${item.primary ? '!text-primary-600 hover:bg-primary-50' : ''}
               ${item.loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}

@@ -20,6 +20,7 @@ import {
   createDocument,
   createLabelClass,
   createLabelInstance,
+  createMcpServer,
   createPortalSession,
   createProject,
   createProvider,
@@ -34,6 +35,7 @@ import {
   deleteDocument,
   deleteLabelClass,
   deleteLabelInstance,
+  deleteMcpServer,
   deletePage,
   deletePageNode,
   deleteProject,
@@ -74,6 +76,7 @@ import {
   listDocuments,
   listLabelClasses,
   listLabelInstances,
+  listMcpServers,
   listModels,
   listPages,
   listProjects,
@@ -104,6 +107,7 @@ import {
   updateDocument,
   updateLabelClass,
   updateLabelInstance,
+  updateMcpServer,
   updatePage,
   updateProject,
   updateProjectItems,
@@ -114,7 +118,18 @@ import {
   updateSkillInstance,
   updateSkillTrigger,
   upload,
+  validateMcpServer,
 } from '../requests/services.gen';
+export type ListMcpServersDefaultResponse = Awaited<ReturnType<typeof listMcpServers>>['data'];
+export type ListMcpServersQueryResult<
+  TData = ListMcpServersDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListMcpServersKey = 'ListMcpServers';
+export const UseListMcpServersKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListMcpServersKey, ...(queryKey ?? [clientOptions])];
 export type ListPagesDefaultResponse = Awaited<ReturnType<typeof listPages>>['data'];
 export type ListPagesQueryResult<
   TData = ListPagesDefaultResponse,
@@ -503,6 +518,30 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type CreateMcpServerMutationResult = Awaited<ReturnType<typeof createMcpServer>>;
+export const useCreateMcpServerKey = 'CreateMcpServer';
+export const UseCreateMcpServerKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateMcpServerKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateMcpServerMutationResult = Awaited<ReturnType<typeof updateMcpServer>>;
+export const useUpdateMcpServerKey = 'UpdateMcpServer';
+export const UseUpdateMcpServerKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateMcpServerKey,
+  ...(mutationKey ?? []),
+];
+export type DeleteMcpServerMutationResult = Awaited<ReturnType<typeof deleteMcpServer>>;
+export const useDeleteMcpServerKey = 'DeleteMcpServer';
+export const UseDeleteMcpServerKeyFn = (mutationKey?: Array<unknown>) => [
+  useDeleteMcpServerKey,
+  ...(mutationKey ?? []),
+];
+export type ValidateMcpServerMutationResult = Awaited<ReturnType<typeof validateMcpServer>>;
+export const useValidateMcpServerKey = 'ValidateMcpServer';
+export const UseValidateMcpServerKeyFn = (mutationKey?: Array<unknown>) => [
+  useValidateMcpServerKey,
+  ...(mutationKey ?? []),
+];
 export type SharePageMutationResult = Awaited<ReturnType<typeof sharePage>>;
 export const useSharePageKey = 'SharePage';
 export const UseSharePageKeyFn = (mutationKey?: Array<unknown>) => [

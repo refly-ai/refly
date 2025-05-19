@@ -59,11 +59,14 @@ export const ReasoningContentPreview = memo(
     return (
       <div>
         <div
-          className={cn('bg-gray-50 rounded-lg border border-gray-200 transition-all', {
-            'cursor-pointer hover:bg-gray-100': collapsed,
-            'p-3': sizeMode !== 'compact',
-            'p-2': sizeMode === 'compact',
-          })}
+          className={cn(
+            'bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all',
+            {
+              'cursor-pointer hover:bg-gray-100': collapsed,
+              'p-3': sizeMode !== 'compact',
+              'p-2': sizeMode === 'compact',
+            },
+          )}
         >
           {collapsed ? (
             <div

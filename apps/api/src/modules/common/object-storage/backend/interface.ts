@@ -44,16 +44,18 @@ export interface ObjectStorageBackend {
   /**
    * Remove an object from storage
    * @param key The storage key
+   * @param force Whether to force the removal of the object
    * @returns true if the object was removed, false if it didn't exist
    */
-  removeObject(key: string): Promise<boolean>;
+  removeObject(key: string, force?: boolean): Promise<boolean>;
 
   /**
    * Remove multiple objects from storage
    * @param keys The storage keys
+   * @param force Whether to force the removal of the objects
    * @returns true if the objects were removed, false if they didn't exist
    */
-  removeObjects(keys: string[]): Promise<boolean>;
+  removeObjects(keys: string[], force?: boolean): Promise<boolean>;
 
   /**
    * Get object info

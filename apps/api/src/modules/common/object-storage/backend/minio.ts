@@ -18,7 +18,12 @@ export class MinioStorageBackend implements ObjectStorageBackend {
   private client: Client;
   private initialized = false;
 
-  constructor(private readonly config: MinioConfig) {}
+  constructor(
+    private readonly config: MinioConfig,
+    private readonly options: {
+      reclaimPolicy: string;
+    },
+  ) {}
 
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -101,7 +106,14 @@ export class MinioStorageBackend implements ObjectStorageBackend {
     }
   }
 
-  async removeObject(key: string): Promise<boolean> {
+  async removeObject(key: string, force?: boolean): Promise<boolean> {
+    if (!force && this.options?.reclaimPolicy !== 'delete') {
+      this.logger.log(
+        `Object ${key} will not be deleted because reclaim policy is ${this.options?.reclaimPolicy}`,
+      );
+      return false;
+    }
+
     try {
       // Check if object exists before trying to remove
       try {
@@ -121,7 +133,14 @@ export class MinioStorageBackend implements ObjectStorageBackend {
     }
   }
 
-  async removeObjects(keys: string[]): Promise<boolean> {
+  async removeObjects(keys: string[], force?: boolean): Promise<boolean> {
+    if (!force && this.options?.reclaimPolicy !== 'delete') {
+      this.logger.log(
+        `Objects ${keys.join(', ')} will not be deleted because reclaim policy is ${this.options?.reclaimPolicy}`,
+      );
+      return false;
+    }
+
     try {
       await this.client.removeObjects(this.config.bucket, keys);
       return true;

@@ -43,10 +43,13 @@ const LogBox = memo(
 
     return (
       <div
-        className={cn('my-2 p-4 border border-solid border-gray-200 rounded-lg transition-all', {
-          'px-4 py-3 cursor-pointer hover:bg-gray-50': collapsed,
-          'relative pb-0': !collapsed,
-        })}
+        className={cn(
+          'my-2 p-4 border border-solid border-gray-200 dark:border-gray-700 rounded-lg transition-all',
+          {
+            'px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800': collapsed,
+            'relative pb-0': !collapsed,
+          },
+        )}
       >
         {collapsed ? (
           <div
@@ -77,6 +80,7 @@ const LogBox = memo(
                   ns: 'skillLog',
                   defaultValue: '',
                 }),
+                status: log.status === 'error' ? 'error' : 'finish',
               }))}
             />
             <Button
@@ -132,9 +136,12 @@ const ReasoningContent = memo(
     return (
       <div>
         <div
-          className={cn('p-3 bg-gray-50 rounded-lg border border-gray-200 transition-all', {
-            'cursor-pointer hover:bg-gray-100': collapsed,
-          })}
+          className={cn(
+            'p-3 bg-gray-50 rounded-lg border border-gray-200 transition-all dark:bg-gray-900 dark:border-gray-700',
+            {
+              'cursor-pointer hover:bg-gray-100 dark:hover-gray-800': collapsed,
+            },
+          )}
         >
           {collapsed ? (
             <div
@@ -231,7 +238,7 @@ const ArtifactItem = memo(({ artifact, onSelect }: { artifact: any; onSelect: ()
   return (
     <div
       key={artifact.entityId}
-      className="my-2 px-4 py-2 h-12 border border-solid border-gray-200 rounded-lg flex items-center justify-between space-x-2 cursor-pointer hover:bg-gray-50"
+      className="my-2 px-4 py-2 h-12 border border-solid border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
       onClick={onSelect}
     >
       <div className="flex items-center space-x-2">

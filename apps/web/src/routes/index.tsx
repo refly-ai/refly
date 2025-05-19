@@ -15,6 +15,7 @@ import { SuspenseLoading } from '@refly-packages/ai-workspace-common/components/
 import { HomeRedirect } from '@refly-packages/ai-workspace-common/components/home-redirect';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { isDesktop } from '@refly-packages/ai-workspace-common/utils/env';
+import { useForcedLightMode } from '@refly-packages/ai-workspace-common/hooks/use-forced-light-mode';
 
 // Lazy load components
 const Home = lazy(() => import('@/pages/home'));
@@ -39,6 +40,10 @@ const prefetchRoutes = () => {
 
 export const AppRouter = (props: { layout?: any }) => {
   const { layout: Layout } = props;
+
+  // Apply forced light mode for specific routes
+  useForcedLightMode();
+
   const userStore = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
     userProfile: state.userProfile,

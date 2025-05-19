@@ -167,7 +167,7 @@ export const SearchList = (props: SearchListProps) => {
             {sortedItems?.map((option) => (
               <div
                 key={option.id}
-                className={`flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-100 ${
+                className={`flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
                   option.isSelected ? 'text-[#00968F]' : ''
                 }`}
                 onClick={() => handleItemClick(option)}

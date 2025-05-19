@@ -71,15 +71,15 @@
 
   // 暗色模式样式
   @at-root .dark & {
-    background-color: #151719;
-    color: #e5e5e5;
+    // background-color: #151719;
+    // color: #e5e5e5;
 
     h1, h2, h3, h4, h5, h6 {
-      color: #ffffff;
+      color: inherit;
     }
 
     strong {
-      color: #ffffff;
+      color: inherit;
     }
 
     code {
@@ -148,13 +148,6 @@
         flex: 1 1 auto;
       }
     }
-  }
-}
-
-.document-title {
-  background: transparent !important;
-  &:hover {
-    background: rgb(242, 243, 245) !important;
   }
 }
 

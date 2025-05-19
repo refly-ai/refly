@@ -300,9 +300,9 @@ export default memo(
     );
 
     return (
-      <div className="flex flex-col h-full border border-gray-200 bg-white">
+      <div className="flex flex-col h-full border border-gray-200">
         {/* Top header with main tab navigation */}
-        <div className="flex items-center justify-between h-12 border-b border-gray-200 bg-white py-2 dark:bg-gray-900 dark:border-gray-700">
+        <div className="flex items-center justify-between h-12 border-b border-gray-200 py-2 dark:bg-gray-900 dark:border-gray-700">
           {renderTabs}
 
           <div className="flex items-center space-x-2">
@@ -335,7 +335,7 @@ export default memo(
         <Divider className="my-0" style={{ margin: 0, height: '1px' }} />
 
         {/* Breadcrumb and action buttons */}
-        <div className="flex justify-between items-center py-2 border-b border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700">
+        <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
           <div className="flex items-center space-x-2">
             {onTypeChange ? (
               <Select

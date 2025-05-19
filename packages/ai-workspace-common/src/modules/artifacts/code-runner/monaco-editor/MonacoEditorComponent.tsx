@@ -13,6 +13,7 @@ import {
   MAX_LOAD_ATTEMPTS,
   getLanguageFromType,
 } from './constants';
+import { useThemeStoreShallow } from '../../../../stores/theme';
 
 // Loading timeout in milliseconds (8 seconds)
 const EDITOR_LOADING_TIMEOUT = 1000;
@@ -36,6 +37,8 @@ const MonacoEditorComponent = React.memo(
     const [loadAttempt, setLoadAttempt] = useState(0);
     const [useFallbackEditor, setUseFallbackEditor] = useState(false);
     const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+
+    const { themeMode } = useThemeStoreShallow((state) => ({ themeMode: state.themeMode }));
 
     // Get current CDN based on load attempt
     const getCurrentCDN = useCallback(() => {
@@ -72,48 +75,6 @@ const MonacoEditorComponent = React.memo(
         }
       };
     }, [isEditorReady, useFallbackEditor, isGenerating, loadingTimedOut]);
-
-    // Switch CDN when current one fails
-    // useEffect(() => {
-    //   // Skip if we're using the fallback editor already
-    //   if (useFallbackEditor) return;
-
-    //   const currentCDN = getCurrentCDN();
-
-    //   // Try another CDN if we have more attempts
-    //   if (loadAttempt > 0 && loadAttempt < MAX_LOAD_ATTEMPTS) {
-    //     console.log(`Trying alternative Monaco CDN (attempt ${loadAttempt}): ${currentCDN}`);
-
-    //     // Configure loader with new CDN
-    //     try {
-    //       const { loader } = require('@monaco-editor/react');
-    //       loader.config({
-    //         paths: {
-    //           vs: currentCDN,
-    //         },
-    //         'vs/nls': {
-    //           availableLanguages: {},
-    //         },
-    //       });
-    //     } catch (error) {
-    //       console.error('Failed to reconfigure Monaco loader:', error);
-    //       // If we can't even reconfigure, move to next attempt
-    //       if (loadAttempt < MAX_LOAD_ATTEMPTS - 1) {
-    //         setLoadAttempt(loadAttempt + 1);
-    //       } else {
-    //         // Last attempt failed, use fallback editor
-    //         setUseFallbackEditor(true);
-    //         setLoadingError('Failed to load editor after multiple attempts');
-    //       }
-    //     }
-    //   }
-
-    //   // If we've reached max attempts, use fallback editor
-    //   if (loadAttempt >= MAX_LOAD_ATTEMPTS - 1) {
-    //     setUseFallbackEditor(true);
-    //     setLoadingError('Failed to load editor after multiple attempts');
-    //   }
-    // }, [loadAttempt, useFallbackEditor, getCurrentCDN]);
 
     // Debounced onChange handler to prevent too frequent updates
     const debouncedOnChange = useMemo(
@@ -267,6 +228,95 @@ const MonacoEditorComponent = React.memo(
       }
     }, [content, isEditorReady]);
 
+    // Determine the editor theme
+    const editorTheme = useMemo(() => {
+      if (themeMode === 'dark') {
+        return 'vs-dark';
+      }
+      if (themeMode === 'light') {
+        return 'github-custom'; // Your existing light theme
+      }
+      // Handle 'system' theme
+      if (
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+      ) {
+        return 'vs-dark';
+      }
+      return 'github-custom'; // Default to light theme for system if not dark
+    }, [themeMode]);
+
+    // Create editor props with the onError handler
+    const editorProps = {
+      height: '100%',
+      value: content,
+      className: 'refly-code-editor',
+      onChange: handleEditorChange,
+      language: getLanguageFromType(type, language),
+      beforeMount: handleEditorWillMount,
+      onMount: handleEditorDidMount,
+      loading: (
+        <div className="text-gray-500 flex items-center justify-center h-full dark:text-gray-400">
+          {t('codeArtifact.editor.loading')}
+        </div>
+      ),
+      options: {
+        automaticLayout: true,
+        minimap: {
+          enabled: false, // Disable minimap for better performance
+        },
+        scrollBeyondLastLine: false,
+        fontSize: 14,
+        fontFamily:
+          'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+        fontLigatures: true,
+        lineNumbers: 'on',
+        renderLineHighlight: 'none',
+        readOnly: readOnly || canvasReadOnly,
+        scrollbar: {
+          vertical: 'auto',
+          horizontal: 'auto',
+          verticalScrollbarSize: 10,
+          horizontalScrollbarSize: 10,
+          alwaysConsumeMouseWheel: false,
+          useShadows: false, // Remove scrollbar shadows for cleaner look
+        },
+        // Performance optimizations
+        formatOnPaste: false,
+        formatOnType: false,
+        autoIndent: 'none',
+        colorDecorators: false,
+        // Reduce editor features for better performance
+        occurrencesHighlight: 'off',
+        selectionHighlight: false,
+        // Enable virtual rendering
+        fixedOverflowWidgets: true,
+        // Disable unnecessary features
+        links: false,
+        hover: {
+          enabled: false,
+        },
+        // Improve scrolling performance
+        smoothScrolling: false,
+        mouseWheelScrollSensitivity: 1.5,
+        fastScrollSensitivity: 7,
+      },
+      theme: editorTheme, // Use the dynamic theme
+      onError: handleEditorError,
+    };
+
+    // Define generation indicator before any conditional returns
+    // No need for conditional rendering here, we'll do that in the return statement
+    const generationIndicator = (
+      <div className="bg-blue-50 text-blue-800 px-4 py-2 text-sm flex items-center justify-between dark:bg-blue-900 dark:text-blue-200">
+        <div className="flex items-center">
+          <div className="mr-2 w-3 h-3 bg-blue-500 rounded-full animate-pulse dark:bg-blue-400" />
+          {t('codeArtifact.editor.generatingContent')}
+        </div>
+      </div>
+    );
+
     // Use simple editor during generation to improve performance
     // Skip complex Monaco initialization & syntax highlighting while content is changing rapidly
     if (isGenerating || loadingTimedOut) {
@@ -330,79 +380,10 @@ const MonacoEditorComponent = React.memo(
       );
     }
 
-    // Add generation indicator when Monaco is forced during generation
-    const generationIndicator = isGenerating && (
-      <div className="bg-blue-50 text-blue-800 px-4 py-2 text-sm flex items-center justify-between dark:bg-blue-900 dark:text-blue-200">
-        <div className="flex items-center">
-          <div className="mr-2 w-3 h-3 bg-blue-500 rounded-full animate-pulse dark:bg-blue-400" />
-          {t('codeArtifact.editor.generatingContent')}
-        </div>
-      </div>
-    );
-
-    // Create editor props with the onError handler
-    const editorProps = {
-      height: '100%',
-      value: content,
-      className: 'refly-code-editor',
-      onChange: handleEditorChange,
-      language: getLanguageFromType(type, language),
-      beforeMount: handleEditorWillMount,
-      onMount: handleEditorDidMount,
-      loading: (
-        <div className="text-gray-500 flex items-center justify-center h-full dark:text-gray-400">
-          {t('codeArtifact.editor.loading')}
-        </div>
-      ),
-      options: {
-        automaticLayout: true,
-        minimap: {
-          enabled: false, // Disable minimap for better performance
-        },
-        scrollBeyondLastLine: false,
-        fontSize: 14,
-        fontFamily:
-          'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-        fontLigatures: true,
-        lineNumbers: 'on',
-        renderLineHighlight: 'none',
-        readOnly: readOnly || canvasReadOnly,
-        scrollbar: {
-          vertical: 'auto',
-          horizontal: 'auto',
-          verticalScrollbarSize: 10,
-          horizontalScrollbarSize: 10,
-          alwaysConsumeMouseWheel: false,
-          useShadows: false, // Remove scrollbar shadows for cleaner look
-        },
-        // Performance optimizations
-        formatOnPaste: false,
-        formatOnType: false,
-        autoIndent: 'none',
-        colorDecorators: false,
-        // Reduce editor features for better performance
-        occurrencesHighlight: 'off',
-        selectionHighlight: false,
-        // Enable virtual rendering
-        fixedOverflowWidgets: true,
-        // Disable unnecessary features
-        links: false,
-        hover: {
-          enabled: false,
-        },
-        // Improve scrolling performance
-        smoothScrolling: false,
-        mouseWheelScrollSensitivity: 1.5,
-        fastScrollSensitivity: 7,
-      },
-      theme: 'github-custom',
-      onError: handleEditorError,
-    };
-
     // Return the editor with container styles that prevent double scrollbars
     return (
       <div className="h-full overflow-hidden">
-        {generationIndicator}
+        {isGenerating && generationIndicator}
         {/* Use type assertion to work around type issues with onError prop */}
         {React.createElement(Editor, editorProps as any)}
       </div>

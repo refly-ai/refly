@@ -16,7 +16,10 @@ export class FsStorageBackend implements ObjectStorageBackend {
   private baseDir: string;
   private initialized = false;
 
-  constructor(private readonly config: FsConfig) {}
+  constructor(
+    private readonly config: FsConfig,
+    private readonly options?: { reclaimPolicy?: string },
+  ) {}
 
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -100,7 +103,14 @@ export class FsStorageBackend implements ObjectStorageBackend {
     }
   }
 
-  async removeObject(key: string): Promise<boolean> {
+  async removeObject(key: string, force?: boolean): Promise<boolean> {
+    if (!force && this.options?.reclaimPolicy !== 'delete') {
+      this.logger.log(
+        `Object ${key} will not be deleted because reclaim policy is ${this.options?.reclaimPolicy}`,
+      );
+      return false;
+    }
+
     try {
       const filePath = this.getFilePath(key);
 
@@ -126,9 +136,16 @@ export class FsStorageBackend implements ObjectStorageBackend {
     }
   }
 
-  async removeObjects(keys: string[]): Promise<boolean> {
+  async removeObjects(keys: string[], force?: boolean): Promise<boolean> {
+    if (!force && this.options?.reclaimPolicy !== 'delete') {
+      this.logger.log(
+        `Objects ${keys.join(', ')} will not be deleted because reclaim policy is ${this.options?.reclaimPolicy}`,
+      );
+      return false;
+    }
+
     try {
-      await Promise.all(keys.map((key) => this.removeObject(key)));
+      await Promise.all(keys.map((key) => this.removeObject(key, force)));
       return true;
     } catch (error) {
       this.logger.error(`Failed to remove objects with keys ${keys}`, error);

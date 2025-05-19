@@ -11,11 +11,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
     "@dqbd/tiktoken": "~1.0.16",
     "@langchain/community": "0.3.29",
     "@langchain/core": "0.3.29",
     "@langchain/deepseek": "^0.0.1",
     "@langchain/langgraph": "0.2.45",
+    "@modelcontextprotocol/sdk": "^1.10.1",
     "@langchain/ollama": "^0.2.0",
     "@langchain/openai": "0.5.6",
     "@refly/common-types": "workspace:*",
@@ -25,9 +27,12 @@
     "@refly/utils": "workspace:*",
     "@types/lodash": "~4.17.10",
     "better-sqlite3": "^9.5.0",
+    "debug": "^4.3.5",
     "dedent": "^1.5.3",
     "dotenv": "~16.4.5",
     "duck-duck-scrape": "~2.2.5",
+    "eventsource": "^3.0.6",
+    "extended-eventsource": "^2.1.0",
     "is-url": "~1.2.4",
     "json-parse-even-better-errors": "^4.0.0",
     "jsonrepair": "^3.12.0",
@@ -38,5 +43,8 @@
     "tsx": "^4.6.2",
     "zod": "3.23.8",
     "zod-to-json-schema": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12"
   }
 }

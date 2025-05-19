@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Form } from '@arco-design/web-react';
-import { Button, Tooltip, Select } from 'antd';
+import { Button, Tooltip, Select, Form } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';

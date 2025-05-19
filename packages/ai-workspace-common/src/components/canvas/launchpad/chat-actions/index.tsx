@@ -1,5 +1,4 @@
-import { Button, Tooltip, Upload, Switch } from 'antd';
-import { FormInstance } from '@arco-design/web-react';
+import { Button, Tooltip, Upload, Switch, FormInstance } from 'antd';
 import { memo, useMemo, useRef, useCallback } from 'react';
 import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { IconLink, IconSend } from '@arco-design/web-react/icon';

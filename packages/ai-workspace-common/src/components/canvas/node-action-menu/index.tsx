@@ -879,7 +879,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
       >
         {menuItems.map((item) => {
           if (item?.type === 'divider') {
-            return <Divider key={item.key} className="my-1 h-[1px] bg-gray-100" />;
+            return <Divider key={item.key} className="my-1 h-[1px] bg-gray-100 dark:bg-gray-900" />;
           }
 
           const button = (

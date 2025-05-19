@@ -92,17 +92,21 @@ export class ObjectStorageService implements OnModuleInit {
 export const createObjectStorageServiceFactory = (options?: { visibility: FileVisibility }) => {
   return (configService: ConfigService) => {
     const backendType = configService.get('objectStorage.backend');
+    const reclaimPolicy = configService.get('objectStorage.reclaimPolicy');
 
     let backend: ObjectStorageBackend;
     switch (backendType) {
       case 'fs':
-        backend = new FsStorageBackend(configService.get('objectStorage.fs'));
+        backend = new FsStorageBackend(configService.get('objectStorage.fs'), {
+          reclaimPolicy,
+        });
         break;
       case 'minio': {
         backend = new MinioStorageBackend(
           options?.visibility === 'public'
             ? configService.get('objectStorage.minio.external')
             : configService.get('objectStorage.minio.internal'),
+          { reclaimPolicy },
         );
         break;
       }

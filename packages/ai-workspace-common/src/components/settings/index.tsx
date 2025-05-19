@@ -14,9 +14,11 @@ import { ModelProviders } from '@refly-packages/ai-workspace-common/components/s
 import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
 import { ParserConfig } from '@refly-packages/ai-workspace-common/components/settings/parser-config';
 import { DefaultModel } from '@refly-packages/ai-workspace-common/components/settings/default-model';
+import { McpServerList } from '@refly-packages/ai-workspace-common/components/settings/mcp-server';
 
 import { RiAccountBoxLine } from 'react-icons/ri';
 import { HiOutlineLanguage } from 'react-icons/hi2';
+import { AiOutlineApi } from 'react-icons/ai';
 import { LuPalette } from 'react-icons/lu';
 
 import './index.scss';
@@ -72,6 +74,14 @@ export const SettingModal = (props: SettingModalProps) => {
       icon: <IconWorldConfig style={iconStyle} />,
       children: (
         <ParserConfig visible={settingsModalActiveTab === SettingsModalActiveTab.ParserConfig} />
+      ),
+    },
+    {
+      key: 'mcpServer',
+      label: t('settings.tabs.mcpServer'),
+      icon: <AiOutlineApi style={iconStyle} />,
+      children: (
+        <McpServerList visible={settingsModalActiveTab === SettingsModalActiveTab.McpServer} />
       ),
     },
     {

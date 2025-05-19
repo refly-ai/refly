@@ -1,7 +1,6 @@
 .config-manager {
   padding: 12px 0px 8px 0px;
   margin: 8px 0px 0;
-  border-top: 1px dashed rgba(0, 0, 0, 0.15);
 
   &__header {
     display: flex;
@@ -21,7 +20,6 @@
     &-title {
       font-size: 12px;
       font-weight: 500;
-      color: rgba(0, 0, 0, 0.85);
     }
   }
 
@@ -42,7 +40,6 @@
     padding: 8px;
     margin-bottom: 8px;
     border-radius: 6px;
-    background-color: #f6f6f6;
 
     &.error {
       border: 1px solid rgba(245, 63, 63, 0.3);
@@ -55,6 +52,7 @@
   }
 
   &__item-label {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -185,5 +183,22 @@
 
   .arco-switch-disabled.arco-switch-checked {
     background-color: rgba(22, 93, 255, 0.5) !important;
+  }
+
+  .ant-radio-inner {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .config-item {
+    .ant-form-item-label {
+      label {
+        width: 100%;
+      }
+    }
+  }
+
+  .ant-form-item {
+    margin-bottom: 0;
   }
 }

@@ -115,7 +115,7 @@
     .intergation-import-from-weblink {
       .intergation-result-list-item {
         border-radius: 0;
-        border-bottom: 1px solid #f1f1f0;
+        border-bottom: 1px solid;
         padding: 10px 0;
 
         .arco-list-item {
@@ -129,7 +129,6 @@
 
       .intergation-result-url {
         font-size: 12px;
-        color: rgba(0, 0, 0, 0.5);
         display: inline-block;
         max-width: 250px;
         overflow: hidden;
@@ -154,9 +153,8 @@
     border-radius: 0;
     bottom: 0;
     padding: 16px 12px;
-    border-top: 1px solid var(--color-neutral-3);
+    border-top: 1px solid;
     width: 100%;
-    background-color: #fff;
     border-bottom-left-radius: 20px;
     border-bottom-right-radius: 20px;
 

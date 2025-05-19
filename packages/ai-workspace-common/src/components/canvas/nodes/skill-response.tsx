@@ -255,10 +255,12 @@ export const SkillResponseNode = memo(
       currentLog: log,
       modelInfo,
       structuredData,
+      selectedSkill,
       actionMeta,
       tokenUsage,
       version,
     } = metadata ?? {};
+    const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
 
@@ -290,10 +292,10 @@ export const SkillResponseNode = memo(
       : '';
 
     const skill = {
-      name: actionMeta?.name || 'CommonQnA',
-      icon: actionMeta?.icon,
+      name: currentSkill?.name || 'CommonQnA',
+      icon: currentSkill?.icon,
     };
-    const skillName = actionMeta?.name;
+    const skillName = currentSkill?.name || 'CommonQnA';
     const model = modelInfo?.label;
 
     // Get query and response content from result
@@ -456,11 +458,14 @@ export const SkillResponseNode = memo(
     const handleAskAI = useCallback(() => {
       const { metadata } = data;
       const {
+        selectedSkill,
         actionMeta,
         modelInfo,
         contextItems: responseContextItems = [],
         tplConfig,
       } = metadata;
+
+      const currentSkill = actionMeta || selectedSkill;
 
       // Create new context items array that includes both the response and its context
       const mergedContextItems = [
@@ -502,7 +507,7 @@ export const SkillResponseNode = memo(
               metadata: {
                 ...metadata,
                 contextItems: mergedContextItems,
-                selectedSkill: actionMeta,
+                selectedSkill: currentSkill,
                 modelInfo,
                 tplConfig,
               },
@@ -516,10 +521,11 @@ export const SkillResponseNode = memo(
     }, [data, addNode]);
 
     const handleCloneAskAI = useCallback(async () => {
-      const { contextItems, modelInfo, actionMeta, tplConfig } = data?.metadata || {};
+      const { contextItems, modelInfo, selectedSkill, tplConfig } = data?.metadata || {};
+      const currentSkill = actionMeta || selectedSkill;
 
       // Create new skill node with context, similar to group node implementation
-      const connectTo = contextItems.map((item) => ({
+      const connectTo = contextItems?.map((item) => ({
         type: item.type as CanvasNodeType,
         entityId: item.entityId,
       }));
@@ -535,7 +541,7 @@ export const SkillResponseNode = memo(
               contextItems,
               query: title,
               modelInfo,
-              selectedSkill: actionMeta,
+              selectedSkill: currentSkill,
               tplConfig,
             },
           },

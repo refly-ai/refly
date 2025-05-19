@@ -27,6 +27,7 @@ import {
   listDocuments,
   listLabelClasses,
   listLabelInstances,
+  listMcpServers,
   listModels,
   listPages,
   listProjects,
@@ -82,6 +83,8 @@ import {
   ListLabelClassesError,
   ListLabelInstancesData,
   ListLabelInstancesError,
+  ListMcpServersData,
+  ListMcpServersError,
   ListModelsError,
   ListPagesData,
   ListPagesError,
@@ -105,6 +108,21 @@ import {
   ServeStaticError,
 } from '../requests/types.gen';
 import * as Common from './common';
+export const useListMcpServersSuspense = <
+  TData = Common.ListMcpServersDefaultResponse,
+  TError = ListMcpServersError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListMcpServersData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListMcpServersKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listMcpServers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
 export const useListPagesSuspense = <
   TData = Common.ListPagesDefaultResponse,
   TError = ListPagesError,

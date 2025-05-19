@@ -392,7 +392,7 @@ export const ImportFromFile = () => {
       </div>
 
       {/* footer */}
-      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] border-x-0 border-b-0 p-[16px] rounded-none">
+      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] dark:border-[#2f2f2f] border-x-0 border-b-0 p-[16px] rounded-none">
         <div className="flex items-center gap-x-[8px]">
           <p className="font-bold whitespace-nowrap text-md text-[#00968f]">
             {t('resource.import.fileCount', { count: fileList?.length || 0 })}

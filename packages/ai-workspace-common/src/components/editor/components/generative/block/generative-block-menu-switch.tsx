@@ -135,7 +135,7 @@ const GenerativeBlockMenuSwitch = ({ open, onOpenChange }: GenerativeBlockMenuSw
           bubbleRef.current = instance;
         },
       }}
-      className="z-50 flex w-fit max-w-[90vw] overflow-hidden rounded-md border border-solid border-[rgba(0,0,0,0.1)] bg-background shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+      className="z-50 flex w-fit max-w-[90vw] overflow-hidden rounded-md border border-solid border-gray-200 dark:border-gray-700 bg-background shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
     >
       {open && (
         <AISelector

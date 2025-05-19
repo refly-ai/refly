@@ -31,7 +31,6 @@ import {
   useCanvasStore,
   useCanvasStoreShallow,
 } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { BigSearchModal } from '@refly-packages/ai-workspace-common/components/search/modal';
 import { useCanvasNodesStore } from '@refly-packages/ai-workspace-common/stores/canvas-nodes';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { LayoutControl } from './layout-control';
@@ -984,8 +983,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             </div>
           </div>
         )}
-
-        <BigSearchModal />
 
         <MenuPopper open={menuOpen} position={menuPosition} setOpen={setMenuOpen} />
 

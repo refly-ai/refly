@@ -166,9 +166,9 @@ export const ProjectDirectory = ({ projectId, source }: ProjectDirectoryProps) =
         <Divider className="my-2" />
         <div
           className={cn(
-            'h-[38px] py-2 px-3 flex items-center justify-between text-gray-600 hover:bg-gray-50 cursor-pointer',
+            'h-[38px] py-2 px-3 flex items-center justify-between text-gray-600 hover:bg-gray-50 cursor-pointer dark:hover:bg-gray-800 dark:text-gray-300',
             {
-              'bg-gray-100 font-medium': !canvasId || canvasId === 'empty',
+              'bg-gray-100 font-medium dark:bg-gray-800': !canvasId || canvasId === 'empty',
             },
           )}
           onClick={() => navigate(`/project/${projectId}`)}

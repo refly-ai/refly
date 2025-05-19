@@ -1146,3 +1146,43 @@ model PageVersion {
   @@index([pageId, version])
   @@map("page_versions")
 }
+
+model McpServer {
+  /// Primary key
+  pk        Int       @id @default(autoincrement())
+  /// Server name
+  name      String    @map("name")
+  /// Server type (sse, streamable, stdio)
+  type      String    @map("type")
+  /// Whether the server is global
+  isGlobal  Boolean   @default(false) @map("is_global")
+  /// UID
+  uid       String?   @map("uid")
+  /// Server URL (for sse and streamable types)
+  url       String?   @map("url")
+  /// Command (for stdio type)
+  command   String?   @map("command")
+  /// Arguments (for stdio type, JSON array)
+  args      String?   @map("args")
+  /// Environment variables (for stdio type, JSON object)
+  env       String?   @map("env")
+  /// Headers (for sse and streamable types, JSON object)
+  headers   String?   @map("headers")
+  /// Reconnect/Restart config (JSON object)
+  reconnect String?   @map("reconnect")
+  /// Additional config (JSON object)
+  config    String?   @map("config")
+  /// Whether the server is enabled
+  enabled   Boolean   @default(true) @map("enabled")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Deletion timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@unique([uid, name])
+  @@index([uid, deletedAt])
+  @@index([isGlobal])
+  @@map("mcp_servers")
+}

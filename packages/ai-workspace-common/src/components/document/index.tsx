@@ -3,8 +3,8 @@ import { useDebounce } from 'use-debounce';
 import { useSearchParams } from 'react-router-dom';
 
 import './index.scss';
-import { Input, Spin } from '@arco-design/web-react';
-import { Button, message, Tooltip } from 'antd';
+import { Button, message, Tooltip, Input } from 'antd';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import {
   IconCopy,
   IconLock,
@@ -265,7 +265,7 @@ const StatusBar = memo(
     }, [ydoc, docId, t]);
 
     return (
-      <div className="w-full h-10 p-3 border-x-0 border-t-0 border-b border-solid border-gray-100 flex flex-row items-center justify-between">
+      <div className="w-full h-10 p-3 border-x-0 border-t-0 border-b border-solid border-gray-100 dark:border-gray-700 flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <div
             className={`
@@ -396,11 +396,11 @@ const DocumentEditorHeader = memo(
         <div className="mx-0 mt-4 max-w-screen-lg">
           <Input
             readOnly={readonly}
-            className="document-title !text-3xl font-bold focus:!border-transparent focus:!bg-transparent text-gray-600 dark:text-gray-300"
+            className="document-title !text-3xl font-bold bg-transparent !border-none focus:!bg-transparent  hover:bg-gray-50 dark:hover:bg-white/10"
             placeholder={t('editor.placeholder.title')}
             value={document?.title}
             style={{ paddingLeft: 6 }}
-            onChange={onTitleChange}
+            onChange={(e) => onTitleChange(e.target.value)}
             onKeyDown={handleKeyDown}
           />
         </div>
@@ -428,7 +428,7 @@ const DocumentBody = memo(
         <Spin
           className="document-editor-spin"
           tip={t('knowledgeBase.note.connecting')}
-          loading={readonly ? isShareDocumentLoading : isStillLoading}
+          spinning={readonly ? isShareDocumentLoading : isStillLoading}
           style={{ height: '100%', width: '100%' }}
         >
           <div className="ai-note-editor">

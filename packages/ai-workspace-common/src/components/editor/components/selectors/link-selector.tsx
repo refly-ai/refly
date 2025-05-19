@@ -1,9 +1,10 @@
-import { Button, Popover } from 'antd';
+import { Button, Popover, Input } from 'antd';
 import { Check, Trash } from 'lucide-react';
 import { useEditor, EditorInstance } from '../../core/components';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link as LucideLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { InputRef } from 'antd';
 
 export function isValidUrl(url: string) {
   try {
@@ -31,9 +32,15 @@ interface LinkSelectorProps {
 
 export const LinkSelector = ({ open, onOpenChange, triggerEditor }: LinkSelectorProps) => {
   const { t } = useTranslation();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<InputRef>(null);
   const { editor: currentEditor } = useEditor();
   const editor = triggerEditor || currentEditor;
+  const [inputValue, setInputValue] = useState<string>(editor?.getAttributes('link').href ?? '');
+
+  const handleSubmit = () => {
+    const url = getUrlFromString(inputValue);
+    url && editor?.chain().focus().setLink({ href: url }).run();
+  };
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -44,17 +51,17 @@ export const LinkSelector = ({ open, onOpenChange, triggerEditor }: LinkSelector
   const content = (
     <form
       onSubmit={(e) => {
-        const target = e.currentTarget as HTMLFormElement;
         e.preventDefault();
-        const input = target[0] as HTMLInputElement;
-        const url = getUrlFromString(input.value);
-        url && editor?.chain().focus().setLink({ href: url }).run();
+        handleSubmit();
       }}
       className="flex w-60 p-1"
     >
-      <input
+      <Input
         ref={inputRef}
         type="text"
+        onChange={(e) => {
+          setInputValue(e.target.value);
+        }}
         placeholder={t('editor.linkSelector.placeholder')}
         className="flex-1 bg-background p-1 text-sm outline-none border-none"
         defaultValue={editor?.getAttributes('link').href ?? ''}
@@ -67,14 +74,14 @@ export const LinkSelector = ({ open, onOpenChange, triggerEditor }: LinkSelector
           onClick={() => {
             editor?.chain().focus().unsetLink().run();
             if (inputRef.current) {
-              inputRef.current.value = '';
+              inputRef.current.input.value = '';
             }
           }}
         >
           <Trash className="h-4 w-4" />
         </Button>
       ) : (
-        <Button size="small" type="text">
+        <Button size="small" type="text" className="h-8 rounded-sm p-1" onClick={handleSubmit}>
           <Check className="h-4 w-4" />
         </Button>
       )}

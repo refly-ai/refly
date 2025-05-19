@@ -218,7 +218,9 @@ export const ImportFromWeblink = () => {
         </div>
 
         <div className="mt-[24px]">
-          <h2 className="text-sm font-bold text-[#00000080]">{t('resource.import.waitingList')}</h2>
+          <h2 className="text-sm font-bold text-[#00000080] dark:text-[#ffffff80]">
+            {t('resource.import.waitingList')}
+          </h2>
           <div className="mt-[12px]">
             {scrapeLinks?.length > 0 ? (
               <List
@@ -234,7 +236,7 @@ export const ImportFromWeblink = () => {
       </div>
 
       {/* footer */}
-      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] border-x-0 border-b-0 p-[16px] rounded-none">
+      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] dark:border-[#2f2f2f] border-x-0 border-b-0 p-[16px] rounded-none">
         <div className="flex items-center gap-x-[8px]">
           <p className="font-bold whitespace-nowrap text-md text-[#00968f]">
             {t('resource.import.linkCount', { count: scrapeLinks?.length || 0 })}
@@ -296,7 +298,7 @@ const RenderItem = (props: { item: LinkMeta }) => {
             <HiOutlineXMark strokeWidth={2} />
           </Button>,
         ]}
-        className="intergation-result-list-item"
+        className="intergation-result-list-item !border-[#f1f1f0] dark:!border-[#2f2f2f]"
       >
         <List.Item.Meta
           avatar={<Avatar src={item.image} />}
@@ -304,7 +306,7 @@ const RenderItem = (props: { item: LinkMeta }) => {
             <div className="intergation-result-intro">
               <p>
                 <span
-                  className="intergation-result-url"
+                  className="intergation-result-url dark:text-[#ffffff80] text-[#00000080]"
                   onClick={() => window.open(item?.url, '_blank')}
                 >
                   {item?.url}

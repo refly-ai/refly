@@ -10,8 +10,7 @@ import {
   IconRight,
   IconPlus,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Form } from '@arco-design/web-react';
-import { Button } from 'antd';
+import { Form, Button } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { Actions } from './action';
 import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
@@ -172,7 +171,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
         )}
       />
       <div
-        className="w-full h-full flex bg-white/90 overflow-y-auto dark:bg-gray-900/90"
+        className="w-full h-full flex bg-white/90 overflow-y-auto dark:bg-gray-900/90 dark:bg-gray-900/90"
         id="front-page-scrollable-div"
       >
         <div

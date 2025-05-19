@@ -1,5 +1,4 @@
-import { Form } from '@arco-design/web-react';
-import { Button, Input, message } from 'antd';
+import { Button, Input, message, Form } from 'antd';
 import { useEffect, useState } from 'react';
 
 // utils
@@ -113,20 +112,20 @@ export const ImportFromText = () => {
 
       {/* content */}
       <div className="flex-grow overflow-y-auto px-6 box-border">
-        <Form>
-          <FormItem layout="vertical" label={t('resource.import.textTitlePlaceholder')}>
+        <Form layout="vertical">
+          <FormItem label={t('resource.import.textTitlePlaceholder')}>
             <Input
               value={copiedTextPayload?.title}
               onChange={(e) => setCopiedTextPayload({ title: e.target.value })}
             />
           </FormItem>
-          <FormItem layout="vertical" label={t('resource.import.textUrlPlaceholder')}>
+          <FormItem label={t('resource.import.textUrlPlaceholder')}>
             <Input
               value={copiedTextPayload?.url}
               onChange={(e) => setCopiedTextPayload({ url: e.target.value })}
             />
           </FormItem>
-          <FormItem required layout="vertical" label={t('resource.import.textContentPlaceholder')}>
+          <FormItem required label={t('resource.import.textContentPlaceholder')}>
             <TextArea
               rows={4}
               autoSize={{
@@ -143,7 +142,7 @@ export const ImportFromText = () => {
       </div>
 
       {/* footer */}
-      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] border-x-0 border-b-0 p-[16px] rounded-none">
+      <div className="w-full flex justify-between items-center border-t border-solid border-[#e5e5e5] dark:border-[#2f2f2f] border-x-0 border-b-0 p-[16px] rounded-none">
         <div className="flex items-center gap-x-[8px]">
           <StorageLimit
             resourceCount={1}

@@ -136,7 +136,7 @@ const PlanItem = (props: {
                 t('settings.subscription.subscribe.forFree')
               )}
             </span>
-            <span className="period !text-xs">
+            <span className="period !text-xs dark:text-gray-200">
               {' '}
               /{' '}
               {title === 'free' ? (

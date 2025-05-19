@@ -22,7 +22,7 @@ const ResourceNodePreviewComponent = ({ node, resourceId }: ResourceNodePreviewP
   }
 
   return (
-    <div className="h-full bg-white rounded">
+    <div className="h-full pb-4 bg-white dark:bg-gray-900 rounded">
       <ResourceView
         resourceId={resourceId}
         deckSize={deckSize}

@@ -7,6 +7,21 @@ import {
   formDataBodySerializer,
 } from '@hey-api/client-fetch';
 import type {
+  ListMcpServersData2,
+  ListMcpServersError,
+  ListMcpServersResponse2,
+  CreateMcpServerData,
+  CreateMcpServerError,
+  CreateMcpServerResponse,
+  UpdateMcpServerData,
+  UpdateMcpServerError,
+  UpdateMcpServerResponse,
+  DeleteMcpServerData,
+  DeleteMcpServerError,
+  DeleteMcpServerResponse2,
+  ValidateMcpServerData,
+  ValidateMcpServerError,
+  ValidateMcpServerResponse2,
   ListPagesData,
   ListPagesError,
   ListPagesResponse2,
@@ -330,6 +345,91 @@ import type {
 } from './types.gen';
 
 export const client = createClient(createConfig());
+
+/**
+ * List MCP servers
+ * List all MCP servers for a user
+ */
+export const listMcpServers = <ThrowOnError extends boolean = false>(
+  options?: Options<ListMcpServersData2, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListMcpServersResponse2,
+    ListMcpServersError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp-server/list',
+  });
+};
+
+/**
+ * Create MCP server
+ * Create a new MCP server
+ */
+export const createMcpServer = <ThrowOnError extends boolean = false>(
+  options: Options<CreateMcpServerData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateMcpServerResponse,
+    CreateMcpServerError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp-server/create',
+  });
+};
+
+/**
+ * Update MCP server
+ * Update an existing MCP server
+ */
+export const updateMcpServer = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateMcpServerData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateMcpServerResponse,
+    UpdateMcpServerError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp-server/update',
+  });
+};
+
+/**
+ * Delete MCP server
+ * Delete an existing MCP server
+ */
+export const deleteMcpServer = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteMcpServerData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DeleteMcpServerResponse2,
+    DeleteMcpServerError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp-server/delete',
+  });
+};
+
+/**
+ * Validate MCP server
+ * Validate MCP server configuration
+ */
+export const validateMcpServer = <ThrowOnError extends boolean = false>(
+  options: Options<ValidateMcpServerData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ValidateMcpServerResponse2,
+    ValidateMcpServerError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/mcp-server/validate',
+  });
+};
 
 /**
  * List user pages

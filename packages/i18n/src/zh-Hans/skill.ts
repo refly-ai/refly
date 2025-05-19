@@ -1,4 +1,21 @@
 const translations = {
+  agent: {
+    name: '智能代理',
+    description: '基于上下文回答问题',
+    placeholder: '向 AI 提问，按 Ctrl + / 选择技能...',
+    placeholderMac: '向 AI 提问，按 ⌘ + / 选择技能...',
+    steps: {
+      analyzeQuery: {
+        name: '查询分析',
+      },
+      analyzeContext: {
+        name: '上下文分析',
+      },
+      answerQuestion: {
+        name: '问题回答',
+      },
+    },
+  },
   commonQnA: {
     name: '通用问答',
     description: '基于上下文回答问题',

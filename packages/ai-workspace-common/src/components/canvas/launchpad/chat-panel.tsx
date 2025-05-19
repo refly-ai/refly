@@ -1,5 +1,4 @@
-import { Form } from '@arco-design/web-react';
-import { notification, Button } from 'antd';
+import { notification, Button, Form } from 'antd';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -371,7 +370,7 @@ export const ChatPanel = ({
         <div
           className={cn(
             'ai-copilot-chat-container chat-input-container rounded-[7px] overflow-hidden',
-            embeddedMode && 'embedded-chat-panel border border-gray-100 dark:border-gray-700',
+            embeddedMode && 'embedded-chat-panel border !border-gray-100 dark:!border-gray-700',
           )}
         >
           <SelectedSkillHeader

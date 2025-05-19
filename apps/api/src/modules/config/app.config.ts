@@ -33,6 +33,7 @@ export default () => ({
     password: process.env.REDIS_PASSWORD,
   },
   objectStorage: {
+    reclaimPolicy: process.env.OBJECT_STORAGE_RECLAIM_POLICY || 'retain', // 'retain' or 'delete'
     backend: process.env.OBJECT_STORAGE_BACKEND || 'minio',
     fs: {
       root: process.env.OBJECT_STORAGE_FS_ROOT || path.join(process.cwd(), 'storage'),

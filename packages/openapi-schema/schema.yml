@@ -37,7 +37,129 @@ tags:
     description: Provider management endpoints
   - name: misc
     description: Miscellaneous endpoints
+
 paths:
+  /mcp-server/list:
+    get:
+      tags:
+        - mcp-server
+      summary: List MCP servers
+      description: List all MCP servers for a user
+      operationId: listMcpServers
+      parameters:
+        - name: type
+          in: query
+          description: MCP server type
+          schema:
+            type: string
+            enum: [sse, streamable, stdio]
+        - name: enabled
+          in: query
+          description: Filter by enabled status
+          schema:
+            type: boolean
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMcpServersResponse'
+
+  /mcp-server/create:
+    post:
+      tags:
+        - mcp-server
+      summary: Create MCP server
+      description: Create a new MCP server
+      operationId: createMcpServer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertMcpServerRequest'
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertMcpServerResponse'
+
+  /mcp-server/update:
+    post:
+      tags:
+        - mcp-server
+      summary: Update MCP server
+      description: Update an existing MCP server
+      operationId: updateMcpServer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertMcpServerRequest'
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertMcpServerResponse'
+
+  /mcp-server/delete:
+    post:
+      tags:
+        - mcp-server
+      summary: Delete MCP server
+      description: Delete an existing MCP server
+      operationId: deleteMcpServer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteMcpServerRequest'
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteMcpServerResponse'
+
+  /mcp-server/validate:
+    post:
+      tags:
+        - mcp-server
+      summary: Validate MCP server
+      description: Validate MCP server configuration
+      operationId: validateMcpServer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertMcpServerRequest'
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateMcpServerResponse'
+
   /pages:
     get:
       tags:
@@ -2535,6 +2657,211 @@ paths:
 
 components:
   schemas:
+    McpServerType:
+      type: string
+      description: MCP Server type
+      enum: [sse, streamable, stdio]
+    
+    McpServerDTO:
+      type: object
+      required:
+        - name
+        - type
+        - enabled
+        - isGlobal
+        - createdAt
+        - updatedAt
+      properties:
+        name:
+          type: string
+          description: MCP server name
+          example: My MCP Server
+        type:
+          $ref: '#/components/schemas/McpServerType'
+        url:
+          type: string
+          description: MCP server URL (for sse and streamable types)
+          example: https://example.com/mcp
+        command:
+          type: string
+          description: Command to execute (for stdio type)
+          example: python
+        args:
+          type: array
+          description: Command arguments (for stdio type)
+          items:
+            type: string
+          example: ["-m", "server.py"]
+        env:
+          type: object
+          description: Environment variables (for stdio type)
+          additionalProperties:
+            type: string
+          example:
+            API_KEY: your_api_key
+        headers:
+          type: object
+          description: HTTP headers (for sse and streamable types)
+          additionalProperties:
+            type: string
+          example:
+            Authorization: Bearer token
+        reconnect:
+          type: object
+          description: Reconnection configuration
+          properties:
+            enabled:
+              type: boolean
+              description: Whether reconnection is enabled
+            maxAttempts:
+              type: integer
+              description: Maximum number of reconnection attempts
+            delayMs:
+              type: integer
+              description: Delay between reconnection attempts in milliseconds
+        config:
+          type: object
+          description: Additional configuration
+          additionalProperties: true
+        enabled:
+          type: boolean
+          description: Whether the MCP server is enabled
+        isGlobal:
+          type: boolean
+          description: Whether the MCP server is global
+        createdAt:
+          type: string
+          format: date-time
+          description: MCP server creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: MCP server update time
+
+    ListMcpServersData:
+      type: object
+      properties:
+        query:
+          type: object
+          properties:
+            type:
+              $ref: '#/components/schemas/McpServerType'
+            enabled:
+              type: boolean
+              description: Filter by enabled status
+
+    ListMcpServersResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/McpServerDTO'
+
+    UpsertMcpServerRequest:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: MCP server name
+        type:
+          $ref: '#/components/schemas/McpServerType'
+        url:
+          type: string
+          description: MCP server URL (required for sse and streamable types)
+        command:
+          type: string
+          description: Command to execute (required for stdio type)
+        args:
+          type: array
+          description: Command arguments (required for stdio type)
+          items:
+            type: string
+        env:
+          type: object
+          description: Environment variables (for stdio type)
+          additionalProperties:
+            type: string
+        headers:
+          type: object
+          description: HTTP headers (for sse and streamable types)
+          additionalProperties:
+            type: string
+        reconnect:
+          type: object
+          description: Reconnection configuration
+          properties:
+            enabled:
+              type: boolean
+              description: Whether reconnection is enabled
+            maxAttempts:
+              type: integer
+              description: Maximum number of reconnection attempts
+            delayMs:
+              type: integer
+              description: Delay between reconnection attempts in milliseconds
+        config:
+          type: object
+          description: Additional configuration
+          additionalProperties: true
+        enabled:
+          type: boolean
+          description: Whether the MCP server is enabled
+
+    UpsertMcpServerResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/McpServerDTO'
+
+    DeleteMcpServerRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: MCP name to delete
+
+    McpServerTool:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+          description: Tool name
+          example: tool_name
+        description:
+          type: string
+          description: Tool description
+          example: This tool does something useful
+
+    ValidateMcpServerResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/McpServerTool'
+
+    DeleteMcpServerResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: 'null'
 
     Page:
       type: object

@@ -35,7 +35,7 @@ const ResourceRenderer = memo(
 
     return (
       <div
-        className={`h-full bg-white ${!isFullscreen ? 'rounded' : 'w-full'} ${
+        className={`h-full bg-white dark:bg-gray-900 ${!isFullscreen ? 'rounded' : 'w-full'} ${
           isMinimap ? 'p-1' : ''
         }`}
       >
@@ -43,7 +43,10 @@ const ResourceRenderer = memo(
           {isLoading ? (
             <Skeleton active style={{ marginTop: 24 }} />
           ) : (
-            <Markdown content={resourceDetail?.content || ''} className="text-base p-4" />
+            <Markdown
+              content={resourceDetail?.content || ''}
+              className="text-base p-4 dark:text-gray-200"
+            />
           )}
         </div>
       </div>

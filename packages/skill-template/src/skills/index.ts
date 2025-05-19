@@ -7,4 +7,5 @@ export * from './library-search';
 export * from './recommend-questions';
 export * from './custom-prompt';
 export * from './code-artifacts';
+export * from './agent';
 export * from './image-generation';

@@ -27,7 +27,7 @@ export const GroupActionMenu: FC<GroupActionMenuProps> = ({ nodeId, isTemporary,
   }, [nodeId, ungroupNodes, onClose]);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-1 flex gap-1 border border-[rgba(0,0,0,0.06)]">
+    <div className="bg-white rounded-lg shadow-lg p-1 flex gap-1 border border-[rgba(0,0,0,0.06)] dark:bg-gray-900">
       {isTemporary ? (
         <Button
           type="text"

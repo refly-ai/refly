@@ -335,11 +335,11 @@ export const GroupNode = memo(
           }}
         >
           <div
-            className="relative h-full rounded-lg"
+            className={`relative h-full rounded-lg border-2 border-dashed ${
+              selected ? 'border-[#00968F]' : 'border-black/10 dark:border-white/10'
+            } transition-all duration-200`}
             style={{
               background: 'transparent',
-              border: selected ? '2px dashed #00968F' : '2px dashed rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.2s ease',
             }}
           >
             {!isPreview && !hideHandles && (

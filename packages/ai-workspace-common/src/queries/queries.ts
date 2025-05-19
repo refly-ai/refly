@@ -20,6 +20,7 @@ import {
   createDocument,
   createLabelClass,
   createLabelInstance,
+  createMcpServer,
   createPortalSession,
   createProject,
   createProvider,
@@ -34,6 +35,7 @@ import {
   deleteDocument,
   deleteLabelClass,
   deleteLabelInstance,
+  deleteMcpServer,
   deletePage,
   deletePageNode,
   deleteProject,
@@ -74,6 +76,7 @@ import {
   listDocuments,
   listLabelClasses,
   listLabelInstances,
+  listMcpServers,
   listModels,
   listPages,
   listProjects,
@@ -104,6 +107,7 @@ import {
   updateDocument,
   updateLabelClass,
   updateLabelInstance,
+  updateMcpServer,
   updatePage,
   updateProject,
   updateProjectItems,
@@ -114,6 +118,7 @@ import {
   updateSkillInstance,
   updateSkillTrigger,
   upload,
+  validateMcpServer,
 } from '../requests/services.gen';
 import {
   AddNodesToCanvasPageData,
@@ -150,6 +155,8 @@ import {
   CreateLabelClassError,
   CreateLabelInstanceData,
   CreateLabelInstanceError,
+  CreateMcpServerData,
+  CreateMcpServerError,
   CreatePortalSessionError,
   CreateProjectData,
   CreateProjectError,
@@ -177,6 +184,8 @@ import {
   DeleteLabelClassError,
   DeleteLabelInstanceData,
   DeleteLabelInstanceError,
+  DeleteMcpServerData,
+  DeleteMcpServerError,
   DeletePageData,
   DeletePageError,
   DeletePageNodeData,
@@ -250,6 +259,8 @@ import {
   ListLabelClassesError,
   ListLabelInstancesData,
   ListLabelInstancesError,
+  ListMcpServersData,
+  ListMcpServersError,
   ListModelsError,
   ListPagesData,
   ListPagesError,
@@ -305,6 +316,8 @@ import {
   UpdateLabelClassError,
   UpdateLabelInstanceData,
   UpdateLabelInstanceError,
+  UpdateMcpServerData,
+  UpdateMcpServerError,
   UpdatePageData,
   UpdatePageError,
   UpdateProjectData,
@@ -325,8 +338,25 @@ import {
   UpdateSkillTriggerError,
   UploadData,
   UploadError,
+  ValidateMcpServerData,
+  ValidateMcpServerError,
 } from '../requests/types.gen';
 import * as Common from './common';
+export const useListMcpServers = <
+  TData = Common.ListMcpServersDefaultResponse,
+  TError = ListMcpServersError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListMcpServersData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListMcpServersKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listMcpServers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
 export const useListPages = <
   TData = Common.ListPagesDefaultResponse,
   TError = ListPagesError,
@@ -875,6 +905,74 @@ export const useServeStatic = <
     queryKey: Common.UseServeStaticKeyFn(clientOptions, queryKey),
     queryFn: () =>
       serveStatic({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useCreateMcpServer = <
+  TData = Common.CreateMcpServerMutationResult,
+  TError = CreateMcpServerError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreateMcpServerData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreateMcpServerData, true>, TContext>({
+    mutationKey: Common.UseCreateMcpServerKeyFn(mutationKey),
+    mutationFn: (clientOptions) => createMcpServer(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdateMcpServer = <
+  TData = Common.UpdateMcpServerMutationResult,
+  TError = UpdateMcpServerError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateMcpServerData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateMcpServerData, true>, TContext>({
+    mutationKey: Common.UseUpdateMcpServerKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateMcpServer(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useDeleteMcpServer = <
+  TData = Common.DeleteMcpServerMutationResult,
+  TError = DeleteMcpServerError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<DeleteMcpServerData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<DeleteMcpServerData, true>, TContext>({
+    mutationKey: Common.UseDeleteMcpServerKeyFn(mutationKey),
+    mutationFn: (clientOptions) => deleteMcpServer(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useValidateMcpServer = <
+  TData = Common.ValidateMcpServerMutationResult,
+  TError = ValidateMcpServerError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ValidateMcpServerData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ValidateMcpServerData, true>, TContext>({
+    mutationKey: Common.UseValidateMcpServerKeyFn(mutationKey),
+    mutationFn: (clientOptions) => validateMcpServer(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useSharePage = <

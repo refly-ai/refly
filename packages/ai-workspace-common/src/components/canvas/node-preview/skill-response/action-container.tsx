@@ -10,7 +10,6 @@ import { parseMarkdownCitationsAndCanvasTags, safeParseJSON } from '@refly/utils
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { editorEmitter, EditorOperation } from '@refly/utils/event-emitter/editor';
-import { Dropdown as ArcoDropdown, Menu } from '@arco-design/web-react';
 import { HiOutlineCircleStack, HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -114,24 +113,22 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
     [sources, t],
   );
 
-  const tokenUsageDropdownList = useMemo(
-    () => (
-      <Menu>
-        {step?.tokenUsage?.map((item: any) => (
-          <Menu.Item key={item?.modelName}>
-            <div className="flex items-center">
-              <span>
-                {item?.modelName}:{' '}
-                {t('copilot.tokenUsage', {
-                  inputCount: item?.inputTokens,
-                  outputCount: item?.outputTokens,
-                })}
-              </span>
-            </div>
-          </Menu.Item>
-        ))}
-      </Menu>
-    ),
+  const tokenUsageDropdownList: MenuProps['items'] = useMemo(
+    () =>
+      step?.tokenUsage?.map((item: any) => ({
+        key: item?.modelName,
+        label: (
+          <div className="flex items-center">
+            <span>
+              {item?.modelName}:{' '}
+              {t('copilot.tokenUsage', {
+                inputCount: item?.inputTokens,
+                outputCount: item?.outputTokens,
+              })}
+            </span>
+          </div>
+        ),
+      })),
     [step?.tokenUsage, t],
   );
 
@@ -258,7 +255,7 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
     <div className="flex items-center justify-between">
       <div className="-ml-1">
         {step?.tokenUsage?.length > 0 && !isShareMode && (
-          <ArcoDropdown droplist={tokenUsageDropdownList}>
+          <Dropdown menu={{ items: tokenUsageDropdownList }}>
             <Button
               type="text"
               size="small"
@@ -267,7 +264,7 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
             >
               {tokenUsage} tokens
             </Button>
-          </ArcoDropdown>
+          </Dropdown>
         )}
       </div>
       {!isPending && step?.content && (
@@ -308,7 +305,7 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
                   key={item.key}
                   size="small"
                   type="text"
-                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
+                  className="text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-all duration-400 relative overflow-hidden group"
                   icon={item.icon}
                   disabled={!item.enabled}
                   loading={isCreating}

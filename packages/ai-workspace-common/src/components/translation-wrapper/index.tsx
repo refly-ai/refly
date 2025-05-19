@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Spin } from 'antd';
-
+import cn from 'classnames';
 import './index.scss';
 import { IconLoading } from '@arco-design/web-react/icon';
 
@@ -121,7 +121,7 @@ export const TranslationWrapper: React.FC<TranslationWrapperProps> = ({
 
   // Early return for unchanged content
   if (!shouldTranslate || translatedContent === content) {
-    return <span className={className}>{content}</span>;
+    return <span className={cn('dark:text-gray-500', className)}>{content}</span>;
   }
 
   return (

@@ -37,15 +37,14 @@ function ATag({ ...props }, sources: Source[]) {
         <PopoverTrigger asChild>
           <span
             title={source.metadata?.title}
-            className="inline-block h-6 !w-6 origin-top-left scale-[60%] transform cursor-pointer rounded-full bg-zinc-300 text-center font-medium no-underline hover:bg-zinc-400"
+            className="inline-block h-6 !w-6 origin-top-left scale-[60%] transform cursor-pointer rounded-full bg-zinc-300 text-center font-medium no-underline hover:bg-zinc-400 dark:bg-gray-700 dark:hover:bg-gray-600"
           >
             {props.href}
           </span>
         </PopoverTrigger>
         <PopoverContent
           align={'start'}
-          style={{ backgroundColor: '#fff' }}
-          className="flex flex-col gap-2 max-w-screen-md text-xs ring-4 shadow-transparent ring-zinc-50"
+          className="flex flex-col gap-2 max-w-screen-md text-xs ring-4 shadow-transparent ring-zinc-50 dark:ring-gray-700 dark:bg-gray-800"
         >
           <div className="overflow-hidden font-medium whitespace-normal break-words">
             {source.title}
@@ -60,7 +59,7 @@ function ATag({ ...props }, sources: Source[]) {
 
           <div className="flex gap-2 items-center">
             <div className="overflow-hidden flex-1">
-              <div className="overflow-hidden text-blue-500 whitespace-normal break-words">
+              <div className="overflow-hidden text-blue-500 dark:text-gray-200 whitespace-normal break-words">
                 <a
                   title={source?.title}
                   href={source?.url}

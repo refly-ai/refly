@@ -41,13 +41,12 @@ const ChatHistoryItem = ({ node }: { node: CanvasNode<ResponseNodeMeta> }) => {
     <div
       key={`${node.id}`}
       className={cn(
-        'm-1 py-0.5 px-2 rounded-lg cursor-pointer border-gray-100 hover:bg-gray-100',
-        {},
+        'm-1 py-0.5 px-2 rounded-lg cursor-pointer border-gray-100 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800',
       )}
       onClick={(e) => handleItemClick(node, e)}
     >
       <div className="text-gray-800 font-medium flex items-center justify-between text-[13px] whitespace-nowrap overflow-hidden">
-        <div className="max-w-[200px] truncate">{node.data?.title}</div>
+        <div className="max-w-[200px] truncate dark:text-gray-300">{node.data?.title}</div>
       </div>
       <div className="text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis text-xs">
         {getResultDisplayContent(node.data)}
@@ -81,9 +80,9 @@ export const ChatHistoryPreview: React.FC<ChatHistoryProps> = ({ item }) => {
           items={historyNodes.map((node, index) => ({
             dot:
               index === historyNodes.length - 1 ? (
-                <IconResponseFilled className="h-4 w-4 text-gray-500" />
+                <IconResponseFilled className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               ) : (
-                <IconResponse className="h-4 w-4 text-gray-500" />
+                <IconResponse className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               ),
             children: <ChatHistoryItem node={node} />,
           }))}

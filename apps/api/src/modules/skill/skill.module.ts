@@ -21,6 +21,7 @@ import { CollabModule } from '../collab/collab.module';
 import { MiscModule } from '../misc/misc.module';
 import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
 import { ProviderModule } from '@/modules/provider/provider.module';
+import { McpServerModule } from '@/modules/mcp-server/mcp-server.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ProviderModule } from '@/modules/provider/provider.module';
     MiscModule,
     CodeArtifactModule,
     ProviderModule,
+    McpServerModule,
     BullModule.registerQueue({ name: QUEUE_SKILL }),
     BullModule.registerQueue({ name: QUEUE_SKILL_TIMEOUT_CHECK }),
     BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_USAGE }),

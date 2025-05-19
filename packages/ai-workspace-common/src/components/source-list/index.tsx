@@ -42,7 +42,7 @@ const SourceItem = ({ source, index }: { source: Source; index: number }) => {
       {/* Title section */}
       <div className="flex items-center gap-2 mb-2">
         <h4
-          className="font-medium text-base m-0 break-words overflow-hidden text-ellipsis whitespace-nowrap max-w-[300px]"
+          className="font-medium text-base m-0 break-words overflow-hidden text-ellipsis whitespace-nowrap w-full dark:text-gray-200 dark:border-gray-700"
           title={source?.title ?? ''}
         >
           {source?.title ?? ''}
@@ -58,7 +58,7 @@ const SourceItem = ({ source, index }: { source: Source; index: number }) => {
             src={`https://www.google.com/s2/favicons?domain=${domain}&sz=${16}`}
           />
           <div
-            className="text-zinc-400 text-sm break-all overflow-hidden text-ellipsis whitespace-nowrap max-w-[250px]"
+            className="text-zinc-400 text-sm break-all overflow-hidden text-ellipsis whitespace-nowrap max-w-[250px] dark:text-gray-200"
             title={domain}
           >
             {domain}
@@ -68,7 +68,10 @@ const SourceItem = ({ source, index }: { source: Source; index: number }) => {
 
       {/* Content section */}
       <div className="content-body pt-0 max-h-[300px] overflow-y-auto">
-        <div className="line-clamp-6 overflow-hidden text-ellipsis" title={source.pageContent}>
+        <div
+          className="line-clamp-6 overflow-hidden text-ellipsis dark:text-gray-500"
+          title={source.pageContent}
+        >
           {source.pageContent}
         </div>
       </div>
@@ -83,7 +86,10 @@ const SourceItem = ({ source, index }: { source: Source; index: number }) => {
       overlayClassName="search-result-popover"
     >
       <div
-        className="flex relative flex-col text-xs rounded-lg source-list-item cursor-pointer hover:bg-gray-50 border border-solid border-black/10 transition-all p-2"
+        className="flex relative flex-col text-xs rounded-lg source-list-item cursor-pointer 
+        hover:bg-gray-50 dark:hover:bg-gray-900
+        border border-solid border-black/10 dark:border-white/10
+        transition-all p-2"
         key={index}
         onClick={handleClick}
       >
@@ -92,7 +98,7 @@ const SourceItem = ({ source, index }: { source: Source; index: number }) => {
           <div className="flex items-center gap-1 min-w-0 flex-1">
             <span className="flex-shrink-0">{index + 1} ·</span>
             <span
-              className="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-zinc-950"
+              className="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-zinc-950 dark:text-zinc-100"
               title={source?.title ?? ''}
             >
               {source?.title ?? ''}
@@ -139,7 +145,9 @@ const ViewMoreItem = ({
 
   return (
     <div
-      className="flex relative flex-col flex-wrap gap-2 justify-start items-start px-3 py-3 text-xs rounded-lg cursor-pointer hover:bg-gray-50 source-list-item view-more-item border border-solid border-black/10 transition-all dark:hover:bg-gray-900 dark:border-white/10"
+      className="flex relative flex-col flex-wrap gap-2 justify-start items-start px-3 py-3 text-xs rounded-lg cursor-pointer 
+      hover:bg-gray-50 source-list-item view-more-item border border-solid 
+      border-black/10 transition-all dark:hover:bg-gray-900 dark:border-white/10"
       onClick={() => {
         onClick?.();
       }}
