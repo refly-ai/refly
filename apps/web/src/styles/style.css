@@ -70,7 +70,6 @@ select:focus {
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -82,15 +81,16 @@ select:focus {
   background: #a8a8a8;
 }
 
-/* 暗色模式滚动条样式 */
-.dark ::-webkit-scrollbar-track {
-  background: #2d3748;
-}
+.dark {
+  ::-webkit-scrollbar-track {
+    background: #2d2d2d;
+  }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #4a5568;
-}
+  ::-webkit-scrollbar-thumb {
+    background: #555;
+  }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #718096;
+  ::-webkit-scrollbar-thumb:hover {
+    background: #777;
+  }
 }
