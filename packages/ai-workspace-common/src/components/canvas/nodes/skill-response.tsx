@@ -53,6 +53,7 @@ import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useSkillError } from '@refly-packages/ai-workspace-common/hooks/use-skill-error';
 import { ModelIcon } from '@lobehub/icons';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
+import { BorderBeam } from '@refly-packages/ai-workspace-common/components/magicui/border-beam';
 
 const POLLING_WAIT_TIME = 15000;
 
@@ -259,6 +260,7 @@ export const SkillResponseNode = memo(
       actionMeta,
       tokenUsage,
       version,
+      pilotStepId,
     } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
@@ -617,7 +619,11 @@ export const SkillResponseNode = memo(
 
     return (
       <div
-        className={classNames({ nowheel: isOperating && isHovered })}
+        className={classNames({
+          'rounded-lg': true,
+          nowheel: isOperating && isHovered,
+          relative: true,
+        })}
         data-cy="skill-response-node"
       >
         <div
@@ -776,6 +782,21 @@ export const SkillResponseNode = memo(
             sizeMode={sizeMode}
             onResize={handleResize}
           />
+        )}
+        {['waiting', 'executing'].includes(status) && pilotStepId && (
+          <>
+            <BorderBeam
+              duration={2}
+              size={300}
+              className="from-transparent via-red-500 to-transparent"
+            />
+            <BorderBeam
+              duration={2}
+              delay={3}
+              size={300}
+              className="from-transparent via-blue-500 to-transparent"
+            />
+          </>
         )}
       </div>
     );

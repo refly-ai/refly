@@ -131,6 +131,7 @@ const translations = {
     create: 'Create',
     update: 'Update',
     validate: 'Validate',
+    refresh: 'Refresh',
   },
   pages: {
     share: {
@@ -1242,7 +1243,6 @@ const translations = {
     action: {
       nodeAlreadyExists: 'The {{type}} with the same entity already exists',
       deleteSuccess: 'Canvas deleted successfully',
-      addSuccess: 'Canvas added successfully, start creating!',
       duplicateSuccess: 'Canvas duplicated successfully',
       nodeLimitReached:
         'Canvas has reached the maximum limit of {{max}} nodes. Please remove some nodes before adding new ones.',
@@ -2688,6 +2688,29 @@ const translations = {
       contact: 'Contact',
       terms: 'Terms',
       privacy: 'Privacy',
+    },
+  },
+  pilot: {
+    name: 'Pilot',
+    description:
+      'Refly Pilot is an autonomous agent that solves your problems with thinking steps displayed in our free-form canvas.',
+    thinking: 'Pilot is thinking',
+    noSessions: 'No pilot sessions found',
+    loadFailed: 'Failed to load session details',
+    epoch: 'Epoch {{count}}',
+    newSession: 'New Session',
+    sessionHistory: 'Session History',
+    sessionInputPlaceholder: 'Ask a question...',
+    createPilotSessionFailed: 'Failed to create pilot session',
+    recentSessions: 'Recent Sessions',
+    createdAt: 'Created At',
+    noTasks: 'No tasks available yet',
+    status: {
+      init: 'Init',
+      executing: 'Executing',
+      waiting: 'Waiting',
+      finish: 'Finish',
+      failed: 'Failed',
     },
   },
   deck: {

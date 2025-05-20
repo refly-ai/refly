@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { message } from 'antd';
-import { useTranslation } from 'react-i18next';
 import { useDebouncedCallback } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
 import { useSiderStore } from '@refly-packages/ai-workspace-common/stores/sider';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { DATA_NUM } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 
+interface CreateCanvasOptions {
+  isPilotActivated?: boolean;
+}
+
 export const useCreateCanvas = ({
   projectId,
   afterCreateSuccess,
 }: { source?: string; projectId?: string; afterCreateSuccess?: () => void } = {}) => {
   const [isCreating, setIsCreating] = useState(false);
-  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const createCanvas = async (canvasTitle: string) => {
@@ -32,7 +33,7 @@ export const useCreateCanvas = ({
   };
 
   const debouncedCreateCanvas = useDebouncedCallback(
-    async (source?: string) => {
+    async (source?: string, options?: CreateCanvasOptions) => {
       const { canvasList, setCanvasList } = useSiderStore.getState();
       const canvasTitle = '';
       const canvasId = await createCanvas(canvasTitle);
@@ -52,12 +53,27 @@ export const useCreateCanvas = ({
         ].slice(0, DATA_NUM),
       );
 
-      message.success(t('canvas.action.addSuccess'));
-      if (projectId) {
-        navigate(`/project/${projectId}?canvasId=${canvasId}${source ? `&source=${source}` : ''}`);
-      } else {
-        navigate(`/canvas/${canvasId}${source ? `?source=${source}` : ''}`);
+      // Build the query string with source and pilot flag if needed
+      const queryParams = new URLSearchParams();
+      if (source) {
+        queryParams.append('source', source);
       }
+
+      // If pilot is activated, create a pilot session
+      if (options?.isPilotActivated) {
+        queryParams.append('isPilotActivated', 'true');
+      }
+
+      // Add canvasId to query params if in project view
+      if (projectId) {
+        queryParams.append('canvasId', canvasId);
+        navigate(`/project/${projectId}?${queryParams.toString()}`);
+      } else {
+        navigate(
+          `/canvas/${canvasId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
+        );
+      }
+
       afterCreateSuccess?.();
     },
     300,

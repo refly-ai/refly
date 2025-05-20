@@ -1624,6 +1624,7 @@ export const SkillMetaSchema = {
 export const ActionMetaSchema = {
   type: 'object',
   description: 'Action metadata',
+  required: ['name'],
   properties: {
     type: {
       type: 'string',
@@ -2172,6 +2173,14 @@ export const ActionResultSchema = {
       items: {
         type: 'string',
       },
+    },
+    pilotStepId: {
+      type: 'string',
+      description: 'Pilot step ID',
+    },
+    pilotSessionId: {
+      type: 'string',
+      description: 'Pilot session ID',
     },
     createdAt: {
       type: 'string',
@@ -4975,6 +4984,231 @@ export const DeleteSkillTriggerRequestSchema = {
       description: 'Trigger ID to delete',
     },
   },
+} as const;
+
+export const PilotStepStatusSchema = {
+  type: 'string',
+  enum: ['init', 'executing', 'finish', 'failed'],
+} as const;
+
+export const PilotStepSchema = {
+  type: 'object',
+  properties: {
+    stepId: {
+      type: 'string',
+      description: 'Pilot step ID',
+    },
+    name: {
+      type: 'string',
+      description: 'Pilot step name',
+    },
+    epoch: {
+      type: 'number',
+      description: 'Pilot step epoch',
+    },
+    entityId: {
+      type: 'string',
+      description: 'Pilot step entity ID',
+    },
+    entityType: {
+      type: 'string',
+      description: 'Pilot step entity type',
+    },
+    status: {
+      description: 'Pilot step status',
+      $ref: '#/components/schemas/PilotStepStatus',
+    },
+    rawOutput: {
+      type: 'string',
+      description: 'Pilot step raw output',
+    },
+    actionResult: {
+      description: 'Pilot step action result',
+      $ref: '#/components/schemas/ActionResult',
+    },
+    createdAt: {
+      type: 'string',
+      description: 'Pilot step created at',
+    },
+    updatedAt: {
+      type: 'string',
+      description: 'Pilot step updated at',
+    },
+  },
+} as const;
+
+export const PilotSessionStatusSchema = {
+  type: 'string',
+  enum: ['init', 'executing', 'waiting', 'finish', 'failed'],
+} as const;
+
+export const PilotSessionSchema = {
+  type: 'object',
+  required: [
+    'sessionId',
+    'status',
+    'targetType',
+    'targetId',
+    'title',
+    'input',
+    'currentEpoch',
+    'maxEpoch',
+  ],
+  properties: {
+    sessionId: {
+      type: 'string',
+      description: 'Pilot session ID',
+    },
+    title: {
+      type: 'string',
+      description: 'Pilot session title',
+    },
+    input: {
+      description: 'Pilot session input',
+      $ref: '#/components/schemas/SkillInput',
+    },
+    status: {
+      description: 'Pilot session status',
+      $ref: '#/components/schemas/PilotSessionStatus',
+    },
+    targetType: {
+      description: 'Pilot session target type',
+      $ref: '#/components/schemas/EntityType',
+    },
+    targetId: {
+      type: 'string',
+      description: 'Pilot session target ID',
+    },
+    currentEpoch: {
+      type: 'number',
+      description: 'Pilot session current epoch',
+    },
+    maxEpoch: {
+      type: 'number',
+      description: 'Pilot session max epoch',
+    },
+    steps: {
+      type: 'array',
+      description: 'Pilot steps',
+      items: {
+        $ref: '#/components/schemas/PilotStep',
+      },
+    },
+    createdAt: {
+      type: 'string',
+      description: 'Pilot session created at',
+    },
+    updatedAt: {
+      type: 'string',
+      description: 'Pilot session updated at',
+    },
+  },
+} as const;
+
+export const CreatePilotSessionRequestSchema = {
+  type: 'object',
+  required: ['targetId', 'targetType', 'input', 'providerItemId'],
+  properties: {
+    targetId: {
+      type: 'string',
+      description: 'Pilot session target ID',
+    },
+    targetType: {
+      description: 'Pilot session target type',
+      $ref: '#/components/schemas/EntityType',
+    },
+    maxEpoch: {
+      type: 'number',
+      description: 'Pilot session max epoch',
+      default: 2,
+    },
+    title: {
+      type: 'string',
+      description: 'Pilot session title',
+    },
+    input: {
+      description: 'Pilot session input',
+      $ref: '#/components/schemas/SkillInput',
+    },
+    providerItemId: {
+      type: 'string',
+      description: 'Pilot session provider item ID',
+    },
+  },
+} as const;
+
+export const UpdatePilotSessionRequestSchema = {
+  type: 'object',
+  required: ['sessionId'],
+  properties: {
+    sessionId: {
+      type: 'string',
+      description: 'Pilot session ID',
+    },
+    input: {
+      description: 'Pilot session input',
+      $ref: '#/components/schemas/SkillInput',
+    },
+    maxEpoch: {
+      type: 'number',
+      description: 'Pilot session max epoch',
+      default: 2,
+    },
+  },
+} as const;
+
+export const UpsertPilotSessionResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          description: 'Upserted pilot session',
+          $ref: '#/components/schemas/PilotSession',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ListPilotSessionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Pilot session list',
+          items: {
+            $ref: '#/components/schemas/PilotSession',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetPilotSessionDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          description: 'Pilot session detail',
+          $ref: '#/components/schemas/PilotSession',
+        },
+      },
+    },
+  ],
 } as const;
 
 export const UpdateUserSettingsRequestSchema = {

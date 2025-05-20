@@ -31,6 +31,7 @@ import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/
 import { useReactFlow } from '@xyflow/react';
 import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
+import { usePilotStore } from '@refly-packages/ai-workspace-common/stores/pilot';
 
 export const useInvokeAction = () => {
   const { addNode } = useAddNode();
@@ -430,6 +431,8 @@ export const useInvokeAction = () => {
       return;
     }
 
+    const { activeSessionId } = usePilotStore.getState();
+
     addNode(
       {
         type: node.type,
@@ -447,6 +450,7 @@ export const useInvokeAction = () => {
           entityId: resultId,
         },
       ],
+      !activeSessionId, // Only open preview when pilot is not active
     );
   };
 

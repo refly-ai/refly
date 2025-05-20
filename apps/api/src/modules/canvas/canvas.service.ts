@@ -20,6 +20,8 @@ import {
   UpsertCanvasRequest,
   User,
   CanvasNode,
+  SkillContext,
+  ActionResult,
 } from '@refly/openapi-schema';
 import { Prisma } from '@/generated/client';
 import { genCanvasID } from '@refly/utils';
@@ -30,7 +32,8 @@ import { streamToBuffer } from '../../utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ActionService } from '../action/action.service';
-import { generateCanvasTitle, CanvasContentItem } from './canvas-title-generator';
+import { generateCanvasTitle } from './canvas-title-generator';
+import { CanvasContentItem } from './canvas.dto';
 import { RedisService } from '@/modules/common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
 import { ProviderService } from '@/modules/provider/provider.service';
@@ -725,9 +728,7 @@ export class CanvasService {
     );
   }
 
-  async autoNameCanvas(user: User, param: AutoNameCanvasRequest) {
-    const { canvasId, directUpdate = false } = param;
-
+  async getCanvasContentItems(user: User, canvasId: string, needAllNodes = false) {
     const canvas = await this.prisma.canvas.findFirst({
       where: { canvasId, uid: user.uid, deletedAt: null },
     });
@@ -736,59 +737,93 @@ export class CanvasService {
     }
 
     const results = await this.prisma.actionResult.findMany({
-      select: { title: true, input: true, version: true, resultId: true },
+      select: {
+        title: true,
+        input: true,
+        version: true,
+        resultId: true,
+        context: true,
+        history: true,
+      },
       where: { targetId: canvasId, targetType: 'canvas' },
     });
 
     // Collect content items for title generation
     const contentItems: CanvasContentItem[] = await Promise.all(
       results.map(async (result) => {
-        const { resultId, version, input, title } = result;
+        const { resultId, version, title } = result;
         const steps = await this.prisma.actionStep.findMany({
           where: { resultId, version },
         });
-        const parsedInput = JSON.parse(input ?? '{}');
-        const question = parsedInput?.query ?? title;
         const answer = steps.map((s) => s.content.slice(0, 500)).join('\n');
+        const context: SkillContext = JSON.parse(result.context ?? '[]');
+        const history: ActionResult[] = JSON.parse(result.history ?? '[]');
 
         return {
-          question,
-          answer,
-        };
+          id: resultId,
+          title,
+          contentPreview: answer,
+          content: steps.map((s) => s.content).join('\n\n'),
+          type: 'skillResponse',
+          inputIds: [
+            ...(context.resources ?? []).map((r) => r.resourceId),
+            ...(context.documents ?? []).map((d) => d.docId),
+            ...(context.codeArtifacts ?? []).map((d) => d.artifactId),
+            ...history.map((h) => h.resultId),
+          ],
+        } as CanvasContentItem;
       }),
     );
 
     // If no action results, try to get all entities associated with the canvas
-    if (contentItems.length === 0) {
+    if (contentItems.length === 0 || needAllNodes) {
       const relations = await this.prisma.canvasEntityRelation.findMany({
         where: { canvasId, entityType: { in: ['resource', 'document'] }, deletedAt: null },
       });
 
-      const documents = await this.prisma.document.findMany({
-        select: { title: true, contentPreview: true },
-        where: { docId: { in: relations.map((r) => r.entityId) } },
-      });
-
-      const resources = await this.prisma.resource.findMany({
-        select: { title: true, contentPreview: true },
-        where: { resourceId: { in: relations.map((r) => r.entityId) } },
-      });
+      const [documents, resources] = await Promise.all([
+        this.prisma.document.findMany({
+          select: { docId: true, title: true, contentPreview: true },
+          where: {
+            docId: {
+              in: relations.filter((r) => r.entityType === 'document').map((r) => r.entityId),
+            },
+          },
+        }),
+        this.prisma.resource.findMany({
+          select: { resourceId: true, title: true, contentPreview: true },
+          where: {
+            resourceId: {
+              in: relations.filter((r) => r.entityType === 'resource').map((r) => r.entityId),
+            },
+          },
+        }),
+      ]);
 
       contentItems.push(
         ...documents.map((d) => ({
+          id: d.docId,
           title: d.title,
           contentPreview: d.contentPreview,
+          content: d.contentPreview, // TODO: check if we need to get the whole content
+          type: 'document' as const,
         })),
         ...resources.map((r) => ({
+          id: r.resourceId,
           title: r.title,
           contentPreview: r.contentPreview,
+          content: r.contentPreview, // TODO: check if we need to get the whole content
+          type: 'resource' as const,
         })),
       );
     }
 
-    if (contentItems.length === 0) {
-      return { title: '' };
-    }
+    return contentItems;
+  }
+
+  async autoNameCanvas(user: User, param: AutoNameCanvasRequest) {
+    const { canvasId, directUpdate = false } = param;
+    const contentItems = await this.getCanvasContentItems(user, canvasId);
 
     const defaultModel = await this.providerService.findDefaultProviderItem(
       user,

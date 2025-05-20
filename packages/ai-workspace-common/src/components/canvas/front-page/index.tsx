@@ -31,6 +31,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const [form] = Form.useForm();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
+  const [isPilotActivated, setIsPilotActivated] = useState(false);
+
   const skills = useListSkills();
   const templateLanguage = i18n.language;
   const templateCategoryId = '';
@@ -87,8 +89,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
 
   const handleSendMessage = useCallback(() => {
     if (!query?.trim()) return;
-    debouncedCreateCanvas('front-page');
-  }, [query, debouncedCreateCanvas]);
+    debouncedCreateCanvas('front-page', { isPilotActivated });
+  }, [query, debouncedCreateCanvas, isPilotActivated]);
 
   const findSkillByName = useCallback(
     (name: string) => {
@@ -266,6 +268,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                   handleSendMessage={handleSendMessage}
                   handleAbort={() => {}}
                   loading={isCreating}
+                  isPilotActivated={isPilotActivated}
+                  setIsPilotActivated={setIsPilotActivated}
                   customActions={[
                     {
                       icon: <IconPlus className="flex items-center justify-center" />,

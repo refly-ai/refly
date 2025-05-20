@@ -228,6 +228,7 @@ export interface SkillEventMap {
   artifact: [data: SkillEvent];
   structured_data: [data: SkillEvent];
   token_usage: [data: SkillEvent];
+  invoke_skill: [data: SkillEvent];
   error: [data: SkillEvent];
 }
 

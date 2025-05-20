@@ -15,6 +15,7 @@ import {
   getDocumentDetail,
   getPageByCanvasId,
   getPageDetail,
+  getPilotSessionDetail,
   getProjectDetail,
   getResourceDetail,
   getSettings,
@@ -30,6 +31,7 @@ import {
   listMcpServers,
   listModels,
   listPages,
+  listPilotSessions,
   listProjects,
   listProviderItemOptions,
   listProviderItems,
@@ -52,6 +54,7 @@ import {
   GetDocumentDetailData,
   GetPageByCanvasIdData,
   GetPageDetailData,
+  GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
   ListCanvasesData,
@@ -61,6 +64,7 @@ import {
   ListLabelInstancesData,
   ListMcpServersData,
   ListPagesData,
+  ListPilotSessionsData,
   ListProjectsData,
   ListProviderItemOptionsData,
   ListProviderItemsData,
@@ -295,6 +299,22 @@ export const ensureUseListSkillTriggersData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListSkillTriggersKeyFn(clientOptions),
     queryFn: () => listSkillTriggers({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListPilotSessionsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListPilotSessionsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListPilotSessionsKeyFn(clientOptions),
+    queryFn: () => listPilotSessions({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetPilotSessionDetailData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetPilotSessionDetailData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetPilotSessionDetailKeyFn(clientOptions),
+    queryFn: () => getPilotSessionDetail({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetSettingsData = (
   queryClient: QueryClient,

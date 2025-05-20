@@ -184,7 +184,7 @@ export const getNodeCommonStyles = ({
   box-border
   transition-all
   duration-200
-  border-[2px]
+  border-[1px]
   border-solid
   overflow-hidden
   ${selected ? 'border-[#00968F] dark:border-gray-700' : 'border-transparent'}
