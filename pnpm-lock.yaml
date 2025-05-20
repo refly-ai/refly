@@ -1007,6 +1007,9 @@ importers:
       '@tiptap/extension-color':
         specifier: 2.7.4
         version: 2.7.4(@tiptap/core@2.7.4)(@tiptap/extension-text-style@2.7.4)
+      '@tiptap/extension-hard-break':
+        specifier: ^2.12.0
+        version: 2.12.0(@tiptap/core@2.7.4)
       '@tiptap/extension-highlight':
         specifier: 2.7.4
         version: 2.7.4(@tiptap/core@2.7.4)
@@ -1022,6 +1025,9 @@ importers:
       '@tiptap/extension-list-item':
         specifier: 2.7.4
         version: 2.7.4(@tiptap/core@2.7.4)
+      '@tiptap/extension-mention':
+        specifier: ^2.12.0
+        version: 2.12.0(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)(@tiptap/suggestion@2.7.4)
       '@tiptap/extension-placeholder':
         specifier: 2.0.3
         version: 2.0.3(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
@@ -10291,8 +10297,8 @@ packages:
       '@tiptap/pm': 2.7.4
     dev: false
 
-  /@tiptap/extension-hard-break@2.9.1(@tiptap/core@2.7.4):
-    resolution: {integrity: sha512-fCuaOD/b7nDjm47PZ58oanq7y4ccS2wjPh42Qm0B0yipu/1fmC8eS1SmaXmk28F89BLtuL6uOCtR1spe+lZtlQ==}
+  /@tiptap/extension-hard-break@2.12.0(@tiptap/core@2.7.4):
+    resolution: {integrity: sha512-08MNS2PK5DzdnAfqXn4krmJ/xebKmWpRpYqqN5EM8AvetYKlAJyTVSpo0ZUeGbZ3EZiPm9djgSnrLqpFUDjRCg==}
     peerDependencies:
       '@tiptap/core': ^2.7.0
     dependencies:
@@ -10368,6 +10374,18 @@ packages:
       '@tiptap/core': ^2.7.0
     dependencies:
       '@tiptap/core': 2.7.4(@tiptap/pm@2.7.4)
+    dev: false
+
+  /@tiptap/extension-mention@2.12.0(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)(@tiptap/suggestion@2.7.4):
+    resolution: {integrity: sha512-+b/fqOU+pRWWAo0ZfyInkhkvV0Ub5RpNrYZ45v2nn5PjbXbxyxNQ51zT6cGk2F6Jmc6UBmlR8iqqNTIQY9ieEg==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+      '@tiptap/pm': ^2.7.0
+      '@tiptap/suggestion': ^2.7.0
+    dependencies:
+      '@tiptap/core': 2.7.4(@tiptap/pm@2.7.4)
+      '@tiptap/pm': 2.7.4
+      '@tiptap/suggestion': 2.7.4(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
     dev: false
 
   /@tiptap/extension-ordered-list@2.9.1(@tiptap/core@2.7.4):
@@ -10542,7 +10560,7 @@ packages:
       '@tiptap/extension-document': 2.9.1(@tiptap/core@2.7.4)
       '@tiptap/extension-dropcursor': 2.9.1(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
       '@tiptap/extension-gapcursor': 2.9.1(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
-      '@tiptap/extension-hard-break': 2.9.1(@tiptap/core@2.7.4)
+      '@tiptap/extension-hard-break': 2.12.0(@tiptap/core@2.7.4)
       '@tiptap/extension-heading': 2.9.1(@tiptap/core@2.7.4)
       '@tiptap/extension-history': 2.9.1(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
       '@tiptap/extension-horizontal-rule': 2.7.4(@tiptap/core@2.7.4)(@tiptap/pm@2.7.4)
