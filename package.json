@@ -48,7 +48,7 @@
     "typescript": "5.3.3",
     "vitest": "^2.1.9"
   },
-  "packageManager": "pnpm@8.15.8",
+  "packageManager": "pnpm@10.9.0",
   "config": {
     "commitizen": {
       "path": "cz-conventional-changelog"

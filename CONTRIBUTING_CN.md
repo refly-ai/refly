@@ -72,6 +72,7 @@ nvm install 20.19.0
 ```shell
 docker version
 node -v # v20.19.0
+pnpm -v # 10.9.0 or higher
 ```
 
 ### 4. 进入开发
