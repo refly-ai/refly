@@ -35,6 +35,7 @@
   font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   font-size: 14px;
   line-height: 22px;
+  line-height: 22px;
 }
 
 .ProseMirror .is-empty::before {
