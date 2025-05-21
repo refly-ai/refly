@@ -107,7 +107,7 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
           class: cn(
             'prose dark:prose-invert prose-sm sm:prose-base focus:outline-none w-full h-full',
             'bg-transparent !outline-none !box-border !border-none !resize-none focus:!shadow-none',
-            'py-2 px-3',
+            '!p-0' /* Force remove padding */,
             inputClassName,
             readonly && 'cursor-not-allowed text-opacity-70',
             'leading-normal',

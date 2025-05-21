@@ -33,7 +33,8 @@ export const SkillMention = Node.create<SkillMentionOptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        class: 'font-medium text-green-600 dark:text-green-400 cursor-pointer mention-skill',
+        class:
+          'font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-md cursor-pointer mention-skill',
       },
       suggestion: {
         char: '/',

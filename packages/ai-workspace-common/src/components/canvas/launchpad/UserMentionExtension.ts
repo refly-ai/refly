@@ -33,7 +33,8 @@ export const UserMention = Node.create<UserMentionOptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        class: 'font-semibold text-blue-500 dark:text-blue-400 cursor-pointer mention-user',
+        class:
+          'font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-md cursor-pointer mention-user',
       },
       suggestion: {
         char: '@',
