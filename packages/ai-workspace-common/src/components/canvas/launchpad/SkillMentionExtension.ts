@@ -97,7 +97,7 @@ export const SkillMention = Node.create<SkillMentionOptions>({
                 showOnCreate: true,
                 interactive: true,
                 trigger: 'manual',
-                placement: 'bottom-start',
+                placement: 'top-start',
               });
             },
             onUpdate: (props) => {

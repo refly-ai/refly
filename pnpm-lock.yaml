@@ -1190,6 +1190,9 @@ importers:
       motion:
         specifier: ^12.4.5
         version: 12.4.5(react-dom@18.3.1)(react@18.3.1)
+      pinyin-pro:
+        specifier: ^3.26.0
+        version: 3.26.0
       prism-react-renderer:
         specifier: ~2.3.1
         version: 2.3.1(react@18.3.1)
@@ -22456,6 +22459,10 @@ packages:
       safe-stable-stringify: 2.5.0
       sonic-boom: 4.1.0
       thread-stream: 3.1.0
+    dev: false
+
+  /pinyin-pro@3.26.0:
+    resolution: {integrity: sha512-HcBZZb0pvm0/JkPhZHWA5Hqp2cWHXrrW/WrV+OtaYYM+kf35ffvZppIUuGmyuQ7gDr1JDJKMkbEE+GN0wfMoGg==}
     dev: false
 
   /pirates@4.0.6:

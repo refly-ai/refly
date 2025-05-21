@@ -103,6 +103,7 @@
     "mitt": "~3.0.1",
     "modern-screenshot": "^4.6.0",
     "motion": "^12.4.5",
+    "pinyin-pro": "^3.26.0",
     "prism-react-renderer": "~2.3.1",
     "prop-types": "^15.8.1",
     "qs": "~6.12.3",
