@@ -41,6 +41,8 @@ export const UserMention = Node.create<UserMentionOptions>({
       HTMLAttributes: {
         class:
           'font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-md cursor-pointer mention-user',
+        style:
+          'display: inline-block; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; margin: 2px 0;',
       },
       suggestion: {
         char: '@',

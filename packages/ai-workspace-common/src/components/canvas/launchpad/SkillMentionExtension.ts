@@ -35,6 +35,8 @@ export const SkillMention = Node.create<SkillMentionOptions>({
       HTMLAttributes: {
         class:
           'font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-md cursor-pointer mention-skill',
+        style:
+          'display: inline-block; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; margin: 2px 0;',
       },
       suggestion: {
         char: '/',
