@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/stores/search';
 import type { Skill } from '@refly/openapi-schema';
 import { cn } from '@refly/utils/cn';
+import { MentionListRef } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/MentionList';
 
 interface ChatInputProps {
   readonly: boolean;
@@ -57,12 +58,7 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
     }, []);
 
     const getPlaceholderText = useCallback(() => {
-      const defaultValue = isMac
-        ? t('commonQnA.placeholderMac', {
-            ns: 'skill',
-            defaultValue: t('commonQnA.placeholder', { ns: 'skill' }),
-          })
-        : t('commonQnA.placeholder', { ns: 'skill' });
+      const defaultValue = `Ask anything (${isMac ? 'cmd' : 'ctl'} + L), / to use skill, @ to mention context`;
       return selectedSkillName
         ? t(`${selectedSkillName}.placeholder${isMac ? 'Mac' : ''}`, {
             ns: 'skill',
@@ -112,7 +108,23 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
             readonly && 'cursor-not-allowed text-opacity-70',
             'leading-normal',
           ),
-          style: `min-height: ${minRows ? minRows * 1.6 : 1.6}em; max-height: ${maxRows ? maxRows * 1.6 : 9.6}em; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;`,
+          style: `
+            min-height: ${minRows ? minRows * 1.6 : 1.6}em; 
+            max-height: ${maxRows ? maxRows * 1.6 : 9.6}em; 
+            overflow-y: auto; 
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 22px;
+            color: var(--editor-text-color);
+            background-color: var(--editor-bg-color);
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 4px 0;
+            -webkit-font-smoothing: antialiased;
+          `,
         },
         handleKeyDown: (view, event) => {
           const userMentionState = UserMentionPluginKey.getState(editor!.state);
@@ -172,7 +184,7 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
         className={cn(
           'w-full h-full flex flex-col flex-grow relative',
           readonly && 'opacity-70 cursor-not-allowed',
-          'border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 tiptap-editor-wrapper',
+          'border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 tiptap-editor-wrapper',
         )}
       >
         <EditorContent

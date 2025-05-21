@@ -5,6 +5,7 @@
 @import 'additional-styles/utility-patterns.css';
 @import 'additional-styles/toggle-switch.css';
 @import 'additional-styles/theme.css';
+@import './tiptap.css';
 
 @import 'tailwindcss/utilities';
 
