@@ -121,7 +121,7 @@ export const ImportFromFile = () => {
     }
 
     // limit audio file size to 50MB
-    if (isAudio && file.size / 1024 / 1024 > 100) {
+    if (isAudio && file.size / 1024 / 1024 > 50) {
       message.error(t('resource.import.audioTooLarge', { size: '50MB' }));
       return false;
     }
