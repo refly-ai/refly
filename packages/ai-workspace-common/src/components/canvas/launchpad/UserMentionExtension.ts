@@ -4,7 +4,9 @@ import { PluginKey } from '@tiptap/pm/state';
 import Suggestion, { SuggestionOptions } from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
 import tippy, { Instance as TippyInstance, GetReferenceClientRect } from 'tippy.js';
-import MentionList, { MentionListRef, MentionListItem, MentionListProps } from './MentionList'; // Assuming MentionList is in the same directory
+import MentionList, { MentionListRef, MentionListItem, MentionListProps } from './MentionList';
+import { CanvasNodeType } from '@refly/openapi-schema';
+import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 
 // Define a unique PluginKey for this extension
 export const UserMentionPluginKey = new PluginKey('userMentionSuggestion');
@@ -12,16 +14,19 @@ export const UserMentionPluginKey = new PluginKey('userMentionSuggestion');
 export interface UserMentionOptions {
   HTMLAttributes: Record<string, any>;
   suggestion: Omit<SuggestionOptions<MentionListItem>, 'editor'>; // editor is implicitly provided by Suggestion
+  getNodes?: () => IContextItem[];
+  onSelectNode?: (node: IContextItem) => void;
 }
 
-// Mock user data - this should ideally be passed in or imported from a shared location
-const mockUsers: MentionListItem[] = [
-  { id: 'user-1', label: 'Alice Wonderland' },
-  { id: 'user-2', label: 'Bob The Builder' },
-  { id: 'user-3', label: 'Charlie Brown' },
-  { id: 'user-4', label: 'Diana Prince' },
-  { id: 'user-5', label: 'Edward Scissorhands' },
-];
+// Convert IContextItem to MentionListItem
+const convertNodeToMentionItem = (node: IContextItem): MentionListItem => {
+  return {
+    id: node.entityId || '',
+    label: node.title || '',
+    type: node.type as CanvasNodeType,
+    metadata: node.metadata,
+  };
+};
 
 export const UserMention = Node.create<UserMentionOptions>({
   name: 'userMention', // Unique name for this node
@@ -41,18 +46,36 @@ export const UserMention = Node.create<UserMentionOptions>({
         pluginKey: UserMentionPluginKey, // Use the unique key
         allowSpaces: true,
         items: ({ query }) => {
-          return mockUsers
-            .filter((user) => user.label.toLowerCase().startsWith(query.toLowerCase()))
-            .slice(0, 5);
+          // 如果没有提供 getNodes 函数，返回空数组
+          const extension = UserMention;
+
+          console.log({ extension });
+
+          if (!extension.child.options.getNodes) {
+            return [];
+          }
+
+          // 获取节点数据并转换为 MentionListItem 格式
+          const nodes = extension.child.options.getNodes();
+          console.log({ nodes });
+
+          return nodes
+            .map(convertNodeToMentionItem)
+            .filter((item) => item.label.toLowerCase().includes(query.toLowerCase()));
         },
         command: ({ editor, range, props }) => {
+          // 插入提及节点
           editor
             .chain()
             .focus()
             .insertContentAt(range, [
               {
                 type: this.name, // Use this node's name
-                attrs: { id: props.id, label: props.label },
+                attrs: {
+                  id: props.id,
+                  label: props.label,
+                  type: props.type,
+                },
               },
               {
                 type: 'text',
@@ -60,6 +83,19 @@ export const UserMention = Node.create<UserMentionOptions>({
               },
             ])
             .run();
+
+          // 如果提供了 onSelectNode 回调，则调用它
+          const extension = UserMention;
+          if (extension.child.options.onSelectNode && props.id && props.type) {
+            // 构造一个 IContextItem 对象
+            const contextItem: IContextItem = {
+              entityId: props.id,
+              title: props.label,
+              type: props.type,
+              metadata: props.metadata,
+            };
+            extension.child.options.onSelectNode(contextItem);
+          }
         },
         render: () => {
           let component: ReactRenderer<MentionListRef, MentionListProps>;
@@ -155,6 +191,29 @@ export const UserMention = Node.create<UserMentionOptions>({
           return { 'data-label': attributes.label };
         },
       },
+      type: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-type'),
+        renderHTML: (attributes) => {
+          if (!attributes.type) {
+            return {};
+          }
+          return { 'data-type': attributes.type };
+        },
+      },
+      metadata: {
+        default: null,
+        parseHTML: (element) => {
+          const metadataStr = element.getAttribute('data-metadata');
+          return metadataStr ? JSON.parse(metadataStr) : null;
+        },
+        renderHTML: (attributes) => {
+          if (!attributes.metadata) {
+            return {};
+          }
+          return { 'data-metadata': JSON.stringify(attributes.metadata) };
+        },
+      },
     };
   },
 
@@ -167,9 +226,14 @@ export const UserMention = Node.create<UserMentionOptions>({
   },
 
   renderHTML({ node, HTMLAttributes }) {
+    // 根据节点类型添加不同的样式
+    const typeClass = node.attrs.type ? `mention-node-type-${node.attrs.type}` : '';
     return [
       'span',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { 'data-type': this.name }),
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        'data-type': this.name,
+        class: `${this.options.HTMLAttributes.class} ${typeClass}`,
+      }),
       this.options.suggestion.char + node.attrs.label, // Render @label
     ];
   },

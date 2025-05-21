@@ -15,8 +15,13 @@ import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/store
 import type { Skill } from '@refly/openapi-schema';
 import { cn } from '@refly/utils/cn';
 import { MentionListRef } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/MentionList';
+// 移除 useCanvasData 导入，因为它依赖于 React Flow 的 zustand provider
+import {
+  IContextItem,
+  useContextPanelStoreShallow,
+} from '@refly-packages/ai-workspace-common/stores/context-panel';
 
-interface ChatInputProps {
+export interface ChatInputProps {
   readonly: boolean;
   query: string;
   setQuery: (text: string) => void;
@@ -29,6 +34,9 @@ interface ChatInputProps {
   onUploadImage?: (file: File) => Promise<void>;
   onUploadMultipleImages?: (files: File[]) => Promise<void>;
   onFocus?: () => void;
+  // 以下是从 ChatInputWithProvider 传递的可选属性
+  getUnselectedNodes?: () => IContextItem[];
+  handleNodeSelect?: (node: IContextItem) => void;
 }
 
 const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
@@ -43,6 +51,9 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
       minRows,
       handleSendMessage,
       onFocus,
+      // 接收从 ChatInputWithProvider 传递的属性
+      getUnselectedNodes: externalGetUnselectedNodes,
+      handleNodeSelect: externalHandleNodeSelect,
     },
     ref,
   ) => {
@@ -52,6 +63,35 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
       setIsSearchOpen: state.setIsSearchOpen,
     }));
     const mentionListRef = useRef<MentionListRef>(null);
+
+    // 使用上下文面板状态
+    const contextPanelStore = useContextPanelStoreShallow((state) => ({
+      addContextItem: state.addContextItem,
+      contextItems: state.contextItems,
+    }));
+
+    // 获取未选择的节点数据
+    // 优先使用从 ChatInputWithProvider 传递的函数，如果没有则使用默认实现
+    const getUnselectedNodes = useCallback(() => {
+      if (externalGetUnselectedNodes) {
+        return externalGetUnselectedNodes();
+      }
+      // 默认返回一个空数组
+      return [];
+    }, [externalGetUnselectedNodes, contextPanelStore.contextItems]);
+
+    // 处理节点选择
+    // 优先使用从 ChatInputWithProvider 传递的函数，如果没有则使用默认实现
+    const handleNodeSelect = useCallback(
+      (node: IContextItem) => {
+        if (externalHandleNodeSelect) {
+          externalHandleNodeSelect(node);
+        } else if (node?.entityId) {
+          contextPanelStore.addContextItem(node);
+        }
+      },
+      [externalHandleNodeSelect, contextPanelStore],
+    );
 
     useEffect(() => {
       setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
@@ -84,7 +124,10 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
           placeholder: getPlaceholderText,
           emptyEditorClass: 'is-editor-empty',
         }),
-        UserMention, // Use the custom UserMention extension
+        UserMention.configure({
+          getNodes: getUnselectedNodes,
+          onSelectNode: handleNodeSelect,
+        }), // 配置 UserMention 扩展，传入节点数据和处理函数
         SkillMention, // Use the custom SkillMention extension
       ],
       content: query,

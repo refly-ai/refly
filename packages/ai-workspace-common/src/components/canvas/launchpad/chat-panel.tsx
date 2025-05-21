@@ -19,7 +19,6 @@ import {
 import { ContextManager } from './context-manager';
 import { ConfigManager } from './config-manager';
 import { ChatActions, CustomAction } from './chat-actions';
-import { ChatInput } from './chat-input';
 
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useSyncSelectedNodesToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-selected-nodes-to-context';
@@ -37,6 +36,7 @@ import { ActionStatus, SkillTemplateConfig } from '@refly/openapi-schema';
 import { ContextTarget } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { ProjectKnowledgeToggle } from '@refly-packages/ai-workspace-common/components/project/project-knowledge-toggle';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import ChatInputWithProvider from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input-with-provider';
 
 const PremiumBanner = () => {
   const { t } = useTranslation();
@@ -393,7 +393,7 @@ export const ChatPanel = ({
             />
 
             <div>
-              <ChatInput
+              <ChatInputWithProvider
                 readonly={readonly}
                 query={chatStore.newQAText}
                 setQuery={chatStore.setNewQAText}

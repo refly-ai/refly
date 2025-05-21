@@ -5,7 +5,8 @@ import { cn } from '@refly/utils/cn';
 export interface MentionListItem {
   id: string;
   label: string;
-  // Add any other properties your items might have
+  type?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface MentionListProps {
@@ -76,18 +77,22 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
     const colors = getHighlightColors();
 
     return (
-      <div className="tiptap-mention-popup bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden text-sm">
-        <div className="py-1">
+      <div
+        className="tiptap-mention-popup bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden text-sm"
+        style={{ width: '240px' }}
+      >
+        <div className="py-1 max-h-60 overflow-y-auto">
           {items.map((item, index) => (
             <div
               key={item.id}
               className={cn(
                 'block w-full text-left px-3 py-1.5 text-gray-800 dark:text-gray-200 focus:outline-none transition-colors duration-150 ease-in-out',
-                'font-normal tracking-wide',
+                'font-normal tracking-wide truncate',
                 colors.hover,
                 index === selectedIndex ? `${colors.selected} ${colors.text}` : '',
               )}
               onClick={() => selectItem(index)}
+              title={item.label}
             >
               {item.label}
             </div>

@@ -75,6 +75,9 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
   }, [onClickOutside]);
 
   const { nodes } = useCanvasData();
+
+  console.log({ nodes: nodes });
+
   const targetNodes = nodes.filter((node) => !['skill', 'group'].includes(node?.type));
 
   const handleClear = () => {
