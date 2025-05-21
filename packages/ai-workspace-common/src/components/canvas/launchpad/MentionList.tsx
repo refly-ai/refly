@@ -1,6 +1,7 @@
 // packages/ai-workspace-common/src/components/canvas/launchpad/MentionList.tsx
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { cn } from '@refly/utils/cn';
+import { getContextItemIcon } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager/utils/icon';
 
 export interface MentionListItem {
   id: string;
@@ -87,14 +88,17 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
               key={item.id}
               className={cn(
                 'block w-full text-left px-3 py-1.5 text-gray-800 dark:text-gray-200 focus:outline-none transition-colors duration-150 ease-in-out',
-                'font-normal tracking-wide truncate',
+                'font-normal tracking-wide',
                 colors.hover,
                 index === selectedIndex ? `${colors.selected} ${colors.text}` : '',
               )}
               onClick={() => selectItem(index)}
               title={item.label}
             >
-              {item.label}
+              <span className="inline-flex items-center mr-2 text-orange-500">
+                {getContextItemIcon(item.type as any, { width: 12, height: 12 })}
+              </span>
+              <span className="truncate inline-block max-w-[calc(100%-24px)]">{item.label}</span>
             </div>
           ))}
         </div>
