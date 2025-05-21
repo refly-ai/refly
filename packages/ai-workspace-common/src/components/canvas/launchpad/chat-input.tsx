@@ -20,6 +20,7 @@ import {
   IContextItem,
   useContextPanelStoreShallow,
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { useListSkills } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 
 export interface ChatInputProps {
   readonly: boolean;
@@ -50,6 +51,7 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
       maxRows,
       minRows,
       handleSendMessage,
+      handleSelectSkill,
       onFocus,
       // 接收从 ChatInputWithProvider 传递的属性
       getUnselectedNodes: externalGetUnselectedNodes,
@@ -107,6 +109,17 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
         : defaultValue;
     }, [t, isMac, selectedSkillName]);
 
+    // 获取技能列表
+    const skills = useListSkills();
+
+    // 创建获取技能显示名称的函数
+    const getSkillDisplayName = useCallback(
+      (skillName: string) => {
+        return t(`${skillName}.name`, { ns: 'skill' });
+      },
+      [t],
+    );
+
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
@@ -128,7 +141,11 @@ const BaseChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
           getNodes: getUnselectedNodes,
           onSelectNode: handleNodeSelect,
         }), // 配置 UserMention 扩展，传入节点数据和处理函数
-        SkillMention, // Use the custom SkillMention extension
+        SkillMention.configure({
+          skills: skills, // 传递技能列表
+          onSelectSkill: handleSelectSkill, // 传递选择回调
+          getDisplayName: getSkillDisplayName, // 传递获取显示名称的函数
+        }), // 配置 SkillMention 扩展，传入技能数据和处理函数
       ],
       content: query,
       editable: !readonly,

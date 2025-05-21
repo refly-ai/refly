@@ -9,6 +9,36 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { pinyin } from 'pinyin-pro';
 
+// 简单的拼音匹配函数
+export const matchesPinyin = (text: string, query: string): boolean => {
+  const lowerQuery = query.toLowerCase();
+
+  // 1. Direct match (already case-insensitive)
+  if (text.toLowerCase().includes(lowerQuery)) {
+    return true;
+  }
+
+  // 2. Full pinyin match
+  // E.g., "你好 World" -> "nihaoworld"
+  const fullPinyin = (
+    pinyin(text, { toneType: 'none', nonZh: 'consecutive' }) as string
+  ).toLowerCase();
+  if (fullPinyin.includes(lowerQuery)) {
+    return true;
+  }
+
+  // 3. Pinyin initials match
+  // E.g., "你好 World" -> "nhw"
+  const initialsPinyin = (
+    pinyin(text, { pattern: 'first', toneType: 'none', nonZh: 'consecutive' }) as string
+  ).toLowerCase();
+  if (initialsPinyin.includes(lowerQuery)) {
+    return true;
+  }
+
+  return false;
+};
+
 // Define a unique PluginKey for this extension
 export const UserMentionPluginKey = new PluginKey('userMentionSuggestion');
 
@@ -60,36 +90,6 @@ export const UserMention = Node.create<UserMentionOptions>({
 
           // 获取节点数据并转换为 MentionListItem 格式
           const nodes = extension.child.options.getNodes();
-
-          // 简单的拼音匹配函数
-          const matchesPinyin = (text: string, query: string): boolean => {
-            const lowerQuery = query.toLowerCase();
-
-            // 1. Direct match (already case-insensitive)
-            if (text.toLowerCase().includes(lowerQuery)) {
-              return true;
-            }
-
-            // 2. Full pinyin match
-            // E.g., "你好 World" -> "nihaoworld"
-            const fullPinyin = (
-              pinyin(text, { toneType: 'none', nonZh: 'consecutive' }) as string
-            ).toLowerCase();
-            if (fullPinyin.includes(lowerQuery)) {
-              return true;
-            }
-
-            // 3. Pinyin initials match
-            // E.g., "你好 World" -> "nhw"
-            const initialsPinyin = (
-              pinyin(text, { pattern: 'first', toneType: 'none', nonZh: 'consecutive' }) as string
-            ).toLowerCase();
-            if (initialsPinyin.includes(lowerQuery)) {
-              return true;
-            }
-
-            return false;
-          };
 
           return nodes.map(convertNodeToMentionItem).filter((item) => {
             // 直接匹配或拼音匹配

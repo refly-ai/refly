@@ -5,6 +5,8 @@ import Suggestion, { SuggestionOptions } from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
 import tippy, { Instance as TippyInstance, GetReferenceClientRect } from 'tippy.js';
 import MentionList, { MentionListRef, MentionListItem, MentionListProps } from './MentionList';
+import type { Skill } from '@refly/openapi-schema';
+import { matchesPinyin } from './UserMentionExtension';
 
 // Define a unique PluginKey for this extension
 export const SkillMentionPluginKey = new PluginKey('skillMentionSuggestion');
@@ -12,16 +14,10 @@ export const SkillMentionPluginKey = new PluginKey('skillMentionSuggestion');
 export interface SkillMentionOptions {
   HTMLAttributes: Record<string, any>;
   suggestion: Omit<SuggestionOptions<MentionListItem>, 'editor'>;
+  skills?: Skill[]; // 添加技能列表参数
+  onSelectSkill?: (skill: Skill) => void; // 添加选择回调
+  getDisplayName?: (skillName: string) => string; // 添加获取显示名称的函数
 }
-
-// Mock skill data - this should ideally be passed in or imported from a shared location
-const mockSkills: MentionListItem[] = [
-  { id: 'skill-1', label: 'Summarize Document' },
-  { id: 'skill-2', label: 'Translate Text' },
-  { id: 'skill-3', label: 'Generate Code' },
-  { id: 'skill-4', label: 'Analyze Sentiment' },
-  { id: 'skill-5', label: 'Extract Keywords' },
-];
 
 export const SkillMention = Node.create<SkillMentionOptions>({
   name: 'skillMention', // Unique name for this node
@@ -43,17 +39,49 @@ export const SkillMention = Node.create<SkillMentionOptions>({
         pluginKey: SkillMentionPluginKey, // Use the unique key
         allowSpaces: true, // Or false, depending on skill name patterns
         items: ({ query }) => {
-          return mockSkills
-            .filter((skill) => skill.label.toLowerCase().startsWith(query.toLowerCase()))
-            .slice(0, 5);
+          // 如果没有提供技能列表，返回空数组
+          const extension = SkillMention;
+
+          if (!extension.child.options.skills) {
+            return [];
+          }
+
+          // 使用真实的技能列表
+          return extension.child.options.skills
+            .map((skill) => {
+              // 使用 getDisplayName 函数获取显示名称，如果没有提供则使用原始名称
+              const displayName = extension.child.options.getDisplayName
+                ? extension.child.options.getDisplayName(skill.name)
+                : skill.name;
+
+              return {
+                id: skill.name,
+                label: displayName, // 使用显示名称作为标签
+                metadata: skill, // 保存完整的技能对象以便回调使用
+              };
+            })
+            .filter(
+              (item) =>
+                item.label.toLowerCase().includes(query.toLowerCase()) ||
+                matchesPinyin(item.label, query),
+            );
         },
         command: ({ editor, range, props }) => {
+          const options = editor.extensionManager.extensions.find(
+            (extension) => extension.name === 'skillMention',
+          )?.options as SkillMentionOptions;
+
+          // 如果有选择回调且 props.metadata 存在，则调用回调
+          if (options?.onSelectSkill && props.metadata) {
+            options.onSelectSkill(props.metadata);
+          }
+
           editor
             .chain()
             .focus()
             .insertContentAt(range, [
               {
-                type: this.name,
+                type: 'skillMention',
                 attrs: { id: props.id, label: props.label },
               },
               {
