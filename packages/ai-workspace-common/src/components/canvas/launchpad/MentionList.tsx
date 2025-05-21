@@ -1,5 +1,5 @@
 // packages/ai-workspace-common/src/components/canvas/launchpad/MentionList.tsx
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from 'react'; // Added useRef
 import { cn } from '@refly/utils/cn';
 import { getContextItemIcon } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager/utils/icon';
 
@@ -23,6 +23,7 @@ export interface MentionListRef {
 const MentionList = forwardRef<MentionListRef, MentionListProps>(
   ({ items, command, type = 'user' }, ref) => {
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const listContainerRef = useRef<HTMLDivElement>(null); // Ref for the scrollable list container
 
     const selectItem = useCallback(
       (index: number) => {
@@ -34,25 +35,53 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
       [command, items],
     );
 
-    useEffect(() => setSelectedIndex(0), [items]);
+    useEffect(() => {
+      setSelectedIndex(0); // Reset index when items change, ensuring it's always valid
+    }, [items]);
 
-    useImperativeHandle(ref, () => ({
-      onKeyDown: ({ event }: { event: KeyboardEvent }) => {
-        if (event.key === 'ArrowUp') {
-          setSelectedIndex((prevIndex) => (prevIndex + items.length - 1) % items.length);
-          return true;
+    // Effect to scroll the selected item into view
+    useEffect(() => {
+      if (listContainerRef.current && items.length > 0) {
+        // Ensure selectedIndex is within bounds, though setSelectedIndex logic should handle this
+        const validIndex = Math.max(0, Math.min(selectedIndex, items.length - 1));
+        const selectedItemElement = listContainerRef.current.children[validIndex] as HTMLElement;
+        if (selectedItemElement) {
+          selectedItemElement.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest',
+          });
         }
-        if (event.key === 'ArrowDown') {
-          setSelectedIndex((prevIndex) => (prevIndex + 1) % items.length);
-          return true;
-        }
-        if (event.key === 'Enter') {
-          selectItem(selectedIndex);
-          return true;
-        }
-        return false;
-      },
-    }));
+      }
+    }, [selectedIndex, items]); // Rerun when selectedIndex or items (which might affect listContainerRef.current.children) change
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+          if (!items.length) {
+            // If there are no items, do nothing
+            return false;
+          }
+          if (event.key === 'ArrowUp') {
+            setSelectedIndex((prevIndex) => (prevIndex + items.length - 1) % items.length);
+            return true;
+          }
+          if (event.key === 'ArrowDown') {
+            setSelectedIndex((prevIndex) => (prevIndex + 1) % items.length);
+            return true;
+          }
+          if (event.key === 'Enter') {
+            // Ensure selectedIndex is valid before calling command
+            if (selectedIndex >= 0 && selectedIndex < items.length) {
+              selectItem(selectedIndex);
+            }
+            return true;
+          }
+          return false;
+        },
+      }),
+      [items, selectedIndex, selectItem],
+    ); // Dependencies for useImperativeHandle
 
     if (!items.length) {
       return null;
@@ -82,7 +111,10 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
         className="tiptap-mention-popup bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden text-sm"
         style={{ width: '240px' }}
       >
-        <div className="py-1 max-h-60 overflow-y-auto">
+        <div
+          ref={listContainerRef} // Assign the ref to the scrollable div
+          className="py-1 max-h-60 overflow-y-auto"
+        >
           {items.map((item, index) => (
             <div
               key={item.id}
