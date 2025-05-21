@@ -67,3 +67,54 @@
 .dark .ProseMirror p {
   color: var(--editor-text-color) !important;
 }
+
+/* Mention styles */
+.mention {
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+/* User mention styles */
+.mention[data-type="user"] {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dark .mention[data-type="user"] {
+  background-color: #1e40af;
+  color: #dbeafe;
+  border: 1px solid #60a5fa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Skill mention styles */
+.mention[data-type="skill"] {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dark .mention[data-type="skill"] {
+  background-color: #065f46;
+  color: #d1fae5;
+  border: 1px solid #34d399;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Mention popup styles */
+.tiptap-mention-popup {
+  z-index: 50;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.dark .tiptap-mention-popup {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}

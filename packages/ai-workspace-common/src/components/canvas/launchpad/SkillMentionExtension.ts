@@ -69,8 +69,19 @@ export const SkillMention = Node.create<SkillMentionOptions>({
             onStart: (props) => {
               component = new ReactRenderer(MentionList, {
                 props: props.decorationNode
-                  ? { ...props, editor: props.editor, items: props.items, command: props.command }
-                  : { editor: props.editor, items: props.items, command: props.command },
+                  ? {
+                      ...props,
+                      editor: props.editor,
+                      items: props.items,
+                      command: props.command,
+                      type: 'skill',
+                    }
+                  : {
+                      editor: props.editor,
+                      items: props.items,
+                      command: props.command,
+                      type: 'skill',
+                    },
                 editor: props.editor,
               });
 

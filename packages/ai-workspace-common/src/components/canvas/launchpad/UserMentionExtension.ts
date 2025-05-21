@@ -69,8 +69,19 @@ export const UserMention = Node.create<UserMentionOptions>({
             onStart: (props) => {
               component = new ReactRenderer(MentionList, {
                 props: props.decorationNode
-                  ? { ...props, editor: props.editor, items: props.items, command: props.command }
-                  : { editor: props.editor, items: props.items, command: props.command },
+                  ? {
+                      ...props,
+                      editor: props.editor,
+                      items: props.items,
+                      command: props.command,
+                      type: 'user',
+                    }
+                  : {
+                      editor: props.editor,
+                      items: props.items,
+                      command: props.command,
+                      type: 'user',
+                    },
                 editor: props.editor,
               });
 
