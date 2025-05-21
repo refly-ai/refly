@@ -19,7 +19,6 @@ import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/e
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useUpdateSourceList } from '@refly-packages/ai-workspace-common/hooks/canvas/use-update-source-list';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
-import { MediaPreview } from './media-preview';
 import { HiLink, HiOutlineXMark } from 'react-icons/hi2';
 
 const { Dragger } = Upload;
@@ -39,11 +38,25 @@ interface FileItem {
 
 const ALLOWED_FILE_EXTENSIONS = [
   // Document Type
-  '.pdf', '.docx', '.rtf', '.txt', '.md', '.html', '.epub',
+  '.pdf',
+  '.docx',
+  '.rtf',
+  '.txt',
+  '.md',
+  '.html',
+  '.epub',
   // media type
-  '.mp4', '.webm', '.mov', '.avi', '.mkv',
+  '.mp4',
+  '.webm',
+  '.mov',
+  '.avi',
+  '.mkv',
   // audio type
-  '.mp3', '.wav', '.ogg', '.m4a', '.aac'
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.aac',
 ];
 
 export const ImportFromFile = () => {
@@ -96,23 +109,23 @@ export const ImportFromFile = () => {
   const validateMediaFile = (file: File) => {
     const isVideo = file.type.startsWith('video/');
     const isAudio = file.type.startsWith('audio/');
-    
+
     if (!isVideo && !isAudio) {
       return true; // No media file, just return true
     }
-    
+
     // limit video file size to 100MB
     if (isVideo && file.size / 1024 / 1024 > 100) {
       message.error(t('resource.import.videoTooLarge', { size: '100MB' }));
       return false;
     }
-    
+
     // limit audio file size to 50MB
-    if (isAudio && file.size / 1024 / 1024 > 50) {
+    if (isAudio && file.size / 1024 / 1024 > 100) {
       message.error(t('resource.import.audioTooLarge', { size: '50MB' }));
       return false;
     }
-    
+
     return true;
   };
 
@@ -266,22 +279,12 @@ export const ImportFromFile = () => {
     const { item } = props;
     const { t } = useTranslation();
 
-    const isMediaFile = (url: string) => {
-      const mediaExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.ogg', '.m4a', '.aac'];
-      return mediaExtensions.some(ext => url.toLowerCase().endsWith(ext));
-    };
-
-    const getMediaType = (url: string): 'video' | 'audio' => {
-      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-      return videoExtensions.some(ext => url.toLowerCase().endsWith(ext)) ? 'video' : 'audio';
-    };
-
     return (
       <Spin spinning={!item.isHandled && !item.isError} style={{ width: '100%', minHeight: 80 }}>
         <List.Item
           actions={[
             <Button
-              key={item.key}
+              key={item.uid}
               type="text"
               className="assist-action-item"
               onClick={() => {
@@ -291,12 +294,12 @@ export const ImportFromFile = () => {
               <HiLink />
             </Button>,
             <Button
-              key={item.key}
+              key={item.uid}
               type="text"
               className="assist-action-item"
               onClick={() => {
                 const newLinks = importResourceStore?.fileList?.filter((link) => {
-                  return link?.key !== item?.key;
+                  return link?.uid !== item?.uid;
                 });
                 importResourceStore.setFileList(newLinks);
               }}
@@ -306,37 +309,29 @@ export const ImportFromFile = () => {
           ]}
           className="intergation-result-list-item"
         >
-          {isMediaFile(item.url) ? (
-            <MediaPreview
-              url={item.url}
-              type={getMediaType(item.url)}
-              title={item.title}
-            />
-          ) : (
-            <List.Item.Meta
-              avatar={<Avatar src={item.image} />}
-              title={
-                <div className="intergation-result-intro">
-                  <p>
-                    <span
-                      className="intergation-result-url"
-                      onClick={() => window.open(item?.url, '_blank')}
-                    >
-                      {item?.url}
-                    </span>
-                  </p>
-                  <p>
-                    {item?.isError ? (
-                      <span className="text-red-500">{t('resource.import.scrapeError')}</span>
-                    ) : (
-                      item?.title
-                    )}
-                  </p>
-                </div>
-              }
-              description={item.description}
-            />
-          )}
+          <List.Item.Meta
+            avatar={<Avatar src={item.image} />}
+            title={
+              <div className="intergation-result-intro">
+                <p>
+                  <span
+                    className="intergation-result-url"
+                    onClick={() => window.open(item?.url, '_blank')}
+                  >
+                    {item?.url}
+                  </span>
+                </p>
+                <p>
+                  {item?.isError ? (
+                    <span className="text-red-500">{t('resource.import.scrapeError')}</span>
+                  ) : (
+                    item?.title
+                  )}
+                </p>
+              </div>
+            }
+            description={item.description}
+          />
         </List.Item>
       </Spin>
     );
