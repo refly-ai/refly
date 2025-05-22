@@ -6,6 +6,7 @@ import { NodeRenderer } from './NodeRenderer';
 import { type NodeRelation } from './ArtifactRenderer';
 import '../styles/preview-mode.css';
 import Logo from '@/assets/logo.svg';
+import { useThemeStoreShallow } from '@refly-packages/ai-workspace-common/stores/theme';
 
 interface PreviewModeProps {
   nodes: NodeRelation[];
@@ -45,6 +46,9 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
   previewContentRef,
 }) => {
   const { t } = useTranslation();
+  const { isDarkMode } = useThemeStoreShallow((state: { isDarkMode: boolean }) => ({
+    isDarkMode: state.isDarkMode,
+  }));
 
   // Calculate current progress percentage
   const progressPercentage = useMemo(() => {
@@ -55,7 +59,7 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
   return (
     <div
       ref={previewContentRef}
-      className={`preview-content-container relative ${uiState.isIdle ? 'idle' : ''} ${uiState.showNav ? 'show-nav' : ''}`}
+      className={`preview-content-container relative bg-white dark:bg-gray-900 ${uiState.isIdle ? 'idle' : ''} ${uiState.showNav ? 'show-nav' : ''}`}
       onMouseMove={onMouseMove}
     >
       {/* Top progress bar */}
@@ -118,8 +122,20 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
         className={`preview-minimap ${showPreviewMinimap ? 'preview-minimap-show' : ''}`}
         onMouseEnter={onMinimapMouseEnter}
         onMouseLeave={onMinimapMouseLeave}
+        style={{
+          background: isDarkMode ? 'rgba(17, 24, 39, 0.95)' : '',
+          borderRight: isDarkMode ? '1px solid rgba(75, 85, 99, 0.2)' : '',
+        }}
       >
-        <div className="preview-minimap-header">{t('pages.components.navigationDirectory')}</div>
+        <div
+          className="preview-minimap-header"
+          style={{
+            background: isDarkMode ? 'rgba(17, 24, 39, 0.95)' : '',
+            borderBottom: isDarkMode ? '1px solid rgba(75, 85, 99, 0.2)' : '',
+          }}
+        >
+          {t('pages.components.navigationDirectory')}
+        </div>
         <div className="preview-minimap-content">
           {nodes.map((node, index) => (
             <div
@@ -129,29 +145,27 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
             >
               <div className="preview-minimap-number">{index + 1}</div>
               <div className="preview-minimap-thumbnail">
-                <div
-                  style={{
-                    height: '100%',
-                    overflow: 'hidden',
-                    transform: 'scale(0.95)',
-                    background: '#fff',
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                  }}
-                >
+                <div className="h-full overflow-hidden transform scale(0.95) bg-white dark:bg-gray-900 pointer-events-none select-none">
                   <NodeRenderer node={node} isFullscreen={false} isModal={true} isMinimap={true} />
                 </div>
                 {/* Transparent mask layer */}
                 <div className="absolute inset-0 bg-transparent" />
               </div>
-              <div className="preview-minimap-title">{getNodeTitle(node)}</div>
+              <div
+                className="preview-minimap-title"
+                style={{
+                  color: isDarkMode ? 'rgba(229, 231, 235, 0.8)' : '',
+                }}
+              >
+                {getNodeTitle(node)}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Main preview content */}
-      <div className="preview-content">
+      <div className="preview-content bg-white dark:bg-gray-900">
         <div
           className="w-full h-full preview-slide"
           style={{
@@ -167,7 +181,7 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
 
       {/* Swipe hint - only displayed on mobile devices */}
       {nodes.length > 1 && (
-        <div className="swipe-hint md:hidden">
+        <div className="swipe-hint md:hidden text-gray-200 dark:text-gray-800 dark:bg-gray-900">
           {t('pages.components.swipeHint', { current: currentSlideIndex + 1, total: nodes.length })}
         </div>
       )}
@@ -177,7 +191,12 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
         <div
           className={`preview-footer ${uiState.isIdle ? 'opacity-0' : 'opacity-100'}`}
           onMouseEnter={onUiInteraction}
-          style={{ transition: 'opacity 0.3s ease-out' }}
+          style={{
+            transition: 'opacity 0.3s ease-out',
+            background: isDarkMode
+              ? 'linear-gradient(to top, rgba(17, 24, 39, 0.7), transparent)'
+              : 'linear-gradient(to top, rgba(0, 0, 0, 0.2), transparent)',
+          }}
         >
           <div className="dots-container">
             {nodes.map((_, index) => (
@@ -198,10 +217,12 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
         style={{
           filter: 'drop-shadow(0 0 4px rgba(0, 0, 0, 0.2))',
           backdropFilter: 'blur(2px)',
-          background: 'rgba(255, 255, 255, 0.15)',
+          background: isDarkMode ? 'rgba(30, 30, 30, 0.7)' : 'rgba(255, 255, 255, 0.15)',
           borderRadius: '30px',
           padding: '5px 10px',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
+          border: isDarkMode
+            ? '1px solid rgba(75, 85, 99, 0.4)'
+            : '1px solid rgba(255, 255, 255, 0.2)',
         }}
       >
         <div className="flex items-center gap-2">
@@ -209,14 +230,19 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
             src={Logo}
             alt="Refly"
             className="h-6 w-6"
-            style={{ filter: 'saturate(1.2) brightness(1.05)' }}
+            style={{
+              filter: isDarkMode
+                ? 'brightness(1.3) saturate(1.2)'
+                : 'saturate(1.2) brightness(1.05)',
+            }}
           />
           <span
-            className="text-sm font-bold"
+            className="text-sm font-bold text-[#333] dark:text-gray-100"
             translate="no"
             style={{
-              color: '#333',
-              textShadow: '0 1px 1px rgba(255, 255, 255, 0.5)',
+              textShadow: isDarkMode
+                ? '0 1px 2px rgba(0, 0, 0, 0.8)'
+                : '0 1px 1px rgba(255, 255, 255, 0.5)',
             }}
           >
             Refly

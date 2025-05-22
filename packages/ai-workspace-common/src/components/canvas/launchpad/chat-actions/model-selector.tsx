@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { Button, Divider, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { IconDown } from '@arco-design/web-react/icon';
+import { DownOutlined } from '@ant-design/icons';
 import { ModelIcon } from '@lobehub/icons';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { LLMModelConfig, ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
@@ -58,7 +58,7 @@ const SelectedModelDisplay = memo(
         icon={<ModelIcon model={model.name} type={'color'} />}
       >
         {model.label}
-        <IconDown />
+        <DownOutlined />
       </Button>
     );
   },

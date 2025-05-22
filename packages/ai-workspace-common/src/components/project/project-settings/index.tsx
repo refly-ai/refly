@@ -10,7 +10,7 @@ import { AiOutlineMenuFold } from 'react-icons/ai';
 import { CreateProjectModal } from '@refly-packages/ai-workspace-common/components/project/project-create';
 import { ActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/project-list';
 import { SlPicture } from 'react-icons/sl';
-import { IconDown } from '@arco-design/web-react/icon';
+import { DownOutlined } from '@ant-design/icons';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 
 const { Paragraph, Text } = Typography;
@@ -92,7 +92,7 @@ export const ProjectSettings = ({
               className="flex-shrink-0"
               type="text"
               size="small"
-              icon={<IconDown className={cn(iconClassName, 'text-gray-500')} />}
+              icon={<DownOutlined className={cn(iconClassName, 'text-gray-500')} />}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowLibraryModal(true);

@@ -9,18 +9,21 @@ import { ImagePreview } from '@refly-packages/ai-workspace-common/components/com
 import { domToPng } from 'modern-screenshot';
 import copyToClipboard from 'copy-to-clipboard';
 import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { IconCode, IconEye, IconCopy } from '@arco-design/web-react/icon';
+import { CopyOutlined, CodeOutlined, EyeOutlined } from '@ant-design/icons';
 import { MarkdownMode } from '../../types';
 import { PiMagnifyingGlassPlusBold } from 'react-icons/pi';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
+import { useThemeStoreShallow } from '../../../../stores/theme';
 
 // Initialize mermaid config
-mermaid.initialize({
-  startOnLoad: true,
-  theme: 'default',
-  securityLevel: 'loose',
-  fontFamily: 'inherit',
-});
+const initializeMermaid = (isDarkMode: boolean) => {
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: isDarkMode ? 'dark' : 'default',
+    securityLevel: 'loose',
+    fontFamily: 'inherit',
+  });
+};
 
 interface MermaidProps {
   children: ReactNode;
@@ -34,7 +37,7 @@ const generateUniqueId = (() => {
   return () => `mermaid-diagram-${counter++}`;
 })();
 
-// Cache for rendered diagrams
+// Cache for rendered diagrams (key: mermaidCode + theme)
 const diagramCache = new Map<string, string>();
 
 const MermaidComponent = memo(
@@ -48,6 +51,11 @@ const MermaidComponent = memo(
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [zoomImageUrl, setZoomImageUrl] = useState<string>('');
 
+    // Get theme information from the store
+    const { isDarkMode } = useThemeStoreShallow((state) => ({
+      isDarkMode: state.isDarkMode,
+    }));
+
     const isInteractive = mode === 'interactive';
 
     // Generate a unique ID for this instance
@@ -55,6 +63,12 @@ const MermaidComponent = memo(
 
     // Memoize the mermaid code to prevent unnecessary recalculations
     const mermaidCode = useMemo(() => children?.toString().trim() ?? '', [children]);
+
+    // Create a cache key that includes the theme mode
+    const cacheKey = useMemo(
+      () => `${mermaidCode}_${isDarkMode ? 'dark' : 'light'}`,
+      [mermaidCode, isDarkMode],
+    );
 
     // Extract a title for the diagram file name
     const diagramTitle = useMemo(() => {
@@ -64,14 +78,25 @@ const MermaidComponent = memo(
       return (titleMatch?.[1] || 'diagram').trim().replace(/\s+/g, '_').slice(0, 20);
     }, [mermaidCode]);
 
+    // Initialize mermaid with the current theme
+    useEffect(() => {
+      // Update mermaid config when theme changes
+      initializeMermaid(isDarkMode);
+
+      // Re-render the diagram when theme changes
+      if (rendered) {
+        renderDiagram();
+      }
+    }, [isDarkMode]);
+
     // Memoize the render function to maintain referential equality
     const renderDiagram = useCallback(
       debounce(async () => {
         if (!mermaidRef.current) return;
 
         try {
-          // Check cache first
-          const cachedSvg = diagramCache.get(mermaidCode);
+          // Check cache first with theme-aware key
+          const cachedSvg = diagramCache.get(cacheKey);
           if (cachedSvg) {
             mermaidRef.current.innerHTML = cachedSvg;
             svgRef.current = cachedSvg;
@@ -83,14 +108,17 @@ const MermaidComponent = memo(
           // Clear previous content
           mermaidRef.current.innerHTML = '';
 
+          // Ensure mermaid is initialized with current theme
+          initializeMermaid(isDarkMode);
+
           // Validate mermaid syntax first
           await mermaid.parse(mermaidCode);
 
           // Generate and render the diagram with unique ID
           const { svg } = await mermaid.render(diagramId, mermaidCode);
 
-          // Cache the result
-          diagramCache.set(mermaidCode, svg);
+          // Cache the result with theme-aware key
+          diagramCache.set(cacheKey, svg);
           svgRef.current = svg;
 
           if (mermaidRef.current) {
@@ -106,14 +134,14 @@ const MermaidComponent = memo(
             // Show original code in a pre tag with error message
             mermaidRef.current.innerHTML = `
               <div class="text-red-500 text-xs mb-2">${t('components.markdown.mermaidError')}</div>
-              <pre class="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+              <pre class="text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded overflow-x-auto">
                 <code>${mermaidCode}</code>
               </pre>
             `;
           }
         }
       }, 300),
-      [mermaidCode, t, diagramId],
+      [mermaidCode, t, diagramId, cacheKey, isDarkMode],
     );
 
     // Toggle between code and preview mode
@@ -141,9 +169,9 @@ const MermaidComponent = memo(
         const svgElement = mermaidRef.current.querySelector('svg') as SVGElement;
         if (!svgElement) return '';
 
-        // Set a white background to ensure transparency is handled properly
+        // Set background based on theme
         const originalBg = svgElement.style.background;
-        svgElement.style.background = 'white';
+        svgElement.style.background = isDarkMode ? '#1f2937' : 'white';
 
         // Use domToPng with proper settings for diagrams
         const dataUrl = await domToPng(svgElement, {
@@ -152,7 +180,7 @@ const MermaidComponent = memo(
           },
           scale: 5, // Higher resolution
           quality: 1,
-          backgroundColor: '#ffffff',
+          backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
         });
 
         // Restore original background
@@ -163,7 +191,7 @@ const MermaidComponent = memo(
         console.error('Error generating PNG:', error);
         return '';
       }
-    }, []);
+    }, [isDarkMode]);
 
     // Copy the diagram to clipboard
     const copyImage = useCallback(async () => {
@@ -322,7 +350,7 @@ const MermaidComponent = memo(
       () =>
         cn(
           'mermaid-diagram w-full flex justify-center items-center overflow-x-auto relative group pt-8',
-          showOriginalCode && 'bg-gray-50 rounded',
+          showOriginalCode && 'bg-gray-50 dark:bg-gray-800 rounded',
         ),
       [showOriginalCode],
     );
@@ -335,14 +363,14 @@ const MermaidComponent = memo(
         />
 
         {viewMode === 'code' && (
-          <pre className="w-full bg-gray-50 p-4 rounded overflow-x-auto">
-            <code>{mermaidCode}</code>
+          <pre className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded overflow-x-auto">
+            <code className="text-gray-800 dark:text-gray-200">{mermaidCode}</code>
           </pre>
         )}
 
         {/* Action Buttons - Only show when successfully rendered or in code view */}
         {(rendered || viewMode === 'code') && (
-          <div className="absolute top-0 right-2 z-50 flex transition-all duration-200 ease-in-out bg-white/80 backdrop-blur-sm rounded-md shadow-sm border border-gray-100">
+          <div className="absolute top-0 right-2 z-50 flex transition-all duration-200 ease-in-out bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-md shadow-sm border border-gray-100 dark:border-gray-700">
             <Space>
               {viewMode === 'preview' && (
                 <>
@@ -350,7 +378,7 @@ const MermaidComponent = memo(
                     <Button
                       type="text"
                       size="small"
-                      className="flex items-center justify-center hover:bg-gray-100"
+                      className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                       icon={
                         <PiMagnifyingGlassPlusBold className="w-4 h-4 flex items-center justify-center" />
                       }
@@ -368,7 +396,7 @@ const MermaidComponent = memo(
                     <Button
                       type="text"
                       size="small"
-                      className="flex items-center justify-center hover:bg-gray-100"
+                      className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                       icon={<DownloadIcon className="w-4 h-4 flex items-center justify-center" />}
                       onClick={(e) => {
                         e.preventDefault();
@@ -384,7 +412,7 @@ const MermaidComponent = memo(
                     <Button
                       type="text"
                       size="small"
-                      className="flex items-center justify-center hover:bg-gray-100"
+                      className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                       icon={<CopyIcon className="w-4 h-4 flex items-center justify-center" />}
                       onClick={(e) => {
                         e.preventDefault();
@@ -400,8 +428,8 @@ const MermaidComponent = memo(
                 <Button
                   type="text"
                   size="small"
-                  className="flex items-center justify-center hover:bg-gray-100"
-                  icon={<IconCopy className="w-4 h-4 flex items-center justify-center" />}
+                  className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  icon={<CopyOutlined className="w-4 h-4 flex items-center justify-center" />}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -419,12 +447,12 @@ const MermaidComponent = memo(
                 <Button
                   type="text"
                   size="small"
-                  className="flex items-center justify-center hover:bg-gray-100"
+                  className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                   icon={
                     viewMode === 'code' ? (
-                      <IconEye className="w-4 h-4 flex items-center justify-center" />
+                      <EyeOutlined className="w-4 h-4 flex items-center justify-center" />
                     ) : (
-                      <IconCode className="w-4 h-4 flex items-center justify-center" />
+                      <CodeOutlined className="w-4 h-4 flex items-center justify-center" />
                     )
                   }
                   onClick={(e) => {
@@ -441,7 +469,7 @@ const MermaidComponent = memo(
                   <Button
                     type="text"
                     size="small"
-                    className="flex items-center justify-center hover:bg-gray-100"
+                    className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     icon={<IconCodeArtifact className="w-4 h-4 flex items-center justify-center" />}
                     onClick={(e) => {
                       e.preventDefault();

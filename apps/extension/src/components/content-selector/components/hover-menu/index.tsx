@@ -1,8 +1,7 @@
 import React from 'react';
-import { Button } from '@arco-design/web-react';
+import { Button, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { IconCopy, IconSave } from '@arco-design/web-react/icon';
-import { Message } from '@arco-design/web-react';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { getSelectionNodesMarkdown } from '@refly/utils/html2md';
 
@@ -23,13 +22,13 @@ const HoverMenu: React.FC<HoverMenuProps> = React.memo(
         const selectedContent = getSelectionNodesMarkdown();
         if (selectedContent) {
           copyToClipboard(selectedContent);
-          Message.success(t('extension.floatingSphere.copySuccess'));
+          message.success(t('extension.floatingSphere.copySuccess'));
           onCopy?.();
           onRemove?.();
         }
       } catch (err) {
         console.error('Failed to copy content:', err);
-        Message.error(t('extension.floatingSphere.copyError'));
+        message.error(t('extension.floatingSphere.copyError'));
       }
     };
 

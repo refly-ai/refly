@@ -20,6 +20,10 @@ const BASE64_IMAGE_URL_REGEX =
 const HTTP_IMAGE_URL_REGEX =
   /https?:\/\/[^\s"'<>]+\.(?<format>png|jpeg|jpg|gif|webp|svg)[^\s"'<>]*/i;
 
+// Regular expression to match HTTP/HTTPS audio links
+const HTTP_AUDIO_URL_REGEX =
+  /https?:\/\/[^\s"'<>]+\.(?<format>mp3|wav|ogg|flac|m4a|aac)[^\s"'<>]*/i;
+
 /**
  * Utility function to safely extract content from regex matches
  * @param content The content to extract from
@@ -54,6 +58,27 @@ const extractImageUrl = (
 
   // Then check if it contains an HTTP image URL
   const httpMatch = HTTP_IMAGE_URL_REGEX.exec(str);
+  if (httpMatch?.groups && httpMatch[0]) {
+    return {
+      url: httpMatch[0],
+      format: httpMatch.groups.format,
+      isHttp: true,
+    };
+  }
+
+  return { url: undefined, format: undefined, isHttp: false };
+};
+
+/**
+ * Extract audio URL from a string
+ * @param str The string to search in
+ * @returns The found audio URL, format and whether it's an HTTP link
+ */
+const extractAudioUrl = (
+  str: string,
+): { url: string | undefined; format: string | undefined; isHttp: boolean } => {
+  // Check if it contains an HTTP audio URL
+  const httpMatch = HTTP_AUDIO_URL_REGEX.exec(str);
   if (httpMatch?.groups && httpMatch[0]) {
     return {
       url: httpMatch[0],
@@ -106,6 +131,12 @@ function rehypePlugin() {
               let isHttpUrl = false;
               let imageNameFromArgs = 'image'; // Default image name
 
+              // Attempt to find and process audio data in the result
+              let audioUrlFromDetails: string | undefined;
+              let audioFormatFromDetails: string | undefined;
+              let _isAudioHttpUrl = false;
+              let audioNameFromArgs = 'audio'; // Default audio name
+
               // 1. Directly search for image URL in the result string
               const { url, format, isHttp } = extractImageUrl(resultStr);
               if (url) {
@@ -123,6 +154,30 @@ function rehypePlugin() {
                     imageUrlFromDetails = jsonResult.url;
                     imageFormatFromDetails = jsonResult.format;
                     isHttpUrl = jsonResult.isHttp;
+                  }
+                } catch (_e) {
+                  // Not a JSON result, or JSON parsing failed
+                }
+              }
+
+              // 1. Directly search for audio URL in the result string
+              const audioResult = extractAudioUrl(resultStr);
+              if (audioResult.url) {
+                audioUrlFromDetails = audioResult.url;
+                audioFormatFromDetails = audioResult.format;
+                // isAudioHttpUrl 变量在这里不需要使用，但我们保留它以保持代码结构一致性
+                _isAudioHttpUrl = true;
+              } else {
+                // 2. If direct search fails, try to parse JSON and search in the stringified JSON result
+                try {
+                  const resultObj = JSON.parse(resultStr);
+                  const resultJsonStr = JSON.stringify(resultObj);
+                  const jsonAudioResult = extractAudioUrl(resultJsonStr);
+
+                  if (jsonAudioResult.url) {
+                    audioUrlFromDetails = jsonAudioResult.url;
+                    audioFormatFromDetails = jsonAudioResult.format;
+                    _isAudioHttpUrl = jsonAudioResult.isHttp;
                   }
                 } catch (_e) {
                   // Not a JSON result, or JSON parsing failed
@@ -164,6 +219,40 @@ function rehypePlugin() {
                 }
                 attributes['data-tool-image-name'] =
                   `${imageNameFromArgs}.${imageFormatFromDetails}`;
+              }
+
+              // Handle audio URL if found
+              if (audioUrlFromDetails && audioFormatFromDetails) {
+                // Set audio URL attribute
+                attributes['data-tool-audio-http-url'] = audioUrlFromDetails;
+
+                // Attempt to get audio name from arguments
+                if (argsStr) {
+                  try {
+                    const argsObj = JSON.parse(argsStr);
+                    if (typeof argsObj.params === 'string') {
+                      const paramsObj = JSON.parse(argsObj.params);
+                      if (paramsObj && typeof paramsObj.name === 'string') {
+                        const trimmedName = paramsObj.name.trim();
+                        if (trimmedName) {
+                          // Ensure non-empty name after trimming
+                          audioNameFromArgs = trimmedName;
+                        }
+                      }
+                    } else if (argsObj && typeof argsObj.name === 'string') {
+                      const trimmedName = argsObj.name.trim();
+                      if (trimmedName) {
+                        // Ensure non-empty name after trimming
+                        audioNameFromArgs = trimmedName;
+                      }
+                    }
+                  } catch (_e) {
+                    // Argument parsing failed
+                  }
+                }
+                attributes['data-tool-audio-name'] =
+                  `${audioNameFromArgs}.${audioFormatFromDetails}`;
+                attributes['data-tool-audio-format'] = audioFormatFromDetails;
               }
             }
 
@@ -250,6 +339,12 @@ function rehypePlugin() {
               let isHttpUrl = false;
               let imageNameFromArgs = 'image'; // Default image name
 
+              // Attempt to find and process audio data in the result
+              let audioUrlFromDetails: string | undefined;
+              let audioFormatFromDetails: string | undefined;
+              let _isAudioHttpUrl = false;
+              let audioNameFromArgs = 'audio'; // Default audio name
+
               // Directly search for image URL in the result string
               const { url, format, isHttp } = extractImageUrl(resultStr);
               if (url) {
@@ -267,6 +362,30 @@ function rehypePlugin() {
                     imageUrlFromDetails = jsonResult.url;
                     imageFormatFromDetails = jsonResult.format;
                     isHttpUrl = jsonResult.isHttp;
+                  }
+                } catch (_e) {
+                  // Not a JSON result, or JSON parsing failed
+                }
+              }
+
+              // Directly search for audio URL in the result string
+              const audioResult = extractAudioUrl(resultStr);
+              if (audioResult.url) {
+                audioUrlFromDetails = audioResult.url;
+                audioFormatFromDetails = audioResult.format;
+                // isAudioHttpUrl 变量在这里不需要使用，但我们保留它以保持代码结构一致性
+                _isAudioHttpUrl = true;
+              } else {
+                // If direct search fails, try to parse JSON and search in the stringified JSON result
+                try {
+                  const resultObj = JSON.parse(resultStr);
+                  const resultJsonStr = JSON.stringify(resultObj);
+                  const jsonAudioResult = extractAudioUrl(resultJsonStr);
+
+                  if (jsonAudioResult.url) {
+                    audioUrlFromDetails = jsonAudioResult.url;
+                    audioFormatFromDetails = jsonAudioResult.format;
+                    _isAudioHttpUrl = jsonAudioResult.isHttp;
                   }
                 } catch (_e) {
                   // Not a JSON result, or JSON parsing failed
@@ -306,6 +425,40 @@ function rehypePlugin() {
                 }
                 attributes['data-tool-image-name'] =
                   `${imageNameFromArgs}.${imageFormatFromDetails}`;
+              }
+
+              // Handle audio URL if found
+              if (audioUrlFromDetails && audioFormatFromDetails) {
+                // Set audio URL attribute
+                attributes['data-tool-audio-http-url'] = audioUrlFromDetails;
+
+                // Attempt to get audio name from arguments
+                if (argsStr) {
+                  try {
+                    const argsObj = JSON.parse(argsStr);
+                    if (typeof argsObj.params === 'string') {
+                      const paramsObj = JSON.parse(argsObj.params);
+                      if (paramsObj && typeof paramsObj.name === 'string') {
+                        const trimmedName = paramsObj.name.trim();
+                        if (trimmedName) {
+                          // Ensure non-empty name after trimming
+                          audioNameFromArgs = trimmedName;
+                        }
+                      }
+                    } else if (argsObj && typeof argsObj.name === 'string') {
+                      const trimmedName = argsObj.name.trim();
+                      if (trimmedName) {
+                        // Ensure non-empty name after trimming
+                        audioNameFromArgs = trimmedName;
+                      }
+                    }
+                  } catch (_e) {
+                    // Argument parsing failed
+                  }
+                }
+                attributes['data-tool-audio-name'] =
+                  `${audioNameFromArgs}.${audioFormatFromDetails}`;
+                attributes['data-tool-audio-format'] = audioFormatFromDetails;
               }
             }
 

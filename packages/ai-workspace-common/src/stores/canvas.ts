@@ -1,12 +1,16 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { useShallow } from 'zustand/react/shallow';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import {
   CanvasNodeData,
   ResponseNodeMeta,
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
+import {
+  createAutoEvictionStorage,
+  CacheInfo,
+} from '@refly-packages/ai-workspace-common/stores/utils/storage-manager';
 
 interface NodePreviewData {
   metadata?: Record<string, unknown>;
@@ -32,7 +36,7 @@ export interface LinearThreadMessage {
 }
 
 export interface CanvasState {
-  config: Record<string, CanvasConfig>;
+  config: Record<string, CanvasConfig & CacheInfo>;
   currentCanvasId: string | null;
   initialFitViewCompleted?: boolean;
   showPreview: boolean;
@@ -46,7 +50,7 @@ export interface CanvasState {
   showTemplates: boolean;
   showReflyPilot: boolean;
   showSlideshow: boolean;
-  linearThreadMessages: LinearThreadMessage[];
+  linearThreadMessages: (LinearThreadMessage & CacheInfo)[];
   tplConfig: Record<string, any> | null;
   canvasPage: Record<string, string>;
 
@@ -104,6 +108,9 @@ const defaultCanvasState = () => ({
   canvasPage: {},
 });
 
+// Create our custom storage with appropriate configuration
+const canvasStorage = createAutoEvictionStorage();
+
 export const useCanvasStore = create<CanvasState>()(
   persist(
     immer((set) => ({
@@ -137,17 +144,20 @@ export const useCanvasStore = create<CanvasState>()(
         set((state) => {
           state.config[canvasId] ??= defaultCanvasConfig();
           state.config[canvasId].localSyncedAt = syncedAt;
+          state.config[canvasId].lastUsedAt = Date.now();
         }),
       setCanvasRemoteSynced: (canvasId, syncedAt) =>
         set((state) => {
           state.config[canvasId] ??= defaultCanvasConfig();
           state.config[canvasId].remoteSyncedAt = syncedAt;
+          state.config[canvasId].lastUsedAt = Date.now();
         }),
       addNodePreview: (canvasId, node) =>
         set((state) => {
           if (!node) return;
           state.config[canvasId] ??= defaultCanvasConfig();
           state.config[canvasId].nodePreviews ??= [];
+          state.config[canvasId].lastUsedAt = Date.now();
 
           const previews = state.config[canvasId].nodePreviews;
           const existingNodeIndex = previews.findIndex((n) => n.id === node.id);
@@ -193,6 +203,7 @@ export const useCanvasStore = create<CanvasState>()(
               // Otherwise, update the node
               state.config[canvasId].nodePreviews[existingNodeIndex] = node;
             }
+            state.config[canvasId].lastUsedAt = Date.now();
           }
         }),
       removeNodePreview: (canvasId, nodeId) =>
@@ -202,6 +213,7 @@ export const useCanvasStore = create<CanvasState>()(
           state.config[canvasId].nodePreviews = state.config[canvasId].nodePreviews.filter(
             (n) => n.id !== nodeId,
           );
+          state.config[canvasId].lastUsedAt = Date.now();
         }),
       updateNodePreview: (canvasId, node) =>
         set((state) => {
@@ -219,6 +231,7 @@ export const useCanvasStore = create<CanvasState>()(
                 }
               : n,
           );
+          state.config[canvasId].lastUsedAt = Date.now();
         }),
       reorderNodePreviews: (canvasId, sourceIndex, targetIndex) =>
         set((state) => {
@@ -230,6 +243,7 @@ export const useCanvasStore = create<CanvasState>()(
           previews.splice(targetIndex, 0, removed);
 
           state.config[canvasId].nodePreviews = previews;
+          state.config[canvasId].lastUsedAt = Date.now();
         }),
       setOperatingNodeId: (nodeId) => set({ operatingNodeId: nodeId }),
       setShowEdges: (show) =>
@@ -265,6 +279,7 @@ export const useCanvasStore = create<CanvasState>()(
           state.linearThreadMessages.push({
             ...message,
             timestamp: Date.now(),
+            lastUsedAt: Date.now(),
           });
         }),
       removeLinearThreadMessage: (id) =>
@@ -295,6 +310,7 @@ export const useCanvasStore = create<CanvasState>()(
     })),
     {
       name: 'canvas-storage',
+      storage: createJSONStorage(() => canvasStorage),
       partialize: (state) => ({
         config: state.config,
         currentCanvasId: state.currentCanvasId,

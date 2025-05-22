@@ -46,7 +46,7 @@
     "rimraf": "^5.0.10",
     "turbo": "^2.1.2",
     "typescript": "5.3.3",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.9"
   },
   "packageManager": "pnpm@8.15.8",
   "config": {

@@ -323,16 +323,12 @@ export const ConfigManager = React.memo(
       return formErrors?.[field];
     };
 
-    console.log('tplConfig', tplConfig);
-
     // Handle initial setup - only run on mount and when tplConfig changes significantly
     useEffect(() => {
       // Skip if already initialized with this config
       if (initializedRef.current) {
         return;
       }
-
-      console.log('Initializing ConfigManager with tplConfig:', tplConfig);
 
       // Track this initialization
       initializedRef.current = true;

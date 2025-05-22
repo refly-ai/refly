@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Typography, Select, Tooltip } from '@arco-design/web-react';
-import { IconDown, IconUp } from '@arco-design/web-react/icon';
+import { Typography, Select, Tooltip } from 'antd';
+import { DownOutlined, UpOutlined } from '@ant-design/icons';
 
 // styles
 import './index.scss';
@@ -63,11 +63,11 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
       <div className="form-header-left" onClick={handleCollapseChange}>
         {enableCollapse && (
           <Typography.Text style={{ color: 'rgba(0, 0, 0, .5)' }}>
-            {collapsed ? <IconDown /> : <IconUp />}
+            {collapsed ? <DownOutlined /> : <UpOutlined />}
           </Typography.Text>
         )}
         {icon && <div className="form-header-icon">{icon}</div>}
-        <Typography.Title heading={6} style={{ margin: 0, marginLeft: 8 }}>
+        <Typography.Title level={5} style={{ margin: 0, marginLeft: 8 }}>
           {title}
         </Typography.Title>
       </div>
@@ -81,15 +81,15 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
         {enableSelect && (
           <>
             {!isMultiSelect && (
-              <Tooltip content={selectTooltipTitle} getPopupContainer={getPopupContainer}>
+              <Tooltip title={selectTooltipTitle} getPopupContainer={getPopupContainer}>
                 <Select
-                  size="mini"
+                  size="small"
                   getPopupContainer={getPopupContainer}
                   className="context-selector"
                   defaultValue={options?.[0]?.value}
                   options={options}
                   onChange={handleSelectChange}
-                  autoWidth={{ minWidth: 100, maxWidth: 200 }}
+                  style={{ minWidth: 100, maxWidth: 200 }}
                 />
               </Tooltip>
             )}

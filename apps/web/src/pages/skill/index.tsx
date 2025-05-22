@@ -8,9 +8,7 @@ import { SkillInstanceList } from '@refly-packages/ai-workspace-common/component
 import { useNavigate, useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 import './index.scss';
 
-import { Radio } from '@arco-design/web-react';
-
-const RadioGroup = Radio.Group;
+import { Radio } from 'antd';
 
 const ContentHeader = (props: {
   val: string;
@@ -20,21 +18,22 @@ const ContentHeader = (props: {
   const { t } = useTranslation();
   return (
     <div className="skill-list__header flex items-center">
-      <RadioGroup
-        type="button"
+      <Radio.Group
+        buttonStyle="solid"
+        optionType="button"
         size="large"
         className="skill-list__tabs"
         defaultValue={val}
         value={val}
-        onChange={(val) => setVal(val)}
+        onChange={(e) => setVal(e.target.value)}
       >
-        <Radio value="instance" style={{ whiteSpace: 'nowrap' }}>
+        <Radio.Button value="instance" style={{ whiteSpace: 'nowrap' }}>
           {t('skill.tab.skillInstances')}
-        </Radio>
-        <Radio value="template" style={{ whiteSpace: 'nowrap' }}>
+        </Radio.Button>
+        <Radio.Button value="template" style={{ whiteSpace: 'nowrap' }}>
           {t('skill.tab.skillTemplate')}
-        </Radio>
-      </RadioGroup>
+        </Radio.Button>
+      </Radio.Group>
     </div>
   );
 };

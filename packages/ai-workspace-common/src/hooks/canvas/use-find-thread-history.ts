@@ -23,18 +23,6 @@ export const useFindThreadHistory = () => {
 
       const edges = getEdges();
 
-      console.log('startNode', startNode);
-
-      // Create a more detailed mapping for debugging
-      const allConnections = edges.map((edge) => ({
-        source: edge.source,
-        target: edge.target,
-        sourceNode: getNode(edge.source),
-        targetNode: getNode(edge.target),
-      }));
-
-      console.log('All connections:', allConnections);
-
       // Create two maps to handle bidirectional traversal if needed
       const targetToSourceMap = new Map();
       const sourceToTargetsMap = new Map();
@@ -53,9 +41,6 @@ export const useFindThreadHistory = () => {
         sourceToTargetsMap.get(edge.source).push(edge.target);
       }
 
-      // For debugging
-      console.log('Target to Source Map:', [...targetToSourceMap.entries()]);
-
       const history = [startNode];
       const visited = new Set<string>();
 
@@ -68,7 +53,6 @@ export const useFindThreadHistory = () => {
         const sourceIds = targetToSourceMap.get(nodeId) || [];
         for (const sourceId of sourceIds) {
           const sourceNode = getNode(sourceId);
-          console.log('Exploring source node:', sourceId, sourceNode?.type);
 
           if (sourceNode?.type === 'skillResponse') {
             // Only add if not already in history
@@ -83,15 +67,6 @@ export const useFindThreadHistory = () => {
 
       // Start the recursive search from the start node
       findSourceNodes(startNode.id);
-
-      console.log(
-        'Found history nodes:',
-        history.map((node) => ({
-          id: node.id,
-          type: node.type,
-          entityId: node.data?.entityId,
-        })),
-      );
 
       // Return nodes in reverse order (oldest to newest)
       return history.reverse();

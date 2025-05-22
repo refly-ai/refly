@@ -1,4 +1,4 @@
-import { Modal } from '@arco-design/web-react';
+import { Modal } from 'antd';
 import { Search } from './index';
 import { useSearchStoreShallow } from '@refly-packages/ai-workspace-common/stores/search';
 import { useEffect } from 'react';
@@ -29,13 +29,14 @@ export const BigSearchModal = () => {
 
   return (
     <Modal
-      visible={isSearchOpen}
+      open={isSearchOpen}
       onCancel={() => setIsSearchOpen(false)}
-      maskStyle={{ background: 'transparent' }}
       footer={null}
       closeIcon={null}
-      alignCenter={false}
-      style={{ background: 'transparent', top: '10%', width: 750 }}
+      styles={{
+        mask: { background: 'transparent' },
+        content: { background: 'transparent', top: '10%', width: 750 },
+      }}
     >
       {isSearchOpen ? <Search showList /> : null}
     </Modal>

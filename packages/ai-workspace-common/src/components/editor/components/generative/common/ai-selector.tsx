@@ -24,7 +24,7 @@ import {
   useContextPanelStoreShallow,
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
-import { IconCopy } from '@arco-design/web-react/icon';
+import { CopyOutlined } from '@ant-design/icons';
 import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
 import { useDocumentStore } from '@refly-packages/ai-workspace-common/stores/document';
 
@@ -312,7 +312,7 @@ export const AISelector = memo(({ onOpenChange, inPlaceEditType }: AISelectorPro
                 </Button>
                 <Button
                   size="small"
-                  icon={<IconCopy />}
+                  icon={<CopyOutlined />}
                   onClick={() => {
                     copyToClipboard(resultContent);
                     message.success(t('components.markdown.copySuccess'));

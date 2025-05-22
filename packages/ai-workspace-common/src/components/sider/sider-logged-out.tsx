@@ -17,7 +17,7 @@ import {
   IconLanguage,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
-import { IconDown } from '@arco-design/web-react/icon';
+import { DownOutlined } from '@ant-design/icons';
 
 export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
   const { t } = useTranslation();
@@ -81,7 +81,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
             >
               <IconLanguage className="h-4 w-4" />
               {t('language')}{' '}
-              <IconDown className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
+              <DownOutlined className="ml-1 transition-transform duration-200 group-hover:rotate-180" />
             </Button>
           </UILocaleList>
         </div>

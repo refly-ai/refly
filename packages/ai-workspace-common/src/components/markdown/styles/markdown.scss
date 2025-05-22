@@ -98,6 +98,18 @@
   background-color: var(--color-canvas-default);
   line-height: 1.5;
   word-wrap: break-word;
+  
+  // Custom formatting styles
+  del {
+    text-decoration: line-through;
+    color: var(--color-fg-subtle);
+  }
+  
+  u, .underline {
+    text-decoration: underline;
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.1em;
+  }
 }
 
 .light {
@@ -171,6 +183,7 @@
 .markdown-body b,
 .markdown-body strong {
   font-weight: var(--base-text-weight-semibold, 600);
+  color: inherit;
 }
 
 .markdown-body dfn {

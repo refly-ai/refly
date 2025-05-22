@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Timeline, Spin, Collapse } from 'antd';
-import { IconLoading } from '@arco-design/web-react/icon';
+import { LoadingOutlined } from '@ant-design/icons';
 import { useMultilingualSearchStore } from '../stores/multilingual-search';
 import './search-progress.scss';
 import { useTranslation } from 'react-i18next';
@@ -143,7 +143,9 @@ export const SearchProgress: React.FC = () => {
                   dot:
                     step.step === 'Processing...' ? (
                       <Spin
-                        indicator={<IconLoading style={{ fontSize: 12, color: '#00968f' }} spin />}
+                        indicator={
+                          <LoadingOutlined style={{ fontSize: 12, color: '#00968f' }} spin />
+                        }
                       />
                     ) : undefined,
                   children: (

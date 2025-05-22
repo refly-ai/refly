@@ -20,7 +20,7 @@ export const SubscriptionHint = memo(() => {
 
   return (
     <div className="w-full rounded-md p-2 bg-gray-100 dark:bg-gray-800">
-      <div className="mb-1 text-sm font-medium">
+      <div className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
         {t('settings.subscription.currentPlan')}:{' '}
         {t('settings.subscription.subscriptionStatus.free')}
       </div>

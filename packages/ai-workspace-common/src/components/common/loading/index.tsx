@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import Logo from '@/assets/logo.svg';
-import { IconLoading } from '@arco-design/web-react/icon';
+import { LoadingOutlined } from '@ant-design/icons';
 
 export const SuspenseLoading = () => {
   const { t } = useTranslation();
@@ -12,7 +12,7 @@ export const SuspenseLoading = () => {
         <span className="text-3xl font-bold">Refly </span>
       </div>
       <div className="text-gray-600 dark:text-gray-300">
-        <IconLoading className="mr-2" />
+        <LoadingOutlined className="mr-2" />
         <span>{t('common.appStarting')}</span>
       </div>
     </div>

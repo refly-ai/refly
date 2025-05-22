@@ -580,8 +580,8 @@ export function SlideshowEdit(props: PageEditProps) {
                 }}
                 className={`transition-all duration-300 h-[400px] rounded-lg bg-white dark:bg-gray-900 ${
                   activeNodeIndex === index
-                    ? 'shadow-[0_10px_30px_rgba(0,0,0,0.15)] transform -translate-y-1 border border-blue-400 dark:border-blue-500'
-                    : 'shadow-md hover:shadow-lg'
+                    ? 'shadow-[0_10px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_30px_rgba(255,255,255,0.15)] transform -translate-y-1'
+                    : 'shadow-md hover:shadow-lg dark:shadow-md dark:shadow-gray-950 dark:hover:shadow-lg dark:hover:shadow-gray-950'
                 }`}
               >
                 <NodeRenderer
@@ -777,7 +777,7 @@ export function SlideshowEdit(props: PageEditProps) {
       <Modal
         title={
           <div className="flex items-center text-lg font-medium">
-            <PlusOutlined className="mr-2 text-blue-500 dark:text-blue-400" />{' '}
+            <PlusOutlined className="mr-2 text-gray-900 dark:text-gray-200" />{' '}
             {t('common.addContent', 'Add Content')}
           </div>
         }
@@ -869,7 +869,7 @@ export function SlideshowEdit(props: PageEditProps) {
               icon={<ShareAltOutlined />}
               onClick={handleShareSubmit}
               loading={isSharing}
-              className="bg-green-600 hover:bg-green-700 border-none mt-2 dark:bg-green-300 dark:hover:bg-green-200"
+              className="bg-green-600 hover:bg-green-700 border-none mt-2 dark:bg-green-500"
             >
               {t('common.copyShareLink')}
             </Button>
@@ -877,21 +877,17 @@ export function SlideshowEdit(props: PageEditProps) {
             <div className="mt-4">
               <div className="text-gray-700 mb-2 dark:text-gray-200">{t('common.shareUrl')}</div>
               <div className="flex items-center">
-                <Input value={shareUrl} readOnly className="flex-1 bg-gray-50 dark:-g-gray-950" />
+                <Input value={shareUrl} readOnly className="flex-1 bg-gray-50 dark:bg-gray-950" />
                 <Button
-                  type="primary"
+                  type={isCopied ? 'primary' : 'default'}
                   icon={<CopyOutlined />}
                   onClick={handleCopyShareUrl}
-                  className={`ml-2 flex items-center justify-center h-[32px] ${
-                    isCopied
-                      ? 'bg-green-600 hover:bg-green-700 dark:bg-green-300 dark:hover:bg-green-200'
-                      : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-300 dark:hover:bg-blue-200'
-                  } border-none`}
+                  className="ml-2 flex items-center justify-center h-[32px]"
                 >
                   {isCopied ? t('common.copied') : t('common.copy.title')}
                 </Button>
               </div>
-              <div className="mt-4 text-gray-500 dark:bg-gray-400 text-sm ">
+              <div className="mt-4 text-gray-500 dark:text-gray-400 text-sm">
                 {t('common.shareUrlDesc')}
               </div>
             </div>
@@ -914,9 +910,6 @@ export function SlideshowEdit(props: PageEditProps) {
           borderRadius: '8px',
         }}
         className="wide-mode-modal"
-        closeIcon={
-          <CloseCircleOutlined className="text-gray-500 hover:text-red-500 dark:bg-gray-400 dark:hover:text-red-400" />
-        }
         maskStyle={{ background: 'rgba(0, 0, 0, 0.65)' }}
       >
         <div className="bg-white h-full w-full flex flex-col rounded-lg overflow-hidden dark:bg-gray-900">

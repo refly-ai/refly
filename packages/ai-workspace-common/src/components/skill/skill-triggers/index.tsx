@@ -14,11 +14,17 @@ import './index.scss';
 import { SkillTrigger } from '@refly/openapi-schema';
 
 import { ScrollLoading } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
-import { List, Empty, Grid, Divider, Switch, Popconfirm } from '@arco-design/web-react';
-import { IconDelete, IconSchedule, IconThunderbolt, IconTool } from '@arco-design/web-react/icon';
+import { List, Empty, Row, Col, Divider, Switch, Popconfirm } from 'antd';
+import {
+  DeleteOutlined,
+  ScheduleOutlined,
+  ThunderboltOutlined,
+  ToolOutlined,
+} from '@ant-design/icons';
 
-const Row = Grid.Row;
-const Col = Grid.Col;
+// 不再需要这些行，因为我们直接从antd导入Row和Col
+// const Row = Grid.Row;
+// const Col = Grid.Col;
 
 export const SkillTriggers = () => {
   const { t } = useTranslation();
@@ -67,7 +73,7 @@ export const SkillTriggers = () => {
 
     return (
       <div className="skill-triggers__card">
-        <Row align="center" justify="center">
+        <Row align="middle" justify="center">
           <Col span={4} className="skill-triggers__card-col ellipsis">
             {trigger.displayName}
           </Col>
@@ -79,13 +85,13 @@ export const SkillTriggers = () => {
           <Col span={4} className="skill-triggers__card-col">
             {eventType === 'timer' && (
               <div>
-                <IconSchedule style={{ marginRight: 8 }} />
+                <ScheduleOutlined style={{ marginRight: 8 }} />
                 {t('skill.newTriggerModal.timer')}
               </div>
             )}
             {eventType === 'simpleEvent' && (
               <div>
-                <IconThunderbolt style={{ marginRight: 8 }} />
+                <ThunderboltOutlined style={{ marginRight: 8 }} />
                 {t('skill.newTriggerModal.simpleEvent')}
               </div>
             )}
@@ -100,25 +106,23 @@ export const SkillTriggers = () => {
             <div className="actions">
               <Switch
                 className="actions-item"
-                type="round"
                 size="small"
                 checked={trigger.enabled}
                 onChange={(val) => updateTriggerStatus(val)}
               />
-              <IconTool
+              <ToolOutlined
                 className="actions-item"
                 style={{ fontSize: 16, margin: '0 20px' }}
                 onClick={handleUpdateTrigger}
               />
               <Popconfirm
-                focusLock
                 title={t('common.deleteConfirmMessage')}
-                position="br"
+                placement="bottomRight"
                 okText={t('common.confirm')}
                 cancelText={t('common.cancel')}
-                onOk={deleteTrigger}
+                onConfirm={deleteTrigger}
               >
-                <IconDelete className="actions-item" style={{ fontSize: 16 }} />
+                <DeleteOutlined className="actions-item" style={{ fontSize: 16 }} />
               </Popconfirm>
             </div>
           </Col>
@@ -145,16 +149,11 @@ export const SkillTriggers = () => {
   return (
     <List
       className="skill-triggers"
-      wrapperStyle={{ width: '100%' }}
+      style={{ width: '100%' }}
       bordered={false}
-      split={false}
-      pagination={false}
       dataSource={dataList}
       loading={isRequesting}
-      scrollLoading={
-        <ScrollLoading isRequesting={isRequesting} hasMore={hasMore} loadMore={loadMore} />
-      }
-      render={(item: SkillTrigger, key) => (
+      renderItem={(item: SkillTrigger, key) => (
         <List.Item
           key={item?.triggerId + key}
           style={{
@@ -162,12 +161,15 @@ export const SkillTriggers = () => {
             width: '100%',
           }}
           className="skill-triggers__list-item"
-          actionLayout="vertical"
           onClick={() => {}}
         >
           <TriggerCard trigger={item} />
         </List.Item>
       )}
-    />
+    >
+      {hasMore && (
+        <ScrollLoading isRequesting={isRequesting} hasMore={hasMore} loadMore={loadMore} />
+      )}
+    </List>
   );
 };

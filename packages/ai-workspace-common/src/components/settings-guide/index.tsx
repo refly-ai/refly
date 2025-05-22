@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { UILocaleList } from '../ui-locale-list';
 import { OutputLocaleList } from '../output-locale-list';
-import { IconDown } from '@arco-design/web-react/icon';
+import { DownOutlined } from '@ant-design/icons';
 import { localeToLanguageName } from '@refly-packages/ai-workspace-common/utils/i18n';
 import {
   IconMouse,
@@ -134,7 +134,7 @@ export const SettingsGuideModal = React.memo(() => {
           </Typography.Paragraph>
           <UILocaleList width={200} onChange={() => setStepTo(1)}>
             <Button>
-              {t('language')} <IconDown />
+              {t('language')} <DownOutlined />
             </Button>
           </UILocaleList>
         </div>
@@ -149,7 +149,7 @@ export const SettingsGuideModal = React.memo(() => {
           </Typography.Paragraph>
           <OutputLocaleList width={200} onChange={() => setStepTo(2)}>
             <Button>
-              {localeToLanguageName?.[uiLocale]?.[outputLocale]} <IconDown />
+              {localeToLanguageName?.[uiLocale]?.[outputLocale]} <DownOutlined />
             </Button>
           </OutputLocaleList>
         </div>

@@ -5,6 +5,7 @@ import { useEdgeStyles, getEdgeStyles } from '../../components/canvas/constants'
 import { useCanvasSync } from './use-canvas-sync';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
+import { useThemeStore } from '@refly-packages/ai-workspace-common/stores/theme';
 
 export const useEdgeOperations = () => {
   const { getState, setState } = useStoreApi<CanvasNode<any>>();
@@ -69,7 +70,8 @@ export const useEdgeOperations = () => {
   const updateAllEdgesStyle = useCallback(
     (showEdges: boolean) => {
       const { edges } = getState();
-      const edgeStyles = getEdgeStyles(showEdges);
+      const { isDarkMode } = useThemeStore.getState();
+      const edgeStyles = getEdgeStyles(showEdges, isDarkMode);
       const updatedEdges = edges.map((edge) => ({
         ...edge,
         style: edgeStyles.default,

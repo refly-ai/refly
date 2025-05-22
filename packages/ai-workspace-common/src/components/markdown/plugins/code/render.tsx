@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Message as message, Space } from '@arco-design/web-react';
+import { message, Space } from 'antd';
 import { Button, Tooltip } from 'antd';
 import copyToClipboard from 'copy-to-clipboard';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { CodeArtifactType } from '@refly/openapi-schema';
-import { IconCopy, IconCode, IconEye } from '@arco-design/web-react/icon';
+import { CopyOutlined, CodeOutlined, EyeOutlined } from '@ant-design/icons';
 import { cn } from '@refly/utils';
 import MermaidComponent from '../mermaid/render';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
@@ -143,15 +143,15 @@ const PreCode = React.memo(
     // Render the code preview if in preview mode and the type is previewable
     if (viewMode === 'preview' && isPreviewable) {
       return (
-        <div className="relative group p-4 border rounded bg-white overflow-auto dark:bg-gray-900">
+        <div className="relative group p-4 border rounded bg-white dark:bg-gray-900 overflow-auto">
           <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <Space>
               <Tooltip title={t('copilot.message.copy', 'Copy code')}>
                 <Button
                   type="default"
                   size="small"
-                  className="flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700"
-                  icon={<IconCopy />}
+                  className="flex items-center justify-center bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                  icon={<CopyOutlined />}
                   onClick={handleCopy}
                 />
               </Tooltip>
@@ -159,8 +159,8 @@ const PreCode = React.memo(
                 <Button
                   type="default"
                   size="small"
-                  className="flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700"
-                  icon={<IconCode />}
+                  className="flex items-center justify-center bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                  icon={<CodeOutlined />}
                   onClick={toggleViewMode}
                 />
               </Tooltip>
@@ -171,7 +171,7 @@ const PreCode = React.memo(
                   <Button
                     type="default"
                     size="small"
-                    className="flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700"
+                    className="flex items-center justify-center bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
                     icon={<IconCodeArtifact />}
                     onClick={handleCreateCodeArtifact}
                   />
@@ -191,15 +191,15 @@ const PreCode = React.memo(
 
     // Otherwise render normal code block with improved buttons
     return (
-      <pre className={cn('relative group')}>
-        <div className="absolute top-2 right-2 z-50 flex transition-all duration-200 ease-in-out bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-md shadow-sm border border-gray-100 dark:border-gray-800">
+      <pre className={cn('relative group bg-gray-50 dark:bg-gray-900 rounded-lg')}>
+        <div className="absolute top-2 right-2 z-50 flex transition-all duration-200 ease-in-out bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-md shadow-sm border border-gray-100 dark:border-gray-700">
           <Space>
             <Tooltip title={t('copilot.message.copy', 'Copy code')}>
               <Button
                 type="text"
                 size="small"
-                className="flex items-center justify-center hover:bg-gray-100"
-                icon={<IconCopy />}
+                className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                icon={<CopyOutlined />}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -212,8 +212,8 @@ const PreCode = React.memo(
                 <Button
                   type="text"
                   size="small"
-                  className="flex items-center justify-center hover:bg-gray-100"
-                  icon={<IconEye />}
+                  className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  icon={<EyeOutlined />}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -227,7 +227,7 @@ const PreCode = React.memo(
                 <Button
                   type="text"
                   size="small"
-                  className="flex items-center justify-center hover:bg-gray-100"
+                  className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                   icon={<IconCodeArtifact />}
                   onClick={(e) => {
                     e.preventDefault();
@@ -239,7 +239,9 @@ const PreCode = React.memo(
             ) : null}
           </Space>
         </div>
-        {children}
+        <code className="block p-4 text-gray-800 dark:text-gray-200 !bg-gray-100 dark:!bg-gray-800 overflow-x-auto">
+          {children}
+        </code>
       </pre>
     );
   },

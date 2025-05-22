@@ -533,7 +533,8 @@ export const CollaborativeEditor = memo(
                 handleDrop: (view, event, _slice, moved) =>
                   handleImageDrop(view, event, moved, uploadFn),
                 attributes: {
-                  class: `prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full prose-img:cursor-pointer ${isDarkMode ? '!text-white' : '!text-black'}`,
+                  class:
+                    'prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full prose-img:cursor-pointer dark:text-white',
 
                   'data-doc-id': docId,
                 },

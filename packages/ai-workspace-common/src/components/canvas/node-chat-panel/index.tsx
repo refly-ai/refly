@@ -264,7 +264,6 @@ export const ChatPanel = memo(
     const handleTplConfigChange = useCallback(
       (config: SkillTemplateConfig) => {
         if (setTplConfig && JSON.stringify(config) !== JSON.stringify(initialTplConfig)) {
-          console.log('Config changed:', { old: initialTplConfig, new: config });
           setTplConfig(config);
         }
       },

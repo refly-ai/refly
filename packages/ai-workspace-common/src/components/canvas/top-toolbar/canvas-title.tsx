@@ -63,7 +63,7 @@ export const CanvasTitle = memo(
     return (
       <>
         <div
-          className="ml-1 group flex items-center gap-2 text-sm font-bold text-gray-500 cursor-pointer hover:text-gray-700"
+          className="ml-1 group flex items-center gap-2 text-sm font-bold cursor-pointer"
           onClick={handleEditClick}
           data-cy="canvas-title-edit"
         >
@@ -87,7 +87,10 @@ export const CanvasTitle = memo(
           {!hasCanvasSynced ? (
             <Skeleton className="w-32" active paragraph={false} />
           ) : (
-            <Typography.Text className="!max-w-72 text-gray-500" ellipsis={{ tooltip: true }}>
+            <Typography.Text
+              className="!max-w-72 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+              ellipsis={{ tooltip: true }}
+            >
               {canvasTitle || t('common.untitled')}
             </Typography.Text>
           )}

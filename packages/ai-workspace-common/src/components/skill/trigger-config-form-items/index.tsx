@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import dayjs from 'dayjs';
 
 // components
 import { useTranslation } from 'react-i18next';
 
-import { Form, Input, Select, DatePicker } from '@arco-design/web-react';
+import { Form, Input, Select, DatePicker } from 'antd';
 import { FormHeader } from '@refly-packages/ai-workspace-common/components/skill/form-header';
 
 const FormItem = Form.Item;
@@ -35,13 +36,13 @@ export const TriggerConfigFormItems = (props: {
             layout="vertical"
             label={t('skill.newTriggerModal.name')}
             required
-            field="displayName"
+            name="displayName"
             rules={[{ required: true, message: t('skill.newTriggerModal.namePlaceholder') }]}
           >
             <Input
               placeholder={t('skill.newTriggerModal.namePlaceholder')}
               maxLength={50}
-              showWordLimit
+              showCount
             />
           </FormItem>
 
@@ -49,7 +50,7 @@ export const TriggerConfigFormItems = (props: {
             layout="vertical"
             label={t('skill.newTriggerModal.triggerType')}
             required
-            field="triggerType"
+            name="triggerType"
             rules={[{ required: true, message: t('skill.newTriggerModal.triggerTypePlaceholder') }]}
           >
             <Select
@@ -75,14 +76,14 @@ export const TriggerConfigFormItems = (props: {
                 layout="vertical"
                 label={t('skill.newTriggerModal.timerConfig')}
                 required
-                field="timerConfig.datetime"
+                name="timerConfig.datetime"
                 rules={[
                   { required: true, message: t('skill.newTriggerModal.timerConfigPlaceholder') },
                 ]}
               >
                 <DatePicker
                   showTime={{
-                    defaultValue: '00:00:00',
+                    defaultValue: dayjs('00:00:00', 'HH:mm:ss'),
                   }}
                   format="YYYY-MM-DD HH:mm:ss"
                   placeholder={t('skill.newTriggerModal.timerConfigPlaceholder')}
@@ -92,7 +93,7 @@ export const TriggerConfigFormItems = (props: {
               <FormItem
                 layout="vertical"
                 label={t('skill.newTriggerModal.repeatInterval')}
-                field="timerConfig.repeatInterval"
+                name="timerConfig.repeatInterval"
               >
                 <Select
                   allowClear
@@ -116,7 +117,7 @@ export const TriggerConfigFormItems = (props: {
               layout="vertical"
               label={t('skill.newTriggerModal.event')}
               required
-              field="simpleEventName"
+              name="simpleEventName"
               rules={[{ required: true, message: t('skill.newTriggerModal.eventPlaceholder') }]}
             >
               <Select size="large" placeholder={t('skill.newTriggerModal.eventPlaceholder')}>

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, memo, useRef } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { useTranslation } from 'react-i18next';
-import { IconClose } from '@arco-design/web-react/icon';
+import { CloseOutlined } from '@ant-design/icons';
 import { Button, Form } from 'antd';
 import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
 import { CanvasNode, CanvasNodeData, SkillNodeMeta } from '../nodes/shared/types';
@@ -54,7 +54,7 @@ const NodeHeader = memo(
             type="text"
             size="small"
             className="p-0"
-            icon={<IconClose />}
+            icon={<CloseOutlined />}
             onClick={() => {
               setSelectedSkill?.(null);
             }}

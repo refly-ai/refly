@@ -1,5 +1,5 @@
 import './index.scss';
-import { Tooltip } from '@arco-design/web-react';
+import { Tooltip } from 'antd';
 import { Popover } from 'antd';
 
 import { Source } from '@refly/openapi-schema';
@@ -46,9 +46,9 @@ export const SourceDetailItem = memo((props: SourceDetailItemProps) => {
     >
       <div className="knowledge-base-directory-site-intro">
         <Tooltip
-          position="right"
+          placement="right"
           color="white"
-          content={small ? <div style={{ color: '#000' }}>{item?.title}</div> : null}
+          title={small ? <div style={{ color: '#000' }}>{item?.title}</div> : null}
         >
           <div className="site-intro-icon">
             <img

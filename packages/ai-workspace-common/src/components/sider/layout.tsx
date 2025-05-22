@@ -585,7 +585,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             onClick={() =>
               window.open('https://github.com/refly-ai/refly/releases/tag/v0.6.0', '_blank')
             }
-            className="mb-2 flex items-start text-[#00968F] hover:bg-gray-50 whitespace-normal h-auto cursor-pointer dark:hover:bg-dark dark:text-gray-300"
+            className="mb-2 flex items-start text-[#00968F] hover:bg-gray-50 rounded-md whitespace-normal h-auto cursor-pointer dark:text-gray-300"
           >
             <span className="flex items-start gap-2 leading-6 w-full ">
               <Tag

@@ -140,7 +140,7 @@
     "@types/prompts": "^2.4.9",
     "execa": "^8.0.1",
     "extract-zip": "^2.0.1",
-    "happy-dom": "^13.3.8",
+    "happy-dom": "^15.10.2",
     "lodash.merge": "^4.6.2",
     "p-map": "^7.0.0",
     "publint": "^0.2.6",

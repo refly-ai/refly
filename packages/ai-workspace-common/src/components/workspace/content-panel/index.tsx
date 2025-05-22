@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Radio } from '@arco-design/web-react';
+import { Radio } from 'antd';
 import { Affix } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -42,12 +42,13 @@ const ContentHeader = (props: { setVal: (val: string) => void; hitTop: boolean; 
     >
       <div className="flex items-center">
         <RadioGroup
-          type="button"
+          optionType="button"
+          buttonStyle="solid"
           size="large"
           className="content-panel-radio-group"
           defaultValue="resource"
           value={props.val}
-          onChange={(val) => handleTabChange(val)}
+          onChange={(e) => handleTabChange(e.target.value)}
           style={{ borderRadius: 8 }}
         >
           <Radio value="canvas">{t('workspace.contentPanel.tabPanel.canvas')}</Radio>

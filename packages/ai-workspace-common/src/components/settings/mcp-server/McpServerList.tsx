@@ -34,6 +34,7 @@ import {
 import { useListMcpServersSuspense } from '@refly-packages/ai-workspace-common/queries/suspense';
 import { McpServerForm } from '@refly-packages/ai-workspace-common/components/settings/mcp-server/McpServerForm';
 import { McpServerBatchImport } from '@refly-packages/ai-workspace-common/components/settings/mcp-server/McpServerBatchImport';
+import { preloadMonacoEditor } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/monaco-editor/monacoPreloader';
 
 interface McpServerListProps {
   visible: boolean;
@@ -47,6 +48,10 @@ export const McpServerList: React.FC<McpServerListProps> = ({ visible }) => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [serverToDelete, setServerToDelete] = useState<McpServerDTO | null>(null);
   const [serverTools, setServerTools] = useState<Record<string, any[]>>({});
+
+  useEffect(() => {
+    preloadMonacoEditor();
+  }, []);
 
   // Fetch MCP servers
   const { data, refetch } = useListMcpServersSuspense({}, [], {

@@ -1,4 +1,4 @@
-import { Result, Button, Modal, Typography } from '@arco-design/web-react';
+import { Result, Button, Modal, Typography } from 'antd';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useTranslation } from 'react-i18next';
 import { useLogout } from '@refly-packages/ai-workspace-common/hooks/use-logout';
@@ -12,16 +12,15 @@ const RequestAccess = () => {
   const { t } = useTranslation();
   const { handleLogout, contextHolder } = useLogout();
 
-  const visible = true;
+  const _visible = true;
 
   return (
     <Modal
       className="request-access-modal"
-      visible={visible}
+      open={true}
       closable={false}
       footer={null}
-      autoFocus={false}
-      maskStyle={{ background: '#FFFFFF' }}
+      styles={{ mask: { background: '#FFFFFF' } }}
     >
       <div className="flex justify-center items-center h-full request-access">
         <Result

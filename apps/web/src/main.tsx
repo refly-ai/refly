@@ -36,6 +36,7 @@ import { useThemeStoreShallow } from '@refly-packages/ai-workspace-common/stores
 import { theme } from 'antd';
 import { SuspenseLoading } from '@refly-packages/ai-workspace-common/components/common/loading';
 import { sentryEnabled } from '@refly-packages/ai-workspace-common/utils/env';
+import { preloadMonacoEditor } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/monaco-editor/monacoPreloader';
 
 // styles
 import '@/styles/style.css';
@@ -133,6 +134,10 @@ export const App = () => {
     // 初始化主题
     initTheme();
   }, [setRuntime, initTheme]);
+
+  useEffect(() => {
+    preloadMonacoEditor();
+  }, []);
 
   // Use light theme when forced, otherwise use the user's preference
   const shouldUseDarkTheme = isDarkMode && !isForcedLightMode;

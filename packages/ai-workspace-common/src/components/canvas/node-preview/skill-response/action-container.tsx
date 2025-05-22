@@ -4,7 +4,12 @@ import { Button, message, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { ActionResult, ActionStep, Source } from '@refly/openapi-schema';
 import { FilePlus, MoreHorizontal, Target, Trash2 } from 'lucide-react';
-import { IconCheckCircle, IconCopy, IconImport, IconShareAlt } from '@arco-design/web-react/icon';
+import {
+  CheckCircleOutlined,
+  CopyOutlined,
+  ImportOutlined,
+  ShareAltOutlined,
+} from '@ant-design/icons';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { parseMarkdownCitationsAndCanvasTags, safeParseJSON } from '@refly/utils/parse';
 import { useDocumentStoreShallow } from '@refly-packages/ai-workspace-common/stores/document';
@@ -60,12 +65,12 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
   const editorActionList = useMemo(
     () => [
       {
-        icon: <IconImport style={{ fontSize: 14 }} />,
+        icon: <ImportOutlined style={{ fontSize: 14 }} />,
         key: 'insertBelow',
         enabled: step.content && activeDocumentId,
       },
       {
-        icon: <IconCheckCircle style={{ fontSize: 14 }} />,
+        icon: <CheckCircleOutlined style={{ fontSize: 14 }} />,
         key: 'replaceSelection',
         enabled: step.content && activeDocumentId && hasEditorSelection,
       },
@@ -275,7 +280,7 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
                 <Button
                   type="text"
                   size="small"
-                  icon={<IconCopy style={{ fontSize: 14 }} />}
+                  icon={<CopyOutlined style={{ fontSize: 14 }} />}
                   className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
                   onClick={() => handleCopyToClipboard(step.content)}
                 >
@@ -288,7 +293,7 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
                   type="text"
                   size="small"
                   loading={isSharing}
-                  icon={<IconShareAlt style={{ fontSize: 14 }} />}
+                  icon={<ShareAltOutlined style={{ fontSize: 14 }} />}
                   className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
                   onClick={handleShare}
                 >

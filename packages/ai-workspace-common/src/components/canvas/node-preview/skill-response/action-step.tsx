@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Steps, Button } from 'antd';
 import { ActionResult, ActionStep, Source } from '@refly/openapi-schema';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
-import { IconCheckCircle } from '@arco-design/web-react/icon';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@refly/utils/cn';
 import { IconCheck, IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -57,7 +57,7 @@ const LogBox = memo(
             onClick={() => onCollapse(false)}
           >
             <div>
-              <IconCheckCircle /> {t('canvas.skillResponse.stepCompleted')}
+              <CheckCircleOutlined /> {t('canvas.skillResponse.stepCompleted')}
             </div>
             <div className="flex items-center">
               <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -261,7 +261,7 @@ const ArtifactItem = memo(({ artifact, onSelect }: { artifact: any; onSelect: ()
         )}
         {artifact?.status === 'finish' && (
           <>
-            <IconCheckCircle />
+            <CheckCircleOutlined />
             <span>{t('artifact.completed')}</span>
           </>
         )}

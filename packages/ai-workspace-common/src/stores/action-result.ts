@@ -1,11 +1,8 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { ActionResult } from '@refly/openapi-schema';
-import { persist } from 'zustand/middleware';
-
-// Maximum number of action results to keep in storage.
-// When the number of results exceeds this limit, we are likely to get stuck in an infinite data fetching loop.
-const MAX_STORED_RESULTS = 100;
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { CacheInfo, createAutoEvictionStorage } from './utils/storage-manager';
 
 interface PollingState {
   notFoundErrorCount: number;
@@ -17,11 +14,10 @@ interface PollingState {
 }
 
 interface ActionResultState {
-  resultMap: Record<string, ActionResult>;
-  pollingStateMap: Record<string, PollingState>;
+  resultMap: Record<string, ActionResult & CacheInfo>;
+  pollingStateMap: Record<string, PollingState & CacheInfo>;
   batchUpdateQueue: Array<{ resultId: string; result: ActionResult }>;
   isBatchUpdateScheduled: boolean;
-  lastUsedResults: string[]; // Track recently used result IDs in order
 
   // Individual update actions
   updateActionResult: (resultId: string, result: ActionResult) => void;
@@ -42,7 +38,7 @@ interface ActionResultState {
   ) => void;
 
   // Storage management
-  trackResultUsage: (resultId: string) => void;
+  updateLastUsedTimestamp: (resultId: string) => void;
   cleanupOldResults: () => void;
 }
 
@@ -51,7 +47,6 @@ export const defaultState = {
   pollingStateMap: {},
   batchUpdateQueue: [],
   isBatchUpdateScheduled: false,
-  lastUsedResults: [],
 };
 
 const POLLING_STATE_INITIAL: PollingState = {
@@ -63,14 +58,11 @@ const POLLING_STATE_INITIAL: PollingState = {
   lastEventTime: null,
 };
 
-// Helper function to update the last used results array
-const updateLastUsedResults = (lastUsedResults: string[], resultId: string): string[] => {
-  // Remove the resultId if it already exists
-  const filteredResults = lastUsedResults.filter((id) => id !== resultId);
-
-  // Add the resultId to the beginning (most recent)
-  return [resultId, ...filteredResults].slice(0, MAX_STORED_RESULTS);
-};
+// Create our custom storage with appropriate configuration
+const actionResultStorage = createAutoEvictionStorage({
+  maxSize: 1024 * 1024, // 1MB
+  maxItems: 50,
+});
 
 // Optimization: use selective updates instead of full immer for simple property changes
 export const useActionResultStore = create<ActionResultState>()(
@@ -78,58 +70,56 @@ export const useActionResultStore = create<ActionResultState>()(
     (set, get) => ({
       ...defaultState,
 
-      // Track result usage (call this whenever a result is accessed)
-      trackResultUsage: (resultId: string) => {
-        set((state) => ({
-          ...state,
-          lastUsedResults: updateLastUsedResults(state.lastUsedResults, resultId),
-        }));
-      },
-
-      // Clean up old results that exceed the maximum
-      cleanupOldResults: () => {
+      // Update the lastUsedAt timestamp for a specific result
+      updateLastUsedTimestamp: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
-          const { lastUsedResults, resultMap, pollingStateMap } = state;
+          const newState = { ...state };
 
-          // Keep only the most recent results based on lastUsedResults
-          const resultIdsToKeep = new Set(lastUsedResults.slice(0, MAX_STORED_RESULTS));
-
-          const newResultMap: Record<string, ActionResult> = {};
-          const newPollingStateMap: Record<string, PollingState> = {};
-
-          // Keep only the results we want to retain
-          for (const resultId of resultIdsToKeep) {
-            if (resultMap[resultId]) {
-              newResultMap[resultId] = resultMap[resultId];
-            }
-
-            if (pollingStateMap[resultId]) {
-              newPollingStateMap[resultId] = pollingStateMap[resultId];
-            }
+          // Update in resultMap if exists
+          if (state.resultMap[resultId]) {
+            newState.resultMap = {
+              ...state.resultMap,
+              [resultId]: {
+                ...state.resultMap[resultId],
+                lastUsedAt: now,
+              },
+            };
           }
 
-          return {
-            ...state,
-            resultMap: newResultMap,
-            pollingStateMap: newPollingStateMap,
-          };
+          // Update in pollingStateMap if exists
+          if (state.pollingStateMap[resultId]) {
+            newState.pollingStateMap = {
+              ...state.pollingStateMap,
+              [resultId]: {
+                ...state.pollingStateMap[resultId],
+                lastUsedAt: now,
+              },
+            };
+          }
+
+          return newState;
         });
       },
+
+      // Clean up old results that exceed the maximum or are too old
+      // Note: This is less important now with our custom storage but kept for compatibility
+      cleanupOldResults: () => {},
 
       // Direct update (use sparingly - prefer queueActionResultUpdate)
       updateActionResult: (resultId: string, result: ActionResult) => {
         // Shallow update to avoid deep copying the entire store
+        const now = Date.now();
         set((state) => {
-          // Track usage and clean up if needed
-          const updatedLastUsed = updateLastUsedResults(state.lastUsedResults, resultId);
-
           return {
             ...state,
             resultMap: {
               ...state.resultMap,
-              [resultId]: result,
+              [resultId]: {
+                ...result,
+                lastUsedAt: now,
+              },
             },
-            lastUsedResults: updatedLastUsed,
           };
         });
 
@@ -140,9 +130,6 @@ export const useActionResultStore = create<ActionResultState>()(
       // Queue update for batching
       queueActionResultUpdate: (resultId: string, result: ActionResult) => {
         set((state) => {
-          // Track usage whenever we update a result
-          const updatedLastUsed = updateLastUsedResults(state.lastUsedResults, resultId);
-
           // Check if there's already an update for this resultId in the queue
           const existingUpdateIndex = state.batchUpdateQueue.findIndex(
             (item) => item.resultId === resultId,
@@ -173,16 +160,17 @@ export const useActionResultStore = create<ActionResultState>()(
               ...state,
               batchUpdateQueue: updatedQueue,
               isBatchUpdateScheduled: true,
-              lastUsedResults: updatedLastUsed,
             };
           }
 
           return {
             ...state,
             batchUpdateQueue: updatedQueue,
-            lastUsedResults: updatedLastUsed,
           };
         });
+
+        // Update timestamp whenever we queue a result update
+        get().updateLastUsedTimestamp(resultId);
       },
 
       // Process all batched updates at once
@@ -197,20 +185,21 @@ export const useActionResultStore = create<ActionResultState>()(
 
           // Create new result map with all batched updates
           const updatedResultMap = { ...state.resultMap };
-          let updatedLastUsed = [...state.lastUsedResults];
+          const now = Date.now();
 
           // First group updates by resultId to ensure we only process the latest update for each result
           const latestUpdates = new Map<string, ActionResult>();
 
           for (const { resultId, result } of state.batchUpdateQueue) {
             latestUpdates.set(resultId, result);
-            // Update last used tracking for each result
-            updatedLastUsed = updateLastUsedResults(updatedLastUsed, resultId);
           }
 
           // Apply all updates at once
           for (const [resultId, result] of latestUpdates.entries()) {
-            updatedResultMap[resultId] = result;
+            updatedResultMap[resultId] = {
+              ...result,
+              lastUsedAt: now,
+            };
           }
 
           return {
@@ -218,19 +207,16 @@ export const useActionResultStore = create<ActionResultState>()(
             resultMap: updatedResultMap,
             batchUpdateQueue: [],
             isBatchUpdateScheduled: false,
-            lastUsedResults: updatedLastUsed,
           };
         });
       },
 
       startPolling: (resultId: string, version: number) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId] || {
             ...POLLING_STATE_INITIAL,
           };
-
-          // Track usage when polling starts
-          const updatedLastUsed = updateLastUsedResults(state.lastUsedResults, resultId);
 
           return {
             ...state,
@@ -240,21 +226,19 @@ export const useActionResultStore = create<ActionResultState>()(
                 ...currentPollingState,
                 isPolling: true,
                 version,
-                lastPollTime: Date.now(),
+                lastPollTime: now,
+                lastUsedAt: now,
               },
             },
-            lastUsedResults: updatedLastUsed,
           };
         });
       },
 
       stopPolling: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId];
           if (!currentPollingState) return state;
-
-          // Track usage when stopping polling
-          const updatedLastUsed = updateLastUsedResults(state.lastUsedResults, resultId);
 
           return {
             ...state,
@@ -265,18 +249,20 @@ export const useActionResultStore = create<ActionResultState>()(
                 isPolling: false,
                 timeoutStartTime: null,
                 lastEventTime: null,
+                lastUsedAt: now,
               },
             },
-            lastUsedResults: updatedLastUsed,
           };
         });
       },
 
       incrementErrorCount: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId] || {
             ...POLLING_STATE_INITIAL,
           };
+
           return {
             ...state,
             pollingStateMap: {
@@ -284,6 +270,7 @@ export const useActionResultStore = create<ActionResultState>()(
               [resultId]: {
                 ...currentPollingState,
                 notFoundErrorCount: currentPollingState.notFoundErrorCount + 1,
+                lastUsedAt: now,
               },
             },
           };
@@ -291,6 +278,7 @@ export const useActionResultStore = create<ActionResultState>()(
       },
 
       resetErrorCount: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId];
           if (!currentPollingState) return state;
@@ -302,6 +290,7 @@ export const useActionResultStore = create<ActionResultState>()(
               [resultId]: {
                 ...currentPollingState,
                 notFoundErrorCount: 0,
+                lastUsedAt: now,
               },
             },
           };
@@ -309,6 +298,7 @@ export const useActionResultStore = create<ActionResultState>()(
       },
 
       updateLastPollTime: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId];
           if (!currentPollingState) return state;
@@ -319,7 +309,8 @@ export const useActionResultStore = create<ActionResultState>()(
               ...state.pollingStateMap,
               [resultId]: {
                 ...currentPollingState,
-                lastPollTime: Date.now(),
+                lastPollTime: now,
+                lastUsedAt: now,
               },
             },
           };
@@ -327,14 +318,11 @@ export const useActionResultStore = create<ActionResultState>()(
       },
 
       startTimeout: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId] || {
             ...POLLING_STATE_INITIAL,
           };
-          const now = Date.now();
-
-          // Track usage when starting timeout
-          const updatedLastUsed = updateLastUsedResults(state.lastUsedResults, resultId);
 
           return {
             ...state,
@@ -344,14 +332,15 @@ export const useActionResultStore = create<ActionResultState>()(
                 ...currentPollingState,
                 timeoutStartTime: now,
                 lastEventTime: now,
+                lastUsedAt: now,
               },
             },
-            lastUsedResults: updatedLastUsed,
           };
         });
       },
 
       updateLastEventTime: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId];
           if (!currentPollingState) return state;
@@ -362,7 +351,8 @@ export const useActionResultStore = create<ActionResultState>()(
               ...state.pollingStateMap,
               [resultId]: {
                 ...currentPollingState,
-                lastEventTime: Date.now(),
+                lastEventTime: now,
+                lastUsedAt: now,
               },
             },
           };
@@ -370,6 +360,7 @@ export const useActionResultStore = create<ActionResultState>()(
       },
 
       clearTimeout: (resultId: string) => {
+        const now = Date.now();
         set((state) => {
           const currentPollingState = state.pollingStateMap[resultId];
           if (!currentPollingState) return state;
@@ -382,6 +373,7 @@ export const useActionResultStore = create<ActionResultState>()(
                 ...currentPollingState,
                 timeoutStartTime: null,
                 lastEventTime: null,
+                lastUsedAt: now,
               },
             },
           };
@@ -392,27 +384,26 @@ export const useActionResultStore = create<ActionResultState>()(
       batchPollingStateUpdates: (
         updates: Array<{ resultId: string; state: Partial<PollingState> }>,
       ) => {
+        const now = Date.now();
         set((state) => {
           const newPollingStateMap = { ...state.pollingStateMap };
-          let updatedLastUsed = [...state.lastUsedResults];
 
           for (const update of updates) {
             const { resultId, state: partialState } = update;
-            const currentState = newPollingStateMap[resultId] || { ...POLLING_STATE_INITIAL };
+            const currentState = newPollingStateMap[resultId] || {
+              ...POLLING_STATE_INITIAL,
+            };
 
             newPollingStateMap[resultId] = {
               ...currentState,
               ...partialState,
+              lastUsedAt: now,
             };
-
-            // Track usage for each updated resultId
-            updatedLastUsed = updateLastUsedResults(updatedLastUsed, resultId);
           }
 
           return {
             ...state,
             pollingStateMap: newPollingStateMap,
-            lastUsedResults: updatedLastUsed,
           };
         });
 
@@ -422,10 +413,10 @@ export const useActionResultStore = create<ActionResultState>()(
     }),
     {
       name: 'action-result-storage',
+      storage: createJSONStorage(() => actionResultStorage),
       partialize: (state) => ({
         resultMap: state.resultMap,
         pollingStateMap: state.pollingStateMap,
-        lastUsedResults: state.lastUsedResults,
       }),
     },
   ),

@@ -189,7 +189,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
             {t('frontPage.welcome')}
           </h3>
 
-          <div className="w-full backdrop-blur-sm rounded-lg shadow-sm ring-1 ring-gray-200 mx-2 dark:ring-gray-700">
+          <div className="w-full backdrop-blur-sm rounded-lg shadow-sm ring-1 ring-gray-200 mx-2 dark:ring-gray-700 overflow-hidden">
             {subscriptionEnabled && !userProfile?.subscription && <PremiumBanner />}
             <div className="p-4">
               {selectedSkill && (

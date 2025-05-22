@@ -95,8 +95,6 @@ export const useContextUpdateByResultId = ({
   const updateContextItemsFromResultId = useCallback(() => {
     if (!resultId) return;
 
-    console.log('updateContextItemsFromResultId', resultId);
-
     // Find the node associated with this resultId
     const nodes = getNodes();
     const currentNode = nodes.find(

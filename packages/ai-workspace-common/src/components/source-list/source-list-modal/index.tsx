@@ -6,7 +6,7 @@ import { Source } from '@refly/openapi-schema';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { getRuntime } from '@refly/utils/env';
 import './index.scss';
-import { IconLink } from '@arco-design/web-react/icon';
+import { LinkOutlined } from '@ant-design/icons';
 import { SearchResults } from '@refly-packages/ai-workspace-common/modules/multilingual-search/components/search-results';
 import {
   ActionMenu,
@@ -122,7 +122,7 @@ export const SourceListModal = (props: SourceListModalProps) => {
         <div className="source-list-modal-header flex items-center justify-between">
           <div>
             <div className="header-content">
-              <IconLink className="header-icon" />
+              <LinkOutlined className="header-icon" />
               <div className="header-text">
                 <div>
                   <span style={{ fontWeight: 'bold' }}>

@@ -24,7 +24,6 @@ export const useActionPolling = () => {
     startTimeout,
     updateLastEventTime,
     clearTimeout: clearTimeoutState,
-    trackResultUsage,
   } = useActionResultStoreShallow((state) => ({
     startPolling: state.startPolling,
     stopPolling: state.stopPolling,
@@ -34,7 +33,6 @@ export const useActionPolling = () => {
     startTimeout: state.startTimeout,
     updateLastEventTime: state.updateLastEventTime,
     clearTimeout: state.clearTimeout,
-    trackResultUsage: state.trackResultUsage,
   }));
 
   const onUpdateResult = useUpdateActionResult();
@@ -61,9 +59,6 @@ export const useActionPolling = () => {
       }
 
       try {
-        // Track result usage when polling to keep it in the recent list
-        trackResultUsage(resultId);
-
         const { data: result } = await getClient().getActionResult({
           query: { resultId, version },
         });
@@ -120,14 +115,7 @@ export const useActionPolling = () => {
         }, POLLING_INTERVAL);
       }
     },
-    [
-      incrementErrorCount,
-      resetErrorCount,
-      stopPolling,
-      onUpdateResult,
-      updateLastPollTime,
-      trackResultUsage,
-    ],
+    [incrementErrorCount, resetErrorCount, stopPolling, onUpdateResult, updateLastPollTime],
   );
 
   const startPolling = useCallback(
@@ -135,9 +123,6 @@ export const useActionPolling = () => {
       const { pollingStateMap, resultMap } = useActionResultStore.getState();
       const pollingState = pollingStateMap[resultId];
       const currentResult = resultMap[resultId];
-
-      // Track result usage when starting polling to ensure it's kept in storage
-      trackResultUsage(resultId);
 
       // Don't restart polling for results that are already marked as failed
       if (failedResultIds.has(resultId) || currentResult?.status === 'failed') {
@@ -154,17 +139,12 @@ export const useActionPolling = () => {
       // Start the polling cycle
       await pollActionResult(resultId, version);
     },
-    [clearTimeoutState, startPollingState, pollActionResult, trackResultUsage],
+    [clearTimeoutState, startPollingState, pollActionResult],
   );
 
-  const resetFailedState = useCallback(
-    (resultId: string) => {
-      failedResultIds.delete(resultId);
-      // Track usage when resetting failed state
-      trackResultUsage(resultId);
-    },
-    [trackResultUsage],
-  );
+  const resetFailedState = useCallback((resultId: string) => {
+    failedResultIds.delete(resultId);
+  }, []);
 
   // Cleanup all polling on unmount
   useEffect(() => {
@@ -177,18 +157,12 @@ export const useActionPolling = () => {
     (resultId: string, version: number) => {
       let timeoutId: NodeJS.Timeout;
 
-      // Track result usage to ensure it's kept in storage
-      trackResultUsage(resultId);
-
       const resetTimeout = () => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
 
         updateLastEventTime(resultId);
-
-        // Track usage when timeout is reset
-        trackResultUsage(resultId);
 
         timeoutId = setTimeout(() => {
           const result = useActionResultStore.getState().resultMap[resultId];
@@ -220,14 +194,7 @@ export const useActionPolling = () => {
         },
       };
     },
-    [
-      startTimeout,
-      updateLastEventTime,
-      startPolling,
-      clearTimeoutState,
-      stopPolling,
-      trackResultUsage,
-    ],
+    [startTimeout, updateLastEventTime, startPolling, clearTimeoutState, stopPolling],
   );
 
   return {

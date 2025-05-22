@@ -1,4 +1,4 @@
-import { Avatar } from '@arco-design/web-react';
+import { Avatar } from 'antd';
 import { Icon } from '@refly/openapi-schema';
 interface SkillAvatarProps {
   icon: Icon;

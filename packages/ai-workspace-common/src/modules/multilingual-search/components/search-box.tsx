@@ -7,7 +7,7 @@ import { SearchOptions } from './search-options';
 
 import './search-box.scss';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { IconSearch } from '@arco-design/web-react/icon';
+import { SearchOutlined } from '@ant-design/icons';
 
 const { Search: AntSearch } = Input;
 
@@ -78,7 +78,7 @@ export const SearchBox: React.FC = () => {
             className="search-input"
             onChange={(e) => multilingualSearchStore.setQuery(e.target.value)}
             onSearch={handleMultilingualSearch}
-            enterButton={<IconSearch />}
+            enterButton={<SearchOutlined />}
           />
           <SearchOptions />
         </Space>

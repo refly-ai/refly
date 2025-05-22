@@ -5,7 +5,7 @@ import './index.scss';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 // components
 import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
-import { IconDown } from '@arco-design/web-react/icon';
+import { DownOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { OutputLocaleList } from '../../output-locale-list';
 import { LOCALE } from '@refly/common-types';
@@ -35,7 +35,7 @@ export const LanguageSetting = () => {
             </Typography.Paragraph>
             <UILocaleList width={200}>
               <Button>
-                {t('language')} <IconDown />
+                {t('language')} <DownOutlined />
               </Button>
             </UILocaleList>
           </div>
@@ -49,7 +49,7 @@ export const LanguageSetting = () => {
             </Typography.Paragraph>
             <OutputLocaleList width={200} position="bl">
               <Button>
-                {localeToLanguageName?.[uiLocale]?.[outputLocale]} <IconDown />
+                {localeToLanguageName?.[uiLocale]?.[outputLocale]} <DownOutlined />
               </Button>
             </OutputLocaleList>
           </div>

@@ -1,6 +1,6 @@
 import { useCurrentEditor } from '@tiptap/react';
 import type { FC } from 'react';
-import { Spin } from '@arco-design/web-react';
+import { Spin } from 'antd';
 import { lazy, Suspense } from 'react';
 
 // Dynamically import Moveable

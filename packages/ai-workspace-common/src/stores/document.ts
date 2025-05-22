@@ -1,8 +1,12 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { immer } from 'zustand/middleware/immer';
 import { Document } from '@refly/openapi-schema';
+import {
+  CacheInfo,
+  createAutoEvictionStorage,
+} from '@refly-packages/ai-workspace-common/stores/utils/storage-manager';
 
 export enum ActionSource {
   KnowledgeBase = 'knowledge-base',
@@ -35,8 +39,8 @@ interface DocumentBaseState {
   // Canvas specific states stored by docId
   activeDocumentId: string;
   hasEditorSelection: boolean;
-  data: Record<string, DocumentData>;
-  config: Record<string, DocumentConfig>;
+  data: Record<string, DocumentData & CacheInfo>;
+  config: Record<string, DocumentConfig & CacheInfo>;
 
   setHasEditorSelection: (hasEditorSelection: boolean) => void;
   updateDocument: (docId: string, document: Document) => void;
@@ -60,6 +64,8 @@ export const defaultState = () => ({
   data: {},
   config: {},
 });
+
+const documentStorage = createAutoEvictionStorage({});
 
 export const useDocumentStore = create<DocumentBaseState>()(
   persist(
@@ -98,18 +104,21 @@ export const useDocumentStore = create<DocumentBaseState>()(
         set((state) => {
           state.config[docId] ??= {};
           state.config[docId].readOnly = readOnly;
+          state.config[docId].lastUsedAt = Date.now();
         }),
 
       setDocumentLocalSyncedAt: (docId: string, syncedAt: number) =>
         set((state) => {
           state.config[docId] ??= {};
           state.config[docId].localSyncedAt = syncedAt;
+          state.config[docId].lastUsedAt = Date.now();
         }),
 
       setDocumentRemoteSyncedAt: (docId: string, syncedAt: number) =>
         set((state) => {
           state.config[docId] ??= {};
           state.config[docId].remoteSyncedAt = syncedAt;
+          state.config[docId].lastUsedAt = Date.now();
         }),
 
       deleteDocumentData: (docId: string) =>
@@ -127,6 +136,7 @@ export const useDocumentStore = create<DocumentBaseState>()(
     })),
     {
       name: 'document-storage',
+      storage: createJSONStorage(() => documentStorage),
       partialize: (state) => ({
         config: state.config,
       }),

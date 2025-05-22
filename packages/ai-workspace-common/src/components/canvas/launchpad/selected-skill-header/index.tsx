@@ -1,5 +1,5 @@
 import { Button } from 'antd';
-import { IconClose } from '@arco-design/web-react/icon';
+import { CloseOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { Skill } from '@refly/openapi-schema';
 import classNames from 'classnames';
@@ -35,7 +35,7 @@ const SelectedSkillHeaderComponent = ({
         <div className="selected-skill-manage">
           <Button
             type="text"
-            icon={<IconClose />}
+            icon={<CloseOutlined />}
             onClick={() => {
               onClose?.();
               setSelectedSkill?.(null);

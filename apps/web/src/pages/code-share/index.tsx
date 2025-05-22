@@ -54,7 +54,7 @@ const ShareCodePage = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex h-full w-full grow items-center justify-center bg-white overflow-hidden">
+      <div className="flex h-full w-full grow items-center justify-center bg-white dark:bg-gray-900 overflow-hidden">
         {codeData?.content ? (
           <div className="w-full h-full">
             <Renderer

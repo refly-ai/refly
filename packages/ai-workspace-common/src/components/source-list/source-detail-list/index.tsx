@@ -1,7 +1,7 @@
 // styles
 import './index.scss';
 import { HiOutlineSearch, HiOutlinePlus } from 'react-icons/hi';
-import { Divider, Input, Skeleton } from '@arco-design/web-react';
+import { Divider, Input, Skeleton } from 'antd';
 import { useState } from 'react';
 import { Source } from '@refly/openapi-schema';
 
@@ -63,9 +63,9 @@ export const SourceDetailList = (props: SourceDetailListProps) => {
       <div className="source-detail-inner-list" style={small ? { minWidth: 72, width: 72 } : {}}>
         {props?.isFetching ? (
           <div style={{ margin: '8px auto' }}>
-            <Skeleton animation style={{ marginTop: 24 }} />
-            <Skeleton animation style={{ marginTop: 24 }} />
-            <Skeleton animation style={{ marginTop: 24 }} />
+            <Skeleton active style={{ marginTop: 24 }} />
+            <Skeleton active style={{ marginTop: 24 }} />
+            <Skeleton active style={{ marginTop: 24 }} />
           </div>
         ) : (
           (props?.sources || []).map((item, index) => (
