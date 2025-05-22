@@ -1,19 +1,18 @@
 productName: Refly
 appId: ai.refly.desktop
 copyright: Copyright 2025 Refly
-afterSign: notarize.js
+# Temporarily commenting out the afterSign hook to allow build to proceed
+# afterSign: notarize.js
 publish:
   provider: github
   private: false
   releaseType: release
   publishAutoUpdate: true
 directories:
-  buildResources: resources
+  buildResources: build
   output: packed
 files:
-  - dist/**/*
   - dist-electron/**/*
-  - localization/!(locales)
   - prisma/**/*
   - "!prisma/app.db"
   - resources/**/*
@@ -40,8 +39,6 @@ win:
     smartUnpack: false
   asarUnpack: # only if you need to run prisma migrate:
     - prisma
-  signingHashAlgorithms: [ 'sha256' ]
-  publisherName: Fun to Imagine LLC
   signAndEditExecutable: true
   verifyUpdateCodeSignature: true
   # had to add artifactName here because electron-builder was generating latest.yml with hyphens instead of spaces,
@@ -59,15 +56,15 @@ mac:
   target:
     - target: dmg
       arch:
-        - x64
+        # - x64
         - arm64
     - target: zip # zip is required because of electron-userland/electron-builder#2199
       arch:
-        - x64
+        # - x64
         - arm64
-  entitlements: ./entitlements.mac.plist
-  entitlementsInherit: ./entitlements.mac.plist
-  hardenedRuntime: true
-  asarUnpack: # only if you need to run prisma migrate:
-    - prisma
-
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  entitlementsInherit: build/entitlements.mac.plist

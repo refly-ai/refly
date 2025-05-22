@@ -4,6 +4,10 @@
   "engines": {
     "pnpm": ">=8"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/refly-ai/refly.git"
+  },
   "scripts": {
     "commit": "cz",
     "dev": "turbo run dev",
@@ -56,5 +60,10 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json}": "biome check --write --unsafe --no-errors-on-unmatched"
+  },
+  "pnpm": {
+    "overrides": {
+      "node-abi": "4.9.0"
+    }
   }
 }

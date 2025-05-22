@@ -41,20 +41,19 @@ const nodeModulesPath =
   findNodeModules(resolve(process.cwd())) ||
   join(process.cwd(), 'node_modules');
 
-// Check if the prisma binary exists
-const prismaBin = join(nodeModulesPath, '.bin', 'prisma');
+if (require.main === module) {
+  // Check if the prisma binary exists
+  let prismaBin = join(nodeModulesPath, '.bin', 'prisma');
 
-// Fallback to using pnpm bin if the above approach fails
-if (!existsSync(prismaBin)) {
-  console.warn('Could not find Prisma binary using directory traversal, falling back to pnpm bin');
-  const binPath = execSync('pnpm bin', { encoding: 'utf-8' }).trim();
-  const fallbackPrismaBin = join(binPath, 'prisma');
+  // Fallback to using pnpm bin if the above approach fails
+  if (!existsSync(prismaBin)) {
+    console.warn(
+      'Could not find Prisma binary using directory traversal, falling back to pnpm bin',
+    );
+    const binPath = execSync('pnpm bin', { encoding: 'utf-8' }).trim();
+    prismaBin = join(binPath, 'prisma');
+  }
 
-  execSync(
-    `${fallbackPrismaBin} migrate diff --from-url ${process.env.DATABASE_URL} --to-schema-datamodel prisma/schema.prisma --script | ${fallbackPrismaBin} db execute --stdin`,
-    { stdio: 'inherit' },
-  );
-} else {
   execSync(
     `${prismaBin} migrate diff --from-url ${process.env.DATABASE_URL} --to-schema-datamodel prisma/schema.prisma --script | ${prismaBin} db execute --stdin`,
     { stdio: 'inherit' },
