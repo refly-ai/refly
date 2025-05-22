@@ -93,7 +93,7 @@ pnpm -v # 10.9.0 or higher
 1. Spin up all the middlewares:
 
 ```bash
-docker compose -f deploy/docker/docker-compose.middleware.yml up -d
+docker compose -f deploy/docker/docker-compose.middleware.yml -p refly up -d
 docker ps | grep refly_ # check that all middleware containers are healthy
 ```
 
