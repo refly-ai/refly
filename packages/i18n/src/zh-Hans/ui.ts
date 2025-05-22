@@ -2392,6 +2392,7 @@ const translations = {
       noContextChat: '不带上下文聊天',
       wholeSpaceChat: '在整个空间聊天',
       recommendQuestions: '推荐问题',
+      chooseMcp: '选择 MCP',
       replace: '替换选中',
       reject: '拒绝',
       copy: '复制回答',
@@ -2445,6 +2446,11 @@ const translations = {
       title: '推荐问题',
       refresh: '换一批',
       empty: '暂无推荐问题',
+    },
+    mcpSelector: {
+      title: '选择 MCP 服务器',
+      empty: '没有可用的 MCP 服务器',
+      selected: '已选择',
     },
     contextItem: {
       current: '当前',

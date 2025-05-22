@@ -87,9 +87,9 @@ function createConnectionConfig(server: ServerConfig): Connection | undefined {
  * @param response - The response from listMcpServers API
  * @returns A record mapping server names to their connection configurations
  */
-export function convertMcpServersToClientConfig(
-  response: ListMcpServersResponse,
-): Record<string, Connection> {
+export function convertMcpServersToClientConfig(response: {
+  data: ListMcpServersResponse['data'];
+}): Record<string, Connection> {
   const mcpServers = response.data || [];
   const config: Record<string, Connection> = {};
 

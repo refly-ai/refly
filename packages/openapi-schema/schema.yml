@@ -6116,6 +6116,11 @@ components:
         triggerId:
           type: string
           description: Trigger ID
+        selectedMcpServers:
+          type: array
+          description: Selected MCP servers
+          items:
+            type: string
     InvokeSkillResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

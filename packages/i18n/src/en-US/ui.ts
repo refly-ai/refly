@@ -2551,6 +2551,7 @@ const translations = {
       noContextChat: 'No Context Chat',
       wholeSpaceChat: 'Whole Space Chat',
       recommendQuestions: 'Recommend Questions',
+      chooseMcp: 'Choose MCP',
       replace: 'Replace Selection',
       reject: 'Reject',
       copy: 'Copy Answer',
@@ -2604,6 +2605,11 @@ const translations = {
       title: 'Recommended Questions',
       refresh: 'Refresh',
       empty: 'No recommended questions',
+    },
+    mcpSelector: {
+      title: 'Choose MCP Servers',
+      empty: 'No MCP servers available',
+      selected: 'Selected',
     },
     contextItem: {
       current: 'Current ',

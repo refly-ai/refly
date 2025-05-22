@@ -13,6 +13,7 @@ import { useSkillStoreShallow } from '@refly-packages/ai-workspace-common/stores
 // types
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { RecommendQuestionsPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/recommend-questions-panel';
+import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
 import { SkillTemplateConfig } from '@refly/openapi-schema';
 
 interface LaunchPadProps {
@@ -56,12 +57,17 @@ export const LaunchPad = memo(
 
     const { canvasId } = useCanvasContext();
 
-    const { recommendQuestionsOpen, setRecommendQuestionsOpen } = useLaunchpadStoreShallow(
-      (state) => ({
-        recommendQuestionsOpen: state.recommendQuestionsOpen,
-        setRecommendQuestionsOpen: state.setRecommendQuestionsOpen,
-      }),
-    );
+    const {
+      recommendQuestionsOpen,
+      setRecommendQuestionsOpen,
+      mcpSelectorOpen,
+      setMcpSelectorOpen,
+    } = useLaunchpadStoreShallow((state) => ({
+      recommendQuestionsOpen: state.recommendQuestionsOpen,
+      setRecommendQuestionsOpen: state.setRecommendQuestionsOpen,
+      mcpSelectorOpen: state.mcpSelectorOpen,
+      setMcpSelectorOpen: state.setMcpSelectorOpen,
+    }));
 
     // Add new method to clear state
     const clearLaunchpadState = useCallback(() => {
@@ -109,6 +115,7 @@ export const LaunchPad = memo(
             isOpen={recommendQuestionsOpen}
             onClose={() => setRecommendQuestionsOpen(false)}
           />
+          <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
           {chatPanelComponent}
         </div>
       </div>

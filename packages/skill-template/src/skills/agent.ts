@@ -197,7 +197,10 @@ export class Agent extends BaseSkill {
     return { requestMessages, sources };
   };
 
-  private async getOrInitializeAgentComponents(user: User): Promise<CachedAgentComponents> {
+  private async getOrInitializeAgentComponents(
+    user: User,
+    selectedMcpServers: string[] = [],
+  ): Promise<CachedAgentComponents> {
     const userId = user?.uid ?? user?.email ?? JSON.stringify(user);
 
     this.engine.logger.log(`Initializing new agent components for user ${userId}`);
@@ -209,12 +212,12 @@ export class Agent extends BaseSkill {
 
     try {
       // Attempt to initialize MCP components
-      const mcpServersResponse = await this.engine.service
+      const mcpServerList = await this.engine.service
         .listMcpServers(user, {
           enabled: true,
         })
-        .catch(() => ({}) as ListMcpServersResponse);
-      const mcpServerList = mcpServersResponse?.data ?? []; // Access the 'data' property
+        .then((data) => data?.data?.filter((item) => selectedMcpServers?.includes?.(item.name)))
+        .catch(() => [] as ListMcpServersResponse['data']);
 
       const cachedAgentComponents = this.userAgentComponentsCache.get(userId);
       const currentMcpServerNames = (mcpServerList?.map((server) => server.name) ?? []).sort();
@@ -247,7 +250,7 @@ export class Agent extends BaseSkill {
 
         try {
           // Pass mcpServersResponse (which is ListMcpServersResponse) to convertMcpServersToClientConfig
-          const mcpClientConfig = convertMcpServersToClientConfig(mcpServersResponse);
+          const mcpClientConfig = convertMcpServersToClientConfig({ data: mcpServerList });
           tempMcpClient = new MultiServerMCPClient(mcpClientConfig);
 
           await tempMcpClient.initializeConnections();
@@ -392,14 +395,18 @@ export class Agent extends BaseSkill {
     state: GraphState,
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
-    const { currentSkill, user } = config.configurable;
+    const { currentSkill, user, selectedMcpServers = [] } = config.configurable;
+
     const project = config.configurable?.project as
       | { projectId: string; customInstructions?: string }
       | undefined;
     const customInstructions = project?.projectId ? project?.customInstructions : undefined;
 
     console.log('\n=== GETTING OR INITIALIZING CACHED LANGGRAPH AGENT FLOW ===');
-    const { compiledLangGraphApp, mcpAvailable } = await this.getOrInitializeAgentComponents(user);
+    const { compiledLangGraphApp, mcpAvailable } = await this.getOrInitializeAgentComponents(
+      user,
+      selectedMcpServers,
+    );
 
     const module: SkillPromptModule = {
       buildSystemPrompt: mcpAvailable

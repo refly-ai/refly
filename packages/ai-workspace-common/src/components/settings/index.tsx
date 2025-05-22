@@ -18,7 +18,6 @@ import { McpServerList } from '@refly-packages/ai-workspace-common/components/se
 
 import { RiAccountBoxLine } from 'react-icons/ri';
 import { HiOutlineLanguage } from 'react-icons/hi2';
-import { AiOutlineApi } from 'react-icons/ai';
 import { LuPalette } from 'react-icons/lu';
 
 import './index.scss';
@@ -33,6 +32,7 @@ import { GrCube } from 'react-icons/gr';
 
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { useEffect } from 'react';
+import { ToolOutlined } from '@ant-design/icons';
 
 const iconStyle = { fontSize: 16, transform: 'translateY(3px)' };
 
@@ -79,7 +79,7 @@ export const SettingModal = (props: SettingModalProps) => {
     {
       key: 'mcpServer',
       label: t('settings.tabs.mcpServer'),
-      icon: <AiOutlineApi style={iconStyle} />,
+      icon: <ToolOutlined style={iconStyle} />,
       children: (
         <McpServerList visible={settingsModalActiveTab === SettingsModalActiveTab.McpServer} />
       ),
