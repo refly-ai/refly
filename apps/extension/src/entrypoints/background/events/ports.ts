@@ -3,6 +3,7 @@ import { TASK_STATUS, SkillEvent } from '@refly/common-types';
 import { getCookie } from '@/utils/cookie';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
 import { getAbortController, getLastUniqueId, setAbortController, setLastUniqueId } from '../index';
+import { logger } from '../../../utils/logger';
 
 export const handleStreamingChat = async (
   req: { body: any; uniqueId: string },
@@ -10,7 +11,7 @@ export const handleStreamingChat = async (
 ) => {
   const { type, payload } = req?.body || {};
   const { uniqueId } = req;
-  console.log('receive request', req.body);
+  logger.debug('receive request', req.body);
   setLastUniqueId(uniqueId);
 
   try {
@@ -76,7 +77,7 @@ export const handleStreamingChat = async (
         },
       });
 
-      console.log('after abortController', abortController);
+      logger.debug('after abortController', abortController);
     } else if (type === TASK_STATUS.SHUTDOWN) {
       const abortController = getAbortController(uniqueId);
 
@@ -85,21 +86,21 @@ export const handleStreamingChat = async (
       }
     }
   } catch (err) {
-    console.log('err', err);
+    logger.error('streaming chat error', err);
     try {
       const abortController = getAbortController(uniqueId);
       if (!abortController?.signal?.aborted) {
         abortController?.abort?.();
       }
     } catch (err) {
-      console.log('err', err);
+      logger.error('abort controller cleanup error', err);
     }
   }
 };
 
 export const onPort = async (port: Runtime.Port) => {
   port.onMessage.addListener(async (message: any, comingPort: Runtime.Port) => {
-    console.log('onPort', message, comingPort);
+    logger.debug('onPort', message, comingPort);
     if (comingPort.name === 'streaming-chat') {
       return handleStreamingChat(message, {
         send: async (msg: any) => {
@@ -115,7 +116,7 @@ export const onPort = async (port: Runtime.Port) => {
     try {
       abortController?.abort?.();
     } catch (err) {
-      console.log('err', err);
+      logger.error('port disconnect cleanup error', err);
     }
   });
 };

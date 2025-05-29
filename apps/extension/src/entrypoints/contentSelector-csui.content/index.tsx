@@ -3,6 +3,7 @@ import { defineContentScript } from 'wxt/sandbox';
 import { createShadowRootUi } from 'wxt/client';
 import { App } from './App';
 import { setRuntime } from '@refly/utils/env';
+import { logger } from '@/utils/logger';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -16,7 +17,7 @@ export default defineContentScript({
 
   async main(ctx) {
     setRuntime('extension-csui');
-    console.log('ctx', ctx);
+    logger.debug('contentSelector ctx', ctx);
 
     const injectSelectorCSS = () => {
       const style = document.createElement('style');
