@@ -6,6 +6,7 @@ To self-deploy Refly, you need to have the following installed:
 
 - Docker (version 20.10.0 or higher)
 - *Optional*: PostgreSQL client (either `psql` or GUI-based tools), used for managing usable LLM models
+- *Optional*: Kubernetes cluster
 
 ::: info
 We plan to provide a fully-functional native application in the future, offering seamless installation experience in a privacy-focused manner. Stay tuned!
@@ -57,14 +58,23 @@ a13f349fe35b   minio/minio:RELEASE.2025-01-20T14-49-07Z   "/usr/bin/docker-entâ€
 e7b398dbd02b   postgres:16-alpine                         "docker-entrypoint.sâ€¦"   5 hours ago   Up 5 hours (healthy)   0.0.0.0:35432->5432/tcp, :::35432->5432/tcp                                              refly_db
 ```
 
-Finally, you can access the Refly application in `http://${HOST_IP}:5700`, where `${HOST_IP}` is the IP address of the host machine.
+### Deploy to Kubernetes cluster
+
+Apply deployment yaml file directory
+
+```bash
+cd refly/deploy/kubernetes
+kubectl apply -f refly-deployment.yaml
+```
+
+Finally, you can access the Refly application in `http://${HOST_IP}:5700` (`http://${HOST_IP}:30001` in Kubernetes), where `${HOST_IP}` is the IP address of the host machine.
 
 ::: info
 If you cannot access the Refly application, please check the following:
 
 - The `HOST_IP` is correct.
 - The application is running properly. If not, jump to [Troubleshooting](#troubleshooting).
-- The port `5700` is not being blocked by any application firewall. Check this especially if you are using a cloud server.
+- The port `5700`(`30001`) is not being blocked by any application firewall. Check this especially if you are using a cloud server.
 :::
 
 ## Start Using Refly {#start-using-refly}

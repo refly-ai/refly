@@ -59,6 +59,18 @@ cp ../../apps/api/.env.example .env # copy the example api env file
 docker compose up -d
 ```
 
+### Self-deploy with Kubernetes
+
+Also, we support deploy ReflyAI to Kubernetes cluster.
+
+To start deployment:
+
+```bash
+cd deploy/kubernetes
+
+kubectl apply -f refly-deployment.yaml
+```
+
 For the following steps, you can visit [Self-deploy Guide](https://docs.refly.ai/guide/self-deploy) for more details.
 
 For core deployment tutorials, environment variable configuration, and FAQs, please refer to 👉 [Deployment Guide](https://docs.refly.ai/guide/self-deploy).
