@@ -6,6 +6,8 @@ import { SearchResult, RerankerModelConfig } from '@refly/openapi-schema';
 export interface RerankerConfig extends RerankerModelConfig {
   /** API credentials */
   apiKey: string;
+  /** Base URL for API endpoint */
+  baseUrl?: string;
 }
 
 /**

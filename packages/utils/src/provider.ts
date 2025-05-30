@@ -30,7 +30,7 @@ export const providerInfoList: ProviderInfo[] = [
   {
     key: 'ollama',
     name: 'Ollama',
-    categories: ['llm', 'embedding'],
+    categories: ['llm', 'embedding', 'reranker'],
     fieldConfig: {
       apiKey: { presence: 'optional' },
       baseUrl: {

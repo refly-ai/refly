@@ -3,6 +3,7 @@ import { Embeddings } from '@langchain/core/embeddings';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { FireworksEmbeddings } from '@langchain/community/embeddings/fireworks';
 import { JinaEmbeddings } from './jina';
+import { OllamaEmbeddings } from './ollama';
 import { BaseProvider } from '../types';
 
 export const getEmbeddings = (provider: BaseProvider, config: EmbeddingModelConfig): Embeddings => {
@@ -26,6 +27,15 @@ export const getEmbeddings = (provider: BaseProvider, config: EmbeddingModelConf
         model: config.modelId,
         batchSize: config.batchSize,
         dimensions: config.dimensions,
+        apiKey: provider.apiKey,
+        maxRetries: 3,
+      });
+    case 'ollama':
+      return new OllamaEmbeddings({
+        model: config.modelId,
+        batchSize: config.batchSize,
+        dimensions: config.dimensions,
+        baseUrl: provider.baseUrl || 'http://localhost:11434/v1',
         apiKey: provider.apiKey,
         maxRetries: 3,
       });
