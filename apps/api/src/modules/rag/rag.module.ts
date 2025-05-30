@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from '../common/common.module';
 import { RAGService } from './rag.service';
-import { ProviderModule } from '@/modules/provider/provider.module';
+import { ProviderModule } from '../provider/provider.module';
 
 @Module({
   imports: [CommonModule, ProviderModule],

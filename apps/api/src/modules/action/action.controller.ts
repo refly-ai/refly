@@ -1,7 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { GetActionResultResponse } from '@refly/openapi-schema';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
-import { User as UserModel } from '@/generated/client';
+import { User as UserModel } from '../../generated/client';
 import { buildSuccessResponse } from '../../utils/response';
 import { ActionService } from '../action/action.service';
 import { actionResultPO2DTO } from '../action/action.dto';

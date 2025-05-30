@@ -2,7 +2,17 @@
   "name": "@refly/providers",
   "version": "1.0.0",
   "description": "Implementation of Refly providers",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./dist/index.js",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
     "test": "echo \"Error: no test specified\" && exit 1"

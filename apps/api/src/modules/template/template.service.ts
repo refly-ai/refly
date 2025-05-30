@@ -6,7 +6,7 @@ import {
   CreateCanvasTemplateRequest,
   UpdateCanvasTemplateRequest,
 } from '@refly/openapi-schema';
-import { Prisma } from '@/generated/client';
+import { Prisma } from '../../generated/client';
 import { PrismaService } from '../common/prisma.service';
 import { genCanvasTemplateID } from '@refly/utils';
 import { ShareService } from '../share/share.service';

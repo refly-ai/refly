@@ -6,6 +6,7 @@
 *.tsbuildinfo
 
 dist
+packed
 .turbo
 .windsurf
 

@@ -13,8 +13,8 @@ import {
   QUEUE_SIMPLE_EVENT,
   QUEUE_SYNC_STORAGE_USAGE,
 } from '../../utils/const';
-import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
-import { FULLTEXT_SEARCH, FulltextSearchService } from '@/modules/common/fulltext-search';
+import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
+import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';
 
 describe('KnowledgeService', () => {
   let service: KnowledgeService;

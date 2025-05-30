@@ -8,8 +8,8 @@ import { RedisService } from '../common/redis.service';
 import { QUEUE_SYNC_CANVAS_ENTITY } from '../../utils/const';
 import type { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';
-import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
-import { FULLTEXT_SEARCH, FulltextSearchService } from '@/modules/common/fulltext-search';
+import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
+import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';
 
 describe('CollabService', () => {
   let service: CollabService;

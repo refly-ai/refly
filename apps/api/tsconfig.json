@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
-    "declaration": false,
+    "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
@@ -23,7 +23,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["jest", "node", "express", "multer", "electron"],
+    "types": ["jest", "node", "express", "multer"],
     "resolveJsonModule": true
   },
   "include": ["src/**/*", "*.json"],
@@ -36,5 +36,13 @@
     { "path": "../../packages/common-types" },
     { "path": "../../packages/utils" },
     { "path": "../../packages/skill-template" }
-  ]
+  ],
+  "tsc-alias": {
+    "verbose": true,
+    "resolveFullPaths": true,
+    "fileExtensions": {
+      "inputGlob": "{js,jsx,mjs}",
+      "outputCheck": ["js", "json", "jsx", "mjs"]
+    }
+  }
 }

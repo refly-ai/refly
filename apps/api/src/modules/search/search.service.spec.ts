@@ -4,7 +4,7 @@ import { createMock } from '@golevelup/ts-jest';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma.service';
 import { RAGService } from '../rag/rag.service';
-import { FULLTEXT_SEARCH, FulltextSearchService } from '@/modules/common/fulltext-search';
+import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';
 
 describe('SearchService', () => {
   let service: SearchService;

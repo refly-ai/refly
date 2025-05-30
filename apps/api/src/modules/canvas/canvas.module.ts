@@ -17,6 +17,7 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { ActionModule } from '../action/action.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
+import { isDesktop } from '../../utils/runtime';
 
 @Module({
   imports: [
@@ -28,20 +29,28 @@ import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
     ProviderModule,
     CodeArtifactModule,
     SubscriptionModule,
-    BullModule.registerQueue({
-      name: QUEUE_DELETE_KNOWLEDGE_ENTITY,
-    }),
-    BullModule.registerQueue({
-      name: QUEUE_POST_DELETE_CANVAS,
-    }),
+    ...(isDesktop()
+      ? []
+      : [
+          BullModule.registerQueue({
+            name: QUEUE_DELETE_KNOWLEDGE_ENTITY,
+          }),
+          BullModule.registerQueue({
+            name: QUEUE_POST_DELETE_CANVAS,
+          }),
+        ]),
   ],
   controllers: [CanvasController],
   providers: [
     CanvasService,
-    SyncCanvasEntityProcessor,
-    ClearCanvasEntityProcessor,
-    AutoNameCanvasProcessor,
-    PostDeleteCanvasProcessor,
+    ...(isDesktop()
+      ? []
+      : [
+          SyncCanvasEntityProcessor,
+          ClearCanvasEntityProcessor,
+          AutoNameCanvasProcessor,
+          PostDeleteCanvasProcessor,
+        ]),
   ],
   exports: [CanvasService],
 })

@@ -4,8 +4,8 @@ import {
   Canvas as CanvasModel,
   Document as DocumentModel,
   Resource as ResourceModel,
-} from '@/generated/client';
-import { pick } from '@/utils';
+} from '../../generated/client';
+import { pick } from '../../utils';
 
 export const projectPO2DTO = (
   project: ProjectModel & {

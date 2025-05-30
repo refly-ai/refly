@@ -1,12 +1,6 @@
 import path from 'node:path';
 
-export enum AppMode {
-  Server = 'server',
-  Desktop = 'desktop',
-}
-
 export default () => ({
-  mode: process.env.MODE || AppMode.Server,
   port: Number.parseInt(process.env.PORT) || 5800,
   wsPort: Number.parseInt(process.env.WS_PORT) || 5801,
   origin: process.env.ORIGIN || 'http://localhost:5700',
@@ -58,9 +52,15 @@ export default () => ({
     },
   },
   vectorStore: {
-    host: process.env.QDRANT_HOST || 'localhost',
-    port: Number.parseInt(process.env.QDRANT_PORT) || 6333,
-    apiKey: process.env.QDRANT_API_KEY,
+    backend: process.env.VECTOR_STORE_BACKEND || 'qdrant', // 'qdrant' or 'lancedb'
+    qdrant: {
+      host: process.env.QDRANT_HOST || 'localhost',
+      port: Number.parseInt(process.env.QDRANT_PORT) || 6333,
+      apiKey: process.env.QDRANT_API_KEY,
+    },
+    lancedb: {
+      uri: process.env.LANCEDB_URI || './data/lancedb',
+    },
   },
   fulltextSearch: {
     backend: process.env.FULLTEXT_SEARCH_BACKEND || 'prisma',

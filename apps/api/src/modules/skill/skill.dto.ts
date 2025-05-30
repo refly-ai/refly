@@ -12,7 +12,7 @@ import {
 import {
   SkillInstance as SkillInstanceModel,
   SkillTrigger as SkillTriggerModel,
-} from '@/generated/client';
+} from '../../generated/client';
 import { pick } from '../../utils';
 
 export interface InvokeSkillJobData extends InvokeSkillRequest {

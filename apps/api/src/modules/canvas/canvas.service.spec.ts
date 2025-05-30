@@ -7,8 +7,8 @@ import { CollabService } from '../collab/collab.service';
 import { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY } from '../../utils/const';
-import { OSS_INTERNAL, ObjectStorageService } from '@/modules/common/object-storage';
-import { FULLTEXT_SEARCH, FulltextSearchService } from '@/modules/common/fulltext-search';
+import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
+import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';
 
 describe('CanvasService', () => {
   let service: CanvasService;

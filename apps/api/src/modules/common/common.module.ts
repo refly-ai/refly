@@ -2,16 +2,15 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from './prisma.service';
 import { RedisService } from './redis.service';
-import { QdrantService } from './qdrant.service';
 import { EncryptionService } from './encryption.service';
 import { createObjectStorageServiceFactory, OSS_EXTERNAL, OSS_INTERNAL } from './object-storage';
 import { FULLTEXT_SEARCH, createFulltextSearchFactory } from './fulltext-search';
+import { VECTOR_SEARCH, createVectorSearchFactory } from './vector-search';
 
 @Module({
   providers: [
     PrismaService,
     RedisService,
-    QdrantService,
     EncryptionService,
     {
       provide: OSS_EXTERNAL,
@@ -28,15 +27,20 @@ import { FULLTEXT_SEARCH, createFulltextSearchFactory } from './fulltext-search'
       useFactory: createFulltextSearchFactory(),
       inject: [PrismaService, ConfigService],
     },
+    {
+      provide: VECTOR_SEARCH,
+      useFactory: createVectorSearchFactory(),
+      inject: [ConfigService],
+    },
   ],
   exports: [
     PrismaService,
     RedisService,
-    QdrantService,
     EncryptionService,
     OSS_EXTERNAL,
     OSS_INTERNAL,
     FULLTEXT_SEARCH,
+    VECTOR_SEARCH,
   ],
 })
 export class CommonModule {}

@@ -1,26 +1,32 @@
 {
   "name": "refly-monorepo",
+  "version": "0.6.0",
   "private": true,
   "engines": {
     "pnpm": ">=8"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/refly-ai/refly.git"
+  },
   "scripts": {
     "commit": "cz",
     "dev": "turbo run dev",
-    "dev:electron": "turbo run dev:electron --filter=@refly/api",
     "start": "turbo run start",
-    "start:electron": "turbo run start:electron --filter=@refly/api",
     "build": "turbo run build",
     "build:api": "turbo run build --filter=@refly/api",
     "build:api:fast": "turbo run build:fast --filter=@refly/api",
     "build:web": "turbo run build --filter=@refly/web",
     "build:extension": "turbo run build --filter=@refly/extension",
     "build:electron": "turbo run build:electron --filter=@refly/api",
-    "package:electron": "turbo run package:electron --filter=@refly/api",
+    "package:electron": "electron-builder --mac --x64",
+    "package:electron:dir": "electron-builder --mac --x64 --dir",
+    "copy-package-dist": "node scripts/copy-package-dist.js",
     "copy-env": "turbo run copy-env",
     "copy-env:develop": "turbo run copy-env:develop",
     "codegen": "turbo run codegen",
     "clean": "turbo run clean",
+    "clean:node-modules": "node scripts/cleanup-node-modules.js",
     "cy:open": "cypress open",
     "cy:install": "cypress install",
     "lint": "biome lint .",
@@ -40,9 +46,11 @@
     "commitizen": "^4.2.4",
     "cypress": "14.0.1",
     "cz-conventional-changelog": "^3.3.0",
+    "dotenv": "~16.4.5",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
     "ncp": "^2.0.0",
+    "nodemon": "~3.1.7",
     "rimraf": "^5.0.10",
     "turbo": "^2.1.2",
     "typescript": "5.3.3",
@@ -56,5 +64,10 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json}": "biome check --write --unsafe --no-errors-on-unmatched"
+  },
+  "pnpm": {
+    "overrides": {
+      "node-abi": "4.9.0"
+    }
   }
 }

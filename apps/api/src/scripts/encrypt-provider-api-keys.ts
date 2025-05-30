@@ -1,8 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { AppModule } from '../modules/app.module';
-import { PrismaService } from '@/modules/common/prisma.service';
-import { EncryptionService } from '@/modules/common/encryption.service';
+import { PrismaService } from '../modules/common/prisma.service';
+import { EncryptionService } from '../modules/common/encryption.service';
 
 /**
  * This script encrypts all existing provider apiKeys in the database.

@@ -1,6 +1,6 @@
-import { McpServer } from '@/generated/client';
+import { McpServer } from '../../generated/client';
 import { McpServerDTO, McpServerType } from '@refly/openapi-schema';
-import { pick } from '@/utils';
+import { pick } from '../../utils';
 
 /**
  * Convert McpServer PO to DTO

@@ -2,7 +2,7 @@ import { ModelInfo, ModelTier, SubscriptionPlan, FileVisibility } from '@refly/o
 import {
   ModelInfo as ModelInfoPO,
   SubscriptionPlan as SubscriptionPlanPO,
-} from '@/generated/client';
+} from '../../generated/client';
 import { pick } from '@refly/utils';
 
 export interface FileObject {

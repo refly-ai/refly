@@ -1,4 +1,4 @@
-import { ShareRecord as ShareRecordModel } from '@/generated/client';
+import { ShareRecord as ShareRecordModel } from '../../generated/client';
 import { EntityType, ShareRecord } from '@refly/openapi-schema';
 import { pick } from '@refly/utils';
 

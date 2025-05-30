@@ -5,11 +5,11 @@ import { BaseParser, ParserOptions } from './base';
 import { PandocParser } from './pandoc.parser';
 import { MarkerParser } from './marker.parser';
 import { JinaParser } from './jina.parser';
-import { PlainTextParser } from '../../knowledge/parsers/plain-text.parser';
-import { PdfjsParser } from '../../knowledge/parsers/pdfjs.parser';
+import { PlainTextParser } from '../parsers/plain-text.parser';
+import { PdfjsParser } from '../parsers/pdfjs.parser';
 import { User } from '@refly/openapi-schema';
-import { CheerioParser } from '@/modules/knowledge/parsers/cheerio.parser';
-import { ProviderService } from '@/modules/provider/provider.service';
+import { CheerioParser } from '../parsers/cheerio.parser';
+import { ProviderService } from '../../provider/provider.service';
 
 @Injectable()
 export class ParserFactory {

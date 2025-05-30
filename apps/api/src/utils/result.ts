@@ -1,4 +1,4 @@
-import { Prisma } from '@/generated/client';
+import { Prisma } from '../generated/client';
 import { ActionLog, Artifact, SkillEvent, TokenUsageItem } from '@refly/openapi-schema';
 import { SkillRunnableMeta } from '@refly/skill-template';
 

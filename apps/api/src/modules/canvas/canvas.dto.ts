@@ -1,4 +1,4 @@
-import { Canvas as CanvasModel } from '@/generated/client';
+import { Canvas as CanvasModel } from '../../generated/client';
 import { Canvas, Entity } from '@refly/openapi-schema';
 import { pick } from '../../utils';
 

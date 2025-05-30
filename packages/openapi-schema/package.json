@@ -2,7 +2,7 @@
   "name": "@refly/openapi-schema",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "exports": {
     ".": "./src/index.ts",
     "./queries": "./src/queries/index.ts",
@@ -16,8 +16,7 @@
   },
   "devDependencies": {
     "@hey-api/client-fetch": "0.4.0",
-    "@hey-api/openapi-ts": "0.53.8",
-    "nodemon": "~3.1.7"
+    "@hey-api/openapi-ts": "0.53.8"
   },
   "keywords": [],
   "author": "",

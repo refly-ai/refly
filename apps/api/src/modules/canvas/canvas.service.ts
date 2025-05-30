@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import * as Y from 'yjs';
 import pLimit from 'p-limit';
 import { Queue } from 'bullmq';
@@ -21,7 +21,7 @@ import {
   User,
   CanvasNode,
 } from '@refly/openapi-schema';
-import { Prisma } from '@/generated/client';
+import { Prisma } from '../../generated/client';
 import { genCanvasID } from '@refly/utils';
 import { DeleteKnowledgeEntityJobData } from '../knowledge/knowledge.dto';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '../../utils/const';
@@ -31,9 +31,10 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ActionService } from '../action/action.service';
 import { generateCanvasTitle, CanvasContentItem } from './canvas-title-generator';
-import { RedisService } from '@/modules/common/redis.service';
-import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
-import { ProviderService } from '@/modules/provider/provider.service';
+import { RedisService } from '../common/redis.service';
+import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
+import { ProviderService } from '../provider/provider.service';
+import { isDesktop } from '../../utils/runtime';
 
 @Injectable()
 export class CanvasService {
@@ -51,10 +52,12 @@ export class CanvasService {
     private subscriptionService: SubscriptionService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
     @Inject(FULLTEXT_SEARCH) private fts: FulltextSearchService,
+    @Optional()
     @InjectQueue(QUEUE_DELETE_KNOWLEDGE_ENTITY)
-    private deleteKnowledgeQueue: Queue<DeleteKnowledgeEntityJobData>,
+    private deleteKnowledgeQueue?: Queue<DeleteKnowledgeEntityJobData>,
+    @Optional()
     @InjectQueue(QUEUE_POST_DELETE_CANVAS)
-    private postDeleteCanvasQueue: Queue<DeleteCanvasJobData>,
+    private postDeleteCanvasQueue?: Queue<DeleteCanvasJobData>,
   ) {}
 
   async listCanvases(user: User, param: ListCanvasesData['query']) {
@@ -479,24 +482,33 @@ export class CanvasService {
     });
 
     // Add canvas deletion to queue for async processing
-    await this.postDeleteCanvasQueue.add(
-      'postDeleteCanvas',
-      {
+    if (this.postDeleteCanvasQueue) {
+      await this.postDeleteCanvasQueue.add(
+        'postDeleteCanvas',
+        {
+          uid,
+          canvasId,
+          deleteAllFiles: param.deleteAllFiles,
+        },
+        {
+          jobId: `canvas-cleanup-${canvasId}`,
+          removeOnComplete: true,
+          removeOnFail: true,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+        },
+      );
+    } else if (isDesktop()) {
+      // In desktop mode, process deletion directly
+      await this.postDeleteCanvas({
         uid,
         canvasId,
         deleteAllFiles: param.deleteAllFiles,
-      },
-      {
-        jobId: `canvas-cleanup-${canvasId}`,
-        removeOnComplete: true,
-        removeOnFail: true,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000,
-        },
-      },
-    );
+      });
+    }
   }
 
   async postDeleteCanvas(jobData: DeleteCanvasJobData) {
@@ -533,20 +545,24 @@ export class CanvasService {
       this.logger.log(`Entities to be deleted: ${JSON.stringify(entities)}`);
 
       for (const entity of entities) {
-        await this.deleteKnowledgeQueue.add(
-          'deleteKnowledgeEntity',
-          {
-            uid: canvas.uid,
-            entityId: entity.entityId,
-            entityType: entity.entityType,
-          },
-          {
-            jobId: entity.entityId,
-            removeOnComplete: true,
-            removeOnFail: true,
-            attempts: 3,
-          },
-        );
+        if (this.deleteKnowledgeQueue) {
+          await this.deleteKnowledgeQueue.add(
+            'deleteKnowledgeEntity',
+            {
+              uid: canvas.uid,
+              entityId: entity.entityId,
+              entityType: entity.entityType,
+            },
+            {
+              jobId: entity.entityId,
+              removeOnComplete: true,
+              removeOnFail: true,
+              attempts: 3,
+            },
+          );
+        }
+        // Note: In desktop mode, entity deletion would be handled differently
+        // or could be processed synchronously if needed
       }
 
       // Mark relations as deleted

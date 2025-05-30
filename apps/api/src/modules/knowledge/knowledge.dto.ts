@@ -3,7 +3,7 @@ import {
   Document as DocumentModel,
   Reference as ReferenceModel,
   StaticFile as StaticFileModel,
-} from '@/generated/client';
+} from '../../generated/client';
 import {
   Resource,
   ResourceType,

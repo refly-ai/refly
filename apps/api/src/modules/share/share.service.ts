@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { createId } from '@paralleldrive/cuid2';
 import { PrismaService } from '../common/prisma.service';
 import { MiscService } from '../misc/misc.service';
-import { ShareRecord } from '@/generated/client';
+import { ShareRecord } from '../../generated/client';
 import * as Y from 'yjs';
 import {
   ActionResult,
@@ -43,7 +43,7 @@ import {
   safeParseJSON,
   batchReplaceRegex,
 } from '@refly/utils';
-import { FULLTEXT_SEARCH, FulltextSearchService } from '@/modules/common/fulltext-search';
+import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { CodeArtifactService } from '../code-artifact/code-artifact.service';
 import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';

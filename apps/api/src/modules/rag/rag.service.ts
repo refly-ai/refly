@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Document, DocumentInterface } from '@langchain/core/documents';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
@@ -6,10 +6,10 @@ import { cleanMarkdownForIngest } from '@refly/utils';
 import * as avro from 'avsc';
 import { SearchResult, User } from '@refly/openapi-schema';
 import { HybridSearchParam, ContentPayload, DocumentPayload } from './rag.dto';
-import { QdrantService } from '../common/qdrant.service';
-import { Condition, PointStruct } from '../common/qdrant.dto';
+import { VectorSearchService, VectorPoint, VectorFilter } from '../common/vector-search';
+import { VECTOR_SEARCH } from '../common/vector-search/tokens';
 import { genResourceUuid } from '../../utils';
-import { ProviderService } from '@/modules/provider/provider.service';
+import { ProviderService } from '../provider/provider.service';
 
 // Define Avro schema for vector points (must match the one used for serialization)
 const avroSchema = avro.Type.forSchema({
@@ -43,7 +43,8 @@ export class RAGService {
   private logger = new Logger(RAGService.name);
 
   constructor(
-    private qdrant: QdrantService,
+    @Inject(VECTOR_SEARCH)
+    private vectorSearch: VectorSearchService,
     private providerService: ProviderService,
   ) {
     this.splitter = RecursiveCharacterTextSplitter.fromLanguage('markdown', {
@@ -161,7 +162,7 @@ export class RAGService {
     const newChunks = await this.chunkText(pageContent);
 
     // Get existing points for this document using scroll
-    const existingPoints = await this.qdrant.scroll({
+    const existingPoints = await this.vectorSearch.scroll({
       filter: {
         must: [
           { key: 'tenantId', match: { value: uid } },
@@ -184,7 +185,7 @@ export class RAGService {
     );
 
     // Prepare points for new or updated chunks
-    const pointsToUpsert: PointStruct[] = [];
+    const pointsToUpsert: VectorPoint[] = [];
     const chunksNeedingEmbeddings: string[] = [];
     const chunkIndices: number[] = [];
 
@@ -234,7 +235,7 @@ export class RAGService {
 
     // Delete existing points for this document
     if (existingPoints.length > 0) {
-      await this.qdrant.batchDelete({
+      await this.vectorSearch.batchDelete({
         must: [
           { key: 'tenantId', match: { value: uid } },
           { key: nodeType === 'document' ? 'docId' : 'resourceId', match: { value: entityId } },
@@ -244,14 +245,14 @@ export class RAGService {
 
     // Save new points
     if (pointsToUpsert.length > 0) {
-      await this.qdrant.batchSaveData(pointsToUpsert);
+      await this.vectorSearch.batchSaveData(pointsToUpsert);
     }
 
-    return { size: QdrantService.estimatePointsSize(pointsToUpsert) };
+    return { size: this.vectorSearch.estimatePointsSize(pointsToUpsert) };
   }
 
   async deleteResourceNodes(user: User, resourceId: string) {
-    return this.qdrant.batchDelete({
+    return this.vectorSearch.batchDelete({
       must: [
         { key: 'tenantId', match: { value: user.uid } },
         { key: 'resourceId', match: { value: resourceId } },
@@ -260,7 +261,7 @@ export class RAGService {
   }
 
   async deleteDocumentNodes(user: User, docId: string) {
-    return this.qdrant.batchDelete({
+    return this.vectorSearch.batchDelete({
       must: [
         { key: 'tenantId', match: { value: user.uid } },
         { key: 'docId', match: { value: docId } },
@@ -282,7 +283,7 @@ export class RAGService {
       );
 
       // Fetch all points for the source document
-      const points = await this.qdrant.scroll({
+      const points = await this.vectorSearch.scroll({
         filter: {
           must: [
             { key: 'tenantId', match: { value: sourceUid } },
@@ -299,7 +300,7 @@ export class RAGService {
       }
 
       // Prepare points for the target user
-      const pointsToUpsert: PointStruct[] = points.map((point) => ({
+      const pointsToUpsert: VectorPoint[] = points.map((point) => ({
         ...point,
         id: genResourceUuid(`${sourceUid}-${targetDocId}-${point.payload.seq ?? 0}`),
         payload: {
@@ -309,10 +310,10 @@ export class RAGService {
       }));
 
       // Calculate the size of the points to be upserted
-      const size = QdrantService.estimatePointsSize(pointsToUpsert);
+      const size = this.vectorSearch.estimatePointsSize(pointsToUpsert);
 
       // Perform the upsert operation
-      await this.qdrant.batchSaveData(pointsToUpsert);
+      await this.vectorSearch.batchSaveData(pointsToUpsert);
 
       this.logger.log(
         `Successfully duplicated ${pointsToUpsert.length} points for document ${sourceDocId} to user ${targetUid}`,
@@ -338,7 +339,7 @@ export class RAGService {
       // param.vector = Array(256).fill(0);
     }
 
-    const conditions: Condition[] = [
+    const conditions: VectorFilter[] = [
       {
         key: 'tenantId',
         match: { value: user.uid },
@@ -376,7 +377,8 @@ export class RAGService {
       });
     }
 
-    const results = await this.qdrant.search(param, { must: conditions });
+    const filter: VectorFilter = { must: conditions };
+    const results = await this.vectorSearch.search(param, filter);
     return results.map((res) => res.payload as any);
   }
 
@@ -426,7 +428,7 @@ export class RAGService {
       this.logger.log(`Serializing ${nodeType} ${entityId} from user ${user.uid} to Avro binary`);
 
       // Fetch all points for the document
-      const points = await this.qdrant.scroll({
+      const points = await this.vectorSearch.scroll({
         filter: {
           must: [
             { key: 'tenantId', match: { value: user.uid } },
@@ -547,10 +549,10 @@ export class RAGService {
       });
 
       // Calculate the size of points
-      const size = QdrantService.estimatePointsSize(pointsToUpsert);
+      const size = this.vectorSearch.estimatePointsSize(pointsToUpsert);
 
       // Save points to Qdrant
-      await this.qdrant.batchSaveData(pointsToUpsert);
+      await this.vectorSearch.batchSaveData(pointsToUpsert);
 
       this.logger.log(
         `Successfully deserialized ${pointsToUpsert.length} points from Avro binary to ${targetNodeType} ${targetEntityId} for user ${user.uid}`,
@@ -613,7 +615,7 @@ export class RAGService {
     );
 
     // Prepare filter conditions
-    const conditions: Condition[] = [{ key: 'tenantId', match: { value: user.uid } }];
+    const conditions: VectorFilter[] = [{ key: 'tenantId', match: { value: user.uid } }];
 
     // Add conditions for documents and resources
     if (hasDocIds) {
@@ -624,11 +626,7 @@ export class RAGService {
       conditions.push({ key: 'resourceId', match: { any: resourceIds } });
     }
 
-    return await this.qdrant.updatePayload(
-      {
-        must: conditions,
-      },
-      metadata,
-    );
+    const filter: VectorFilter = { must: conditions };
+    return await this.vectorSearch.updatePayload(filter, metadata);
   }
 }

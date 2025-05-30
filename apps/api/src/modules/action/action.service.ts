@@ -2,12 +2,12 @@ import { ActionDetail } from '../action/action.dto';
 import { PrismaService } from '../common/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { ActionResultNotFoundError } from '@refly/errors';
-import { ActionResult } from '@/generated/client';
+import { ActionResult } from '../../generated/client';
 import { EntityType, GetActionResultData, User } from '@refly/openapi-schema';
 import { batchReplaceRegex, genActionResultID, pick } from '@refly/utils';
 import pLimit from 'p-limit';
 import { ProviderService } from '../provider/provider.service';
-import { providerItem2ModelInfo } from '@/modules/provider/provider.dto';
+import { providerItem2ModelInfo } from '../provider/provider.dto';
 
 @Injectable()
 export class ActionService {
