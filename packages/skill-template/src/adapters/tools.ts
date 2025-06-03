@@ -21,6 +21,8 @@ import {
 import debug from 'debug';
 import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod';
 import { z } from 'zod';
+import { getTraceManager } from '@refly/observability';
+import { createId } from '@paralleldrive/cuid2';
 
 // Replace direct initialization with lazy initialization
 let debugLog: debug.Debugger;
@@ -142,11 +144,7 @@ async function _convertCallToolResult(
 }
 
 /**
- * Call an MCP tool.
- *
- * Use this with `.bind` to capture the fist three arguments, then pass to the constructor of DynamicStructuredTool.
- *
- * @internal
+ * Call a tool on an MCP server.
  *
  * @param client - The MCP client
  * @param toolName - The name of the tool (forwarded to the client)
@@ -159,6 +157,36 @@ async function _callTool(
   client: Client,
   args: Record<string, unknown>,
 ): Promise<[MessageContent, EmbeddedResource[]]> {
+  const traceManager = getTraceManager();
+  const spanId = createId();
+  const startTime = Date.now();
+
+  // Desensitize arguments for logging
+  const desensitizedArgs = desensitizeData(args);
+
+  // Create span for MCP tool call
+  if (traceManager) {
+    const traceId = createId(); // Generate a trace ID for this operation
+    traceManager.createSpan(
+      traceId,
+      spanId,
+      {
+        name: `Tool: ${toolName}`,
+        input: {
+          serverName,
+          toolName,
+          arguments: desensitizedArgs,
+        },
+        metadata: {
+          type: 'mcp_tool_call',
+          serverName,
+          toolName,
+          startTime,
+        },
+      }
+    );
+  }
+
   let result: CallToolResult;
   try {
     getDebugLog()(`INFO: Calling tool ${toolName}(${JSON.stringify(args)})`);
@@ -166,8 +194,25 @@ async function _callTool(
       name: toolName,
       arguments: args,
     })) as CallToolResult;
+
+    // Update span with success
+    if (traceManager) {
+      traceManager.endSpan(spanId, {
+        output: result,
+        success: true,
+      });
+    }
   } catch (error) {
     getDebugLog()(`Error calling tool ${toolName}: ${String(error)}`);
+
+    // Update span with error
+    if (traceManager) {
+      traceManager.endSpan(spanId, {
+        error: error.message,
+        success: false,
+      }, error.message, 'ERROR');
+    }
+
     // eslint-disable-next-line no-instanceof/no-instanceof
     if (error instanceof ToolException) {
       throw error;
@@ -176,6 +221,28 @@ async function _callTool(
   }
 
   return _convertCallToolResult(serverName, toolName, result, client);
+}
+
+/**
+ * Desensitize data by removing sensitive information
+ */
+function desensitizeData(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+
+  const sensitiveKeys = ['password', 'token', 'key', 'secret', 'auth', 'credential'];
+  const result = Array.isArray(data) ? [...data] : { ...data };
+
+  for (const [key, value] of Object.entries(result)) {
+    if (
+      sensitiveKeys.some((sensitiveKey) => key.toLowerCase().includes(sensitiveKey.toLowerCase()))
+    ) {
+      result[key] = '[REDACTED]';
+    } else if (typeof value === 'object' && value !== null) {
+      result[key] = desensitizeData(value);
+    }
+  }
+
+  return result;
 }
 
 export type LoadMcpToolsOptions = {

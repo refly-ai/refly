@@ -33,6 +33,7 @@ import { CodeArtifactModule } from './code-artifact/code-artifact.module';
 import { PagesModule } from './pages/pages.module';
 import { ProjectModule } from './project/project.module';
 import { McpServerModule } from './mcp-server/mcp-server.module';
+import { ObservabilityModule } from './observability/observability.module';
 
 class CustomThrottlerGuard extends ThrottlerGuard {
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
@@ -59,6 +60,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
       cache: true,
       expandVariables: true,
     }),
+    ObservabilityModule,
     ThrottlerModule.forRootAsync({
       imports: [CommonModule],
       inject: [RedisService],

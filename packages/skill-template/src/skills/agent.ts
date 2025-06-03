@@ -19,6 +19,9 @@ import {
   User,
 } from '@refly/openapi-schema';
 import { createSkillTemplateInventory } from '../inventory';
+import { LangfuseListener } from '../langfuse-listener';
+import { getTraceManager } from '@refly/observability';
+import { createId } from '@paralleldrive/cuid2';
 
 // types
 import { GraphState } from '../scheduler/types';
@@ -74,6 +77,7 @@ export class Agent extends BaseSkill {
 
   skills: BaseSkill[] = createSkillTemplateInventory(this.engine);
   private userAgentComponentsCache = new Map<string, CachedAgentComponents>();
+  private langfuseListener: LangfuseListener | null = null;
 
   isValidSkillName = (name: string) => {
     return this.skills.some((skill) => skill.name === name);
@@ -395,65 +399,122 @@ export class Agent extends BaseSkill {
     state: GraphState,
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
-    const { currentSkill, user, selectedMcpServers = [] } = config.configurable;
+    const { currentSkill, user, selectedMcpServers = [], emitter } = config.configurable;
+
+    // Initialize trace manager and create trace for this request
+    const traceManager = getTraceManager();
+    const traceId = createId();
+    const rootSpanId = createId();
+    
+    // Create trace for the entire skill execution
+    if (traceManager) {
+      traceManager.createTrace(
+        traceId,
+        `${this.name} - Question Answering`,
+        {
+          skillName: this.name,
+          userId: user?.uid ?? user?.email ?? 'anonymous',
+          metadata: {
+            messages: state.messages,
+            selectedMcpServers,
+            customInstructions: (config.configurable?.project as any)?.customInstructions,
+            model: (config.configurable as any)?.modelInfo?.model,
+            type: 'skill_execution',
+            mcpServers: selectedMcpServers,
+          },
+        },
+      );
+
+      // Create root span for request processing
+      traceManager.createSpan(traceId, rootSpanId, {
+        name: 'Request Processing',
+        input: state.messages,
+        metadata: {
+          step: 'agent_node_execution',
+        },
+      });
+    }
+
+    // Initialize Langfuse listener if not already done and emitter is available
+    if (!this.langfuseListener && emitter) {
+      this.langfuseListener = new LangfuseListener({
+        enabled: true,
+        excludeEvents: ['stream'], // Exclude noisy stream events by default
+      });
+      this.langfuseListener.attachToEmitter(emitter);
+    }
 
     const project = config.configurable?.project as
       | { projectId: string; customInstructions?: string }
       | undefined;
     const customInstructions = project?.projectId ? project?.customInstructions : undefined;
 
-    console.log('\n=== GETTING OR INITIALIZING CACHED LANGGRAPH AGENT FLOW ===');
-    const { compiledLangGraphApp, mcpAvailable } = await this.getOrInitializeAgentComponents(
-      user,
-      selectedMcpServers,
-    );
-
-    const module: SkillPromptModule = {
-      buildSystemPrompt: mcpAvailable
-        ? () =>
-            buildSystemPrompt(
-              'You are an advanced AI assistant with specialized expertise in leveraging the Model Context Protocol (MCP) to solve complex problems efficiently. Your intelligence manifests through precise tool orchestration, context-aware execution, and proactive optimization of MCP server capabilities. ' +
-                'When a tool call is made, you will receive a ToolMessage with the result. ' +
-                'If an MCP server call fails or returns malformed data, the ToolMessage will contain the error details. ' +
-                'You MUST carefully analyze this error message. ' +
-                'If the error indicates incorrect arguments (e.g., missing parameters, invalid values, type mismatches), you MUST revise the arguments and attempt the tool call again. Do NOT repeat the previous mistake. ' +
-                'If the error seems to be a transient issue (e.g., network error, temporary unavailability), you should retry the call, perhaps after a brief conceptual pause. ' +
-                "You must continuously retry and adapt your approach to achieve the user's expected outcome. Never abandon the operation prematurely. " +
-                'After several (e.g., 3-5) persistent failures for the same tool call despite your best efforts to correct it, and if no alternative tools or approaches are viable, you may then inform the user about the specific difficulty encountered and suggest a different course of action or ask for clarification.',
-            )
-        : commonQnA.buildCommonQnASystemPrompt,
-      buildContextUserPrompt: commonQnA.buildCommonQnAContextUserPrompt,
-      buildUserPrompt: commonQnA.buildCommonQnAUserPrompt,
-    };
-
-    const { requestMessages, sources } = await this.commonPreprocess(
-      state,
-      config,
-      module,
-      customInstructions,
-    );
-
-    config.metadata.step = { name: 'answerQuestion' };
-
-    if (sources.length > 0) {
-      const truncatedSources = truncateSource(sources);
-      await this.emitLargeDataEvent(
-        {
-          data: truncatedSources,
-          buildEventData: (chunk, { isPartial, chunkIndex, totalChunks }) => ({
-            structuredData: {
-              sources: chunk,
-              isPartial,
-              chunkIndex,
-              totalChunks,
-            },
-          }),
-        },
-        config,
-      );
-    }
-
     try {
+      console.log('\n=== GETTING OR INITIALIZING CACHED LANGGRAPH AGENT FLOW ===');
+      const { compiledLangGraphApp, mcpAvailable } = await this.getOrInitializeAgentComponents(
+        user,
+        selectedMcpServers,
+      );
+
+      const module: SkillPromptModule = {
+        buildSystemPrompt: mcpAvailable
+          ? () =>
+              buildSystemPrompt(
+                'You are an advanced AI assistant with specialized expertise in leveraging the Model Context Protocol (MCP) to solve complex problems efficiently. Your intelligence manifests through precise tool orchestration, context-aware execution, and proactive optimization of MCP server capabilities. ' +
+                  'When a tool call is made, you will receive a ToolMessage with the result. ' +
+                  'If an MCP server call fails or returns malformed data, the ToolMessage will contain the error details. ' +
+                  'You MUST carefully analyze this error message. ' +
+                  'If the error indicates incorrect arguments (e.g., missing parameters, invalid values, type mismatches), you MUST revise the arguments and attempt the tool call again. Do NOT repeat the previous mistake. ' +
+                  'If the error seems to be a transient issue (e.g., network error, temporary unavailability), you should retry the call, perhaps after a brief conceptual pause. ' +
+                  "You must continuously retry and adapt your approach to achieve the user's expected outcome. Never abandon the operation prematurely. " +
+                  'After several (e.g., 3-5) persistent failures for the same tool call despite your best efforts to correct it, and if no alternative tools or approaches are viable, you may then inform the user about the specific difficulty encountered and suggest a different course of action or ask for clarification.',
+              )
+          : commonQnA.buildCommonQnASystemPrompt,
+        buildContextUserPrompt: commonQnA.buildCommonQnAContextUserPrompt,
+        buildUserPrompt: commonQnA.buildCommonQnAUserPrompt,
+      };
+
+      const { requestMessages, sources } = await this.commonPreprocess(
+        state,
+        config,
+        module,
+        customInstructions,
+      );
+
+      config.metadata.step = { name: 'answerQuestion' };
+
+      if (sources.length > 0) {
+        const truncatedSources = truncateSource(sources);
+        await this.emitLargeDataEvent(
+          {
+            data: truncatedSources,
+            buildEventData: (chunk, { isPartial, chunkIndex, totalChunks }) => ({
+              structuredData: {
+                sources: chunk,
+                isPartial,
+                chunkIndex,
+                totalChunks,
+              },
+            }),
+          },
+          config,
+        );
+      }
+
+      // Create span for LangGraph execution
+      const langGraphSpanId = createId();
+      if (traceManager) {
+        traceManager.createSpan(traceId, langGraphSpanId, {
+          name: 'LangGraph Execution',
+          input: { messages: requestMessages },
+          metadata: {
+            mcpAvailable,
+            recursionLimit: 50,
+            step: 'langgraph_invoke',
+          },
+        });
+      }
+
       const result = await compiledLangGraphApp.invoke(
         { messages: requestMessages },
         {
@@ -462,10 +523,40 @@ export class Agent extends BaseSkill {
           metadata: {
             ...config.metadata,
             ...currentSkill,
+            traceId, // Pass trace ID to child operations
           },
         },
       );
+
+      // Update spans with success results
+      if (traceManager) {
+        traceManager.endSpan(langGraphSpanId, {
+          output: result.messages,
+          success: true,
+        });
+        
+        traceManager.endSpan(rootSpanId, {
+          output: result.messages,
+          success: true,
+        });
+
+        traceManager.endTrace(traceId, result.messages);
+      }
+
       return { messages: result.messages };
+    } catch (error) {
+      // Update spans and trace with error information
+      if (traceManager) {
+        traceManager.endSpan(rootSpanId, {
+          error: error?.message || error,
+          success: false,
+        }, error?.message, 'ERROR');
+
+        traceManager.endTrace(traceId, { error: error?.message || error });
+      }
+      
+      this.engine.logger.error('Error in agentNode execution:', error);
+      throw error;
     } finally {
       this.engine.logger.log('agentNode execution finished.');
       this.dispose();
@@ -503,6 +594,13 @@ export class Agent extends BaseSkill {
       }
     }
     this.userAgentComponentsCache.clear();
+
+    // Clean up Langfuse listener
+    if (this.langfuseListener) {
+      this.langfuseListener.detach();
+      this.langfuseListener = null;
+    }
+
     this.engine.logger.log(`Agent (${this.name}) disposed, cache cleared.`);
   }
 }
