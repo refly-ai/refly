@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { jsonrepair } from 'jsonrepair';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import parseJson from 'json-parse-even-better-errors';
+import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 
 // Define a more flexible CanvasContentItem interface to accommodate different content types
 export interface CanvasContentItem {
@@ -317,8 +318,12 @@ export async function generateCanvasTitle(
   contentItems: CanvasContentItem[],
   model: BaseChatModel,
   logger: Logger,
+  callbacks?: BaseCallbackHandler[],
 ): Promise<string> {
   const combinedContent = formatCanvasContent(contentItems);
+
+  // Add callbacks to the model if provided
+  const enhancedModel = callbacks && callbacks.length > 0 ? model.bind({ callbacks }) : model;
 
   try {
     if (!combinedContent) {
@@ -330,10 +335,15 @@ export async function generateCanvasTitle(
 
     // First attempt: Use LLM structured output capability
     try {
-      const structuredLLM = model.withStructuredOutput(titleSchema);
+      // Check if the model has structured output capability
+      if (
+        'withStructuredOutput' in enhancedModel &&
+        typeof enhancedModel.withStructuredOutput === 'function'
+      ) {
+        const structuredLLM = (enhancedModel as any).withStructuredOutput(titleSchema);
 
-      // Combine schema instructions with examples and content
-      const fullPrompt = `You are an expert at generating concise, descriptive titles for canvases.
+        // Combine schema instructions with examples and content
+        const fullPrompt = `You are an expert at generating concise, descriptive titles for canvases.
 
 ## Your Task
 Analyze this canvas content and generate a structured output that follows the specified schema.
@@ -352,18 +362,22 @@ ${buildTitleGenerationExamples()}
 Canvas Content:
 ${combinedContent}`;
 
-      const result = await structuredLLM.invoke(fullPrompt);
+        const result = await structuredLLM.invoke(fullPrompt);
 
-      logger.log(`Generated structured output: ${JSON.stringify(result)}`);
+        logger.log(`Generated structured output: ${JSON.stringify(result)}`);
 
-      // Validate title word count
-      const titleWords = result.title.split(/\s+/);
-      if (titleWords.length > 15) {
-        result.title = titleWords.slice(0, 15).join(' ');
-        logger.log(`Title truncated to 15 words: "${result.title}"`);
+        // Validate title word count
+        const titleWords = result.title.split(/\s+/);
+        if (titleWords.length > 15) {
+          result.title = titleWords.slice(0, 15).join(' ');
+          logger.log(`Title truncated to 15 words: "${result.title}"`);
+        }
+
+        return result.title;
+      } else {
+        logger.warn('Model does not support structured output, using fallback approach');
+        throw new Error('Structured output not supported');
       }
-
-      return result.title;
     } catch (structuredError) {
       logger.warn(`Structured output failed: ${structuredError.message}, trying fallback approach`);
       // Continue to fallback
@@ -383,7 +397,7 @@ ${combinedContent}
 
 Respond ONLY with a valid JSON object wrapped in \`\`\`json and \`\`\` tags.`;
 
-    const response = await model.invoke(fullPrompt);
+    const response = await enhancedModel.invoke(fullPrompt);
     const responseText = response.content.toString();
 
     // Extract and parse JSON
@@ -412,7 +426,7 @@ Respond ONLY with a valid JSON object wrapped in \`\`\`json and \`\`\` tags.`;
     }
 
     // Final fallback: Simple title generation
-    const fallbackResponse = await model.invoke([
+    const fallbackResponse = await enhancedModel.invoke([
       new SystemMessage(
         'Generate a very concise title (5 words maximum) for this content. Output only the title itself.',
       ),

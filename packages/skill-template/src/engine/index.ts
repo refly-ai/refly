@@ -49,6 +49,7 @@ import {
 } from '@refly/openapi-schema';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { getChatModel } from '@refly/providers';
+import { createLangfuseCallbacks } from '@refly/observability';
 
 // TODO: unify with frontend
 export type ContentNodeType =
@@ -187,7 +188,19 @@ export class SkillEngine {
 
     const config = this.config?.configurable;
     const provider = config?.provider;
-    const model = config.modelConfigMap?.[finalScene]?.modelId || this.options.defaultModel;
+    const model = config?.modelConfigMap?.[finalScene]?.modelId || this.options?.defaultModel;
+
+    // Create Langfuse callback handler for skill execution
+    const callbacks = createLangfuseCallbacks({
+      userId: config?.user?.uid,
+      sessionId: config?.resultId || config?.canvasId,
+      traceName: `${config?.currentSkill?.name || 'unknown-skill'}-${finalScene}`,
+      tags: ['skill', 'chat-model', finalScene, config?.currentSkill?.name || 'unknown-skill'],
+    });
+
+    console.log(
+      `[SkillEngine] Creating chat model for scene: ${finalScene}, skill: ${config?.currentSkill?.name}, user: ${config?.user?.uid}, callbacks: ${callbacks.length}`,
+    );
 
     return getChatModel(
       provider,
@@ -196,6 +209,7 @@ export class SkillEngine {
         modelName: model,
       },
       params,
+      callbacks,
     );
   }
 }

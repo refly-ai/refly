@@ -41,6 +41,7 @@ import {
 } from '@refly/providers';
 import { ConfigService } from '@nestjs/config';
 import { QdrantService } from '@/modules/common/qdrant.service';
+import { createLangfuseCallbacks } from '@refly/observability';
 
 interface GlobalProviderConfig {
   providers: ProviderModel[];
@@ -421,7 +422,14 @@ export class ProviderService {
     const { provider, config } = item;
     const chatConfig: LLMModelConfig = JSON.parse(config);
 
-    return getChatModel(provider, chatConfig);
+    // Create Langfuse callback handler with user context
+    const callbacks = createLangfuseCallbacks({
+      userId: user.uid,
+      traceName: `chat-model-${modelId}`,
+      tags: ['chat', 'provider-service'],
+    });
+
+    return getChatModel(provider, chatConfig, undefined, callbacks);
   }
 
   /**

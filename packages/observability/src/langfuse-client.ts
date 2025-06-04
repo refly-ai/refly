@@ -86,7 +86,7 @@ export class SecurityFilter {
     if (str.length <= this.maxStringLength) {
       return str;
     }
-    return str.substring(0, this.maxStringLength) + '... [TRUNCATED]';
+    return `${str.substring(0, this.maxStringLength)}... [TRUNCATED]`;
   }
 }
 
@@ -174,29 +174,21 @@ export class LangfuseClientManager {
   }
 
   /**
-   * Shutdown the client and flush pending data
+   * Flush all pending traces
    */
-  async shutdown(): Promise<void> {
-    if (this.client) {
-      try {
-        await this.client.shutdownAsync();
-        console.log('[Langfuse] Client shutdown completed');
-      } catch (error) {
-        console.error('[Langfuse] Error during shutdown:', error);
-      }
+  async flushAsync(): Promise<void> {
+    if (this.client && this.isEnabled) {
+      await this.client.flushAsync();
     }
   }
 
   /**
-   * Flush pending data immediately
+   * Shutdown the client
    */
-  async flush(): Promise<void> {
-    if (this.client) {
-      try {
-        await this.client.flushAsync();
-      } catch (error) {
-        console.error('[Langfuse] Error during flush:', error);
-      }
+  async shutdown(): Promise<void> {
+    if (this.client && this.isEnabled) {
+      await this.client.shutdownAsync();
+      this.client = null;
     }
   }
 }

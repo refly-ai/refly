@@ -40,6 +40,8 @@ export class ObservabilityModule implements OnModuleInit, OnModuleDestroy {
     });
 
     initializeObservability(langfuseConfig, securityConfig);
+
+    console.log('[ObservabilityModule] Langfuse observability initialized successfully');
   }
 
   async onModuleDestroy(): Promise<void> {

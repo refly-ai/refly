@@ -334,7 +334,8 @@ export async function extractStructuredData<T extends z.ZodType>(
               ...config,
               metadata: {
                 ...config.metadata,
-                suppressOutput: true,
+                // Remove suppressOutput to allow Langfuse monitoring
+                // suppressOutput: true,
               },
             }),
           ).catch((error) => {
@@ -433,7 +434,8 @@ Please fix these issues and ensure your response matches the schema exactly.`
           ...config,
           metadata: {
             ...config.metadata,
-            suppressOutput: true,
+            // Remove suppressOutput to allow Langfuse monitoring
+            // suppressOutput: true,
           },
         }),
       ).catch((error) => {

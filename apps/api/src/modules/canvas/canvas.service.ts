@@ -34,6 +34,7 @@ import { generateCanvasTitle, CanvasContentItem } from './canvas-title-generator
 import { RedisService } from '@/modules/common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
 import { ProviderService } from '@/modules/provider/provider.service';
+import { createLangfuseCallbacks } from '@refly/observability';
 
 @Injectable()
 export class CanvasService {
@@ -798,8 +799,16 @@ export class CanvasService {
     const model = await this.providerService.prepareChatModel(user, modelConfig.modelId);
     this.logger.log(`Using default model for auto naming: ${model.name}`);
 
+    // Create Langfuse callback handler for title generation
+    const callbacks = createLangfuseCallbacks({
+      userId: user.uid,
+      sessionId: canvasId,
+      traceName: 'canvas-title-generation',
+      tags: ['canvas', 'title-generation'],
+    });
+
     // Use the new structured title generation approach
-    const newTitle = await generateCanvasTitle(contentItems, model, this.logger);
+    const newTitle = await generateCanvasTitle(contentItems, model, this.logger, callbacks);
 
     if (directUpdate && newTitle) {
       await this.updateCanvas(user, {

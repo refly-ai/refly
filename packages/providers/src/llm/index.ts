@@ -5,12 +5,20 @@ import { ChatOllama } from '@langchain/ollama';
 import { ChatFireworks } from '@langchain/community/chat_models/fireworks';
 import { BaseProvider } from '../types';
 import { OpenAIBaseInput } from '@langchain/openai';
+import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 
 export const getChatModel = (
   provider: BaseProvider,
   config: LLMModelConfig,
   params?: Partial<OpenAIBaseInput>,
+  callbacks?: BaseCallbackHandler[],
 ): BaseChatModel => {
+  // Merge callbacks into params
+  const finalParams = {
+    ...params,
+    ...(callbacks && callbacks.length > 0 ? { callbacks } : {}),
+  };
+
   switch (provider?.providerKey) {
     case 'openai':
       return new EnhancedChatOpenAI({
@@ -19,20 +27,20 @@ export const getChatModel = (
         configuration: {
           baseURL: provider.baseUrl,
         },
-        ...params,
+        ...finalParams,
         include_reasoning: config?.capabilities?.reasoning,
       });
     case 'ollama':
       return new ChatOllama({
         model: config.modelId,
         baseUrl: provider.baseUrl?.replace(/\/v1\/?$/, ''),
-        ...params,
+        ...finalParams,
       });
     case 'fireworks':
       return new ChatFireworks({
         model: config.modelId,
         apiKey: provider.apiKey,
-        ...params,
+        ...finalParams,
       });
     default:
       throw new Error(`Unsupported provider: ${provider?.providerKey}`);

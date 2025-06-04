@@ -22,6 +22,13 @@ export type {
   GenerationData,
 } from './trace-manager';
 
+// Export LangChain callback handlers
+export {
+  getLangfuseCallbackHandler,
+  getLangfuseCallbackHandlerWithMetadata,
+  createLangfuseCallbacks,
+} from './langchain-callback';
+
 // Convenience function to initialize the observability system
 export function initializeObservability(
   langfuseConfig: LangfuseConfig,
