@@ -9,3 +9,4 @@ export * from './custom-prompt';
 export * from './code-artifacts';
 export * from './agent';
 export * from './image-generation';
+export * from './nl2prompt';
