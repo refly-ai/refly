@@ -5,33 +5,43 @@ import { FireworksEmbeddings } from '@langchain/community/embeddings/fireworks';
 import { JinaEmbeddings } from './jina';
 import { OllamaEmbeddings } from './ollama';
 import { BaseProvider } from '../types';
+import { wrapEmbeddingsWithMonitoring } from '../monitoring/langfuse-wrapper';
 
-export const getEmbeddings = (provider: BaseProvider, config: EmbeddingModelConfig): Embeddings => {
+export const getEmbeddings = (
+  provider: BaseProvider, 
+  config: EmbeddingModelConfig,
+  context?: { userId?: string }
+): Embeddings => {
+  let embeddings: Embeddings;
+
   switch (provider.providerKey) {
     case 'fireworks':
-      return new FireworksEmbeddings({
+      embeddings = new FireworksEmbeddings({
         model: config.modelId,
         batchSize: config.batchSize,
         maxRetries: 3,
         apiKey: provider.apiKey,
       });
+      break;
     case 'openai':
-      return new OpenAIEmbeddings({
+      embeddings = new OpenAIEmbeddings({
         model: config.modelId,
         batchSize: config.batchSize,
         dimensions: config.dimensions,
         apiKey: provider.apiKey,
       });
+      break;
     case 'jina':
-      return new JinaEmbeddings({
+      embeddings = new JinaEmbeddings({
         model: config.modelId,
         batchSize: config.batchSize,
         dimensions: config.dimensions,
         apiKey: provider.apiKey,
         maxRetries: 3,
       });
+      break;
     case 'ollama':
-      return new OllamaEmbeddings({
+      embeddings = new OllamaEmbeddings({
         model: config.modelId,
         batchSize: config.batchSize,
         dimensions: config.dimensions,
@@ -39,9 +49,17 @@ export const getEmbeddings = (provider: BaseProvider, config: EmbeddingModelConf
         apiKey: provider.apiKey,
         maxRetries: 3,
       });
+      break;
     default:
       throw new Error(`Unsupported embeddings provider: ${provider.providerKey}`);
   }
+
+  // Automatically wrap with monitoring
+  return wrapEmbeddingsWithMonitoring(embeddings, {
+    userId: context?.userId,
+    modelId: config.modelId,
+    provider: provider.providerKey
+  });
 };
 
 export { Embeddings };

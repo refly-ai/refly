@@ -3,7 +3,6 @@ import { memo, useEffect, useRef, useState, Suspense, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 import RemarkBreaks from 'remark-breaks';
-import RemarkGfm from 'remark-gfm';
 
 import { cn, markdownCitationParse } from '@refly/utils';
 
@@ -140,7 +139,7 @@ export const Markdown = memo(
               plugins.RehypeKatex &&
               plugins.RehypeHighlight && (
                 <ReactMarkdown
-                  remarkPlugins={[RemarkBreaks, plugins.RemarkMath, RemarkGfm]}
+                  remarkPlugins={[RemarkBreaks, plugins.RemarkMath]}
                   rehypePlugins={[
                     ...rehypePlugins,
                     rehypeHighlight,
