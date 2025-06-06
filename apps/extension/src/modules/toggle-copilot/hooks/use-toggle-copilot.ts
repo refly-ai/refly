@@ -5,6 +5,7 @@ import pTimeout from 'p-timeout';
 import { checkPageUnsupported } from '@refly-packages/ai-workspace-common/utils/extension/check';
 import { checkBrowserArc } from '@/utils/browser';
 import { useCopilotTypeStore } from '@/modules/toggle-copilot/stores/use-copilot-type';
+import { logger } from '@/utils/logger';
 
 export const useToggleCopilot = () => {
   const { copilotType } = useCopilotTypeStore((state) => ({
@@ -22,9 +23,9 @@ export const useToggleCopilot = () => {
 
     await handleCheckArcBrowser();
 
-    console.log('isArcBrowserRef.current', isArcBrowserRef.current, isCopilotOpen);
+    logger.debug('isArcBrowserRef.current', isArcBrowserRef.current, isCopilotOpen);
     if (isArcBrowserRef.current) {
-      console.log('sendMessage', 'toggleCopilotSidePanel');
+      logger.debug('sendMessage', 'toggleCopilotCSUI');
       sendMessage({
         type: 'others',
         name: 'toggleCopilotCSUI',
@@ -35,7 +36,7 @@ export const useToggleCopilot = () => {
         source: getRuntime(),
       });
     } else {
-      console.log('sendMessage', 'toggleCopilotSidePanel');
+      logger.debug('sendMessage', 'toggleCopilotSidePanel');
       sendMessage({
         type: 'toggleCopilot',
         name: 'toggleCopilotSidePanel',
@@ -93,7 +94,7 @@ export const useToggleCopilot = () => {
   });
 
   useEffect(() => {
-    console.log('useToggleCopilot copilotType', copilotType);
+    logger.debug('useToggleCopilot copilotType', copilotType);
     //
 
     // Initial check if the page is already visible

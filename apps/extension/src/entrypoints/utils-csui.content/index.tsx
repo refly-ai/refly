@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { setRuntime } from '@refly/utils/env';
 import { createShadowRootUi } from 'wxt/client';
 import App from './App';
+import { logger } from '@/utils/logger';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -19,7 +20,7 @@ export default defineContentScript({
   async main(ctx) {
     setRuntime('extension-csui');
 
-    console.log('ctx', ctx);
+    logger.debug('utils-csui ctx', ctx);
     // 3. Define your UI`
     const ui = await createShadowRootUi(ctx, {
       name: 'refly-utils-app',
