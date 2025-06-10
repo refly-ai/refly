@@ -11,10 +11,10 @@ export const getChatModel = (
   provider: BaseProvider,
   config: LLMModelConfig,
   params?: Partial<OpenAIBaseInput>,
-  context?: { userId?: string }
+  context?: { userId?: string },
 ): BaseChatModel => {
   let model: BaseChatModel;
-  
+
   switch (provider?.providerKey) {
     case 'openai':
       model = new EnhancedChatOpenAI({
@@ -49,7 +49,7 @@ export const getChatModel = (
   return wrapChatModelWithMonitoring(model, {
     userId: context?.userId,
     modelId: config.modelId,
-    provider: provider.providerKey
+    provider: provider.providerKey,
   });
 };
 

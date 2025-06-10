@@ -5,25 +5,21 @@ import { LangfuseListener } from './langfuse-listener';
 export class LangfuseService {
   private instance: LangfuseListener;
 
-  constructor(
-    publicKey: string,
-    secretKey: string,
-    baseUrl?: string
-  ) {
+  constructor(publicKey: string, secretKey: string, baseUrl?: string) {
     this.instance = new LangfuseListener({
       publicKey,
       secretKey,
-      baseUrl
+      baseUrl,
     });
   }
-  
+
   /**
    * Create a new trace for monitoring
    */
   createTrace(userId: string, metadata: Record<string, any>) {
     return this.instance.createTrace({
       userId,
-      metadata
+      metadata,
     });
   }
 
@@ -40,4 +36,4 @@ export class LangfuseService {
   async flush(): Promise<void> {
     await this.instance.flush();
   }
-} 
+}

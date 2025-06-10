@@ -4,7 +4,7 @@ export * from './reranker';
 export * from './types';
 
 // Export monitoring functions
-export { 
-  initializeMonitoring, 
-  shutdownMonitoring 
+export {
+  initializeMonitoring,
+  shutdownMonitoring,
 } from './monitoring/langfuse-wrapper';

@@ -8,9 +8,9 @@ import { BaseProvider } from '../types';
 import { wrapEmbeddingsWithMonitoring } from '../monitoring/langfuse-wrapper';
 
 export const getEmbeddings = (
-  provider: BaseProvider, 
+  provider: BaseProvider,
   config: EmbeddingModelConfig,
-  context?: { userId?: string }
+  context?: { userId?: string },
 ): Embeddings => {
   let embeddings: Embeddings;
 
@@ -58,7 +58,7 @@ export const getEmbeddings = (
   return wrapEmbeddingsWithMonitoring(embeddings, {
     userId: context?.userId,
     modelId: config.modelId,
-    provider: provider.providerKey
+    provider: provider.providerKey,
   });
 };
 

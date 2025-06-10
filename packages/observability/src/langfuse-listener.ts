@@ -77,7 +77,7 @@ export class LangfuseListener implements OpenTelemetryListener {
         name: 'OpenTelemetry Trace',
       });
 
-      const langfuseSpan = trace.span({
+      trace.span({
         id: spanId,
         name: 'OpenTelemetry Span',
         startTime: new Date(),
@@ -140,11 +140,11 @@ export class LangfuseListener implements OpenTelemetryListener {
       const urlObj = new URL(url);
       // Remove sensitive query parameters
       const sensitiveParams = ['token', 'key', 'password', 'secret', 'auth'];
-      sensitiveParams.forEach((param) => {
+      for (const param of sensitiveParams) {
         if (urlObj.searchParams.has(param)) {
           urlObj.searchParams.set(param, '[REDACTED]');
         }
-      });
+      }
       return urlObj.toString();
     } catch {
       return url;
@@ -160,12 +160,12 @@ export class LangfuseListener implements OpenTelemetryListener {
     ];
 
     let desensitized = query;
-    sensitivePatterns.forEach((pattern) => {
+    for (const pattern of sensitivePatterns) {
       desensitized = desensitized.replace(pattern, (match) => {
         const parts = match.split('=');
         return `${parts[0]}='[REDACTED]'`;
       });
-    });
+    }
 
     return desensitized;
   }

@@ -71,7 +71,10 @@ export class ProviderService implements OnModuleInit {
         publicKey: this.configService.get('LANGFUSE_PUBLIC_KEY'),
         secretKey: this.configService.get('LANGFUSE_SECRET_KEY'),
         baseUrl: this.configService.get('LANGFUSE_HOST'),
-        enabled: !!(this.configService.get('LANGFUSE_PUBLIC_KEY') && this.configService.get('LANGFUSE_SECRET_KEY'))
+        enabled: !!(
+          this.configService.get('LANGFUSE_PUBLIC_KEY') &&
+          this.configService.get('LANGFUSE_SECRET_KEY')
+        ),
       };
 
       if (langfuseConfig.enabled) {
