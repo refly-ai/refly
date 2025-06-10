@@ -139,4 +139,9 @@ export default () => ({
       page: Number.parseInt(process.env.QUOTA_FILE_PARSE_PAGE) || -1,
     },
   },
+  langfuse: {
+    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+    secretKey: process.env.LANGFUSE_SECRET_KEY,
+    host: process.env.LANGFUSE_HOST,
+  },
 });

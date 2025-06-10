@@ -68,12 +68,12 @@ export class ProviderService implements OnModuleInit {
     // Initialize monitoring when module starts
     try {
       const langfuseConfig = {
-        publicKey: this.configService.get('LANGFUSE_PUBLIC_KEY'),
-        secretKey: this.configService.get('LANGFUSE_SECRET_KEY'),
-        baseUrl: this.configService.get('LANGFUSE_HOST'),
+        publicKey: this.configService.get('langfuse.publicKey'),
+        secretKey: this.configService.get('langfuse.secretKey'),
+        baseUrl: this.configService.get('langfuse.host'),
         enabled: !!(
-          this.configService.get('LANGFUSE_PUBLIC_KEY') &&
-          this.configService.get('LANGFUSE_SECRET_KEY')
+          this.configService.get('langfuse.publicKey') &&
+          this.configService.get('langfuse.secretKey')
         ),
       };
 
