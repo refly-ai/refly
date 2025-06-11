@@ -96,8 +96,8 @@ export const AppRouter = (props: { layout?: any }) => {
   const hasBetaAccess = true;
 
   return (
-    <Layout>
-      <Suspense fallback={<LightLoading />}>
+    <Suspense fallback={<LightLoading />}>
+      <Layout>
         <Routes>
           <Route path="/" element={<HomeRedirect defaultNode={<Home />} />} />
           <Route path="/pricing" element={<Pricing />} />
@@ -120,7 +120,7 @@ export const AppRouter = (props: { layout?: any }) => {
             element={<RequestAccessRoute hasBetaAccess={hasBetaAccess} />}
           />
         </Routes>
-      </Suspense>
-    </Layout>
+      </Layout>
+    </Suspense>
   );
 };
