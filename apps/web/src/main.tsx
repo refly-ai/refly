@@ -33,12 +33,8 @@ import '@refly-packages/ai-workspace-common/i18n/config';
 import { getEnv, setRuntime } from '@refly/utils/env';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useThemeStoreShallow } from '@refly-packages/ai-workspace-common/stores/theme';
-import { useAppStoreShallow } from '@refly-packages/ai-workspace-common/stores/app';
 import { theme } from 'antd';
-import {
-  LightLoading,
-  SuspenseLoading,
-} from '@refly-packages/ai-workspace-common/components/common/loading';
+import { LightLoading } from '@refly-packages/ai-workspace-common/components/common/loading';
 import { sentryEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { preloadMonacoEditor } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/monaco-editor/monacoPreloader';
 
@@ -133,31 +129,15 @@ export const App = () => {
     isForcedLightMode: state.isForcedLightMode,
   }));
 
-  const { isInitialLoading, setInitialLoading } = useAppStoreShallow((state) => ({
-    isInitialLoading: state.isInitialLoading,
-    setInitialLoading: state.setInitialLoading,
-  }));
-
   useEffect(() => {
     setRuntime('web');
     // Initialize theme
     initTheme();
-
-    // Set initial loading to false after app is ready
-    const timer = setTimeout(() => {
-      setInitialLoading(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [setRuntime, initTheme, setInitialLoading]);
+  }, [setRuntime, initTheme]);
 
   useEffect(() => {
     preloadMonacoEditor();
   }, []);
-
-  if (isInitialLoading) {
-    return <SuspenseLoading />;
-  }
 
   // Use light theme when forced, otherwise use the user's preference
   const shouldUseDarkTheme = isDarkMode && !isForcedLightMode;
