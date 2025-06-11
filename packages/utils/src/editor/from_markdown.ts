@@ -4,6 +4,12 @@ import Token from './token';
 import { MarkdownParser } from 'prosemirror-markdown';
 import { schema } from './schema';
 
+// Type assertion function to help with version mismatches
+// between different prosemirror packages
+function assertCompatibleSchema(schema: any): any {
+  return schema;
+}
+
 function listIsTight(tokens: readonly any[], i: number) {
   // biome-ignore lint/style/noParameterAssign: using param assign is cleaner
   while (++i < tokens.length) if (tokens[i].type !== 'listItem_open') return tokens[i].hidden;
@@ -49,7 +55,7 @@ md.core.ruler.push('table_block_cells', (state) => {
 
 /// A parser parsing unextended [CommonMark](http://commonmark.org/),
 /// without inline HTML, and producing a document in the basic schema.
-export const defaultMarkdownParser = new MarkdownParser(schema, md, {
+export const defaultMarkdownParser = new MarkdownParser(assertCompatibleSchema(schema), md, {
   blockquote: { block: 'blockquote' },
   paragraph: { block: 'paragraph' },
   list_item: { block: 'listItem' },
