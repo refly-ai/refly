@@ -12,6 +12,10 @@ overrides:
   rollup: ^4.22.4
   cross-spawn: ^7.0.5
   tar-fs: ^2.1.3
+  prosemirror-model: ^1.25.1
+  prosemirror-state: ^1.4.3
+  prosemirror-view: ^1.40.0
+  prosemirror-transform: ^1.10.4
 
 importers:
 
@@ -1733,7 +1737,7 @@ importers:
         specifier: ~1.13.0
         version: 1.13.2
       prosemirror-model:
-        specifier: ~1.25.1
+        specifier: ^1.25.1
         version: 1.25.1
       react:
         specifier: ^18.2.0
@@ -5703,7 +5707,7 @@ packages:
     dependencies:
       '@langchain/core': 0.3.29(openai@5.3.0)
       '@langchain/openai': 0.4.9(@langchain/core@0.3.29)(ws@8.17.1)
-      zod: 3.25.60
+      zod: 3.25.61
     transitivePeerDependencies:
       - encoding
       - ws
@@ -5761,8 +5765,8 @@ packages:
       '@langchain/core': 0.3.29(openai@5.3.0)
       ollama: 0.5.16
       uuid: 10.0.0
-      zod: 3.25.60
-      zod-to-json-schema: 3.24.5(zod@3.25.60)
+      zod: 3.25.61
+      zod-to-json-schema: 3.24.5(zod@3.25.61)
     dev: false
 
   /@langchain/openai@0.4.9(@langchain/core@0.3.29)(ws@8.17.1):
@@ -12054,7 +12058,7 @@ packages:
     resolution: {integrity: sha512-re4CqKTJaURpzbLHtIi6XpDv20/CnpXOtjRY5/CU32L8gU8ek9UIivcfvSWvmKEngmVbrUtPpdDwWDWL7DNHvg==}
     dependencies:
       follow-redirects: 1.15.9(debug@4.4.1)
-      form-data: 4.0.3
+      form-data: 4.0.0
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
@@ -21413,6 +21417,7 @@ packages:
   /parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
+    requiresBuild: true
     dependencies:
       callsites: 3.1.0
 
@@ -22266,9 +22271,9 @@ packages:
   /prosemirror-trailing-node@3.0.0(prosemirror-model@1.25.1)(prosemirror-state@1.4.3)(prosemirror-view@1.40.0):
     resolution: {integrity: sha512-xiun5/3q0w5eRnGYfNlW1uU9W6x5MoFKWwq/0TIRgt09lv7Hcser2QYV8t4muXbEr+Fwo0geYn79Xs4GKywrRQ==}
     peerDependencies:
-      prosemirror-model: ^1.22.1
-      prosemirror-state: ^1.4.2
-      prosemirror-view: ^1.33.8
+      prosemirror-model: ^1.25.1
+      prosemirror-state: ^1.4.3
+      prosemirror-view: ^1.40.0
     dependencies:
       '@remirror/core-constants': 3.0.0
       escape-string-regexp: 4.0.0
@@ -24168,6 +24173,7 @@ packages:
   /resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
     engines: {node: '>=4'}
+    requiresBuild: true
 
   /resolve-from@5.0.0:
     resolution: {integrity: sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw==}
@@ -27661,9 +27667,9 @@ packages:
     resolution: {integrity: sha512-9bmO5Vl6E3AH5JRQhJPWOmX4x0dwDZvfM86qd+w38G0j23VSV+ZvrKYBbKc1l44Tnyd7j7TWEuqBpzfOfbc4fw==}
     engines: {node: '>=16.0.0', npm: '>=8.0.0'}
     peerDependencies:
-      prosemirror-model: ^1.7.1
-      prosemirror-state: ^1.2.3
-      prosemirror-view: ^1.9.10
+      prosemirror-model: ^1.25.1
+      prosemirror-state: ^1.4.3
+      prosemirror-view: ^1.40.0
       y-protocols: ^1.0.1
       yjs: ^13.5.38
     dependencies:
@@ -27788,12 +27794,12 @@ packages:
       zod: 3.23.8
     dev: false
 
-  /zod-to-json-schema@3.24.5(zod@3.25.60):
+  /zod-to-json-schema@3.24.5(zod@3.25.61):
     resolution: {integrity: sha512-/AuWwMP+YqiPbsJx5D6TfgRTc4kTLjsh5SOcd4bLsfUg2RcEXrFMJl1DGgdHy2aCfsIA/cr/1JM0xcB2GZji8g==}
     peerDependencies:
       zod: ^3.24.1
     dependencies:
-      zod: 3.25.60
+      zod: 3.25.61
     dev: false
 
   /zod-validation-error@3.4.1(zod@3.23.8):
@@ -27809,8 +27815,8 @@ packages:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
     dev: false
 
-  /zod@3.25.60:
-    resolution: {integrity: sha512-VyPT/ZfyggoJtTnGCfPGx2OOW9idfmyqsqZCAvYscOlXKCGKPCeSfr44Ewp8fqvtfNMe1T88qjWIFKopTL9jSQ==}
+  /zod@3.25.61:
+    resolution: {integrity: sha512-fzfJgUw78LTNnHujj9re1Ov/JJQkRZZGDMcYqSx7Hp4rPOkKywaFHq0S6GoHeXs0wGNE/sIOutkXgnwzrVOGCQ==}
     dev: false
 
   /zustand@3.7.2(react@18.3.1):
