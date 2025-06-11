@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { devtools } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 
 interface AppState {
   isInitialLoading: boolean;
@@ -7,10 +8,12 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>()(
-  subscribeWithSelector((set) => ({
+  devtools((set) => ({
     isInitialLoading: true,
     setInitialLoading: (loading: boolean) => set({ isInitialLoading: loading }),
   })),
 );
 
-export const useAppStoreShallow = <T>(selector: (state: AppState) => T): T => useAppStore(selector);
+export const useAppStoreShallow = <T>(selector: (state: AppState) => T) => {
+  return useAppStore(useShallow(selector));
+};
