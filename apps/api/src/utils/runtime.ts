@@ -7,6 +7,12 @@ import { existsSync } from 'node:fs';
 export const isDesktop = (): boolean => process.env.MODE === 'desktop';
 
 /**
+ * Whether the current process is running in multi-tenant mode
+ */
+export const isMultiTenantEnabled = (): boolean =>
+  process.env.MULTI_TENANT_ENABLED === 'true' && !isDesktop();
+
+/**
  * Finds the path to node_modules by traversing up from the current directory
  * @param startDir Directory to start searching from
  * @param maxDepth Maximum number of parent directories to check

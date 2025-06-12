@@ -641,6 +641,10 @@ export class SubscriptionService implements OnModuleInit {
     _sub?: SubscriptionModel,
   ): Promise<SubscriptionUsageData> {
     const { uid } = user;
+    if (!uid) {
+      return null;
+    }
+
     const userPo = await this.prisma.user.findUnique({
       select: { subscriptionId: true },
       where: { uid },

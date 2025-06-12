@@ -108,6 +108,7 @@ import { providerPO2DTO } from '../provider/provider.dto';
 import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
 import { McpServerService } from '../mcp-server/mcp-server.service';
 import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
+import { UserService } from '../user/user.service';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -132,6 +133,7 @@ export class SkillService {
     private prisma: PrismaService,
     private label: LabelService,
     private search: SearchService,
+    private userService: UserService,
     private knowledge: KnowledgeService,
     private rag: RAGService,
     private canvas: CanvasService,
@@ -837,10 +839,7 @@ export class SkillService {
       eventListener,
       selectedMcpServers,
     } = data;
-    const userPo = await this.prisma.user.findUnique({
-      select: { uiLocale: true, outputLocale: true },
-      where: { uid: user.uid },
-    });
+    const userPo = await this.userService.getUserSettings(user);
     const outputLocale = data?.locale || userPo?.outputLocale;
 
     const displayLocale =

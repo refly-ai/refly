@@ -20,11 +20,13 @@ import {
   QUEUE_POST_DELETE_KNOWLEDGE_ENTITY,
 } from '../../utils/const';
 import { ProviderModule } from '../provider/provider.module';
+import { UserModule } from '../user/user.module';
 import { isDesktop } from '../../utils/runtime';
 
 @Module({
   imports: [
     CommonModule,
+    UserModule,
     RAGModule,
     MiscModule,
     ProviderModule,

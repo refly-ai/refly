@@ -22,7 +22,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Get('settings')
   async getSettings(@LoginedUser() user: User): Promise<GetUserSettingsResponse> {
-    const userPo = await this.userService.getUserSettings(user);
+    const userPo = await this.userService.getUserSettings(user, true);
     const settings = userPO2Settings(userPo);
 
     return buildSuccessResponse(settings);

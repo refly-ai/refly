@@ -25,7 +25,7 @@ import { QUEUE_SYNC_CANVAS_ENTITY } from '../../utils/const';
 import ms from 'ms';
 import pLimit from 'p-limit';
 import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
-import { isDesktop } from '../../utils/runtime';
+import { isMultiTenantEnabled } from '../../utils/runtime';
 
 @Injectable()
 export class CollabService {
@@ -81,7 +81,7 @@ export class CollabService {
   async authenticate({ token, documentName }: { token: string; documentName: string }) {
     // First validate the UID
     let uid: string | null = null;
-    if (isDesktop()) {
+    if (!isMultiTenantEnabled()) {
       uid = this.config.get('local.uid');
     } else {
       // Validate the token from Redis

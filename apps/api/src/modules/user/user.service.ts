@@ -14,11 +14,12 @@ import { RedisService } from '../common/redis.service';
 import { OperationTooFrequent, ParamsError } from '@refly/errors';
 import { MiscService } from '../misc/misc.service';
 import { ConfigService } from '@nestjs/config';
-import { isDesktop } from '../../utils/runtime';
+import { isMultiTenantEnabled } from '../../utils/runtime';
 
 @Injectable()
 export class UserService implements OnModuleInit {
   private logger = new Logger(UserService.name);
+  private localUid: string | null = null;
 
   constructor(
     private config: ConfigService,
@@ -29,35 +30,43 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    if (isDesktop()) {
-      const localUid = this.config.get('local.uid');
-      const localUser = await this.prisma.user.findUnique({
-        where: { uid: localUid },
+    if (!isMultiTenantEnabled()) {
+      const lastUser = await this.prisma.user.findFirst({
+        orderBy: { pk: 'desc' },
       });
-      if (!localUser) {
+
+      // If there is already a user, use the last user's uid
+      if (lastUser) {
+        this.localUid = lastUser.uid;
+      } else {
+        this.localUid = this.config.get('local.uid');
         const username = os.userInfo().username;
         await this.prisma.user.upsert({
           where: { name: username },
           create: {
-            uid: localUid,
+            uid: this.localUid,
             name: username,
             nickname: username,
           },
           update: {
-            uid: localUid,
+            uid: this.localUid,
           },
         });
       }
     }
   }
 
-  async getUserSettings(user: User) {
+  async getUserSettings(user: User, needSubscriptionInfo = false) {
+    if (this.localUid) {
+      user.uid = this.localUid;
+    }
+
     const userPo = await this.prisma.user.findUnique({
       where: { uid: user.uid },
     });
 
     let subscription: Subscription | null = null;
-    if (userPo.subscriptionId) {
+    if (needSubscriptionInfo && userPo.subscriptionId) {
       subscription = await this.subscriptionService.getSubscription(userPo.subscriptionId);
     }
 
@@ -68,6 +77,10 @@ export class UserService implements OnModuleInit {
   }
 
   async updateSettings(user: User, data: UpdateUserSettingsRequest) {
+    if (this.localUid) {
+      user.uid = this.localUid;
+    }
+
     const releaseLock = await this.redis.acquireLock(`update-user-settings:${user.uid}`);
     if (!releaseLock) {
       throw new OperationTooFrequent('Update user settings too frequent');
