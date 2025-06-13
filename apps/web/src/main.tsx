@@ -154,13 +154,39 @@ export const App = () => {
   useEffect(() => {
     preloadMonacoEditor();
   }, []);
+  // Use light theme when forced, otherwise use the user's preference
+  const shouldUseDarkTheme = isDarkMode && !isForcedLightMode;
+
+  useEffect(() => {
+    ConfigProvider.config({
+      holderRender: (children) => (
+        <ConfigProvider
+          theme={{
+            token: {
+              colorPrimary: '#00968F',
+              borderRadius: 6,
+              ...(shouldUseDarkTheme
+                ? {
+                    controlItemBgActive: 'rgba(255, 255, 255, 0.08)',
+                    controlItemBgActiveHover: 'rgba(255, 255, 255, 0.12)',
+                  }
+                : {
+                    controlItemBgActive: '#f1f1f0',
+                    controlItemBgActiveHover: '#e0e0e0',
+                  }),
+            },
+            algorithm: shouldUseDarkTheme ? theme.darkAlgorithm : theme.defaultAlgorithm,
+          }}
+        >
+          {children}
+        </ConfigProvider>
+      ),
+    });
+  }, [shouldUseDarkTheme]);
 
   if (isInitialLoading) {
     return <SuspenseLoading />;
   }
-
-  // Use light theme when forced, otherwise use the user's preference
-  const shouldUseDarkTheme = isDarkMode && !isForcedLightMode;
 
   return (
     <ConfigProvider
