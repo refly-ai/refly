@@ -37,6 +37,7 @@
     "test": "pnpm -r --if-present test",
     "test:unit": "pnpm -r --if-present test:unit",
     "test:integration": "pnpm -r --if-present test:integration",
+    "i18n:check": "node scripts/check-i18n-consistency.js",
     "prepare": "husky"
   },
   "devDependencies": {
