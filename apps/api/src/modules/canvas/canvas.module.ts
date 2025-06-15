@@ -18,10 +18,12 @@ import { ActionModule } from '../action/action.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
 import { isDesktop } from '../../utils/runtime';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
     CommonModule,
+    UserModule,
     CollabModule,
     MiscModule,
     KnowledgeModule,

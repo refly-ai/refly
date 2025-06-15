@@ -35,6 +35,7 @@ import { RedisService } from '../common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { ProviderService } from '../provider/provider.service';
 import { isDesktop } from '../../utils/runtime';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class CanvasService {
@@ -43,6 +44,7 @@ export class CanvasService {
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
+    private userService: UserService,
     private collabService: CollabService,
     private miscService: MiscService,
     private actionService: ActionService,
@@ -148,14 +150,7 @@ export class CanvasService {
       throw new CanvasNotFoundError();
     }
 
-    const userPo = await this.prisma.user.findUnique({
-      select: {
-        name: true,
-        nickname: true,
-        avatar: true,
-      },
-      where: { uid: user.uid },
-    });
+    const userPo = await this.userService.getUserSettings(user);
 
     const doc = await this.getCanvasYDoc(canvas.stateStorageKey);
 

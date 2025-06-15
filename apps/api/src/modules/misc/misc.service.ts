@@ -39,7 +39,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { StaticFile } from '../../generated/client';
 import { PandocParser } from '../knowledge/parsers/pandoc.parser';
 import pLimit from 'p-limit';
-import { isDesktop } from '../../utils/runtime';
+import { isDesktop, isMultiTenantEnabled } from '../../utils/runtime';
 
 @Injectable()
 export class MiscService implements OnModuleInit {
@@ -348,8 +348,8 @@ export class MiscService implements OnModuleInit {
       });
     }
 
-    // Check for file permission if not in desktop mode
-    if (!isDesktop()) {
+    // Check for file permission if in multi-tenant mode
+    if (isMultiTenantEnabled() && user.uid) {
       if (existingFile && existingFile.uid !== user.uid) {
         this.logger.warn(`User ${user.uid} is not allowed to upload file with ${param.storageKey}`);
         throw new ForbiddenException();
@@ -375,7 +375,7 @@ export class MiscService implements OnModuleInit {
     } else {
       await this.prisma.staticFile.create({
         data: {
-          uid: user.uid,
+          uid: user.uid ?? '',
           storageKey,
           storageSize: file.buffer.length,
           entityId,

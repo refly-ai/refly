@@ -82,6 +82,7 @@ import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
 import { ProviderService } from '../provider/provider.service';
 import { DocxParser } from '../knowledge/parsers/docx.parser';
 import { PdfParser } from '../knowledge/parsers/pdf.parser';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class KnowledgeService {
@@ -90,6 +91,7 @@ export class KnowledgeService {
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
+    private userService: UserService,
     private ragService: RAGService,
     private miscService: MiscService,
     private providerService: ProviderService,
@@ -656,7 +658,7 @@ export class KnowledgeService {
   async finalizeResource(param: FinalizeResourceParam): Promise<ResourceModel | null> {
     const { resourceId, uid } = param;
 
-    const user = await this.prisma.user.findUnique({ where: { uid } });
+    const user = await this.userService.getUserSettings({ uid });
     if (!user) {
       this.logger.warn(`User not found, userId: ${uid}`);
       return null;
