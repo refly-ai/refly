@@ -47,6 +47,7 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ConfigService } from '@nestjs/config';
 import { VectorSearchService } from '../common/vector-search';
 import { VECTOR_SEARCH } from '../common/vector-search/tokens';
+import { UserService } from '../user/user.service';
 
 interface GlobalProviderConfig {
   providers: ProviderModel[];
@@ -66,6 +67,7 @@ export class ProviderService implements OnModuleInit {
     private readonly vectorSearchService: VectorSearchService,
     private readonly configService: ConfigService,
     private readonly encryptionService: EncryptionService,
+    private readonly userService: UserService,
   ) {
     this.globalProviderCache = new SingleFlightCache(this.fetchGlobalProviderConfig.bind(this));
   }
@@ -505,12 +507,7 @@ export class ProviderService implements OnModuleInit {
     user: User,
     modelItemId: string,
   ): Promise<Record<ModelScene, ProviderItemModel>> {
-    const userPo = await this.prisma.user.findUnique({
-      where: { uid: user.uid },
-      select: {
-        preferences: true,
-      },
-    });
+    const userPo = await this.userService.getUserSettings(user);
     const defaultChatItem = await this.findDefaultProviderItem(user, 'chat', userPo);
     const chatItem = modelItemId
       ? await this.findProviderItemById(user, modelItemId)
@@ -541,14 +538,7 @@ export class ProviderService implements OnModuleInit {
     scene: ModelScene,
     userPo?: { preferences: string },
   ): Promise<ProviderItemModel> {
-    const { preferences } =
-      userPo ||
-      (await this.prisma.user.findUnique({
-        where: { uid: user.uid },
-        select: {
-          preferences: true,
-        },
-      }));
+    const { preferences } = userPo || (await this.userService.getUserSettings(user));
 
     const userPreferences: UserPreferences = JSON.parse(preferences || '{}');
     const { defaultModel } = userPreferences;
@@ -586,12 +576,7 @@ export class ProviderService implements OnModuleInit {
   }
 
   async findProviderByCategory(user: User, category: ProviderCategory) {
-    const { preferences } = await this.prisma.user.findUnique({
-      where: { uid: user.uid },
-      select: {
-        preferences: true,
-      },
-    });
+    const { preferences } = await this.userService.getUserSettings(user);
     const userPreferences: UserPreferences = JSON.parse(preferences || '{}');
 
     let providerId: string | null = null;

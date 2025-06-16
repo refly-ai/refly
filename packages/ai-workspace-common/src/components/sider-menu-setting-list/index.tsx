@@ -8,6 +8,8 @@ import { GrGroup } from 'react-icons/gr';
 import { MemoizedIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { IconChrome } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { EXTENSION_DOWNLOAD_LINK } from '@refly/utils/url';
+import { isMultiTenantEnabled } from '@refly-packages/ai-workspace-common/utils/env';
+
 export const SiderMenuSettingList = (props: { children: React.ReactNode }) => {
   const { t } = useTranslation();
   const userStore = useUserStore();
@@ -49,14 +51,18 @@ export const SiderMenuSettingList = (props: { children: React.ReactNode }) => {
       icon: <MemoizedIcon icon={IconChrome} className="w-[14px] h-[14px]" />,
       label: t('loggedHomePage.siderMenu.addToChrome'),
     },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'logout',
-      icon: <LuLogOut size={14} />,
-      label: t('loggedHomePage.siderMenu.logout'),
-    },
+    ...(isMultiTenantEnabled()
+      ? [
+          {
+            type: 'divider' as const,
+          },
+          {
+            key: 'logout',
+            icon: <LuLogOut size={14} />,
+            label: t('loggedHomePage.siderMenu.logout'),
+          },
+        ]
+      : []),
   ];
 
   const handleMenuClick = (key: string) => {

@@ -23,10 +23,12 @@ import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
 import { ProviderModule } from '../provider/provider.module';
 import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { isDesktop } from '../../utils/runtime';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
     CommonModule,
+    UserModule,
     LabelModule,
     SearchModule,
     CanvasModule,

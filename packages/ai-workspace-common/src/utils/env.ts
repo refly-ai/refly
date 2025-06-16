@@ -58,3 +58,8 @@ export const sentryEnabled =
 export const runtime: IRuntime = import.meta.env.VITE_RUNTIME;
 
 export const isDesktop = () => runtime === 'desktop';
+
+export const isMultiTenantEnabled = () =>
+  runtime !== 'desktop' &&
+  (getBrowserValue(() => Boolean(window.ENV?.MULTI_TENANT_ENABLED), false) ||
+    Boolean(import.meta.env.VITE_MULTI_TENANT_ENABLED));

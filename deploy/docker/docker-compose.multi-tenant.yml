@@ -1,0 +1,64 @@
+include:
+  - path: docker-compose.middleware.yml
+services:
+  api:
+    image: reflyai/refly-api:latest
+    container_name: refly_api
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    working_dir: /app/apps/api/dist
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "node scripts/sync-db-schema.js && node main.js"
+    ports:
+      - 5800:5800
+      - 5801:5801
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - MINIO_INTERNAL_ENDPOINT=minio
+      - MINIO_EXTERNAL_ENDPOINT=minio
+      - REDIS_HOST=redis
+      - DATABASE_URL=postgresql://refly:test@db:5432/refly?schema=refly
+      - QDRANT_HOST=qdrant
+      - SEARXNG_BASE_URL=http://searxng:8080
+      - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
+      - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
+      - MULTI_TENANT_ENABLED=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5800"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - refly_network  
+  web:
+    image: reflyai/refly-web:latest
+    container_name: refly_web
+    ports:
+      - 5700:80
+    restart: always
+    environment:
+      - API_URL=/api
+      - COLLAB_URL=/collab
+      - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
+      - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
+      - MULTI_TENANT_ENABLED=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - refly_network

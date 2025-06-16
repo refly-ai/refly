@@ -52,6 +52,7 @@ declare global {
       STATIC_PRIVATE_ENDPOINT?: string;
       SUBSCRIPTION_ENABLED?: boolean;
       CANVAS_TEMPLATE_ENABLED?: boolean;
+      MULTI_TENANT_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
     };
 
