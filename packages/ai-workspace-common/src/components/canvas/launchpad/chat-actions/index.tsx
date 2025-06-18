@@ -97,15 +97,19 @@ export const ChatActions = memo((props: ChatActionsProps) => {
     activeResultId: state.activeResultId,
   }));
 
+  console.log('ChatActions - activeResultId from store:', activeResultId);
+
   // Determine whether the active result is currently executing
   const isExecuting = useActionResultStore((state) => {
     const result = state.resultMap?.[activeResultId];
-    if (!result) return false;
-    console.log('ChatActions debug:', {
+    console.log('ChatActions - Full debug:', {
       activeResultId,
+      hasResult: !!result,
       resultStatus: result?.status,
-      isExecuting: result.status !== 'finish' && result.status !== 'failed',
+      allResultIds: Object.keys(state.resultMap || {}),
+      isExecuting: result ? result.status !== 'finish' && result.status !== 'failed' : false,
     });
+    if (!result) return false;
     return result.status !== 'finish' && result.status !== 'failed';
   });
 
