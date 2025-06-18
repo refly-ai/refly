@@ -195,9 +195,6 @@ export const ChatPanel = ({
   }, [selectedSkill, form, initialTplConfig]);
 
   const handleSendMessage = (userInput?: string) => {
-    // Set active resultId when sending a message
-    setActiveResultId(resultId);
-
     const error = handleFilterErrorTip();
     if (error) {
       return;
@@ -232,6 +229,9 @@ export const ChatPanel = ({
       resultId: genActionResultID(),
       nodeId: genUniqueId(),
     };
+
+    // Set active resultId to the new resultId when sending a message
+    setActiveResultId(newResultId);
 
     // Call onAddMessage callback with all required data
     if (onAddMessage) {
