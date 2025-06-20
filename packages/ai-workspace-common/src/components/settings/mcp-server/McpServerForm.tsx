@@ -56,6 +56,24 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
 
   const [serverType, setServerType] = useState<McpServerType>(initialData?.type || 'sse');
 
+  // Convert environment variables from object format to key-value pair array format for form usage
+  const convertEnvObjectToArray = (envObj: Record<string, string> = {}) => {
+    return Object.entries(envObj || {}).map(([key, value]) => ({ key, value }));
+  };
+
+  // Convert environment variables from key-value pair array format back to object format
+  const convertEnvArrayToObject = (envArray: any[] = []) => {
+    return (envArray || []).reduce(
+      (acc, { key, value }) => {
+        if (key) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+  };
+
   // Create and update mutations
   const createMutation = useCreateMcpServer([], {
     onSuccess: (response, _variables, _context) => {
@@ -125,24 +143,6 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
       setFormData(updatedFormData);
     },
   });
-
-  // Convert environment variables from object format to key-value pair array format for form usage
-  const convertEnvObjectToArray = (envObj: Record<string, string> = {}) => {
-    return Object.entries(envObj).map(([key, value]) => ({ key, value }));
-  };
-
-  // Convert environment variables from key-value pair array format back to object format
-  const convertEnvArrayToObject = (envArray: any[] = []) => {
-    return envArray.reduce(
-      (acc, { key, value }) => {
-        if (key) {
-          acc[key] = value;
-        }
-        return acc;
-      },
-      {} as Record<string, string>,
-    );
-  };
 
   // Initialize form with initial data
   useEffect(() => {

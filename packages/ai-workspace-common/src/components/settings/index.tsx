@@ -14,7 +14,10 @@ import { ModelProviders } from '@refly-packages/ai-workspace-common/components/s
 import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
 import { ParserConfig } from '@refly-packages/ai-workspace-common/components/settings/parser-config';
 import { DefaultModel } from '@refly-packages/ai-workspace-common/components/settings/default-model';
-import { McpServerList } from '@refly-packages/ai-workspace-common/components/settings/mcp-server';
+import {
+  McpServerList,
+  CommunityMcpList,
+} from '@refly-packages/ai-workspace-common/components/settings/mcp-server';
 
 import { RiAccountBoxLine } from 'react-icons/ri';
 import { HiOutlineLanguage } from 'react-icons/hi2';
@@ -31,8 +34,10 @@ import {
 import { GrCube } from 'react-icons/gr';
 
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
-import { useEffect } from 'react';
-import { ToolOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { ToolOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { useListMcpServers } from '@refly-packages/ai-workspace-common/queries';
+import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 
 const iconStyle = { fontSize: 16, transform: 'translateY(3px)' };
 
@@ -40,6 +45,78 @@ interface SettingModalProps {
   visible: boolean;
   setVisible: (visible: boolean) => void;
 }
+
+// MCP Server Tab Component
+const McpServerTab = ({ visible }: { visible: boolean }) => {
+  const [mcpActiveTab, setMcpActiveTab] = useState('my-servers');
+  const isLogin = useUserStoreShallow((state) => state.isLogin);
+
+  // Fetch MCP servers for the community tab to check installed status
+  const { data: mcpServersData, refetch } = useListMcpServers({}, [], {
+    enabled: visible && isLogin,
+    refetchOnWindowFocus: false,
+  });
+
+  const mcpServers = mcpServersData?.data || [];
+
+  // Custom tab items
+  const tabItems = [
+    {
+      key: 'my-servers',
+      label: 'My Servers',
+      icon: <UnorderedListOutlined />,
+    },
+    {
+      key: 'community',
+      label: 'MCP Store',
+      icon: <AppstoreOutlined />,
+    },
+  ];
+
+  if (!visible) return null;
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Custom Tab Header */}
+      <div className="flex border-b border-gray-100 dark:border-gray-800">
+        {tabItems.map((tab) => (
+          <div
+            key={tab.key}
+            onClick={() => setMcpActiveTab(tab.key)}
+            className={`
+              cursor-pointer relative px-4 py-2.5 flex items-center gap-1.5 text-sm font-medium transition-all duration-200 ease-in-out
+              ${
+                mcpActiveTab === tab.key
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }
+            `}
+          >
+            <span className="text-sm">{tab.icon}</span>
+            <span>{tab.label}</span>
+            {mcpActiveTab === tab.key && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-sm" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden">
+        {mcpActiveTab === 'my-servers' && (
+          <McpServerList visible={visible && mcpActiveTab === 'my-servers'} />
+        )}
+        {mcpActiveTab === 'community' && (
+          <CommunityMcpList
+            visible={visible && mcpActiveTab === 'community'}
+            installedServers={mcpServers}
+            onInstallSuccess={() => refetch()}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const SettingModal = (props: SettingModalProps) => {
   const { visible, setVisible } = props;
@@ -81,7 +158,7 @@ export const SettingModal = (props: SettingModalProps) => {
       label: t('settings.tabs.mcpServer'),
       icon: <ToolOutlined style={iconStyle} />,
       children: (
-        <McpServerList visible={settingsModalActiveTab === SettingsModalActiveTab.McpServer} />
+        <McpServerTab visible={settingsModalActiveTab === SettingsModalActiveTab.McpServer} />
       ),
     },
     {

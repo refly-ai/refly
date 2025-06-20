@@ -382,12 +382,7 @@ export const McpServerList: React.FC<McpServerListProps> = ({ visible }) => {
       style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '0 1px' }}
     >
       <div className="flex justify-between items-center mb-5" style={{ padding: '0 4px' }}>
-        <h2
-          style={{ fontSize: '18px', fontWeight: 500, margin: 0 }}
-          className="text-gray-900 dark:text-gray-100"
-        >
-          {t('settings.mcpServer.title')}
-        </h2>
+        <div />
         <Space>
           {/* Batch import button */}
           <McpServerBatchImport onSuccess={refetch} />
