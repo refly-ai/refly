@@ -1,5 +1,5 @@
 import { Button, Tooltip, Upload, Switch, FormInstance } from 'antd';
-import { memo, useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef, useCallback, useEffect } from 'react';
 import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LinkOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -12,8 +12,6 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
-import { useContextPanelStoreShallow } from '@refly-packages/ai-workspace-common/stores/context-panel';
-import { useActionResultStore } from '@refly-packages/ai-workspace-common/stores/action-result';
 
 export interface CustomAction {
   icon: React.ReactNode;
@@ -34,9 +32,10 @@ interface ChatActionsProps {
   customActions?: CustomAction[];
   onUploadImage?: (file: File) => Promise<void>;
   contextItems: IContextItem[];
+  loading?: boolean;
 }
 
-export const ChatActions = memo((props: ChatActionsProps) => {
+export const ChatActions = (props: ChatActionsProps) => {
   const {
     query,
     model,
@@ -48,13 +47,17 @@ export const ChatActions = memo((props: ChatActionsProps) => {
     className,
     onUploadImage,
     contextItems,
+    loading = false,
   } = props;
   const { t } = useTranslation();
   const { canvasId, readonly } = useCanvasContext();
   const { handleUploadImage } = useUploadImage();
 
   const handleSendClick = () => {
+    console.log('🎯 ChatActions handleSendClick called - about to call handleSendMessage');
+    console.log('🔍 handleSendMessage function:', handleSendMessage);
     handleSendMessage();
+    console.log('✅ ChatActions handleSendMessage called');
   };
 
   // hooks
@@ -92,25 +95,35 @@ export const ChatActions = memo((props: ChatActionsProps) => {
   /* ------------------------------------------------------------------
    * Stop / Abort handling
    * ------------------------------------------------------------------*/
-  // Get currently active result id from context panel store
-  const { activeResultId } = useContextPanelStoreShallow((state) => ({
-    activeResultId: state.activeResultId,
-  }));
 
-  console.log('ChatActions - activeResultId from store:', activeResultId);
+  // Check if any task is currently executing
+  const isExecuting = loading;
 
-  // Determine whether the active result is currently executing
-  const isExecuting = useActionResultStore((state) => {
-    const result = state.resultMap?.[activeResultId];
-    console.log('ChatActions - Full debug:', {
-      activeResultId,
-      hasResult: !!result,
-      resultStatus: result?.status,
-      allResultIds: Object.keys(state.resultMap || {}),
-      isExecuting: result ? result.status !== 'finish' && result.status !== 'failed' : false,
+  // Debug: Monitor loading prop changes
+  useEffect(() => {
+    console.log('ChatActions - loading prop changed:', {
+      loading,
+      isExecuting,
+      timestamp: new Date().toISOString(),
     });
-    if (!result) return false;
-    return result.status !== 'finish' && result.status !== 'failed';
+  }, [loading, isExecuting]);
+
+  console.log('ChatActions - Detailed execution state:', {
+    loading,
+    isExecuting,
+    isWeb,
+    canSendMessage,
+    readonly,
+    shouldShowButtons: !readonly,
+    shouldShowSendOrStop: isWeb,
+    willShowStop: isWeb && isExecuting,
+    willShowSend: isWeb && !isExecuting,
+    timestamp: new Date().toISOString(),
+    propsLoading: props.loading, // Also log the original prop
+    destructuredLoading: loading,
+    hasLoadingProp: 'loading' in props,
+    propsKeys: Object.keys(props),
+    getRuntime: getRuntime(),
   });
 
   return readonly ? null : (
@@ -171,7 +184,8 @@ export const ChatActions = memo((props: ChatActionsProps) => {
         </Upload>
 
         {/* Show Stop button when generating, otherwise show Send button */}
-        {!isWeb ? null : isExecuting ? (
+        {/* 🧪 Temporarily removed isWeb check for debugging */}
+        {!canSendMessage ? (
           <Button
             size="small"
             danger
@@ -196,6 +210,6 @@ export const ChatActions = memo((props: ChatActionsProps) => {
       </div>
     </div>
   );
-});
+};
 
 ChatActions.displayName = 'ChatActions';

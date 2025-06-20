@@ -10,6 +10,7 @@ import { useContextFilterErrorTip } from './context-manager/hooks/use-context-fi
 import { genActionResultID, genUniqueId } from '@refly/utils/id';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { useChatStore, useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
+import { useActionResultStore } from '@refly-packages/ai-workspace-common/stores/action-result';
 
 import { SelectedSkillHeader } from './selected-skill-header';
 import {
@@ -97,6 +98,12 @@ interface ChatPanelProps {
   resultId?: string;
 }
 
+// State definition - moved outside component to prevent recreation
+enum ButtonState {
+  IDLE = 'idle', // Show Send button - ready to send
+  EXECUTING = 'executing', // Show Stop button - task running
+}
+
 export const ChatPanel = ({
   embeddedMode = false,
   onAddMessage,
@@ -106,6 +113,115 @@ export const ChatPanel = ({
   resultId = ContextTarget.Global,
 }: ChatPanelProps) => {
   const { t } = useTranslation();
+
+  /* ------------------------------------------------------------------
+   * Button State Machine
+   * ------------------------------------------------------------------
+   *
+   * State Diagram:
+   *
+   *     IDLE                    EXECUTING
+   *  (Send button)           (Stop button)
+   *       ↓                       ↑
+   *   User clicks              User clicks
+   *      Send                     Stop
+   *       ↓                       ↑
+   *       →    EXECUTING    →    IDLE
+   *              ↓                 ↑
+   *          Task auto          Task
+   *         completes        completes
+   *              ↓                 ↑
+   *              →     IDLE     →  ←
+   *
+   * Transitions:
+   * 1. IDLE → EXECUTING: User clicks Send
+   * 2. EXECUTING → IDLE: User clicks Stop
+   * 3. EXECUTING → IDLE: Task completes (auto)
+   * ------------------------------------------------------------------*/
+
+  // State management
+  const [buttonState, setButtonState] = useState<ButtonState>(ButtonState.IDLE);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // State machine transitions with validation
+  const transitionToExecuting = useCallback(() => {
+    console.log('🎯 transitionToExecuting called - current state:', buttonState);
+    if (buttonState !== ButtonState.IDLE) {
+      console.warn('⚠️ Invalid transition: Can only transition to EXECUTING from IDLE', {
+        currentState: buttonState,
+        expectedState: ButtonState.IDLE,
+      });
+      return;
+    }
+    console.log('🔄 State Machine: IDLE → EXECUTING (User clicked Send)');
+    setButtonState(ButtonState.EXECUTING);
+    setForceUpdate((prev) => prev + 1); // Force re-render
+    console.log('✅ setButtonState(EXECUTING) called - state will update asynchronously');
+  }, [buttonState]);
+
+  const transitionToIdle = useCallback(() => {
+    console.log('🎯 transitionToIdle called - current state:', buttonState);
+    if (buttonState !== ButtonState.EXECUTING) {
+      console.warn('⚠️ Invalid transition: Can only transition to IDLE from EXECUTING', {
+        currentState: buttonState,
+        expectedState: ButtonState.EXECUTING,
+      });
+      return;
+    }
+    console.log('🔄 State Machine: EXECUTING → IDLE');
+    setButtonState(ButtonState.IDLE);
+    console.log('✅ setButtonState(IDLE) called - state will update asynchronously');
+  }, [buttonState]);
+
+  // Derived state for compatibility
+  const isSending = buttonState === ButtonState.EXECUTING;
+
+  // 🧪 Debug derived state calculation
+  console.log('📊 Derived state calculation:', {
+    buttonState,
+    ButtonStateEXECUTING: ButtonState.EXECUTING,
+    isEqual: buttonState === ButtonState.EXECUTING,
+    isSending,
+    stringComparison: buttonState === 'executing',
+  });
+
+  // State machine logger
+  useEffect(() => {
+    console.log('🎯 State Machine Current State:', {
+      buttonState,
+      isSending,
+      showingButton: isSending ? 'Stop' : 'Send',
+      timestamp: new Date().toISOString(),
+      ButtonStateEnum: ButtonState,
+      isExecutingEnum: ButtonState.EXECUTING,
+      isIdleEnum: ButtonState.IDLE,
+      stateComparison: {
+        isIdle: buttonState === ButtonState.IDLE,
+        isExecuting: buttonState === ButtonState.EXECUTING,
+        stringComparison: buttonState === 'executing',
+      },
+    });
+  }, [buttonState, isSending]);
+
+  // State machine validator (development only)
+  if (process.env.NODE_ENV === 'development') {
+    // Validate state consistency
+    const isStateConsistent =
+      (buttonState === ButtonState.IDLE && !isSending) ||
+      (buttonState === ButtonState.EXECUTING && isSending);
+
+    if (!isStateConsistent) {
+      console.error('❌ State Machine Error: Inconsistent state detected!', {
+        buttonState,
+        isSending,
+        expected:
+          buttonState === ButtonState.IDLE
+            ? 'isSending should be false'
+            : 'isSending should be true',
+      });
+    }
+  }
+
   const { formErrors, setFormErrors } = useContextPanelStore((state) => ({
     formErrors: state.formErrors,
     setFormErrors: state.setFormErrors,
@@ -194,20 +310,66 @@ export const ChatPanel = ({
     }
   }, [selectedSkill, form, initialTplConfig]);
 
+  // Get active result to monitor its status
+  const { activeResultId } = useContextPanelStoreShallow((state) => ({
+    activeResultId: state.activeResultId,
+  }));
+
+  // Monitor active result status to reset sending state
+  const activeResult = useActionResultStore((state) => state.resultMap?.[activeResultId]);
+
+  // Auto-transition to idle when task completes
+  useEffect(() => {
+    if (activeResult && buttonState === ButtonState.EXECUTING) {
+      const { status } = activeResult;
+      if (status === 'finish' || status === 'failed') {
+        console.log('✅ Task completed - auto-transitioning to idle state:', status);
+        transitionToIdle();
+      }
+    }
+  }, [activeResult?.status, buttonState, transitionToIdle]);
+
   const handleSendMessage = (userInput?: string) => {
+    console.log('🔥 handleSendMessage called - START', {
+      buttonState,
+      isSending,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 🧪 Let's test the state machine directly
+    console.log('🧪 Testing direct state change...');
+    setButtonState(ButtonState.EXECUTING);
+    console.log('🧪 Direct setButtonState(EXECUTING) called');
+
+    // 🧪 Check state in next render cycle
+    setTimeout(() => {
+      console.log('🧪 State after timeout:', {
+        buttonState,
+        isSending: buttonState === ButtonState.EXECUTING,
+      });
+    }, 0);
+
     const error = handleFilterErrorTip();
     if (error) {
+      console.log('❌ handleSendMessage aborted - filter error');
       return;
     }
 
     const { formErrors } = useContextPanelStore.getState();
     if (formErrors && Object.keys(formErrors).length > 0) {
+      console.log('❌ handleSendMessage aborted - form errors');
       notification.error({
         message: t('copilot.configManager.errorTipTitle'),
         description: t('copilot.configManager.errorTip'),
       });
       return;
     }
+
+    // Transition to executing state
+    console.log('🚀 User clicked Send - transitioning to executing state');
+    console.log('🔍 State BEFORE transition:', { buttonState, isSending });
+    transitionToExecuting();
+    console.log('🔍 State AFTER transition call:', { buttonState, isSending });
 
     const tplConfig = form?.getFieldValue('tplConfig');
 
@@ -229,6 +391,8 @@ export const ChatPanel = ({
       resultId: genActionResultID(),
       nodeId: genUniqueId(),
     };
+
+    console.log('ChatPanel - Generated new resultId:', newResultId);
 
     // Set active resultId to the new resultId when sending a message
     setActiveResultId(newResultId);
@@ -315,6 +479,9 @@ export const ChatPanel = ({
   };
 
   const handleAbort = () => {
+    // User clicked Stop - transition to idle state
+    console.log('🛑 User clicked Stop - transitioning to idle state');
+    transitionToIdle();
     abortAction();
   };
 
@@ -497,7 +664,49 @@ export const ChatPanel = ({
               customActions={customActions}
               onUploadImage={handleImageUpload}
               contextItems={contextItems}
+              loading={Boolean(isSending)} // Using state machine value
             />
+            {/* Debug: Log what we're passing to ChatActions */}
+            {console.log('📤 ChatPanel passing to ChatActions:', {
+              loading: Boolean(isSending),
+              isSending,
+              buttonState,
+              typeof_isSending: typeof isSending,
+              typeof_loading: typeof Boolean(isSending),
+              Boolean_isSending: Boolean(isSending),
+            })}
+            {/* Debug info for state machine */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 mt-1 px-2 space-y-1">
+                <div>
+                  Debug: buttonState={buttonState}, isSending={isSending ? 'true' : 'false'},
+                  passing loading={isSending ? 'true' : 'false'} to ChatActions, renders=
+                  {forceUpdate}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+                    onClick={() => {
+                      console.log('🧪 Manual test: calling transitionToExecuting');
+                      transitionToExecuting();
+                    }}
+                  >
+                    Test: → EXECUTING
+                  </button>
+                  <button
+                    type="button"
+                    className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs"
+                    onClick={() => {
+                      console.log('🧪 Manual test: calling transitionToIdle');
+                      transitionToIdle();
+                    }}
+                  >
+                    Test: → IDLE
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
