@@ -19,6 +19,7 @@ import { canvasTemplateEnabled } from '@refly-packages/ai-workspace-common/utils
 import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/components/magicui/animated-grid-pattern';
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 
 import cn from 'classnames';
 import Logo from '@/assets/logo.svg';
@@ -34,6 +35,8 @@ export const UnsignedFrontPage = memo(() => {
   const templateCategoryId = '';
 
   const [starCount, setStarCount] = useState('');
+
+  const { abortAction } = useInvokeAction();
 
   useEffect(() => {
     // Fetch GitHub star count
@@ -321,7 +324,7 @@ export const UnsignedFrontPage = memo(() => {
                   runtimeConfig={runtimeConfig}
                   setRuntimeConfig={setRuntimeConfig}
                   handleSendMessage={handleLogin}
-                  handleAbort={() => {}}
+                  handleAbort={abortAction}
                   customActions={[
                     {
                       icon: <IconPlus className="flex items-center justify-center" />,

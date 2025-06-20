@@ -26,6 +26,7 @@ import { useCanvasTemplateModalShallow } from '@refly-packages/ai-workspace-comm
 import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/components/magicui/animated-grid-pattern';
 import { Title } from './title';
 import cn from 'classnames';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 
 export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const { t, i18n } = useTranslation();
@@ -78,6 +79,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const { setVisible: setCanvasTemplateModalVisible } = useCanvasTemplateModalShallow((state) => ({
     setVisible: state.setVisible,
   }));
+
+  const { abortAction } = useInvokeAction();
 
   const handleSelectSkill = useCallback(
     (skill: Skill) => {
@@ -260,7 +263,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                   runtimeConfig={runtimeConfig}
                   setRuntimeConfig={setRuntimeConfig}
                   handleSendMessage={handleSendMessage}
-                  handleAbort={() => {}}
+                  handleAbort={abortAction}
                   loading={isCreating}
                   customActions={[
                     {

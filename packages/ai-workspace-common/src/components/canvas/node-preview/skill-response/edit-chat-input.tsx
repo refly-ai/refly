@@ -84,7 +84,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   );
 
   const { canvasId, readonly: canvasReadonly } = useCanvasContext();
-  const { invokeAction } = useInvokeAction();
+  const { invokeAction, abortAction } = useInvokeAction();
   const skill = useFindSkill(localActionMeta?.name);
   const {
     handleUploadImage: uploadImageHook,
@@ -408,7 +408,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
           runtimeConfig={editRuntimeConfig}
           setRuntimeConfig={setEditRuntimeConfig}
           handleSendMessage={handleSendMessage}
-          handleAbort={() => {}}
+          handleAbort={abortAction}
           customActions={customActions}
           onUploadImage={handleImageUpload}
           contextItems={editContextItems}

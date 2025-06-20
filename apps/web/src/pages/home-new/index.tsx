@@ -15,6 +15,7 @@ import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/compone
 import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import Header from '@/components/landing-page-partials/Header';
 import SimpleFooter from '@/components/landing-page-partials/SimpleFooter';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 
 import cn from 'classnames';
 import { Title } from '@refly-packages/ai-workspace-common/components/canvas/front-page/title';
@@ -53,6 +54,8 @@ const UnsignedFrontPage = memo(() => {
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
+
+  const { abortAction } = useInvokeAction();
 
   const handleSelectSkill = useCallback(
     (skill: Skill | null) => {
@@ -231,7 +234,7 @@ const UnsignedFrontPage = memo(() => {
                     runtimeConfig={runtimeConfig}
                     setRuntimeConfig={setRuntimeConfig}
                     handleSendMessage={handleLogin}
-                    handleAbort={() => {}}
+                    handleAbort={abortAction}
                     customActions={[
                       {
                         icon: <IconPlus className="flex items-center justify-center" />,
