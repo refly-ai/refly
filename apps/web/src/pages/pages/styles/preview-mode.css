@@ -597,7 +597,6 @@
   width: 100%;
   height: 100vh;
   overflow: hidden; /* Ensure overflow content is clipped */
-  background-color: #000;
 }
 
 /* When mouse hovers over container, show header and footer */
