@@ -72,6 +72,7 @@ import { usePilotStoreShallow } from '@refly-packages/ai-workspace-common/stores
 import { Pilot } from '@refly-packages/ai-workspace-common/components/pilot';
 import { IconPilot } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ChevronUp } from 'lucide-react';
+import { Slideshow } from '@refly-packages/ai-workspace-common/components/canvas/slideshow';
 
 const GRID_SIZE = 10;
 
@@ -1091,7 +1092,11 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
 export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
   const { canvasId, readonly } = props;
-  const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
+
+  const { showSlideshow, setCurrentCanvasId } = useCanvasStoreShallow((state) => ({
+    showSlideshow: state.showSlideshow,
+    setCurrentCanvasId: state.setCurrentCanvasId,
+  }));
 
   useEffect(() => {
     if (readonly) {
@@ -1109,7 +1114,12 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     <EditorPerformanceProvider>
       <ReactFlowProvider>
         <CanvasProvider readonly={readonly} canvasId={canvasId}>
-          <Flow canvasId={canvasId} />
+          <div className="w-full h-full flex">
+            <div className="flex-1">
+              <Flow canvasId={canvasId} />
+            </div>
+            {showSlideshow && <Slideshow canvasId={canvasId} />}
+          </div>
         </CanvasProvider>
       </ReactFlowProvider>
     </EditorPerformanceProvider>

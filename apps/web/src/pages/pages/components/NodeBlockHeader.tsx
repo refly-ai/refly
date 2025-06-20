@@ -1,59 +1,11 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo } from 'react';
 import { Button, Dropdown, Popconfirm } from 'antd';
 import type { MenuProps } from 'antd';
-import {
-  MoreHorizontal,
-  X,
-  Maximize2,
-  Minimize2,
-  FileText,
-  Sparkles,
-  Wrench,
-  Trash2,
-} from 'lucide-react';
-import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
-import { NodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-header';
+import { MoreHorizontal, X, Trash2 } from 'lucide-react';
+import { PlayCircleOutlined } from '@ant-design/icons';
 import { type NodeRelation } from './ArtifactRenderer';
-import {
-  IconWideMode,
-  IconDocument,
-  IconResource,
-  IconResponse,
-  IconCodeArtifact,
-  IconWebsite,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
+
 import { useTranslation } from 'react-i18next';
-
-// Get node icon component
-const getNodeIcon = (nodeType: string) => {
-  switch (nodeType) {
-    case 'document':
-      return IconDocument;
-    case 'resource':
-      return IconResource;
-    case 'skillResponse':
-      return IconResponse;
-    case 'toolResponse':
-      return IconResponse;
-    case 'codeArtifact':
-      return IconCodeArtifact;
-    case 'website':
-      return IconWebsite;
-    case 'skill':
-      // We can return different icons based on skillType, but we simplify it for now
-      return Sparkles;
-    case 'tool':
-      return Wrench;
-    default:
-      return FileText;
-  }
-};
-
-// Get node title
-const getNodeTitle = (node: NodeRelation) => {
-  const { t } = useTranslation();
-  return node.nodeData?.title || t('pages.components.nodeBlock.untitledNode');
-};
 
 interface NodeBlockHeaderProps {
   node: NodeRelation;
@@ -67,26 +19,8 @@ interface NodeBlockHeaderProps {
 }
 
 export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
-  ({
-    node,
-    onClose,
-    onMaximize,
-    onWideMode,
-    isMaximized = false,
-    isWideMode = false,
-    isMinimap = false,
-    onDelete,
-  }) => {
+  ({ node, onClose, onMaximize, isMaximized = false, isMinimap = false, onDelete }) => {
     const { t } = useTranslation();
-    const IconComponent = getNodeIcon(node.nodeType);
-    const nodeColor = NODE_COLORS[node.nodeType as keyof typeof NODE_COLORS] || '#17B26A';
-    const title = getNodeTitle(node);
-
-    // Handle title update
-    const handleTitleUpdate = useCallback((newTitle: string) => {
-      // Logic for title update can be added here
-      console.log('Title updated:', newTitle);
-    }, []);
 
     // Define dropdown menu items
     const menuItems: MenuProps['items'] = onDelete
@@ -118,33 +52,8 @@ export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
     }
 
     return (
-      <div className="flex justify-between items-center py-2 px-4 border-b border-[#EAECF0] relative">
-        {/* Left: Icon and Title */}
-        <div className="flex items-center gap-2 flex-grow overflow-hidden">
-          <div className="flex-grow overflow-hidden">
-            <NodeHeader
-              source="node"
-              title={title}
-              Icon={IconComponent}
-              iconBgColor={nodeColor}
-              canEdit={false}
-              updateTitle={handleTitleUpdate}
-            />
-          </div>
-        </div>
-
-        {/* Right: Action Buttons */}
+      <div className="flex justify-end items-center py-2 px-4 border-b border-[#EAECF0] relative">
         <div className="flex items-center gap-1 flex-shrink-0">
-          {onWideMode && (
-            <Button
-              type="text"
-              className={`p-1.5 hover:bg-gray-100 ${isWideMode ? 'text-primary-600' : 'text-gray-500'}`}
-              onClick={onWideMode}
-              title={t('pages.components.nodeBlock.wideModeView')}
-            >
-              <IconWideMode className="w-4 h-4" />
-            </Button>
-          )}
           {onMaximize && (
             <Button
               type="text"
@@ -152,7 +61,7 @@ export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
               onClick={onMaximize}
               title={t('pages.components.nodeBlock.slideshowPreview')}
             >
-              {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              <PlayCircleOutlined className="w-4 h-4" />
             </Button>
           )}
 

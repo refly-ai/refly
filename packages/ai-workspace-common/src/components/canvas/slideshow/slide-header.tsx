@@ -1,12 +1,8 @@
-import {
-  IconClose,
-  IconExitWideMode,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconClose } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { IconSlideshow } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { IconWideMode } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { Minimize2, Maximize2 } from 'lucide-react';
 
 const SlideHeader = memo(
@@ -14,14 +10,10 @@ const SlideHeader = memo(
     onClose,
     onMaximize,
     isMaximized,
-    onWideMode,
-    isWideMode,
   }: {
     onClose: () => void;
     onMaximize: () => void;
     isMaximized: boolean;
-    onWideMode: () => void;
-    isWideMode: boolean;
   }) => {
     const { t } = useTranslation();
 
@@ -39,18 +31,6 @@ const SlideHeader = memo(
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            type="text"
-            size="small"
-            className={`flex items-center justify-center p-0 w-7 h-7 ${isWideMode ? 'text-primary-600 ' : 'text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'} min-w-0`}
-            onClick={onWideMode}
-          >
-            {isWideMode ? (
-              <IconExitWideMode className="w-4 h-4" />
-            ) : (
-              <IconWideMode className="w-4 h-4" />
-            )}
-          </Button>
           <Button
             type="text"
             size="small"

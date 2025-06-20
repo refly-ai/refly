@@ -1,4 +1,4 @@
-import { useEffect, FC, useState, useCallback, memo } from 'react';
+import { useEffect, FC, useState, useCallback, memo, useMemo } from 'react';
 import { useMatch } from 'react-router-dom';
 import { Button, Divider, message } from 'antd';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
@@ -56,13 +56,14 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
     };
   }, [provider, handleUnsyncedChanges]);
 
-  const { config, showPreview, setShowPreview, showMaxRatio, setShowMaxRatio } =
+  const { config, showPreview, setShowPreview, showMaxRatio, setShowMaxRatio, showSlideshow } =
     useCanvasStoreShallow((state) => ({
       config: state.config[canvasId],
       showPreview: state.showPreview,
       setShowPreview: state.setShowPreview,
       showMaxRatio: state.showMaxRatio,
       setShowMaxRatio: state.setShowMaxRatio,
+      showSlideshow: state.showSlideshow,
     }));
 
   const canvasTitle = shareData?.title || provider?.document.getText('title').toJSON() || '';
@@ -77,6 +78,13 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
     duplicateCanvas(canvasId, () => {});
   };
 
+  const width = useMemo(() => {
+    if (collapse) {
+      return `calc(100vw-12px${showSlideshow ? '-840px' : ''})`;
+    }
+    return `calc(100vw-232px${showSlideshow ? '-840px' : ''})`;
+  }, [collapse, showSlideshow]);
+
   return (
     <>
       <Helmet>
@@ -85,7 +93,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
       </Helmet>
       <div
         className={`absolute h-16 top-0 left-0 right-0  box-border flex justify-between items-center py-2 px-4 pr-0 bg-transparent ${
-          collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-232px)]'
+          width
         }`}
       >
         <div className="flex items-center relative z-10">

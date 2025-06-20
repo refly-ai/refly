@@ -17,11 +17,9 @@ import { useDrag, useDrop, DndProvider, XYCoord } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import withScrolling, { createHorizontalStrength } from 'react-dnd-scrolling';
 import { getFreshNodePreviews } from '@refly-packages/ai-workspace-common/utils/canvas';
-import { Slideshow } from '@refly-packages/ai-workspace-common/components/canvas/slideshow';
 import { EnhancedSkillResponse } from './skill-response/enhanced-skill-response';
 import { useReactFlow } from '@xyflow/react';
 import { useSearchParams } from 'react-router-dom';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { preloadMonacoEditor } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/monaco-editor/monacoPreloader';
 import { LinearThreadContainer } from '@refly-packages/ai-workspace-common/components/canvas/linear-thread';
 
@@ -364,15 +362,14 @@ export const NodePreviewContainer = memo(
     canvasId: string;
     nodes: CanvasNode<any>[];
   }) => {
-    const { readonly } = useCanvasContext();
     const { getNodes } = useReactFlow<CanvasNode<any>>();
-    const { showLinearThread, rawNodePreviews, reorderNodePreviews, showSlideshow } =
-      useCanvasStoreShallow((state) => ({
+    const { showLinearThread, rawNodePreviews, reorderNodePreviews } = useCanvasStoreShallow(
+      (state) => ({
         showLinearThread: state.showLinearThread,
         rawNodePreviews: state.config[canvasId]?.nodePreviews ?? [],
         reorderNodePreviews: state.reorderNodePreviews,
-        showSlideshow: state.showSlideshow,
-      }));
+      }),
+    );
 
     useEffect(() => {
       preloadMonacoEditor();
@@ -422,7 +419,6 @@ export const NodePreviewContainer = memo(
       <DndProvider backend={HTML5Backend}>
         <div className="flex h-full w-full">
           <ScrollingComponent {...scrollingComponentProps}>
-            {showSlideshow && !readonly && <Slideshow canvasId={canvasId} />}
             {showLinearThread && <LinearThreadContainer />}
             {nodePreviewsRendered}
           </ScrollingComponent>
