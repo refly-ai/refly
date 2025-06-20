@@ -581,6 +581,7 @@ export const useInvokeAction = () => {
         tplConfig = {},
         runtimeConfig = {},
         projectId,
+        timeout = 180000, // 3 minutes default
       } = payload;
       const { context, resultHistory, images } = convertContextItemsToInvokeParams(
         contextItems,
@@ -669,6 +670,7 @@ export const useInvokeAction = () => {
       ssePost({
         controller: globalAbortControllerRef.current,
         payload: param,
+        timeout,
         onStart: wrapEventHandler(onStart),
         onSkillStart: wrapEventHandler(onSkillStart),
         onSkillStream: wrapEventHandler(onSkillStream),

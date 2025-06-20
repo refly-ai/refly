@@ -21,6 +21,7 @@ export interface InvokeSkillJobData extends InvokeSkillRequest {
   result?: ActionResult;
   provider?: Provider;
   modelConfigMap?: Record<ModelScene, LLMModelConfig>;
+  abortController?: AbortController;
 }
 
 export interface SkillTimeoutCheckJobData {

@@ -179,6 +179,7 @@ export class SkillInvokerService {
       projectId,
       eventListener,
       selectedMcpServers,
+      abortController,
     } = data;
     const userPo = await this.prisma.user.findUnique({
       select: { uiLocale: true, outputLocale: true },
@@ -207,6 +208,7 @@ export class SkillInvokerService {
         resultId: data.result?.resultId,
         selectedMcpServers,
       },
+      signal: abortController?.signal,
     };
 
     // Add project info if projectId is provided
@@ -263,6 +265,17 @@ export class SkillInvokerService {
     }
 
     let aborted = false;
+
+    // Check if AbortController signal is aborted
+    if (data.abortController?.signal?.aborted) {
+      aborted = true;
+    }
+
+    // Listen for abort signal
+    data.abortController?.signal?.addEventListener('abort', () => {
+      this.logger.log(`AbortController signal received for result ${resultId}`);
+      aborted = true;
+    });
 
     if (res) {
       res.on('close', () => {
@@ -424,11 +437,13 @@ export class SkillInvokerService {
 
     try {
       for await (const event of skill.streamEvents(input, { ...config, version: 'v2' })) {
-        if (aborted) {
+        // Check multiple abort conditions for robust cancellation
+        if (aborted || data.abortController?.signal?.aborted) {
+          this.logger.log(`Skill execution aborted for result ${resultId}`);
           if (runMeta) {
-            result.errors.push('AbortError');
+            result.errors.push('Execution cancelled by user');
           }
-          throw new Error('AbortError');
+          break; // Exit the loop gracefully instead of throwing
         }
 
         // reset idle timeout check when events are received
@@ -675,6 +690,20 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
 
     const { resultId, version } = data.result;
 
+    // Create AbortController for this execution
+    const abortController = new AbortController();
+
+    // Handle client disconnect by aborting the controller
+    if (res) {
+      res.on('close', () => {
+        this.logger.log(`Client disconnected for result ${resultId}, aborting execution`);
+        abortController.abort();
+      });
+    }
+
+    // Add AbortController to data for use in execution
+    const dataWithAbort = { ...data, abortController };
+
     const defaultModel = await this.providerService.findDefaultProviderItem(user, 'chat');
     this.skillEngine.setOptions({ defaultModel: defaultModel?.name });
 
@@ -690,7 +719,7 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
       //   { delay: this.config.get('skill.executionTimeout') },
       // );
 
-      await this._invokeSkill(user, data, res);
+      await this._invokeSkill(user, dataWithAbort, res);
     } catch (err) {
       if (res) {
         writeSSEResponse(res, {
