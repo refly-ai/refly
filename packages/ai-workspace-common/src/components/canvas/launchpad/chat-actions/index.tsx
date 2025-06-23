@@ -145,7 +145,7 @@ export const ChatActions = memo(
             </Tooltip>
           </Upload>
 
-          {!isWeb ? null : (
+          {!isWeb ? null : query?.trim() ? (
             <Button
               size="small"
               type="primary"
@@ -155,6 +155,15 @@ export const ChatActions = memo(
             >
               <SendOutlined />
               <span>{t('copilot.chatActions.send')}</span>
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              type="default"
+              className="text-xs flex items-center gap-1"
+              onClick={props.handleAbort}
+            >
+              <span>{t('common.stop')}</span>
             </Button>
           )}
         </div>
