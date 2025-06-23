@@ -532,6 +532,23 @@ export const useInvokeAction = () => {
       setTraceId(resultId, traceId);
     }
 
+    // Check if this error is due to user-initiated abort
+    const isUserAborted =
+      globalIsAbortedRef.current || globalAbortControllerRef.current?.signal?.aborted;
+
+    if (isUserAborted) {
+      // User cancelled the request - update status to finish but don't show errors
+      const updatedResult = {
+        ...result,
+        status: 'finish' as const,
+        errors: [], // Don't show errors for user-cancelled requests
+      };
+      onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
+      console.log('✅ Request was cancelled by user - not showing error');
+      return;
+    }
+
+    // This is a real error, not user cancellation
     const updatedResult = {
       ...result,
       status: 'failed' as const,
@@ -539,6 +556,7 @@ export const useInvokeAction = () => {
     };
     onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
 
+    // Additional runtime-specific abort checks (legacy compatibility)
     if (runtime?.includes('extension')) {
       if (globalIsAbortedRef.current) {
         return;
