@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { SkillService } from './skill.service';
@@ -26,10 +26,12 @@ import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { SkillEngineService } from './skill-engine.service';
 import { SkillInvokerService } from './skill-invoker.service';
 import { isDesktop } from '../../utils/runtime';
+import { ActionModule } from '../action/action.module';
 
 @Module({
   imports: [
     CommonModule,
+    forwardRef(() => ActionModule),
     LabelModule,
     SearchModule,
     CanvasModule,
@@ -59,6 +61,6 @@ import { isDesktop } from '../../utils/runtime';
     ...(isDesktop() ? [] : [SkillProcessor, SkillTimeoutCheckProcessor]),
   ],
   controllers: [SkillController],
-  exports: [SkillService],
+  exports: [SkillService, SkillInvokerService],
 })
 export class SkillModule {}
