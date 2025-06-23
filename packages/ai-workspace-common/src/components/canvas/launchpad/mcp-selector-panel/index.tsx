@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button, Empty, Skeleton, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, CheckCircle2 } from 'lucide-react';
@@ -42,6 +42,17 @@ export const McpSelectorPanel: React.FC<McpSelectorPanelProps> = ({ isOpen, onCl
   const loading = isLoading || isRefetching;
 
   const mcpServers = data?.data || [];
+
+  useEffect(() => {
+    if (mcpServers.length > 0) {
+      const userMcpServers = mcpServers
+        .filter((server) => server.enabled)
+        .filter((server) => selectedMcpServers.includes(server.name))
+        .map((server) => server.name);
+
+      setSelectedMcpServers(userMcpServers);
+    }
+  }, [mcpServers]);
 
   // Handle MCP server selection
   const handleMcpSelect = (mcpName: string) => {

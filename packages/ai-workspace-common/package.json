@@ -1,7 +1,8 @@
 {
   "name": "@refly/ai-workspace-common",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.7.0",
+  "description": "Common components for Refly AI Workspace",
   "type": "module",
   "main": "src/index.ts",
   "exports": {

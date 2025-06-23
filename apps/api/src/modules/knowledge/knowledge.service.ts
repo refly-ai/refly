@@ -235,7 +235,7 @@ export class KnowledgeService {
     if (content) {
       // save content to object storage
       const storageKey = `resources/${param.resourceId}.txt`;
-      await this.oss.putObject(storageKey, param.content);
+      await this.oss.putObject(storageKey, content);
       const storageSize = (await this.oss.statObject(storageKey)).size;
 
       return {
@@ -243,7 +243,7 @@ export class KnowledgeService {
         storageSize,
         identifier,
         indexStatus: 'wait_index', // skip parsing stage, since content is provided
-        contentPreview: param.content.slice(0, 500),
+        contentPreview: content.slice(0, 500),
       };
     }
 

@@ -1,7 +1,7 @@
 {
   "name": "@refly/api",
-  "version": "0.6.0",
-  "description": "Refly Desktop Application - AI-powered productivity tool",
+  "version": "0.7.0",
+  "description": "API server for Refly",
   "author": "",
   "private": true,
   "license": "ReflyAI OpenSource License",

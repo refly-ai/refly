@@ -1,6 +1,6 @@
 {
   "name": "@refly/providers",
-  "version": "1.0.0",
+  "version": "0.7.0",
   "description": "Implementation of Refly providers",
   "main": "dist/index.js",
   "module": "src/index.ts",

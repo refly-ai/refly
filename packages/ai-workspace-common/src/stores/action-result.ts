@@ -18,6 +18,17 @@ interface ActionResultState {
   pollingStateMap: Record<string, PollingState & CacheInfo>;
   batchUpdateQueue: Array<{ resultId: string; result: ActionResult }>;
   isBatchUpdateScheduled: boolean;
+  streamResults: Record<string, ActionResult>;
+  traceIdMap: Record<string, string>; // key: resultId, value: traceId
+
+  // Stream result actions
+  addStreamResult: (resultId: string, result: ActionResult) => void;
+  removeStreamResult: (resultId: string) => void;
+
+  // TraceId management actions
+  setTraceId: (resultId: string, traceId: string) => void;
+  getTraceId: (resultId: string) => string | undefined;
+  removeTraceId: (resultId: string) => void;
 
   // Individual update actions
   updateActionResult: (resultId: string, result: ActionResult) => void;
@@ -47,6 +58,8 @@ export const defaultState = {
   pollingStateMap: {},
   batchUpdateQueue: [],
   isBatchUpdateScheduled: false,
+  streamResults: {},
+  traceIdMap: {},
 };
 
 const POLLING_STATE_INITIAL: PollingState = {
@@ -410,13 +423,61 @@ export const useActionResultStore = create<ActionResultState>()(
         // Clean up old results after batch updates
         get().cleanupOldResults();
       },
+
+      // Stream result methods
+      addStreamResult: (resultId: string, result: ActionResult) => {
+        set((state) => ({
+          ...state,
+          streamResults: {
+            ...state.streamResults,
+            [resultId]: result,
+          },
+        }));
+      },
+
+      removeStreamResult: (resultId: string) => {
+        set((state) => {
+          const newStreamResults = { ...state.streamResults };
+          delete newStreamResults[resultId];
+          return {
+            ...state,
+            streamResults: newStreamResults,
+          };
+        });
+      },
+
+      // TraceId management methods
+      setTraceId: (resultId: string, traceId: string) => {
+        set((state) => ({
+          ...state,
+          traceIdMap: {
+            ...state.traceIdMap,
+            [resultId]: traceId,
+          },
+        }));
+      },
+
+      getTraceId: (resultId: string) => {
+        return get().traceIdMap[resultId];
+      },
+
+      removeTraceId: (resultId: string) => {
+        set((state) => {
+          const newTraceIdMap = { ...state.traceIdMap };
+          delete newTraceIdMap[resultId];
+          return {
+            ...state,
+            traceIdMap: newTraceIdMap,
+          };
+        });
+      },
     }),
     {
       name: 'action-result-storage',
       storage: createJSONStorage(() => actionResultStorage),
       partialize: (state) => ({
         resultMap: state.resultMap,
-        pollingStateMap: state.pollingStateMap,
+        traceIdMap: state.traceIdMap,
       }),
     },
   ),

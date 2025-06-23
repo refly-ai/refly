@@ -128,7 +128,9 @@ export class CodeArtifactService {
     });
 
     const contentStream = await this.oss.getObject(artifact.storageKey);
-    await this.oss.putObject(newStorageKey, contentStream);
+    if (contentStream) {
+      await this.oss.putObject(newStorageKey, contentStream);
+    }
 
     return newArtifact;
   }

@@ -68,6 +68,9 @@ const translations = {
     project: '知识库',
     upgrade: '升级',
     upgradeSubscription: '升级订阅',
+    dismiss: '关闭',
+    copyRequestInfo: '复制请求信息',
+    tryAgain: '重试',
     copy: {
       title: '复制',
       success: '内容已复制到剪切板！',
@@ -1100,6 +1103,11 @@ const translations = {
       shareLoading: '正在加载共享技能响应...',
       notFound: '技能响应未找到',
       notFoundDesc: '您查找的技能响应不存在或已被删除。',
+      generating: '正在生成内容...',
+      error: {
+        defaultTitle: '技能执行失败',
+        networkError: '如果问题持续存在，请检查您的网络连接或 VPN',
+      },
     },
     chatHistory: {
       alreadyAdded: '已添加到对话历史',

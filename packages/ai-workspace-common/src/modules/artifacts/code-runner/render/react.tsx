@@ -52,11 +52,9 @@ const ReactCodeRunner = memo(
         template="react-ts"
         className="relative h-full w-full [&_.sp-preview-container]:flex [&_.sp-preview-container]:h-full [&_.sp-preview-container]:w-full [&_.sp-preview-container]:grow [&_.sp-preview-container]:flex-col [&_.sp-preview-container]:justify-center [&_.sp-preview-iframe]:grow"
         files={{
-          'App.tsx': code,
+          'App.tsx': code || '',
           ...shadcnFiles,
-          '/tsconfig.json': {
-            code: tsConfig,
-          },
+          '/tsconfig.json': tsConfig,
         }}
         options={{
           externalResources: ['https://unpkg.com/@tailwindcss/ui/dist/tailwind-ui.min.css'],

@@ -1,7 +1,8 @@
 {
   "name": "@refly/web",
+  "description": "Refly Web UI",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "copy-env": "ncp .env.example .env",

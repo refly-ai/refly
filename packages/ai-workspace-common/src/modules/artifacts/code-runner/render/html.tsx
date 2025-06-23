@@ -232,7 +232,7 @@ const HTMLRenderer = memo(
             style={{ border: 'none', width, height }}
             title="html-renderer"
             className="w-full h-full"
-            sandbox="allow-same-origin allow-scripts"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
             scrolling="auto"
           />
         </div>

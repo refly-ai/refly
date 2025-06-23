@@ -2722,7 +2722,6 @@ export type SkillEvent = {
   node?: CanvasNode;
   /**
    * Error data. Only present when `event` is `error`.
-   * @deprecated
    */
   error?: BaseResponse;
   /**

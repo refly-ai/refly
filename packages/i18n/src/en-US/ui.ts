@@ -60,6 +60,9 @@ const translations = {
     project: 'Project',
     upgrade: 'Upgrade',
     upgradeSubscription: 'Upgrade Subscription',
+    dismiss: 'Dismiss',
+    copyRequestInfo: 'Copy Request Info',
+    tryAgain: 'Try again',
     copy: {
       title: 'Copy',
       success: 'Content has been copied to the clipboard!',
@@ -1287,6 +1290,11 @@ const translations = {
       shareLoading: 'Loading shared skill response...',
       notFound: 'Skill Response Not Found',
       notFoundDesc: 'The skill response you are looking for does not exist or has been removed.',
+      generating: 'Generating content...',
+      error: {
+        defaultTitle: 'Skill execution failed',
+        networkError: 'If the problem persists, please check your internet connection or VPN',
+      },
     },
     chatHistory: {
       alreadyAdded: 'Already added to chat history',

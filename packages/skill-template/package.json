@@ -1,7 +1,7 @@
 {
   "name": "@refly/skill-template",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.7.0",
+  "description": "Refly Skill Template",
   "main": "dist/index.js",
   "scripts": {
     "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, memo, useCallback } from 'react';
-import { Button, Divider, Result, Skeleton } from 'antd';
+import { Button, Divider, message, Result, Skeleton, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -25,7 +25,11 @@ import { cn } from '@refly/utils/cn';
 import { useReactFlow } from '@xyflow/react';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { IconRerun } from '@refly-packages/ai-workspace-common/components/common/icon';
+import {
+  IconError,
+  IconLoading,
+  IconRerun,
+} from '@refly-packages/ai-workspace-common/components/common/icon';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
@@ -71,10 +75,14 @@ const StepsList = memo(
 );
 
 const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNodePreviewProps) => {
-  const { result, updateActionResult } = useActionResultStoreShallow((state) => ({
-    result: state.resultMap[resultId],
-    updateActionResult: state.updateActionResult,
-  }));
+  const { result, traceId, isStreaming, updateActionResult } = useActionResultStoreShallow(
+    (state) => ({
+      result: state.resultMap[resultId],
+      traceId: state.traceIdMap[resultId],
+      isStreaming: !!state.streamResults[resultId],
+      updateActionResult: state.updateActionResult,
+    }),
+  );
   const knowledgeBaseStore = useKnowledgeBaseStoreShallow((state) => ({
     sourceListDrawerVisible: state.sourceListDrawer.visible,
   }));
@@ -177,7 +185,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   const tplConfig = result?.tplConfig ?? data?.metadata?.tplConfig;
   const runtimeConfig = result?.runtimeConfig ?? data?.metadata?.runtimeConfig;
 
-  const { errCode, errMsg } = useSkillError(result?.errors?.[0]);
+  const { errCode, errMsg, rawError } = useSkillError(result?.errors?.[0]);
 
   const { steps = [], context, history = [] } = result ?? {};
   const contextItems = useMemo(() => {
@@ -255,6 +263,9 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   }
 
   const isPending = result?.status === 'executing' || result?.status === 'waiting' || loading;
+  const errDescription = useMemo(() => {
+    return `${errCode} ${errMsg} ${rawError ? `: ${String(rawError)}` : ''}`;
+  }, [errCode, errMsg, rawError]);
 
   return (
     <div className="flex flex-col space-y-4 p-4 h-full max-w-[1024px] mx-auto">
@@ -283,41 +294,75 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
         </>
       )}
 
-      <div
-        className={cn('flex-grow transition-opacity duration-500', { 'opacity-30': editMode })}
-        onClick={() => {
-          if (editMode) {
-            setEditMode(false);
-          }
-        }}
+      <Spin
+        spinning={!isStreaming && result?.status === 'executing'}
+        indicator={<IconLoading className="animate-spin" />}
+        size="large"
+        tip={t('canvas.skillResponse.generating')}
       >
-        {result?.status === 'failed' ? (
-          <div className="h-full w-full flex items-center justify-center">
-            <Result
-              status="500"
-              subTitle={
-                errCode ? `[${errCode}] ${errMsg}` : t('canvas.skillResponse.executionFailed')
-              }
-              extra={
+        <div
+          className={cn('flex-grow transition-opacity duration-500', { 'opacity-30': editMode })}
+          onClick={() => {
+            if (editMode) {
+              setEditMode(false);
+            }
+          }}
+        >
+          {steps.length === 0 && isPending && (
+            <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
+          )}
+          <StepsList steps={steps} result={result} title={title} nodeId={node.id} />
+
+          {result?.status === 'failed' && (
+            <div className="mt-2 flex flex-col gap-2 border border-solid border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-md">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2 flex-1 min-w-0">
+                  <div className="font-medium text-sm flex items-center gap-2">
+                    <IconError className="flex items-center justify-center text-yellow-500 flex-shrink-0" />
+                    {t('canvas.skillResponse.error.defaultTitle')}
+                  </div>
+                  {errCode && (
+                    <div className="space-y-2">
+                      <p className="text-gray-700 dark:text-gray-200 text-xs break-words">
+                        {errDescription}
+                      </p>
+                      {traceId && (
+                        <p className="text-gray-500 dark:text-gray-400 text-xs break-all">
+                          Trace ID: {traceId}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2">
                 <Button
-                  disabled={readonly}
-                  icon={<IconRerun className="text-sm flex items-center justify-center" />}
+                  type="text"
+                  size="small"
+                  className="text-xs"
+                  onClick={() => {
+                    if (errCode) {
+                      navigator.clipboard.writeText(`${errDescription}\nTrace ID: ${traceId}`);
+                      message.success(t('components.markdown.copySuccess'));
+                    }
+                  }}
+                >
+                  {t('common.copyRequestInfo')}
+                </Button>
+                <Button
+                  type="primary"
+                  size="small"
+                  className="text-xs"
+                  icon={<IconRerun className="text-xs flex items-center justify-center" />}
                   onClick={handleRetry}
                 >
                   {t('canvas.nodeActions.rerun')}
                 </Button>
-              }
-            />
-          </div>
-        ) : (
-          <>
-            {steps.length === 0 && isPending && (
-              <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
-            )}
-            <StepsList steps={steps} result={result} title={title} nodeId={node.id} />
-          </>
-        )}
-      </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Spin>
 
       {knowledgeBaseStore?.sourceListDrawerVisible ? (
         <SourceListModal classNames="source-list-modal" />

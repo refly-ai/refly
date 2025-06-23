@@ -1,7 +1,7 @@
 {
   "name": "refly-desktop",
-  "version": "0.6.0",
-  "description": "Hello World!",
+  "version": "0.7.0",
+  "description": "Refly Desktop Application",
   "main": "dist/main.js",
   "scripts": {
     "dev": "nodemon",

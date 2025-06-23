@@ -49,3 +49,6 @@ packed
 
 .qdrant-initialized
 data/lancedb
+
+# i18n
+i18n-consistency-report.json
