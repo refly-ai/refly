@@ -1,11 +1,13 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { Button, Dropdown, Popconfirm } from 'antd';
 import type { MenuProps } from 'antd';
-import { MoreHorizontal, X, Trash2 } from 'lucide-react';
+import { MoreHorizontal, X, Trash2, Target } from 'lucide-react';
 import { PlayCircleOutlined } from '@ant-design/icons';
 import { type NodeRelation } from './ArtifactRenderer';
 
 import { useTranslation } from 'react-i18next';
+import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
+import { useReactFlow } from '@xyflow/react';
 
 interface NodeBlockHeaderProps {
   node: NodeRelation;
@@ -21,30 +23,50 @@ interface NodeBlockHeaderProps {
 export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
   ({ node, onClose, onMaximize, isMaximized = false, isMinimap = false, onDelete }) => {
     const { t } = useTranslation();
+    const { setNodeCenter } = useNodePosition();
+    const { getNodes } = useReactFlow();
+    const nodes = getNodes();
 
     // Define dropdown menu items
-    const menuItems: MenuProps['items'] = onDelete
-      ? [
-          {
-            key: 'delete',
-            label: (
-              <Popconfirm
-                title={t('pages.components.nodeBlock.confirmDelete')}
-                description={t('pages.components.nodeBlock.confirmDeleteContent')}
-                onConfirm={() => onDelete(node.nodeId)}
-                okText={t('common.confirm')}
-                cancelText={t('common.cancel')}
-                okButtonProps={{ danger: true }}
-              >
-                <div className="flex items-center gap-2 text-red-600 whitespace-nowrap">
-                  <Trash2 className="w-4 h-4 flex-shrink-0" />
-                  <span>{t('pages.components.nodeBlock.deleteNode')}</span>
-                </div>
-              </Popconfirm>
-            ),
-          },
-        ]
-      : [];
+    const menuItems: MenuProps['items'] = useMemo(() => {
+      return [
+        {
+          key: 'centerNode',
+          label: (
+            <div
+              className="flex items-center gap-2 whitespace-nowrap"
+              onClick={() => {
+                const nodeToCenter = nodes.find((n) => n.data.entityId === node.nodeId);
+                if (nodeToCenter) {
+                  setNodeCenter(nodeToCenter.id, true);
+                }
+              }}
+            >
+              <Target className="w-4 h-4 flex-shrink-0" />
+              {t('canvas.nodeActions.centerNode')}
+            </div>
+          ),
+        },
+        onDelete && {
+          key: 'delete',
+          label: (
+            <Popconfirm
+              title={t('pages.components.nodeBlock.confirmDelete')}
+              description={t('pages.components.nodeBlock.confirmDeleteContent')}
+              onConfirm={() => onDelete(node.nodeId)}
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
+              okButtonProps={{ danger: true }}
+            >
+              <div className="flex items-center gap-2 text-red-600 whitespace-nowrap">
+                <Trash2 className="w-4 h-4 flex-shrink-0" />
+                <span>{t('pages.components.nodeBlock.deleteNode')}</span>
+              </div>
+            </Popconfirm>
+          ),
+        },
+      ].filter(Boolean) as MenuProps['items'];
+    }, [onDelete, node.nodeId, t, setNodeCenter]);
 
     // If in minimap mode, don't display header
     if (isMinimap) {
@@ -65,7 +87,7 @@ export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
             </Button>
           )}
 
-          {menuItems?.length > 0 && (
+          {menuItems && menuItems.length > 0 && (
             <Dropdown
               menu={{ items: menuItems }}
               trigger={['click']}
