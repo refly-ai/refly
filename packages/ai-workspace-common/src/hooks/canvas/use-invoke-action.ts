@@ -39,8 +39,8 @@ export const useInvokeAction = () => {
   const { getNodes } = useReactFlow();
   const setNodeDataByEntity = useSetNodeDataByEntity();
 
-  const globalAbortControllerRef = { current: null as AbortController | null };
-  const globalIsAbortedRef = { current: false as boolean };
+  const globalAbortControllerRef = useRef<AbortController | null>(null);
+  const globalIsAbortedRef = useRef<boolean>(false);
   const deletedNodeIdsRef = useRef<Set<string>>(new Set());
 
   const { refetchUsage } = useSubscriptionUsage();
@@ -543,9 +543,21 @@ export const useInvokeAction = () => {
 
   const abortAction = useCallback(
     (_msg?: string) => {
+      console.log('🛑 abortAction called!', {
+        hasAbortController: !!globalAbortControllerRef.current,
+        isAlreadyAborted: globalIsAbortedRef.current,
+        abortController: globalAbortControllerRef.current,
+      });
+
       try {
-        globalAbortControllerRef.current?.abort();
-        globalIsAbortedRef.current = true;
+        if (globalAbortControllerRef.current) {
+          console.log('✅ Calling abort() on controller');
+          globalAbortControllerRef.current.abort();
+          globalIsAbortedRef.current = true;
+          console.log('✅ Abort completed successfully');
+        } else {
+          console.warn('⚠️ No AbortController available to abort');
+        }
       } catch (err) {
         console.log('shutdown error', err);
       }
@@ -581,7 +593,6 @@ export const useInvokeAction = () => {
         tplConfig = {},
         runtimeConfig = {},
         projectId,
-        timeout = 180000, // 3 minutes default
       } = payload;
       const { context, resultHistory, images } = convertContextItemsToInvokeParams(
         contextItems,
@@ -653,6 +664,10 @@ export const useInvokeAction = () => {
       });
 
       globalAbortControllerRef.current = new AbortController();
+      console.log('🚀 New AbortController created for action:', {
+        resultId,
+        abortController: globalAbortControllerRef.current,
+      });
 
       // Create timeout handler for this action
       const { resetTimeout, cleanup } = createTimeoutHandler(resultId, version);
@@ -670,7 +685,6 @@ export const useInvokeAction = () => {
       ssePost({
         controller: globalAbortControllerRef.current,
         payload: param,
-        timeout,
         onStart: wrapEventHandler(onStart),
         onSkillStart: wrapEventHandler(onSkillStart),
         onSkillStream: wrapEventHandler(onSkillStream),

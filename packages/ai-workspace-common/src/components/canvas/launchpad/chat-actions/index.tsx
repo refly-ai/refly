@@ -60,6 +60,18 @@ export const ChatActions = (props: ChatActionsProps) => {
     console.log('✅ ChatActions handleSendMessage called');
   };
 
+  const handleAbortClick = () => {
+    console.log('🛑 ChatActions handleAbortClick called - about to call handleAbort');
+    console.log('🔍 handleAbort function:', props.handleAbort);
+    console.log('🔍 handleAbort type:', typeof props.handleAbort);
+    if (typeof props.handleAbort === 'function') {
+      props.handleAbort();
+      console.log('✅ ChatActions handleAbort called');
+    } else {
+      console.error('❌ handleAbort is not a function!');
+    }
+  };
+
   // hooks
   const isWeb = getRuntime() === 'web';
 
@@ -107,6 +119,14 @@ export const ChatActions = (props: ChatActionsProps) => {
       timestamp: new Date().toISOString(),
     });
   }, [loading, isExecuting]);
+
+  // Debug: handleAbort function
+  console.log('ChatActions - handleAbort debug:', {
+    handleAbort: props.handleAbort,
+    handleAbortType: typeof props.handleAbort,
+    handleAbortString: props.handleAbort?.toString(),
+    isFunction: typeof props.handleAbort === 'function',
+  });
 
   console.log('ChatActions - Detailed execution state:', {
     loading,
@@ -190,7 +210,7 @@ export const ChatActions = (props: ChatActionsProps) => {
             size="small"
             danger
             className="text-xs flex items-center gap-1"
-            onClick={props.handleAbort}
+            onClick={handleAbortClick}
           >
             <StopOutlined />
             <span>{t('copilot.chatActions.stop', { defaultValue: 'Stop' })}</span>
@@ -199,7 +219,7 @@ export const ChatActions = (props: ChatActionsProps) => {
           <Button
             size="small"
             type="primary"
-            disabled={!canSendMessage}
+            // disabled={!canSendMessage}
             className="text-xs flex items-center gap-1"
             onClick={handleSendClick}
           >
