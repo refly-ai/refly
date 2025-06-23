@@ -37,6 +37,8 @@ import { NodeActionButtons } from './shared/node-action-buttons';
 import { message } from 'antd';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
+import { useAddNodeToSlide } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node-to-slide';
 
 export const DocumentNode = memo(
   ({
@@ -47,12 +49,18 @@ export const DocumentNode = memo(
     hideHandles = false,
     onNodeClick,
   }: DocumentNodeProps) => {
-    const { readonly } = useCanvasContext();
+    const { readonly, canvasId } = useCanvasContext();
     const [isHovered, setIsHovered] = useState(false);
     const { edges } = useCanvasData();
     const { i18n, t } = useTranslation();
     const language = i18n.languages?.[0];
     const updateNodeTitle = useUpdateNodeTitle();
+
+    // Setup add to slide functionality
+    const { addNodesToSlide } = useAddNodeToSlide({
+      canvasId,
+      nodes: [{ id, type: 'document', data, position: { x: 0, y: 0 } } as any],
+    });
 
     const targetRef = useRef<HTMLDivElement>(null);
     const { getNode, screenToFlowPosition } = useReactFlow();
@@ -245,6 +253,25 @@ export const DocumentNode = memo(
       handleAskAI,
       handleDuplicateDocument,
     ]);
+
+    // Listen for action completion events
+    useEffect(() => {
+      const handleActionCompleted = (event: { resultId: string }) => {
+        const metadata = data?.metadata as any;
+        const { addToSlideshow, relatedResultId } = metadata || {};
+
+        // Check if this node should be added to slideshow
+        if (addToSlideshow === true && relatedResultId === event.resultId) {
+          addNodesToSlide();
+        }
+      };
+
+      actionEmitter.on('invokeActionEnd', handleActionCompleted);
+
+      return () => {
+        actionEmitter.off('invokeActionEnd', handleActionCompleted);
+      };
+    }, [data?.metadata, addNodesToSlide]);
 
     return (
       <div className={classNames({ nowheel: isOperating && isHovered })}>

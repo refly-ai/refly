@@ -45,6 +45,8 @@ import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hook
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
+import { useAddNodeToSlide } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node-to-slide';
 
 interface NodeContentProps {
   status: 'generating' | 'finish' | 'failed' | 'executing';
@@ -122,7 +124,12 @@ export const CodeArtifactNode = memo(
     const isOperating = operatingNodeId === id;
     const node = useMemo(() => getNode(id), [id, getNode]);
 
-    const { readonly } = useCanvasContext();
+    const { readonly, canvasId } = useCanvasContext();
+
+    const { addNodesToSlide } = useAddNodeToSlide({
+      canvasId,
+      nodes: [{ id, type: 'codeArtifact', data, position: { x: 0, y: 0 } } as any],
+    });
 
     // Listen for statusUpdate events to update node metadata
     useEffect(() => {
@@ -350,6 +357,24 @@ export const CodeArtifactNode = memo(
         cleanupNodeEvents(id);
       };
     }, [id, handleAddToContext, handleDelete, handleInsertToDoc, handleAskAI]);
+
+    useEffect(() => {
+      const handleActionCompleted = (event: { resultId: string }) => {
+        const metadata = data?.metadata as any;
+        const { addToSlideshow, relatedResultId } = metadata || {};
+
+        // Check if this node should be added to slideshow
+        if (addToSlideshow === true && relatedResultId === event.resultId) {
+          addNodesToSlide();
+        }
+      };
+
+      actionEmitter.on('invokeActionEnd', handleActionCompleted);
+
+      return () => {
+        actionEmitter.off('invokeActionEnd', handleActionCompleted);
+      };
+    }, [data?.metadata, addNodesToSlide]);
 
     return (
       <div

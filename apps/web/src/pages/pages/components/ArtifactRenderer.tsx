@@ -68,7 +68,7 @@ const ArtifactRenderer = memo(
             },
             [artifactId],
             {
-              enabled: Boolean(!shareId && artifactId && status?.startsWith('finish')),
+              enabled: Boolean(!shareId && artifactId),
             },
           )
         : useGetCodeArtifactDetail(

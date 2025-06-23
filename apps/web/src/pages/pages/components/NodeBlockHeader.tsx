@@ -37,6 +37,7 @@ export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
               className="flex items-center gap-2 whitespace-nowrap"
               onClick={() => {
                 const nodeToCenter = nodes.find((n) => n.data.entityId === node.nodeId);
+                console.log('nodeToCenter', nodeToCenter);
                 if (nodeToCenter) {
                   setNodeCenter(nodeToCenter.id, true);
                 }
