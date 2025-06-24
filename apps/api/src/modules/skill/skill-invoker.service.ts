@@ -268,7 +268,7 @@ export class SkillInvokerService {
     const abortController = new AbortController();
 
     // Register the abort controller with ActionService
-    this.actionService.registerAbortController(resultId, abortController, user.uid);
+    this.actionService.registerAbortController(resultId, abortController);
 
     // const job = await this.timeoutCheckQueue.add(
     //   `idle_timeout_check:${resultId}`,
