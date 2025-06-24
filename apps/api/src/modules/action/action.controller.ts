@@ -36,4 +36,20 @@ export class ActionController {
     await this.actionService.abortAction(user, body);
     return buildSuccessResponse();
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/abort-controllers/stats')
+  async getAbortControllerStats(@LoginedUser() _user: UserModel) {
+    // Return statistics about active abort controllers for monitoring
+    const stats = this.actionService.getAbortControllerStats();
+    return buildSuccessResponse(stats);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/abort-controllers/cleanup')
+  async manualCleanup(@LoginedUser() _user: UserModel) {
+    // Manually trigger cleanup of expired abort controllers
+    const result = await this.actionService.manualCleanupExpiredControllers();
+    return buildSuccessResponse(result);
+  }
 }
