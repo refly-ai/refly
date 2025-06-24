@@ -341,7 +341,7 @@ export class Agent extends BaseSkill {
       let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
       if (mcpSuccessfullyInitializedAndToolsAvailable && actualMcpTools.length > 0) {
-        llmForGraph = baseLlm.bindTools(actualMcpTools, { strict: true } as never);
+        llmForGraph = baseLlm.bindTools(actualMcpTools);
         actualToolNodeInstance = new ToolNode(actualMcpTools);
       } else {
         llmForGraph = baseLlm;
