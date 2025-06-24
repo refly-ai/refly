@@ -550,18 +550,30 @@ export const useInvokeAction = () => {
       }
     }
 
-    abortAction(originError);
+    abortAction(resultId);
   };
 
   const abortAction = useCallback(
     async (resultId?: string, _msg?: string) => {
+      console.log('=== ABORT ACTION CALLED ===');
+      console.log('resultId:', resultId);
+      console.log('globalAbortControllerRef.current:', globalAbortControllerRef.current);
+      console.log('globalIsAbortedRef.current:', globalIsAbortedRef.current);
+
       try {
         // Abort the local controller
-        globalAbortControllerRef.current?.abort();
-        globalIsAbortedRef.current = true;
+        if (globalAbortControllerRef.current) {
+          console.log('Aborting local controller...');
+          globalAbortControllerRef.current.abort();
+          globalIsAbortedRef.current = true;
+          console.log('Local controller aborted');
+        } else {
+          console.log('No local controller to abort');
+        }
 
-        // If resultId is provided, also call the backend to clean up server-side resources
-        if (resultId) {
+        // If resultId is provided and is a valid string, call the backend to clean up server-side resources
+        if (resultId && typeof resultId === 'string') {
+          console.log('Calling backend abort API with resultId:', resultId);
           try {
             const response = await fetch('/api/v1/action/abort', {
               method: 'POST',
@@ -571,15 +583,25 @@ export const useInvokeAction = () => {
               body: JSON.stringify({ resultId }),
             });
 
-            if (!response.ok) {
+            console.log('Backend abort API response status:', response.status);
+            console.log('Backend abort API response ok:', response.ok);
+
+            if (response.ok) {
+              const responseData = await response.text();
+              console.log('Backend abort API response data:', responseData);
+            } else {
               console.warn('Failed to abort action on server:', response.statusText);
             }
           } catch (serverError) {
-            console.warn('Error calling server abort API:', serverError);
+            console.error('Error calling server abort API:', serverError);
           }
+        } else {
+          console.log('No valid resultId provided, skipping backend call');
         }
+
+        console.log('=== ABORT ACTION COMPLETED ===');
       } catch (err) {
-        console.log('shutdown error', err);
+        console.error('shutdown error', err);
       }
     },
     [globalAbortControllerRef, globalIsAbortedRef],

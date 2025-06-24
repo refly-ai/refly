@@ -53,7 +53,15 @@ export const ChatActions = memo(
     const { handleUploadImage } = useUploadImage();
 
     const handleSendClick = () => {
+      console.log('Send button clicked');
+      console.log('handleSendMessage function:', handleSendMessage);
+      console.log('props.handleSendMessage:', props.handleSendMessage);
       handleSendMessage();
+    };
+
+    const handleAbortClick = () => {
+      console.log('Stop button clicked');
+      props.handleAbort();
     };
 
     // hooks
@@ -161,9 +169,9 @@ export const ChatActions = memo(
               size="small"
               type="default"
               className="text-xs flex items-center gap-1"
-              onClick={props.handleAbort}
+              onClick={handleAbortClick}
             >
-              <span>{t('common.stop')}</span>
+              <span>{t('copilot.chatActions.stop')}</span>
             </Button>
           )}
         </div>

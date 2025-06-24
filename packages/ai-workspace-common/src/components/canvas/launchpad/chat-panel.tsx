@@ -30,6 +30,7 @@ import { IoClose } from 'react-icons/io5';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
+import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { omit } from '@refly/utils/index';
 import { cn } from '@refly/utils/cn';
@@ -144,6 +145,7 @@ export const ChatPanel = ({
   }));
 
   const [form] = Form.useForm();
+  const [currentActionResultId, setCurrentActionResultId] = useState<string | null>(null);
 
   // hooks
   const { canvasId, readonly } = useCanvasContext();
@@ -159,6 +161,24 @@ export const ChatPanel = ({
 
   // automatically sync selected nodes to context
   useSyncSelectedNodesToContext();
+
+  // Listen for action completion to clear currentActionResultId
+  useEffect(() => {
+    const handleActionUpdate = ({ resultId, payload }) => {
+      if (
+        resultId === currentActionResultId &&
+        (payload.status === 'finish' || payload.status === 'failed')
+      ) {
+        setCurrentActionResultId(null);
+      }
+    };
+
+    actionEmitter.on('updateResult', handleActionUpdate);
+
+    return () => {
+      actionEmitter.off('updateResult', handleActionUpdate);
+    };
+  }, [currentActionResultId]);
 
   useEffect(() => {
     if (!selectedSkill?.configSchema?.items?.length) {
@@ -195,6 +215,9 @@ export const ChatPanel = ({
   }, [selectedSkill, form, initialTplConfig]);
 
   const handleSendMessage = (userInput?: string) => {
+    console.log('=== HANDLE SEND MESSAGE START ===');
+    console.log('userInput:', userInput);
+
     // Set active resultId when sending a message
     setActiveResultId(resultId);
 
@@ -232,6 +255,11 @@ export const ChatPanel = ({
       resultId: genActionResultID(),
       nodeId: genUniqueId(),
     };
+
+    // Store the current action resultId for abort functionality
+    console.log('=== HANDLE SEND MESSAGE ===');
+    console.log('Setting currentActionResultId to:', newResultId);
+    setCurrentActionResultId(newResultId);
 
     // Call onAddMessage callback with all required data
     if (onAddMessage) {
@@ -315,7 +343,14 @@ export const ChatPanel = ({
   };
 
   const handleAbort = () => {
-    abortAction();
+    // Use the current action resultId if available, otherwise fall back to the component's resultId
+    const targetResultId = currentActionResultId || resultId;
+    console.log('=== HANDLE ABORT ===');
+    console.log('currentActionResultId:', currentActionResultId);
+    console.log('resultId:', resultId);
+    console.log('targetResultId:', targetResultId);
+    console.log('ContextTarget.Global:', ContextTarget.Global);
+    abortAction(targetResultId);
   };
 
   const { setRecommendQuestionsOpen, recommendQuestionsOpen } = useLaunchpadStoreShallow(
