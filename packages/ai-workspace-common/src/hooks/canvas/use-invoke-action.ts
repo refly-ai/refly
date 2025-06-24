@@ -554,10 +554,30 @@ export const useInvokeAction = () => {
   };
 
   const abortAction = useCallback(
-    (_msg?: string) => {
+    async (resultId?: string, _msg?: string) => {
       try {
+        // Abort the local controller
         globalAbortControllerRef.current?.abort();
         globalIsAbortedRef.current = true;
+
+        // If resultId is provided, also call the backend to clean up server-side resources
+        if (resultId) {
+          try {
+            const response = await fetch('/api/v1/action/abort', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ resultId }),
+            });
+
+            if (!response.ok) {
+              console.warn('Failed to abort action on server:', response.statusText);
+            }
+          } catch (serverError) {
+            console.warn('Error calling server abort API:', serverError);
+          }
+        }
       } catch (err) {
         console.log('shutdown error', err);
       }
