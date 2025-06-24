@@ -168,10 +168,11 @@ export const ChatActions = memo(
             <Button
               size="small"
               type="default"
-              className="text-xs flex items-center gap-1"
+              className="text-xs flex items-center gap-1 bg-red-50 border-red-200 text-red-600"
               onClick={handleAbortClick}
+              title="DEBUG: This is the STOP button"
             >
-              <span>{t('copilot.chatActions.stop')}</span>
+              <span>🛑 {t('copilot.chatActions.stop')}</span>
             </Button>
           )}
         </div>

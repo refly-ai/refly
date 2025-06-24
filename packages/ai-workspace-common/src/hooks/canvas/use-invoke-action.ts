@@ -28,7 +28,7 @@ import { useUpdateActionResult } from './use-update-action-result';
 import { useSubscriptionUsage } from '../use-subscription-usage';
 import { useFindImages } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-images';
 import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@refly/utils/artifact';
-import { useFindWebsite } from './use-find-website';
+import { useFindWebsite } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-website';
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { useReactFlow } from '@xyflow/react';
 import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
@@ -36,13 +36,16 @@ import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/
 import { usePilotStore } from '@refly-packages/ai-workspace-common/stores/pilot';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 
+// Global variables shared across all hook instances
+const globalAbortControllerRef = { current: null as AbortController | null };
+const globalIsAbortedRef = { current: false };
+const globalCurrentResultIdRef = { current: '' as string };
+
 export const useInvokeAction = () => {
   const { addNode } = useAddNode();
   const { getNodes } = useReactFlow();
   const setNodeDataByEntity = useSetNodeDataByEntity();
 
-  const globalAbortControllerRef = { current: null as AbortController | null };
-  const globalIsAbortedRef = { current: false as boolean };
   const deletedNodeIdsRef = useRef<Set<string>>(new Set());
 
   const { refetchUsage } = useSubscriptionUsage();
@@ -474,6 +477,11 @@ export const useInvokeAction = () => {
     };
     onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
 
+    // Clear current resultId when conversation ends
+    if (globalCurrentResultIdRef.current === skillEvent.resultId) {
+      globalCurrentResultIdRef.current = '';
+    }
+
     const artifacts = result.steps?.flatMap((s) => s.artifacts);
     if (artifacts?.length) {
       for (const artifact of artifacts) {
@@ -560,6 +568,10 @@ export const useInvokeAction = () => {
       console.log('globalAbortControllerRef.current:', globalAbortControllerRef.current);
       console.log('globalIsAbortedRef.current:', globalIsAbortedRef.current);
 
+      // Use current active resultId if none provided
+      const activeResultId = resultId || globalCurrentResultIdRef.current;
+      console.log('activeResultId:', activeResultId);
+
       try {
         // Abort the local controller
         if (globalAbortControllerRef.current) {
@@ -572,31 +584,38 @@ export const useInvokeAction = () => {
         }
 
         // If resultId is provided and is a valid string, call the backend to clean up server-side resources
-        if (resultId && typeof resultId === 'string') {
-          console.log('Calling backend abort API with resultId:', resultId);
+        if (activeResultId && typeof activeResultId === 'string' && activeResultId.trim() !== '') {
+          console.log('Calling backend abort API with resultId:', activeResultId);
           try {
-            const response = await fetch('/api/v1/action/abort', {
+            // Use direct fetch since abortAction is not in the generated client yet
+            const { serverOrigin } = await import('@refly-packages/ai-workspace-common/utils/env');
+
+            const response = await fetch(`${serverOrigin}/v1/action/abort`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({ resultId }),
+              credentials: 'include',
+              body: JSON.stringify({ resultId: activeResultId }),
             });
 
             console.log('Backend abort API response status:', response.status);
-            console.log('Backend abort API response ok:', response.ok);
 
             if (response.ok) {
-              const responseData = await response.text();
-              console.log('Backend abort API response data:', responseData);
+              console.log('Backend abort API succeeded');
             } else {
-              console.warn('Failed to abort action on server:', response.statusText);
+              console.warn('Failed to abort action on server:', response.status);
             }
           } catch (serverError) {
             console.error('Error calling server abort API:', serverError);
           }
         } else {
           console.log('No valid resultId provided, skipping backend call');
+          console.log('activeResultId details:', {
+            activeResultId,
+            type: typeof activeResultId,
+            isEmpty: !activeResultId,
+          });
         }
 
         console.log('=== ABORT ACTION COMPLETED ===');
@@ -620,6 +639,9 @@ export const useInvokeAction = () => {
 
   const invokeAction = useCallback(
     async (payload: SkillNodeMeta, target: Entity) => {
+      console.log('=== INVOKE ACTION CALLED ===');
+      console.log('payload.resultId:', payload.resultId);
+
       deletedNodeIdsRef.current = new Set();
 
       payload.resultId ||= genActionResultID();
@@ -636,6 +658,16 @@ export const useInvokeAction = () => {
         runtimeConfig = {},
         projectId,
       } = payload;
+
+      console.log('=== SETTING GLOBAL VARIABLES ===');
+      console.log('resultId:', resultId);
+
+      globalAbortControllerRef.current = new AbortController();
+      globalCurrentResultIdRef.current = resultId; // Track current active resultId
+
+      console.log('globalAbortControllerRef.current:', globalAbortControllerRef.current);
+      console.log('globalCurrentResultIdRef.current:', globalCurrentResultIdRef.current);
+
       const { context, resultHistory, images } = convertContextItemsToInvokeParams(
         contextItems,
         (item) =>
@@ -707,8 +739,6 @@ export const useInvokeAction = () => {
 
       onUpdateResult(resultId, initialResult);
       useActionResultStore.getState().addStreamResult(resultId, initialResult);
-
-      globalAbortControllerRef.current = new AbortController();
 
       // Create timeout handler for this action
       const { resetTimeout, cleanup: timeoutCleanup } = createTimeoutHandler(resultId, version);

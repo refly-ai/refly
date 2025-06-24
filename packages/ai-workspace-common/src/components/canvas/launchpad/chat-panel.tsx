@@ -343,14 +343,12 @@ export const ChatPanel = ({
   };
 
   const handleAbort = () => {
-    // Use the current action resultId if available, otherwise fall back to the component's resultId
-    const targetResultId = currentActionResultId || resultId;
     console.log('=== HANDLE ABORT ===');
     console.log('currentActionResultId:', currentActionResultId);
     console.log('resultId:', resultId);
-    console.log('targetResultId:', targetResultId);
-    console.log('ContextTarget.Global:', ContextTarget.Global);
-    abortAction(targetResultId);
+    console.log('Calling abortAction without parameters to use global currentResultId');
+    // Call abortAction without parameters to use the global currentResultId tracking
+    abortAction();
   };
 
   const { setRecommendQuestionsOpen, recommendQuestionsOpen } = useLaunchpadStoreShallow(
