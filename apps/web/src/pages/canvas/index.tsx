@@ -5,8 +5,6 @@ import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores
 import { SiderPopover } from '@refly-packages/ai-workspace-common/components/sider/popover';
 import { AiOutlineMenuUnfold } from 'react-icons/ai';
 import { FrontPage } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
-import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canvas';
-import { ReactFlowProvider } from '@xyflow/react';
 
 const CanvasPage = () => {
   const { canvasId = '' } = useParams();
@@ -32,11 +30,7 @@ const CanvasPage = () => {
           </SiderPopover>
         )}
       </div>
-      <ReactFlowProvider>
-        <CanvasProvider canvasId="empty" readonly={false}>
-          <FrontPage projectId={null} />
-        </CanvasProvider>
-      </ReactFlowProvider>
+      <FrontPage projectId={null} />
     </div>
   );
 };

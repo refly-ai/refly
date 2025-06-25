@@ -28,7 +28,7 @@ import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/compone
 import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { Title } from './title';
-import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
+import { useAbortAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-abort-action';
 import cn from 'classnames';
 
 export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
@@ -89,7 +89,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
     setVisible: state.setVisible,
   }));
 
-  const { abortAction } = useInvokeAction();
+  const { abortAction } = useAbortAction();
 
   const handleSelectSkill = useCallback(
     (skill: Skill) => {
