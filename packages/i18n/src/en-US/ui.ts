@@ -2628,6 +2628,7 @@ const translations = {
     },
     chatActions: {
       send: 'Send',
+      stop: 'Stop',
       directChat: 'Direct Chat',
       noContextChat: 'No Context Chat',
       wholeSpaceChat: 'Whole Space Chat',

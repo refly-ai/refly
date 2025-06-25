@@ -2457,6 +2457,7 @@ const translations = {
     },
     chatActions: {
       send: '发送',
+      stop: '停止',
       directChat: '直接聊天',
       noContextChat: '不带上下文聊天',
       wholeSpaceChat: '在整个空间聊天',
