@@ -530,6 +530,7 @@ export const ChatPanel = ({
               customActions={customActions}
               onUploadImage={handleImageUpload}
               contextItems={contextItems}
+              isExecuting={!!currentActionResultId}
             />
           </div>
         </div>

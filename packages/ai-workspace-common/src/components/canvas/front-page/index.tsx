@@ -37,6 +37,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
   const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
   const skills = useListSkills();
   const templateLanguage = i18n.language;
@@ -101,9 +102,21 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
 
   const handleSendMessage = useCallback(() => {
     if (!query?.trim()) return;
+    setIsExecuting(true);
     const { isPilotActivated } = useChatStore.getState();
     debouncedCreateCanvas('front-page', { isPilotActivated });
   }, [query, debouncedCreateCanvas]);
+
+  const handleAbort = useCallback(() => {
+    setIsExecuting(false);
+    abortAction();
+  }, [abortAction]);
+
+  useEffect(() => {
+    if (!isCreating && isExecuting) {
+      setIsExecuting(false);
+    }
+  }, [isCreating, isExecuting]);
 
   const findSkillByName = useCallback(
     (name: string) => {
@@ -279,8 +292,9 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                   runtimeConfig={runtimeConfig}
                   setRuntimeConfig={setRuntimeConfig}
                   handleSendMessage={handleSendMessage}
-                  handleAbort={abortAction}
+                  handleAbort={handleAbort}
                   loading={isCreating}
+                  isExecuting={isExecuting}
                   customActions={[
                     {
                       icon: (
