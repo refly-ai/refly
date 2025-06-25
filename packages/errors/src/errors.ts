@@ -320,6 +320,14 @@ export class ModelProviderTimeout extends BaseError {
   };
 }
 
+export class ActionAborted extends BaseError {
+  code = 'E3004';
+  messageDict = {
+    en: 'Action was stopped by user',
+    'zh-CN': '操作已被用户停止',
+  };
+}
+
 // Create a mapping of error codes to error classes
 const errorMap = {
   E0000: UnknownError,
@@ -362,6 +370,7 @@ const errorMap = {
   E3001: ModelProviderError,
   E3002: ModelProviderRateLimitExceeded,
   E3003: ModelProviderTimeout,
+  E3004: ActionAborted,
 };
 
 export function getErrorMessage(code: string, locale: string): string {
