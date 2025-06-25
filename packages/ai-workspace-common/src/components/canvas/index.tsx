@@ -187,6 +187,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       const pageData = res.data.data;
       if (pageData?.page?.pageId) {
         setCanvasPage(canvasId, pageData.page.pageId);
+        setShowSlideshow(true);
       }
     }
   }, [canvasId]);
@@ -482,12 +483,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   }, [provider?.status]);
 
   useEffect(() => {
-    if (!readonly) {
-      getPageByCanvasId();
-    }
-
     if (showSlideshow) {
       setShowSlideshow(false);
+    }
+
+    if (!readonly) {
+      getPageByCanvasId();
     }
 
     if (isPilotOpen) {
