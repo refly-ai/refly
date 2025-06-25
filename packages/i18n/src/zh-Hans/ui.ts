@@ -260,8 +260,8 @@ const translations = {
       first: '由多线程对话、代码组件、知识库集成、上下文记忆和智能搜索驱动，',
       second: 'Refly 是将创意转化为优质内容的最佳方式。',
     },
-    messageText: 'v0.7.0 发布：Agent 和 MCP 🚀',
-    simpleMessageText: 'v0.7.0: Agent 和 MCP 🚀',
+    messageText: 'v0.7.1 发布：MCP 商店和后台技能调用 🚀',
+    simpleMessageText: 'v0.7.1: MCP 商店和后台技能调用 🚀',
     tryForFree: '开始使用',
     tryItNow: '立即体验',
     creationEngine: '创作引擎',
@@ -2520,6 +2520,7 @@ const translations = {
       title: '选择 MCP 服务器',
       empty: '没有可用的 MCP 服务器',
       selected: '已选择',
+      browseMcpStore: '去商店添加',
     },
     contextItem: {
       current: '当前',

@@ -1,6 +1,6 @@
 {
   "name": "refly-desktop",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Refly Desktop Application",
   "main": "dist/main.js",
   "scripts": {

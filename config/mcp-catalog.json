@@ -1,0 +1,84 @@
+{
+  "servers": [
+    {
+      "name": "GitHub",
+      "icon": "https://static.refly.ai/icons/github.svg",
+      "description": {
+        "en": "Access the GitHub API, enabling file operations, repository management, search functionality, and more.",
+        "zh-CN": "访问 GitHub API，支持文件操作、仓库管理、搜索功能等。"
+      },
+      "type": "streamable",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "authorization": [
+        {
+          "type": "apiKey",
+          "apiKeyIn": "authorizationBearer"
+        }
+      ],
+      "documentation": "https://github.com/github/github-mcp-server"
+    },
+    {
+      "name": "Firecrawl",
+      "icon": "https://firecrawl.com/favicon.ico",
+      "description": {
+        "en": "Firecrawl is an API service that takes a URL, crawls it, and converts it into clean markdown. We crawl all accessible subpages and give you clean markdown for each. No sitemap required.",
+        "zh-CN": "Firecrawl 是一个 API 服务，它接受一个 URL，爬取它，并将其转换为干净的 Markdown。我们爬取所有可访问的子页面，并为您提供每个页面的干净 Markdown。无需 sitemap。"
+      },
+      "type": "sse",
+      "url": "https://mcp.firecrawl.dev/${API_KEY}/sse",
+      "authorization": [
+        {
+          "type": "apiKey",
+          "apiKeyIn": "url"
+        }
+      ],
+      "documentation": "https://docs.firecrawl.dev/mcp"
+    },
+    {
+      "name": "DeepWiki",
+      "icon": "https://deepwiki.org/favicon.ico",
+      "description": {
+        "en": "DeepWiki provides up-to-date documentation you can talk to, for every repo in the world.",
+        "zh-CN": "DeepWiki 提供与每个仓库相关的最新文档，您可以与之对话。"
+      },
+      "type": "sse",
+      "url": "https://mcp.deepwiki.com/sse",
+      "authorization": [],
+      "documentation": "https://deepwiki.com/"
+    },
+    {
+      "name": "Gitee",
+      "icon": "https://gitee.com/favicon.ico",
+      "description": {
+        "en": "Gitee is a Git-based code hosting and development collaboration platform.",
+        "zh-CN": "Gitee 是基于 Git 的代码托管和研发协作平台。"
+      },
+      "type": "streamable",
+      "url": "https://api.gitee.com/mcp",
+      "authorization": [
+        {
+          "type": "apiKey",
+          "apiKeyIn": "authorizationBearer"
+        }
+      ],
+      "documentation": "https://gitee.com/oschina/mcp-gitee"
+    },
+    {
+      "name": "Zapier",
+      "icon": "https://static.refly.ai/icons/zapier.svg",
+      "description": {
+        "en": "Zapier is a platform that allows you to connect your apps and automate your workflows.",
+        "zh-CN": "Zapier 是一个平台，允许您连接您的应用程序并自动化您的流程。"
+      },
+      "type": "sse",
+      "url": "https://actions.zapier.com/mcp/${API_KEY}/sse",
+      "authorization": [
+        {
+          "type": "apiKey",
+          "apiKeyIn": "url"
+        }
+      ],
+      "documentation": "https://actions.zapier.com/docs/platform/cursor/#configuring-zapier-mcp-in-cursor"
+    }
+  ]
+}

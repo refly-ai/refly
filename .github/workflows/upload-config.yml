@@ -1,0 +1,42 @@
+name: Upload Config to MinIO
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/**'
+  workflow_dispatch:
+
+jobs:
+  upload-config:
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run upload-config.js
+        env:
+          MINIO_EXTERNAL_ENDPOINT: ${{ secrets.MINIO_EXTERNAL_ENDPOINT }}
+          MINIO_EXTERNAL_PORT: ${{ secrets.MINIO_EXTERNAL_PORT }}
+          MINIO_EXTERNAL_USE_SSL: ${{ secrets.MINIO_EXTERNAL_USE_SSL }}
+          MINIO_EXTERNAL_ACCESS_KEY: ${{ secrets.MINIO_EXTERNAL_ACCESS_KEY }}
+          MINIO_EXTERNAL_SECRET_KEY: ${{ secrets.MINIO_EXTERNAL_SECRET_KEY }}
+          MINIO_EXTERNAL_BUCKET: ${{ secrets.MINIO_EXTERNAL_BUCKET }}
+        run: node scripts/upload-config.js

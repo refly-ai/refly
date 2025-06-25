@@ -1,6 +1,6 @@
 {
   "name": "@refly/skill-template",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Refly Skill Template",
   "main": "dist/index.js",
   "scripts": {

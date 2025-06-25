@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { ReflyService, SkillEngine } from '@refly/skill-template';
+import { ReflyService, SkillEngine, SkillEngineOptions } from '@refly/skill-template';
 import { CanvasService } from '@/modules/canvas/canvas.service';
 import { KnowledgeService } from '@/modules/knowledge/knowledge.service';
 import { LabelService } from '@/modules/label/label.service';
@@ -15,6 +15,7 @@ import { ParserFactory } from '@/modules/knowledge/parsers/factory';
 import { documentPO2DTO, referencePO2DTO, resourcePO2DTO } from '@/modules/knowledge/knowledge.dto';
 import { labelClassPO2DTO, labelPO2DTO } from '@/modules/label/label.dto';
 import { ConfigService } from '@nestjs/config';
+import { AuthService } from '@/modules/auth/auth.service';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
@@ -27,6 +28,7 @@ export class SkillEngineService implements OnModuleInit {
   private canvasService: CanvasService;
   private providerService: ProviderService;
   private mcpServerService: McpServerService;
+  private authService: AuthService;
 
   private engine: SkillEngine;
 
@@ -43,6 +45,7 @@ export class SkillEngineService implements OnModuleInit {
     this.canvasService = this.moduleRef.get(CanvasService, { strict: false });
     this.providerService = this.moduleRef.get(ProviderService, { strict: false });
     this.mcpServerService = this.moduleRef.get(McpServerService, { strict: false });
+    this.authService = this.moduleRef.get(AuthService, { strict: false });
   }
 
   buildReflyService = (): ReflyService => {
@@ -150,12 +153,42 @@ export class SkillEngineService implements OnModuleInit {
           };
         }
       },
+      generateJwtToken: async (user) => {
+        // Use the same JWT generation method as AuthService.login()
+        const tokenData = await this.authService.login(user);
+        return tokenData.accessToken;
+      },
     };
   };
 
   public getEngine() {
     if (!this.engine) {
-      this.engine = new SkillEngine(this.logger, this.buildReflyService());
+      // Get all configuration from config service
+      const appConfig = {
+        port: this.config.get('port'),
+        wsPort: this.config.get('wsPort'),
+        origin: this.config.get('origin'),
+        static: this.config.get('static'),
+        local: this.config.get('local'),
+        image: this.config.get('image'),
+        redis: this.config.get('redis'),
+        objectStorage: this.config.get('objectStorage'),
+        vectorStore: this.config.get('vectorStore'),
+        fulltextSearch: this.config.get('fulltextSearch'),
+        auth: this.config.get('auth'),
+        encryption: this.config.get('encryption'),
+        skill: this.config.get('skill'),
+        defaultModel: this.config.get('defaultModel'),
+        stripe: this.config.get('stripe'),
+        quota: this.config.get('quota'),
+        langfuse: this.config.get('langfuse'),
+      };
+
+      const options = {
+        config: appConfig,
+      } as SkillEngineOptions;
+
+      this.engine = new SkillEngine(this.logger, this.buildReflyService(), options);
     }
     return this.engine;
   }

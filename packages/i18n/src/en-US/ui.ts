@@ -420,8 +420,8 @@ const translations = {
         'Powered by multi-threaded dialogue, artifacts, knowledge integration, context memory, and intelligent search, ',
       second: 'Refly is the best way to transform ideas into quality content.',
     },
-    messageText: 'v0.7.0 Released: Agent and MCP 🚀',
-    simpleMessageText: 'v0.7.0: Agent and MCP 🚀',
+    messageText: 'v0.7.1 Released: MCP Store and Background Skills 🚀',
+    simpleMessageText: 'v0.7.1: MCP Store and Background Skills 🚀',
     tryForFree: 'Get Started',
     tryItNow: 'Try It Now',
     creationEngine: 'Creation Engine',
@@ -2250,6 +2250,16 @@ const translations = {
         pdfParsing: 'PDF Parsing',
         reranker: 'Reranker',
         embedding: 'Embedding',
+      },
+    },
+    copilot: {
+      mcpSelector: {
+        title: 'MCP Selector',
+        empty: 'No MCP servers available',
+        browseMcpStore: 'Go to Store',
+      },
+      recommendQuestions: {
+        refresh: 'Refresh',
       },
     },
     modelConfig: {

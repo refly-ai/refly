@@ -123,7 +123,7 @@ export interface CommunityMcpApiKeyModalProps {
   visible: boolean;
   config: CommunityMcpConfig;
   onClose: () => void;
-  onSuccess: (apiKey: string) => void;
+  onSuccess?: (apiKey: string) => void;
   loading?: boolean;
 }
 

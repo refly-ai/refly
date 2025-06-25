@@ -1,6 +1,6 @@
 {
   "name": "@refly/openapi-schema",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Refly OpenAPI Schema",
   "main": "dist/index.js",
   "exports": {

@@ -11,7 +11,7 @@
 
 Refly 是一个开创性的开源 Vibe Workflow 平台，旨在解决您最复杂的挑战。只需要动动嘴，您就可以轻松地设计、构建和复用智能工作流，借助 AI 智能体和可无限扩展的 MCP 工具，完成高质量的工作结果交付，从而大幅提升生产力。
 
-[🚀 v0.7.0 正式发布！Agent 和 MCP 服务器 🚀⚡️](https://docs.refly.ai/zh/changelog/v0.7.0)
+[🚀 v0.7.1 正式发布！MCP 商店和后台技能调用 🚀⚡️](https://docs.refly.ai/zh/changelog/v0.7.1)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 

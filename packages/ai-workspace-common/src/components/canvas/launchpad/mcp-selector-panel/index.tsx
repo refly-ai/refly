@@ -1,12 +1,16 @@
 import React, { useEffect } from 'react';
 import { Button, Empty, Skeleton, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, CheckCircle2, ChevronRight } from 'lucide-react';
 import { ReloadOutlined, ToolOutlined } from '@ant-design/icons';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { useListMcpServers } from '@refly-packages/ai-workspace-common/queries';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import {
+  useSiderStoreShallow,
+  SettingsModalActiveTab,
+} from '@refly-packages/ai-workspace-common/stores/sider';
 // McpServerDTO is used implicitly through the API response
 
 interface McpSelectorPanelProps {
@@ -28,6 +32,12 @@ export const McpSelectorPanel: React.FC<McpSelectorPanelProps> = ({ isOpen, onCl
   }));
 
   const isLogin = useUserStoreShallow((state) => state.isLogin);
+
+  // Get settings modal state
+  const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
+    setShowSettingModal: state.setShowSettingModal,
+    setSettingsModalActiveTab: state.setSettingsModalActiveTab,
+  }));
 
   // Fetch MCP servers from API
   const { data, refetch, isLoading, isRefetching } = useListMcpServers(
@@ -68,6 +78,13 @@ export const McpSelectorPanel: React.FC<McpSelectorPanelProps> = ({ isOpen, onCl
     refetch();
   };
 
+  // Open settings modal and navigate to MCP Store
+  const handleOpenMcpStore = () => {
+    setSettingsModalActiveTab(SettingsModalActiveTab.McpServer);
+    setShowSettingModal(true);
+    onClose(); // Close the current panel
+  };
+
   // Don't render if panel is closed
   if (!isOpen) return null;
 
@@ -97,13 +114,24 @@ export const McpSelectorPanel: React.FC<McpSelectorPanelProps> = ({ isOpen, onCl
 
     if (mcpServers.length === 0) {
       return (
-        <Empty
-          className="mb-2"
-          imageStyle={{ height: 40, width: 40, margin: '4px auto' }}
-          description={
-            <span className="text-[12px] text-[#00968f]">{t('copilot.mcpSelector.empty')}</span>
-          }
-        />
+        <div className="h-[140px] flex flex-col items-center justify-center">
+          <Empty
+            className="mb-2"
+            imageStyle={{ height: 40, width: 40, margin: '4px auto' }}
+            description={
+              <span className="text-[12px] text-[#00968f]">{t('copilot.mcpSelector.empty')}</span>
+            }
+          />
+          <Button
+            type="link"
+            size="small"
+            onClick={handleOpenMcpStore}
+            className="text-[12px] text-[#00968f] hover:text-[#007c74] p-0 flex items-center gap-1"
+          >
+            {t('copilot.mcpSelector.browseMcpStore')}
+            <ChevronRight className="w-3 h-3" />
+          </Button>
+        </div>
       );
     }
 
@@ -164,6 +192,15 @@ export const McpSelectorPanel: React.FC<McpSelectorPanelProps> = ({ isOpen, onCl
           <span>{t('copilot.mcpSelector.title')}</span>
         </div>
         <div className="flex items-center space-x-2">
+          <Tooltip title={t('copilot.mcpSelector.browseMcpStore')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<ChevronRight className="w-4 h-4 text-gray-400" />}
+              onClick={handleOpenMcpStore}
+              className="text-[12px] text-[rgba(0,0,0,0.5)] dark:text-gray-400"
+            />
+          </Tooltip>
           <Tooltip title={t('copilot.recommendQuestions.refresh')}>
             <Button
               type="text"

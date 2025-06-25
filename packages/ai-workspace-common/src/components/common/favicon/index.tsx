@@ -5,7 +5,7 @@ export const Favicon = (props: { url: string; size?: number }) => {
   const { size = 12, url } = props;
 
   const faviconUrl = useMemo(() => {
-    return `https://www.google.com/s2/favicons?domain=${safeParseURL(`${url}` as string)}&sz=${32}`;
+    return `https://www.google.com/s2/favicons?domain=${safeParseURL(`${url}` as string)}&sz=${64}`;
   }, [url]);
 
   // const [cachedUrl, setCachedUrl] = useState(faviconUrl);

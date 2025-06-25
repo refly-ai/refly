@@ -1,6 +1,6 @@
 {
   "name": "@refly/api",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "API server for Refly",
   "author": "",
   "private": true,
@@ -72,6 +72,7 @@
     "@sentry/cli": "^2.31.2",
     "@sentry/node": "^7.113.0",
     "@sentry/profiling-node": "^7.113.0",
+    "@rekog/mcp-nest": "^1.5.2",
     "apache-arrow": "^20.0.0",
     "argon2": "^0.41.1",
     "avsc": "^5.7.7",

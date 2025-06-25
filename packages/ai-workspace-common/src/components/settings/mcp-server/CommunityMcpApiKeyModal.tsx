@@ -1,67 +1,17 @@
-import React, { memo, useState } from 'react';
+import React, { memo } from 'react';
 import { Modal, Form, Input, Button, message, Alert, Space, Typography } from 'antd';
 import { KeyOutlined, ExclamationCircleOutlined, LinkOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import {
-  useCreateMcpServer,
-  useValidateMcpServer,
-} from '@refly-packages/ai-workspace-common/queries';
 import type { CommunityMcpApiKeyModalProps, ApiKeyConfiguration } from './types';
-import {
-  convertCommunityConfigToServerRequest,
-  getConfigDescription,
-  requiresApiKey,
-} from './utils';
+import { getConfigDescription, requiresApiKey } from './utils';
 
 const { Text, Link } = Typography;
 
 export const CommunityMcpApiKeyModal: React.FC<CommunityMcpApiKeyModalProps> = memo(
   ({ visible, config, onClose, onSuccess, loading: externalLoading }) => {
     const [form] = Form.useForm<ApiKeyConfiguration>();
-    const [validating, setValidating] = useState(false);
-    const [installing, setInstalling] = useState(false);
+
     const { t } = useTranslation();
-
-    // Create MCP server mutation
-    const createMutation = useCreateMcpServer(undefined, {
-      onSuccess: (response) => {
-        if (!response?.data?.success) {
-          throw new Error(response?.data?.errMsg || 'Installation failed');
-        }
-
-        // Show success message and clean up
-        message.success(t('settings.mcpServer.community.installSuccess', { name: config.name }));
-
-        // Get the API key from form and call parent success callback
-        const formValues = form.getFieldsValue() as ApiKeyConfiguration;
-        onSuccess(formValues.apiKey);
-
-        // Clean up and close modal
-        setValidating(false);
-        setInstalling(false);
-        handleClose();
-      },
-      onError: (error) => {
-        console.error('Installation error:', error);
-        message.error(t('settings.mcpServer.community.installError', { name: config.name }));
-        setValidating(false);
-        setInstalling(false);
-      },
-    });
-
-    // Validate MCP server mutation
-    const validateMutation = useValidateMcpServer(undefined, {
-      onSuccess: () => {
-        message.success(t('settings.mcpServer.community.validateSuccess'));
-        setValidating(false);
-      },
-      onError: (error) => {
-        console.error('Validation error:', error);
-        message.error(t('settings.mcpServer.community.validateError'));
-        setValidating(false);
-        setInstalling(false);
-      },
-    });
 
     // Check if API key is required
     const requiresApiKeyFlag = requiresApiKey(config);
@@ -69,37 +19,23 @@ export const CommunityMcpApiKeyModal: React.FC<CommunityMcpApiKeyModalProps> = m
     // Handle direct installation with validation
     const handleValidateAndInstall = async (values: ApiKeyConfiguration) => {
       try {
-        // Convert community config to server request format with API key
-        const serverRequest = convertCommunityConfigToServerRequest(config, values.apiKey);
-
         // Step 1: Validate MCP server connection
-        setValidating(true);
+
         message.info(t('settings.mcpServer.community.validating'));
 
-        await validateMutation.mutateAsync({
-          body: serverRequest,
-        });
+        await onSuccess?.(values.apiKey);
 
         // Step 2: Install the MCP server if validation successful
-        setValidating(false);
-        setInstalling(true);
-
-        await createMutation.mutateAsync({
-          body: serverRequest,
-        });
       } catch (error) {
         console.error('Validate and install error:', error);
         // Error handling is done in mutation callbacks
-        setValidating(false);
-        setInstalling(false);
       }
     };
 
     // Handle modal close
     const handleClose = () => {
       form.resetFields();
-      setValidating(false);
-      setInstalling(false);
+
       onClose();
     };
 
@@ -128,7 +64,7 @@ export const CommunityMcpApiKeyModal: React.FC<CommunityMcpApiKeyModalProps> = m
       return authTypes.join(', ');
     };
 
-    const isLoading = validating || installing || externalLoading;
+    const isLoading = externalLoading;
 
     return (
       <Modal
@@ -234,7 +170,7 @@ export const CommunityMcpApiKeyModal: React.FC<CommunityMcpApiKeyModalProps> = m
                 {t('common.cancel')}
               </Button>
               <Button type="primary" htmlType="submit" loading={isLoading} disabled={isLoading}>
-                {installing
+                {isLoading
                   ? t('settings.mcpServer.community.installing')
                   : t('settings.mcpServer.community.install')}
               </Button>

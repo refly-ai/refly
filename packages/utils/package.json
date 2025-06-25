@@ -1,6 +1,6 @@
 {
   "name": "@refly/utils",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Refly Code Utils",
   "main": "dist/index.js",
   "module": "src/index.ts",

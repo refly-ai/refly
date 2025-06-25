@@ -50,6 +50,16 @@ interface SettingModalProps {
 const McpServerTab = ({ visible }: { visible: boolean }) => {
   const [mcpActiveTab, setMcpActiveTab] = useState('my-servers');
   const isLogin = useUserStoreShallow((state) => state.isLogin);
+  const { settingsModalActiveTab } = useSiderStoreShallow((state) => ({
+    settingsModalActiveTab: state.settingsModalActiveTab,
+  }));
+
+  // Auto-switch to MCP Store when modal is opened via MCP selector
+  useEffect(() => {
+    if (visible && settingsModalActiveTab === SettingsModalActiveTab.McpServer) {
+      setMcpActiveTab('community');
+    }
+  }, [visible, settingsModalActiveTab]);
 
   // Fetch MCP servers for the community tab to check installed status
   const { data: mcpServersData, refetch } = useListMcpServers({}, [], {
@@ -118,13 +128,26 @@ const McpServerTab = ({ visible }: { visible: boolean }) => {
   );
 };
 
-export const SettingModal = (props: SettingModalProps) => {
-  const { visible, setVisible } = props;
+const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
   const { t } = useTranslation();
   const { settingsModalActiveTab, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
     settingsModalActiveTab: state.settingsModalActiveTab,
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
+
+  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(
+    settingsModalActiveTab || SettingsModalActiveTab.Appearance,
+  );
+
+  // Update local active tab when prop changes
+  useEffect(() => {
+    setLocalActiveTab(settingsModalActiveTab || SettingsModalActiveTab.Appearance);
+  }, [settingsModalActiveTab]);
+
+  // Handle tab change
+  const handleTabChange = (key: string) => {
+    setLocalActiveTab(key as SettingsModalActiveTab);
+  };
 
   const tabs = [
     {
@@ -132,42 +155,32 @@ export const SettingModal = (props: SettingModalProps) => {
       label: t('settings.tabs.providers'),
       icon: <IconCloud style={iconStyle} />,
       children: (
-        <ModelProviders
-          visible={settingsModalActiveTab === SettingsModalActiveTab.ModelProviders}
-        />
+        <ModelProviders visible={localActiveTab === SettingsModalActiveTab.ModelProviders} />
       ),
     },
     {
       key: 'modelConfig',
       label: t('settings.tabs.modelConfig'),
       icon: <IconModel style={iconStyle} />,
-      children: (
-        <ModelConfig visible={settingsModalActiveTab === SettingsModalActiveTab.ModelConfig} />
-      ),
+      children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
     },
     {
       key: 'parserConfig',
       label: t('settings.tabs.parserConfig'),
       icon: <IconWorldConfig style={iconStyle} />,
-      children: (
-        <ParserConfig visible={settingsModalActiveTab === SettingsModalActiveTab.ParserConfig} />
-      ),
+      children: <ParserConfig visible={localActiveTab === SettingsModalActiveTab.ParserConfig} />,
     },
     {
       key: 'mcpServer',
       label: t('settings.tabs.mcpServer'),
       icon: <ToolOutlined style={iconStyle} />,
-      children: (
-        <McpServerTab visible={settingsModalActiveTab === SettingsModalActiveTab.McpServer} />
-      ),
+      children: <McpServerTab visible={localActiveTab === SettingsModalActiveTab.McpServer} />,
     },
     {
       key: 'defaultModel',
       label: t('settings.tabs.defaultModel'),
       icon: <GrCube style={iconStyle} />,
-      children: (
-        <DefaultModel visible={settingsModalActiveTab === SettingsModalActiveTab.DefaultModel} />
-      ),
+      children: <DefaultModel visible={localActiveTab === SettingsModalActiveTab.DefaultModel} />,
     },
     ...(subscriptionEnabled
       ? [
@@ -225,12 +238,12 @@ export const SettingModal = (props: SettingModalProps) => {
       open={visible}
       onCancel={() => setVisible(false)}
     >
-      <Tabs
-        tabPosition="left"
-        items={tabs}
-        activeKey={settingsModalActiveTab}
-        onChange={(key) => setSettingsModalActiveTab(key as SettingsModalActiveTab)}
-      />
+      <Tabs tabPosition="left" items={tabs} activeKey={localActiveTab} onChange={handleTabChange} />
     </Modal>
   );
 };
+
+export default Settings;
+
+// Export with both names for compatibility
+export { Settings as SettingModal };
