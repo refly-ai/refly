@@ -576,9 +576,6 @@ export const useInvokeAction = () => {
 
   const invokeAction = useCallback(
     async (payload: SkillNodeMeta, target: Entity) => {
-      console.log('=== INVOKE ACTION CALLED ===');
-      console.log('payload.resultId:', payload.resultId);
-
       deletedNodeIdsRef.current = new Set();
 
       payload.resultId ||= genActionResultID();
@@ -596,14 +593,8 @@ export const useInvokeAction = () => {
         projectId,
       } = payload;
 
-      console.log('=== SETTING GLOBAL VARIABLES ===');
-      console.log('resultId:', resultId);
-
       globalAbortControllerRef.current = new AbortController();
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
-
-      console.log('globalAbortControllerRef.current:', globalAbortControllerRef.current);
-      console.log('globalCurrentResultIdRef.current:', globalCurrentResultIdRef.current);
 
       const { context, resultHistory, images } = convertContextItemsToInvokeParams(
         contextItems,

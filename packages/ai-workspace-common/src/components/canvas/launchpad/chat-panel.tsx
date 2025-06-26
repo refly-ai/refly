@@ -215,9 +215,6 @@ export const ChatPanel = ({
   }, [selectedSkill, form, initialTplConfig]);
 
   const handleSendMessage = (userInput?: string) => {
-    console.log('=== HANDLE SEND MESSAGE START ===');
-    console.log('userInput:', userInput);
-
     // Set active resultId when sending a message
     setActiveResultId(resultId);
 
@@ -257,8 +254,6 @@ export const ChatPanel = ({
     };
 
     // Store the current action resultId for abort functionality
-    console.log('=== HANDLE SEND MESSAGE ===');
-    console.log('Setting currentActionResultId to:', newResultId);
     setCurrentActionResultId(newResultId);
 
     // Call onAddMessage callback with all required data
@@ -343,10 +338,6 @@ export const ChatPanel = ({
   };
 
   const handleAbort = () => {
-    console.log('=== HANDLE ABORT ===');
-    console.log('currentActionResultId:', currentActionResultId);
-    console.log('resultId:', resultId);
-    console.log('Calling abortAction without parameters to use global currentResultId');
     // Call abortAction without parameters to use the global currentResultId tracking
     abortAction();
   };
