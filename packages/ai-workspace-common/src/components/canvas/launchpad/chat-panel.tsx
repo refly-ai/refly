@@ -340,6 +340,8 @@ export const ChatPanel = ({
   const handleAbort = () => {
     // Call abortAction without parameters to use the global currentResultId tracking
     abortAction();
+    // Clear currentActionResultId to reset isExecuting state
+    setCurrentActionResultId(null);
   };
 
   const { setRecommendQuestionsOpen, recommendQuestionsOpen } = useLaunchpadStoreShallow(
