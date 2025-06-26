@@ -20,29 +20,19 @@ export const useAbortAction = () => {
       }
 
       // If resultId is provided and is a valid string, call the backend to clean up server-side resources
-      if (activeResultId && typeof activeResultId === 'string' && activeResultId.trim() !== '') {
+      if (activeResultId?.trim()) {
         try {
-          // Use direct fetch since abortAction is not in the generated client yet
           const { serverOrigin } = await import('@refly-packages/ai-workspace-common/utils/env');
 
-          const response = await fetch(`${serverOrigin}/v1/action/abort`, {
+          await fetch(`${serverOrigin}/v1/action/abort`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ resultId: activeResultId }),
           });
-
-          console.log('Backend abort API response status:', response.status);
-
-          if (response.ok) {
-            console.log('Backend abort API succeeded');
-          } else {
-            console.warn('Failed to abort action on server:', response.status);
-          }
-        } catch (serverError) {
-          console.error('Error calling server abort API:', serverError);
+        } catch (_error) {
+          // Silent fail or minimal logging
+          console.warn('Failed to abort action on server');
         }
       } else {
         console.log('No valid resultId provided, skipping backend call');
