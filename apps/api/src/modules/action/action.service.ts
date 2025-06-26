@@ -205,7 +205,7 @@ export class ActionService {
     ); // 30 minutes
 
     this.activeAbortControllers.set(resultId, { controller, timeoutId });
-    this.logger.log(`Registered abort controller for action: ${resultId}`);
+    this.logger.debug(`Registered abort controller for action: ${resultId}`);
   }
 
   /**
@@ -216,7 +216,7 @@ export class ActionService {
     if (entry) {
       clearTimeout(entry.timeoutId);
       this.activeAbortControllers.delete(resultId);
-      this.logger.log(`Unregistered abort controller for action: ${resultId}`);
+      this.logger.debug(`Unregistered abort controller for action: ${resultId}`);
     }
   }
 
@@ -224,7 +224,7 @@ export class ActionService {
    * Abort a running action
    */
   async abortAction(user: User, { resultId }: { resultId: string }) {
-    this.logger.log(`Attempting to abort action: ${resultId} for user: ${user.uid}`);
+    this.logger.debug(`Attempting to abort action: ${resultId} for user: ${user.uid}`);
 
     // Verify that the action belongs to the user
     const result = await this.prisma.actionResult.findFirst({
