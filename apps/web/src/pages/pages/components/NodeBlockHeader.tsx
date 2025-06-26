@@ -7,7 +7,7 @@ import { type NodeRelation } from './ArtifactRenderer';
 
 import { useTranslation } from 'react-i18next';
 import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
-import { useReactFlow } from '@xyflow/react';
+import { useReactFlow } from '@refly-packages/ai-workspace-common/utils';
 
 interface NodeBlockHeaderProps {
   node: NodeRelation;
