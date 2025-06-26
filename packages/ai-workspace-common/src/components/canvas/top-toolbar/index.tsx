@@ -80,9 +80,9 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
 
   const width = useMemo(() => {
     if (collapse) {
-      return `calc(100vw-12px${showSlideshow ? '-840px' : ''})`;
+      return `calc(100vw-12px${showSlideshow ? '-50vw' : ''})`;
     }
-    return `calc(100vw-232px${showSlideshow ? '-840px' : ''})`;
+    return `calc(100vw-232px${showSlideshow ? '-50vw' : ''})`;
   }, [collapse, showSlideshow]);
 
   return (
