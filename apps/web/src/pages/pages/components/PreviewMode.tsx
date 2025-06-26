@@ -59,7 +59,7 @@ const PreviewMode: React.FC<PreviewModeProps> = ({
   return (
     <div
       ref={previewContentRef}
-      className={`preview-content-container relative bg-white dark:bg-gray-900 ${uiState.isIdle ? 'idle' : ''} ${uiState.showNav ? 'show-nav' : ''}`}
+      className={`preview-content-container relative bg-white p-10 dark:bg-gray-900${uiState.isIdle ? 'idle' : ''} ${uiState.showNav ? 'show-nav' : ''}`}
       onMouseMove={onMouseMove}
     >
       {/* Top progress bar */}

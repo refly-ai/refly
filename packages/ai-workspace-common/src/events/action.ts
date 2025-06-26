@@ -6,6 +6,9 @@ export type Events = {
     resultId: string;
     payload: ActionResult;
   };
+  invokeActionEnd: {
+    resultId: string;
+  };
 };
 
 export const actionEmitter = mitt<Events>();

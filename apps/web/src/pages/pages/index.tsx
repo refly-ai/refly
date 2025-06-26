@@ -33,6 +33,7 @@ import { getNodeTitle } from './utils/nodeUtils';
 import { slideshowEmitter } from '@refly-packages/ai-workspace-common/events/slideshow';
 import EmptyContentPrompt from './components/EmptyContentPrompt';
 import { useCardScroll } from './hooks/useCardScroll';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 interface PageDetailType {
   pageId: string;
@@ -74,6 +75,7 @@ export function SlideshowEdit(props: PageEditProps) {
 
   // Use the card scroll hook for managing card interaction
   const { activeCardId, handleCardClick } = useCardScroll();
+  const { readOnly } = useCanvasContext();
 
   // Share related states
   const [shareModalVisible, setShareModalVisible] = useState(false);
@@ -725,32 +727,37 @@ export function SlideshowEdit(props: PageEditProps) {
           </div>
 
           <div className="flex items-center flex-shrink-0 ml-2">
-            <Tooltip title={t('common.addNode')}>
-              <Button
-                type="text"
-                size={minimalMode ? 'small' : 'middle'}
-                onClick={handleAddNode}
-                icon={<PlusOutlined />}
-                className={`flex items-center text-gray-600 hover:!text-green-600 hover:bg-gray-50 dark:hover:bg-gray-950 dark:text-gray-300 dark:hover:!text-green-300 ${
-                  minimalMode ? 'text-xs' : ''
-                }`}
-              >
-                {!minimalMode && t('common.addNode')}
-              </Button>
-            </Tooltip>
-            <Tooltip title={t('common.shareLink')}>
-              <Button
-                type="text"
-                size={minimalMode ? 'small' : 'middle'}
-                onClick={handleShare}
-                icon={<ShareAltOutlined />}
-                className={`flex items-center text-gray-600 hover:!text-green-600 hover:bg-gray-50 dark:hover:bg-gray-950 dark:text-gray-300 dark:hover:!text-green-300 ${
-                  minimalMode ? 'text-xs' : ''
-                }`}
-              >
-                {!minimalMode && t('common.shareLink')}
-              </Button>
-            </Tooltip>
+            {!readOnly && (
+              <>
+                <Tooltip title={t('common.addNode')}>
+                  <Button
+                    type="text"
+                    size={minimalMode ? 'small' : 'middle'}
+                    onClick={handleAddNode}
+                    icon={<PlusOutlined />}
+                    className={`flex items-center text-gray-600 hover:!text-green-600 hover:bg-gray-50 dark:hover:bg-gray-950 dark:text-gray-300 dark:hover:!text-green-300 ${
+                      minimalMode ? 'text-xs' : ''
+                    }`}
+                  >
+                    {!minimalMode && t('common.addNode')}
+                  </Button>
+                </Tooltip>
+                <Tooltip title={t('common.shareLink')}>
+                  <Button
+                    type="text"
+                    size={minimalMode ? 'small' : 'middle'}
+                    onClick={handleShare}
+                    icon={<ShareAltOutlined />}
+                    className={`flex items-center text-gray-600 hover:!text-green-600 hover:bg-gray-50 dark:hover:bg-gray-950 dark:text-gray-300 dark:hover:!text-green-300 ${
+                      minimalMode ? 'text-xs' : ''
+                    }`}
+                  >
+                    {!minimalMode && t('common.shareLink')}
+                  </Button>
+                </Tooltip>
+              </>
+            )}
+
             {nodesList.length > 0 && (
               <Tooltip title={t('pages.share.slideshow')}>
                 <Button

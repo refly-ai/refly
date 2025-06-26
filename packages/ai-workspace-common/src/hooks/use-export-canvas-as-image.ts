@@ -403,6 +403,48 @@ export const useExportCanvasAsImage = () => {
     });
   }, [getCanvasElement]);
 
+  const convertElementToImage = useCallback(
+    async (element: HTMLElement) => {
+      try {
+        // use html2canvas to convert the element to canvas
+        console.log('convertElementToImage', element);
+        const canvas = await html2canvas(element);
+        console.log('convertElementToImage canvas', canvas);
+
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = 'downloaded_image.png';
+        link.click();
+
+        // also upload the image and return the upload response
+        return new Promise<UploadResponse['data']>((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              getClient()
+                .upload({
+                  body: { file: blob, visibility: 'public' },
+                })
+                .then(({ data }) => {
+                  if (!data?.success) {
+                    reject(new Error('Failed to upload element image'));
+                  }
+                  resolve(data?.data);
+                })
+                .catch(reject);
+            } else {
+              reject(new Error('Failed to convert element to blob'));
+            }
+          }, 'image/png');
+        });
+      } catch (error) {
+        console.error('Error converting element to image:', error);
+        throw new Error('Failed to convert element to image');
+      }
+    },
+    [imageToBase64],
+  );
+
   return {
     getCanvasElement,
     exportCanvasAsImage,
@@ -411,5 +453,6 @@ export const useExportCanvasAsImage = () => {
     isMinimapLoading,
     svgBlobToPngBlob,
     uploadCanvasCover,
+    convertElementToImage,
   };
 };

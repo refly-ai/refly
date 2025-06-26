@@ -35,6 +35,7 @@ import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/mo
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
 import { usePilotStore } from '@refly-packages/ai-workspace-common/stores/pilot';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
+import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 
 export const useInvokeAction = () => {
   const { addNode } = useAddNode();
@@ -438,6 +439,7 @@ export const useInvokeAction = () => {
     }
 
     const { activeSessionId } = usePilotStore.getState();
+    const addToSlideshow = ['document', 'codeArtifact'].includes(node.type);
 
     addNode(
       {
@@ -447,6 +449,8 @@ export const useInvokeAction = () => {
           metadata: {
             status: 'executing',
             ...node.data?.metadata,
+            addToSlideshow,
+            relatedResultId: resultId,
           },
         } as CanvasNodeData,
       },
@@ -512,6 +516,10 @@ export const useInvokeAction = () => {
     }
 
     refetchUsage();
+
+    setTimeout(() => {
+      actionEmitter.emit('invokeActionEnd', { resultId: skillEvent.resultId });
+    }, 3000);
   };
 
   const onSkillError = (skillEvent: SkillEvent) => {
