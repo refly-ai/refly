@@ -45,6 +45,7 @@ export const Actions = memo(
       runtimeConfig,
       setRuntimeConfig,
       handleSendMessage,
+      handleAbort,
       customActions,
       className,
       loading = false,
