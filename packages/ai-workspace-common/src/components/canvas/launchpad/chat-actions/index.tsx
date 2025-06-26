@@ -155,12 +155,7 @@ export const ChatActions = memo(
             <Button
               size="small"
               type="default"
-              className={cn(
-                'text-xs flex items-center gap-1',
-                'border-red-200 text-red-600 hover:border-red-300 hover:text-red-700',
-                'dark:border-red-800 dark:text-red-400 dark:hover:border-red-700 dark:hover:text-red-300',
-                'dark:bg-red-950/20 dark:hover:bg-red-900/30',
-              )}
+              className="text-xs flex items-center gap-1 border-red-200 text-red-600 hover:border-red-300 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:border-red-700 dark:hover:text-red-300 dark:bg-red-950/20 dark:hover:bg-red-900/30"
               onClick={handleAbortClick}
             >
               <span>{t('copilot.chatActions.stop')}</span>
