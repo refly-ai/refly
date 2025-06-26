@@ -62,18 +62,23 @@ const translations = {
     resource: '资源',
     document: '文档',
     newDocument: '新文档',
+    docs: '文档',
     skill: '技能',
     thread: '会话',
     meta: '元信息',
     project: '知识库',
     upgrade: '升级',
     upgradeSubscription: '升级订阅',
+    dismiss: '关闭',
+    copyRequestInfo: '复制请求信息',
+    tryAgain: '重试',
     copy: {
       title: '复制',
       success: '内容已复制到剪切板！',
       failed: '复制失败，请重试！',
     },
     login: '登录',
+    signup: '注册',
     share: '分享',
     uploadImage: '上传图片',
     uploadSuccess: '上传成功',
@@ -139,6 +144,13 @@ const translations = {
     create: '创建',
     update: '更新',
     validate: '验证',
+    refresh: '刷新',
+  },
+  mode: {
+    ask: '提问',
+    agent: 'Agent',
+    askDescription: '单次回答问题',
+    agentDescription: '多步解决复杂问题',
   },
   verifyRules: {
     emailRequired: '邮箱地址不能为空',
@@ -219,7 +231,7 @@ const translations = {
   },
   tabMeta: {
     landingPage: {
-      title: 'AI 原生创作引擎',
+      title: '开源 Vibe Workflow 平台',
       description:
         '快速总结与形成洞察、自动化归档以及智能语义搜索——Refly 能够为你打造第二大脑，拓展你的知识视野，并赋予你超乎寻常的能力。',
     },
@@ -238,7 +250,7 @@ const translations = {
     },
   },
   landingPage: {
-    slogan: 'AI Native 创作引擎',
+    slogan: '开源 Vibe Workflow 平台',
     simplySlogan: '创作引擎',
     description:
       '基于自由画布的创作平台，通过多线程对话、代码组件、知识库整合、上下文记忆和智能搜索，轻松将想法转化为优质内容。',
@@ -248,8 +260,8 @@ const translations = {
       first: '由多线程对话、代码组件、知识库集成、上下文记忆和智能搜索驱动，',
       second: 'Refly 是将创意转化为优质内容的最佳方式。',
     },
-    messageText: 'v0.6.0 发布：新首页、模型定制和幻灯片 🚀',
-    simpleMessageText: 'v0.6.0: 模型自定义和幻灯片 🚀',
+    messageText: 'v0.7.1 发布：MCP 商店和后台技能调用 🚀',
+    simpleMessageText: 'v0.7.1: MCP 商店和后台技能调用 🚀',
     tryForFree: '开始使用',
     tryItNow: '立即体验',
     creationEngine: '创作引擎',
@@ -624,7 +636,12 @@ const translations = {
     ],
   },
   frontPage: {
-    welcome: '今天我能为您完成什么工作？',
+    welcome: {
+      part1: '全球首个开源',
+      part2: 'Vibe Workflow',
+      part3: '平台',
+    },
+    githubStar: '在 GitHub 为我们点 Star!',
     fromCommunity: '来自社区',
     fromCommunityDesc: '探索将 Refly 用于工作或更广泛领域的途径。',
   },
@@ -924,6 +941,7 @@ const translations = {
       codeArtifact: '代码组件',
       website: '网站',
       mindMap: '思维导图',
+      group: '分组',
     },
     presetScenarios: {
       title: '预设场景',
@@ -1059,7 +1077,6 @@ const translations = {
     action: {
       nodeAlreadyExists: '该{{type}}已存在于当前画布中',
       deleteSuccess: '删除画布成功',
-      addSuccess: '画布添加好啦，开始创作吧~',
       duplicateSuccess: '复制画布成功',
       nodeLimitReached: '画布已达到最大节点数限制 ({{max}})，请删除一些节点后再添加新节点。',
       approachingNodeLimit: '画布节点数量接近上限 ({{current}}/{{max}})，建议移除不必要的节点。',
@@ -1087,6 +1104,11 @@ const translations = {
       shareLoading: '正在加载共享技能响应...',
       notFound: '技能响应未找到',
       notFoundDesc: '您查找的技能响应不存在或已被删除。',
+      generating: '正在生成内容...',
+      error: {
+        defaultTitle: '技能执行失败',
+        networkError: '如果问题持续存在，请检查您的网络连接或 VPN',
+      },
     },
     chatHistory: {
       alreadyAdded: '已添加到对话历史',
@@ -1172,6 +1194,7 @@ const translations = {
       downloadFile: '下载文件',
       editGroupNamePlaceholder: '请输入分组名称',
       addToSlideshow: '插入幻灯片',
+      more: '更多选项',
     },
     nodeStatus: {
       isCreatingDocument: '创建中...',
@@ -1458,7 +1481,7 @@ const translations = {
       skill: '技能',
     },
     homePage: {
-      title: 'AI 原生创作引擎',
+      title: '开源 Vibe Workflow 平台',
       searchPlaceholder: '输入搜索内容...',
       selectedWeblink: {
         title: '基于选中网页提问：',
@@ -1777,6 +1800,50 @@ const translations = {
       availableToolsPrefix: '可用工具: ',
       collapse: '收起',
       viewToolsWithCount: '查看工具 ({{count}})',
+      // 社区 MCP
+      community: {
+        title: '社区 MCP 配置',
+        description: '发现并安装社区 MCP 配置',
+        searchPlaceholder: '搜索配置...',
+        filterByType: '按类型过滤',
+        allTypes: '全部类型',
+        install: '安装',
+        installing: '安装中...',
+        installed: '已安装',
+        installSuccess: '成功安装 {{name}}',
+        installError: '安装 {{name}} 失败',
+        requiresApiKeyWarning: '{{name}} 需要 API 密钥，请在详细视图中配置。',
+        viewDocumentation: '查看文档',
+        noDescription: '暂无描述',
+        loadError: '加载社区配置失败',
+        loadErrorDescription: '请检查网络连接并重试。',
+        noConfigurations: '未找到社区配置',
+        author: '作者：{{author}}',
+        version: 'v{{version}}',
+        types: {
+          sse: '服务器发送事件 (SSE)',
+          streamable: '流式 API',
+          stdio: '标准输入输出 (Stdio)',
+          websocket: 'WebSocket',
+        },
+        // API Key 配置相关翻译
+        configureApiKey: '配置 API Key',
+        apiKeyRequired: '需要 API Key',
+        apiKeyDescription: '此 MCP 服务器需要 API Key 才能正常工作。',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: '请输入您的 API Key...',
+        authMethod: '认证方式',
+        auth: {
+          urlParam: 'URL 参数',
+          bearerToken: 'Bearer 令牌',
+          headerKey: '请求头 ({{header}})',
+          apiKey: 'API Key',
+        },
+        validateAndInstall: '验证并安装',
+        validating: '验证中...',
+        validateSuccess: '验证成功',
+        validateError: '验证失败',
+      },
     },
     appearance: {
       title: '外观设置',
@@ -2047,6 +2114,7 @@ const translations = {
     defaultModel: {
       title: '默认模型',
       chat: '默认问答模型',
+      agent: '默认 Agent 模型',
       queryAnalysis: '问题分析与上下文处理',
       titleGeneration: '智能标题生成',
       noModel: '未设置',
@@ -2055,6 +2123,7 @@ const translations = {
       updateFailed: '更新失败，请重试！',
       description: {
         chat: '当您没有指定具体模型时，我们将用这个模型为您解答问题。',
+        agent: '当您开启 Agent 模式时，将会使用此模型。',
         queryAnalysis:
           '帮助更好地理解您的问题，同时优化处理输入的上下文内容（推荐使用处理速度快且经济的模型）。',
         titleGeneration: '为文档或画布自动生成合适的标题。',
@@ -2392,6 +2461,7 @@ const translations = {
       noContextChat: '不带上下文聊天',
       wholeSpaceChat: '在整个空间聊天',
       recommendQuestions: '推荐问题',
+      chooseMcp: '选择 MCP',
       replace: '替换选中',
       reject: '拒绝',
       copy: '复制回答',
@@ -2445,6 +2515,12 @@ const translations = {
       title: '推荐问题',
       refresh: '换一批',
       empty: '暂无推荐问题',
+    },
+    mcpSelector: {
+      title: '选择 MCP 服务器',
+      empty: '没有可用的 MCP 服务器',
+      selected: '已选择',
+      browseMcpStore: '去商店添加',
     },
     contextItem: {
       current: '当前',
@@ -2516,6 +2592,28 @@ const translations = {
       contact: '联系我们',
       terms: '条款',
       privacy: '隐私',
+    },
+  },
+  pilot: {
+    name: 'Agent',
+    description: 'Refly Agent 是一个自主 Agent，它通过在自由画布中显示思维步骤来解决您的问题。',
+    thinking: 'Agent 正在思考',
+    noSessions: '暂无会话',
+    loadFailed: '加载会话失败',
+    epoch: '第 {{count}} 轮',
+    newSession: '新会话',
+    sessionHistory: '会话历史',
+    sessionInputPlaceholder: '问点什么...',
+    createPilotSessionFailed: '创建会话失败',
+    recentSessions: '最近会话',
+    createdAt: '创建时间',
+    noTasks: '暂无任务',
+    status: {
+      init: '初始化',
+      executing: '运行中',
+      waiting: '等待中',
+      finish: '已完成',
+      failed: '失败',
     },
   },
   deck: {

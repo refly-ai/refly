@@ -6,6 +6,7 @@
 *.tsbuildinfo
 
 dist
+packed
 .turbo
 .windsurf
 
@@ -16,6 +17,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+i18n-consistency-report.json
 
 # Rush temporary files
 common/deploy/
@@ -31,3 +33,4 @@ mise.toml
 
 # docs
 docs/.vitepress/cache/*
+.self-docs/*

@@ -1,0 +1,33 @@
+{
+  "name": "refly-desktop",
+  "version": "0.7.1",
+  "description": "Refly Desktop Application",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "nodemon",
+    "dev:electron": "nodemon",
+    "start": "tsc && electron .",
+    "copy-renderer": "ncp ../web/dist dist/renderer",
+    "build:mac": "tsc && electron-builder --mac --dir",
+    "build:mac:x64": "tsc && electron-builder --mac --x64 --dir",
+    "build:mac:arm64": "tsc && electron-builder --mac --arm64 --dir",
+    "build:win": "tsc && electron-builder --win --dir",
+    "build:win:x64": "tsc && electron-builder --win --x64 --dir",
+    "build:win:arm64": "tsc && electron-builder --win --arm64 --dir",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@electron/asar": "^4.0.0",
+    "electron": "36.2.1",
+    "electron-builder": "26.0.15",
+    "electron-notarize": "^1.2.2"
+  },
+  "dependencies": {
+    "@prisma/engines": "5.16.1",
+    "@refly/api": "workspace:*",
+    "electron-log": "^5.4.0",
+    "get-port": "^7.1.0",
+    "is-number": "^7.0.0",
+    "prisma": "5.16.1"
+  }
+}

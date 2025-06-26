@@ -84,16 +84,18 @@ Make sure all dependencies are ready:
 
 ```shell
 docker version
-node -v # v20.19.0
-pnpm -v # 10.9.0 or higher
+node -v # v20.19.0 or higher
+pnpm -v # 9.15.9
 ```
 
-### 4. Development
+## Developing
+
+### Developing API and Web
 
 1. Spin up all the middlewares:
 
 ```bash
-docker compose -f deploy/docker/docker-compose.middleware.yml up -d
+docker compose -f deploy/docker/docker-compose.middleware.yml -p refly up -d
 docker ps | grep refly_ # check that all middleware containers are healthy
 ```
 
@@ -114,54 +116,81 @@ pnpm install
 pnpm copy-env:develop
 ```
 
-4. Start developing from the root directory:
+4. Build all the packages for the first time:
 
 ```bash
 pnpm build
+```
+
+5. Start developing web-UI based application either from the root directory or in separate packages:
+
+```bash
+# Option 1: from the root directory
 pnpm dev
+
+# Option 2: from separate packages in two terminals
+cd apps/web && pnpm dev # terminal 1
+cd apps/api && pnpm dev # terminal 2
 ```
 
 You can visit [http://localhost:5173](http://localhost:5173/) to start developing Refly.
 
-> The `dev` script in the root will run the `dev` script in the `apps/web`, `apps/api`, `apps/extension` concurrently. If you only want to run one of them, you can `cd` into the corresponding directory and run the `dev` script there.
+6. Developing desktop application:
 
-## Developing
+```bash
+# Option 1: from the root directory
+pnpm dev:electron
+
+# Option 2: from separate packages in two terminals
+cd apps/web && pnpm dev:electron # terminal 1
+cd apps/desktop && pnpm dev:electron # terminal 2
+```
+
+## Code Structure
 
 To help you quickly navigate where your contribution fits, here's a brief outline of Refly's structure:
 
 ### Backend Structure
 
 ```text
-[apps/server/]             // Main server application
+[apps/api/]                // Main API server application
 ├── src/
-│   ├── controllers/      // API route handlers
-│   ├── services/        // Business logic implementation
-│   ├── models/          // Data models and types
-│   ├── ai/              // AI feature implementations
-│   │   ├── llm/        // LLM integration and management
-│   │   ├── rag/        // RAG pipeline implementation
-│   │   └── memory/     // Context memory management
-│   ├── canvas/         // Canvas-related backend services
-│   └── utils/          // Shared utilities
+│   ├── modules/          // Feature modules (NestJS modules)
+│   │   ├── auth/        // Authentication and authorization
+│   │   ├── canvas/      // Canvas-related backend services
+│   │   ├── rag/         // RAG pipeline implementation
+│   │   ├── knowledge/   // Knowledge base management
+│   │   ├── provider/    // AI provider integrations
+│   │   ├── search/      // Search functionality
+│   │   ├── collab/      // Real-time collaboration
+│   │   ├── project/     // Project management
+│   │   ├── user/        // User management
+│   │   └── ...          // Other feature modules
+│   ├── utils/           // Shared utilities
+│   └── scripts/         // Build and deployment scripts
+├── prisma/              // Database schema and migrations
+└── data/                // Static data and configurations
 
 [packages/]
-├── ai-core/            // Core AI functionality
-│   ├── src/
-│   │   ├── llm/       // LLM abstraction and implementations
-│   │   ├── memory/    // Memory systems
-│   │   └── rag/       // RAG implementations
-│
-└── shared/            // Shared types and utilities
-    └── src/
-        └── types/     // Common TypeScript types
+├── providers/           // AI provider abstractions and implementations
+│   └── src/            // LLM integrations (OpenAI, Anthropic, etc.)
+├── common-types/       // Shared TypeScript types and interfaces
+├── ai-workspace-common/ // Shared AI workspace components and logic
+├── utils/              // Shared utility functions
+├── errors/             // Common error definitions
+├── openapi-schema/     // API schema definitions
+└── tsconfig/           // Shared TypeScript configurations
 ```
 
-The backend is built with Nest.js and TypeScript, focusing on:
+The backend is built with NestJS and TypeScript, focusing on:
 
-- AI feature implementation including LLM integration, RAG pipelines, and context memory
-- Canvas state management and real-time collaboration
-- RESTful APIs and WebSocket connections for real-time features
-- Efficient data storage and retrieval for knowledge bases
+- Modular architecture with feature-based modules
+- AI provider integrations and LLM management
+- RAG pipeline implementation for knowledge retrieval
+- Real-time collaboration using WebSockets
+- Canvas state management and persistence
+- RESTful APIs with OpenAPI documentation
+- Efficient database operations with Prisma ORM
 
 ### Frontend Structure
 
@@ -169,20 +198,51 @@ The backend is built with Nest.js and TypeScript, focusing on:
 [apps/web/]                 // Main web application
 ├── src/
 │   ├── components/         // React components
+│   ├── pages/             // Page components and routing
+│   ├── routes/            // Route definitions
+│   ├── lib/               // Third-party library configurations
+│   ├── utils/             // Frontend utilities
 │   ├── styles/            // Global styles and themes
 │   └── main.tsx           // Application entry point
+├── public/                // Static assets
+└── typing/                // TypeScript type definitions
+
+[apps/desktop/]            // Desktop application (Electron)
+├── src/                   // Desktop-specific code
+└── ...                    // Electron configuration
+
+[apps/extension/]          // Browser extension
+├── src/                   // Extension-specific code
+└── ...                    // Extension manifest and assets
 
 [packages/]
 ├── ai-workspace-common/   // Shared AI workspace components
 │   ├── src/
 │   │   ├── components/    // Canvas, editor, and AI feature components
-│   │   └── utils/        // Shared utilities
+│   │   ├── hooks/         // Custom React hooks
+│   │   ├── stores/        // State management (Zustand/Redux)
+│   │   ├── utils/         // Shared utilities
+│   │   ├── types/         // Component-specific types
+│   │   └── modules/       // Feature modules
 │
-└── i18n/                 // Internationalization
-    ├── src/
-    │   ├── en-US/        // English translations
-    │   └── zh-Hans/      // Chinese translations
+├── i18n/                  // Internationalization
+│   ├── src/
+│   │   ├── en-US/         // English translations
+│   │   └── zh-Hans/       // Chinese translations
+│
+└── wxt/                   // Web extension toolkit configuration
 ```
+
+The frontend is built with React, TypeScript, and modern tooling:
+
+- Component-based architecture with reusable UI components
+- Canvas-based interface for AI-powered content creation
+- Real-time collaboration features
+- Multi-threaded conversation management
+- Knowledge base integration and RAG-powered search
+- Responsive design with Tailwind CSS
+- State management for complex application state
+- Internationalization support for multiple languages
 
 ## Submitting your PR
 

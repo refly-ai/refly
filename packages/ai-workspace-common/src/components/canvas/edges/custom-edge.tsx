@@ -120,7 +120,16 @@ export const CustomEdge = memo(
             strokeWidth={20}
             stroke="transparent"
           />
-          <BaseEdge path={edgePath} style={selected ? selectedStyle : edgeStyle} />
+          <BaseEdge
+            path={edgePath}
+            style={
+              id.startsWith('temp-edge-')
+                ? { ...edgeStyle, stroke: '#94a3b8', strokeDasharray: '10,10' }
+                : selected
+                  ? selectedStyle
+                  : edgeStyle
+            }
+          />
         </g>
 
         {label || isEditing ? (

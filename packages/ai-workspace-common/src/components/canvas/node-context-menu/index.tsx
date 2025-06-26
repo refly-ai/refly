@@ -2,12 +2,19 @@ import { FC, useEffect, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { NodeActionMenu } from '../node-action-menu';
 import { CanvasNodeType } from '@refly/openapi-schema';
+import {
+  NodeContextMenuSource,
+  NodeDragCreateInfo,
+} from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { CreateNodeMenu } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/create-node-menu';
 
 interface NodeContextMenuProps {
   open: boolean;
   position: { x: number; y: number };
   nodeId: string;
   nodeType: CanvasNodeType;
+  source?: NodeContextMenuSource;
+  dragCreateInfo?: NodeDragCreateInfo;
   setOpen: (open: boolean) => void;
 }
 
@@ -16,34 +23,45 @@ export const NodeContextMenu: FC<NodeContextMenuProps> = ({
   position,
   nodeId,
   nodeType,
+  source,
+  dragCreateInfo,
   setOpen,
 }) => {
   const reactFlowInstance = useReactFlow();
+  const { setNodes, setEdges } = useReactFlow();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Clean up ghost nodes when menu closes
+  const handleClose = () => {
+    setNodes((nodes) => nodes.filter((node) => !node.id.startsWith('ghost-')));
+    setEdges((edges) => edges.filter((edge) => !edge.id.startsWith('temp-edge-')));
+    setOpen(false);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpen(false);
+        handleClose();
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setOpen(false);
+        handleClose();
       }
     };
 
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use capture phase to ensure we catch all events before they can be stopped
+      document.addEventListener('mousedown', handleClickOutside, true);
       document.addEventListener('keydown', handleEscape);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [open, setOpen]);
+  }, [open, dragCreateInfo, setNodes, setEdges]);
 
   if (!open) return null;
 
@@ -60,12 +78,16 @@ export const NodeContextMenu: FC<NodeContextMenuProps> = ({
         e.preventDefault();
       }}
     >
-      <NodeActionMenu
-        nodeId={nodeId}
-        nodeType={nodeType}
-        onClose={() => setOpen(false)}
-        hasFixedHeight
-      />
+      {source === 'handle' ? (
+        <CreateNodeMenu
+          nodeId={nodeId}
+          nodeType={nodeType}
+          onClose={handleClose}
+          dragCreateInfo={dragCreateInfo}
+        />
+      ) : (
+        <NodeActionMenu nodeId={nodeId} nodeType={nodeType} onClose={handleClose} />
+      )}
     </div>
   );
 };

@@ -170,7 +170,8 @@ export const ChatActions = memo(
       prevProps.runtimeConfig === nextProps.runtimeConfig &&
       prevProps.setRuntimeConfig === nextProps.setRuntimeConfig &&
       prevProps.onUploadImage === nextProps.onUploadImage &&
-      prevProps.model === nextProps.model
+      prevProps.model === nextProps.model &&
+      prevProps.customActions === nextProps.customActions
     );
   },
 );

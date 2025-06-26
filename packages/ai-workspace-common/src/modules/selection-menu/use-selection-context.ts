@@ -11,6 +11,7 @@ import { message } from 'antd';
 import React from 'react';
 import { emitAddToContext, emitAddToContextCompleted } from '../../utils/event-emitter/context';
 import AddToContextMessageContent from '../../components/message/add-to-context-message';
+import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 
 interface UseSelectionContextProps {
   containerClass?: string;
@@ -29,6 +30,11 @@ export const useSelectionContext = ({
   const [isSelecting, setIsSelecting] = useState(false);
   const { addContextItem } = useContextPanelStoreShallow((state) => ({
     addContextItem: state.addContextItem,
+  }));
+
+  const { showLinearThread, setShowLinearThread } = useCanvasStoreShallow((state) => ({
+    showLinearThread: state.showLinearThread,
+    setShowLinearThread: state.setShowLinearThread,
   }));
 
   const handleSelection = useCallback(() => {
@@ -134,7 +140,7 @@ export const useSelectionContext = ({
 
   // Add selected text to context
   const addToContext = useCallback(
-    (item: IContextItem) => {
+    async (item: IContextItem) => {
       if (!selectedText) return;
 
       const { activeResultId } = useContextPanelStore.getState();
@@ -142,6 +148,11 @@ export const useSelectionContext = ({
       const contextStore = useContextPanelStore.getState();
       const selectedContextItems = contextStore.contextItems;
       const nodeType = item?.type;
+
+      if (resultId === ContextTarget.Global && !showLinearThread) {
+        setShowLinearThread(true);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
 
       // Check if item is already in context
       const isAlreadyAdded = selectedContextItems.some(

@@ -53,8 +53,11 @@ import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useSkillError } from '@refly-packages/ai-workspace-common/hooks/use-skill-error';
 import { ModelIcon } from '@lobehub/icons';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
-
-const POLLING_WAIT_TIME = 15000;
+import { BorderBeam } from '@refly-packages/ai-workspace-common/components/magicui/border-beam';
+import { NodeActionButtons } from './shared/node-action-buttons';
+import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
+import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
 
 export const NodeHeader = memo(
   ({
@@ -111,7 +114,7 @@ export const NodeHeader = memo(
           <div className="flex items-center gap-2">
             {showIcon && (
               <div className="w-6 h-6 rounded bg-[#F79009] shadow-lg flex items-center justify-center flex-shrink-0">
-                <IconResponse className="w-4 h-4 text-white dark:text-gray-900" />
+                <IconResponse className="w-4 h-4 text-white" />
               </div>
             )}
             {isEditing ? (
@@ -234,6 +237,7 @@ export const SkillResponseNode = memo(
     const isOperating = operatingNodeId === id;
     const sizeMode = data?.metadata?.sizeMode || 'adaptive';
     const node = getNode(id);
+    const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
     const { containerStyle, handleResize, updateSize } = useNodeSize({
       id,
@@ -259,20 +263,24 @@ export const SkillResponseNode = memo(
       actionMeta,
       tokenUsage,
       version,
+      pilotStepId,
     } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
+    const { isStreaming, removeStreamResult } = useActionResultStoreShallow((state) => ({
+      isStreaming: !!state.streamResults[entityId],
+      removeStreamResult: state.removeStreamResult,
+    }));
 
     useEffect(() => {
-      if (
-        createdAt &&
-        Date.now() - new Date(createdAt).getTime() >= POLLING_WAIT_TIME &&
-        status === 'executing'
-      ) {
+      if (!isStreaming && (status === 'executing' || status === 'waiting')) {
         startPolling(entityId, version);
       }
-    }, [createdAt, status, startPolling, entityId, version]);
+      if (isStreaming && status !== 'executing' && status !== 'waiting') {
+        removeStreamResult(entityId);
+      }
+    }, [isStreaming, status, startPolling, entityId, version]);
 
     const sources = Array.isArray(structuredData?.sources) ? structuredData?.sources : [];
 
@@ -394,37 +402,49 @@ export const SkillResponseNode = memo(
 
     const { debouncedCreateDocument } = useCreateDocument();
 
-    const handleCreateDocument = useCallback(async () => {
-      try {
-        // Fetch complete action result from server to get full content
-        const { data, error } = await getClient().getActionResult({
-          query: { resultId: entityId },
-        });
+    const handleCreateDocument = useCallback(
+      async (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => {
+        try {
+          // Fetch complete action result from server to get full content
+          const { data, error } = await getClient().getActionResult({
+            query: { resultId: entityId },
+          });
 
-        if (error || !data?.success) {
-          message.error(t('canvas.skillResponse.fetchContentFailed'));
-          return;
+          if (error || !data?.success) {
+            message.error(t('canvas.skillResponse.fetchContentFailed'));
+            return;
+          }
+
+          // Extract full content from all steps
+          const fullContent = data.data.steps
+            ?.map((step) => step?.content || '')
+            .filter(Boolean)
+            .join('\n\n');
+
+          const { position, connectTo } = getConnectionInfo(
+            { entityId, type: 'skillResponse' },
+            event?.dragCreateInfo,
+          );
+
+          // Create document with full content
+          await debouncedCreateDocument(title ?? '', fullContent || content, {
+            sourceNodeId: connectTo.find((c) => c.handleType === 'source')?.entityId,
+            targetNodeId: connectTo.find((c) => c.handleType === 'target')?.entityId,
+            position,
+            addToCanvas: true,
+            sourceType: 'skillResponse',
+          });
+        } catch (err) {
+          console.error('Failed to create document:', err);
+          message.error(t('canvas.skillResponse.createDocumentFailed'));
+        } finally {
+          nodeActionEmitter.emit(createNodeEventName(id, 'createDocument.completed'));
         }
-
-        // Extract full content from all steps
-        const fullContent = data.data.steps
-          ?.map((step) => step?.content || '')
-          .filter(Boolean)
-          .join('\n\n');
-
-        // Create document with full content
-        await debouncedCreateDocument(title ?? '', fullContent || content, {
-          sourceNodeId: entityId,
-          addToCanvas: true,
-          sourceType: 'skillResponse',
-        });
-      } catch (err) {
-        console.error('Failed to create document:', err);
-        message.error(t('canvas.skillResponse.createDocumentFailed'));
-      } finally {
-        nodeActionEmitter.emit(createNodeEventName(id, 'createDocument.completed'));
-      }
-    }, [debouncedCreateDocument, entityId, title, content, t]);
+      },
+      [debouncedCreateDocument, entityId, title, content, t, id, getConnectionInfo],
+    );
 
     const { addToContext } = useAddToContext();
 
@@ -455,70 +475,81 @@ export const SkillResponseNode = memo(
 
     const { addNode } = useAddNode();
 
-    const handleAskAI = useCallback(() => {
-      const { metadata } = data;
-      const {
-        selectedSkill,
-        actionMeta,
-        modelInfo,
-        contextItems: responseContextItems = [],
-        tplConfig,
-      } = metadata;
+    const handleAskAI = useCallback(
+      (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => {
+        const { metadata } = data;
+        const {
+          selectedSkill,
+          actionMeta,
+          modelInfo,
+          contextItems: responseContextItems = [],
+          tplConfig,
+        } = metadata;
 
-      const currentSkill = actionMeta || selectedSkill;
+        const currentSkill = actionMeta || selectedSkill;
 
-      // Create new context items array that includes both the response and its context
-      const mergedContextItems = [
-        {
-          type: 'skillResponse' as CanvasNodeType,
-          title: data.title,
-          entityId: data.entityId,
-          metadata: {
-            withHistory: true,
-          },
-        },
-        // Include the original context items from the response
-        ...responseContextItems.map((item) => ({
-          ...item,
-          metadata: {
-            ...item.metadata,
-            withHistory: undefined,
-          },
-        })),
-      ];
-
-      // Create node connect filters - include both the response and its context items
-      const connectFilters = [
-        { type: 'skillResponse' as CanvasNodeType, entityId: data.entityId },
-        ...responseContextItems.map((item) => ({
-          type: item.type as CanvasNodeType,
-          entityId: item.entityId,
-        })),
-      ];
-
-      // Add a small delay to avoid race conditions with context items
-      setTimeout(() => {
-        addNode(
+        // Create new context items array that includes both the response and its context
+        const mergedContextItems = [
           {
-            type: 'skill',
-            data: {
-              title: 'Skill',
-              entityId: genSkillID(),
-              metadata: {
-                ...metadata,
-                contextItems: mergedContextItems,
-                selectedSkill: currentSkill,
-                modelInfo,
-                tplConfig,
-              },
+            type: 'skillResponse' as CanvasNodeType,
+            title: data.title,
+            entityId: data.entityId,
+            metadata: {
+              withHistory: true,
             },
           },
-          connectFilters,
-          false,
-          true,
+          // Include the original context items from the response
+          ...responseContextItems.map((item) => ({
+            ...item,
+            metadata: {
+              ...item.metadata,
+              withHistory: undefined,
+            },
+          })),
+        ];
+
+        // Create node connect filters - include both the response and its context items
+        const connectFilters = [
+          { type: 'skillResponse' as CanvasNodeType, entityId: data.entityId },
+          ...responseContextItems.map((item) => ({
+            type: item.type as CanvasNodeType,
+            entityId: item.entityId,
+          })),
+        ];
+
+        const { position, connectTo } = getConnectionInfo(
+          { entityId: data.entityId, type: 'skillResponse' },
+          event?.dragCreateInfo,
         );
-      }, 10);
-    }, [data, addNode]);
+
+        // Add a small delay to avoid race conditions with context items
+        setTimeout(() => {
+          addNode(
+            {
+              type: 'skill',
+              data: {
+                title: 'Skill',
+                entityId: genSkillID(),
+                metadata: {
+                  ...metadata,
+                  contextItems: mergedContextItems,
+                  selectedSkill: currentSkill,
+                  modelInfo,
+                  tplConfig,
+                },
+              },
+              position,
+            },
+            [...connectTo, ...connectFilters],
+            false,
+            true,
+          );
+        }, 10);
+      },
+      [data, addNode, getConnectionInfo],
+    );
 
     const handleCloneAskAI = useCallback(async () => {
       const { contextItems, modelInfo, selectedSkill, tplConfig } = data?.metadata || {};
@@ -572,10 +603,15 @@ export const SkillResponseNode = memo(
       // Create node-specific event handlers
       const handleNodeRerun = () => handleRerun();
       const handleNodeAddToContext = () => handleAddToContext();
-      const handleNodeInsertToDoc = (content: string) => handleInsertToDoc(content);
-      const handleNodeCreateDocument = () => handleCreateDocument();
+      const handleNodeInsertToDoc = (event: { content: string }) =>
+        handleInsertToDoc(event.content);
+      const handleNodeCreateDocument = (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => handleCreateDocument(event);
       const handleNodeDelete = () => handleDelete();
-      const handleNodeAskAI = () => handleAskAI();
+      const handleNodeAskAI = (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => handleAskAI(event);
       const handleNodeCloneAskAI = () => handleCloneAskAI();
 
       // Register events with node ID
@@ -583,9 +619,7 @@ export const SkillResponseNode = memo(
       nodeActionEmitter.on(createNodeEventName(id, 'cloneAskAI'), handleNodeCloneAskAI);
       nodeActionEmitter.on(createNodeEventName(id, 'rerun'), handleNodeRerun);
       nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
-      nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), (event) =>
-        handleNodeInsertToDoc(event.content),
-      );
+      nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
       nodeActionEmitter.on(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
 
@@ -595,9 +629,7 @@ export const SkillResponseNode = memo(
         nodeActionEmitter.off(createNodeEventName(id, 'cloneAskAI'), handleNodeCloneAskAI);
         nodeActionEmitter.off(createNodeEventName(id, 'rerun'), handleNodeRerun);
         nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
-        nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), (event) =>
-          handleNodeInsertToDoc(event.content),
-        );
+        nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
         nodeActionEmitter.off(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
 
@@ -617,7 +649,11 @@ export const SkillResponseNode = memo(
 
     return (
       <div
-        className={classNames({ nowheel: isOperating && isHovered })}
+        className={classNames({
+          'rounded-lg': true,
+          nowheel: isOperating && isHovered,
+          relative: true,
+        })}
         data-cy="skill-response-node"
       >
         <div
@@ -633,6 +669,15 @@ export const SkillResponseNode = memo(
           <div
             className={`h-full flex flex-col dark:bg-gray-900 ${getNodeCommonStyles({ selected, isHovered })}`}
           >
+            {!isPreview && !readonly && (
+              <NodeActionButtons
+                nodeId={id}
+                nodeType="skillResponse"
+                isNodeHovered={isHovered}
+                isSelected={selected}
+              />
+            )}
+
             {!isPreview && !hideHandles && (
               <>
                 <CustomHandle
@@ -776,6 +821,21 @@ export const SkillResponseNode = memo(
             sizeMode={sizeMode}
             onResize={handleResize}
           />
+        )}
+        {['waiting', 'executing'].includes(status) && pilotStepId && (
+          <>
+            <BorderBeam
+              duration={2}
+              size={300}
+              className="from-transparent via-red-500 to-transparent"
+            />
+            <BorderBeam
+              duration={2}
+              delay={3}
+              size={300}
+              className="from-transparent via-blue-500 to-transparent"
+            />
+          </>
         )}
       </div>
     );

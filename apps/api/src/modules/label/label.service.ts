@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { Prisma } from '@/generated/client';
+import { Prisma } from '../../generated/client';
 import {
   CreateLabelClassRequest,
   CreateLabelInstanceRequest,

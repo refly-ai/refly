@@ -16,25 +16,33 @@ export const isColumnGripSelected = ({
   state: EditorState;
   from: number;
 }) => {
-  if (!view) return false;
+  if (!view || !editor?.isInitialized || !editor?.view) return false;
 
-  const domAtPos = view.domAtPos(from).node as HTMLElement;
-  const nodeDOM = view.nodeDOM(from) as HTMLElement;
-  const node = nodeDOM || domAtPos;
+  try {
+    const domAtPosResult = view.domAtPos(from);
+    if (!domAtPosResult) return false;
 
-  if (!editor?.isActive(Table.name) || !node || isTableSelected(state?.selection)) {
+    const domAtPos = domAtPosResult.node as HTMLElement;
+    const nodeDOM = view.nodeDOM(from) as HTMLElement;
+    const node = nodeDOM || domAtPos;
+
+    if (!editor?.isActive(Table.name) || !node || isTableSelected(state?.selection)) {
+      return false;
+    }
+
+    let container = node;
+
+    while (container && !['TD', 'TH'].includes(container.tagName)) {
+      container = container.parentElement!;
+    }
+
+    const gripColumn = container?.querySelector?.('a.grip-column.selected');
+
+    return !!gripColumn;
+  } catch (error) {
+    console.error(error);
     return false;
   }
-
-  let container = node;
-
-  while (container && !['TD', 'TH'].includes(container.tagName)) {
-    container = container.parentElement!;
-  }
-
-  const gripColumn = container?.querySelector?.('a.grip-column.selected');
-
-  return !!gripColumn;
 };
 
 export default isColumnGripSelected;

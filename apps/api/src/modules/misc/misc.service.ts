@@ -5,6 +5,7 @@ import {
   OnModuleInit,
   NotFoundException,
   ForbiddenException,
+  Optional,
 } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import sharp from 'sharp';
@@ -35,9 +36,10 @@ import {
 } from '@refly/errors';
 import { FileObject } from '../misc/misc.dto';
 import { createId } from '@paralleldrive/cuid2';
-import { StaticFile } from '@/generated/client';
-import { PandocParser } from '@/modules/knowledge/parsers/pandoc.parser';
+import { StaticFile } from '../../generated/client';
+import { PandocParser } from '../knowledge/parsers/pandoc.parser';
 import pLimit from 'p-limit';
+import { isDesktop } from '../../utils/runtime';
 
 @Injectable()
 export class MiscService implements OnModuleInit {
@@ -48,18 +50,22 @@ export class MiscService implements OnModuleInit {
     private prisma: PrismaService,
     @Inject(OSS_EXTERNAL) private externalOss: ObjectStorageService,
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
-    @InjectQueue(QUEUE_IMAGE_PROCESSING) private imageQueue: Queue<FileObject>,
-    @InjectQueue(QUEUE_CLEAN_STATIC_FILES) private cleanStaticFilesQueue: Queue,
+    @Optional() @InjectQueue(QUEUE_IMAGE_PROCESSING) private imageQueue?: Queue<FileObject>,
+    @Optional() @InjectQueue(QUEUE_CLEAN_STATIC_FILES) private cleanStaticFilesQueue?: Queue,
   ) {}
 
   async onModuleInit() {
-    await this.setupCleanStaticFilesCronjob();
+    if (this.cleanStaticFilesQueue) {
+      await this.setupCleanStaticFilesCronjob();
+    }
   }
 
   private async setupCleanStaticFilesCronjob() {
+    if (!this.cleanStaticFilesQueue) return;
+
     const existingJobs = await this.cleanStaticFilesQueue.getJobSchedulers();
     await Promise.all(
-      existingJobs.map((job) => this.cleanStaticFilesQueue.removeJobScheduler(job.id)),
+      existingJobs.map((job) => this.cleanStaticFilesQueue!.removeJobScheduler(job.id)),
     );
 
     // Set up the cronjob to run daily at midnight
@@ -307,7 +313,7 @@ export class MiscService implements OnModuleInit {
 
     // Resize and convert to webp if it's an image
     if (contentType?.startsWith('image/')) {
-      await this.imageQueue.add('resizeAndConvert', { storageKey, visibility });
+      await this.imageQueue?.add('resizeAndConvert', { storageKey, visibility });
     }
 
     return {
@@ -343,7 +349,7 @@ export class MiscService implements OnModuleInit {
     }
 
     // Check for file permission if not in desktop mode
-    if (this.config.get('mode') !== 'desktop') {
+    if (!isDesktop()) {
       if (existingFile && existingFile.uid !== user.uid) {
         this.logger.warn(`User ${user.uid} is not allowed to upload file with ${param.storageKey}`);
         throw new ForbiddenException();
@@ -386,7 +392,7 @@ export class MiscService implements OnModuleInit {
 
     // Resize and convert to webp if it's an image
     if (contentType.startsWith('image/')) {
-      await this.imageQueue.add('resizeAndConvert', { storageKey, visibility });
+      await this.imageQueue?.add('resizeAndConvert', { storageKey, visibility });
     }
 
     return {
@@ -552,7 +558,7 @@ export class MiscService implements OnModuleInit {
       throw new NotFoundException();
     }
 
-    if (this.config.get('mode') !== 'desktop' && file.uid !== user.uid) {
+    if (!isDesktop() && file.uid !== user.uid) {
       throw new NotFoundException();
     }
 

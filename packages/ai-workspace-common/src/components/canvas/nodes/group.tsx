@@ -15,7 +15,6 @@ import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { genSkillID } from '@refly/utils/id';
-import { CanvasNodeType } from '@refly/openapi-schema';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-cluster';
 import Moveable from 'react-moveable';
@@ -26,6 +25,8 @@ import { useThrottledCallback } from 'use-debounce';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
+import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
+import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface GroupMetadata {
   label?: string;
@@ -75,6 +76,7 @@ export const GroupNode = memo(
     const setNodeDataByEntity = useSetNodeDataByEntity();
     const { setNodeStyle } = useNodeData();
     const { onLayoutWithGroup } = useCanvasLayout();
+    const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     useSelectedNodeZIndex(id, selected);
 
     // Memoize node and its measurements
@@ -144,40 +146,52 @@ export const GroupNode = memo(
       }
     }, [id, getNodes, addContextItems]);
 
-    const handleAskAI = useCallback(() => {
-      const childNodes = getChildNodes(id, getNodes() as CanvasNode[]);
+    const handleAskAI = useCallback(
+      (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => {
+        const childNodes = getChildNodes(id, getNodes() as CanvasNode[]);
 
-      if (childNodes.length > 0) {
-        const connectTo = childNodes.map((node) => ({
-          type: node.type as CanvasNodeType,
-          entityId: node.data.entityId as string,
-        }));
+        if (childNodes.length > 0) {
+          const connectTo = [];
+          let position = { x: 0, y: 0 };
+          for (const node of childNodes) {
+            const { position: nodePosition, connectTo: nodeConnectTo } = getConnectionInfo(
+              { entityId: node.data.entityId, type: node.type },
+              event?.dragCreateInfo,
+            );
+            connectTo.push(...nodeConnectTo);
+            position = nodePosition;
+          }
 
-        addNode(
-          {
-            type: 'skill',
-            data: {
-              title: 'Skill',
-              entityId: genSkillID(),
-              metadata: {
-                contextItems: childNodes.map((node) => ({
-                  type: node.type,
-                  title: node.data?.title,
-                  entityId: node.data?.entityId,
-                  metadata: {
-                    ...node.data?.metadata,
-                    ...(node.type === 'skillResponse' ? { withHistory: true } : {}),
-                  },
-                })),
+          addNode(
+            {
+              type: 'skill',
+              data: {
+                title: 'Skill',
+                entityId: genSkillID(),
+                metadata: {
+                  contextItems: childNodes.map((node) => ({
+                    type: node.type,
+                    title: node.data?.title,
+                    entityId: node.data?.entityId,
+                    metadata: {
+                      ...node.data?.metadata,
+                      ...(node.type === 'skillResponse' ? { withHistory: true } : {}),
+                    },
+                  })),
+                },
               },
+              position,
             },
-          },
-          connectTo,
-          false,
-          true,
-        );
-      }
-    }, [id, getNodes, addNode]);
+            connectTo,
+            false,
+            true,
+          );
+        }
+      },
+      [id, getNodes, addNode, data, getConnectionInfo],
+    );
 
     const handleSelectCluster = useCallback(() => {
       const childNodes = getChildNodes(id, getNodes() as CanvasNode[]);
@@ -203,8 +217,10 @@ export const GroupNode = memo(
       const handleNodeUngroup = () => {
         ungroupNodes(id);
       };
-      const handleNodeAskAI = () => {
-        handleAskAI();
+      const handleNodeAskAI = (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => {
+        handleAskAI(event);
       };
       const handleNodeSelectCluster = () => handleSelectCluster();
       const handleNodeGroupCluster = () => handleGroupCluster();
@@ -295,7 +311,6 @@ export const GroupNode = memo(
     );
 
     const handleChangeBgColor = useCallback((color: string) => {
-      console.log('change bg color', color);
       setNodeDataByEntity(
         {
           entityId: data.entityId,
@@ -374,6 +389,7 @@ export const GroupNode = memo(
             )}
 
             <GroupName
+              nodeId={id}
               title={data.title}
               onUpdateName={handleUpdateName}
               selected={selected}

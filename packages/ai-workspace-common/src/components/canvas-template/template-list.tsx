@@ -17,6 +17,8 @@ import { useNavigate } from 'react-router-dom';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { staticPublicEndpoint } from '@refly-packages/ai-workspace-common/utils/env';
 import cn from 'classnames';
+import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 
 export const TemplateCard = ({
   template,
@@ -29,6 +31,10 @@ export const TemplateCard = ({
     setVisible: state.setVisible,
   }));
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
+  const isLogin = useUserStoreShallow((state) => state.isLogin);
+  const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
+    setLoginModalOpen: state.setLoginModalOpen,
+  }));
 
   const handlePreview = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -40,6 +46,10 @@ export const TemplateCard = ({
 
   const handleUse = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (!isLogin) {
+      setLoginModalOpen(true);
+      return;
+    }
     if (template.shareId) {
       duplicateCanvas(template.shareId);
     }
@@ -47,14 +57,14 @@ export const TemplateCard = ({
 
   return (
     <div
-      className={`${className} m-2 group relative bg-white dark:bg-gray-900 rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out h-[245px]`}
+      className={`${className} m-2 group relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out h-[245px]`}
     >
       {template?.featured && (
         <Tag color="green" className="absolute top-2 right-0 z-10 shadow-sm">
           {t('common.featured')}
         </Tag>
       )}
-      <div className="h-40 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+      <div className="h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
         <img
           src={`${staticPublicEndpoint}/share-cover/${template?.shareId}.png`}
           alt={`${template?.title} cover`}
@@ -92,7 +102,7 @@ export const TemplateCard = ({
         <div className="relative w-full h-16 py-2 px-4 bg-white dark:bg-gray-900 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between gap-3">
           <Button
             type="default"
-            className="flex-1 p-1 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="flex-1 p-1 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={handlePreview}
           >
             {t('template.preview')}
@@ -184,7 +194,7 @@ export const TemplateList = ({
   return (
     <div
       id={source === 'front-page' ? scrollableTargetId : undefined}
-      className={cn('w-full h-full overflow-y-auto bg-[#F8F9FA] p-4 dark:bg-gray-900', className)}
+      className={cn('w-full h-full overflow-y-auto bg-gray-100 p-4 dark:bg-gray-700', className)}
     >
       <Spin className="spin" spinning={isRequesting && dataList.length === 0}>
         {dataList.length > 0 ? (

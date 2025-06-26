@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { Button, Divider, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { DownOutlined } from '@ant-design/icons';
 import { ModelIcon } from '@lobehub/icons';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { LLMModelConfig, ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
@@ -17,6 +16,7 @@ import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context
 import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/model';
 import { useGroupModels } from '@refly-packages/ai-workspace-common/hooks/use-group-models';
 import './index.scss';
+import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 
 interface ModelSelectorProps {
   model: ModelInfo | null;
@@ -171,6 +171,9 @@ export const ModelSelector = memo(
     }, [refetchModelList]);
 
     const { tokenUsage, isUsageLoading } = useSubscriptionUsage();
+    const { userProfile } = useUserStoreShallow((state) => ({
+      userProfile: state.userProfile,
+    }));
 
     const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
       setShowSettingModal: state.setShowSettingModal,
@@ -263,8 +266,16 @@ export const ModelSelector = memo(
         isModelDisabled(tokenUsage, model) ||
         !modelList?.find((m) => m.name === model.name)
       ) {
-        const availableModel = modelList?.find((m) => !isModelDisabled(tokenUsage, m));
-        setModel(availableModel);
+        const defaultModelItemId = userProfile?.preferences?.defaultModel?.chat?.itemId;
+        let initialModel: ModelInfo | null = null;
+
+        if (defaultModelItemId) {
+          initialModel = modelList?.find((m) => m.providerItemId === defaultModelItemId);
+        }
+        if (!initialModel) {
+          initialModel = modelList?.find((m) => !isModelDisabled(tokenUsage, m));
+        }
+        setModel(initialModel);
       }
     }, [model, tokenUsage, modelList, isModelDisabled, setModel]);
 

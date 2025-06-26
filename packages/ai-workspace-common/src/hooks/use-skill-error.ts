@@ -15,6 +15,7 @@ export const useSkillError = (error: string | Error) => {
     return {
       errCode: guessedErr.code,
       errMsg,
+      rawError: error,
     };
   }, [error]);
 };

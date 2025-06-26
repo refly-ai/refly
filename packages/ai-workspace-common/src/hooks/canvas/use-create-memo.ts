@@ -3,6 +3,7 @@ import { genMemoID } from '@refly/utils/id';
 import { XYPosition } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNodeType } from '@refly/openapi-schema';
+import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 
 export const useCreateMemo = () => {
   const { t } = useTranslation();
@@ -15,8 +16,21 @@ export const useCreateMemo = () => {
       type: CanvasNodeType;
       entityId: string;
     };
+    targetNode?: {
+      type: CanvasNodeType;
+      entityId: string;
+    };
   }) => {
     const memoId = genMemoID();
+    const { sourceNode, targetNode } = options;
+
+    let connectTo: CanvasNodeFilter[] | undefined;
+
+    if (sourceNode) {
+      connectTo = [{ type: sourceNode.type, entityId: sourceNode.entityId, handleType: 'source' }];
+    } else if (targetNode) {
+      connectTo = [{ type: targetNode.type, entityId: targetNode.entityId, handleType: 'target' }];
+    }
 
     addNode(
       {
@@ -28,9 +42,7 @@ export const useCreateMemo = () => {
         },
         position: options.position,
       },
-      options.sourceNode
-        ? [{ type: options.sourceNode.type, entityId: options.sourceNode.entityId }]
-        : undefined,
+      connectTo,
       false,
       true,
     );

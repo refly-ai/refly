@@ -8,6 +8,7 @@ import { cn, markdownCitationParse } from '@refly/utils';
 
 // plugins
 import LinkElement from './plugins/link';
+import rehypeHighlight from './custom-plugins/rehype-highlight';
 
 // styles
 import './styles/markdown.scss';
@@ -47,6 +48,17 @@ const MarkdownImage = memo(({ src, alt, ...props }: React.ImgHTMLAttributes<HTML
     </>
   );
 });
+
+// Custom Components for enhanced Markdown rendering
+const HighlightComponent = ({ children }: { children: React.ReactNode }) => (
+  <mark className="bg-yellow-200 dark:bg-yellow-800 dark:text-gray-200 rounded-sm px-1 text-inherit">
+    {children}
+  </mark>
+);
+
+const StrikethroughComponent = ({ children }: { children: React.ReactNode }) => (
+  <del>{children}</del>
+);
 
 export const Markdown = memo(
   (
@@ -130,6 +142,7 @@ export const Markdown = memo(
                   remarkPlugins={[RemarkBreaks, plugins.RemarkMath]}
                   rehypePlugins={[
                     ...rehypePlugins,
+                    rehypeHighlight,
                     plugins.RehypeKatex,
                     [
                       plugins.RehypeHighlight,
@@ -143,6 +156,8 @@ export const Markdown = memo(
                     ...artifactComponents,
                     a: (args) => LinkElement.Component(args, props?.sources || []),
                     img: MarkdownImage,
+                    mark: HighlightComponent,
+                    del: StrikethroughComponent,
                   }}
                   linkTarget={'_blank'}
                 >

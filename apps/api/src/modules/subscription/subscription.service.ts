@@ -1,16 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import Stripe from 'stripe';
-import { InjectStripeClient, StripeWebhookHandler } from '@golevelup/nestjs-stripe';
+import { InjectStripeClient } from '@golevelup/nestjs-stripe';
 import { PrismaService } from '../common/prisma.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import {
-  CreateCheckoutSessionRequest,
-  SubscriptionInterval,
-  SubscriptionPlanType,
-  SubscriptionUsageData,
-  User,
-} from '@refly/openapi-schema';
+import { CreateCheckoutSessionRequest, SubscriptionUsageData, User } from '@refly/openapi-schema';
 import { genTokenUsageMeterID, genStorageUsageMeterID, safeParseJSON } from '@refly/utils';
 import {
   CreateSubscriptionParam,
@@ -28,8 +22,7 @@ import { pick } from '../../utils';
 import {
   Subscription as SubscriptionModel,
   ModelInfo as ModelInfoModel,
-  Prisma,
-} from '@/generated/client';
+} from '../../generated/client';
 import { ConfigService } from '@nestjs/config';
 import { OperationTooFrequent, ParamsError } from '@refly/errors';
 import { QUEUE_CHECK_CANCELED_SUBSCRIPTIONS } from '../../utils/const';
@@ -48,33 +41,40 @@ export class SubscriptionService implements OnModuleInit {
     protected readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly config: ConfigService,
-    @InjectStripeClient() private readonly stripeClient: Stripe,
+    @Optional() @InjectStripeClient() private readonly stripeClient?: Stripe,
+    @Optional()
     @InjectQueue(QUEUE_CHECK_CANCELED_SUBSCRIPTIONS)
-    private readonly checkCanceledSubscriptionsQueue: Queue,
+    private readonly checkCanceledSubscriptionsQueue?: Queue,
   ) {}
 
   async onModuleInit() {
-    const initPromise = this.setupSubscriptionCheckJobs();
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(`Subscription cronjob timed out after ${this.INIT_TIMEOUT}ms`);
-      }, this.INIT_TIMEOUT);
-    });
+    if (this.checkCanceledSubscriptionsQueue) {
+      const initPromise = this.setupSubscriptionCheckJobs();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(`Subscription cronjob timed out after ${this.INIT_TIMEOUT}ms`);
+        }, this.INIT_TIMEOUT);
+      });
 
-    try {
-      await Promise.race([initPromise, timeoutPromise]);
-      this.logger.log('Subscription cronjob scheduled successfully');
-    } catch (error) {
-      this.logger.error(`Failed to schedule subscription cronjob: ${error}`);
-      throw error;
+      try {
+        await Promise.race([initPromise, timeoutPromise]);
+        this.logger.log('Subscription cronjob scheduled successfully');
+      } catch (error) {
+        this.logger.error(`Failed to schedule subscription cronjob: ${error}`);
+        throw error;
+      }
+    } else {
+      this.logger.log('Subscription queue not available, skipping cronjob setup');
     }
   }
 
   private async setupSubscriptionCheckJobs() {
+    if (!this.checkCanceledSubscriptionsQueue) return;
+
     // Remove any existing recurring jobs
     const existingJobs = await this.checkCanceledSubscriptionsQueue.getJobSchedulers();
     await Promise.all(
-      existingJobs.map((job) => this.checkCanceledSubscriptionsQueue.removeJobScheduler(job.id)),
+      existingJobs.map((job) => this.checkCanceledSubscriptionsQueue!.removeJobScheduler(job.id)),
     );
 
     // Add the new recurring job with concurrency options
@@ -376,141 +376,6 @@ export class SubscriptionService implements OnModuleInit {
       this.logger.log(`Processing canceled subscription: ${subscription.subscriptionId}`);
       await this.cancelSubscription(subscription);
     }
-  }
-
-  @StripeWebhookHandler('checkout.session.completed')
-  async handleCheckoutSessionCompleted(event: Stripe.Event) {
-    const session = event.data.object as Stripe.Checkout.Session;
-    this.logger.log(`Checkout session completed: ${JSON.stringify(session)}`);
-
-    if (session.payment_status !== 'paid') {
-      this.logger.warn(`Checkout session ${session.id} not paid`);
-      return;
-    }
-
-    const uid = session.client_reference_id;
-    const customerId = session.customer as string;
-    const subscriptionId = session.subscription as string;
-
-    const checkoutSession = await this.prisma.checkoutSession.findFirst({
-      where: { sessionId: session.id },
-      orderBy: { pk: 'desc' },
-    });
-
-    if (!checkoutSession) {
-      this.logger.error(`No checkout session found for session ${session.id}`);
-      return;
-    }
-
-    if (checkoutSession.uid !== uid) {
-      this.logger.error(`Checkout session ${session.id} does not match user ${uid}`);
-      return;
-    }
-
-    await this.prisma.checkoutSession.update({
-      where: { pk: checkoutSession.pk },
-      data: {
-        paymentStatus: session.payment_status,
-        subscriptionId: session.subscription as string,
-      },
-    });
-
-    // Check if customerId is already associated with this user
-    const user = await this.prisma.user.findUnique({
-      where: { uid },
-      select: { customerId: true },
-    });
-
-    // Update user's customerId if it's missing or different
-    if (!user?.customerId || user.customerId !== customerId) {
-      await this.prisma.user.update({
-        where: { uid },
-        data: { customerId },
-      });
-    }
-
-    const plan = await this.prisma.subscriptionPlan.findFirstOrThrow({
-      where: { lookupKey: checkoutSession.lookupKey },
-    });
-
-    const { planType, interval } = plan;
-
-    await this.createSubscription(uid, {
-      planType: planType as SubscriptionPlanType,
-      interval: interval as SubscriptionInterval,
-      lookupKey: checkoutSession.lookupKey,
-      status: 'active',
-      subscriptionId,
-      customerId,
-    });
-
-    this.logger.log(`Successfully processed checkout session ${session.id} for user ${uid}`);
-  }
-
-  @StripeWebhookHandler('customer.subscription.created')
-  async handleSubscriptionCreated(event: Stripe.Event) {
-    const subscription = event.data.object as Stripe.Subscription;
-    this.logger.log(`New subscription created: ${subscription.id}`);
-  }
-
-  @StripeWebhookHandler('customer.subscription.updated')
-  async handleSubscriptionUpdated(event: Stripe.Event) {
-    const subscription = event.data.object as Stripe.Subscription;
-    this.logger.log(`Subscription updated: ${subscription.id}`);
-
-    const sub = await this.prisma.subscription.findUnique({
-      where: { subscriptionId: subscription.id },
-    });
-    if (!sub) {
-      this.logger.error(`No subscription found for subscription ${subscription.id}`);
-      return;
-    }
-
-    const updates: Prisma.SubscriptionUpdateInput = {};
-
-    // Track status changes
-    if (subscription.status !== sub.status) {
-      updates.status = subscription.status;
-    }
-
-    // Track cancellation changes
-    if (subscription.cancel_at && !sub.cancelAt) {
-      updates.cancelAt = new Date(subscription.cancel_at * 1000);
-    } else if (!subscription.cancel_at && sub.cancelAt) {
-      // Handle cancellation removal (user undid cancellation)
-      updates.cancelAt = null;
-    }
-
-    if (Object.keys(updates).length > 0) {
-      this.logger.log(
-        `Subscription ${sub.subscriptionId} received updates: ${JSON.stringify(updates)}`,
-      );
-      await this.prisma.subscription.update({
-        where: { subscriptionId: subscription.id },
-        data: updates,
-      });
-    }
-  }
-
-  @StripeWebhookHandler('customer.subscription.deleted')
-  async handleSubscriptionDeleted(event: Stripe.Event) {
-    const subscription = event.data.object as Stripe.Subscription;
-    this.logger.log(`Subscription deleted: ${subscription.id}`);
-
-    const sub = await this.prisma.subscription.findUnique({
-      where: { subscriptionId: subscription.id },
-    });
-    if (!sub) {
-      this.logger.error(`No subscription found for subscription ${subscription.id}`);
-      return;
-    }
-
-    if (sub.status === 'canceled') {
-      this.logger.log(`Subscription ${sub.subscriptionId} already canceled`);
-      return;
-    }
-
-    await this.cancelSubscription(sub);
   }
 
   async checkRequestUsage(user: User): Promise<CheckRequestUsageResult> {

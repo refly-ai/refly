@@ -4,7 +4,7 @@ import { UpsertCodeArtifactRequest, User } from '@refly/openapi-schema';
 import { streamToString } from '../../utils';
 import { CodeArtifactNotFoundError, ParamsError } from '@refly/errors';
 import { genCodeArtifactID } from '@refly/utils';
-import { OSS_INTERNAL, ObjectStorageService } from '@/modules/common/object-storage';
+import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
 
 @Injectable()
 export class CodeArtifactService {
@@ -128,7 +128,9 @@ export class CodeArtifactService {
     });
 
     const contentStream = await this.oss.getObject(artifact.storageKey);
-    await this.oss.putObject(newStorageKey, contentStream);
+    if (contentStream) {
+      await this.oss.putObject(newStorageKey, contentStream);
+    }
 
     return newArtifact;
   }

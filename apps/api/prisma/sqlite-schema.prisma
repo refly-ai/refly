@@ -101,51 +101,53 @@ model User {
 
 model ActionResult {
   /// Primary key
-  pk            Int      @id @default(autoincrement())
+  pk             Int      @id @default(autoincrement())
   /// Action result id
-  resultId      String   @map("result_id")
+  resultId       String   @map("result_id")
   /// Action result version
-  version       Int      @default(0) @map("version")
+  version        Int      @default(0) @map("version")
   /// Action type
-  type          String   @default("skill") @map("type")
+  type           String   @default("skill") @map("type")
   /// UID
-  uid           String   @default("") @map("uid")
+  uid            String   @default("") @map("uid")
   /// Result title
-  title         String   @default("") @map("title")
+  title          String   @default("") @map("title")
   /// Used model tier
-  tier          String   @default("") @map("tier")
+  tier           String?  @default("") @map("tier")
   /// Used model
-  modelName     String?  @map("model_name")
+  modelName      String?  @map("model_name")
   /// Action target type
-  targetType    String?  @map("target_type")
+  targetType     String?  @map("target_type")
   /// Action target ID
-  targetId      String?  @map("target_id")
+  targetId       String?  @map("target_id")
   /// Action metadata
-  actionMeta    String?  @map("action_meta")
+  actionMeta     String?  @map("action_meta")
   /// Input (JSON)
-  input         String?  @map("input")
+  input          String?  @map("input")
   /// Context (JSON of `SkillContext`)
-  context       String?  @map("context")
+  context        String?  @map("context")
   /// Skill template config (JSON)
-  tplConfig     String?  @map("tpl_config")
+  tplConfig      String?  @map("tpl_config")
   /// Skill runtime config (JSON)
-  runtimeConfig String?  @map("runtime_config")
+  runtimeConfig  String?  @map("runtime_config")
   /// Result history (JSON array of `ActionResult`)
-  history       String?  @map("history")
+  history        String?  @map("history")
   /// Errors
-  errors        String?  @map("errors")
+  errors         String?  @map("errors")
   /// Locale setting
-  locale        String?  @default("") @map("locale")
+  locale         String?  @default("") @map("locale")
   /// Project id
-  projectId     String?  @map("project_id")
+  projectId      String?  @map("project_id")
   /// Action result status
-  status        String   @default("waiting") @map("status")
+  status         String   @default("waiting") @map("status")
   /// Duplicate from another action result id
-  duplicateFrom String?  @map("duplicate_from")
+  duplicateFrom  String?  @map("duplicate_from")
+  /// Provider item id
+  providerItemId String?  @map("provider_item_id")
   /// Create timestamp
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt      DateTime @default(now()) @map("created_at")
   /// Update timestamp
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@unique([resultId, version])
   @@index([targetType, targetId])
@@ -167,6 +169,8 @@ model ActionStep {
   content          String    @map("content")
   /// Step reasoning content
   reasoningContent String?   @map("reasoning_content")
+  /// Model tier
+  tier             String?   @default("") @map("tier")
   /// Structured data output (JSON)
   structuredData   String    @default("{}") @map("structured_data")
   /// Action logs
@@ -304,6 +308,8 @@ model CanvasTemplate {
   description    String                  @map("description")
   /// Whether this canvas template is public
   isPublic       Boolean                 @default(false) @map("is_public")
+  /// Priority
+  priority       Int                     @default(0) @map("priority")
   /// Language code
   language       String                  @map("language")
   /// Create timestamp
@@ -316,6 +322,7 @@ model CanvasTemplate {
   category       CanvasTemplateCategory? @relation(fields: [categoryId], references: [categoryId])
 
   @@index([uid, updatedAt])
+  @@index([isPublic, priority])
   @@map("canvas_templates")
 }
 
@@ -750,69 +757,76 @@ model LabelInstance {
   @@map("label_instances")
 }
 
-model ModelProvider {
+model Provider {
   /// Primary key
-  pk          Int         @id @default(autoincrement())
+  pk          Int            @id @default(autoincrement())
   /// Provider id
-  providerId  String      @unique @map("provider_id")
+  providerId  String         @unique @map("provider_id")
   /// Provider key
-  providerKey String      @map("provider_key")
+  providerKey String         @map("provider_key")
   /// Provider name
-  name        String      @map("name")
+  name        String         @map("name")
   /// Whether the provider is global
-  isGlobal    Boolean     @default(false) @map("is_global")
+  isGlobal    Boolean        @default(false) @map("is_global")
+  /// Configured categories (comma separated)
+  categories  String         @default("") @map("categories")
   /// UID
-  uid         String      @map("uid")
+  uid         String?        @map("uid")
   /// Provider API key
-  apiKey      String      @map("api_key")
+  apiKey      String?        @map("api_key")
   /// Provider base URL
-  baseUrl     String?     @map("base_url")
+  baseUrl     String?        @map("base_url")
   /// Whether the provider is enabled
-  enabled     Boolean     @default(true) @map("enabled")
+  enabled     Boolean        @default(true) @map("enabled")
   /// Create timestamp
-  createdAt   DateTime    @default(now()) @map("created_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
   /// Update timestamp
-  updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at")
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
   /// Deletion timestamp
-  deletedAt   DateTime?   @map("deleted_at")
+  deletedAt   DateTime?      @map("deleted_at")
   /// Model items
-  modelItems  ModelItem[]
+  items       ProviderItem[]
 
   @@index([uid, deletedAt])
-  @@map("model_providers")
+  @@index([isGlobal])
+  @@map("providers")
 }
 
-model ModelItem {
+model ProviderItem {
   /// Primary key
-  pk         Int           @id @default(autoincrement())
-  /// Model provider ID
-  providerId String        @map("provider_id")
-  /// Model item ID
-  itemId     String        @unique @map("item_id")
-  /// Model item type
-  modelType  String        @map("model_type")
-  /// Model item name (used to call the API)
-  name       String        @map("name")
-  /// Model item label
-  label      String        @map("label")
+  pk         Int       @id @default(autoincrement())
+  /// Provider ID
+  providerId String    @map("provider_id")
+  /// Provider item ID
+  itemId     String    @unique @map("item_id")
+  /// Provider category
+  category   String    @map("category")
+  /// Provider item name
+  name       String    @map("name")
   /// UID
-  uid        String        @map("uid")
+  uid        String?   @map("uid")
   /// Whether the model item is enabled
-  enabled    Boolean       @default(true) @map("enabled")
-  /// Model item config (JSON)
-  config     String?       @map("config")
+  enabled    Boolean   @default(true) @map("enabled")
+  /// Provider item config (JSON)
+  config     String?   @map("config")
+  /// Provider item billing tier
+  tier       String?   @map("tier")
+  /// Order
+  order      Int       @default(0) @map("order")
+  /// Group name
+  groupName  String    @default("") @map("group_name")
   /// Create timestamp
-  createdAt  DateTime      @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
   /// Update timestamp
-  updatedAt  DateTime      @default(now()) @updatedAt @map("updated_at")
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
   /// Deletion timestamp
-  deletedAt  DateTime?     @map("deleted_at")
+  deletedAt  DateTime? @map("deleted_at")
   /// Provider
-  provider   ModelProvider @relation(fields: [providerId], references: [providerId])
+  provider   Provider  @relation(fields: [providerId], references: [providerId])
 
   @@index([providerId])
   @@index([uid, deletedAt])
-  @@map("model_items")
+  @@map("provider_items")
 }
 
 model SubscriptionPlan {
@@ -1037,4 +1051,131 @@ model RefreshToken {
 
   @@index([uid])
   @@map("refresh_tokens")
+}
+
+model Page {
+  /// Primary key
+  pk              Int       @id @default(autoincrement())
+  /// Page ID
+  pageId          String    @unique @map("page_id")
+  /// Owner UID
+  uid             String    @map("uid")
+  /// Canvas ID (Associated canvas ID)
+  canvasId        String    @map("canvas_id")
+  /// Page title
+  title           String    @default("Untitled Page") @map("title")
+  /// Page description
+  description     String?   @map("description")
+  /// Page state storage key (for storing edit state)
+  stateStorageKey String    @map("state_storage_key")
+  /// Cover storage key 
+  coverStorageKey String?   @map("cover_storage_key")
+  /// Page status
+  status          String    @default("draft") @map("status") // draft, publishing, published
+  /// Create timestamp
+  createdAt       DateTime  @default(now()) @map("created_at")
+  /// Update timestamp
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+  /// Soft delete timestamp
+  deletedAt       DateTime? @map("deleted_at")
+
+  /// Associated versions
+  versions PageVersion[]
+
+  @@index([uid, updatedAt])
+  @@index([canvasId, deletedAt])
+  @@map("pages")
+}
+
+model PageNodeRelation {
+  /// Primary key
+  pk         Int       @id @default(autoincrement())
+  /// Relation ID
+  relationId String    @unique @map("relation_id")
+  /// Page ID
+  pageId     String    @map("page_id")
+  /// Source node ID
+  nodeId     String    @map("node_id")
+  /// Node type (document, resource, skillResponse, etc.)
+  nodeType   String    @map("node_type")
+  /// Entity ID (associated entity ID)
+  entityId   String    @map("entity_id")
+  /// Order in page (sorting position)
+  orderIndex Int       @map("order_index")
+  /// Node data (storing node metadata)
+  nodeData   String    @default("{}") @map("node_data")
+  /// Create timestamp
+  createdAt  DateTime  @default(now()) @map("created_at")
+  /// Update timestamp
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
+  /// Soft delete timestamp
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([pageId, deletedAt])
+  @@map("page_node_relations")
+}
+
+model PageVersion {
+  /// Primary key
+  pk                Int      @id @default(autoincrement())
+  /// Version ID
+  versionId         String   @unique @map("version_id")
+  /// Page ID
+  pageId            String   @map("page_id")
+  /// Version number
+  version           Int      @map("version")
+  /// Page title at this version
+  title             String   @map("title")
+  /// Content storage key (storing complete content for a specific version)
+  contentStorageKey String   @map("content_storage_key")
+  /// Cover storage key
+  coverStorageKey   String?  @map("cover_storage_key")
+  /// Create timestamp
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  /// Page association
+  page Page @relation(fields: [pageId], references: [pageId])
+
+  @@index([pageId, version])
+  @@map("page_versions")
+}
+
+model McpServer {
+  /// Primary key
+  pk        Int       @id @default(autoincrement())
+  /// Server name
+  name      String    @map("name")
+  /// Server type (sse, streamable, stdio)
+  type      String    @map("type")
+  /// Whether the server is global
+  isGlobal  Boolean   @default(false) @map("is_global")
+  /// UID
+  uid       String?   @map("uid")
+  /// Server URL (for sse and streamable types)
+  url       String?   @map("url")
+  /// Command (for stdio type)
+  command   String?   @map("command")
+  /// Arguments (for stdio type, JSON array)
+  args      String?   @map("args")
+  /// Environment variables (for stdio type, JSON object)
+  env       String?   @map("env")
+  /// Headers (for sse and streamable types, JSON object)
+  headers   String?   @map("headers")
+  /// Reconnect/Restart config (JSON object)
+  reconnect String?   @map("reconnect")
+  /// Additional config (JSON object)
+  config    String?   @map("config")
+  /// Whether the server is enabled
+  enabled   Boolean   @default(true) @map("enabled")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at")
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  /// Deletion timestamp
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([uid, name])
+  @@index([uid, deletedAt])
+  @@index([isGlobal])
+  @@map("mcp_servers")
 }

@@ -108,7 +108,7 @@ const PlanItem = (props: {
       <div
         className={`
         subscribe-content-plans-item
-        ${title === 'free' && 'item-free bg-gray-50 dark:bg-gray-900'}
+        ${title === 'free' && 'item-free bg-gray-50 dark:bg-gray-800'}
         ${title === 'plus' && 'item-plus bg-[#E8F4FC] dark:bg-[#1A2A3A]'}
         ${title === 'pro' && 'item-pro bg-green-50 dark:bg-green-900'}
         ${title === 'max' && 'item-max bg-[#FFF5EB] dark:bg-[#33241A]'}
@@ -207,7 +207,7 @@ const PlanItem = (props: {
           <Divider className="mt-2 mb-4" />
           {(features || [])?.map((feature, index) => (
             <div className="plane-features-item" key={index}>
-              <div className="text-gray-500">
+              <div className="text-gray-500 dark:text-gray-400">
                 <CheckOutlined style={{ color: 'green', strokeWidth: 6 }} /> {feature.name}
                 {feature.tooltip && (
                   <Tooltip title={<div>{feature.tooltip}</div>}>

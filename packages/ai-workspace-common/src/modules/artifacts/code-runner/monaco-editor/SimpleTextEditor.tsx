@@ -43,7 +43,7 @@ const SimpleTextEditor = React.memo(
         </div>
 
         {isContentTruncated && (
-          <div className="bg-yellow-50 text-yellow-800 px-4 py-2 text-sm dark:bg-yellow-850 dark:text-yellow-100">
+          <div className="bg-yellow-50 text-yellow-800 px-4 py-2 text-sm dark:bg-yellow-50 dark:text-yellow-600">
             {t('codeArtifact.editor.contentTruncated', {
               chars: DEFAULT_MAX_GENERATION_DISPLAY,
               total: content.length,

@@ -79,6 +79,7 @@ export const DefaultModel = React.memo(({ visible }: { visible: boolean }) => {
   const defaultModel = useMemo(() => defaultPreferences?.defaultModel ?? {}, [defaultPreferences]);
 
   const [chatModel, setChatModel] = useState<ProviderItem | undefined>(defaultModel?.chat);
+  const [agentModel, setAgentModel] = useState<ProviderItem | undefined>(defaultModel?.agent);
   const [queryAnalysisModel, setQueryAnalysisModel] = useState<ProviderItem | undefined>(
     defaultModel?.queryAnalysis,
   );
@@ -89,7 +90,7 @@ export const DefaultModel = React.memo(({ visible }: { visible: boolean }) => {
   const [updateLoading, setUpdateLoading] = useState<Record<string, boolean>>({});
 
   const updateSettings = useCallback(
-    async (type: 'chat' | 'queryAnalysis' | 'titleGeneration', model?: ProviderItem) => {
+    async (type: 'chat' | 'agent' | 'queryAnalysis' | 'titleGeneration', model?: ProviderItem) => {
       const updatedDefaultModel = {
         ...defaultModel,
         [type]: model,
@@ -150,6 +151,14 @@ export const DefaultModel = React.memo(({ visible }: { visible: boolean }) => {
     [updateSettings],
   );
 
+  const handleAgentModelChange = useCallback(
+    (model: ProviderItem) => {
+      setAgentModel(model);
+      updateSettings('agent', model);
+    },
+    [updateSettings],
+  );
+
   useEffect(() => {
     if (visible) {
       refetch();
@@ -159,6 +168,7 @@ export const DefaultModel = React.memo(({ visible }: { visible: boolean }) => {
   useEffect(() => {
     if (visible) {
       setChatModel(defaultModel?.chat);
+      setAgentModel(defaultModel?.agent);
       setQueryAnalysisModel(defaultModel?.queryAnalysis);
       setTitleGenerationModel(defaultModel?.titleGeneration);
     }
@@ -182,6 +192,16 @@ export const DefaultModel = React.memo(({ visible }: { visible: boolean }) => {
         description={t('settings.defaultModel.description.chat')}
         title={t('settings.defaultModel.chat')}
         isUpdating={updateLoading.chat}
+      />
+
+      <ModelSelect
+        value={agentModel}
+        onChange={handleAgentModelChange}
+        options={llmProviders}
+        placeholder={t('settings.defaultModel.noModel')}
+        description={t('settings.defaultModel.description.agent')}
+        title={t('settings.defaultModel.agent')}
+        isUpdating={updateLoading.agent}
       />
 
       <ModelSelect

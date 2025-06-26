@@ -1,9 +1,10 @@
 import { sendHeartBeatMessage } from './utils';
 import { Tabs } from 'wxt/browser';
+import { logger } from '../../../utils/logger';
 
 export const onActivated = (activeInfo: Tabs.OnActivatedActiveInfoType) => {
   // 在此处处理标签切换
-  console.log(`Tab with ID ${activeInfo.tabId} was activated in window ${activeInfo.windowId}`);
+  logger.debug(`Tab with ID ${activeInfo.tabId} was activated in window ${activeInfo.windowId}`);
 
   sendHeartBeatMessage(activeInfo);
 };

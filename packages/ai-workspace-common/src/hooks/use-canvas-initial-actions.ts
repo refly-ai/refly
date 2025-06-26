@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFrontPageStoreShallow } from '../stores/front-page';
 import { genActionResultID } from '@refly/utils/id';
@@ -6,6 +6,16 @@ import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 import { useCanvasContext } from '../context/canvas';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { usePilotStoreShallow } from '@refly-packages/ai-workspace-common/stores/pilot';
+import {
+  CreatePilotSessionRequest,
+  ModelInfo,
+  Skill,
+  SkillRuntimeConfig,
+  SkillTemplateConfig,
+} from '@refly/openapi-schema';
+import { message } from 'antd';
 
 export const useCanvasInitialActions = (canvasId: string) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,6 +34,10 @@ export const useCanvasInitialActions = (canvasId: string) => {
   const { skillSelectedModel } = useChatStoreShallow((state) => ({
     skillSelectedModel: state.skillSelectedModel,
   }));
+  const { setActiveSessionId, setIsPilotOpen } = usePilotStoreShallow((state) => ({
+    setActiveSessionId: state.setActiveSessionId,
+    setIsPilotOpen: state.setIsPilotOpen,
+  }));
 
   // Get canvas provider to check connection status
   const { provider } = useCanvasContext();
@@ -33,10 +47,11 @@ export const useCanvasInitialActions = (canvasId: string) => {
   const pendingActionRef = useRef<{
     source: string | null;
     query: string;
-    selectedSkill: any;
-    modelInfo: any;
-    tplConfig: any;
-    runtimeConfig: any;
+    selectedSkill: Skill;
+    modelInfo: ModelInfo;
+    tplConfig: SkillTemplateConfig;
+    runtimeConfig: SkillRuntimeConfig;
+    isPilotActivated?: boolean;
   } | null>(null);
 
   // Update connection status when provider status changes
@@ -61,11 +76,12 @@ export const useCanvasInitialActions = (canvasId: string) => {
   // Store parameters needed for actions when URL parameters are processed
   useEffect(() => {
     const source = searchParams.get('source');
+    const isPilotActivated = Boolean(searchParams.get('isPilotActivated'));
     const newParams = new URLSearchParams();
 
     // Copy all params except 'source'
     for (const [key, value] of searchParams.entries()) {
-      if (key !== 'source') {
+      if (!['source', 'isPilotActivated'].includes(key)) {
         newParams.append(key, value);
       }
     }
@@ -80,24 +96,48 @@ export const useCanvasInitialActions = (canvasId: string) => {
         modelInfo: skillSelectedModel,
         tplConfig,
         runtimeConfig,
+        isPilotActivated,
       };
     }
   }, [canvasId, query, selectedSkill, searchParams, skillSelectedModel, tplConfig, runtimeConfig]);
+
+  const handleCreatePilotSession = useCallback(async (param: CreatePilotSessionRequest) => {
+    const { data, error } = await getClient().createPilotSession({
+      body: param,
+    });
+    if (error) {
+      message.error('Failed to create pilot session');
+      return;
+    }
+
+    if (data.data?.sessionId) {
+      setActiveSessionId(data.data?.sessionId);
+      setIsPilotOpen(true);
+    } else {
+      message.error('Failed to create pilot session');
+    }
+  }, []);
 
   // Execute the actions once connected
   useEffect(() => {
     // Only proceed if we're connected and have pending actions
     if (isConnected && pendingActionRef.current && canvasId) {
-      const { query, selectedSkill, modelInfo, tplConfig, runtimeConfig } =
+      const { query, selectedSkill, modelInfo, tplConfig, runtimeConfig, isPilotActivated } =
         pendingActionRef.current;
 
-      console.log('Canvas connected, executing initial action:', {
-        canvasId,
-        query,
-        selectedSkill,
-        tplConfig,
-        runtimeConfig,
-      });
+      if (isPilotActivated) {
+        handleCreatePilotSession({
+          targetId: canvasId,
+          targetType: 'canvas',
+          title: query,
+          input: { query },
+          maxEpoch: 3,
+          // providerItemId: modelInfo.providerItemId,
+        });
+        pendingActionRef.current = null;
+
+        return;
+      }
 
       const resultId = genActionResultID();
       invokeAction(

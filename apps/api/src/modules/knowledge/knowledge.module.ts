@@ -18,8 +18,9 @@ import {
   QUEUE_SYNC_STORAGE_USAGE,
   QUEUE_CLEAR_CANVAS_ENTITY,
   QUEUE_POST_DELETE_KNOWLEDGE_ENTITY,
-} from '@/utils';
-import { ProviderModule } from '@/modules/provider/provider.module';
+} from '../../utils/const';
+import { ProviderModule } from '../provider/provider.module';
+import { isDesktop } from '../../utils/runtime';
 
 @Module({
   imports: [
@@ -28,18 +29,22 @@ import { ProviderModule } from '@/modules/provider/provider.module';
     MiscModule,
     ProviderModule,
     SubscriptionModule,
-    BullModule.registerQueue({ name: QUEUE_RESOURCE }),
-    BullModule.registerQueue({ name: QUEUE_SIMPLE_EVENT }),
-    BullModule.registerQueue({ name: QUEUE_SYNC_STORAGE_USAGE }),
-    BullModule.registerQueue({ name: QUEUE_CLEAR_CANVAS_ENTITY }),
-    BullModule.registerQueue({ name: QUEUE_POST_DELETE_KNOWLEDGE_ENTITY }),
+    ...(isDesktop()
+      ? []
+      : [
+          BullModule.registerQueue({ name: QUEUE_RESOURCE }),
+          BullModule.registerQueue({ name: QUEUE_SIMPLE_EVENT }),
+          BullModule.registerQueue({ name: QUEUE_SYNC_STORAGE_USAGE }),
+          BullModule.registerQueue({ name: QUEUE_CLEAR_CANVAS_ENTITY }),
+          BullModule.registerQueue({ name: QUEUE_POST_DELETE_KNOWLEDGE_ENTITY }),
+        ]),
   ],
   controllers: [KnowledgeController],
   providers: [
     KnowledgeService,
-    ResourceProcessor,
-    DeleteKnowledgeEntityProcessor,
-    PostDeleteKnowledgeEntityProcessor,
+    ...(isDesktop()
+      ? []
+      : [ResourceProcessor, DeleteKnowledgeEntityProcessor, PostDeleteKnowledgeEntityProcessor]),
   ],
   exports: [KnowledgeService],
 })

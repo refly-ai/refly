@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
-import { LoginedUser } from '@/utils/decorators/user.decorator';
+import { LoginedUser } from '../../utils/decorators/user.decorator';
 import {
   BaseResponse,
   DeleteProjectItemsRequest,
@@ -23,8 +23,8 @@ import {
   UpsertProjectResponse,
   User,
 } from '@refly/openapi-schema';
-import { buildSuccessResponse } from '@/utils/response';
-import { projectPO2DTO } from '@/modules/project/project.dto';
+import { buildSuccessResponse } from '../../utils/response';
+import { projectPO2DTO } from '../project/project.dto';
 
 @Controller('v1/project')
 export class ProjectController {

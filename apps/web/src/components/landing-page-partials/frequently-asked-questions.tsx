@@ -5,9 +5,7 @@ function FrequentlyAskedQuestions() {
   const { t } = useTranslation();
   const panelStyle: React.CSSProperties = {
     marginBottom: 24,
-    background: '#F5F5F5',
     borderRadius: 8,
-    border: 'none',
   };
 
   const items = [1, 2, 3, 4, 5, 6].map((item) => ({

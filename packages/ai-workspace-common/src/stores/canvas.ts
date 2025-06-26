@@ -48,11 +48,12 @@ export interface CanvasState {
   nodeSizeMode: 'compact' | 'adaptive';
   autoLayout: boolean;
   showTemplates: boolean;
-  showReflyPilot: boolean;
+  showLinearThread: boolean;
   showSlideshow: boolean;
   linearThreadMessages: (LinearThreadMessage & CacheInfo)[];
   tplConfig: Record<string, any> | null;
   canvasPage: Record<string, string>;
+  contextMenuOpenedCanvasId: string | null;
 
   setInitialFitViewCompleted: (completed: boolean) => void;
   deleteCanvasData: (canvasId: string) => void;
@@ -73,7 +74,7 @@ export interface CanvasState {
   setNodeSizeMode: (mode: 'compact' | 'adaptive') => void;
   setAutoLayout: (enabled: boolean) => void;
   setShowTemplates: (show: boolean) => void;
-  setShowReflyPilot: (show: boolean) => void;
+  setShowLinearThread: (show: boolean) => void;
   setShowSlideshow: (show: boolean) => void;
   addLinearThreadMessage: (message: Omit<LinearThreadMessage, 'timestamp'>) => void;
   removeLinearThreadMessage: (id: string) => void;
@@ -82,6 +83,7 @@ export interface CanvasState {
   setTplConfig: (config: Record<string, any> | null) => void;
   clearState: () => void;
   setCanvasPage: (canvasId: string, pageId: string) => void;
+  setContextMenuOpenedCanvasId: (canvasId: string | null) => void;
 }
 
 const defaultCanvasConfig: () => CanvasConfig = () => ({
@@ -101,11 +103,12 @@ const defaultCanvasState = () => ({
   nodeSizeMode: 'compact' as const,
   autoLayout: false,
   showTemplates: true,
-  showReflyPilot: false,
+  showLinearThread: false,
   showSlideshow: false,
   linearThreadMessages: [],
   tplConfig: null,
   canvasPage: {},
+  contextMenuOpenedCanvasId: null,
 });
 
 // Create our custom storage with appropriate configuration
@@ -266,9 +269,9 @@ export const useCanvasStore = create<CanvasState>()(
         set((state) => {
           state.showTemplates = show;
         }),
-      setShowReflyPilot: (show) =>
+      setShowLinearThread: (show) =>
         set((state) => {
-          state.showReflyPilot = show;
+          state.showLinearThread = show;
         }),
       setShowSlideshow: (show) =>
         set((state) => {
@@ -307,6 +310,10 @@ export const useCanvasStore = create<CanvasState>()(
         set((state) => {
           state.canvasPage[canvasId] = pageId;
         }),
+      setContextMenuOpenedCanvasId: (canvasId) =>
+        set((state) => {
+          state.contextMenuOpenedCanvasId = canvasId;
+        }),
     })),
     {
       name: 'canvas-storage',
@@ -318,7 +325,7 @@ export const useCanvasStore = create<CanvasState>()(
         showLaunchpad: state.showLaunchpad,
         clickToPreview: state.clickToPreview,
         nodeSizeMode: state.nodeSizeMode,
-        showReflyPilot: state.showReflyPilot,
+        showLinearThread: state.showLinearThread,
         linearThreadMessages: state.linearThreadMessages,
         showSlideshow: state.showSlideshow,
         canvasPage: state.canvasPage,

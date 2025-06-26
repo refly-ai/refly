@@ -38,6 +38,7 @@ export const CustomHandle = React.memo(
           y,
           nodeId: actualNodeId,
           nodeType: nodeType as CanvasNodeType,
+          source: 'handle',
         });
       },
       [nodeId, id, nodeType],

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import * as Y from 'yjs';
 import pLimit from 'p-limit';
 import { Queue } from 'bullmq';
@@ -20,8 +20,10 @@ import {
   UpsertCanvasRequest,
   User,
   CanvasNode,
+  SkillContext,
+  ActionResult,
 } from '@refly/openapi-schema';
-import { Prisma } from '@/generated/client';
+import { Prisma } from '../../generated/client';
 import { genCanvasID } from '@refly/utils';
 import { DeleteKnowledgeEntityJobData } from '../knowledge/knowledge.dto';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '../../utils/const';
@@ -30,10 +32,12 @@ import { streamToBuffer } from '../../utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ActionService } from '../action/action.service';
-import { generateCanvasTitle, CanvasContentItem } from './canvas-title-generator';
-import { RedisService } from '@/modules/common/redis.service';
-import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
-import { ProviderService } from '@/modules/provider/provider.service';
+import { generateCanvasTitle } from './canvas-title-generator';
+import { CanvasContentItem } from './canvas.dto';
+import { RedisService } from '../common/redis.service';
+import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
+import { ProviderService } from '../provider/provider.service';
+import { isDesktop } from '../../utils/runtime';
 
 @Injectable()
 export class CanvasService {
@@ -51,10 +55,12 @@ export class CanvasService {
     private subscriptionService: SubscriptionService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
     @Inject(FULLTEXT_SEARCH) private fts: FulltextSearchService,
+    @Optional()
     @InjectQueue(QUEUE_DELETE_KNOWLEDGE_ENTITY)
-    private deleteKnowledgeQueue: Queue<DeleteKnowledgeEntityJobData>,
+    private deleteKnowledgeQueue?: Queue<DeleteKnowledgeEntityJobData>,
+    @Optional()
     @InjectQueue(QUEUE_POST_DELETE_CANVAS)
-    private postDeleteCanvasQueue: Queue<DeleteCanvasJobData>,
+    private postDeleteCanvasQueue?: Queue<DeleteCanvasJobData>,
   ) {}
 
   async listCanvases(user: User, param: ListCanvasesData['query']) {
@@ -479,24 +485,33 @@ export class CanvasService {
     });
 
     // Add canvas deletion to queue for async processing
-    await this.postDeleteCanvasQueue.add(
-      'postDeleteCanvas',
-      {
+    if (this.postDeleteCanvasQueue) {
+      await this.postDeleteCanvasQueue.add(
+        'postDeleteCanvas',
+        {
+          uid,
+          canvasId,
+          deleteAllFiles: param.deleteAllFiles,
+        },
+        {
+          jobId: `canvas-cleanup-${canvasId}`,
+          removeOnComplete: true,
+          removeOnFail: true,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+        },
+      );
+    } else if (isDesktop()) {
+      // In desktop mode, process deletion directly
+      await this.postDeleteCanvas({
         uid,
         canvasId,
         deleteAllFiles: param.deleteAllFiles,
-      },
-      {
-        jobId: `canvas-cleanup-${canvasId}`,
-        removeOnComplete: true,
-        removeOnFail: true,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000,
-        },
-      },
-    );
+      });
+    }
   }
 
   async postDeleteCanvas(jobData: DeleteCanvasJobData) {
@@ -533,20 +548,24 @@ export class CanvasService {
       this.logger.log(`Entities to be deleted: ${JSON.stringify(entities)}`);
 
       for (const entity of entities) {
-        await this.deleteKnowledgeQueue.add(
-          'deleteKnowledgeEntity',
-          {
-            uid: canvas.uid,
-            entityId: entity.entityId,
-            entityType: entity.entityType,
-          },
-          {
-            jobId: entity.entityId,
-            removeOnComplete: true,
-            removeOnFail: true,
-            attempts: 3,
-          },
-        );
+        if (this.deleteKnowledgeQueue) {
+          await this.deleteKnowledgeQueue.add(
+            'deleteKnowledgeEntity',
+            {
+              uid: canvas.uid,
+              entityId: entity.entityId,
+              entityType: entity.entityType,
+            },
+            {
+              jobId: entity.entityId,
+              removeOnComplete: true,
+              removeOnFail: true,
+              attempts: 3,
+            },
+          );
+        }
+        // Note: In desktop mode, entity deletion would be handled differently
+        // or could be processed synchronously if needed
       }
 
       // Mark relations as deleted
@@ -725,9 +744,7 @@ export class CanvasService {
     );
   }
 
-  async autoNameCanvas(user: User, param: AutoNameCanvasRequest) {
-    const { canvasId, directUpdate = false } = param;
-
+  async getCanvasContentItems(user: User, canvasId: string, needAllNodes = false) {
     const canvas = await this.prisma.canvas.findFirst({
       where: { canvasId, uid: user.uid, deletedAt: null },
     });
@@ -736,59 +753,93 @@ export class CanvasService {
     }
 
     const results = await this.prisma.actionResult.findMany({
-      select: { title: true, input: true, version: true, resultId: true },
+      select: {
+        title: true,
+        input: true,
+        version: true,
+        resultId: true,
+        context: true,
+        history: true,
+      },
       where: { targetId: canvasId, targetType: 'canvas' },
     });
 
     // Collect content items for title generation
     const contentItems: CanvasContentItem[] = await Promise.all(
       results.map(async (result) => {
-        const { resultId, version, input, title } = result;
+        const { resultId, version, title } = result;
         const steps = await this.prisma.actionStep.findMany({
           where: { resultId, version },
         });
-        const parsedInput = JSON.parse(input ?? '{}');
-        const question = parsedInput?.query ?? title;
         const answer = steps.map((s) => s.content.slice(0, 500)).join('\n');
+        const context: SkillContext = JSON.parse(result.context ?? '[]');
+        const history: ActionResult[] = JSON.parse(result.history ?? '[]');
 
         return {
-          question,
-          answer,
-        };
+          id: resultId,
+          title,
+          contentPreview: answer,
+          content: steps.map((s) => s.content).join('\n\n'),
+          type: 'skillResponse',
+          inputIds: [
+            ...(context.resources ?? []).map((r) => r.resourceId),
+            ...(context.documents ?? []).map((d) => d.docId),
+            ...(context.codeArtifacts ?? []).map((d) => d.artifactId),
+            ...history.map((h) => h.resultId),
+          ],
+        } as CanvasContentItem;
       }),
     );
 
     // If no action results, try to get all entities associated with the canvas
-    if (contentItems.length === 0) {
+    if (contentItems.length === 0 || needAllNodes) {
       const relations = await this.prisma.canvasEntityRelation.findMany({
         where: { canvasId, entityType: { in: ['resource', 'document'] }, deletedAt: null },
       });
 
-      const documents = await this.prisma.document.findMany({
-        select: { title: true, contentPreview: true },
-        where: { docId: { in: relations.map((r) => r.entityId) } },
-      });
-
-      const resources = await this.prisma.resource.findMany({
-        select: { title: true, contentPreview: true },
-        where: { resourceId: { in: relations.map((r) => r.entityId) } },
-      });
+      const [documents, resources] = await Promise.all([
+        this.prisma.document.findMany({
+          select: { docId: true, title: true, contentPreview: true },
+          where: {
+            docId: {
+              in: relations.filter((r) => r.entityType === 'document').map((r) => r.entityId),
+            },
+          },
+        }),
+        this.prisma.resource.findMany({
+          select: { resourceId: true, title: true, contentPreview: true },
+          where: {
+            resourceId: {
+              in: relations.filter((r) => r.entityType === 'resource').map((r) => r.entityId),
+            },
+          },
+        }),
+      ]);
 
       contentItems.push(
         ...documents.map((d) => ({
+          id: d.docId,
           title: d.title,
           contentPreview: d.contentPreview,
+          content: d.contentPreview, // TODO: check if we need to get the whole content
+          type: 'document' as const,
         })),
         ...resources.map((r) => ({
+          id: r.resourceId,
           title: r.title,
           contentPreview: r.contentPreview,
+          content: r.contentPreview, // TODO: check if we need to get the whole content
+          type: 'resource' as const,
         })),
       );
     }
 
-    if (contentItems.length === 0) {
-      return { title: '' };
-    }
+    return contentItems;
+  }
+
+  async autoNameCanvas(user: User, param: AutoNameCanvasRequest) {
+    const { canvasId, directUpdate = false } = param;
+    const contentItems = await this.getCanvasContentItems(user, canvasId);
 
     const defaultModel = await this.providerService.findDefaultProviderItem(
       user,

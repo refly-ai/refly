@@ -22,9 +22,12 @@ import { useReactFlow } from '@xyflow/react';
 import { GrRevert } from 'react-icons/gr';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
-import { notification, Form } from 'antd';
+import { notification, Form, Badge } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { ToolOutlined } from '@ant-design/icons';
+import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 
 interface EditChatInputProps {
   enabled: boolean;
@@ -204,28 +207,6 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
     getFinalProjectId,
   ]);
 
-  const customActions: CustomAction[] = useMemo(
-    () => [
-      {
-        icon: <GrRevert className="flex items-center" />,
-        title: t('copilot.chatActions.discard'),
-        onClick: () => {
-          setEditMode(false);
-          setEditQuery(query);
-          setEditContextItems(contextItems);
-          setEditModelInfo(modelInfo);
-          setEditRuntimeConfig(runtimeConfig);
-
-          // Reset form values
-          if (initialTplConfig) {
-            form.setFieldValue('tplConfig', initialTplConfig);
-          }
-        },
-      },
-    ],
-    [setEditMode, contextItems, query, modelInfo, t, form, initialTplConfig],
-  );
-
   const handleSelectSkill = useCallback(
     (skill: Skill) => {
       setLocalActionMeta({
@@ -281,13 +262,75 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
     }
   };
 
+  const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
+
+  // Toggle MCP selector panel
+  const handleMcpSelectorToggle = useCallback(() => {
+    setMcpSelectorOpen(!mcpSelectorOpen);
+  }, [mcpSelectorOpen, setMcpSelectorOpen]);
+
+  // 获取选择的 MCP 服务器
+  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
+    selectedMcpServers: state.selectedMcpServers,
+  }));
+
+  const customActions: CustomAction[] = useMemo(
+    () => [
+      {
+        icon: (
+          <Badge
+            count={selectedMcpServers.length > 0 ? selectedMcpServers.length : 0}
+            size="small"
+            offset={[2, -2]}
+          >
+            <ToolOutlined className="flex items-center" />
+          </Badge>
+        ),
+        title: t('copilot.chatActions.chooseMcp'),
+        onClick: () => {
+          handleMcpSelectorToggle();
+        },
+      },
+      {
+        icon: <GrRevert className="flex items-center" />,
+        title: t('copilot.chatActions.discard'),
+        onClick: () => {
+          setEditMode(false);
+          setEditQuery(query);
+          setEditContextItems(contextItems);
+          setEditModelInfo(modelInfo);
+          setEditRuntimeConfig(runtimeConfig);
+
+          // Reset form values
+          if (initialTplConfig) {
+            form.setFieldValue('tplConfig', initialTplConfig);
+          }
+        },
+      },
+    ],
+    [
+      handleMcpSelectorToggle,
+      t,
+      selectedMcpServers,
+      setEditMode,
+      contextItems,
+      query,
+      modelInfo,
+      t,
+      form,
+      initialTplConfig,
+    ],
+  );
+
   if (!enabled) {
     return null;
   }
 
   return (
     <div className="ai-copilot-chat-container">
-      <div className={cn('border border-solid border-gray-200 rounded-lg')}>
+      <div className={cn('border border-solid border-gray-200 dark:border-gray-700 rounded-lg')}>
+        <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
+
         {!hideSelectedSkillHeader && (
           <SelectedSkillHeader
             readonly={readonly}

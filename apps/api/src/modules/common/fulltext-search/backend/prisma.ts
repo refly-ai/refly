@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '@/modules/common/prisma.service';
+import { PrismaService } from '../../prisma.service';
 import { SearchDomain, SearchRequest, SearchResult, User } from '@refly/openapi-schema';
 import { FulltextDocument, FulltextSearchBackend } from './interface';
 
@@ -7,8 +7,15 @@ import { FulltextDocument, FulltextSearchBackend } from './interface';
 export class PrismaFulltextSearchBackend implements FulltextSearchBackend {
   private readonly logger = new Logger(PrismaFulltextSearchBackend.name);
   private initialized = false;
+  private database: 'sqlite' | 'postgresql' = 'sqlite';
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    if (process.env.DATABASE_URL?.startsWith('file:')) {
+      this.database = 'sqlite';
+    } else {
+      this.database = 'postgresql';
+    }
+  }
 
   /**
    * Initialize the Prisma fulltext search backend
@@ -116,7 +123,7 @@ export class PrismaFulltextSearchBackend implements FulltextSearchBackend {
           {
             title: {
               contains: req.query,
-              mode: 'insensitive',
+              ...(this.database === 'postgresql' && { mode: 'insensitive' }),
             },
           },
         ],
@@ -155,7 +162,14 @@ export class PrismaFulltextSearchBackend implements FulltextSearchBackend {
       where: {
         uid: user.uid,
         deletedAt: null,
-        OR: [{ title: { contains: req.query, mode: 'insensitive' } }],
+        OR: [
+          {
+            title: {
+              contains: req.query,
+              ...(this.database === 'postgresql' && { mode: 'insensitive' }),
+            },
+          },
+        ],
       },
       take: req.limit ?? 20,
       orderBy: { updatedAt: 'desc' },
@@ -190,7 +204,14 @@ export class PrismaFulltextSearchBackend implements FulltextSearchBackend {
       where: {
         uid: user.uid,
         deletedAt: null,
-        OR: [{ title: { contains: req.query, mode: 'insensitive' } }],
+        OR: [
+          {
+            title: {
+              contains: req.query,
+              ...(this.database === 'postgresql' && { mode: 'insensitive' }),
+            },
+          },
+        ],
       },
       take: req.limit ?? 20,
       orderBy: { updatedAt: 'desc' },

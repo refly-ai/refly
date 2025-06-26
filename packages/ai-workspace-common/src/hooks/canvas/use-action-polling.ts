@@ -8,7 +8,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useUpdateActionResult } from './use-update-action-result';
 
 const POLLING_INTERVAL = 3000;
-const TIMEOUT_DURATION = 10000;
+const TIMEOUT_DURATION = 5000;
 const MAX_NOT_FOUND_RETRIES = 3;
 
 // Track globally failed result IDs to prevent auto-restarting polling for failed actions
@@ -173,7 +173,6 @@ export const useActionPolling = () => {
           }
 
           if (result?.status !== 'finish') {
-            console.log('start polling', resultId, result);
             startPolling(resultId, version);
           }
         }, TIMEOUT_DURATION);

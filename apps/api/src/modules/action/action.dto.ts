@@ -10,7 +10,7 @@ import {
 import {
   ActionResult as ActionResultModel,
   ActionStep as ActionStepModel,
-} from '@/generated/client';
+} from '../../generated/client';
 import { pick } from '../../utils';
 
 export type ActionDetail = ActionResultModel & {
@@ -30,7 +30,7 @@ export function actionStepPO2DTO(step: ActionStepModel): ActionStep {
 
 export function actionResultPO2DTO(result: ActionDetail): ActionResult {
   return {
-    ...pick(result, ['resultId', 'version', 'title', 'targetId']),
+    ...pick(result, ['resultId', 'version', 'title', 'targetId', 'pilotSessionId', 'pilotStepId']),
     type: result.type as ActionType,
     tier: result.tier as ModelTier,
     targetType: result.targetType as EntityType,

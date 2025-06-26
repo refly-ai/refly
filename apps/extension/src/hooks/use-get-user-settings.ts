@@ -15,6 +15,7 @@ import { getRuntime } from '@refly/utils/env';
 import { UserSettings } from '@refly/openapi-schema';
 import { browser } from 'wxt/browser';
 import debounce from 'lodash.debounce';
+import { logger } from '@/utils/logger';
 
 export const useGetUserSettings = () => {
   const userStore = useUserStore((state) => ({
@@ -40,7 +41,7 @@ export const useGetUserSettings = () => {
       userStore.setIsCheckingLoginStatus(true);
       const res = await getClient().getSettings();
 
-      console.log('loginStatus', res);
+      logger.debug('loginStatus', res);
 
       if (!res?.error || !res) {
         userStore.resetState();
@@ -92,7 +93,7 @@ export const useGetUserSettings = () => {
         }
       }
     } catch (err) {
-      console.log('getLoginStatus err', err);
+      logger.debug('getLoginStatus err', err);
       userStore.setIsCheckingLoginStatus(false);
       userStore.resetState();
 

@@ -7,6 +7,7 @@ import { setRuntime } from '@refly/utils/env';
 import { ConfigProvider } from 'antd';
 import { MemoryRouter, Route } from '@refly-packages/ai-workspace-common/utils/router';
 import { AppRouter } from '@/routes';
+import { logger } from '@/utils/logger';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -22,7 +23,7 @@ export default defineContentScript({
   async main(ctx) {
     setRuntime('extension-csui');
 
-    console.log('ctx', ctx);
+    logger.debug('floatingSphere ctx', ctx);
     let _removeInjectCSS: () => void;
     // 3. Define your UI`
     const ui = await createShadowRootUi(ctx, {

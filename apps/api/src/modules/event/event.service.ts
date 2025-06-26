@@ -3,7 +3,7 @@ import { SimpleEventData } from '../event/event.dto';
 import { PrismaService } from '../common/prisma.service';
 import { SkillContext } from '@refly/openapi-schema';
 import { SkillService } from '../skill/skill.service';
-import { SkillTrigger } from '@/generated/client';
+import { SkillTrigger } from '../../generated/client';
 
 @Injectable()
 export class EventService {

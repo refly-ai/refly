@@ -15,9 +15,9 @@ import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/store
 
 export const useAddToContext = () => {
   const { t } = useTranslation();
-  const { showReflyPilot, setShowReflyPilot } = useCanvasStoreShallow((state) => ({
-    showReflyPilot: state.showReflyPilot,
-    setShowReflyPilot: state.setShowReflyPilot,
+  const { showLinearThread, setShowLinearThread } = useCanvasStoreShallow((state) => ({
+    showLinearThread: state.showLinearThread,
+    setShowLinearThread: state.setShowLinearThread,
     showSlideshow: state.showSlideshow,
     setShowSlideshow: state.setShowSlideshow,
   }));
@@ -30,8 +30,8 @@ export const useAddToContext = () => {
       const selectedContextItems = contextStore.contextItems;
       const nodeType = item?.type;
 
-      if (activeResultId === 'global' && !showReflyPilot) {
-        setShowReflyPilot(true);
+      if (activeResultId === 'global' && !showLinearThread) {
+        setShowLinearThread(true);
       }
 
       // Check if item is already in context

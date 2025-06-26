@@ -1,8 +1,8 @@
 import { Body, Controller, Get, ParseBoolPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ProviderService } from './provider.service';
-import { JwtAuthGuard } from '@/modules/auth/guard/jwt-auth.guard';
-import { LoginedUser } from '@/utils/decorators/user.decorator';
-import { User as UserModel } from '@/generated/client';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { LoginedUser } from '../../utils/decorators/user.decorator';
+import { User as UserModel } from '../../generated/client';
 import {
   BatchUpsertProviderItemsRequest,
   BatchUpsertProviderItemsResponse,
@@ -19,7 +19,7 @@ import {
   UpsertProviderRequest,
   UpsertProviderResponse,
 } from '@refly/openapi-schema';
-import { buildSuccessResponse } from '@/utils/response';
+import { buildSuccessResponse } from '../../utils/response';
 import { providerItemPO2DTO, providerPO2DTO } from './provider.dto';
 
 @Controller('v1/provider')

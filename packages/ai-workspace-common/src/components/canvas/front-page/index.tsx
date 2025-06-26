@@ -10,10 +10,11 @@ import {
   IconRight,
   IconPlus,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Form, Button } from 'antd';
+import { Form, Button, Badge } from 'antd';
+import { ToolOutlined } from '@ant-design/icons';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { Actions } from './action';
-import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
+import { useChatStore, useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useListSkills } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
@@ -24,6 +25,9 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/env';
 import { useCanvasTemplateModalShallow } from '@refly-packages/ai-workspace-common/stores/canvas-template-modal';
 import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/components/magicui/animated-grid-pattern';
+import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
+import { Title } from './title';
 import cn from 'classnames';
 
 export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
@@ -31,6 +35,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const [form] = Form.useForm();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
+  const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
+
   const skills = useListSkills();
   const templateLanguage = i18n.language;
   const templateCategoryId = '';
@@ -42,6 +48,11 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const { skillSelectedModel, setSkillSelectedModel } = useChatStoreShallow((state) => ({
     skillSelectedModel: state.skillSelectedModel,
     setSkillSelectedModel: state.setSkillSelectedModel,
+  }));
+
+  // Get selected MCP servers
+  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
+    selectedMcpServers: state.selectedMcpServers,
   }));
 
   const {
@@ -87,7 +98,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
 
   const handleSendMessage = useCallback(() => {
     if (!query?.trim()) return;
-    debouncedCreateCanvas('front-page');
+    const { isPilotActivated } = useChatStore.getState();
+    debouncedCreateCanvas('front-page', { isPilotActivated });
   }, [query, debouncedCreateCanvas]);
 
   const findSkillByName = useCallback(
@@ -152,6 +164,11 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
     setCanvasTemplateModalVisible(true);
   }, [setCanvasTemplateModalVisible]);
 
+  // Toggle MCP selector panel
+  const handleMcpSelectorToggle = useCallback(() => {
+    setMcpSelectorOpen(!mcpSelectorOpen);
+  }, [mcpSelectorOpen]);
+
   useEffect(() => {
     return () => {
       reset();
@@ -171,7 +188,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
         )}
       />
       <div
-        className="w-full h-full flex bg-white/90 overflow-y-auto dark:bg-gray-900/90 dark:bg-gray-900/90"
+        className="w-full h-full flex bg-white/95 overflow-y-auto dark:bg-gray-900/95"
         id="front-page-scrollable-div"
       >
         <div
@@ -180,16 +197,11 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
             canvasTemplateEnabled ? '' : 'flex flex-col justify-center',
           )}
         >
-          <h3
-            className={cn(
-              'text-3xl font-bold text-center text-gray-800 mb-6 mx-2 dark:text-gray-100',
-              canvasTemplateEnabled ? 'mt-48' : '',
-            )}
-          >
-            {t('frontPage.welcome')}
-          </h3>
+          <Title />
 
-          <div className="w-full backdrop-blur-sm rounded-lg shadow-sm ring-1 ring-gray-200 mx-2 dark:ring-gray-700 overflow-hidden">
+          <div className="w-full backdrop-blur-sm rounded-lg shadow-sm ring-1 ring-gray-200 mx-2 dark:ring-gray-600 overflow-hidden">
+            <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
+
             {subscriptionEnabled && !userProfile?.subscription && <PremiumBanner />}
             <div className="p-4">
               {selectedSkill && (
@@ -268,6 +280,20 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                   loading={isCreating}
                   customActions={[
                     {
+                      icon: (
+                        <Badge
+                          count={selectedMcpServers?.length > 0 ? selectedMcpServers.length : 0}
+                          size="small"
+                          offset={[2, -2]}
+                        >
+                          <ToolOutlined className="flex items-center" />
+                        </Badge>
+                      ),
+                      title: t('copilot.chatActions.chooseMcp'),
+                      content: t('copilot.chatActions.chooseMcp'),
+                      onClick: handleMcpSelectorToggle,
+                    },
+                    {
                       icon: <IconPlus className="flex items-center justify-center" />,
                       title: '',
                       content: t('loggedHomePage.siderMenu.newCanvas'),
@@ -284,22 +310,28 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
               {presetScenarios.map((scenario) => (
                 <div
                   key={scenario.id}
-                  className={`bg-white/90 backdrop-blur-sm rounded-md ring-1 dark:bg-gray-800/90 ${
+                  className={`group bg-white/90 backdrop-blur-sm rounded-md ring-1 dark:bg-gray-800/90 ${
                     activeScenarioId === scenario.id
-                      ? 'ring-green-500'
-                      : 'ring-gray-200 dark:ring-gray-700'
-                  } py-2 px-3 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer`}
+                      ? 'ring-green-500 bg-green-50/90 dark:bg-green-900/20'
+                      : 'ring-gray-200 dark:ring-gray-600'
+                  } py-2 px-3 cursor-pointer transition-all duration-200 ease-in-out 
+                  hover:ring-green-400 hover:bg-green-50/90
+                  dark:hover:bg-green-800/20 dark:hover:ring-green-500`}
                   onClick={() =>
                     handlePresetScenario(scenario.id, scenario.skillName, scenario.query)
                   }
                 >
                   <div className="flex items-center mb-1">
-                    <div className="text-2xl mr-2">{scenario.icon}</div>
-                    <h5 className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                    <div className="text-2xl mr-2 transition-transform duration-200 ease-in-out">
+                      {scenario.icon}
+                    </div>
+                    <h5 className="text-sm font-medium text-gray-800 dark:text-gray-100 transition-colors duration-200 group-hover:text-green-700 dark:group-hover:text-green-300">
                       {scenario.title}
                     </h5>
                   </div>
-                  <p className="text-xs text-gray-600">{scenario.description}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-300">
+                    {scenario.description}
+                  </p>
                 </div>
               ))}
             </div>

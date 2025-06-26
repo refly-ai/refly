@@ -108,7 +108,7 @@ export const ReadonlyEditor = memo(
                 },
                 attributes: {
                   class:
-                    'prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full',
+                    'prose prose-md prose-headings:font-title font-default focus:outline-none max-w-full dark:text-white',
                   'data-doc-id': docId,
                 },
               }}

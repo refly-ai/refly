@@ -6,7 +6,7 @@ import {
   CreateCanvasTemplateRequest,
   UpdateCanvasTemplateRequest,
 } from '@refly/openapi-schema';
-import { Prisma } from '@/generated/client';
+import { Prisma } from '../../generated/client';
 import { PrismaService } from '../common/prisma.service';
 import { genCanvasTemplateID } from '@refly/utils';
 import { ShareService } from '../share/share.service';
@@ -22,7 +22,7 @@ export class TemplateService {
     private miscService: MiscService,
   ) {}
 
-  async listCanvasTemplates(user: User, param: ListCanvasTemplatesData['query']) {
+  async listCanvasTemplates(user: User | null, param: ListCanvasTemplatesData['query']) {
     const { categoryId, scope, language, page, pageSize } = param;
 
     const where: Prisma.CanvasTemplateWhereInput = {
@@ -34,10 +34,12 @@ export class TemplateService {
     if (language) {
       where.language = language;
     }
-    if (scope === 'private') {
-      where.uid = user.uid;
-    } else {
+
+    // If user is null or scope is public, only show public templates
+    if (!user || scope === 'public') {
       where.isPublic = true;
+    } else if (scope === 'private' && user) {
+      where.uid = user.uid;
     }
 
     const templates = await this.prisma.canvasTemplate.findMany({

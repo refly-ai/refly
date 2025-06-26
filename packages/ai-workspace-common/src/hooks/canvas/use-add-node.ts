@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useStoreApi, XYPosition } from '@xyflow/react';
+import { useReactFlow, useStoreApi, XYPosition } from '@xyflow/react';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -45,15 +45,27 @@ export const useAddNode = () => {
   const { t } = useTranslation();
   const edgeStyles = useEdgeStyles();
   const { setSelectedNode } = useNodeSelection();
-  const { setNodeCenter } = useNodePosition();
   const { getState, setState } = useStoreApi();
   const { canvasId } = useCanvasContext();
-  const { calculatePosition, layoutBranchAndUpdatePositions } = useNodePosition();
+  const { calculatePosition, layoutBranchAndUpdatePositions, setNodeCenter } = useNodePosition();
   const { previewNode } = useNodePreviewControl({ canvasId });
+  const { setNodes, setEdges } = useReactFlow();
+
+  // Clean up ghost nodes when menu closes
+  const handleCleanGhost = () => {
+    setNodes((nodes) => nodes.filter((node) => !node.id.startsWith('ghost-')));
+    setEdges((edges) => edges.filter((edge) => !edge.id.startsWith('temp-edge-')));
+  };
 
   const addNode = useCallback(
     (
-      node: { type: CanvasNodeType; data: CanvasNodeData<any>; position?: XYPosition; id?: string },
+      node: {
+        type: CanvasNodeType;
+        data: CanvasNodeData<any>;
+        position?: XYPosition;
+        id?: string;
+        offsetPosition?: XYPosition;
+      },
       connectTo?: CanvasNodeFilter[],
       shouldPreview = true,
       needSetCenter = false,
@@ -63,6 +75,7 @@ export const useAddNode = () => {
 
       if (!node?.type || !node?.data) {
         console.warn('Invalid node data provided');
+        handleCleanGhost();
         return undefined;
       }
 
@@ -112,8 +125,16 @@ export const useAddNode = () => {
         node.data.metadata.contextItems = purgeContextItems(node.data.metadata.contextItems);
       }
 
-      // Find source nodes
+      // Find source nodes and target nodes based on handleType
       const sourceNodes = connectTo
+        ?.filter((filter) => !filter.handleType || filter.handleType === 'source')
+        ?.map((filter) =>
+          nodes.find((n) => n.type === filter.type && n.data?.entityId === filter.entityId),
+        )
+        .filter(Boolean);
+
+      const targetNodes = connectTo
+        ?.filter((filter) => filter.handleType === 'target')
         ?.map((filter) =>
           nodes.find((n) => n.type === filter.type && n.data?.entityId === filter.entityId),
         )
@@ -122,11 +143,16 @@ export const useAddNode = () => {
       // Calculate new node position using the utility function
       const newPosition = calculatePosition({
         nodes,
-        sourceNodes,
+        sourceNodes: [...(sourceNodes || []), ...(targetNodes || [])],
         connectTo,
         defaultPosition: node.position,
         edges,
       });
+
+      if (node.offsetPosition && !node.position) {
+        newPosition.x += node.offsetPosition.x || 0;
+        newPosition.y += node.offsetPosition.y || 0;
+      }
 
       // Get default metadata and apply global nodeSizeMode
       const defaultMetadata = getNodeDefaultMetadata(node.type);
@@ -161,25 +187,50 @@ export const useAddNode = () => {
         newNode,
       ]);
 
-      // Create new edges if connecting to source nodes
+      // Create new edges based on connection types
       let updatedEdges = edges;
-      if (connectTo?.length > 0 && sourceNodes?.length > 0) {
-        const newEdges = sourceNodes
-          .filter((sourceNode) => {
-            // filter out the source nodes that already have an edge
-            return !edges?.some(
-              (edge) => edge.source === sourceNode.id && edge.target === newNode.id,
-            );
-          })
-          .map((sourceNode) => ({
-            id: `edge-${genUniqueId()}`,
-            source: sourceNode.id,
-            target: newNode.id,
-            style: edgeStyles.default,
-            type: 'default',
-          }));
+      if (connectTo?.length > 0) {
+        const newEdges = [];
 
-        // only add new edges if there are any
+        // Create edges from source nodes to new node (source -> new node)
+        if (sourceNodes?.length > 0) {
+          const sourceEdges = sourceNodes
+            .filter((sourceNode) => {
+              // Filter out the source nodes that already have an edge
+              return !edges?.some(
+                (edge) => edge.source === sourceNode.id && edge.target === newNode.id,
+              );
+            })
+            .map((sourceNode) => ({
+              id: `edge-${genUniqueId()}`,
+              source: sourceNode.id,
+              target: newNode.id,
+              style: edgeStyles.default,
+              type: 'default',
+            }));
+          newEdges.push(...sourceEdges);
+        }
+
+        // Create edges from new node to target nodes (new node -> target)
+        if (targetNodes?.length > 0) {
+          const targetEdges = targetNodes
+            .filter((targetNode) => {
+              // Filter out the target nodes that already have an edge
+              return !edges?.some(
+                (edge) => edge.source === newNode.id && edge.target === targetNode.id,
+              );
+            })
+            .map((targetNode) => ({
+              id: `edge-${genUniqueId()}`,
+              source: newNode.id,
+              target: targetNode.id,
+              style: edgeStyles.default,
+              type: 'default',
+            }));
+          newEdges.push(...targetEdges);
+        }
+
+        // Only add new edges if there are any
         if (newEdges.length > 0) {
           updatedEdges = deduplicateEdges([...edges, ...newEdges]);
         }
@@ -189,16 +240,16 @@ export const useAddNode = () => {
       adoptUserNodes(updatedNodes, nodeLookup, parentLookup, {
         elevateNodesOnSelect: false,
       });
-      setState({ nodes: updatedNodes });
+      setState({ nodes: updatedNodes.filter((node) => !node.id.startsWith('ghost-')) });
 
       // Then update edges with a slight delay to ensure nodes are registered first
       // This helps prevent the race condition where edges are created but nodes aren't ready
       setTimeout(() => {
         // Update edges separately
-        setState({ edges: updatedEdges });
+        setState({ edges: updatedEdges.filter((edge) => !edge.id.startsWith('temp-edge-')) });
 
         // Apply branch layout if we're connecting to existing nodes
-        if (sourceNodes?.length > 0) {
+        if (sourceNodes?.length > 0 || targetNodes?.length > 0) {
           // Use setTimeout to ensure the new node and edges are added before layout
           setTimeout(() => {
             // const { autoLayout } = useCanvasStore.getState();
@@ -211,8 +262,10 @@ export const useAddNode = () => {
               return;
             }
 
+            // Use all connected nodes for layout calculation
+            const allConnectedNodes = [...(sourceNodes || []), ...(targetNodes || [])];
             layoutBranchAndUpdatePositions(
-              sourceNodes,
+              allConnectedNodes,
               updatedNodes,
               updatedEdges,
               {},
@@ -225,9 +278,10 @@ export const useAddNode = () => {
       }, 10);
 
       if (
-        newNode.type === 'document' ||
-        (newNode.type === 'resource' && shouldPreview) ||
-        (['skillResponse', 'codeArtifact', 'website'].includes(newNode.type) && shouldPreview)
+        (newNode.type === 'document' ||
+          newNode.type === 'resource' ||
+          newNode.type === 'website') &&
+        shouldPreview
       ) {
         previewNode(newNode as unknown as CanvasNode);
         locateToNodePreviewEmitter.emit('locateToNodePreview', { canvasId, id: newNode.id });

@@ -19,7 +19,7 @@ export const translation = {
     loggedHomePage: {
       newThreadText: 'New Thread',
       homePage: {
-        title: 'The AI Native Creation Engine',
+        title: 'The Open Source Vibe Workflow Platform',
         header: {
           fullscreen: 'Fullscreen',
           settings: 'Settings',

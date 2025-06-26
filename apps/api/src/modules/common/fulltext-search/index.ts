@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { SearchDomain, SearchRequest, SearchResult, User } from '@refly/openapi-schema';
 import { FulltextDocument, FulltextSearchBackend } from './backend/interface';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '@/modules/common/prisma.service';
+import { PrismaService } from '../prisma.service';
 import { PrismaFulltextSearchBackend } from './backend/prisma';
 import { ElasticsearchFulltextSearchBackend } from './backend/elasticsearch';
 

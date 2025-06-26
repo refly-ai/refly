@@ -1,5 +1,5 @@
 {
   "watch": ["schema.yml"],
   "ext": "yml",
-  "exec": "openapi-ts"
+  "exec": "openapi-ts && tsc --build --verbose"
 }

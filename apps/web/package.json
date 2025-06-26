@@ -1,7 +1,8 @@
 {
   "name": "@refly/web",
+  "description": "Refly Web UI",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.7.1",
   "type": "module",
   "scripts": {
     "copy-env": "ncp .env.example .env",
@@ -9,6 +10,7 @@
     "dev:electron": "cross-env VITE_RUNTIME=desktop vite",
     "start": "serve dist -p 5700",
     "build": "rimraf dist && cross-env NODE_OPTIONS=--max_old_space_size=8192 vite build",
+    "build:electron": "rimraf dist && cross-env NODE_OPTIONS=--max_old_space_size=8192 VITE_RUNTIME=desktop vite build",
     "preview": "vite preview",
     "analyze": "source-map-explorer 'dist/assets/*.js'"
   },

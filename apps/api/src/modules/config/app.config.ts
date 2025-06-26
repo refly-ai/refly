@@ -1,12 +1,6 @@
 import path from 'node:path';
 
-export enum AppMode {
-  Server = 'server',
-  Desktop = 'desktop',
-}
-
 export default () => ({
-  mode: process.env.MODE || AppMode.Server,
   port: Number.parseInt(process.env.PORT) || 5800,
   wsPort: Number.parseInt(process.env.WS_PORT) || 5801,
   origin: process.env.ORIGIN || 'http://localhost:5700',
@@ -58,9 +52,15 @@ export default () => ({
     },
   },
   vectorStore: {
-    host: process.env.QDRANT_HOST || 'localhost',
-    port: Number.parseInt(process.env.QDRANT_PORT) || 6333,
-    apiKey: process.env.QDRANT_API_KEY,
+    backend: process.env.VECTOR_STORE_BACKEND || 'qdrant', // 'qdrant' or 'lancedb'
+    qdrant: {
+      host: process.env.QDRANT_HOST || 'localhost',
+      port: Number.parseInt(process.env.QDRANT_PORT) || 6333,
+      apiKey: process.env.QDRANT_API_KEY,
+    },
+    lancedb: {
+      uri: process.env.LANCEDB_URI || './data/lancedb',
+    },
   },
   fulltextSearch: {
     backend: process.env.FULLTEXT_SEARCH_BACKEND || 'prisma',
@@ -111,6 +111,12 @@ export default () => ({
     idleTimeout: Number.parseInt(process.env.SKILL_IDLE_TIMEOUT) || 1000 * 60, // 1 minute
     executionTimeout: Number.parseInt(process.env.SKILL_EXECUTION_TIMEOUT) || 1000 * 60 * 3, // 3 minutes
   },
+  defaultModel: {
+    chat: process.env.DEFAULT_MODEL_CHAT,
+    agent: process.env.DEFAULT_MODEL_AGENT,
+    queryAnalysis: process.env.DEFAULT_MODEL_QUERY_ANALYSIS,
+    titleGeneration: process.env.DEFAULT_MODEL_TITLE_GENERATION,
+  },
   stripe: {
     apiKey: process.env.STRIPE_API_KEY,
     webhookSecret: {
@@ -138,5 +144,10 @@ export default () => ({
     fileParse: {
       page: Number.parseInt(process.env.QUOTA_FILE_PARSE_PAGE) || -1,
     },
+  },
+  langfuse: {
+    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+    secretKey: process.env.LANGFUSE_SECRET_KEY,
+    host: process.env.LANGFUSE_HOST,
   },
 });

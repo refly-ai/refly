@@ -21,6 +21,7 @@ import {
   createLabelClass,
   createLabelInstance,
   createMcpServer,
+  createPilotSession,
   createPortalSession,
   createProject,
   createProvider,
@@ -62,6 +63,7 @@ import {
   getDocumentDetail,
   getPageByCanvasId,
   getPageDetail,
+  getPilotSessionDetail,
   getProjectDetail,
   getResourceDetail,
   getSettings,
@@ -79,6 +81,7 @@ import {
   listMcpServers,
   listModels,
   listPages,
+  listPilotSessions,
   listProjects,
   listProviderItemOptions,
   listProviderItems,
@@ -109,6 +112,7 @@ import {
   updateLabelInstance,
   updateMcpServer,
   updatePage,
+  updatePilotSession,
   updateProject,
   updateProjectItems,
   updateProvider,
@@ -157,6 +161,8 @@ import {
   CreateLabelInstanceError,
   CreateMcpServerData,
   CreateMcpServerError,
+  CreatePilotSessionData,
+  CreatePilotSessionError,
   CreatePortalSessionError,
   CreateProjectData,
   CreateProjectError,
@@ -236,6 +242,8 @@ import {
   GetPageByCanvasIdError,
   GetPageDetailData,
   GetPageDetailError,
+  GetPilotSessionDetailData,
+  GetPilotSessionDetailError,
   GetProjectDetailData,
   GetProjectDetailError,
   GetResourceDetailData,
@@ -264,6 +272,8 @@ import {
   ListModelsError,
   ListPagesData,
   ListPagesError,
+  ListPilotSessionsData,
+  ListPilotSessionsError,
   ListProjectsData,
   ListProjectsError,
   ListProviderItemOptionsData,
@@ -320,6 +330,8 @@ import {
   UpdateMcpServerError,
   UpdatePageData,
   UpdatePageError,
+  UpdatePilotSessionData,
+  UpdatePilotSessionError,
   UpdateProjectData,
   UpdateProjectError,
   UpdateProjectItemsData,
@@ -764,6 +776,38 @@ export const useListSkillTriggers = <
     queryKey: Common.UseListSkillTriggersKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listSkillTriggers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useListPilotSessions = <
+  TData = Common.ListPilotSessionsDefaultResponse,
+  TError = ListPilotSessionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListPilotSessionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListPilotSessionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listPilotSessions({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetPilotSessionDetail = <
+  TData = Common.GetPilotSessionDetailDefaultResponse,
+  TError = GetPilotSessionDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetPilotSessionDetailData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetPilotSessionDetailKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getPilotSessionDetail({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetSettings = <
@@ -1926,6 +1970,40 @@ export const useDeleteSkillTrigger = <
   useMutation<TData, TError, Options<DeleteSkillTriggerData, true>, TContext>({
     mutationKey: Common.UseDeleteSkillTriggerKeyFn(mutationKey),
     mutationFn: (clientOptions) => deleteSkillTrigger(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useCreatePilotSession = <
+  TData = Common.CreatePilotSessionMutationResult,
+  TError = CreatePilotSessionError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreatePilotSessionData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreatePilotSessionData, true>, TContext>({
+    mutationKey: Common.UseCreatePilotSessionKeyFn(mutationKey),
+    mutationFn: (clientOptions) => createPilotSession(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdatePilotSession = <
+  TData = Common.UpdatePilotSessionMutationResult,
+  TError = UpdatePilotSessionError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdatePilotSessionData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdatePilotSessionData, true>, TContext>({
+    mutationKey: Common.UseUpdatePilotSessionKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updatePilotSession(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateCheckoutSession = <

@@ -47,6 +47,7 @@ import {
   LuFileStack,
   LuCloud,
   LuRefreshCw,
+  LuBot,
 } from 'react-icons/lu';
 
 import {
@@ -101,6 +102,7 @@ export const IconCanvas = TfiBlackboard;
 export const IconTemplate = VscNotebookTemplate;
 export const IconAskAI = LuSparkles;
 export const IconAskAIInput = TbInputSpark;
+export const IconPilot = LuBot;
 export const IconImage = RiImageAiLine;
 export const IconImageFilled = RiImageAiFill;
 export const IconDocument = LuFileText;

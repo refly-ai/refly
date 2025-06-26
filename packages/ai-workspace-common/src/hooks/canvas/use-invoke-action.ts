@@ -7,6 +7,8 @@ import {
   Entity,
   InvokeSkillRequest,
   SkillEvent,
+  ActionStatus,
+  ActionResult,
 } from '@refly/openapi-schema';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
 import { getRuntime } from '@refly/utils/env';
@@ -31,6 +33,8 @@ import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/
 import { useReactFlow } from '@xyflow/react';
 import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
+import { usePilotStore } from '@refly-packages/ai-workspace-common/stores/pilot';
+import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 
 export const useInvokeAction = () => {
   const { addNode } = useAddNode();
@@ -57,10 +61,13 @@ export const useInvokeAction = () => {
     };
   }, []);
 
-  const { createTimeoutHandler } = useActionPolling();
+  const { createTimeoutHandler, stopPolling } = useActionPolling();
   const onUpdateResult = useUpdateActionResult();
 
-  const onSkillStart = (_skillEvent: SkillEvent) => {};
+  const onSkillStart = (skillEvent: SkillEvent) => {
+    const { resultId } = skillEvent;
+    stopPolling(resultId);
+  };
 
   const onSkillLog = (skillEvent: SkillEvent) => {
     const { resultId, step, log } = skillEvent;
@@ -430,6 +437,8 @@ export const useInvokeAction = () => {
       return;
     }
 
+    const { activeSessionId } = usePilotStore.getState();
+
     addNode(
       {
         type: node.type,
@@ -447,6 +456,7 @@ export const useInvokeAction = () => {
           entityId: resultId,
         },
       ],
+      !activeSessionId, // Only open preview when pilot is not active
     );
   };
 
@@ -508,11 +518,18 @@ export const useInvokeAction = () => {
     const runtime = getRuntime();
     const { originError, resultId } = skillEvent;
 
-    const { resultMap } = useActionResultStore.getState();
+    const { resultMap, setTraceId } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
     if (!result) {
       return;
+    }
+
+    // Set traceId if available (check for traceId in different possible locations)
+    const traceId = skillEvent?.error?.traceId;
+
+    if (traceId) {
+      setTraceId(resultId, traceId);
     }
 
     const updatedResult = {
@@ -555,8 +572,12 @@ export const useInvokeAction = () => {
   const findWebsite = useFindWebsite();
   const findImages = useFindImages();
 
+  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
+    selectedMcpServers: state.selectedMcpServers,
+  }));
+
   const invokeAction = useCallback(
-    (payload: SkillNodeMeta, target: Entity) => {
+    async (payload: SkillNodeMeta, target: Entity) => {
       deletedNodeIdsRef.current = new Set();
 
       payload.resultId ||= genActionResultID();
@@ -618,12 +639,13 @@ export const useInvokeAction = () => {
         context,
         resultHistory,
         skillName: selectedSkill?.name,
+        selectedMcpServers,
         tplConfig,
         runtimeConfig,
         projectId,
       };
 
-      onUpdateResult(resultId, {
+      const initialResult: ActionResult = {
         resultId,
         version,
         type: 'skill',
@@ -636,15 +658,18 @@ export const useInvokeAction = () => {
         history: resultHistory,
         tplConfig,
         runtimeConfig,
-        status: 'waiting',
+        status: 'waiting' as ActionStatus,
         steps: [],
         errors: [],
-      });
+      };
+
+      onUpdateResult(resultId, initialResult);
+      useActionResultStore.getState().addStreamResult(resultId, initialResult);
 
       globalAbortControllerRef.current = new AbortController();
 
       // Create timeout handler for this action
-      const { resetTimeout, cleanup } = createTimeoutHandler(resultId, version);
+      const { resetTimeout, cleanup: timeoutCleanup } = createTimeoutHandler(resultId, version);
 
       // Wrap event handlers to reset timeout
       const wrapEventHandler =
@@ -656,7 +681,7 @@ export const useInvokeAction = () => {
 
       resetTimeout();
 
-      ssePost({
+      await ssePost({
         controller: globalAbortControllerRef.current,
         payload: param,
         onStart: wrapEventHandler(onStart),
@@ -672,9 +697,11 @@ export const useInvokeAction = () => {
         onSkillTokenUsage: wrapEventHandler(onSkillTokenUsage),
       });
 
-      return cleanup;
+      return () => {
+        timeoutCleanup();
+      };
     },
-    [addNode, setNodeDataByEntity, onUpdateResult, createTimeoutHandler],
+    [addNode, setNodeDataByEntity, onUpdateResult, createTimeoutHandler, selectedMcpServers],
   );
 
   return { invokeAction, abortAction };

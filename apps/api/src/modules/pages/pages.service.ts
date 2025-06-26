@@ -1,22 +1,22 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import * as Y from 'yjs';
-import { PrismaService } from '@/modules/common/prisma.service';
-import { MiscService } from '@/modules/misc/misc.service';
-import { CanvasService } from '@/modules/canvas/canvas.service';
-import { KnowledgeService } from '@/modules/knowledge/knowledge.service';
-import { ObjectStorageService, OSS_INTERNAL } from '@/modules/common/object-storage';
-import { streamToBuffer } from '@/utils';
+import { PrismaService } from '../common/prisma.service';
+import { MiscService } from '../misc/misc.service';
+import { CanvasService } from '../canvas/canvas.service';
+import { KnowledgeService } from '../knowledge/knowledge.service';
+import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
+import { streamToBuffer } from '../../utils';
 import { User } from '@refly/openapi-schema';
 import { CanvasNotFoundError, PageNotFoundError } from '@refly/errors';
-import { CodeArtifactService } from '@/modules/code-artifact/code-artifact.service';
-import { ShareService } from '@/modules/share/share.service';
+import { CodeArtifactService } from '../code-artifact/code-artifact.service';
+import { ShareService } from '../share/share.service';
 import { UpdatePageDto, ResolveUserResponse, CanvasData, NodeInfo } from './pages.dto';
 import { createId } from '@paralleldrive/cuid2';
 import {
   Page as PageModel,
   PageNodeRelation as PageNodeRelationModel,
   Prisma,
-} from '@/generated/client';
+} from '../../generated/client';
 
 // Generate unique IDs
 const genPageId = (): string => `page-${createId()}`;

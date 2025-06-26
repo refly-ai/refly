@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, message, Dropdown } from 'antd';
+import { Button, message, Dropdown, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { ActionResult, ActionStep, Source } from '@refly/openapi-schema';
 import { FilePlus, MoreHorizontal, Target, Trash2 } from 'lucide-react';
@@ -29,6 +29,8 @@ interface ActionContainerProps {
   result: ActionResult;
   nodeId?: string;
 }
+
+const buttonClassName = 'text-xs flex justify-center items-center h-6 px-1 rounded-lg';
 
 const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps) => {
   const { t } = useTranslation();
@@ -274,55 +276,49 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
       </div>
       {!isPending && step?.content && (
         <div className="flex flex-row justify-between items-center text-sm">
-          <div className="-ml-1 text-sm flex flex-row items-center">
+          <div className="-ml-1 text-sm flex flex-row items-center gap-1">
             {!readonly && !isShareMode && step.content && (
               <>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<CopyOutlined style={{ fontSize: 14 }} />}
-                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
-                  onClick={() => handleCopyToClipboard(step.content)}
-                >
-                  <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
-                    {t('copilot.message.copy')}
-                  </span>
-                </Button>
+                <Tooltip title={t('copilot.message.copy')}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<CopyOutlined style={{ fontSize: 14 }} />}
+                    className={buttonClassName}
+                    onClick={() => handleCopyToClipboard(step.content)}
+                  />
+                </Tooltip>
 
-                <Button
-                  type="text"
-                  size="small"
-                  loading={isSharing}
-                  icon={<ShareAltOutlined style={{ fontSize: 14 }} />}
-                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400 relative overflow-hidden group"
-                  onClick={handleShare}
-                >
-                  <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
-                    {t('common.share')}
-                  </span>
-                </Button>
+                <Tooltip title={t('common.share')}>
+                  <Button
+                    type="text"
+                    size="small"
+                    loading={isSharing}
+                    icon={<ShareAltOutlined style={{ fontSize: 14 }} />}
+                    className={buttonClassName}
+                    onClick={handleShare}
+                  />
+                </Tooltip>
               </>
             )}
             {!readonly &&
               !isShareMode &&
               editorActionList.map((item) => (
-                <Button
-                  key={item.key}
-                  size="small"
-                  type="text"
-                  className="text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-all duration-400 relative overflow-hidden group"
-                  icon={item.icon}
-                  disabled={!item.enabled}
-                  loading={isCreating}
-                  onClick={() => {
-                    const parsedText = parseMarkdownCitationsAndCanvasTags(step.content, sources);
-                    handleEditorOperation(item.key as EditorOperation, parsedText || '');
-                  }}
-                >
-                  <span className="opacity-0 max-w-0 transform -translate-x-0.5 transition-all duration-400 whitespace-nowrap group-hover:opacity-100 group-hover:max-w-[200px] group-hover:translate-x-0 group-hover:ml-1">
-                    {t(`copilot.message.${item.key}`)}
-                  </span>
-                </Button>
+                <Tooltip key={item.key} title={t(`copilot.message.${item.key}`)}>
+                  <Button
+                    key={item.key}
+                    size="small"
+                    type="text"
+                    className={buttonClassName}
+                    icon={item.icon}
+                    disabled={!item.enabled}
+                    loading={isCreating}
+                    onClick={() => {
+                      const parsedText = parseMarkdownCitationsAndCanvasTags(step.content, sources);
+                      handleEditorOperation(item.key as EditorOperation, parsedText || '');
+                    }}
+                  />
+                </Tooltip>
               ))}
 
             {/* More actions dropdown button */}
@@ -334,11 +330,7 @@ const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps
                 getPopupContainer={(triggerNode) => triggerNode.parentNode as HTMLElement}
                 overlayClassName="min-w-[160px] w-max"
               >
-                <Button
-                  type="text"
-                  size="small"
-                  className="text-[#64645F] text-xs flex justify-center items-center h-6 px-1 rounded-lg hover:bg-[#f1f1f0] hover:text-[#00968f] transition-all duration-400"
-                >
+                <Button type="text" size="small" className={buttonClassName}>
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </Dropdown>

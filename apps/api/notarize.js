@@ -10,7 +10,7 @@ module.exports = async (params) => {
 
   console.log('afterSign hook triggered', params);
 
-  const appId = 'Your app ID';
+  const appId = 'ai.refly.desktop';
 
   const appPath = path.join(params.appOutDir, `${params.packager.appInfo.productFilename}.app`);
   if (!fs.existsSync(appPath)) {

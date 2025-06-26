@@ -1,11 +1,15 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Tooltip, Select, Form } from 'antd';
-import { SwapOutlined } from '@ant-design/icons';
+import { Button, Tooltip, Dropdown, Form, Badge } from 'antd';
+import type { MenuProps } from 'antd';
+import { SwapOutlined, ToolOutlined } from '@ant-design/icons';
 
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
-import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
+import {
+  ChatActions,
+  CustomAction,
+} from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
 import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import {
@@ -28,6 +32,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useListSkills } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 
 import './index.scss';
+import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { t } from 'i18next';
 
 // Memoized Premium Banner Component
 export const PremiumBanner = memo(() => {
@@ -91,18 +97,19 @@ const NodeHeader = memo(
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const skills = useListSkills();
 
-    const onSkillChange = useCallback(
-      (value: string) => {
-        const selectedSkill = skills.find((skill) => skill.name === value) || null;
-        setSelectedSkill(selectedSkill);
-      },
-      [skills, setSelectedSkill],
-    );
+    const menuItems: MenuProps['items'] = useMemo(() => {
+      const defaultItem = {
+        key: 'default',
+        label: (
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">{t('canvas.skill.askAI')}</span>
+            <span className="text-xs text-gray-500">{t('canvas.skill.askAIDescription')}</span>
+          </div>
+        ),
+      };
 
-    const skillOptions = useMemo(() => {
-      return skills.map((skill) => ({
-        value: skill.name,
-        name: t(`${skill.name}.name`, { ns: 'skill' }),
+      const skillItems = skills.map((skill) => ({
+        key: skill.name,
         label: (
           <div className="flex flex-col">
             <span className="text-sm font-medium">{t(`${skill.name}.name`, { ns: 'skill' })}</span>
@@ -111,9 +118,19 @@ const NodeHeader = memo(
             </span>
           </div>
         ),
-        textLabel: t(`${skill.name}.name`, { ns: 'skill' }),
       }));
+
+      return [defaultItem, ...skillItems];
     }, [t, skills]);
+
+    const handleMenuClick: MenuProps['onClick'] = useCallback(
+      ({ key }) => {
+        const selectedSkill =
+          key === 'default' ? null : skills.find((skill) => skill.name === key) || null;
+        setSelectedSkill(selectedSkill);
+      },
+      [skills, setSelectedSkill],
+    );
 
     return (
       <div className="flex justify-between items-center">
@@ -133,35 +150,35 @@ const NodeHeader = memo(
                   })
             }
           >
-            <div className="cursor-pointer">
-              <Select
-                value={selectedSkillName || 'default'}
-                suffixIcon={<SwapOutlined className="text-gray-400" />}
-                bordered={false}
+            <Dropdown
+              menu={{
+                items: menuItems,
+                onClick: handleMenuClick,
+              }}
+              trigger={['click']}
+              disabled={readonly}
+              placement="bottomLeft"
+              dropdownRender={(menu) => (
+                <div style={{ minWidth: '240px', maxHeight: '300px', overflowY: 'auto' }}>
+                  {menu}
+                </div>
+              )}
+            >
+              <Button
+                type="text"
+                className="py-0 px-1 border-none shadow-none hover:bg-transparent focus:bg-transparent"
                 disabled={readonly}
-                className="p-0 node-chat-panel-skill-select"
-                onChange={onSkillChange}
-                dropdownMatchSelectWidth={false}
-                dropdownStyle={{ minWidth: '240px' }}
-                optionLabelProp="name"
-                options={[
-                  {
-                    value: 'default',
-                    name: t('canvas.skill.askAI'),
-                    label: (
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{t('canvas.skill.askAI')}</span>
-                        <span className="text-xs text-gray-500">
-                          {t('canvas.skill.askAIDescription')}
-                        </span>
-                      </div>
-                    ),
-                  },
-                  ...skillOptions,
-                ]}
-                placeholder={t('canvas.skill.askAI')}
-              />
-            </div>
+              >
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-medium">
+                    {selectedSkillName
+                      ? t(`${selectedSkillName}.name`, { ns: 'skill' })
+                      : t('canvas.skill.askAI')}
+                  </span>
+                  <SwapOutlined className="text-gray-400" />
+                </div>
+              </Button>
+            </Dropdown>
           </Tooltip>
         </div>
         {selectedSkillName && !readonly && (
@@ -375,6 +392,39 @@ export const ChatPanel = memo(
       handleSendMessage();
     }, [handleSendMessage, resultId, setActiveResultId]);
 
+    const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
+
+    // Toggle MCP selector panel
+    const handleMcpSelectorToggle = useCallback(() => {
+      setMcpSelectorOpen(!mcpSelectorOpen);
+    }, [mcpSelectorOpen, setMcpSelectorOpen]);
+
+    // 获取选择的 MCP 服务器
+    const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
+      selectedMcpServers: state.selectedMcpServers,
+    }));
+
+    const customActions: CustomAction[] = useMemo(
+      () => [
+        {
+          icon: (
+            <Badge
+              count={selectedMcpServers.length > 0 ? selectedMcpServers.length : 0}
+              size="small"
+              offset={[2, -2]}
+            >
+              <ToolOutlined className="flex items-center" />
+            </Badge>
+          ),
+          title: t('copilot.chatActions.chooseMcp'),
+          onClick: () => {
+            handleMcpSelectorToggle();
+          },
+        },
+      ],
+      [handleMcpSelectorToggle, t, selectedMcpServers],
+    );
+
     const renderContent = () => (
       <>
         <ContextManager
@@ -442,6 +492,7 @@ export const ChatPanel = memo(
         ) : null}
 
         <ChatActions
+          customActions={customActions}
           className={classNames({
             'py-2': isList,
           })}
@@ -467,6 +518,8 @@ export const ChatPanel = memo(
               'border border-gray-100 border-solid dark:border-gray-700',
             )}
           >
+            <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
+
             <SelectedSkillHeader
               skill={selectedSkill}
               setSelectedSkill={setSelectedSkill}
@@ -488,6 +541,8 @@ export const ChatPanel = memo(
       <div
         className={`flex flex-col gap-3 h-full p-3 box-border ${className} max-w-[1024px] mx-auto`}
       >
+        <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
+
         <NodeHeader
           readonly={readonly}
           selectedSkillName={selectedSkill?.name}

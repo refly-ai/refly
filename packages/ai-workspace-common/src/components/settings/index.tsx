@@ -14,11 +14,13 @@ import { ModelProviders } from '@refly-packages/ai-workspace-common/components/s
 import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
 import { ParserConfig } from '@refly-packages/ai-workspace-common/components/settings/parser-config';
 import { DefaultModel } from '@refly-packages/ai-workspace-common/components/settings/default-model';
-import { McpServerList } from '@refly-packages/ai-workspace-common/components/settings/mcp-server';
+import {
+  McpServerList,
+  CommunityMcpList,
+} from '@refly-packages/ai-workspace-common/components/settings/mcp-server';
 
 import { RiAccountBoxLine } from 'react-icons/ri';
 import { HiOutlineLanguage } from 'react-icons/hi2';
-import { AiOutlineApi } from 'react-icons/ai';
 import { LuPalette } from 'react-icons/lu';
 
 import './index.scss';
@@ -32,7 +34,10 @@ import {
 import { GrCube } from 'react-icons/gr';
 
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ToolOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { useListMcpServers } from '@refly-packages/ai-workspace-common/queries';
+import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 
 const iconStyle = { fontSize: 16, transform: 'translateY(3px)' };
 
@@ -41,13 +46,108 @@ interface SettingModalProps {
   setVisible: (visible: boolean) => void;
 }
 
-export const SettingModal = (props: SettingModalProps) => {
-  const { visible, setVisible } = props;
+// MCP Server Tab Component
+const McpServerTab = ({ visible }: { visible: boolean }) => {
+  const [mcpActiveTab, setMcpActiveTab] = useState('my-servers');
+  const isLogin = useUserStoreShallow((state) => state.isLogin);
+  const { settingsModalActiveTab } = useSiderStoreShallow((state) => ({
+    settingsModalActiveTab: state.settingsModalActiveTab,
+  }));
+
+  // Auto-switch to MCP Store when modal is opened via MCP selector
+  useEffect(() => {
+    if (visible && settingsModalActiveTab === SettingsModalActiveTab.McpServer) {
+      setMcpActiveTab('community');
+    }
+  }, [visible, settingsModalActiveTab]);
+
+  // Fetch MCP servers for the community tab to check installed status
+  const { data: mcpServersData, refetch } = useListMcpServers({}, [], {
+    enabled: visible && isLogin,
+    refetchOnWindowFocus: false,
+  });
+
+  const mcpServers = mcpServersData?.data || [];
+
+  // Custom tab items
+  const tabItems = [
+    {
+      key: 'my-servers',
+      label: 'My Servers',
+      icon: <UnorderedListOutlined />,
+    },
+    {
+      key: 'community',
+      label: 'MCP Store',
+      icon: <AppstoreOutlined />,
+    },
+  ];
+
+  if (!visible) return null;
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Custom Tab Header */}
+      <div className="flex border-b border-gray-100 dark:border-gray-800">
+        {tabItems.map((tab) => (
+          <div
+            key={tab.key}
+            onClick={() => setMcpActiveTab(tab.key)}
+            className={`
+              cursor-pointer relative px-4 py-2.5 flex items-center gap-1.5 text-sm font-medium transition-all duration-200 ease-in-out
+              ${
+                mcpActiveTab === tab.key
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }
+            `}
+          >
+            <span className="text-sm">{tab.icon}</span>
+            <span>{tab.label}</span>
+            {mcpActiveTab === tab.key && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-sm" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden">
+        {mcpActiveTab === 'my-servers' && (
+          <McpServerList visible={visible && mcpActiveTab === 'my-servers'} />
+        )}
+        {mcpActiveTab === 'community' && (
+          <CommunityMcpList
+            visible={visible && mcpActiveTab === 'community'}
+            installedServers={mcpServers}
+            onInstallSuccess={() => refetch()}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
   const { t } = useTranslation();
   const { settingsModalActiveTab, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
     settingsModalActiveTab: state.settingsModalActiveTab,
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
+
+  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(
+    settingsModalActiveTab || SettingsModalActiveTab.Appearance,
+  );
+
+  // Update local active tab when prop changes
+  useEffect(() => {
+    setLocalActiveTab(settingsModalActiveTab || SettingsModalActiveTab.Appearance);
+  }, [settingsModalActiveTab]);
+
+  // Handle tab change
+  const handleTabChange = (key: string) => {
+    setLocalActiveTab(key as SettingsModalActiveTab);
+  };
 
   const tabs = [
     {
@@ -55,42 +155,32 @@ export const SettingModal = (props: SettingModalProps) => {
       label: t('settings.tabs.providers'),
       icon: <IconCloud style={iconStyle} />,
       children: (
-        <ModelProviders
-          visible={settingsModalActiveTab === SettingsModalActiveTab.ModelProviders}
-        />
+        <ModelProviders visible={localActiveTab === SettingsModalActiveTab.ModelProviders} />
       ),
     },
     {
       key: 'modelConfig',
       label: t('settings.tabs.modelConfig'),
       icon: <IconModel style={iconStyle} />,
-      children: (
-        <ModelConfig visible={settingsModalActiveTab === SettingsModalActiveTab.ModelConfig} />
-      ),
+      children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
     },
     {
       key: 'parserConfig',
       label: t('settings.tabs.parserConfig'),
       icon: <IconWorldConfig style={iconStyle} />,
-      children: (
-        <ParserConfig visible={settingsModalActiveTab === SettingsModalActiveTab.ParserConfig} />
-      ),
+      children: <ParserConfig visible={localActiveTab === SettingsModalActiveTab.ParserConfig} />,
     },
     {
       key: 'mcpServer',
       label: t('settings.tabs.mcpServer'),
-      icon: <AiOutlineApi style={iconStyle} />,
-      children: (
-        <McpServerList visible={settingsModalActiveTab === SettingsModalActiveTab.McpServer} />
-      ),
+      icon: <ToolOutlined style={iconStyle} />,
+      children: <McpServerTab visible={localActiveTab === SettingsModalActiveTab.McpServer} />,
     },
     {
       key: 'defaultModel',
       label: t('settings.tabs.defaultModel'),
       icon: <GrCube style={iconStyle} />,
-      children: (
-        <DefaultModel visible={settingsModalActiveTab === SettingsModalActiveTab.DefaultModel} />
-      ),
+      children: <DefaultModel visible={localActiveTab === SettingsModalActiveTab.DefaultModel} />,
     },
     ...(subscriptionEnabled
       ? [
@@ -148,12 +238,12 @@ export const SettingModal = (props: SettingModalProps) => {
       open={visible}
       onCancel={() => setVisible(false)}
     >
-      <Tabs
-        tabPosition="left"
-        items={tabs}
-        activeKey={settingsModalActiveTab}
-        onChange={(key) => setSettingsModalActiveTab(key as SettingsModalActiveTab)}
-      />
+      <Tabs tabPosition="left" items={tabs} activeKey={localActiveTab} onChange={handleTabChange} />
     </Modal>
   );
 };
+
+export default Settings;
+
+// Export with both names for compatibility
+export { Settings as SettingModal };

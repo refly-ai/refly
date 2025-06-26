@@ -55,8 +55,8 @@ export const ProjectDirectory = ({ projectId, source }: ProjectDirectoryProps) =
     collapse: state.collapse,
     setCollapse: state.setCollapse,
   }));
-  const { setShowReflyPilot } = useCanvasStoreShallow((state) => ({
-    setShowReflyPilot: state.setShowReflyPilot,
+  const { setShowLinearThread } = useCanvasStoreShallow((state) => ({
+    setShowLinearThread: state.setShowLinearThread,
   }));
 
   const { data: projectDetail } = useGetProjectDetail({ query: { projectId } }, null, {
@@ -131,14 +131,14 @@ export const ProjectDirectory = ({ projectId, source }: ProjectDirectoryProps) =
 
   const handleSwitchChange = useCallback(
     (checked: boolean) => {
-      const { config, showReflyPilot } = useCanvasStore.getState();
+      const { config, showLinearThread } = useCanvasStore.getState();
       const hasNodePreviews =
         config?.[canvasId]?.nodePreviews?.filter((item) => item?.type === 'skillResponse')?.length >
         0;
 
       if (checked) {
-        if (!showReflyPilot && !hasNodePreviews) {
-          setShowReflyPilot(true);
+        if (!showLinearThread && !hasNodePreviews) {
+          setShowLinearThread(true);
         }
       }
     },

@@ -6,12 +6,12 @@
     <b>
         <a href="https://www.refly.ai" target="_blank">Refly.AI</a><br>
     </b>
-    ⭐️  AI Native 内容创作引擎 ⭐️ <br>
+    ⭐️  开源 Vibe Workflow 平台 ⭐️ <br>
 </h1>
 
-Refly 是一个开源的 AI 原生创作引擎，集成了 13+ 主流 AI 模型。其直观的自由画布界面支持多线程对话、多模态输入（文本/图片/文件）、RAG 检索流程、浏览器插件剪藏、上下文记忆、AI 文档编辑、代码生成（HTML/SVG/Mermaid/React）以及网站可视化引擎等功能，让您轻松地将创意转化为完整作品，并通过交互式可视化和网页应用进行展示。
+Refly 是一个开创性的开源 Vibe Workflow 平台，旨在解决您最复杂的挑战。只需要动动嘴，您就可以轻松地设计、构建和复用智能工作流，借助 AI 智能体和可无限扩展的 MCP 工具，完成高质量的工作结果交付，从而大幅提升生产力。
 
-[🚀 v0.6.0 正式发布！新首页、模型自定义和幻灯片 🚀⚡️](https://docs.refly.ai/zh/changelog/v0.6.0)
+[🚀 v0.7.1 正式发布！MCP 商店和后台技能调用 🚀⚡️](https://docs.refly.ai/zh/changelog/v0.7.1)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
@@ -58,7 +58,19 @@ cp ../../apps/api/.env.example .env # 确保所有必须的环境变量均已设
 docker compose up -d
 ```
 
-访问 [http://localhost:5700](http://localhost:5700/) 开始使用 ReflyAI。
+### 使用 Kubernetes 自行部署
+
+与此同时，我们也支持在 K8s 集群部署 ReflyAI。
+
+开始部署
+
+```bash
+cd deploy/kubernetes
+
+kubectl apply -f refly-deployment.yaml
+```
+
+访问 [http://localhost:5700](http://localhost:5700/) （ Kubernetes 部署访问 `http://${HOST_IP}:30001` ）开始使用 ReflyAI。
 
 核心部署教程、环境变量配置和常见问题参见 👉 [部署教程](https://docs.refly.ai/zh/guide/self-deploy)。
 
@@ -66,67 +78,78 @@ docker compose up -d
 
 查看 [CONTRIBUTING](./CONTRIBUTING_CN.md) 了解更多信息。
 
-
 ## 核心特性
 
 ### `1` 🧵 多线程对话系统
+
 基于创新的多线程对话架构，支持并行管理多个独立会话上下文。通过高效的状态管理和上下文切换机制，实现复杂的 Agentic Workflow，突破传统对话模型的限制。
 
 ### `2` 🤖 多模型集成框架
+
 - 集成 13+ 主流大语言模型，包括 DeepSeek R1、Claude 3.5 Sonnet、Google Gemini 2.0、OpenAI O3-mini 等
 - 支持模型混合调度和并行处理
 - 灵活的模型切换机制和统一的对话接口
 - 多模型知识库协同
 
 ### `3` 🎨 多模态处理能力
+
 - 文件格式支持：PDF、DOCX、RTF、TXT、MD、HTML、EPUB 等 7+ 种格式
 - 图像处理：支持 PNG、JPG、JPEG、BMP、GIF、SVG、WEBP 等主流格式
 - 智能批处理：支持画布多元素批量选择和 AI 分析
 
 ### `4` ⚡️ AI 驱动的技能系统
+
 集成 Perplexity AI、Stanford Storm 等先进能力，提供：
+
 - 智能全网搜索与信息聚合
 - 基于向量数据库的知识检索
 - 智能问题改写与推荐
 - AI 辅助文档生成工作流
 
 ### `5` 🔍 上下文管理系统
+
 - 精确的临时知识库构建
 - 灵活的节点选择机制
 - 多维度上下文关联
 - 类 Cursor 的智能上下文理解
 
 ### `6` 📚 知识库引擎
+
 - 支持多源异构数据导入
 - 基于 RAG 的语义检索架构
 - 智能知识图谱构建
 - 个性化知识空间管理
 
 ### `7` ✂️ 智能内容采集
+
 - 支持主流平台内容一键采集（Github、Medium、Wikipedia、Arxiv 等）
 - 智能内容解析与结构化
 - 自动知识分类与标签
 - 深度知识库集成
 
 ### `8` 📌 引用系统
+
 - 灵活的多源内容引用
 - 智能上下文关联
 - 一键引用生成
 - 引用溯源支持
 
 ### `9` ✍️ AI 增强编辑器
+
 - 实时 Markdown 渲染
 - AI 辅助内容优化
 - 智能内容分析
 - 类 Notion 的编辑体验
 
 ### `10` 🎨 代码生成引擎
+
 - 生成 HTML、SVG、Mermaid 图表和 React 应用
 - 智能代码结构优化
 - 组件化架构支持
 - 实时代码预览和调试
 
 ### `11` 🌐 网站可视化引擎
+
 - 交互式网页渲染和预览
 - 复杂概念可视化支持
 - 动态 SVG 和图表生成
@@ -210,7 +233,7 @@ docker compose up -d
 15. [Resend](https://github.com/resend/react-email) - 用于构建邮件发送功能的库。
 16. 其他上游依赖。
 
-非常感谢社区提供如此强大而简单的库，使我们能够更专注于产品逻辑的实现。我们希望将来我们的项目也能为大家提供更易用的 AI Native 内容创作引擎。
+非常感谢社区提供如此强大而简单的库，使我们能够更专注于产品逻辑的实现。我们希望将来我们的项目也能为大家提供更易用的 Vibe Workflow 平台。
 
 ## 安全问题
 

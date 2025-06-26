@@ -81,7 +81,7 @@ export const HelpModal = memo(({ visible, onClose }: HelpModalProps) => {
           }}
         >
           {isLoading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-50 rounded-[20px]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 z-50 rounded-[20px]">
               <Spin className="w-6 h-6" />
               <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
                 {t('canvas.toolbar.interativeTutorialLoading')}

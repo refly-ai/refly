@@ -36,6 +36,7 @@ import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
+import { NodeActionButtons } from './shared/node-action-buttons';
 
 type SkillNode = Node<CanvasNodeData<SkillNodeMeta>, 'skill'>;
 
@@ -387,6 +388,15 @@ export const SkillNode = memo(
                 />
               </>
             }
+
+            {!readonly && (
+              <NodeActionButtons
+                nodeId={id}
+                nodeType="skill"
+                isNodeHovered={isHovered}
+                isSelected={selected}
+              />
+            )}
 
             <ChatPanel
               mode="node"

@@ -5,6 +5,7 @@ import { Job } from 'bullmq';
 import { SkillService } from './skill.service';
 import { QUEUE_SKILL, QUEUE_SKILL_TIMEOUT_CHECK } from '../../utils/const';
 import { InvokeSkillJobData, SkillTimeoutCheckJobData } from './skill.dto';
+import { SkillInvokerService } from '@/modules/skill/skill-invoker.service';
 
 @Processor(QUEUE_SKILL)
 export class SkillProcessor extends WorkerHost {
@@ -30,7 +31,7 @@ export class SkillProcessor extends WorkerHost {
 export class SkillTimeoutCheckProcessor extends WorkerHost {
   private readonly logger = new Logger(SkillTimeoutCheckProcessor.name);
 
-  constructor(private skillService: SkillService) {
+  constructor(private skillInvokerService: SkillInvokerService) {
     super();
   }
 
@@ -38,7 +39,7 @@ export class SkillTimeoutCheckProcessor extends WorkerHost {
     this.logger.log(`[handleSkillTimeoutCheck] job: ${JSON.stringify(job)}`);
 
     try {
-      await this.skillService.checkSkillTimeout(job.data);
+      await this.skillInvokerService.checkSkillTimeout(job.data);
     } catch (error) {
       this.logger.error(`[handleSkillTimeoutCheck] error: ${error?.stack}`);
       throw error;

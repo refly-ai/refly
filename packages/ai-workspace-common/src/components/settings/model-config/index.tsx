@@ -528,7 +528,9 @@ export const ModelConfig = ({ visible }: { visible: boolean }) => {
       <div
         className={cn(
           isLoading || filteredModels.length === 0 ? 'flex items-center justify-center' : '',
-          filteredModels.length === 0 ? 'p-4 border-dashed border-gray-200 rounded-md' : '',
+          filteredModels.length === 0
+            ? 'p-4 border-dashed border-gray-200 dark:border-gray-600 rounded-md'
+            : '',
           'min-h-[50px] overflow-y-auto',
         )}
       >

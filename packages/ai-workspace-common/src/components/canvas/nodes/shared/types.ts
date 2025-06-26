@@ -109,6 +109,8 @@ export type ResponseNodeMeta = {
   originalWidth?: number;
   reasoningContent?: string;
   shareId?: string;
+  pilotSessionId?: string;
+  pilotStepId?: string;
 };
 
 export type ImageNodeMeta = {

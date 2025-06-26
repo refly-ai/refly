@@ -42,6 +42,9 @@ import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
+import { NodeActionButtons } from './shared/node-action-buttons';
+import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
+import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface NodeContentProps {
   status: 'generating' | 'finish' | 'failed' | 'executing';
@@ -102,6 +105,7 @@ export const CodeArtifactNode = memo(
     const updateNodeTitle = useUpdateNodeTitle();
     useSelectedNodeZIndex(id, selected);
     const setNodeDataByEntity = useSetNodeDataByEntity();
+    const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
     const { sizeMode = 'adaptive' } = data?.metadata ?? {};
 
@@ -240,52 +244,63 @@ export const CodeArtifactNode = memo(
       [insertToDoc],
     );
 
-    const handleAskAI = useCallback(() => {
-      // Get the current model
-      const { skillSelectedModel } = useChatStore.getState();
+    const handleAskAI = useCallback(
+      (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => {
+        // Get the current model
+        const { skillSelectedModel } = useChatStore.getState();
 
-      // Define a default code fix skill
-      const defaultCodeFixSkill: Skill = {
-        name: 'codeArtifacts',
-        icon: {
-          type: 'emoji',
-          value: '🔧',
-        },
-        description: t('codeArtifact.fix.title'),
-        configSchema: {
-          items: [],
-        },
-      };
-
-      addNode(
-        {
-          type: 'skill',
-          data: {
-            title: 'Skill',
-            entityId: genSkillID(),
-            metadata: {
-              contextItems: [
-                {
-                  type: 'codeArtifact',
-                  title: data.title,
-                  entityId: data.entityId,
-                  metadata: {
-                    ...data.metadata,
-                    withHistory: true,
-                  },
-                },
-              ] as IContextItem[],
-              query: '',
-              selectedSkill: defaultCodeFixSkill,
-              modelInfo: skillSelectedModel,
-            },
+        // Define a default code fix skill
+        const defaultCodeFixSkill: Skill = {
+          name: 'codeArtifacts',
+          icon: {
+            type: 'emoji',
+            value: '🔧',
           },
-        },
-        [{ type: 'codeArtifact', entityId: data.entityId }],
-        false,
-        true,
-      );
-    }, [data, addNode, t]);
+          description: t('codeArtifact.fix.title'),
+          configSchema: {
+            items: [],
+          },
+        };
+
+        const { position, connectTo } = getConnectionInfo(
+          { entityId: data.entityId, type: 'codeArtifact' },
+          event?.dragCreateInfo,
+        );
+
+        addNode(
+          {
+            type: 'skill',
+            data: {
+              title: 'Skill',
+              entityId: genSkillID(),
+              metadata: {
+                contextItems: [
+                  {
+                    type: 'codeArtifact',
+                    title: data.title,
+                    entityId: data.entityId,
+                    metadata: {
+                      ...data.metadata,
+                      withHistory: true,
+                    },
+                  },
+                ] as IContextItem[],
+                query: '',
+                selectedSkill: defaultCodeFixSkill,
+                modelInfo: skillSelectedModel,
+              },
+            },
+            position,
+          },
+          connectTo,
+          false,
+          true,
+        );
+      },
+      [data, addNode, t, getConnectionInfo],
+    );
 
     const updateTitle = (newTitle: string) => {
       if (newTitle === node.data?.title) {
@@ -312,24 +327,23 @@ export const CodeArtifactNode = memo(
       // Create node-specific event handlers
       const handleNodeAddToContext = () => handleAddToContext();
       const handleNodeDelete = () => handleDelete();
-      const handleNodeInsertToDoc = (content: string) => handleInsertToDoc(content);
-      const handleNodeAskAI = () => handleAskAI();
+      const handleNodeInsertToDoc = (event: { content: string }) =>
+        handleInsertToDoc(event.content);
+      const handleNodeAskAI = (event?: {
+        dragCreateInfo?: NodeDragCreateInfo;
+      }) => handleAskAI(event);
 
       // Register events with node ID
       nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
-      nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), (event) =>
-        handleNodeInsertToDoc(event.content),
-      );
+      nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
       nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
 
       return () => {
         // Cleanup events when component unmounts
         nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
-        nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), (event) =>
-          handleNodeInsertToDoc(event.content),
-        );
+        nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
         nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
 
         // Clean up all node events
@@ -377,6 +391,15 @@ export const CodeArtifactNode = memo(
                   nodeType="codeArtifact"
                 />
               </>
+            )}
+
+            {!isPreview && !readonly && (
+              <NodeActionButtons
+                nodeId={id}
+                nodeType="codeArtifact"
+                isNodeHovered={isHovered}
+                isSelected={selected}
+              />
             )}
 
             <div className={cn('flex flex-col h-full p-3 box-border', MAX_HEIGHT_CLASS)}>

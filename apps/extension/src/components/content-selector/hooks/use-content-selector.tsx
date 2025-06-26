@@ -22,6 +22,7 @@ import { getElementType } from '../utils';
 import { genContentSelectorID } from '@refly/utils/id';
 import { getMarkdown } from '@refly/utils/html2md';
 import { BLOCK_SELECTED_MARK_ID, INLINE_SELECTED_MARK_ID } from '../utils/index';
+import { logger } from '../../../utils/logger';
 
 // utils
 import { getSelectionNodesMarkdown } from '@refly/utils/html2md';
@@ -126,7 +127,7 @@ export const useContentSelector = (
           containerElem?.removeChild(menuContainer);
           document.head.removeChild(styleContainer);
         } catch (err) {
-          console.log('remove err', err);
+          logger.log('remove err', err);
         }
       }, 300);
     };
@@ -392,7 +393,7 @@ export const useContentSelector = (
         } as Mark,
       },
     };
-    console.log('contentSelectorClickHandler', safeStringifyJSON(msg));
+    logger.debug('contentSelectorClickHandler', safeStringifyJSON(msg));
     sendMessage(msg);
   };
 
@@ -437,13 +438,13 @@ export const useContentSelector = (
   const onMouseMove = (ev: MouseEvent) => {
     ev.stopImmediatePropagation();
 
-    console.log('isMouseOutsideContainer', isMouseOutsideContainer(ev), selector);
+    logger.debug('isMouseOutsideContainer', isMouseOutsideContainer(ev), selector);
 
     if (isMouseOutsideContainer(ev)) {
       return;
     }
 
-    console.log('contentActionHandler', ev, statusRef, markRef, showContentSelectorRef);
+    logger.debug('contentActionHandler', ev, statusRef, markRef, showContentSelectorRef);
     if (
       statusRef.current &&
       markRef.current &&
@@ -523,7 +524,7 @@ export const useContentSelector = (
     const selection = window.getSelection();
     const text = selection?.toString();
 
-    console.log('onMouseDownUpEvent');
+    logger.debug('onMouseDownUpEvent');
 
     if (statusRef.current && markRef.current && showContentSelectorRef.current) {
       if (text && text?.trim()?.length > 0) {

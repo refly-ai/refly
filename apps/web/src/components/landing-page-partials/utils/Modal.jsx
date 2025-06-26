@@ -45,7 +45,6 @@ function Modal({ children, id, ariaLabel, show, handleClose }) {
       <Transition
         id={id}
         className="fixed inset-0 z-50 flex transform items-center justify-center overflow-hidden px-4 sm:px-6"
-        role="dialog"
         aria-modal="true"
         aria-labelledby={ariaLabel}
         show={show}

@@ -1,7 +1,8 @@
 {
   "name": "@refly/ai-workspace-common",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.7.1",
+  "description": "Common components for Refly AI Workspace",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -9,7 +10,7 @@
   },
   "scripts": {
     "preview": "vite preview",
-    "codegen": "openapi-rq -i ../openapi-schema/schema.yml -o src --noSchemas && biome check ./src --write"
+    "codegen": "openapi-rq -i ../openapi-schema/schema.yml -o src --noSchemas && biome check ./src --write --no-errors-on-unmatched"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",

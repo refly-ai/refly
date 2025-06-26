@@ -1,0 +1,1276 @@
+###############################################################################
+# Author: Winson Li
+# Email: mail@winson.dev
+# Github: @Winson-030
+###############################################################################
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: refly
+---
+# Refly Config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: refly-shared-config
+  namespace: refly
+data:
+  # common
+  TZ: Asia/Shanghai
+  # postgres db
+  POSTGRES_DB: refly
+  POSTGRES_USER: refly
+  POSTGRES_PASSWORD: test
+  POSTGRES_MAX_CONNECTIONS: "150"
+  POSTGRES_SHARED_BUFFERS: 256MB
+  POSTGRES_WORK_MEM: 8MB
+  POSTGRES_MAINTENANCE_WORK_MEM: 128MB
+  POSTGRES_EFFECTIVE_CACHE_SIZE: 8192MB
+  # redis
+  REDIS_PASSWORD: refly
+  REDISTIMESERIES_ARGS: "RETENTION_POLICY=20"
+  # minio
+  MINIO_ROOT_USER: minioadmin
+  MINIO_ROOT_PASSWORD: minioadmin
+  # MINIO_DOMAIN: refly-minio
+  # MINIO_COMPRESSION_ENABLE: 'on'
+  # MINIO_COMPRESSION_ALLOW_ENCRYPTION: 'off'
+  # MINIO_API_ROOT_ACCESS: 'on'
+  # MINIO_BROWSER: 'on'
+  # MINIO_BROWSER_LOGIN_ANIMATION: 'off'
+  # MINIO_BROWSER_REDIRECT: 'false'
+  # MINIO_BROWSER_SESSION_DURATION: '365d'
+  # qdrant
+  # elastcisearch
+  # ELASTIC_PASSWORD: refly
+  # cluster.name: es-cluster
+  # node.name: es-node01
+  discovery.type: single-node
+  xpack.license.self_generated.type: basic
+  xpack.security.enabled: 'true'
+  xpack.security.http.ssl.enabled: 'false'
+  # api
+
+  # Embeddings provider (options: jina, openai, fireworks)
+  EMBEDDINGS_PROVIDER: jina
+
+  # Name of the embeddings model to use
+  EMBEDDINGS_MODEL_NAME: jina-embeddings-v3
+
+  # OpenAI-compatible API base URL
+  OPENAI_BASE_URL: ''
+
+  # OpenAI-compatible API key, used for LLM inference and embeddings
+  OPENAI_API_KEY: ''
+
+  # OpenRouter API key, used for LLM inference
+  # will take precedence over OPENAI_API_KEY for LLM inference if set
+  OPENROUTER_API_KEY: ''
+
+  # Jina API key, used for embeddings
+  JINA_API_KEY: ''
+
+  # Fireworks API key, used for embeddings
+  FIREWORKS_API_KEY: ''
+
+  # Serper API key (https://serper.dev/), used for web search
+  SERPER_API_KEY: ''
+
+  #----------------------------------------------
+  # Optional Environment Variables for API service
+  # (will have reasonable default values)
+  #----------------------------------------------
+
+  # General Configuration
+  NODE_ENV: production
+  PORT: '5800'
+  WS_PORT: '5801'
+  ORIGIN: 'http://refly-web'
+
+  # Static Endpoint Configuration
+  STATIC_PUBLIC_ENDPOINT: /api/v1/misc/public
+  STATIC_PRIVATE_ENDPOINT: /api/v1/misc
+
+  # Redis Configuration
+  # host: redis
+  # port: 6379
+  # password: ''
+  REDIS_HOST: refly-redis
+  REDIS_PORT: '6379'
+  # REDIS_PASSWORD: ''
+
+  # Database Configuration
+  # user: refly_admin
+  # password: refly_pwd
+  # database: refly
+  # schema: refly_schema
+  DATABASE_URL: postgresql://refly:test@refly-postgres:5432/refly?schema=refly
+  # Vector Store Configuration
+  # host: qdrant
+  # port: 6333
+  # api_key: ''
+  QDRANT_HOST: refly-qdrant
+  QDRANT_PORT: '6333'
+  QDRANT_API_KEY: ''
+  REFLY_VEC_DIM: '768'
+
+  # Elasticsearch Configuration
+  # url: http://elasticsearch:9200
+  # username: elastic
+  # password: ''
+  ELASTICSEARCH_URL: http://refly-elasticsearch:9200
+  ELASTICSEARCH_USERNAME: elastic
+  ELASTICSEARCH_PASSWORD: refly
+  # FULLTEXT_SEARCH_BACKEND: elasticsearch
+  # MinIO Configuration
+  # host: minio
+  # port: 9000
+  # use_ssl: false
+  # access_key: ''
+  # secret_key: ''
+  # internal bucket: refly-internal
+  # external bucket: refly-external
+  MINIO_INTERNAL_ENDPOINT: refly-minio
+  MINIO_INTERNAL_PORT: '9000'
+  MINIO_INTERNAL_USE_SSL: 'false'
+  MINIO_INTERNAL_ACCESS_KEY: minioadmin
+  MINIO_INTERNAL_SECRET_KEY: minioadmin
+  MINIO_INTERNAL_BUCKET: refly-internal
+
+  MINIO_EXTERNAL_ENDPOINT: refly-minio
+  MINIO_EXTERNAL_PORT: '9000'
+  MINIO_EXTERNAL_USE_SSL: 'false'
+  MINIO_EXTERNAL_ACCESS_KEY: minioadmin
+  MINIO_EXTERNAL_SECRET_KEY: minioadmin
+  MINIO_EXTERNAL_BUCKET: refly-external
+
+  # Authentication Configuration
+  AUTH_SKIP_VERIFICATION: 'true'
+  REFLY_COOKIE_DOMAIN: ''
+  REFLY_COOKIE_SECURE: ''
+  REFLY_COOKIE_SAME_SITE: ''
+  LOGIN_REDIRECT_URL: ''
+  JWT_SECRET: 'C0mpl3xR@nd0mS3cr3t!2023'
+  JWT_EXPIRATION_TIME: 6h
+  JWT_REFRESH_EXPIRATION_TIME: 7d
+
+  # Parser for PDF files (options: pdfjs, marker)
+  PARSER_PDF: pdfjs
+
+  # Marker API key (https://www.datalab.to/), required if PARSER_PDF=marker
+  MARKER_API_KEY: ''
+
+  # Collaboration Configuration
+  COLLAB_TOKEN_EXPIRY: 12h
+
+  # Email Authentication
+  EMAIL_AUTH_ENABLED: 'false'
+  EMAIL_SENDER: 'info@example.com'
+
+  # Resend API Key. Required if email verification is enabled.
+  # You can get your own key from https://resend.com/
+  RESEND_API_KEY: 're_xxxxxxxx'
+
+  # GitHub Authentication
+  GITHUB_AUTH_ENABLED: 'false'
+  GITHUB_CLIENT_ID: ''
+  GITHUB_CLIENT_SECRET: ''
+  GITHUB_CALLBACK_URL: ''
+
+  # Google Authentication
+  GOOGLE_AUTH_ENABLED: 'false'
+  GOOGLE_CLIENT_ID: ''
+  GOOGLE_CLIENT_SECRET: ''
+  GOOGLE_CALLBACK_URL: ''
+
+  # Embeddings Configuration
+  EMBEDDINGS_DIMENSIONS: '768'
+  EMBEDDINGS_BATCH_SIZE: '512'
+
+  # Reranker Configuration
+  RERANKER_TOP_N: '10'
+  RERANKER_MODEL: jina-reranker-v2-base-multilingual
+  RERANKER_RELEVANCE_THRESHOLD: '0.5'
+
+  # Skill Configuration
+  SKILL_IDLE_TIMEOUT: '60000'
+  SKILL_EXECUTION_TIMEOUT: '180000'
+
+  # Stripe Configuration
+  STRIPE_API_KEY: ''
+  STRIPE_ACCOUNT_WEBHOOK_SECRET: ''
+  STRIPE_ACCOUNT_TEST_WEBHOOK_SECRET: ''
+  STRIPE_SESSION_SUCCESS_URL: ''
+  STRIPE_SESSION_CANCEL_URL: ''
+  STRIPE_PORTAL_RETURN_URL: ''
+
+  # Quota Configuration
+  QUOTA_T1_TOKEN: '-1'
+  QUOTA_T2_TOKEN: '-1'
+  QUOTA_T1_REQUEST: '-1'
+  QUOTA_T2_REQUEST: '-1'
+  QUOTA_STORAGE_FILE: '-1'
+  QUOTA_STORAGE_OBJECT: '-1'
+  QUOTA_STORAGE_VECTOR: '-1'
+  QUOTA_FILE_PARSE_PAGE: '-1'
+  # web
+
+  API_URL: '/api'
+  COLLAB_URL: '/collab'
+  # STATIC_PUBLIC_ENDPOINT: /api/v1/misc/public
+  # STATIC_PRIVATE_ENDPOINT: /api/v1/misc
+---
+# Postgres DB
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-postgres
+  name: refly-postgres
+  namespace: refly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-postgres
+  name: refly-postgres
+  namespace: refly
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-postgres
+  name: refly-postgres
+  namespace: refly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: refly-postgres
+subjects:
+- kind: ServiceAccount
+  name: refly-postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: refly-postgres
+  namespace: refly
+spec:
+  selector:
+    matchLabels:
+      app: refly-postgres
+  serviceName: "refly-postgres"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: refly-postgres
+    spec:
+      serviceAccountName: refly-postgres
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: refly-postgres
+        image: postgres:15-alpine
+        env:
+        - name: TZ
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: TZ
+        - name: POSTGRES_DB
+          # value: refly
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_DB
+
+        - name: POSTGRES_USER
+          # value: refly
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_USER
+
+        - name: POSTGRES_PASSWORD
+          # value: test
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_MAX_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_MAX_CONNECTIONS
+        - name: POSTGRES_SHARED_BUFFERS
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_SHARED_BUFFERS
+        - name: POSTGRES_WORK_MEM
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_WORK_MEM
+        - name: POSTGRES_MAINTENANCE_WORK_MEM
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_MAINTENANCE_WORK_MEM
+        - name: POSTGRES_EFFECTIVE_CACHE_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: POSTGRES_EFFECTIVE_CACHE_SIZE
+        livenessProbe:
+          exec:
+            command:
+            - "pg_isready"
+            - "-U"
+            - "$(PGUSER)"
+            - "-d"
+            - "$(POSTGRES_DB)"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        ports:
+        - containerPort: 5432
+          name: postgres-port
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-data
+        hostPath:
+          path: /root/refly/db/postgres/data
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refly-postgres
+  namespace: refly
+spec:
+  selector:
+    app: refly-postgres
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: postgres
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+
+# Postgres Server End
+# Redis Server Start
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-redis
+  name: refly-redis
+  namespace: refly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-redis
+  name: refly-redis
+  namespace: refly
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-redis
+  name: refly-redis
+  namespace: refly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: refly-redis
+subjects:
+- kind: ServiceAccount
+  name: refly-redis
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: refly-redis
+  namespace: refly
+spec:
+  selector:
+    matchLabels:
+      app: refly-redis
+  serviceName: "refly-redis"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: refly-redis
+    spec:
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: refly-redis
+      containers:
+      - name: refly-redis
+        image: redis:6-alpine
+        ports:
+        - containerPort: 6379
+          name: redis-p
+        command: [ "redis-server", "--save", "20", "1", "--loglevel", "warning", "--requirepass", "$(REDIS_PASSWORD)" ]
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 102Mi
+        env:
+        - name: TZ
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: TZ
+        - name: REDIS_PASSWORD
+          # value: refly
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: REDIS_PASSWORD
+
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        hostPath:
+          path: /root/refly/db/redis/data
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refly-redis
+  namespace: refly
+spec:
+  selector:
+    app: refly-redis
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: redis
+    protocol: TCP
+    port: 6379
+    targetPort: 6379
+
+# Redis Server End
+# Minio Server Start
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-minio
+  name: refly-minio
+  namespace: refly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-minio
+  name: refly-minio
+  namespace: refly
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-minio
+  name: refly-minio
+  namespace: refly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: refly-minio
+subjects:
+- kind: ServiceAccount
+  name: refly-minio
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: refly-minio
+  namespace: refly
+spec:
+  selector:
+    matchLabels:
+      app: refly-minio
+  serviceName: "refly-minio"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: refly-minio
+    spec:
+      serviceAccountName: refly-minio
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: refly-minio
+        image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+        command: [ "minio", "server", "/data", "--address", ":9000", "--console-address", ":9001" ]
+        env:
+        - name: TZ
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: TZ
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: MINIO_ROOT_USER
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: MINIO_ROOT_PASSWORD
+
+        ports:
+        - containerPort: 9000
+          name: minio-api
+        - containerPort: 9001
+          name: minio-console
+        livenessProbe:
+          exec:
+            command: [ "mc", "ready", "local" ]
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256M
+          requests:
+            cpu: 300m
+            memory: 128M
+        volumeMounts:
+        - name: minio-data
+          mountPath: /data
+      volumes:
+      - name: minio-data
+        hostPath:
+          path: /root/refly/storage/minio/data
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refly-minio
+  namespace: refly
+spec:
+  selector:
+    app: refly-minio
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: minio-api
+    protocol: TCP
+    port: 9000
+    targetPort: 9000
+  - name: minio-console
+    protocol: TCP
+    port: 9001
+    targetPort: 9001
+
+## Minio Server End
+## Qdrant Server Start
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qdrant-config
+  namespace: refly
+data:
+  production.yaml: |
+    log_level: INFO
+    service:
+      enable_cors: true
+      enable_tls: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-qdrant
+  name: refly-qdrant
+  namespace: refly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-qdrant
+  name: refly-qdrant
+  namespace: refly
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-qdrant
+  name: refly-qdrant
+  namespace: refly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: refly-qdrant
+subjects:
+- kind: ServiceAccount
+  name: refly-qdrant
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: refly-qdrant
+  namespace: refly
+spec:
+  selector:
+    matchLabels:
+      app: refly-qdrant
+  serviceName: "refly-qdrant"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: refly-qdrant
+    spec:
+      serviceAccountName: refly-qdrant
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: refly-qdrant
+        image: reflyai/qdrant:v1.13.1
+        env:
+        - name: TZ
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: TZ
+        ports:
+        - containerPort: 6333
+          name: qdrant-http
+        - containerPort: 6334
+          name: qdrant-grpc
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "curl -s http://localhost:6333/healthz | grep -q 'healthz check passed' || exit 1"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512M
+          requests:
+            cpu: 300m
+            memory: 128M
+        volumeMounts:
+        - name: qdrant-config
+          mountPath: /qdrant/config/production.yaml
+          subPath: production.yaml
+        - name: qdrant-data
+          mountPath: /qdrant/storage
+      volumes:
+      - name: qdrant-config
+        configMap:
+          name: qdrant-config
+      - name: qdrant-data
+        hostPath:
+          path: /root/refly/db/qdrant/data
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refly-qdrant
+  namespace: refly
+spec:
+  selector:
+    app: refly-qdrant
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: qdrant-http
+    protocol: TCP
+    port: 6333
+    targetPort: 6333
+  - name: qdrant-grpc
+    protocol: TCP
+    port: 6334
+    targetPort: 6334
+
+## Qdrant Server End
+
+## Elasticsearch Server Start
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-elasticsearch
+  name: refly-elasticsearch
+  namespace: refly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-elasticsearch
+  name: refly-elasticsearch
+  namespace: refly
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-elasticsearch
+  name: refly-elasticsearch
+  namespace: refly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: refly-elasticsearch
+subjects:
+- kind: ServiceAccount
+  name: refly-elasticsearch
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: refly-elasticsearch
+  namespace: refly
+spec:
+  selector:
+    matchLabels:
+      app: refly-elasticsearch
+  serviceName: "refly-elasticsearch"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: refly-elasticsearch
+    spec:
+      serviceAccountName: refly-elasticsearch
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: refly-elasticsearch
+        image: reflyai/elasticsearch:7.10.2
+        env:
+        - name: TZ
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: TZ
+        # - name: ELASTIC_PASSWORD
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: refly-shared-config
+        #       key: ELASTIC_PASSWORD
+        # - name: cluster.name
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: refly-shared-config
+        #       key: cluster.name
+        # - name: node.name
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: refly-shared-config
+        #       key: node.name
+        - name: discovery.type
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: discovery.type
+        - name: xpack.license.self_generated.type
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: xpack.license.self_generated.type
+        - name: xpack.security.enabled
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: xpack.security.enabled
+        - name: xpack.security.http.ssl.enabled
+          valueFrom:
+            configMapKeyRef:
+              name: refly-shared-config
+              key: xpack.security.http.ssl.enabled
+        ports:
+        - containerPort: 9200
+          name: elastic-http
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "curl -s http://localhost:9200 >/dev/null || exit 1"
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 2G
+          requests:
+            cpu: 300m
+            memory: 128M
+        volumeMounts:
+        - name: elasticsearch-data
+          mountPath: /usr/share/elasticsearch/data
+      volumes:
+      - name: elasticsearch-data
+        hostPath:
+          path: /root/refly/db/elasticsearch/data
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refly-elasticsearch
+  namespace: refly
+spec:
+  selector:
+    app: refly-elasticsearch
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: elastic-http
+    protocol: TCP
+    port: 9200
+    targetPort: 9200
+
+## Elasticsearch Server End
+## API Server Start
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-api
+  name: refly-api
+  namespace: refly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-api
+  name: refly-api
+  namespace: refly
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-api
+  name: refly-api
+  namespace: refly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: refly-api
+subjects:
+- kind: ServiceAccount
+  name: refly-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: refly-api
+  namespace: refly
+spec:
+  selector:
+    matchLabels:
+      app: refly-api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: refly-api
+    spec:
+      serviceAccountName: refly-api
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15-alpine
+        command: [ 'sh', '-c', "until pg_isready -h refly-postgres -U postgres -d mydb; do echo waiting for postgres; sleep 2; done;" ]
+      - name: wait-for-redis
+        image: redis:6-alpine
+        command: [ 'sh', '-c', "until redis-cli -h refly-redis -p 6379 ping | grep 'PONG'; do echo waiting for redis; sleep 2; done;" ]
+      - name: wait-for-qdrant
+        image: curlimages/curl:7.68.0
+        command: [ 'sh', '-c', "until curl -s http://refly-qdrant:6333/healthz | grep -q 'healthz check passed'; do echo waiting for qdrant; sleep 2; done;" ]
+      - name: wait-for-elasticsearch
+        image: curlimages/curl:7.68.0
+        command: [ 'sh', '-c', "until curl -s http://refly-elasticsearch:9200 ; do echo waiting for elasticsearch; sleep 2; done;" ]
+      - name: wait-for-minio
+        image: curlimages/curl:7.68.0
+        command: [ 'sh', '-c', "until curl -s http://refly-minio:9000/minio/health/live ; do echo waiting for minio; sleep 2; done;" ]
+      containers:
+      - name: refly-api
+        image: reflyai/refly-api:0.6.0
+        workingDir: /app/apps/api/dist
+        command: [ "sh", "-c", "node scripts/sync-db-schema.js && node main.js" ]
+        envFrom:
+        - configMapRef:
+            name: refly-shared-config
+        ports:
+        - containerPort: 5800
+          name: api-http
+        - containerPort: 5801
+          name: api-ws
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -f
+            - http://localhost:5800
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refly-api
+  namespace: refly
+spec:
+  selector:
+    app: refly-api
+  type: ClusterIP
+  ports:
+  - name: api-http
+    protocol: TCP
+    port: 5800
+    targetPort: 5800
+  - name: api-ws
+    protocol: TCP
+    port: 5801
+    targetPort: 5801
+
+## API Server End
+## WEB Server Start
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: refly-nginx
+  namespace: refly
+data:
+  nginx.conf: |-
+    server {
+        listen 80;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        # API proxy
+        location /api/ {
+            proxy_pass http://refly-api:5800/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_buffering off;
+            proxy_read_timeout 1800;
+            proxy_connect_timeout 1800;
+        }
+
+        # Collab proxy
+        location /collab {
+            proxy_pass http://refly-api:5801/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_buffering off;
+            proxy_read_timeout 1800;
+            proxy_connect_timeout 1800;
+        }
+
+        # Static files
+        location / {
+            try_files $uri $uri/ /index.html;
+            expires 1h;
+            add_header Cache-Control "public, no-transform";
+            
+            # Cache static files
+            location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg)$ {
+                expires 7d;
+                add_header Cache-Control "public, no-transform";
+            }
+        }
+
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer-when-downgrade" always;
+        add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'" always;
+        
+        # Additional security
+        server_tokens off;
+
+        # Basic settings
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        client_max_body_size 100M;
+        
+        # Buffer size for POST submissions
+        client_body_buffer_size 10K;
+        client_header_buffer_size 1k;
+        
+        # Timeouts
+        client_body_timeout 12;
+        client_header_timeout 12;
+        send_timeout 10;
+
+        # Compression
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
+        gzip_disable "msie6";
+
+        # File cache settings
+        open_file_cache max=1000 inactive=20s;
+        open_file_cache_valid 30s;
+        open_file_cache_min_uses 2;
+        open_file_cache_errors on;
+    }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-web
+  name: refly-web
+  namespace: refly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-web
+  name: refly-web
+  namespace: refly
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: refly-web
+  name: refly-web
+  namespace: refly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: refly-web
+subjects:
+- kind: ServiceAccount
+  name: refly-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: refly-web
+  namespace: refly
+spec:
+  selector:
+    matchLabels:
+      app: refly-web
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: refly-web
+    spec:
+      serviceAccountName: refly-web
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      initContainers:
+      - name: wait-for-refly-api
+        image: curlimages/curl:7.68.0
+        command: [ 'sh', '-c', "until curl -s http://refly-api:5800; do echo waiting for refly api; sleep 2; done;" ]
+      containers:
+      - name: refly-web
+        image: reflyai/refly-web:0.6.0
+        envFrom:
+        - configMapRef:
+            name: refly-shared-config
+        ports:
+        - containerPort: 80
+          name: web-http
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -f
+            - http://localhost:80
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: "0.5"
+            memory: 0.5Gi
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: nginx.conf
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: refly-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refly-web
+  namespace: refly
+spec:
+  selector:
+    app: refly-web
+  type: ClusterIP
+  ports:
+  - name: web-http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: refly-web-nodeport
+  namespace: refly
+spec:
+  selector:
+    app: refly-web
+  type: NodePort
+  ports:
+  - name: web-http
+    port: 80
+    targetPort: 80
+    nodePort: 30001

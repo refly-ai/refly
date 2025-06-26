@@ -1,15 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '@/modules/common/prisma.service';
+import { PrismaService } from '../common/prisma.service';
 import {
   DeleteMcpServerRequest,
   ListMcpServersData,
   UpsertMcpServerRequest,
   User,
 } from '@refly/openapi-schema';
-import { McpServer as McpServerModel } from '@/generated/client';
+import { McpServer as McpServerModel } from '../../generated/client';
 import { McpServerNotFoundError, ParamsError } from '@refly/errors';
-import { SingleFlightCache } from '@/utils/cache';
-import { EncryptionService } from '@/modules/common/encryption.service';
+import { SingleFlightCache } from '../../utils/cache';
+import { EncryptionService } from '../common/encryption.service';
 import { Connection, MultiServerMCPClient, createMcpClientConfig } from '@refly/skill-template';
 
 /**

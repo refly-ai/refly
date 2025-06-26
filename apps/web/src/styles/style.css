@@ -63,34 +63,64 @@ select:focus {
   content: none !important;
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* Scrollbar Styles - Only show during scrolling */
+@media (hover: hover) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: transparent transparent;
+  }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
+  *:hover,
+  *:focus,
+  *:focus-within {
+    scrollbar-color: #c1c1c1 #f1f1f1;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-.dark {
   ::-webkit-scrollbar-track {
-    background: #2d2d2d;
+    background: #f1f1f1;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #555;
+    background-color: transparent;
+    border-radius: 4px;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #777;
+  *:hover::-webkit-scrollbar-thumb,
+  *:focus::-webkit-scrollbar-thumb,
+  *:focus-within::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #c1c1c1;
+    transition: background-color 0.3s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #a8a8a8;
+  }
+
+  .dark *:hover,
+  .dark *:focus,
+  .dark *:focus-within {
+    scrollbar-color: #555 #2d2d2d;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: #2d2d2d;
+  }
+
+  .dark *:hover::-webkit-scrollbar-thumb,
+  .dark *:focus::-webkit-scrollbar-thumb,
+  .dark *:focus-within::-webkit-scrollbar-thumb,
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+    transition: background-color 0.3s ease;
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background-color: #777;
   }
 }

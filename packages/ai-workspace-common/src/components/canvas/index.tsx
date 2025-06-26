@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useEffect, useState, useRef, memo } from 'react';
-import { Modal, Result, message } from 'antd';
+import { Button, Modal, Result, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
@@ -57,13 +57,21 @@ import { useUserStore, useUserStoreShallow } from '@refly-packages/ai-workspace-
 import { useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 import { EmptyGuide } from './empty-guide';
-import { useReflyPilotReset } from '@refly-packages/ai-workspace-common/hooks/canvas/use-refly-pilot-reset';
+import { useLinearThreadReset } from '@refly-packages/ai-workspace-common/hooks/canvas/use-linear-thread-reset';
 import HelperLines from './common/helper-line/index';
 import { useListenNodeOperationEvents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-listen-node-events';
 import { runtime } from '@refly-packages/ai-workspace-common/utils/env';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import {
+  NodeContextMenuSource,
+  NodeDragCreateInfo,
+  nodeOperationsEmitter,
+} from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
+import { usePilotStoreShallow } from '@refly-packages/ai-workspace-common/stores/pilot';
+import { Pilot } from '@refly-packages/ai-workspace-common/components/pilot';
+import { IconPilot } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { ChevronUp } from 'lucide-react';
 
 const GRID_SIZE = 10;
 
@@ -86,6 +94,8 @@ interface ContextMenuState {
   nodeId?: string;
   nodeType?: CanvasNodeType;
   isSelection?: boolean;
+  source?: 'node' | 'handle';
+  dragCreateInfo?: NodeDragCreateInfo;
 }
 
 // Add new memoized components
@@ -152,7 +162,9 @@ const MiniMapNode = (props: any) => {
 
 const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
+
   useCanvasInitialActions(canvasId);
+  // useFollowPilotSteps();
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const { addNode } = useAddNode();
@@ -202,6 +214,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const { pendingNode, clearPendingNode } = useCanvasNodesStore();
   const { provider, readonly, shareNotFound, shareLoading } = useCanvasContext();
 
+  const { isPilotOpen, setIsPilotOpen, setActiveSessionId } = usePilotStoreShallow((state) => ({
+    isPilotOpen: state.isPilotOpen,
+    setIsPilotOpen: state.setIsPilotOpen,
+    setActiveSessionId: state.setActiveSessionId,
+  }));
+
   const {
     config,
     operatingNodeId,
@@ -211,6 +229,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     setCanvasPage,
     showSlideshow,
     setShowSlideshow,
+    setContextMenuOpenedCanvasId,
   } = useCanvasStoreShallow((state) => ({
     config: state.config[canvasId],
     operatingNodeId: state.operatingNodeId,
@@ -220,6 +239,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     setCanvasPage: state.setCanvasPage,
     showSlideshow: state.showSlideshow,
     setShowSlideshow: state.setShowSlideshow,
+    setContextMenuOpenedCanvasId: state.setContextMenuOpenedCanvasId,
   }));
   const hasCanvasSynced = config?.localSyncedAt > 0 && config?.remoteSyncedAt > 0;
 
@@ -253,7 +273,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   );
 
   // Use the reset hook to handle canvas ID changes
-  useReflyPilotReset(canvasId);
+  useLinearThreadReset(canvasId);
 
   useEffect(() => {
     return () => {
@@ -464,8 +484,14 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     if (!readonly) {
       getPageByCanvasId();
     }
+
     if (showSlideshow) {
       setShowSlideshow(false);
+    }
+
+    if (isPilotOpen) {
+      setIsPilotOpen(false);
+      setActiveSessionId(null);
     }
 
     const unsubscribe = locateToNodePreviewEmitter.on(
@@ -497,6 +523,12 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     type: 'canvas',
   });
 
+  useEffect(() => {
+    if (contextMenu.type === 'node') {
+      setContextMenuOpenedCanvasId(contextMenu.open ? contextMenu.nodeId : null);
+    }
+  }, [contextMenu, setContextMenuOpenedCanvasId]);
+
   const onPaneContextMenu = useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
@@ -515,7 +547,14 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   );
 
   const onNodeContextMenu = useCallback(
-    (event: React.MouseEvent, node: CanvasNode<any>) => {
+    (
+      event: React.MouseEvent,
+      node: CanvasNode<any>,
+      metaInfo?: {
+        source?: NodeContextMenuSource;
+        dragCreateInfo?: NodeDragCreateInfo;
+      },
+    ) => {
       event.preventDefault();
       const flowPosition = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
@@ -556,10 +595,14 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           return; // Don't show context menu for unknown node types
       }
 
+      const { source, dragCreateInfo } = metaInfo || {};
+
       setContextMenu({
         open: true,
         position: flowPosition,
         type: 'node',
+        source: source || 'node',
+        dragCreateInfo,
         nodeId: node.id,
         nodeType: menuNodeType,
       });
@@ -569,6 +612,11 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: CanvasNode<any>) => {
+      if (node.id.startsWith('ghost-')) {
+        setContextMenu((prev) => ({ ...prev, open: false }));
+        return;
+      }
+
       const { operatingNodeId } = useCanvasStore.getState();
       setContextMenu((prev) => ({ ...prev, open: false }));
 
@@ -853,7 +901,10 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         } as unknown as CanvasNode<any>;
 
         // 调用onNodeContextMenu处理上下文菜单
-        onNodeContextMenu(syntheticEvent, node);
+        onNodeContextMenu(syntheticEvent, node, {
+          source: event.source,
+          dragCreateInfo: event.dragCreateInfo,
+        });
       }
     };
 
@@ -893,6 +944,20 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       <div className="w-full h-screen relative flex flex-col overflow-hidden">
         {!readonly && (
           <CanvasToolbar onToolSelect={handleToolSelect} nodeLength={nodes?.length || 0} />
+        )}
+        {isPilotOpen ? (
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-20 shadow-sm rounded-lg w-[550px] h-[280px] border border-solid border-gray-100 dark:border-gray-800">
+            <Pilot canvasId={canvasId} />
+          </div>
+        ) : (
+          <Button
+            type="text"
+            icon={<IconPilot className="w-4 h-4" />}
+            className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-20"
+            onClick={() => setIsPilotOpen(true)}
+          >
+            {t('pilot.name', { defaultValue: 'Pilot' })} <ChevronUp className="w-4 h-4" />
+          </Button>
         )}
         <TopToolbar canvasId={canvasId} />
         <div className="flex-grow relative">
@@ -1004,6 +1069,8 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
               position={contextMenu.position}
               nodeId={contextMenu.nodeId}
               nodeType={contextMenu.nodeType}
+              source={contextMenu.source}
+              dragCreateInfo={contextMenu.dragCreateInfo}
               setOpen={(open) => setContextMenu((prev) => ({ ...prev, open }))}
             />
           )}

@@ -204,7 +204,7 @@ export const SearchList = (props: SearchListProps) => {
           </div>
 
           {mode === 'multiple' && (
-            <div className="pt-2 flex justify-end items-center gap-2 border-solid border-t-1 border-x-0 border-b-0 border-[#E5E5E5]">
+            <div className="pt-2 flex justify-end items-center gap-2 border-solid border-t-1 border-x-0 border-b-0 border-gray-100 dark:border-gray-700">
               <Button size="small" className="text-xs" onClick={cancel}>
                 {t('common.cancel')}
               </Button>

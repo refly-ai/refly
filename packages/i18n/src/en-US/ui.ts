@@ -54,18 +54,23 @@ const translations = {
     resource: 'Resource',
     document: 'Document',
     newDocument: 'New Document',
+    docs: 'Docs',
     skill: 'Skill',
     thread: 'Thread',
     meta: 'Meta',
     project: 'Project',
     upgrade: 'Upgrade',
     upgradeSubscription: 'Upgrade Subscription',
+    dismiss: 'Dismiss',
+    copyRequestInfo: 'Copy Request Info',
+    tryAgain: 'Try again',
     copy: {
       title: 'Copy',
       success: 'Content has been copied to the clipboard!',
       failed: 'Copy failed, please try again!',
     },
-    login: 'Login',
+    login: 'Sign In',
+    signup: 'Sign Up',
     share: 'Share',
     uploadImage: 'Upload Image',
     uploadSuccess: 'Upload successful',
@@ -131,6 +136,13 @@ const translations = {
     create: 'Create',
     update: 'Update',
     validate: 'Validate',
+    refresh: 'Refresh',
+  },
+  mode: {
+    ask: 'Ask',
+    agent: 'Agent',
+    askDescription: 'Answer your question in a single step',
+    agentDescription: 'Solve complex problems with multiple steps',
   },
   pages: {
     share: {
@@ -377,9 +389,9 @@ const translations = {
   },
   tabMeta: {
     landingPage: {
-      title: 'The AI Native Creation Engine',
+      title: 'The Open Source Vibe Workflow Platform',
       description:
-        'Refly is a free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.',
+        'Refly is a pioneering vibe workflow platform designed to solve your most complex challenges. Effortlessly design, build, and reuse intelligent workflows to boost productivity with AI agents and infinite expansion of MCP tools.',
     },
     threadLibrary: {
       title: 'Threads',
@@ -392,13 +404,13 @@ const translations = {
     },
   },
   landingPage: {
-    title: 'The AI Native Creation Engine',
+    title: 'The Open Source Vibe Workflow Platform',
     subTitle:
       'Powered by multi-threaded dialogue, knowledge integration, context memory, and intelligent search, Refly is the best way to transform ideas into quality content.',
     getStarted: 'Get Started',
     login: 'Login',
-    simplySlogan: 'Creation Engine',
-    slogan: 'The AI Native Creation Engine',
+    simplySlogan: 'Vibe Workflow',
+    slogan: 'The Open Source Vibe Workflow Platform',
     description:
       'Refly is the best way to transform ideas into quality content through multi-threaded dialogue, knowledge integration, context memory, and intelligent search.',
     anotherDescription:
@@ -408,8 +420,8 @@ const translations = {
         'Powered by multi-threaded dialogue, artifacts, knowledge integration, context memory, and intelligent search, ',
       second: 'Refly is the best way to transform ideas into quality content.',
     },
-    messageText: 'v0.6.0 Released: New Homepage, Model Customization and Slideshow 🚀',
-    simpleMessageText: 'v0.6.0: Model Customization and Slideshow 🚀',
+    messageText: 'v0.7.1 Released: MCP Store and Background Skills 🚀',
+    simpleMessageText: 'v0.7.1: MCP Store and Background Skills 🚀',
     tryForFree: 'Get Started',
     tryItNow: 'Try It Now',
     creationEngine: 'Creation Engine',
@@ -631,7 +643,7 @@ const translations = {
         contactUs: 'Contact us',
       },
       description:
-        'Refly is a free-form canvas creation platform powered by multi-threaded dialogue, knowledge integration, context memory, intelligent search and WYSIWYG AI editor, easily transforms ideas into quality content.',
+        'Refly is a pioneering vibe workflow platform designed to solve your most complex challenges. Effortlessly design, build, and reuse intelligent workflows to boost productivity with AI agents and infinite expansion of MCP tools.',
       right: 'Refly.ai. All rights reserved.',
       product: {
         title: 'Products',
@@ -799,7 +811,13 @@ const translations = {
     ],
   },
   frontPage: {
-    welcome: 'What can I do for you today?',
+    welcome: {
+      part1: 'The World #1 Open Source',
+      part2: 'Vibe Workflow',
+      part3: 'Platform',
+    },
+    vibeWorkflow: 'Vibe Workflow',
+    githubStar: 'Star us on GitHub!',
     fromCommunity: 'From the community',
     fromCommunityDesc: 'Discover a way to use Refly for work, or even beyond.',
   },
@@ -1101,6 +1119,7 @@ const translations = {
       codeArtifact: 'Code Artifact',
       website: 'Website',
       mindMap: 'Mind Map',
+      group: 'Group',
     },
     presetScenarios: {
       title: 'Preset Scenarios',
@@ -1242,7 +1261,6 @@ const translations = {
     action: {
       nodeAlreadyExists: 'The {{type}} with the same entity already exists',
       deleteSuccess: 'Canvas deleted successfully',
-      addSuccess: 'Canvas added successfully, start creating!',
       duplicateSuccess: 'Canvas duplicated successfully',
       nodeLimitReached:
         'Canvas has reached the maximum limit of {{max}} nodes. Please remove some nodes before adding new ones.',
@@ -1273,6 +1291,11 @@ const translations = {
       shareLoading: 'Loading shared skill response...',
       notFound: 'Skill Response Not Found',
       notFoundDesc: 'The skill response you are looking for does not exist or has been removed.',
+      generating: 'Generating content...',
+      error: {
+        defaultTitle: 'Skill execution failed',
+        networkError: 'If the problem persists, please check your internet connection or VPN',
+      },
     },
     chatHistory: {
       alreadyAdded: 'Already added to chat history',
@@ -1365,6 +1388,7 @@ const translations = {
       downloadFile: 'Download File',
       editGroupNamePlaceholder: 'Please enter the group name',
       addToSlideshow: 'Add to Slideshow',
+      more: 'More Options',
     },
     nodeStatus: {
       isCreatingDocument: 'Creating Document...',
@@ -1658,7 +1682,7 @@ const translations = {
       skill: 'skill',
     },
     homePage: {
-      title: 'The AI Native Creation Engine',
+      title: 'The Open Source Vibe Workflow Platform',
       searchPlaceholder: 'Search for Refly',
       selectedWeblink: {
         title: 'Ask a Question Based on the Selected Web Page:',
@@ -1983,6 +2007,51 @@ const translations = {
       stdioWebDisabledTooltip: 'Stdio protocol is not supported in the web version.',
       jsonModeStdioWarning:
         "When configuring via JSON, please note: The 'stdio' type is not supported in the web version and may lead to unexpected behavior.",
+      // Community MCP
+      community: {
+        title: 'Community MCP Configurations',
+        description: 'Discover and install community MCP configurations',
+        searchPlaceholder: 'Search configurations...',
+        filterByType: 'Filter by type',
+        allTypes: 'All Types',
+        install: 'Install',
+        installing: 'Installing...',
+        installed: 'Installed',
+        installSuccess: 'Successfully installed {{name}}',
+        installError: 'Failed to install {{name}}',
+        requiresApiKeyWarning:
+          '{{name}} requires an API key. Please configure it in the detailed view.',
+        viewDocumentation: 'View documentation',
+        noDescription: 'No description available',
+        loadError: 'Failed to load community configurations',
+        loadErrorDescription: 'Please check your network connection and try again.',
+        noConfigurations: 'No community configurations found',
+        author: 'by {{author}}',
+        version: 'v{{version}}',
+        types: {
+          sse: 'Server-Sent Events (SSE)',
+          streamable: 'Streamable API',
+          stdio: 'Standard I/O (Stdio)',
+          websocket: 'WebSocket',
+        },
+        // API Key configuration translations
+        configureApiKey: 'Configure API Key',
+        apiKeyRequired: 'API Key Required',
+        apiKeyDescription: 'This MCP server requires an API key to function properly.',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: 'Enter your API key...',
+        authMethod: 'Authentication Method',
+        auth: {
+          urlParam: 'URL Parameter',
+          bearerToken: 'Bearer Token',
+          headerKey: 'Header ({{header}})',
+          apiKey: 'API Key',
+        },
+        validateAndInstall: 'Validate & Install',
+        validating: 'Validating...',
+        validateSuccess: 'Validation successful',
+        validateError: 'Validation failed',
+      },
     },
     appearance: {
       title: 'Appearance Settings',
@@ -2183,6 +2252,16 @@ const translations = {
         embedding: 'Embedding',
       },
     },
+    copilot: {
+      mcpSelector: {
+        title: 'MCP Selector',
+        empty: 'No MCP servers available',
+        browseMcpStore: 'Go to Store',
+      },
+      recommendQuestions: {
+        refresh: 'Refresh',
+      },
+    },
     modelConfig: {
       title: 'Model Config',
       chatModels: 'Chat Models',
@@ -2257,6 +2336,7 @@ const translations = {
     defaultModel: {
       title: 'Default Model',
       chat: 'Default Q&A Model',
+      agent: 'Default Agent Model',
       queryAnalysis: 'Question Analysis & Context Processing',
       titleGeneration: 'Smart Title Generator',
       noModel: 'Not Set',
@@ -2265,6 +2345,7 @@ const translations = {
       updateFailed: 'Update failed, please try again!',
       description: {
         chat: "We'll use this model to answer your questions when you don't specify a particular one.",
+        agent: 'This model will be used when you toggle the agent mode.',
         queryAnalysis:
           'Helps understand your questions better and optimizes the input context. (Choose a fast and economical model for efficiency.)',
         titleGeneration: 'Creates suitable titles for your documents or canvases.',
@@ -2551,6 +2632,7 @@ const translations = {
       noContextChat: 'No Context Chat',
       wholeSpaceChat: 'Whole Space Chat',
       recommendQuestions: 'Recommend Questions',
+      chooseMcp: 'Choose MCP',
       replace: 'Replace Selection',
       reject: 'Reject',
       copy: 'Copy Answer',
@@ -2604,6 +2686,11 @@ const translations = {
       title: 'Recommended Questions',
       refresh: 'Refresh',
       empty: 'No recommended questions',
+    },
+    mcpSelector: {
+      title: 'Choose MCP Servers',
+      empty: 'No MCP servers available',
+      selected: 'Selected',
     },
     contextItem: {
       current: 'Current ',
@@ -2688,6 +2775,29 @@ const translations = {
       contact: 'Contact',
       terms: 'Terms',
       privacy: 'Privacy',
+    },
+  },
+  pilot: {
+    name: 'Agent',
+    description:
+      'Refly Agent is an autonomous agent that solves your problems with thinking steps displayed in our free-form canvas.',
+    thinking: 'Agent is thinking',
+    noSessions: 'No agent sessions found',
+    loadFailed: 'Failed to load session details',
+    epoch: 'Epoch {{count}}',
+    newSession: 'New Session',
+    sessionHistory: 'Session History',
+    sessionInputPlaceholder: 'Ask a question...',
+    createPilotSessionFailed: 'Failed to create agent session',
+    recentSessions: 'Recent Sessions',
+    createdAt: 'Created At',
+    noTasks: 'No tasks available yet',
+    status: {
+      init: 'Init',
+      executing: 'Executing',
+      waiting: 'Waiting',
+      finish: 'Finish',
+      failed: 'Failed',
     },
   },
   deck: {

@@ -6,7 +6,7 @@ info:
     email: support@refly.ai
   version: 0.2.0
 externalDocs:
-  description: The AI Native Creation Engine
+  description: The Open Source Vibe Workflow Platform
   url: https://refly.ai
 servers:
   - url: /v1
@@ -27,6 +27,8 @@ tags:
     description: Action management endpoints
   - name: skill
     description: Skill management endpoints
+  - name: pilot
+    description: Pilot management endpoints
   - name: codeArtifact
     description: Code artifact management endpoints
   - name: user
@@ -2155,6 +2157,104 @@ paths:
                 $ref: '#/components/schemas/BaseResponse'
       security:
         - api_key: []
+  /pilot/session/new:
+    post:
+      tags:
+        - pilot
+      summary: Create new pilot session
+      description: Create a new pilot session
+      operationId: createPilotSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePilotSessionRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertPilotSessionResponse'
+  /pilot/session/update:
+    post:
+      tags:
+        - pilot
+      summary: Update pilot session
+      description: Update an existing pilot session
+      operationId: updatePilotSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePilotSessionRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertPilotSessionResponse'
+  /pilot/session/list:
+    get:
+      tags:
+        - pilot
+      summary: List pilot sessions
+      description: List all pilot sessions
+      operationId: listPilotSessions
+      parameters:
+        - name: targetId
+          in: query
+          description: Target ID
+          schema:
+            type: string
+        - name: targetType
+          in: query
+          description: Target type
+          schema:
+            $ref: '#/components/schemas/EntityType'
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          schema:
+            type: number
+            default: 10
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPilotSessionsResponse'
+  /pilot/session/detail:
+    get:
+      tags:
+        - pilot
+      summary: Get pilot session detail
+      description: Get detail for a pilot session
+      operationId: getPilotSessionDetail
+      parameters:
+        - name: sessionId
+          in: query
+          description: Pilot session ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPilotSessionDetailResponse'
   /user/settings:
     get:
       tags:
@@ -3876,6 +3976,8 @@ components:
     ActionMeta:
       type: object
       description: Action metadata
+      required:
+        - name
       properties:
         type:
           type: string
@@ -4314,6 +4416,12 @@ components:
           description: Errors
           items:
             type: string
+        pilotStepId:
+          type: string
+          description: Pilot step ID
+        pilotSessionId:
+          type: string
+          description: Pilot session ID
         createdAt:
           type: string
           format: date-time
@@ -4546,6 +4654,7 @@ components:
       description: Model usage scene
       enum:
         - chat
+        - agent
         - queryAnalysis
         - titleGeneration
     DefaultModelConfig:
@@ -4554,6 +4663,9 @@ components:
       properties:
         chat:
           description: Default chat model to use
+          $ref: '#/components/schemas/ProviderItem'
+        agent:
+          description: Default agent model to use
           $ref: '#/components/schemas/ProviderItem'
         queryAnalysis:
           description: Query analysis and context processing model
@@ -5417,7 +5529,6 @@ components:
         error:
           description: Error data. Only present when `event` is `error`.
           $ref: '#/components/schemas/BaseResponse'
-          deprecated: true
         originError:
           type: string
           description: Original error message. Only present when `event` is `error`.
@@ -6116,6 +6227,11 @@ components:
         triggerId:
           type: string
           description: Trigger ID
+        selectedMcpServers:
+          type: array
+          description: Selected MCP servers
+          items:
+            type: string
     InvokeSkillResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -6217,6 +6333,168 @@ components:
         triggerId:
           type: string
           description: Trigger ID to delete
+    PilotStepStatus:
+      type: string
+      enum:
+        - init
+        - executing
+        - finish
+        - failed
+    PilotStep:
+      type: object
+      properties:
+        stepId:
+          type: string
+          description: Pilot step ID
+        name:
+          type: string
+          description: Pilot step name
+        epoch:
+          type: number
+          description: Pilot step epoch
+        entityId:
+          type: string
+          description: Pilot step entity ID
+        entityType:
+          type: string
+          description: Pilot step entity type
+        status:
+          description: Pilot step status
+          $ref: '#/components/schemas/PilotStepStatus'
+        rawOutput:
+          type: string
+          description: Pilot step raw output
+        actionResult:
+          description: Pilot step action result
+          $ref: '#/components/schemas/ActionResult'
+        createdAt:
+          type: string
+          description: Pilot step created at
+        updatedAt:
+          type: string
+          description: Pilot step updated at
+    PilotSessionStatus:
+      type: string
+      enum:
+        - init
+        - executing
+        - waiting
+        - finish
+        - failed
+    PilotSession:
+      type: object
+      required:
+        - sessionId
+        - status
+        - targetType
+        - targetId
+        - title
+        - input
+        - currentEpoch
+        - maxEpoch
+      properties:
+        sessionId:
+          type: string
+          description: Pilot session ID
+        title:
+          type: string
+          description: Pilot session title
+        input:
+          description: Pilot session input
+          $ref: '#/components/schemas/SkillInput'
+        status:
+          description: Pilot session status
+          $ref: '#/components/schemas/PilotSessionStatus'
+        targetType:
+          description: Pilot session target type
+          $ref: '#/components/schemas/EntityType'
+        targetId:
+          type: string
+          description: Pilot session target ID
+        currentEpoch:
+          type: number
+          description: Pilot session current epoch
+        maxEpoch:
+          type: number
+          description: Pilot session max epoch
+        steps:
+          type: array
+          description: Pilot steps
+          items:
+            $ref: '#/components/schemas/PilotStep'
+        createdAt:
+          type: string
+          description: Pilot session created at
+        updatedAt:
+          type: string
+          description: Pilot session updated at
+    CreatePilotSessionRequest:
+      type: object
+      required:
+        - targetId
+        - targetType
+        - input
+      properties:
+        targetId:
+          type: string
+          description: Pilot session target ID
+        targetType:
+          description: Pilot session target type
+          $ref: '#/components/schemas/EntityType'
+        maxEpoch:
+          type: number
+          description: Pilot session max epoch
+          default: 2
+        title:
+          type: string
+          description: Pilot session title
+        input:
+          description: Pilot session input
+          $ref: '#/components/schemas/SkillInput'
+        providerItemId:
+          type: string
+          description: Pilot session provider item ID
+    UpdatePilotSessionRequest:
+      type: object
+      required:
+        - sessionId
+      properties:
+        sessionId:
+          type: string
+          description: Pilot session ID
+        input:
+          description: Pilot session input
+          $ref: '#/components/schemas/SkillInput'
+        maxEpoch:
+          type: number
+          description: Pilot session max epoch
+          default: 2
+    UpsertPilotSessionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              description: Upserted pilot session
+              $ref: '#/components/schemas/PilotSession'
+    ListPilotSessionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Pilot session list
+              items:
+                $ref: '#/components/schemas/PilotSession'
+    GetPilotSessionDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              description: Pilot session detail
+              $ref: '#/components/schemas/PilotSession'
     UpdateUserSettingsRequest:
       type: object
       properties:

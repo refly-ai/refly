@@ -5,7 +5,6 @@ import './footer.scss';
 import { Button } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
-import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/auth';
 import {
   IconX,
   IconGithub,
@@ -13,7 +12,6 @@ import {
   IconEmail,
   IconLanguage,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { FaGithub } from 'react-icons/fa6';
 import { EXTENSION_DOWNLOAD_LINK, getClientOrigin } from '@refly/utils/url';
 
 const resources = [
@@ -48,9 +46,6 @@ const platforms = [
 
 function Footer() {
   const { t } = useTranslation();
-  const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
-    setLoginModalOpen: state.setLoginModalOpen,
-  }));
 
   // Add scroll to top function
   const scrollToTop = (e: React.MouseEvent) => {
@@ -65,47 +60,8 @@ function Footer() {
     <footer className="px-6">
       <div className="py-12 md:py-16">
         <div className="mx-auto w-full max-w-7xl md:w-[70%]">
-          {/* CTA Block */}
-          <div
-            className="mb-[72px] flex h-[380px] w-full flex-col items-center justify-center rounded-[20px] border border-[#E3E3E3] p-12 text-center font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif]"
-            style={{
-              backgroundImage:
-                'linear-gradient(180deg, #F8E2D3 0%, #FCFBFA 95%, #FCFAF9 100%, #FCFCFC 100%, #FFFFFF 100%)',
-            }}
-          >
-            <h2 className="mb-6 font-['Alibaba_PuHuiTi_Bold',system-ui,-apple-system,sans-serif] text-3xl font-bold md:text-4xl">
-              {t('landingPage.footer.cta.title')}
-            </h2>
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button
-                type="primary"
-                onClick={() => setLoginModalOpen(true)}
-                size="large"
-                className="cursor-pointer"
-              >
-                {t('landingPage.footer.cta.getStarted')}
-              </Button>
-              <Button
-                size="large"
-                onClick={() => {
-                  window.open('https://github.com/refly-ai/refly', '_blank');
-                }}
-                icon={<FaGithub className="flex h-5 w-5 items-center justify-center" />}
-                className="cursor-pointer"
-              >
-                Github
-              </Button>
-            </div>
-          </div>
-
           {/* Main Footer Content */}
-          <div
-            className="w-full rounded-[20px] border border-[#E3E3E3] p-8 md:p-12"
-            style={{
-              backgroundImage:
-                'linear-gradient(180deg, #FAF8F4 0%, #FCFBFA 95%, #FCFAF9 100%, #FCFCFC 100%, #FFFFFF 100%)',
-            }}
-          >
+          <div className="w-full rounded-[20px] border border-[#E3E3E3] p-8 md:p-12 bg-gray-100 dark:bg-gray-700">
             {/* Updated Footer Layout - Changed grid columns ratio */}
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-[40%_1fr]">
               {/* Left Column - Logo, Description, Social */}
@@ -157,7 +113,7 @@ function Footer() {
                   </div>
 
                   {/* Divider */}
-                  <div className="h-4 w-[1px] bg-gray-200" />
+                  <div className="h-4 w-[1px] bg-gray-200 dark:bg-gray-600" />
 
                   {/* Language Selector */}
                   <div className="flex cursor-pointer items-center text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-300">
@@ -175,7 +131,7 @@ function Footer() {
                   </div>
                 </div>
                 <div className="mt-6">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     © {new Date().getFullYear()} Powerformer, Inc.
                   </p>
                 </div>
@@ -198,7 +154,7 @@ function Footer() {
                           <Link
                             to="#"
                             onClick={scrollToTop}
-                            className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                            className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                           >
                             {item}
                           </Link>
@@ -218,7 +174,7 @@ function Footer() {
                           <Link
                             to={item.link}
                             target="_blank"
-                            className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                            className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                           >
                             {t(`landingPage.footer.resource.${item.title}`)}
                           </Link>
@@ -240,7 +196,7 @@ function Footer() {
                         <Link
                           to="https://docs.refly.ai/about/privacy-policy"
                           target="_blank"
-                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                           {t('landingPage.footer.about.privacy')}
                         </Link>
@@ -249,7 +205,7 @@ function Footer() {
                         <Link
                           to="https://docs.refly.ai/about/terms-of-service"
                           target="_blank"
-                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                           {t('landingPage.footer.about.terms')}
                         </Link>
@@ -268,7 +224,7 @@ function Footer() {
                           <Link
                             to={item.link}
                             target="_blank"
-                            className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                            className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                           >
                             {t(`landingPage.footer.platforms.${item.title}`)}
                           </Link>
@@ -287,7 +243,7 @@ function Footer() {
                         <Link
                           to="https://docs.refly.ai/community/contact-us"
                           target="_blank"
-                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                           {t('landingPage.footer.contactUs.community')}
                         </Link>
@@ -295,7 +251,7 @@ function Footer() {
                       <li key="mail" className="mb-1">
                         <Link
                           to={'mailto:support@refly.ai'}
-                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700"
+                          className="text-gray-500 no-underline transition duration-150 ease-in-out hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                           {t('landingPage.footer.contactUs.mail')}
                         </Link>

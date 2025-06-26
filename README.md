@@ -6,12 +6,12 @@
     <b>
         <a href="https://www.refly.ai">Refly.AI</a><br>
     </b>
-    ⭐️  The AI Native Creation Engine ⭐️ <br>
+    ⭐️  The Open Source Vibe Workflow Platform ⭐️ <br>
 </h1>
 
-Refly is an open-source AI-native creation engine powered by 13+ leading AI models. Its intuitive free-form canvas interface integrates multi-threaded conversations, multimodal inputs (text/images/files), RAG retrieval process, browser extension web clipper, contextual memory, AI document editing capabilities, code artifact generation (HTML/SVG/Mermaid/React), and website visualization engine, empowering you to effortlessly transform ideas into complete works with interactive visualizations and web applications.
+Refly is a pioneering vibe workflow platform designed to solve your most complex challenges. Effortlessly design, build, and reuse intelligent workflows to boost productivity with AI agents and infinite expansion of MCP tools.
 
-[🚀 v0.6.0 Released! Now Supporting brand new home page, custom model providers (BYOK) and Slideshow ⚡️](https://docs.refly.ai/changelog/v0.6.0)
+[🚀 v0.7.1 Released! Now Supporting MCP Store and Background Skill Invocation ⚡️](https://docs.refly.ai/changelog/v0.7.1)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
@@ -57,6 +57,18 @@ To start deployment:
 cd deploy/docker
 cp ../../apps/api/.env.example .env # copy the example api env file
 docker compose up -d
+```
+
+### Self-deploy with Kubernetes
+
+Also, we support deploy ReflyAI to Kubernetes cluster.
+
+To start deployment:
+
+```bash
+cd deploy/kubernetes
+
+kubectl apply -f refly-deployment.yaml
 ```
 
 For the following steps, you can visit [Self-deploy Guide](https://docs.refly.ai/guide/self-deploy) for more details.
@@ -209,7 +221,7 @@ We would also like to thank the following open-source projects that make ReflyAI
 15. [Resend](https://github.com/resend/react-email) - Library for building email sending functionality.
 16. Other upstream dependencies.
 
-We are deeply grateful to the community for providing such powerful yet simple libraries that allow us to focus more on implementing product logic. We hope that our project will also provide an easier-to-use AI Native content creation engine for everyone in the future.
+We are deeply grateful to the community for providing such powerful yet simple libraries that allow us to focus more on implementing product logic. We hope that our project will also provide an easier-to-use Vibe Workflow Platform for everyone in the future.
 
 ## Security Issues
 

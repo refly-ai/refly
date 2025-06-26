@@ -9,8 +9,8 @@ const enNav = [
   },
   { text: 'Community', link: '/community/contact-us' },
   {
-    text: 'v0.6.0',
-    items: [{ text: 'Changelog', link: '/changelog/v0.6.0' }],
+    text: 'v0.7.1',
+    items: [{ text: 'Changelog', link: '/changelog/v0.7.1' }],
   },
   { text: 'Roadmap', link: '/roadmap' },
 ];
@@ -23,8 +23,8 @@ const zhNav = [
   },
   { text: '社区', link: '/zh/community/contact-us' },
   {
-    text: 'v0.6.0',
-    items: [{ text: '更新日志', link: '/zh/changelog/v0.6.0' }],
+    text: 'v0.7.1',
+    items: [{ text: '更新日志', link: '/zh/changelog/v0.7.1' }],
   },
   { text: '路线图', link: '/zh/roadmap' },
 ];
@@ -118,7 +118,10 @@ const sidebar = {
     },
     {
       text: 'Community',
-      items: [{ text: 'Contact Us', link: '/community/contact-us' }],
+      items: [
+        { text: 'Contact Us', link: '/community/contact-us' },
+        { text: 'MCP Store Onboarding', link: '/community/mcp-onboarding' },
+      ],
     },
     {
       text: 'About',
@@ -130,6 +133,8 @@ const sidebar = {
     {
       text: 'Changelog',
       items: [
+        { text: 'v0.7.1', link: '/changelog/v0.7.1' },
+        { text: 'v0.7.0', link: '/changelog/v0.7.0' },
         { text: 'v0.6.0', link: '/changelog/v0.6.0' },
         { text: 'v0.5.0', link: '/changelog/v0.5.0' },
         { text: 'v0.4.2', link: '/changelog/v0.4.2' },
@@ -229,7 +234,10 @@ const sidebar = {
     },
     {
       text: '社区',
-      items: [{ text: '联系我们', link: '/zh/community/contact-us' }],
+      items: [
+        { text: '联系我们', link: '/zh/community/contact-us' },
+        { text: 'MCP Store 入驻指南', link: '/zh/community/mcp-onboarding' },
+      ],
     },
     {
       text: '关于',
@@ -241,6 +249,8 @@ const sidebar = {
     {
       text: '更新日志',
       items: [
+        { text: 'v0.7.1', link: '/zh/changelog/v0.7.1' },
+        { text: 'v0.7.0', link: '/zh/changelog/v0.7.0' },
         { text: 'v0.6.0', link: '/zh/changelog/v0.6.0' },
         { text: 'v0.5.0', link: '/zh/changelog/v0.5.0' },
         { text: 'v0.4.2', link: '/zh/changelog/v0.4.2' },

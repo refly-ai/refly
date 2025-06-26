@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2021",
+    "sourceMap": true,
+    "inlineSourceMap": false,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "esModuleInterop": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "inlineSources": true,
+    "sourceRoot": "/",
+    "composite": true,
+    "types": ["electron"],
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"]
+}

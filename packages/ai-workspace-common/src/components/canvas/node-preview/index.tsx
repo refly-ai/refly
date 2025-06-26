@@ -17,12 +17,13 @@ import { useDrag, useDrop, DndProvider, XYCoord } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import withScrolling, { createHorizontalStrength } from 'react-dnd-scrolling';
 import { getFreshNodePreviews } from '@refly-packages/ai-workspace-common/utils/canvas';
-import { ReflyPilot } from '@refly-packages/ai-workspace-common/components/canvas/refly-pilot';
 import { Slideshow } from '@refly-packages/ai-workspace-common/components/canvas/slideshow';
 import { EnhancedSkillResponse } from './skill-response/enhanced-skill-response';
 import { useReactFlow } from '@xyflow/react';
 import { useSearchParams } from 'react-router-dom';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { preloadMonacoEditor } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/monaco-editor/monacoPreloader';
+import { LinearThreadContainer } from '@refly-packages/ai-workspace-common/components/canvas/linear-thread';
 
 // DnD item type constant
 const ITEM_TYPE = 'node-preview';
@@ -365,13 +366,17 @@ export const NodePreviewContainer = memo(
   }) => {
     const { readonly } = useCanvasContext();
     const { getNodes } = useReactFlow<CanvasNode<any>>();
-    const { rawNodePreviews, reorderNodePreviews, showReflyPilot, showSlideshow } =
+    const { showLinearThread, rawNodePreviews, reorderNodePreviews, showSlideshow } =
       useCanvasStoreShallow((state) => ({
+        showLinearThread: state.showLinearThread,
         rawNodePreviews: state.config[canvasId]?.nodePreviews ?? [],
         reorderNodePreviews: state.reorderNodePreviews,
-        showReflyPilot: state.showReflyPilot,
         showSlideshow: state.showSlideshow,
       }));
+
+    useEffect(() => {
+      preloadMonacoEditor();
+    }, []);
 
     // Compute fresh node previews using the utility function
     const nodePreviews = useMemo(() => {
@@ -418,7 +423,7 @@ export const NodePreviewContainer = memo(
         <div className="flex h-full w-full">
           <ScrollingComponent {...scrollingComponentProps}>
             {showSlideshow && !readonly && <Slideshow canvasId={canvasId} />}
-            {showReflyPilot && <ReflyPilot />}
+            {showLinearThread && <LinearThreadContainer />}
             {nodePreviewsRendered}
           </ScrollingComponent>
         </div>

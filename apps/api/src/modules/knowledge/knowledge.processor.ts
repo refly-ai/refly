@@ -7,7 +7,7 @@ import {
   QUEUE_DELETE_KNOWLEDGE_ENTITY,
   QUEUE_POST_DELETE_KNOWLEDGE_ENTITY,
   QUEUE_RESOURCE,
-} from '@/utils/const';
+} from '../../utils/const';
 import {
   DeleteKnowledgeEntityJobData,
   FinalizeResourceParam,

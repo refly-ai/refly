@@ -11,10 +11,11 @@ import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { getAvailableFileCount } from '@refly/utils/quota';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useReactFlow } from '@xyflow/react';
+import { useReactFlow, XYPosition } from '@xyflow/react';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { Document } from '@refly/openapi-schema';
+import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 
 export const useCreateDocument = () => {
   const [isCreating, setIsCreating] = useState(false);
@@ -68,9 +69,16 @@ export const useCreateDocument = () => {
       content: string,
       {
         sourceNodeId,
+        targetNodeId,
         addToCanvas,
-        sourceType,
-      }: { sourceNodeId?: string; addToCanvas?: boolean; sourceType?: string },
+        position,
+      }: {
+        sourceNodeId?: string;
+        targetNodeId?: string;
+        addToCanvas?: boolean;
+        sourceType?: string;
+        position?: XYPosition;
+      },
     ) => {
       if (!checkStorageUsage()) {
         return null;
@@ -104,8 +112,26 @@ export const useCreateDocument = () => {
 
         // Find the source node
         const sourceNode = nodes.find((n) => n.data?.entityId === sourceNodeId);
+        const targetNode = nodes.find((n) => n.data?.entityId === targetNodeId);
+        const connectTo: CanvasNodeFilter[] = [];
 
-        if (!sourceNode) {
+        if (sourceNode) {
+          connectTo.push({
+            type: sourceNode.type as CanvasNodeType,
+            entityId: sourceNodeId,
+            handleType: 'source',
+          });
+        }
+
+        if (targetNode) {
+          connectTo.push({
+            type: targetNode.type as CanvasNodeType,
+            entityId: targetNodeId,
+            handleType: 'target',
+          });
+        }
+
+        if (!sourceNode && !targetNode) {
           console.warn('Source node not found');
           return null;
         }
@@ -117,14 +143,10 @@ export const useCreateDocument = () => {
             title,
             contentPreview: parsedContent.slice(0, 500),
           },
+          position,
         };
 
-        addNode(newNode, [
-          {
-            type: sourceType as CanvasNodeType,
-            entityId: sourceNodeId,
-          },
-        ]);
+        addNode(newNode, connectTo);
       }
 
       return docId;
@@ -138,11 +160,25 @@ export const useCreateDocument = () => {
       content: string,
       {
         sourceNodeId,
+        targetNodeId,
         addToCanvas,
         sourceType,
-      }: { sourceNodeId?: string; addToCanvas?: boolean; sourceType?: string },
+        position,
+      }: {
+        sourceNodeId?: string;
+        targetNodeId?: string;
+        addToCanvas?: boolean;
+        sourceType?: string;
+        position?: XYPosition;
+      },
     ) => {
-      return createDocument(title, content, { sourceNodeId, addToCanvas, sourceType });
+      return createDocument(title, content, {
+        sourceNodeId,
+        targetNodeId,
+        addToCanvas,
+        sourceType,
+        position,
+      });
     },
     300,
     { leading: true },
@@ -200,7 +236,16 @@ export const useCreateDocument = () => {
   );
 
   const duplicateDocument = useCallback(
-    async (title: string, content: string, sourceDocId: string, metadata?: any) => {
+    async (
+      title: string,
+      content: string,
+      metadata?: any,
+      nodeInfo?: {
+        position?: XYPosition;
+        connectTo?: CanvasNodeFilter[];
+      },
+      onSuccess?: () => void,
+    ) => {
       if (!checkStorageUsage()) {
         return null;
       }
@@ -237,9 +282,11 @@ export const useCreateDocument = () => {
               status: 'finish',
             },
           },
+          position: nodeInfo?.position,
         };
+        addNode(newNode, nodeInfo?.connectTo, false, true);
 
-        addNode(newNode, [{ type: 'document', entityId: sourceDocId }], false, true);
+        onSuccess?.();
       }
 
       return docId;

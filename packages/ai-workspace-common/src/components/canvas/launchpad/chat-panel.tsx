@@ -1,5 +1,5 @@
-import { notification, Button, Form } from 'antd';
-import { useCallback, useEffect, useMemo } from 'react';
+import { notification, Button, Form, Badge } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useContextPanelStore,
@@ -37,6 +37,8 @@ import { ActionStatus, SkillTemplateConfig } from '@refly/openapi-schema';
 import { ContextTarget } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { ProjectKnowledgeToggle } from '@refly-packages/ai-workspace-common/components/project/project-knowledge-toggle';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { ToolOutlined } from '@ant-design/icons';
 
 const PremiumBanner = () => {
   const { t } = useTranslation();
@@ -136,6 +138,11 @@ export const ChatPanel = ({
     setActiveResultId: state.setActiveResultId,
   }));
 
+  // 获取选择的 MCP 服务器
+  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
+    selectedMcpServers: state.selectedMcpServers,
+  }));
+
   const [form] = Form.useForm();
 
   // hooks
@@ -217,6 +224,7 @@ export const ChatPanel = ({
     const query = userInput || newQAText.trim();
 
     const { contextItems, runtimeConfig } = useContextPanelStore.getState();
+
     const finalProjectId = getFinalProjectId();
 
     // Generate new message IDs using the provided function
@@ -238,10 +246,11 @@ export const ChatPanel = ({
             metadata: {
               status: 'executing' as ActionStatus,
               contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
-              tplConfig,
-              modelInfo: selectedModel,
               selectedSkill,
+              selectedMcpServers,
+              modelInfo: selectedModel,
               runtimeConfig,
+              tplConfig,
               structuredData: {
                 query,
               },
@@ -287,6 +296,7 @@ export const ChatPanel = ({
           metadata: {
             status: 'executing',
             contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
+            selectedMcpServers,
             selectedSkill,
             modelInfo: selectedModel,
             runtimeConfig,
@@ -319,8 +329,30 @@ export const ChatPanel = ({
     setRecommendQuestionsOpen(!recommendQuestionsOpen);
   }, [recommendQuestionsOpen, setRecommendQuestionsOpen]);
 
+  const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
+
+  // Toggle MCP selector panel
+  const handleMcpSelectorToggle = useCallback(() => {
+    setMcpSelectorOpen(!mcpSelectorOpen);
+  }, [mcpSelectorOpen, setMcpSelectorOpen]);
+
   const customActions: CustomAction[] = useMemo(
     () => [
+      {
+        icon: (
+          <Badge
+            count={selectedMcpServers.length > 0 ? selectedMcpServers.length : 0}
+            size="small"
+            offset={[2, -2]}
+          >
+            <ToolOutlined className="flex items-center" />
+          </Badge>
+        ),
+        title: t('copilot.chatActions.chooseMcp'),
+        onClick: () => {
+          handleMcpSelectorToggle();
+        },
+      },
       {
         icon: <PiMagicWand className="flex items-center" />,
         title: t('copilot.chatActions.recommendQuestions'),
@@ -329,7 +361,13 @@ export const ChatPanel = ({
         },
       },
     ],
-    [handleRecommendQuestionsToggle, t],
+    [
+      handleRecommendQuestionsToggle,
+      handleMcpSelectorToggle,
+      t,
+      selectedMcpServers,
+      handleMcpSelectorToggle,
+    ],
   );
 
   const handleImageUpload = async (file: File) => {
@@ -373,6 +411,8 @@ export const ChatPanel = ({
             embeddedMode && 'embedded-chat-panel border !border-gray-100 dark:!border-gray-700',
           )}
         >
+          <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
+
           <SelectedSkillHeader
             skill={selectedSkill}
             setSelectedSkill={setSelectedSkill}

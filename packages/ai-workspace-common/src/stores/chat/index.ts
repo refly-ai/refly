@@ -37,6 +37,7 @@ export interface ChatState {
 
   selectedModel: ModelInfo;
   skillSelectedModel: ModelInfo;
+  isPilotActivated: boolean;
   enableWebSearch: boolean;
   enableDeepReasonWebSearch: boolean;
   enableKnowledgeBaseSearch: boolean;
@@ -46,6 +47,7 @@ export interface ChatState {
   setMessageIntentContext: (val: MessageIntentContext) => void;
   setSelectedModel: (val: ModelInfo) => void;
   setSkillSelectedModel: (val: ModelInfo) => void;
+  setIsPilotActivated: (val: boolean) => void;
   setEnableWebSearch: (val: boolean) => void;
   setEnableDeepReasonWebSearch: (val: boolean) => void;
   setEnableKnowledgeBaseSearch: (val: boolean) => void;
@@ -55,6 +57,7 @@ export interface ChatState {
 const defaultConfigurableState = {
   selectedModel: null,
   skillSelectedModel: null,
+  isPilotActivated: false,
   enableWebSearch: true,
   enableDeepReasonWebSearch: false,
   enableKnowledgeBaseSearch: true,
@@ -82,6 +85,7 @@ export const useChatStore = create<ChatState>()(
         setMessageIntentContext: (val: MessageIntentContext) => set({ messageIntentContext: val }),
         setSelectedModel: (val: ModelInfo) => set({ selectedModel: val }),
         setSkillSelectedModel: (val: ModelInfo) => set({ skillSelectedModel: val }),
+        setIsPilotActivated: (val: boolean) => set({ isPilotActivated: val }),
         setEnableWebSearch: (val: boolean) => set({ enableWebSearch: val }),
         setEnableDeepReasonWebSearch: (val: boolean) => set({ enableDeepReasonWebSearch: val }),
         setEnableKnowledgeBaseSearch: (val: boolean) => set({ enableKnowledgeBaseSearch: val }),
@@ -95,6 +99,7 @@ export const useChatStore = create<ChatState>()(
           newQAText: state.newQAText,
           selectedModel: state.selectedModel,
           skillSelectedModel: state.skillSelectedModel,
+          isPilotActivated: state.isPilotActivated,
         }),
       },
     ),

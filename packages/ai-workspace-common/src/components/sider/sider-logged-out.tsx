@@ -49,19 +49,21 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
     <Layout.Sider
       width={source === 'sider' ? (collapse ? 0 : 220) : 220}
       className={cn(
-        'border border-solid border-gray-100 bg-white shadow-sm',
+        'border border-solid border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900',
         source === 'sider' ? 'h-[calc(100vh)]' : 'h-[calc(100vh-100px)] rounded-r-lg',
       )}
     >
       <div className="flex h-full flex-col overflow-y-auto">
         <SiderLogo source={source} navigate={(path) => navigate(path)} setCollapse={setCollapse} />
         <div className="flex-grow flex flex-col items-center justify-center px-3">
-          <div className="text-xl font-bold">AI Native</div>
-          <div className="text-xl font-bold mb-4">{t('landingPage.creationEngine')}</div>
+          <div className="text-xl font-bold dark:text-gray-100">AI Native</div>
+          <div className="text-xl font-bold mb-4 dark:text-gray-100">
+            {t('landingPage.creationEngine')}
+          </div>
           <div className="flex flex-col gap-2">
             {keyFeatureIds.map((featureId) => (
-              <div className="text-[12px] text-gray-500" key={featureId}>
-                <LuCheck className="w-4 h-4 translate-y-1 text-green-500" />{' '}
+              <div className="text-[12px] text-gray-500 dark:text-gray-400" key={featureId}>
+                <LuCheck className="w-4 h-4 translate-y-1 text-green-500 dark:text-green-400" />{' '}
                 {t(`share.keyFeatures.${featureId}`)}
               </div>
             ))}
@@ -91,7 +93,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
           <Link
             to="https://twitter.com/reflyai"
             target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
+            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="Twitter"
           >
             <IconX className="flex items-center text-base" />
@@ -99,7 +101,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
           <Link
             to="https://github.com/refly-ai"
             target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
+            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="GitHub"
           >
             <IconGithub className="flex items-center text-base" />
@@ -107,7 +109,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
           <Link
             to="https://discord.gg/bWjffrb89h"
             target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
+            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="Discord"
           >
             <IconDiscord className="flex items-center text-base" />
@@ -115,7 +117,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
           <Link
             to="mailto:support@refly.ai"
             target="_blank"
-            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
+            className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="Discord"
           >
             <IconEmail className="flex items-center text-base" />

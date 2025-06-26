@@ -45,10 +45,10 @@ let isLoggingOut = false;
 
 export const logout = async ({
   callRemoteLogout,
-  skipReload = false,
+  forceReload = false,
 }: {
   callRemoteLogout?: boolean;
-  skipReload?: boolean;
+  forceReload?: boolean;
 } = {}) => {
   // Return early if already logging out
   if (isLoggingOut) {
@@ -76,16 +76,13 @@ export const logout = async ({
       }
     }
 
-    // Reload page only if not explicitly skipped
-    if (!skipReload) {
-      // Check for valid auth reload flag
-      if (hasValidAuthReloadFlag()) {
-        // We've already tried reloading once after auth failure, don't reload again
-        console.log('Preventing reload loop after authentication failure');
-        return;
-      }
+    const hasFlag = hasValidAuthReloadFlag();
 
+    if (!hasFlag) {
       setAuthReloadFlag();
+    }
+
+    if (forceReload || !hasFlag) {
       window.location.reload();
     }
   } catch (error) {
@@ -108,7 +105,7 @@ export const useLogout = () => {
       content: t('settings.account.logoutConfirmation.message'),
       centered: true,
       async onOk() {
-        await logout({ callRemoteLogout: true });
+        await logout({ callRemoteLogout: true, forceReload: true });
       },
     });
   };

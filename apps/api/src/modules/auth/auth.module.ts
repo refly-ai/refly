@@ -14,6 +14,7 @@ import { GoogleOauthStrategy } from './strategy/google-oauth.strategy';
 
 import { QUEUE_SEND_VERIFICATION_EMAIL } from '../../utils/const';
 import { ProviderModule } from '../provider/provider.module';
+import { isDesktop } from '../../utils/runtime';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { ProviderModule } from '../provider/provider.module';
     PassportModule.register({
       session: true,
     }),
-    BullModule.registerQueue({ name: QUEUE_SEND_VERIFICATION_EMAIL }),
+    ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SEND_VERIFICATION_EMAIL })]),
     JwtModule.registerAsync({
       global: true,
       useFactory: async (configService: ConfigService) => ({
@@ -37,7 +38,12 @@ import { ProviderModule } from '../provider/provider.module';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, AuthProcessor, GithubOauthStrategy, GoogleOauthStrategy],
+  providers: [
+    AuthService,
+    ...(isDesktop() ? [] : [AuthProcessor]),
+    GithubOauthStrategy,
+    GoogleOauthStrategy,
+  ],
   exports: [AuthService],
   controllers: [AuthController],
 })

@@ -29,6 +29,9 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import cn from 'classnames';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
+import { NodeActionButtons } from './shared/node-action-buttons';
+import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
+import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 export const ImageNode = memo(
   ({ id, data, isPreview, selected, hideHandles, onNodeClick }: ImageNodeProps) => {
@@ -46,6 +49,8 @@ export const ImageNode = memo(
     const { addToContext } = useAddToContext();
     const { deleteNode } = useDeleteNode();
     const setNodeDataByEntity = useSetNodeDataByEntity();
+    const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
+    const { readonly } = useCanvasContext();
 
     const { operatingNodeId } = useCanvasStoreShallow((state) => ({
       operatingNodeId: state.operatingNodeId,
@@ -53,7 +58,6 @@ export const ImageNode = memo(
 
     const isOperating = operatingNodeId === id;
     const node = useMemo(() => getNode(id), [id, getNode]);
-    const { readonly } = useCanvasContext();
 
     const { containerStyle, handleResize } = useNodeSize({
       id,
@@ -105,30 +109,39 @@ export const ImageNode = memo(
       } as unknown as CanvasNode);
     }, [id, data, deleteNode]);
 
-    const handleAskAI = useCallback(() => {
-      addNode(
-        {
-          type: 'skill',
-          data: {
-            title: 'Skill',
-            entityId: genSkillID(),
-            metadata: {
-              contextItems: [
-                {
-                  type: 'image',
-                  title: data.title,
-                  entityId: data.entityId,
-                  metadata: data.metadata,
-                },
-              ] as IContextItem[],
+    const handleAskAI = useCallback(
+      (dragCreateInfo?: NodeDragCreateInfo) => {
+        const { position, connectTo } = getConnectionInfo(
+          { entityId: data.entityId, type: 'image' },
+          dragCreateInfo,
+        );
+
+        addNode(
+          {
+            type: 'skill',
+            data: {
+              title: 'Skill',
+              entityId: genSkillID(),
+              metadata: {
+                contextItems: [
+                  {
+                    type: 'image',
+                    title: data.title,
+                    entityId: data.entityId,
+                    metadata: data.metadata,
+                  },
+                ] as IContextItem[],
+              },
             },
+            position,
           },
-        },
-        [{ type: 'image', entityId: data.entityId }],
-        false,
-        true,
-      );
-    }, [data, addNode]);
+          connectTo,
+          false,
+          true,
+        );
+      },
+      [data, addNode, getConnectionInfo],
+    );
 
     const handlePreview = useCallback(() => {
       setIsPreviewModalVisible(true);
@@ -157,7 +170,9 @@ export const ImageNode = memo(
       // Create node-specific event handlers
       const handleNodeAddToContext = () => handleAddToContext();
       const handleNodeDelete = () => handleDelete();
-      const handleNodeAskAI = () => handleAskAI();
+      const handleNodeAskAI = (event?: { dragCreateInfo?: NodeDragCreateInfo }) => {
+        handleAskAI(event?.dragCreateInfo);
+      };
       const handleNodePreview = () => handlePreview();
 
       // Register events with node ID
@@ -239,6 +254,15 @@ export const ImageNode = memo(
             )}
 
             <div className={cn('flex flex-col h-full relative box-border', MAX_HEIGHT_CLASS)}>
+              {!isPreview && !readonly && (
+                <NodeActionButtons
+                  nodeId={id}
+                  nodeType="image"
+                  isNodeHovered={isHovered}
+                  isSelected={selected}
+                />
+              )}
+
               <div className="relative w-full h-full rounded-lg overflow-hidden">
                 {showTitle && (
                   <div

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { storage } from '@refly-packages/ai-workspace-common/utils/storage';
 import { safeParseJSON } from '@refly-packages/ai-workspace-common/utils/parse';
+import { logger } from '@/utils/logger';
 
 export type StorageLocation = 'local' | 'sync' | 'session' | 'managed';
 
@@ -29,7 +30,7 @@ export const useStorage = <T>(
 
   useEffect(() => {
     storageItem.watch((newValue) => {
-      console.log('new Syn storage value', newValue);
+      logger.debug('new Syn storage value', newValue);
       setStorageValue(newValue as T);
     });
   }, []);

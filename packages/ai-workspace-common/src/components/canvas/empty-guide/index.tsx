@@ -17,9 +17,9 @@ export const EmptyGuide = ({ canvasId }: { canvasId: string }) => {
     setVisible: state.setVisible,
   }));
 
-  const { setShowReflyPilot, showReflyPilot } = useCanvasStoreShallow((state) => ({
-    setShowReflyPilot: state.setShowReflyPilot,
-    showReflyPilot: state.showReflyPilot,
+  const { setShowLinearThread, showLinearThread } = useCanvasStoreShallow((state) => ({
+    setShowLinearThread: state.setShowLinearThread,
+    showLinearThread: state.showLinearThread,
   }));
 
   const { setImportResourceModalVisible } = useImportResourceStoreShallow((state) => ({
@@ -54,7 +54,7 @@ export const EmptyGuide = ({ canvasId }: { canvasId: string }) => {
             type="text"
             icon={<IconAskAI className="-mr-1 flex items-center justify-center" />}
             className="text-[20px] text-[#00968F] py-[4px] px-[8px]"
-            onClick={() => setShowReflyPilot(!showReflyPilot)}
+            onClick={() => setShowLinearThread(!showLinearThread)}
             data-cy="canvas-ask-ai-button"
             style={{ pointerEvents: 'auto' }}
           >

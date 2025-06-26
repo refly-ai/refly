@@ -3,6 +3,7 @@ import { Button, Tooltip, Popover } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { MdOutlineImage } from 'react-icons/md';
 import {
+  IconAskAI,
   IconDownloadFile,
   IconSearch,
   IconSlideshow,
@@ -15,7 +16,6 @@ import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { IconAskAI } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 export const ToolbarButtons = memo(
@@ -38,12 +38,12 @@ export const ToolbarButtons = memo(
     const { hoverCardEnabled } = useHoverCard();
     const { readonly } = useCanvasContext();
 
-    const { showReflyPilot, setShowReflyPilot, showSlideshow, setShowSlideshow } =
+    const { showSlideshow, showLinearThread, setShowSlideshow, setShowLinearThread } =
       useCanvasStoreShallow((state) => ({
-        showReflyPilot: state.showReflyPilot,
-        setShowReflyPilot: state.setShowReflyPilot,
         showSlideshow: state.showSlideshow,
+        showLinearThread: state.showLinearThread,
         setShowSlideshow: state.setShowSlideshow,
+        setShowLinearThread: state.setShowLinearThread,
       }));
 
     const handleNodeSelect = useCallback(
@@ -65,12 +65,12 @@ export const ToolbarButtons = memo(
       placement: 'bottom' as const,
     };
 
-    const pilotButtonConfig = {
-      title: t(`canvas.toolbar.${showReflyPilot ? 'hideLaunchpad' : 'showLaunchpad'}`, {
-        defaultValue: showReflyPilot ? 'Hide Ask AI' : 'Show Ask AI',
+    const linearThreadButtonConfig = {
+      title: t(`canvas.toolbar.${showLinearThread ? 'hideLaunchpad' : 'showLaunchpad'}`, {
+        defaultValue: showLinearThread ? 'Hide Pilot' : 'Show Pilot',
       }),
       description: t('canvas.toolbar.toggleLaunchpadTitle', {
-        defaultValue: 'Toggle the visibility of Ask AI',
+        defaultValue: 'Toggle the visibility of Pilot Panel',
       }),
       placement: 'bottom' as const,
     };
@@ -91,21 +91,21 @@ export const ToolbarButtons = memo(
       />
     );
 
-    const pilotButton = (
+    const linearThreadButton = (
       <Button
         type="text"
         icon={
           <span
-            className={`flex items-center justify-center text-xs font-semibold ${
-              showReflyPilot ? 'text-green-500' : 'text-gray-400'
+            className={`flex items-center justify-center text-sm font-semibold ${
+              showLinearThread ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'
             }`}
           >
-            <IconAskAI className="w-3 h-3 mr-1" />
-            {t('canvas.reflyPilot.title', { defaultValue: 'Ask AI' })}
+            <IconAskAI className="w-4 h-4 mr-2" />
+            {t('canvas.toolbar.askAI')}
           </span>
         }
-        onClick={() => setShowReflyPilot(!showReflyPilot)}
-        className="!w-16 h-6 flex items-center justify-center"
+        onClick={() => setShowLinearThread(!showLinearThread)}
+        className="!w-20 h-6 flex items-center justify-center"
       />
     );
 
@@ -138,9 +138,9 @@ export const ToolbarButtons = memo(
         {!readonly && (
           <div className="flex items-center h-9 bg-[#ffffff] rounded-lg px-2 border border-solid border-1 border-[#EAECF0] box-shadow-[0px_2px_6px_0px_rgba(0,0,0,0.1)] dark:bg-gray-900 dark:border-gray-700">
             {hoverCardEnabled ? (
-              <HoverCard {...pilotButtonConfig}>{pilotButton}</HoverCard>
+              <HoverCard {...linearThreadButtonConfig}>{linearThreadButton}</HoverCard>
             ) : (
-              <Tooltip title={pilotButtonConfig.title}>{pilotButton}</Tooltip>
+              <Tooltip title={linearThreadButtonConfig.title}>{linearThreadButton}</Tooltip>
             )}
           </div>
         )}

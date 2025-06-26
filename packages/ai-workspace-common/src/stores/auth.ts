@@ -8,6 +8,7 @@ interface AuthState {
   loginInProgress: boolean;
   loginProvider: string;
   loginModalOpen: boolean;
+  isSignUpMode: boolean;
   verificationModalOpen: boolean;
   resetPasswordModalOpen: boolean;
 
@@ -16,6 +17,7 @@ interface AuthState {
   setLoginInProgress: (val: boolean) => void;
   setLoginProvider: (val: string) => void;
   setLoginModalOpen: (val: boolean) => void;
+  setIsSignUpMode: (val: boolean) => void;
   setVerificationModalOpen: (val: boolean) => void;
   setResetPasswordModalOpen: (val: boolean) => void;
 
@@ -28,6 +30,7 @@ const defaultState = {
   loginInProgress: false,
   loginProvider: '',
   loginModalOpen: false,
+  isSignUpMode: false,
   verificationModalOpen: false,
   resetPasswordModalOpen: false,
 };
@@ -42,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
       setLoginInProgress: (val: boolean) => set((state) => ({ ...state, loginInProgress: val })),
       setLoginProvider: (val: string) => set((state) => ({ ...state, loginProvider: val })),
       setLoginModalOpen: (val: boolean) => set((state) => ({ ...state, loginModalOpen: val })),
+      setIsSignUpMode: (val: boolean) => set((state) => ({ ...state, isSignUpMode: val })),
       setVerificationModalOpen: (val: boolean) =>
         set((state) => ({ ...state, verificationModalOpen: val })),
       setResetPasswordModalOpen: (val: boolean) =>

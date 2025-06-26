@@ -57,14 +57,24 @@ a13f349fe35b   minio/minio:RELEASE.2025-01-20T14-49-07Z   "/usr/bin/docker-ent�
 e7b398dbd02b   postgres:16-alpine                         "docker-entrypoint.s…"   5 hours ago   Up 5 hours (healthy)   0.0.0.0:35432->5432/tcp, :::35432->5432/tcp  
 ```
 
-最后，您可以通过访问 `http://${HOST_IP}:5700` 来使用 Refly 应用程序，其中 `${HOST_IP}` 是主机的 IP 地址。
+### 在 Kubernetes 集群部署
+
+直接使用部署文件
+
+```bash
+cd refly/deploy/kubernetes
+
+kubectl apply -f refly-deployment.yaml
+```
+
+最后，您可以通过访问 `http://${HOST_IP}:5700` ( Kubernetes 集群部署访问 `http://${HOST_IP}:30001` ) 来使用 Refly 应用程序，其中 `${HOST_IP}` 是主机的 IP 地址。
 
 ::: info
 如果无法访问 Refly 应用，请检查以下内容：
 
 - `HOST_IP` 是否正确。
 - 应用是否正常运行。如果未运行，请跳转到[故障排除](#troubleshooting)部分。
-- 端口 `5700` 是否被任何应用程序防火墙阻止。如果您使用的是云服务器，请特别注意这一点。
+- 端口 `5700`(`30001`) 是否被任何应用程序防火墙阻止。如果您使用的是云服务器，请特别注意这一点。
 :::
 
 ## 开始使用 Refly {#start-using-refly}

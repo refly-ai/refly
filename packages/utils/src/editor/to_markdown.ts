@@ -230,6 +230,12 @@ export const defaultMarkdownSerializer = new MarkdownSerializer(
       mixable: true,
       expelEnclosingWhitespace: true,
     },
+    underline: {
+      open: '',
+      close: '',
+      mixable: true,
+      expelEnclosingWhitespace: true,
+    },
     link: {
       open(state, mark, parent, index) {
         state.inAutolink = isPlainURL(mark, parent, index);
@@ -261,6 +267,26 @@ export const defaultMarkdownSerializer = new MarkdownSerializer(
     highlight: {
       open: '==',
       close: '==',
+      mixable: true,
+      expelEnclosingWhitespace: true,
+    },
+    textStyle: {
+      open(_state, mark, _parent, _index) {
+        // Check if there's backgroundColor and treat it as highlight
+        if (mark.attrs.backgroundColor) {
+          return '==';
+        }
+        // For other text styles, don't add any markdown markers
+        return '';
+      },
+      close(_state, mark, _parent, _index) {
+        // Close highlight syntax if there's backgroundColor
+        if (mark.attrs.backgroundColor) {
+          return '==';
+        }
+        // For other text styles, don't add any markdown markers
+        return '';
+      },
       mixable: true,
       expelEnclosingWhitespace: true,
     },

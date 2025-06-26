@@ -11,8 +11,13 @@ const skillItemTitleClasses =
   'inline-block max-w-[calc(100% - 8px)] overflow-hidden text-ellipsis whitespace-nowrap';
 
 const skillItemClasses =
-  'h-7 px-1.5 rounded-md border border-solid border-gray-200 text-gray-500 bg-white flex items-center justify-center dark:bg-gray-900 dark:text-gray-400 dark:border-gray-700 ' +
-  'text-xs font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 hover:text-green-600 cursor-pointer';
+  'h-7 px-1.5 rounded-md border border-solid border-gray-200 bg-white flex items-center justify-center ' +
+  'dark:bg-gray-800 dark:border-gray-600 ' +
+  'text-xs font-medium text-gray-500 dark:text-gray-400 ' +
+  'transition-all duration-200 ease-in-out cursor-pointer ' +
+  'hover:bg-gray-100 hover:border-gray-300 hover:text-green-600 ' +
+  'dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-green-400 ' +
+  'active:scale-95';
 
 interface SkillDisplayProps {
   containCnt?: number;

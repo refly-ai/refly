@@ -9,7 +9,7 @@ import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ACCESS_TOKEN_COOKIE } from '@refly/utils';
-import { AppMode } from '@/modules/config/app.config';
+import { isDesktop } from '../../../utils/runtime';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -24,7 +24,7 @@ export class JwtAuthGuard implements CanActivate {
     const request: Request = context.switchToHttp().getRequest();
 
     // If we are in desktop mode, we don't need to check the JWT token
-    if (this.configService.get('mode') === AppMode.Desktop) {
+    if (isDesktop()) {
       request.user = { uid: this.configService.get('local.uid') };
       return true;
     }

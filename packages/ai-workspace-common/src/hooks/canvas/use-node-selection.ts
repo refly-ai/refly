@@ -6,6 +6,7 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 export interface CanvasNodeFilter {
   type: CanvasNodeType;
   entityId: string;
+  handleType?: 'source' | 'target';
 }
 
 export const useNodeSelection = () => {

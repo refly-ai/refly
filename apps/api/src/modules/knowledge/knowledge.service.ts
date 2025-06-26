@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import pdf from 'pdf-parse';
 import pLimit from 'p-limit';
@@ -12,10 +12,10 @@ import {
   Document as DocumentModel,
   StaticFile as StaticFileModel,
   User as UserModel,
-} from '@/generated/client';
+} from '../../generated/client';
 import { RAGService } from '../rag/rag.service';
 import { PrismaService } from '../common/prisma.service';
-import { FULLTEXT_SEARCH, FulltextSearchService } from '@/modules/common/fulltext-search';
+import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';
 import {
   UpsertResourceRequest,
   ResourceMeta,
@@ -78,10 +78,10 @@ import { DeleteCanvasNodesJobData } from '../canvas/canvas.dto';
 import { ParserFactory } from '../knowledge/parsers/factory';
 import { ConfigService } from '@nestjs/config';
 import { ParseResult, ParserOptions } from './parsers/base';
-import { OSS_INTERNAL, ObjectStorageService } from '@/modules/common/object-storage';
-import { ProviderService } from '@/modules/provider/provider.service';
-import { DocxParser } from '@/modules/knowledge/parsers/docx.parser';
-import { PdfParser } from '@/modules/knowledge/parsers/pdf.parser';
+import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
+import { ProviderService } from '../provider/provider.service';
+import { DocxParser } from '../knowledge/parsers/docx.parser';
+import { PdfParser } from '../knowledge/parsers/pdf.parser';
 
 @Injectable()
 export class KnowledgeService {
@@ -96,16 +96,21 @@ export class KnowledgeService {
     private subscriptionService: SubscriptionService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
     @Inject(FULLTEXT_SEARCH) private fts: FulltextSearchService,
-    @InjectQueue(QUEUE_RESOURCE) private queue: Queue<FinalizeResourceParam>,
-    @InjectQueue(QUEUE_SIMPLE_EVENT) private simpleEventQueue: Queue<SimpleEventData>,
-    @InjectQueue(QUEUE_SYNC_STORAGE_USAGE) private ssuQueue: Queue<SyncStorageUsageJobData>,
-    @InjectQueue(QUEUE_CLEAR_CANVAS_ENTITY) private canvasQueue: Queue<DeleteCanvasNodesJobData>,
+    @Optional() @InjectQueue(QUEUE_RESOURCE) private queue?: Queue<FinalizeResourceParam>,
+    @Optional() @InjectQueue(QUEUE_SIMPLE_EVENT) private simpleEventQueue?: Queue<SimpleEventData>,
+    @Optional()
+    @InjectQueue(QUEUE_SYNC_STORAGE_USAGE)
+    private ssuQueue?: Queue<SyncStorageUsageJobData>,
+    @Optional()
+    @InjectQueue(QUEUE_CLEAR_CANVAS_ENTITY)
+    private canvasQueue?: Queue<DeleteCanvasNodesJobData>,
+    @Optional()
     @InjectQueue(QUEUE_POST_DELETE_KNOWLEDGE_ENTITY)
-    private postDeleteKnowledgeQueue: Queue<PostDeleteKnowledgeEntityJobData>,
+    private postDeleteKnowledgeQueue?: Queue<PostDeleteKnowledgeEntityJobData>,
   ) {}
 
   async syncStorageUsage(user: User) {
-    await this.ssuQueue.add(
+    await this.ssuQueue?.add(
       'syncStorageUsage',
       {
         uid: user.uid,
@@ -230,7 +235,7 @@ export class KnowledgeService {
     if (content) {
       // save content to object storage
       const storageKey = `resources/${param.resourceId}.txt`;
-      await this.oss.putObject(storageKey, param.content);
+      await this.oss.putObject(storageKey, content);
       const storageSize = (await this.oss.statObject(storageKey)).size;
 
       return {
@@ -238,7 +243,7 @@ export class KnowledgeService {
         storageSize,
         identifier,
         indexStatus: 'wait_index', // skip parsing stage, since content is provided
-        contentPreview: param.content.slice(0, 500),
+        contentPreview: content.slice(0, 500),
       };
     }
 
@@ -341,7 +346,7 @@ export class KnowledgeService {
     await this.syncStorageUsage(user);
 
     // Add to queue to be processed by worker
-    await this.queue.add('finalizeResource', {
+    await this.queue?.add('finalizeResource', {
       resourceId: resource.resourceId,
       uid: user.uid,
     });
@@ -693,7 +698,7 @@ export class KnowledgeService {
 
     // Send simple event
     if (resource.indexStatus === 'finish') {
-      await this.simpleEventQueue.add('simpleEvent', {
+      await this.simpleEventQueue?.add('simpleEvent', {
         entityType: 'resource',
         entityId: resourceId,
         name: 'onResourceReady',
@@ -787,7 +792,7 @@ export class KnowledgeService {
 
     await this.syncStorageUsage(user);
 
-    await this.postDeleteKnowledgeQueue.add('postDeleteKnowledgeEntity', {
+    await this.postDeleteKnowledgeQueue?.add('postDeleteKnowledgeEntity', {
       uid,
       entityId: resourceId,
       entityType: 'resource',
@@ -806,7 +811,7 @@ export class KnowledgeService {
     const cleanups: Promise<any>[] = [
       this.ragService.deleteResourceNodes(user, resourceId),
       this.fts.deleteDocument(user, 'resource', resourceId),
-      this.canvasQueue.add('deleteNodes', {
+      this.canvasQueue?.add('deleteNodes', {
         entities: [{ entityId: resourceId, entityType: 'resource' }],
       }),
     ];
@@ -1048,7 +1053,7 @@ export class KnowledgeService {
 
     await this.syncStorageUsage(user);
 
-    await this.postDeleteKnowledgeQueue.add('postDeleteKnowledgeEntity', {
+    await this.postDeleteKnowledgeQueue?.add('postDeleteKnowledgeEntity', {
       uid,
       entityId: docId,
       entityType: 'document',
@@ -1071,7 +1076,7 @@ export class KnowledgeService {
       }),
       this.ragService.deleteDocumentNodes(user, docId),
       this.fts.deleteDocument(user, 'document', docId),
-      this.canvasQueue.add('deleteNodes', {
+      this.canvasQueue?.add('deleteNodes', {
         entities: [{ entityId: docId, entityType: 'document' }],
       }),
     ];

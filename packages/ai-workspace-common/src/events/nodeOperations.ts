@@ -4,6 +4,12 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { CanvasNodeData } from '@refly-packages/ai-workspace-common/components/canvas/nodes/types';
 import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 
+export type NodeContextMenuSource = 'node' | 'handle';
+export type NodeDragCreateInfo = {
+  nodeId: string;
+  handleType: 'source' | 'target';
+  position: XYPosition;
+};
 export type Events = {
   addNode: {
     node: { type: CanvasNodeType; data: CanvasNodeData<any>; position?: XYPosition };
@@ -25,6 +31,8 @@ export type Events = {
     nodeType: CanvasNodeType;
     x: number;
     y: number;
+    source?: 'node' | 'handle';
+    dragCreateInfo?: NodeDragCreateInfo;
   };
 };
 

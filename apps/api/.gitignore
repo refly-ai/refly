@@ -45,5 +45,10 @@ lerna-debug.log*
 # Prisma generated files and sqlite db
 src/generated
 prisma/app.db
+packed
 
 .qdrant-initialized
+data/lancedb
+
+# i18n
+i18n-consistency-report.json

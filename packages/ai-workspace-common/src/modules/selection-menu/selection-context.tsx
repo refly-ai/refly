@@ -133,14 +133,8 @@ export const SelectionContext = React.memo<SelectionContextProps>(
     return (
       <SelectionBubble containerClass={containerClass} placement="top" offset={[0, 10]}>
         <div
-          className="refly-selector-hover-menu flex flex-col"
-          style={{
-            background: '#FFFFFF',
-            border: '1px solid rgba(0,0,0,0.10)',
-            boxShadow: '0 2px 6px 0 rgba(0,0,0,0.10)',
-            borderRadius: '8px',
-            padding: '2px 4px',
-          }}
+          className="refly-selector-hover-menu flex flex-col bg-white dark:bg-black shadow-sm shadow-gray-300/80 dark:shadow-gray-700/80 rounded-md"
+          style={{ padding: '2px 4px' }}
         >
           {buttons.map((button, index) => (
             <Button

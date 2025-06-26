@@ -46,17 +46,42 @@ function createConnectionConfig(server: ServerConfig): Connection | undefined {
     case 'streamable':
       if (server.url) {
         // Handle headers and reconnect
-        const headers =
+        const parsedHeaders =
           typeof server.headers === 'string' ? JSON.parse(server.headers) : server.headers;
 
-        const reconnect =
+        const parsedReconnectConfig =
           typeof server.reconnect === 'string' ? JSON.parse(server.reconnect) : server.reconnect;
 
+        let connectionReconnect:
+          | { enabled?: boolean; maxAttempts?: number; delayMs?: number }
+          | undefined = undefined;
+
+        if (parsedReconnectConfig !== undefined && parsedReconnectConfig !== null) {
+          if (typeof parsedReconnectConfig === 'boolean') {
+            connectionReconnect = { enabled: parsedReconnectConfig };
+          } else if (typeof parsedReconnectConfig === 'object') {
+            // If 'enabled' property exists and is boolean, use the object as is (assuming it matches target structure)
+            // Otherwise, default 'enabled' to true and spread other properties.
+            if (typeof (parsedReconnectConfig as any).enabled === 'boolean') {
+              connectionReconnect = parsedReconnectConfig as {
+                enabled?: boolean;
+                maxAttempts?: number;
+                delayMs?: number;
+              };
+            } else {
+              connectionReconnect = {
+                enabled: true,
+                ...(parsedReconnectConfig as { maxAttempts?: number; delayMs?: number }),
+              };
+            }
+          }
+        }
+
         return {
-          type: 'streamable',
+          type: 'http',
           url: server.url,
-          headers,
-          reconnect,
+          headers: parsedHeaders as Record<string, string> | undefined,
+          reconnect: connectionReconnect,
         } as Connection;
       }
       break;
@@ -87,9 +112,9 @@ function createConnectionConfig(server: ServerConfig): Connection | undefined {
  * @param response - The response from listMcpServers API
  * @returns A record mapping server names to their connection configurations
  */
-export function convertMcpServersToClientConfig(
-  response: ListMcpServersResponse,
-): Record<string, Connection> {
+export function convertMcpServersToClientConfig(response: {
+  data: ListMcpServersResponse['data'];
+}): Record<string, Connection> {
   const mcpServers = response.data || [];
   const config: Record<string, Connection> = {};
 

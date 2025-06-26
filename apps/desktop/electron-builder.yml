@@ -1,0 +1,80 @@
+productName: Refly
+appId: ai.refly.desktop
+copyright: Copyright 2025 Refly
+# Temporarily commenting out the afterSign hook to allow build to proceed
+# afterSign: notarize.js
+directories:
+  buildResources: build
+  output: packed
+# Other settings that may help reduce build size and time
+npmRebuild: true
+buildDependenciesFromSource: true
+compression: normal
+asarUnpack:
+  # Only unpack specific native modules that need to be unpacked
+  - "node_modules/@lancedb/lancedb-*/*"
+  - "node_modules/@prisma/engines/**/*"
+  - "**/node_modules/sharp/**/*"
+  - "**/node_modules/@img/**/*"
+files:
+  - "!{.vscode,.yarn,.github,.turbo,.cursor,.husky}"
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!src'
+  - '!scripts'
+  - '!local'
+  - '!**/*.chunks.jsonl'
+  - '!**/*.{map,ts,tsx,jsx,css.d.ts,d.cts,d.mts,md,markdown,log,yaml,yml,tsbuildinfo}'
+  - '!**/{test,tests,__tests__,coverage}/**'
+  - '!**/*.{spec,test}.{js,jsx,ts,tsx}'
+  - '!**/{.DS_Store,Thumbs.db}'
+  - '!**/{LICENSE,LICENSE.txt,LICENSE-MIT.txt,*.LICENSE.txt,NOTICE.txt,README.md,CHANGELOG.md}'
+  - '!node_modules/@refly/api/src/**'
+  - '!node_modules/@refly/api/dist/generated/client/*.node'
+  - '!node_modules/@img/sharp-wasm32/**'
+  - '!node_modules/@sentry/cli*'
+  - '!node_modules/@esbuild/**'
+  - '!node_modules/esbuild/**'
+  - '!node_modules/swagger-ui-dist/**'
+  - '!node_modules/@sentry/cli-*/**'
+  - '!node_modules/prisma/*.node'
+extraResources:
+  - from: ../api/prisma/sqlite-schema.prisma
+    to: prisma/sqlite-schema.prisma
+win:
+  target:
+    - nsis
+    - portable
+  signAndEditExecutable: false
+  verifyUpdateCodeSignature: false
+  # had to add artifactName here because electron-builder was generating latest.yml with hyphens instead of spaces,
+  # which screwed up auto updates
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  buildUniversalInstaller: false
+portable:
+  artifactName: ${productName}-${version}-${arch}-portable.${ext}
+  buildUniversalInstaller: false
+mac:
+  identity: null
+  category: public.app-category.productivity
+  #  gatekeeperAssess: true
+  target:
+    - target: dmg
+    - target: zip # zip is required because of electron-userland/electron-builder#2199s
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  entitlementsInherit: build/entitlements.mac.plist
+dmg:
+  writeUpdateInfo: false

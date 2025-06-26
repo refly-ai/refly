@@ -286,7 +286,9 @@ export const ModelProviders = ({ visible }: ModelProvidersProps) => {
         className={cn(
           'flex-1 overflow-auto',
           isLoading || filteredProviders.length === 0 ? 'flex items-center justify-center' : '',
-          filteredProviders.length === 0 ? 'border-dashed border-gray-200 rounded-md' : '',
+          filteredProviders.length === 0
+            ? 'border-dashed border-gray-200 dark:border-gray-600 rounded-md'
+            : '',
         )}
       >
         {isLoading ? (

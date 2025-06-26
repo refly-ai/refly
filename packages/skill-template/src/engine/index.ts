@@ -127,10 +127,14 @@ export interface ReflyService {
     user: User,
     url: string,
   ) => Promise<{ title?: string; content?: string; metadata?: Record<string, any> }>;
+
+  // Generate JWT token for user (same as AuthService.login)
+  generateJwtToken: (user: User) => Promise<string>;
 }
 
 export interface SkillEngineOptions {
   defaultModel?: string;
+  config?: any;
 }
 
 export interface Logger {
@@ -173,6 +177,30 @@ export class SkillEngine {
 
   configure(config: SkillRunnableConfig) {
     this.config = config;
+  }
+
+  getConfig(key?: string) {
+    if (!this.options?.config) {
+      return null;
+    }
+
+    if (!key) {
+      return this.options.config;
+    }
+
+    // Support nested keys like 'api.port'
+    const keys = key.split('.');
+    let value = this.options.config;
+
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
+      } else {
+        return null;
+      }
+    }
+
+    return value;
   }
 
   chatModel(params?: Partial<OpenAIBaseInput>, scene?: ModelScene): BaseChatModel {

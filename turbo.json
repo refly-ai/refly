@@ -10,8 +10,7 @@
     "dev:electron": {
       "cache": false,
       "persistent": true,
-      "env": ["*"],
-      "dependsOn": ["sync-db-schema"]
+      "env": ["*"]
     },
     "start": {
       "cache": false,

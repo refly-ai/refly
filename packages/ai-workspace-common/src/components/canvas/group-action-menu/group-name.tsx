@@ -1,7 +1,10 @@
-import { Input } from 'antd';
+import { Button, Input } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { FC, useCallback, useState, useEffect } from 'react';
 import CommonColorPicker from '../nodes/shared/color-picker';
+import { IconMoreHorizontal } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { CanvasNodeType } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface GroupNameProps {
   title: string;
@@ -9,6 +12,7 @@ interface GroupNameProps {
   selected: boolean;
   readonly: boolean;
   bgColor?: string;
+  nodeId: string;
   onChangeBgColor?: (color: string) => void;
 }
 
@@ -19,6 +23,7 @@ export const GroupName: FC<GroupNameProps> = ({
   readonly,
   bgColor,
   onChangeBgColor,
+  nodeId,
 }) => {
   const { t } = useTranslation();
   const [name, setName] = useState(title);
@@ -28,6 +33,26 @@ export const GroupName: FC<GroupNameProps> = ({
   const handleUpdateName = useCallback(() => {
     onUpdateName(name);
   }, [name, onUpdateName]);
+
+  const handleOpenContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      // Get mouse coordinates
+      const x = e.clientX + 10;
+      const y = e.clientY;
+
+      // Emit event to open context menu
+      nodeOperationsEmitter.emit('openNodeContextMenu', {
+        x,
+        y,
+        nodeId: nodeId,
+        nodeType: 'group' as CanvasNodeType,
+      });
+    },
+    [nodeId],
+  );
 
   useEffect(() => {
     handleUpdateName();
@@ -50,7 +75,7 @@ export const GroupName: FC<GroupNameProps> = ({
     >
       <div className="flex gap-3">
         <Input
-          className="!bg-transparent !border-none !shadow-none !pl-0 !text-base !text-black dark:!text-gray-100"
+          className="!bg-transparent !border-none !shadow-none !pl-0 !text-base !text-gray-600 dark:!text-gray-100"
           disabled={readonly}
           placeholder={t('canvas.nodeActions.editGroupNamePlaceholder')}
           value={name}
@@ -58,8 +83,19 @@ export const GroupName: FC<GroupNameProps> = ({
           onBlur={() => setIsEditing(false)}
           onFocus={() => setIsEditing(true)}
         />
-        <div style={{ display: selected ? 'block' : 'none' }}>
+
+        <div
+          className="items-center gap-2 bg-white dark:bg-[#1f1f1f] rounded-md px-2"
+          style={{ display: selected ? 'flex' : 'none' }}
+        >
           <CommonColorPicker disabledAlpha={true} color={bgColor} onChange={onChangeBgColor} />
+          <Button
+            type="text"
+            size="small"
+            className="text-gray-600 dark:text-gray-300"
+            icon={<IconMoreHorizontal className=" w-4 h-4 flex items-center justify-center" />}
+            onClick={handleOpenContextMenu}
+          />
         </div>
       </div>
     </div>

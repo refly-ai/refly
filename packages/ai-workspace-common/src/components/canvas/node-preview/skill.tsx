@@ -1,13 +1,16 @@
-import { useState, useCallback, useEffect, memo, useRef } from 'react';
+import { useState, useCallback, useEffect, memo, useRef, useMemo } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { useTranslation } from 'react-i18next';
-import { CloseOutlined } from '@ant-design/icons';
-import { Button, Form } from 'antd';
+import { CloseOutlined, ToolOutlined } from '@ant-design/icons';
+import { Badge, Button, Form } from 'antd';
 import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
 import { CanvasNode, CanvasNodeData, SkillNodeMeta } from '../nodes/shared/types';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
+import {
+  ChatActions,
+  CustomAction,
+} from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
@@ -24,6 +27,9 @@ import { genActionResultID } from '@refly/utils/id';
 import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useReactFlow } from '@xyflow/react';
+import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
+import { t } from 'i18next';
 
 // Memoized Header Component
 const NodeHeader = memo(
@@ -248,22 +254,55 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
     [entityId, setNodeDataByEntity],
   );
 
+  const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
+
+  // Toggle MCP selector panel
+  const handleMcpSelectorToggle = useCallback(() => {
+    setMcpSelectorOpen(!mcpSelectorOpen);
+  }, [mcpSelectorOpen, setMcpSelectorOpen]);
+
+  // 获取选择的 MCP 服务器
+  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
+    selectedMcpServers: state.selectedMcpServers,
+  }));
+
+  const customActions: CustomAction[] = useMemo(
+    () => [
+      {
+        icon: (
+          <Badge
+            count={selectedMcpServers.length > 0 ? selectedMcpServers.length : 0}
+            size="small"
+            offset={[2, -2]}
+          >
+            <ToolOutlined className="flex items-center" />
+          </Badge>
+        ),
+        title: t('copilot.chatActions.chooseMcp'),
+        onClick: () => {
+          handleMcpSelectorToggle();
+        },
+      },
+    ],
+    [handleMcpSelectorToggle, t, selectedMcpServers],
+  );
+
   if (!node) return null;
 
   return (
     <div className="flex flex-col gap-3 h-full p-3 box-border">
+      <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
+
       <NodeHeader
         readonly={readonly}
         selectedSkillName={skill?.name}
         setSelectedSkill={setSelectedSkill}
       />
-
       <ContextManager
         className="px-0.5"
         contextItems={contextItems}
         setContextItems={setContextItems}
       />
-
       <ChatInput
         readonly={readonly}
         ref={chatInputRef}
@@ -276,7 +315,6 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
         handleSelectSkill={handleSelectSkill}
         onUploadImage={handleImageUpload}
       />
-
       {skill?.configSchema?.items?.length > 0 && (
         <ConfigManager
           readonly={readonly}
@@ -299,6 +337,7 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
       )}
 
       <ChatActions
+        customActions={customActions}
         query={localQuery}
         model={modelInfo}
         setModel={setModelInfo}

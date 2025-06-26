@@ -273,6 +273,30 @@ export const schema = new Schema({
       },
     } as MarkSpec,
 
+    underline: {
+      parseDOM: [
+        { tag: 'u' },
+        { style: 'text-decoration=underline' },
+        { style: 'text-decoration-line=underline' },
+      ],
+      toDOM() {
+        return ['u', 0];
+      },
+    },
+
+    strike: {
+      parseDOM: [
+        { tag: 's' },
+        { tag: 'strike' },
+        { tag: 'del' },
+        { style: 'text-decoration=line-through' },
+        { style: 'text-decoration-line=line-through' },
+      ],
+      toDOM() {
+        return ['s', 0];
+      },
+    },
+
     link: {
       attrs: {
         href: {},
@@ -299,6 +323,82 @@ export const schema = new Schema({
       parseDOM: [{ tag: 'code' }],
       toDOM() {
         return ['code'];
+      },
+    },
+
+    highlight: {
+      attrs: {
+        color: { default: null },
+      },
+      parseDOM: [
+        {
+          tag: 'mark',
+          getAttrs: (node) => {
+            const dom = node as HTMLElement;
+            return {
+              color: dom.getAttribute('data-color') || dom.style.backgroundColor,
+            };
+          },
+        },
+      ],
+      toDOM(node) {
+        const attrs: Record<string, string> = {};
+        if (node.attrs.color) {
+          attrs['data-color'] = node.attrs.color;
+          attrs.style = `background-color: ${node.attrs.color}; color: inherit`;
+        }
+        return ['mark', attrs, 0];
+      },
+    },
+
+    textStyle: {
+      attrs: {
+        color: { default: null },
+        backgroundColor: { default: null },
+        fontSize: { default: null },
+        fontFamily: { default: null },
+        fontWeight: { default: null },
+        textDecoration: { default: null },
+      },
+      parseDOM: [
+        {
+          tag: 'span[style]',
+          getAttrs: (node) => {
+            const dom = node as HTMLElement;
+            return {
+              color: dom.style.color,
+              backgroundColor: dom.style.backgroundColor,
+              fontSize: dom.style.fontSize,
+              fontFamily: dom.style.fontFamily,
+              fontWeight: dom.style.fontWeight,
+              textDecoration: dom.style.textDecoration,
+            };
+          },
+        },
+      ],
+      toDOM(node) {
+        const attrs: Record<string, string> = { style: '' };
+
+        if (node.attrs.color) {
+          attrs.style += `color: ${node.attrs.color};`;
+        }
+        if (node.attrs.backgroundColor) {
+          attrs.style += `background-color: ${node.attrs.backgroundColor}; color: inherit;`;
+        }
+        if (node.attrs.fontSize) {
+          attrs.style += `font-size: ${node.attrs.fontSize};`;
+        }
+        if (node.attrs.fontFamily) {
+          attrs.style += `font-family: ${node.attrs.fontFamily};`;
+        }
+        if (node.attrs.fontWeight) {
+          attrs.style += `font-weight: ${node.attrs.fontWeight};`;
+        }
+        if (node.attrs.textDecoration) {
+          attrs.style += `text-decoration: ${node.attrs.textDecoration};`;
+        }
+
+        return ['span', attrs, 0];
       },
     },
   },

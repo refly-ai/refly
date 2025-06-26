@@ -1,8 +1,8 @@
 import { Body, Controller, Get, ParseBoolPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { McpServerService } from './mcp-server.service';
-import { JwtAuthGuard } from '@/modules/auth/guard/jwt-auth.guard';
-import { LoginedUser } from '@/utils/decorators/user.decorator';
-import { User as UserModel } from '@/generated/client';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { LoginedUser } from '../../utils/decorators/user.decorator';
+import { User as UserModel } from '../../generated/client';
 import {
   DeleteMcpServerRequest,
   DeleteMcpServerResponse,
@@ -12,7 +12,7 @@ import {
   UpsertMcpServerResponse,
   ValidateMcpServerResponse,
 } from '@refly/openapi-schema';
-import { buildSuccessResponse } from '@/utils/response';
+import { buildSuccessResponse } from '../../utils/response';
 import { mcpServerPO2DTO } from './mcp-server.dto';
 
 @Controller('v1/mcp-server')

@@ -22,6 +22,7 @@ import { useSaveSelectedContent } from '@/hooks/use-save-selected-content';
 import { BackgroundMessage, SyncMarkEvent, type MessageName } from '@refly/common-types';
 import { useGetUserSettings } from '@/hooks/use-get-user-settings';
 import { useUserStore } from '@refly-packages/ai-workspace-common/stores/user';
+import { logger } from '@/utils/logger';
 
 const getPopupContainer = () => {
   const elem = document
@@ -54,7 +55,7 @@ export const App = () => {
     getLoginStatus();
   }, []);
 
-  console.log('i18n', i18n?.languages);
+  logger.debug('i18n', i18n?.languages);
 
   // 加载快捷键
   const [_shortcut] = useState<string>(reflyEnv.getOsType() === 'OSX' ? '⌘ J' : 'Ctrl J');
@@ -229,7 +230,7 @@ export const App = () => {
               icon={<IconSave />}
               size="small"
               onClick={() => {
-                console.log('saveResource', saveResource);
+                logger.debug('saveResource', saveResource);
                 handleSaveResourceAndNotify(saveResource);
               }}
               className="refly-floating-sphere-dropdown-item assist-action-item"
@@ -274,7 +275,7 @@ export const App = () => {
     };
 
     const handleMouseUp = () => {
-      console.log('handleMouseUp');
+      logger.debug('handleMouseUp');
       setIsDragging(false);
       isDraggingRef.current = false;
     };
@@ -293,6 +294,18 @@ export const App = () => {
   }, []);
 
   const [isVisible, setIsVisible] = useState(true);
+
+  const handleDebugClick = useCallback(() => {
+    const showMessage = (content: string, type: 'info' | 'success' = 'info') => {
+      if (type === 'success') {
+        Message.success({ content, duration: 4000 });
+      } else {
+        Message.info({ content, duration: 2000 });
+      }
+    };
+
+    logger.handleDebugClick(showMessage);
+  }, []);
 
   const handleClose = (e: React.MouseEvent) => {
     Message.info({
@@ -357,7 +370,8 @@ export const App = () => {
             <img
               src={Logo}
               alt={t('extension.floatingSphere.toggleCopilot')}
-              style={{ width: 25, height: 25 }}
+              style={{ width: 25, height: 25, cursor: 'pointer' }}
+              onClick={handleDebugClick}
             />
             <span className="refly-floating-sphere-entry-shortcut">Refly</span>
           </div>

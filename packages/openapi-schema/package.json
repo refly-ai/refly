@@ -1,8 +1,8 @@
 {
   "name": "@refly/openapi-schema",
-  "version": "1.0.0",
-  "description": "",
-  "main": "src/index.ts",
+  "version": "0.7.1",
+  "description": "Refly OpenAPI Schema",
+  "main": "dist/index.js",
   "exports": {
     ".": "./src/index.ts",
     "./queries": "./src/queries/index.ts",
@@ -10,14 +10,14 @@
   },
   "scripts": {
     "dev": "nodemon",
-    "codegen": "openapi-ts",
+    "codegen": "openapi-ts && tsc --build --verbose",
     "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "tsc --build --verbose"
   },
   "devDependencies": {
     "@hey-api/client-fetch": "0.4.0",
-    "@hey-api/openapi-ts": "0.53.8",
-    "nodemon": "~3.1.7"
+    "@hey-api/openapi-ts": "0.53.8"
   },
   "keywords": [],
   "author": "",
