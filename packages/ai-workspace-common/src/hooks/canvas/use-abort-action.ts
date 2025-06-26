@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { serverOrigin } from '@refly-packages/ai-workspace-common/utils/env';
 
 // Global variables shared across all hook instances
 export const globalAbortControllerRef = { current: null as AbortController | null };
@@ -22,8 +23,6 @@ export const useAbortAction = () => {
       // If resultId is provided and is a valid string, call the backend to clean up server-side resources
       if (activeResultId?.trim()) {
         try {
-          const { serverOrigin } = await import('@refly-packages/ai-workspace-common/utils/env');
-
           await fetch(`${serverOrigin}/v1/action/abort`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
