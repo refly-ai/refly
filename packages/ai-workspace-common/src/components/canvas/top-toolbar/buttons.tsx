@@ -1,7 +1,6 @@
 import { useState, useCallback, memo } from 'react';
 import { Button, Tooltip, Popover } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { MdOutlineImage } from 'react-icons/md';
 import {
   IconAskAI,
   IconDownloadFile,
@@ -21,8 +20,6 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 export const ToolbarButtons = memo(
   ({
     canvasTitle,
-    showPreview,
-    setShowPreview,
   }: {
     canvasTitle: string;
     showPreview: boolean;
@@ -58,13 +55,6 @@ export const ToolbarButtons = memo(
       [getNodes, setNodeCenter],
     );
 
-    const previewButtonConfig = {
-      title: t(`canvas.toolbar.${showPreview ? 'hidePreview' : 'showPreview'}`),
-      description: t('canvas.toolbar.togglePreviewDescription'),
-      videoUrl: 'https://static.refly.ai/onboarding/top-toolbar/topToolbar-togglePreview.webm',
-      placement: 'bottom' as const,
-    };
-
     const linearThreadButtonConfig = {
       title: t(`canvas.toolbar.${showLinearThread ? 'hideLaunchpad' : 'showLaunchpad'}`, {
         defaultValue: showLinearThread ? 'Hide Pilot' : 'Show Pilot',
@@ -74,22 +64,6 @@ export const ToolbarButtons = memo(
       }),
       placement: 'bottom' as const,
     };
-
-    const previewButton = (
-      <Button
-        type="text"
-        icon={
-          <MdOutlineImage
-            size={16}
-            className={`flex items-center justify-center ${
-              showPreview ? 'text-gray-900 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'
-            }`}
-          />
-        }
-        onClick={() => setShowPreview(!showPreview)}
-        className="w-8 h-6 flex items-center justify-center mr-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-      />
-    );
 
     const linearThreadButton = (
       <Button
@@ -176,12 +150,6 @@ export const ToolbarButtons = memo(
               />
             </Tooltip>
           </Popover>
-
-          {hoverCardEnabled ? (
-            <HoverCard {...previewButtonConfig}>{previewButton}</HoverCard>
-          ) : (
-            <Tooltip title={previewButtonConfig.title}>{previewButton}</Tooltip>
-          )}
 
           <Tooltip title={t('canvas.toolbar.exportImage')}>{exportImageButton}</Tooltip>
         </div>

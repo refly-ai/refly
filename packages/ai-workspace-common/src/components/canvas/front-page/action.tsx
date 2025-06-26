@@ -1,4 +1,4 @@
-import { Button, Tooltip, Switch, Dropdown, MenuProps, Tag } from 'antd';
+import { Button, Tooltip, Switch, Segmented } from 'antd';
 import { memo, useMemo, useRef, useCallback } from 'react';
 import { LinkOutlined, SendOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -8,11 +8,7 @@ import { ModelSelector } from '@refly-packages/ai-workspace-common/components/ca
 import { ModelInfo } from '@refly/openapi-schema';
 import { cn, extractUrlsWithLinkify } from '@refly/utils/index';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
-import {
-  IconAskAI,
-  IconDown,
-  IconPilot,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconAskAI, IconPilot } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 
 export interface CustomAction {
@@ -84,51 +80,6 @@ export const Actions = memo(
       [runtimeConfig, setRuntimeConfig],
     );
 
-    // Handle dropdown menu click
-    const handleMenuClick = useCallback(
-      ({ key }: { key: string }) => {
-        const isAgent = key === 'agent';
-        setIsPilotActivated(isAgent);
-      },
-      [setIsPilotActivated],
-    );
-
-    // Dropdown menu items
-    const menuItems: MenuProps['items'] = useMemo(
-      () => [
-        {
-          key: 'ask',
-          icon: <IconAskAI className="h-4 w-4" />,
-          label: (
-            <div className="flex flex-col py-0 px-1">
-              <span className="font-medium text-sm">{t('mode.ask')}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {t('mode.askDescription')}
-              </span>
-            </div>
-          ),
-        },
-        {
-          key: 'agent',
-          icon: <IconPilot className="h-4 w-4" />,
-          label: (
-            <div className="flex flex-col py-0 px-1">
-              <span className="font-medium text-sm flex items-center">
-                {t('mode.agent')}{' '}
-                <Tag color="orange" className="ml-2 py-0 px-1 text-[10px]">
-                  Beta
-                </Tag>
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {t('mode.agentDescription')}
-              </span>
-            </div>
-          ),
-        },
-      ],
-      [t],
-    );
-
     // Create a pilot session or directly send message
     const handleSend = useCallback(() => {
       if (!canSendMessage) return;
@@ -140,28 +91,37 @@ export const Actions = memo(
     return (
       <div className={cn('flex justify-between items-center', className)} ref={containerRef}>
         <div className="flex items-center">
-          <Dropdown
-            menu={{
-              items: menuItems,
-              onClick: handleMenuClick,
-              selectedKeys: [isPilotActivated ? 'agent' : 'ask'],
-            }}
-            trigger={['click']}
-            placement="bottomLeft"
-          >
-            <div
-              className={cn(
-                'flex items-center mr-2 px-2 py-1 gap-0.5 text-xs font-medium cursor-pointer transition-colors duration-200',
-                'text-gray-600 dark:text-gray-300',
-                'border border-solid rounded-lg border-gray-200 dark:border-gray-600',
-                'hover:bg-gray-100 dark:hover:bg-gray-700',
-              )}
-            >
-              <IconPilot className="mr-1 text-sm" />
-              <span>{isPilotActivated ? t('mode.agent') : t('mode.ask')}</span>
-              <IconDown className="text-xs ml-1" />
-            </div>
-          </Dropdown>
+          <div className="mr-2">
+            <Segmented
+              size="small"
+              value={isPilotActivated ? 'agent' : 'ask'}
+              onChange={(value) => setIsPilotActivated(value === 'agent')}
+              options={[
+                {
+                  label: (
+                    <Tooltip title={t('mode.askDescription')}>
+                      <div className="flex items-center gap-1.5">
+                        <IconAskAI className="text-sm" />
+                        <span className="text-xs">{t('mode.ask')}</span>
+                      </div>
+                    </Tooltip>
+                  ),
+                  value: 'ask',
+                },
+                {
+                  label: (
+                    <Tooltip title={t('mode.agentDescription')}>
+                      <div className="flex items-center gap-1.5">
+                        <IconPilot className="text-sm" />
+                        <span className="text-xs">{t('mode.agent')}</span>
+                      </div>
+                    </Tooltip>
+                  ),
+                  value: 'agent',
+                },
+              ]}
+            />
+          </div>
 
           {userStore.isLogin && !isPilotActivated && (
             <ModelSelector
