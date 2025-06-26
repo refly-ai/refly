@@ -108,6 +108,7 @@ export const CreateTemplateModal = memo(
   (props: CreateTemplateModalProps) => {
     const { canvasId, title, categoryId, visible, setVisible } = props;
     if (!visible) return null;
+    const needCover = false;
 
     const coverElementRef = useRef<HTMLDivElement>(null);
 
@@ -184,7 +185,7 @@ export const CreateTemplateModal = memo(
         let coverStorageKey: string;
 
         // Try to convert cover element to image, fallback to canvas cover
-        if (hasCovers && selectedCover) {
+        if (needCover && hasCovers && selectedCover) {
           const nodeImageKey = await convertCoverElementToImage();
           if (nodeImageKey) {
             coverStorageKey = nodeImageKey;
@@ -260,25 +261,27 @@ export const CreateTemplateModal = memo(
               </Form.Item>
 
               {/* Cover selection */}
-              <Form.Item label={t('template.templateCover')} required>
-                <div className="space-y-3">
-                  {hasCovers && selectedCover ? (
-                    <CoverPreview
-                      node={selectedCover}
-                      isEdit
-                      handleCoverEdit={handleCoverEdit}
-                      ref={coverElementRef}
-                    />
-                  ) : (
-                    <div className="w-full h-40 border border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-                      <div className="text-center text-gray-500 dark:text-gray-400">
-                        <div className="text-lg mb-2">📷</div>
-                        <div className="text-sm">{t('template.useCanvasCover')}</div>
+              {needCover && (
+                <Form.Item label={t('template.templateCover')} required>
+                  <div className="space-y-3">
+                    {hasCovers && selectedCover ? (
+                      <CoverPreview
+                        node={selectedCover}
+                        isEdit
+                        handleCoverEdit={handleCoverEdit}
+                        ref={coverElementRef}
+                      />
+                    ) : (
+                      <div className="w-full h-40 border border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+                        <div className="text-center text-gray-500 dark:text-gray-400">
+                          <div className="text-lg mb-2">📷</div>
+                          <div className="text-sm">{t('template.useCanvasCover')}</div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </Form.Item>
+                    )}
+                  </div>
+                </Form.Item>
+              )}
 
               <Form.Item label={t('template.templateDescription')} name="description">
                 <Input.TextArea
