@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { useMemo, memo, useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { SelectedSkillHeader } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/selected-skill-header';
@@ -16,7 +16,7 @@ import {
   SkillTemplateConfig,
 } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
-import { convertContextItemsToEdges } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { convertContextItemsToEdges } from '@refly/canvas-common';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useReactFlow } from '@xyflow/react';
 import { GrRevert } from 'react-icons/gr';

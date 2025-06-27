@@ -15,7 +15,7 @@ import { useReactFlow, XYPosition } from '@xyflow/react';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { Document } from '@refly/openapi-schema';
-import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
+import { CanvasNodeFilter } from '@refly/canvas-common';
 
 export const useCreateDocument = () => {
   const [isCreating, setIsCreating] = useState(false);

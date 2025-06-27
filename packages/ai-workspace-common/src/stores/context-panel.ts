@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { CanvasNodeType, SelectionKey, SkillRuntimeConfig } from '@refly/openapi-schema';
-import { purgeContextItems } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { SkillRuntimeConfig } from '@refly/openapi-schema';
+import { IContextItem } from '@refly/common-types';
+import { purgeContextItems } from '@refly/canvas-common';
 
 export interface FilterErrorInfo {
   [key: string]: {
@@ -14,23 +15,6 @@ export interface FilterErrorInfo {
 
 export enum ContextTarget {
   Global = 'global',
-}
-
-export interface Selection {
-  content: string;
-  sourceTitle?: string;
-  sourceEntityId?: string;
-  sourceEntityType?: CanvasNodeType;
-}
-
-export interface IContextItem {
-  title: string;
-  entityId: string;
-  type: CanvasNodeType | SelectionKey;
-  selection?: Selection;
-  metadata?: Record<string, any>;
-  isPreview?: boolean; // is preview mode
-  isCurrentContext?: boolean;
 }
 
 interface ContextPanelState {

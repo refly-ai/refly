@@ -2,7 +2,8 @@ import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import Moveable from 'react-moveable';
-import { CanvasNode, CodeArtifactNodeProps } from './shared/types';
+import { CanvasNode } from '@refly/canvas-common';
+import { CodeArtifactNodeProps } from './shared/types';
 import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './index';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
@@ -30,7 +31,8 @@ import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly/utils/id';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
+import { detectActualTypeFromType } from '@refly/utils';
 import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
 import { CodeArtifact, CodeArtifactType, Skill } from '@refly/openapi-schema';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
@@ -40,7 +42,6 @@ import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
-import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';

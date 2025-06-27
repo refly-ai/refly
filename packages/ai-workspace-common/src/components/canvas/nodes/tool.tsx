@@ -1,5 +1,5 @@
 import { Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { CanvasNodeData, ToolNodeMeta } from './shared/types';
+import { CanvasNodeData, ToolNodeMeta } from '@refly/canvas-common';
 import { Node } from '@xyflow/react';
 import { Wrench, MoreHorizontal } from 'lucide-react';
 import { CustomHandle } from './shared/custom-handle';

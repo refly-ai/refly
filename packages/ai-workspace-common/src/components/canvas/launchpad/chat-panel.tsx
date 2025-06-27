@@ -25,11 +25,12 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useSyncSelectedNodesToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-selected-nodes-to-context';
 import { PiMagicWand } from 'react-icons/pi';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { convertContextItemsToNodeFilters } from '@refly/canvas-common';
 import { IoClose } from 'react-icons/io5';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useSubscriptionStoreShallow } from '@refly-packages/ai-workspace-common/stores/subscription';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
+import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { omit } from '@refly/utils/index';
 import { cn } from '@refly/utils/cn';
@@ -144,6 +145,7 @@ export const ChatPanel = ({
   }));
 
   const [form] = Form.useForm();
+  const [currentActionResultId, setCurrentActionResultId] = useState<string | null>(null);
 
   // hooks
   const { canvasId, readonly } = useCanvasContext();
@@ -159,6 +161,24 @@ export const ChatPanel = ({
 
   // automatically sync selected nodes to context
   useSyncSelectedNodesToContext();
+
+  // Listen for action completion to clear currentActionResultId
+  useEffect(() => {
+    const handleActionUpdate = ({ resultId, payload }) => {
+      if (
+        resultId === currentActionResultId &&
+        (payload.status === 'finish' || payload.status === 'failed')
+      ) {
+        setCurrentActionResultId(null);
+      }
+    };
+
+    actionEmitter.on('updateResult', handleActionUpdate);
+
+    return () => {
+      actionEmitter.off('updateResult', handleActionUpdate);
+    };
+  }, [currentActionResultId]);
 
   useEffect(() => {
     if (!selectedSkill?.configSchema?.items?.length) {
@@ -232,6 +252,9 @@ export const ChatPanel = ({
       resultId: genActionResultID(),
       nodeId: genUniqueId(),
     };
+
+    // Store the current action resultId for abort functionality
+    setCurrentActionResultId(newResultId);
 
     // Call onAddMessage callback with all required data
     if (onAddMessage) {
@@ -315,7 +338,10 @@ export const ChatPanel = ({
   };
 
   const handleAbort = () => {
+    // Call abortAction without parameters to use the global currentResultId tracking
     abortAction();
+    // Clear currentActionResultId to reset isExecuting state
+    setCurrentActionResultId(null);
   };
 
   const { setRecommendQuestionsOpen, recommendQuestionsOpen } = useLaunchpadStoreShallow(
@@ -497,6 +523,7 @@ export const ChatPanel = ({
               customActions={customActions}
               onUploadImage={handleImageUpload}
               contextItems={contextItems}
+              isExecuting={!!currentActionResultId}
             />
           </div>
         </div>

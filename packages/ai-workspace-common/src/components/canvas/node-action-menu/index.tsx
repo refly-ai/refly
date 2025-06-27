@@ -12,7 +12,7 @@ import {
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { RiFullscreenFill } from 'react-icons/ri';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode } from '@refly/canvas-common';
 import {
   FileInput,
   MessageSquareDiff,

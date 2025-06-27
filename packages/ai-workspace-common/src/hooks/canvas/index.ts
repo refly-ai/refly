@@ -16,6 +16,7 @@ export * from './use-find-thread-history';
 
 // Actions
 export * from './use-invoke-action';
+export * from './use-abort-action';
 export * from './use-update-action-result';
 export * from './use-action-polling';
 

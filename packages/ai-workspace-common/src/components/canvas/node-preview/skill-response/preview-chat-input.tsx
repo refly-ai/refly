@@ -1,4 +1,4 @@
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { PreviewContextManager } from './preview-context-manager';
 import { useMemo, memo } from 'react';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';

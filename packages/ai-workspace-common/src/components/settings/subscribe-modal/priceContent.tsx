@@ -136,7 +136,7 @@ const PlanItem = (props: {
                 t('settings.subscription.subscribe.forFree')
               )}
             </span>
-            <span className="period !text-xs dark:text-gray-200">
+            <span className="text-xs text-[#2c2929] dark:text-gray-200">
               {' '}
               /{' '}
               {title === 'free' ? (
@@ -152,7 +152,7 @@ const PlanItem = (props: {
           {interval === 'yearly' && title !== 'free' && (
             <div>
               <span className="price text-base">${getPrice(title)}</span>
-              <span className="period !text-xs">
+              <span className="!text-xs !text-[#2c2929] dark:!text-gray-200">
                 {' '}
                 /{' '}
                 <span className="whitespace-nowrap">

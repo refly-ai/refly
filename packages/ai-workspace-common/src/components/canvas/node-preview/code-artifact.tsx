@@ -1,14 +1,12 @@
 import { useState, memo, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  CanvasNode,
-  CodeArtifactNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode, CodeArtifactNodeMeta } from '@refly/canvas-common';
 import CodeViewerLayout from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer-layout';
 import CodeViewer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly/utils/id';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
+import { detectActualTypeFromType } from '@refly/utils';
 import { useChatStore } from '@refly-packages/ai-workspace-common/stores/chat';
 import { ConfigScope, Skill, CodeArtifactType, CodeArtifact } from '@refly/openapi-schema';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -21,7 +19,6 @@ import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 import { useNodesData } from '@xyflow/react';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
-import { detectActualTypeFromType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
 
 interface CodeArtifactNodePreviewProps {
   nodeId: string;

@@ -2,10 +2,9 @@ import { useMemo } from 'react';
 import { useCanvasContext } from '../../context/canvas';
 import { useThrottledCallback } from 'use-debounce';
 import { Edge } from '@xyflow/react';
-import { CanvasNode } from '../../components/canvas/nodes';
 import { UndoManager } from 'yjs';
 import { omit } from '@refly/utils';
-import { purgeContextItems } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { purgeContextItems, CanvasNode } from '@refly/canvas-common';
 import { isDesktop } from '@refly-packages/ai-workspace-common/utils/env';
 
 export const useCanvasSync = () => {

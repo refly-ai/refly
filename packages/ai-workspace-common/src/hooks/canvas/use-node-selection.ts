@@ -1,13 +1,6 @@
 import { useCallback } from 'react';
 import { Node, useReactFlow } from '@xyflow/react';
-import { CanvasNode } from '../../components/canvas/nodes';
-import { CanvasNodeType } from '@refly/openapi-schema';
-
-export interface CanvasNodeFilter {
-  type: CanvasNodeType;
-  entityId: string;
-  handleType?: 'source' | 'target';
-}
+import { CanvasNode, CanvasNodeFilter } from '@refly/canvas-common';
 
 export const useNodeSelection = () => {
   const { getNodes, setNodes } = useReactFlow<CanvasNode<any>>();

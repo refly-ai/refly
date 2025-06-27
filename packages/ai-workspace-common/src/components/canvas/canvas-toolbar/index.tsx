@@ -31,7 +31,7 @@ import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-
 import { genMemoID, genSkillID } from '@refly/utils/id';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
-import { getDefaultContentForType } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
+import { getDefaultContentForType } from '@refly/utils';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface ToolbarProps {

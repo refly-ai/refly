@@ -47,7 +47,7 @@ import { editorEmitter } from '@refly/utils/event-emitter/editor';
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { useThemeStoreShallow } from '@refly-packages/ai-workspace-common/stores/theme';
 

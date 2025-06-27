@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
+import { IContextItem } from '@refly/common-types';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
-import {
-  IContextItem,
-  useContextPanelStore,
-} from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
 
 export const useSyncSelectedNodesToContext = () => {
   const { nodes } = useCanvasData();

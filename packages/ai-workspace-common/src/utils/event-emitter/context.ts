@@ -1,5 +1,5 @@
 import mitt from 'mitt';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 
 // Define event types
 type ContextEventTypes = {

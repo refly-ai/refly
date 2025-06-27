@@ -3,10 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import { ActionResult, SkillEvent } from '@refly/openapi-schema';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
-import {
-  CanvasNodeData,
-  ResponseNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
 import { aggregateTokenUsage } from '@refly/utils/models';
 import { useSetNodeDataByEntity } from './use-set-node-data-by-entity';
 import { processContentPreview } from '../../utils/content';

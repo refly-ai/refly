@@ -1,16 +1,13 @@
 import { memo, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import {
-  CanvasNode,
-  ResponseNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LinearThreadContent } from '@refly-packages/ai-workspace-common/components/canvas/linear-thread/linear-thread';
 import { LinearThreadMessage } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { cn } from '@refly/utils/cn';
 import { useFindThreadHistory } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-thread-history';
 import { genActionResultID, genUniqueId } from '@refly/utils/id';
 import { ChatPanel } from '@refly-packages/ai-workspace-common/components/canvas/node-chat-panel';
+import { IContextItem } from '@refly/common-types';
 import {
-  IContextItem,
   useContextPanelStore,
   useContextPanelStoreShallow,
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
@@ -24,7 +21,7 @@ import {
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { convertContextItemsToNodeFilters } from '@refly/canvas-common';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useContextUpdateByResultId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-debounced-context-update';
 import { useReactFlow } from '@xyflow/react';

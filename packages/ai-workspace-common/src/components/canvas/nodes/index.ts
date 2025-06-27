@@ -20,12 +20,11 @@ import {
   ToolNodeMeta,
   ResponseNodeMeta,
   CodeArtifactNodeMeta,
-} from './shared/types';
+} from '@refly/canvas-common';
 import { t } from 'i18next';
 import { genUniqueId } from '@refly/utils/id';
 
 // Export all components and types
-export * from './shared/types';
 export * from './document';
 export * from './resource';
 export * from './skill';

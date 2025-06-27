@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
+import { CanvasNode } from '@refly/canvas-common';
 import { Node, Edge, useStoreApi, InternalNode } from '@xyflow/react';
 import { adoptUserNodes, updateConnectionLookup } from '@xyflow/system';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';

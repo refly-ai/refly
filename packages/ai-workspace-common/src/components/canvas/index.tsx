@@ -13,7 +13,8 @@ import {
   useStoreApi,
 } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
-import { nodeTypes, CanvasNode } from './nodes';
+import { CanvasNode } from '@refly/canvas-common';
+import { nodeTypes } from './nodes';
 import { CanvasToolbar } from './canvas-toolbar';
 import { TopToolbar } from './top-toolbar';
 import { NodePreviewContainer } from './node-preview';

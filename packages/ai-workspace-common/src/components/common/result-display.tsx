@@ -1,11 +1,11 @@
 import { Artifact } from '@refly/openapi-schema';
-import { CanvasNodeData } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
+import { CanvasNodeData } from '@refly/canvas-common';
 import {
   IconCanvas,
   IconDocument,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
-import { ResponseNodeMeta } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
+import { ResponseNodeMeta } from '@refly/canvas-common';
 
 export const getArtifactIcon = (artifact: Artifact, className?: string) => {
   switch (artifact.type) {

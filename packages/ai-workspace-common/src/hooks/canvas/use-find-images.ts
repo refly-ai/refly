@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode } from '@refly/canvas-common';
 
 export const useFindImages = () => {
   const { getNodes } = useReactFlow();

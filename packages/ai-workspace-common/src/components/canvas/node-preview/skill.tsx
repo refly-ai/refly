@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { CloseOutlined, ToolOutlined } from '@ant-design/icons';
 import { Badge, Button, Form } from 'antd';
 import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
-import { CanvasNode, CanvasNodeData, SkillNodeMeta } from '../nodes/shared/types';
+import { CanvasNode, CanvasNodeData, SkillNodeMeta } from '@refly/canvas-common';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import {
@@ -16,15 +16,13 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useChatStoreShallow } from '@refly-packages/ai-workspace-common/stores/chat';
 import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
-import {
-  IContextItem,
-  useContextPanelStore,
-} from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
+import { useContextPanelStore } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { genActionResultID } from '@refly/utils/id';
-import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { convertContextItemsToNodeFilters } from '@refly/canvas-common';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useReactFlow } from '@xyflow/react';
 import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';

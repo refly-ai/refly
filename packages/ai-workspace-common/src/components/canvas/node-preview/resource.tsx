@@ -1,9 +1,6 @@
 import { useState, memo } from 'react';
 import { ResourceView } from '@refly-packages/ai-workspace-common/components/resource-view';
-import {
-  CanvasNode,
-  ResourceNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode, ResourceNodeMeta } from '@refly/canvas-common';
 
 interface ResourceNodePreviewProps {
   node: CanvasNode<ResourceNodeMeta>;

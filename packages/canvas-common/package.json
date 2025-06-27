@@ -1,0 +1,33 @@
+{
+  "name": "@refly/canvas-common",
+  "version": "0.7.0",
+  "description": "Common canvas utilitized shared by UI and server",
+  "main": "dist/index.js",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./dist/index.js",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
+    "@refly/common-types": "workspace:*",
+    "@refly/openapi-schema": "workspace:*",
+    "@refly/utils": "workspace:*",
+    "@xyflow/react": "^12.3.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.56"
+  }
+}

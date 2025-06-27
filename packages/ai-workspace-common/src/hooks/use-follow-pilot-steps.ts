@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { usePilotStore, usePilotStoreShallow } from '../stores/pilot';
-import { ResponseNodeMeta } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { ResponseNodeMeta } from '@refly/canvas-common';
 
 /**
  * Hook that follows pilot steps by automatically fitting view to nodes associated

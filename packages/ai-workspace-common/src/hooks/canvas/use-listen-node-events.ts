@@ -3,7 +3,7 @@ import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/event
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useAddNode } from './use-add-node';
 import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/types';
-import { CodeArtifactNodeMeta } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
+import { CodeArtifactNodeMeta } from '@refly/canvas-common';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-preview-control';
 import { CanvasNodeType } from '@refly-packages/ai-workspace-common/requests';
 import { useReactFlow } from '@xyflow/react';

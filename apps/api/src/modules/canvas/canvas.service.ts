@@ -23,7 +23,7 @@ import {
   SkillContext,
   ActionResult,
 } from '@refly/openapi-schema';
-import { Prisma } from '../../generated/client';
+import { Prisma, Canvas as CanvasModel } from '../../generated/client';
 import { genCanvasID } from '@refly/utils';
 import { DeleteKnowledgeEntityJobData } from '../knowledge/knowledge.dto';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '../../utils/const';
@@ -38,6 +38,7 @@ import { RedisService } from '../common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { ProviderService } from '../provider/provider.service';
 import { isDesktop } from '../../utils/runtime';
+import { CanvasNodeFilter, prepareAddNode } from '@refly/canvas-common';
 
 @Injectable()
 export class CanvasService {
@@ -389,6 +390,91 @@ export class CanvasService {
     return canvas;
   }
 
+  /**
+   * Execute a transaction on a canvas document with automatic connection management
+   * @param canvasId - The id of the canvas
+   * @param user - The user performing the operation
+   * @param canvas - The canvas entity (optional, will be fetched if not provided)
+   * @param transaction - The transaction function to execute
+   */
+  private async executeCanvasTransaction(
+    canvasId: string,
+    user: User,
+    canvas: CanvasModel | null,
+    transaction: (doc: Y.Doc) => void | Promise<void>,
+  ): Promise<void> {
+    const connection = await this.collabService.openDirectConnection(canvasId, {
+      user,
+      entity: canvas,
+      entityType: 'canvas',
+    });
+
+    try {
+      await connection.document.transact(async () => {
+        const result = transaction(connection.document);
+        // If the transaction returns a promise, await it
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
+      });
+    } finally {
+      await connection.disconnect();
+    }
+  }
+
+  /**
+   * Apply realtime updates to canvas document
+   * @param user - The user who is applying the updates
+   * @param canvasId - The id of the canvas to apply the updates to
+   * @param tx - The Yjs transaction to apply to the canvas
+   */
+  async applyUpdatesToCanvasDoc(
+    user: User,
+    canvasId: string,
+    tx: (doc: Y.Doc) => void,
+    canvasPo?: CanvasModel,
+  ) {
+    const canvas =
+      canvasPo ||
+      (await this.prisma.canvas.findUnique({
+        where: { canvasId, uid: user.uid, deletedAt: null },
+      }));
+    if (!canvas) {
+      throw new CanvasNotFoundError();
+    }
+
+    await this.executeCanvasTransaction(canvasId, user, canvas, tx);
+  }
+
+  /**
+   * Add a node to the canvas document
+   * @param user - The user who is adding the node
+   * @param canvasId - The id of the canvas to add the node to
+   * @param node - The node to add
+   * @param connectTo - The nodes to connect to
+   */
+  async addNodeToCanvasDoc(
+    user: User,
+    canvasId: string,
+    node: CanvasNode,
+    connectTo?: CanvasNodeFilter[],
+  ) {
+    await this.applyUpdatesToCanvasDoc(user, canvasId, (doc) => {
+      const nodes = doc.getArray('nodes');
+      const edges = doc.getArray('edges');
+
+      const { newNode, newEdges } = prepareAddNode({
+        node,
+        nodes: nodes.toJSON(),
+        edges: edges.toJSON(),
+        connectTo,
+      });
+
+      nodes.push([newNode]);
+      edges.push(newEdges);
+    });
+  }
+
   async updateCanvas(user: User, param: UpsertCanvasRequest) {
     const { canvasId, title, minimapStorageKey, projectId } = param;
 
@@ -434,17 +520,11 @@ export class CanvasService {
 
     // Update title in yjs document
     if (title !== undefined) {
-      const connection = await this.collabService.openDirectConnection(canvasId, {
-        user,
-        entity: updatedCanvas,
-        entityType: 'canvas',
+      await this.executeCanvasTransaction(canvasId, user, updatedCanvas, (doc) => {
+        const titleText = doc.getText('title');
+        titleText.delete(0, titleText.length);
+        titleText.insert(0, param.title);
       });
-      connection.document.transact(() => {
-        const title = connection.document.getText('title');
-        title.delete(0, title.length);
-        title.insert(0, param.title);
-      });
-      await connection.disconnect();
     }
 
     // Remove original minimap if it exists
@@ -694,16 +774,9 @@ export class CanvasService {
           });
           if (!canvas) return;
 
-          // Open connection to get the document
-          const connection = await this.collabService.openDirectConnection(canvasId, {
-            user: { uid: canvas.uid },
-            entity: canvas,
-            entityType: 'canvas',
-          });
-
           // Remove nodes matching the entities
-          connection.document.transact(() => {
-            const nodes = connection.document.getArray('nodes');
+          await this.executeCanvasTransaction(canvasId, { uid: canvas.uid }, canvas, (doc) => {
+            const nodes = doc.getArray('nodes');
             const toRemove: number[] = [];
 
             nodes.forEach((node: any, index: number) => {
@@ -726,8 +799,6 @@ export class CanvasService {
               nodes.delete(index, 1);
             }
           });
-
-          await connection.disconnect();
 
           // Update relations
           await this.prisma.canvasEntityRelation.updateMany({

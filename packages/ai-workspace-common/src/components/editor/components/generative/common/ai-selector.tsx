@@ -5,7 +5,6 @@ import CrazySpinner from '../../ui/icons/crazy-spinner';
 import Magic from '../../ui/icons/magic';
 import { InPlaceEditType, CanvasEditConfig } from '@refly/utils/event-emitter/editor';
 import { Button, message, Input } from 'antd';
-import { cn } from '@refly/utils/cn';
 import { getOsType } from '@refly/utils/env';
 import { AddBaseMarkContext } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager/components/add-base-mark-context';
 
@@ -27,6 +26,7 @@ import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { CopyOutlined } from '@ant-design/icons';
 import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
 import { useDocumentStore } from '@refly-packages/ai-workspace-common/stores/document';
+import { useAbortAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-abort-action';
 
 interface AISelectorProps {
   open: boolean;
@@ -92,6 +92,7 @@ export const AISelector = memo(({ onOpenChange, inPlaceEditType }: AISelectorPro
   const [resultStatus, setResultStatus] = useState<ActionStatus>('waiting');
   const { docId } = useDocumentContext();
   const { invokeAction } = useInvokeAction();
+  const { abortAction } = useAbortAction();
 
   const { selectedModel, setSelectedModel } = useChatStoreShallow((state) => ({
     selectedModel: state.selectedModel,
@@ -277,6 +278,12 @@ export const AISelector = memo(({ onOpenChange, inPlaceEditType }: AISelectorPro
     editor.chain().focus().insertContentAt(selection, resultContent).run();
   };
 
+  const handleAbort = () => {
+    abortAction(resultId);
+    setIsLoading(false);
+    setResultStatus('failed');
+  };
+
   return (
     <div className="w-[405px] z-50" ref={ref}>
       {(resultId && ['waiting', 'executing'].includes(resultStatus)) || isLoading ? (
@@ -362,9 +369,7 @@ export const AISelector = memo(({ onOpenChange, inPlaceEditType }: AISelectorPro
               }}
               onKeyDown={handleKeyDown}
               autoFocus
-              className={cn(
-                'flex py-3 mx-0.5 w-full h-11 text-sm border-none outline-none calc-width-64px important-outline-none important-box-shadow-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 !bg-transparent',
-              )}
+              className="flex py-3 mx-0.5 w-full h-11 text-sm border-none outline-none calc-width-64px important-outline-none important-box-shadow-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 !bg-transparent"
               placeholder={t('copilot.chatInput.editPlaceholder')}
               onFocus={() => {
                 addAIHighlight(editor);
@@ -372,16 +377,27 @@ export const AISelector = memo(({ onOpenChange, inPlaceEditType }: AISelectorPro
             />
           </div>
           <div className="flex flex-row gap-1 mr-2">
-            <Button
-              type="primary"
-              size="small"
-              disabled={!inputValue}
-              onClick={() => {
-                handleEdit();
-              }}
-            >
-              <span>{t('copilot.chatActions.send')}</span> <span>{shortcutSymbols.edit}</span>
-            </Button>
+            {(resultId && ['waiting', 'executing'].includes(resultStatus)) || isLoading ? (
+              <Button
+                size="small"
+                type="default"
+                className="text-xs flex items-center gap-1 font-medium border-red-200 text-red-600 hover:border-red-300 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:border-red-700 dark:hover:text-red-300 dark:bg-red-950/20 dark:hover:bg-red-900/30 shadow-sm hover:shadow-md transition-all duration-200"
+                onClick={handleAbort}
+              >
+                <span>{t('copilot.chatActions.stop')}</span>
+              </Button>
+            ) : (
+              <Button
+                type="primary"
+                size="small"
+                disabled={!inputValue}
+                onClick={() => {
+                  handleEdit();
+                }}
+              >
+                <span>{t('copilot.chatActions.send')}</span> <span>{shortcutSymbols.edit}</span>
+              </Button>
+            )}
           </div>
         </div>
       )}

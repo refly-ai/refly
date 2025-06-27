@@ -3,7 +3,7 @@ import { Connection, Edge, applyEdgeChanges, EdgeChange, useStoreApi } from '@xy
 import { genUniqueId } from '@refly/utils/id';
 import { useEdgeStyles, getEdgeStyles } from '../../components/canvas/constants';
 import { useCanvasSync } from './use-canvas-sync';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode } from '@refly/canvas-common';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 import { useThemeStore } from '@refly-packages/ai-workspace-common/stores/theme';
 

@@ -4,11 +4,12 @@ import Moveable from 'react-moveable';
 import classNames from 'classnames';
 import { Divider, Input, message, Typography } from 'antd';
 import type { InputRef } from 'antd';
-import { CanvasNode, SkillResponseNodeProps } from './shared/types';
+import { CanvasNode } from '@refly/canvas-common';
 import { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { CustomHandle } from './shared/custom-handle';
 import { LuChevronRight } from 'react-icons/lu';
 import { getNodeCommonStyles } from './index';
+import { SkillResponseNodeProps } from './shared/types';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
@@ -300,10 +301,10 @@ export const SkillResponseNode = memo(
       : '';
 
     const skill = {
-      name: currentSkill?.name || 'CommonQnA',
+      name: currentSkill?.name || 'commonQnA',
       icon: currentSkill?.icon,
     };
-    const skillName = currentSkill?.name || 'CommonQnA';
+    const skillName = currentSkill?.name || 'commonQnA';
     const model = modelInfo?.label;
 
     // Get query and response content from result

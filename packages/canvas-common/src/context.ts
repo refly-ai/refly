@@ -1,9 +1,8 @@
 import { ActionResult, CanvasNodeType, SkillContext } from '@refly/openapi-schema';
+import { IContextItem } from '@refly/common-types';
 import { Node, Edge } from '@xyflow/react';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
-import { getClientOrigin } from '@refly/utils/url';
-import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
-import { omit } from '@refly/utils';
+import { getClientOrigin, omit } from '@refly/utils';
+import { CanvasNodeFilter } from './types';
 
 export const convertResultContextToItems = (
   context: SkillContext,

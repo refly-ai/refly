@@ -1,8 +1,13 @@
 import { useCallback } from 'react';
+import {
+  CanvasNode,
+  prepareNodeData,
+  calculateGroupBoundaries,
+  sortNodes,
+  getAbsolutePosition,
+} from '@refly/canvas-common';
 import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
-import { calculateGroupBoundaries, sortNodes, getAbsolutePosition } from './utils';
-import { CanvasNode, prepareNodeData } from '../../../components/canvas/nodes';
 import { genUniqueId } from '@refly/utils/id';
 import { useReactFlow } from '@xyflow/react';
 

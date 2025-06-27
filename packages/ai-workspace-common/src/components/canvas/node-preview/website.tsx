@@ -1,7 +1,7 @@
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CanvasNode } from '../nodes/shared/types';
-import { WebsiteNodeMeta } from '../nodes/shared/types';
+import { CanvasNode } from '@refly/canvas-common';
+import { WebsiteNodeMeta } from '@refly/canvas-common';
 import { Button, Form, Input, message, Tooltip } from 'antd';
 import { FiCode, FiEye, FiExternalLink, FiCopy } from 'react-icons/fi';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';

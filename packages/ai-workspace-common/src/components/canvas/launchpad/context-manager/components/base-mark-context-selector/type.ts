@@ -1,4 +1,4 @@
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { CanvasNodeType } from '@refly/openapi-schema';
 
 export interface RenderItem {

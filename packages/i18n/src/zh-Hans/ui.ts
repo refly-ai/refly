@@ -2009,6 +2009,10 @@ const translations = {
       payCancelDescription: '我们未能成功收到您的付款，如有任何问题，请联系 support@refly.ai',
     },
     modelProviders: {
+      // Tabs
+      myProviders: '我的供应商',
+      providerStore: '供应商商店',
+
       addProvider: '添加供应商',
       editProvider: '编辑供应商',
       providerType: '类型',
@@ -2038,6 +2042,43 @@ const translations = {
         pdfParsing: 'PDF 解析',
         reranker: '重排器',
         embedding: '嵌入',
+      },
+      // Provider Store 相关翻译
+      community: {
+        title: '社区供应商配置',
+        description: '发现并安装社区供应商配置',
+        searchPlaceholder: '搜索配置...',
+        filterByCategory: '按类别过滤',
+        allCategories: '全部类别',
+        install: '安装',
+        installing: '安装中...',
+        installed: '已安装',
+        installSuccess: '成功安装 {{name}}',
+        installError: '安装 {{name}} 失败',
+        requiresApiKeyWarning: '{{name}} 需要 API 密钥，请在详细视图中配置。',
+        viewDocumentation: '查看文档',
+        documentation: '文档',
+        noDescription: '暂无描述',
+        loadError: '加载社区配置失败',
+        loadErrorDescription: '请检查网络连接并重试。',
+        noConfigurations: '未找到社区配置',
+        author: '作者：{{author}}',
+        version: 'v{{version}}',
+        // API Key 配置弹框
+        configureApiKey: '配置 API Key',
+        apiKeyRequired: '需要 API Key',
+        apiKeyRequiredDescription:
+          '此提供商需要您提供 API Key 才能使用。请从提供商官网获取 API Key 并填写在下方。',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: '请输入您的 API Key',
+        baseUrlLabel: 'Base URL (可选)',
+        baseUrlDescription: '如需使用自定义服务地址，请填写此项',
+        baseUrlPlaceholder: '使用默认地址',
+        validateAndInstall: '验证并安装',
+        validating: '验证中...',
+        validateSuccess: '验证成功',
+        validateError: '验证失败',
+        cancel: '取消',
       },
     },
     modelConfig: {
@@ -2457,6 +2498,7 @@ const translations = {
     },
     chatActions: {
       send: '发送',
+      stop: '停止',
       directChat: '直接聊天',
       noContextChat: '不带上下文聊天',
       wholeSpaceChat: '在整个空间聊天',

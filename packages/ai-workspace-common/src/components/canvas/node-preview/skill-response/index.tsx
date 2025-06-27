@@ -4,17 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { ActionResult, ActionStep } from '@refly/openapi-schema';
-import {
-  CanvasNode,
-  ResponseNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { ActionStepCard } from './action-step';
-import {
-  convertResultContextToItems,
-  purgeContextItems,
-} from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { convertResultContextToItems, purgeContextItems } from '@refly/canvas-common';
 
 import { PreviewChatInput } from './preview-chat-input';
 import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
@@ -225,7 +219,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
         resultId,
         query: title,
         selectedSkill: {
-          name: actionMeta?.name || 'CommonQnA',
+          name: actionMeta?.name || 'commonQnA',
         },
         contextItems,
       },

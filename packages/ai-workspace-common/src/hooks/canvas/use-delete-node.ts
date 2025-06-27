@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { message } from 'antd';
 import { useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode } from '@refly/canvas-common';
 import DeleteNodeMessageContent from '../../components/message/delete-node-message';
 
 interface DeleteNodeOptions {

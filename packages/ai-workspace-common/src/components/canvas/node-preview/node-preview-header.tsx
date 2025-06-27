@@ -19,7 +19,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { NODE_COLORS } from '../nodes/shared/colors';
-import { CanvasNode } from '../nodes/shared/types';
+import { CanvasNode } from '@refly/canvas-common';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';

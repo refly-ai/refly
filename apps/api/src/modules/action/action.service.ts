@@ -1,6 +1,6 @@
 import { ActionDetail } from '../action/action.dto';
 import { PrismaService } from '../common/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ActionResultNotFoundError } from '@refly/errors';
 import { ActionResult } from '../../generated/client';
 import { EntityType, GetActionResultData, User } from '@refly/openapi-schema';
@@ -11,6 +11,14 @@ import { providerItem2ModelInfo } from '../provider/provider.dto';
 
 @Injectable()
 export class ActionService {
+  private readonly logger = new Logger(ActionService.name);
+
+  // Store active abort controllers with timeout cleanup to prevent memory leaks
+  private activeAbortControllers = new Map<
+    string,
+    { controller: AbortController; timeoutId: NodeJS.Timeout }
+  >();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly providerService: ProviderService,
@@ -181,5 +189,78 @@ export class ActionService {
     const results = await Promise.all(newResultsPromises);
 
     return results.filter((result) => result !== null);
+  }
+
+  /**
+   * Register an abort controller for a running action with timeout cleanup
+   */
+  registerAbortController(resultId: string, controller: AbortController) {
+    // Set up automatic cleanup after 30 minutes to prevent memory leaks
+    const timeoutId = setTimeout(
+      () => {
+        this.logger.warn(`Auto-cleaning up abort controller for action: ${resultId} after timeout`);
+        this.unregisterAbortController(resultId);
+      },
+      30 * 60 * 1000,
+    ); // 30 minutes
+
+    this.activeAbortControllers.set(resultId, { controller, timeoutId });
+    this.logger.debug(`Registered abort controller for action: ${resultId}`);
+  }
+
+  /**
+   * Unregister an abort controller when action completes
+   */
+  unregisterAbortController(resultId: string) {
+    const entry = this.activeAbortControllers.get(resultId);
+    if (entry) {
+      clearTimeout(entry.timeoutId);
+      this.activeAbortControllers.delete(resultId);
+      this.logger.debug(`Unregistered abort controller for action: ${resultId}`);
+    }
+  }
+
+  /**
+   * Abort a running action
+   */
+  async abortAction(user: User, { resultId }: { resultId: string }) {
+    this.logger.debug(`Attempting to abort action: ${resultId} for user: ${user.uid}`);
+
+    // Verify that the action belongs to the user
+    const result = await this.prisma.actionResult.findFirst({
+      where: {
+        resultId,
+        uid: user.uid,
+      },
+    });
+
+    if (!result) {
+      throw new ActionResultNotFoundError();
+    }
+
+    // Get the abort controller for this action
+    const entry = this.activeAbortControllers.get(resultId);
+
+    if (entry) {
+      // Abort the action
+      entry.controller.abort('User requested abort');
+      this.logger.log(`Aborted action: ${resultId}`);
+
+      // Clean up the entry
+      this.unregisterAbortController(resultId);
+
+      // Update the action status to failed
+      await this.prisma.actionResult.update({
+        where: {
+          pk: result.pk,
+        },
+        data: {
+          status: 'failed',
+          errors: JSON.stringify(['User aborted the action']),
+        },
+      });
+    } else {
+      this.logger.warn(`No active abort controller found for action: ${resultId}`);
+    }
   }
 }

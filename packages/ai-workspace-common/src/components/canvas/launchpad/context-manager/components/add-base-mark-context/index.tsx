@@ -4,7 +4,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { BaseMarkContextSelector } from '../base-mark-context-selector';
 import { useTranslation } from 'react-i18next';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 
 interface AddBaseMarkContextProps {
   contextItems: IContextItem[];

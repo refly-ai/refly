@@ -10,6 +10,10 @@ import {
   EntityType,
   ActionMeta,
 } from '@refly/openapi-schema';
+import {
+  convertContextItemsToNodeFilters,
+  convertResultContextToItems,
+} from '@refly/canvas-common';
 import { PilotEngine } from './pilot-engine';
 import { PilotSession } from '@/generated/client';
 import { SkillService } from '@/modules/skill/skill.service';
@@ -437,6 +441,47 @@ export class PilotService {
           rawOutput: JSON.stringify(rawStep),
           status: 'executing',
         },
+      });
+
+      const contextItems = convertResultContextToItems(context, history);
+
+      if (targetType === 'canvas') {
+        await this.canvasService.addNodeToCanvasDoc(
+          user,
+          targetId,
+          {
+            type: 'skillResponse',
+            data: {
+              title: rawStep.name,
+              entityId: resultId,
+              metadata: {
+                status: 'executing',
+                contextItems,
+                tplConfig: '{}',
+                runtimeConfig: '{}',
+                modelInfo: {
+                  modelId: chatModelId,
+                },
+              },
+            },
+          },
+          convertContextItemsToNodeFilters(contextItems),
+        );
+      }
+
+      await this.skillService.sendInvokeSkillTask(user, {
+        resultId,
+        input: { query: rawStep.query },
+        target: {
+          entityId: targetId,
+          entityType: targetType as EntityType,
+        },
+        modelName: chatModelId,
+        modelItemId: chatPi.itemId,
+        context,
+        resultHistory: history,
+        skillName: skill.name,
+        selectedMcpServers: [],
       });
     }
 

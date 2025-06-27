@@ -1,9 +1,6 @@
 import { useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import {
-  CanvasNode,
-  WebsiteNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode, WebsiteNodeMeta } from '@refly/canvas-common';
 
 /**
  * Hook to find website nodes in the canvas by resultId

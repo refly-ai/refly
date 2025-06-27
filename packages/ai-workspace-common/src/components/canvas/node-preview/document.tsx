@@ -1,9 +1,6 @@
 import { memo } from 'react';
 import { DocumentEditor } from '@refly-packages/ai-workspace-common/components/document';
-import {
-  CanvasNode,
-  DocumentNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode, DocumentNodeMeta } from '@refly/canvas-common';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 interface DocumentNodePreviewProps {

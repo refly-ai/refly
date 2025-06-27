@@ -3,7 +3,7 @@ import { genMemoID } from '@refly/utils/id';
 import { XYPosition } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNodeType } from '@refly/openapi-schema';
-import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
+import { CanvasNodeFilter } from '@refly/canvas-common';
 
 export const useCreateMemo = () => {
   const { t } = useTranslation();

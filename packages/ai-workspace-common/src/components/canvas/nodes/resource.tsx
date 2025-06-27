@@ -1,7 +1,8 @@
 import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
-import { CanvasNode, CanvasNodeData, ResourceNodeMeta, ResourceNodeProps } from './shared/types';
+import { CanvasNode, CanvasNodeData, ResourceNodeMeta } from '@refly/canvas-common';
+import { ResourceNodeProps } from './shared/types';
 import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './index';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';

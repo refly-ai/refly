@@ -63,8 +63,8 @@ export const useActionPolling = () => {
           query: { resultId, version },
         });
 
-        if (!result.success) {
-          if (result.errCode === new ActionResultNotFoundError().code) {
+        if (!result?.success) {
+          if (result?.errCode === new ActionResultNotFoundError().code) {
             incrementErrorCount(resultId);
             const newErrorCount = (pollingStateMap[resultId]?.notFoundErrorCount ?? 0) + 1;
 

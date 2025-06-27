@@ -1,6 +1,6 @@
 import { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useReactFlow, Position } from '@xyflow/react';
-import { CanvasNode, ImageNodeProps } from './shared/types';
+import { CanvasNode } from '@refly/canvas-common';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import {
   useNodeSize,
@@ -10,6 +10,7 @@ import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { getNodeCommonStyles } from './index';
 import { CustomHandle } from './shared/custom-handle';
+import { ImageNodeProps } from './shared/types';
 import classNames from 'classnames';
 import { NodeHeader } from './shared/node-header';
 import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -20,7 +21,7 @@ import {
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly/utils/id';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import Moveable from 'react-moveable';

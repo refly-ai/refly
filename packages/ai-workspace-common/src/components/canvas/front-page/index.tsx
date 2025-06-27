@@ -28,6 +28,7 @@ import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/compone
 import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { Title } from './title';
+import { useAbortAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-abort-action';
 import cn from 'classnames';
 
 export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
@@ -36,6 +37,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
   const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
   const skills = useListSkills();
   const templateLanguage = i18n.language;
@@ -88,6 +90,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
     setVisible: state.setVisible,
   }));
 
+  const { abortAction } = useAbortAction();
+
   const handleSelectSkill = useCallback(
     (skill: Skill) => {
       setSelectedSkill(skill);
@@ -98,9 +102,21 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
 
   const handleSendMessage = useCallback(() => {
     if (!query?.trim()) return;
+    setIsExecuting(true);
     const { isPilotActivated } = useChatStore.getState();
     debouncedCreateCanvas('front-page', { isPilotActivated });
   }, [query, debouncedCreateCanvas]);
+
+  const handleAbort = useCallback(() => {
+    setIsExecuting(false);
+    abortAction();
+  }, [abortAction]);
+
+  useEffect(() => {
+    if (!isCreating && isExecuting) {
+      setIsExecuting(false);
+    }
+  }, [isCreating, isExecuting]);
 
   const findSkillByName = useCallback(
     (name: string) => {
@@ -276,8 +292,9 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                   runtimeConfig={runtimeConfig}
                   setRuntimeConfig={setRuntimeConfig}
                   handleSendMessage={handleSendMessage}
-                  handleAbort={() => {}}
+                  handleAbort={handleAbort}
                   loading={isCreating}
+                  isExecuting={isExecuting}
                   customActions={[
                     {
                       icon: (

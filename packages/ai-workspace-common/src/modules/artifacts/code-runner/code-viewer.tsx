@@ -13,7 +13,7 @@ import {
   getFileExtensionFromType,
   getArtifactTypeOptions,
   getSimpleTypeDescription,
-} from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/artifact-type-util';
+} from '@refly/utils';
 import { GoColumns } from 'react-icons/go';
 
 export default memo(

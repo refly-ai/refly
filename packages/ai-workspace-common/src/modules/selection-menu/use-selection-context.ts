@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { IContextItem } from '@refly/common-types';
 import {
-  IContextItem,
   useContextPanelStoreShallow,
   useContextPanelStore,
   ContextTarget,

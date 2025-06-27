@@ -1,13 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useReactFlow, XYPosition } from '@xyflow/react';
-import { ActionResult, PilotSession, PilotStep } from '@refly/openapi-schema';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { useReactFlow } from '@xyflow/react';
+import { PilotSession, PilotStep } from '@refly/openapi-schema';
+import { CanvasNode } from '@refly/canvas-common';
 import { Button, Skeleton, Tooltip, Popover, Empty, Divider, Progress } from 'antd';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import {
-  useAddNode,
-  useInvokeAction,
   useNodePosition,
   useNodePreviewControl,
 } from '@refly-packages/ai-workspace-common/hooks/canvas';
@@ -23,10 +21,6 @@ import {
 import { RiChatNewLine } from 'react-icons/ri';
 import { usePilotStoreShallow } from '@refly-packages/ai-workspace-common/stores/pilot';
 import { SessionChat } from './session-chat';
-import {
-  convertContextItemsToNodeFilters,
-  convertResultContextToItems,
-} from '@refly-packages/ai-workspace-common/utils/map-context-items';
 
 const SessionHeader = memo(
   ({
@@ -268,9 +262,6 @@ export const SessionContainer = memo(
       [className],
     );
 
-    const { invokeAction } = useInvokeAction();
-    const { addNode } = useAddNode();
-
     // Fetch the pilot session details
     const {
       data: sessionData,
@@ -314,63 +305,6 @@ export const SessionContainer = memo(
       [onStepClick, setNodeCenter],
     );
 
-    const handleInvokeAction = useCallback(
-      (result: ActionResult, offsetPosition: XYPosition) => {
-        console.log('[handleInvokeAction] result', result);
-        const {
-          input,
-          resultId,
-          actionMeta,
-          modelInfo,
-          runtimeConfig,
-          tplConfig,
-          targetId,
-          targetType,
-          context,
-          history,
-        } = result;
-
-        invokeAction(
-          {
-            query: input.query,
-            resultId,
-            selectedSkill: actionMeta,
-            modelInfo,
-            tplConfig,
-            runtimeConfig,
-          },
-          {
-            entityId: targetId,
-            entityType: targetType,
-          },
-        );
-
-        const contextItems = convertResultContextToItems(context, history);
-        addNode(
-          {
-            type: 'skillResponse',
-            data: {
-              title: input.query,
-              entityId: resultId,
-              metadata: {
-                status: 'executing',
-                selectedSkill: actionMeta,
-                modelInfo,
-                runtimeConfig,
-                tplConfig,
-                pilotStepId: result.pilotStepId,
-                pilotSessionId: sessionId,
-              },
-            },
-            offsetPosition,
-          },
-          convertContextItemsToNodeFilters(contextItems),
-          false,
-        );
-      },
-      [invokeAction, addNode, sessionId],
-    );
-
     // Sort steps by epoch and creation time
     const sortedSteps = useMemo(() => {
       if (!session?.steps?.length) return [];
@@ -405,38 +339,6 @@ export const SessionContainer = memo(
         setIsPolling(false);
       }
     }, [shouldPoll, isPolling]);
-
-    // Process waiting steps and call handleInvokeAction for each one
-    useEffect(() => {
-      if (!sortedSteps?.length) return;
-
-      const nodes = getNodes();
-      const processedPilotStepIds = new Set(
-        nodes.map((node) => node?.data?.metadata?.pilotStepId).filter(Boolean),
-      );
-
-      // Find steps with status "init" that have an actionResult and haven't been processed yet
-      const stepsToProcess = sortedSteps.filter(
-        (step) =>
-          (step.status === 'init' || step.status === 'executing') &&
-          step.actionResult &&
-          !processedPilotStepIds.has(step.stepId),
-      );
-
-      console.log('[SessionContainer] stepsToProcess', stepsToProcess);
-
-      if (stepsToProcess.length > 0) {
-        for (const [index, step] of stepsToProcess.entries()) {
-          if (step.actionResult) {
-            const offsetPosition: XYPosition = {
-              x: 0,
-              y: 250 * index,
-            };
-            handleInvokeAction(step.actionResult, offsetPosition);
-          }
-        }
-      }
-    }, [sortedSteps, handleInvokeAction]);
 
     return (
       <div className={containerClassName}>

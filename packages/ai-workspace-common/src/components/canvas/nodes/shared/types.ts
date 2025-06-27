@@ -1,138 +1,15 @@
-import { Node, NodeProps, XYPosition } from '@xyflow/react';
+import { Node, NodeProps } from '@xyflow/react';
 import {
-  ActionLog,
-  ActionMeta,
-  ActionStatus,
-  Artifact,
-  CanvasNodeType,
-  IndexError,
-  IndexStatus,
-  ModelInfo,
-  ResourceType,
-  Skill,
-  SkillRuntimeConfig,
-  SkillTemplateConfig,
-  TokenUsageItem,
-} from '@refly/openapi-schema';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
-import { CodeArtifactType } from '@refly/openapi-schema';
-
-export type CanvasNodeData<T = Record<string, unknown>> = {
-  title: string;
-  entityId: string;
-  createdAt?: string;
-  contentPreview?: string;
-  reasoningContent?: string;
-  metadata?: T;
-  targetHandle?: string;
-  sourceHandle?: string;
-};
-
-export type CanvasNode<T = Record<string, unknown>> = Node<CanvasNodeData<T>, CanvasNodeType> & {
-  className?: string;
-  style?: React.CSSProperties;
-  position?: XYPosition;
-};
-
-// Node specific metadata types
-export interface DocumentNodeMeta {
-  status: ActionStatus;
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-  shareId?: string;
-}
-
-export interface ResourceNodeMeta {
-  resourceType?: ResourceType;
-  indexStatus?: IndexStatus;
-  indexError?: IndexError;
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-  shareId?: string;
-}
-
-export interface CodeArtifactNodeMeta {
-  status?: 'generating' | 'finish' | 'failed' | 'executing';
-  shareId?: string;
-  previewUrl?: string;
-  previewStorageKey?: string;
-  language?: string;
-  type?: CodeArtifactType;
-  title?: string;
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-  activeTab?: 'code' | 'preview';
-  code?: string; // @deprecated
-}
-
-export type SkillNodeMeta = {
-  query?: string;
-  resultId?: string;
-  version?: number;
-  selectedSkill?: Skill;
-  modelInfo?: ModelInfo;
-  contextItems?: IContextItem[];
-  tplConfig?: SkillTemplateConfig;
-  runtimeConfig?: SkillRuntimeConfig;
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-  projectId?: string;
-};
-
-export type ToolNodeMeta = {
-  toolType: string;
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-};
-
-export type ResponseNodeMeta = {
-  status: ActionStatus;
-  version?: number;
-  modelInfo?: ModelInfo;
-  tokenUsage?: TokenUsageItem[];
-  actionMeta?: ActionMeta;
-  artifacts?: Artifact[];
-  currentLog?: ActionLog;
-  errors?: string[];
-  structuredData?: Record<string, unknown>;
-  selectedSkill?: Skill;
-  contextItems?: IContextItem[];
-  tplConfig?: SkillTemplateConfig;
-  runtimeConfig?: SkillRuntimeConfig;
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-  reasoningContent?: string;
-  shareId?: string;
-  pilotSessionId?: string;
-  pilotStepId?: string;
-};
-
-export type ImageNodeMeta = {
-  imageType: string;
-  imageUrl: string;
-  storageKey: string;
-  showBorder?: boolean;
-  showTitle?: boolean;
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-};
-
-// Website node metadata
-export interface WebsiteNodeMeta {
-  url?: string;
-  isEditing?: boolean;
-  viewMode?: 'form' | 'preview';
-  sizeMode?: 'compact' | 'adaptive';
-  style?: React.CSSProperties;
-  originalWidth?: number;
-}
+  CanvasNodeData,
+  DocumentNodeMeta,
+  ResourceNodeMeta,
+  SkillNodeMeta,
+  ToolNodeMeta,
+  ResponseNodeMeta,
+  ImageNodeMeta,
+  CodeArtifactNodeMeta,
+  WebsiteNodeMeta,
+} from '@refly/canvas-common';
 
 // Type mapping for node metadata
 export type NodeMetadataMap = {

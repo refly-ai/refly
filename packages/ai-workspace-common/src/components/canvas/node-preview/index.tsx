@@ -1,4 +1,4 @@
-import { CanvasNode } from '../nodes/shared/types';
+import { CanvasNode } from '@refly/canvas-common';
 import { ResourceNodePreview } from './resource';
 import { SkillNodePreview } from './skill';
 import { ToolNodePreview } from './tool';

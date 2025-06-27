@@ -7,11 +7,14 @@ import { useCallback, useState } from 'react';
 import { CreatePilotSessionRequest } from '@refly/openapi-schema';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { usePilotStoreShallow } from '@refly-packages/ai-workspace-common/stores/pilot';
+import { useAbortAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-abort-action';
 
 export const SessionChat = ({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
+  const { abortAction } = useAbortAction();
   const { setActiveSessionId } = usePilotStoreShallow((state) => ({
     setActiveSessionId: state.setActiveSessionId,
   }));
@@ -32,6 +35,7 @@ export const SessionChat = ({ canvasId }: { canvasId: string }) => {
 
     if (data.data?.sessionId) {
       setActiveSessionId(data.data?.sessionId);
+      setSessionId(data.data?.sessionId);
     } else {
       message.error(
         t('pilot.createPilotSessionFailed', {
@@ -53,6 +57,12 @@ export const SessionChat = ({ canvasId }: { canvasId: string }) => {
     });
   };
 
+  const handleAbort = () => {
+    abortAction(sessionId);
+    setLoading(false);
+    setSessionId('');
+  };
+
   const { skillSelectedModel, setSkillSelectedModel } = useChatStoreShallow((state) => ({
     skillSelectedModel: state.skillSelectedModel,
     setSkillSelectedModel: state.setSkillSelectedModel,
@@ -70,17 +80,27 @@ export const SessionChat = ({ canvasId }: { canvasId: string }) => {
       />
       <div className="mt-2 flex items-center justify-between">
         <ModelSelector model={skillSelectedModel} setModel={setSkillSelectedModel} />
-        <Button
-          size="small"
-          type="primary"
-          disabled={!inputValue}
-          className="text-[11px] flex items-center gap-1 h-5"
-          onClick={handleSend}
-          loading={loading}
-        >
-          <SendOutlined className="h-3 w-3 flex items-center" />
-          <span>{t('copilot.chatActions.send')}</span>
-        </Button>
+        {loading ? (
+          <Button
+            size="small"
+            type="default"
+            className="text-[11px] flex items-center gap-1 h-5 font-medium border-red-200 text-red-600 hover:border-red-300 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:border-red-700 dark:hover:text-red-300 dark:bg-red-950/20 dark:hover:bg-red-900/30 shadow-sm hover:shadow-md transition-all duration-200"
+            onClick={handleAbort}
+          >
+            <span>{t('copilot.chatActions.stop')}</span>
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            type="primary"
+            disabled={!inputValue}
+            className="text-[11px] flex items-center gap-1 h-5"
+            onClick={handleSend}
+          >
+            <SendOutlined className="h-3 w-3 flex items-center" />
+            <span>{t('copilot.chatActions.send')}</span>
+          </Button>
+        )}
       </div>
     </div>
   );

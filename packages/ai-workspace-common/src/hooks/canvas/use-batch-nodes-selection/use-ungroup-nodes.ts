@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
 import { Node, useReactFlow } from '@xyflow/react';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
-import { PADDING, sortNodes } from './utils';
+import { NODE_PADDING, sortNodes } from '@refly/canvas-common';
 
 export const useUngroupNodes = () => {
   const canvasId = useCanvasId();
@@ -42,8 +42,8 @@ export const useUngroupNodes = () => {
           if (node.parentId === groupId) {
             // Calculate absolute position for the child node
             const nodeAbsolutePos = {
-              x: groupAbsolutePos.x + node.position.x + PADDING / 2,
-              y: groupAbsolutePos.y + node.position.y + PADDING / 2,
+              x: groupAbsolutePos.x + node.position.x + NODE_PADDING / 2,
+              y: groupAbsolutePos.y + node.position.y + NODE_PADDING / 2,
             };
 
             // Remove group-related properties

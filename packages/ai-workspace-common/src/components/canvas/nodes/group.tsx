@@ -2,7 +2,7 @@ import { memo, useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { CustomHandle } from './shared/custom-handle';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
-import { CanvasNode, CommonNodeProps } from './shared/types';
+import { CanvasNode, CommonNodeProps } from '@refly/canvas-common';
 import { GroupActionButtons } from '../group-action-menu/group-action-buttons';
 import { GroupName } from '../group-action-menu/group-name';
 import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
@@ -13,7 +13,7 @@ import {
 import { useUngroupNodes } from '@refly-packages/ai-workspace-common/hooks/canvas/use-batch-nodes-selection/use-ungroup-nodes';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { genSkillID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-cluster';

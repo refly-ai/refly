@@ -19,6 +19,8 @@ async function uploadState(sourceFile, targetPath) {
 async function main() {
   // upload mcp catalog
   await uploadState('config/mcp-catalog.json', 'mcp-config/mcp-catalog.json');
+
+  await uploadState('config/provider-catalog.json', 'mcp-config/provider-catalog.json');
 }
 
 main();

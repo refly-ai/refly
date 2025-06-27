@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { useReactFlow, XYPosition } from '@xyflow/react';
-import { CanvasNodeType } from '@refly-packages/ai-workspace-common/requests/types.gen';
-import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
+import { CanvasNodeType } from '@refly/openapi-schema';
+import { CanvasNodeFilter } from '@refly/canvas-common';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+
 export function useGetNodeConnectFromDragCreateInfo() {
   const { screenToFlowPosition } = useReactFlow();
 

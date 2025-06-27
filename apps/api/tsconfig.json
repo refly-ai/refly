@@ -35,6 +35,7 @@
     { "path": "../../packages/openapi-schema" },
     { "path": "../../packages/common-types" },
     { "path": "../../packages/utils" },
+    { "path": "../../packages/canvas-common" },
     { "path": "../../packages/skill-template" }
   ],
   "tsc-alias": {

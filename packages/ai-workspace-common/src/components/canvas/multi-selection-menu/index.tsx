@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore, useReactFlow } from '@xyflow/react';
 import { GroupActionMenu } from '../group-action-menu';
 import { SelectionActionMenu } from './selection-action-menu';
-import { calculateGroupBoundaries } from './utils';
+import { calculateGroupBoundaries } from '@refly/canvas-common';
 
 export const MultiSelectionMenus = () => {
   const [isTopMenuHovered, setIsTopMenuHovered] = useState(false);

@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import { Command } from 'cmdk';
 import { Home } from '../../launchpad/context-manager/components/base-mark-context-selector/home';
 import { getContextItemIcon } from '../../launchpad/context-manager/utils/icon';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
 import { CanvasNodeType } from '@refly/openapi-schema';
 

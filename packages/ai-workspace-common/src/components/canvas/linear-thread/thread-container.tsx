@@ -13,10 +13,10 @@ import { LinearThreadContent } from './linear-thread';
 import { LinearThreadMessage } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useContextUpdateByResultId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-debounced-context-update';
 import { LaunchPad } from '@refly-packages/ai-workspace-common/components/canvas/launchpad';
+import { IContextItem } from '@refly/common-types';
 import {
   useContextPanelStore,
   ContextTarget,
-  IContextItem,
   useContextPanelStoreShallow,
 } from '@refly-packages/ai-workspace-common/stores/context-panel';
 import { IconAskAI } from '@refly-packages/ai-workspace-common/components/common/icon';

@@ -155,6 +155,9 @@ importers:
       '@qdrant/js-client-rest':
         specifier: ^1.9.0
         version: 1.11.0(typescript@5.8.3)
+      '@refly/canvas-common':
+        specifier: workspace:*
+        version: link:../../packages/canvas-common
       '@refly/errors':
         specifier: workspace:*
         version: link:../../packages/errors
@@ -1014,6 +1017,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ~1.0.2
         version: 1.0.2(@types/react@18.3.10)(react@18.3.1)
+      '@refly/canvas-common':
+        specifier: workspace:*
+        version: link:../canvas-common
       '@refly/common-types':
         specifier: workspace:*
         version: link:../common-types
@@ -1432,6 +1438,28 @@ importers:
       wxt:
         specifier: workspace:*
         version: link:../wxt
+
+  packages/canvas-common:
+    dependencies:
+      '@dagrejs/dagre':
+        specifier: ^1.1.4
+        version: 1.1.4
+      '@refly/common-types':
+        specifier: workspace:*
+        version: link:../common-types
+      '@refly/openapi-schema':
+        specifier: workspace:*
+        version: link:../openapi-schema
+      '@refly/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@xyflow/react':
+        specifier: ^12.3.5
+        version: 12.3.5(@types/react@18.3.10)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.56
+        version: 18.3.10
 
   packages/common-types:
     dependencies:

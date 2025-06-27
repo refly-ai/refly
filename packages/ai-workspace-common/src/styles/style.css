@@ -19,3 +19,8 @@
 [x-cloak=''] {
   display: none;
 }
+
+html,
+body {
+  line-height: 1.5;
+}

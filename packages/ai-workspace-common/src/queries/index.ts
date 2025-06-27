@@ -2,3 +2,5 @@
 
 export * from './common';
 export * from './queries';
+export * from './mcp-community';
+export * from './provider-community';

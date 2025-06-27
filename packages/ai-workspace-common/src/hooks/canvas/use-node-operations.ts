@@ -7,7 +7,7 @@ import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/us
 import { useUploadMinimap } from '@refly-packages/ai-workspace-common/hooks/use-upload-minimap';
 import { truncateContent, MAX_CONTENT_PREVIEW_LENGTH } from '../../utils/content';
 import { getHelperLines } from '../../components/canvas/common/helper-line/util';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode } from '@refly/canvas-common';
 import { adoptUserNodes } from '@xyflow/system';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
 

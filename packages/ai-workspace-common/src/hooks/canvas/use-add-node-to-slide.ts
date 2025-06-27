@@ -4,7 +4,7 @@ import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { useCallback } from 'react';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
+import { CanvasNode } from '@refly/canvas-common';
 
 export const useAddNodeToSlide = ({
   canvasId,

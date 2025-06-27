@@ -9,5 +9,7 @@ export const buildSuccessResponse = <T>(data?: T) => {
 };
 
 export const writeSSEResponse = (res: Response, msg: SkillEvent) => {
-  res.write(`data: ${JSON.stringify(msg)}\n\n`);
+  if (res) {
+    res.write(`data: ${JSON.stringify(msg)}\n\n`);
+  }
 };

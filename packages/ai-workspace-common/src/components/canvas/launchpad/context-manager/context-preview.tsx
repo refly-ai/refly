@@ -1,24 +1,24 @@
 import { memo } from 'react';
 import {
-  DocumentNodeProps,
-  MemoNodeProps,
-  ResourceNodeProps,
-  SkillResponseNode,
-  SkillResponseNodeProps,
-  ImageNodeProps,
-  WebsiteNodeProps,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
-import {
   DocumentNode,
   ResourceNode,
   MemoNode,
   ImageNode,
   CodeArtifactNode,
   WebsiteNode,
-  CodeArtifactNodeProps,
+  SkillResponseNode,
 } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import {
+  DocumentNodeProps,
+  MemoNodeProps,
+  ResourceNodeProps,
+  CodeArtifactNodeProps,
+  SkillResponseNodeProps,
+  ImageNodeProps,
+  WebsiteNodeProps,
+} from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { ChatHistoryPreview } from './components/chat-history-preview';
 import { SelectionPreview } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager/components/selection-preview';
 

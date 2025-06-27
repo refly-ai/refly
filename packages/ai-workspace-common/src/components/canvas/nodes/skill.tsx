@@ -1,5 +1,5 @@
 import { Edge, NodeProps, Position, useReactFlow } from '@xyflow/react';
-import { CanvasNode, CanvasNodeData, SkillNodeMeta } from './shared/types';
+import { CanvasNode, CanvasNodeData, SkillNodeMeta } from '@refly/canvas-common';
 import { Node } from '@xyflow/react';
 import { Form } from 'antd';
 import { CustomHandle } from './shared/custom-handle';
@@ -16,11 +16,11 @@ import { cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/no
 import { nodeActionEmitter } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { createNodeEventName } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { useEdgeStyles } from '@refly-packages/ai-workspace-common/components/canvas/constants';
 import { genActionResultID, genUniqueId } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { convertContextItemsToNodeFilters } from '@refly-packages/ai-workspace-common/utils/map-context-items';
+import { convertContextItemsToNodeFilters } from '@refly/canvas-common';
 import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';

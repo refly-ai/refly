@@ -1,5 +1,6 @@
 import { Position, useReactFlow } from '@xyflow/react';
-import { CanvasNode, MemoNodeProps } from '../shared/types';
+import { CanvasNode } from '@refly/canvas-common';
+import { MemoNodeProps } from '../shared/types';
 import { CustomHandle } from '../shared/custom-handle';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
@@ -36,7 +37,7 @@ import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/c
 import { MemoEditor } from './memo-editor';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID, genMemoID } from '@refly/utils/id';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
 import { NodeResizer as NodeResizerComponent } from '../shared/node-resizer';

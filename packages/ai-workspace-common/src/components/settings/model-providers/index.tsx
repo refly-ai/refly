@@ -14,11 +14,10 @@ import {
   DropdownProps,
   Popconfirm,
   MenuProps,
-  Typography,
   message,
   Tag,
 } from 'antd';
-import { LuGlobe, LuPlus, LuSearch } from 'react-icons/lu';
+import { LuGlobe, LuPlus, LuSearch, LuList, LuStore } from 'react-icons/lu';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { Provider } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import {
@@ -27,8 +26,7 @@ import {
   IconMoreHorizontal,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ProviderModal } from './provider-modal';
-
-const { Title } = Typography;
+import { ProviderStore } from './ProviderStore';
 
 const ActionDropdown = ({
   provider,
@@ -197,11 +195,11 @@ const ProviderItem = React.memo(
 
 ProviderItem.displayName = 'ProviderItem';
 
-interface ModelProvidersProps {
-  visible: boolean;
-}
-
-export const ModelProviders = ({ visible }: ModelProvidersProps) => {
+// My Providers Tab Component
+const MyProviders: React.FC<{ visible: boolean; onRefetch: () => void }> = ({
+  visible,
+  onRefetch,
+}) => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -227,6 +225,7 @@ export const ModelProviders = ({ visible }: ModelProvidersProps) => {
         });
         if (res.data.success) {
           refetch();
+          onRefetch(); // Notify parent to refresh
         }
       } catch (error) {
         console.error('Failed to update provider status', error);
@@ -234,7 +233,7 @@ export const ModelProviders = ({ visible }: ModelProvidersProps) => {
         setIsSubmitting(false);
       }
     },
-    [refetch],
+    [refetch, onRefetch],
   );
 
   const filteredProviders = useMemo(() => {
@@ -254,13 +253,10 @@ export const ModelProviders = ({ visible }: ModelProvidersProps) => {
     if (visible) {
       refetch();
     }
-  }, [visible]);
+  }, [visible, refetch]);
 
   return (
-    <div className="p-4 pt-0 h-full overflow-hidden flex flex-col">
-      <Title level={4} className="pb-4">
-        {t('settings.tabs.providers')}
-      </Title>
+    <div className="h-full overflow-hidden flex flex-col">
       {/* Search and Add Bar */}
       <div className="flex items-center justify-between mb-6">
         <div className="relative flex-1 max-w-xs">
@@ -346,8 +342,103 @@ export const ModelProviders = ({ visible }: ModelProvidersProps) => {
           setEditProvider(null);
         }}
         provider={editProvider}
-        onSuccess={() => refetch()}
+        onSuccess={() => {
+          refetch();
+          onRefetch();
+        }}
       />
+    </div>
+  );
+};
+
+interface ModelProvidersProps {
+  visible: boolean;
+}
+
+export const ModelProviders = ({ visible }: ModelProvidersProps) => {
+  const [activeTab, setActiveTab] = useState('my-providers');
+
+  // Get installed providers for Provider Store
+  const { data: providersData, refetch: refetchProviders } = useListProviders();
+  const installedProviders = providersData?.data || [];
+
+  const handleInstallSuccess = useCallback(() => {
+    refetchProviders();
+  }, [refetchProviders]);
+
+  const handleRefetch = useCallback(() => {
+    refetchProviders();
+  }, [refetchProviders]);
+
+  useEffect(() => {
+    if (visible) {
+      refetchProviders();
+    }
+  }, [visible, refetchProviders]);
+
+  const tabItems = [
+    {
+      key: 'my-providers',
+      label: 'My Providers',
+      icon: <LuList className="h-4 w-4" />,
+    },
+    {
+      key: 'provider-store',
+      label: 'Provider Store',
+      icon: <LuStore className="h-4 w-4" />,
+    },
+  ];
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'my-providers':
+        return (
+          <MyProviders
+            visible={visible && activeTab === 'my-providers'}
+            onRefetch={handleRefetch}
+          />
+        );
+      case 'provider-store':
+        return (
+          <ProviderStore
+            visible={visible && activeTab === 'provider-store'}
+            installedProviders={installedProviders}
+            onInstallSuccess={handleInstallSuccess}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="p-4 pt-0 h-full overflow-hidden flex flex-col">
+      {/* Custom Tab Header */}
+      <div className="flex border-b border-gray-100 dark:border-gray-800">
+        {tabItems.map((tab) => (
+          <div
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`
+              cursor-pointer relative px-4 py-2.5 flex items-center justify-center gap-1.5 text-sm font-medium transition-all duration-200 ease-in-out 
+              ${
+                activeTab === tab.key
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }
+            `}
+          >
+            <span className="text-sm">{tab.icon}</span>
+            <span>{tab.label}</span>
+            {activeTab === tab.key && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-sm" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden mt-4">{renderTabContent()}</div>
     </div>
   );
 };

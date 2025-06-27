@@ -1,8 +1,7 @@
 import mitt from 'mitt';
 import { XYPosition } from '@xyflow/react';
 import { CanvasNodeType } from '@refly/openapi-schema';
-import { CanvasNodeData } from '@refly-packages/ai-workspace-common/components/canvas/nodes/types';
-import { CanvasNodeFilter } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
+import { CanvasNodeData, CanvasNodeFilter } from '@refly/canvas-common';
 
 export type NodeContextMenuSource = 'node' | 'handle';
 export type NodeDragCreateInfo = {

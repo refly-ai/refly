@@ -1,7 +1,8 @@
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
-import { CanvasNode, CanvasNodeData, WebsiteNodeMeta, WebsiteNodeProps } from './shared/types';
+import { CanvasNode, CanvasNodeData, WebsiteNodeMeta } from '@refly/canvas-common';
+import { WebsiteNodeProps } from './shared/types';
 import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './index';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
@@ -25,7 +26,7 @@ import {
   useNodeSize,
 } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
 import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { genSkillID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import cn from 'classnames';

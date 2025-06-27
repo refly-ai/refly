@@ -10,7 +10,7 @@ import { ModelInfo } from '@refly/openapi-schema';
 import { cn, extractUrlsWithLinkify } from '@refly/utils/index';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
 
 export interface CustomAction {
@@ -32,6 +32,7 @@ interface ChatActionsProps {
   customActions?: CustomAction[];
   onUploadImage?: (file: File) => Promise<void>;
   contextItems: IContextItem[];
+  isExecuting?: boolean;
 }
 
 export const ChatActions = memo(
@@ -47,6 +48,7 @@ export const ChatActions = memo(
       className,
       onUploadImage,
       contextItems,
+      isExecuting = false,
     } = props;
     const { t } = useTranslation();
     const { canvasId, readonly } = useCanvasContext();
@@ -54,6 +56,10 @@ export const ChatActions = memo(
 
     const handleSendClick = () => {
       handleSendMessage();
+    };
+
+    const handleAbortClick = () => {
+      props.handleAbort();
     };
 
     // hooks
@@ -145,7 +151,16 @@ export const ChatActions = memo(
             </Tooltip>
           </Upload>
 
-          {!isWeb ? null : (
+          {!isWeb ? null : isExecuting ? (
+            <Button
+              size="small"
+              type="default"
+              className="text-xs flex items-center gap-1 border-red-200 text-red-600 hover:border-red-300 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:border-red-700 dark:hover:text-red-300 dark:bg-red-950/20 dark:hover:bg-red-900/30"
+              onClick={handleAbortClick}
+            >
+              <span>{t('copilot.chatActions.stop')}</span>
+            </Button>
+          ) : (
             <Button
               size="small"
               type="primary"
@@ -171,7 +186,8 @@ export const ChatActions = memo(
       prevProps.setRuntimeConfig === nextProps.setRuntimeConfig &&
       prevProps.onUploadImage === nextProps.onUploadImage &&
       prevProps.model === nextProps.model &&
-      prevProps.customActions === nextProps.customActions
+      prevProps.customActions === nextProps.customActions &&
+      prevProps.isExecuting === nextProps.isExecuting
     );
   },
 );

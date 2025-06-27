@@ -1,4 +1,4 @@
-import { SearchDomain, Source } from '@refly/openapi-schema';
+import { SearchDomain } from '@refly/openapi-schema';
 import { SyncMarkEventName } from './extension-messaging';
 
 export type MarkScope = 'block' | 'inline';
@@ -61,20 +61,6 @@ export interface Mark {
   metadata?: Record<string, any>; // TODO: 元数据，用于添加额外的元数据，比如 canvas 的 projectId
   parentId?: string; // 父级 id 比如  documentSelection 的 parentId 是 docId, resourceSelection 的 parentId 是 resourceId
   projectId?: string; // 项目 id
-}
-
-export interface Selection {
-  xPath: string;
-  content: string;
-  type: TextType;
-}
-
-export interface Data {
-  version: string; // 浏览器插件所属的版本，方便制定兼容策略
-  type: 'partial-content' | 'whole-content' | 'link'; // 是前端全部内容、部分内容、还是直接通过 link 处理
-  source: Source; // 网页 Meta
-  marks: Mark[];
-  userId: string; // 是否需要 by User 保存，到时候可以推荐给其他人是这个人的策略
 }
 
 export type SyncMarkEventType = 'add' | 'remove' | 'reset';

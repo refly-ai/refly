@@ -3,14 +3,14 @@ import { CloseOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useReactFlow } from '@xyflow/react';
 import { getContextItemIcon } from './utils/icon';
-import { IContextItem } from '@refly-packages/ai-workspace-common/stores/context-panel';
+import { IContextItem } from '@refly/common-types';
 import cn from 'classnames';
 import { ContextPreview } from './context-preview';
 import { useCallback } from 'react';
 import { message } from 'antd';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { CanvasNode } from '@refly/canvas-common';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 export const ContextItem = ({

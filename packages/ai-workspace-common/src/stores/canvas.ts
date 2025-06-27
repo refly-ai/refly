@@ -2,11 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { useShallow } from 'zustand/react/shallow';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { CanvasNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes';
-import {
-  CanvasNodeData,
-  ResponseNodeMeta,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/types';
+import { CanvasNode, CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
 import {
   createAutoEvictionStorage,
   CacheInfo,
