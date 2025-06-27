@@ -1039,4 +1039,344 @@ export class ProviderService implements OnModuleInit {
       return [];
     }
   }
+
+  /**
+   * Test provider connection and API availability
+   * @param user The user to test provider for
+   * @param param Test connection parameters
+   * @returns Test result with status and details
+   */
+  async testProviderConnection(
+    user: User,
+    param: { providerId: string; category?: ProviderCategory },
+  ) {
+    const { providerId, category } = param;
+
+    if (!providerId) {
+      throw new ParamsError('Provider ID is required');
+    }
+
+    const provider = await this.prisma.provider.findUnique({
+      where: { providerId, deletedAt: null, OR: [{ uid: user.uid }, { isGlobal: true }] },
+    });
+
+    if (!provider) {
+      throw new ProviderNotFoundError();
+    }
+
+    const testResult = {
+      providerId,
+      providerKey: provider.providerKey,
+      name: provider.name,
+      baseUrl: provider.baseUrl,
+      categories: provider.categories.split(','),
+      status: 'unknown' as 'success' | 'failed' | 'unknown',
+      message: '',
+      details: {} as any,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const apiKey = provider.apiKey ? this.encryptionService.decrypt(provider.apiKey) : null;
+
+      // Test different types of providers based on their key
+      switch (provider.providerKey) {
+        case 'openai':
+        case 'anthropic':
+          testResult.details = await this.testLLMProvider(provider, apiKey, category);
+          break;
+        case 'ollama':
+          testResult.details = await this.testOllamaProvider(provider, apiKey, category);
+          break;
+        case 'jina':
+          testResult.details = await this.testJinaProvider(provider, apiKey, category);
+          break;
+        case 'searxng':
+          testResult.details = await this.testSearXngProvider(provider);
+          break;
+        default:
+          // Generic OpenAI-compatible API test
+          testResult.details = await this.testOpenAICompatibleProvider(provider, apiKey, category);
+      }
+
+      testResult.status = 'success';
+      testResult.message = 'Connection test successful';
+    } catch (error) {
+      testResult.status = 'failed';
+      testResult.message = error?.message || 'Connection test failed';
+      testResult.details.error = {
+        type: error?.constructor?.name || 'Error',
+        message: error?.message,
+        ...(error?.response ? { response: error.response } : {}),
+      };
+      this.logger.warn(`Provider connection test failed for ${providerId}: ${error.stack}`);
+    }
+
+    return testResult;
+  }
+
+  /**
+   * Test OpenAI/Anthropic compatible LLM provider
+   */
+  private async testLLMProvider(
+    provider: ProviderModel,
+    apiKey: string | null,
+    category?: ProviderCategory,
+  ) {
+    const testResults = {
+      modelsEndpoint: { status: 'unknown', data: null, error: null },
+      chatCompletion: { status: 'unknown', data: null, error: null },
+    };
+
+    // Test 1: Check /models endpoint
+    try {
+      const modelsResponse = await fetch(`${provider.baseUrl}/models`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
+
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        testResults.modelsEndpoint.status = 'success';
+        testResults.modelsEndpoint.data = {
+          modelCount: modelsData?.data?.length || 0,
+          models: modelsData?.data?.slice(0, 5)?.map((m) => m.id || m.name) || [],
+        };
+      } else {
+        testResults.modelsEndpoint.status = 'failed';
+        testResults.modelsEndpoint.error = `HTTP ${modelsResponse.status}: ${modelsResponse.statusText}`;
+      }
+    } catch (error) {
+      testResults.modelsEndpoint.status = 'failed';
+      testResults.modelsEndpoint.error = error.message;
+    }
+
+    // Test 2: Test chat completion with minimal request (only if LLM category)
+    if (!category || category === 'llm') {
+      try {
+        const chatResponse = await fetch(`${provider.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+          },
+          body: JSON.stringify({
+            model: 'test-model', // This will likely fail, but we're testing API structure
+            messages: [{ role: 'user', content: 'test' }],
+            max_tokens: 1,
+          }),
+          signal: AbortSignal.timeout(15000), // 15 second timeout
+        });
+
+        // Even 400/422 responses indicate the API is working
+        if (chatResponse.status < 500) {
+          testResults.chatCompletion.status = 'success';
+          testResults.chatCompletion.data = {
+            statusCode: chatResponse.status,
+            contentType: chatResponse.headers.get('content-type'),
+          };
+        } else {
+          testResults.chatCompletion.status = 'failed';
+          testResults.chatCompletion.error = `HTTP ${chatResponse.status}: ${chatResponse.statusText}`;
+        }
+      } catch (error) {
+        testResults.chatCompletion.status = 'failed';
+        testResults.chatCompletion.error = error.message;
+      }
+    }
+
+    return testResults;
+  }
+
+  /**
+   * Test Ollama provider
+   */
+  private async testOllamaProvider(
+    provider: ProviderModel,
+    apiKey: string | null,
+    category?: ProviderCategory,
+  ) {
+    const testResults = {
+      apiEndpoint: { status: 'unknown', data: null, error: null },
+      tagsEndpoint: { status: 'unknown', data: null, error: null },
+    };
+
+    // Test 1: Check API availability
+    try {
+      const apiResponse = await fetch(`${provider.baseUrl}/api/tags`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (apiResponse.ok) {
+        const tagsData = await apiResponse.json();
+        testResults.apiEndpoint.status = 'success';
+        testResults.tagsEndpoint.status = 'success';
+        testResults.tagsEndpoint.data = {
+          modelCount: tagsData?.models?.length || 0,
+          models: tagsData?.models?.slice(0, 5)?.map((m) => m.name) || [],
+        };
+      } else {
+        testResults.apiEndpoint.status = 'failed';
+        testResults.apiEndpoint.error = `HTTP ${apiResponse.status}: ${apiResponse.statusText}`;
+      }
+    } catch (error) {
+      testResults.apiEndpoint.status = 'failed';
+      testResults.apiEndpoint.error = error.message;
+    }
+
+    // Test OpenAI-compatible endpoint if available
+    if (provider.baseUrl?.includes('/v1')) {
+      const llmResults = await this.testLLMProvider(provider, apiKey, category);
+      Object.assign(testResults, llmResults);
+    }
+
+    return testResults;
+  }
+
+  /**
+   * Test Jina provider
+   */
+  private async testJinaProvider(
+    _provider: ProviderModel,
+    apiKey: string | null,
+    category?: ProviderCategory,
+  ) {
+    const testResults = {
+      apiKey: { status: 'unknown', data: null, error: null },
+      embeddings: { status: 'unknown', data: null, error: null },
+      reranker: { status: 'unknown', data: null, error: null },
+    };
+
+    if (!apiKey) {
+      testResults.apiKey.status = 'failed';
+      testResults.apiKey.error = 'API key is required for Jina provider';
+      return testResults;
+    }
+
+    testResults.apiKey.status = 'success';
+
+    // Test embeddings endpoint if category is embedding or not specified
+    if (!category || category === 'embedding') {
+      try {
+        const embeddingResponse = await fetch('https://api.jina.ai/v1/embeddings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'jina-embeddings-v2-base-en',
+            input: ['test'],
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+
+        if (embeddingResponse.ok) {
+          testResults.embeddings.status = 'success';
+          testResults.embeddings.data = { statusCode: embeddingResponse.status };
+        } else {
+          testResults.embeddings.status = 'failed';
+          testResults.embeddings.error = `HTTP ${embeddingResponse.status}: ${embeddingResponse.statusText}`;
+        }
+      } catch (error) {
+        testResults.embeddings.status = 'failed';
+        testResults.embeddings.error = error.message;
+      }
+    }
+
+    // Test reranker endpoint if category is reranker or not specified
+    if (!category || category === 'reranker') {
+      try {
+        const rerankerResponse = await fetch('https://api.jina.ai/v1/rerank', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'jina-reranker-v1-base-en',
+            query: 'test',
+            documents: ['test document'],
+            top_n: 1,
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+
+        if (rerankerResponse.ok) {
+          testResults.reranker.status = 'success';
+          testResults.reranker.data = { statusCode: rerankerResponse.status };
+        } else {
+          testResults.reranker.status = 'failed';
+          testResults.reranker.error = `HTTP ${rerankerResponse.status}: ${rerankerResponse.statusText}`;
+        }
+      } catch (error) {
+        testResults.reranker.status = 'failed';
+        testResults.reranker.error = error.message;
+      }
+    }
+
+    return testResults;
+  }
+
+  /**
+   * Test SearXNG provider
+   */
+  private async testSearXngProvider(provider: ProviderModel) {
+    const testResults = {
+      healthCheck: { status: 'unknown', data: null, error: null },
+      searchTest: { status: 'unknown', data: null, error: null },
+    };
+
+    try {
+      // Test basic connectivity
+      const healthResponse = await fetch(`${provider.baseUrl}`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (healthResponse.ok) {
+        testResults.healthCheck.status = 'success';
+        testResults.healthCheck.data = { statusCode: healthResponse.status };
+
+        // Test search functionality
+        const searchResponse = await fetch(`${provider.baseUrl}/search`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(15000),
+        });
+
+        if (searchResponse.status < 500) {
+          testResults.searchTest.status = 'success';
+          testResults.searchTest.data = { statusCode: searchResponse.status };
+        } else {
+          testResults.searchTest.status = 'failed';
+          testResults.searchTest.error = `HTTP ${searchResponse.status}: ${searchResponse.statusText}`;
+        }
+      } else {
+        testResults.healthCheck.status = 'failed';
+        testResults.healthCheck.error = `HTTP ${healthResponse.status}: ${healthResponse.statusText}`;
+      }
+    } catch (error) {
+      testResults.healthCheck.status = 'failed';
+      testResults.healthCheck.error = error.message;
+    }
+
+    return testResults;
+  }
+
+  /**
+   * Test generic OpenAI-compatible provider
+   */
+  private async testOpenAICompatibleProvider(
+    provider: ProviderModel,
+    apiKey: string | null,
+    category?: ProviderCategory,
+  ) {
+    // Use the same test as LLM providers since most custom providers are OpenAI-compatible
+    return this.testLLMProvider(provider, apiKey, category);
+  }
 }
