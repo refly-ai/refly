@@ -2157,6 +2157,57 @@ paths:
                 $ref: '#/components/schemas/BaseResponse'
       security:
         - api_key: []
+  /media/generate:
+      post:
+        tags:
+          - Media
+        summary: Generate media content
+        description: Generate image, video, or audio content
+        operationId: generateMedia
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateMediaRequest'
+        responses:
+          '200':
+            description: Media generation started
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/GenerateMediaResponse'
+        security:
+          - bearerAuth: []
+  /media/result:
+      get:
+        tags:
+          - Media
+        summary: Get media generation result
+        description: Get media generation result by result ID
+        operationId: getMediaResult
+        parameters:
+          - name: resultId
+            in: query
+            required: true
+            schema:
+              type: string
+            description: Action result ID
+          - name: version
+            in: query
+            required: false
+            schema:
+              type: integer
+            description: Result version
+        responses:
+          '200':
+            description: Media generation result
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/GetActionResultResponse'
+        security:
+          - bearerAuth: []
   /pilot/session/new:
     post:
       tags:
@@ -6145,6 +6196,14 @@ components:
       enum:
         - skill
         - tool
+        - media
+    MediaType:
+      type: string
+      description: Media type
+      enum:
+        - image
+        - video
+        - audio
     ActionContextType:
       type: string
       enum:
@@ -6333,6 +6392,54 @@ components:
         triggerId:
           type: string
           description: Trigger ID to delete
+    GenerateMediaRequest:
+      type: object
+      description: Generate media request
+      required:
+        - mediaType
+        - prompt
+      properties:
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        prompt:
+          type: string
+          description: Generation prompt
+        config:
+          type: object
+          description: Generation configuration
+          additionalProperties: true
+        genId:
+          type: string
+          description: ID of previously generated media to edit (for image editing)
+        targetType:
+          $ref: '#/components/schemas/EntityType'
+        targetId:
+          type: string
+          description: Target entity ID
+        projectId:
+          type: string
+          description: Project ID
+        locale:
+          type: string
+          description: Locale setting
+          default: zh-CN
+    GenerateMediaResponse:
+      type: object
+      description: Generate media response
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required:
+            - resultId
+          properties:
+            resultId:
+              type: string
+              description: Action result ID for polling
     PilotStepStatus:
       type: string
       enum:

@@ -54,6 +54,7 @@ import {
   emailSignup,
   exportCanvas,
   exportDocument,
+  generateMedia,
   getActionResult,
   getAuthConfig,
   getCanvasData,
@@ -61,6 +62,7 @@ import {
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
+  getMediaResult,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -422,6 +424,16 @@ export const UseListSkillTriggersKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListSkillTriggersKey, ...(queryKey ?? [clientOptions])];
+export type GetMediaResultDefaultResponse = Awaited<ReturnType<typeof getMediaResult>>['data'];
+export type GetMediaResultQueryResult<
+  TData = GetMediaResultDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetMediaResultKey = 'GetMediaResult';
+export const UseGetMediaResultKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetMediaResultKey, ...(queryKey ?? [clientOptions])];
 export type ListPilotSessionsDefaultResponse = Awaited<
   ReturnType<typeof listPilotSessions>
 >['data'];
@@ -906,6 +918,12 @@ export type DeleteSkillTriggerMutationResult = Awaited<ReturnType<typeof deleteS
 export const useDeleteSkillTriggerKey = 'DeleteSkillTrigger';
 export const UseDeleteSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteSkillTriggerKey,
+  ...(mutationKey ?? []),
+];
+export type GenerateMediaMutationResult = Awaited<ReturnType<typeof generateMedia>>;
+export const useGenerateMediaKey = 'GenerateMedia';
+export const UseGenerateMediaKeyFn = (mutationKey?: Array<unknown>) => [
+  useGenerateMediaKey,
   ...(mutationKey ?? []),
 ];
 export type CreatePilotSessionMutationResult = Awaited<ReturnType<typeof createPilotSession>>;

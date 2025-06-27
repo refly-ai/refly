@@ -4711,7 +4711,13 @@ export const SkillInvocationConfigSchema = {
 
 export const ActionTypeSchema = {
   type: 'string',
-  enum: ['skill', 'tool'],
+  enum: ['skill', 'tool', 'media'],
+} as const;
+
+export const MediaTypeSchema = {
+  type: 'string',
+  description: 'Media type',
+  enum: ['image', 'video', 'audio'],
 } as const;
 
 export const ActionContextTypeSchema = {
@@ -4992,6 +4998,67 @@ export const DeleteSkillTriggerRequestSchema = {
     triggerId: {
       type: 'string',
       description: 'Trigger ID to delete',
+    },
+  },
+} as const;
+
+export const GenerateMediaRequestSchema = {
+  type: 'object',
+  description: 'Generate media request',
+  required: ['mediaType', 'prompt'],
+  properties: {
+    mediaType: {
+      $ref: '#/components/schemas/MediaType',
+    },
+    prompt: {
+      type: 'string',
+      description: 'Generation prompt',
+    },
+    config: {
+      type: 'object',
+      description: 'Generation configuration',
+      additionalProperties: true,
+    },
+    genId: {
+      type: 'string',
+      description: 'ID of previously generated media to edit (for image editing)',
+    },
+    targetType: {
+      $ref: '#/components/schemas/EntityType',
+    },
+    targetId: {
+      type: 'string',
+      description: 'Target entity ID',
+    },
+    projectId: {
+      type: 'string',
+      description: 'Project ID',
+    },
+    locale: {
+      type: 'string',
+      description: 'Locale setting',
+      default: 'zh-CN',
+    },
+  },
+} as const;
+
+export const GenerateMediaResponseSchema = {
+  type: 'object',
+  description: 'Generate media response',
+  required: ['success', 'data'],
+  properties: {
+    success: {
+      type: 'boolean',
+    },
+    data: {
+      type: 'object',
+      required: ['resultId'],
+      properties: {
+        resultId: {
+          type: 'string',
+          description: 'Action result ID for polling',
+        },
+      },
     },
   },
 } as const;
