@@ -2255,6 +2255,13 @@ const translations = {
         reranker: 'Reranker',
         embedding: 'Embedding',
       },
+      testConnection: 'Test Connection',
+      testing: 'Testing...',
+      connectionTestSuccess: 'Connection test successful',
+      connectionTestFailed: 'Connection test failed',
+      testConnectionFailed: 'Failed to test connection',
+      selectProviderFirst: 'Please select a provider type first',
+      viewDetails: 'View Details',
       // Provider Store related translations
       community: {
         title: 'Community Provider Configurations',

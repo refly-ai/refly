@@ -2043,6 +2043,13 @@ const translations = {
         reranker: '重排器',
         embedding: '嵌入',
       },
+      testConnection: '测试连接',
+      testing: '测试中...',
+      connectionTestSuccess: '测试连接成功',
+      connectionTestFailed: '测试连接失败',
+      testConnectionFailed: '测试连接失败',
+      selectProviderFirst: '请先选择供应商类型',
+      viewDetails: '查看详情',
       // Provider Store 相关翻译
       community: {
         title: '社区供应商配置',
