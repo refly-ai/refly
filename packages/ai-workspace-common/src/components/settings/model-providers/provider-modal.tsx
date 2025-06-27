@@ -1,6 +1,23 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Input, Modal, Form, Switch, Select, Checkbox, message } from 'antd';
+import {
+  Button,
+  Input,
+  Modal,
+  Form,
+  Switch,
+  Select,
+  Checkbox,
+  message,
+  Alert,
+  Tooltip,
+} from 'antd';
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  SyncOutlined,
+} from '@ant-design/icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { ProviderInfo, providerInfoList } from '@refly/utils';
@@ -32,6 +49,8 @@ export const ProviderModal = React.memo(
     const [selectedProviderKey, setSelectedProviderKey] = useState<string | undefined>(
       provider?.providerKey || defaultProviderKey,
     );
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [connectionTestResult, setConnectionTestResult] = useState<any>(null);
 
     const isEditMode = !!provider;
 
@@ -177,6 +196,137 @@ export const ProviderModal = React.memo(
       [isDefaultApiKey, form],
     );
 
+    const handleTestConnection = useCallback(async () => {
+      try {
+        const values = await form.validateFields();
+        setIsTestingConnection(true);
+        setConnectionTestResult(null);
+
+        // For edit mode, use existing provider ID, for create mode, create a temporary test
+        if (isEditMode && provider) {
+          const res = await getClient().testProviderConnection({
+            body: {
+              providerId: provider.providerId,
+              category: filterCategory,
+            },
+          });
+
+          if (res.data.success) {
+            setConnectionTestResult(res.data.data);
+          } else {
+            message.error(t('settings.modelProviders.testConnectionFailed'));
+          }
+        } else {
+          // For new providers, we need to validate the configuration first
+          const testConfig = {
+            name: values.name,
+            providerKey: values.providerKey,
+            apiKey: values.apiKey,
+            baseUrl: values.baseUrl,
+            categories: values.categories,
+          };
+
+          // Create a temporary provider for testing
+          const createRes = await getClient().createProvider({
+            body: {
+              ...testConfig,
+              enabled: false, // Create as disabled for testing
+            },
+          });
+
+          if (createRes.data.success) {
+            const tempProvider = createRes.data.data;
+
+            // Test the connection
+            const testRes = await getClient().testProviderConnection({
+              body: {
+                providerId: tempProvider.providerId,
+                category: filterCategory,
+              },
+            });
+
+            if (testRes.data.success) {
+              setConnectionTestResult(testRes.data.data);
+            }
+
+            // Clean up: delete the temporary provider
+            await getClient().deleteProvider({
+              body: { providerId: tempProvider.providerId },
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Connection test failed:', error);
+        message.error(t('settings.modelProviders.testConnectionFailed'));
+        setConnectionTestResult({
+          status: 'failed',
+          message: error?.message || 'Connection test failed',
+        });
+      } finally {
+        setIsTestingConnection(false);
+      }
+    }, [form, isEditMode, provider, filterCategory, t]);
+
+    const renderConnectionTestResult = () => {
+      if (!connectionTestResult) return null;
+
+      const { status, message: testMessage, details } = connectionTestResult;
+
+      const getStatusIcon = () => {
+        switch (status) {
+          case 'success':
+            return <CheckCircleOutlined className="text-green-500" />;
+          case 'failed':
+            return <CloseCircleOutlined className="text-red-500" />;
+          default:
+            return <ExclamationCircleOutlined className="text-yellow-500" />;
+        }
+      };
+
+      const getAlertType = () => {
+        switch (status) {
+          case 'success':
+            return 'success';
+          case 'failed':
+            return 'error';
+          default:
+            return 'warning';
+        }
+      };
+
+      return (
+        <Alert
+          type={getAlertType()}
+          icon={getStatusIcon()}
+          message={
+            <div>
+              <div className="font-medium">
+                {status === 'success'
+                  ? t('settings.modelProviders.connectionTestSuccess')
+                  : t('settings.modelProviders.connectionTestFailed')}
+              </div>
+              {testMessage && <div className="text-sm opacity-80 mt-1">{testMessage}</div>}
+            </div>
+          }
+          description={
+            details && (
+              <div className="mt-2">
+                <details className="text-xs">
+                  <summary className="cursor-pointer hover:text-blue-600">
+                    {t('settings.modelProviders.viewDetails')}
+                  </summary>
+                  <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-auto max-h-32">
+                    {JSON.stringify(details, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )
+          }
+          className="mb-4"
+        />
+      );
+    };
+
     const handleSubmit = useCallback(async () => {
       try {
         const values = await form.validateFields();
@@ -241,6 +391,21 @@ export const ProviderModal = React.memo(
           <Button key="cancel" onClick={onClose}>
             {t('common.cancel')}
           </Button>,
+          <Tooltip
+            title={!selectedProviderInfo ? t('settings.modelProviders.selectProviderFirst') : ''}
+            key="test"
+          >
+            <Button
+              icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
+              onClick={handleTestConnection}
+              disabled={!selectedProviderInfo || isTestingConnection}
+              loading={isTestingConnection}
+            >
+              {isTestingConnection
+                ? t('settings.modelProviders.testing')
+                : t('settings.modelProviders.testConnection')}
+            </Button>
+          </Tooltip>,
           <Button key="submit" type="primary" onClick={handleSubmit} loading={isSubmitting}>
             {submitButtonText}
           </Button>,
@@ -331,6 +496,9 @@ export const ProviderModal = React.memo(
             <Switch disabled={disabledEnableControl} />
           </Form.Item>
         </Form>
+
+        {/* Connection test result */}
+        {renderConnectionTestResult()}
       </Modal>
     );
   },
