@@ -28,6 +28,7 @@ import {
   CustomPrompt,
   CodeArtifacts,
   ImageGeneration,
+  NL2Prompt,
 } from './skills';
 import { Agent } from './skills/agent';
 
@@ -60,6 +61,7 @@ export const createSkillInventory = (engine: SkillEngine): BaseSkill[] => {
     new WebSearch(engine),
     new LibrarySearch(engine),
     new CustomPrompt(engine),
+    new NL2Prompt(engine),
     new GenerateDoc(engine),
     new RecommendQuestions(engine),
     // new CommonQnA(engine),
