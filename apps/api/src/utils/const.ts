@@ -19,3 +19,4 @@ export const QUEUE_CHECK_CANCELED_SUBSCRIPTIONS = 'checkCanceledSubscriptions';
 export const QUEUE_SYNC_REQUEST_USAGE = 'syncRequestUsage';
 export const QUEUE_IMAGE_PROCESSING = 'imageProcessing';
 export const QUEUE_CLEAN_STATIC_FILES = 'cleanStaticFiles';
+export const QUEUE_MEDIA = 'media';

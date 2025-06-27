@@ -1890,7 +1890,7 @@ export type ProviderConfig = {
 /**
  * Model usage scene
  */
-export type ModelScene = 'chat' | 'queryAnalysis' | 'titleGeneration';
+export type ModelScene = 'chat' | 'agent' | 'queryAnalysis' | 'titleGeneration';
 
 /**
  * Default model config
@@ -1900,6 +1900,10 @@ export type DefaultModelConfig = {
    * Default chat model to use
    */
   chat?: ProviderItem;
+  /**
+   * Default agent model to use
+   */
+  agent?: ProviderItem;
   /**
    * Query analysis and context processing model
    */
@@ -2718,7 +2722,6 @@ export type SkillEvent = {
   node?: CanvasNode;
   /**
    * Error data. Only present when `event` is `error`.
-   * @deprecated
    */
   error?: BaseResponse;
   /**
@@ -3315,7 +3318,12 @@ export type SkillInvocationConfig = {
   context?: SkillContextRuleGroup;
 };
 
-export type ActionType = 'skill' | 'tool';
+export type ActionType = 'skill' | 'tool' | 'media';
+
+/**
+ * Media type
+ */
+export type MediaType = 'image' | 'video' | 'audio';
 
 export type ActionContextType = 'resource' | 'document';
 
@@ -3507,6 +3515,53 @@ export type DeleteSkillTriggerRequest = {
   triggerId: string;
 };
 
+/**
+ * Generate media request
+ */
+export type GenerateMediaRequest = {
+  mediaType: MediaType;
+  /**
+   * Generation prompt
+   */
+  prompt: string;
+  /**
+   * Generation configuration
+   */
+  config?: {
+    [key: string]: unknown;
+  };
+  /**
+   * ID of previously generated media to edit (for image editing)
+   */
+  genId?: string;
+  targetType?: EntityType;
+  /**
+   * Target entity ID
+   */
+  targetId?: string;
+  /**
+   * Project ID
+   */
+  projectId?: string;
+  /**
+   * Locale setting
+   */
+  locale?: string;
+};
+
+/**
+ * Generate media response
+ */
+export type GenerateMediaResponse = {
+  success: boolean;
+  data: {
+    /**
+     * Action result ID for polling
+     */
+    resultId: string;
+  };
+};
+
 export type PilotStepStatus = 'init' | 'executing' | 'finish' | 'failed';
 
 export type PilotStep = {
@@ -3625,7 +3680,7 @@ export type CreatePilotSessionRequest = {
   /**
    * Pilot session provider item ID
    */
-  providerItemId: string;
+  providerItemId?: string;
 };
 
 export type UpdatePilotSessionRequest = {
@@ -5593,6 +5648,31 @@ export type DeleteSkillTriggerData = {
 export type DeleteSkillTriggerResponse = BaseResponse;
 
 export type DeleteSkillTriggerError = unknown;
+
+export type GenerateMediaData = {
+  body: GenerateMediaRequest;
+};
+
+export type GenerateMediaResponse2 = GenerateMediaResponse;
+
+export type GenerateMediaError = unknown;
+
+export type GetMediaResultData = {
+  query: {
+    /**
+     * Action result ID
+     */
+    resultId: string;
+    /**
+     * Result version
+     */
+    version?: number;
+  };
+};
+
+export type GetMediaResultResponse = GetActionResultResponse;
+
+export type GetMediaResultError = unknown;
 
 export type CreatePilotSessionData = {
   body: CreatePilotSessionRequest;

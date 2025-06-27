@@ -9,6 +9,7 @@ import api from '@opentelemetry/api';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { RAGModule } from './rag/rag.module';
+import { MediaModule } from './media/media.module';
 
 import configuration from './config/app.config';
 import { AppController } from './app.controller';
@@ -96,6 +97,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     ProjectModule,
     McpServerModule,
     InternalMcpModule,
+    MediaModule,
     ...(isDesktop()
       ? []
       : [
