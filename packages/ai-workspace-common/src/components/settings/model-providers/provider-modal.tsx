@@ -50,7 +50,7 @@ export const ProviderModal = React.memo(
       provider?.providerKey || defaultProviderKey,
     );
     const [isTestingConnection, setIsTestingConnection] = useState(false);
-    const [connectionTestResult, setConnectionTestResult] = useState<any>(null);
+    const [testResult, setTestResult] = useState<any>(null);
 
     const isEditMode = !!provider;
 
@@ -196,81 +196,183 @@ export const ProviderModal = React.memo(
       [isDefaultApiKey, form],
     );
 
-    const handleTestConnection = useCallback(async () => {
+    // Simple API connection test using form values
+    const testConnection = useCallback(async () => {
+      console.log('=== NEW testConnection method called ===');
+      setIsTestingConnection(true);
+      setTestResult({ status: 'unknown', message: '', details: {}, timestamp: '' });
+
       try {
-        const values = await form.validateFields();
-        setIsTestingConnection(true);
-        setConnectionTestResult(null);
+        // Get current form values directly
+        const formValues = form.getFieldsValue();
+        const { apiKey, baseUrl, providerKey } = formValues;
 
-        // For edit mode, use existing provider ID, for create mode, create a temporary test
-        if (isEditMode && provider) {
-          const res = await getClient().testProviderConnection({
-            body: {
-              providerId: provider.providerId,
-              category: filterCategory,
-            },
-          });
-
-          if (res.data.success) {
-            setConnectionTestResult(res.data.data);
-          } else {
-            message.error(t('settings.modelProviders.testConnectionFailed'));
+        // Check required fields based on provider type
+        if (providerKey === 'jina') {
+          if (!apiKey) {
+            throw new Error('请填写API Key');
+          }
+        } else if (providerKey === 'searxng') {
+          if (!baseUrl) {
+            throw new Error('请填写Base URL');
+          }
+        } else if (providerKey === 'ollama') {
+          if (!baseUrl) {
+            throw new Error('请填写Base URL');
           }
         } else {
-          // For new providers, we need to validate the configuration first
-          const testConfig = {
-            name: values.name,
-            providerKey: values.providerKey,
-            apiKey: values.apiKey,
-            baseUrl: values.baseUrl,
-            categories: values.categories,
-          };
-
-          // Create a temporary provider for testing
-          const createRes = await getClient().createProvider({
-            body: {
-              ...testConfig,
-              enabled: false, // Create as disabled for testing
-            },
-          });
-
-          if (createRes.data.success) {
-            const tempProvider = createRes.data.data;
-
-            // Test the connection
-            const testRes = await getClient().testProviderConnection({
-              body: {
-                providerId: tempProvider.providerId,
-                category: filterCategory,
-              },
-            });
-
-            if (testRes.data.success) {
-              setConnectionTestResult(testRes.data.data);
-            }
-
-            // Clean up: delete the temporary provider
-            await getClient().deleteProvider({
-              body: { providerId: tempProvider.providerId },
-            });
+          // For OpenAI, Anthropic and other providers
+          if (!baseUrl) {
+            throw new Error('请填写Base URL');
+          }
+          if (!apiKey) {
+            throw new Error('请填写API Key');
           }
         }
-      } catch (error) {
-        console.error('Connection test failed:', error);
-        message.error(t('settings.modelProviders.testConnectionFailed'));
-        setConnectionTestResult({
+
+        // Configure test parameters based on provider type
+        let testUrl: string;
+        let testBody: any;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+
+        // Add API key if provided (most APIs need it)
+        if (apiKey) {
+          headers.Authorization = `Bearer ${apiKey}`;
+        }
+
+        // Configure request based on provider type
+        switch (providerKey) {
+          case 'openai':
+            testUrl = baseUrl.endsWith('/')
+              ? `${baseUrl}chat/completions`
+              : `${baseUrl}/chat/completions`;
+            testBody = {
+              model: 'gpt-3.5-turbo',
+              messages: [{ role: 'user', content: 'Hello' }],
+              max_tokens: 1,
+              temperature: 0,
+            };
+            break;
+
+          case 'anthropic':
+            testUrl = baseUrl.endsWith('/') ? `${baseUrl}messages` : `${baseUrl}/messages`;
+            headers['anthropic-version'] = '2023-06-01';
+            testBody = {
+              model: 'claude-3-haiku-20240307',
+              messages: [{ role: 'user', content: 'Hello' }],
+              max_tokens: 1,
+            };
+            break;
+
+          case 'ollama':
+            testUrl = baseUrl.endsWith('/') ? `${baseUrl}api/generate` : `${baseUrl}/api/generate`;
+            // Ollama doesn't need Authorization header
+            headers.Authorization = undefined;
+            testBody = {
+              model: 'llama2', // Default model for testing
+              prompt: 'Hello',
+              stream: false,
+              options: {
+                num_predict: 1,
+              },
+            };
+            break;
+
+          case 'jina':
+            // Jina uses official API endpoint, ignore user's baseUrl
+            testUrl = 'https://api.jina.ai/v1/embeddings';
+            testBody = {
+              model: 'jina-embeddings-v2-base-en',
+              input: ['Hello'],
+              encoding_format: 'float',
+            };
+            break;
+
+          case 'searxng':
+            testUrl = baseUrl.endsWith('/') ? `${baseUrl}search` : `${baseUrl}/search`;
+            // SearXNG doesn't need Authorization header
+            headers.Authorization = undefined;
+            testBody = {
+              q: 'test',
+              format: 'json',
+              engines: 'google',
+            };
+            break;
+
+          default:
+            // Generic OpenAI-compatible API
+            testUrl = baseUrl.endsWith('/')
+              ? `${baseUrl}chat/completions`
+              : `${baseUrl}/chat/completions`;
+            testBody = {
+              model: 'gpt-3.5-turbo',
+              messages: [{ role: 'user', content: 'Hello' }],
+              max_tokens: 1,
+              temperature: 0,
+            };
+        }
+
+        const response = await fetch(testUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(testBody),
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+        });
+
+        // Check if API is reachable
+        if (response.ok) {
+          const data = await response.json();
+          setTestResult({
+            status: 'success',
+            message: 'API连接成功',
+            details: {
+              config: { baseUrl, hasApiKey: !!apiKey, providerKey },
+              response: data,
+            },
+            timestamp: new Date().toISOString(),
+          });
+        } else if (response.status === 401) {
+          throw new Error('API Key无效或已过期');
+        } else if (response.status === 403) {
+          throw new Error('API Key权限不足');
+        } else if (response.status === 404) {
+          throw new Error('API端点不存在，请检查Base URL');
+        } else {
+          throw new Error(`API请求失败 (${response.status}): ${response.statusText}`);
+        }
+      } catch (error: any) {
+        let errorMessage = 'API连接失败';
+
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+          errorMessage = '请求超时，请检查Base URL是否正确';
+        } else if (error.message.includes('CORS') || error.message.includes('blocked')) {
+          errorMessage = '跨域请求被阻止，可能需要在服务器端配置CORS';
+        } else if (
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('NetworkError')
+        ) {
+          errorMessage = '网络错误，请检查Base URL和网络连接';
+        } else {
+          errorMessage = error.message || 'API连接失败';
+        }
+
+        setTestResult({
           status: 'failed',
-          message: error?.message || 'Connection test failed',
+          message: errorMessage,
+          details: { error: error.message },
+          timestamp: new Date().toISOString(),
         });
       } finally {
         setIsTestingConnection(false);
       }
-    }, [form, isEditMode, provider, filterCategory, t]);
+    }, []);
 
     const renderConnectionTestResult = () => {
-      if (!connectionTestResult) return null;
+      if (!testResult) return null;
 
-      const { status, message: testMessage, details } = connectionTestResult;
+      const { status, message: testMessage, details } = testResult;
 
       const getStatusIcon = () => {
         switch (status) {
@@ -397,7 +499,7 @@ export const ProviderModal = React.memo(
           >
             <Button
               icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
-              onClick={handleTestConnection}
+              onClick={testConnection}
               disabled={!selectedProviderInfo || isTestingConnection}
               loading={isTestingConnection}
             >
