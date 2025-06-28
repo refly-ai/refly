@@ -134,6 +134,16 @@ export class ProviderController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('/test-connection')
+  async testProviderConnection(
+    @LoginedUser() user: UserModel,
+    @Body() body: { providerId: string; category?: ProviderCategory },
+  ) {
+    const result = await this.providerService.testProviderConnection(user, body);
+    return buildSuccessResponse(result);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('/item/option/list')
   async listProviderItemOptions(
     @LoginedUser() user: UserModel,

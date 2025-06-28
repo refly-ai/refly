@@ -2079,6 +2079,23 @@ export const deleteProvider = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Test provider connection
+ * Test the connection to a provider
+ */
+export const testProviderConnection = <ThrowOnError extends boolean = false>(
+  options: Options<{ body?: { providerId: string; category?: string } }, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    { success: boolean; data?: any; message?: string },
+    { success: boolean; message?: string },
+    ThrowOnError
+  >({
+    ...options,
+    url: '/provider/test-connection',
+  });
+};
+
+/**
  * List provider items
  * List all available provider items
  */

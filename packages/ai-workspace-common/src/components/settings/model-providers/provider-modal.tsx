@@ -1,6 +1,23 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Input, Modal, Form, Switch, Select, Checkbox, message } from 'antd';
+import {
+  Button,
+  Input,
+  Modal,
+  Form,
+  Switch,
+  Select,
+  Checkbox,
+  message,
+  Alert,
+  Tooltip,
+} from 'antd';
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  SyncOutlined,
+} from '@ant-design/icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { ProviderInfo, providerInfoList } from '@refly/utils';
@@ -32,6 +49,8 @@ export const ProviderModal = React.memo(
     const [selectedProviderKey, setSelectedProviderKey] = useState<string | undefined>(
       provider?.providerKey || defaultProviderKey,
     );
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [testResult, setTestResult] = useState<any>(null);
 
     const isEditMode = !!provider;
 
@@ -177,6 +196,239 @@ export const ProviderModal = React.memo(
       [isDefaultApiKey, form],
     );
 
+    // Simple API connection test using form values
+    const testConnection = useCallback(async () => {
+      console.log('=== NEW testConnection method called ===');
+      setIsTestingConnection(true);
+      setTestResult({ status: 'unknown', message: '', details: {}, timestamp: '' });
+
+      try {
+        // Get current form values directly
+        const formValues = form.getFieldsValue();
+        const { apiKey, baseUrl, providerKey } = formValues;
+
+        // Check required fields based on provider type
+        if (providerKey === 'jina') {
+          if (!apiKey) {
+            throw new Error('请填写API Key');
+          }
+        } else if (providerKey === 'searxng') {
+          if (!baseUrl) {
+            throw new Error('请填写Base URL');
+          }
+        } else if (providerKey === 'ollama') {
+          if (!baseUrl) {
+            throw new Error('请填写Base URL');
+          }
+        } else {
+          // For OpenAI, Anthropic and other providers
+          if (!baseUrl) {
+            throw new Error('请填写Base URL');
+          }
+          if (!apiKey) {
+            throw new Error('请填写API Key');
+          }
+        }
+
+        // Configure test parameters based on provider type
+        let testUrl: string;
+        let testBody: any;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+
+        // Add API key if provided (most APIs need it)
+        if (apiKey) {
+          headers.Authorization = `Bearer ${apiKey}`;
+        }
+
+        // Configure request based on provider type
+        switch (providerKey) {
+          case 'openai':
+            testUrl = baseUrl.endsWith('/')
+              ? `${baseUrl}chat/completions`
+              : `${baseUrl}/chat/completions`;
+            testBody = {
+              model: 'gpt-3.5-turbo',
+              messages: [{ role: 'user', content: 'Hello' }],
+              max_tokens: 1,
+              temperature: 0,
+            };
+            break;
+
+          case 'anthropic':
+            testUrl = baseUrl.endsWith('/') ? `${baseUrl}messages` : `${baseUrl}/messages`;
+            headers['anthropic-version'] = '2023-06-01';
+            testBody = {
+              model: 'claude-3-haiku-20240307',
+              messages: [{ role: 'user', content: 'Hello' }],
+              max_tokens: 1,
+            };
+            break;
+
+          case 'ollama':
+            testUrl = baseUrl.endsWith('/') ? `${baseUrl}api/generate` : `${baseUrl}/api/generate`;
+            // Ollama doesn't need Authorization header
+            headers.Authorization = undefined;
+            testBody = {
+              model: 'llama2', // Default model for testing
+              prompt: 'Hello',
+              stream: false,
+              options: {
+                num_predict: 1,
+              },
+            };
+            break;
+
+          case 'jina':
+            // Jina uses official API endpoint, ignore user's baseUrl
+            testUrl = 'https://api.jina.ai/v1/embeddings';
+            testBody = {
+              model: 'jina-embeddings-v2-base-en',
+              input: ['Hello'],
+              encoding_format: 'float',
+            };
+            break;
+
+          case 'searxng':
+            testUrl = baseUrl.endsWith('/') ? `${baseUrl}search` : `${baseUrl}/search`;
+            // SearXNG doesn't need Authorization header
+            headers.Authorization = undefined;
+            testBody = {
+              q: 'test',
+              format: 'json',
+              engines: 'google',
+            };
+            break;
+
+          default:
+            // Generic OpenAI-compatible API
+            testUrl = baseUrl.endsWith('/')
+              ? `${baseUrl}chat/completions`
+              : `${baseUrl}/chat/completions`;
+            testBody = {
+              model: 'gpt-3.5-turbo',
+              messages: [{ role: 'user', content: 'Hello' }],
+              max_tokens: 1,
+              temperature: 0,
+            };
+        }
+
+        const response = await fetch(testUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(testBody),
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+        });
+
+        // Check if API is reachable
+        if (response.ok) {
+          const data = await response.json();
+          setTestResult({
+            status: 'success',
+            message: 'API连接成功',
+            details: {
+              config: { baseUrl, hasApiKey: !!apiKey, providerKey },
+              response: data,
+            },
+            timestamp: new Date().toISOString(),
+          });
+        } else if (response.status === 401) {
+          throw new Error('API Key无效或已过期');
+        } else if (response.status === 403) {
+          throw new Error('API Key权限不足');
+        } else if (response.status === 404) {
+          throw new Error('API端点不存在，请检查Base URL');
+        } else {
+          throw new Error(`API请求失败 (${response.status}): ${response.statusText}`);
+        }
+      } catch (error: any) {
+        let errorMessage = 'API连接失败';
+
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+          errorMessage = '请求超时，请检查Base URL是否正确';
+        } else if (error.message.includes('CORS') || error.message.includes('blocked')) {
+          errorMessage = '跨域请求被阻止，可能需要在服务器端配置CORS';
+        } else if (
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('NetworkError')
+        ) {
+          errorMessage = '网络错误，请检查Base URL和网络连接';
+        } else {
+          errorMessage = error.message || 'API连接失败';
+        }
+
+        setTestResult({
+          status: 'failed',
+          message: errorMessage,
+          details: { error: error.message },
+          timestamp: new Date().toISOString(),
+        });
+      } finally {
+        setIsTestingConnection(false);
+      }
+    }, []);
+
+    const renderConnectionTestResult = () => {
+      if (!testResult) return null;
+
+      const { status, message: testMessage, details } = testResult;
+
+      const getStatusIcon = () => {
+        switch (status) {
+          case 'success':
+            return <CheckCircleOutlined className="text-green-500" />;
+          case 'failed':
+            return <CloseCircleOutlined className="text-red-500" />;
+          default:
+            return <ExclamationCircleOutlined className="text-yellow-500" />;
+        }
+      };
+
+      const getAlertType = () => {
+        switch (status) {
+          case 'success':
+            return 'success';
+          case 'failed':
+            return 'error';
+          default:
+            return 'warning';
+        }
+      };
+
+      return (
+        <Alert
+          type={getAlertType()}
+          icon={getStatusIcon()}
+          message={
+            <div>
+              <div className="font-medium">
+                {status === 'success'
+                  ? t('settings.modelProviders.connectionTestSuccess')
+                  : t('settings.modelProviders.connectionTestFailed')}
+              </div>
+              {testMessage && <div className="text-sm opacity-80 mt-1">{testMessage}</div>}
+            </div>
+          }
+          description={
+            details && (
+              <div className="mt-2">
+                <details className="text-xs">
+                  <summary className="cursor-pointer hover:text-blue-600">
+                    {t('settings.modelProviders.viewDetails')}
+                  </summary>
+                  <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-auto max-h-32">
+                    {JSON.stringify(details, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )
+          }
+          className="mb-4"
+        />
+      );
+    };
+
     const handleSubmit = useCallback(async () => {
       try {
         const values = await form.validateFields();
@@ -241,6 +493,21 @@ export const ProviderModal = React.memo(
           <Button key="cancel" onClick={onClose}>
             {t('common.cancel')}
           </Button>,
+          <Tooltip
+            title={!selectedProviderInfo ? t('settings.modelProviders.selectProviderFirst') : ''}
+            key="test"
+          >
+            <Button
+              icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
+              onClick={testConnection}
+              disabled={!selectedProviderInfo || isTestingConnection}
+              loading={isTestingConnection}
+            >
+              {isTestingConnection
+                ? t('settings.modelProviders.testing')
+                : t('settings.modelProviders.testConnection')}
+            </Button>
+          </Tooltip>,
           <Button key="submit" type="primary" onClick={handleSubmit} loading={isSubmitting}>
             {submitButtonText}
           </Button>,
@@ -331,6 +598,9 @@ export const ProviderModal = React.memo(
             <Switch disabled={disabledEnableControl} />
           </Form.Item>
         </Form>
+
+        {/* Connection test result */}
+        {renderConnectionTestResult()}
       </Modal>
     );
   },
