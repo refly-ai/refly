@@ -1,6 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Input, Modal, Form, Switch, Select, Checkbox, message, Alert } from 'antd';
+import {
+  Button,
+  Input,
+  Modal,
+  Form,
+  Switch,
+  Select,
+  Checkbox,
+  message,
+  Alert,
+  Tooltip,
+} from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -185,194 +196,68 @@ export const ProviderModal = React.memo(
       [isDefaultApiKey, form],
     );
 
-    // Test OpenAI-compatible API
-    const testOpenAICompatible = useCallback(async (baseUrl: string, apiKey: string) => {
-      if (!baseUrl) {
-        throw new Error('请填写Base URL');
-      }
-      if (!apiKey) {
-        throw new Error('请填写API Key');
-      }
-
-      try {
-        // Test /models endpoint
-        const response = await fetch(`${baseUrl}/models`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          signal: AbortSignal.timeout(10000), // 10 second timeout
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('API Key无效或已过期');
-          } else if (response.status === 403) {
-            throw new Error('API Key权限不足');
-          } else if (response.status === 404) {
-            throw new Error('API端点不存在，请检查Base URL');
-          } else {
-            throw new Error(`API请求失败 (${response.status}): ${response.statusText}`);
-          }
-        }
-
-        const data = await response.json();
-        if (!data?.data && !data?.object) {
-          throw new Error('API响应格式不正确');
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError' || error.message.includes('timeout')) {
-          throw new Error('请求超时，请检查Base URL是否正确');
-        } else if (error.message.includes('CORS') || error.message.includes('blocked')) {
-          throw new Error('跨域请求被阻止，可能需要在服务器端配置CORS');
-        } else if (
-          error.message.includes('Failed to fetch') ||
-          error.message.includes('NetworkError')
-        ) {
-          throw new Error('网络错误，请检查Base URL和网络连接');
-        }
-        throw error; // Re-throw if it's already a handled error
-      }
-    }, []);
-
-    // Test Ollama API
-    const testOllama = useCallback(async (baseUrl: string) => {
-      if (!baseUrl) {
-        throw new Error('请填写Base URL');
-      }
-
-      try {
-        const response = await fetch(`${baseUrl}/api/tags`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (!response.ok) {
-          throw new Error(`请求失败 (${response.status}): ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        if (!data.models) {
-          throw new Error('Ollama API响应格式不正确');
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError' || error.message.includes('timeout')) {
-          throw new Error('请求超时，请检查Base URL是否正确');
-        } else if (error.message.includes('Failed to fetch')) {
-          throw new Error('网络错误，请检查Base URL和网络连接');
-        }
-        throw error;
-      }
-    }, []);
-
-    // Test Jina API
-    const testJina = useCallback(async (baseUrl: string, apiKey: string) => {
-      if (!apiKey) {
-        throw new Error('Jina API需要API Key');
-      }
-
-      const testBaseUrl = baseUrl || 'https://api.jina.ai/v1';
-
-      try {
-        // Test with a simple embedding request
-        const response = await fetch(`${testBaseUrl}/embeddings`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'jina-embeddings-v2-base-en',
-            input: ['test'],
-          }),
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('API Key无效');
-          } else {
-            throw new Error(`请求失败 (${response.status}): ${response.statusText}`);
-          }
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError' || error.message.includes('timeout')) {
-          throw new Error('请求超时，请检查配置');
-        } else if (error.message.includes('Failed to fetch')) {
-          throw new Error('网络错误，请检查Base URL和网络连接');
-        }
-        throw error;
-      }
-    }, []);
-
-    // Direct validation function
-    const testProviderDirectly = useCallback(
-      async (providerKey: string, apiKey: string, baseUrl: string, category?: ProviderCategory) => {
-        const testResult = {
-          providerKey,
-          apiKey: apiKey ? '***已提供***' : '未设置',
-          baseUrl: baseUrl || '默认',
-          category,
-          status: 'unknown' as 'success' | 'failed' | 'unknown',
-          message: '',
-          details: {} as any,
-          timestamp: new Date().toISOString(),
-        };
-
-        try {
-          // Test based on provider type
-          switch (providerKey) {
-            case 'openai':
-            case 'anthropic':
-              await testOpenAICompatible(baseUrl, apiKey);
-              break;
-            case 'ollama':
-              await testOllama(baseUrl);
-              break;
-            case 'jina':
-              await testJina(baseUrl, apiKey);
-              break;
-            default:
-              // Generic OpenAI-compatible test
-              await testOpenAICompatible(baseUrl, apiKey);
-          }
-
-          testResult.status = 'success';
-          testResult.message = 'API连接验证成功';
-          setConnectionTestResult(testResult);
-          message.success('API连接验证成功！');
-        } catch (error: any) {
-          testResult.status = 'failed';
-          testResult.message = error.message || 'API连接验证失败';
-          testResult.details = { error: error.message };
-          setConnectionTestResult(testResult);
-          message.error(`API连接验证失败：${error.message}`);
-        }
-      },
-      [testOpenAICompatible, testOllama, testJina],
-    );
-
     const handleTestConnection = useCallback(async () => {
       try {
+        const values = await form.validateFields();
         setIsTestingConnection(true);
         setConnectionTestResult(null);
 
-        // Get current form values directly
-        const formValues = form.getFieldsValue();
-        const { providerKey, apiKey, baseUrl } = formValues;
+        // For edit mode, use existing provider ID, for create mode, create a temporary test
+        if (isEditMode && provider) {
+          const res = await getClient().testProviderConnection({
+            body: {
+              providerId: provider.providerId,
+              category: filterCategory,
+            },
+          });
 
-        // Validate required fields
-        if (!providerKey) {
-          message.warning('请先选择Provider类型');
-          return;
+          if (res.data.success) {
+            setConnectionTestResult(res.data.data);
+          } else {
+            message.error(t('settings.modelProviders.testConnectionFailed'));
+          }
+        } else {
+          // For new providers, we need to validate the configuration first
+          const testConfig = {
+            name: values.name,
+            providerKey: values.providerKey,
+            apiKey: values.apiKey,
+            baseUrl: values.baseUrl,
+            categories: values.categories,
+          };
+
+          // Create a temporary provider for testing
+          const createRes = await getClient().createProvider({
+            body: {
+              ...testConfig,
+              enabled: false, // Create as disabled for testing
+            },
+          });
+
+          if (createRes.data.success) {
+            const tempProvider = createRes.data.data;
+
+            // Test the connection
+            const testRes = await getClient().testProviderConnection({
+              body: {
+                providerId: tempProvider.providerId,
+                category: filterCategory,
+              },
+            });
+
+            if (testRes.data.success) {
+              setConnectionTestResult(testRes.data.data);
+            }
+
+            // Clean up: delete the temporary provider
+            await getClient().deleteProvider({
+              body: { providerId: tempProvider.providerId },
+            });
+          }
         }
-
-        // Test the configuration directly without saving
-        await testProviderDirectly(providerKey, apiKey, baseUrl, filterCategory);
-      } catch (error: any) {
+      } catch (error) {
         console.error('Connection test failed:', error);
-        message.error(`连接测试失败：${error?.message || '未知错误'}`);
+        message.error(t('settings.modelProviders.testConnectionFailed'));
         setConnectionTestResult({
           status: 'failed',
           message: error?.message || 'Connection test failed',
@@ -380,7 +265,7 @@ export const ProviderModal = React.memo(
       } finally {
         setIsTestingConnection(false);
       }
-    }, [form, filterCategory, testProviderDirectly]);
+    }, [form, isEditMode, provider, filterCategory, t]);
 
     const renderConnectionTestResult = () => {
       if (!connectionTestResult) return null;
@@ -471,132 +356,149 @@ export const ProviderModal = React.memo(
               name: values.name,
               enabled: values.enabled,
               apiKey: values.apiKey,
-              baseUrl: values.baseUrl || undefined,
+              baseUrl: values.baseUrl,
               providerKey: values.providerKey,
               categories: values.categories,
             },
           });
           if (res.data.success) {
-            message.success(t('common.saveSuccess'));
+            message.success(t('common.addSuccess'));
             onSuccess?.(res.data.data);
             form.resetFields();
             onClose();
           }
         }
-      } catch (err) {
-        console.error('Failed to submit provider:', err);
+      } catch (error) {
+        console.error(`Failed to ${isEditMode ? 'update' : 'create'} provider`, error);
       } finally {
         setIsSubmitting(false);
       }
-    }, [form, isEditMode, provider, onSuccess, onClose, t]);
+    }, [form, onClose, onSuccess, provider, isEditMode, t]);
+
+    const modalTitle = isEditMode
+      ? t('settings.modelProviders.editProvider')
+      : t('settings.modelProviders.addProvider');
+
+    const submitButtonText = isEditMode ? t('common.save') : t('common.add');
 
     return (
       <Modal
-        title={
-          isEditMode
-            ? t('settings.modelProviders.editProvider')
-            : t('settings.modelProviders.addProvider')
-        }
+        centered
+        title={modalTitle}
         open={isOpen}
         onCancel={onClose}
-        width={600}
         footer={[
           <Button key="cancel" onClick={onClose}>
             {t('common.cancel')}
           </Button>,
-          <Button
+          <Tooltip
+            title={!selectedProviderInfo ? t('settings.modelProviders.selectProviderFirst') : ''}
             key="test"
-            type="default"
-            loading={isTestingConnection}
-            onClick={handleTestConnection}
-            icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
           >
-            {isTestingConnection ? '测试中...' : '测试连接'}
-          </Button>,
-          <Button key="submit" type="primary" loading={isSubmitting} onClick={handleSubmit}>
-            {isEditMode ? t('common.save') : t('common.create')}
+            <Button
+              icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
+              onClick={handleTestConnection}
+              disabled={!selectedProviderInfo || isTestingConnection}
+              loading={isTestingConnection}
+            >
+              {isTestingConnection
+                ? t('settings.modelProviders.testing')
+                : t('settings.modelProviders.testConnection')}
+            </Button>
+          </Tooltip>,
+          <Button key="submit" type="primary" onClick={handleSubmit} loading={isSubmitting}>
+            {submitButtonText}
           </Button>,
         ]}
       >
-        {renderConnectionTestResult()}
-
-        <Form form={form} layout="vertical" className="space-y-4">
+        <Form form={form} className="mt-6" labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
           <Form.Item
-            label={t('settings.modelProviders.form.providerType')}
             name="providerKey"
+            label={t('settings.modelProviders.providerType')}
             rules={[
-              { required: true, message: t('settings.modelProviders.form.providerTypeRequired') },
+              {
+                required: true,
+                message: t('settings.modelProviders.selectProviderType'),
+              },
             ]}
           >
             <Select
-              placeholder={t('settings.modelProviders.form.selectProviderType')}
+              placeholder={t('settings.modelProviders.selectProviderType')}
               options={providerOptions}
               onChange={handleProviderChange}
-              disabled={isEditMode}
             />
           </Form.Item>
-
           <Form.Item
-            label={t('settings.modelProviders.form.name')}
             name="name"
-            rules={[{ required: true, message: t('settings.modelProviders.form.nameRequired') }]}
-          >
-            <Input placeholder={t('settings.modelProviders.form.namePlaceholder')} />
-          </Form.Item>
-
-          {showApiKey && (
-            <Form.Item
-              label={t('settings.modelProviders.form.apiKey')}
-              name="apiKey"
-              rules={
-                apiKeyRequired
-                  ? [{ required: true, message: t('settings.modelProviders.form.apiKeyRequired') }]
-                  : []
-              }
-            >
-              <Input.Password
-                placeholder={t('settings.modelProviders.form.apiKeyPlaceholder')}
-                onChange={handleApiKeyChange}
-              />
-            </Form.Item>
-          )}
-
-          {showBaseUrl && (
-            <Form.Item
-              label={t('settings.modelProviders.form.baseUrl')}
-              name="baseUrl"
-              rules={
-                baseUrlRequired
-                  ? [{ required: true, message: t('settings.modelProviders.form.baseUrlRequired') }]
-                  : []
-              }
-            >
-              <Input
-                placeholder={
-                  selectedProviderInfo?.fieldConfig.baseUrl.placeholder ||
-                  t('settings.modelProviders.form.baseUrlPlaceholder')
-                }
-              />
-            </Form.Item>
-          )}
-
-          <Form.Item
-            label={t('settings.modelProviders.form.categories')}
-            name="categories"
+            label={t('settings.modelProviders.name')}
             rules={[
-              { required: true, message: t('settings.modelProviders.form.categoriesRequired') },
+              {
+                required: true,
+                message: t('settings.modelProviders.namePlaceholder'),
+              },
             ]}
           >
-            <Checkbox.Group options={categoryOptions} />
+            <Input placeholder={t('settings.modelProviders.namePlaceholder')} />
           </Form.Item>
-
-          {!disabledEnableControl && (
-            <Form.Item name="enabled" valuePropName="checked">
-              <Switch />
-              <span className="ml-2">{t('settings.modelProviders.form.enabled')}</span>
+          {categories.length > 0 && (
+            <Form.Item
+              name="categories"
+              label={t('settings.modelProviders.category')}
+              rules={[
+                {
+                  required: true,
+                  message: t('settings.modelProviders.categoryPlaceholder'),
+                },
+              ]}
+            >
+              <Checkbox.Group options={categoryOptions} className="w-full" />
             </Form.Item>
           )}
+          {showApiKey && (
+            <Form.Item
+              name="apiKey"
+              label={t('settings.modelProviders.apiKey')}
+              rules={[
+                {
+                  required: apiKeyRequired,
+                  message: t('settings.modelProviders.apiKeyPlaceholder'),
+                },
+              ]}
+            >
+              <Input.Password
+                placeholder={t('settings.modelProviders.apiKeyPlaceholder')}
+                onChange={handleApiKeyChange}
+                visibilityToggle={!isDefaultApiKey}
+                className={isDefaultApiKey ? 'default-api-key' : ''}
+                autoComplete="new-password"
+              />
+            </Form.Item>
+          )}
+          {showBaseUrl && (
+            <Form.Item
+              name="baseUrl"
+              label={t('settings.modelProviders.baseUrl')}
+              rules={[
+                {
+                  required: baseUrlRequired,
+                  message: t('settings.modelProviders.baseUrlPlaceholder'),
+                },
+              ]}
+            >
+              <Input placeholder={t('settings.modelProviders.baseUrlPlaceholder')} />
+            </Form.Item>
+          )}
+          <Form.Item
+            name="enabled"
+            label={t('settings.modelProviders.enabled')}
+            valuePropName="checked"
+          >
+            <Switch disabled={disabledEnableControl} />
+          </Form.Item>
         </Form>
+
+        {/* Connection test result */}
+        {renderConnectionTestResult()}
       </Modal>
     );
   },
