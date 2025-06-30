@@ -51,7 +51,7 @@ export const ProviderModal = React.memo(
     const isEditMode = !!provider;
 
     // Use React Query hook for provider connection testing
-    const _testProviderMutation = useTestProviderConnection();
+    const testProviderMutation = useTestProviderConnection();
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
@@ -206,7 +206,7 @@ export const ProviderModal = React.memo(
       [isDefaultApiKey, form],
     );
 
-    // Simple test connection function - Step 2
+    // Simple test connection function - Step 3: React Query integration
     const handleTestConnection = useCallback(async () => {
       try {
         setIsTestingConnection(true);
@@ -237,33 +237,83 @@ export const ProviderModal = React.memo(
           }
         }
 
-        // Simulate testing process
-        console.log('Testing connection for:', {
-          name,
-          providerKey,
-          baseUrl: baseUrl || 'default',
-        });
+        // For edit mode, test existing provider directly
+        if (isEditMode && provider) {
+          console.log('Testing existing provider:', provider.providerId);
 
-        // Simple delay to show loading state
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+          const testResult = await testProviderMutation.mutateAsync({
+            body: {
+              providerId: provider.providerId,
+            },
+          });
 
-        // For now, just show success
-        setTestResult({
-          status: 'success',
-          message: '基础验证通过，连接测试功能将在后续步骤中完善',
-          timestamp: new Date().toISOString(),
-        });
+          if (testResult.data?.success) {
+            setTestResult({
+              status: 'success',
+              message: 'API连接测试成功',
+              details: testResult.data,
+              timestamp: new Date().toISOString(),
+            });
+          } else {
+            throw new Error('连接测试失败');
+          }
+        } else {
+          // For new providers, create temporary provider for testing
+          console.log('Creating temporary provider for testing');
+
+          const createRes = await getClient().createProvider({
+            body: {
+              name: `temp_test_${Date.now()}`,
+              enabled: false,
+              apiKey: apiKey || undefined,
+              baseUrl: baseUrl || undefined,
+              providerKey,
+              categories: ['llm'], // Default category for testing
+            },
+          });
+
+          if (!createRes.data?.success) {
+            throw new Error('创建临时供应商失败');
+          }
+
+          const tempProvider = createRes.data.data;
+          try {
+            console.log('Testing temporary provider:', tempProvider.providerId);
+
+            const testResult = await testProviderMutation.mutateAsync({
+              body: {
+                providerId: tempProvider.providerId,
+              },
+            });
+
+            if (testResult.data?.success) {
+              setTestResult({
+                status: 'success',
+                message: 'API连接测试成功',
+                details: testResult.data,
+                timestamp: new Date().toISOString(),
+              });
+            } else {
+              throw new Error('连接测试失败');
+            }
+          } finally {
+            // Clean up: delete the temporary provider
+            await getClient().deleteProvider({
+              body: { providerId: tempProvider.providerId },
+            });
+          }
+        }
       } catch (error: any) {
         console.error('Connection test failed:', error);
         setTestResult({
           status: 'failed',
-          message: error.message || '测试失败',
+          message: error.message || 'API连接失败',
           timestamp: new Date().toISOString(),
         });
       } finally {
         setIsTestingConnection(false);
       }
-    }, [form, selectedProviderInfo]);
+    }, [form, selectedProviderInfo, isEditMode, provider, testProviderMutation]);
 
     const handleSubmit = useCallback(async () => {
       try {
