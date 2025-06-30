@@ -149,6 +149,9 @@ export const ProviderModal = React.memo(
 
     useEffect(() => {
       if (isOpen) {
+        // Clear test result when modal opens (for both edit and create modes)
+        setTestResult(null);
+
         if (provider) {
           const apiKeyValue = provider.apiKey;
           setIsDefaultApiKey(!!apiKeyValue);
@@ -239,8 +242,6 @@ export const ProviderModal = React.memo(
 
         // For edit mode, test existing provider directly
         if (isEditMode && provider) {
-          console.log('Testing existing provider:', provider.providerId);
-
           const testResult = await testProviderMutation.mutateAsync({
             body: {
               providerId: provider.providerId,
@@ -251,7 +252,6 @@ export const ProviderModal = React.memo(
             setTestResult({
               status: 'success',
               message: 'API连接测试成功',
-              details: testResult.data,
               timestamp: new Date().toISOString(),
             });
           } else {
@@ -259,8 +259,6 @@ export const ProviderModal = React.memo(
           }
         } else {
           // For new providers, create temporary provider for testing
-          console.log('Creating temporary provider for testing');
-
           const createRes = await getClient().createProvider({
             body: {
               name: `temp_test_${Date.now()}`,
@@ -278,8 +276,6 @@ export const ProviderModal = React.memo(
 
           const tempProvider = createRes.data.data;
           try {
-            console.log('Testing temporary provider:', tempProvider.providerId);
-
             const testResult = await testProviderMutation.mutateAsync({
               body: {
                 providerId: tempProvider.providerId,
@@ -290,7 +286,6 @@ export const ProviderModal = React.memo(
               setTestResult({
                 status: 'success',
                 message: 'API连接测试成功',
-                details: testResult.data,
                 timestamp: new Date().toISOString(),
               });
             } else {
@@ -303,11 +298,18 @@ export const ProviderModal = React.memo(
             });
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Connection test failed:', error);
+
+        // Simple error handling
+        let errorMessage = 'API连接失败';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
         setTestResult({
           status: 'failed',
-          message: error.message || 'API连接失败',
+          message: errorMessage,
           timestamp: new Date().toISOString(),
         });
       } finally {
@@ -488,7 +490,7 @@ export const ProviderModal = React.memo(
           </Form.Item>
         </Form>
 
-        {/* Connection test result placeholder */}
+        {/* Simple connection test result */}
         {testResult && (
           <Alert
             type={testResult.status === 'success' ? 'success' : 'error'}
