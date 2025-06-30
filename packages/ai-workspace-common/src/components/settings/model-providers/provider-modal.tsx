@@ -1,9 +1,22 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Input, Modal, Form, Switch, Select, Checkbox, message } from 'antd';
+import {
+  Button,
+  Input,
+  Modal,
+  Form,
+  Switch,
+  Select,
+  Checkbox,
+  message,
+  Alert,
+  Tooltip,
+} from 'antd';
+import { SyncOutlined } from '@ant-design/icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { ProviderInfo, providerInfoList } from '@refly/utils';
+import { useTestProviderConnection } from '@refly-packages/ai-workspace-common/queries';
 
 export const ProviderModal = React.memo(
   ({
@@ -32,8 +45,13 @@ export const ProviderModal = React.memo(
     const [selectedProviderKey, setSelectedProviderKey] = useState<string | undefined>(
       provider?.providerKey || defaultProviderKey,
     );
+    const [isTestingConnection, _setIsTestingConnection] = useState(false);
+    const [testResult, _setTestResult] = useState<any>(null);
 
     const isEditMode = !!provider;
+
+    // Use React Query hook for provider connection testing
+    const _testProviderMutation = useTestProviderConnection();
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
@@ -241,6 +259,24 @@ export const ProviderModal = React.memo(
           <Button key="cancel" onClick={onClose}>
             {t('common.cancel')}
           </Button>,
+          <Tooltip
+            title={!selectedProviderInfo ? t('settings.modelProviders.selectProviderFirst') : ''}
+            key="test"
+          >
+            <Button
+              icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
+              onClick={() => {
+                // TODO: 实现测试连接逻辑
+                console.log('Test connection clicked');
+              }}
+              disabled={!selectedProviderInfo || isTestingConnection}
+              loading={isTestingConnection}
+            >
+              {isTestingConnection
+                ? t('settings.modelProviders.testing')
+                : t('settings.modelProviders.testConnection')}
+            </Button>
+          </Tooltip>,
           <Button key="submit" type="primary" onClick={handleSubmit} loading={isSubmitting}>
             {submitButtonText}
           </Button>,
@@ -331,6 +367,16 @@ export const ProviderModal = React.memo(
             <Switch disabled={disabledEnableControl} />
           </Form.Item>
         </Form>
+
+        {/* Connection test result placeholder */}
+        {testResult && (
+          <Alert
+            type="info"
+            message="测试结果"
+            description="连接测试功能即将实现"
+            className="mb-4"
+          />
+        )}
       </Modal>
     );
   },
