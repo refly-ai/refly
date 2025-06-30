@@ -189,6 +189,23 @@ export const ProviderModal = React.memo(
       }
     }, [provider, isOpen, form, providerOptions, defaultProviderKey, presetProviders]);
 
+    const handleApiKeyChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+
+        // Clear test result when API key changes
+        setTestResult(null);
+
+        if (isDefaultApiKey && value !== 'default') {
+          form.setFieldsValue({ apiKey: '' });
+          setIsDefaultApiKey(false);
+        } else {
+          form.setFieldsValue({ apiKey: value });
+        }
+      },
+      [isDefaultApiKey, form],
+    );
+
     // Simple test connection function - Step 2
     const handleTestConnection = useCallback(async () => {
       try {
