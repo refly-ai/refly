@@ -196,8 +196,6 @@ export const ProviderModal = React.memo(
         const formValues = form.getFieldsValue();
         const { apiKey, baseUrl, providerKey, name } = formValues;
 
-        console.log('Form values:', { providerKey, hasApiKey: !!apiKey, baseUrl, name });
-
         // For new providers, create a temporary provider to test
         if (!isEditMode) {
           // Validate required fields first
@@ -252,13 +250,9 @@ export const ProviderModal = React.memo(
               },
             });
 
-            console.log('🔍 API返回的原始数据:', JSON.stringify(testResult));
-            console.log('🔍 API返回的原始数据 testResult.success:', testResult.data);
             if (testResult.data.success) {
               // Analyze the detailed test results to determine overall status
               const data = testResult.data;
-              console.log('📊 提取的data部分:', data);
-              console.log('🔧 data.details内容:', data.details);
 
               const hasFailures =
                 data.details && typeof data.details === 'object'
@@ -309,16 +303,9 @@ export const ProviderModal = React.memo(
             },
           });
 
-          console.log('🔍 [编辑模式] API返回的原始数据:', JSON.stringify(testResult));
-          console.log(
-            '🔍 [编辑模式] API返回的原始数据:testResult.data.success',
-            testResult.data.success,
-          );
           if (testResult.data.success) {
             // Analyze the detailed test results to determine overall status
             const data = testResult.data;
-            console.log('📊 [编辑模式] 提取的data部分:', data);
-            console.log('🔧 [编辑模式] data.details内容:', data.details);
 
             const hasFailures =
               data.details && typeof data.details === 'object'
@@ -332,8 +319,6 @@ export const ProviderModal = React.memo(
                   )
                 : false;
 
-            console.log('❌ [编辑模式] 检测到失败:', hasFailures);
-
             const overallStatus = hasFailures ? 'failed' : 'success';
             const overallMessage = hasFailures ? 'API连接测试部分失败，请检查配置' : 'API连接成功';
 
@@ -344,7 +329,6 @@ export const ProviderModal = React.memo(
               timestamp: new Date().toISOString(),
             };
 
-            console.log('📋 [编辑模式] 最终设置的testResult:', finalTestResult);
             setTestResult(finalTestResult);
           } else {
             throw new Error(testResult.message || '连接测试失败');
@@ -368,11 +352,6 @@ export const ProviderModal = React.memo(
       if (!testResult) return null;
 
       const { status, message: testMessage, details } = testResult;
-
-      console.log('🎨 渲染组件接收到的testResult:', testResult);
-      console.log('🎯 渲染组件接收到的details:', details);
-      console.log('📌 details的类型:', typeof details);
-      console.log('🔍 details的所有key:', details ? Object.keys(details) : 'no details');
 
       const getStatusIcon = () => {
         switch (status) {
@@ -398,24 +377,16 @@ export const ProviderModal = React.memo(
 
       // Render detailed test results in a user-friendly format
       const renderDetailedResults = () => {
-        console.log('🔧 renderDetailedResults 接收到的details:', details);
-
         if (!details || typeof details !== 'object') {
-          console.log('❌ details为空或不是object，返回null');
           return null;
         }
 
         // 实际的测试详情在 details.details 中
         const actualTestDetails = details.details || {};
-        console.log('🎯 实际的测试详情 (details.details):', actualTestDetails);
 
         if (!actualTestDetails || typeof actualTestDetails !== 'object') {
-          console.log('❌ actualTestDetails为空或不是object，返回null');
           return null;
         }
-
-        console.log('🗝️ actualTestDetails的所有属性:', Object.keys(actualTestDetails));
-        console.log('📋 遍历actualTestDetails的每个属性:');
 
         const testItems = [];
 
@@ -434,18 +405,9 @@ export const ProviderModal = React.memo(
         };
 
         for (const [key, value] of Object.entries(actualTestDetails)) {
-          console.log(`  📝 处理属性 "${key}":`, value);
-          console.log('  🔍 是否为object:', value && typeof value === 'object');
-          console.log(
-            '  ✅ 是否有status属性:',
-            value && typeof value === 'object' && 'status' in value,
-          );
-
           if (value && typeof value === 'object' && 'status' in value) {
             const testItem = value as { status: string; data?: any; error?: any };
             const displayName = testDisplayNames[key] || key;
-
-            console.log(`  🎯 处理测试项 "${key}" (${displayName}):`, testItem);
 
             testItems.push(
               <div key={key} className="flex items-center justify-between py-1">
@@ -478,9 +440,6 @@ export const ProviderModal = React.memo(
             );
           }
         }
-
-        console.log('📊 最终生成的testItems数量:', testItems.length);
-        console.log('🎨 testItems内容:', testItems);
 
         return testItems.length > 0 ? (
           <div className="mt-3 p-3 bg-gray-50 rounded-md">
