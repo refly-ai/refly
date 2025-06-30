@@ -14,6 +14,8 @@ import {
   ListProviderItemsResponse,
   ListProvidersResponse,
   ProviderCategory,
+  TestProviderConnectionRequest,
+  TestProviderConnectionResponse,
   UpsertProviderItemRequest,
   UpsertProviderItemResponse,
   UpsertProviderRequest,
@@ -137,8 +139,8 @@ export class ProviderController {
   @Post('/test-connection')
   async testProviderConnection(
     @LoginedUser() user: UserModel,
-    @Body() body: { providerId: string; category?: ProviderCategory },
-  ) {
+    @Body() body: TestProviderConnectionRequest,
+  ): Promise<TestProviderConnectionResponse> {
     const result = await this.providerService.testProviderConnection(user, body);
     return buildSuccessResponse(result);
   }

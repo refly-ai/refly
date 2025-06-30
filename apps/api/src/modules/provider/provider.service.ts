@@ -44,6 +44,7 @@ import {
   getChatModel,
   initializeMonitoring,
   ProviderChecker,
+  ProviderCheckResult,
 } from '@refly/providers';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ConfigService } from '@nestjs/config';
@@ -1050,7 +1051,7 @@ export class ProviderService implements OnModuleInit {
   async testProviderConnection(
     user: User,
     param: { providerId: string; category?: ProviderCategory },
-  ) {
+  ): Promise<ProviderCheckResult> {
     const { providerId, category } = param;
 
     if (!providerId) {
@@ -1086,24 +1087,30 @@ export class ProviderService implements OnModuleInit {
     } catch (error) {
       this.logger.warn(`Provider connection test failed for ${providerId}: ${error.stack}`);
 
-      // Return standardized error result
-      return {
+      // Re-throw the error to let the global error handler deal with it
+      // or create a proper error response using ProviderChecker's error format
+      const errorResult: ProviderCheckResult = {
         providerId,
         providerKey: provider.providerKey,
         name: provider.name,
         baseUrl: provider.baseUrl,
         categories: provider.categories.split(','),
-        status: 'failed' as const,
-        message: error?.message || 'Connection test failed',
+        status: 'failed',
+        message: error?.message || 'Connection check failed',
         details: {
           error: {
-            type: error?.constructor?.name || 'Error',
-            message: error?.message,
-            ...(error?.response ? { response: error.response } : {}),
+            status: 'failed',
+            error: {
+              type: error?.constructor?.name || 'Error',
+              message: error?.message,
+              ...(error?.response ? { response: error.response } : {}),
+            },
           },
         },
         timestamp: new Date().toISOString(),
       };
+
+      return errorResult;
     }
   }
 }
