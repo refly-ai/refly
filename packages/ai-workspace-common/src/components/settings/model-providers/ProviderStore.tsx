@@ -4,7 +4,7 @@ import { LuSearch } from 'react-icons/lu';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useTranslation } from 'react-i18next';
 
-import { useListCommunityProviders } from '@refly-packages/ai-workspace-common/queries';
+import { useListCommunityProviders } from '@refly-packages/ai-workspace-common/queries/provider-community';
 import {
   CommunityProviderListProps,
   CommunityProviderFilterState,
