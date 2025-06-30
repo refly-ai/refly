@@ -1,12 +1,27 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Input, Modal, Form, Switch, Select, Checkbox, message, Tooltip } from 'antd';
-import { SyncOutlined } from '@ant-design/icons';
+import {
+  Button,
+  Input,
+  Modal,
+  Form,
+  Switch,
+  Select,
+  Checkbox,
+  message,
+  Alert,
+  Tooltip,
+} from 'antd';
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  SyncOutlined,
+} from '@ant-design/icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { ProviderInfo, providerInfoList } from '@refly/utils';
-import { useProviderConnectionTest } from '@refly-packages/ai-workspace-common/hooks/useProviderConnectionTest';
-import ProviderTestResult from './provider-test-result';
+import { useTestProviderConnection } from '@refly-packages/ai-workspace-common/queries';
 
 export const ProviderModal = React.memo(
   ({
@@ -35,11 +50,13 @@ export const ProviderModal = React.memo(
     const [selectedProviderKey, setSelectedProviderKey] = useState<string | undefined>(
       provider?.providerKey || defaultProviderKey,
     );
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [testResult, setTestResult] = useState<any>(null);
+
     const isEditMode = !!provider;
 
-    // Use custom hook for provider connection testing
-    const { isTestingConnection, testResult, testConnection, clearTestResult } =
-      useProviderConnectionTest();
+    // Use React Query hook for provider connection testing
+    const testProviderMutation = useTestProviderConnection();
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
@@ -123,9 +140,6 @@ export const ProviderModal = React.memo(
         } else {
           form.setFieldValue('categories', []);
         }
-
-        // Clear test result when changing provider
-        clearTestResult();
       },
       [form, presetProviders],
     );
@@ -169,17 +183,349 @@ export const ProviderModal = React.memo(
             form.setFieldValue('categories', providerCategories);
           }
         }
-
-        // Clear test result when modal opens
-        clearTestResult();
       }
     }, [provider, isOpen, form, providerOptions, defaultProviderKey, presetProviders]);
 
-    // Test provider connection
-    const handleTestConnection = useCallback(async () => {
-      const formValues = form.getFieldsValue();
-      await testConnection(formValues, isEditMode ? provider : undefined);
-    }, [form, testConnection, isEditMode, provider]);
+    // Use React Query hook to test provider connection
+    const testConnection = useCallback(async () => {
+      console.log('=== Testing connection via React Query hook ===');
+      setIsTestingConnection(true);
+      setTestResult({ status: 'unknown', message: '', details: {}, timestamp: '' });
+
+      try {
+        const formValues = form.getFieldsValue();
+        const { apiKey, baseUrl, providerKey, name } = formValues;
+
+        console.log('Form values:', { providerKey, hasApiKey: !!apiKey, baseUrl, name });
+
+        // For new providers, create a temporary provider to test
+        if (!isEditMode) {
+          // Validate required fields first
+          if (!name) {
+            throw new Error('请填写供应商名称');
+          }
+          if (!providerKey) {
+            throw new Error('请选择供应商类型');
+          }
+
+          // Check provider-specific required fields
+          if (['jina', 'serper'].includes(providerKey)) {
+            if (!apiKey) {
+              throw new Error('请填写API Key');
+            }
+          } else if (['searxng', 'ollama'].includes(providerKey)) {
+            if (!baseUrl) {
+              throw new Error('请填写Base URL');
+            }
+          } else {
+            // For OpenAI, Anthropic and other providers
+            if (!baseUrl) {
+              throw new Error('请填写Base URL');
+            }
+            if (!apiKey) {
+              throw new Error('请填写API Key');
+            }
+          }
+
+          // Create temporary provider for testing
+          const createRes = await getClient().createProvider({
+            body: {
+              name: `temp_test_${Date.now()}`,
+              enabled: false,
+              apiKey: apiKey || undefined,
+              baseUrl: baseUrl || undefined,
+              providerKey,
+              categories: ['llm'], // Default category for testing
+            },
+          });
+
+          if (!createRes.data.success) {
+            throw new Error('创建临时供应商失败');
+          }
+
+          const tempProvider = createRes.data.data;
+          try {
+            // Test the connection using React Query hook
+            const testResult = await testProviderMutation.mutateAsync({
+              body: {
+                providerId: tempProvider.providerId,
+              },
+            });
+
+            console.log('🔍 API返回的原始数据:', JSON.stringify(testResult));
+            console.log('🔍 API返回的原始数据 testResult.success:', testResult.data);
+            if (testResult.data.success) {
+              // Analyze the detailed test results to determine overall status
+              const data = testResult.data;
+              console.log('📊 提取的data部分:', data);
+              console.log('🔧 data.details内容:', data.details);
+
+              const hasFailures =
+                data.details && typeof data.details === 'object'
+                  ? Object.values(data.details).some(
+                      (test: any) =>
+                        test &&
+                        typeof test === 'object' &&
+                        (test.status === 'failed' ||
+                          (test.data?.statusCode &&
+                            (test.data.statusCode >= 400 || test.data.statusCode === 401))),
+                    )
+                  : false;
+
+              console.log('❌ 检测到失败:', hasFailures);
+
+              const overallStatus = hasFailures ? 'failed' : 'success';
+              const overallMessage = hasFailures
+                ? 'API连接测试部分失败，请检查配置'
+                : 'API连接成功';
+
+              const finalTestResult = {
+                status: overallStatus,
+                message: overallMessage,
+                details: data,
+                timestamp: new Date().toISOString(),
+              };
+
+              console.log('📋 最终设置的testResult:', finalTestResult);
+              setTestResult(finalTestResult);
+            } else {
+              throw new Error(testResult.message || '连接测试失败');
+            }
+          } finally {
+            // Clean up: delete the temporary provider
+            await getClient().deleteProvider({
+              body: { providerId: tempProvider.providerId },
+            });
+          }
+        } else {
+          // For edit mode, test existing provider
+          if (!provider) {
+            throw new Error('供应商信息不存在');
+          }
+
+          const testResult = await testProviderMutation.mutateAsync({
+            body: {
+              providerId: provider.providerId,
+            },
+          });
+
+          console.log('🔍 [编辑模式] API返回的原始数据:', JSON.stringify(testResult));
+          console.log(
+            '🔍 [编辑模式] API返回的原始数据:testResult.data.success',
+            testResult.data.success,
+          );
+          if (testResult.data.success) {
+            // Analyze the detailed test results to determine overall status
+            const data = testResult.data;
+            console.log('📊 [编辑模式] 提取的data部分:', data);
+            console.log('🔧 [编辑模式] data.details内容:', data.details);
+
+            const hasFailures =
+              data.details && typeof data.details === 'object'
+                ? Object.values(data.details).some(
+                    (test: any) =>
+                      test &&
+                      typeof test === 'object' &&
+                      (test.status === 'failed' ||
+                        (test.data?.statusCode &&
+                          (test.data.statusCode >= 400 || test.data.statusCode === 401))),
+                  )
+                : false;
+
+            console.log('❌ [编辑模式] 检测到失败:', hasFailures);
+
+            const overallStatus = hasFailures ? 'failed' : 'success';
+            const overallMessage = hasFailures ? 'API连接测试部分失败，请检查配置' : 'API连接成功';
+
+            const finalTestResult = {
+              status: overallStatus,
+              message: overallMessage,
+              details: data,
+              timestamp: new Date().toISOString(),
+            };
+
+            console.log('📋 [编辑模式] 最终设置的testResult:', finalTestResult);
+            setTestResult(finalTestResult);
+          } else {
+            throw new Error(testResult.message || '连接测试失败');
+          }
+        }
+      } catch (error: any) {
+        console.error('Connection test failed:', error);
+
+        setTestResult({
+          status: 'failed',
+          message: error.message || 'API连接失败',
+          details: { error: error.message },
+          timestamp: new Date().toISOString(),
+        });
+      } finally {
+        setIsTestingConnection(false);
+      }
+    }, [form, isEditMode, provider, testProviderMutation]);
+
+    const renderConnectionTestResult = () => {
+      if (!testResult) return null;
+
+      const { status, message: testMessage, details } = testResult;
+
+      console.log('🎨 渲染组件接收到的testResult:', testResult);
+      console.log('🎯 渲染组件接收到的details:', details);
+      console.log('📌 details的类型:', typeof details);
+      console.log('🔍 details的所有key:', details ? Object.keys(details) : 'no details');
+
+      const getStatusIcon = () => {
+        switch (status) {
+          case 'success':
+            return <CheckCircleOutlined className="text-green-500" />;
+          case 'failed':
+            return <CloseCircleOutlined className="text-red-500" />;
+          default:
+            return <ExclamationCircleOutlined className="text-yellow-500" />;
+        }
+      };
+
+      const getAlertType = () => {
+        switch (status) {
+          case 'success':
+            return 'success';
+          case 'failed':
+            return 'error';
+          default:
+            return 'warning';
+        }
+      };
+
+      // Render detailed test results in a user-friendly format
+      const renderDetailedResults = () => {
+        console.log('🔧 renderDetailedResults 接收到的details:', details);
+
+        if (!details || typeof details !== 'object') {
+          console.log('❌ details为空或不是object，返回null');
+          return null;
+        }
+
+        // 实际的测试详情在 details.details 中
+        const actualTestDetails = details.details || {};
+        console.log('🎯 实际的测试详情 (details.details):', actualTestDetails);
+
+        if (!actualTestDetails || typeof actualTestDetails !== 'object') {
+          console.log('❌ actualTestDetails为空或不是object，返回null');
+          return null;
+        }
+
+        console.log('🗝️ actualTestDetails的所有属性:', Object.keys(actualTestDetails));
+        console.log('📋 遍历actualTestDetails的每个属性:');
+
+        const testItems = [];
+
+        // Map of test keys to display names
+        const testDisplayNames: Record<string, string> = {
+          apiKey: 'API Key验证',
+          embeddings: '嵌入模型API',
+          reranker: '重排序API',
+          chat: '对话API',
+          chatCompletion: '对话完成API',
+          models: '模型列表API',
+          modelsEndpoint: '模型端点API',
+          health: '健康检查',
+          search: '搜索功能',
+          tags: 'Tags端点',
+        };
+
+        for (const [key, value] of Object.entries(actualTestDetails)) {
+          console.log(`  📝 处理属性 "${key}":`, value);
+          console.log('  🔍 是否为object:', value && typeof value === 'object');
+          console.log(
+            '  ✅ 是否有status属性:',
+            value && typeof value === 'object' && 'status' in value,
+          );
+
+          if (value && typeof value === 'object' && 'status' in value) {
+            const testItem = value as { status: string; data?: any; error?: any };
+            const displayName = testDisplayNames[key] || key;
+
+            console.log(`  🎯 处理测试项 "${key}" (${displayName}):`, testItem);
+
+            testItems.push(
+              <div key={key} className="flex items-center justify-between py-1">
+                <span className="text-sm">{displayName}</span>
+                <div className="flex items-center gap-1">
+                  {testItem.status === 'success' &&
+                  (!testItem.data?.statusCode || testItem.data.statusCode < 400) ? (
+                    <>
+                      <CheckCircleOutlined className="text-green-500 text-xs" />
+                      <span className="text-xs text-green-600">成功</span>
+                      {testItem.data?.statusCode && (
+                        <span className="text-xs text-gray-500 ml-1">
+                          ({testItem.data.statusCode})
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <CloseCircleOutlined className="text-red-500 text-xs" />
+                      <span className="text-xs text-red-600">失败</span>
+                      {(testItem.error || testItem.data?.statusCode >= 400) && (
+                        <span className="text-xs text-red-500 ml-1">
+                          ({testItem.error || `HTTP ${testItem.data?.statusCode}`})
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>,
+            );
+          }
+        }
+
+        console.log('📊 最终生成的testItems数量:', testItems.length);
+        console.log('🎨 testItems内容:', testItems);
+
+        return testItems.length > 0 ? (
+          <div className="mt-3 p-3 bg-gray-50 rounded-md">
+            <div className="text-sm font-medium text-gray-700 mb-2">测试详情</div>
+            <div className="space-y-1">{testItems}</div>
+          </div>
+        ) : null;
+      };
+
+      return (
+        <Alert
+          type={getAlertType()}
+          icon={getStatusIcon()}
+          message={
+            <div>
+              <div className="font-medium">
+                {status === 'success'
+                  ? t('settings.modelProviders.connectionTestSuccess')
+                  : t('settings.modelProviders.connectionTestFailed')}
+              </div>
+              {testMessage && <div className="text-sm opacity-80 mt-1">{testMessage}</div>}
+            </div>
+          }
+          description={
+            <div className="mt-2">
+              {/* Render user-friendly detailed results */}
+              {renderDetailedResults()}
+
+              {/* Keep the raw JSON details as a collapsible section */}
+              {details && (
+                <details className="text-xs mt-3">
+                  <summary className="cursor-pointer hover:text-blue-600">
+                    {t('settings.modelProviders.viewDetails')}
+                  </summary>
+                  <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-auto max-h-32">
+                    {JSON.stringify(details, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          }
+          className="mb-4"
+        />
+      );
+    };
 
     const handleSubmit = useCallback(async () => {
       try {
@@ -250,12 +596,18 @@ export const ProviderModal = React.memo(
             key="test"
           >
             <Button
-              icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
-              onClick={handleTestConnection}
-              disabled={!selectedProviderInfo || isTestingConnection}
-              loading={isTestingConnection}
+              icon={
+                isTestingConnection || testProviderMutation.isPending ? (
+                  <SyncOutlined spin />
+                ) : undefined
+              }
+              onClick={testConnection}
+              disabled={
+                !selectedProviderInfo || isTestingConnection || testProviderMutation.isPending
+              }
+              loading={isTestingConnection || testProviderMutation.isPending}
             >
-              {isTestingConnection
+              {isTestingConnection || testProviderMutation.isPending
                 ? t('settings.modelProviders.testing')
                 : t('settings.modelProviders.testConnection')}
             </Button>
@@ -351,7 +703,7 @@ export const ProviderModal = React.memo(
         </Form>
 
         {/* Connection test result */}
-        <ProviderTestResult testResult={testResult} />
+        {renderConnectionTestResult()}
       </Modal>
     );
   },
