@@ -186,6 +186,54 @@ export const ProviderModal = React.memo(
       }
     }, [provider, isOpen, form, providerOptions, defaultProviderKey, presetProviders]);
 
+    const handleSubmit = useCallback(async () => {
+      try {
+        const values = await form.validateFields();
+        setIsSubmitting(true);
+
+        if (isEditMode && provider) {
+          const res = await getClient().updateProvider({
+            body: {
+              ...provider,
+              name: values.name,
+              enabled: values.enabled,
+              apiKey: values.apiKey,
+              baseUrl: values.baseUrl || undefined,
+              providerKey: values.providerKey,
+              categories: values.categories,
+            },
+          });
+          if (res.data.success) {
+            message.success(t('common.saveSuccess'));
+            onSuccess?.(res.data.data);
+            form.resetFields();
+            onClose();
+          }
+        } else {
+          const res = await getClient().createProvider({
+            body: {
+              name: values.name,
+              enabled: values.enabled,
+              apiKey: values.apiKey,
+              baseUrl: values.baseUrl,
+              providerKey: values.providerKey,
+              categories: values.categories,
+            },
+          });
+          if (res.data.success) {
+            message.success(t('common.addSuccess'));
+            onSuccess?.(res.data.data);
+            form.resetFields();
+            onClose();
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to ${isEditMode ? 'update' : 'create'} provider`, error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }, [form, onClose, onSuccess, provider, isEditMode, t]);
+
     // Use React Query hook to test provider connection
     const testConnection = useCallback(async () => {
       console.log('=== Testing connection via React Query hook ===');
@@ -485,54 +533,6 @@ export const ProviderModal = React.memo(
         />
       );
     };
-
-    const handleSubmit = useCallback(async () => {
-      try {
-        const values = await form.validateFields();
-        setIsSubmitting(true);
-
-        if (isEditMode && provider) {
-          const res = await getClient().updateProvider({
-            body: {
-              ...provider,
-              name: values.name,
-              enabled: values.enabled,
-              apiKey: values.apiKey,
-              baseUrl: values.baseUrl || undefined,
-              providerKey: values.providerKey,
-              categories: values.categories,
-            },
-          });
-          if (res.data.success) {
-            message.success(t('common.saveSuccess'));
-            onSuccess?.(res.data.data);
-            form.resetFields();
-            onClose();
-          }
-        } else {
-          const res = await getClient().createProvider({
-            body: {
-              name: values.name,
-              enabled: values.enabled,
-              apiKey: values.apiKey,
-              baseUrl: values.baseUrl,
-              providerKey: values.providerKey,
-              categories: values.categories,
-            },
-          });
-          if (res.data.success) {
-            message.success(t('common.addSuccess'));
-            onSuccess?.(res.data.data);
-            form.resetFields();
-            onClose();
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to ${isEditMode ? 'update' : 'create'} provider`, error);
-      } finally {
-        setIsSubmitting(false);
-      }
-    }, [form, onClose, onSuccess, provider, isEditMode, t]);
 
     const modalTitle = isEditMode
       ? t('settings.modelProviders.editProvider')
