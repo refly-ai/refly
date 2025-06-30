@@ -107,6 +107,14 @@ export const ProviderModal = React.memo(
       return selectedProviderInfo?.fieldConfig.baseUrl.presence === 'required';
     }, [selectedProviderInfo]);
 
+    // Handle API key change to manage default API key state
+    const handleApiKeyChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      if (value && value.trim() !== '') {
+        setIsDefaultApiKey(false);
+      }
+    }, []);
+
     const handleSubmit = useCallback(async () => {
       try {
         const values = await form.validateFields();
@@ -631,10 +639,11 @@ export const ProviderModal = React.memo(
               ]}
             >
               <Input.Password
-                placeholder={t('settings.modelProviders.')}
+                placeholder={t('settings.modelProviders.apiKeyPlaceholder')}
                 visibilityToggle={!isDefaultApiKey}
                 className={isDefaultApiKey ? 'default-api-key' : ''}
                 autoComplete="new-password"
+                onChange={handleApiKeyChange}
               />
             </Form.Item>
           )}
