@@ -12,7 +12,7 @@ import {
   Alert,
   Tooltip,
 } from 'antd';
-import { SyncOutlined } from '@ant-design/icons';
+import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { ProviderInfo, providerInfoList } from '@refly/utils';
@@ -45,8 +45,8 @@ export const ProviderModal = React.memo(
     const [selectedProviderKey, setSelectedProviderKey] = useState<string | undefined>(
       provider?.providerKey || defaultProviderKey,
     );
-    const [isTestingConnection, _setIsTestingConnection] = useState(false);
-    const [testResult, _setTestResult] = useState<any>(null);
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [testResult, setTestResult] = useState<any>(null);
 
     const isEditMode = !!provider;
 
@@ -109,6 +109,9 @@ export const ProviderModal = React.memo(
         const providers = presetProviders || providerInfoList;
         const providerInfo = providers.find((p) => p.key === value);
 
+        // Clear test result when provider changes
+        setTestResult(null);
+
         // Reset form fields except for providerKey and enabled
         const enabled = form.getFieldValue('enabled');
         form.resetFields();
@@ -138,6 +141,11 @@ export const ProviderModal = React.memo(
       },
       [form, presetProviders],
     );
+
+    const handleBaseUrlChange = useCallback(() => {
+      // Clear test result when base URL changes
+      setTestResult(null);
+    }, []);
 
     useEffect(() => {
       if (isOpen) {
@@ -181,19 +189,64 @@ export const ProviderModal = React.memo(
       }
     }, [provider, isOpen, form, providerOptions, defaultProviderKey, presetProviders]);
 
-    const handleApiKeyChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
+    // Simple test connection function - Step 2
+    const handleTestConnection = useCallback(async () => {
+      try {
+        setIsTestingConnection(true);
+        setTestResult(null);
 
-        if (isDefaultApiKey && value !== 'default') {
-          form.setFieldsValue({ apiKey: '' });
-          setIsDefaultApiKey(false);
-        } else {
-          form.setFieldsValue({ apiKey: value });
+        // Basic form validation
+        const formValues = form.getFieldsValue();
+        const { name, providerKey, apiKey, baseUrl } = formValues;
+
+        // Validate required fields
+        if (!name?.trim()) {
+          throw new Error('请填写供应商名称');
         }
-      },
-      [isDefaultApiKey, form],
-    );
+        if (!providerKey) {
+          throw new Error('请选择供应商类型');
+        }
+
+        // Provider-specific validation
+        if (selectedProviderInfo) {
+          if (selectedProviderInfo.fieldConfig.apiKey.presence === 'required' && !apiKey?.trim()) {
+            throw new Error('请填写API Key');
+          }
+          if (
+            selectedProviderInfo.fieldConfig.baseUrl.presence === 'required' &&
+            !baseUrl?.trim()
+          ) {
+            throw new Error('请填写Base URL');
+          }
+        }
+
+        // Simulate testing process
+        console.log('Testing connection for:', {
+          name,
+          providerKey,
+          baseUrl: baseUrl || 'default',
+        });
+
+        // Simple delay to show loading state
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        // For now, just show success
+        setTestResult({
+          status: 'success',
+          message: '基础验证通过，连接测试功能将在后续步骤中完善',
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error: any) {
+        console.error('Connection test failed:', error);
+        setTestResult({
+          status: 'failed',
+          message: error.message || '测试失败',
+          timestamp: new Date().toISOString(),
+        });
+      } finally {
+        setIsTestingConnection(false);
+      }
+    }, [form, selectedProviderInfo]);
 
     const handleSubmit = useCallback(async () => {
       try {
@@ -265,10 +318,7 @@ export const ProviderModal = React.memo(
           >
             <Button
               icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
-              onClick={() => {
-                // TODO: 实现测试连接逻辑
-                console.log('Test connection clicked');
-              }}
+              onClick={handleTestConnection}
               disabled={!selectedProviderInfo || isTestingConnection}
               loading={isTestingConnection}
             >
@@ -356,7 +406,10 @@ export const ProviderModal = React.memo(
                 },
               ]}
             >
-              <Input placeholder={t('settings.modelProviders.baseUrlPlaceholder')} />
+              <Input
+                placeholder={t('settings.modelProviders.baseUrlPlaceholder')}
+                onChange={handleBaseUrlChange}
+              />
             </Form.Item>
           )}
           <Form.Item
@@ -371,9 +424,28 @@ export const ProviderModal = React.memo(
         {/* Connection test result placeholder */}
         {testResult && (
           <Alert
-            type="info"
-            message="测试结果"
-            description="连接测试功能即将实现"
+            type={testResult.status === 'success' ? 'success' : 'error'}
+            icon={
+              testResult.status === 'success' ? <CheckCircleOutlined /> : <CloseCircleOutlined />
+            }
+            message={
+              <div className="flex items-center justify-between">
+                <span>{testResult.message}</span>
+                <Button
+                  type="text"
+                  size="small"
+                  onClick={() => setTestResult(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </Button>
+              </div>
+            }
+            description={
+              <div className="text-sm text-gray-600">
+                测试时间: {new Date(testResult.timestamp).toLocaleString()}
+              </div>
+            }
             className="mb-4"
           />
         )}
