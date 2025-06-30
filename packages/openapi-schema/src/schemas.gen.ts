@@ -6305,6 +6305,85 @@ export const DeleteProviderRequestSchema = {
   },
 } as const;
 
+export const TestProviderConnectionRequestSchema = {
+  type: 'object',
+  required: ['providerId'],
+  properties: {
+    providerId: {
+      type: 'string',
+      description: 'Provider ID to test',
+    },
+    category: {
+      description: 'Provider category to test (optional)',
+      $ref: '#/components/schemas/ProviderCategory',
+    },
+  },
+} as const;
+
+export const ProviderTestResultSchema = {
+  type: 'object',
+  properties: {
+    providerId: {
+      type: 'string',
+      description: 'Provider ID',
+    },
+    providerKey: {
+      type: 'string',
+      description: 'Provider key',
+    },
+    name: {
+      type: 'string',
+      description: 'Provider name',
+    },
+    baseUrl: {
+      type: 'string',
+      description: 'Provider base URL',
+    },
+    categories: {
+      type: 'array',
+      description: 'Provider categories',
+      items: {
+        type: 'string',
+      },
+    },
+    status: {
+      type: 'string',
+      description: 'Test result status',
+      enum: ['success', 'failed', 'unknown'],
+    },
+    message: {
+      type: 'string',
+      description: 'Test result message',
+    },
+    details: {
+      type: 'object',
+      description: 'Detailed test results',
+      additionalProperties: true,
+    },
+    timestamp: {
+      type: 'string',
+      description: 'Test timestamp',
+      format: 'date-time',
+    },
+  },
+} as const;
+
+export const TestProviderConnectionResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/ProviderTestResult',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const ListProviderItemOptionsResponseSchema = {
   allOf: [
     {

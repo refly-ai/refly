@@ -21,6 +21,7 @@ import {
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { ProviderInfo, providerInfoList } from '@refly/utils';
+import { useTestProviderConnection } from '@refly-packages/ai-workspace-common/queries';
 
 export const ProviderModal = React.memo(
   ({
@@ -53,6 +54,9 @@ export const ProviderModal = React.memo(
     const [testResult, setTestResult] = useState<any>(null);
 
     const isEditMode = !!provider;
+
+    // Use React Query hook for provider connection testing
+    const testProviderMutation = useTestProviderConnection();
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
@@ -182,192 +186,125 @@ export const ProviderModal = React.memo(
       }
     }, [provider, isOpen, form, providerOptions, defaultProviderKey, presetProviders]);
 
-    const handleApiKeyChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-
-        if (isDefaultApiKey && value !== 'default') {
-          form.setFieldsValue({ apiKey: '' });
-          setIsDefaultApiKey(false);
-        } else {
-          form.setFieldsValue({ apiKey: value });
-        }
-      },
-      [isDefaultApiKey, form],
-    );
-
-    // Simple API connection test using form values
+    // Use React Query hook to test provider connection
     const testConnection = useCallback(async () => {
-      console.log('=== NEW testConnection method called ===');
+      console.log('=== Testing connection via React Query hook ===');
       setIsTestingConnection(true);
       setTestResult({ status: 'unknown', message: '', details: {}, timestamp: '' });
 
       try {
-        // Get current form values directly
         const formValues = form.getFieldsValue();
-        const { apiKey, baseUrl, providerKey } = formValues;
+        const { apiKey, baseUrl, providerKey, name } = formValues;
 
-        // Check required fields based on provider type
-        if (providerKey === 'jina') {
-          if (!apiKey) {
-            throw new Error('请填写API Key');
+        console.log('Form values:', { providerKey, hasApiKey: !!apiKey, baseUrl, name });
+
+        // For new providers, create a temporary provider to test
+        if (!isEditMode) {
+          // Validate required fields first
+          if (!name) {
+            throw new Error('请填写供应商名称');
           }
-        } else if (providerKey === 'searxng') {
-          if (!baseUrl) {
-            throw new Error('请填写Base URL');
+          if (!providerKey) {
+            throw new Error('请选择供应商类型');
           }
-        } else if (providerKey === 'ollama') {
-          if (!baseUrl) {
-            throw new Error('请填写Base URL');
+
+          // Check provider-specific required fields
+          if (['jina', 'serper'].includes(providerKey)) {
+            if (!apiKey) {
+              throw new Error('请填写API Key');
+            }
+          } else if (['searxng', 'ollama'].includes(providerKey)) {
+            if (!baseUrl) {
+              throw new Error('请填写Base URL');
+            }
+          } else {
+            // For OpenAI, Anthropic and other providers
+            if (!baseUrl) {
+              throw new Error('请填写Base URL');
+            }
+            if (!apiKey) {
+              throw new Error('请填写API Key');
+            }
           }
-        } else {
-          // For OpenAI, Anthropic and other providers
-          if (!baseUrl) {
-            throw new Error('请填写Base URL');
-          }
-          if (!apiKey) {
-            throw new Error('请填写API Key');
-          }
-        }
 
-        // Configure test parameters based on provider type
-        let testUrl: string;
-        let testBody: any;
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-
-        // Add API key if provided (most APIs need it)
-        if (apiKey) {
-          headers.Authorization = `Bearer ${apiKey}`;
-        }
-
-        // Configure request based on provider type
-        switch (providerKey) {
-          case 'openai':
-            testUrl = baseUrl.endsWith('/')
-              ? `${baseUrl}chat/completions`
-              : `${baseUrl}/chat/completions`;
-            testBody = {
-              model: 'gpt-3.5-turbo',
-              messages: [{ role: 'user', content: 'Hello' }],
-              max_tokens: 1,
-              temperature: 0,
-            };
-            break;
-
-          case 'anthropic':
-            testUrl = baseUrl.endsWith('/') ? `${baseUrl}messages` : `${baseUrl}/messages`;
-            headers['anthropic-version'] = '2023-06-01';
-            testBody = {
-              model: 'claude-3-haiku-20240307',
-              messages: [{ role: 'user', content: 'Hello' }],
-              max_tokens: 1,
-            };
-            break;
-
-          case 'ollama':
-            testUrl = baseUrl.endsWith('/') ? `${baseUrl}api/generate` : `${baseUrl}/api/generate`;
-            // Ollama doesn't need Authorization header
-            headers.Authorization = undefined;
-            testBody = {
-              model: 'llama2', // Default model for testing
-              prompt: 'Hello',
-              stream: false,
-              options: {
-                num_predict: 1,
-              },
-            };
-            break;
-
-          case 'jina':
-            // Jina uses official API endpoint, ignore user's baseUrl
-            testUrl = 'https://api.jina.ai/v1/embeddings';
-            testBody = {
-              model: 'jina-embeddings-v2-base-en',
-              input: ['Hello'],
-              encoding_format: 'float',
-            };
-            break;
-
-          case 'searxng':
-            testUrl = baseUrl.endsWith('/') ? `${baseUrl}search` : `${baseUrl}/search`;
-            // SearXNG doesn't need Authorization header
-            headers.Authorization = undefined;
-            testBody = {
-              q: 'test',
-              format: 'json',
-              engines: 'google',
-            };
-            break;
-
-          default:
-            // Generic OpenAI-compatible API
-            testUrl = baseUrl.endsWith('/')
-              ? `${baseUrl}chat/completions`
-              : `${baseUrl}/chat/completions`;
-            testBody = {
-              model: 'gpt-3.5-turbo',
-              messages: [{ role: 'user', content: 'Hello' }],
-              max_tokens: 1,
-              temperature: 0,
-            };
-        }
-
-        const response = await fetch(testUrl, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(testBody),
-          signal: AbortSignal.timeout(10000), // 10 second timeout
-        });
-
-        // Check if API is reachable
-        if (response.ok) {
-          const data = await response.json();
-          setTestResult({
-            status: 'success',
-            message: 'API连接成功',
-            details: {
-              config: { baseUrl, hasApiKey: !!apiKey, providerKey },
-              response: data,
+          // Create temporary provider for testing
+          const createRes = await getClient().createProvider({
+            body: {
+              name: `temp_test_${Date.now()}`,
+              enabled: false,
+              apiKey: apiKey || undefined,
+              baseUrl: baseUrl || undefined,
+              providerKey,
+              categories: ['llm'], // Default category for testing
             },
-            timestamp: new Date().toISOString(),
           });
-        } else if (response.status === 401) {
-          throw new Error('API Key无效或已过期');
-        } else if (response.status === 403) {
-          throw new Error('API Key权限不足');
-        } else if (response.status === 404) {
-          throw new Error('API端点不存在，请检查Base URL');
+
+          if (!createRes.data.success) {
+            throw new Error('创建临时供应商失败');
+          }
+
+          const tempProvider = createRes.data.data;
+
+          try {
+            // Test the connection using React Query hook
+            const testResult = await testProviderMutation.mutateAsync({
+              body: {
+                providerId: tempProvider.providerId,
+              },
+            });
+
+            if (testResult.success) {
+              setTestResult({
+                status: 'success',
+                message: 'API连接成功',
+                details: testResult.data,
+                timestamp: new Date().toISOString(),
+              });
+            } else {
+              throw new Error(testResult.message || '连接测试失败');
+            }
+          } finally {
+            // Clean up: delete the temporary provider
+            await getClient().deleteProvider({
+              body: { providerId: tempProvider.providerId },
+            });
+          }
         } else {
-          throw new Error(`API请求失败 (${response.status}): ${response.statusText}`);
+          // For edit mode, test existing provider
+          if (!provider) {
+            throw new Error('供应商信息不存在');
+          }
+
+          const testResult = await testProviderMutation.mutateAsync({
+            body: {
+              providerId: provider.providerId,
+            },
+          });
+
+          if (testResult.success) {
+            setTestResult({
+              status: 'success',
+              message: 'API连接成功',
+              details: testResult.data,
+              timestamp: new Date().toISOString(),
+            });
+          } else {
+            throw new Error(testResult.message || '连接测试失败');
+          }
         }
       } catch (error: any) {
-        let errorMessage = 'API连接失败';
-
-        if (error.name === 'AbortError' || error.message.includes('timeout')) {
-          errorMessage = '请求超时，请检查Base URL是否正确';
-        } else if (error.message.includes('CORS') || error.message.includes('blocked')) {
-          errorMessage = '跨域请求被阻止，可能需要在服务器端配置CORS';
-        } else if (
-          error.message.includes('Failed to fetch') ||
-          error.message.includes('NetworkError')
-        ) {
-          errorMessage = '网络错误，请检查Base URL和网络连接';
-        } else {
-          errorMessage = error.message || 'API连接失败';
-        }
+        console.error('Connection test failed:', error);
 
         setTestResult({
           status: 'failed',
-          message: errorMessage,
+          message: error.message || 'API连接失败',
           details: { error: error.message },
           timestamp: new Date().toISOString(),
         });
       } finally {
         setIsTestingConnection(false);
       }
-    }, []);
+    }, [form, isEditMode, provider, testProviderMutation]);
 
     const renderConnectionTestResult = () => {
       if (!testResult) return null;
@@ -396,6 +333,63 @@ export const ProviderModal = React.memo(
         }
       };
 
+      // Render detailed test results in a user-friendly format
+      const renderDetailedResults = () => {
+        if (!details || typeof details !== 'object') return null;
+
+        const testItems = [];
+
+        // Map of test keys to display names
+        const testDisplayNames: Record<string, string> = {
+          apiKey: 'API Key验证',
+          embeddings: '嵌入模型API',
+          reranker: '重排序API',
+          chat: '对话API',
+          models: '模型列表API',
+          health: '健康检查',
+          search: '搜索功能',
+          tags: 'Tags端点',
+        };
+
+        for (const [key, value] of Object.entries(details)) {
+          if (value && typeof value === 'object' && 'status' in value) {
+            const testItem = value as { status: string; data?: any; error?: any };
+            const displayName = testDisplayNames[key] || key;
+
+            testItems.push(
+              <div key={key} className="flex items-center justify-between py-1">
+                <span className="text-sm">{displayName}</span>
+                <div className="flex items-center gap-1">
+                  {testItem.status === 'success' ? (
+                    <>
+                      <CheckCircleOutlined className="text-green-500 text-xs" />
+                      <span className="text-xs text-green-600">成功</span>
+                      {testItem.data?.statusCode && (
+                        <span className="text-xs text-gray-500 ml-1">
+                          ({testItem.data.statusCode})
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <CloseCircleOutlined className="text-red-500 text-xs" />
+                      <span className="text-xs text-red-600">失败</span>
+                    </>
+                  )}
+                </div>
+              </div>,
+            );
+          }
+        }
+
+        return testItems.length > 0 ? (
+          <div className="mt-3 p-3 bg-gray-50 rounded-md">
+            <div className="text-sm font-medium text-gray-700 mb-2">测试详情</div>
+            <div className="space-y-1">{testItems}</div>
+          </div>
+        ) : null;
+      };
+
       return (
         <Alert
           type={getAlertType()}
@@ -411,9 +405,13 @@ export const ProviderModal = React.memo(
             </div>
           }
           description={
-            details && (
-              <div className="mt-2">
-                <details className="text-xs">
+            <div className="mt-2">
+              {/* Render user-friendly detailed results */}
+              {renderDetailedResults()}
+
+              {/* Keep the raw JSON details as a collapsible section */}
+              {details && (
+                <details className="text-xs mt-3">
                   <summary className="cursor-pointer hover:text-blue-600">
                     {t('settings.modelProviders.viewDetails')}
                   </summary>
@@ -421,8 +419,8 @@ export const ProviderModal = React.memo(
                     {JSON.stringify(details, null, 2)}
                   </pre>
                 </details>
-              </div>
-            )
+              )}
+            </div>
           }
           className="mb-4"
         />
@@ -498,12 +496,18 @@ export const ProviderModal = React.memo(
             key="test"
           >
             <Button
-              icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
+              icon={
+                isTestingConnection || testProviderMutation.isPending ? (
+                  <SyncOutlined spin />
+                ) : undefined
+              }
               onClick={testConnection}
-              disabled={!selectedProviderInfo || isTestingConnection}
-              loading={isTestingConnection}
+              disabled={
+                !selectedProviderInfo || isTestingConnection || testProviderMutation.isPending
+              }
+              loading={isTestingConnection || testProviderMutation.isPending}
             >
-              {isTestingConnection
+              {isTestingConnection || testProviderMutation.isPending
                 ? t('settings.modelProviders.testing')
                 : t('settings.modelProviders.testConnection')}
             </Button>
@@ -568,8 +572,7 @@ export const ProviderModal = React.memo(
               ]}
             >
               <Input.Password
-                placeholder={t('settings.modelProviders.apiKeyPlaceholder')}
-                onChange={handleApiKeyChange}
+                placeholder={t('settings.modelProviders.')}
                 visibilityToggle={!isDefaultApiKey}
                 className={isDefaultApiKey ? 'default-api-key' : ''}
                 autoComplete="new-password"

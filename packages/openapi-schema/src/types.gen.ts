@@ -4418,6 +4418,67 @@ export type DeleteProviderRequest = {
   providerId: string;
 };
 
+export type TestProviderConnectionRequest = {
+  /**
+   * Provider ID to test
+   */
+  providerId: string;
+  /**
+   * Provider category to test (optional)
+   */
+  category?: ProviderCategory;
+};
+
+export type ProviderTestResult = {
+  /**
+   * Provider ID
+   */
+  providerId?: string;
+  /**
+   * Provider key
+   */
+  providerKey?: string;
+  /**
+   * Provider name
+   */
+  name?: string;
+  /**
+   * Provider base URL
+   */
+  baseUrl?: string;
+  /**
+   * Provider categories
+   */
+  categories?: Array<string>;
+  /**
+   * Test result status
+   */
+  status?: 'success' | 'failed' | 'unknown';
+  /**
+   * Test result message
+   */
+  message?: string;
+  /**
+   * Detailed test results
+   */
+  details?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Test timestamp
+   */
+  timestamp?: string;
+};
+
+/**
+ * Test result status
+ */
+export type status2 = 'success' | 'failed' | 'unknown';
+
+export type TestProviderConnectionResponse = BaseResponse & {
+  data?: ProviderTestResult;
+};
+
 export type ListProviderItemOptionsResponse = BaseResponse & {
   data?: Array<ProviderItemOption>;
 };
@@ -5764,6 +5825,14 @@ export type DeleteProviderData = {
 export type DeleteProviderResponse = BaseResponse;
 
 export type DeleteProviderError = unknown;
+
+export type TestProviderConnectionData = {
+  body: TestProviderConnectionRequest;
+};
+
+export type TestProviderConnectionResponse2 = TestProviderConnectionResponse;
+
+export type TestProviderConnectionError = unknown;
 
 export type ListProviderItemsData = {
   query?: {

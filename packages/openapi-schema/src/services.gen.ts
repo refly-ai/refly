@@ -322,6 +322,9 @@ import type {
   DeleteProviderData,
   DeleteProviderError,
   DeleteProviderResponse,
+  TestProviderConnectionData,
+  TestProviderConnectionError,
+  TestProviderConnectionResponse2,
   ListProviderItemsData,
   ListProviderItemsError,
   ListProviderItemsResponse2,
@@ -2075,6 +2078,23 @@ export const deleteProvider = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/provider/delete',
+  });
+};
+
+/**
+ * Test provider connection
+ * Test provider API connection and availability
+ */
+export const testProviderConnection = <ThrowOnError extends boolean = false>(
+  options: Options<TestProviderConnectionData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    TestProviderConnectionResponse2,
+    TestProviderConnectionError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/provider/test-connection',
   });
 };
 
