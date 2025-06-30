@@ -1890,7 +1890,7 @@ export type ProviderConfig = {
 /**
  * Model usage scene
  */
-export type ModelScene = 'chat' | 'queryAnalysis' | 'titleGeneration';
+export type ModelScene = 'chat' | 'agent' | 'queryAnalysis' | 'titleGeneration';
 
 /**
  * Default model config
@@ -1900,6 +1900,10 @@ export type DefaultModelConfig = {
    * Default chat model to use
    */
   chat?: ProviderItem;
+  /**
+   * Default agent model to use
+   */
+  agent?: ProviderItem;
   /**
    * Query analysis and context processing model
    */
@@ -2718,7 +2722,6 @@ export type SkillEvent = {
   node?: CanvasNode;
   /**
    * Error data. Only present when `event` is `error`.
-   * @deprecated
    */
   error?: BaseResponse;
   /**
@@ -3625,7 +3628,7 @@ export type CreatePilotSessionRequest = {
   /**
    * Pilot session provider item ID
    */
-  providerItemId: string;
+  providerItemId?: string;
 };
 
 export type UpdatePilotSessionRequest = {
@@ -4413,6 +4416,67 @@ export type DeleteProviderRequest = {
    * Provider ID
    */
   providerId: string;
+};
+
+export type TestProviderConnectionRequest = {
+  /**
+   * Provider ID to test
+   */
+  providerId: string;
+  /**
+   * Provider category to test (optional)
+   */
+  category?: ProviderCategory;
+};
+
+export type ProviderTestResult = {
+  /**
+   * Provider ID
+   */
+  providerId?: string;
+  /**
+   * Provider key
+   */
+  providerKey?: string;
+  /**
+   * Provider name
+   */
+  name?: string;
+  /**
+   * Provider base URL
+   */
+  baseUrl?: string;
+  /**
+   * Provider categories
+   */
+  categories?: Array<string>;
+  /**
+   * Test result status
+   */
+  status?: 'success' | 'failed' | 'unknown';
+  /**
+   * Test result message
+   */
+  message?: string;
+  /**
+   * Detailed test results
+   */
+  details?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Test timestamp
+   */
+  timestamp?: string;
+};
+
+/**
+ * Test result status
+ */
+export type status2 = 'success' | 'failed' | 'unknown';
+
+export type TestProviderConnectionResponse = BaseResponse & {
+  data?: ProviderTestResult;
 };
 
 export type ListProviderItemOptionsResponse = BaseResponse & {
@@ -5761,6 +5825,14 @@ export type DeleteProviderData = {
 export type DeleteProviderResponse = BaseResponse;
 
 export type DeleteProviderError = unknown;
+
+export type TestProviderConnectionData = {
+  body: TestProviderConnectionRequest;
+};
+
+export type TestProviderConnectionResponse2 = TestProviderConnectionResponse;
+
+export type TestProviderConnectionError = unknown;
 
 export type ListProviderItemsData = {
   query?: {

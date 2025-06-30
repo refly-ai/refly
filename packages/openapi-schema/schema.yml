@@ -2528,6 +2528,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /provider/test-connection:
+    post:
+      tags:
+        - provider
+      summary: Test provider connection
+      description: Test provider API connection and availability
+      operationId: testProviderConnection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestProviderConnectionRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestProviderConnectionResponse'
   /provider/item/list:
     get:
       tags:
@@ -7244,6 +7264,62 @@ components:
         providerId:
           type: string
           description: Provider ID
+    TestProviderConnectionRequest:
+      type: object
+      required:
+        - providerId
+      properties:
+        providerId:
+          type: string
+          description: Provider ID to test
+        category:
+          description: Provider category to test (optional)
+          $ref: '#/components/schemas/ProviderCategory'
+    ProviderTestResult:
+      type: object
+      properties:
+        providerId:
+          type: string
+          description: Provider ID
+        providerKey:
+          type: string
+          description: Provider key
+        name:
+          type: string
+          description: Provider name
+        baseUrl:
+          type: string
+          description: Provider base URL
+        categories:
+          type: array
+          description: Provider categories
+          items:
+            type: string
+        status:
+          type: string
+          description: Test result status
+          enum:
+            - success
+            - failed
+            - unknown
+        message:
+          type: string
+          description: Test result message
+        details:
+          type: object
+          description: Detailed test results
+          additionalProperties: true
+        timestamp:
+          type: string
+          description: Test timestamp
+          format: date-time
+    TestProviderConnectionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ProviderTestResult'
     ListProviderItemOptionsResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
