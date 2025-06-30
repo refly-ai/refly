@@ -12,7 +12,7 @@ export interface ProviderCheckConfig {
 export interface CheckResult {
   status: 'success' | 'failed' | 'unknown';
   data?: any;
-  error?: string;
+  error?: string | { type?: string; message?: string; response?: any };
 }
 
 export interface ProviderCheckResult {
@@ -78,9 +78,12 @@ export class ProviderChecker {
       checkResult.status = 'failed';
       checkResult.message = error?.message || 'Connection check failed';
       checkResult.details.error = {
-        type: error?.constructor?.name || 'Error',
-        message: error?.message,
-        ...(error?.response ? { response: error.response } : {}),
+        status: 'failed',
+        error: {
+          type: error?.constructor?.name || 'Error',
+          message: error?.message,
+          ...(error?.response ? { response: error.response } : {}),
+        },
       };
     }
 
