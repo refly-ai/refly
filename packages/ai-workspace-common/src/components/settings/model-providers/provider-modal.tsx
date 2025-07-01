@@ -54,10 +54,7 @@ export const ProviderModal = React.memo(
 
     const isEditMode = !!provider;
 
-    // Use React Query hook for provider connection testing
     const testProviderMutation = useTestProviderConnection();
-
-    // Debug effect to monitor testResult changes
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
