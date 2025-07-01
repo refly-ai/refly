@@ -362,8 +362,6 @@ export const ProviderModal = React.memo(
         setIsSubmitting(true);
 
         if (isEditMode && provider) {
-          // 🔒 CRITICAL: Prevent API key overwrite in edit mode
-          // Only include apiKey in update if user actually modified it
           const updateBody: any = {
             ...provider,
             name: values.name,
@@ -373,8 +371,6 @@ export const ProviderModal = React.memo(
             categories: values.categories,
           };
 
-          // Only include apiKey if user has actually modified it
-          // Do NOT send apiKey if user hasn't modified it (preserve encrypted version in DB)
           const userModifiedApiKey = !isDefaultApiKey;
 
           // 关键保存日志：显示API Key处理策略
