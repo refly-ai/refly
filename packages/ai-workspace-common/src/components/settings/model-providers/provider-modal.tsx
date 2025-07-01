@@ -58,15 +58,6 @@ export const ProviderModal = React.memo(
     const testProviderMutation = useTestProviderConnection();
 
     // Debug effect to monitor testResult changes
-    useEffect(() => {
-      if (testResult) {
-        console.log('🎨 [DEBUG] testResult changed:', testResult);
-        console.log(
-          '🎨 [DEBUG] Will render Alert with type:',
-          testResult.status === 'success' ? 'success' : 'error',
-        );
-      }
-    }, [testResult]);
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
@@ -169,13 +160,6 @@ export const ProviderModal = React.memo(
 
         if (provider) {
           const apiKeyValue = provider.apiKey;
-
-          console.log('[MODAL-INIT] Edit mode initialization:', {
-            providerId: provider.providerId,
-            providerApiKey: apiKeyValue,
-            willSetIsDefaultApiKey: !!apiKeyValue,
-          });
-
           setIsDefaultApiKey(!!apiKeyValue);
           setSelectedProviderKey(provider.providerKey);
 
@@ -188,7 +172,6 @@ export const ProviderModal = React.memo(
             categories: provider.categories || [],
           });
         } else {
-          console.log('[MODAL-INIT] Create mode initialization');
           setIsDefaultApiKey(false);
           const initialProviderKey = defaultProviderKey || providerOptions[0]?.value;
           setSelectedProviderKey(initialProviderKey);
@@ -272,76 +255,46 @@ export const ProviderModal = React.memo(
         // 只有在编辑现有provider且用户没有输入新API key时，才直接使用现有provider
         const shouldUseExistingProvider = isEditingExistingProvider && !userInputtedNewApiKey;
 
-        console.log('[TEST-CONNECTION] Decision logic:', {
-          isEditMode,
-          hasProvider: !!provider,
-          apiKeyInput: apiKey,
-          apiKeyLength: apiKey?.length,
-          isDefaultApiKey,
-          userInputtedNewApiKey,
-          shouldUseExistingProvider,
-        });
-
-        console.log('[TEST-CONNECTION] Step-by-step calculation:', {
-          step1_isEditingExistingProvider: isEditingExistingProvider,
-          step2_apiKeyExists: !!apiKey,
-          step3_apiKeyNotEmpty: apiKey?.trim() !== '',
-          step4_notDefaultApiKey: !isDefaultApiKey,
-          step5_userInputtedNewApiKey: userInputtedNewApiKey,
-          step6_finalDecision: shouldUseExistingProvider,
-        });
-
-        console.log('[TEST-CONNECTION] Detailed API key analysis:', {
-          apiKeyValue: apiKey,
-          apiKeyIsDefault: apiKey === 'default',
-          isDefaultApiKeyState: isDefaultApiKey,
-          expectedPath: shouldUseExistingProvider
-            ? 'Existing Provider (情况1)'
-            : 'Temporary Provider (情况2/3)',
-        });
+        // 关键判断日志：显示测试连接的策略决策
+        console.log(
+          '[TEST-CONNECTION] 测试策略:',
+          shouldUseExistingProvider
+            ? '情况1: 编辑模式且用户未修改API key -> 使用现有Provider'
+            : '情况2/3: 新建模式或用户修改了API key -> 创建临时Provider',
+          {
+            isEditMode,
+            isDefaultApiKey,
+            userInputtedNewApiKey,
+            shouldUseExistingProvider,
+          },
+        );
 
         if (shouldUseExistingProvider) {
           // 情况1: 编辑模式且用户未修改API key，直接测试现有provider
           // 后端会从数据库获取已保存的加密API key
-          console.log('[TEST-CONNECTION] Using existing provider for testing');
+          console.log('🔄 [情况1] 使用现有Provider测试连接');
           const testResult = await testProviderMutation.mutateAsync({
             body: {
               providerId: provider.providerId,
             },
           });
 
-          // Check the actual business logic result from ProviderTestResult
-          // Fix: testResult.data is BaseResponse, testResult.data.data is ProviderTestResult
           const providerResult = testResult.data.data as ProviderTestResult;
 
-          // Debug logging
-          console.log('🔍 [DEBUG] Provider test result:', {
-            fullResponse: testResult,
-            baseResponseData: testResult.data,
-            providerTestResult: testResult.data.data,
-            dataStatus: providerResult?.status,
-            dataMessage: providerResult?.message,
-            statusType: typeof providerResult?.status,
-            statusComparison: providerResult?.status === 'success',
-          });
-
           if (providerResult?.status === 'success') {
-            console.log('✅ [DEBUG] Setting success result');
             const successResult = {
               status: 'success',
               message: providerResult.message || 'API连接测试成功',
               timestamp: new Date().toISOString(),
             };
-            console.log('✅ [DEBUG] Final testResult object:', successResult);
             setTestResult(successResult);
           } else {
-            console.log('❌ [DEBUG] Setting failure result, status was:', providerResult?.status);
             throw new Error(providerResult?.message || '连接测试失败');
           }
         } else {
           // 情况2: 新建模式，使用前端输入的所有配置
           // 情况3: 编辑模式且用户修改了API key，使用新的配置
-          console.log('[TEST-CONNECTION] Creating temporary provider for testing with new config');
+          console.log('🔧 [情况2/3] 创建临时Provider测试连接');
           const createRes = await getClient().createProvider({
             body: {
               name: `temp_test_${Date.now()}`,
@@ -365,35 +318,16 @@ export const ProviderModal = React.memo(
               },
             });
 
-            // Check the actual business logic result from ProviderTestResult
-            // Fix: testResult.data is BaseResponse, testResult.data.data is ProviderTestResult
             const providerResult = testResult.data.data as ProviderTestResult;
 
-            // Debug logging
-            console.log('🔍 [DEBUG] Provider test result (temp provider):', {
-              fullResponse: testResult,
-              baseResponseData: testResult.data,
-              providerTestResult: testResult.data.data,
-              dataStatus: providerResult?.status,
-              dataMessage: providerResult?.message,
-              statusType: typeof providerResult?.status,
-              statusComparison: providerResult?.status === 'success',
-            });
-
             if (providerResult?.status === 'success') {
-              console.log('✅ [DEBUG] Setting success result (temp provider)');
               const successResult = {
                 status: 'success',
                 message: providerResult.message || 'API连接测试成功',
                 timestamp: new Date().toISOString(),
               };
-              console.log('✅ [DEBUG] Final testResult object (temp provider):', successResult);
               setTestResult(successResult);
             } else {
-              console.log(
-                '❌ [DEBUG] Setting failure result (temp provider), status was:',
-                providerResult?.status,
-              );
               throw new Error(providerResult?.message || '连接测试失败');
             }
           } finally {
@@ -404,16 +338,14 @@ export const ProviderModal = React.memo(
           }
         }
       } catch (error: unknown) {
-        console.error('🚨 [DEBUG] Connection test failed:', error);
+        console.error('Connection test failed:', error);
 
         // Simple error handling
         let errorMessage = 'API连接失败';
         if (error instanceof Error) {
           errorMessage = error.message;
-          console.log('🚨 [DEBUG] Error message:', errorMessage);
         }
 
-        console.log('🚨 [DEBUG] Setting failed testResult due to exception');
         setTestResult({
           status: 'failed',
           message: errorMessage,
@@ -430,16 +362,41 @@ export const ProviderModal = React.memo(
         setIsSubmitting(true);
 
         if (isEditMode && provider) {
-          const res = await getClient().updateProvider({
-            body: {
-              ...provider,
-              name: values.name,
-              enabled: values.enabled,
-              apiKey: values.apiKey,
-              baseUrl: values.baseUrl || undefined,
-              providerKey: values.providerKey,
-              categories: values.categories,
+          // 🔒 CRITICAL: Prevent API key overwrite in edit mode
+          // Only include apiKey in update if user actually modified it
+          const updateBody: any = {
+            ...provider,
+            name: values.name,
+            enabled: values.enabled,
+            baseUrl: values.baseUrl || undefined,
+            providerKey: values.providerKey,
+            categories: values.categories,
+          };
+
+          // Only include apiKey if user has actually modified it
+          // Do NOT send apiKey if user hasn't modified it (preserve encrypted version in DB)
+          const userModifiedApiKey = !isDefaultApiKey;
+
+          // 关键保存日志：显示API Key处理策略
+          console.log(
+            '💾 [SUBMIT] API Key处理:',
+            userModifiedApiKey
+              ? '用户修改了API Key -> 更新到数据库'
+              : '用户未修改API Key -> 保持数据库原值',
+            {
+              isDefaultApiKey,
+              userModifiedApiKey,
             },
+          );
+
+          if (userModifiedApiKey) {
+            // User has modified the API key (either entered new value or cleared it)
+            updateBody.apiKey = values.apiKey || ''; // Include empty string if user cleared it
+          }
+          // If user hasn't modified API key, don't include it - preserve encrypted version in DB
+
+          const res = await getClient().updateProvider({
+            body: updateBody,
           });
           if (res.data.success) {
             message.success(t('common.saveSuccess'));
