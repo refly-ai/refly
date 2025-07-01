@@ -102,13 +102,27 @@ export class ProviderChecker {
       chatCompletion: { status: 'unknown', data: null, error: null },
     };
 
+    // Debug logging for API key
+    console.log(
+      `[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}, baseUrl: ${config.baseUrl}`,
+    );
+
+    // Provider-specific authentication headers
+    const getAuthHeaders = (apiKey: string) => {
+      if (config.providerKey === 'anthropic') {
+        return { 'x-api-key': apiKey };
+      }
+      // Default to OpenAI-style Bearer token for other providers
+      return { Authorization: `Bearer ${apiKey}` };
+    };
+
     // Check 1: Check /models endpoint
     try {
       const modelsResponse = await fetch(`${config.baseUrl}/models`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+          ...(config.apiKey ? getAuthHeaders(config.apiKey) : {}),
         },
         signal: AbortSignal.timeout(10000), // 10 second timeout
       });
@@ -133,26 +147,80 @@ export class ProviderChecker {
     // Check 2: Check chat completion with minimal request (only if LLM category)
     if (!category || category === 'llm') {
       try {
+        // Use provider-specific test models or first available model
+        const getTestModel = () => {
+          switch (config.providerKey) {
+            case 'anthropic':
+              return 'claude-3-haiku-20240307'; // A reliable Anthropic model
+            case 'openai':
+              return 'gpt-3.5-turbo'; // A reliable OpenAI model
+            default: {
+              // For generic providers, try to use the first available model from the models endpoint
+              const availableModels = checkResults.modelsEndpoint?.data?.models;
+              if (availableModels && availableModels.length > 0) {
+                console.log(`[ProviderChecker] Using first available model: ${availableModels[0]}`);
+                return availableModels[0];
+              }
+              // Fallback to a common model name
+              return 'gpt-3.5-turbo';
+            }
+          }
+        };
+
+        const testModel = getTestModel();
+        console.log(`[ProviderChecker] Testing chat completion with model: ${testModel}`);
+
+        const requestBody = {
+          model: testModel,
+          messages: [{ role: 'user', content: 'Hi' }],
+          max_tokens: 1,
+        };
+
+        console.log(
+          '[ProviderChecker] Chat completion request body:',
+          JSON.stringify(requestBody, null, 2),
+        );
+        console.log(
+          '[ProviderChecker] Request headers:',
+          JSON.stringify(
+            {
+              'Content-Type': 'application/json',
+              ...(config.apiKey ? getAuthHeaders(config.apiKey) : {}),
+            },
+            null,
+            2,
+          ),
+        );
+
         const chatResponse = await fetch(`${config.baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+            ...(config.apiKey ? getAuthHeaders(config.apiKey) : {}),
           },
-          body: JSON.stringify({
-            model: 'test-model', // This will likely fail, but we're checking API structure
-            messages: [{ role: 'user', content: 'test' }],
-            max_tokens: 1,
-          }),
+          body: JSON.stringify(requestBody),
           signal: AbortSignal.timeout(15000), // 15 second timeout
         });
 
-        // Even 400/422 responses indicate the API is working
-        if (chatResponse.status < 500) {
+        console.log(`[ProviderChecker] Chat completion response status: ${chatResponse.status}`);
+
+        // Try to log the response body for debugging
+        const responseText = await chatResponse.text();
+        console.log(`[ProviderChecker] Chat completion response body: ${responseText}`);
+
+        // Even 400/422 responses indicate the API is working and authenticated
+        // We mainly want to avoid 401/403 (authentication errors)
+        if (
+          chatResponse.status < 500 &&
+          chatResponse.status !== 401 &&
+          chatResponse.status !== 403
+        ) {
           checkResults.chatCompletion.status = 'success';
           checkResults.chatCompletion.data = {
             statusCode: chatResponse.status,
             contentType: chatResponse.headers.get('content-type'),
+            responseBody:
+              responseText.length > 200 ? `${responseText.substring(0, 200)}...` : responseText,
           };
         } else {
           checkResults.chatCompletion.status = 'failed';

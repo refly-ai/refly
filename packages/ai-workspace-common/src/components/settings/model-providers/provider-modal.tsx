@@ -154,6 +154,13 @@ export const ProviderModal = React.memo(
 
         if (provider) {
           const apiKeyValue = provider.apiKey;
+
+          console.log('[MODAL-INIT] Edit mode initialization:', {
+            providerId: provider.providerId,
+            providerApiKey: apiKeyValue,
+            willSetIsDefaultApiKey: !!apiKeyValue,
+          });
+
           setIsDefaultApiKey(!!apiKeyValue);
           setSelectedProviderKey(provider.providerKey);
 
@@ -166,6 +173,7 @@ export const ProviderModal = React.memo(
             categories: provider.categories || [],
           });
         } else {
+          console.log('[MODAL-INIT] Create mode initialization');
           setIsDefaultApiKey(false);
           const initialProviderKey = defaultProviderKey || providerOptions[0]?.value;
           setSelectedProviderKey(initialProviderKey);
@@ -240,8 +248,47 @@ export const ProviderModal = React.memo(
           }
         }
 
-        // For edit mode, test existing provider directly
-        if (isEditMode && provider) {
+        // 更精确地判断用户是否修改了API key
+        // 情况1: 编辑模式下，用户未输入新的API key (表单为空或默认值)
+        // 情况2&3: 新建模式 或 编辑模式下用户输入了新的API key
+        const isEditingExistingProvider = isEditMode && provider;
+        const userInputtedNewApiKey = apiKey && apiKey.trim() !== '' && !isDefaultApiKey;
+
+        // 只有在编辑现有provider且用户没有输入新API key时，才直接使用现有provider
+        const shouldUseExistingProvider = isEditingExistingProvider && !userInputtedNewApiKey;
+
+        console.log('[TEST-CONNECTION] Decision logic:', {
+          isEditMode,
+          hasProvider: !!provider,
+          apiKeyInput: apiKey,
+          apiKeyLength: apiKey?.length,
+          isDefaultApiKey,
+          userInputtedNewApiKey,
+          shouldUseExistingProvider,
+        });
+
+        console.log('[TEST-CONNECTION] Step-by-step calculation:', {
+          step1_isEditingExistingProvider: isEditingExistingProvider,
+          step2_apiKeyExists: !!apiKey,
+          step3_apiKeyNotEmpty: apiKey?.trim() !== '',
+          step4_notDefaultApiKey: !isDefaultApiKey,
+          step5_userInputtedNewApiKey: userInputtedNewApiKey,
+          step6_finalDecision: shouldUseExistingProvider,
+        });
+
+        console.log('[TEST-CONNECTION] Detailed API key analysis:', {
+          apiKeyValue: apiKey,
+          apiKeyIsDefault: apiKey === 'default',
+          isDefaultApiKeyState: isDefaultApiKey,
+          expectedPath: shouldUseExistingProvider
+            ? 'Existing Provider (情况1)'
+            : 'Temporary Provider (情况2/3)',
+        });
+
+        if (shouldUseExistingProvider) {
+          // 情况1: 编辑模式且用户未修改API key，直接测试现有provider
+          // 后端会从数据库获取已保存的加密API key
+          console.log('[TEST-CONNECTION] Using existing provider for testing');
           const testResult = await testProviderMutation.mutateAsync({
             body: {
               providerId: provider.providerId,
@@ -258,7 +305,9 @@ export const ProviderModal = React.memo(
             throw new Error('连接测试失败');
           }
         } else {
-          // For new providers, create temporary provider for testing
+          // 情况2: 新建模式，使用前端输入的所有配置
+          // 情况3: 编辑模式且用户修改了API key，使用新的配置
+          console.log('[TEST-CONNECTION] Creating temporary provider for testing with new config');
           const createRes = await getClient().createProvider({
             body: {
               name: `temp_test_${Date.now()}`,
