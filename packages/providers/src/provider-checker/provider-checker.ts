@@ -67,13 +67,21 @@ export class ProviderChecker {
         case 'searxng':
           checkResult.details = await this.checkSearXngProvider(config);
           break;
+        case 'serper':
+          checkResult.details = await this.checkSerperProvider(config);
+          break;
         default:
           // Generic OpenAI-compatible API check
           checkResult.details = await this.checkOpenAICompatibleProvider(config, category);
       }
 
-      checkResult.status = 'success';
-      checkResult.message = 'Connection check successful';
+      // Evaluate overall status based on individual check results
+      const { status, message } = this.evaluateOverallStatus(
+        checkResult.details,
+        config.providerKey,
+      );
+      checkResult.status = status;
+      checkResult.message = message;
     } catch (error: any) {
       checkResult.status = 'failed';
       checkResult.message = error?.message || 'Connection check failed';
@@ -88,6 +96,95 @@ export class ProviderChecker {
     }
 
     return checkResult;
+  }
+
+  /**
+   * Evaluate overall connection status based on individual check results
+   */
+  private evaluateOverallStatus(
+    details: Record<string, CheckResult>,
+    providerKey: string,
+  ): { status: 'success' | 'failed' | 'unknown'; message: string } {
+    // Define critical checks for each provider type
+    const criticalChecks: Record<string, string[]> = {
+      ollama: ['connectionTest'],
+      openai: ['modelsEndpoint'],
+      anthropic: ['modelsEndpoint'],
+      jina: ['apiKey'],
+      searxng: ['healthCheck'],
+      serper: ['apiKeyValidation'],
+      default: ['modelsEndpoint'], // For generic OpenAI-compatible providers
+    };
+
+    const checksToEvaluate = criticalChecks[providerKey] || criticalChecks.default;
+
+    // Check if any critical checks failed
+    const failedChecks: string[] = [];
+    const successfulChecks: string[] = [];
+
+    for (const checkName of checksToEvaluate) {
+      const checkResult = details[checkName];
+      if (checkResult) {
+        if (checkResult.status === 'failed') {
+          failedChecks.push(checkName);
+        } else if (checkResult.status === 'success') {
+          successfulChecks.push(checkName);
+        }
+      }
+    }
+
+    // Special case for Ollama: provide specific error messages
+    if (providerKey === 'ollama') {
+      const connectionResult = details.connectionTest;
+
+      if (connectionResult?.status === 'success') {
+        return {
+          status: 'success',
+          message: 'Connection check successful',
+        };
+      } else if (connectionResult?.status === 'failed') {
+        const endpoint = connectionResult.data?.endpoint || 'unknown endpoint';
+        return {
+          status: 'failed',
+          message: `Cannot connect to Ollama service at ${endpoint} - ${connectionResult.error}`,
+        };
+      } else {
+        return {
+          status: 'failed',
+          message: 'Cannot connect to Ollama service - connection test failed',
+        };
+      }
+    }
+
+    // For other providers, if any critical check failed, overall status is failed
+    if (failedChecks.length > 0) {
+      return {
+        status: 'failed',
+        message: `Connection check failed - critical checks failed: ${failedChecks.join(', ')}`,
+      };
+    }
+
+    // If all critical checks succeeded
+    if (successfulChecks.length === checksToEvaluate.length) {
+      return {
+        status: 'success',
+        message: 'Connection check successful',
+      };
+    }
+
+    // If we have mixed results or unknown status
+    const hasAnySuccess = Object.values(details).some((check) => check.status === 'success');
+    if (hasAnySuccess) {
+      return {
+        status: 'success',
+        message: 'Connection check partially successful',
+      };
+    }
+
+    return {
+      status: 'unknown',
+      message: 'Connection check status unclear',
+    };
   }
 
   /**
@@ -240,42 +337,45 @@ export class ProviderChecker {
    */
   private async checkOllamaProvider(
     config: ProviderCheckConfig,
-    category?: ProviderCategory,
+    _category?: ProviderCategory,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      apiEndpoint: { status: 'unknown', data: null, error: null },
-      tagsEndpoint: { status: 'unknown', data: null, error: null },
+      connectionTest: { status: 'unknown', data: null, error: null },
     };
 
-    // Check 1: Check API availability
     try {
-      const apiResponse = await fetch(`${config.baseUrl}/api/tags`, {
+      // Simple GET request to test basic connectivity
+      // For OpenAI-compatible URLs (ending with /v1), check health
+      // For native Ollama URLs, check tags endpoint
+      const testUrl = config.baseUrl?.endsWith('/v1')
+        ? `${config.baseUrl}/models` // OpenAI-compatible endpoint
+        : `${config.baseUrl}/api/tags`; // Native Ollama endpoint
+
+      console.log(`[ProviderChecker] Testing Ollama connection: ${testUrl}`);
+
+      const response = await fetch(testUrl, {
         method: 'GET',
-        signal: AbortSignal.timeout(10000),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+        },
+        signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
-      if (apiResponse.ok) {
-        const tagsData = await apiResponse.json();
-        checkResults.apiEndpoint.status = 'success';
-        checkResults.tagsEndpoint.status = 'success';
-        checkResults.tagsEndpoint.data = {
-          statusCode: apiResponse.status,
-          modelCount: tagsData?.models?.length || 0,
-          models: tagsData?.models?.slice(0, 5)?.map((m: any) => m.name) || [],
+      if (response.ok) {
+        checkResults.connectionTest.status = 'success';
+        checkResults.connectionTest.data = {
+          statusCode: response.status,
+          endpoint: testUrl,
+          contentType: response.headers.get('content-type'),
         };
       } else {
-        checkResults.apiEndpoint.status = 'failed';
-        checkResults.apiEndpoint.error = `HTTP ${apiResponse.status}: ${apiResponse.statusText}`;
+        checkResults.connectionTest.status = 'failed';
+        checkResults.connectionTest.error = `HTTP ${response.status}: ${response.statusText}`;
       }
     } catch (error: any) {
-      checkResults.apiEndpoint.status = 'failed';
-      checkResults.apiEndpoint.error = error.message;
-    }
-
-    // Check OpenAI-compatible endpoint if available
-    if (config.baseUrl?.includes('/v1')) {
-      const llmResults = await this.checkLLMProvider(config, category);
-      Object.assign(checkResults, llmResults);
+      checkResults.connectionTest.status = 'failed';
+      checkResults.connectionTest.error = error.message;
     }
 
     return checkResults;
@@ -407,6 +507,89 @@ export class ProviderChecker {
     } catch (error: any) {
       checkResults.healthCheck.status = 'failed';
       checkResults.healthCheck.error = error.message;
+    }
+
+    return checkResults;
+  }
+
+  /**
+   * Check Serper provider
+   */
+  private async checkSerperProvider(
+    config: ProviderCheckConfig,
+  ): Promise<Record<string, CheckResult>> {
+    const checkResults: Record<string, CheckResult> = {
+      apiKeyValidation: { status: 'unknown', data: null, error: null },
+      searchFunction: { status: 'unknown', data: null, error: null },
+    };
+
+    // Debug logging
+    console.log(`[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}`);
+
+    if (!config.apiKey) {
+      checkResults.apiKeyValidation.status = 'failed';
+      checkResults.apiKeyValidation.error = 'API key is required for Serper';
+      return checkResults;
+    }
+
+    try {
+      // Test search function with a simple query
+      const searchPayload = {
+        q: 'test query',
+        num: 1, // Limit to 1 result to minimize API usage
+      };
+
+      console.log(
+        '[ProviderChecker] Serper search request:',
+        JSON.stringify(searchPayload, null, 2),
+      );
+
+      const searchResponse = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': config.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(searchPayload),
+        signal: AbortSignal.timeout(15000), // 15 second timeout
+      });
+
+      const responseText = await searchResponse.text();
+      console.log(`[ProviderChecker] Serper response status: ${searchResponse.status}`);
+
+      if (searchResponse.ok) {
+        const responseData = JSON.parse(responseText);
+        checkResults.apiKeyValidation.status = 'success';
+        checkResults.searchFunction.status = 'success';
+        checkResults.searchFunction.data = {
+          statusCode: searchResponse.status,
+          resultsCount: responseData.organic?.length || 0,
+          hasSearchParameters: !!responseData.searchParameters,
+        };
+      } else {
+        // Check for specific error codes
+        if (searchResponse.status === 401 || searchResponse.status === 403) {
+          checkResults.apiKeyValidation.status = 'failed';
+          checkResults.apiKeyValidation.error = 'Invalid API key or unauthorized access';
+        } else if (searchResponse.status === 429) {
+          checkResults.apiKeyValidation.status = 'success'; // API key is valid but rate limited
+          checkResults.searchFunction.status = 'failed';
+          checkResults.searchFunction.error = 'Rate limit exceeded';
+        } else {
+          checkResults.searchFunction.status = 'failed';
+          checkResults.searchFunction.error = `HTTP ${searchResponse.status}: ${responseText}`;
+        }
+      }
+    } catch (error: any) {
+      console.error('[ProviderChecker] Serper test error:', error);
+
+      if (error.name === 'AbortError') {
+        checkResults.searchFunction.status = 'failed';
+        checkResults.searchFunction.error = 'Request timeout - Serper API may be unavailable';
+      } else {
+        checkResults.searchFunction.status = 'failed';
+        checkResults.searchFunction.error = error.message;
+      }
     }
 
     return checkResults;

@@ -14,7 +14,11 @@ import {
 } from 'antd';
 import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import {
+  Provider,
+  ProviderCategory,
+  ProviderTestResult,
+} from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { ProviderInfo, providerInfoList } from '@refly/utils';
 import { useTestProviderConnection } from '@refly-packages/ai-workspace-common/queries';
 
@@ -52,6 +56,17 @@ export const ProviderModal = React.memo(
 
     // Use React Query hook for provider connection testing
     const testProviderMutation = useTestProviderConnection();
+
+    // Debug effect to monitor testResult changes
+    useEffect(() => {
+      if (testResult) {
+        console.log('🎨 [DEBUG] testResult changed:', testResult);
+        console.log(
+          '🎨 [DEBUG] Will render Alert with type:',
+          testResult.status === 'success' ? 'success' : 'error',
+        );
+      }
+    }, [testResult]);
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
@@ -295,14 +310,33 @@ export const ProviderModal = React.memo(
             },
           });
 
-          if (testResult.data?.success) {
-            setTestResult({
+          // Check the actual business logic result from ProviderTestResult
+          // Fix: testResult.data is BaseResponse, testResult.data.data is ProviderTestResult
+          const providerResult = testResult.data.data as ProviderTestResult;
+
+          // Debug logging
+          console.log('🔍 [DEBUG] Provider test result:', {
+            fullResponse: testResult,
+            baseResponseData: testResult.data,
+            providerTestResult: testResult.data.data,
+            dataStatus: providerResult?.status,
+            dataMessage: providerResult?.message,
+            statusType: typeof providerResult?.status,
+            statusComparison: providerResult?.status === 'success',
+          });
+
+          if (providerResult?.status === 'success') {
+            console.log('✅ [DEBUG] Setting success result');
+            const successResult = {
               status: 'success',
-              message: 'API连接测试成功',
+              message: providerResult.message || 'API连接测试成功',
               timestamp: new Date().toISOString(),
-            });
+            };
+            console.log('✅ [DEBUG] Final testResult object:', successResult);
+            setTestResult(successResult);
           } else {
-            throw new Error('连接测试失败');
+            console.log('❌ [DEBUG] Setting failure result, status was:', providerResult?.status);
+            throw new Error(providerResult?.message || '连接测试失败');
           }
         } else {
           // 情况2: 新建模式，使用前端输入的所有配置
@@ -331,14 +365,36 @@ export const ProviderModal = React.memo(
               },
             });
 
-            if (testResult.data?.success) {
-              setTestResult({
+            // Check the actual business logic result from ProviderTestResult
+            // Fix: testResult.data is BaseResponse, testResult.data.data is ProviderTestResult
+            const providerResult = testResult.data.data as ProviderTestResult;
+
+            // Debug logging
+            console.log('🔍 [DEBUG] Provider test result (temp provider):', {
+              fullResponse: testResult,
+              baseResponseData: testResult.data,
+              providerTestResult: testResult.data.data,
+              dataStatus: providerResult?.status,
+              dataMessage: providerResult?.message,
+              statusType: typeof providerResult?.status,
+              statusComparison: providerResult?.status === 'success',
+            });
+
+            if (providerResult?.status === 'success') {
+              console.log('✅ [DEBUG] Setting success result (temp provider)');
+              const successResult = {
                 status: 'success',
-                message: 'API连接测试成功',
+                message: providerResult.message || 'API连接测试成功',
                 timestamp: new Date().toISOString(),
-              });
+              };
+              console.log('✅ [DEBUG] Final testResult object (temp provider):', successResult);
+              setTestResult(successResult);
             } else {
-              throw new Error('连接测试失败');
+              console.log(
+                '❌ [DEBUG] Setting failure result (temp provider), status was:',
+                providerResult?.status,
+              );
+              throw new Error(providerResult?.message || '连接测试失败');
             }
           } finally {
             // Clean up: delete the temporary provider
@@ -348,14 +404,16 @@ export const ProviderModal = React.memo(
           }
         }
       } catch (error: unknown) {
-        console.error('Connection test failed:', error);
+        console.error('🚨 [DEBUG] Connection test failed:', error);
 
         // Simple error handling
         let errorMessage = 'API连接失败';
         if (error instanceof Error) {
           errorMessage = error.message;
+          console.log('🚨 [DEBUG] Error message:', errorMessage);
         }
 
+        console.log('🚨 [DEBUG] Setting failed testResult due to exception');
         setTestResult({
           status: 'failed',
           message: errorMessage,
