@@ -1,4 +1,4 @@
-import { ProviderCategory } from '@refly/openapi-schema';
+import { ProviderCategory } from '../../../openapi-schema/src';
 
 export interface ProviderCheckConfig {
   providerId: string;
