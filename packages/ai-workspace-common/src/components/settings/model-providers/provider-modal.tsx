@@ -13,14 +13,10 @@ import {
   Tooltip,
 } from 'antd';
 import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import {
-  Provider,
-  ProviderCategory,
-  ProviderTestResult,
-} from '@refly-packages/ai-workspace-common/requests/types.gen';
-import { ProviderInfo, providerInfoList } from '@refly/utils';
-import { useTestProviderConnection } from '@refly-packages/ai-workspace-common/queries';
+import getClient from '../../../requests/proxiedRequest';
+import { Provider, ProviderCategory, ProviderTestResult } from '../../../requests/types.gen';
+import { ProviderInfo, providerInfoList } from '../../../../../utils/src';
+import { useTestProviderConnection } from '../../../queries';
 
 export const ProviderModal = React.memo(
   ({
