@@ -88,22 +88,11 @@ export const ProviderModal = React.memo(
       }));
     }, [categories, t]);
 
-    // Determine if apiKey and baseUrl should be shown and required
-    const showApiKey = useMemo(() => {
-      return selectedProviderInfo?.fieldConfig.apiKey.presence !== 'omit';
-    }, [selectedProviderInfo]);
-
-    const apiKeyRequired = useMemo(() => {
-      return selectedProviderInfo?.fieldConfig.apiKey.presence === 'required';
-    }, [selectedProviderInfo]);
-
-    const showBaseUrl = useMemo(() => {
-      return selectedProviderInfo?.fieldConfig.baseUrl.presence !== 'omit';
-    }, [selectedProviderInfo]);
-
-    const baseUrlRequired = useMemo(() => {
-      return selectedProviderInfo?.fieldConfig.baseUrl.presence === 'required';
-    }, [selectedProviderInfo]);
+    // Simple calculations - no need for useMemo
+    const showApiKey = selectedProviderInfo?.fieldConfig.apiKey.presence !== 'omit';
+    const apiKeyRequired = selectedProviderInfo?.fieldConfig.apiKey.presence === 'required';
+    const showBaseUrl = selectedProviderInfo?.fieldConfig.baseUrl.presence !== 'omit';
+    const baseUrlRequired = selectedProviderInfo?.fieldConfig.baseUrl.presence === 'required';
 
     // Handle provider type change
     const handleProviderChange = useCallback(
@@ -145,10 +134,10 @@ export const ProviderModal = React.memo(
       [form, presetProviders],
     );
 
-    const handleBaseUrlChange = useCallback(() => {
+    const handleBaseUrlChange = () => {
       // Clear test result when base URL changes
       setTestResult(null);
-    }, []);
+    };
 
     useEffect(() => {
       if (isOpen) {
@@ -359,6 +348,7 @@ export const ProviderModal = React.memo(
         setIsSubmitting(true);
 
         if (isEditMode && provider) {
+          // 基础更新体（不包含 apiKey）
           const updateBody: any = {
             ...provider,
             name: values.name,
@@ -368,25 +358,16 @@ export const ProviderModal = React.memo(
             categories: values.categories,
           };
 
-          const userModifiedApiKey = !isDefaultApiKey;
+          // 明确排除 apiKey 字段，确保不会意外更新
+          updateBody.apiKey = undefined;
 
-          // 关键保存日志：显示API Key处理策略
-          console.log(
-            '💾 [SUBMIT] API Key处理:',
-            userModifiedApiKey
-              ? '用户修改了API Key -> 更新到数据库'
-              : '用户未修改API Key -> 保持数据库原值',
-            {
-              isDefaultApiKey,
-              userModifiedApiKey,
-            },
-          );
-
-          if (userModifiedApiKey) {
-            // User has modified the API key (either entered new value or cleared it)
-            updateBody.apiKey = values.apiKey || ''; // Include empty string if user cleared it
+          // 简化策略：只要 apiKey 不是 'default'，才添加到更新体中
+          if (values.apiKey !== 'default') {
+            updateBody.apiKey = values.apiKey;
+            console.log('✅ [SUBMIT] API Key 不是默认值 -> 更新到数据库');
+          } else {
+            console.log('❌ [SUBMIT] API Key 是默认值 -> 明确排除，保持数据库原值');
           }
-          // If user hasn't modified API key, don't include it - preserve encrypted version in DB
 
           const res = await getClient().updateProvider({
             body: updateBody,
