@@ -251,24 +251,9 @@ export const ProviderModal = React.memo(
         // Only use existing provider when editing existing provider and user has not input new API key
         const shouldUseExistingProvider = isEditingExistingProvider && !userInputtedNewApiKey;
 
-        // Key judgment log: show test connection strategy decision
-        console.log(
-          '[TEST-CONNECTION] Test strategy:',
-          shouldUseExistingProvider
-            ? 'Case 1: Edit mode and user has not modified API key -> Use existing Provider'
-            : 'Case 2/3: Create mode or user modified API key -> Create temporary Provider',
-          {
-            isEditMode,
-            isDefaultApiKey,
-            userInputtedNewApiKey,
-            shouldUseExistingProvider,
-          },
-        );
-
         if (shouldUseExistingProvider) {
           // Case 1: Edit mode and user has not modified API key, directly test existing provider
-          // Backend will fetch saved encrypted API key from database
-          console.log('🔄 [Case 1] Use existing Provider for connection test');
+          // Backend will fetch saved encrypted API key from databas
           const testResult = await testProviderMutation.mutateAsync({
             body: {
               providerId: provider.providerId,
@@ -292,7 +277,6 @@ export const ProviderModal = React.memo(
         } else {
           // Case 2: Create mode, use all configurations from frontend input
           // Case 3: Edit mode and user modified API key, use new configurations
-          console.log('🔧 [Case 2/3] Create temporary Provider for connection test');
           const createRes = await getClient().createProvider({
             body: {
               name: `temp_test_${Date.now()}`,
@@ -379,11 +363,6 @@ export const ProviderModal = React.memo(
           // Simplified strategy: only add to update body if apiKey is not 'default'
           if (values.apiKey !== 'default') {
             updateBody.apiKey = values.apiKey;
-            console.log('✅ [SUBMIT] API Key is not default value -> Update to database');
-          } else {
-            console.log(
-              '❌ [SUBMIT] API Key is default value -> Explicitly exclude, keep database original value',
-            );
           }
 
           const res = await getClient().updateProvider({
