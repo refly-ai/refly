@@ -224,40 +224,39 @@ export const ProviderModal = React.memo(
 
         // Validate required fields
         if (!name?.trim()) {
-          throw new Error('请填写供应商名称');
+          throw new Error(t('settings.modelProviders.namePlaceholder'));
         }
         if (!providerKey) {
-          throw new Error('请选择供应商类型');
+          throw new Error(t('settings.modelProviders.selectProviderType'));
         }
 
         // Provider-specific validation
         if (selectedProviderInfo) {
           if (selectedProviderInfo.fieldConfig.apiKey.presence === 'required' && !apiKey?.trim()) {
-            throw new Error('请填写API Key');
+            throw new Error(t('settings.modelProviders.apiKeyPlaceholder'));
           }
           if (
             selectedProviderInfo.fieldConfig.baseUrl.presence === 'required' &&
             !baseUrl?.trim()
           ) {
-            throw new Error('请填写Base URL');
+            throw new Error(t('settings.modelProviders.baseUrlPlaceholder'));
           }
         }
 
-        // 更精确地判断用户是否修改了API key
-        // 情况1: 编辑模式下，用户未输入新的API key (表单为空或默认值)
-        // 情况2&3: 新建模式 或 编辑模式下用户输入了新的API key
+        // Case 1: Edit mode, user has not entered new API key (form is empty or default value)
+        // Case 2&3: Create mode or edit mode with user input new API key
         const isEditingExistingProvider = isEditMode && provider;
         const userInputtedNewApiKey = apiKey && apiKey.trim() !== '' && !isDefaultApiKey;
 
-        // 只有在编辑现有provider且用户没有输入新API key时，才直接使用现有provider
+        // Only use existing provider when editing existing provider and user has not input new API key
         const shouldUseExistingProvider = isEditingExistingProvider && !userInputtedNewApiKey;
 
-        // 关键判断日志：显示测试连接的策略决策
+        // Key judgment log: show test connection strategy decision
         console.log(
-          '[TEST-CONNECTION] 测试策略:',
+          '[TEST-CONNECTION] Test strategy:',
           shouldUseExistingProvider
-            ? '情况1: 编辑模式且用户未修改API key -> 使用现有Provider'
-            : '情况2/3: 新建模式或用户修改了API key -> 创建临时Provider',
+            ? 'Case 1: Edit mode and user has not modified API key -> Use existing Provider'
+            : 'Case 2/3: Create mode or user modified API key -> Create temporary Provider',
           {
             isEditMode,
             isDefaultApiKey,
@@ -267,9 +266,9 @@ export const ProviderModal = React.memo(
         );
 
         if (shouldUseExistingProvider) {
-          // 情况1: 编辑模式且用户未修改API key，直接测试现有provider
-          // 后端会从数据库获取已保存的加密API key
-          console.log('🔄 [情况1] 使用现有Provider测试连接');
+          // Case 1: Edit mode and user has not modified API key, directly test existing provider
+          // Backend will fetch saved encrypted API key from database
+          console.log('🔄 [Case 1] Use existing Provider for connection test');
           const testResult = await testProviderMutation.mutateAsync({
             body: {
               providerId: provider.providerId,
@@ -281,17 +280,19 @@ export const ProviderModal = React.memo(
           if (providerResult?.status === 'success') {
             const successResult = {
               status: 'success',
-              message: providerResult.message || 'API连接测试成功',
+              message: providerResult.message || t('settings.modelProviders.connectionTestSuccess'),
               timestamp: new Date().toISOString(),
             };
             setTestResult(successResult);
           } else {
-            throw new Error(providerResult?.message || '连接测试失败');
+            throw new Error(
+              providerResult?.message || t('settings.modelProviders.connectionTestFailed'),
+            );
           }
         } else {
-          // 情况2: 新建模式，使用前端输入的所有配置
-          // 情况3: 编辑模式且用户修改了API key，使用新的配置
-          console.log('🔧 [情况2/3] 创建临时Provider测试连接');
+          // Case 2: Create mode, use all configurations from frontend input
+          // Case 3: Edit mode and user modified API key, use new configurations
+          console.log('🔧 [Case 2/3] Create temporary Provider for connection test');
           const createRes = await getClient().createProvider({
             body: {
               name: `temp_test_${Date.now()}`,
@@ -304,7 +305,7 @@ export const ProviderModal = React.memo(
           });
 
           if (!createRes.data?.success) {
-            throw new Error('创建临时供应商失败');
+            throw new Error(t('settings.modelProviders.createTempProviderFailed'));
           }
 
           const tempProvider = createRes.data.data;
@@ -320,12 +321,15 @@ export const ProviderModal = React.memo(
             if (providerResult?.status === 'success') {
               const successResult = {
                 status: 'success',
-                message: providerResult.message || 'API连接测试成功',
+                message:
+                  providerResult.message || t('settings.modelProviders.connectionTestSuccess'),
                 timestamp: new Date().toISOString(),
               };
               setTestResult(successResult);
             } else {
-              throw new Error(providerResult?.message || '连接测试失败');
+              throw new Error(
+                providerResult?.message || t('settings.modelProviders.connectionTestFailed'),
+              );
             }
           } finally {
             // Clean up: delete the temporary provider
@@ -338,7 +342,7 @@ export const ProviderModal = React.memo(
         console.error('Connection test failed:', error);
 
         // Simple error handling
-        let errorMessage = 'API连接失败';
+        let errorMessage = t('settings.modelProviders.apiConnectionFailed');
         if (error instanceof Error) {
           errorMessage = error.message;
         }
@@ -359,7 +363,7 @@ export const ProviderModal = React.memo(
         setIsSubmitting(true);
 
         if (isEditMode && provider) {
-          // 基础更新体（不包含 apiKey）
+          // Base update body (excluding apiKey)
           const updateBody: any = {
             ...provider,
             name: values.name,
@@ -369,15 +373,17 @@ export const ProviderModal = React.memo(
             categories: values.categories,
           };
 
-          // 明确排除 apiKey 字段，确保不会意外更新
+          // Explicitly exclude apiKey field to ensure no accidental updates
           updateBody.apiKey = undefined;
 
-          // 简化策略：只要 apiKey 不是 'default'，才添加到更新体中
+          // Simplified strategy: only add to update body if apiKey is not 'default'
           if (values.apiKey !== 'default') {
             updateBody.apiKey = values.apiKey;
-            console.log('✅ [SUBMIT] API Key 不是默认值 -> 更新到数据库');
+            console.log('✅ [SUBMIT] API Key is not default value -> Update to database');
           } else {
-            console.log('❌ [SUBMIT] API Key 是默认值 -> 明确排除，保持数据库原值');
+            console.log(
+              '❌ [SUBMIT] API Key is default value -> Explicitly exclude, keep database original value',
+            );
           }
 
           const res = await getClient().updateProvider({
@@ -561,7 +567,8 @@ export const ProviderModal = React.memo(
             }
             description={
               <div className="text-sm text-gray-600">
-                测试时间: {new Date(testResult.timestamp).toLocaleString()}
+                {t('settings.modelProviders.testTime')}:{' '}
+                {new Date(testResult.timestamp).toLocaleString()}
               </div>
             }
             className="mb-4"

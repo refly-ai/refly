@@ -2048,6 +2048,9 @@ const translations = {
       connectionTestSuccess: '测试连接成功',
       connectionTestFailed: '测试连接失败',
       testConnectionFailed: '测试连接失败',
+      createTempProviderFailed: '创建临时供应商失败',
+      apiConnectionFailed: 'API连接失败',
+      testTime: '测试时间',
       selectProviderFirst: '请先选择供应商类型',
       viewDetails: '查看详情',
       // Provider Store 相关翻译
