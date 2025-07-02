@@ -569,6 +569,10 @@ model CodeArtifact {
   storageKey        String    @map("storage_key")
   /// Preview storage key
   previewStorageKey String?   @map("preview_storage_key")
+  /// Action result id
+  resultId          String?   @map("result_id")
+  /// Action result version
+  resultVersion     Int       @default(0) @map("result_version")
   /// Create timestamp
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp

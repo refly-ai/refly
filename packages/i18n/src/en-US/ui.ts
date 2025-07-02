@@ -1086,6 +1086,8 @@ const translations = {
     contentTitle: 'Canvas Content',
     loadingContent: 'Loading content...',
     thinking: 'Thinking...',
+    loading: 'Loading code artifact...',
+    componentNotFound: 'Code artifact does not exist',
     svg: {
       downloadAsSvg: 'Download as SVG',
       downloadAsPng: 'Download as PNG',

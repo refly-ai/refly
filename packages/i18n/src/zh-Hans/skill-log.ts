@@ -55,6 +55,14 @@ const translations = {
     title: '组件生成完成',
     description: '组件生成完成，耗时 {{duration}} 毫秒',
   },
+  generateCodeArtifactTitle: {
+    title: '生成组件标题',
+    description: '成功生成标题：{{title}}, 耗时 {{duration}} 毫秒',
+  },
+  generateCodeArtifactTitleFailed: {
+    title: '生成组件标题',
+    description: '由于模型能力不足，无法生成标题，使用提问作为默认标题',
+  },
   // 图像生成翻译
   'image.generating': {
     title: '生成图像',

@@ -907,6 +907,8 @@ const translations = {
     contentTitle: '画布内容',
     loadingContent: '加载内容中...',
     thinking: '思考中...',
+    loading: '代码组件加载中...',
+    componentNotFound: '代码组件不存在',
     svg: {
       downloadAsSvg: '下载为 SVG',
       downloadAsPng: '下载为 PNG',

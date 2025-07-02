@@ -2074,6 +2074,14 @@ export const CodeArtifactSchema = {
       type: 'string',
       description: 'Code artifact language',
     },
+    resultId: {
+      type: 'string',
+      description: 'Action result ID',
+    },
+    resultVersion: {
+      type: 'number',
+      description: 'Action result version',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -3874,6 +3882,14 @@ export const UpsertCodeArtifactRequestSchema = {
       type: 'string',
       description: 'Code artifact language',
     },
+    resultId: {
+      type: 'string',
+      description: 'Action result ID',
+    },
+    resultVersion: {
+      type: 'number',
+      description: 'Action result version',
+    },
     previewStorageKey: {
       type: 'string',
       description: 'Code artifact preview storage key',
@@ -3896,6 +3912,26 @@ export const UpsertCodeArtifactResponseSchema = {
       properties: {
         data: {
           $ref: '#/components/schemas/CodeArtifact',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ListCodeArtifactResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Code artifact list',
+          items: {
+            $ref: '#/components/schemas/CodeArtifact',
+          },
         },
       },
     },

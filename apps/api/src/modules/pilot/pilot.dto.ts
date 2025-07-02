@@ -2,9 +2,9 @@ import {
   PilotSession as PilotSessionPO,
   PilotStep as PilotStepPO,
   ActionResult as ActionResultPO,
-} from '@/generated/client';
-import { actionResultPO2DTO } from '@/modules/action/action.dto';
-import { pick } from '@/utils';
+} from '../../generated/client';
+import { actionResultPO2DTO } from '../action/action.dto';
+import { pick } from '../../utils';
 import {
   PilotSession,
   PilotSessionStatus,

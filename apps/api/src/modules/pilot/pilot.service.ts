@@ -15,19 +15,19 @@ import {
   convertResultContextToItems,
 } from '@refly/canvas-common';
 import { PilotEngine } from './pilot-engine';
-import { PilotSession } from '@/generated/client';
-import { SkillService } from '@/modules/skill/skill.service';
+import { PilotSession } from '../../generated/client';
+import { SkillService } from '../skill/skill.service';
 import { genActionResultID, genPilotSessionID, genPilotStepID } from '@refly/utils';
 import { CanvasContentItem } from '../canvas/canvas.dto';
-import { ProviderService } from '@/modules/provider/provider.service';
-import { CanvasService } from '@/modules/canvas/canvas.service';
+import { ProviderService } from '../provider/provider.service';
+import { CanvasService } from '../canvas/canvas.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { QUEUE_RUN_PILOT } from '@/utils/const';
+import { QUEUE_RUN_PILOT } from '../../utils/const';
 import { RunPilotJobData } from './pilot.processor';
 import { ProviderItemNotFoundError } from '@refly/errors';
-import { pilotSessionPO2DTO, pilotStepPO2DTO } from '@/modules/pilot/pilot.dto';
-import { findBestMatch } from '@/utils/similarity';
+import { pilotSessionPO2DTO, pilotStepPO2DTO } from './pilot.dto';
+import { findBestMatch } from '../../utils/similarity';
 
 @Injectable()
 export class PilotService {

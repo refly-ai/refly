@@ -1586,6 +1586,14 @@ export type CodeArtifact = {
    * Code artifact language
    */
   language?: string;
+  /**
+   * Action result ID
+   */
+  resultId?: string;
+  /**
+   * Action result version
+   */
+  resultVersion?: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -2791,6 +2799,14 @@ export type UpsertCodeArtifactRequest = {
    */
   language?: string;
   /**
+   * Action result ID
+   */
+  resultId?: string;
+  /**
+   * Action result version
+   */
+  resultVersion?: number;
+  /**
    * Code artifact preview storage key
    */
   previewStorageKey?: string;
@@ -2802,6 +2818,13 @@ export type UpsertCodeArtifactRequest = {
 
 export type UpsertCodeArtifactResponse = BaseResponse & {
   data?: CodeArtifact;
+};
+
+export type ListCodeArtifactResponse = BaseResponse & {
+  /**
+   * Code artifact list
+   */
+  data?: Array<CodeArtifact>;
 };
 
 export type GetCodeArtifactDetailResponse = BaseResponse & {
@@ -5304,6 +5327,35 @@ export type DeleteProjectItemsData = {
 export type DeleteProjectItemsResponse = BaseResponse;
 
 export type DeleteProjectItemsError = unknown;
+
+export type ListCodeArtifactsData = {
+  query?: {
+    /**
+     * Whether to include content
+     */
+    needContent?: boolean;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+    /**
+     * Action result ID
+     */
+    resultId?: string;
+    /**
+     * Action result version
+     */
+    resultVersion?: number;
+  };
+};
+
+export type ListCodeArtifactsResponse = ListCodeArtifactResponse;
+
+export type ListCodeArtifactsError = unknown;
 
 export type GetCodeArtifactDetailData = {
   query: {

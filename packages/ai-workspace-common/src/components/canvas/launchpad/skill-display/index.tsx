@@ -103,7 +103,7 @@ export const SkillDisplay = ({
   return (
     <div className="flex flex-row gap-1 pb-1" ref={skillDisplayRef}>
       {skillItems}
-      {dropdownComponent}
+      {remainingSkills.length > 0 && dropdownComponent}
     </div>
   );
 };

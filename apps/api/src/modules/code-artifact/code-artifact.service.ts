@@ -1,10 +1,11 @@
 import { Inject, Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { UpsertCodeArtifactRequest, User } from '@refly/openapi-schema';
+import { ListCodeArtifactsData, UpsertCodeArtifactRequest, User } from '@refly/openapi-schema';
 import { streamToString } from '../../utils';
 import { CodeArtifactNotFoundError, ParamsError } from '@refly/errors';
 import { genCodeArtifactID } from '@refly/utils';
 import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
+import { CodeArtifact as CodeArtifactModel } from '../../generated/client';
 
 @Injectable()
 export class CodeArtifactService {
@@ -39,8 +40,17 @@ export class CodeArtifactService {
 
   async updateCodeArtifact(user: User, body: UpsertCodeArtifactRequest) {
     const { uid } = user;
-    const { artifactId, title, type, language, content, previewStorageKey, createIfNotExists } =
-      body;
+    const {
+      artifactId,
+      title,
+      type,
+      language,
+      content,
+      previewStorageKey,
+      createIfNotExists,
+      resultId,
+      resultVersion,
+    } = body;
 
     if (!artifactId) {
       throw new ParamsError('ArtifactId is required for updating a code artifact');
@@ -66,6 +76,8 @@ export class CodeArtifactService {
           language,
           storageKey,
           previewStorageKey,
+          resultId,
+          resultVersion,
           uid,
         },
       });
@@ -77,6 +89,8 @@ export class CodeArtifactService {
           type,
           language,
           previewStorageKey,
+          resultId,
+          resultVersion,
         },
       });
     }
@@ -105,6 +119,29 @@ export class CodeArtifactService {
       ...artifact,
       content,
     };
+  }
+
+  async listCodeArtifacts(user: User, query: ListCodeArtifactsData['query']) {
+    const { uid } = user;
+    const { resultId, resultVersion, needContent, page = 1, pageSize = 10 } = query;
+
+    let artifacts: (CodeArtifactModel & { content?: string })[] = [];
+
+    artifacts = await this.prisma.codeArtifact.findMany({
+      where: { uid, resultId, resultVersion, deletedAt: null },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    if (needContent) {
+      for (const artifact of artifacts) {
+        const contentStream = await this.oss.getObject(artifact.storageKey);
+        const content = await streamToString(contentStream);
+        artifact.content = content;
+      }
+    }
+
+    return artifacts;
   }
 
   async duplicateCodeArtifact(user: User, artifactId: string) {

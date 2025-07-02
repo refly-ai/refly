@@ -62,6 +62,9 @@ const translations = {
       analyzeContext: {
         name: 'Context Analysis',
       },
+      generateTitle: {
+        name: 'Generate Title',
+      },
       generateCodeArtifact: {
         name: 'Generate Code Artifact',
       },

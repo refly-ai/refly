@@ -1466,6 +1466,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /codeArtifact/list:
+    get:
+      tags:
+        - codeArtifact
+      summary: List code artifacts
+      description: List all code artifacts
+      operationId: listCodeArtifacts
+      parameters:
+        - name: resultId
+          in: query
+          description: Action result ID
+          schema:
+            type: string
+        - name: resultVersion
+          in: query
+          description: Action result version
+          schema:
+            type: number
+        - name: needContent
+          in: query
+          description: Whether to include content
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          schema:
+            type: number
+            default: 10
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCodeArtifactResponse'
   /codeArtifact/detail:
     get:
       tags:
@@ -4360,6 +4403,12 @@ components:
         language:
           type: string
           description: Code artifact language
+        resultId:
+          type: string
+          description: Action result ID
+        resultVersion:
+          type: number
+          description: Action result version
         createdAt:
           type: string
           format: date-time
@@ -5604,6 +5653,12 @@ components:
         language:
           type: string
           description: Code artifact language
+        resultId:
+          type: string
+          description: Action result ID
+        resultVersion:
+          type: number
+          description: Action result version
         previewStorageKey:
           type: string
           description: Code artifact preview storage key
@@ -5618,6 +5673,16 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/CodeArtifact'
+    ListCodeArtifactResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Code artifact list
+              items:
+                $ref: '#/components/schemas/CodeArtifact'
     GetCodeArtifactDetailResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

@@ -62,6 +62,18 @@ export const useInvokeAction = () => {
   const onSkillStart = (skillEvent: SkillEvent) => {
     const { resultId } = skillEvent;
     stopPolling(resultId);
+
+    // Clear any pending throttled updates for this result
+    if (streamUpdateThrottleRef.current[resultId]?.timeout) {
+      clearTimeout(streamUpdateThrottleRef.current[resultId].timeout);
+      delete streamUpdateThrottleRef.current[resultId];
+    }
+
+    // Clear any pending token usage updates
+    if (tokenUsageUpdateTimeoutRef.current[resultId]) {
+      clearTimeout(tokenUsageUpdateTimeoutRef.current[resultId]);
+      delete tokenUsageUpdateTimeoutRef.current[resultId];
+    }
   };
 
   const onSkillLog = (skillEvent: SkillEvent) => {
@@ -398,6 +410,8 @@ export const useInvokeAction = () => {
       return;
     }
 
+    stopPolling(skillEvent.resultId);
+
     const updatedResult = {
       ...result,
       status: 'finish' as const,
@@ -459,6 +473,8 @@ export const useInvokeAction = () => {
     if (!result) {
       return;
     }
+
+    stopPolling(resultId);
 
     // Set traceId if available (check for traceId in different possible locations)
     const traceId = skillEvent?.error?.traceId;

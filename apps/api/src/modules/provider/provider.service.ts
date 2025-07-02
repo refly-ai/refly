@@ -50,7 +50,7 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ConfigService } from '@nestjs/config';
 import { VectorSearchService } from '../common/vector-search';
 import { VECTOR_SEARCH } from '../common/vector-search/tokens';
-import { providerItemPO2DTO } from '@/modules/provider/provider.dto';
+import { providerItemPO2DTO } from './provider.dto';
 
 interface GlobalProviderConfig {
   providers: ProviderModel[];

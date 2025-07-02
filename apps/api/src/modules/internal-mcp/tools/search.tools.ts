@@ -3,8 +3,8 @@ import { Tool, Context } from '@rekog/mcp-nest';
 import { z } from 'zod';
 import { Request } from 'express';
 import { InternalMcpService } from '../internal-mcp.service';
-import { User as UserModel } from '@/generated/client';
-import { SearchService } from '@/modules/search/search.service';
+import { User as UserModel } from '../../../generated/client';
+import { SearchService } from '../../search/search.service';
 
 @Injectable()
 export class SearchTools {

@@ -246,7 +246,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
               )}
 
               <SkillDisplay
-                containCnt={5}
+                containCnt={7}
                 selectedSkill={selectedSkill}
                 setSelectedSkill={handleSelectSkill}
               />

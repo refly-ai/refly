@@ -303,7 +303,7 @@ export const EnhancedSkillResponse = memo(
           },
         },
         convertContextItemsToNodeFilters(contextItems),
-        false,
+        true,
         true,
       );
     }, [
@@ -397,7 +397,13 @@ export const EnhancedSkillResponse = memo(
 
     // Memoize the LinearThreadContent component
     const threadContentComponent = useMemo(
-      () => <LinearThreadContent messages={messages} contentHeight={contentHeight} />,
+      () => (
+        <LinearThreadContent
+          messages={messages}
+          contentHeight={contentHeight}
+          source="skillResponse"
+        />
+      ),
       [messages, contentHeight],
     );
 

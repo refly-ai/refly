@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { McpServerService } from '../mcp-server/mcp-server.service';
-import { EncryptionService } from '@/modules/common/encryption.service';
+import { EncryptionService } from '../common/encryption.service';
 
 @Injectable()
 export class InternalMcpService {

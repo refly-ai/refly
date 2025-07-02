@@ -30,6 +30,18 @@ import {
   buildArtifactsSystemPrompt,
 } from '../scheduler/module/artifacts';
 
+import { extractStructuredData } from '../scheduler/utils/extractor';
+import { BaseMessage, HumanMessage } from '@langchain/core/dist/messages';
+import { truncateTextWithToken, truncateMessages } from '../scheduler/utils/truncator';
+import { countToken } from '../scheduler/utils/token';
+
+// Add title schema for code artifact
+const codeArtifactTitleSchema = z.object({
+  title: z.string().describe('The code artifact title based on user query and context'),
+  description: z.string().optional().describe('A brief description of the component'),
+  reason: z.string().describe('The reasoning process for generating this title'),
+});
+
 // Helper function to get artifact type options
 const getArtifactTypeOptions = () => {
   return [
@@ -258,7 +270,7 @@ export class CodeArtifacts extends BaseSkill {
       customInstructions,
     });
 
-    return { requestMessages, sources, context, query };
+    return { requestMessages, sources, context, query, usedChatHistory };
   };
 
   callGenerateArtifact = async (
@@ -268,13 +280,33 @@ export class CodeArtifacts extends BaseSkill {
     const { currentSkill } = config.configurable;
 
     // Preprocess the query
-    const { requestMessages, sources, query } = await this.commonPreprocess(state, config);
+    const { requestMessages, sources, query, context, usedChatHistory } =
+      await this.commonPreprocess(state, config);
 
-    // Set current step
+    // Generate title first
+    config.metadata.step = { name: 'generateTitle' };
+
+    const codeArtifactTitle = await this.generateCodeArtifactTitle(state, config, {
+      context,
+      chatHistory: usedChatHistory,
+    });
+    this.engine.logger.log(`Generated code artifact title: ${codeArtifactTitle}`);
+
+    if (codeArtifactTitle) {
+      this.emitEvent(
+        {
+          log: { key: 'generateCodeArtifactTitle', descriptionArgs: { title: codeArtifactTitle } },
+        },
+        config,
+      );
+    } else {
+      this.emitEvent({ log: { key: 'generateCodeArtifactTitleFailed' } }, config);
+    }
+
     config.metadata.step = { name: 'generateCodeArtifact' };
 
     // Create a code artifact entity
-    const title = '';
+    const title = codeArtifactTitle || '';
     const codeEntityId = genCodeArtifactID();
 
     // Create and emit the code artifact
@@ -370,4 +402,113 @@ export class CodeArtifacts extends BaseSkill {
 
     return workflow.compile();
   }
+
+  // Generate title prompt specifically for code artifacts
+  getCodeArtifactTitlePrompt = (locale: string, _uiLocale: string) => `
+## Role
+You are a code component title generation expert who creates clear, concise, and descriptive titles for React/TypeScript components.
+
+## Task
+Generate a component title based on the user's query${locale !== 'en' ? ` in ${locale} language` : ''}.
+
+## Output Requirements
+1. Title should be concise (preferably under 80 characters)
+2. Title should clearly reflect the component's main purpose and functionality
+3. Title should be in ${locale} language (preserve technical terms)
+4. Use descriptive terms that indicate what the component does
+5. Provide reasoning for the chosen title
+
+## Output Format
+Return a JSON object with:
+- title: The generated title
+- description (optional): Brief description of the component
+- reason: Explanation of why this title was chosen
+
+## Examples
+- "Interactive Data Chart" for a chart component
+- "User Registration Form" for a signup form
+- "Real-time Chat Widget" for a chat component
+- "Image Gallery Carousel" for an image slider
+`;
+
+  // Generate title for code artifact
+  generateCodeArtifactTitle = async (
+    state: GraphState,
+    config: SkillRunnableConfig,
+    { context, chatHistory }: { context: string; chatHistory: BaseMessage[] },
+  ): Promise<string> => {
+    const { query = '' } = state;
+    const { locale = 'en', uiLocale = 'en', modelConfigMap } = config.configurable;
+    const modelInfo = modelConfigMap.titleGeneration;
+
+    const model = this.engine.chatModel({ temperature: 0.1 }, 'titleGeneration');
+
+    // Prepare context snippet if available
+    let contextSnippet = '';
+    if (context) {
+      const maxContextTokens = 300; // Target for ~200-400 tokens
+      const tokens = countToken(context);
+      if (tokens > maxContextTokens) {
+        // Take first part of context up to token limit
+        contextSnippet = truncateTextWithToken(context, maxContextTokens);
+      } else {
+        contextSnippet = context;
+      }
+    }
+
+    // Prepare recent chat history
+    const recentHistory = truncateMessages(chatHistory); // Limit chat history tokens
+
+    const titlePrompt = `${this.getCodeArtifactTitlePrompt(locale, uiLocale)}
+
+USER QUERY:
+${query}
+
+${
+  contextSnippet
+    ? `RELEVANT CONTEXT:
+${contextSnippet}`
+    : ''
+}
+
+${
+  recentHistory.length > 0
+    ? `RECENT CHAT HISTORY:
+${recentHistory.map((msg) => `${(msg as HumanMessage)?.getType?.()}: ${msg.content}`).join('\n')}`
+    : ''
+}`;
+
+    try {
+      const result = await extractStructuredData(
+        model,
+        codeArtifactTitleSchema,
+        titlePrompt,
+        config,
+        3, // Max retries
+        modelInfo,
+      );
+
+      // Log the reasoning process
+      this.engine.logger.log(`Code artifact title generation reason: ${result.reason}`);
+
+      // Emit structured data for UI
+      this.emitEvent(
+        {
+          structuredData: {
+            titleGeneration: {
+              title: result.title,
+              description: result.description,
+              reason: result.reason,
+            },
+          },
+        },
+        config,
+      );
+
+      return result.title;
+    } catch (error) {
+      this.engine.logger.error(`Failed to generate code artifact title: ${error}`);
+      return '';
+    }
+  };
 }

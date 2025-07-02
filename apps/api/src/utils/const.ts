@@ -11,6 +11,7 @@ export const QUEUE_DELETE_KNOWLEDGE_ENTITY = 'deleteKnowledgeEntity';
 export const QUEUE_POST_DELETE_KNOWLEDGE_ENTITY = 'postDeleteKnowledgeEntity';
 export const QUEUE_AUTO_NAME_CANVAS = 'autoNameCanvas';
 export const QUEUE_POST_DELETE_CANVAS = 'postDeleteCanvas';
+export const QUEUE_VERIFY_NODE_ADDITION = 'verifyNodeAddition';
 export const QUEUE_RUN_PILOT = 'runPilot';
 export const QUEUE_SYNC_PILOT_STEP = 'syncPilotStep';
 

@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { McpModule, McpTransportType } from '@rekog/mcp-nest';
-import { JwtAuthGuard } from '@/modules/auth/guard/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { McpServerService } from '../mcp-server/mcp-server.service';
-import { PrismaService } from '@/modules/common/prisma.service';
-import { EncryptionService } from '@/modules/common/encryption.service';
-import { InternalMcpService } from '@/modules/internal-mcp/internal-mcp.service';
-import { SearchTools } from '@/modules/internal-mcp/tools/search.tools';
-import { SearchService } from '@/modules/search/search.service';
-import { RAGModule } from '@/modules/rag/rag.module';
-import { ProviderModule } from '@/modules/provider/provider.module';
-import { CommonModule } from '@/modules/common/common.module';
+import { PrismaService } from '../common/prisma.service';
+import { EncryptionService } from '../common/encryption.service';
+import { InternalMcpService } from './internal-mcp.service';
+import { SearchTools } from './tools/search.tools';
+import { SearchService } from '../search/search.service';
+import { RAGModule } from '../rag/rag.module';
+import { ProviderModule } from '../provider/provider.module';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [

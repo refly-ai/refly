@@ -23,7 +23,7 @@ declare namespace NodeJS {
 
 // Used in Renderer process, expose in `preload.ts`
 interface Window {
-  ipcRenderer: import('electron').IpcRenderer;
+  // ipcRenderer: import('electron').IpcRenderer;
   versions: {
     node: () => string;
     chrome: () => string;

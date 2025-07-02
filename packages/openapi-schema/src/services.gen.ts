@@ -185,6 +185,9 @@ import type {
   DeleteProjectItemsData,
   DeleteProjectItemsError,
   DeleteProjectItemsResponse,
+  ListCodeArtifactsData,
+  ListCodeArtifactsError,
+  ListCodeArtifactsResponse,
   GetCodeArtifactDetailData,
   GetCodeArtifactDetailError,
   GetCodeArtifactDetailResponse2,
@@ -1304,6 +1307,23 @@ export const deleteProjectItems = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/project/deleteItems',
+  });
+};
+
+/**
+ * List code artifacts
+ * List all code artifacts
+ */
+export const listCodeArtifacts = <ThrowOnError extends boolean = false>(
+  options?: Options<ListCodeArtifactsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListCodeArtifactsResponse,
+    ListCodeArtifactsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/list',
   });
 };
 

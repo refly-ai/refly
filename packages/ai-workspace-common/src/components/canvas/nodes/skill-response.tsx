@@ -58,7 +58,10 @@ import { BorderBeam } from '@refly-packages/ai-workspace-common/components/magic
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
-import { useActionResultStoreShallow } from '@refly-packages/ai-workspace-common/stores/action-result';
+import {
+  useActionResultStoreShallow,
+  useActionResultStore,
+} from '@refly-packages/ai-workspace-common/stores/action-result';
 
 export const NodeHeader = memo(
   ({
@@ -275,13 +278,27 @@ export const SkillResponseNode = memo(
     }));
 
     useEffect(() => {
-      if (!isStreaming && (status === 'executing' || status === 'waiting')) {
-        startPolling(entityId, version);
+      if (!isStreaming) {
+        if (['executing', 'waiting'].includes(status)) {
+          startPolling(entityId, version);
+        }
+      } else {
+        // Only remove stream result if the status has been 'failed' or 'finish'
+        // for a reasonable time to avoid race conditions during rerun
+        if (['failed', 'finish'].includes(status)) {
+          // Add a small delay to handle race conditions during rerun
+          const timeoutId = setTimeout(() => {
+            // Double check the status before removing
+            const currentStream = useActionResultStore.getState().streamResults[entityId];
+            if (currentStream && ['failed', 'finish'].includes(status)) {
+              removeStreamResult(entityId);
+            }
+          }, 100);
+
+          return () => clearTimeout(timeoutId);
+        }
       }
-      if (isStreaming && status !== 'executing' && status !== 'waiting') {
-        removeStreamResult(entityId);
-      }
-    }, [isStreaming, status, startPolling, entityId, version]);
+    }, [isStreaming, status, startPolling, entityId, version, removeStreamResult]);
 
     const sources = Array.isArray(structuredData?.sources) ? structuredData?.sources : [];
 
@@ -514,10 +531,12 @@ export const SkillResponseNode = memo(
         // Create node connect filters - include both the response and its context items
         const connectFilters = [
           { type: 'skillResponse' as CanvasNodeType, entityId: data.entityId },
-          ...responseContextItems.map((item) => ({
-            type: item.type as CanvasNodeType,
-            entityId: item.entityId,
-          })),
+          ...responseContextItems
+            .filter((item) => item.type !== 'skillResponse')
+            .map((item) => ({
+              type: item.type as CanvasNodeType,
+              entityId: item.entityId,
+            })),
         ];
 
         const { position, connectTo } = getConnectionInfo(

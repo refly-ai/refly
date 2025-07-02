@@ -9,5 +9,5 @@
   ],
   "ext": "ts",
   "ignore": ["src/**/*.spec.ts"],
-  "exec": "prisma format && prisma generate && ts-node -r tsconfig-paths/register src/main.ts"
+  "exec": "pnpm build && node dist/main.js"
 }

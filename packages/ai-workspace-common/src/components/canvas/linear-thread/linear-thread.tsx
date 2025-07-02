@@ -10,6 +10,7 @@ interface LinearThreadContentProps {
   messages: LinearThreadMessage[];
   contentHeight: string | number;
   className?: string;
+  source?: 'skillResponse' | 'thread';
 }
 
 // Optimize SkillResponseNodePreview with memo
@@ -58,20 +59,27 @@ export const EmptyThreadWelcome = memo(() => {
 EmptyThreadWelcome.displayName = 'EmptyThreadWelcome';
 
 export const LinearThreadContent = memo(
-  ({ messages, contentHeight, className = '' }: LinearThreadContentProps) => {
+  ({ messages, contentHeight, className = '', source }: LinearThreadContentProps) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const lastMessageRef = useRef<HTMLDivElement>(null);
 
+    // Filter messages based on source
+    const displayMessages =
+      source === 'skillResponse' && messages.length > 0
+        ? [messages[messages.length - 1]]
+        : messages;
+
     // Scroll to the start of the last message
     useEffect(() => {
-      if (messagesContainerRef.current && messages.length > 0) {
+      if (messagesContainerRef.current && displayMessages.length > 0) {
         setTimeout(() => {
           const lastMessageElement = document.getElementById(
-            `message-wrapper-${messages[messages.length - 1].id}`,
+            `message-wrapper-${displayMessages[displayMessages.length - 1].id}-${displayMessages.length - 1}`,
           );
+
           if (lastMessageElement && messagesContainerRef.current) {
             // If it's the only message, scroll to top
-            if (messages.length === 1) {
+            if (displayMessages.length === 1) {
               messagesContainerRef.current.scrollTop = 0;
             } else {
               // Scroll to position the last message at the top
@@ -82,7 +90,7 @@ export const LinearThreadContent = memo(
           }
         }, 100);
       }
-    }, [messages]);
+    }, [displayMessages]);
 
     return (
       <div
@@ -90,15 +98,15 @@ export const LinearThreadContent = memo(
         className={`flex-grow overflow-auto message-container ${className}`}
         style={{ height: contentHeight, width: '100%' }}
       >
-        {messages.length === 0 ? (
+        {displayMessages.length === 0 ? (
           <EmptyThreadWelcome key={'empty-thread-welcome'} />
         ) : (
           <div className="flex flex-col divide-y max-w-[1024px] mx-auto">
-            {messages.map((message, index) => (
+            {displayMessages.map((message, index) => (
               <div
-                key={`message-wrapper-${message.id}`}
-                id={`message-wrapper-${message.id}`}
-                ref={index === messages.length - 1 ? lastMessageRef : null}
+                key={`message-wrapper-${message.id}-${index}`}
+                id={`message-wrapper-${message.id}-${index}`}
+                ref={index === displayMessages.length - 1 ? lastMessageRef : null}
               >
                 <div key={`message-content-${message.id}`}>
                   <MemoizedSkillResponseNodePreview
@@ -111,7 +119,7 @@ export const LinearThreadContent = memo(
                     resultId={message.resultId}
                   />
                 </div>
-                {index !== messages.length - 1 && (
+                {index !== displayMessages.length - 1 && (
                   <Divider key={`divider-${message.id}`} className="max-w-[1024px] mx-auto" />
                 )}
               </div>

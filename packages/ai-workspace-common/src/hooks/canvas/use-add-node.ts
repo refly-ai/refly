@@ -135,14 +135,15 @@ export const useAddNode = () => {
 
         // Apply branch layout if we're connecting to existing nodes
         if (needSetCenter) {
+          setSelectedNode(newNode);
           setNodeCenter(newNode.id);
         }
       }, 10);
 
       if (
-        (newNode.type === 'document' ||
-          newNode.type === 'resource' ||
-          newNode.type === 'website') &&
+        ['document', 'resource', 'website', 'skillResponse', 'codeArtifact'].includes(
+          newNode.type,
+        ) &&
         shouldPreview
       ) {
         previewNode(newNode as unknown as CanvasNode);

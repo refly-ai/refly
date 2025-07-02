@@ -7,9 +7,14 @@ import {
   SyncCanvasEntityProcessor,
   AutoNameCanvasProcessor,
   PostDeleteCanvasProcessor,
+  VerifyNodeAdditionProcessor,
 } from './canvas.processor';
 import { CollabModule } from '../collab/collab.module';
-import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '../../utils/const';
+import {
+  QUEUE_DELETE_KNOWLEDGE_ENTITY,
+  QUEUE_POST_DELETE_CANVAS,
+  QUEUE_VERIFY_NODE_ADDITION,
+} from '../../utils/const';
 import { CommonModule } from '../common/common.module';
 import { MiscModule } from '../misc/misc.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
@@ -38,6 +43,9 @@ import { isDesktop } from '../../utils/runtime';
           BullModule.registerQueue({
             name: QUEUE_POST_DELETE_CANVAS,
           }),
+          BullModule.registerQueue({
+            name: QUEUE_VERIFY_NODE_ADDITION,
+          }),
         ]),
   ],
   controllers: [CanvasController],
@@ -50,6 +58,7 @@ import { isDesktop } from '../../utils/runtime';
           ClearCanvasEntityProcessor,
           AutoNameCanvasProcessor,
           PostDeleteCanvasProcessor,
+          VerifyNodeAdditionProcessor,
         ]),
   ],
   exports: [CanvasService],

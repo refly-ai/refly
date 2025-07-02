@@ -5,7 +5,7 @@ import { Job } from 'bullmq';
 import { SkillService } from './skill.service';
 import { QUEUE_SKILL, QUEUE_SKILL_TIMEOUT_CHECK } from '../../utils/const';
 import { InvokeSkillJobData, SkillTimeoutCheckJobData } from './skill.dto';
-import { SkillInvokerService } from '@/modules/skill/skill-invoker.service';
+import { SkillInvokerService } from './skill-invoker.service';
 
 @Processor(QUEUE_SKILL)
 export class SkillProcessor extends WorkerHost {

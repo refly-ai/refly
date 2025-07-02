@@ -55,6 +55,14 @@ const translations = {
     title: 'Code Artifact Generated',
     description: 'Code artifact generated, completed in {{duration}}ms',
   },
+  generateCodeArtifactTitle: {
+    title: 'Generate Code Artifact Title',
+    description: 'Title generated: {{title}}, completed in {{duration}}ms',
+  },
+  generateCodeArtifactTitleFailed: {
+    title: 'Generate Code Artifact Title',
+    description: 'Failed to generate title due to model capability, fallback to use query as title',
+  },
   // Image Generation Translations
   'image.generating': {
     title: 'Generating Image',

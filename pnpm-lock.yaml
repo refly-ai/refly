@@ -430,6 +430,12 @@ importers:
       '@electron/asar':
         specifier: ^4.0.0
         version: 4.0.0
+      '@types/express':
+        specifier: ^4.17.13
+        version: 4.17.21
+      '@types/multer':
+        specifier: ~1.4.11
+        version: 1.4.12
       electron:
         specifier: 36.2.1
         version: 36.2.1
@@ -439,6 +445,15 @@ importers:
       electron-notarize:
         specifier: ^1.2.2
         version: 1.2.2
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@swc/core@1.11.24)(@types/node@24.0.4)(typescript@5.8.3)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      tsconfig-paths:
+        specifier: ~4.2.0
+        version: 4.2.0
 
   apps/extension:
     dependencies:
@@ -21765,7 +21780,6 @@ snapshots:
   '@types/node@24.0.4':
     dependencies:
       undici-types: 7.8.0
-    optional: true
 
   '@types/normalize-path@3.0.2': {}
 
@@ -32281,7 +32295,6 @@ snapshots:
       yn: 3.1.1
     optionalDependencies:
       '@swc/core': 1.11.24
-    optional: true
 
   tsc-alias@1.8.16:
     dependencies:
@@ -32511,8 +32524,7 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  undici-types@7.8.0:
-    optional: true
+  undici-types@7.8.0: {}
 
   undici@5.28.4:
     dependencies:

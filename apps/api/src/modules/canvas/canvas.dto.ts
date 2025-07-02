@@ -1,5 +1,6 @@
 import { Canvas as CanvasModel } from '../../generated/client';
-import { Canvas, Entity, EntityType } from '@refly/openapi-schema';
+import { Canvas, Entity, EntityType, CanvasNode } from '@refly/openapi-schema';
+import { CanvasNodeFilter } from '@refly/canvas-common';
 import { pick } from '../../utils';
 
 export interface SyncCanvasEntityJobData {
@@ -19,6 +20,15 @@ export interface DeleteCanvasJobData {
   uid: string;
   canvasId: string;
   deleteAllFiles: boolean;
+}
+
+export interface VerifyNodeAdditionJobData {
+  uid: string;
+  canvasId: string;
+  node: CanvasNode;
+  connectTo?: CanvasNodeFilter[];
+  attempt: number;
+  maxAttempts: number;
 }
 
 export interface CanvasContentItem {

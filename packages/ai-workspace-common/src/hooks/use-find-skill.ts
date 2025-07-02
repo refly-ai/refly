@@ -10,7 +10,7 @@ export const useListSkills = () => {
     gcTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  return skillData?.data ?? [];
+  return skillData?.data.filter((skill) => skill.name !== 'imageGeneration') ?? [];
 };
 
 export const useFindSkill = (skillName: string) => {

@@ -62,6 +62,9 @@ const translations = {
       analyzeContext: {
         name: '上下文分析',
       },
+      generateTitle: {
+        name: '生成标题',
+      },
       generateCodeArtifact: {
         name: '生成小组件',
       },

@@ -8,12 +8,14 @@ import {
   QUEUE_SYNC_CANVAS_ENTITY,
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_POST_DELETE_CANVAS,
+  QUEUE_VERIFY_NODE_ADDITION,
 } from '../../utils/const';
 import {
   DeleteCanvasNodesJobData,
   SyncCanvasEntityJobData,
   AutoNameCanvasJobData,
   DeleteCanvasJobData,
+  VerifyNodeAdditionJobData,
 } from './canvas.dto';
 
 @Processor(QUEUE_SYNC_CANVAS_ENTITY)
@@ -86,6 +88,28 @@ export class PostDeleteCanvasProcessor extends WorkerHost {
       await this.canvasService.postDeleteCanvas(job.data);
     } catch (error) {
       this.logger.error(`[${QUEUE_POST_DELETE_CANVAS}] error ${job.id}: ${error?.stack}`);
+      throw error;
+    }
+  }
+}
+
+@Processor(QUEUE_VERIFY_NODE_ADDITION)
+export class VerifyNodeAdditionProcessor extends WorkerHost {
+  private logger = new Logger(VerifyNodeAdditionProcessor.name);
+
+  constructor(private canvasService: CanvasService) {
+    super();
+  }
+
+  async process(job: Job<VerifyNodeAdditionJobData>) {
+    this.logger.log(
+      `Processing node verification job ${job.id} for canvas ${job.data.canvasId}, attempt ${job.data.attempt}`,
+    );
+
+    try {
+      await this.canvasService.verifyNodeAdditionFromQueue(job.data);
+    } catch (error) {
+      this.logger.error(`[${QUEUE_VERIFY_NODE_ADDITION}] error ${job.id}: ${error?.stack}`);
       throw error;
     }
   }

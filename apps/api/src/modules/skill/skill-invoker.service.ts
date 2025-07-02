@@ -32,7 +32,7 @@ import {
 } from '@refly/skill-template';
 import { throttle } from 'lodash';
 import { MiscService } from '../misc/misc.service';
-import { ResultAggregator } from '@/utils/result';
+import { ResultAggregator } from '../../utils/result';
 import { DirectConnection } from '@hocuspocus/server';
 import { getWholeParsedContent } from '@refly/utils';
 import { ProjectNotFoundError } from '@refly/errors';
@@ -44,11 +44,11 @@ import {
   QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_SYNC_TOKEN_USAGE,
-} from '@/utils/const';
+} from '../../utils/const';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { writeSSEResponse } from '@/utils/response';
-import { genBaseRespDataFromError } from '@/utils/exception';
+import { writeSSEResponse } from '../../utils/response';
+import { genBaseRespDataFromError } from '../../utils/exception';
 import { SyncPilotStepJobData } from '../pilot/pilot.processor';
 import { AutoNameCanvasJobData } from '../canvas/canvas.dto';
 import { ProviderService } from '../provider/provider.service';
@@ -442,6 +442,8 @@ export class SkillInvokerService {
           language,
           content: codeContent,
           createIfNotExists: true,
+          resultId,
+          resultVersion: version,
         });
       },
       1000,
