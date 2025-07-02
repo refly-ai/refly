@@ -1055,10 +1055,6 @@ export class ProviderService implements OnModuleInit {
     const { providerId, category } = param;
 
     // Confirm method is being called
-    this.logger.log(
-      `[TEST-CONNECTION] Starting connection test for provider: ${providerId}, category: ${category}, user: ${user.uid}`,
-    );
-
     if (!providerId) {
       throw new ParamsError('Provider ID is required');
     }
@@ -1072,45 +1068,17 @@ export class ProviderService implements OnModuleInit {
       throw new ProviderNotFoundError();
     }
 
-    this.logger.log(
-      `[TEST-CONNECTION] Found provider: ${provider.name} (${provider.providerKey}), isGlobal: ${provider.isGlobal}`,
-    );
-
     // 识别前端的测试情况
     const isTemporaryProvider = provider.name.startsWith('temp_test_');
-    const testScenario = provider.isGlobal
+    const _testScenario = provider.isGlobal
       ? 'Global Provider Test'
       : isTemporaryProvider
         ? 'New Config Test (Temporary Provider)' // 情况2&3: 新建或修改配置测试
         : 'Existing Provider Test'; // 情况1: 编辑模式直接测试
 
-    this.logger.log(`[TEST-CONNECTION] Test scenario: ${testScenario}`);
-
     try {
       // Check if encrypted API key exists in database
-      this.logger.log(`[TEST-CONNECTION] Raw encrypted API key exists: ${!!provider.apiKey}`);
-      if (provider.apiKey) {
-        this.logger.debug(
-          `[TEST-CONNECTION] Encrypted API key length: ${provider.apiKey.length}, starts with: ${provider.apiKey.substring(0, 15)}...`,
-        );
-      }
-
       const apiKey = provider.apiKey ? this.encryptionService.decrypt(provider.apiKey) : null;
-
-      // Enhanced debug logging for 401 troubleshooting
-      this.logger.log(
-        `[TEST-CONNECTION] Provider ${providerId} - hasEncryptedApiKey: ${!!provider.apiKey}, hasDecryptedApiKey: ${!!apiKey}`,
-      );
-
-      if (apiKey) {
-        this.logger.log(
-          `[TEST-CONNECTION] API Key format: starts with '${apiKey.substring(0, 7)}...', length: ${apiKey.length}`,
-        );
-      } else {
-        this.logger.error(
-          `[TEST-CONNECTION] No API key found for provider ${providerId} - this will cause 401 errors`,
-        );
-      }
 
       // Create provider check configuration
       const checkConfig = {
@@ -1122,21 +1090,9 @@ export class ProviderService implements OnModuleInit {
         categories: provider.categories.split(','),
       };
 
-      this.logger.log(
-        `[TEST-CONNECTION] Starting ProviderChecker with config: ${JSON.stringify({
-          providerId: checkConfig.providerId,
-          providerKey: checkConfig.providerKey,
-          baseUrl: checkConfig.baseUrl,
-          hasApiKey: !!checkConfig.apiKey,
-          categories: checkConfig.categories,
-        })}`,
-      );
-
       // Use ProviderChecker from packages/providers
       const providerChecker = new ProviderChecker();
       const result = await providerChecker.checkProvider(checkConfig, category);
-
-      this.logger.log(`[TEST-CONNECTION] ProviderChecker result: ${JSON.stringify(result)}`);
 
       return result;
     } catch (error) {
@@ -1170,8 +1126,6 @@ export class ProviderService implements OnModuleInit {
         },
         timestamp: new Date().toISOString(),
       };
-
-      this.logger.log(`[TEST-CONNECTION] Returning error result: ${JSON.stringify(errorResult)}`);
 
       return errorResult;
     }
