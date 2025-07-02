@@ -88,11 +88,22 @@ export const ProviderModal = React.memo(
       }));
     }, [categories, t]);
 
-    // Simple calculations - no need for useMemo
-    const showApiKey = selectedProviderInfo?.fieldConfig.apiKey.presence !== 'omit';
-    const apiKeyRequired = selectedProviderInfo?.fieldConfig.apiKey.presence === 'required';
-    const showBaseUrl = selectedProviderInfo?.fieldConfig.baseUrl.presence !== 'omit';
-    const baseUrlRequired = selectedProviderInfo?.fieldConfig.baseUrl.presence === 'required';
+    // Determine if apiKey and baseUrl should be shown and required
+    const showApiKey = useMemo(() => {
+      return selectedProviderInfo?.fieldConfig.apiKey.presence !== 'omit';
+    }, [selectedProviderInfo]);
+
+    const apiKeyRequired = useMemo(() => {
+      return selectedProviderInfo?.fieldConfig.apiKey.presence === 'required';
+    }, [selectedProviderInfo]);
+
+    const showBaseUrl = useMemo(() => {
+      return selectedProviderInfo?.fieldConfig.baseUrl.presence !== 'omit';
+    }, [selectedProviderInfo]);
+
+    const baseUrlRequired = useMemo(() => {
+      return selectedProviderInfo?.fieldConfig.baseUrl.presence === 'required';
+    }, [selectedProviderInfo]);
 
     // Handle provider type change
     const handleProviderChange = useCallback(
