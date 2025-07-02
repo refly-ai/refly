@@ -1068,13 +1068,13 @@ export class ProviderService implements OnModuleInit {
       throw new ProviderNotFoundError();
     }
 
-    // 识别前端的测试情况
+    // Identify the test scenario
     const isTemporaryProvider = provider.name.startsWith('temp_test_');
     const _testScenario = provider.isGlobal
       ? 'Global Provider Test'
       : isTemporaryProvider
-        ? 'New Config Test (Temporary Provider)' // 情况2&3: 新建或修改配置测试
-        : 'Existing Provider Test'; // 情况1: 编辑模式直接测试
+        ? 'New Config Test (Temporary Provider)' // Case 2&3: New or modify config test
+        : 'Existing Provider Test'; // Case 1: Edit mode directly test
 
     try {
       // Check if encrypted API key exists in database
