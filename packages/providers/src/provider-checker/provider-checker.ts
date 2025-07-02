@@ -199,11 +199,6 @@ export class ProviderChecker {
       chatCompletion: { status: 'unknown', data: null, error: null },
     };
 
-    // Debug logging for API key
-    console.log(
-      `[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}, baseUrl: ${config.baseUrl}`,
-    );
-
     // Provider-specific authentication headers
     const getAuthHeaders = (apiKey: string) => {
       if (config.providerKey === 'anthropic') {
@@ -255,7 +250,6 @@ export class ProviderChecker {
               // For generic providers, try to use the first available model from the models endpoint
               const availableModels = checkResults.modelsEndpoint?.data?.models;
               if (availableModels && availableModels.length > 0) {
-                console.log(`[ProviderChecker] Using first available model: ${availableModels[0]}`);
                 return availableModels[0];
               }
               // Fallback to a common model name
@@ -265,29 +259,12 @@ export class ProviderChecker {
         };
 
         const testModel = getTestModel();
-        console.log(`[ProviderChecker] Testing chat completion with model: ${testModel}`);
 
         const requestBody = {
           model: testModel,
           messages: [{ role: 'user', content: 'Hi' }],
           max_tokens: 1,
         };
-
-        console.log(
-          '[ProviderChecker] Chat completion request body:',
-          JSON.stringify(requestBody, null, 2),
-        );
-        console.log(
-          '[ProviderChecker] Request headers:',
-          JSON.stringify(
-            {
-              'Content-Type': 'application/json',
-              ...(config.apiKey ? getAuthHeaders(config.apiKey) : {}),
-            },
-            null,
-            2,
-          ),
-        );
 
         const chatResponse = await fetch(`${config.baseUrl}/chat/completions`, {
           method: 'POST',
@@ -299,11 +276,8 @@ export class ProviderChecker {
           signal: AbortSignal.timeout(15000), // 15 second timeout
         });
 
-        console.log(`[ProviderChecker] Chat completion response status: ${chatResponse.status}`);
-
         // Try to log the response body for debugging
         const responseText = await chatResponse.text();
-        console.log(`[ProviderChecker] Chat completion response body: ${responseText}`);
 
         // Even 400/422 responses indicate the API is working and authenticated
         // We mainly want to avoid 401/403 (authentication errors)
@@ -350,8 +324,6 @@ export class ProviderChecker {
       const testUrl = config.baseUrl?.endsWith('/v1')
         ? `${config.baseUrl}/models` // OpenAI-compatible endpoint
         : `${config.baseUrl}/api/tags`; // Native Ollama endpoint
-
-      console.log(`[ProviderChecker] Testing Ollama connection: ${testUrl}`);
 
       const response = await fetch(testUrl, {
         method: 'GET',
@@ -523,9 +495,6 @@ export class ProviderChecker {
       searchFunction: { status: 'unknown', data: null, error: null },
     };
 
-    // Debug logging
-    console.log(`[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}`);
-
     if (!config.apiKey) {
       checkResults.apiKeyValidation.status = 'failed';
       checkResults.apiKeyValidation.error = 'API key is required for Serper';
@@ -539,11 +508,6 @@ export class ProviderChecker {
         num: 1, // Limit to 1 result to minimize API usage
       };
 
-      console.log(
-        '[ProviderChecker] Serper search request:',
-        JSON.stringify(searchPayload, null, 2),
-      );
-
       const searchResponse = await fetch('https://google.serper.dev/search', {
         method: 'POST',
         headers: {
@@ -555,7 +519,6 @@ export class ProviderChecker {
       });
 
       const responseText = await searchResponse.text();
-      console.log(`[ProviderChecker] Serper response status: ${searchResponse.status}`);
 
       if (searchResponse.ok) {
         const responseData = JSON.parse(responseText);
