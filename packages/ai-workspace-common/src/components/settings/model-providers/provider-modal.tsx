@@ -323,8 +323,6 @@ export const ProviderModal = React.memo(
           }
         }
       } catch (error: unknown) {
-        console.error('Connection test failed:', error);
-
         // Simple error handling
         let errorMessage = t('settings.modelProviders.apiConnectionFailed');
         if (error instanceof Error) {
