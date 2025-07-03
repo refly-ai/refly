@@ -13,6 +13,7 @@ import {
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
+  getMediaResult,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -62,6 +63,8 @@ import {
   GetCollabTokenError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetMediaResultData,
+  GetMediaResultError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
   GetPageDetailData,
@@ -536,6 +539,21 @@ export const useListSkillTriggersSuspense = <
     queryKey: Common.UseListSkillTriggersKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listSkillTriggers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetMediaResultSuspense = <
+  TData = Common.GetMediaResultDefaultResponse,
+  TError = GetMediaResultError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetMediaResultData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetMediaResultKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getMediaResult({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListPilotSessionsSuspense = <

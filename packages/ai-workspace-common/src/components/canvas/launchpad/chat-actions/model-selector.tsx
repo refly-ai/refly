@@ -5,7 +5,7 @@ import { ModelIcon } from '@lobehub/icons';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { LLMModelConfig, ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
 import { useListProviderItems } from '@refly-packages/ai-workspace-common/queries';
-import { IconDown, IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LuInfo, LuSettings2 } from 'react-icons/lu';
 import {
   SettingsModalActiveTab,
@@ -58,7 +58,7 @@ const SelectedModelDisplay = memo(
         icon={<ModelIcon model={model.name} type={'color'} />}
       >
         {model.label}
-        <IconDown />
+        <DownOutlined />
       </Button>
     );
   },

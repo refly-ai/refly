@@ -276,6 +276,12 @@ import type {
   DeleteSkillTriggerData,
   DeleteSkillTriggerError,
   DeleteSkillTriggerResponse,
+  GenerateMediaData,
+  GenerateMediaError,
+  GenerateMediaResponse2,
+  GetMediaResultData,
+  GetMediaResultError,
+  GetMediaResultResponse,
   CreatePilotSessionData,
   CreatePilotSessionError,
   CreatePilotSessionResponse,
@@ -1808,6 +1814,36 @@ export const deleteSkillTrigger = <ThrowOnError extends boolean = false>(
     ...options,
     url: '/skill/trigger/delete',
   });
+};
+
+/**
+ * Generate media content
+ * Generate image, video, or audio content
+ */
+export const generateMedia = <ThrowOnError extends boolean = false>(
+  options: Options<GenerateMediaData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<GenerateMediaResponse2, GenerateMediaError, ThrowOnError>(
+    {
+      ...options,
+      url: '/media/generate',
+    },
+  );
+};
+
+/**
+ * Get media generation result
+ * Get media generation result by result ID
+ */
+export const getMediaResult = <ThrowOnError extends boolean = false>(
+  options: Options<GetMediaResultData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<GetMediaResultResponse, GetMediaResultError, ThrowOnError>(
+    {
+      ...options,
+      url: '/media/result',
+    },
+  );
 };
 
 /**

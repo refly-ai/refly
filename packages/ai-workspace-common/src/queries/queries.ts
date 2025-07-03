@@ -54,6 +54,7 @@ import {
   emailSignup,
   exportCanvas,
   exportDocument,
+  generateMedia,
   getActionResult,
   getAuthConfig,
   getCanvasData,
@@ -61,6 +62,7 @@ import {
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
+  getMediaResult,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -226,6 +228,8 @@ import {
   ExportCanvasError,
   ExportDocumentData,
   ExportDocumentError,
+  GenerateMediaData,
+  GenerateMediaError,
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
@@ -238,6 +242,8 @@ import {
   GetCollabTokenError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetMediaResultData,
+  GetMediaResultError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
   GetPageDetailData,
@@ -776,6 +782,21 @@ export const useListSkillTriggers = <
     queryKey: Common.UseListSkillTriggersKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listSkillTriggers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetMediaResult = <
+  TData = Common.GetMediaResultDefaultResponse,
+  TError = GetMediaResultError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetMediaResultData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetMediaResultKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getMediaResult({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListPilotSessions = <
@@ -1970,6 +1991,23 @@ export const useDeleteSkillTrigger = <
   useMutation<TData, TError, Options<DeleteSkillTriggerData, true>, TContext>({
     mutationKey: Common.UseDeleteSkillTriggerKeyFn(mutationKey),
     mutationFn: (clientOptions) => deleteSkillTrigger(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useGenerateMedia = <
+  TData = Common.GenerateMediaMutationResult,
+  TError = GenerateMediaError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<GenerateMediaData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<GenerateMediaData, true>, TContext>({
+    mutationKey: Common.UseGenerateMediaKeyFn(mutationKey),
+    mutationFn: (clientOptions) => generateMedia(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreatePilotSession = <

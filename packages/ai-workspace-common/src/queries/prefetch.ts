@@ -13,6 +13,7 @@ import {
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
+  getMediaResult,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -52,6 +53,7 @@ import {
   GetCanvasDetailData,
   GetCodeArtifactDetailData,
   GetDocumentDetailData,
+  GetMediaResultData,
   GetPageByCanvasIdData,
   GetPageDetailData,
   GetPilotSessionDetailData,
@@ -299,6 +301,14 @@ export const prefetchUseListSkillTriggers = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListSkillTriggersKeyFn(clientOptions),
     queryFn: () => listSkillTriggers({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetMediaResult = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetMediaResultData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetMediaResultKeyFn(clientOptions),
+    queryFn: () => getMediaResult({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListPilotSessions = (
   queryClient: QueryClient,
