@@ -366,11 +366,7 @@ export const ChatPanel = ({
     () => [
       {
         icon: (
-          <Badge
-            count={selectedMcpServers.length > 0 ? selectedMcpServers.length : 0}
-            size="small"
-            offset={[2, -2]}
-          >
+          <Badge count={selectedMcpServers?.length || 0} size="small" offset={[2, -2]}>
             <ToolOutlined className="flex items-center" />
           </Badge>
         ),
@@ -387,13 +383,7 @@ export const ChatPanel = ({
         },
       },
     ],
-    [
-      handleRecommendQuestionsToggle,
-      handleMcpSelectorToggle,
-      t,
-      selectedMcpServers,
-      handleMcpSelectorToggle,
-    ],
+    [handleRecommendQuestionsToggle, handleMcpSelectorToggle, t, selectedMcpServers?.length],
   );
 
   const handleImageUpload = async (file: File) => {

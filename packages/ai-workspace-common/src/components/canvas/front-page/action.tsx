@@ -237,7 +237,8 @@ export const Actions = memo(
       prevProps.setRuntimeConfig === nextProps.setRuntimeConfig &&
       prevProps.model === nextProps.model &&
       prevProps.loading === nextProps.loading &&
-      prevProps.isExecuting === nextProps.isExecuting
+      prevProps.isExecuting === nextProps.isExecuting &&
+      prevProps.customActions === nextProps.customActions
     );
   },
 );
