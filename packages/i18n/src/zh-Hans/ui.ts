@@ -145,6 +145,7 @@ const translations = {
     update: '更新',
     validate: '验证',
     refresh: '刷新',
+    generating: '生成中...',
   },
   mode: {
     ask: '提问',
@@ -1005,6 +1006,7 @@ const translations = {
       autoLayout: '自动布局',
       autoName: '自动命名',
       askAI: '问问 AI',
+      mediaGenerate: '多模态生成',
       askAIDescription:
         '通过 AI 提问，可以选择上下文、切换技能或模型，以获取写作灵感、内容创作、知识问答等。',
       createMemo: '创建备忘录',
@@ -1257,6 +1259,20 @@ const translations = {
         addSibling: '添加同级卡片',
         delete: '删除卡片',
         invalidMindMapData: '思维导图数据格式无效，请检查您的 JSON 结构',
+      },
+      mediaSkill: {
+        prompt: '请输入生成内容',
+        mediaType: '媒体类型',
+        image: '图片',
+        video: '视频',
+        audio: '音频',
+        imageGenerate: '生成图片',
+        videoGenerate: '生成视频',
+        audioGenerate: '生成音频',
+        imagePlaceholder: '描述你想要生成的图片...',
+        videoPlaceholder: '描述你想要生成的视频...',
+        audioPlaceholder: '描述你想要生成的音频...',
+        defaultPlaceholder: '描述你想要生成的内容...',
       },
     },
     reflyPilot: {

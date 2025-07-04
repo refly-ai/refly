@@ -7,6 +7,8 @@ export const NODE_COLORS: Record<CanvasNodeType | 'threadHistory', string> = {
   skillResponse: '#F79009',
   toolResponse: '#F79009',
   skill: '#6172F3',
+  mediaSkill: '#E93D82',
+  mediaSkillResponse: '#E93D82',
   tool: '#2E90FA',
   memo: '#f2eb0e',
   group: '#6172F3',
@@ -14,6 +16,8 @@ export const NODE_COLORS: Record<CanvasNodeType | 'threadHistory', string> = {
   image: '#02b0c7',
   codeArtifact: '#3E63DD',
   website: '#17B26A',
+  video: '#FF6B6B',
+  audio: '#4ECDC4',
 };
 export const NODE_MINI_MAP_COLORS = {
   ...NODE_COLORS,

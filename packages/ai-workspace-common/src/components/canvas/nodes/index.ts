@@ -3,11 +3,15 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { DocumentNode } from './document';
 import { ResourceNode } from './resource';
 import { SkillNode } from './skill';
+import { MediaSkillNode } from './media/mediaSkill';
+import { MediaSkillResponseNode } from './media/media-skill-response';
 import { ToolNode } from './tool';
 import { SkillResponseNode } from './skill-response';
 import { MemoNode } from './memo/memo';
 import { GroupNode } from './group';
 import { ImageNode } from './image';
+import { VideoNode } from './video';
+import { AudioNode } from './audio';
 import { CodeArtifactNode } from './code-artifact';
 import { WebsiteNode } from './website';
 import { GhostNode } from './ghost';
@@ -17,6 +21,7 @@ import {
   DocumentNodeMeta,
   ResourceNodeMeta,
   SkillNodeMeta,
+  MediaSkillNodeMeta,
   ToolNodeMeta,
   ResponseNodeMeta,
   CodeArtifactNodeMeta,
@@ -28,11 +33,15 @@ import { genUniqueId } from '@refly/utils/id';
 export * from './document';
 export * from './resource';
 export * from './skill';
+export * from './media/mediaSkill';
+export * from './media/media-skill-response';
 export * from './tool';
 export * from './skill-response';
 export * from './memo/memo';
 export * from './group';
 export * from './image';
+export * from './video';
+export * from './audio';
 export * from './code-artifact';
 export * from './website';
 
@@ -41,11 +50,15 @@ export const nodeTypes: NodeTypes = {
   document: DocumentNode,
   resource: ResourceNode,
   skill: SkillNode,
+  mediaSkill: MediaSkillNode,
+  mediaSkillResponse: MediaSkillResponseNode,
   tool: ToolNode,
   skillResponse: SkillResponseNode,
   memo: MemoNode,
   group: GroupNode,
   image: ImageNode,
+  video: VideoNode,
+  audio: AudioNode,
   codeArtifact: CodeArtifactNode,
   website: WebsiteNode,
   ghost: GhostNode,
@@ -131,6 +144,14 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
         modelInfo: null,
       } as SkillNodeMeta;
 
+    case 'mediaSkill':
+      return {
+        ...baseMetadata,
+        query: '',
+        modelInfo: null,
+        mediaType: 'image',
+      } as MediaSkillNodeMeta;
+
     case 'tool':
       return {
         ...baseMetadata,
@@ -147,6 +168,17 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
         version: 0,
       } as ResponseNodeMeta;
 
+    case 'mediaSkillResponse':
+      return {
+        ...baseMetadata,
+        status: 'waiting',
+        version: 0,
+        mediaType: 'image',
+        prompt: '',
+        model: '',
+        resultId: '',
+      } as ResponseNodeMeta;
+
     case 'toolResponse':
       return {
         ...baseMetadata,
@@ -158,6 +190,24 @@ export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {
     case 'image':
       return {
         ...baseMetadata,
+        style: {},
+      };
+
+    case 'video':
+      return {
+        ...baseMetadata,
+        videoUrl: '',
+        showBorder: true,
+        showTitle: true,
+        style: {},
+      };
+
+    case 'audio':
+      return {
+        ...baseMetadata,
+        audioUrl: '',
+        showBorder: true,
+        showTitle: true,
         style: {},
       };
 

@@ -65,9 +65,18 @@ export const useNodeSize = ({
   const [size, setSize] = useState<NodeSize>(initialSize);
 
   // Update size when node style changes
-  const updateSize = useCallback((newSize: Partial<NodeSize>) => {
-    setSize((prevSize) => ({ ...prevSize, ...newSize }));
-  }, []);
+  const updateSize = useCallback(
+    (newSize: Partial<NodeSize>) => {
+      setSize((prevSize) => ({ ...prevSize, ...newSize }));
+
+      setNodeStyle(id, {
+        width: `${newSize.width}px`,
+        height: newSize.height === 'auto' ? 'auto' : `${newSize.height}px`,
+        maxHeight: MAX_HEIGHT,
+      });
+    },
+    [id],
+  );
 
   useEffect(() => {
     const height = size.height === 'auto' ? 'auto' : `${Math.max(size.height, minHeight)}px`;

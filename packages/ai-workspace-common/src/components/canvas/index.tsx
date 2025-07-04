@@ -645,7 +645,18 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       }
 
       // Memo nodes are not previewable
-      if (['memo', 'skill', 'group', 'image'].includes(node.type)) {
+      if (
+        [
+          'memo',
+          'skill',
+          'group',
+          'image',
+          'mediaSkill',
+          'video',
+          'audio',
+          'mediaSkillResponse',
+        ].includes(node.type)
+      ) {
         return;
       }
 

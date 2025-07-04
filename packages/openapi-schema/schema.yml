@@ -7485,6 +7485,10 @@ components:
         - memo
         - group
         - image
+        - video
+        - audio
+        - mediaSkill
+        - mediaSkillResponse
     CanvasNodeData:
       type: object
       required:

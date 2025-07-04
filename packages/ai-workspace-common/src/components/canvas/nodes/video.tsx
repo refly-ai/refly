@@ -10,10 +10,9 @@ import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { getNodeCommonStyles } from './index';
 import { CustomHandle } from './shared/custom-handle';
-import { ImageNodeProps } from './shared/types';
 import classNames from 'classnames';
 import { NodeHeader } from './shared/node-header';
-import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { HiOutlineFilm } from 'react-icons/hi2';
 import {
   nodeActionEmitter,
   createNodeEventName,
@@ -28,22 +27,38 @@ import Moveable from 'react-moveable';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
-import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { NodeProps } from '@xyflow/react';
+import { CanvasNodeData } from '@refly/canvas-common';
 
-export const ImageNode = memo(
-  ({ id, data, isPreview, selected, hideHandles, onNodeClick }: ImageNodeProps) => {
+// Define VideoNodeMeta interface
+interface VideoNodeMeta {
+  videoUrl?: string;
+  showBorder?: boolean;
+  showTitle?: boolean;
+  style?: Record<string, any>;
+}
+
+interface VideoNodeProps extends NodeProps {
+  data: CanvasNodeData<VideoNodeMeta>;
+  isPreview?: boolean;
+  hideHandles?: boolean;
+  onNodeClick?: () => void;
+}
+
+export const VideoNode = memo(
+  ({ id, data, isPreview, selected, hideHandles, onNodeClick }: VideoNodeProps) => {
     const { metadata } = data ?? {};
-    const imageUrl = metadata?.imageUrl ?? '';
+    const videoUrl = metadata?.videoUrl ?? '';
     const showBorder = metadata?.showBorder ?? false;
     const showTitle = metadata?.showTitle ?? true;
     const [isHovered, setIsHovered] = useState(false);
-    const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const targetRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const { getNode } = useReactFlow();
     useSelectedNodeZIndex(id, selected);
     const { addNode } = useAddNode();
@@ -65,11 +80,11 @@ export const ImageNode = memo(
       node,
       readonly,
       isOperating,
-      minWidth: 100,
+      minWidth: 200,
       maxWidth: 800,
-      minHeight: 80,
-      defaultWidth: 288,
-      defaultHeight: 'auto',
+      minHeight: 150,
+      defaultWidth: 400,
+      defaultHeight: 300,
     });
 
     // Ensure containerStyle has valid height value
@@ -77,7 +92,7 @@ export const ImageNode = memo(
       const style = { ...containerStyle };
       // If height is NaN, set it to 'auto'
       if (typeof style.height === 'number' && Number.isNaN(style.height)) {
-        style.height = 'auto';
+        style.height = 300;
       }
       return style;
     }, [containerStyle]);
@@ -94,7 +109,7 @@ export const ImageNode = memo(
 
     const handleAddToContext = useCallback(() => {
       addToContext({
-        type: 'image',
+        type: 'video',
         title: data.title,
         entityId: data.entityId,
         metadata: data.metadata,
@@ -104,7 +119,7 @@ export const ImageNode = memo(
     const handleDelete = useCallback(() => {
       deleteNode({
         id,
-        type: 'image',
+        type: 'video',
         data,
         position: { x: 0, y: 0 },
       } as unknown as CanvasNode);
@@ -113,7 +128,7 @@ export const ImageNode = memo(
     const handleAskAI = useCallback(
       (dragCreateInfo?: NodeDragCreateInfo) => {
         const { position, connectTo } = getConnectionInfo(
-          { entityId: data.entityId, type: 'image' },
+          { entityId: data.entityId, type: 'video' },
           dragCreateInfo,
         );
 
@@ -126,7 +141,7 @@ export const ImageNode = memo(
               metadata: {
                 contextItems: [
                   {
-                    type: 'image',
+                    type: 'video',
                     title: data.title,
                     entityId: data.entityId,
                     metadata: data.metadata,
@@ -144,21 +159,11 @@ export const ImageNode = memo(
       [data, addNode, getConnectionInfo],
     );
 
-    const handlePreview = useCallback(() => {
-      setIsPreviewModalVisible(true);
-    }, []);
-
-    const handleImageClick = useCallback(() => {
-      if (selected || readonly) {
-        handlePreview();
-      }
-    }, [selected, readonly, handlePreview]);
-
     const onTitleChange = (newTitle: string) => {
       setNodeDataByEntity(
         {
           entityId: data.entityId,
-          type: 'image',
+          type: 'video',
         },
         {
           title: newTitle,
@@ -174,25 +179,22 @@ export const ImageNode = memo(
       const handleNodeAskAI = (event?: { dragCreateInfo?: NodeDragCreateInfo }) => {
         handleAskAI(event?.dragCreateInfo);
       };
-      const handleNodePreview = () => handlePreview();
 
       // Register events with node ID
       nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
       nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-      nodeActionEmitter.on(createNodeEventName(id, 'preview'), handleNodePreview);
 
       return () => {
         // Cleanup events when component unmounts
         nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
         nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-        nodeActionEmitter.off(createNodeEventName(id, 'preview'), handleNodePreview);
 
         // Clean up all node events
         cleanupNodeEvents(id);
       };
-    }, [id, handleAddToContext, handleDelete, handleAskAI, handlePreview]);
+    }, [id, handleAddToContext, handleDelete, handleAskAI]);
 
     const moveableRef = useRef<Moveable>(null);
 
@@ -208,7 +210,7 @@ export const ImageNode = memo(
       }, 1);
     }, [resizeMoveable, targetRef.current?.offsetHeight]);
 
-    if (!data || !imageUrl) {
+    if (!data || !videoUrl) {
       return null;
     }
 
@@ -218,7 +220,7 @@ export const ImageNode = memo(
           ref={targetRef}
           onMouseEnter={!isPreview ? handleMouseEnter : undefined}
           onMouseLeave={!isPreview ? handleMouseLeave : undefined}
-          style={isPreview ? { width: 288, height: 200 } : safeContainerStyle}
+          style={isPreview ? { width: 400, height: 300 } : safeContainerStyle}
           onClick={onNodeClick}
           className={classNames({
             'nodrag nopan select-text': isOperating,
@@ -240,7 +242,7 @@ export const ImageNode = memo(
                   position={Position.Left}
                   isConnected={false}
                   isNodeHovered={isHovered}
-                  nodeType="image"
+                  nodeType="video"
                 />
                 <CustomHandle
                   id={`${id}-source`}
@@ -249,7 +251,7 @@ export const ImageNode = memo(
                   position={Position.Right}
                   isConnected={false}
                   isNodeHovered={isHovered}
-                  nodeType="image"
+                  nodeType="video"
                 />
               </>
             )}
@@ -258,7 +260,7 @@ export const ImageNode = memo(
               {!isPreview && !readonly && (
                 <NodeActionButtons
                   nodeId={id}
-                  nodeType="image"
+                  nodeType="video"
                   isNodeHovered={isHovered}
                   isSelected={selected}
                 />
@@ -268,7 +270,7 @@ export const ImageNode = memo(
                 {showTitle && (
                   <div
                     className={cn(
-                      'absolute top-0 left-0 right-0 z-10 rounded-t-lg px-1 py-1 transition-opacity duration-200 bg-gray-100 dark:bg-black text-black dark:text-white',
+                      'absolute top-0 left-0 right-0 z-10 rounded-t-lg px-1 py-1 transition-opacity duration-200 bg-gray-100 dark:bg-black',
                       {
                         'opacity-100': selected || isHovered,
                         'opacity-0': !selected && !isHovered,
@@ -277,42 +279,39 @@ export const ImageNode = memo(
                   >
                     <NodeHeader
                       title={data.title}
-                      Icon={IconImage}
-                      iconBgColor="#02b0c7"
+                      Icon={HiOutlineFilm}
+                      iconBgColor="#FF6B6B"
                       canEdit={!readonly}
                       updateTitle={onTitleChange}
                     />
                   </div>
                 )}
-                <img
-                  onClick={handleImageClick}
-                  src={imageUrl}
-                  alt={data.title || 'Image'}
-                  className="w-full h-full object-contain"
-                  style={{ cursor: selected || readonly ? 'pointer' : 'default' }}
-                />
-
-                {/* only for preview image */}
-                {isPreviewModalVisible && !isPreview && (
-                  <ImagePreview
-                    isPreviewModalVisible={isPreviewModalVisible}
-                    setIsPreviewModalVisible={setIsPreviewModalVisible}
-                    imageUrl={imageUrl}
-                    imageTitle={data?.title}
-                  />
-                )}
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  controls
+                  className="w-full h-full object-contain bg-black"
+                  style={{ cursor: 'default' }}
+                  preload="metadata"
+                  onError={(e) => {
+                    console.error('Video failed to load:', e);
+                  }}
+                >
+                  <track kind="captions" />
+                  Your browser does not support the video tag.
+                </video>
               </div>
             </div>
           </div>
         </div>
 
-        {!isPreview && selected && !readonly && (
+        {!readonly && !isPreview && (
           <NodeResizerComponent
             moveableRef={moveableRef}
             targetRef={targetRef}
             isSelected={selected}
             isHovered={isHovered}
-            isPreview={isPreview}
+            isPreview={false}
             onResize={handleResize}
           />
         )}
@@ -321,4 +320,4 @@ export const ImageNode = memo(
   },
 );
 
-ImageNode.displayName = 'ImageNode';
+VideoNode.displayName = 'VideoNode';

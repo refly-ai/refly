@@ -17,6 +17,7 @@ import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-em
 import { useGroupModels } from '@refly-packages/ai-workspace-common/hooks/use-group-models';
 import './index.scss';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
+import { DownOutlined } from '@ant-design/icons';
 
 interface ModelSelectorProps {
   model: ModelInfo | null;

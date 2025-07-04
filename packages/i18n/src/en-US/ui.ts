@@ -137,6 +137,7 @@ const translations = {
     update: 'Update',
     validate: 'Validate',
     refresh: 'Refresh',
+    generating: 'Generating...',
   },
   mode: {
     ask: 'Ask',
@@ -1186,6 +1187,7 @@ const translations = {
       autoLayout: 'Auto Layout',
       autoName: 'Auto Name',
       askAI: 'Ask AI',
+      mediaGenerate: 'Media Generate',
       askAIDescription:
         'Ask AI, select context or switch skill, input requirements, get help with writing, reading comprehension, or question answering',
       createMemo: 'Create Memo',
@@ -1451,6 +1453,20 @@ const translations = {
         addSibling: 'Add Sibling Card',
         delete: 'Delete Card',
         invalidMindMapData: 'Invalid mind map data format. Please check your JSON structure.',
+      },
+      mediaSkill: {
+        prompt: 'Please enter the content to generate',
+        mediaType: 'Media Type',
+        image: 'Image',
+        video: 'Video',
+        audio: 'Audio',
+        imageGenerate: 'Generate Image',
+        videoGenerate: 'Generate Video',
+        audioGenerate: 'Generate Audio',
+        imagePlaceholder: 'Describe the image you want to generate...',
+        videoPlaceholder: 'Describe the video you want to generate...',
+        audioPlaceholder: 'Describe the audio you want to generate...',
+        defaultPlaceholder: 'Describe what you want to generate...',
       },
     },
     reflyPilot: {

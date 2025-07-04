@@ -92,6 +92,20 @@ export type SkillNodeMeta = {
   projectId?: string;
 };
 
+export type MediaSkillNodeMeta = {
+  query?: string;
+  resultId?: string;
+  version?: number;
+  modelInfo?: ModelInfo;
+  contextItems?: IContextItem[];
+  mediaType?: 'image' | 'video' | 'audio';
+  runtimeConfig?: SkillRuntimeConfig;
+  sizeMode?: 'compact' | 'adaptive';
+  style?: React.CSSProperties;
+  originalWidth?: number;
+  projectId?: string;
+};
+
 export type ToolNodeMeta = {
   toolType: string;
   sizeMode?: 'compact' | 'adaptive';
@@ -148,6 +162,7 @@ export type NodeMetadataMap = {
   document: DocumentNodeMeta;
   resource: ResourceNodeMeta;
   skill: SkillNodeMeta;
+  mediaSkill: MediaSkillNodeMeta;
   tool: ToolNodeMeta;
   response: ResponseNodeMeta;
   image: ImageNodeMeta;

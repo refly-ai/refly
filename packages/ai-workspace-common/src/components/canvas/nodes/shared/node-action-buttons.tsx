@@ -150,7 +150,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
       const buttons: ActionButtonType[] = [];
 
       // Add askAI button for most node types
-      if (!['skill'].includes(nodeType)) {
+      if (!['skill', 'mediaSkill'].includes(nodeType)) {
         buttons.push({
           key: 'askAI',
           icon: IconAskAI,
@@ -277,7 +277,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
           </Tooltip>
         ))}
 
-        {nodeType !== 'skill' && (
+        {!['skill', 'mediaSkill', 'video', 'audio', 'image'].includes(nodeType) && (
           <Tooltip title={t('canvas.nodeActions.more')} placement="top">
             <Button
               type="text"

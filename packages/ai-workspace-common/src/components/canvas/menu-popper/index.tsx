@@ -16,8 +16,9 @@ import {
   IconResource,
   IconWebsite,
   IconMindMap,
+  IconMedia,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { genMemoID, genSkillID } from '@refly/utils/id';
+import { genMediaSkillID, genMemoID, genSkillID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useReactFlow } from '@xyflow/react';
@@ -78,6 +79,11 @@ export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }
         description: t('canvas.toolbar.askAIDescription'),
         videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-askAI.webm',
       },
+    },
+    {
+      key: 'mediaGenerate',
+      icon: IconMedia,
+      type: 'button',
     },
     { key: 'divider-1', type: 'divider' },
     {
@@ -282,11 +288,23 @@ export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }
     setOpen(false);
   };
 
+  const createMediaGenerateSkillNode = (position: { x: number; y: number }) => {
+    addNode({
+      type: 'mediaSkill',
+      data: { title: 'Media', entityId: genMediaSkillID() },
+      position: position,
+    });
+  };
+
   const handleMenuClick = async ({ key }: { key: string }) => {
     setActiveKey(key);
     switch (key) {
       case 'askAI':
         createSkillNode(position);
+        setOpen(false);
+        break;
+      case 'mediaGenerate':
+        createMediaGenerateSkillNode(position);
         setOpen(false);
         break;
       case 'createDocument':

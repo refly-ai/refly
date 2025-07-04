@@ -6590,6 +6590,10 @@ export const CanvasNodeTypeSchema = {
     'memo',
     'group',
     'image',
+    'video',
+    'audio',
+    'mediaSkill',
+    'mediaSkillResponse',
   ],
 } as const;
 

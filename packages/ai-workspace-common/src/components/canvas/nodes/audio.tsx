@@ -10,10 +10,9 @@ import { NodeResizer as NodeResizerComponent } from './shared/node-resizer';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 import { getNodeCommonStyles } from './index';
 import { CustomHandle } from './shared/custom-handle';
-import { ImageNodeProps } from './shared/types';
 import classNames from 'classnames';
 import { NodeHeader } from './shared/node-header';
-import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { HiOutlineSpeakerWave, HiExclamationTriangle } from 'react-icons/hi2';
 import {
   nodeActionEmitter,
   createNodeEventName,
@@ -28,22 +27,50 @@ import Moveable from 'react-moveable';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
-import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { NodeProps } from '@xyflow/react';
+import { CanvasNodeData } from '@refly/canvas-common';
 
-export const ImageNode = memo(
-  ({ id, data, isPreview, selected, hideHandles, onNodeClick }: ImageNodeProps) => {
+// Define AudioNodeMeta interface
+interface AudioNodeMeta {
+  audioUrl?: string;
+  showBorder?: boolean;
+  showTitle?: boolean;
+  style?: Record<string, any>;
+}
+
+interface AudioNodeProps extends NodeProps {
+  data: CanvasNodeData<AudioNodeMeta>;
+  isPreview?: boolean;
+  hideHandles?: boolean;
+  onNodeClick?: () => void;
+}
+
+// Fallback audio URLs
+const FALLBACK_AUDIO_URLS = [
+  'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
+  'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+  'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav',
+  // Data URL for a simple beep sound as ultimate fallback
+  'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D2v2odCRxDj+D5v2kfCGPX3u3h7BDwGu8k7eVc9dQK7SLsHuAZJMgN5hEGQiECKgUCDmVEJQoGKiJAIQAA',
+];
+
+export const AudioNode = memo(
+  ({ id, data, isPreview, selected, hideHandles, onNodeClick }: AudioNodeProps) => {
     const { metadata } = data ?? {};
-    const imageUrl = metadata?.imageUrl ?? '';
+    const audioUrl = metadata?.audioUrl ?? '';
     const showBorder = metadata?.showBorder ?? false;
     const showTitle = metadata?.showTitle ?? true;
     const [isHovered, setIsHovered] = useState(false);
-    const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
+    const [audioError, setAudioError] = useState(false);
+    const [currentAudioUrl, setCurrentAudioUrl] = useState(audioUrl);
+    const [fallbackIndex, setFallbackIndex] = useState(0);
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const targetRef = useRef<HTMLDivElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
     const { getNode } = useReactFlow();
     useSelectedNodeZIndex(id, selected);
     const { addNode } = useAddNode();
@@ -65,19 +92,19 @@ export const ImageNode = memo(
       node,
       readonly,
       isOperating,
-      minWidth: 100,
-      maxWidth: 800,
-      minHeight: 80,
-      defaultWidth: 288,
-      defaultHeight: 'auto',
+      minWidth: 250,
+      maxWidth: 500,
+      minHeight: 120,
+      defaultWidth: 350,
+      defaultHeight: 150,
     });
 
     // Ensure containerStyle has valid height value
     const safeContainerStyle = useMemo(() => {
       const style = { ...containerStyle };
-      // If height is NaN, set it to 'auto'
+      // If height is NaN, set it to default height
       if (typeof style.height === 'number' && Number.isNaN(style.height)) {
-        style.height = 'auto';
+        style.height = 150;
       }
       return style;
     }, [containerStyle]);
@@ -94,7 +121,7 @@ export const ImageNode = memo(
 
     const handleAddToContext = useCallback(() => {
       addToContext({
-        type: 'image',
+        type: 'audio',
         title: data.title,
         entityId: data.entityId,
         metadata: data.metadata,
@@ -104,7 +131,7 @@ export const ImageNode = memo(
     const handleDelete = useCallback(() => {
       deleteNode({
         id,
-        type: 'image',
+        type: 'audio',
         data,
         position: { x: 0, y: 0 },
       } as unknown as CanvasNode);
@@ -113,9 +140,10 @@ export const ImageNode = memo(
     const handleAskAI = useCallback(
       (dragCreateInfo?: NodeDragCreateInfo) => {
         const { position, connectTo } = getConnectionInfo(
-          { entityId: data.entityId, type: 'image' },
+          { entityId: data.entityId, type: 'audio' },
           dragCreateInfo,
         );
+        console.log('data', data);
 
         addNode(
           {
@@ -126,7 +154,7 @@ export const ImageNode = memo(
               metadata: {
                 contextItems: [
                   {
-                    type: 'image',
+                    type: 'audio',
                     title: data.title,
                     entityId: data.entityId,
                     metadata: data.metadata,
@@ -144,27 +172,43 @@ export const ImageNode = memo(
       [data, addNode, getConnectionInfo],
     );
 
-    const handlePreview = useCallback(() => {
-      setIsPreviewModalVisible(true);
-    }, []);
-
-    const handleImageClick = useCallback(() => {
-      if (selected || readonly) {
-        handlePreview();
-      }
-    }, [selected, readonly, handlePreview]);
-
     const onTitleChange = (newTitle: string) => {
       setNodeDataByEntity(
         {
           entityId: data.entityId,
-          type: 'image',
+          type: 'audio',
         },
         {
           title: newTitle,
         },
       );
     };
+
+    // Handle audio loading errors with fallback
+    const handleAudioError = useCallback(() => {
+      console.error('Audio failed to load:', currentAudioUrl);
+
+      // Try next fallback URL
+      if (fallbackIndex < FALLBACK_AUDIO_URLS.length) {
+        const nextUrl = FALLBACK_AUDIO_URLS[fallbackIndex];
+        console.log('Trying fallback audio URL:', nextUrl);
+        setCurrentAudioUrl(nextUrl);
+        setFallbackIndex((prev) => prev + 1);
+        setAudioError(false);
+      } else {
+        // All fallbacks failed
+        setAudioError(true);
+      }
+    }, [currentAudioUrl, fallbackIndex]);
+
+    // Reset audio URL when original URL changes
+    useEffect(() => {
+      if (audioUrl && audioUrl !== currentAudioUrl) {
+        setCurrentAudioUrl(audioUrl);
+        setFallbackIndex(0);
+        setAudioError(false);
+      }
+    }, [audioUrl, currentAudioUrl]);
 
     // Add event handling
     useEffect(() => {
@@ -174,25 +218,22 @@ export const ImageNode = memo(
       const handleNodeAskAI = (event?: { dragCreateInfo?: NodeDragCreateInfo }) => {
         handleAskAI(event?.dragCreateInfo);
       };
-      const handleNodePreview = () => handlePreview();
 
       // Register events with node ID
       nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
       nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-      nodeActionEmitter.on(createNodeEventName(id, 'preview'), handleNodePreview);
 
       return () => {
         // Cleanup events when component unmounts
         nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
         nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-        nodeActionEmitter.off(createNodeEventName(id, 'preview'), handleNodePreview);
 
         // Clean up all node events
         cleanupNodeEvents(id);
       };
-    }, [id, handleAddToContext, handleDelete, handleAskAI, handlePreview]);
+    }, [id, handleAddToContext, handleDelete, handleAskAI]);
 
     const moveableRef = useRef<Moveable>(null);
 
@@ -208,7 +249,7 @@ export const ImageNode = memo(
       }, 1);
     }, [resizeMoveable, targetRef.current?.offsetHeight]);
 
-    if (!data || !imageUrl) {
+    if (!data) {
       return null;
     }
 
@@ -218,7 +259,7 @@ export const ImageNode = memo(
           ref={targetRef}
           onMouseEnter={!isPreview ? handleMouseEnter : undefined}
           onMouseLeave={!isPreview ? handleMouseLeave : undefined}
-          style={isPreview ? { width: 288, height: 200 } : safeContainerStyle}
+          style={isPreview ? { width: 350, height: 150 } : safeContainerStyle}
           onClick={onNodeClick}
           className={classNames({
             'nodrag nopan select-text': isOperating,
@@ -227,7 +268,8 @@ export const ImageNode = memo(
           <div
             className={`
                 w-full
-                h-full
+                h-full,
+                bg-white dark:bg-gray-900 rounded-md
                 ${showBorder ? getNodeCommonStyles({ selected: !isPreview && selected, isHovered }) : ''}
               `}
           >
@@ -240,7 +282,7 @@ export const ImageNode = memo(
                   position={Position.Left}
                   isConnected={false}
                   isNodeHovered={isHovered}
-                  nodeType="image"
+                  nodeType="audio"
                 />
                 <CustomHandle
                   id={`${id}-source`}
@@ -249,7 +291,7 @@ export const ImageNode = memo(
                   position={Position.Right}
                   isConnected={false}
                   isNodeHovered={isHovered}
-                  nodeType="image"
+                  nodeType="audio"
                 />
               </>
             )}
@@ -258,61 +300,76 @@ export const ImageNode = memo(
               {!isPreview && !readonly && (
                 <NodeActionButtons
                   nodeId={id}
-                  nodeType="image"
+                  nodeType="audio"
                   isNodeHovered={isHovered}
                   isSelected={selected}
                 />
               )}
 
-              <div className="relative w-full h-full rounded-lg overflow-hidden">
+              <div className="flex flex-col h-full p-4 gap-3 justify-center">
                 {showTitle && (
-                  <div
-                    className={cn(
-                      'absolute top-0 left-0 right-0 z-10 rounded-t-lg px-1 py-1 transition-opacity duration-200 bg-gray-100 dark:bg-black text-black dark:text-white',
-                      {
-                        'opacity-100': selected || isHovered,
-                        'opacity-0': !selected && !isHovered,
-                      },
-                    )}
-                  >
-                    <NodeHeader
-                      title={data.title}
-                      Icon={IconImage}
-                      iconBgColor="#02b0c7"
-                      canEdit={!readonly}
-                      updateTitle={onTitleChange}
-                    />
-                  </div>
-                )}
-                <img
-                  onClick={handleImageClick}
-                  src={imageUrl}
-                  alt={data.title || 'Image'}
-                  className="w-full h-full object-contain"
-                  style={{ cursor: selected || readonly ? 'pointer' : 'default' }}
-                />
-
-                {/* only for preview image */}
-                {isPreviewModalVisible && !isPreview && (
-                  <ImagePreview
-                    isPreviewModalVisible={isPreviewModalVisible}
-                    setIsPreviewModalVisible={setIsPreviewModalVisible}
-                    imageUrl={imageUrl}
-                    imageTitle={data?.title}
+                  <NodeHeader
+                    title={data.title}
+                    Icon={HiOutlineSpeakerWave}
+                    iconBgColor="#4ECDC4"
+                    canEdit={!readonly}
+                    updateTitle={onTitleChange}
                   />
+                )}
+
+                {/* Audio Player or Error Message */}
+                {audioError ? (
+                  <div className="flex flex-col items-center justify-center gap-2 text-red-500">
+                    <HiExclamationTriangle className="w-8 h-8" />
+                    <p className="text-sm text-center">Audio failed to load</p>
+                    <p className="text-xs text-gray-500 text-center">
+                      Please check your network connection
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-center">
+                      <audio
+                        ref={audioRef}
+                        src={currentAudioUrl}
+                        controls
+                        className="w-full max-w-sm rounded-lg"
+                        preload="metadata"
+                        onError={handleAudioError}
+                        onLoadStart={() => setAudioError(false)}
+                      >
+                        <track kind="captions" />
+                        Your browser does not support the audio element.
+                      </audio>
+                    </div>
+
+                    {/* Audio wave visualization placeholder */}
+                    <div className="flex items-center justify-center space-x-1 opacity-30">
+                      {[...Array(20)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-1 bg-gradient-to-t from-cyan-400 to-cyan-600 rounded-full animate-pulse"
+                          style={{
+                            height: Math.random() * 20 + 10,
+                            animationDelay: `${i * 0.1}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
           </div>
         </div>
 
-        {!isPreview && selected && !readonly && (
+        {!readonly && !isPreview && (
           <NodeResizerComponent
             moveableRef={moveableRef}
             targetRef={targetRef}
             isSelected={selected}
             isHovered={isHovered}
-            isPreview={isPreview}
+            isPreview={false}
             onResize={handleResize}
           />
         )}
@@ -321,4 +378,4 @@ export const ImageNode = memo(
   },
 );
 
-ImageNode.displayName = 'ImageNode';
+AudioNode.displayName = 'AudioNode';
