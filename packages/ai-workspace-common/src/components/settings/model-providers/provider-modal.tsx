@@ -1,9 +1,22 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Input, Modal, Form, Switch, Select, Checkbox, message } from 'antd';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
-import { ProviderInfo, providerInfoList } from '@refly/utils';
+import {
+  Button,
+  Input,
+  Modal,
+  Form,
+  Switch,
+  Select,
+  Checkbox,
+  message,
+  Alert,
+  Tooltip,
+} from 'antd';
+import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import getClient from '../../../requests/proxiedRequest';
+import { Provider, ProviderCategory, ProviderTestResult } from '../../../requests/types.gen';
+import { ProviderInfo, providerInfoList } from '../../../../../utils/src';
+import { useTestProviderConnection } from '../../../queries';
 
 export const ProviderModal = React.memo(
   ({
@@ -32,8 +45,12 @@ export const ProviderModal = React.memo(
     const [selectedProviderKey, setSelectedProviderKey] = useState<string | undefined>(
       provider?.providerKey || defaultProviderKey,
     );
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [testResult, setTestResult] = useState<any>(null);
 
     const isEditMode = !!provider;
+
+    const testProviderMutation = useTestProviderConnection();
 
     // Convert provider info list to options for the select component
     const providerOptions = useMemo(
@@ -91,6 +108,9 @@ export const ProviderModal = React.memo(
         const providers = presetProviders || providerInfoList;
         const providerInfo = providers.find((p) => p.key === value);
 
+        // Clear test result when provider changes
+        setTestResult(null);
+
         // Reset form fields except for providerKey and enabled
         const enabled = form.getFieldValue('enabled');
         form.resetFields();
@@ -121,8 +141,16 @@ export const ProviderModal = React.memo(
       [form, presetProviders],
     );
 
+    const handleBaseUrlChange = () => {
+      // Clear test result when base URL changes
+      setTestResult(null);
+    };
+
     useEffect(() => {
       if (isOpen) {
+        // Clear test result when modal opens (for both edit and create modes)
+        setTestResult(null);
+
         if (provider) {
           const apiKeyValue = provider.apiKey;
           setIsDefaultApiKey(!!apiKeyValue);
@@ -167,6 +195,9 @@ export const ProviderModal = React.memo(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
 
+        // Clear test result when API key changes
+        setTestResult(null);
+
         if (isDefaultApiKey && value !== 'default') {
           form.setFieldsValue({ apiKey: '' });
           setIsDefaultApiKey(false);
@@ -177,22 +208,159 @@ export const ProviderModal = React.memo(
       [isDefaultApiKey, form],
     );
 
+    // Simple test connection function - Step 3: React Query integration
+    const handleTestConnection = useCallback(async () => {
+      try {
+        setIsTestingConnection(true);
+        setTestResult(null);
+
+        // Basic form validation
+        const formValues = form.getFieldsValue();
+        const { name, providerKey, apiKey, baseUrl } = formValues;
+
+        // Validate required fields
+        if (!name?.trim()) {
+          throw new Error(t('settings.modelProviders.namePlaceholder'));
+        }
+        if (!providerKey) {
+          throw new Error(t('settings.modelProviders.selectProviderType'));
+        }
+
+        // Provider-specific validation
+        if (selectedProviderInfo) {
+          if (selectedProviderInfo.fieldConfig.apiKey.presence === 'required' && !apiKey?.trim()) {
+            throw new Error(t('settings.modelProviders.apiKeyPlaceholder'));
+          }
+          if (
+            selectedProviderInfo.fieldConfig.baseUrl.presence === 'required' &&
+            !baseUrl?.trim()
+          ) {
+            throw new Error(t('settings.modelProviders.baseUrlPlaceholder'));
+          }
+        }
+
+        // Case 1: Edit mode, user has not entered new API key (form is empty or default value)
+        // Case 2&3: Create mode or edit mode with user input new API key
+        const isEditingExistingProvider = isEditMode && provider;
+        const userInputtedNewApiKey = apiKey && apiKey.trim() !== '' && !isDefaultApiKey;
+
+        // Only use existing provider when editing existing provider and user has not input new API key
+        const shouldUseExistingProvider = isEditingExistingProvider && !userInputtedNewApiKey;
+
+        if (shouldUseExistingProvider) {
+          // Case 1: Edit mode and user has not modified API key, directly test existing provider
+          // Backend will fetch saved encrypted API key from databas
+          const testResult = await testProviderMutation.mutateAsync({
+            body: {
+              providerId: provider.providerId,
+            },
+          });
+
+          const providerResult = testResult.data.data as ProviderTestResult;
+
+          if (providerResult?.status === 'success') {
+            const successResult = {
+              status: 'success',
+              message: providerResult.message || t('settings.modelProviders.connectionTestSuccess'),
+              timestamp: new Date().toISOString(),
+            };
+            setTestResult(successResult);
+          } else {
+            throw new Error(
+              providerResult?.message || t('settings.modelProviders.connectionTestFailed'),
+            );
+          }
+        } else {
+          // Case 2: Create mode, use all configurations from frontend input
+          // Case 3: Edit mode and user modified API key, use new configurations
+          const createRes = await getClient().createProvider({
+            body: {
+              name: `temp_test_${Date.now()}`,
+              enabled: false,
+              apiKey: apiKey || undefined,
+              baseUrl: baseUrl || undefined,
+              providerKey,
+              categories: ['llm'], // Default category for testing
+            },
+          });
+
+          if (!createRes.data?.success) {
+            throw new Error(t('settings.modelProviders.createTempProviderFailed'));
+          }
+
+          const tempProvider = createRes.data.data;
+          try {
+            const testResult = await testProviderMutation.mutateAsync({
+              body: {
+                providerId: tempProvider.providerId,
+              },
+            });
+
+            const providerResult = testResult.data.data as ProviderTestResult;
+
+            if (providerResult?.status === 'success') {
+              const successResult = {
+                status: 'success',
+                message:
+                  providerResult.message || t('settings.modelProviders.connectionTestSuccess'),
+                timestamp: new Date().toISOString(),
+              };
+              setTestResult(successResult);
+            } else {
+              throw new Error(
+                providerResult?.message || t('settings.modelProviders.connectionTestFailed'),
+              );
+            }
+          } finally {
+            // Clean up: delete the temporary provider
+            await getClient().deleteProvider({
+              body: { providerId: tempProvider.providerId },
+            });
+          }
+        }
+      } catch (error: unknown) {
+        // Simple error handling
+        let errorMessage = t('settings.modelProviders.apiConnectionFailed');
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        setTestResult({
+          status: 'failed',
+          message: errorMessage,
+          timestamp: new Date().toISOString(),
+        });
+      } finally {
+        setIsTestingConnection(false);
+      }
+    }, [form, selectedProviderInfo, isEditMode, provider, testProviderMutation]);
+
     const handleSubmit = useCallback(async () => {
       try {
         const values = await form.validateFields();
         setIsSubmitting(true);
 
         if (isEditMode && provider) {
+          // Base update body (excluding apiKey)
+          const updateBody: any = {
+            ...provider,
+            name: values.name,
+            enabled: values.enabled,
+            baseUrl: values.baseUrl || undefined,
+            providerKey: values.providerKey,
+            categories: values.categories,
+          };
+
+          // Explicitly exclude apiKey field to ensure no accidental updates
+          updateBody.apiKey = undefined;
+
+          // Simplified strategy: only add to update body if apiKey is not 'default'
+          if (values.apiKey !== 'default') {
+            updateBody.apiKey = values.apiKey;
+          }
+
           const res = await getClient().updateProvider({
-            body: {
-              ...provider,
-              name: values.name,
-              enabled: values.enabled,
-              apiKey: values.apiKey,
-              baseUrl: values.baseUrl || undefined,
-              providerKey: values.providerKey,
-              categories: values.categories,
-            },
+            body: updateBody,
           });
           if (res.data.success) {
             message.success(t('common.saveSuccess'));
@@ -241,6 +409,21 @@ export const ProviderModal = React.memo(
           <Button key="cancel" onClick={onClose}>
             {t('common.cancel')}
           </Button>,
+          <Tooltip
+            title={!selectedProviderInfo ? t('settings.modelProviders.selectProviderFirst') : ''}
+            key="test"
+          >
+            <Button
+              icon={isTestingConnection ? <SyncOutlined spin /> : undefined}
+              onClick={handleTestConnection}
+              disabled={!selectedProviderInfo || isTestingConnection}
+              loading={isTestingConnection}
+            >
+              {isTestingConnection
+                ? t('settings.modelProviders.testing')
+                : t('settings.modelProviders.testConnection')}
+            </Button>
+          </Tooltip>,
           <Button key="submit" type="primary" onClick={handleSubmit} loading={isSubmitting}>
             {submitButtonText}
           </Button>,
@@ -320,7 +503,10 @@ export const ProviderModal = React.memo(
                 },
               ]}
             >
-              <Input placeholder={t('settings.modelProviders.baseUrlPlaceholder')} />
+              <Input
+                placeholder={t('settings.modelProviders.baseUrlPlaceholder')}
+                onChange={handleBaseUrlChange}
+              />
             </Form.Item>
           )}
           <Form.Item
@@ -331,6 +517,36 @@ export const ProviderModal = React.memo(
             <Switch disabled={disabledEnableControl} />
           </Form.Item>
         </Form>
+
+        {/* Simple connection test result */}
+        {testResult && (
+          <Alert
+            type={testResult.status === 'success' ? 'success' : 'error'}
+            icon={
+              testResult.status === 'success' ? <CheckCircleOutlined /> : <CloseCircleOutlined />
+            }
+            message={
+              <div className="flex items-center justify-between">
+                <span>{testResult.message}</span>
+                <Button
+                  type="text"
+                  size="small"
+                  onClick={() => setTestResult(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </Button>
+              </div>
+            }
+            description={
+              <div className="text-sm text-gray-600">
+                {t('settings.modelProviders.testTime')}:{' '}
+                {new Date(testResult.timestamp).toLocaleString()}
+              </div>
+            }
+            className="mb-4"
+          />
+        )}
       </Modal>
     );
   },

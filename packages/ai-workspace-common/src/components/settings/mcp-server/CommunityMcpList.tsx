@@ -3,7 +3,7 @@ import { Row, Col, Input, Select, Alert, Empty, Typography } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { McpServerDTO } from '@refly/openapi-schema';
-import { useListCommunityMcpConfigs } from '@refly-packages/ai-workspace-common/queries';
+import { useListCommunityMcpConfigs } from '@refly-packages/ai-workspace-common/queries/mcp-community';
 import {
   CommunityMcpCard,
   CommunityMcpCardSkeleton,

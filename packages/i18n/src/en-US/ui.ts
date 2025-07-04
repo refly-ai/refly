@@ -2257,6 +2257,16 @@ const translations = {
         reranker: 'Reranker',
         embedding: 'Embedding',
       },
+      testConnection: 'Test Connection',
+      testing: 'Testing...',
+      connectionTestSuccess: 'Connection test successful',
+      connectionTestFailed: 'Connection test failed',
+      testConnectionFailed: 'Failed to test connection',
+      createTempProviderFailed: 'Failed to create temporary provider',
+      apiConnectionFailed: 'API connection failed',
+      testTime: 'Test time',
+      selectProviderFirst: 'Please select a provider type first',
+      viewDetails: 'View Details',
       // Provider Store related translations
       community: {
         title: 'Community Provider Configurations',

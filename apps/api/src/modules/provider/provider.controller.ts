@@ -14,6 +14,8 @@ import {
   ListProviderItemsResponse,
   ListProvidersResponse,
   ProviderCategory,
+  TestProviderConnectionRequest,
+  TestProviderConnectionResponse,
   UpsertProviderItemRequest,
   UpsertProviderItemResponse,
   UpsertProviderRequest,
@@ -131,6 +133,16 @@ export class ProviderController {
   ): Promise<DeleteProviderItemResponse> {
     await this.providerService.deleteProviderItem(user, body);
     return buildSuccessResponse();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/test-connection')
+  async testProviderConnection(
+    @LoginedUser() user: UserModel,
+    @Body() body: TestProviderConnectionRequest,
+  ): Promise<TestProviderConnectionResponse> {
+    const result = await this.providerService.testProviderConnection(user, body);
+    return buildSuccessResponse(result);
   }
 
   @UseGuards(JwtAuthGuard)
