@@ -223,7 +223,7 @@ export class ActionService {
   /**
    * Abort a running action
    */
-  async abortAction(user: User, { resultId }: { resultId: string }) {
+  async abortAction(user: User, { resultId, reason }: { resultId: string; reason?: string }) {
     this.logger.debug(`Attempting to abort action: ${resultId} for user: ${user.uid}`);
 
     // Verify that the action belongs to the user
@@ -241,26 +241,40 @@ export class ActionService {
     // Get the abort controller for this action
     const entry = this.activeAbortControllers.get(resultId);
 
+    // Determine the error message based on the reason
+    const defaultReason = 'User aborted the action';
+    const abortReason = reason || 'User requested abort';
+    const errorMessage = reason || defaultReason;
+
     if (entry) {
       // Abort the action
-      entry.controller.abort('User requested abort');
-      this.logger.log(`Aborted action: ${resultId}`);
+      entry.controller.abort(abortReason);
+      this.logger.log(`Aborted action: ${resultId} - ${abortReason}`);
 
       // Clean up the entry
       this.unregisterAbortController(resultId);
+    } else {
+      this.logger.warn(`No active abort controller found for action: ${resultId}`);
+    }
 
-      // Update the action status to failed
+    // Always update the action status to failed, regardless of whether we found an active controller
+    // This handles cases where the action might be stuck without an active controller
+    try {
       await this.prisma.actionResult.update({
         where: {
           pk: result.pk,
+          status: 'executing', // Only update if still executing to avoid race conditions
         },
         data: {
           status: 'failed',
-          errors: JSON.stringify(['User aborted the action']),
+          errors: JSON.stringify([errorMessage]),
         },
       });
-    } else {
-      this.logger.warn(`No active abort controller found for action: ${resultId}`);
+      this.logger.log(`Updated action ${resultId} status to failed: ${errorMessage}`);
+    } catch (updateError) {
+      // If the update fails (e.g., because the status is no longer 'executing'),
+      // log the error but don't throw it
+      this.logger.warn(`Failed to update action ${resultId} status: ${updateError?.message}`);
     }
   }
 }
