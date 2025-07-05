@@ -1,10 +1,9 @@
-import { useEffect, FC, useState, useCallback, memo } from 'react';
+import { FC, memo } from 'react';
 import { useMatch } from 'react-router-dom';
 import { Button, Divider, message } from 'antd';
 import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 import { useTranslation } from 'react-i18next';
 import { LOCALE } from '@refly/common-types';
-import { useDebounce } from 'use-debounce';
 import { AiOutlineMenuUnfold } from 'react-icons/ai';
 import { SiderPopover } from '@refly-packages/ai-workspace-common/components/sider/popover';
 import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
@@ -41,31 +40,25 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
   const isShareCanvas = useMatch('/share/canvas/:canvasId');
   const isPreviewCanvas = useMatch('/preview/canvas/:shareId');
 
-  const { provider, readonly, shareData } = useCanvasContext();
-  const [unsyncedChanges, setUnsyncedChanges] = useState(provider?.unsyncedChanges || 0);
-  const [debouncedUnsyncedChanges] = useDebounce(unsyncedChanges, 500);
+  const { loading, readonly, shareData } = useCanvasContext();
 
-  const handleUnsyncedChanges = useCallback((data: number) => {
-    setUnsyncedChanges(data);
-  }, []);
+  const {
+    config,
+    showPreview,
+    setShowPreview,
+    showMaxRatio,
+    setShowMaxRatio,
+    canvasTitle: canvasTitleFromStore,
+  } = useCanvasStoreShallow((state) => ({
+    config: state.config[canvasId],
+    showPreview: state.showPreview,
+    setShowPreview: state.setShowPreview,
+    showMaxRatio: state.showMaxRatio,
+    setShowMaxRatio: state.setShowMaxRatio,
+    canvasTitle: state.canvasTitle[canvasId],
+  }));
 
-  useEffect(() => {
-    provider?.on('unsyncedChanges', handleUnsyncedChanges);
-    return () => {
-      provider?.off('unsyncedChanges', handleUnsyncedChanges);
-    };
-  }, [provider, handleUnsyncedChanges]);
-
-  const { config, showPreview, setShowPreview, showMaxRatio, setShowMaxRatio } =
-    useCanvasStoreShallow((state) => ({
-      config: state.config[canvasId],
-      showPreview: state.showPreview,
-      setShowPreview: state.setShowPreview,
-      showMaxRatio: state.showMaxRatio,
-      setShowMaxRatio: state.setShowMaxRatio,
-    }));
-
-  const canvasTitle = shareData?.title || provider?.document.getText('title').toJSON() || '';
+  const canvasTitle = shareData?.title || canvasTitleFromStore;
   const hasCanvasSynced = config?.localSyncedAt > 0 && config?.remoteSyncedAt > 0;
 
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
@@ -114,8 +107,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
               canvasId={canvasId}
               canvasTitle={canvasTitle}
               hasCanvasSynced={hasCanvasSynced}
-              providerStatus={provider?.status}
-              debouncedUnsyncedChanges={debouncedUnsyncedChanges}
+              canvasLoading={loading}
               language={language}
             />
           )}

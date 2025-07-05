@@ -334,7 +334,9 @@ model Canvas {
   title             String    @default("Untitled") @map("title")
   /// Canvas yjs doc storage size (in bytes)
   storageSize       BigInt    @default(0) @map("storage_size")
-  /// Canvas yjs doc storage key
+  /// Canvas version
+  version           String    @default("") @map("version")
+  /// Canvas yjs doc storage key (deprecated, use `dataStorageKey` instead)
   stateStorageKey   String?   @map("state_storage_key")
   /// Minimap storage key
   minimapStorageKey String?   @map("minimap_storage_key")
@@ -357,6 +359,28 @@ model Canvas {
 
   @@index([uid, updatedAt])
   @@map("canvases")
+}
+
+model CanvasVersion {
+  /// Primary key
+  pk              BigInt    @id @default(autoincrement())
+  /// Canvas id
+  canvasId        String    @map("canvas_id")
+  /// Version
+  version         String    @map("version")
+  /// Canvas state hash
+  hash            String    @map("hash")
+  /// Canvas state storage key
+  stateStorageKey String    @map("state_storage_key")
+  /// Create timestamp
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([canvasId, version])
+  @@map("canvas_versions")
 }
 
 model CanvasTemplate {

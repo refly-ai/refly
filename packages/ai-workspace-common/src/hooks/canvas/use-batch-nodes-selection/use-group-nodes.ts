@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import {
   CanvasNode,
-  prepareNodeData,
   calculateGroupBoundaries,
   sortNodes,
   getAbsolutePosition,
@@ -26,14 +25,15 @@ export const useGroupNodes = () => {
     const { groupNode } = calculateGroupBoundaries(selectedNodes, beforeNodes);
 
     // Prepare the new group node
-    const newGroupNode = prepareNodeData({
+    const newGroupNode = {
       ...groupNode,
+      id: genUniqueId(),
       zIndex: -1,
       data: {
         ...groupNode.data,
         entityId: genUniqueId(),
       },
-    });
+    };
 
     // Track groups that will become empty
     const emptyGroups = new Set<string>();

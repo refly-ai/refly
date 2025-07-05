@@ -1209,6 +1209,12 @@ importers:
       i18next-browser-languagedetector:
         specifier: ^8.0.2
         version: 8.0.2
+      idb:
+        specifier: ^8.0.3
+        version: 8.0.3
+      idb-keyval:
+        specifier: ^6.2.2
+        version: 6.2.2
       immer:
         specifier: ^10.1.1
         version: 10.1.1
@@ -1471,6 +1477,9 @@ importers:
       '@xyflow/react':
         specifier: ^12.3.5
         version: 12.3.5(@types/react@18.3.10)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      deepmerge:
+        specifier: ^4.3.1
+        version: 4.3.1
     devDependencies:
       '@types/react':
         specifier: ^18.2.56
@@ -10278,6 +10287,12 @@ packages:
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
+
+  idb-keyval@6.2.2:
+    resolution: {integrity: sha512-yjD9nARJ/jb1g+CvD0tlhUHOrJ9Sy0P8T9MF3YaLlHnSRpwPfpTX0XIvpmw3gAJUmEu3FiICLBDPXVwyEvrleg==}
+
+  idb@8.0.3:
+    resolution: {integrity: sha512-LtwtVyVYO5BqRvcsKuB2iUMnHwPVByPCXFXOpuU96IZPPoPN6xjOGxZQ74pgSVVLQWtUOYgyeL4GE98BY5D3wg==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -26004,6 +26019,10 @@ snapshots:
   iconv-lite@0.6.3:
     dependencies:
       safer-buffer: 2.1.2
+
+  idb-keyval@6.2.2: {}
+
+  idb@8.0.3: {}
 
   ieee754@1.2.1: {}
 

@@ -5,6 +5,7 @@ import { InfiniteData, useInfiniteQuery, UseInfiniteQueryOptions } from '@tansta
 import {
   listCanvases,
   listCanvasTemplates,
+  listCodeArtifacts,
   listDocuments,
   listLabelClasses,
   listLabelInstances,
@@ -20,6 +21,8 @@ import {
   ListCanvasesError,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
+  ListCodeArtifactsData,
+  ListCodeArtifactsError,
   ListDocumentsData,
   ListDocumentsError,
   ListLabelClassesData,
@@ -178,6 +181,31 @@ export const useListProjectsInfinite = <
     queryKey: Common.UseListProjectsKeyFn(clientOptions, queryKey),
     queryFn: ({ pageParam }) =>
       listProjects({
+        ...clientOptions,
+        query: { ...clientOptions.query, page: pageParam as number },
+      }).then((response) => response.data as TData) as TData,
+    initialPageParam: '1',
+    getNextPageParam: (response) =>
+      (
+        response as {
+          nextPage: number;
+        }
+      ).nextPage,
+    ...options,
+  });
+export const useListCodeArtifactsInfinite = <
+  TData = InfiniteData<Common.ListCodeArtifactsDefaultResponse>,
+  TError = ListCodeArtifactsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListCodeArtifactsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useInfiniteQuery({
+    queryKey: Common.UseListCodeArtifactsKeyFn(clientOptions, queryKey),
+    queryFn: ({ pageParam }) =>
+      listCodeArtifacts({
         ...clientOptions,
         query: { ...clientOptions.query, page: pageParam as number },
       }).then((response) => response.data as TData) as TData,

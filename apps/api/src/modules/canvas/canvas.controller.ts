@@ -20,11 +20,18 @@ import {
   AutoNameCanvasRequest,
   AutoNameCanvasResponse,
   DuplicateCanvasRequest,
+  SyncCanvasStateRequest,
+  GetCanvasStateResponse,
+  BaseResponse,
 } from '@refly/openapi-schema';
+import { CanvasSyncService } from './canvas-sync.service';
 
 @Controller('v1/canvas')
 export class CanvasController {
-  constructor(private canvasService: CanvasService) {}
+  constructor(
+    private canvasService: CanvasService,
+    private canvasSyncService: CanvasSyncService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('list')
@@ -88,5 +95,26 @@ export class CanvasController {
   ): Promise<AutoNameCanvasResponse> {
     const data = await this.canvasService.autoNameCanvas(user, body);
     return buildSuccessResponse(data);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('getState')
+  async getCanvasState(
+    @LoginedUser() user: User,
+    @Query('canvasId') canvasId: string,
+    @Query('version') version?: string,
+  ): Promise<GetCanvasStateResponse> {
+    const state = await this.canvasSyncService.getState(user, { canvasId, version });
+    return buildSuccessResponse(state);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('syncState')
+  async syncCanvasState(
+    @LoginedUser() user: User,
+    @Body() body: SyncCanvasStateRequest,
+  ): Promise<BaseResponse> {
+    await this.canvasSyncService.syncState(user, body);
+    return buildSuccessResponse({});
   }
 }

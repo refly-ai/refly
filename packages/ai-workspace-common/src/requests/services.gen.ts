@@ -99,6 +99,12 @@ import type {
   AutoNameCanvasData,
   AutoNameCanvasError,
   AutoNameCanvasResponse2,
+  GetCanvasStateData,
+  GetCanvasStateError,
+  GetCanvasStateResponse2,
+  SyncCanvasStateData,
+  SyncCanvasStateError,
+  SyncCanvasStateResponse2,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
   ListCanvasTemplatesResponse,
@@ -185,6 +191,9 @@ import type {
   DeleteProjectItemsData,
   DeleteProjectItemsError,
   DeleteProjectItemsResponse,
+  ListCodeArtifactsData,
+  ListCodeArtifactsError,
+  ListCodeArtifactsResponse,
   GetCodeArtifactDetailData,
   GetCodeArtifactDetailError,
   GetCodeArtifactDetailResponse2,
@@ -835,6 +844,40 @@ export const autoNameCanvas = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Get canvas state
+ * Get canvas state
+ */
+export const getCanvasState = <ThrowOnError extends boolean = false>(
+  options: Options<GetCanvasStateData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetCanvasStateResponse2,
+    GetCanvasStateError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/getState',
+  });
+};
+
+/**
+ * Sync canvas state
+ * Sync canvas state
+ */
+export const syncCanvasState = <ThrowOnError extends boolean = false>(
+  options: Options<SyncCanvasStateData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    SyncCanvasStateResponse2,
+    SyncCanvasStateError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/syncState',
+  });
+};
+
+/**
  * List canvas templates
  * List all canvas templates
  */
@@ -1301,6 +1344,23 @@ export const deleteProjectItems = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/project/deleteItems',
+  });
+};
+
+/**
+ * List code artifacts
+ * List all code artifacts
+ */
+export const listCodeArtifacts = <ThrowOnError extends boolean = false>(
+  options?: Options<ListCodeArtifactsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListCodeArtifactsResponse,
+    ListCodeArtifactsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/codeArtifact/list',
   });
 };
 

@@ -446,7 +446,7 @@ export class PilotService {
       const contextItems = convertResultContextToItems(context, history);
 
       if (targetType === 'canvas') {
-        await this.canvasService.addNodeToCanvasDoc(
+        await this.canvasService.addNodeToCanvas(
           user,
           targetId,
           {

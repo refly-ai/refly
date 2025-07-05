@@ -23,6 +23,7 @@ import { ActionModule } from '../action/action.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
 import { isDesktop } from '../../utils/runtime';
+import { CanvasSyncService } from './canvas-sync.service';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { isDesktop } from '../../utils/runtime';
   controllers: [CanvasController],
   providers: [
     CanvasService,
+    CanvasSyncService,
     ...(isDesktop()
       ? []
       : [

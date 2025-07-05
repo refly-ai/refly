@@ -26,7 +26,6 @@ export * from './use-sync-selected-nodes-to-context';
 export * from './use-debounced-context-update';
 
 // Canvas operations
-export * from './use-canvas-sync';
 export * from './use-canvas-data';
 export * from './use-canvas-id';
 export * from './use-canvas-layout';

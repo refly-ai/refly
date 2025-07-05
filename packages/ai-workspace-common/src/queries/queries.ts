@@ -58,6 +58,7 @@ import {
   getAuthConfig,
   getCanvasData,
   getCanvasDetail,
+  getCanvasState,
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
@@ -75,6 +76,7 @@ import {
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCodeArtifacts,
   listDocuments,
   listLabelClasses,
   listLabelInstances,
@@ -103,6 +105,7 @@ import {
   serveStatic,
   sharePage,
   streamInvokeSkill,
+  syncCanvasState,
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
@@ -233,6 +236,8 @@ import {
   GetCanvasDataError,
   GetCanvasDetailData,
   GetCanvasDetailError,
+  GetCanvasStateData,
+  GetCanvasStateError,
   GetCodeArtifactDetailData,
   GetCodeArtifactDetailError,
   GetCollabTokenError,
@@ -261,6 +266,8 @@ import {
   ListCanvasTemplateCategoriesError,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
+  ListCodeArtifactsData,
+  ListCodeArtifactsError,
   ListDocumentsData,
   ListDocumentsError,
   ListLabelClassesData,
@@ -312,6 +319,8 @@ import {
   SharePageError,
   StreamInvokeSkillData,
   StreamInvokeSkillError,
+  SyncCanvasStateData,
+  SyncCanvasStateError,
   UnpinSkillInstanceData,
   UnpinSkillInstanceError,
   UpdateCanvasData,
@@ -504,6 +513,21 @@ export const useExportCanvas = <
       exportCanvas({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
+export const useGetCanvasState = <
+  TData = Common.GetCanvasStateDefaultResponse,
+  TError = GetCanvasStateError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetCanvasStateData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetCanvasStateKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getCanvasState({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
 export const useListCanvasTemplates = <
   TData = Common.ListCanvasTemplatesDefaultResponse,
   TError = ListCanvasTemplatesError,
@@ -639,6 +663,21 @@ export const useGetProjectDetail = <
     queryKey: Common.UseGetProjectDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getProjectDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useListCodeArtifacts = <
+  TData = Common.ListCodeArtifactsDefaultResponse,
+  TError = ListCodeArtifactsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListCodeArtifactsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListCodeArtifactsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listCodeArtifacts({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCodeArtifactDetail = <
@@ -1272,6 +1311,23 @@ export const useAutoNameCanvas = <
   useMutation<TData, TError, Options<AutoNameCanvasData, true>, TContext>({
     mutationKey: Common.UseAutoNameCanvasKeyFn(mutationKey),
     mutationFn: (clientOptions) => autoNameCanvas(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useSyncCanvasState = <
+  TData = Common.SyncCanvasStateMutationResult,
+  TError = SyncCanvasStateError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<SyncCanvasStateData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<SyncCanvasStateData, true>, TContext>({
+    mutationKey: Common.UseSyncCanvasStateKeyFn(mutationKey),
+    mutationFn: (clientOptions) => syncCanvasState(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateCanvasTemplate = <

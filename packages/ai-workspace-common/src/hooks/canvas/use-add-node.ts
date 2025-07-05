@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useReactFlow, useStoreApi, XYPosition } from '@xyflow/react';
-import { CanvasNodeType } from '@refly/openapi-schema';
+import { CanvasNode } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { CanvasNode, CanvasNodeData, CanvasNodeFilter, prepareAddNode } from '@refly/canvas-common';
+import { CanvasNodeFilter, prepareAddNode } from '@refly/canvas-common';
 import { useEdgeStyles } from '../../components/canvas/constants';
 import { useNodeSelection } from './use-node-selection';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -51,13 +51,7 @@ export const useAddNode = () => {
 
   const addNode = useCallback(
     (
-      node: {
-        type: CanvasNodeType;
-        data: CanvasNodeData<any>;
-        position?: XYPosition;
-        id?: string;
-        offsetPosition?: XYPosition;
-      },
+      node: Partial<CanvasNode>,
       connectTo?: CanvasNodeFilter[],
       shouldPreview = true,
       needSetCenter = false,

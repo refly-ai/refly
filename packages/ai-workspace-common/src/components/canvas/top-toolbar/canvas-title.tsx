@@ -5,30 +5,32 @@ import { useTranslation } from 'react-i18next';
 import { LOCALE } from '@refly/common-types';
 import { IconCanvas, IconEdit } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
-import { useCanvasSync } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-sync';
 import { CanvasRename } from './canvas-rename';
 import { ShareUser } from '@refly/openapi-schema';
 import { AiOutlineUser } from 'react-icons/ai';
+import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
 
 export const CanvasTitle = memo(
   ({
     canvasId,
-    canvasTitle,
     hasCanvasSynced,
-    providerStatus,
-    debouncedUnsyncedChanges,
+    canvasLoading,
+    canvasTitle,
     language,
   }: {
     canvasId: string;
-    canvasTitle?: string;
     hasCanvasSynced: boolean;
-    providerStatus: string;
-    debouncedUnsyncedChanges: number;
+    canvasLoading: boolean;
+    canvasTitle: string;
     language: LOCALE;
   }) => {
     const { t } = useTranslation();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { syncTitleToYDoc } = useCanvasSync();
+
+    const { setCanvasTitle } = useCanvasStoreShallow((state) => ({
+      setCanvasTitle: state.setCanvasTitle,
+    }));
+
     const { updateCanvasTitle } = useSiderStoreShallow((state) => ({
       updateCanvasTitle: state.updateCanvasTitle,
     }));
@@ -37,14 +39,24 @@ export const CanvasTitle = memo(
       setIsModalOpen(true);
     }, []);
 
+    const handleUpdateCanvasTitle = useCallback(
+      (newTitle: string) => {
+        // CH-TODO: 调接口更新canvas title
+
+        updateCanvasTitle(canvasId, newTitle);
+        setCanvasTitle(canvasId, newTitle);
+      },
+      [canvasId, updateCanvasTitle],
+    );
+
     const handleModalOk = useCallback(
       (newTitle: string) => {
         if (newTitle?.trim()) {
-          syncTitleToYDoc(newTitle);
+          handleUpdateCanvasTitle(newTitle);
           setIsModalOpen(false);
         }
       },
-      [canvasId, syncTitleToYDoc, updateCanvasTitle],
+      [canvasId, handleUpdateCanvasTitle],
     );
 
     const handleModalCancel = useCallback(() => {
@@ -55,10 +67,11 @@ export const CanvasTitle = memo(
     useEffect(() => {
       if (hasCanvasSynced && canvasTitle) {
         updateCanvasTitle(canvasId, canvasTitle);
+        setCanvasTitle(canvasId, canvasTitle);
       }
-    }, [canvasTitle, hasCanvasSynced, canvasId]);
+    }, [canvasTitle, hasCanvasSynced, canvasId, updateCanvasTitle, setCanvasTitle]);
 
-    const isSyncing = providerStatus !== 'connected' || debouncedUnsyncedChanges > 0;
+    const isSyncing = canvasLoading;
 
     return (
       <>
@@ -84,7 +97,7 @@ export const CanvasTitle = memo(
             `}
             />
           </Tooltip>
-          {!hasCanvasSynced ? (
+          {canvasLoading ? (
             <Skeleton className="w-32" active paragraph={false} />
           ) : (
             <Typography.Text

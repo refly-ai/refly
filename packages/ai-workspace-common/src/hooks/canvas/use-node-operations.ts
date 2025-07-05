@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { applyNodeChanges, NodeChange, useStoreApi } from '@xyflow/react';
 import { useCanvasStoreShallow } from '../../stores/canvas';
-import { useCanvasSync } from './use-canvas-sync';
 import { useContextPanelStoreShallow } from '../../stores/context-panel';
 import { useCanvasId } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-id';
 import { useUploadMinimap } from '@refly-packages/ai-workspace-common/hooks/use-upload-minimap';
@@ -10,6 +9,7 @@ import { getHelperLines } from '../../components/canvas/common/helper-line/util'
 import { CanvasNode } from '@refly/canvas-common';
 import { adoptUserNodes } from '@xyflow/system';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 // Add snap threshold constant
 const SNAP_THRESHOLD = 10;
@@ -24,7 +24,7 @@ export const useNodeOperations = () => {
     removeContextItem: state.removeContextItem,
   }));
   const { debouncedHandleUpdateCanvasMiniMap } = useUploadMinimap(canvasId);
-  const { throttledSyncNodesToYDoc } = useCanvasSync();
+  const { syncCanvasData } = useCanvasContext();
 
   // Add helper line states
   const [helperLineHorizontal, setHelperLineHorizontal] = useState<number | undefined>(undefined);
@@ -91,9 +91,9 @@ export const useNodeOperations = () => {
         elevateNodesOnSelect: false,
       });
       setState({ nodes });
-      throttledSyncNodesToYDoc(nodes);
+      syncCanvasData();
     },
-    [throttledSyncNodesToYDoc],
+    [syncCanvasData],
   );
 
   const onNodesChange = useCallback(

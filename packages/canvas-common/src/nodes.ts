@@ -1,9 +1,6 @@
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { Edge, Node } from '@xyflow/react';
-import { genUniqueId } from '@refly/utils';
 import {
-  NodeMetadataMap,
-  CanvasNodeData,
   DocumentNodeMeta,
   ResourceNodeMeta,
   SkillNodeMeta,
@@ -11,47 +8,6 @@ import {
   ResponseNodeMeta,
   CodeArtifactNodeMeta,
 } from './types';
-
-// Helper function to prepare node data
-export const prepareNodeData = <T extends CanvasNodeType>({
-  type,
-  data,
-  position = { x: 0, y: 0 },
-  connectable = true,
-  selected = false,
-  selectable = true,
-  className,
-  style,
-  draggable = true,
-  zIndex,
-  id,
-}: {
-  type: T;
-  data: CanvasNodeData<NodeMetadataMap[T]>;
-  position?: { x: number; y: number };
-  connectable?: boolean;
-  selectable?: boolean;
-  selected?: boolean;
-  className?: string;
-  style?: React.CSSProperties;
-  draggable?: boolean;
-  zIndex?: number;
-  id?: string;
-}) => {
-  return {
-    id: id || `node-${genUniqueId()}`,
-    type,
-    position,
-    data,
-    connectable,
-    selected,
-    selectable,
-    className,
-    style,
-    draggable,
-    zIndex,
-  };
-};
 
 // Helper function to get default metadata based on node type
 export const getNodeDefaultMetadata = (nodeType: CanvasNodeType) => {

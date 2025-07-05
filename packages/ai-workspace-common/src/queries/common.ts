@@ -58,6 +58,7 @@ import {
   getAuthConfig,
   getCanvasData,
   getCanvasDetail,
+  getCanvasState,
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
@@ -75,6 +76,7 @@ import {
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCodeArtifacts,
   listDocuments,
   listLabelClasses,
   listLabelInstances,
@@ -103,6 +105,7 @@ import {
   serveStatic,
   sharePage,
   streamInvokeSkill,
+  syncCanvasState,
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
@@ -226,6 +229,16 @@ export const UseExportCanvasKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useExportCanvasKey, ...(queryKey ?? [clientOptions])];
+export type GetCanvasStateDefaultResponse = Awaited<ReturnType<typeof getCanvasState>>['data'];
+export type GetCanvasStateQueryResult<
+  TData = GetCanvasStateDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetCanvasStateKey = 'GetCanvasState';
+export const UseGetCanvasStateKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetCanvasStateKey, ...(queryKey ?? [clientOptions])];
 export type ListCanvasTemplatesDefaultResponse = Awaited<
   ReturnType<typeof listCanvasTemplates>
 >['data'];
@@ -324,6 +337,18 @@ export const UseGetProjectDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetProjectDetailKey, ...(queryKey ?? [clientOptions])];
+export type ListCodeArtifactsDefaultResponse = Awaited<
+  ReturnType<typeof listCodeArtifacts>
+>['data'];
+export type ListCodeArtifactsQueryResult<
+  TData = ListCodeArtifactsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListCodeArtifactsKey = 'ListCodeArtifacts';
+export const UseListCodeArtifactsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListCodeArtifactsKey, ...(queryKey ?? [clientOptions])];
 export type GetCodeArtifactDetailDefaultResponse = Awaited<
   ReturnType<typeof getCodeArtifactDetail>
 >['data'];
@@ -658,6 +683,12 @@ export type AutoNameCanvasMutationResult = Awaited<ReturnType<typeof autoNameCan
 export const useAutoNameCanvasKey = 'AutoNameCanvas';
 export const UseAutoNameCanvasKeyFn = (mutationKey?: Array<unknown>) => [
   useAutoNameCanvasKey,
+  ...(mutationKey ?? []),
+];
+export type SyncCanvasStateMutationResult = Awaited<ReturnType<typeof syncCanvasState>>;
+export const useSyncCanvasStateKey = 'SyncCanvasState';
+export const UseSyncCanvasStateKeyFn = (mutationKey?: Array<unknown>) => [
+  useSyncCanvasStateKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCanvasTemplateMutationResult = Awaited<ReturnType<typeof createCanvasTemplate>>;

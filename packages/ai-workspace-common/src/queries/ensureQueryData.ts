@@ -10,6 +10,7 @@ import {
   getAuthConfig,
   getCanvasData,
   getCanvasDetail,
+  getCanvasState,
   getCodeArtifactDetail,
   getCollabToken,
   getDocumentDetail,
@@ -25,6 +26,7 @@ import {
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCodeArtifacts,
   listDocuments,
   listLabelClasses,
   listLabelInstances,
@@ -50,6 +52,7 @@ import {
   GetActionResultData,
   GetCanvasDataData,
   GetCanvasDetailData,
+  GetCanvasStateData,
   GetCodeArtifactDetailData,
   GetDocumentDetailData,
   GetPageByCanvasIdData,
@@ -59,6 +62,7 @@ import {
   GetResourceDetailData,
   ListCanvasesData,
   ListCanvasTemplatesData,
+  ListCodeArtifactsData,
   ListDocumentsData,
   ListLabelClassesData,
   ListLabelInstancesData,
@@ -155,6 +159,14 @@ export const ensureUseExportCanvasData = (
     queryKey: Common.UseExportCanvasKeyFn(clientOptions),
     queryFn: () => exportCanvas({ ...clientOptions }).then((response) => response.data),
   });
+export const ensureUseGetCanvasStateData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetCanvasStateData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetCanvasStateKeyFn(clientOptions),
+    queryFn: () => getCanvasState({ ...clientOptions }).then((response) => response.data),
+  });
 export const ensureUseListCanvasTemplatesData = (
   queryClient: QueryClient,
   clientOptions: Options<ListCanvasTemplatesData, true> = {},
@@ -227,6 +239,14 @@ export const ensureUseGetProjectDetailData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetProjectDetailKeyFn(clientOptions),
     queryFn: () => getProjectDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListCodeArtifactsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListCodeArtifactsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListCodeArtifactsKeyFn(clientOptions),
+    queryFn: () => listCodeArtifacts({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetCodeArtifactDetailData = (
   queryClient: QueryClient,

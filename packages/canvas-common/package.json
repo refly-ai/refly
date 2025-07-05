@@ -25,7 +25,8 @@
     "@refly/common-types": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/utils": "workspace:*",
-    "@xyflow/react": "^12.3.5"
+    "@xyflow/react": "^12.3.5",
+    "deepmerge": "^4.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.56"

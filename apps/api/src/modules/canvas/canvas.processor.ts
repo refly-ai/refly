@@ -15,7 +15,6 @@ import {
   SyncCanvasEntityJobData,
   AutoNameCanvasJobData,
   DeleteCanvasJobData,
-  VerifyNodeAdditionJobData,
 } from './canvas.dto';
 
 @Processor(QUEUE_SYNC_CANVAS_ENTITY)
@@ -101,16 +100,7 @@ export class VerifyNodeAdditionProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<VerifyNodeAdditionJobData>) {
-    this.logger.log(
-      `Processing node verification job ${job.id} for canvas ${job.data.canvasId}, attempt ${job.data.attempt}`,
-    );
-
-    try {
-      await this.canvasService.verifyNodeAdditionFromQueue(job.data);
-    } catch (error) {
-      this.logger.error(`[${QUEUE_VERIFY_NODE_ADDITION}] error ${job.id}: ${error?.stack}`);
-      throw error;
-    }
+  async process(_job: Job<unknown>) {
+    // TODO: remove this processor, no longer used
   }
 }

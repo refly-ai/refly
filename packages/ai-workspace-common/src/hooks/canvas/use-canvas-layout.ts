@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import Dagre from '@dagrejs/dagre';
-import { CanvasNode } from '../../components/canvas/nodes';
+import { CanvasNode } from '@refly/canvas-common';
 import { Edge } from '@xyflow/react';
-import { useCanvasSync } from './use-canvas-sync';
 import { GroupData } from '../../components/canvas/nodes/group';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 const NODE_DEFAULT_WIDTH = 288;
 const NODE_DEFAULT_HEIGHT = 320;
@@ -412,7 +412,7 @@ const getLayoutedElements = (
 export const useCanvasLayout = () => {
   const { getNodes, getEdges, setNodes, setEdges, getNode } = useReactFlow<CanvasNode<any>>();
 
-  const { syncNodesToYDoc, syncEdgesToYDoc } = useCanvasSync();
+  const { syncCanvasData } = useCanvasContext();
   const { fitView } = useReactFlow();
 
   const onLayout = useCallback(
@@ -423,8 +423,7 @@ export const useCanvasLayout = () => {
 
       setNodes(layouted.nodes);
       setEdges(layouted.edges);
-      syncNodesToYDoc(layouted.nodes);
-      syncEdgesToYDoc(layouted.edges);
+      syncCanvasData();
 
       window.requestAnimationFrame(() => {
         fitView({
@@ -434,7 +433,7 @@ export const useCanvasLayout = () => {
         });
       });
     },
-    [fitView, setNodes, setEdges, syncNodesToYDoc, syncEdgesToYDoc],
+    [fitView, setNodes, setEdges, syncCanvasData],
   );
 
   const getChildNodes = (id: string, nodes: CanvasNode[]) => {
@@ -558,9 +557,9 @@ export const useCanvasLayout = () => {
       });
 
       setNodes(updatedNodes);
-      syncNodesToYDoc(updatedNodes);
+      syncCanvasData();
     },
-    [getNodes, getNode, getEdges, setNodes, syncNodesToYDoc],
+    [getNodes, getNode, getEdges, setNodes, syncCanvasData],
   );
 
   return {

@@ -139,3 +139,13 @@ export const genUniqueId = () => {
   const id = `${uuid}${timestamp}${randomString}`;
   return md5(id);
 };
+
+export const genTransactionId = () => {
+  const timestamp = Date.now();
+  return `tx-${timestamp}-${createId()}`;
+};
+
+export const genCanvasVersionId = () => {
+  const timestamp = Date.now();
+  return `cv-${timestamp}-${createId()}`;
+};

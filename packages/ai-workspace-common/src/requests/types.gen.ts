@@ -1586,6 +1586,14 @@ export type CodeArtifact = {
    * Code artifact language
    */
   language?: string;
+  /**
+   * Action result ID
+   */
+  resultId?: string;
+  /**
+   * Action result version
+   */
+  resultVersion?: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -1890,7 +1898,7 @@ export type ProviderConfig = {
 /**
  * Model usage scene
  */
-export type ModelScene = 'chat' | 'queryAnalysis' | 'titleGeneration';
+export type ModelScene = 'chat' | 'agent' | 'queryAnalysis' | 'titleGeneration';
 
 /**
  * Default model config
@@ -1900,6 +1908,10 @@ export type DefaultModelConfig = {
    * Default chat model to use
    */
   chat?: ProviderItem;
+  /**
+   * Default agent model to use
+   */
+  agent?: ProviderItem;
   /**
    * Query analysis and context processing model
    */
@@ -2195,32 +2207,73 @@ export type GetCanvasDetailResponse = BaseResponse & {
   data?: Canvas;
 };
 
+export type CanvasHistoryVersion = {
+  /**
+   * Canvas version
+   */
+  version: string;
+  /**
+   * Canvas hash
+   */
+  hash: string;
+  /**
+   * Canvas timestamp (in unix milliseconds)
+   */
+  timestamp: number;
+};
+
+/**
+ * Canvas data
+ */
+export type CanvasData = {
+  /**
+   * Canvas nodes
+   */
+  nodes: Array<CanvasNode>;
+  /**
+   * Canvas edges
+   */
+  edges: Array<CanvasEdge>;
+};
+
+/**
+ * Canvas state
+ */
+export type CanvasState = CanvasData & {
+  /**
+   * Canvas version
+   */
+  version?: string;
+  /**
+   * Canvas state hash (sha256), calculated from nodes and edges
+   */
+  hash?: string;
+  /**
+   * Canvas transaction list
+   */
+  transactions?: Array<CanvasTransaction>;
+  /**
+   * Canvas history versions
+   */
+  history?: Array<CanvasHistoryVersion>;
+};
+
 /**
  * Raw canvas data
  */
-export type RawCanvasData = {
-  /**
-   * Canvas owner
-   */
-  owner?: ShareUser;
+export type RawCanvasData = CanvasData & {
   /**
    * Canvas title
    */
   title?: string;
   /**
+   * Canvas owner
+   */
+  owner?: ShareUser;
+  /**
    * Minimap URL
    */
   minimapUrl?: string;
-  /**
-   * Canvas nodes
-   */
-  nodes?: Array<CanvasNode>;
-  /**
-   * Canvas edges
-   */
-  edges?: Array<{
-    [key: string]: unknown;
-  }>;
 };
 
 export type ExportCanvasResponse = BaseResponse & {
@@ -2326,6 +2379,113 @@ export type AutoNameCanvasResponse = BaseResponse & {
      */
     title?: string;
   };
+};
+
+export type GetCanvasStateResponse = BaseResponse & {
+  data?: CanvasState;
+};
+
+/**
+ * Diff type
+ */
+export type DiffType = 'add' | 'update' | 'delete';
+
+export type NodeDiff = {
+  /**
+   * Node ID
+   */
+  id: string;
+  /**
+   * Node diff type
+   */
+  type: DiffType;
+  /**
+   * Node diff from
+   */
+  from?: CanvasNode;
+  /**
+   * Node diff to
+   */
+  to?: CanvasNode;
+};
+
+export type EdgeDiff = {
+  /**
+   * Edge ID
+   */
+  id: string;
+  /**
+   * Edge diff type
+   */
+  type: DiffType;
+  /**
+   * Edge diff from
+   */
+  from?: CanvasEdge;
+  /**
+   * Edge diff to
+   */
+  to?: CanvasEdge;
+};
+
+export type CanvasTransaction = {
+  /**
+   * Transaction ID
+   */
+  txId: string;
+  /**
+   * Node diffs
+   */
+  nodeDiffs: Array<NodeDiff>;
+  /**
+   * Edge diffs
+   */
+  edgeDiffs: Array<EdgeDiff>;
+  /**
+   * Whether the transaction is revoked
+   */
+  revoked?: boolean;
+  /**
+   * Whether the transaction is deleted
+   */
+  deleted?: boolean;
+  /**
+   * Transaction creation timestamp (in unix milliseconds)
+   */
+  createdAt: number;
+  /**
+   * Transaction synchronization timestamp (in unix milliseconds)
+   */
+  syncedAt?: number;
+};
+
+export type SyncCanvasStateRequest = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Canvas state version
+   */
+  version?: string;
+  /**
+   * Transaction list
+   */
+  transactions: Array<CanvasTransaction>;
+};
+
+export type SyncCanvasStateResult = {
+  /**
+   * Transaction list
+   */
+  transactions: Array<CanvasTransaction>;
+};
+
+export type SyncCanvasStateResponse = BaseResponse & {
+  /**
+   * Apply canvas state result
+   */
+  data?: SyncCanvasStateResult;
 };
 
 export type ListCanvasTemplateResponse = BaseResponse & {
@@ -2718,7 +2878,6 @@ export type SkillEvent = {
   node?: CanvasNode;
   /**
    * Error data. Only present when `event` is `error`.
-   * @deprecated
    */
   error?: BaseResponse;
   /**
@@ -2788,6 +2947,14 @@ export type UpsertCodeArtifactRequest = {
    */
   language?: string;
   /**
+   * Action result ID
+   */
+  resultId?: string;
+  /**
+   * Action result version
+   */
+  resultVersion?: number;
+  /**
    * Code artifact preview storage key
    */
   previewStorageKey?: string;
@@ -2799,6 +2966,13 @@ export type UpsertCodeArtifactRequest = {
 
 export type UpsertCodeArtifactResponse = BaseResponse & {
   data?: CodeArtifact;
+};
+
+export type ListCodeArtifactResponse = BaseResponse & {
+  /**
+   * Code artifact list
+   */
+  data?: Array<CodeArtifact>;
 };
 
 export type GetCodeArtifactDetailResponse = BaseResponse & {
@@ -3625,7 +3799,7 @@ export type CreatePilotSessionRequest = {
   /**
    * Pilot session provider item ID
    */
-  providerItemId: string;
+  providerItemId?: string;
 };
 
 export type UpdatePilotSessionRequest = {
@@ -4538,12 +4712,68 @@ export type CanvasNodeData = {
   };
 };
 
+export type XYPosition = {
+  /**
+   * Node position x
+   */
+  x: number;
+  /**
+   * Node position y
+   */
+  y: number;
+};
+
 export type CanvasNode = {
+  /**
+   * Node ID
+   */
+  id: string;
   /**
    * Node type
    */
   type: CanvasNodeType;
+  /**
+   * Node position
+   */
+  position: XYPosition;
+  /**
+   * Node offset position
+   */
+  offsetPosition?: XYPosition;
   data: CanvasNodeData;
+  /**
+   * Node style
+   */
+  style?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Whether the node is selected
+   */
+  selected?: boolean;
+  /**
+   * Whether the node is being dragged
+   */
+  dragging?: boolean;
+};
+
+export type CanvasEdge = {
+  /**
+   * Edge ID
+   */
+  id: string;
+  /**
+   * Edge source node ID
+   */
+  source: string;
+  /**
+   * Edge target node ID
+   */
+  target: string;
+  /**
+   * Edge type
+   */
+  type: string;
 };
 
 export type ListMcpServersData2 = {
@@ -4876,6 +5106,31 @@ export type AutoNameCanvasData = {
 export type AutoNameCanvasResponse2 = AutoNameCanvasResponse;
 
 export type AutoNameCanvasError = unknown;
+
+export type GetCanvasStateData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+    /**
+     * Canvas state version
+     */
+    version?: string;
+  };
+};
+
+export type GetCanvasStateResponse2 = GetCanvasStateResponse;
+
+export type GetCanvasStateError = unknown;
+
+export type SyncCanvasStateData = {
+  body: SyncCanvasStateRequest;
+};
+
+export type SyncCanvasStateResponse2 = SyncCanvasStateResponse;
+
+export type SyncCanvasStateError = unknown;
 
 export type ListCanvasTemplatesData = {
   query?: {
@@ -5240,6 +5495,35 @@ export type DeleteProjectItemsData = {
 export type DeleteProjectItemsResponse = BaseResponse;
 
 export type DeleteProjectItemsError = unknown;
+
+export type ListCodeArtifactsData = {
+  query?: {
+    /**
+     * Whether to include content
+     */
+    needContent?: boolean;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+    /**
+     * Action result ID
+     */
+    resultId?: string;
+    /**
+     * Action result version
+     */
+    resultVersion?: number;
+  };
+};
+
+export type ListCodeArtifactsResponse = ListCodeArtifactResponse;
+
+export type ListCodeArtifactsError = unknown;
 
 export type GetCodeArtifactDetailData = {
   query: {

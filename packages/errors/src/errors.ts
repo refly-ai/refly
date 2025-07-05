@@ -256,6 +256,14 @@ export class McpServerNotFoundError extends BaseError {
   };
 }
 
+export class CanvasVersionNotFoundError extends BaseError {
+  code = 'E1018';
+  messageDict = {
+    en: 'Canvas version not found, please refresh',
+    'zh-CN': '画布版本不存在，请刷新重试',
+  };
+}
+
 export class StorageQuotaExceeded extends BaseError {
   code = 'E2001';
   messageDict = {

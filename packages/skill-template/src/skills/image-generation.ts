@@ -12,7 +12,6 @@ import {
   ArtifactType,
   CanvasNodeData,
   CanvasNodeType,
-  CanvasNode,
 } from '@refly/openapi-schema';
 import { GraphState } from '../scheduler/types';
 import { genImageID } from '@refly/utils';
@@ -774,7 +773,12 @@ export class ImageGeneration extends BaseSkill {
       };
 
       // create full Canvas node
-      const canvasNode: CanvasNode = {
+      const canvasNode = {
+        id: imageId,
+        position: {
+          x: 0,
+          y: 0,
+        },
         type: 'image' as CanvasNodeType,
         data: nodeData,
       };

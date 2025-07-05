@@ -1,52 +1,96 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
-import * as Y from 'yjs';
-import { HocuspocusProvider } from '@hocuspocus/provider';
-import { IndexeddbPersistence } from 'y-indexeddb';
-import { CanvasNode } from '@refly/canvas-common';
-import { Node, Edge, useStoreApi, InternalNode } from '@xyflow/react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from 'react';
+import { get, set, update } from 'idb-keyval';
+import { message } from 'antd';
+import { Node, Edge, useStoreApi, InternalNode, useReactFlow } from '@xyflow/react';
 import { adoptUserNodes, updateConnectionLookup } from '@xyflow/system';
-import { useCanvasStoreShallow } from '@refly-packages/ai-workspace-common/stores/canvas';
-import { useCollabToken } from '@refly-packages/ai-workspace-common/hooks/use-collab-token';
+import { CanvasEdge, CanvasNode, CanvasState } from '@refly/openapi-schema';
 import { RawCanvasData } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { wsServerOrigin } from '@refly-packages/ai-workspace-common/utils/env';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import {
+  getCanvasDataFromState,
+  mergeCanvasStates,
+  CanvasConflictException,
+  purgeContextItems,
+  calculateCanvasStateDiff,
+} from '@refly/canvas-common';
+import {
+  useCanvasStore,
+  useCanvasStoreShallow,
+} from '@refly-packages/ai-workspace-common/stores/canvas';
+import { useDebouncedCallback } from 'use-debounce';
+import { IContextItem } from '@refly/common-types';
 
 interface CanvasContextType {
   canvasId: string;
-  provider: HocuspocusProvider | null;
-  localProvider: IndexeddbPersistence | null;
   readonly: boolean;
+  loading: boolean;
   shareLoading: boolean;
   shareNotFound?: boolean;
   shareData?: RawCanvasData;
+  isPolling: boolean;
+  lastUpdated?: number;
+
+  syncCanvasData: () => Promise<void>;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
 }
 
+// HTTP interface to get canvas state
+const getCanvasState = async (canvasId: string): Promise<CanvasState> => {
+  const { data, error } = await getClient().getCanvasState({ query: { canvasId } });
+  if (error) {
+    throw error;
+  }
+  return data.data;
+};
+
+// Sync canvas state with remote
+const syncWithRemote = async (canvasId: string) => {
+  const state = await get<CanvasState>(`canvas-state:${canvasId}`);
+  if (!state) {
+    return;
+  }
+
+  const unsyncedTransactions = state?.transactions?.filter((tx) => !tx.syncedAt);
+
+  if (!unsyncedTransactions?.length) {
+    return;
+  }
+
+  console.log('[syncWithRemote] unsynced transactions', unsyncedTransactions);
+
+  const { error, data } = await getClient().syncCanvasState({
+    body: {
+      canvasId,
+      version: state.version,
+      transactions: unsyncedTransactions,
+    },
+  });
+
+  if (!error && data?.success) {
+    console.log('[syncWithRemote] synced successfully');
+    await update<CanvasState>(`canvas-state:${canvasId}`, (state) => ({
+      ...state,
+      transactions: state?.transactions?.map((tx) => ({
+        ...tx,
+        syncedAt: tx.syncedAt ?? Date.now(),
+      })),
+    }));
+  } else {
+    message.error('Failed to sync canvas state');
+  }
+};
+
 const CanvasContext = createContext<CanvasContextType | null>(null);
-
-const providerCache = new Map<
-  string,
-  { remote: HocuspocusProvider; local: IndexeddbPersistence }
->();
-
-const getNodesFromYDoc = (ydoc: Y.Doc) => {
-  const nodesArray = ydoc.getArray<CanvasNode>('nodes');
-  const nodes = nodesArray.toJSON();
-  const uniqueNodesMap = new Map();
-  for (const node of nodes) {
-    uniqueNodesMap.set(node.id, node);
-  }
-  return Array.from(uniqueNodesMap.values());
-};
-
-const getEdgesFromYDoc = (ydoc: Y.Doc) => {
-  const edgesArray = ydoc.getArray<Edge>('edges');
-  const edges = edgesArray.toJSON();
-  const uniqueEdgesMap = new Map();
-  for (const edge of edges) {
-    uniqueEdgesMap.set(edge.id, edge);
-  }
-  return Array.from(uniqueEdgesMap.values());
-};
 
 const getInternalState = ({
   nodes,
@@ -83,15 +127,16 @@ export const CanvasProvider = ({
   readonly?: boolean;
   children: React.ReactNode;
 }) => {
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 2000;
+  const [isPolling, setIsPolling] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number>();
+  const [loading, setLoading] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isFirstPollRef = useRef(true);
+  // const POLLING_INTERVAL = 500000; // 5 seconds
 
-  const { token, refreshToken } = useCollabToken();
   const { setState, getState } = useStoreApi();
-  const { setCanvasLocalSynced, setCanvasRemoteSynced } = useCanvasStoreShallow((state) => ({
-    setCanvasLocalSynced: state.setCanvasLocalSynced,
-    setCanvasRemoteSynced: state.setCanvasRemoteSynced,
+  const { setCanvasInitialized } = useCanvasStoreShallow((state) => ({
+    setCanvasInitialized: state.setCanvasInitialized,
   }));
 
   // Use the hook to fetch canvas data when in readonly mode
@@ -127,201 +172,251 @@ export const CanvasProvider = ({
     }
   }, [readonly, canvasData, canvasId]);
 
-  const setCanvasDataFromYDoc = useCallback(
-    (ydoc: Y.Doc) => {
+  // Set up sync job that runs every 2 seconds
+  const isSyncingRemoteRef = useRef(false);
+  useEffect(() => {
+    if (!canvasId || readonly) return;
+
+    const intervalId = setInterval(async () => {
+      // Prevent multiple instances from running simultaneously
+      if (isSyncingRemoteRef.current) return;
+
+      isSyncingRemoteRef.current = true;
+      try {
+        await syncWithRemote(canvasId);
+      } catch (error) {
+        console.error('Canvas sync failed:', error);
+      } finally {
+        isSyncingRemoteRef.current = false;
+      }
+    }, 3000); // Run every 3 seconds
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [canvasId]);
+
+  const { getNodes, getEdges } = useReactFlow();
+  const isSyncingLocalRef = useRef(false);
+
+  // Sync canvas data to local state
+  const syncCanvasData = useDebouncedCallback(async () => {
+    // Prevent multiple concurrent sync operations
+    if (isSyncingLocalRef.current) {
+      return;
+    }
+
+    const { canvasInitialized } = useCanvasStore.getState();
+    if (!canvasInitialized[canvasId]) {
+      console.log('[syncCanvasData] canvas not initialized', canvasId);
+      return;
+    }
+
+    isSyncingLocalRef.current = true;
+
+    try {
+      const nodes = getNodes() as CanvasNode[];
+      const edges = getEdges() as CanvasEdge[];
+
+      // Purge context items from nodes
+      const purgedNodes: CanvasNode[] = nodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          metadata: {
+            ...node.data?.metadata,
+            contextItems: purgeContextItems(node.data?.metadata?.contextItems as IContextItem[]),
+          },
+        },
+      }));
+
+      const currentState = await get(`canvas-state:${canvasId}`);
+      const currentStateData = getCanvasDataFromState(currentState);
+
+      const diff = calculateCanvasStateDiff(currentStateData, {
+        nodes: purgedNodes,
+        edges,
+      });
+
+      if (diff) {
+        console.log('currentStateData', currentStateData);
+        console.log('dynamic data', {
+          nodes: purgedNodes,
+          edges,
+        });
+        console.log('diff', diff);
+
+        await update<CanvasState>(`canvas-state:${canvasId}`, (state) => ({
+          ...state,
+          transactions: [...(state?.transactions?.filter((tx) => !tx.revoked) ?? []), diff],
+        }));
+      }
+    } finally {
+      isSyncingLocalRef.current = false;
+    }
+  }, 500);
+
+  // Function to update canvas data from state
+  const updateCanvasDataFromState = useCallback(
+    (state: CanvasState) => {
       const { nodeLookup, parentLookup, connectionLookup, edgeLookup } = getState();
+      const { nodes, edges } = getCanvasDataFromState(state);
+
       const internalState = getInternalState({
-        nodes: getNodesFromYDoc(ydoc),
-        edges: getEdgesFromYDoc(ydoc),
+        nodes: nodes && Array.isArray(nodes) ? (nodes as unknown as Node[]) : [],
+        edges: edges && Array.isArray(edges) ? (edges as unknown as Edge[]) : [],
         nodeLookup,
         parentLookup,
         connectionLookup,
         edgeLookup,
       });
       setState(internalState);
+      setLastUpdated(Date.now());
     },
-    [canvasId],
+    [getState, setState],
   );
 
-  const { remote: provider, local: localProvider } = useMemo(() => {
-    // Don't create providers when in readonly mode
-    if (readonly) {
-      return { remote: null, local: null };
-    }
+  // Polling function to fetch canvas state
+  const initialFetchCanvasState = useCallback(async () => {
+    if (readonly) return;
 
-    const existingProvider = providerCache.get(canvasId);
-    if (existingProvider?.remote?.status === 'connected') {
-      return existingProvider;
-    }
+    try {
+      const localState = await get(`canvas-state:${canvasId}`);
+      console.log('localState', localState);
 
-    const doc = new Y.Doc();
-
-    const remoteProvider = new HocuspocusProvider({
-      url: wsServerOrigin,
-      name: canvasId,
-      token,
-      document: doc,
-      connect: true,
-      forceSyncInterval: 5000,
-      onAuthenticationFailed: (data) => {
-        console.log('onAuthenticationFailed', data);
-        refreshToken();
-      },
-    });
-
-    const handleSync = () => {
-      setCanvasRemoteSynced(canvasId, Date.now());
-    };
-
-    remoteProvider.on('synced', handleSync);
-
-    const localProvider = new IndexeddbPersistence(canvasId, doc);
-
-    const handleLocalSync = () => {
-      setCanvasDataFromYDoc(doc);
-      setCanvasLocalSynced(canvasId, Date.now());
-    };
-
-    localProvider.on('synced', handleLocalSync);
-
-    const providers = { remote: remoteProvider, local: localProvider };
-    providerCache.set(canvasId, providers);
-
-    return providers;
-  }, [
-    canvasId,
-    token,
-    readonly,
-    setCanvasRemoteSynced,
-    setCanvasLocalSynced,
-    setCanvasDataFromYDoc,
-  ]);
-
-  // Handle connection retries
-  useEffect(() => {
-    if (readonly || !provider) return;
-
-    let timeoutId: NodeJS.Timeout;
-
-    const handleConnection = () => {
-      if (provider?.status !== 'connected' && connectionAttempts < MAX_RETRIES) {
-        timeoutId = setTimeout(() => {
-          console.log(`Retrying connection attempt ${connectionAttempts + 1}/${MAX_RETRIES}`);
-          provider.connect();
-          setConnectionAttempts((prev) => prev + 1);
-        }, RETRY_DELAY);
+      // Only set loading when local state is not found
+      if (!localState) {
+        setLoading(true);
       }
-    };
 
-    const handleStatus = ({ status }: { status: string }) => {
-      if (status === 'connected') {
-        setConnectionAttempts(0);
+      const remoteState = await getCanvasState(canvasId);
+      console.log('remoteState', remoteState);
+
+      let finalState: CanvasState;
+      if (!localState) {
+        finalState = remoteState;
       } else {
-        handleConnection();
+        try {
+          finalState = mergeCanvasStates(localState, remoteState);
+        } catch (error) {
+          if (error instanceof CanvasConflictException) {
+            // TODO: Handle conflict by showing a modal to the user
+            console.error('Canvas conflict detected:', error);
+            finalState = remoteState;
+          } else {
+            console.error('Failed to merge canvas states:', error);
+            finalState = remoteState;
+          }
+          console.error('Failed to merge canvas states:', error);
+          finalState = remoteState;
+        }
       }
-    };
 
-    provider.on('status', handleStatus);
+      updateCanvasDataFromState(finalState);
 
-    return () => {
-      clearTimeout(timeoutId);
-      provider.off('status', handleStatus);
-    };
-  }, [provider, connectionAttempts, readonly]);
+      await set(`canvas-state:${canvasId}`, finalState);
 
-  // Subscribe to yjs document changes
+      setCanvasInitialized(canvasId, true);
+
+      // Mark first poll as complete
+      if (isFirstPollRef.current) {
+        isFirstPollRef.current = false;
+      }
+    } catch (error) {
+      console.error('Failed to poll canvas state:', error);
+    } finally {
+      // Only clear loading if it was the first poll
+      if (loading) {
+        setLoading(false);
+      }
+    }
+  }, [canvasId, readonly, updateCanvasDataFromState, loading]);
+
+  // Start/stop polling
   useEffect(() => {
-    if (readonly || !provider) return;
+    if (readonly) return;
 
-    const ydoc = provider.document;
-    if (!ydoc) return;
+    setIsPolling(true);
 
-    let isDestroyed = false;
+    // Initial fetch
+    initialFetchCanvasState();
 
-    // Get references to the shared types
-    const nodesArray = ydoc.getArray<CanvasNode>('nodes');
-    const edgesArray = ydoc.getArray<Edge>('edges');
-
-    // Connect handler
-    const handleConnect = () => {
-      if (isDestroyed) return;
-
-      if (provider?.status === 'connected') {
-        setCanvasDataFromYDoc(ydoc);
-      }
-
-      const nodesObserverCallback = () => {
-        if (provider?.status === 'connected') {
-          const nodes = getNodesFromYDoc(ydoc);
-          const { nodeLookup, parentLookup } = getState();
-          adoptUserNodes(nodes, nodeLookup, parentLookup, {
-            elevateNodesOnSelect: false,
-          });
-          setState({ nodes });
-        }
-      };
-
-      const edgesObserverCallback = () => {
-        if (provider?.status === 'connected') {
-          setState({ edges: getEdgesFromYDoc(ydoc) as unknown as Edge[] });
-        }
-      };
-
-      // Add observers
-      nodesArray.observe(nodesObserverCallback);
-      edgesArray.observe(edgesObserverCallback);
-
-      // Store cleanup functions
-      return () => {
-        nodesArray.unobserve(nodesObserverCallback);
-        edgesArray.unobserve(edgesObserverCallback);
-      };
-    };
-
-    const cleanup = handleConnect();
-    provider.on('connect', handleConnect);
+    // intervalRef.current = setInterval(pollCanvasState, POLLING_INTERVAL);
 
     return () => {
-      isDestroyed = true;
-      cleanup?.(); // Clean up observers
-      provider.off('connect', handleConnect);
+      setIsPolling(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
-  }, [provider, canvasId, setCanvasDataFromYDoc, readonly]);
+  }, [canvasId, readonly, initialFetchCanvasState]);
 
-  // Add cleanup on unmount
+  const undo = useCallback(async () => {
+    const currentState = await get(`canvas-state:${canvasId}`);
+    const transactions = currentState?.transactions;
+    if (Array.isArray(transactions) && transactions.length > 0) {
+      // Find the last transaction where revoked is false
+      for (let i = transactions.length - 1; i >= 0; i--) {
+        if (!transactions[i]?.revoked) {
+          transactions[i].revoked = true;
+          transactions[i].syncedAt = undefined;
+          await set(`canvas-state:${canvasId}`, currentState);
+          updateCanvasDataFromState(currentState);
+          break;
+        }
+      }
+    }
+  }, [canvasId, updateCanvasDataFromState]);
+
+  const redo = useCallback(async () => {
+    const currentState = await get(`canvas-state:${canvasId}`);
+    const transactions = currentState?.transactions;
+    if (Array.isArray(transactions) && transactions.length > 0) {
+      // Find the first transaction where revoked is true
+      for (let i = 0; i < transactions.length; i++) {
+        if (transactions[i]?.revoked) {
+          transactions[i].revoked = false;
+          transactions[i].syncedAt = undefined;
+          await set(`canvas-state:${canvasId}`, currentState);
+          updateCanvasDataFromState(currentState);
+          break;
+        }
+      }
+    }
+  }, [canvasId, updateCanvasDataFromState]);
+
+  // Cleanup on unmount
   useEffect(() => {
     if (readonly) return;
 
     return () => {
-      // Force clear the nodes and edges
+      // Clear canvas data
       setState({ nodes: [], edges: [] });
-
-      const providers = providerCache.get(canvasId);
-      if (providers) {
-        if (providers?.remote?.status === 'connected') {
-          providers.remote.forceSync();
-        }
-        providers.remote.destroy();
-        providers.local.destroy();
-        providerCache.delete(canvasId);
-      }
+      setLoading(false);
+      isFirstPollRef.current = true;
     };
   }, [canvasId, readonly]);
 
-  const canvasContext = useMemo<CanvasContextType>(
-    () => ({
-      canvasId,
-      provider,
-      localProvider,
-      readonly,
-      shareLoading,
-      shareNotFound,
-      shareData: canvasData,
-    }),
-    [canvasId, provider, localProvider, readonly, shareNotFound, canvasData, shareLoading],
+  return (
+    <CanvasContext.Provider
+      value={{
+        loading,
+        canvasId,
+        readonly,
+        shareLoading,
+        shareNotFound,
+        shareData: canvasData,
+        isPolling,
+        lastUpdated,
+        syncCanvasData,
+        undo,
+        redo,
+      }}
+    >
+      {children}
+    </CanvasContext.Provider>
   );
-
-  return <CanvasContext.Provider value={canvasContext}>{children}</CanvasContext.Provider>;
 };
 
 export const useCanvasContext = () => {
