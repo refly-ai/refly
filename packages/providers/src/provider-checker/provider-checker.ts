@@ -79,6 +79,7 @@ export class ProviderChecker {
       const { status, message } = this.evaluateOverallStatus(
         checkResult.details,
         config.providerKey,
+        category,
       );
       checkResult.status = status;
       checkResult.message = message;
@@ -104,16 +105,17 @@ export class ProviderChecker {
   private evaluateOverallStatus(
     details: Record<string, CheckResult>,
     providerKey: string,
+    _category?: ProviderCategory,
   ): { status: 'success' | 'failed' | 'unknown'; message: string } {
     // Define critical checks for each provider type
     const criticalChecks: Record<string, string[]> = {
       ollama: ['connectionTest'],
-      openai: ['modelsEndpoint'],
-      anthropic: ['modelsEndpoint'],
-      jina: ['apiKey'],
+      openai: ['apiAvailability'],
+      anthropic: ['apiAvailability'],
+      jina: ['apiAvailability'], // Simple API availability check
       searxng: ['healthCheck'],
       serper: ['apiKeyValidation'],
-      default: ['modelsEndpoint'], // For generic OpenAI-compatible providers
+      default: ['apiAvailability'], // For generic OpenAI-compatible providers
     };
 
     const checksToEvaluate = criticalChecks[providerKey] || criticalChecks.default;
@@ -156,11 +158,35 @@ export class ProviderChecker {
       }
     }
 
-    // For other providers, if any critical check failed, overall status is failed
-    if (failedChecks.length > 0) {
+    // Special case for Jina: simple API availability check
+    if (providerKey === 'jina') {
+      const apiAvailabilityResult = details.apiAvailability;
+
+      if (apiAvailabilityResult?.status === 'success') {
+        return { status: 'success', message: 'Connection check successful' };
+      } else if (apiAvailabilityResult?.status === 'failed') {
+        return {
+          status: 'failed',
+          message: `Connection check failed - apiAvailability: ${apiAvailabilityResult.error || 'Unknown error'}`,
+        };
+      }
+
       return {
         status: 'failed',
-        message: `Connection check failed - critical checks failed: ${failedChecks.join(', ')}`,
+        message: 'Connection check failed - API availability could not be verified',
+      };
+    }
+
+    // For other providers, if any critical check failed, overall status is failed
+    if (failedChecks.length > 0) {
+      // Get the first failed check's detailed error message
+      const firstFailedCheck = failedChecks[0];
+      const failedCheckResult = details[firstFailedCheck];
+      const detailedError = failedCheckResult?.error || 'Unknown error';
+
+      return {
+        status: 'failed',
+        message: `Connection check failed - ${firstFailedCheck}: ${detailedError}`,
       };
     }
 
@@ -192,11 +218,10 @@ export class ProviderChecker {
    */
   private async checkLLMProvider(
     config: ProviderCheckConfig,
-    category?: ProviderCategory,
+    _category?: ProviderCategory,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      modelsEndpoint: { status: 'unknown', data: null, error: null },
-      chatCompletion: { status: 'unknown', data: null, error: null },
+      apiAvailability: { status: 'unknown', data: null, error: null },
     };
 
     // Debug logging for API key
@@ -213,9 +238,9 @@ export class ProviderChecker {
       return { Authorization: `Bearer ${apiKey}` };
     };
 
-    // Check 1: Check /models endpoint
+    // Single API availability check using models endpoint
     try {
-      const modelsResponse = await fetch(`${config.baseUrl}/models`, {
+      const apiResponse = await fetch(`${config.baseUrl}/models`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -224,109 +249,33 @@ export class ProviderChecker {
         signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
-      if (modelsResponse.ok) {
-        const modelsData = await modelsResponse.json();
-        checkResults.modelsEndpoint.status = 'success';
-        checkResults.modelsEndpoint.data = {
-          statusCode: modelsResponse.status,
-          modelCount: modelsData?.data?.length || 0,
-          models: modelsData?.data?.slice(0, 5)?.map((m: any) => m.id || m.name) || [],
+      // Only 2xx status codes indicate successful API connection
+      if (apiResponse.status >= 200 && apiResponse.status < 300) {
+        const responseData = await apiResponse.json();
+        checkResults.apiAvailability.status = 'success';
+        checkResults.apiAvailability.data = {
+          statusCode: apiResponse.status,
+          modelCount: responseData?.data?.length || 0,
+          responseTime: Date.now(),
         };
       } else {
-        checkResults.modelsEndpoint.status = 'failed';
-        checkResults.modelsEndpoint.error = `HTTP ${modelsResponse.status}: ${modelsResponse.statusText}`;
+        checkResults.apiAvailability.status = 'failed';
+        // Provide specific error messages for common status codes
+        let errorMessage = `HTTP ${apiResponse.status}: ${apiResponse.statusText}`;
+        if (apiResponse.status === 401) {
+          errorMessage += ' - Invalid API key or unauthorized access';
+        } else if (apiResponse.status === 403) {
+          errorMessage += ' - Access forbidden, check API key permissions';
+        } else if (apiResponse.status === 429) {
+          errorMessage += ' - Rate limit exceeded';
+        } else if (apiResponse.status >= 400 && apiResponse.status < 500) {
+          errorMessage += ' - Client error, check request format and API key';
+        }
+        checkResults.apiAvailability.error = errorMessage;
       }
     } catch (error: any) {
-      checkResults.modelsEndpoint.status = 'failed';
-      checkResults.modelsEndpoint.error = error.message;
-    }
-
-    // Check 2: Check chat completion with minimal request (only if LLM category)
-    if (!category || category === 'llm') {
-      try {
-        // Use provider-specific test models or first available model
-        const getTestModel = () => {
-          switch (config.providerKey) {
-            case 'anthropic':
-              return 'claude-3-haiku-20240307'; // A reliable Anthropic model
-            case 'openai':
-              return 'gpt-3.5-turbo'; // A reliable OpenAI model
-            default: {
-              // For generic providers, try to use the first available model from the models endpoint
-              const availableModels = checkResults.modelsEndpoint?.data?.models;
-              if (availableModels && availableModels.length > 0) {
-                console.log(`[ProviderChecker] Using first available model: ${availableModels[0]}`);
-                return availableModels[0];
-              }
-              // Fallback to a common model name
-              return 'gpt-3.5-turbo';
-            }
-          }
-        };
-
-        const testModel = getTestModel();
-        console.log(`[ProviderChecker] Testing chat completion with model: ${testModel}`);
-
-        const requestBody = {
-          model: testModel,
-          messages: [{ role: 'user', content: 'Hi' }],
-          max_tokens: 1,
-        };
-
-        console.log(
-          '[ProviderChecker] Chat completion request body:',
-          JSON.stringify(requestBody, null, 2),
-        );
-        console.log(
-          '[ProviderChecker] Request headers:',
-          JSON.stringify(
-            {
-              'Content-Type': 'application/json',
-              ...(config.apiKey ? getAuthHeaders(config.apiKey) : {}),
-            },
-            null,
-            2,
-          ),
-        );
-
-        const chatResponse = await fetch(`${config.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(config.apiKey ? getAuthHeaders(config.apiKey) : {}),
-          },
-          body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(15000), // 15 second timeout
-        });
-
-        console.log(`[ProviderChecker] Chat completion response status: ${chatResponse.status}`);
-
-        // Try to log the response body for debugging
-        const responseText = await chatResponse.text();
-        console.log(`[ProviderChecker] Chat completion response body: ${responseText}`);
-
-        // Even 400/422 responses indicate the API is working and authenticated
-        // We mainly want to avoid 401/403 (authentication errors)
-        if (
-          chatResponse.status < 500 &&
-          chatResponse.status !== 401 &&
-          chatResponse.status !== 403
-        ) {
-          checkResults.chatCompletion.status = 'success';
-          checkResults.chatCompletion.data = {
-            statusCode: chatResponse.status,
-            contentType: chatResponse.headers.get('content-type'),
-            responseBody:
-              responseText.length > 200 ? `${responseText.substring(0, 200)}...` : responseText,
-          };
-        } else {
-          checkResults.chatCompletion.status = 'failed';
-          checkResults.chatCompletion.error = `HTTP ${chatResponse.status}: ${chatResponse.statusText}`;
-        }
-      } catch (error: any) {
-        checkResults.chatCompletion.status = 'failed';
-        checkResults.chatCompletion.error = error.message;
-      }
+      checkResults.apiAvailability.status = 'failed';
+      checkResults.apiAvailability.error = `Connection failed: ${error.message}`;
     }
 
     return checkResults;
@@ -371,7 +320,18 @@ export class ProviderChecker {
         };
       } else {
         checkResults.connectionTest.status = 'failed';
-        checkResults.connectionTest.error = `HTTP ${response.status}: ${response.statusText}`;
+        // Provide more specific error messages for common status codes
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        if (response.status === 401) {
+          errorMessage += ' - Invalid API key or unauthorized access';
+        } else if (response.status === 403) {
+          errorMessage += ' - Access forbidden, check API key permissions';
+        } else if (response.status === 429) {
+          errorMessage += ' - Rate limit exceeded';
+        } else if (response.status >= 400 && response.status < 500) {
+          errorMessage += ' - Client error, check connection settings';
+        }
+        checkResults.connectionTest.error = errorMessage;
       }
     } catch (error: any) {
       checkResults.connectionTest.status = 'failed';
@@ -382,84 +342,64 @@ export class ProviderChecker {
   }
 
   /**
-   * Check Jina provider
+   * Check Jina provider - simple API availability check
    */
   private async checkJinaProvider(
     config: ProviderCheckConfig,
-    category?: ProviderCategory,
+    _category?: ProviderCategory,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      apiKey: { status: 'unknown', data: null, error: null },
-      embeddings: { status: 'unknown', data: null, error: null },
-      reranker: { status: 'unknown', data: null, error: null },
+      apiAvailability: { status: 'unknown', data: null, error: null },
     };
 
     if (!config.apiKey) {
-      checkResults.apiKey.status = 'failed';
-      checkResults.apiKey.error = 'API key is required for Jina provider';
+      checkResults.apiAvailability.status = 'failed';
+      checkResults.apiAvailability.error = 'API key is required for Jina provider';
       return checkResults;
     }
 
-    checkResults.apiKey.status = 'success';
+    // Simple API availability check using minimal request
+    try {
+      // Use a lightweight endpoint or minimal request to verify API key validity
+      // We'll use the embeddings endpoint with minimal payload just to check authentication
+      const apiResponse = await fetch('https://api.jina.ai/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'jina-embeddings-v2-base-en',
+          input: ['test'], // Minimal input to check API key validity
+        }),
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
 
-    // Check embeddings endpoint if category is embedding or not specified
-    if (!category || category === 'embedding') {
-      try {
-        const embeddingResponse = await fetch('https://api.jina.ai/v1/embeddings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.apiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'jina-embeddings-v2-base-en',
-            input: ['test'],
-          }),
-          signal: AbortSignal.timeout(15000),
-        });
-
-        if (embeddingResponse.ok) {
-          checkResults.embeddings.status = 'success';
-          checkResults.embeddings.data = { statusCode: embeddingResponse.status };
-        } else {
-          checkResults.embeddings.status = 'failed';
-          checkResults.embeddings.error = `HTTP ${embeddingResponse.status}: ${embeddingResponse.statusText}`;
+      // Only 2xx status codes indicate successful API connection
+      if (apiResponse.status >= 200 && apiResponse.status < 300) {
+        checkResults.apiAvailability.status = 'success';
+        checkResults.apiAvailability.data = {
+          statusCode: apiResponse.status,
+          responseTime: Date.now(),
+        };
+      } else {
+        checkResults.apiAvailability.status = 'failed';
+        // Provide specific error messages for common status codes
+        let errorMessage = `HTTP ${apiResponse.status}: ${apiResponse.statusText}`;
+        if (apiResponse.status === 401) {
+          errorMessage += ' - Invalid API key or unauthorized access';
+        } else if (apiResponse.status === 403) {
+          errorMessage += ' - Access forbidden, check API key permissions';
+        } else if (apiResponse.status === 429) {
+          errorMessage += ' - Rate limit exceeded';
+        } else if (apiResponse.status >= 400 && apiResponse.status < 500) {
+          errorMessage += ' - Client error, check request format and API key';
         }
-      } catch (error: any) {
-        checkResults.embeddings.status = 'failed';
-        checkResults.embeddings.error = error.message;
+        checkResults.apiAvailability.error = errorMessage;
       }
-    }
-
-    // Check reranker endpoint if category is reranker or not specified
-    if (!category || category === 'reranker') {
-      try {
-        const rerankerResponse = await fetch('https://api.jina.ai/v1/rerank', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.apiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'jina-reranker-v1-base-en',
-            query: 'test',
-            documents: ['test document'],
-            top_n: 1,
-          }),
-          signal: AbortSignal.timeout(15000),
-        });
-
-        if (rerankerResponse.ok) {
-          checkResults.reranker.status = 'success';
-          checkResults.reranker.data = { statusCode: rerankerResponse.status };
-        } else {
-          checkResults.reranker.status = 'failed';
-          checkResults.reranker.error = `HTTP ${rerankerResponse.status}: ${rerankerResponse.statusText}`;
-        }
-      } catch (error: any) {
-        checkResults.reranker.status = 'failed';
-        checkResults.reranker.error = error.message;
-      }
+    } catch (error: any) {
+      checkResults.apiAvailability.status = 'failed';
+      checkResults.apiAvailability.error = `Connection failed: ${error.message}`;
     }
 
     return checkResults;
@@ -493,16 +433,42 @@ export class ProviderChecker {
           signal: AbortSignal.timeout(15000),
         });
 
-        if (searchResponse.status < 500) {
+        if (searchResponse.status >= 200 && searchResponse.status < 300) {
           checkResults.searchCheck.status = 'success';
           checkResults.searchCheck.data = { statusCode: searchResponse.status };
         } else {
           checkResults.searchCheck.status = 'failed';
-          checkResults.searchCheck.error = `HTTP ${searchResponse.status}: ${searchResponse.statusText}`;
+          // Provide more specific error messages for common status codes
+          let errorMessage = `HTTP ${searchResponse.status}: ${searchResponse.statusText}`;
+          if (searchResponse.status === 401) {
+            errorMessage += ' - Authentication required';
+          } else if (searchResponse.status === 403) {
+            errorMessage += ' - Access forbidden';
+          } else if (searchResponse.status === 404) {
+            errorMessage += ' - Search endpoint not found';
+          } else if (searchResponse.status === 429) {
+            errorMessage += ' - Rate limit exceeded';
+          } else if (searchResponse.status >= 400 && searchResponse.status < 500) {
+            errorMessage += ' - Client error, check SearXNG configuration';
+          }
+          checkResults.searchCheck.error = errorMessage;
         }
       } else {
         checkResults.healthCheck.status = 'failed';
-        checkResults.healthCheck.error = `HTTP ${healthResponse.status}: ${healthResponse.statusText}`;
+        // Provide more specific error messages for common status codes
+        let errorMessage = `HTTP ${healthResponse.status}: ${healthResponse.statusText}`;
+        if (healthResponse.status === 401) {
+          errorMessage += ' - Authentication required';
+        } else if (healthResponse.status === 403) {
+          errorMessage += ' - Access forbidden';
+        } else if (healthResponse.status === 404) {
+          errorMessage += ' - SearXNG service not found at this URL';
+        } else if (healthResponse.status === 429) {
+          errorMessage += ' - Rate limit exceeded';
+        } else if (healthResponse.status >= 400 && healthResponse.status < 500) {
+          errorMessage += ' - Client error, check SearXNG URL';
+        }
+        checkResults.healthCheck.error = errorMessage;
       }
     } catch (error: any) {
       checkResults.healthCheck.status = 'failed';
