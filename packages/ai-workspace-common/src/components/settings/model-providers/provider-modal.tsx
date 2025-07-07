@@ -244,8 +244,14 @@ export const ProviderModal = React.memo(
         const isEditingExistingProvider = isEditMode && provider;
         const userInputtedNewApiKey = apiKey && apiKey.trim() !== '' && !isDefaultApiKey;
 
-        // Only use existing provider when editing existing provider and user has not input new API key
-        const shouldUseExistingProvider = isEditingExistingProvider && !userInputtedNewApiKey;
+        // Check if base URL has been modified from the original value
+        const originalBaseUrl = provider?.baseUrl || '';
+        const currentBaseUrl = baseUrl || '';
+        const userModifiedBaseUrl = originalBaseUrl !== currentBaseUrl;
+
+        // Only use existing provider when editing existing provider and user has not modified API key or base URL
+        const shouldUseExistingProvider =
+          isEditingExistingProvider && !userInputtedNewApiKey && !userModifiedBaseUrl;
 
         if (shouldUseExistingProvider) {
           // Case 1: Edit mode and user has not modified API key, directly test existing provider
