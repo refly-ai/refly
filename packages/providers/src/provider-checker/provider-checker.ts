@@ -33,6 +33,92 @@ export interface ProviderCheckResult {
  */
 export class ProviderChecker {
   /**
+   * Generate standardized error message based on HTTP status code
+   */
+  private generateHttpErrorMessage(status: number, statusText: string, context?: string): string {
+    let errorMessage = `HTTP ${status}: ${statusText}`;
+
+    if (status === 401) {
+      errorMessage += ' - Invalid API key or unauthorized access';
+    } else if (status === 403) {
+      errorMessage += ' - Access forbidden, check API key permissions';
+    } else if (status === 404) {
+      errorMessage += context ? ` - ${context} not found` : ' - Resource not found';
+    } else if (status === 429) {
+      errorMessage += ' - Rate limit exceeded';
+    } else if (status >= 400 && status < 500) {
+      errorMessage += context
+        ? ` - Client error, check ${context}`
+        : ' - Client error, check request format and API key';
+    }
+
+    return errorMessage;
+  }
+
+  /**
+   * Create initial check result structure
+   */
+  private createCheckResult(): CheckResult {
+    return { status: 'unknown', data: null, error: null };
+  }
+
+  /**
+   * Perform a standardized API request with common error handling
+   */
+  private async performApiRequest(
+    url: string,
+    options: RequestInit,
+    timeout = 10000,
+  ): Promise<{ response: Response; isSuccess: boolean; errorMessage?: string }> {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(timeout),
+      });
+
+      const isSuccess = response.status >= 200 && response.status < 300;
+      const errorMessage = isSuccess
+        ? undefined
+        : this.generateHttpErrorMessage(response.status, response.statusText);
+
+      return { response, isSuccess, errorMessage };
+    } catch (error: any) {
+      return {
+        response: null as any,
+        isSuccess: false,
+        errorMessage: `Connection failed: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Handle API key validation for providers that require it
+   */
+  private validateApiKey(config: ProviderCheckConfig, providerName: string): CheckResult | null {
+    if (!config.apiKey) {
+      return {
+        status: 'failed',
+        data: null,
+        error: `API key is required for ${providerName} provider`,
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Get authentication headers based on provider type
+   */
+  private getAuthHeaders(config: ProviderCheckConfig): Record<string, string> {
+    if (!config.apiKey) return {};
+
+    if (config.providerKey === 'anthropic') {
+      return { 'x-api-key': config.apiKey };
+    }
+    // Default to OpenAI-style Bearer token for other providers
+    return { Authorization: `Bearer ${config.apiKey}` };
+  }
+
+  /**
    * Check provider connection and API availability
    */
   async checkProvider(
@@ -221,7 +307,7 @@ export class ProviderChecker {
     _category?: ProviderCategory,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      apiAvailability: { status: 'unknown', data: null, error: null },
+      apiAvailability: this.createCheckResult(),
     };
 
     // Debug logging for API key
@@ -229,53 +315,30 @@ export class ProviderChecker {
       `[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}, baseUrl: ${config.baseUrl}`,
     );
 
-    // Provider-specific authentication headers
-    const getAuthHeaders = (apiKey: string) => {
-      if (config.providerKey === 'anthropic') {
-        return { 'x-api-key': apiKey };
-      }
-      // Default to OpenAI-style Bearer token for other providers
-      return { Authorization: `Bearer ${apiKey}` };
-    };
-
     // Single API availability check using models endpoint
-    try {
-      const apiResponse = await fetch(`${config.baseUrl}/models`, {
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      `${config.baseUrl}/models`,
+      {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          ...(config.apiKey ? getAuthHeaders(config.apiKey) : {}),
+          ...this.getAuthHeaders(config),
         },
-        signal: AbortSignal.timeout(10000), // 10 second timeout
-      });
+      },
+      10000,
+    );
 
-      // Only 2xx status codes indicate successful API connection
-      if (apiResponse.status >= 200 && apiResponse.status < 300) {
-        const responseData = await apiResponse.json();
-        checkResults.apiAvailability.status = 'success';
-        checkResults.apiAvailability.data = {
-          statusCode: apiResponse.status,
-          modelCount: responseData?.data?.length || 0,
-          responseTime: Date.now(),
-        };
-      } else {
-        checkResults.apiAvailability.status = 'failed';
-        // Provide specific error messages for common status codes
-        let errorMessage = `HTTP ${apiResponse.status}: ${apiResponse.statusText}`;
-        if (apiResponse.status === 401) {
-          errorMessage += ' - Invalid API key or unauthorized access';
-        } else if (apiResponse.status === 403) {
-          errorMessage += ' - Access forbidden, check API key permissions';
-        } else if (apiResponse.status === 429) {
-          errorMessage += ' - Rate limit exceeded';
-        } else if (apiResponse.status >= 400 && apiResponse.status < 500) {
-          errorMessage += ' - Client error, check request format and API key';
-        }
-        checkResults.apiAvailability.error = errorMessage;
-      }
-    } catch (error: any) {
+    if (isSuccess) {
+      const responseData = await response.json();
+      checkResults.apiAvailability.status = 'success';
+      checkResults.apiAvailability.data = {
+        statusCode: response.status,
+        modelCount: responseData?.data?.length || 0,
+        responseTime: Date.now(),
+      };
+    } else {
       checkResults.apiAvailability.status = 'failed';
-      checkResults.apiAvailability.error = `Connection failed: ${error.message}`;
+      checkResults.apiAvailability.error = errorMessage;
     }
 
     return checkResults;
@@ -289,53 +352,40 @@ export class ProviderChecker {
     _category?: ProviderCategory,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      connectionTest: { status: 'unknown', data: null, error: null },
+      connectionTest: this.createCheckResult(),
     };
 
-    try {
-      // Simple GET request to test basic connectivity
-      // For OpenAI-compatible URLs (ending with /v1), check health
-      // For native Ollama URLs, check tags endpoint
-      const testUrl = config.baseUrl?.endsWith('/v1')
-        ? `${config.baseUrl}/models` // OpenAI-compatible endpoint
-        : `${config.baseUrl}/api/tags`; // Native Ollama endpoint
+    // Simple GET request to test basic connectivity
+    // For OpenAI-compatible URLs (ending with /v1), check health
+    // For native Ollama URLs, check tags endpoint
+    const testUrl = config.baseUrl?.endsWith('/v1')
+      ? `${config.baseUrl}/models` // OpenAI-compatible endpoint
+      : `${config.baseUrl}/api/tags`; // Native Ollama endpoint
 
-      console.log(`[ProviderChecker] Testing Ollama connection: ${testUrl}`);
+    console.log(`[ProviderChecker] Testing Ollama connection: ${testUrl}`);
 
-      const response = await fetch(testUrl, {
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      testUrl,
+      {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+          ...this.getAuthHeaders(config),
         },
-        signal: AbortSignal.timeout(10000), // 10 second timeout
-      });
+      },
+      10000,
+    );
 
-      if (response.ok) {
-        checkResults.connectionTest.status = 'success';
-        checkResults.connectionTest.data = {
-          statusCode: response.status,
-          endpoint: testUrl,
-          contentType: response.headers.get('content-type'),
-        };
-      } else {
-        checkResults.connectionTest.status = 'failed';
-        // Provide more specific error messages for common status codes
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        if (response.status === 401) {
-          errorMessage += ' - Invalid API key or unauthorized access';
-        } else if (response.status === 403) {
-          errorMessage += ' - Access forbidden, check API key permissions';
-        } else if (response.status === 429) {
-          errorMessage += ' - Rate limit exceeded';
-        } else if (response.status >= 400 && response.status < 500) {
-          errorMessage += ' - Client error, check connection settings';
-        }
-        checkResults.connectionTest.error = errorMessage;
-      }
-    } catch (error: any) {
+    if (isSuccess) {
+      checkResults.connectionTest.status = 'success';
+      checkResults.connectionTest.data = {
+        statusCode: response.status,
+        endpoint: testUrl,
+        contentType: response.headers.get('content-type'),
+      };
+    } else {
       checkResults.connectionTest.status = 'failed';
-      checkResults.connectionTest.error = error.message;
+      checkResults.connectionTest.error = errorMessage;
     }
 
     return checkResults;
@@ -349,20 +399,20 @@ export class ProviderChecker {
     _category?: ProviderCategory,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      apiAvailability: { status: 'unknown', data: null, error: null },
+      apiAvailability: this.createCheckResult(),
     };
 
-    if (!config.apiKey) {
-      checkResults.apiAvailability.status = 'failed';
-      checkResults.apiAvailability.error = 'API key is required for Jina provider';
+    // Validate API key
+    const apiKeyError = this.validateApiKey(config, 'Jina');
+    if (apiKeyError) {
+      checkResults.apiAvailability = apiKeyError;
       return checkResults;
     }
 
     // Simple API availability check using minimal request
-    try {
-      // Use a lightweight endpoint or minimal request to verify API key validity
-      // We'll use the embeddings endpoint with minimal payload just to check authentication
-      const apiResponse = await fetch('https://api.jina.ai/v1/embeddings', {
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      'https://api.jina.ai/v1/embeddings',
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -372,34 +422,19 @@ export class ProviderChecker {
           model: 'jina-embeddings-v2-base-en',
           input: ['test'], // Minimal input to check API key validity
         }),
-        signal: AbortSignal.timeout(10000), // 10 second timeout
-      });
+      },
+      10000,
+    );
 
-      // Only 2xx status codes indicate successful API connection
-      if (apiResponse.status >= 200 && apiResponse.status < 300) {
-        checkResults.apiAvailability.status = 'success';
-        checkResults.apiAvailability.data = {
-          statusCode: apiResponse.status,
-          responseTime: Date.now(),
-        };
-      } else {
-        checkResults.apiAvailability.status = 'failed';
-        // Provide specific error messages for common status codes
-        let errorMessage = `HTTP ${apiResponse.status}: ${apiResponse.statusText}`;
-        if (apiResponse.status === 401) {
-          errorMessage += ' - Invalid API key or unauthorized access';
-        } else if (apiResponse.status === 403) {
-          errorMessage += ' - Access forbidden, check API key permissions';
-        } else if (apiResponse.status === 429) {
-          errorMessage += ' - Rate limit exceeded';
-        } else if (apiResponse.status >= 400 && apiResponse.status < 500) {
-          errorMessage += ' - Client error, check request format and API key';
-        }
-        checkResults.apiAvailability.error = errorMessage;
-      }
-    } catch (error: any) {
+    if (isSuccess) {
+      checkResults.apiAvailability.status = 'success';
+      checkResults.apiAvailability.data = {
+        statusCode: response.status,
+        responseTime: Date.now(),
+      };
+    } else {
       checkResults.apiAvailability.status = 'failed';
-      checkResults.apiAvailability.error = `Connection failed: ${error.message}`;
+      checkResults.apiAvailability.error = errorMessage;
     }
 
     return checkResults;
@@ -412,67 +447,38 @@ export class ProviderChecker {
     config: ProviderCheckConfig,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      healthCheck: { status: 'unknown', data: null, error: null },
-      searchCheck: { status: 'unknown', data: null, error: null },
+      healthCheck: this.createCheckResult(),
+      searchCheck: this.createCheckResult(),
     };
 
-    try {
-      // Check basic connectivity
-      const healthResponse = await fetch(`${config.baseUrl}`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(10000),
-      });
+    // Check basic connectivity
+    const {
+      response: healthResponse,
+      isSuccess: healthSuccess,
+      errorMessage: healthError,
+    } = await this.performApiRequest(`${config.baseUrl}`, { method: 'GET' }, 10000);
 
-      if (healthResponse.ok) {
-        checkResults.healthCheck.status = 'success';
-        checkResults.healthCheck.data = { statusCode: healthResponse.status };
+    if (healthSuccess) {
+      checkResults.healthCheck.status = 'success';
+      checkResults.healthCheck.data = { statusCode: healthResponse.status };
 
-        // Check search functionality
-        const searchResponse = await fetch(`${config.baseUrl}/search`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(15000),
-        });
+      // Check search functionality
+      const {
+        response: searchResponse,
+        isSuccess: searchSuccess,
+        errorMessage: searchError,
+      } = await this.performApiRequest(`${config.baseUrl}/search`, { method: 'GET' }, 15000);
 
-        if (searchResponse.status >= 200 && searchResponse.status < 300) {
-          checkResults.searchCheck.status = 'success';
-          checkResults.searchCheck.data = { statusCode: searchResponse.status };
-        } else {
-          checkResults.searchCheck.status = 'failed';
-          // Provide more specific error messages for common status codes
-          let errorMessage = `HTTP ${searchResponse.status}: ${searchResponse.statusText}`;
-          if (searchResponse.status === 401) {
-            errorMessage += ' - Authentication required';
-          } else if (searchResponse.status === 403) {
-            errorMessage += ' - Access forbidden';
-          } else if (searchResponse.status === 404) {
-            errorMessage += ' - Search endpoint not found';
-          } else if (searchResponse.status === 429) {
-            errorMessage += ' - Rate limit exceeded';
-          } else if (searchResponse.status >= 400 && searchResponse.status < 500) {
-            errorMessage += ' - Client error, check SearXNG configuration';
-          }
-          checkResults.searchCheck.error = errorMessage;
-        }
+      if (searchSuccess) {
+        checkResults.searchCheck.status = 'success';
+        checkResults.searchCheck.data = { statusCode: searchResponse.status };
       } else {
-        checkResults.healthCheck.status = 'failed';
-        // Provide more specific error messages for common status codes
-        let errorMessage = `HTTP ${healthResponse.status}: ${healthResponse.statusText}`;
-        if (healthResponse.status === 401) {
-          errorMessage += ' - Authentication required';
-        } else if (healthResponse.status === 403) {
-          errorMessage += ' - Access forbidden';
-        } else if (healthResponse.status === 404) {
-          errorMessage += ' - SearXNG service not found at this URL';
-        } else if (healthResponse.status === 429) {
-          errorMessage += ' - Rate limit exceeded';
-        } else if (healthResponse.status >= 400 && healthResponse.status < 500) {
-          errorMessage += ' - Client error, check SearXNG URL';
-        }
-        checkResults.healthCheck.error = errorMessage;
+        checkResults.searchCheck.status = 'failed';
+        checkResults.searchCheck.error = searchError;
       }
-    } catch (error: any) {
+    } else {
       checkResults.healthCheck.status = 'failed';
-      checkResults.healthCheck.error = error.message;
+      checkResults.healthCheck.error = healthError;
     }
 
     return checkResults;
@@ -485,76 +491,63 @@ export class ProviderChecker {
     config: ProviderCheckConfig,
   ): Promise<Record<string, CheckResult>> {
     const checkResults: Record<string, CheckResult> = {
-      apiKeyValidation: { status: 'unknown', data: null, error: null },
-      searchFunction: { status: 'unknown', data: null, error: null },
+      apiKeyValidation: this.createCheckResult(),
+      searchFunction: this.createCheckResult(),
     };
 
     // Debug logging
     console.log(`[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}`);
 
-    if (!config.apiKey) {
-      checkResults.apiKeyValidation.status = 'failed';
-      checkResults.apiKeyValidation.error = 'API key is required for Serper';
+    // Validate API key
+    const apiKeyError = this.validateApiKey(config, 'Serper');
+    if (apiKeyError) {
+      checkResults.apiKeyValidation = apiKeyError;
       return checkResults;
     }
 
-    try {
-      // Test search function with a simple query
-      const searchPayload = {
-        q: 'test query',
-        num: 1, // Limit to 1 result to minimize API usage
-      };
+    // Test search function with a simple query
+    const searchPayload = {
+      q: 'test query',
+      num: 1, // Limit to 1 result to minimize API usage
+    };
 
-      console.log(
-        '[ProviderChecker] Serper search request:',
-        JSON.stringify(searchPayload, null, 2),
-      );
+    console.log('[ProviderChecker] Serper search request:', JSON.stringify(searchPayload, null, 2));
 
-      const searchResponse = await fetch('https://google.serper.dev/search', {
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      'https://google.serper.dev/search',
+      {
         method: 'POST',
         headers: {
-          'X-API-KEY': config.apiKey,
+          'X-API-KEY': config.apiKey!,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(searchPayload),
-        signal: AbortSignal.timeout(15000), // 15 second timeout
-      });
+      },
+      15000,
+    );
 
-      const responseText = await searchResponse.text();
-      console.log(`[ProviderChecker] Serper response status: ${searchResponse.status}`);
-
-      if (searchResponse.ok) {
-        const responseData = JSON.parse(responseText);
-        checkResults.apiKeyValidation.status = 'success';
-        checkResults.searchFunction.status = 'success';
-        checkResults.searchFunction.data = {
-          statusCode: searchResponse.status,
-          resultsCount: responseData.organic?.length || 0,
-          hasSearchParameters: !!responseData.searchParameters,
-        };
-      } else {
-        // Check for specific error codes
-        if (searchResponse.status === 401 || searchResponse.status === 403) {
-          checkResults.apiKeyValidation.status = 'failed';
-          checkResults.apiKeyValidation.error = 'Invalid API key or unauthorized access';
-        } else if (searchResponse.status === 429) {
-          checkResults.apiKeyValidation.status = 'success'; // API key is valid but rate limited
-          checkResults.searchFunction.status = 'failed';
-          checkResults.searchFunction.error = 'Rate limit exceeded';
-        } else {
-          checkResults.searchFunction.status = 'failed';
-          checkResults.searchFunction.error = `HTTP ${searchResponse.status}: ${responseText}`;
-        }
-      }
-    } catch (error: any) {
-      console.error('[ProviderChecker] Serper test error:', error);
-
-      if (error.name === 'AbortError') {
+    if (isSuccess) {
+      const responseText = await response.text();
+      const responseData = JSON.parse(responseText);
+      checkResults.apiKeyValidation.status = 'success';
+      checkResults.searchFunction.status = 'success';
+      checkResults.searchFunction.data = {
+        statusCode: response.status,
+        resultsCount: responseData.organic?.length || 0,
+        hasSearchParameters: !!responseData.searchParameters,
+      };
+    } else {
+      // Check for specific error codes
+      if (response?.status === 401 || response?.status === 403) {
+        checkResults.apiKeyValidation.status = 'failed';
+        checkResults.apiKeyValidation.error = 'Invalid API key or unauthorized access';
+      } else if (response?.status === 429) {
+        checkResults.apiKeyValidation.status = 'success'; // API key is valid but rate limited
         checkResults.searchFunction.status = 'failed';
-        checkResults.searchFunction.error = 'Request timeout - Serper API may be unavailable';
+        checkResults.searchFunction.error = 'Rate limit exceeded';
       } else {
         checkResults.searchFunction.status = 'failed';
-        checkResults.searchFunction.error = error.message;
+        checkResults.searchFunction.error = errorMessage;
       }
     }
 
