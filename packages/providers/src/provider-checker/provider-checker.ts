@@ -139,8 +139,23 @@ export class ProviderChecker {
 
     try {
       // Route to specific provider check based on provider key
+      console.log(
+        `[ProviderChecker] Routing provider check for: ${config.providerKey} (${config.name})`,
+      );
+
       switch (config.providerKey) {
         case 'openai':
+          // Check if this is actually an OpenRouter provider
+          if (this.detectOpenRouterProvider(config)) {
+            console.log(
+              '[ProviderChecker] Detected OpenRouter provider, using OpenRouter-specific validation',
+            );
+            checkResult.details = await this.checkOpenRouterProvider(config, category);
+          } else {
+            // Standard OpenAI provider
+            checkResult.details = await this.checkLLMProvider(config, category);
+          }
+          break;
         case 'anthropic':
           checkResult.details = await this.checkLLMProvider(config, category);
           break;
@@ -150,6 +165,11 @@ export class ProviderChecker {
         case 'jina':
           checkResult.details = await this.checkJinaProvider(config, category);
           break;
+        case 'openrouter':
+          // Explicit OpenRouter provider type (for future use)
+          console.log('[ProviderChecker] Explicit OpenRouter provider type');
+          checkResult.details = await this.checkOpenRouterProvider(config, category);
+          break;
         case 'searxng':
           checkResult.details = await this.checkSearXngProvider(config);
           break;
@@ -157,6 +177,9 @@ export class ProviderChecker {
           checkResult.details = await this.checkSerperProvider(config);
           break;
         default:
+          console.log(
+            `[ProviderChecker] Using default OpenAI-compatible validation for ${config.providerKey}`,
+          );
           // Generic OpenAI-compatible API check
           checkResult.details = await this.checkOpenAICompatibleProvider(config, category);
       }
@@ -263,6 +286,34 @@ export class ProviderChecker {
       };
     }
 
+    // Special case for OpenRouter: explicit URL-based routing
+    // Note: OpenRouter uses 'openai' providerKey but is detected by URL and routed separately
+    if (
+      details.apiAvailability?.data?.method === 'openrouter_credits_validation' ||
+      details.apiAvailability?.data?.method === 'openrouter_models_fallback'
+    ) {
+      const apiAvailabilityResult = details.apiAvailability;
+
+      if (apiAvailabilityResult?.status === 'success') {
+        const method = apiAvailabilityResult.data?.method;
+        const message =
+          method === 'openrouter_models_fallback'
+            ? 'OpenRouter API key valid (verified via models endpoint)'
+            : 'OpenRouter API key valid and functional';
+        return { status: 'success', message };
+      } else if (apiAvailabilityResult?.status === 'failed') {
+        return {
+          status: 'failed',
+          message: `OpenRouter API key validation failed - ${apiAvailabilityResult.error || 'Invalid API key'}`,
+        };
+      }
+
+      return {
+        status: 'failed',
+        message: 'OpenRouter connection check failed - unable to validate API key',
+      };
+    }
+
     // For other providers, if any critical check failed, overall status is failed
     if (failedChecks.length > 0) {
       // Get the first failed check's detailed error message
@@ -300,7 +351,7 @@ export class ProviderChecker {
   }
 
   /**
-   * Check OpenAI/Anthropic compatible LLM provider
+   * Check LLM provider (OpenAI, Anthropic, and OpenAI-compatible providers)
    */
   private async checkLLMProvider(
     config: ProviderCheckConfig,
@@ -310,35 +361,45 @@ export class ProviderChecker {
       apiAvailability: this.createCheckResult(),
     };
 
-    // Debug logging for API key
-    console.log(
-      `[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}, baseUrl: ${config.baseUrl}`,
-    );
+    // Validate API key presence
+    const apiKeyError = this.validateApiKey(config, config.providerKey);
+    if (apiKeyError) {
+      checkResults.apiAvailability = apiKeyError;
+      return checkResults;
+    }
 
-    // Single API availability check using models endpoint
+    // Standard LLM provider check (OpenAI, Anthropic, etc.)
     const { response, isSuccess, errorMessage } = await this.performApiRequest(
       `${config.baseUrl}/models`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...this.getAuthHeaders(config),
-        },
+        headers: this.getAuthHeaders(config),
       },
       10000,
     );
 
     if (isSuccess) {
-      const responseData = await response.json();
-      checkResults.apiAvailability.status = 'success';
-      checkResults.apiAvailability.data = {
-        statusCode: response.status,
-        modelCount: responseData?.data?.length || 0,
-        responseTime: Date.now(),
-      };
+      try {
+        const responseData = await response.json();
+        const modelCount = responseData?.data?.length;
+
+        checkResults.apiAvailability.status = 'success';
+        checkResults.apiAvailability.data = {
+          statusCode: response.status,
+          modelCount,
+          responseTime: Date.now(),
+        };
+      } catch (parseError) {
+        checkResults.apiAvailability.status = 'failed';
+        checkResults.apiAvailability.error = `Failed to parse models response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`;
+      }
     } else {
       checkResults.apiAvailability.status = 'failed';
-      checkResults.apiAvailability.error = errorMessage;
+      checkResults.apiAvailability.error = this.generateHttpErrorMessage(
+        response?.status,
+        errorMessage,
+        config.providerKey,
+      );
     }
 
     return checkResults;
@@ -563,5 +624,211 @@ export class ProviderChecker {
   ): Promise<Record<string, CheckResult>> {
     // Use the same check as LLM providers since most custom providers are OpenAI-compatible
     return this.checkLLMProvider(config, category);
+  }
+
+  /**
+   * Check OpenRouter provider - supports both official and custom URLs
+   */
+  private async checkOpenRouterProvider(
+    config: ProviderCheckConfig,
+    _category?: ProviderCategory,
+  ): Promise<Record<string, CheckResult>> {
+    const checkResults: Record<string, CheckResult> = {
+      apiAvailability: this.createCheckResult(),
+    };
+
+    // Validate API key presence
+    const apiKeyError = this.validateApiKey(config, 'OpenRouter');
+    if (apiKeyError) {
+      checkResults.apiAvailability = apiKeyError;
+      return checkResults;
+    }
+
+    console.log('[ProviderChecker] OpenRouter: Testing API key with credits endpoint');
+
+    // Try OpenRouter-specific validation first
+    const creditsValidationResult = await this.tryOpenRouterCreditsValidation(config);
+
+    if (creditsValidationResult.success) {
+      checkResults.apiAvailability = creditsValidationResult.result;
+      return checkResults;
+    }
+
+    // If credits validation failed, fall back to standard models endpoint
+    console.log(
+      '[ProviderChecker] OpenRouter: Credits validation failed, falling back to models endpoint',
+    );
+    const modelsValidationResult = await this.tryModelsValidation(config);
+
+    checkResults.apiAvailability = modelsValidationResult;
+    return checkResults;
+  }
+
+  /**
+   * Try OpenRouter credits endpoint validation
+   */
+  private async tryOpenRouterCreditsValidation(config: ProviderCheckConfig): Promise<{
+    success: boolean;
+    result: CheckResult;
+  }> {
+    // Determine credits endpoint URL
+    let creditsUrl: string;
+
+    if (config.baseUrl?.includes('openrouter.ai')) {
+      // Official OpenRouter - use official endpoint
+      creditsUrl = 'https://openrouter.ai/api/v1/credits';
+    } else {
+      // Custom base URL - try to construct credits endpoint
+      const baseUrl = config.baseUrl?.replace(/\/+$/, ''); // Remove trailing slashes
+      creditsUrl = `${baseUrl}/credits`;
+    }
+
+    console.log(`[ProviderChecker] OpenRouter: Trying credits endpoint: ${creditsUrl}`);
+
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      creditsUrl,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      },
+      10000,
+    );
+
+    const result = this.createCheckResult();
+
+    if (isSuccess) {
+      // 2xx response means API key is valid
+      try {
+        const responseData = await response.json();
+        result.status = 'success';
+        result.data = {
+          statusCode: response.status,
+          method: 'openrouter_credits_validation',
+          credits: responseData?.data?.credits,
+          creditsUrl,
+          responseTime: Date.now(),
+        };
+        return { success: true, result };
+      } catch (_parseError) {
+        // Even if parsing fails, a 2xx response means API key is valid
+        result.status = 'success';
+        result.data = {
+          statusCode: response.status,
+          method: 'openrouter_credits_validation',
+          creditsUrl,
+          note: 'API key valid (response parsing failed)',
+          responseTime: Date.now(),
+        };
+        return { success: true, result };
+      }
+    } else {
+      // Handle specific error codes for OpenRouter
+      if (response?.status === 401) {
+        result.status = 'failed';
+        result.error = 'Invalid OpenRouter API key - unauthorized access to credits endpoint';
+        return { success: true, result }; // We got a definitive answer
+      } else if (response?.status === 403) {
+        result.status = 'failed';
+        result.error = 'OpenRouter API key access forbidden - check permissions';
+        return { success: true, result }; // We got a definitive answer
+      } else if (response?.status === 429) {
+        result.status = 'success';
+        result.data = {
+          statusCode: response.status,
+          method: 'openrouter_credits_validation',
+          creditsUrl,
+          note: 'API key valid but rate limited',
+          responseTime: Date.now(),
+        };
+        return { success: true, result };
+      } else {
+        // For other errors (like 404, 5xx), we'll try fallback
+        console.log(
+          `[ProviderChecker] OpenRouter: Credits endpoint returned ${response?.status}, will try fallback`,
+        );
+        result.status = 'failed';
+        result.error = `Credits endpoint failed: ${errorMessage || 'Unknown error'}`;
+        return { success: false, result };
+      }
+    }
+  }
+
+  /**
+   * Try standard models endpoint validation as fallback
+   */
+  private async tryModelsValidation(config: ProviderCheckConfig): Promise<CheckResult> {
+    console.log(`[ProviderChecker] OpenRouter: Trying models endpoint: ${config.baseUrl}/models`);
+
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      `${config.baseUrl}/models`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(config),
+      },
+      10000,
+    );
+
+    const result = this.createCheckResult();
+
+    if (isSuccess) {
+      try {
+        const responseData = await response.json();
+        const modelCount = responseData?.data?.length;
+
+        result.status = 'success';
+        result.data = {
+          statusCode: response.status,
+          method: 'openrouter_models_fallback',
+          modelCount,
+          note: 'Validated via models endpoint (credits endpoint unavailable)',
+          responseTime: Date.now(),
+        };
+      } catch (parseError) {
+        result.status = 'failed';
+        result.error = `Failed to parse models response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`;
+      }
+    } else {
+      result.status = 'failed';
+      result.error = this.generateHttpErrorMessage(
+        response?.status,
+        errorMessage,
+        'OpenRouter (fallback)',
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Smart detection for OpenRouter providers using multiple strategies
+   */
+  private detectOpenRouterProvider(config: ProviderCheckConfig): boolean {
+    // Strategy 1: URL-based detection (most common case)
+    if (config.baseUrl?.includes('openrouter.ai')) {
+      console.log('[ProviderChecker] OpenRouter detected via URL: openrouter.ai');
+      return true;
+    }
+
+    // Strategy 2: Name-based detection (user explicitly names it as OpenRouter)
+    if (config.name?.toLowerCase().includes('openrouter')) {
+      console.log('[ProviderChecker] OpenRouter detected via name pattern');
+      return true;
+    }
+
+    // Strategy 3: Explicit provider configuration (for future extensibility)
+    // This could be used if we add explicit OpenRouter provider type in the future
+    if (config.providerKey === 'openrouter') {
+      console.log('[ProviderChecker] OpenRouter detected via explicit providerKey');
+      return true;
+    }
+
+    // Strategy 4: Check for OpenRouter-specific configuration patterns
+    // This is for cases where users might use custom URLs but still want OpenRouter validation
+    // In the future, we could add a custom field or parameter to force OpenRouter validation
+
+    return false;
   }
 }
