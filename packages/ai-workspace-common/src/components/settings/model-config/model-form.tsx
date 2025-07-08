@@ -337,7 +337,7 @@ export const ModelFormModal = memo(
         const provider = providerOptions.find((p) => p.value === selectedProviderId);
         const providerKey = provider?.providerKey || selectedProviderId;
         return (
-          (mediaConfig as MediaConfig)[providerKey].map((item) => ({
+          (mediaConfig as MediaConfig)[providerKey]?.map((item) => ({
             label: item.config?.modelId || '',
             value: item.config?.modelId || '',
             ...item,
