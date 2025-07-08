@@ -1034,10 +1034,7 @@ export class ProviderService implements OnModuleInit {
             }) as ProviderItemOption,
         ) ?? []
       );
-    } catch (error) {
-      this.logger.warn(
-        `Failed to list provider item options for provider ${providerId}: ${error.stack}`,
-      );
+    } catch (_error) {
       return [];
     }
   }
@@ -1064,7 +1061,6 @@ export class ProviderService implements OnModuleInit {
     });
 
     if (!provider) {
-      this.logger.error(`[TEST-CONNECTION] Provider not found: ${providerId}`);
       throw new ProviderNotFoundError();
     }
 
@@ -1096,14 +1092,6 @@ export class ProviderService implements OnModuleInit {
 
       return result;
     } catch (error) {
-      this.logger.error(
-        `[TEST-CONNECTION] Provider connection test failed for ${providerId}:`,
-        error,
-      );
-      this.logger.error(
-        `[TEST-CONNECTION] Error details - type: ${error?.constructor?.name}, message: ${error?.message}`,
-      );
-
       // Re-throw the error to let the global error handler deal with it
       // or create a proper error response using ProviderChecker's error format
       const errorResult: ProviderCheckResult = {
