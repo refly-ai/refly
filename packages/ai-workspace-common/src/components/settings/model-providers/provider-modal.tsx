@@ -528,26 +528,23 @@ export const ProviderModal = React.memo(
         {testResult && (
           <Alert
             type={testResult.status === 'success' ? 'success' : 'error'}
+            showIcon
+            closable
             icon={
               testResult.status === 'success' ? <CheckCircleOutlined /> : <CloseCircleOutlined />
             }
             message={
-              <div className="flex items-center justify-between">
-                <span>{testResult.message}</span>
-                <Button
-                  type="text"
-                  size="small"
-                  onClick={() => setTestResult(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </Button>
-              </div>
+              testResult.status === 'success'
+                ? t('settings.modelProviders.connectionTestSuccess')
+                : t('settings.modelProviders.connectionTestFailed')
             }
             description={
-              <div className="text-sm text-gray-600">
-                {t('settings.modelProviders.testTime')}:{' '}
-                {new Date(testResult.timestamp).toLocaleString()}
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <p>{testResult.message}</p>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {t('settings.modelProviders.testTime')}:{' '}
+                  {new Date(testResult.timestamp).toLocaleString()}
+                </p>
               </div>
             }
             className="mb-4"
