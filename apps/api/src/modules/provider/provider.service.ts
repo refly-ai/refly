@@ -1034,7 +1034,10 @@ export class ProviderService implements OnModuleInit {
             }) as ProviderItemOption,
         ) ?? []
       );
-    } catch (_error) {
+    } catch (error) {
+      this.logger.warn(
+        `Failed to list provider item options for provider ${providerId}: ${error.stack}`,
+      );
       return [];
     }
   }
