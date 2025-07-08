@@ -139,17 +139,10 @@ export class ProviderChecker {
 
     try {
       // Route to specific provider check based on provider key
-      console.log(
-        `[ProviderChecker] Routing provider check for: ${config.providerKey} (${config.name})`,
-      );
-
       switch (config.providerKey) {
         case 'openai':
           // Check if this is actually an OpenRouter provider
           if (this.detectOpenRouterProvider(config)) {
-            console.log(
-              '[ProviderChecker] Detected OpenRouter provider, using OpenRouter-specific validation',
-            );
             checkResult.details = await this.checkOpenRouterProvider(config, category);
           } else {
             // Standard OpenAI provider
@@ -166,8 +159,6 @@ export class ProviderChecker {
           checkResult.details = await this.checkJinaProvider(config, category);
           break;
         case 'openrouter':
-          // Explicit OpenRouter provider type (for future use)
-          console.log('[ProviderChecker] Explicit OpenRouter provider type');
           checkResult.details = await this.checkOpenRouterProvider(config, category);
           break;
         case 'searxng':
@@ -177,9 +168,6 @@ export class ProviderChecker {
           checkResult.details = await this.checkSerperProvider(config);
           break;
         default:
-          console.log(
-            `[ProviderChecker] Using default OpenAI-compatible validation for ${config.providerKey}`,
-          );
           // Generic OpenAI-compatible API check
           checkResult.details = await this.checkOpenAICompatibleProvider(config, category);
       }
@@ -423,8 +411,6 @@ export class ProviderChecker {
       ? `${config.baseUrl}/models` // OpenAI-compatible endpoint
       : `${config.baseUrl}/api/tags`; // Native Ollama endpoint
 
-    console.log(`[ProviderChecker] Testing Ollama connection: ${testUrl}`);
-
     const { response, isSuccess, errorMessage } = await this.performApiRequest(
       testUrl,
       {
@@ -556,9 +542,6 @@ export class ProviderChecker {
       searchFunction: this.createCheckResult(),
     };
 
-    // Debug logging
-    console.log(`[ProviderChecker] ${config.providerId} - hasApiKey: ${!!config.apiKey}`);
-
     // Validate API key
     const apiKeyError = this.validateApiKey(config, 'Serper');
     if (apiKeyError) {
@@ -571,8 +554,6 @@ export class ProviderChecker {
       q: 'test query',
       num: 1, // Limit to 1 result to minimize API usage
     };
-
-    console.log('[ProviderChecker] Serper search request:', JSON.stringify(searchPayload, null, 2));
 
     const { response, isSuccess, errorMessage } = await this.performApiRequest(
       'https://google.serper.dev/search',
@@ -644,8 +625,6 @@ export class ProviderChecker {
       return checkResults;
     }
 
-    console.log('[ProviderChecker] OpenRouter: Testing API key with credits endpoint');
-
     // Try OpenRouter-specific validation first
     const creditsValidationResult = await this.tryOpenRouterCreditsValidation(config);
 
@@ -655,9 +634,6 @@ export class ProviderChecker {
     }
 
     // If credits validation failed, fall back to standard models endpoint
-    console.log(
-      '[ProviderChecker] OpenRouter: Credits validation failed, falling back to models endpoint',
-    );
     const modelsValidationResult = await this.tryModelsValidation(config);
 
     checkResults.apiAvailability = modelsValidationResult;
@@ -682,8 +658,6 @@ export class ProviderChecker {
       const baseUrl = config.baseUrl?.replace(/\/+$/, ''); // Remove trailing slashes
       creditsUrl = `${baseUrl}/credits`;
     }
-
-    console.log(`[ProviderChecker] OpenRouter: Trying credits endpoint: ${creditsUrl}`);
 
     const { response, isSuccess, errorMessage } = await this.performApiRequest(
       creditsUrl,
@@ -746,9 +720,6 @@ export class ProviderChecker {
         return { success: true, result };
       } else {
         // For other errors (like 404, 5xx), we'll try fallback
-        console.log(
-          `[ProviderChecker] OpenRouter: Credits endpoint returned ${response?.status}, will try fallback`,
-        );
         result.status = 'failed';
         result.error = `Credits endpoint failed: ${errorMessage || 'Unknown error'}`;
         return { success: false, result };
@@ -760,8 +731,6 @@ export class ProviderChecker {
    * Try standard models endpoint validation as fallback
    */
   private async tryModelsValidation(config: ProviderCheckConfig): Promise<CheckResult> {
-    console.log(`[ProviderChecker] OpenRouter: Trying models endpoint: ${config.baseUrl}/models`);
-
     const { response, isSuccess, errorMessage } = await this.performApiRequest(
       `${config.baseUrl}/models`,
       {
@@ -808,20 +777,17 @@ export class ProviderChecker {
   private detectOpenRouterProvider(config: ProviderCheckConfig): boolean {
     // Strategy 1: URL-based detection (most common case)
     if (config.baseUrl?.includes('openrouter.ai')) {
-      console.log('[ProviderChecker] OpenRouter detected via URL: openrouter.ai');
       return true;
     }
 
     // Strategy 2: Name-based detection (user explicitly names it as OpenRouter)
     if (config.name?.toLowerCase().includes('openrouter')) {
-      console.log('[ProviderChecker] OpenRouter detected via name pattern');
       return true;
     }
 
     // Strategy 3: Explicit provider configuration (for future extensibility)
     // This could be used if we add explicit OpenRouter provider type in the future
     if (config.providerKey === 'openrouter') {
-      console.log('[ProviderChecker] OpenRouter detected via explicit providerKey');
       return true;
     }
 
