@@ -28,7 +28,7 @@ Refly is a pioneering vibe workflow platform designed to solve your most complex
         <img alt="TypeScript-version-icon" src="https://img.shields.io/badge/TypeScript-^5.3.3-blue"></a>
 </p>
 
-
+[<img src="https://raw.githubusercontent.com/ClawCloud/Run-Template/refs/heads/main/Run-on-ClawCloud.svg" alt="SVG" style="height:45px; vertical-align:middle;">](https://template.run.claw.cloud/?openapp=system-fastdeploy%3FtemplateName%3Drefly)
 [![Deploy on Sealos](https://sealos.io/Deploy-on-Sealos.svg)](https://template.sealos.io/deploy?templateName=refly)
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
 
