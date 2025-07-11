@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional, OnModuleInit } from '@nestjs/common';
 import pLimit from 'p-limit';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -37,8 +37,8 @@ import {
 import { BaseSkill } from '@refly/skill-template';
 import { genActionResultID, genSkillID, genSkillTriggerID, safeParseJSON } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
-import { QUEUE_SKILL, pick } from '../../utils';
-import { InvokeSkillJobData } from './skill.dto';
+import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
+import { InvokeSkillJobData, CheckStuckActionsJobData } from './skill.dto';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
 import { SubscriptionService } from '../subscription/subscription.service';
@@ -55,6 +55,8 @@ import { ProviderService } from '../provider/provider.service';
 import { providerPO2DTO } from '../provider/provider.dto';
 import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
 import { SkillInvokerService } from './skill-invoker.service';
+import { ActionService } from '../action/action.service';
+import { ConfigService } from '@nestjs/config';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -69,21 +71,202 @@ function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
 }
 
 @Injectable()
-export class SkillService {
-  private logger = new Logger(SkillService.name);
+export class SkillService implements OnModuleInit {
+  private readonly logger = new Logger(SkillService.name);
+  private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout for initialization
   private skillInventory: BaseSkill[];
 
   constructor(
-    private prisma: PrismaService,
-    private knowledge: KnowledgeService,
-    private subscription: SubscriptionService,
-    private codeArtifact: CodeArtifactService,
-    private providerService: ProviderService,
-    private skillInvokerService: SkillInvokerService,
-    @Optional() @InjectQueue(QUEUE_SKILL) private skillQueue?: Queue<InvokeSkillJobData>,
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+    private readonly knowledgeService: KnowledgeService,
+    private readonly subscriptionService: SubscriptionService,
+    private readonly codeArtifactService: CodeArtifactService,
+    private readonly providerService: ProviderService,
+    private readonly skillInvokerService: SkillInvokerService,
+    private readonly actionService: ActionService,
+    @Optional()
+    @InjectQueue(QUEUE_SKILL)
+    private skillQueue?: Queue<InvokeSkillJobData>,
+    @Optional()
+    @InjectQueue(QUEUE_CHECK_STUCK_ACTIONS)
+    private checkStuckActionsQueue?: Queue<CheckStuckActionsJobData>,
   ) {
     this.skillInventory = this.skillInvokerService.getSkillInventory();
     this.logger.log(`Skill inventory initialized: ${this.skillInventory.length}`);
+  }
+
+  async onModuleInit() {
+    if (this.checkStuckActionsQueue) {
+      const initPromise = this.setupStuckActionsCheckJobs();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(`Stuck actions check cronjob timed out after ${this.INIT_TIMEOUT}ms`);
+        }, this.INIT_TIMEOUT);
+      });
+
+      try {
+        await Promise.race([initPromise, timeoutPromise]);
+        this.logger.log('Stuck actions check cronjob scheduled successfully');
+      } catch (error) {
+        this.logger.error(`Failed to schedule stuck actions check cronjob: ${error}`);
+        throw error;
+      }
+    } else {
+      this.logger.log('Stuck actions check queue not available, skipping cronjob setup');
+    }
+  }
+
+  private async setupStuckActionsCheckJobs() {
+    if (!this.checkStuckActionsQueue) return;
+
+    // Remove any existing recurring jobs
+    const existingJobs = await this.checkStuckActionsQueue.getJobSchedulers();
+    await Promise.all(
+      existingJobs.map((job) => this.checkStuckActionsQueue!.removeJobScheduler(job.id)),
+    );
+
+    // Add the new recurring job
+    const stuckCheckInterval = this.config.get<number>('skill.stuckCheckInterval');
+    const intervalMinutes = Math.max(1, Math.ceil(stuckCheckInterval / (1000 * 60))); // Convert to minutes, minimum 1 minute
+
+    await this.checkStuckActionsQueue.add(
+      'check-stuck-actions',
+      {},
+      {
+        repeat: {
+          pattern: `*/${intervalMinutes} * * * *`, // Run every N minutes
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+        jobId: 'check-stuck-actions', // Unique job ID to prevent duplicates
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
+    );
+
+    this.logger.log(`Stuck actions check job scheduled to run every ${intervalMinutes} minutes`);
+  }
+
+  async checkStuckActions() {
+    const stuckTimeoutThreshold = this.config.get<number>('skill.stuckTimeoutThreshold');
+
+    // Validate the threshold to ensure it's a positive number
+    if (!stuckTimeoutThreshold || stuckTimeoutThreshold <= 0) {
+      this.logger.error(
+        `Invalid stuckTimeoutThreshold: ${stuckTimeoutThreshold}. Must be a positive number.`,
+      );
+      return;
+    }
+
+    const cutoffTime = new Date(Date.now() - stuckTimeoutThreshold);
+
+    this.logger.log(`Checking for stuck actions with cutoff time: ${cutoffTime.toISOString()}`);
+
+    try {
+      // Find all ActionResults that are stuck in executing status
+      const stuckResults = await this.prisma.actionResult.findMany({
+        where: {
+          status: 'executing',
+          updatedAt: {
+            lt: cutoffTime,
+          },
+        },
+        orderBy: {
+          updatedAt: 'asc',
+        },
+        take: 100, // Limit to avoid overwhelming the system
+      });
+
+      if (stuckResults.length === 0) {
+        this.logger.log('No stuck actions found');
+        return;
+      }
+
+      this.logger.warn(`Found ${stuckResults.length} stuck actions, marking them as failed`);
+
+      // Use ActionService.abortAction to handle stuck actions consistently
+      const timeoutDuration = Math.ceil(stuckTimeoutThreshold / 1000 / 60); // Convert to minutes
+      const timeoutError = `Skill execution timeout after ${timeoutDuration} minutes of inactivity`;
+
+      const updateResults = await Promise.allSettled(
+        stuckResults.map(async (result) => {
+          // Create a user object for the ActionService.abortAction call
+          const user = { uid: result.uid } as User;
+
+          try {
+            await this.actionService.abortAction(user, {
+              resultId: result.resultId,
+              reason: timeoutError,
+            });
+            return { success: true, resultId: result.resultId };
+          } catch (error) {
+            this.logger.error(`Failed to abort stuck action ${result.resultId}: ${error?.message}`);
+            // Fallback to direct database update if ActionService fails
+            try {
+              const existingErrors = safeParseJSON(result.errors || '[]') as string[];
+              const updatedErrors = [...existingErrors, timeoutError];
+
+              await this.prisma.actionResult.update({
+                where: {
+                  pk: result.pk,
+                  status: 'executing', // Only update if still executing to avoid race conditions
+                },
+                data: {
+                  status: 'failed',
+                  errors: JSON.stringify(updatedErrors),
+                  updatedAt: new Date(),
+                },
+              });
+              return { success: true, resultId: result.resultId };
+            } catch (dbError) {
+              this.logger.error(
+                `Failed to update stuck action ${result.resultId} directly: ${dbError?.message}`,
+              );
+              throw dbError;
+            }
+          }
+        }),
+      );
+
+      const successful = updateResults.filter((result) => result.status === 'fulfilled').length;
+      const failed = updateResults.filter((result) => result.status === 'rejected').length;
+
+      this.logger.log(`Updated ${successful} stuck actions to failed status`);
+      if (failed > 0) {
+        this.logger.warn(`Failed to update ${failed} stuck actions`);
+      }
+
+      // Also update related pilot steps if they exist
+      const pilotStepUpdates = await Promise.allSettled(
+        stuckResults
+          .filter((result) => result.pilotStepId)
+          .map(async (result) => {
+            return this.prisma.pilotStep.updateMany({
+              where: {
+                stepId: result.pilotStepId,
+                status: 'executing',
+              },
+              data: {
+                status: 'failed',
+              },
+            });
+          }),
+      );
+
+      const pilotStepsUpdated = pilotStepUpdates.filter(
+        (result) => result.status === 'fulfilled',
+      ).length;
+      if (pilotStepsUpdated > 0) {
+        this.logger.log(`Updated ${pilotStepsUpdated} related pilot steps to failed status`);
+      }
+    } catch (error) {
+      this.logger.error(`Error checking stuck actions: ${error?.stack}`);
+      throw error;
+    }
   }
 
   listSkills(includeAll = false): Skill[] {
@@ -281,7 +464,7 @@ export class SkillService {
 
     if (tiers.length > 0) {
       // Check for usage quota
-      const usageResult = await this.subscription.checkRequestUsage(user);
+      const usageResult = await this.subscriptionService.checkRequestUsage(user);
 
       for (const tier of tiers) {
         if (!usageResult[tier]) {
@@ -464,7 +647,7 @@ export class SkillService {
       const limit = pLimit(5);
       const resources = await Promise.all(
         resourceIds.map((id) =>
-          limit(() => this.knowledge.getResourceDetail(user, { resourceId: id })),
+          limit(() => this.knowledgeService.getResourceDetail(user, { resourceId: id })),
         ),
       );
       const resourceMap = new Map<string, Resource>();
@@ -482,7 +665,9 @@ export class SkillService {
       const docIds = [...new Set(context.documents.map((item) => item.docId).filter((id) => id))];
       const limit = pLimit(5);
       const docs = await Promise.all(
-        docIds.map((id) => limit(() => this.knowledge.getDocumentDetail(user, { docId: id }))),
+        docIds.map((id) =>
+          limit(() => this.knowledgeService.getDocumentDetail(user, { docId: id })),
+        ),
       );
       const docMap = new Map<string, Document>();
       for (const d of docs) {
@@ -501,7 +686,9 @@ export class SkillService {
       ];
       const limit = pLimit(5);
       const artifacts = await Promise.all(
-        artifactIds.map((id) => limit(() => this.codeArtifact.getCodeArtifactDetail(user, id))),
+        artifactIds.map((id) =>
+          limit(() => this.codeArtifactService.getCodeArtifactDetail(user, id)),
+        ),
       );
       const artifactMap = new Map<string, CodeArtifact>();
       for (const a of artifacts) {

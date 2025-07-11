@@ -331,8 +331,8 @@ export class ModelProviderTimeout extends BaseError {
 export class ActionAborted extends BaseError {
   code = 'E3004';
   messageDict = {
-    en: 'Action was stopped by user',
-    'zh-CN': '操作已被用户停止',
+    en: 'Action was stopped',
+    'zh-CN': '操作已被停止',
   };
 }
 

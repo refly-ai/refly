@@ -38,6 +38,8 @@ export interface SkillTimeoutCheckJobData {
   version?: number;
 }
 
+export type CheckStuckActionsJobData = Record<string, never>;
+
 export function skillInstancePO2DTO(skill: SkillInstanceModel): SkillInstance {
   return {
     ...pick(skill, ['skillId', 'description']),
