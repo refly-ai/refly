@@ -397,3 +397,5 @@ kubectl apply -f refly-deployment.yaml
     </div> 
   </a>
 </div>
+
+[![Star 历史图表](https://api.star-history.com/svg?repos=refly-ai/refly&type=Date)](https://www.star-history.com/#refly-ai/refly&Date)

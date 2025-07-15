@@ -396,3 +396,5 @@ This codebase uses the [ReflyAI Open Source License](./LICENSE), which is essent
     </div> 
   </a>
 </div>
+
+[![Star History Chart](https://api.star-history.com/svg?repos=refly-ai/refly&type=Date)](https://www.star-history.com/#refly-ai/refly&Date)
