@@ -13,7 +13,7 @@ Refly 是一个基于前沿 A2A 和 MCP 协议的开源 Vibe AI工作台，集�
 
 [🚀 v0.7.1 正式发布！MCP 商店和后台技能调用 🚀⚡️](https://docs.refly.ai/zh/changelog/v0.7.1)
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/community-version/self-deploy/) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
 <p align="center">
     <a href="https://refly.ai" target="_blank">

@@ -13,7 +13,7 @@ Refly is an open-source Vibe AI workspace based on cutting-edge A2A and MCP prot
 
 [🚀 v0.7.1 Official Release! MCP Store and Backend Skill Invocation 🚀⚡️](https://docs.refly.ai/zh/changelog/v0.7.1) 
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/guide/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/community-version/self-deploy/) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
 <p align="center">
     <a href="https://refly.ai" target="_blank">
