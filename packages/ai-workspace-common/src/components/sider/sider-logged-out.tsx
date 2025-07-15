@@ -47,7 +47,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
 
   return (
     <Layout.Sider
-      width={source === 'sider' ? (collapse ? 0 : 220) : 220}
+      width={source === 'sider' ? (collapse ? 0 : 248) : 248}
       className={cn(
         'border border-solid border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900',
         source === 'sider' ? 'h-[calc(100vh)]' : 'h-[calc(100vh-100px)] rounded-r-lg',

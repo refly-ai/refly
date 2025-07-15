@@ -6594,6 +6594,10 @@ export const MediaGenerationModelConfigSchema = {
       description: 'Model capabilities',
       $ref: '#/components/schemas/MediaGenerationModelCapabilities',
     },
+    description: {
+      type: 'string',
+      description: 'Model description',
+    },
   },
 } as const;
 

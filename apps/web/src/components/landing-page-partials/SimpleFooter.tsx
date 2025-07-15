@@ -9,7 +9,7 @@ import {
 
 const SimpleFooter = React.memo(() => {
   return (
-    <footer className="w-full bg-white px-6 py-4 dark:bg-gray-900/95">
+    <footer className="w-full px-6 py-4">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         {/* Copyright Info */}
         <div className="text-sm text-gray-500 dark:text-gray-400">

@@ -51,15 +51,20 @@ export const AppLayout = (props: AppLayoutProps) => {
 
   return (
     <ErrorBoundary>
-      <Layout className="app-layout main">
+      <Layout
+        className="app-layout main"
+        style={{
+          background:
+            'linear-gradient(124deg,rgba(31,201,150,0.1) 0%,rgba(69,190,255,0.06) 24.85%),#f3f3f3',
+        }}
+      >
         {showSider ? <SiderLayout source="sider" /> : null}
         <Layout
-          className="content-layout dark:bg-green-900"
+          className="content-layout"
           style={{
-            height: 'calc(100vh)',
+            height: '100vh',
             flexGrow: 1,
             overflowY: 'auto',
-            width: showSider ? 'calc(100% - 200px - 16px)' : 'calc(100% - 16px)',
           }}
         >
           <Content>{props.children}</Content>

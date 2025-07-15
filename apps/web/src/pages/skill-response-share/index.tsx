@@ -185,7 +185,7 @@ const SkillResponseSharePage = () => {
 
       <div
         className={`absolute h-16 bottom-0 left-0 right-0 box-border flex justify-between items-center py-2 px-4 pr-0 bg-transparent ${
-          collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-232px)]'
+          collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-260px)]'
         }`}
       >
         {/* Removed the collapse button since we now use PoweredByRefly for toggling */}

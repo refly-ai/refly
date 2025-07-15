@@ -77,7 +77,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
       </Helmet>
       <div
         className={`absolute h-16 top-0 left-0 right-0  box-border flex justify-between items-center py-2 px-4 pr-0 bg-transparent ${
-          collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-232px)]'
+          collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-260px)]'
         }`}
       >
         <div className="flex items-center relative z-10">

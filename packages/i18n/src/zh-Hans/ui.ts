@@ -269,7 +269,7 @@ const translations = {
     tryForFree: '开始使用',
     tryItNow: '立即体验',
     creationEngine: '创作引擎',
-    addToChrome: '添加到 Chrome',
+    addToChrome: '安装浏览器插件',
     contactUs: '联系我们',
     watchVideo: '观看视频',
     joinBtn: '免费使用',
@@ -467,6 +467,12 @@ const translations = {
       continue: '继续',
       signin: '登录',
       signup: '注册',
+      greeting: {
+        signin: '欢迎回来！',
+        signup: '欢迎！',
+        signinSubtitle: '欢迎回来！请登录以继续使用',
+        signupSubtitle: '欢迎！请填写详细信息以开始使用',
+      },
       signinTitle: '登录 Refly',
       signinSubtitle: '欢迎回来！请登录以继续使用',
       signupTitle: '创建您的账户',
@@ -1554,7 +1560,7 @@ const translations = {
     },
     siderMenu: {
       contactUs: '联系我们',
-      addToChrome: '添加到 Chrome',
+      addToChrome: '安装浏览器插件',
       canvasTitle: '画布',
       canvasDescription:
         '创建、编辑和查看画布, 不同于传统的 Chatbot 应用，Refly 通过无限延伸的二维画布来完成对话思考、内容消费和创作的全流程。',

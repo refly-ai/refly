@@ -148,7 +148,7 @@ export const TemplateList = ({
         query: {
           language,
           categoryId: categoryId === 'my-templates' ? null : categoryId,
-          scope: categoryId === 'my-templates' ? 'private' : 'public',
+          scope: categoryId !== 'my-templates' ? 'private' : 'public',
           ...queryPayload,
         },
       });

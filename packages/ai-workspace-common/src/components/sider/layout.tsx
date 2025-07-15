@@ -9,12 +9,14 @@ import {
 
 import {
   IconCanvas,
-  IconHome,
   IconPlus,
+  IconSettings,
+  IconLightMode,
+  IconDarkMode,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import cn from 'classnames';
+import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 
-import Logo from '@/assets/logo.svg';
 import { useUserStoreShallow } from '@refly-packages/ai-workspace-common/stores/user';
 // components
 import { SearchQuickOpenBtn } from '@refly-packages/ai-workspace-common/components/search-quick-open-btn';
@@ -41,7 +43,6 @@ import {
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { AiOutlineMenuFold, AiOutlineUser } from 'react-icons/ai';
 import { SubscriptionHint } from '@refly-packages/ai-workspace-common/components/subscription/hint';
-import { FaGithub } from 'react-icons/fa6';
 import { useKnowledgeBaseStoreShallow } from '@refly-packages/ai-workspace-common/stores/knowledge-base';
 import { subscriptionEnabled } from '@refly-packages/ai-workspace-common/utils/env';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
@@ -51,67 +52,32 @@ import { LuList } from 'react-icons/lu';
 
 import './layout.scss';
 import { ProjectDirectory } from '../project/project-directory';
+import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/githubStar';
+import { useThemeStoreShallow } from '@refly-packages/ai-workspace-common/stores/theme';
 
 const Sider = Layout.Sider;
 const SubMenu = Menu.SubMenu;
 
 export const SiderLogo = (props: {
-  source: 'sider' | 'popover';
   navigate: (path: string) => void;
   setCollapse: (collapse: boolean) => void;
 }) => {
-  const { navigate, setCollapse, source } = props;
-  const [starCount, setStarCount] = useState('');
-
-  useEffect(() => {
-    // Fetch GitHub star count
-    fetch('https://api.github.com/repos/refly-ai/refly')
-      .then((res) => res.json())
-      .then((data) => {
-        const stars = data.stargazers_count;
-        setStarCount(stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : stars.toString());
-      })
-      .catch(() => {
-        // Keep default value if fetch fails
-      });
-  }, []);
+  const { navigate, setCollapse } = props;
 
   return (
-    <div className="flex items-center justify-between p-3">
+    <div className="flex items-center justify-between mb-6">
       <div className="flex items-center gap-2">
-        <div
-          className="flex cursor-pointer flex-row items-center gap-1.5"
-          onClick={() => navigate('/')}
-        >
-          <img src={Logo} alt="Refly" className="h-8 w-8" />
-          <span
-            className="text-xl font-bold text-black dark:text-gray-100 dark:text-gray-100"
-            translate="no"
-          >
-            Refly
-          </span>
-        </div>
-
-        {starCount && (
-          <Button
-            type="default"
-            icon={<FaGithub className="h-3.5 w-3.5" />}
-            onClick={() => window.open('https://github.com/refly-ai/refly', '_blank')}
-            className="flex h-6 items-center gap-0.5 bg-white px-1.5 text-xs font-bold dark:bg-gray-900"
-          >
-            {starCount}
-          </Button>
-        )}
+        <Logo onClick={() => navigate('/')} />
+        <GithubStar />
       </div>
-      {source === 'sider' && (
-        <div>
-          <Button
-            type="text"
-            icon={<AiOutlineMenuFold size={16} className="text-gray-500 dark:text-gray-400" />}
-            onClick={() => setCollapse(true)}
-          />
-        </div>
-      )}
+
+      <div>
+        <Button
+          type="text"
+          icon={<AiOutlineMenuFold size={16} className="text-gray-500 dark:text-gray-400" />}
+          onClick={() => setCollapse(true)}
+        />
+      </div>
     </div>
   );
 };
@@ -120,15 +86,16 @@ const SettingItem = () => {
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
   }));
-  const planType = userProfile?.subscription?.planType || 'free';
-
-  const { t } = useTranslation();
+  const { isDarkMode, setThemeMode } = useThemeStoreShallow((state) => ({
+    isDarkMode: state.isDarkMode,
+    setThemeMode: state.setThemeMode,
+  }));
 
   return (
     <div className="group w-full">
       <SiderMenuSettingList>
         <div className="flex flex-1 items-center justify-between">
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <Avatar size={32} src={userProfile?.avatar} icon={<AiOutlineUser />} />
             <span
               className={cn(
@@ -141,32 +108,28 @@ const SettingItem = () => {
               {userProfile?.nickname}
             </span>
           </div>
-
-          {subscriptionEnabled && (
-            <div className="flex h-6 items-center justify-center rounded-full bg-gray-100 px-3 text-xs font-medium group-hover:bg-white dark:bg-gray-800 dark:group-hover:bg-black">
-              {t(`settings.subscription.subscriptionStatus.${planType}`)}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Button
+              type="text"
+              icon={isDarkMode ? <IconDarkMode size={16} /> : <IconLightMode size={16} />}
+              onClick={() => setThemeMode(isDarkMode ? 'light' : 'dark')}
+            />
+            <Button type="text" icon={<IconSettings size={16} />} />
+          </div>
         </div>
       </SiderMenuSettingList>
     </div>
   );
 };
 
-export const NewCanvasItem = () => {
+export const NewCanvasButton = () => {
   const { t } = useTranslation();
   const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas();
 
   return (
     <div className="w-full" onClick={() => debouncedCreateCanvas()}>
-      <Button
-        className="w-full justify-start px-2"
-        key="newCanvas"
-        loading={createCanvasLoading}
-        type="text"
-        icon={<IconPlus className="text-green-600 dark:text-green-300" />}
-      >
-        <span className="text-green-600 dark:text-green-300">
+      <Button className="w-full h-8" key="newCanvas" loading={createCanvasLoading} type="default">
+        <span className="hover:text-green-600 dark:hover:text-green-300">
           {t('loggedHomePage.siderMenu.newCanvas')}
         </span>
       </Button>
@@ -353,7 +316,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
   const defaultOpenKeys = useMemo(() => ['Canvas', 'Library'], []);
 
   const canvasId = location.pathname.split('/').pop();
-  const isHome = useMatch('/canvas/:canvasId') && canvasId === 'empty';
   const { debouncedCreateCanvas } = useCreateCanvas({
     projectId: null,
     afterCreateSuccess: () => {
@@ -446,130 +408,128 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
   return (
     <Sider
-      width={source === 'sider' ? (collapse ? 0 : 220) : 220}
+      width={source === 'sider' ? (collapse ? 0 : 248) : 248}
       className={cn(
-        'border border-solid border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900',
-        source === 'sider' ? 'h-[calc(100vh)]' : 'h-[calc(100vh-100px)] rounded-r-lg',
+        'bg-transparent p-4',
+        source === 'sider'
+          ? 'h-[100vh]'
+          : 'h-[calc(100vh-100px)] rounded-r-lg ring-1 ring-gray-200 shadow-sm',
       )}
     >
-      <div className="flex h-full flex-col overflow-y-auto">
-        <SiderLogo source={source} navigate={(path) => navigate(path)} setCollapse={setCollapse} />
+      <div className="flex h-full flex-col gap-3 overflow-hidden">
+        <div className="flex flex-col gap-2 flex-1 overflow-hidden">
+          <SiderLogo navigate={(path) => navigate(path)} setCollapse={setCollapse} />
 
-        <SearchQuickOpenBtn />
+          <SearchQuickOpenBtn />
 
-        <div
-          className={cn(
-            'flex-shrink-0 h-10 my-1 mx-2 flex items-center justify-between pl-6 pr-3 text-gray-600 hover:bg-gray-100 cursor-pointer rounded-lg dark:text-gray-400 dark:bg-gray-900 dark:hover:bg-gray-700',
-            {
-              'bg-gray-100 dark:bg-gray-700': isHome,
-            },
-          )}
-          onClick={() => navigate('/')}
-        >
-          <div className="flex justify-between items-center w-full">
-            <div className="flex items-center gap-2">
-              <IconHome key="home" style={{ fontSize: 20 }} />
-              <span>{t('loggedHomePage.siderMenu.home')}</span>
-            </div>
+          <NewCanvasButton />
+
+          {/* Main menu section with flexible layout */}
+          <div className="flex-1 overflow-hidden flex flex-col min-h-[250px]">
+            <Menu
+              className="flex-1 !border-none bg-transparent overflow-hidden flex flex-col"
+              mode="inline"
+              defaultOpenKeys={defaultOpenKeys}
+              selectedKeys={selectedKey ? [selectedKey] : []}
+              style={{ height: '100%' }}
+            >
+              {siderSections.map((section) => {
+                const sectionTitle = (
+                  <div className="flex items-center justify-between w-full text-gray-600 group select-none dark:text-gray-300">
+                    <div className="flex items-center gap-2">
+                      {section.icon}
+                      <span>{t(`loggedHomePage.siderMenu.${section.name}`)}</span>
+                    </div>
+                    {section.actionIcon && (
+                      <Button
+                        type="text"
+                        size="small"
+                        className="px-1 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 dark:text-gray-400"
+                        icon={section.actionIcon}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (section.actionHandler) {
+                            section.actionHandler();
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+
+                const sectionContent = (
+                  <div className="flex-1 overflow-hidden flex flex-col bg-white select-none dark:bg-gray-900">
+                    <div className="flex-none pl-5 pr-2">
+                      {/* {section.key === 'Canvas' && <NewCanvasItem />} */}
+                      {section.key === 'Library' && <NewProjectItem />}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pl-5 pr-2 min-h-0">
+                      {section.key === 'Canvas' &&
+                        (isLoadingCanvas ? (
+                          <Skeleton
+                            key="skeleton-1"
+                            active
+                            title={false}
+                            paragraph={{ rows: 3 }}
+                            className="px-[12px] w-[200px]"
+                          />
+                        ) : canvasList?.length > 0 ? (
+                          <div>
+                            {canvasList.map((canvas) => (
+                              <CanvasListItem key={canvas.id} canvas={canvas} />
+                            ))}
+                            <ViewAllButton onClick={() => setShowCanvasListModal(true)} />
+                          </div>
+                        ) : null)}
+
+                      {section.key === 'Library' &&
+                        (isLoadingProjects ? (
+                          <Skeleton
+                            key="skeleton-1"
+                            active
+                            title={false}
+                            paragraph={{ rows: 3 }}
+                            className="px-[12px] w-[200px]"
+                          />
+                        ) : projectsList?.length > 0 ? (
+                          <div>
+                            {projectsList.map((project) => (
+                              <ProjectListItem key={project.id} project={project} />
+                            ))}
+
+                            <ViewAllButton onClick={() => setShowLibraryModal(true)} />
+                          </div>
+                        ) : null)}
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <SubMenu
+                    key={section.key}
+                    title={sectionTitle}
+                    className="ant-menu-submenu-adaptive overflow-hidden border-t-1 border-b-0 border-x-0 border-solid border-gray-100 !rounded-none mx-2 dark:border-gray-800"
+                    onTitleClick={() => {
+                      if (section.onClick) section.onClick();
+                    }}
+                  >
+                    {sectionContent}
+                  </SubMenu>
+                );
+              })}
+            </Menu>
           </div>
         </div>
 
-        {/* Main menu section with flexible layout */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-[250px]">
-          <Menu
-            className="flex-1 !border-none bg-transparent overflow-hidden flex flex-col"
-            mode="inline"
-            defaultOpenKeys={defaultOpenKeys}
-            selectedKeys={selectedKey ? [selectedKey] : []}
-            style={{ height: '100%' }}
+        {!!userProfile?.uid && (
+          <div
+            className="flex h-12 items-center justify-between cursor-pointer hover:bg-gray-100 rounded-md px-2 dark:text-gray-300 dark:hover:bg-gray-800"
+            data-cy="settings-menu-item"
           >
-            {siderSections.map((section) => {
-              const sectionTitle = (
-                <div className="flex items-center justify-between w-full text-gray-600 group select-none dark:text-gray-300">
-                  <div className="flex items-center gap-2">
-                    {section.icon}
-                    <span>{t(`loggedHomePage.siderMenu.${section.name}`)}</span>
-                  </div>
-                  {section.actionIcon && (
-                    <Button
-                      type="text"
-                      size="small"
-                      className="px-1 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 dark:text-gray-400"
-                      icon={section.actionIcon}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (section.actionHandler) {
-                          section.actionHandler();
-                        }
-                      }}
-                    />
-                  )}
-                </div>
-              );
-
-              const sectionContent = (
-                <div className="flex-1 overflow-hidden flex flex-col bg-white select-none dark:bg-gray-900">
-                  <div className="flex-none pl-5 pr-2">
-                    {section.key === 'Canvas' && <NewCanvasItem />}
-                    {section.key === 'Library' && <NewProjectItem />}
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto pl-5 pr-2 min-h-0">
-                    {section.key === 'Canvas' &&
-                      (isLoadingCanvas ? (
-                        <Skeleton
-                          key="skeleton-1"
-                          active
-                          title={false}
-                          paragraph={{ rows: 3 }}
-                          className="px-[12px] w-[200px]"
-                        />
-                      ) : canvasList?.length > 0 ? (
-                        <div>
-                          {canvasList.map((canvas) => (
-                            <CanvasListItem key={canvas.id} canvas={canvas} />
-                          ))}
-                          <ViewAllButton onClick={() => setShowCanvasListModal(true)} />
-                        </div>
-                      ) : null)}
-
-                    {section.key === 'Library' &&
-                      (isLoadingProjects ? (
-                        <Skeleton
-                          key="skeleton-1"
-                          active
-                          title={false}
-                          paragraph={{ rows: 3 }}
-                          className="px-[12px] w-[200px]"
-                        />
-                      ) : projectsList?.length > 0 ? (
-                        <div>
-                          {projectsList.map((project) => (
-                            <ProjectListItem key={project.id} project={project} />
-                          ))}
-
-                          <ViewAllButton onClick={() => setShowLibraryModal(true)} />
-                        </div>
-                      ) : null)}
-                  </div>
-                </div>
-              );
-
-              return (
-                <SubMenu
-                  key={section.key}
-                  title={sectionTitle}
-                  className="ant-menu-submenu-adaptive overflow-hidden border-t-1 border-b-0 border-x-0 border-solid border-gray-100 !rounded-none mx-2 dark:border-gray-800"
-                  onTitleClick={() => {
-                    if (section.onClick) section.onClick();
-                  }}
-                >
-                  {sectionContent}
-                </SubMenu>
-              );
-            })}
-          </Menu>
-        </div>
+            <SettingItem />
+          </div>
+        )}
 
         <div className="sider-footer mt-auto px-2 pb-2">
           <Divider style={{ margin: '6px 0' }} />
@@ -594,15 +554,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
               </Tag>
             </span>
           </div>
-
-          {!!userProfile?.uid && (
-            <div
-              className="flex h-12 items-center justify-between cursor-pointer hover:bg-gray-100 rounded-md px-2 dark:text-gray-300 dark:hover:bg-gray-800"
-              data-cy="settings-menu-item"
-            >
-              <SettingItem />
-            </div>
-          )}
         </div>
       </div>
     </Sider>

@@ -23,13 +23,13 @@ import {
   subscriptionEnabled,
 } from '@refly-packages/ai-workspace-common/utils/env';
 import { useCanvasTemplateModalShallow } from '@refly-packages/ai-workspace-common/stores/canvas-template-modal';
-import { AnimatedGridPattern } from '@refly-packages/ai-workspace-common/components/magicui/animated-grid-pattern';
 import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
 import { useLaunchpadStoreShallow } from '@refly-packages/ai-workspace-common/stores/launchpad';
 import { Title } from './title';
 import { useAbortAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-abort-action';
 import cn from 'classnames';
 import { MediaChatInput } from '@refly-packages/ai-workspace-common/components/canvas/nodes/media/media-input';
+import { useSiderStoreShallow } from '@refly-packages/ai-workspace-common/stores/sider';
 
 export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const { t, i18n } = useTranslation();
@@ -43,6 +43,10 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
 
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
+  }));
+
+  const { collapse } = useSiderStoreShallow((state) => ({
+    collapse: state.collapse,
   }));
 
   const { skillSelectedModel, setSkillSelectedModel, chatMode } = useChatStoreShallow((state) => ({
@@ -154,152 +158,145 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   }, [reset]);
 
   return (
-    <div className="relative h-full overflow-hidden bg-white/90">
-      <AnimatedGridPattern
-        numSquares={20}
-        maxOpacity={0.1}
-        duration={3}
-        repeatDelay={1}
-        className={cn(
-          '[mask-image:radial-gradient(500px_circle_at_center,white,transparent)]',
-          'skew-y-12',
-        )}
-      />
+    <div
+      className={cn(
+        'h-full flex m-2 bg-white/95 overflow-y-auto dark:bg-gray-900/95 rounded-lg ring-1 ring-gray-200 dark:ring-gray-600',
+        {
+          'ml-0 shadow-sm': !collapse,
+        },
+      )}
+      id="front-page-scrollable-div"
+    >
       <div
-        className="w-full h-full flex bg-white/95 overflow-y-auto dark:bg-gray-900/95"
-        id="front-page-scrollable-div"
+        className={cn(
+          'relative w-full h-full p-6 max-w-4xl mx-auto z-10',
+          canvasTemplateEnabled ? '' : 'flex flex-col justify-center',
+        )}
       >
-        <div
-          className={cn(
-            'relative w-full h-full p-6 max-w-4xl mx-auto z-10',
-            canvasTemplateEnabled ? '' : 'flex flex-col justify-center',
-          )}
-        >
-          <Title />
+        <Title />
 
-          <div className="w-full backdrop-blur-sm rounded-lg shadow-sm ring-1 ring-gray-200 mx-2 dark:ring-gray-600 overflow-hidden">
-            <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
+        <div className="w-full backdrop-blur-sm rounded-lg shadow-sm ring-1 ring-gray-200 mx-2 dark:ring-gray-600 overflow-hidden">
+          <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
 
-            {subscriptionEnabled && !userProfile?.subscription && <PremiumBanner />}
-            <div className="p-4">
-              {selectedSkill && (
-                <div className="flex w-full justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-[#6172F3] shadow-lg flex items-center justify-center flex-shrink-0">
-                      {getSkillIcon(selectedSkill.name, 'w-4 h-4 text-white')}
-                    </div>
-                    <span className="text-sm font-medium leading-normal text-[rgba(0,0,0,0.8)] truncate dark:text-[rgba(225,225,225,0.8)]">
-                      {t(`${selectedSkill.name}.name`, { ns: 'skill' })}
-                    </span>
+          {subscriptionEnabled && !userProfile?.subscription && <PremiumBanner />}
+          <div className="p-4">
+            {selectedSkill && (
+              <div className="flex w-full justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-[#6172F3] shadow-lg flex items-center justify-center flex-shrink-0">
+                    {getSkillIcon(selectedSkill.name, 'w-4 h-4 text-white')}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="text"
-                      size="small"
-                      onClick={() => {
-                        handleSelectSkill(null);
-                      }}
-                    >
-                      {t('common.cancel')}
-                    </Button>
-                  </div>
+                  <span className="text-sm font-medium leading-normal text-[rgba(0,0,0,0.8)] truncate dark:text-[rgba(225,225,225,0.8)]">
+                    {t(`${selectedSkill.name}.name`, { ns: 'skill' })}
+                  </span>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="text"
+                    size="small"
+                    onClick={() => {
+                      handleSelectSkill(null);
+                    }}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
 
-              {chatMode === 'media' ? (
-                <MediaChatInput
-                  readonly={false}
-                  query={query}
-                  setQuery={setQuery}
-                  showChatModeSelector
+            {chatMode === 'media' ? (
+              <MediaChatInput
+                readonly={false}
+                query={query}
+                setQuery={setQuery}
+                showChatModeSelector
+              />
+            ) : (
+              <>
+                <SkillDisplay
+                  containCnt={7}
+                  selectedSkill={selectedSkill}
+                  setSelectedSkill={handleSelectSkill}
                 />
-              ) : (
-                <>
-                  <SkillDisplay
-                    containCnt={7}
-                    selectedSkill={selectedSkill}
-                    setSelectedSkill={handleSelectSkill}
+                <div className="flex flex-col">
+                  <ChatInput
+                    readonly={false}
+                    query={query}
+                    setQuery={setQuery}
+                    selectedSkillName={selectedSkill?.name ?? null}
+                    handleSendMessage={handleSendMessage}
+                    handleSelectSkill={handleSelectSkill}
+                    maxRows={6}
+                    inputClassName="px-3 py-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <div className="flex flex-col">
-                    <ChatInput
+
+                  {selectedSkill?.configSchema?.items?.length > 0 && (
+                    <ConfigManager
                       readonly={false}
-                      query={query}
-                      setQuery={setQuery}
-                      selectedSkillName={selectedSkill?.name ?? null}
-                      handleSendMessage={handleSendMessage}
-                      handleSelectSkill={handleSelectSkill}
-                      maxRows={6}
-                      inputClassName="px-3 py-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      key={selectedSkill?.name}
+                      form={form}
+                      formErrors={formErrors}
+                      setFormErrors={setFormErrors}
+                      schema={selectedSkill?.configSchema}
+                      tplConfig={tplConfig}
+                      fieldPrefix="tplConfig"
+                      configScope="runtime"
+                      resetConfig={() => {
+                        const defaultConfig = selectedSkill?.tplConfig ?? {};
+                        setTplConfig(defaultConfig);
+                        form.setFieldValue('tplConfig', defaultConfig);
+                      }}
+                      onFormValuesChange={(_changedValues, allValues) => {
+                        setTplConfig(allValues.tplConfig);
+                      }}
                     />
+                  )}
 
-                    {selectedSkill?.configSchema?.items?.length > 0 && (
-                      <ConfigManager
-                        readonly={false}
-                        key={selectedSkill?.name}
-                        form={form}
-                        formErrors={formErrors}
-                        setFormErrors={setFormErrors}
-                        schema={selectedSkill?.configSchema}
-                        tplConfig={tplConfig}
-                        fieldPrefix="tplConfig"
-                        configScope="runtime"
-                        resetConfig={() => {
-                          const defaultConfig = selectedSkill?.tplConfig ?? {};
-                          setTplConfig(defaultConfig);
-                          form.setFieldValue('tplConfig', defaultConfig);
-                        }}
-                        onFormValuesChange={(_changedValues, allValues) => {
-                          setTplConfig(allValues.tplConfig);
-                        }}
-                      />
-                    )}
+                  <Actions
+                    query={query}
+                    model={skillSelectedModel}
+                    setModel={setSkillSelectedModel}
+                    runtimeConfig={runtimeConfig}
+                    setRuntimeConfig={setRuntimeConfig}
+                    handleSendMessage={handleSendMessage}
+                    handleAbort={handleAbort}
+                    loading={isCreating}
+                    isExecuting={isExecuting}
+                    customActions={customActions}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
-                    <Actions
-                      query={query}
-                      model={skillSelectedModel}
-                      setModel={setSkillSelectedModel}
-                      runtimeConfig={runtimeConfig}
-                      setRuntimeConfig={setRuntimeConfig}
-                      handleSendMessage={handleSendMessage}
-                      handleAbort={handleAbort}
-                      loading={isCreating}
-                      isExecuting={isExecuting}
-                      customActions={customActions}
-                    />
-                  </div>
-                </>
-              )}
+        {canvasTemplateEnabled && (
+          <div className="h-full flex flex-col mt-10">
+            <div className="flex justify-between items-center mx-2">
+              <div>
+                <h3 className="text-base font-medium">{t('frontPage.fromCommunity')}</h3>
+                <p className="text-xs text-gray-500 mt-1">{t('frontPage.fromCommunityDesc')}</p>
+              </div>
+              <Button
+                type="text"
+                size="small"
+                className="text-xs text-gray-500 gap-1 !hover:text-green-500 transition-colors"
+                onClick={handleViewAllTemplates}
+              >
+                {t('common.viewAll')} <IconRight className="w-3 h-3" />
+              </Button>
+            </div>
+            <div className="flex-1">
+              <TemplateList
+                source="front-page"
+                scrollableTargetId="front-page-scrollable-div"
+                language={templateLanguage}
+                categoryId={templateCategoryId}
+                className="!bg-transparent !px-0"
+              />
             </div>
           </div>
-
-          {canvasTemplateEnabled && (
-            <div className="h-full flex flex-col mt-10">
-              <div className="flex justify-between items-center mx-2">
-                <div>
-                  <h3 className="text-base font-medium">{t('frontPage.fromCommunity')}</h3>
-                  <p className="text-xs text-gray-500 mt-1">{t('frontPage.fromCommunityDesc')}</p>
-                </div>
-                <Button
-                  type="text"
-                  size="small"
-                  className="text-xs text-gray-500 gap-1 !hover:text-green-500 transition-colors"
-                  onClick={handleViewAllTemplates}
-                >
-                  {t('common.viewAll')} <IconRight className="w-3 h-3" />
-                </Button>
-              </div>
-              <div className="flex-1">
-                <TemplateList
-                  source="front-page"
-                  scrollableTargetId="front-page-scrollable-div"
-                  language={templateLanguage}
-                  categoryId={templateCategoryId}
-                  className="!bg-transparent !px-0"
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

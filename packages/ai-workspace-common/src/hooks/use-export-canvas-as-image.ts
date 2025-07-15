@@ -79,7 +79,7 @@ export const useExportCanvasAsImage = () => {
             if (clonedContainer) {
               if (!useSiderStore.getState().collapse) {
                 if (clonedContainer instanceof HTMLElement) {
-                  clonedContainer.style.left = '-220px';
+                  clonedContainer.style.left = '-248px';
                 }
               }
 

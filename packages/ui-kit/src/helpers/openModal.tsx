@@ -175,7 +175,7 @@ function PortalModal<T>({
             {renderSlot(Title, slotProps)}
           </div>
           {renderSlot(Content, slotProps)}
-          <div className="fixed bottom-0 z-10 flex h-16 w-full border-t border-solid border-line-divider-default bg-bg-body px-[220px] py-4 shadow-s2-up">
+          <div className="fixed bottom-0 z-10 flex h-16 w-full border-t border-solid border-line-divider-default bg-bg-body px-[248] py-4 shadow-s2-up">
             {renderSlot(Footer, slotProps)}
           </div>
         </div>

@@ -3,7 +3,6 @@ import { Link } from '@refly-packages/ai-workspace-common/utils/router';
 import { useCallback, useEffect, useMemo } from 'react';
 import React from 'react';
 
-import Logo from '@/assets/logo.svg';
 import Google from '@/assets/google.svg';
 import GitHub from '@/assets/github-mark.svg';
 
@@ -13,6 +12,7 @@ import { useAuthStoreShallow } from '@refly-packages/ai-workspace-common/stores/
 import { serverOrigin } from '@refly-packages/ai-workspace-common/utils/env';
 import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 
 interface FormValues {
   email: string;
@@ -147,208 +147,203 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
       open={props.visible || authStore.loginModalOpen}
       centered
       footer={null}
-      width={410}
+      width={560}
       onCancel={() => authStore.setLoginModalOpen(false)}
     >
-      <div className="relative flex h-full w-full flex-col items-center justify-center">
-        <div className="flex flex-row items-center">
-          <img src={Logo} alt="Refly" style={{ width: 24, height: 24 }} />
-          <span
-            style={{
-              fontSize: 20,
-              fontWeight: 'bold',
-              display: 'inline-block',
-              marginLeft: 8,
-            }}
-          >
+      <div className="relative h-full w-full">
+        <Logo className="w-[100px]" />
+
+        <div className="p-10 pb-0">
+          <div className="text-3xl font-bold">
             {authStore.isSignUpMode
-              ? t('landingPage.loginModal.signupTitle')
-              : t('landingPage.loginModal.signinTitle')}
-          </span>
-        </div>
-        <div className="mt-2 text-sm text-gray-500">
-          {authStore.isSignUpMode
-            ? t('landingPage.loginModal.signupSubtitle')
-            : t('landingPage.loginModal.signinSubtitle')}
-        </div>
-        {(isGithubEnabled || isGoogleEnabled) && (
-          <div className="mt-4 px-4 flex flex-row items-center justify-center gap-2 w-full">
-            {isGithubEnabled && (
-              <Button
-                onClick={() => handleLogin('github')}
-                className="mt-2 h-8 w-full"
-                data-cy="github-login-button"
-                loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
-                disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
-              >
-                <img src={GitHub} alt="github" className="mr-1 h-4 w-4" />
-                {authStore.loginInProgress && authStore.loginProvider === 'github'
-                  ? t('landingPage.loginModal.loggingStatus')
-                  : t('landingPage.loginModal.oauthBtn.github')}
-              </Button>
-            )}
-            {isGoogleEnabled && (
-              <Button
-                onClick={() => handleLogin('google')}
-                className="mt-2 h-8 w-full"
-                data-cy="google-login-button"
-                loading={authStore.loginInProgress && authStore.loginProvider === 'google'}
-                disabled={authStore.loginInProgress && authStore.loginProvider !== 'google'}
-              >
-                <img src={Google} alt="google" className="mr-1 h-4 w-4" />
-                {authStore.loginInProgress && authStore.loginProvider === 'google'
-                  ? t('landingPage.loginModal.loggingStatus')
-                  : t('landingPage.loginModal.oauthBtn.google')}
-              </Button>
-            )}
+              ? t('landingPage.loginModal.greeting.signup')
+              : t('landingPage.loginModal.greeting.signin')}
           </div>
-        )}
 
-        <div className="w-full px-4">
-          {(isGithubEnabled || isGoogleEnabled) && isEmailEnabled && (
-            <Divider className="flex-1">or</Divider>
-          )}
+          <div className="text-sm">
+            {authStore.isSignUpMode
+              ? t('landingPage.loginModal.signupSubtitle')
+              : t('landingPage.loginModal.signinSubtitle')}
+          </div>
         </div>
 
-        {isEmailEnabled && (
-          <>
-            <Form
-              form={form}
-              layout="vertical"
-              className="w-full max-w-sm px-4"
-              requiredMark={false}
-            >
-              <Form.Item
-                name="email"
-                label={
-                  <span className="font-medium">{t('landingPage.loginModal.emailLabel')}</span>
-                }
-                validateTrigger={['onBlur']}
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                    message: t('verifyRules.emailRequired'),
-                  },
-                  {
-                    type: 'email',
-                    message: t('verifyRules.emailInvalid'),
-                  },
-                ]}
-              >
-                <Input
-                  type="email"
-                  placeholder={t('landingPage.loginModal.emailPlaceholder')}
-                  className="h-8"
-                  data-cy="email-input"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="password"
-                label={
-                  <div className="flex w-96 flex-row items-center justify-between">
-                    <span className="font-medium">{t('landingPage.loginModal.passwordLabel')}</span>
-                    {!authStore.isSignUpMode && (
-                      <Button
-                        type="link"
-                        className="p-0 text-green-600"
-                        onClick={handleResetPassword}
-                      >
-                        {t('landingPage.loginModal.passwordForget')}
-                      </Button>
-                    )}
-                  </div>
-                }
-                validateTrigger={['onBlur']}
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                    message: t('verifyRules.passwordRequired'),
-                  },
-                  ...(authStore.isSignUpMode
-                    ? [
-                        {
-                          min: 8,
-                          message: t('verifyRules.passwordMin'),
-                        },
-                      ]
-                    : []),
-                ]}
-              >
-                <Input.Password
-                  placeholder={t('landingPage.loginModal.passwordPlaceholder')}
-                  className="h-8"
-                  data-cy="password-input"
-                />
-              </Form.Item>
-
-              <Form.Item className="mb-0">
+        <div className="flex flex-col items-center justify-center p-10">
+          {(isGithubEnabled || isGoogleEnabled) && (
+            <div className="flex flex-row items-center justify-center gap-2 w-full">
+              {isGithubEnabled && (
                 <Button
-                  type="primary"
-                  onClick={handleEmailAuth}
-                  loading={authStore.loginInProgress && authStore.loginProvider === 'email'}
-                  className="h-10 w-full text-base"
-                  data-cy="continue-button"
+                  onClick={() => handleLogin('github')}
+                  type="default"
+                  variant="filled"
+                  className="h-8 w-full"
+                  data-cy="github-login-button"
+                  loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
+                  disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
                 >
-                  {t('landingPage.loginModal.continue')}
+                  <img src={GitHub} alt="github" className="mr-1 h-4 w-4" />
+                  {authStore.loginInProgress && authStore.loginProvider === 'github'
+                    ? t('landingPage.loginModal.loggingStatus')
+                    : t('landingPage.loginModal.oauthBtn.github')}
                 </Button>
-              </Form.Item>
-            </Form>
-            <div className="mt-6 text-sm">
-              {authStore.isSignUpMode ? (
-                <span>
-                  {`${t('landingPage.loginModal.signinHint')} `}
-                  <Button
-                    type="link"
-                    className="p-0 text-green-600"
-                    data-cy="switch-to-signin-button"
-                    onClick={() => handleModeSwitch(false)}
-                  >
-                    {t('landingPage.loginModal.signin')}
-                  </Button>
-                </span>
-              ) : (
-                <span>
-                  {`${t('landingPage.loginModal.signupHint')} `}
-                  <Button
-                    type="link"
-                    className="p-0 text-green-600"
-                    data-cy="switch-to-signup-button"
-                    onClick={() => handleModeSwitch(true)}
-                  >
-                    {t('landingPage.loginModal.signup')}
-                  </Button>
-                </span>
+              )}
+              {isGoogleEnabled && (
+                <Button
+                  onClick={() => handleLogin('google')}
+                  type="default"
+                  variant="filled"
+                  className="h-8 w-full"
+                  data-cy="google-login-button"
+                  loading={authStore.loginInProgress && authStore.loginProvider === 'google'}
+                  disabled={authStore.loginInProgress && authStore.loginProvider !== 'google'}
+                >
+                  <img src={Google} alt="google" className="mr-1 h-4 w-4" />
+                  {authStore.loginInProgress && authStore.loginProvider === 'google'
+                    ? t('landingPage.loginModal.loggingStatus')
+                    : t('landingPage.loginModal.oauthBtn.google')}
+                </Button>
               )}
             </div>
-          </>
-        )}
+          )}
 
-        <div className="mt-3 text-center text-xs text-gray-500">
-          {t('landingPage.loginModal.utilText')}
-          <Link
-            to="https://docs.refly.ai/about/terms-of-service"
-            target="_blank"
-            className="mx-1 text-xs text-green-600 underline"
-            onClick={() => {
-              authStore.setLoginModalOpen(false);
-            }}
-          >
-            {t('landingPage.loginModal.terms')}
-          </Link>
-          {t('landingPage.loginModal.and')}
-          <Link
-            to="https://docs.refly.ai/about/privacy-policy"
-            target="_blank"
-            className="mx-1 text-xs text-green-600 underline"
-            onClick={() => {
-              authStore.setLoginModalOpen(false);
-            }}
-          >
-            {t('landingPage.loginModal.privacyPolicy')}
-          </Link>
+          {(isGithubEnabled || isGoogleEnabled) && isEmailEnabled && <Divider className="my-4" />}
+
+          {isEmailEnabled && (
+            <>
+              <Form form={form} layout="vertical" className="w-full" requiredMark={false}>
+                <Form.Item
+                  name="email"
+                  label={
+                    <span className="font-medium">{t('landingPage.loginModal.emailLabel')}</span>
+                  }
+                  validateTrigger={['onBlur']}
+                  hasFeedback
+                  rules={[
+                    {
+                      required: true,
+                      message: t('verifyRules.emailRequired'),
+                    },
+                    {
+                      type: 'email',
+                      message: t('verifyRules.emailInvalid'),
+                    },
+                  ]}
+                >
+                  <Input
+                    type="email"
+                    placeholder={t('landingPage.loginModal.emailPlaceholder')}
+                    className="h-8"
+                    data-cy="email-input"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="password"
+                  label={
+                    <div className="flex w-96 flex-row items-center justify-between">
+                      <span className="font-medium">
+                        {t('landingPage.loginModal.passwordLabel')}
+                      </span>
+                      {!authStore.isSignUpMode && (
+                        <Button
+                          type="link"
+                          className="p-0 text-green-600"
+                          onClick={handleResetPassword}
+                        >
+                          {t('landingPage.loginModal.passwordForget')}
+                        </Button>
+                      )}
+                    </div>
+                  }
+                  validateTrigger={['onBlur']}
+                  hasFeedback
+                  rules={[
+                    {
+                      required: true,
+                      message: t('verifyRules.passwordRequired'),
+                    },
+                    ...(authStore.isSignUpMode
+                      ? [
+                          {
+                            min: 8,
+                            message: t('verifyRules.passwordMin'),
+                          },
+                        ]
+                      : []),
+                  ]}
+                >
+                  <Input.Password
+                    placeholder={t('landingPage.loginModal.passwordPlaceholder')}
+                    className="h-8"
+                    data-cy="password-input"
+                  />
+                </Form.Item>
+
+                <Form.Item className="mb-0">
+                  <Button
+                    type="primary"
+                    onClick={handleEmailAuth}
+                    loading={authStore.loginInProgress && authStore.loginProvider === 'email'}
+                    className="h-10 w-full text-base"
+                    data-cy="continue-button"
+                  >
+                    {t('landingPage.loginModal.continue')}
+                  </Button>
+                </Form.Item>
+              </Form>
+              <div className="mt-6 text-sm">
+                {authStore.isSignUpMode ? (
+                  <span>
+                    {`${t('landingPage.loginModal.signinHint')} `}
+                    <Button
+                      type="link"
+                      className="p-0 text-green-600"
+                      data-cy="switch-to-signin-button"
+                      onClick={() => handleModeSwitch(false)}
+                    >
+                      {t('landingPage.loginModal.signin')}
+                    </Button>
+                  </span>
+                ) : (
+                  <span>
+                    {`${t('landingPage.loginModal.signupHint')} `}
+                    <Button
+                      type="link"
+                      className="p-0 text-green-600"
+                      data-cy="switch-to-signup-button"
+                      onClick={() => handleModeSwitch(true)}
+                    >
+                      {t('landingPage.loginModal.signup')}
+                    </Button>
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+
+          <div className="mt-3 text-center text-xs text-gray-500">
+            {t('landingPage.loginModal.utilText')}
+            <Link
+              to="https://docs.refly.ai/about/terms-of-service"
+              target="_blank"
+              className="mx-1 text-xs text-green-600 underline"
+              onClick={() => {
+                authStore.setLoginModalOpen(false);
+              }}
+            >
+              {t('landingPage.loginModal.terms')}
+            </Link>
+            {t('landingPage.loginModal.and')}
+            <Link
+              to="https://docs.refly.ai/about/privacy-policy"
+              target="_blank"
+              className="mx-1 text-xs text-green-600 underline"
+              onClick={() => {
+                authStore.setLoginModalOpen(false);
+              }}
+            >
+              {t('landingPage.loginModal.privacyPolicy')}
+            </Link>
+          </div>
         </div>
       </div>
     </Modal>

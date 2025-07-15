@@ -13,9 +13,9 @@ export const SearchQuickOpenBtn = (props: SearchQuickOpenBtnProps) => {
   const { t } = useTranslation();
 
   return (
-    <div {...divProps} className={classNames('mb-3', divProps.className)}>
+    <div {...divProps} className={classNames('mb-2', divProps.className)}>
       <div
-        className="mx-3 flex flex-row flex-nowrap justify-between rounded-md border border-solid border-gray-200 p-2 transition-colors duration-500 hover:cursor-pointer hover:border-green-500 dark:border-gray-700 dark:hover:border-green-500"
+        className="flex flex-row flex-nowrap justify-between rounded-md border border-solid border-gray-200 p-2 transition-colors duration-500 hover:cursor-pointer hover:border-green-500 dark:border-gray-700 dark:hover:border-green-500"
         onClick={() => {
           bigSearchQuickOpenEmitter.emit('openSearch');
         }}
