@@ -13,7 +13,7 @@ export const SearchQuickOpenBtn = (props: SearchQuickOpenBtnProps) => {
   const { t } = useTranslation();
 
   return (
-    <div {...divProps} className={classNames('mb-2', divProps.className)}>
+    <div {...divProps} className={classNames(divProps.className)}>
       <div
         className="flex flex-row flex-nowrap justify-between rounded-md border border-solid border-gray-200 p-2 transition-colors duration-500 hover:cursor-pointer hover:border-green-500 dark:border-gray-700 dark:hover:border-green-500"
         onClick={() => {
