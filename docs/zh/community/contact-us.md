@@ -22,7 +22,7 @@ https://github.com/refly-ai/refly/discussions
 
 扫描下方二维码加入我们的微信群：
 
-![wechat](/images/wechat-qrcode.webp)
+![wechat](https://static.refly.ai/landing/wechat-qrcode.webp)
 
 ::: tip 提示
 如果二维码过期，请通过邮件联系我们：support@refly.ai
@@ -32,7 +32,7 @@ https://github.com/refly-ai/refly/discussions
 
 扫描下方二维码加入关注我们的微信公众号：
 
-![wechat](/images/wechat-group-qrcode.webp)
+![wechat](https://static.refly.ai/landing/wechat-mp-qrcode.webp)
 
 ## 飞书群
 
