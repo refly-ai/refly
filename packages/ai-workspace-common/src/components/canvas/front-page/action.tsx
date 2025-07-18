@@ -11,6 +11,7 @@ import { cn, extractUrlsWithLinkify } from '@refly/utils/index';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
 import { useChatStoreShallow } from '@refly/stores';
 import { ChatModeSelector } from './chat-mode-selector';
+import { McpSelectorPopover } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
 
 export interface CustomAction {
   content?: string;
@@ -51,7 +52,7 @@ export const Actions = memo(
     const { t } = useTranslation();
 
     // hooks
-    const isWeb = getRuntime() !== 'web';
+    const isWeb = getRuntime() === 'web';
 
     const userStore = useUserStoreShallow((state) => ({
       isLogin: state.isLogin,
@@ -110,6 +111,8 @@ export const Actions = memo(
             />
           )}
 
+          {userStore.isLogin && <McpSelectorPopover />}
+
           {detectedUrls?.length > 0 && (
             <div className="flex items-center gap-1 ml-2">
               <Switch
@@ -152,7 +155,7 @@ export const Actions = memo(
               className="flex items-center !h-9 !w-9 rounded-full"
               onClick={handleSend}
               loading={loading}
-              icon={<Send />}
+              icon={<Send size={20} />}
             />
           )}
         </div>

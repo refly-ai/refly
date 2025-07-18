@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState, useMemo } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Skill } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
@@ -9,16 +9,13 @@ import {
   getSkillIcon,
   IconRight,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Form, Button, Badge } from 'antd';
-import { ToolOutlined } from '@ant-design/icons';
+import { Form, Button } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
-import { Actions, CustomAction } from './action';
+import { Actions } from './action';
 import { useChatStoreShallow } from '@refly/stores';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useCanvasTemplateModalShallow } from '@refly/stores';
-import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
-import { useLaunchpadStoreShallow } from '@refly/stores';
 import { Title } from './title';
 import { useAbortAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-abort-action';
 import cn from 'classnames';
@@ -29,7 +26,6 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
   const templateLanguage = i18n.language;
@@ -43,11 +39,6 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
     skillSelectedModel: state.skillSelectedModel,
     setSkillSelectedModel: state.setSkillSelectedModel,
     chatMode: state.chatMode,
-  }));
-
-  // Get selected MCP servers
-  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
-    selectedMcpServers: state.selectedMcpServers,
   }));
 
   const {
@@ -116,27 +107,6 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
     setCanvasTemplateModalVisible(true);
   }, [setCanvasTemplateModalVisible]);
 
-  // Toggle MCP selector panel
-  const handleMcpSelectorToggle = useCallback(() => {
-    setMcpSelectorOpen(!mcpSelectorOpen);
-  }, [mcpSelectorOpen]);
-
-  const customActions: CustomAction[] = useMemo(
-    () => [
-      {
-        icon: (
-          <Badge count={selectedMcpServers?.length || 0} size="small" offset={[2, -2]}>
-            <ToolOutlined className="flex items-center" />
-          </Badge>
-        ),
-        title: t('copilot.chatActions.chooseMcp'),
-        content: t('copilot.chatActions.chooseMcp'),
-        onClick: handleMcpSelectorToggle,
-      },
-    ],
-    [selectedMcpServers?.length, t, handleMcpSelectorToggle],
-  );
-
   useEffect(() => {
     return () => {
       reset();
@@ -162,8 +132,6 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
         <Title />
 
         <div className="w-full rounded-[12px] shadow-[0px-2px_20px_4px_rgba(0,0,0,0.04)] overflow-hidden border-1 border border-solid border-refly-primary-default">
-          <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
-
           <div className="p-4">
             {selectedSkill && (
               <div className="flex w-full justify-between">
@@ -247,7 +215,6 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                     handleAbort={handleAbort}
                     loading={isCreating}
                     isExecuting={isExecuting}
-                    customActions={customActions}
                   />
                 </div>
               </>

@@ -3,8 +3,7 @@ import { Link } from '@refly-packages/ai-workspace-common/utils/router';
 import { useCallback, useEffect, useMemo } from 'react';
 import React from 'react';
 
-import Google from '../../assets/google.svg';
-import GitHub from '../../assets/github-mark.svg';
+import { OAuthButton } from './oauth-button';
 
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -155,7 +154,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
       onCancel={() => authStore.setLoginModalOpen(false)}
     >
       <div className="relative h-full w-full">
-        <Logo className="w-[100px]" />
+        <Logo className="w-[100px] mb-6" />
 
         <div className="p-10 pb-0">
           <div className="text-3xl font-bold">
@@ -173,48 +172,43 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
 
         <div className="flex flex-col items-center justify-center p-10">
           {(isGithubEnabled || isGoogleEnabled) && (
-            <div className="flex flex-row items-center justify-center gap-2 w-full">
+            <div className="flex flex-col items-center justify-center gap-2 w-full">
               {isGithubEnabled && (
-                <Button
+                <OAuthButton
+                  provider="github"
                   onClick={() => handleLogin('github')}
-                  type="default"
-                  variant="filled"
-                  className="h-8 w-full"
-                  data-cy="github-login-button"
                   loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
                   disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
-                >
-                  <img src={GitHub} alt="github" className="mr-1 h-4 w-4" />
-                  {authStore.loginInProgress && authStore.loginProvider === 'github'
-                    ? t('landingPage.loginModal.loggingStatus')
-                    : t('landingPage.loginModal.oauthBtn.github')}
-                </Button>
+                  loadingText={t('landingPage.loginModal.loggingStatus')}
+                  buttonText={t('landingPage.loginModal.oauthBtn.github')}
+                />
               )}
               {isGoogleEnabled && (
-                <Button
+                <OAuthButton
+                  provider="google"
                   onClick={() => handleLogin('google')}
-                  type="default"
-                  variant="filled"
-                  className="h-8 w-full"
-                  data-cy="google-login-button"
                   loading={authStore.loginInProgress && authStore.loginProvider === 'google'}
                   disabled={authStore.loginInProgress && authStore.loginProvider !== 'google'}
-                >
-                  <img src={Google} alt="google" className="mr-1 h-4 w-4" />
-                  {authStore.loginInProgress && authStore.loginProvider === 'google'
-                    ? t('landingPage.loginModal.loggingStatus')
-                    : t('landingPage.loginModal.oauthBtn.google')}
-                </Button>
+                  loadingText={t('landingPage.loginModal.loggingStatus')}
+                  buttonText={t('landingPage.loginModal.oauthBtn.google')}
+                />
               )}
             </div>
           )}
 
-          {(isGithubEnabled || isGoogleEnabled) && isEmailEnabled && <Divider className="my-4" />}
+          {(isGithubEnabled || isGoogleEnabled) && isEmailEnabled && (
+            <Divider className="!mb-3 !mt-8 !h-4">
+              <span className="text-refly-text-0 text-xs font-normal leading-none">
+                {t('landingPage.loginModal.or')}
+              </span>
+            </Divider>
+          )}
 
           {isEmailEnabled && (
             <>
               <Form form={form} layout="vertical" className="w-full" requiredMark={false}>
                 <Form.Item
+                  className="mb-3"
                   name="email"
                   label={
                     <span className="font-medium">{t('landingPage.loginModal.emailLabel')}</span>
@@ -241,6 +235,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
                 </Form.Item>
 
                 <Form.Item
+                  className="mb-3"
                   name="password"
                   label={
                     <div className="flex w-96 flex-row items-center justify-between">
@@ -250,10 +245,12 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
                       {!authStore.isSignUpMode && (
                         <Button
                           type="link"
-                          className="p-0 text-green-600"
+                          className="p-0 !text-refly-text-2"
                           onClick={handleResetPassword}
                         >
-                          {t('landingPage.loginModal.passwordForget')}
+                          <span className="hover:text-refly-primary-default">
+                            {t('landingPage.loginModal.passwordForget')}
+                          </span>
                         </Button>
                       )}
                     </div>
@@ -294,32 +291,30 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
                   </Button>
                 </Form.Item>
               </Form>
-              <div className="mt-6 text-sm">
-                {authStore.isSignUpMode ? (
-                  <span>
-                    {`${t('landingPage.loginModal.signinHint')} `}
-                    <Button
-                      type="link"
-                      className="p-0 text-green-600"
-                      data-cy="switch-to-signin-button"
-                      onClick={() => handleModeSwitch(false)}
-                    >
-                      {t('landingPage.loginModal.signin')}
-                    </Button>
-                  </span>
-                ) : (
-                  <span>
-                    {`${t('landingPage.loginModal.signupHint')} `}
-                    <Button
-                      type="link"
-                      className="p-0 text-green-600"
-                      data-cy="switch-to-signup-button"
-                      onClick={() => handleModeSwitch(true)}
-                    >
-                      {t('landingPage.loginModal.signup')}
-                    </Button>
-                  </span>
-                )}
+              <div className="mt-3 text-sm">
+                <span>
+                  {t(
+                    authStore.isSignUpMode
+                      ? 'landingPage.loginModal.signinHint'
+                      : 'landingPage.loginModal.signupHint',
+                  )}{' '}
+                  <Button
+                    type="link"
+                    className="p-0 !text-refly-text-2"
+                    data-cy={
+                      authStore.isSignUpMode ? 'switch-to-signin-button' : 'switch-to-signup-button'
+                    }
+                    onClick={() => handleModeSwitch(!authStore.isSignUpMode)}
+                  >
+                    <span className="hover:text-refly-primary-default">
+                      {t(
+                        authStore.isSignUpMode
+                          ? 'landingPage.loginModal.signin'
+                          : 'landingPage.loginModal.signup',
+                      )}
+                    </span>
+                  </Button>
+                </span>
               </div>
             </>
           )}

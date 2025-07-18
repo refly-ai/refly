@@ -12,6 +12,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { IContextItem } from '@refly/common-types';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
+import { McpSelectorPopover } from '../mcp-selector-panel';
 
 export interface CustomAction {
   icon: React.ReactNode;
@@ -104,6 +105,8 @@ export const ChatActions = memo(
             trigger={['click']}
             contextItems={contextItems}
           />
+
+          <McpSelectorPopover />
 
           {detectedUrls?.length > 0 && (
             <div className="flex items-center gap-1 ml-2">

@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
-import { Button, Divider, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip } from 'antd';
+import { Button, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ModelIcon } from '@lobehub/icons';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { LLMModelConfig, ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
 import { useListProviderItems } from '@refly-packages/ai-workspace-common/queries';
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { LuInfo, LuSettings2 } from 'react-icons/lu';
+import { LuInfo } from 'react-icons/lu';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { IContextItem } from '@refly/common-types';
@@ -14,7 +14,8 @@ import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-em
 import { useGroupModels } from '@refly-packages/ai-workspace-common/hooks/use-group-models';
 import './index.scss';
 import { useUserStoreShallow } from '@refly/stores';
-import { DownOutlined } from '@ant-design/icons';
+import { ArrowDown, Settings } from 'refly-icons';
+import cn from 'classnames';
 
 interface ModelSelectorProps {
   model: ModelInfo | null;
@@ -28,9 +29,10 @@ interface ModelSelectorProps {
 // Memoize the selected model display
 const SelectedModelDisplay = memo(
   ({
+    open,
     model,
     handleOpenSettingModal,
-  }: { model: ModelInfo | null; handleOpenSettingModal: () => void }) => {
+  }: { open: boolean; model: ModelInfo | null; handleOpenSettingModal: () => void }) => {
     const { t } = useTranslation();
 
     if (!model) {
@@ -38,12 +40,15 @@ const SelectedModelDisplay = memo(
         <Button
           type="text"
           size="small"
-          className="text-xs gap-1.5"
+          className={cn(
+            'h-7text-xs gap-1.5 p-1 hover:border-refly-Card-Border',
+            open && 'border-refly-Card-Border',
+          )}
           style={{ color: '#f59e0b' }}
           icon={<LuInfo className="flex items-center" />}
           onClick={handleOpenSettingModal}
         >
-          {t('copilot.modelSelector.configureModel')}
+          <div className="leading-5">{t('copilot.modelSelector.configureModel')}</div>
         </Button>
       );
     }
@@ -52,11 +57,14 @@ const SelectedModelDisplay = memo(
       <Button
         type="text"
         size="small"
-        className="text-xs gap-1.5"
+        className={cn(
+          'h-7 text-xs gap-0.5 p-1 hover:border-refly-Card-Border min-w-0',
+          open && 'border-refly-Card-Border',
+        )}
         icon={<ModelIcon model={model.name} type={'color'} />}
       >
-        {model.label}
-        <DownOutlined />
+        <span className="truncate leading-5">{model.label}</span>
+        <ArrowDown size={12} color="var(--refly-text-0)" className="flex-shrink-0" />
       </Button>
     );
   },
@@ -69,11 +77,11 @@ const ModelLabel = memo(
     const { t } = useTranslation();
 
     return (
-      <span className="text-xs flex items-center gap-1">
-        {model.label}
+      <span className="text-xs flex items-center gap-1 text-refly-text-0 min-w-0 flex-1">
+        <span className="truncate">{model.label}</span>
         {!model.capabilities?.vision && isContextIncludeImage && (
           <Tooltip title={t('copilot.modelSelector.noVisionSupport')}>
-            <IconError className="w-3.5 h-3.5 text-[#faad14]" />
+            <IconError className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
           </Tooltip>
         )}
       </span>
@@ -100,11 +108,14 @@ export const SettingsButton = memo(
     }, [setDropdownOpen, handleOpenSettingModal]);
 
     return (
-      <div onClick={handleClick} className="text-xs flex items-center gap-2 group">
-        <LuSettings2 className="text-sm text-gray-500 flex items-center" />
-        <div className="text-xs flex items-center gap-1.5 text-gray-500">
+      <div
+        onClick={handleClick}
+        className="p-3 flex items-center rounded-b-lg gap-2 hover:bg-refly-tertiary-hover cursor-pointer border-t-1 border-x-0 border-b-0 border-solid border-refly-Card-Border"
+      >
+        <Settings size={14} />
+        <span className="text-xs font-semibold text-refly-text-0">
           {t('copilot.modelSelector.configureModel')}
-        </div>
+        </span>
       </div>
     );
   },
@@ -207,6 +218,17 @@ export const ModelSelector = memo(
       return contextItems?.some((item) => item.type === 'image');
     }, [contextItems]);
 
+    const handleMenuClick = useCallback(
+      ({ key }: { key: string }) => {
+        const selectedModel = modelList?.find((model) => model.name === key);
+        if (selectedModel) {
+          setModel(selectedModel);
+          setDropdownOpen(false);
+        }
+      },
+      [modelList, setModel, setDropdownOpen],
+    );
+
     const droplist: MenuProps['items'] = useMemo(() => {
       let list = [];
       for (const group of sortedGroups) {
@@ -215,14 +237,9 @@ export const ModelSelector = memo(
             key: group.key,
             type: 'group',
             label: (
-              <Divider
-                className="!my-1 !p-0"
-                variant="dashed"
-                orientation="left"
-                orientationMargin="0"
-              >
-                <div className="text-[13px] max-w-[300px] truncate">{group.name}</div>
-              </Divider>
+              <div className="font-semibold text-refly-text-1 w-full truncate px-1.5 pb-1 pt-2">
+                {group.name}
+              </div>
             ),
           };
           const items = group.models.map((model) => ({
@@ -234,25 +251,38 @@ export const ModelSelector = memo(
         }
       }
 
-      // Add settings button at the bottom
-      list.push({
-        key: 'settings',
-        type: 'divider',
-        className: '!my-1',
-      });
+      return list;
+    }, [sortedGroups, isContextIncludeImage]);
 
-      list.push({
-        key: 'settings-button',
-        label: (
+    // Custom dropdown overlay component
+    const dropdownOverlay = useMemo(
+      () => (
+        <div className="w-[240px] bg-refly-bg-content-z2 rounded-lg border border-1 border-solid border-refly-Card-Border">
+          <div className="max-h-[48vh] w-full overflow-y-auto p-2">
+            {droplist.map((item) => (
+              <div key={item.key} className="model-list-item">
+                {item.type === 'group' ? (
+                  item.label
+                ) : item.type !== 'divider' ? (
+                  <div
+                    className="flex items-center gap-1 rounded-[6px] p-1.5 hover:bg-refly-tertiary-hover cursor-pointer min-w-0"
+                    onClick={() => handleMenuClick({ key: item.key as string })}
+                  >
+                    <div className="flex-shrink-0">{item.icon}</div>
+                    <div className="min-w-0 flex-1">{item.label}</div>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
           <SettingsButton
             handleOpenSettingModal={handleOpenSettingModal}
             setDropdownOpen={setDropdownOpen}
           />
-        ),
-      });
-
-      return list;
-    }, [sortedGroups, isContextIncludeImage, handleOpenSettingModal, setDropdownOpen]);
+        </div>
+      ),
+      [droplist, handleMenuClick, handleOpenSettingModal, setDropdownOpen],
+    );
 
     // Automatically select available model when:
     // 1. No model is selected
@@ -277,16 +307,6 @@ export const ModelSelector = memo(
       }
     }, [model, tokenUsage, modelList, isModelDisabled, setModel]);
 
-    const handleMenuClick = useCallback(
-      ({ key }: { key: string }) => {
-        const selectedModel = modelList?.find((model) => model.name === key);
-        if (selectedModel) {
-          setModel(selectedModel);
-        }
-      },
-      [modelList, setModel],
-    );
-
     if (isModelListLoading || isUsageLoading) {
       return <Skeleton className="w-28" active paragraph={false} />;
     }
@@ -295,10 +315,7 @@ export const ModelSelector = memo(
 
     return (
       <Dropdown
-        menu={{
-          items: droplist,
-          onClick: handleMenuClick,
-        }}
+        dropdownRender={() => dropdownOverlay}
         placement={placement}
         trigger={trigger}
         open={dropdownOpen}
@@ -308,15 +325,19 @@ export const ModelSelector = memo(
         autoAdjustOverflow={true}
       >
         {!briefMode ? (
-          <span className="text-xs flex items-center gap-1.5 text-gray-500 cursor-pointer transition-all duration-300 hover:text-gray-700">
-            <SelectedModelDisplay model={model} handleOpenSettingModal={handleOpenSettingModal} />
+          <div className="text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-300">
+            <SelectedModelDisplay
+              open={dropdownOpen}
+              model={model}
+              handleOpenSettingModal={handleOpenSettingModal}
+            />
 
             {!remoteModel?.capabilities?.vision && isContextIncludeImage && (
               <Tooltip title={t('copilot.modelSelector.noVisionSupport')}>
                 <IconError className="w-3.5 h-3.5 text-[#faad14]" />
               </Tooltip>
             )}
-          </span>
+          </div>
         ) : (
           <ModelIcon model={'gpt-4o'} size={16} type={'color'} />
         )}

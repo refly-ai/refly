@@ -151,10 +151,10 @@ const translations = {
   mode: {
     ask: '提问',
     agent: 'Agent',
-    askDescription: '单次回答问题',
-    agentDescription: '多步解决复杂问题',
+    askDescription: '问答模式：回答日常问题',
+    agentDescription: 'Agent模式：自动规划并执行任务',
     media: '媒体',
-    mediaDescription: '生成图片/视频/音频',
+    mediaDescription: '媒体模式：生成图片/视频/音频',
   },
   verifyRules: {
     emailRequired: '邮箱地址不能为空',
@@ -493,6 +493,7 @@ const translations = {
       utilText: '注册即表明您同意 ',
       privacyPolicy: '隐私政策',
       terms: '服务条款',
+      or: '或使用邮箱登录',
     },
     resetPasswordModal: {
       title: '重置密码',
@@ -2630,9 +2631,11 @@ const translations = {
     },
     mcpSelector: {
       title: '选择 MCP 服务器',
-      empty: '没有可用的 MCP 服务器',
+      empty: '暂无 MCP 服务器',
       selected: '已选择',
-      browseMcpStore: '去商店添加',
+      browseMcpStore: '去安装',
+      manageMcpServers: '管理 MCP',
+      useMcpServers: '使用 MCP',
     },
     contextItem: {
       current: '当前',

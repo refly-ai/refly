@@ -90,8 +90,8 @@ export const ProjectKnowledgeToggle: React.FC<ProjectKnowledgeToggleProps> = ({
   const projectName = currentProject?.name || t('common.untitled');
 
   return (
-    <div className={`project-kb-toggle mt-auto border-t border-gray-100 pt-2 pb-2 ${className}`}>
-      <div className="rounded-lg flex items-center justify-between bg-gray-50 p-2 pt-0 pb-0 border border-solid dark:border-gray-700 dark:bg-gray-800 hover:border-[#00968F]/30 transition-all cursor-pointer">
+    <div className={`project-kb-toggle mt-autopt-2 pb-2 ${className}`}>
+      <div className="rounded-lg flex items-center justify-between bg-gray-50 p-2 pt-0 pb-0 border border-solid border-refly-Card-Border hover:border-[#00968F]/30 transition-all cursor-pointer">
         <div className="flex items-center gap-2 flex-shrink overflow-hidden">
           <LuBrain
             className={`transition-colors duration-300 flex-shrink-0 ${enabledKnowledgeBase ? 'text-[#00968F]' : 'text-gray-500'}`}

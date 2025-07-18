@@ -1,4 +1,4 @@
-import { notification, Button, Form, Badge } from 'antd';
+import { notification, Button, Form } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useContextPanelStore, useContextPanelStoreShallow } from '@refly/stores';
@@ -32,8 +32,6 @@ import { ActionStatus, SkillTemplateConfig } from '@refly/openapi-schema';
 import { ContextTarget } from '@refly/common-types';
 import { ProjectKnowledgeToggle } from '@refly-packages/ai-workspace-common/components/project/project-knowledge-toggle';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
-import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
-import { ToolOutlined } from '@ant-design/icons';
 
 const PremiumBanner = () => {
   const { t } = useTranslation();
@@ -349,30 +347,8 @@ export const ChatPanel = ({
     setRecommendQuestionsOpen(!recommendQuestionsOpen);
   }, [recommendQuestionsOpen, setRecommendQuestionsOpen]);
 
-  const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
-
-  // Toggle MCP selector panel
-  const handleMcpSelectorToggle = useCallback(() => {
-    setMcpSelectorOpen(!mcpSelectorOpen);
-  }, [mcpSelectorOpen, setMcpSelectorOpen]);
-
   const customActions: CustomAction[] = useMemo(
     () => [
-      {
-        icon: (
-          <Badge
-            count={selectedMcpServers.length > 0 ? selectedMcpServers.length : 0}
-            size="small"
-            offset={[2, -2]}
-          >
-            <ToolOutlined className="flex items-center" />
-          </Badge>
-        ),
-        title: t('copilot.chatActions.chooseMcp'),
-        onClick: () => {
-          handleMcpSelectorToggle();
-        },
-      },
       {
         icon: <PiMagicWand className="flex items-center" />,
         title: t('copilot.chatActions.recommendQuestions'),
@@ -381,7 +357,7 @@ export const ChatPanel = ({
         },
       },
     ],
-    [handleRecommendQuestionsToggle, handleMcpSelectorToggle, t, selectedMcpServers],
+    [handleRecommendQuestionsToggle, t],
   );
 
   const handleImageUpload = async (file: File) => {
@@ -425,8 +401,6 @@ export const ChatPanel = ({
             embeddedMode && 'embedded-chat-panel border !border-gray-100 dark:!border-gray-700',
           )}
         >
-          <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
-
           <SelectedSkillHeader
             skill={selectedSkill}
             setSelectedSkill={setSelectedSkill}

@@ -1,14 +1,15 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import { Button, Divider, Dropdown, DropdownProps, MenuProps, Skeleton } from 'antd';
+import { Button, Dropdown, DropdownProps, Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ModelIcon } from '@lobehub/icons';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { ProviderItem } from '@refly/openapi-schema';
 import { LuInfo } from 'react-icons/lu';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
-import { DownOutlined } from '@ant-design/icons';
 import { SettingsButton } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
 import { useChatStoreShallow } from '@refly/stores';
+import { ArrowDown } from 'refly-icons';
+import cn from 'classnames';
 import './index.scss';
 
 interface MediaModelSelectorProps {
@@ -25,9 +26,14 @@ interface MediaModelSelectorProps {
 // Memoize the selected model display
 const SelectedMediaModelDisplay = memo(
   ({
+    open,
     model,
     handleOpenSettingModal,
-  }: { model: ProviderItem | null; handleOpenSettingModal: () => void }) => {
+  }: {
+    open: boolean;
+    model: ProviderItem | null;
+    handleOpenSettingModal: () => void;
+  }) => {
     const { t } = useTranslation();
 
     if (!model) {
@@ -35,7 +41,10 @@ const SelectedMediaModelDisplay = memo(
         <Button
           type="text"
           size="small"
-          className="text-xs gap-1.5"
+          className={cn(
+            'text-xs gap-1.5 p-1 hover:border-refly-Card-Border',
+            open && 'border-refly-Card-Border',
+          )}
           style={{ color: '#f59e0b' }}
           icon={<LuInfo className="flex items-center" />}
           onClick={handleOpenSettingModal}
@@ -49,11 +58,14 @@ const SelectedMediaModelDisplay = memo(
       <Button
         type="text"
         size="small"
-        className="text-xs gap-1.5"
+        className={cn(
+          'text-xs gap-0.5 p-1 hover:border-refly-Card-Border min-w-0',
+          open && 'border-refly-Card-Border',
+        )}
         icon={<ModelIcon model={model.name} type={'color'} />}
       >
-        {model.name}
-        <DownOutlined />
+        <span className="truncate">{model.name}</span>
+        <ArrowDown size={12} color="var(--refly-text-0)" className="flex-shrink-0" />
       </Button>
     );
   },
@@ -62,7 +74,11 @@ const SelectedMediaModelDisplay = memo(
 SelectedMediaModelDisplay.displayName = 'SelectedMediaModelDisplay';
 
 const MediaModelLabel = memo(({ model }: { model: ProviderItem }) => {
-  return <span className="text-xs flex items-center gap-1">{model.name}</span>;
+  return (
+    <span className="text-xs flex items-center gap-1 text-refly-text-0 min-w-0 flex-1">
+      <span className="truncate">{model.name}</span>
+    </span>
+  );
 });
 
 MediaModelLabel.displayName = 'MediaModelLabel';
@@ -146,70 +162,54 @@ export const MediaModelSelector = memo(
         }));
     }, [mediaModelList, t]);
 
-    const droplist: MenuProps['items'] = useMemo(() => {
-      const list: any[] = [];
-
-      for (let index = 0; index < groupedModels.length; index++) {
-        const group = groupedModels[index];
-
-        // Add group header
-        list.push({
-          key: `group-${group.mediaType}`,
-          type: 'group',
-          label: (
-            <Divider
-              className="!my-1 !p-0"
-              variant="dashed"
-              orientation="left"
-              orientationMargin="0"
-            >
-              <div className="text-[13px] max-w-[300px] truncate">{group.label}</div>
-            </Divider>
-          ),
-        });
-
-        for (const model of group.models) {
-          list.push({
-            key: model.itemId,
-            label: <MediaModelLabel model={model} />,
-            icon: <ModelIcon model={model.name} size={16} type={'color'} />,
-          });
-        }
-      }
-
-      // Add settings button at the bottom
-      if (list.length > 0) {
-        list.push({
-          key: 'settings',
-          type: 'divider',
-          className: '!my-1',
-        });
-      }
-
-      list.push({
-        key: 'settings-button',
-        label: (
-          <SettingsButton
-            handleOpenSettingModal={handleOpenSettingModal}
-            setDropdownOpen={setDropdownOpen}
-          />
-        ),
-      });
-
-      return list;
-    }, [groupedModels, handleOpenSettingModal, setDropdownOpen]);
-
     const handleMenuClick = useCallback(
       ({ key }: { key: string }) => {
-        if (key === 'settings-button') return;
-
         const selectedModel = mediaModelList?.find((model) => model.itemId === key);
         if (selectedModel) {
           setModel(selectedModel);
           setMediaSelectedModel(selectedModel);
+          setDropdownOpen(false);
         }
       },
-      [mediaModelList, setModel],
+      [mediaModelList, setModel, setMediaSelectedModel, setDropdownOpen],
+    );
+
+    // Custom dropdown overlay component
+    const dropdownOverlay = useMemo(
+      () => (
+        <div className="w-[240px] bg-refly-bg-content-z2 rounded-lg border border-1 border-solid border-refly-Card-Border">
+          <div className="max-h-[48vh] w-full overflow-y-auto p-2">
+            {groupedModels.map((group) => (
+              <div key={group.mediaType}>
+                {/* Group header */}
+                <div className="font-semibold text-refly-text-1 w-full truncate px-1.5 pb-1 pt-2">
+                  {group.label}
+                </div>
+                {/* Group models */}
+                {group.models.map((model) => (
+                  <div
+                    key={model.itemId}
+                    className="flex items-center gap-1 rounded-[6px] p-1.5 hover:bg-refly-tertiary-hover cursor-pointer min-w-0"
+                    onClick={() => handleMenuClick({ key: model.itemId })}
+                  >
+                    <div className="flex-shrink-0">
+                      <ModelIcon model={model.name} size={16} type={'color'} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <MediaModelLabel model={model} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <SettingsButton
+            handleOpenSettingModal={handleOpenSettingModal}
+            setDropdownOpen={setDropdownOpen}
+          />
+        </div>
+      ),
+      [groupedModels, handleMenuClick, handleOpenSettingModal, setDropdownOpen],
     );
 
     if (loading) {
@@ -231,10 +231,7 @@ export const MediaModelSelector = memo(
 
     return (
       <Dropdown
-        menu={{
-          items: droplist,
-          onClick: handleMenuClick,
-        }}
+        dropdownRender={() => dropdownOverlay}
         placement={placement}
         trigger={trigger}
         open={dropdownOpen}
@@ -244,8 +241,9 @@ export const MediaModelSelector = memo(
         autoAdjustOverflow={true}
         disabled={readonly}
       >
-        <span className="text-xs flex items-center gap-1.5 text-gray-500 cursor-pointer transition-all duration-300 hover:text-gray-700">
+        <span className="text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-300">
           <SelectedMediaModelDisplay
+            open={dropdownOpen}
             model={model}
             handleOpenSettingModal={handleOpenSettingModal}
           />

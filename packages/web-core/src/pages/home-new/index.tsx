@@ -4,7 +4,7 @@ import { Skill } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { useFrontPageStoreShallow } from '@refly/stores';
 import { SkillDisplay } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/skill-display';
-import { getSkillIcon, IconPlus } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { Button, Form } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { Actions } from '@refly-packages/ai-workspace-common/components/canvas/front-page/action';
@@ -72,7 +72,7 @@ const UnsignedFrontPage = memo(() => {
       className="relative h-full overflow-hidden"
       style={{
         background:
-          'linear-gradient(124deg,rgba(31,201,150,0.1) 0%,rgba(69,190,255,0.06) 24.85%),#f3f3f3',
+          'linear-gradient(124deg,rgba(31,201,150,0.1) 0%,rgba(69,190,255,0.06) 24.85%),var(--refly-bg-body-z0)',
       }}
     >
       <Header />
@@ -161,14 +161,6 @@ const UnsignedFrontPage = memo(() => {
                     setRuntimeConfig={setRuntimeConfig}
                     handleSendMessage={handleLogin}
                     handleAbort={() => {}}
-                    customActions={[
-                      {
-                        icon: <IconPlus className="flex items-center justify-center" />,
-                        title: '',
-                        content: t('loggedHomePage.siderMenu.newCanvas'),
-                        onClick: handleLogin,
-                      },
-                    ]}
                   />
                 </div>
               </div>

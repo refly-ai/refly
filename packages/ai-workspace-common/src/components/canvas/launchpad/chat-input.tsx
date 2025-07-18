@@ -380,10 +380,9 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
               onKeyDownCapture={handleKeyDown}
               onPaste={handlePaste}
               className={cn(
-                '!m-0 bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none focus',
+                '!m-0 !bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
                 inputClassName,
-                readonly && 'cursor-not-allowed !text-black !bg-transparent',
-                'dark:hover:bg-transparent dark:hover:!bg-none dark:focus:bg-transparent dark:active:bg-transparent dark:bg-transparent dark:!bg-transparent',
+                readonly && 'cursor-not-allowed',
               )}
               placeholder={getPlaceholder(selectedSkillName)}
               autoSize={{
@@ -410,10 +409,9 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
             onKeyDownCapture={handleKeyDown}
             onPaste={handlePaste}
             className={cn(
-              '!m-0 bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
+              '!m-0 !bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
               inputClassName,
-              readonly && 'cursor-not-allowed !text-black !bg-transparent',
-              'dark:hover:bg-transparent dark:hover:!bg-none dark:focus:bg-transparent dark:active:bg-transparent dark:bg-transparent dark:!bg-transparent',
+              readonly && 'cursor-not-allowed',
             )}
             placeholder={getPlaceholder(selectedSkillName)}
             autoSize={{

@@ -143,10 +143,10 @@ const translations = {
   mode: {
     ask: 'Ask',
     agent: 'Agent',
-    askDescription: 'Answer your question in a single step',
-    agentDescription: 'Solve complex problems with multiple steps',
+    askDescription: 'Ask mode: answer your question in a single step',
+    agentDescription: 'Agent mode: automatically plan and execute tasks',
     media: 'Media',
-    mediaDescription: 'Generate images/videos/audios',
+    mediaDescription: 'Media mode: generate images, videos, audios',
   },
   pages: {
     share: {
@@ -717,6 +717,7 @@ const translations = {
       utilText: 'By registering, you agree to our',
       privacyPolicy: 'Privacy Policy',
       terms: 'Terms of Service',
+      or: 'or use email to login',
     },
     resetPasswordModal: {
       title: 'Reset Password',
@@ -2348,11 +2349,6 @@ const translations = {
       },
     },
     copilot: {
-      mcpSelector: {
-        title: 'MCP Selector',
-        empty: 'No MCP servers available',
-        browseMcpStore: 'Go to Store',
-      },
       recommendQuestions: {
         refresh: 'Refresh',
       },
@@ -2805,6 +2801,9 @@ const translations = {
       title: 'Choose MCP Servers',
       empty: 'No MCP servers available',
       selected: 'Selected',
+      browseMcpStore: 'Go to Install',
+      manageMcpServers: 'Manage MCP',
+      useMcpServers: 'Use MCP',
     },
     contextItem: {
       current: 'Current ',

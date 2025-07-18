@@ -22,12 +22,9 @@ import { useReactFlow } from '@xyflow/react';
 import { GrRevert } from 'react-icons/gr';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
-import { notification, Form, Badge } from 'antd';
+import { notification, Form } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
-import { McpSelectorPanel } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
-import { ToolOutlined } from '@ant-design/icons';
-import { useLaunchpadStoreShallow } from '@refly/stores';
 
 interface EditChatInputProps {
   enabled: boolean;
@@ -262,35 +259,8 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
     }
   };
 
-  const [mcpSelectorOpen, setMcpSelectorOpen] = useState<boolean>(false);
-
-  // Toggle MCP selector panel
-  const handleMcpSelectorToggle = useCallback(() => {
-    setMcpSelectorOpen(!mcpSelectorOpen);
-  }, [mcpSelectorOpen, setMcpSelectorOpen]);
-
-  // 获取选择的 MCP 服务器
-  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
-    selectedMcpServers: state.selectedMcpServers,
-  }));
-
   const customActions: CustomAction[] = useMemo(
     () => [
-      {
-        icon: (
-          <Badge
-            count={selectedMcpServers.length > 0 ? selectedMcpServers.length : 0}
-            size="small"
-            offset={[2, -2]}
-          >
-            <ToolOutlined className="flex items-center" />
-          </Badge>
-        ),
-        title: t('copilot.chatActions.chooseMcp'),
-        onClick: () => {
-          handleMcpSelectorToggle();
-        },
-      },
       {
         icon: <GrRevert className="flex items-center" />,
         title: t('copilot.chatActions.discard'),
@@ -308,18 +278,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
         },
       },
     ],
-    [
-      handleMcpSelectorToggle,
-      t,
-      selectedMcpServers,
-      setEditMode,
-      contextItems,
-      query,
-      modelInfo,
-      t,
-      form,
-      initialTplConfig,
-    ],
+    [t, setEditMode, contextItems, query, modelInfo, t, form, initialTplConfig],
   );
 
   if (!enabled) {
@@ -329,8 +288,6 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   return (
     <div className="ai-copilot-chat-container">
       <div className={cn('border border-solid border-gray-200 dark:border-gray-700 rounded-lg')}>
-        <McpSelectorPanel isOpen={mcpSelectorOpen} onClose={() => setMcpSelectorOpen(false)} />
-
         {!hideSelectedSkillHeader && (
           <SelectedSkillHeader
             readonly={readonly}
