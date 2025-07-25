@@ -656,6 +656,19 @@ export class ProviderService implements OnModuleInit {
     return null;
   }
 
+  async findMediaProviderItemByModelID(user: User, modelId: string) {
+    const items = await this.findProviderItemsByCategory(user, 'mediaGeneration');
+
+    for (const item of items) {
+      const config: LLMModelConfig = JSON.parse(item.config);
+      if (config.modelId === modelId) {
+        return item;
+      }
+    }
+
+    return null;
+  }
+
   async prepareChatModel(user: User, modelId: string): Promise<BaseChatModel> {
     const item = await this.findLLMProviderItemByModelID(user, modelId);
     if (!item) {

@@ -14,6 +14,9 @@ import {
   getCanvasTransactions,
   getCodeArtifactDetail,
   getCollabToken,
+  getCreditBalance,
+  getCreditRecharge,
+  getCreditUsage,
   getDocumentDetail,
   getPageByCanvasId,
   getPageDetail,
@@ -361,6 +364,30 @@ export const prefetchUseCheckSettingsField = (
   queryClient.prefetchQuery({
     queryKey: Common.UseCheckSettingsFieldKeyFn(clientOptions),
     queryFn: () => checkSettingsField({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetCreditRecharge = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetCreditRechargeKeyFn(clientOptions),
+    queryFn: () => getCreditRecharge({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetCreditUsage = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetCreditUsageKeyFn(clientOptions),
+    queryFn: () => getCreditUsage({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetCreditBalance = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetCreditBalanceKeyFn(clientOptions),
+    queryFn: () => getCreditBalance({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetSubscriptionPlans = (
   queryClient: QueryClient,

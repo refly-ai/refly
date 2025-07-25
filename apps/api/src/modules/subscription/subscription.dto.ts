@@ -7,6 +7,7 @@ import {
   TokenUsageMeter,
   StorageUsageMeter,
   ModelTier,
+  CreditBilling,
 } from '@refly/openapi-schema';
 import {
   Subscription as SubscriptionModel,
@@ -34,6 +35,13 @@ export interface SyncTokenUsageJobData {
   uid: string;
   resultId?: string;
   usage: TokenUsageItem;
+  timestamp: Date;
+}
+
+export interface SyncMediaCreditUsageJobData {
+  uid: string;
+  resultId?: string;
+  creditBilling: CreditBilling;
   timestamp: Date;
 }
 

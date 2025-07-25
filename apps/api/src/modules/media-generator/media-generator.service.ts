@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { User, MediaGenerateRequest, MediaGenerateResponse } from '@refly/openapi-schema';
+import {
+  User,
+  MediaGenerateRequest,
+  MediaGenerateResponse,
+  CreditBilling,
+} from '@refly/openapi-schema';
 import {
   ReplicateAudioGenerator,
   ReplicateVideoGenerator,
@@ -10,19 +15,61 @@ import {
   VolcesVideoGenerator,
   VolcesImageGenerator,
 } from '@refly/providers';
+import { ModelUsageQuotaExceeded } from '@refly/errors';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { QUEUE_SYNC_MEDIA_CREDIT_USAGE } from '../../utils/const';
+import { SyncMediaCreditUsageJobData } from '../subscription/subscription.dto';
 import { PrismaService } from '../common/prisma.service';
 import { MiscService } from '../misc/misc.service';
+import { CreditService } from '../credit/credit.service';
 import { ProviderService } from '../provider/provider.service';
 import { PromptProcessorService } from './prompt-processor.service';
 import { genActionResultID } from '@refly/utils';
 
+// Define generator interface for type safety
+interface MediaGenerator {
+  generate(params: { model: string; prompt: string; apiKey: string }): Promise<{ output: string }>;
+}
+
+// Generator factory type
+type GeneratorFactory = () => MediaGenerator;
+
+// Generator mapping configuration
+type GeneratorConfig = {
+  [provider: string]: {
+    [mediaType: string]: GeneratorFactory;
+  };
+};
+
 @Injectable()
 export class MediaGeneratorService {
+  // Generator configuration mapping
+  private readonly generatorConfig: GeneratorConfig = {
+    replicate: {
+      audio: () => new ReplicateAudioGenerator(),
+      video: () => new ReplicateVideoGenerator(),
+      image: () => new ReplicateImageGenerator(),
+    },
+    fal: {
+      audio: () => new FalAudioGenerator(),
+      video: () => new FalVideoGenerator(),
+      image: () => new FalImageGenerator(),
+    },
+    volces: {
+      video: () => new VolcesVideoGenerator(),
+      image: () => new VolcesImageGenerator(),
+    },
+  };
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly miscService: MiscService,
+    private readonly credit: CreditService,
     private readonly providerService: ProviderService,
     private readonly promptProcessor: PromptProcessorService,
+    @InjectQueue(QUEUE_SYNC_MEDIA_CREDIT_USAGE)
+    private readonly mediaCreditUsageReportQueue: Queue<SyncMediaCreditUsageJobData>,
   ) {}
 
   /**
@@ -96,6 +143,23 @@ export class MediaGeneratorService {
         },
       });
 
+      const providerItem = await this.providerService.findMediaProviderItemByModelID(
+        user,
+        request.model,
+      );
+
+      const creditBilling: CreditBilling = providerItem?.creditBilling
+        ? JSON.parse(providerItem?.creditBilling)
+        : undefined;
+
+      if (creditBilling) {
+        const creditUsageResult = await this.credit.checkRequestCreditUsage(user, creditBilling);
+        console.log('creditUsageResult', creditUsageResult);
+        if (!creditUsageResult.canUse) {
+          throw new ModelUsageQuotaExceeded(`credit not available: ${creditUsageResult.message}`);
+        }
+      }
+
       const providerKey = request.provider;
 
       const provider = await this.providerService.findProvider(user, {
@@ -109,20 +173,12 @@ export class MediaGeneratorService {
       }
 
       // Create request with translated prompt for third-party service
-      const translatedRequest: MediaGenerateRequest = {
+      const _translatedRequest: MediaGenerateRequest = {
         ...request,
         prompt: promptProcessingResult.translatedPrompt, // Use English prompt for generation
       };
 
-      if (providerKey === 'replicate') {
-        result = await this.generateWithReplicate(user, translatedRequest, provider.apiKey);
-      } else if (providerKey === 'fal') {
-        result = await this.generateWithFal(user, translatedRequest, provider.apiKey);
-      } else if (providerKey === 'volces') {
-        result = await this.generateWithVolces(user, translatedRequest, provider.apiKey);
-      } else {
-        throw new Error(`Unsupported provider: ${providerKey}`);
-      }
+      result = await this.generateWithProvider(request, provider.apiKey);
 
       const uploadResult = await this.miscService.dumpFileFromURL(user, {
         url: result.output,
@@ -140,6 +196,22 @@ export class MediaGeneratorService {
           storageKey: uploadResult.storageKey, // Save storage key
         },
       });
+      const basicUsageData = {
+        uid: user.uid,
+        resultId,
+      };
+
+      const mediaCreditUsage: SyncMediaCreditUsageJobData = {
+        ...basicUsageData,
+        creditBilling,
+        timestamp: new Date(),
+      };
+      if (this.mediaCreditUsageReportQueue) {
+        await this.mediaCreditUsageReportQueue.add(
+          `media_credit_usage_report:${resultId}`,
+          mediaCreditUsage,
+        );
+      }
     } catch (error) {
       console.error(`Media generation failed for ${resultId}:`, error);
 
@@ -154,174 +226,35 @@ export class MediaGeneratorService {
     }
   }
 
-  private async generateWithReplicate(
-    _user: User,
+  /**
+   * Generate media using the appropriate provider and media type
+   * @param request Media generation request
+   * @param apiKey API key for the provider
+   * @returns Generated media output
+   */
+  private async generateWithProvider(
     request: MediaGenerateRequest,
     apiKey: string,
   ): Promise<{ output: string }> {
-    let result: { output: string };
+    const { provider, mediaType, model, prompt } = request;
 
-    switch (request.mediaType) {
-      case 'audio':
-        result = await this.generateAudioWithReplicate(request, apiKey);
-        break;
-      case 'video':
-        result = await this.generateVideoWithReplicate(request, apiKey);
-        break;
-      case 'image':
-        result = await this.generateImageWithReplicate(request, apiKey);
-        break;
-      default:
-        throw new Error(`Unsupported media type: ${request.mediaType}`);
+    // Get the generator factory from configuration
+    const providerConfig = this.generatorConfig[provider];
+    if (!providerConfig) {
+      throw new Error(`Unsupported provider: ${provider}`);
     }
 
-    return result;
-  }
-
-  private async generateWithFal(
-    _user: User,
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    let result: { output: string };
-
-    switch (request.mediaType) {
-      case 'audio':
-        result = await this.generateAudioWithFal(request, apiKey);
-        break;
-      case 'video':
-        result = await this.generateVideoWithFal(request, apiKey);
-        break;
-      case 'image':
-        result = await this.generateImageWithFal(request, apiKey);
-        break;
-      default:
-        throw new Error(`Unsupported media type: ${request.mediaType}`);
+    const generatorFactory = providerConfig[mediaType];
+    if (!generatorFactory) {
+      throw new Error(`Unsupported media type '${mediaType}' for provider '${provider}'`);
     }
-    return result;
-  }
 
-  private async generateWithVolces(
-    _user: User,
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    let result: { output: string };
-
-    switch (request.mediaType) {
-      case 'video':
-        result = await this.generateVideoWithVolces(request, apiKey);
-        break;
-      case 'image':
-        result = await this.generateImageWithVolces(request, apiKey);
-        break;
-      default:
-        throw new Error(`Unsupported media type: ${request.mediaType}`);
-    }
-    return result;
-  }
-
-  private async generateAudioWithReplicate(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new ReplicateAudioGenerator();
-
+    // Create generator instance and generate media
+    const generator = generatorFactory();
     return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
-    });
-  }
-
-  private async generateVideoWithReplicate(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new ReplicateVideoGenerator();
-
-    return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
-    });
-  }
-
-  private async generateImageWithReplicate(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new ReplicateImageGenerator();
-
-    return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
-    });
-  }
-
-  private async generateAudioWithFal(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new FalAudioGenerator();
-
-    return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
-    });
-  }
-
-  private async generateVideoWithFal(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new FalVideoGenerator();
-
-    return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
-    });
-  }
-
-  private async generateImageWithFal(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new FalImageGenerator();
-
-    return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
-    });
-  }
-
-  private async generateVideoWithVolces(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new VolcesVideoGenerator();
-
-    return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
-    });
-  }
-
-  private async generateImageWithVolces(
-    request: MediaGenerateRequest,
-    apiKey: string,
-  ): Promise<{ output: string }> {
-    const generator = new VolcesImageGenerator();
-
-    return await generator.generate({
-      model: request.model,
-      prompt: request.prompt,
-      apiKey: apiKey,
+      model,
+      prompt,
+      apiKey,
     });
   }
 }

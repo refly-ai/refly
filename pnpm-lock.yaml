@@ -1843,6 +1843,9 @@ importers:
         specifier: ^5.61.3
         version: 5.83.0(react@18.3.1)
     devDependencies:
+      '@7nohe/openapi-react-query-codegen':
+        specifier: 2.0.0-beta.3
+        version: 2.0.0-beta.3(commander@13.1.0)(ts-morph@23.0.0)(typescript@5.8.3)
       '@refly/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig

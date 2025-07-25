@@ -314,6 +314,12 @@ import type {
   CheckSettingsFieldData,
   CheckSettingsFieldError,
   CheckSettingsFieldResponse2,
+  GetCreditRechargeError,
+  GetCreditRechargeResponse2,
+  GetCreditUsageError,
+  GetCreditUsageResponse2,
+  GetCreditBalanceError,
+  GetCreditBalanceResponse,
   GetSubscriptionPlansError,
   GetSubscriptionPlansResponse2,
   GetSubscriptionUsageError,
@@ -2039,6 +2045,57 @@ export const checkSettingsField = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/user/checkSettingsField',
+  });
+};
+
+/**
+ * Get credit recharge
+ * Get credit recharge
+ */
+export const getCreditRecharge = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetCreditRechargeResponse2,
+    GetCreditRechargeError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/credit/recharge',
+  });
+};
+
+/**
+ * Get credit usage
+ * Get credit usage
+ */
+export const getCreditUsage = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetCreditUsageResponse2,
+    GetCreditUsageError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/credit/usage',
+  });
+};
+
+/**
+ * Get credit balance
+ * Get credit balance
+ */
+export const getCreditBalance = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetCreditBalanceResponse,
+    GetCreditBalanceError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/credit/balance',
   });
 };
 

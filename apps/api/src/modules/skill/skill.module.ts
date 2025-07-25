@@ -15,6 +15,7 @@ import {
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
+  QUEUE_SYNC_TOKEN_CREDIT_USAGE,
 } from '../../utils';
 import { LabelModule } from '../label/label.module';
 import {
@@ -23,6 +24,7 @@ import {
   CheckStuckActionsProcessor,
 } from '../skill/skill.processor';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { CreditModule } from '../credit/credit.module';
 import { CollabModule } from '../collab/collab.module';
 import { MiscModule } from '../misc/misc.module';
 import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
@@ -44,6 +46,7 @@ import { ActionModule } from '../action/action.module';
     KnowledgeModule,
     RAGModule,
     SubscriptionModule,
+    CreditModule,
     CollabModule,
     MiscModule,
     CodeArtifactModule,
@@ -64,6 +67,7 @@ import { ActionModule } from '../action/action.module';
             },
           }),
           BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_USAGE }),
+          BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_CREDIT_USAGE }),
           BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
           BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
           BullModule.registerQueue({ name: QUEUE_SYNC_PILOT_STEP }),

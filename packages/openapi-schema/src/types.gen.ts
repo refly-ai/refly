@@ -4056,6 +4056,36 @@ export type CreatePortalSessionResponse = BaseResponse & {
   };
 };
 
+export type GetCreditRechargeResponse = BaseResponse & {
+  /**
+   * Credit recharge list
+   */
+  data?: Array<CreditRecharge>;
+};
+
+export type GetCreditUsageResponse = BaseResponse & {
+  /**
+   * Credit usage list
+   */
+  data?: Array<CreditUsage>;
+};
+
+export type getCreditBalanceResponse = BaseResponse & {
+  /**
+   * Credit balance
+   */
+  data?: {
+    /**
+     * Credit balance
+     */
+    creditBalance?: number;
+    /**
+     * Credit amount
+     */
+    creditAmount?: number;
+  };
+};
+
 export type SubscriptionPlan = {
   /**
    * Subscription plan type
@@ -4649,6 +4679,24 @@ export type ProviderItemConfig =
   | RerankerModelConfig
   | MediaGenerationModelConfig;
 
+/**
+ * Credit billing configuration for provider items
+ */
+export type CreditBilling = {
+  /**
+   * Credit consumption per unit usage
+   */
+  unitCost: number;
+  /**
+   * Measurement unit (e.g., token, image, second)
+   */
+  unit: string;
+  /**
+   * Minimum credit charge per request
+   */
+  minCharge: number;
+};
+
 export type ProviderItemOption = {
   /**
    * Provider item name
@@ -4709,7 +4757,113 @@ export type ProviderItem = {
    * Provider item group
    */
   group?: string;
+  /**
+   * Credit billing info
+   */
+  creditBilling?: CreditBilling;
 };
+
+/**
+ * Credit recharge record for user balance management
+ */
+export type CreditRecharge = {
+  /**
+   * Unique recharge record ID
+   */
+  rechargeId: string;
+  /**
+   * User UID who owns this recharge record
+   */
+  uid: string;
+  /**
+   * Original recharge amount in credits
+   */
+  amount: number;
+  /**
+   * Remaining balance for this recharge record
+   */
+  balance: number;
+  /**
+   * Whether this recharge record is enabled (false after 30 days)
+   */
+  enabled: boolean;
+  /**
+   * Recharge source type
+   */
+  source?: 'purchase' | 'gift' | 'promotion' | 'refund';
+  /**
+   * Optional description for this recharge
+   */
+  description?: string;
+  /**
+   * Expiration timestamp (30 days from creation)
+   */
+  expiresAt: string;
+  /**
+   * Record creation timestamp
+   */
+  createdAt: string;
+  /**
+   * Record last update timestamp
+   */
+  updatedAt: string;
+};
+
+/**
+ * Recharge source type
+ */
+export type source = 'purchase' | 'gift' | 'promotion' | 'refund';
+
+/**
+ * Credit usage record for tracking consumption
+ */
+export type CreditUsage = {
+  /**
+   * Unique usage record ID
+   */
+  usageId: string;
+  /**
+   * User UID who consumed the credits
+   */
+  uid: string;
+  /**
+   * Amount of credits consumed
+   */
+  amount: number;
+  /**
+   * Provider item ID that consumed the credits
+   */
+  providerItemId?: string;
+  /**
+   * Model name used for this consumption
+   */
+  modelName?: string;
+  /**
+   * Type of usage that consumed credits
+   */
+  usageType: 'model_call' | 'media_generation' | 'embedding' | 'reranking' | 'other';
+  /**
+   * Related action result ID (if applicable)
+   */
+  actionResultId?: string;
+  /**
+   * Related pilot session ID (if applicable)
+   */
+  pilotSessionId?: string;
+  /**
+   * Optional description for this usage
+   */
+  description?: string;
+  /**
+   * Usage record creation timestamp
+   */
+  createdAt: string;
+};
+
+/**
+ * Type of usage that consumed credits
+ */
+export type usageType = 'model_call' | 'media_generation' | 'embedding' | 'reranking' | 'other';
 
 export type ListProvidersResponse = BaseResponse & {
   data?: Array<Provider>;
@@ -6242,6 +6396,18 @@ export type CheckSettingsFieldData = {
 export type CheckSettingsFieldResponse2 = CheckSettingsFieldResponse;
 
 export type CheckSettingsFieldError = unknown;
+
+export type GetCreditRechargeResponse2 = GetCreditRechargeResponse;
+
+export type GetCreditRechargeError = unknown;
+
+export type GetCreditUsageResponse2 = GetCreditUsageResponse;
+
+export type GetCreditUsageError = unknown;
+
+export type GetCreditBalanceResponse = getCreditBalanceResponse;
+
+export type GetCreditBalanceError = unknown;
 
 export type GetSubscriptionPlansResponse2 = GetSubscriptionPlansResponse;
 

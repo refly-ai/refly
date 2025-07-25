@@ -12,6 +12,7 @@ import {
   Artifact,
   SkillEvent,
   TokenUsageItem,
+  CreditBilling,
 } from '@refly/openapi-schema';
 import { InvokeSkillJobData, SkillTimeoutCheckJobData } from './skill.dto';
 import { PrismaService } from '../common/prisma.service';
@@ -39,12 +40,14 @@ import { getWholeParsedContent } from '@refly/utils';
 import { ProjectNotFoundError } from '@refly/errors';
 import { projectPO2DTO } from '../project/project.dto';
 import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/subscription.dto';
+import { SyncTokenCreditUsageJobData } from '../credit/credit.dto';
 import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SKILL_TIMEOUT_CHECK,
   QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_SYNC_TOKEN_USAGE,
+  QUEUE_SYNC_TOKEN_CREDIT_USAGE,
 } from '../../utils/const';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -96,6 +99,9 @@ export class SkillInvokerService {
     @Optional()
     @InjectQueue(QUEUE_SYNC_TOKEN_USAGE)
     private usageReportQueue?: Queue<SyncTokenUsageJobData>,
+    @Optional()
+    @InjectQueue(QUEUE_SYNC_TOKEN_CREDIT_USAGE)
+    private creditUsageReportQueue?: Queue<SyncTokenCreditUsageJobData>,
     @Optional()
     @InjectQueue(QUEUE_AUTO_NAME_CANVAS)
     private autoNameCanvasQueue?: Queue<AutoNameCanvasJobData>,
@@ -893,8 +899,27 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
                 usage,
                 timestamp: new Date(),
               };
+
+              const creditBilling: CreditBilling = providerItem?.creditBilling
+                ? JSON.parse(providerItem?.creditBilling)
+                : undefined;
+
+              const tokenCreditUsage: SyncTokenCreditUsageJobData = {
+                ...basicUsageData,
+                usage,
+                creditBilling,
+                timestamp: new Date(),
+              };
+
               if (this.usageReportQueue) {
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
+              }
+
+              if (this.creditUsageReportQueue) {
+                await this.creditUsageReportQueue.add(
+                  `credit_usage_report:${resultId}`,
+                  tokenCreditUsage,
+                );
               }
             }
             break;

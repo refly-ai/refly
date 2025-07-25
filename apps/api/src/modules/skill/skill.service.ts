@@ -33,6 +33,7 @@ import {
   LLMModelConfig,
   CodeArtifact,
   MediaGenerationModelConfig,
+  CreditBilling,
 } from '@refly/openapi-schema';
 import { BaseSkill } from '@refly/skill-template';
 import { genActionResultID, genSkillID, genSkillTriggerID, safeParseJSON } from '@refly/utils';
@@ -42,6 +43,7 @@ import { InvokeSkillJobData, CheckStuckActionsJobData } from './skill.dto';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { CreditService } from '../credit/credit.service';
 import {
   ModelUsageQuotaExceeded,
   ParamsError,
@@ -81,6 +83,7 @@ export class SkillService implements OnModuleInit {
     private readonly config: ConfigService,
     private readonly knowledgeService: KnowledgeService,
     private readonly subscriptionService: SubscriptionService,
+    private readonly credit: CreditService,
     private readonly codeArtifactService: CodeArtifactService,
     private readonly providerService: ProviderService,
     private readonly skillInvokerService: SkillInvokerService,
@@ -464,6 +467,11 @@ export class SkillService implements OnModuleInit {
       }
     }
 
+    const creditBilling: CreditBilling = providerItem?.creditBilling
+      ? JSON.parse(providerItem?.creditBilling)
+      : undefined;
+    console.log('creditBilling', creditBilling);
+
     if (tiers.length > 0) {
       // Check for usage quota
       const usageResult = await this.subscriptionService.checkRequestUsage(user);
@@ -474,6 +482,14 @@ export class SkillService implements OnModuleInit {
             `model provider (${tier}) not available for current plan`,
           );
         }
+      }
+    }
+
+    if (creditBilling) {
+      const creditUsageResult = await this.credit.checkRequestCreditUsage(user, creditBilling);
+      console.log('creditUsageResult', creditUsageResult);
+      if (!creditUsageResult.canUse) {
+        throw new ModelUsageQuotaExceeded(`credit not available: ${creditUsageResult.message}`);
       }
     }
 

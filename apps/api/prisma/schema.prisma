@@ -901,35 +901,37 @@ model Provider {
 
 model ProviderItem {
   /// Primary key
-  pk         Int       @id @default(autoincrement())
+  pk            Int       @id @default(autoincrement())
   /// Provider ID
-  providerId String    @map("provider_id")
+  providerId    String    @map("provider_id")
   /// Provider item ID
-  itemId     String    @unique @map("item_id")
+  itemId        String    @unique @map("item_id")
   /// Provider category
-  category   String    @map("category")
+  category      String    @map("category")
   /// Provider item name
-  name       String    @map("name")
+  name          String    @map("name")
   /// UID
-  uid        String?   @map("uid")
+  uid           String?   @map("uid")
   /// Whether the model item is enabled
-  enabled    Boolean   @default(true) @map("enabled")
+  enabled       Boolean   @default(true) @map("enabled")
   /// Provider item config (JSON)
-  config     String?   @map("config")
+  config        String?   @map("config")
   /// Provider item billing tier
-  tier       String?   @map("tier")
+  tier          String?   @map("tier")
+  /// Credit billing configuration (JSON)
+  creditBilling String?   @map("credit_billing")
   /// Order
-  order      Int       @default(0) @map("order")
+  order         Int       @default(0) @map("order")
   /// Group name
-  groupName  String    @default("") @map("group_name")
+  groupName     String    @default("") @map("group_name")
   /// Create timestamp
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Deletion timestamp
-  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz()
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
   /// Provider
-  provider   Provider  @relation(fields: [providerId], references: [providerId])
+  provider      Provider  @relation(fields: [providerId], references: [providerId])
 
   @@index([providerId])
   @@index([uid, deletedAt])
@@ -1041,6 +1043,67 @@ model TokenUsageMeter {
 
   @@index([uid, deletedAt])
   @@map("token_usage_meters")
+}
+
+model CreditRecharge {
+  /// Primary key
+  pk          BigInt   @id @default(autoincrement())
+  /// Recharge record ID
+  rechargeId  String   @unique @map("recharge_id")
+  /// User UID
+  uid         String   @map("uid")
+  /// Recharge amount (in credits)
+  amount      Int      @map("amount")
+  /// Remaining balance for this recharge record
+  balance     Int      @map("balance")
+  /// Whether this recharge record is enabled (false after 30 days)
+  enabled     Boolean  @default(true) @map("enabled")
+  /// Recharge source (purchase, gift, promotion, etc.)
+  source      String   @default("purchase") @map("source")
+  /// Recharge description
+  description String?  @map("description")
+  /// Expiration timestamp (30 days from creation)
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([uid, createdAt])
+  @@index([uid, enabled, createdAt])
+  @@index([expiresAt, enabled])
+  @@map("credit_recharges")
+}
+
+model CreditUsage {
+  /// Primary key
+  pk             BigInt   @id @default(autoincrement())
+  /// Usage record ID
+  usageId        String   @unique @map("usage_id")
+  /// User UID
+  uid            String   @map("uid")
+  /// Used credits amount
+  amount         Int      @map("amount")
+  /// Provider item ID that consumed the credits
+  providerItemId String?  @map("provider_item_id")
+  /// Model name used
+  modelName      String?  @map("model_name")
+  /// Usage type (model_call, media_generation, etc.)
+  usageType      String   @default("model_call") @map("usage_type")
+  /// Related action result ID (if applicable)
+  actionResultId String?  @map("action_result_id")
+  /// Related pilot session ID (if applicable)
+  pilotSessionId String?  @map("pilot_session_id")
+  /// Usage description
+  description    String?  @map("description")
+  /// Create timestamp
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([uid, createdAt])
+  @@index([providerItemId, createdAt])
+  @@index([actionResultId])
+  @@index([pilotSessionId])
+  @@map("credit_usages")
 }
 
 model StorageUsageMeter {
