@@ -947,6 +947,8 @@ model SubscriptionPlan {
   interval           String?  @map("interval")
   /// Lookup key
   lookupKey          String   @map("lookup_key")
+  /// Credit quota
+  creditQuota        Int      @default(0) @map("credit_quota")
   /// Request count quota (T1)
   t1CountQuota       Int      @default(0) @map("t1_count_quota")
   /// Request count quota (T2)

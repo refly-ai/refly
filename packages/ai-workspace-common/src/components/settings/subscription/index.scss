@@ -1,200 +1,388 @@
-.subscription {
-  padding: 8px 16px;
-  width: 100%;
+.subscription-management-page {
+  // antd override
+  .ant-table-wrapper .ant-table-pagination.ant-pagination {
+    background: transparent;
+  }
+
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   min-width: 680px;
-  box-sizing: border-box;
-  overflow: auto;
 
-  &-plan {
-    padding: 20px 24px 40px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: linear-gradient(to right, #00968f, #00c4b8);
-    border-radius: 12px;
-    box-shadow: rgba(0, 0, 0, 0.06) 5px 7px 12px 0px;
-    color: #fff;
-    &.free {
-      background: linear-gradient(113deg, rgba(255, 255, 255, 0.51) 3.51%, rgba(255, 255, 255, 0) 111.71%),
-        rgb(234, 236, 240);
-      .subscription-plan-info-title {
-        color: #666;
-      }
-      .subscription-plan-info-status {
-        color: #333;
-      }
+  .subscription-header {
+    padding-left: 16px;
+    margin-bottom: 16px;
+    .title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
     }
+    .subtitle {
+      color: var(--text-icon-refly-text-1, rgba(28, 31, 35, 0.8));
 
-    &-info {
-      &-title {
+      font-family: "PingFang SC";
+      font-size: 12px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 16px;
+    }
+  }
+
+  .subscription-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px;
+  }
+
+  .subscription-plan-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-radius: 12px;
+    background-color: #f7f7f7;
+    background-image: url("./banner-bg.svg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin-bottom: 16px;
+
+    .plan-info {
+      .current-plan-label {
+        font-size: 14px;
+
+        color: var(--text-icon-refly-text-0, #1c1f23);
+
+        font-family: "PingFang SC";
         font-size: 12px;
+        font-style: normal;
+        font-weight: 400;
         line-height: 16px;
-        color: #fff;
       }
+      .current-plan-name {
+        margin-top: 4px;
+        font-size: 24px;
+        font-weight: bold;
 
-      &-status {
-        display: flex;
-        align-items: center;
-        font-size: 20px;
-        line-height: 40px;
+        color: var(--text-icon-refly-text-0, #1c1f23);
+
+        font-family: "PingFang SC";
+        font-size: 22px;
+        font-style: normal;
         font-weight: 600;
-        color: #fff;
-        .interval {
-          margin-left: 10px;
-          font-size: 10px;
-          height: 18px;
-          line-height: 18px;
-          border-radius: 4px;
-        }
-      }
-    }
-  }
-
-  &-usage {
-    margin-top: -20px;
-    padding: 20px 24px;
-    border: 1px solid transparent;
-    border-color: #fff;
-    border-top-color: transparent;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: rgba(0, 0, 0, 0.06) 5px 7px 12px 0px;
-    @apply dark:bg-gray-800 dark:border-gray-700;
-
-    &-item {
-      margin-bottom: 28px;
-      &-title {
-        .title {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          color: rgb(71, 84, 103);
-          @apply dark:text-gray-200;
-
-          .title-left {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            line-height: 20px;
-            font-weight: 700;
-          }
-
-          .title-right {
-            font-size: 13px;
-            line-height: 16px;
-            color: #666;
-            text-align: right;
-            @apply dark:text-gray-400;
-          }
-
-          .info-icon {
-            margin-left: 4px;
-            cursor: pointer;
-          }
-        }
-
-        .value {
-          font-size: 13px;
-          line-height: 16px;
-          color: #666;
-          .value-used {
-            color: #f00;
-          }
-        }
-      }
-
-      &-progress {
-        margin-top: 8px;
+        line-height: 32px;
       }
     }
 
-    .file-storage-usage-bar {
-      width: 100%;
-
-      &-title {
-        margin-bottom: 8px;
-        color: rgb(71, 84, 103);
-        display: flex;
-        justify-content: space-between;
-
-        .title-left {
-          display: flex;
-          align-items: center;
-          font-size: 14px;
-          line-height: 20px;
-          font-weight: 700;
-        }
-
-        .title-right {
-          font-size: 13px;
-          line-height: 16px;
-          color: #666;
-        }
-
-        .info-icon {
-          margin-left: 4px;
-          cursor: pointer;
-        }
-      }
-
-      &-progress {
-        height: 10px;
-        background: #f2f3f5;
-        border-radius: 12px;
-        overflow: hidden;
-        display: flex;
-      }
-
-      &-category {
-        display: flex;
-        align-items: center;
-
-        &-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          margin-right: 6px;
-        }
-
-        &-name {
-          font-size: 12px;
-          line-height: 16px;
-          color: #555;
-        }
-      }
-    }
-  }
-
-  &-management-wrapper {
-    margin-top: 20px;
-  }
-
-  &-management {
-    height: 48px;
-    padding: 0 24px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    color: #666;
-    font-weight: 500;
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 12px;
-    cursor: pointer;
-
-    &-left {
+    .plan-actions {
       display: flex;
       align-items: center;
-      font-size: 14px;
+      gap: 12px;
+
+      .plan-renewal-info {
+        font-size: 12px;
+        color: var(--text-icon-refly-text-1, rgba(28, 31, 35, 0.8));
+        white-space: nowrap;
+      }
+
+      .ant-btn {
+        display: flex;
+        width: 120px;
+        height: var(--height-button_default, 32px);
+        padding: var(--spacing-button_default-paddingTop, 6px)
+          var(--spacing-button_default-paddingRight, 12px)
+          var(--spacing-button_default-paddingTop, 6px)
+          var(--spacing-button_default-paddingLeft, 12px);
+        justify-content: center;
+        align-items: center;
+        border-radius: 8px;
+
+        &.ant-btn-primary {
+          border: 0 solid var(--border---refly-Card-Border, rgba(0, 0, 0, 0.1));
+          background: var(--primary---refly-primary-default, #0e9f77);
+        }
+      }
     }
-    &-right {
-      font-size: 16px;
-      color: #666;
+
+    .upgrade-button {
+      display: flex;
+      width: 120px;
+      height: var(--height-button_default, 32px);
+      padding: var(--spacing-button_default-paddingTop, 6px)
+        var(--spacing-button_default-paddingRight, 12px)
+        var(--spacing-button_default-paddingTop, 6px)
+        var(--spacing-button_default-paddingLeft, 12px);
+      justify-content: center;
+      align-items: center;
+
+      border-radius: 8px;
+      border: 0 solid var(--border---refly-Card-Border, rgba(0, 0, 0, 0.1));
+      background: var(--primary---refly-primary-default, #0e9f77);
     }
-    &:hover {
-      background-color: rgba(0, 0, 0, 0.1);
-      .subscription-management-right {
-        color: #00968f;
+
+    // Free plan style (current style)
+    &.plan-free {
+      // This class preserves the existing look for free plan.
+      // The default styles of .subscription-plan-card already handle this.
+    }
+
+    // Starter plan style
+    &.plan-starter {
+      background-color: rgba(223, 255, 246, 0.7); // Light blue overlay
+      .current-plan-name {
+        color: var(--text-icon-refly-text-0, #1c1f23);
+      }
+      .plan-actions {
+        .plan-renewal-info {
+          color: var(--text-icon-refly-text-1, rgba(28, 31, 35, 0.8));
+        }
+        .ant-btn-default {
+          background-color: #f0f0f0;
+          border-color: #f0f0f0;
+          color: var(--text-icon-refly-text-0, #1c1f23);
+        }
+      }
+    }
+
+    // Maker plan style
+    &.plan-maker {
+      background-color: rgba(223, 255, 246, 0.7); // Light blue overlay
+      .current-plan-name {
+        color: var(--text-icon-refly-text-0, #1c1f23);
+      }
+      .plan-actions {
+        .plan-renewal-info {
+          color: var(--text-icon-refly-text-1, rgba(28, 31, 35, 0.8));
+        }
+        .ant-btn-default {
+          background-color: #f0f0f0;
+          border-color: #f0f0f0;
+          color: var(--text-icon-refly-text-0, #1c1f23);
+        }
+      }
+    }
+  }
+
+  .usage-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+
+    .usage-card {
+      padding: 16px;
+      border-radius: 12px;
+      background-color: #f7f7f7;
+
+      .usage-label {
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 8px;
+
+        color: var(--text-icon-refly-text-0, #1c1f23);
+
+        font-family: "PingFang SC";
+        font-size: 12px;
+        font-style: normal;
+        font-weight: 400;
+        line-height: 16px;
+      }
+      .usage-value {
+        color: var(--text-icon-refly-text-0, #1c1f23);
+
+        font-family: "PingFang SC";
+        font-size: 18px;
+        font-style: normal;
+        font-weight: 600;
+        line-height: 28px;
+      }
+    }
+  }
+
+  .points-history {
+    margin-top: 24px;
+
+    .history-tabs {
+      margin-bottom: 24px;
+      background-color: #fff;
+      padding: 4px;
+      border-radius: 20px;
+      display: inline-block;
+      border: 1px solid #e8e8e8;
+
+      .ant-segmented-item {
+        border-radius: 16px !important;
+      }
+
+      .ant-segmented-item-label {
+        color: var(--text-icon-refly-text-0, #1c1f23);
+        text-align: center;
+        font-size: 12px;
+        font-weight: 400;
+        padding: 2px 8px;
+        min-height: unset;
+        line-height: unset;
+      }
+
+      .ant-segmented-item-selected {
+        background-color: #f5f5f5 !important;
+
+        .ant-segmented-item-label {
+          color: var(--text-icon-refly-text-0, #1c1f23);
+          text-align: center;
+          font-size: 12px;
+          font-weight: 600;
+        }
+      }
+    }
+
+    .history-table {
+      border-radius: 12px;
+      overflow: hidden;
+      background-color: #fff;
+      
+      .ant-table {
+        background-color: #fff;
+      }
+      
+      .ant-table-container {
+        border: none;
+      }
+      
+      .ant-table-thead > tr > th {
+        background: #fff !important;
+        border-bottom: none;
+        color: var(--text-icon-refly-text-0, #1c1f23);
+        font-weight: normal;
+        padding: 12px 16px;
+        border-right: none !important;
+        font-size: 14px;
+      }
+      
+      .ant-table-tbody > tr > td {
+        border-bottom: none;
+        padding: 12px 16px;
+        font-size: 14px;
+      }
+      
+      .ant-table-tbody > tr.ant-table-row:hover > td {
+        background: #fafafa;
+      }
+      
+      .ant-table-pagination.ant-pagination {
+        background: #fff;
+        margin: 0;
+        padding: 16px;
+        justify-content: center;
+        border-top: none;
+      }
+    }
+  }
+}
+
+.dark {
+  .subscription-management-page {
+    .subscription-header {
+      .subtitle {
+        color: var(--text-color-secondary);
+      }
+    }
+
+    .subscription-plan-card {
+      background-color: #333;
+      background-image: url("./banner-bg.svg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+
+      .plan-info {
+        .current-plan-label,
+        .current-plan-name {
+          color: var(--text-color-primary);
+        }
+      }
+    }
+
+    .usage-cards {
+      .usage-card {
+        background-color: #333;
+
+        .usage-label,
+        .usage-value {
+          color: var(--text-color-primary);
+        }
+
+        .usage-label {
+          color: var(--text-color-secondary);
+        }
+      }
+    }
+
+    .points-history {
+      .history-tabs {
+        background-color: #1c1f23;
+        border: 1px solid #424242;
+
+        .ant-segmented-item-label {
+          color: var(--text-color-primary);
+        }
+
+        .ant-segmented-item-selected {
+          background-color: #424242 !important;
+
+          .ant-segmented-item-label {
+            color: var(--text-color-primary);
+          }
+        }
+      }
+
+      .history-table {
+        border: 1px solid #424242;
+
+        .ant-table {
+          background-color: #1c1f23;
+        }
+
+        .ant-table-thead > tr > th {
+          background: #1c1f23 !important;
+          color: var(--text-color-primary);
+          border-bottom: 1px solid #424242;
+          border-right: none !important;
+        }
+
+        .ant-table-tbody > tr > td {
+          background: #1c1f23;
+          color: var(--text-color-primary);
+          border-bottom: 1px solid #424242;
+        }
+
+        .ant-table-tbody > tr.ant-table-row:hover > td {
+          background: #2c2c2c;
+        }
+
+        .ant-table-pagination.ant-pagination {
+          background: #1c1f23;
+          border-top: 1px solid #424242;
+
+          .ant-pagination-item a {
+            color: var(--text-color-primary);
+          }
+          .ant-pagination-item-active a {
+            color: #fff;
+          }
+          .ant-pagination-item-active {
+            background-color: #00968f;
+            border-color: #00968f;
+          }
+
+          .ant-pagination-prev .ant-pagination-item-link,
+          .ant-pagination-next .ant-pagination-item-link {
+            background-color: transparent;
+            color: var(--text-color-primary);
+          }
+        }
       }
     }
   }

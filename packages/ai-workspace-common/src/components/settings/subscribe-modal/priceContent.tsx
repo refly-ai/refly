@@ -1,51 +1,43 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { Button, Divider, Tooltip, Row, Col } from 'antd';
+import { Row, Col, Tag } from 'antd';
+import { useTranslation } from 'react-i18next';
 
 // styles
 import './index.scss';
-import { useTranslation } from 'react-i18next';
-import { FaLightbulb } from 'react-icons/fa';
+
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { CheckOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { useSubscriptionStoreShallow } from '@refly/stores';
-import { useUserStoreShallow } from '@refly/stores';
+import { CheckOutlined, HourglassOutlined } from '@ant-design/icons';
+import {
+  useSubscriptionStoreShallow,
+  useUserStoreShallow,
+  useAuthStoreShallow,
+} from '@refly/stores';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
-import { useAuthStoreShallow } from '@refly/stores';
 import { SubscriptionPlanType } from '@refly/openapi-schema';
 
 export type SubscriptionInterval = 'monthly' | 'yearly';
 export type PriceSource = 'page' | 'modal';
-
-const premiumModels = 'Claude 3.7 Sonnet (Thinking), DeepSeek R1, o3 Mini, GPT-4o and more';
-const basicModels = 'Gemini Flash 2.0, DeepSeek V3, Claude 3.5 Haiku and more';
 
 const gridSpan = {
   xs: 24,
   sm: 12,
   md: 12,
   lg: 6,
-  xl: 5,
-  xxl: 4,
+  xl: 6,
+  xxl: 6,
 };
 
-interface ModelFeatures {
+interface Feature {
   name: string;
-  count?: string;
-  details?: string;
-  tooltip?: string;
-}
-
-interface Capability {
-  before: string;
-  highlight: string;
-  after: string;
+  type?: string;
 }
 
 const PlanItem = (props: {
-  title: SubscriptionPlanType;
-  features: ModelFeatures[];
-  capabilities: Capability[];
+  planType: string;
+  title: string;
+  description: string;
+  features: Feature[];
   handleClick?: () => void;
   interval: SubscriptionInterval;
   loadingInfo: {
@@ -53,188 +45,151 @@ const PlanItem = (props: {
     plan: string;
   };
 }) => {
-  const { t } = useTranslation();
-  const { title, features, capabilities, handleClick, interval, loadingInfo } = props;
-  const { isLogin } = useUserStoreShallow((state) => ({
+  const { t } = useTranslation('ui');
+  const { planType, title, description, features, handleClick, interval } = props;
+  const { isLogin, userProfile } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
+    userProfile: state.userProfile,
   }));
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
-  const [isHovered, setIsHovered] = useState(false);
 
-  const getPrice = (plan: SubscriptionPlanType) => {
-    switch (plan) {
-      case 'max':
-        return interval === 'monthly' ? 19.9 : 199;
-      case 'pro':
-        return interval === 'monthly' ? 12.9 : 129;
-      case 'plus':
-        return interval === 'monthly' ? 6.9 : 69;
-      case 'free':
-        return 0;
-    }
-  };
+  const currentPlan: string = userProfile?.subscription?.planType || 'free';
 
-  const getButtonText = (plan: SubscriptionPlanType) => {
-    if (isLogin) {
-      switch (plan) {
-        case 'max':
-        case 'pro':
-        case 'plus':
-          return t('settings.subscription.subscribe.upgrade');
-        case 'free':
-          return t('settings.subscription.subscribe.continueFree');
-        default:
-          return t('settings.subscription.getStarted');
+  const getPrice = () => {
+    if (planType === 'free') {
+      if (interval === 'monthly') {
+        return t('subscription.plans.free.price');
+      } else {
+        return (
+          <div className="yearly-price-container">
+            <span className="price-monthly">{t('subscription.plans.free.price')}</span>
+            <span className="price-yearly">&nbsp;</span>
+          </div>
+        );
       }
     }
-    return t('settings.subscription.getStarted');
+    if (planType === 'enterprise') {
+      if (interval === 'monthly') {
+        return <div>&nbsp;</div>;
+      } else {
+        return (
+          <div className="yearly-price-container">
+            <span className="price-monthly">&nbsp;</span>
+            <span className="price-yearly">&nbsp;</span>
+          </div>
+        );
+      }
+    }
+
+    const prices = {
+      starter: { monthly: 24.9, yearly: 19.9, yearlyTotal: 238.8 },
+      maker: { monthly: 49.9, yearly: 39.9, yearlyTotal: 478.8 },
+    };
+
+    const priceInfo = prices[planType];
+
+    if (interval === 'monthly') {
+      return (
+        <span className="price-monthly">
+          $ {t('subscription.plans.starter.priceMonthly', { price: priceInfo.monthly })}
+        </span>
+      );
+    }
+    return (
+      <div className="yearly-price-container">
+        <span className="price-monthly">
+          $ {t('subscription.plans.starter.priceYearly', { price: priceInfo.yearly })}
+        </span>
+        <span className="price-yearly">
+          $ {t('subscription.plans.starter.priceYearlyTotal', { price: priceInfo.yearlyTotal })}
+        </span>
+      </div>
+    );
+  };
+
+  const getButtonText = () => {
+    if (planType === 'enterprise') return t('subscription.plans.enterprise.buttonText');
+
+    if (!isLogin) {
+      if (planType === 'free') return t('subscription.plans.free.buttonText');
+      return t('subscription.plans.starter.buttonText', {
+        planName: t(`subscription.plans.${planType}.title`),
+      });
+    }
+
+    if (currentPlan === planType) {
+      return t('subscription.plans.currentPlan');
+    }
+
+    if (planType === 'free') {
+      return t('subscription.plans.free.buttonTextDowngrade');
+    }
+
+    return t('subscription.plans.starter.buttonText', {
+      planName: t(`subscription.plans.${planType}.title`),
+    });
   };
 
   const handleButtonClick = () => {
     if (isLogin) {
-      handleClick();
+      handleClick?.();
     } else {
       setLoginModalOpen(true);
     }
   };
 
+  const isCurrentPlan = currentPlan === planType;
+  const _isButtonDisabled = isCurrentPlan && planType !== 'enterprise';
+
   return (
-    <div className={`w-full h-full flex flex-col ${title === 'pro' ? 'pro-plan' : ''}`}>
-      <div className="h-[20px] text-center text-xs text-white font-bold">
-        {title === 'pro' && t('settings.subscription.mostPopular')}
+    <div className={`w-full h-full flex flex-col ${planType === 'starter' ? 'pro-plan' : ''}`}>
+      <div className="pt-1 h-[24px] text-center text-xs text-white font-bold text-[color:var(--primary---refly-primary-default,#0E9F77)] leading-4 ">
+        {planType === 'starter' && t('subscription.mostPopular')}
       </div>
-      <div
-        className={`
-        subscribe-content-plans-item
-        ${title === 'free' && 'item-free bg-gray-50 dark:bg-gray-800'}
-        ${title === 'plus' && 'item-plus bg-[#E8F4FC] dark:bg-[#1A2A3A]'}
-        ${title === 'pro' && 'item-pro bg-green-50 dark:bg-green-900'}
-        ${title === 'max' && 'item-max bg-[#FFF5EB] dark:bg-[#33241A]'}
-        `}
-      >
-        <div className="subscribe-content-plans-item-title font-extrabold dark:text-gray-100">
-          {t(`settings.subscription.subscriptionStatus.${title}`)}
-        </div>
-
-        <div className="description">
-          {t(`settings.subscription.subscribe.${title}.description`)}
-        </div>
-
-        <div className="h-16">
-          <div className="subscribe-content-plans-item-price">
-            <span className="price text-3xl dark:text-gray-100">
-              {title !== 'free' ? (
-                <>
-                  $
-                  {interval === 'monthly'
-                    ? getPrice(title)
-                    : Math.round((getPrice(title) / 12) * 10) / 10}
-                </>
-              ) : (
-                t('settings.subscription.subscribe.forFree')
-              )}
-            </span>
-            <span className="text-xs text-[#2c2929] dark:text-gray-200">
-              {' '}
-              /{' '}
-              {title === 'free' ? (
-                t('settings.subscription.subscribe.period')
-              ) : (
-                <span className="whitespace-nowrap">
-                  {t('settings.subscription.subscribe.month')}
-                </span>
-              )}
-            </span>
-          </div>
-
-          {interval === 'yearly' && title !== 'free' && (
-            <div>
-              <span className="price text-base">${getPrice(title)}</span>
-              <span className="!text-xs !text-[#2c2929] dark:!text-gray-200">
-                {' '}
-                /{' '}
-                <span className="whitespace-nowrap">
-                  {t('settings.subscription.subscribe.year')}
-                </span>
-              </span>
-            </div>
+      <div className={`subscribe-content-plans-item item-${planType}`}>
+        <div className="subscribe-content-plans-item-title">
+          {planType === 'free' && currentPlan === 'free' ? (
+            <>
+              {t('subscription.plans.free.title')} <Tag>{t('subscription.plans.free.titleCn')}</Tag>
+            </>
+          ) : (
+            title
           )}
         </div>
 
-        <Button
-          className={`subscribe-btn subscribe-btn--${title}`}
+        <div className="description">{description}</div>
+
+        <div className="price-section">{getPrice()}</div>
+
+        <div
+          className={`subscribe-btn subscribe-btn--${planType} ${planType === 'starter' && 'subscribe-btn--most-popular'}`}
           onClick={handleButtonClick}
-          loading={loadingInfo.isLoading && loadingInfo.plan === title}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          // loading={loadingInfo.isLoading && loadingInfo.plan === planType}
+          // disabled={isButtonDisabled}
         >
-          <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
-            <span
-              className={`
-                inline-flex
-                items-center
-                justify-center
-                w-full
-                h-full
-                transition-transform duration-300
-                absolute
-                ${isHovered ? '-translate-y-full' : 'translate-y-0'}
-              `}
-            >
-              {getButtonText(title)}
-            </span>
-            <span
-              className={`
-                absolute
-                inline-flex
-                items-center
-                justify-center
-                w-full
-                h-full
-                m-auto
-                transition-transform duration-300
-                ${isHovered ? 'translate-y-0' : 'translate-y-full'}
-              `}
-            >
-              {getButtonText(title)}
-            </span>
-          </div>
-        </Button>
+          {getButtonText()}
+        </div>
 
         <div className="plane-features">
-          <Divider className="mt-2 mb-4" />
-          {(features || [])?.map((feature, index) => (
-            <div className="plane-features-item" key={index}>
-              <div className="text-gray-500 dark:text-gray-400">
-                <CheckOutlined style={{ color: 'green', strokeWidth: 6 }} /> {feature.name}
-                {feature.tooltip && (
-                  <Tooltip title={<div>{feature.tooltip}</div>}>
-                    <QuestionCircleOutlined className="ml-1" />
-                  </Tooltip>
-                )}
-              </div>
-              {feature.count && (
-                <div className="ml-4 text-sm text-black font-medium dark:text-gray-100">
-                  {feature.count}
-                </div>
-              )}
-              <div className="ml-4 text-xs text-gray-400">{feature.details}</div>
-            </div>
-          ))}
+          {features.map((feature, index) => {
+            const parts = feature.name.split('\n');
+            const name = parts[0];
+            const description = parts.length > 1 ? parts.slice(1).join('\n') : null;
 
-          <Divider className="my-4" />
-          {(capabilities || [])?.map((capability, index) => (
-            <div className="py-2 text-gray-600 dark:text-gray-300" key={index}>
-              <FaLightbulb className="text-yellow-500 mr-1" size={12} />
-              <span>{capability.before}</span>
-              <span className="font-bold text-black dark:text-gray-100">
-                {capability.highlight}
-              </span>
-              <span>{capability.after}</span>
-            </div>
-          ))}
+            return (
+              <div className="plane-features-item" key={index}>
+                {feature.type === 'coming-soon' ? <HourglassOutlined /> : <CheckOutlined />}
+                <div className="plane-features-item-text">
+                  <span className={!description ? 'feature-description' : 'feature-name'}>
+                    {name}
+                  </span>
+                  {description && <span className="feature-description">{description}</span>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -242,9 +197,9 @@ const PlanItem = (props: {
 };
 
 export const PriceContent = (props: { source: PriceSource }) => {
+  const { t } = useTranslation('ui');
   const navigate = useNavigate();
   const { source } = props;
-  const { t } = useTranslation();
   const { setSubscribeModalVisible: setVisible } = useSubscriptionStoreShallow((state) => ({
     setSubscribeModalVisible: state.setSubscribeModalVisible,
   }));
@@ -255,6 +210,22 @@ export const PriceContent = (props: { source: PriceSource }) => {
     isLogin: state.isLogin,
   }));
 
+  const plansData = useMemo(() => {
+    const planTypes = ['free', 'starter', 'maker', 'enterprise'];
+    const data = {};
+    for (const planType of planTypes) {
+      data[planType] = {
+        title: t(`subscription.plans.${planType}.title`),
+        titleCn: t(`subscription.plans.${planType}.titleCn`),
+        description: t(`subscription.plans.${planType}.description`),
+        features: (
+          (t(`subscription.plans.${planType}.features`, { returnObjects: true }) as string[]) || []
+        ).map((name) => ({ name })),
+      };
+    }
+    return data;
+  }, [t]);
+
   const [interval, setInterval] = useState<SubscriptionInterval>('yearly');
   const [loadingInfo, setLoadingInfo] = useState<{
     isLoading: boolean;
@@ -264,145 +235,43 @@ export const PriceContent = (props: { source: PriceSource }) => {
     plan: '',
   });
 
-  const t1ModelName = t('settings.subscription.t1Requests');
-  const t2ModelName = t('settings.subscription.t2Requests');
-  const t1ModalTooltipContent = t('settings.subscription.t1RequestsDescription');
-  const t2ModalTooltipContent = t('settings.subscription.t2RequestsDescription');
-  const libraryStorage = t('settings.subscription.libraryStorage');
-  const libraryTooltipContent = t('settings.subscription.libraryStorageDescription');
-  const advancedFileParsing = t('settings.subscription.advancedFileParsing');
-  const advancedFileParsingTooltip = t('settings.subscription.advancedFileParsingDescription');
-  const fileSizeLimitName = t('settings.subscription.fileSizeLimit');
+  const createCheckoutSession = async (plan: string) => {
+    if (loadingInfo.isLoading) return;
 
-  const unlimited = t('settings.subscription.subscribe.unlimited');
+    const planType = plan as SubscriptionPlanType;
 
-  const createFeatures = (plan: 'free' | 'plus' | 'pro' | 'max'): ModelFeatures[] => {
-    const configs = {
-      free: {
-        t1Count: 5,
-        t2Count: 50,
-        fileLimit: 100,
-        t1Period: 'daily',
-        t2Period: 'daily',
-        fileParseLimit: 50,
-        fileSizeLimit: 5,
-      },
-      plus: {
-        t1Count: 100,
-        t2Count: 1500,
-        fileLimit: 200,
-        t1Period: 'monthly',
-        t2Period: 'monthly',
-        fileParseLimit: 100,
-        fileSizeLimit: 10,
-      },
-      pro: {
-        t1Count: 300,
-        t2Count: 3000,
-        fileLimit: 500,
-        t1Period: 'monthly',
-        t2Period: 'monthly',
-        fileParseLimit: 300,
-        fileSizeLimit: 20,
-      },
-      max: {
-        t1Count: 600,
-        t2Count: 6000,
-        fileLimit: 2000,
-        t1Period: 'monthly',
-        t2Period: 'monthly',
-        fileParseLimit: 1000,
-        fileSizeLimit: 30,
-      },
-    };
-
-    const config = configs[plan];
-    return [
-      ...(config.t1Count !== 0
-        ? [
-            {
-              name: t1ModelName,
-              count:
-                config.t1Count === -1
-                  ? unlimited
-                  : t(`settings.subscription.subscribe.${config.t1Period}Counts`, {
-                      count: config.t1Count,
-                    }),
-              details: premiumModels,
-              tooltip: t1ModalTooltipContent,
-            },
-          ]
-        : []),
-      {
-        name: t2ModelName,
-        count:
-          config.t2Count === -1
-            ? unlimited
-            : t(`settings.subscription.subscribe.${config.t2Period}Counts`, {
-                count: config.t2Count,
-              }),
-        details: basicModels,
-        tooltip: t2ModalTooltipContent,
-      },
-      {
-        name: libraryStorage,
-        count: t('settings.subscription.subscribe.fileCounts', { count: config.fileLimit }),
-        tooltip: libraryTooltipContent,
-      },
-      {
-        name: advancedFileParsing,
-        count: t('settings.subscription.subscribe.dailyPagesCount', {
-          count: config.fileParseLimit,
-        }),
-        tooltip: advancedFileParsingTooltip,
-      },
-      {
-        name: fileSizeLimitName,
-        count: t('settings.subscription.subscribe.fileSizeLimit', {
-          count: config.fileSizeLimit,
-        }),
-        tooltip: t('settings.subscription.fileSizeLimitDescription', {
-          size: config.fileSizeLimit,
-        }),
-      },
-      {
-        name: t(`settings.subscription.subscribe.${plan}.serviceSupport.name`),
-        count: t(`settings.subscription.subscribe.${plan}.serviceSupport.details`),
-      },
-    ];
+    setLoadingInfo({ isLoading: true, plan });
+    try {
+      const res = await getClient().createCheckoutSession({
+        body: {
+          planType,
+          interval: interval,
+        },
+      });
+      if (res.data?.data?.url) {
+        window.location.href = res.data.data.url;
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+    } finally {
+      setLoadingInfo({ isLoading: false, plan: '' });
+    }
   };
 
-  const freeFeatures = createFeatures('free');
-  const plusFeatures = createFeatures('plus');
-  const proFeatures = createFeatures('pro');
-  const maxFeatures = createFeatures('max');
+  const handleContactSales = () => {
+    // Replace with actual contact logic, e.g., open a contact form/modal or mailto link
+    window.location.href = 'mailto:sales@refly.ai';
+  };
 
-  const freeCapabilities = t('priceContent.freeCapabilities', {
-    returnObjects: true,
-  }) as Capability[];
-  const premiumCapabilities = t('priceContent.premiumCapabilities', {
-    returnObjects: true,
-  }) as Capability[];
-
-  const createCheckoutSession = async (plan: SubscriptionPlanType) => {
-    if (loadingInfo.isLoading) return;
-    setLoadingInfo({
-      isLoading: true,
-      plan,
-    });
-    const { data } = await getClient().createCheckoutSession({
-      body: {
-        planType: plan,
-        interval: interval,
-      },
-    });
-    setLoadingInfo({
-      isLoading: false,
-      plan: '',
-    });
-
-    if (data?.data?.url) {
-      window.location.href = data.data.url;
+  const handleFreeClick = () => {
+    if (isLogin) {
+      if (source === 'modal') {
+        setVisible(false);
+      } else {
+        navigate('/', { replace: true });
+      }
+    } else {
+      setLoginModalOpen(true);
     }
   };
 
@@ -414,82 +283,53 @@ export const PriceContent = (props: { source: PriceSource }) => {
             className={`subscribe-content-type-inner-item ${interval === 'yearly' ? 'active' : ''}`}
             onClick={() => setInterval('yearly')}
           >
-            <span>{t('settings.subscription.subscribe.yearly')}</span>
+            <span>{t('subscription.yearly')}</span>{' '}
+            <Tag color="orange">{t('subscription.save20')}</Tag>
           </div>
 
           <div
             className={`subscribe-content-type-inner-item ${interval === 'monthly' ? 'active' : ''}`}
             onClick={() => setInterval('monthly')}
           >
-            {t('settings.subscription.subscribe.monthly')}
+            {t('subscription.monthly')}
           </div>
         </div>
       </div>
 
-      <Row gutter={[4, 4]} className="subscribe-content-plans" justify="center" align="stretch">
-        <Col {...gridSpan}>
-          <PlanItem
-            title="free"
-            features={freeFeatures}
-            capabilities={freeCapabilities}
-            handleClick={() => {
-              isLogin
-                ? source === 'modal'
-                  ? setVisible(false)
-                  : navigate('/', { replace: true })
-                : setLoginModalOpen(true);
-            }}
-            interval={interval}
-            loadingInfo={loadingInfo}
-          />
-        </Col>
-
-        <Col {...gridSpan}>
-          <PlanItem
-            title="plus"
-            features={plusFeatures}
-            capabilities={premiumCapabilities}
-            handleClick={() => createCheckoutSession('plus')}
-            interval={interval}
-            loadingInfo={loadingInfo}
-          />
-        </Col>
-
-        <Col {...gridSpan}>
-          <PlanItem
-            title="pro"
-            features={proFeatures}
-            capabilities={premiumCapabilities}
-            handleClick={() => createCheckoutSession('pro')}
-            interval={interval}
-            loadingInfo={loadingInfo}
-          />
-        </Col>
-
-        <Col {...gridSpan}>
-          <PlanItem
-            title="max"
-            features={maxFeatures}
-            capabilities={premiumCapabilities}
-            handleClick={() => createCheckoutSession('max')}
-            interval={interval}
-            loadingInfo={loadingInfo}
-          />
-        </Col>
+      <Row gutter={[16, 16]} className="subscribe-content-plans" justify="center" align="stretch">
+        {Object.keys(plansData).map((planType) => (
+          <Col {...gridSpan} key={planType}>
+            <PlanItem
+              planType={planType}
+              title={plansData[planType].title}
+              description={plansData[planType].description}
+              features={plansData[planType].features}
+              handleClick={() => {
+                if (planType === 'free') {
+                  handleFreeClick();
+                } else if (planType === 'enterprise') {
+                  handleContactSales();
+                } else {
+                  createCheckoutSession(planType);
+                }
+              }}
+              interval={interval}
+              loadingInfo={loadingInfo}
+            />
+          </Col>
+        ))}
       </Row>
 
-      {isLogin && (
-        <div className="subscribe-content-description">
-          {t('settings.subscription.subscribe.description')}{' '}
-          <a href="https://docs.refly.ai/about/privacy-policy" target="_blank" rel="noreferrer">
-            {t('settings.subscription.subscribe.privacy')}
-          </a>{' '}
-          {t('settings.subscription.subscribe.and')}{' '}
-          <a href="https://docs.refly.ai/about/terms-of-service" target="_blank" rel="noreferrer">
-            {t('settings.subscription.subscribe.terms')}
-          </a>
-        </div>
-      )}
+      <div className="subscribe-content-description">
+        {t('subscription.cancelAnytime')}{' '}
+        <a href="https://docs.refly.ai/about/privacy-policy" target="_blank" rel="noreferrer">
+          {t('subscription.privacy')}
+        </a>{' '}
+        和{' '}
+        <a href="https://docs.refly.ai/about/terms-of-service" target="_blank" rel="noreferrer">
+          {t('subscription.terms')}
+        </a>
+      </div>
     </div>
   );
 };

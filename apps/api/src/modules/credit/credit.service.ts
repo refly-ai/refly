@@ -158,11 +158,24 @@ export class CreditService {
     const records = await this.prisma.creditRecharge.findMany({
       where: {
         uid: user.uid,
+      },
+      select: {
+        rechargeId: true,
+        uid: true,
+        amount: true,
+        balance: true,
         enabled: true,
+        source: true,
+        description: true,
+        expiresAt: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
     return records.map((record) => ({
       ...record,
+      amount: Number(record.amount), // Convert BigInt to number
+      balance: Number(record.balance), // Convert BigInt to number
       source: record.source as 'purchase' | 'gift' | 'promotion' | 'refund',
       expiresAt: record.expiresAt.toISOString(),
       createdAt: record.createdAt.toISOString(),
@@ -175,9 +188,22 @@ export class CreditService {
       where: {
         uid: user.uid,
       },
+      select: {
+        usageId: true,
+        uid: true,
+        amount: true,
+        providerItemId: true,
+        modelName: true,
+        usageType: true,
+        actionResultId: true,
+        pilotSessionId: true,
+        description: true,
+        createdAt: true,
+      },
     });
     return records.map((record) => ({
       ...record,
+      amount: Number(record.amount), // Convert BigInt to number
       usageType: record.usageType as
         | 'model_call'
         | 'media_generation'
@@ -198,6 +224,10 @@ export class CreditService {
           gt: new Date(), // Not expired
         },
       },
+      select: {
+        amount: true,
+        balance: true,
+      },
       orderBy: {
         expiresAt: 'asc',
       },
@@ -205,16 +235,16 @@ export class CreditService {
 
     // Calculate total balance and total amount
     const totalBalance = activeRecharges.reduce((sum, record) => {
-      return sum + record.balance;
+      return sum + Number(record.balance); // Convert BigInt to number
     }, 0);
 
     const totalAmount = activeRecharges.reduce((sum, record) => {
-      return sum + record.amount;
+      return sum + Number(record.amount); // Convert BigInt to number
     }, 0);
 
     return {
       creditAmount: totalAmount,
-      creditUsage: totalBalance,
+      creditBalance: totalBalance, // 修复字段名以匹配OpenAPI schema
     };
   }
 }

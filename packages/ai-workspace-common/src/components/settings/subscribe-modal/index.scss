@@ -9,35 +9,37 @@
     justify-content: center;
     align-items: center;
     overflow: hidden;
+
+    background: linear-gradient(
+        124deg,
+        rgba(31, 201, 150, 0.1) 0%,
+        rgba(69, 190, 255, 0.06) 24.85%
+      ),
+      var(--bg---refly-bg-body-z0, #fff);
     .ant-modal-body {
       width: 100%;
-      padding: 24px 0;
+      padding: 40px 0; // Increased padding
       max-height: 100vh;
       overflow-y: auto;
+    }
+    .ant-modal-close {
+      top: 20px;
+      right: 20px;
+      color: var(--text-icon-refly-text-2, #6b7280);
+
+      &:hover {
+        color: var(--text-icon-refly-text-0, #111827);
+      }
     }
   }
 }
 
 .subscribe-content {
-  &-title {
-    font-size: 30px;
-    line-height: 38px;
-    color: #000;
-    font-weight: 600;
-    text-align: center;
-  }
-
-  &-subtitle {
-    margin-top: 8px;
-    font-size: 16px;
-    line-height: 24px;
-    color: rgb(242 103 37);
-    font-weight: 600;
-    text-align: center;
-  }
+  max-width: 1200px;
+  margin: 0 auto;
 
   &-type {
-    margin-top: 8px;
+    margin-top: 24px;
     display: flex;
     justify-content: center;
 
@@ -45,162 +47,227 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 40px;
+      height: 36px;
       padding: 4px;
       box-sizing: border-box;
-      border-radius: 8px;
-      background: #f5f5f5;
-      border: 1px solid #e5e5e5;
+      border-radius: 18px;
+      background-color: var(--bg-refly-bg-subtle, #f3f4f6);
 
       &-item {
-        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 120px;
+        min-width: 100px;
         height: 100%;
-        border-radius: 8px;
+        border-radius: 18px;
         cursor: pointer;
-        font-size: 16px;
-        line-height: 24px;
-        color: #000;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 0 16px;
+        color: var(--text-icon-refly-text-2, #6b7280); // Softer text color for inactive item
+        transition: all 0.3s ease;
+
+        .ant-tag {
+          color: var(--functional-refly-functional-orange-6-default, #fa8c16);
+          background: var(--functional-refly-functional-orange-1-light, #fff7e6);
+          border-color: var(--functional-refly-functional-orange-3-light, #ffd591);
+          border-radius: 4px;
+          margin-left: 8px;
+        }
+
         &.active {
-          color: #fff;
-          background: #00968f;
+          color: var(--text-icon-refly-text-0, #111827); // Dark text for active item
+          background: var(
+            --bg-refly-bg-container,
+            #fff
+          ); // White background for active item
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); // Subtle shadow for depth
         }
       }
     }
   }
 
   &-plans {
-    margin-top: 20px;
+    margin-top: 32px;
     padding: 12px;
-    display: flex;
-    gap: 12px;
     justify-content: center;
     border-radius: 12px;
 
     .pro-plan {
-      padding: 0 2px 2px 2px;
       border-radius: 12px;
-      background: rgba(0, 150, 143, 0.8);
+      // Apply border to the outer container to wrap the 'Most Popular' tag
+      border: 2px solid var(--primary---refly-primary-default, #0e9f77);
+      // Update box-shadow to match the new design
+      box-shadow: 0px 4px 12px 0px rgba(14, 159, 119, 0.2);
+
+      // The inner item should not have its own border
+      .subscribe-content-plans-item {
+        border: none;
+      }
     }
 
     &-item {
       flex: 1;
-      border-radius: 12px;
-      padding: 28px;
+      border-radius: 10px;
+      padding: 24px;
       box-sizing: border-box;
-      border: 1px solid transparent;
+      border: 1px solid #e5e5e5;
+      background-color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
 
       &-title {
         font-size: 18px;
-        line-height: 32px;
-        color: #000;
-      }
-
-      &.item-free {
-        &:hover {
-          box-shadow: #e5e5e5 0px 0px 0px 2px;
-        }
-      }
-
-      &.item-plus {
-        &:hover {
-          box-shadow: rgb(0, 134, 201) 0px 0px 0px 2px;
-        }
-        .subscribe-content-plans-item-title {
-          color: #016aa2;
-        }
-      }
-
-      &.item-pro {
-        .subscribe-content-plans-item-title {
-          color: #00968f;
-        }
-      }
-
-      &.item-max {
-        &:hover {
-          box-shadow: rgb(232, 178, 102) 0px 0px 0px 2px;
-        }
-        .subscribe-content-plans-item-title {
-          color: #f26725;
-        }
-      }
-
-      &-price {
-        font-size: 36px;
-        line-height: 50px;
-        color: #000;
-        font-weight: 800;
-        height: 48px;
-        margin-top: 12px;
-
+        font-weight: 600;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .description {
-        height: 36px;
+        margin-top: 4px;
         font-size: 14px;
-        line-height: 18px;
-        color: rgb(107 114 128);
+        color: #6b7280;
+        height: auto;
+        min-height: 20px; // Ensure consistent height
+      }
+
+      .price-section {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+
+        color: var(--text-icon-refly-text-0, #1c1f23);
+
+        /* 超大标题 */
+        font-family: "PingFang SC";
+        font-size: 22px;
+        font-style: normal;
+        font-weight: 600;
+        line-height: 32px; /* 145.455% */
+
+        .yearly-price-container {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          .price-monthly {
+            font-size: 24px;
+            line-height: 1.2;
+          }
+          .price-yearly {
+            font-size: 12px;
+            font-weight: 400;
+            color: #6b7280;
+
+            color: var(--text-icon-refly-text-0, #1c1f23);
+
+            /* 辅助文本-12-bold */
+            font-family: "PingFang SC";
+            font-size: 12px;
+            font-style: normal;
+            font-weight: 600;
+            line-height: 16px; /* 133.333% */
+            margin-top: 4px;
+          }
+        }
       }
 
       .subscribe-btn {
-        margin: 20px 0;
+        margin: 24px 0;
         height: 40px;
         width: 100%;
-        font-size: 16px;
-        line-height: 24px;
+        font-size: 14px;
         font-weight: 600;
-        background: transparent;
-        padding: 0 12px !important;
+        border-radius: 8px;
+        transition: all 0.3s ease;
 
-        &--free {
-          background: transparent;
+        display: flex;
+        height: var(--height-button_default, 32px);
+        padding: var(--spacing-button_default-paddingTop, 6px)
+          var(--spacing-button_default-paddingRight, 12px)
+          var(--spacing-button_default-paddingTop, 6px)
+          var(--spacing-button_default-paddingLeft, 12px);
+        justify-content: center;
+        align-items: center;
+        align-self: stretch;
+
+        &--most-popular {
+          border-radius: 8px;
+          border: 0px solid
+            var(--border---refly-Card-Border, rgba(0, 0, 0, 0.1));
+          background: var(--primary---refly-primary-default, #0e9f77);
+          color: var(--fill---refly-fill-StaticWhite, #fff);
+
+          font-family: "PingFang SC";
+          font-size: 14px;
+          font-style: normal;
+          font-weight: 600;
+          line-height: 20px;
         }
 
-        &--plus {
-          border: 1px solid #016aa2;
-          &.ant-btn-default {
-            &:hover {
-              background: linear-gradient(to right, #068cd4, #016aa2);
-              color: #fff;
-              border-color: #068cd4;
-            }
-          }
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+        color: var(--primary---refly-primary-default, #0e9f77);
+        font-family: "PingFang SC";
+        font-size: 14px;
+        font-style: normal;
+        font-weight: 600;
+        line-height: 20px;
+
+        &:disabled {
+          background-color: #f3f4f6;
+          color: #9ca3af;
+          border-color: #d1d5db;
         }
 
-        &--pro {
-          background: linear-gradient(to right, #00a49c, #02857f);
-          color: #fff;
-          border-color: #00968f;
-          &.ant-btn-default {
-            &:hover {
-              background: linear-gradient(to right, #00b7ae, #009d95);
-              color: #fff;
-              border-color: #068cd4;
-            }
-          }
-        }
-
-        &--max {
-          border: 1px solid #f26725;
-          &.ant-btn-default {
-            &:hover {
-              background: linear-gradient(to right, #f7a985, #d34b0c);
-              color: #fff;
-              border-color: #f7a985;
-            }
-          }
+        &:hover:not(:disabled) {
+          background-color: #e5e7eb;
+          border-color: #9ca3af;
         }
       }
 
       .plane-features {
+        flex-grow: 1;
+
         &-item {
-          margin-bottom: 8px;
-          font-size: 12px;
-          font-weight: 500;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          color: #374151;
+
+          .anticon-check,
+          .anticon-hourglass {
+            color: #00968f;
+            margin-top: 3px; // Adjust for vertical alignment
+          }
+
+          .plane-features-item-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.4; // Improve readability
+
+            .feature-name {
+              color: var(--text-icon-refly-text-1, rgba(28, 31, 35, 0.8));
+
+              font-size: 12px;
+              font-weight: 400;
+              line-height: 16px;
+            }
+
+            .feature-description {
+              margin-top: 4px;
+              color: var(--text-icon-refly-text-0, #1c1f23);
+
+              font-size: 14px;
+              font-weight: 600;
+              line-height: 20px;
+            }
+          }
+
           &:last-child {
             margin-bottom: 0;
           }
@@ -211,9 +278,15 @@
 
   &-description {
     text-align: center;
-    margin-top: 20px;
-    font-size: 14px;
-    line-height: 24px;
-    color: rgb(107 114 128);
+    margin-top: 32px;
+    font-size: 12px;
+    color: #9ca3af;
+    a {
+      color: #6b7280;
+      text-decoration: underline;
+      &:hover {
+        color: #111827;
+      }
+    }
   }
 }

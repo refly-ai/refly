@@ -14,5 +14,5 @@ export interface SyncTokenCreditUsageJobData {
 
 export interface CreditBalance {
   creditAmount: number;
-  creditUsage: number;
+  creditBalance: number;
 }
