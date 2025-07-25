@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, message, Upload, UploadProps } from 'antd';
+import { Button, message, Upload, UploadProps, List, Avatar, Spin } from 'antd';
 import { TbFile } from 'react-icons/tb';
 import { RiInboxArchiveLine } from 'react-icons/ri';
 import { useImportResourceStoreShallow } from '@refly/stores';
@@ -19,6 +19,7 @@ import { subscriptionEnabled } from '@refly/ui-kit';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useUpdateSourceList } from '@refly-packages/ai-workspace-common/hooks/canvas/use-update-source-list';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { HiLink, HiOutlineXMark } from 'react-icons/hi2';
 
 const { Dragger } = Upload;
 
@@ -28,9 +29,35 @@ interface FileItem {
   storageKey: string;
   uid?: string;
   status?: 'uploading' | 'done' | 'error';
+  isHandled?: boolean;
+  isError?: boolean;
+  key?: string;
+  image?: string;
+  description?: string;
 }
 
-const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx', '.rtf', '.txt', '.md', '.html', '.epub'];
+const ALLOWED_FILE_EXTENSIONS = [
+  // Document Type
+  '.pdf',
+  '.docx',
+  '.rtf',
+  '.txt',
+  '.md',
+  '.html',
+  '.epub',
+  // media type
+  '.mp4',
+  '.webm',
+  '.mov',
+  '.avi',
+  '.mkv',
+  // audio type
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.aac',
+];
 
 export const ImportFromFile = () => {
   const { t } = useTranslation();
@@ -79,6 +106,29 @@ export const ImportFromFile = () => {
     return { url: '', storageKey: '', uid };
   };
 
+  const validateMediaFile = (file: File) => {
+    const isVideo = file.type.startsWith('video/');
+    const isAudio = file.type.startsWith('audio/');
+
+    if (!isVideo && !isAudio) {
+      return true; // No media file, just return true
+    }
+
+    // limit video file size to 100MB
+    if (isVideo && file.size / 1024 / 1024 > 100) {
+      message.error(t('resource.import.videoTooLarge', { size: '100MB' }));
+      return false;
+    }
+
+    // limit audio file size to 50MB
+    if (isAudio && file.size / 1024 / 1024 > 50) {
+      message.error(t('resource.import.audioTooLarge', { size: '50MB' }));
+      return false;
+    }
+
+    return true;
+  };
+
   const props: UploadProps = {
     name: 'file',
     multiple: true,
@@ -92,6 +142,10 @@ export const ImportFromFile = () => {
     beforeUpload: async (file: File) => {
       if (uploadLimit > 0 && file.size > maxFileSizeBytes) {
         message.error(t('resource.import.fileTooLarge', { size: maxFileSize }));
+        return Upload.LIST_IGNORE;
+      }
+
+      if (!validateMediaFile(file)) {
         return Upload.LIST_IGNORE;
       }
 
@@ -217,6 +271,72 @@ export const ImportFromFile = () => {
     setStorageFileList(fileList);
   }, [fileList, setStorageFileList]);
 
+  const RenderItem = (props: { item: FileItem }) => {
+    const importResourceStore = useImportResourceStoreShallow((state) => ({
+      fileList: state.fileList,
+      setFileList: state.setFileList,
+    }));
+    const { item } = props;
+    const { t } = useTranslation();
+
+    return (
+      <Spin spinning={!item.isHandled && !item.isError} style={{ width: '100%', minHeight: 80 }}>
+        <List.Item
+          actions={[
+            <Button
+              key={item.uid}
+              type="text"
+              className="assist-action-item"
+              onClick={() => {
+                window.open(item?.url, '_blank');
+              }}
+            >
+              <HiLink />
+            </Button>,
+            <Button
+              key={item.uid}
+              type="text"
+              className="assist-action-item"
+              onClick={() => {
+                const newLinks = importResourceStore?.fileList?.filter((link) => {
+                  return link?.uid !== item?.uid;
+                });
+                importResourceStore.setFileList(newLinks);
+              }}
+            >
+              <HiOutlineXMark strokeWidth={2} />
+            </Button>,
+          ]}
+          className="intergation-result-list-item"
+        >
+          <List.Item.Meta
+            avatar={<Avatar src={item.image} />}
+            title={
+              <div className="intergation-result-intro">
+                <p>
+                  <span
+                    className="intergation-result-url"
+                    onClick={() => window.open(item?.url, '_blank')}
+                  >
+                    {item?.url}
+                  </span>
+                </p>
+                <p>
+                  {item?.isError ? (
+                    <span className="text-red-500">{t('resource.import.scrapeError')}</span>
+                  ) : (
+                    item?.title
+                  )}
+                </p>
+              </div>
+            }
+            description={item.description}
+          />
+        </List.Item>
+      </Spin>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col min-w-[500px] box-border intergation-import-from-weblink">
       {/* header */}
@@ -256,6 +376,13 @@ export const ImportFromFile = () => {
               </div>
             )}
           </Dragger>
+          {fileList?.length > 0 && (
+            <List
+              className="mt-4"
+              dataSource={fileList}
+              renderItem={(item) => <RenderItem item={item} />}
+            />
+          )}
         </div>
       </div>
 
