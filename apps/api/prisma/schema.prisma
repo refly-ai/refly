@@ -940,37 +940,39 @@ model ProviderItem {
 
 model SubscriptionPlan {
   /// Primary key
-  pk                 BigInt   @id @default(autoincrement())
+  pk                   BigInt   @id @default(autoincrement())
   /// Subscription plan type
-  planType           String   @map("plan_type")
+  planType             String   @map("plan_type")
   /// Billing interval (monthly, yearly, etc.)
-  interval           String?  @map("interval")
+  interval             String?  @map("interval")
   /// Lookup key
-  lookupKey          String   @map("lookup_key")
+  lookupKey            String   @map("lookup_key")
   /// Credit quota
-  creditQuota        Int      @default(0) @map("credit_quota")
+  creditQuota          Int      @default(0) @map("credit_quota")
+  /// Daily gift credit quota
+  dailyGiftCreditQuota Int      @default(0) @map("daily_gift_credit_quota")
   /// Request count quota (T1)
-  t1CountQuota       Int      @default(0) @map("t1_count_quota")
+  t1CountQuota         Int      @default(0) @map("t1_count_quota")
   /// Request count quota (T2)
-  t2CountQuota       Int      @default(0) @map("t2_count_quota")
+  t2CountQuota         Int      @default(0) @map("t2_count_quota")
   /// Token quota per month (T1) (Deprecated)
-  t1TokenQuota       Int      @default(0) @map("t1_token_quota")
+  t1TokenQuota         Int      @default(0) @map("t1_token_quota")
   /// Token quota per month (T2) (Deprecated)
-  t2TokenQuota       Int      @default(1000000) @map("t2_token_quota")
+  t2TokenQuota         Int      @default(1000000) @map("t2_token_quota")
   /// File count quota
-  fileCountQuota     Int      @default(10) @map("file_count_quota")
+  fileCountQuota       Int      @default(10) @map("file_count_quota")
   /// Object storage quota (in bytes), including resource, canvas and static files
-  objectStorageQuota BigInt   @default(1000000000) @map("object_storage_quota")
+  objectStorageQuota   BigInt   @default(1000000000) @map("object_storage_quota")
   /// Vector storage quota (in bytes)
-  vectorStorageQuota BigInt   @default(1000000000) @map("vector_storage_quota")
+  vectorStorageQuota   BigInt   @default(1000000000) @map("vector_storage_quota")
   /// File parse limit (in pages)
-  fileParsePageLimit Int      @default(-1) @map("file_parse_page_limit")
+  fileParsePageLimit   Int      @default(-1) @map("file_parse_page_limit")
   /// File upload limit (in MB)
-  fileUploadLimit    Int      @default(-1) @map("file_upload_limit")
+  fileUploadLimit      Int      @default(-1) @map("file_upload_limit")
   /// Create timestamp
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@unique([planType, interval])
   @@map("subscription_plans")

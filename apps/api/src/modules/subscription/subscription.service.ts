@@ -587,8 +587,10 @@ export class SubscriptionService implements OnModuleInit {
           this.logger.log(`Disabled ${activeRecharges.length} credit recharge records`);
         }
 
-        // Step 3: Process subscription-based recharges
-        const subscriptionRecharges = activeRecharges.filter((r) => r.source === 'subscription');
+        // Step 3: Process subscription-based and gift recharges
+        const subscriptionRecharges = activeRecharges.filter(
+          (r) => r.source === 'subscription' || r.source === 'gift',
+        );
 
         for (const recharge of subscriptionRecharges) {
           try {
@@ -604,47 +606,70 @@ export class SubscriptionService implements OnModuleInit {
               },
             });
 
-            if (subscription) {
-              // Find plan quota for credit amount
-              let plan: PlanQuota | null = null;
-              if (subscription.overridePlan) {
-                plan = safeParseJSON(subscription.overridePlan) as PlanQuota;
-              }
-              if (!plan) {
-                const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
-                  where: {
-                    planType: subscription.planType,
-                    interval: subscription.interval,
-                  },
-                });
-                if (subscriptionPlan) {
-                  plan = {
-                    creditQuota: subscriptionPlan.creditQuota,
-                    t1CountQuota: subscriptionPlan.t1CountQuota,
-                    t2CountQuota: subscriptionPlan.t2CountQuota,
-                    fileCountQuota: subscriptionPlan.fileCountQuota,
-                  };
-                }
-              }
-
-              // Create new credit recharge record if plan has credit quota
-              if (plan && plan.creditQuota > 0) {
-                const newExpiresAt = new Date();
-                newExpiresAt.setDate(newExpiresAt.getDate() + 30); // 30 days from now
-
-                await this.createCreditRecharge(
-                  prisma,
-                  recharge.uid,
-                  plan.creditQuota,
-                  newExpiresAt,
-                  'subscription',
-                  `Monthly subscription credit recharge for plan ${subscription.planType}`,
-                  now,
-                );
-              }
-            } else {
+            if (!subscription) {
               this.logger.log(
                 `No active subscription found for user ${recharge.uid}, skipping credit recharge`,
+              );
+              continue;
+            }
+
+            // Find plan quota for credit amount
+            let plan: PlanQuota | null = null;
+            if (subscription.overridePlan) {
+              plan = safeParseJSON(subscription.overridePlan) as PlanQuota;
+            }
+            if (!plan) {
+              const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
+                where: {
+                  planType: subscription.planType,
+                  interval: subscription.interval,
+                },
+              });
+              if (subscriptionPlan) {
+                plan = {
+                  creditQuota: subscriptionPlan.creditQuota,
+                  dailyGiftCreditQuota: subscriptionPlan.dailyGiftCreditQuota,
+                  t1CountQuota: subscriptionPlan.t1CountQuota,
+                  t2CountQuota: subscriptionPlan.t2CountQuota,
+                  fileCountQuota: subscriptionPlan.fileCountQuota,
+                };
+              }
+            }
+
+            if (!plan) {
+              this.logger.log(`No plan found for user ${recharge.uid}, skipping credit recharge`);
+              continue;
+            }
+
+            // Handle subscription source - monthly recharge with creditQuota
+            if (recharge.source === 'subscription' && plan.creditQuota > 0) {
+              const newExpiresAt = new Date();
+              newExpiresAt.setMonth(newExpiresAt.getMonth() + 1);
+
+              await this.createCreditRecharge(
+                prisma,
+                recharge.uid,
+                plan.creditQuota,
+                newExpiresAt,
+                'subscription',
+                `Monthly subscription credit recharge for plan ${subscription.planType}`,
+                now,
+              );
+            }
+
+            // Handle gift source - daily recharge with dailyGiftCreditQuota
+            if (recharge.source === 'gift' && plan.dailyGiftCreditQuota > 0) {
+              const newExpiresAt = new Date();
+              newExpiresAt.setDate(newExpiresAt.getDate() + 1);
+
+              await this.createCreditRecharge(
+                prisma,
+                recharge.uid,
+                plan.dailyGiftCreditQuota,
+                newExpiresAt,
+                'gift',
+                `Daily gift credit recharge for plan ${subscription.planType}`,
+                now,
               );
             }
           } catch (error) {

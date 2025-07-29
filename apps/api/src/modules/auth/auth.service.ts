@@ -12,6 +12,7 @@ import {
   ACCESS_TOKEN_COOKIE,
   genUID,
   genVerificationSessionID,
+  genCreditRechargeId,
   omit,
   pick,
   REFRESH_TOKEN_COOKIE,
@@ -364,6 +365,40 @@ export class AuthService {
 
   private async postCreateUser(user: User) {
     await this.providerService.prepareGlobalProviderItemsForUser(user);
+
+    // Create initial credit recharge for new user (free plan)
+    const now = new Date();
+    const expiresAt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // 1 day from now
+
+    // Priority: first get credit quota from database for free plan, then from config
+    let creditAmount = this.configService.get('quota.credit') ?? 100; // Default fallback
+
+    const freePlan = await this.prisma.subscriptionPlan.findFirst({
+      where: { planType: 'free' },
+    });
+
+    if (freePlan?.creditQuota) {
+      creditAmount = freePlan.creditQuota;
+    }
+
+    await this.prisma.creditRecharge.create({
+      data: {
+        rechargeId: genCreditRechargeId(),
+        uid: user.uid,
+        amount: creditAmount,
+        balance: creditAmount,
+        enabled: true,
+        source: 'gift',
+        description: 'Initial free plan credit recharge for new user',
+        createdAt: now,
+        updatedAt: now,
+        expiresAt,
+      },
+    });
+
+    this.logger.log(
+      `Created initial credit recharge for user ${user.uid}: ${creditAmount} credits, expires at ${expiresAt.toISOString()}`,
+    );
   }
 
   async emailLogin(email: string, password: string) {

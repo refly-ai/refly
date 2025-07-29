@@ -32,6 +32,9 @@ export class CreditService {
           balance: {
             gt: 0, // Only records with positive balance
           },
+          expiresAt: {
+            gte: new Date(),
+          },
         },
         orderBy: {
           createdAt: 'asc', // Order by creation time (oldest first)
@@ -61,50 +64,6 @@ export class CreditService {
   }
 
   /**
-   * Check if user has outstanding debt before allowing usage
-   */
-  private async checkUserDebt(uid: string): Promise<{ hasDebt: boolean; totalDebt: number }> {
-    const activeDebts = await this.prisma.creditDebt.findMany({
-      where: {
-        uid,
-        enabled: true,
-        balance: {
-          gt: 0,
-        },
-      },
-    });
-
-    const totalDebt = activeDebts.reduce((sum, debt) => sum + debt.balance, 0);
-    return {
-      hasDebt: totalDebt > 0,
-      totalDebt,
-    };
-  }
-
-  /**
-   * Create a debt record when credits are insufficient
-   */
-  private async createDebtRecord(
-    uid: string,
-    debtAmount: number,
-    description?: string,
-  ): Promise<void> {
-    await this.prisma.creditDebt.create({
-      data: {
-        debtId: genCreditDebtId(),
-        uid,
-        amount: debtAmount,
-        balance: debtAmount,
-        enabled: true,
-        source: 'usage_overdraft',
-        description,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-  }
-
-  /**
    * Deduct credits from user's recharge records and create usage record
    * If insufficient credits, create debt record instead of negative balance
    */
@@ -124,6 +83,9 @@ export class CreditService {
       where: {
         uid,
         enabled: true,
+        expiresAt: {
+          gte: new Date(),
+        },
         balance: {
           gt: 0,
         },

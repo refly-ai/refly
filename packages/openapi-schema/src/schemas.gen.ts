@@ -5901,6 +5901,10 @@ export const SubscriptionPlanSchema = {
       type: 'number',
       description: 'Credit quota per month',
     },
+    dailyGiftCreditQuota: {
+      type: 'number',
+      description: 'Daily gift credit quota',
+    },
     t1TokenQuota: {
       type: 'number',
       description: 'Token quota per month (T1)',

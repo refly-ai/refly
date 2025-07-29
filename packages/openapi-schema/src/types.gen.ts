@@ -4096,6 +4096,10 @@ export type SubscriptionPlan = {
    */
   creditQuota?: number;
   /**
+   * Daily gift credit quota
+   */
+  dailyGiftCreditQuota?: number;
+  /**
    * Token quota per month (T1)
    */
   t1TokenQuota?: number;

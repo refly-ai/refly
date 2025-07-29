@@ -317,7 +317,7 @@ export class SkillService implements OnModuleInit {
       }
       let tpl = this.skillInventory.find((tpl) => tpl.name === instance.tplName);
       if (!tpl) {
-        console.log(`skill ${instance.tplName} not found`);
+        this.logger.log(`skill ${instance.tplName} not found`);
         tpl = this.skillInventory?.[0];
       }
       tplConfigMap.set(instance.tplName, tpl);
@@ -470,24 +470,11 @@ export class SkillService implements OnModuleInit {
     const creditBilling: CreditBilling = providerItem?.creditBilling
       ? JSON.parse(providerItem?.creditBilling)
       : undefined;
-    console.log('creditBilling', creditBilling);
-
-    /*if (tiers.length > 0) {
-      // Check for usage quota
-      const usageResult = await this.subscriptionService.checkRequestUsage(user);
-
-      for (const tier of tiers) {
-        if (!usageResult[tier]) {
-          throw new ModelUsageQuotaExceeded(
-            `model provider (${tier}) not available for current plan`,
-          );
-        }
-      }
-    }*/
+    this.logger.log('creditBilling', creditBilling);
 
     if (creditBilling) {
       const creditUsageResult = await this.credit.checkRequestCreditUsage(user, creditBilling);
-      console.log('creditUsageResult', creditUsageResult);
+      this.logger.log('creditUsageResult', creditUsageResult);
       if (!creditUsageResult.canUse) {
         throw new ModelUsageQuotaExceeded(`credit not available: ${creditUsageResult.message}`);
       }
