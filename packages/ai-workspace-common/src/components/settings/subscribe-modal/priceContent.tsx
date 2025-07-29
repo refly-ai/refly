@@ -119,6 +119,10 @@ const PlanItem = (props: {
   const isDowngrade = PlanPriorityMap[currentPlan] > PlanPriorityMap[planType];
   const isButtonDisabled = (isCurrentPlan || isDowngrade) && planType !== 'enterprise';
 
+  const isHighlight =
+    (planType === 'starter' && currentPlan === 'free') ||
+    (planType === currentPlan && currentPlan !== 'free');
+
   const handleButtonClick = () => {
     if (isButtonDisabled) return;
 
@@ -131,27 +135,21 @@ const PlanItem = (props: {
 
   return (
     <div
-      className={`w-full h-full flex flex-col ${planType === 'starter' ? 'pro-plan bg-[var(--bg-control---refly-bg-control-z0,_#F6F6F6)]' : ''}`}
+      className={`w-full h-full flex flex-col ${isHighlight ? 'pro-plan bg-[var(--bg-control---refly-bg-control-z0,_#F6F6F6)]' : ''}`}
     >
       <div
         className={
           'pt-1 h-[24px] text-center text-xs font-bold text-[color:var(--primary---refly-primary-default,#0E9F77)] leading-4'
         }
       >
-        {planType === 'starter' && t('subscription.mostPopular')}
+        {isHighlight &&
+          (currentPlan === 'free'
+            ? t('subscription.mostPopular')
+            : t('subscription.plans.currentPlan'))}
       </div>
       <div className={`subscribe-content-plans-item item-${planType}`}>
         <div className="subscribe-content-plans-item-title">
-          {planType === 'free' ? (
-            <>
-              {t('subscription.plans.free.title')}{' '}
-              {isCurrentPlan && <Tag>{t('subscription.plans.currentPlan')}</Tag>}
-            </>
-          ) : (
-            <>
-              {title} {isCurrentPlan && <Tag>{t('subscription.plans.currentPlan')}</Tag>}
-            </>
-          )}
+          {planType === 'free' ? <>{t('subscription.plans.free.title')} </> : <>{title}</>}
         </div>
 
         <div className="description">{description}</div>
@@ -162,17 +160,19 @@ const PlanItem = (props: {
           className={`subscribe-btn cursor-pointer subscribe-btn--${planType} ${planType === 'starter' && 'subscribe-btn--most-popular'} ${isUpgrade && 'subscribe-btn--upgrade'} ${isButtonDisabled && 'subscribe-btn--disabled'}`}
           onClick={handleButtonClick}
         >
-          {isButtonDisabled
-            ? t('subscription.plans.cannotChangeTo', {
-                planType: planType.charAt(0).toUpperCase() + planType.slice(1),
-              })
-            : planType === 'free'
-              ? t('subscription.plans.free.buttonText')
-              : planType === 'enterprise'
-                ? t('subscription.plans.enterprise.buttonText')
-                : t('subscription.plans.upgrade', {
-                    planType: planType.charAt(0).toUpperCase() + planType.slice(1),
-                  })}
+          {isCurrentPlan
+            ? t('subscription.plans.currentPlan')
+            : isButtonDisabled
+              ? t('subscription.plans.cannotChangeTo', {
+                  planType: planType.charAt(0).toUpperCase() + planType.slice(1),
+                })
+              : planType === 'free'
+                ? t('subscription.plans.free.buttonText')
+                : planType === 'enterprise'
+                  ? t('subscription.plans.enterprise.buttonText')
+                  : t('subscription.plans.upgrade', {
+                      planType: planType.charAt(0).toUpperCase() + planType.slice(1),
+                    })}
         </div>
 
         <div className="plane-features">
@@ -218,6 +218,11 @@ export const PriceContent = (props: { source: PriceSource }) => {
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
+  const { userProfile } = useUserStoreShallow((state) => ({
+    userProfile: state.userProfile,
+  }));
+
+  const currentPlan: string = userProfile?.subscription?.planType || 'free';
 
   const plansData = useMemo(() => {
     const planTypes = ['free', 'starter', 'maker', 'enterprise'];
@@ -306,27 +311,34 @@ export const PriceContent = (props: { source: PriceSource }) => {
       </div>
 
       <Row gutter={[16, 16]} className="subscribe-content-plans" justify="center" align="stretch">
-        {Object.keys(plansData).map((planType) => (
-          <Col {...gridSpan} key={planType}>
-            <PlanItem
-              planType={planType}
-              title={plansData[planType].title}
-              description={plansData[planType].description}
-              features={plansData[planType].features}
-              handleClick={() => {
-                if (planType === 'free') {
-                  handleFreeClick();
-                } else if (planType === 'enterprise') {
-                  handleContactSales();
-                } else {
-                  createCheckoutSession(planType);
-                }
-              }}
-              interval={interval}
-              loadingInfo={loadingInfo}
-            />
-          </Col>
-        ))}
+        {Object.keys(plansData)
+          .map((planType) => {
+            if (planType === 'free' && currentPlan !== 'free') {
+              return null;
+            }
+            return (
+              <Col {...gridSpan} key={planType}>
+                <PlanItem
+                  planType={planType}
+                  title={plansData[planType].title}
+                  description={plansData[planType].description}
+                  features={plansData[planType].features}
+                  handleClick={() => {
+                    if (planType === 'free') {
+                      handleFreeClick();
+                    } else if (planType === 'enterprise') {
+                      handleContactSales();
+                    } else {
+                      createCheckoutSession(planType);
+                    }
+                  }}
+                  interval={interval}
+                  loadingInfo={loadingInfo}
+                />
+              </Col>
+            );
+          })
+          .filter(Boolean)}
       </Row>
 
       <div className="subscribe-content-description">
