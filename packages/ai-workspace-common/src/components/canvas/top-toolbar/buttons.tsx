@@ -17,6 +17,7 @@ import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hook
 import { useCanvasStoreShallow } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { Help } from '@refly-packages/ai-workspace-common/components/canvas/layout-control/help';
+import { logEvent } from '@refly/telemetry-web';
 export type Mode = 'mouse' | 'touchpad';
 
 // Add interface for TooltipButton props
@@ -89,7 +90,7 @@ export const ToolbarButtons = memo(
     const { setNodeCenter } = useNodePosition();
     const { getNodes } = useReactFlow();
     const { hoverCardEnabled } = useHoverCard();
-    const { readonly } = useCanvasContext();
+    const { readonly, canvasId } = useCanvasContext();
 
     const { showSlideshow, showLinearThread, setShowSlideshow, setShowLinearThread } =
       useCanvasStoreShallow((state) => ({
@@ -168,7 +169,12 @@ export const ToolbarButtons = memo(
         type="text"
         loading={isLoading}
         icon={<Download size={18} />}
-        onClick={() => exportCanvasAsImage(canvasTitle)}
+        onClick={() => {
+          logEvent('canvas::canvas_download_image', Date.now(), {
+            canvas_id: canvasId,
+          });
+          exportCanvasAsImage(canvasTitle);
+        }}
       />
     );
 
@@ -176,7 +182,12 @@ export const ToolbarButtons = memo(
       <Button
         type="text"
         icon={<IconSlideshow size={18} />}
-        onClick={() => setShowSlideshow(!showSlideshow)}
+        onClick={() => {
+          logEvent('canvas::canvas_demo_click', Date.now(), {
+            canvas_id: canvasId,
+          });
+          setShowSlideshow(!showSlideshow);
+        }}
       />
     );
 

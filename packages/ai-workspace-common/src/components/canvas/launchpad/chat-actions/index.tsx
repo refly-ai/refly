@@ -3,7 +3,7 @@ import { memo, useMemo, useRef, useCallback } from 'react';
 import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LinkOutlined, SendOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useUserStoreShallow } from '@refly/stores';
+import { useUserStoreShallow, useLaunchpadStoreShallow } from '@refly/stores';
 import { getRuntime } from '@refly/utils/env';
 import { ModelSelector } from './model-selector';
 import { ModelInfo } from '@refly/openapi-schema';
@@ -13,6 +13,7 @@ import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-up
 import { IContextItem } from '@refly/common-types';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
 import { McpSelectorPopover } from '../mcp-selector-panel';
+import { logEvent } from '@refly/telemetry-web';
 
 export interface CustomAction {
   icon: React.ReactNode;
@@ -169,7 +170,27 @@ export const ChatActions = memo(
               type="primary"
               disabled={!canSendMessage}
               className="text-xs flex items-center gap-1"
-              onClick={handleSendClick}
+              onClick={() => {
+                // Check if knowledge base is used (resource or document types)
+                const usedKnowledgeBase =
+                  contextItems?.some(
+                    (item) => item?.type === 'resource' || item?.type === 'document',
+                  ) ?? false;
+
+                // Check if MCP is used (selectedMcpServers from launchpad store)
+                const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
+                  selectedMcpServers: state.selectedMcpServers,
+                }));
+                const usedMcp = selectedMcpServers?.length > 0;
+
+                logEvent('canvas::node_execute', Date.now(), {
+                  node_type: 'askAI',
+                  model_name: model.name,
+                  used_knowledge_base: usedKnowledgeBase,
+                  used_mcp: usedMcp,
+                });
+                handleSendClick();
+              }}
             >
               <SendOutlined />
               <span>{t('copilot.chatActions.send')}</span>

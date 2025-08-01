@@ -7,6 +7,7 @@ import { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { getContextItemIcon } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager/utils/icon';
 import React from 'react';
+import { logEvent } from '@refly/telemetry-web';
 
 const { Text } = Typography;
 
@@ -177,7 +178,12 @@ export const CreatePageFromCanvas = memo(({ canvasId, afterCreate }: CreatePageF
               </Button>
               <Button
                 type="primary"
-                onClick={handleSubmit}
+                onClick={(e) => {
+                  logEvent('canvas::canvas_demo_play', Date.now(), {
+                    canvas_id: canvasId,
+                  });
+                  handleSubmit(e);
+                }}
                 loading={isPending}
                 disabled={nodeIds?.length === 0}
               >

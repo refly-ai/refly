@@ -12,6 +12,7 @@ import { useFrontPageStoreShallow } from '@refly/stores';
 import { MediaModelSelector } from './media-model-selector';
 import { ProviderItem } from '@refly/openapi-schema';
 import { type MediaQueryData } from '@refly/stores';
+import { logEvent } from '@refly/telemetry-web';
 
 const { TextArea } = Input;
 
@@ -245,7 +246,15 @@ const MediaChatInput = memo(
                 size="small"
                 type="primary"
                 icon={<Send size={20} />}
-                onClick={handleSend}
+                onClick={() => {
+                  logEvent('canvas::node_execute', Date.now(), {
+                    node_type: 'mediaGenerate',
+                    model_name: selectedModel?.config?.modelId,
+                    used_knowledge_base: false,
+                    used_mcp: false,
+                  });
+                  handleSend();
+                }}
                 disabled={loading || !query?.trim()}
                 loading={loading}
               />

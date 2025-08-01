@@ -91,6 +91,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
     setIsExecuting(true);
     debouncedCreateCanvas('front-page', {
       isPilotActivated: chatMode === 'agent',
+      isAsk: chatMode === 'ask',
     });
   }, [query, debouncedCreateCanvas, chatMode]);
 

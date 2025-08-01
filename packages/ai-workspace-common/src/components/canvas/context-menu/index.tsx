@@ -30,6 +30,7 @@ import { cn } from '@refly/utils/cn';
 import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
 import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
+import { logEvent } from '@refly/telemetry-web';
 
 interface ContextMenuProps {
   open: boolean;
@@ -465,7 +466,12 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
         type="text"
         loading={getIsLoading(item.key)}
         icon={item.icon && <item.icon className="flex items-center w-4 h-4" />}
-        onClick={() => handleMenuClick(item.key)}
+        onClick={() => {
+          logEvent('canvas::add_node', Date.now(), {
+            node_type: item.key,
+          });
+          handleMenuClick(item.key);
+        }}
       >
         <span className="flex-1 text-left truncate">{item.title}</span>
       </Button>

@@ -66,7 +66,7 @@ export const TemplateCard = ({
       return;
     }
     if (template.shareId) {
-      duplicateCanvas(template.shareId);
+      duplicateCanvas(template.shareId, template.templateId);
     }
   };
 

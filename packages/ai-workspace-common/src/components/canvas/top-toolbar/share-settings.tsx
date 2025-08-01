@@ -10,6 +10,7 @@ import { CreateTemplateModal } from '@refly-packages/ai-workspace-common/compone
 import { useListShares } from '@refly-packages/ai-workspace-common/queries';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
+import { logEvent } from '@refly/telemetry-web';
 
 type ShareAccess = 'off' | 'anyone';
 
@@ -234,7 +235,12 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
               title={t('shareContent.accessOptions.off')}
               description={t('shareContent.accessOptions.offDescription')}
               isFirst={true}
-              onClick={handleAccessChange}
+              onClick={() => {
+                logEvent('canvas::canvas_share_private', Date.now(), {
+                  canvas_id: canvasId,
+                });
+                handleAccessChange('off');
+              }}
             />
 
             <Divider className="my-0 bg-refly-Card-Border" />
@@ -258,7 +264,12 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
                 color="default"
                 variant="filled"
                 className="flex-shrink-0 w-[104px] h-[32px] text-sm text-refly-text-0 leading-5 font-semibold"
-                onClick={updateShare}
+                onClick={() => {
+                  logEvent('canvas::canvas_share_public_sync', Date.now(), {
+                    canvas_id: canvasId,
+                  });
+                  updateShare();
+                }}
                 loading={updateShareLoading}
                 disabled={updateShareLoading}
               >
@@ -270,7 +281,12 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
               <Button
                 color="default"
                 variant="filled"
-                onClick={copyLink}
+                onClick={() => {
+                  logEvent('canvas::canvas_share_copy_link', Date.now(), {
+                    canvas_id: canvasId,
+                  });
+                  copyLink();
+                }}
                 disabled={linkCopied}
                 className="flex-shrink-0 w-[104px] h-[32px] text-sm text-refly-text-0 leading-5 font-semibold"
               >
@@ -289,7 +305,12 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
             type="primary"
             size="small"
             className="w-[104px] h-[32px]"
-            onClick={handlePublishToCommunity}
+            onClick={() => {
+              logEvent('canvas::canvas_publish_template', Date.now(), {
+                canvas_id: canvasId,
+              });
+              handlePublishToCommunity();
+            }}
           >
             {t('shareContent.publish')}
           </Button>
