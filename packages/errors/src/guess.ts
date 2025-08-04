@@ -3,6 +3,7 @@ import {
   ModelProviderRateLimitExceeded,
   ModelProviderTimeout,
   ActionAborted,
+  ModelUsageQuotaExceeded,
 } from './errors';
 
 export const guessModelProviderError = (error: string | Error) => {
@@ -16,6 +17,18 @@ export const guessModelProviderError = (error: string | Error) => {
     e.includes('stopped')
   ) {
     return new ActionAborted();
+  }
+
+  // Check for credit/quota related errors
+  // These patterns match the error messages thrown by the backend when credits are insufficient
+  if (
+    e.includes('credit not available') ||
+    e.includes('insufficient credits') ||
+    e.includes('model usage quota exceeded') ||
+    // Match backend error message format: "Available: X, Required minimum: Y"
+    (e.includes('available:') && e.includes('required minimum:'))
+  ) {
+    return new ModelUsageQuotaExceeded();
   }
 
   if (e.includes('limit exceed')) {
