@@ -1,7 +1,7 @@
 /**
  * Status types for divergent sessions
  */
-export type DivergentSessionStatus = 'executing' | 'completed' | 'failed';
+export type DivergentSessionStatus = 'executing' | 'completed' | 'failed' | 'max_depth_reached';
 
 /**
  * Data model for divergent session tracking
