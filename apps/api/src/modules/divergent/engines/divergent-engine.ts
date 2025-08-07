@@ -1,9 +1,10 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { User, InvokeSkillRequest, SkillContext } from '@refly/openapi-schema';
 import { genActionResultID } from '@refly/utils';
 import { DivergentSessionService } from '../divergent-session.service';
 import { DivergentSessionData } from '../models/divergent-session.model';
 import { SkillOrchestrator } from './skill-orchestrator';
+import { SkillServiceIntegration } from '../services/skill-service-integration';
 
 /**
  * SubTask interface for task decomposition
@@ -42,9 +43,11 @@ export class DivergentEngine {
   constructor(
     private readonly sessionService: DivergentSessionService,
     private readonly skillOrchestrator: SkillOrchestrator,
-    @Inject('SkillService') private readonly skillService: any,
+    private readonly skillServiceIntegration: SkillServiceIntegration,
   ) {
-    this.logger.log('DivergentEngine initialized with SkillOrchestrator');
+    this.logger.log(
+      'DivergentEngine initialized with SkillOrchestrator and SkillServiceIntegration',
+    );
   }
 
   /**
@@ -236,9 +239,9 @@ export class DivergentEngine {
         selectedMcpServers: [],
       };
 
-      const result = await this.skillService.sendInvokeSkillTask(user, skillRequest);
+      const result = await this.skillServiceIntegration.invokeSkill(user, skillRequest);
 
-      // Note: metadata will be handled by SkillService internally
+      // Note: metadata will be handled by SkillServiceIntegration internally
 
       this.logger.log(`Summary node created successfully: ${result.resultId}`);
       return result;
@@ -277,9 +280,9 @@ export class DivergentEngine {
           selectedMcpServers: [],
         };
 
-        const result = await this.skillService.sendInvokeSkillTask(user, skillRequest);
+        const result = await this.skillServiceIntegration.invokeSkill(user, skillRequest);
 
-        // Note: metadata will be handled by SkillService internally
+        // Note: metadata will be handled by SkillServiceIntegration internally
 
         return {
           success: true,
@@ -398,9 +401,9 @@ export class DivergentEngine {
         selectedMcpServers: [],
       };
 
-      const result = await this.skillService.sendInvokeSkillTask(user, skillRequest);
+      const result = await this.skillServiceIntegration.invokeSkill(user, skillRequest);
 
-      // Note: metadata will be handled by SkillService internally
+      // Note: metadata will be handled by SkillServiceIntegration internally
 
       this.logger.log(`Final output generated successfully: ${result.resultId}`);
       return result;

@@ -3,13 +3,14 @@ import { Logger } from '@nestjs/common';
 import { DivergentEngine } from './divergent-engine';
 import { DivergentSessionService } from '../divergent-session.service';
 import { SkillOrchestrator } from './skill-orchestrator';
+import { SkillServiceIntegration } from '../services/skill-service-integration';
 import { User } from '@refly/openapi-schema';
 import { DivergentSessionData } from '../models/divergent-session.model';
 
 describe('DivergentEngine Core Total-Divide-Total Loop', () => {
   let engine: DivergentEngine;
   let sessionService: DivergentSessionService;
-  let skillService: any; // Use any to avoid import issues
+  let _skillService: any; // Use any to avoid import issues
   let module: TestingModule;
 
   const mockUser: User = {
@@ -24,8 +25,8 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
     getDivergentSession: jest.fn(),
   };
 
-  const mockSkillService = {
-    sendInvokeSkillTask: jest.fn(),
+  const mockSkillServiceIntegration = {
+    invokeSkill: jest.fn(),
   };
 
   const mockSkillOrchestrator = {
@@ -48,15 +49,19 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
           useValue: mockSkillOrchestrator,
         },
         {
+          provide: SkillServiceIntegration,
+          useValue: mockSkillServiceIntegration,
+        },
+        {
           provide: 'SkillService',
-          useValue: mockSkillService,
+          useValue: null, // Mock for testing
         },
       ],
     }).compile();
 
     engine = module.get<DivergentEngine>(DivergentEngine);
     sessionService = module.get<DivergentSessionService>(DivergentSessionService);
-    skillService = module.get<any>('SkillService');
+    _skillService = module.get<any>('SkillService');
   });
 
   afterEach(async () => {
@@ -76,7 +81,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
 
     it('should inject all required services correctly', () => {
       expect(engine.sessionService).toBe(sessionService);
-      expect(engine.skillService).toBe(skillService);
+      expect(engine.skillServiceIntegration).toBe(mockSkillServiceIntegration);
     });
   });
 
@@ -129,7 +134,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
       ];
 
       // Setup mocks
-      mockSkillService.sendInvokeSkillTask
+      mockSkillServiceIntegration.invokeSkill
         .mockResolvedValueOnce(rootSummaryResult) // Root summary creation
         .mockResolvedValueOnce(executionResults[0]) // First execution task
         .mockResolvedValueOnce(executionResults[1]) // Second execution task
@@ -225,7 +230,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
         }),
       );
 
-      expect(mockSkillService.sendInvokeSkillTask).toHaveBeenCalledTimes(4);
+      expect(mockSkillServiceIntegration.invokeSkill).toHaveBeenCalledTimes(4);
       expect(mockSessionService.updateDivergentSession).toHaveBeenCalled();
     });
 
@@ -234,7 +239,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
       const targetId = 'canvas-deep-research-001';
 
       // Mock to never reach completion threshold
-      mockSkillService.sendInvokeSkillTask.mockImplementation(() =>
+      mockSkillServiceIntegration.invokeSkill.mockImplementation(() =>
         Promise.resolve({
           resultId: `action-result-${Date.now()}`,
           status: 'completed',
@@ -322,7 +327,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
       const targetId = 'canvas-simple-doc-001';
 
       // Mock high completion score to trigger final output
-      mockSkillService.sendInvokeSkillTask
+      mockSkillServiceIntegration.invokeSkill
         .mockResolvedValueOnce({
           // Root summary
           resultId: 'root-summary-high-completion',
@@ -426,7 +431,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
         status: 'completed',
       };
 
-      mockSkillService.sendInvokeSkillTask.mockResolvedValue(expectedResult);
+      mockSkillServiceIntegration.invokeSkill.mockResolvedValue(expectedResult);
 
       const result = await engine.createSummaryNode(
         mockUser,
@@ -440,7 +445,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
       expect(result).toEqual(expectedResult);
 
       // Verify skill service was called with correct parameters
-      expect(mockSkillService.sendInvokeSkillTask).toHaveBeenCalledWith(
+      expect(mockSkillServiceIntegration.invokeSkill).toHaveBeenCalledWith(
         mockUser,
         expect.objectContaining({
           input: { query },
@@ -465,7 +470,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
       const level = 0;
       const sessionId = 'test-session-empty-context';
 
-      mockSkillService.sendInvokeSkillTask.mockResolvedValue({
+      mockSkillServiceIntegration.invokeSkill.mockResolvedValue({
         resultId: 'action-result-initial-summary',
         status: 'completed',
       });
@@ -515,7 +520,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
       const parentResultIds = ['parent-result-001'];
 
       // Mock successful execution for all tasks
-      mockSkillService.sendInvokeSkillTask
+      mockSkillServiceIntegration.invokeSkill
         .mockResolvedValueOnce({
           resultId: 'web-search-result-001',
           status: 'completed',
@@ -543,7 +548,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
       expect(results[2].resultId).toBe('analysis-result-001');
 
       // Verify all tasks were called with correct metadata
-      expect(mockSkillService.sendInvokeSkillTask).toHaveBeenCalledTimes(3);
+      expect(mockSkillServiceIntegration.invokeSkill).toHaveBeenCalledTimes(3);
     });
 
     it('should handle mixed success and failure scenarios', async () => {
@@ -566,7 +571,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
         },
       ];
 
-      mockSkillService.sendInvokeSkillTask
+      mockSkillServiceIntegration.invokeSkill
         .mockResolvedValueOnce({
           resultId: 'successful-result',
           status: 'completed',
@@ -597,7 +602,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
         sessionId: 'limit-test-session',
       }));
 
-      mockSkillService.sendInvokeSkillTask.mockResolvedValue({
+      mockSkillServiceIntegration.invokeSkill.mockResolvedValue({
         resultId: 'test-result',
         status: 'completed',
       });
@@ -611,7 +616,7 @@ describe('DivergentEngine Core Total-Divide-Total Loop', () => {
 
       // Should only execute first 8 tasks
       expect(results).toHaveLength(8);
-      expect(mockSkillService.sendInvokeSkillTask).toHaveBeenCalledTimes(8);
+      expect(mockSkillServiceIntegration.invokeSkill).toHaveBeenCalledTimes(8);
     });
   });
 });

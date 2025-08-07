@@ -195,7 +195,7 @@ export class SkillOrchestrator {
    * @param sessionId - Session identifier for task tracking
    * @returns Array of validated and enriched SubTask objects
    */
-  private async parseSubTasks(
+  public async parseSubTasks(
     aiResponse: string,
     level: number,
     sessionId: string,
