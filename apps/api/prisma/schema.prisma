@@ -1381,3 +1381,36 @@ model McpServer {
   @@index([isGlobal])
   @@map("mcp_servers")
 }
+
+model DivergentSession {
+  /// Primary key
+  pk                    BigInt               @id @default(autoincrement())
+  /// Session ID
+  sessionId             String               @map("session_id")
+  /// User ID who initiated the session
+  uid                   String               @map("uid")
+  /// Original user intent/query
+  userIntent            String               @map("user_intent") @db.Text
+  /// Root summary result ID from ActionResult
+  rootResultId          String               @map("root_result_id")
+  /// Current level in the total-divide-total loop (0-5)
+  currentLevel          Int                  @default(0) @map("current_level")
+  /// Global completion score for the entire session (0-1)
+  globalCompletionScore Float                @default(0) @map("global_completion_score")
+  /// Current status of the session
+  status                String               @default("executing") @map("status")
+  /// Final output result ID (when session is completed)
+  finalOutputResultId   String?              @map("final_output_result_id")
+  /// Target Canvas ID where results are generated
+  targetId              String               @map("target_id")
+  /// Session creation timestamp
+  createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz()
+  /// Session last update timestamp
+  updatedAt             DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([sessionId])
+  @@index([uid, status])
+  @@index([targetId])
+  @@index([createdAt])
+  @@map("divergent_sessions")
+}
