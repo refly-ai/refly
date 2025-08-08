@@ -83,11 +83,16 @@ const pollCanvasTransactions = async (
   canvasId: string,
   version: string,
 ): Promise<CanvasTransaction[]> => {
+  // Prefer last local transaction time to avoid丢帧
+  const localState = await get<CanvasState>(`canvas-state:${canvasId}`);
+  const lastTxCreatedAt = getLastTransaction(localState)?.createdAt ?? 0;
+  const since = lastTxCreatedAt ? lastTxCreatedAt : Date.now() - 5000;
+
   const { data, error } = await getClient().getCanvasTransactions({
     query: {
       canvasId,
       version,
-      since: Date.now() - 5000, // 5 seconds ago
+      since,
     },
   });
   if (error) {
@@ -591,11 +596,13 @@ export const CanvasProvider = ({
     const poll = async () => {
       if (!polling) return;
       try {
-        // Get local CanvasState
-        const localState = await get<CanvasState>(`canvas-state:${canvasId}`);
+        // Get local CanvasState; if missing,拉取远端并初始化本地
+        let localState = await get<CanvasState>(`canvas-state:${canvasId}`);
         if (!localState) {
-          // If local state is not found, skip this poll
-          return;
+          const remote = await getCanvasState(canvasId);
+          if (!remote) return;
+          await set(`canvas-state:${canvasId}`, remote);
+          localState = remote;
         }
 
         const { canvasInitialized } = useCanvasStore.getState();

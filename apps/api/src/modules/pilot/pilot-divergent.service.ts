@@ -63,7 +63,7 @@ export class PilotDivergentService {
     this.logger.log(`Created divergent session ${sessionId} for user ${user.uid}`);
 
     // Start divergent execution asynchronously
-    this.executeDivergentSessionAsync(sessionId);
+    this.executeDivergentSessionAsync(sessionId, user);
 
     return {
       sessionId: session.sessionId,
@@ -75,10 +75,10 @@ export class PilotDivergentService {
   /**
    * Execute divergent session asynchronously
    */
-  private async executeDivergentSessionAsync(sessionId: string) {
+  private async executeDivergentSessionAsync(sessionId: string, user: User) {
     try {
       this.logger.log(`Starting divergent execution for session ${sessionId}`);
-      await this.divergentOrchestrator.executeSession(sessionId);
+      await this.divergentOrchestrator.executeSession(sessionId, user);
       this.logger.log(`Completed divergent execution for session ${sessionId}`);
     } catch (error) {
       this.logger.error(`Error in divergent execution for session ${sessionId}:`, error);
