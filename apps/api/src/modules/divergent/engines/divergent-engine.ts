@@ -38,12 +38,12 @@ export interface ExecutionResult {
  */
 @Injectable()
 export class DivergentEngine {
-  private readonly logger = new Logger(DivergentEngine.name);
+  public readonly logger = new Logger(DivergentEngine.name);
 
   constructor(
-    private readonly sessionService: DivergentSessionService,
-    private readonly skillOrchestrator: SkillOrchestrator,
-    private readonly skillServiceIntegration: SkillServiceIntegration,
+    public readonly sessionService: DivergentSessionService,
+    public readonly skillOrchestrator: SkillOrchestrator,
+    public readonly skillServiceIntegration: SkillServiceIntegration,
   ) {
     this.logger.log(
       'DivergentEngine initialized with SkillOrchestrator and SkillServiceIntegration',

@@ -52,9 +52,9 @@ export type AvailableSkill = (typeof AVAILABLE_SKILLS)[number];
  */
 @Injectable()
 export class SkillOrchestrator {
-  private readonly logger = new Logger(SkillOrchestrator.name);
+  public readonly logger = new Logger(SkillOrchestrator.name);
 
-  constructor(@Inject('BaseChatModel') private readonly model: any) {
+  constructor(@Inject('BaseChatModel') public readonly model: any) {
     this.logger.log('SkillOrchestrator initialized with AI model');
   }
 

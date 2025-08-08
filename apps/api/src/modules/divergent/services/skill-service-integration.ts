@@ -16,9 +16,9 @@ import { User, InvokeSkillRequest, ActionResult } from '@refly/openapi-schema';
  */
 @Injectable()
 export class SkillServiceIntegration {
-  private readonly logger = new Logger(SkillServiceIntegration.name);
+  public readonly logger = new Logger(SkillServiceIntegration.name);
 
-  constructor(@Inject('SkillService') private readonly skillService: any) {
+  constructor(@Inject('SkillService') public readonly skillService: any) {
     this.logger.log('SkillServiceIntegration initialized with real SkillService');
   }
 

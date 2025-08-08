@@ -1,13 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { DivergentService } from './divergent.service';
 import { DivergentSessionService } from './divergent-session.service';
 import { User } from '@refly/openapi-schema';
+import { LoginedUser } from '../../utils/decorators/user.decorator';
 import {
   CreateDivergentSessionRequest,
   UpdateDivergentSessionRequest,
   DivergentSessionResponse,
 } from './divergent.dto';
 import { DivergentSessionData, DivergentSessionStatus } from './models/divergent-session.model';
+import { JwtAuthGuard } from 'src/modules/auth/guard/jwt-auth.guard';
 
 /**
  * DivergentAgent controller
@@ -31,9 +33,10 @@ export class DivergentController {
   /**
    * Create a new divergent session
    */
+  @UseGuards(JwtAuthGuard)
   @Post('sessions')
   async createSession(
-    user: User,
+    @LoginedUser() user: User,
     @Body() request: CreateDivergentSessionRequest,
   ): Promise<DivergentSessionResponse> {
     return this.sessionService.createDivergentSession(user, request);
@@ -42,9 +45,10 @@ export class DivergentController {
   /**
    * Get a divergent session by ID
    */
+  @UseGuards(JwtAuthGuard)
   @Get('sessions/:sessionId')
   async getSession(
-    user: User,
+    @LoginedUser() user: User,
     @Param('sessionId') sessionId: string,
   ): Promise<DivergentSessionData | null> {
     return this.sessionService.getDivergentSession(user, sessionId);
@@ -53,20 +57,24 @@ export class DivergentController {
   /**
    * Update a divergent session
    */
+  @UseGuards(JwtAuthGuard)
   @Put('sessions/:sessionId')
   async updateSession(
-    user: User,
+    @LoginedUser() user: User,
+    @Param('sessionId') sessionId: string,
     @Body() request: UpdateDivergentSessionRequest,
   ): Promise<DivergentSessionResponse> {
-    return this.sessionService.updateDivergentSession(user, request);
+    const requestWithSessionId = { ...request, sessionId };
+    return this.sessionService.updateDivergentSession(user, requestWithSessionId);
   }
 
   /**
    * List divergent sessions for the current user
    */
+  @UseGuards(JwtAuthGuard)
   @Get('sessions')
   async listSessions(
-    user: User,
+    @LoginedUser() user: User,
     @Query() options?: { limit?: number; offset?: number; status?: DivergentSessionStatus },
   ): Promise<DivergentSessionData[]> {
     return this.sessionService.listDivergentSessions(user, options);
@@ -75,9 +83,10 @@ export class DivergentController {
   /**
    * Delete a divergent session
    */
+  @UseGuards(JwtAuthGuard)
   @Delete('sessions/:sessionId')
   async deleteSession(
-    user: User,
+    @LoginedUser() user: User,
     @Param('sessionId') sessionId: string,
   ): Promise<DivergentSessionResponse> {
     return this.sessionService.deleteDivergentSession(user, sessionId);
