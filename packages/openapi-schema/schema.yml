@@ -38,6 +38,8 @@ tags:
     description: Provider management endpoints
   - name: misc
     description: Miscellaneous endpoints
+  - name: workflow
+    description: Workflow management endpoints
 
 paths:
   /mcp-server/list:
@@ -2456,6 +2458,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetPilotSessionDetailResponse'
+  /workflow/initialize:
+    post:
+      tags:
+        - workflow
+      summary: Initialize workflow execution
+      description: Initialize a new workflow execution for a canvas
+      operationId: initializeWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitializeWorkflowRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitializeWorkflowResponse'
   /user/settings:
     get:
       tags:
@@ -8424,6 +8446,31 @@ components:
         type:
           type: string
           description: Edge type
+    InitializeWorkflowRequest:
+      type: object
+      required:
+        - canvasId
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to initialize workflow for
+          example: "canvas-123"
+    InitializeWorkflowResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          required:
+            - executionId
+            - success
+          properties:
+            executionId:
+              type: string
+              description: Workflow execution ID
+              example: "we-abc123"
+            success:
+              type: boolean
+              description: Whether the workflow initialization was successful
+              example: true
   securitySchemes:
     api_key:
       type: apiKey

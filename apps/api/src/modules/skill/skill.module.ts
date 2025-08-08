@@ -15,6 +15,7 @@ import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
+  QUEUE_SYNC_WORKFLOW,
 } from '../../utils';
 import { LabelModule } from '../label/label.module';
 import { SkillProcessor, CheckStuckActionsProcessor } from '../skill/skill.processor';
@@ -65,6 +66,7 @@ import { ActionModule } from '../action/action.module';
           BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
           BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
           BullModule.registerQueue({ name: QUEUE_SYNC_PILOT_STEP }),
+          BullModule.registerQueue({ name: QUEUE_SYNC_WORKFLOW }),
         ]),
   ],
   providers: [

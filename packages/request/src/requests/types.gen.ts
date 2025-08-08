@@ -1688,6 +1688,14 @@ export type ActionResult = {
    */
   pilotSessionId?: string;
   /**
+   * Workflow execution ID
+   */
+  workflowExecutionId?: string;
+  /**
+   * Workflow node execution ID
+   */
+  workflowNodeExecutionId?: string;
+  /**
    * Message creation time
    */
   createdAt?: string;
@@ -5259,6 +5267,24 @@ export type CanvasEdge = {
   type: string;
 };
 
+export type InitializeWorkflowRequest = {
+  /**
+   * Canvas ID to initialize workflow for
+   */
+  canvasId: string;
+};
+
+export type InitializeWorkflowResponse = BaseResponse & {
+  /**
+   * Workflow execution ID
+   */
+  executionId: string;
+  /**
+   * Whether the workflow initialization was successful
+   */
+  success: boolean;
+};
+
 export type ListMcpServersData2 = {
   query?: {
     /**
@@ -6470,6 +6496,14 @@ export type GetPilotSessionDetailData = {
 export type GetPilotSessionDetailResponse2 = GetPilotSessionDetailResponse;
 
 export type GetPilotSessionDetailError = unknown;
+
+export type InitializeWorkflowData = {
+  body: InitializeWorkflowRequest;
+};
+
+export type InitializeWorkflowResponse2 = InitializeWorkflowResponse;
+
+export type InitializeWorkflowError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 

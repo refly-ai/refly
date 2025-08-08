@@ -15,11 +15,12 @@ import ShareSettings from './share-settings';
 import { useUserStoreShallow } from '@refly/stores';
 import './index.scss';
 import { IconLink } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Undo, Redo, Copy } from 'refly-icons';
+import { Undo, Redo, Copy, Play } from 'refly-icons';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { useAuthStoreShallow } from '@refly/stores';
 import { CanvasLayoutControls } from '@refly-packages/ai-workspace-common/components/canvas/layout-control/canvas-layout-controls';
 import { TooltipButton } from './buttons';
+import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
 
 const buttonClass = '!p-0 h-[30px] w-[30px] flex items-center justify-center ';
 
@@ -64,12 +65,22 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
   const canvasTitle = shareData?.title || canvasTitleFromStore;
 
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
+  const { initializeWorkflow, loading: initializing } = useInitializeWorkflow();
+
   const handleDuplicate = () => {
     if (!isLogin) {
       setLoginModalOpen(true);
       return;
     }
     duplicateCanvas(canvasId);
+  };
+
+  const handleInitializeWorkflow = () => {
+    if (!isLogin) {
+      setLoginModalOpen(true);
+      return;
+    }
+    initializeWorkflow(canvasId);
   };
 
   return (
@@ -126,6 +137,15 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
             </>
           )}
           <CanvasLayoutControls />
+
+          <TooltipButton
+            tooltip={t('canvas.toolbar.tooltip.initializeWorkflow') || 'Initialize Workflow'}
+            onClick={handleInitializeWorkflow}
+            disabled={initializing}
+            className={buttonClass}
+          >
+            <Play size={16} />
+          </TooltipButton>
 
           {isPreviewCanvas ? (
             <Button

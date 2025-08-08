@@ -2201,6 +2201,14 @@ export const ActionResultSchema = {
       type: 'string',
       description: 'Pilot session ID',
     },
+    workflowExecutionId: {
+      type: 'string',
+      description: 'Workflow execution ID',
+    },
+    workflowNodeExecutionId: {
+      type: 'string',
+      description: 'Workflow node execution ID',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -7513,4 +7521,40 @@ export const CanvasEdgeSchema = {
       description: 'Edge type',
     },
   },
+} as const;
+
+export const InitializeWorkflowRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID to initialize workflow for',
+      example: 'canvas-123',
+    },
+  },
+} as const;
+
+export const InitializeWorkflowResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      required: ['executionId', 'success'],
+      properties: {
+        executionId: {
+          type: 'string',
+          description: 'Workflow execution ID',
+          example: 'we-abc123',
+        },
+        success: {
+          type: 'boolean',
+          description: 'Whether the workflow initialization was successful',
+          example: true,
+        },
+      },
+    },
+  ],
 } as const;

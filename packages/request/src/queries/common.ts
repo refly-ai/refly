@@ -78,6 +78,7 @@ import {
   getSubscriptionPlans,
   getSubscriptionUsage,
   importCanvas,
+  initializeWorkflow,
   invokeSkill,
   listActions,
   listCanvases,
@@ -1026,6 +1027,12 @@ export type UpdatePilotSessionMutationResult = Awaited<ReturnType<typeof updateP
 export const useUpdatePilotSessionKey = 'UpdatePilotSession';
 export const UseUpdatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
   useUpdatePilotSessionKey,
+  ...(mutationKey ?? []),
+];
+export type InitializeWorkflowMutationResult = Awaited<ReturnType<typeof initializeWorkflow>>;
+export const useInitializeWorkflowKey = 'InitializeWorkflow';
+export const UseInitializeWorkflowKeyFn = (mutationKey?: Array<unknown>) => [
+  useInitializeWorkflowKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;

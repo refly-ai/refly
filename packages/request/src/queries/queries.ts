@@ -78,6 +78,7 @@ import {
   getSubscriptionPlans,
   getSubscriptionUsage,
   importCanvas,
+  initializeWorkflow,
   invokeSkill,
   listActions,
   listCanvases,
@@ -280,6 +281,8 @@ import {
   GetSubscriptionUsageError,
   ImportCanvasData,
   ImportCanvasError,
+  InitializeWorkflowData,
+  InitializeWorkflowError,
   InvokeSkillData,
   InvokeSkillError,
   ListActionsError,
@@ -2216,6 +2219,23 @@ export const useUpdatePilotSession = <
   useMutation<TData, TError, Options<UpdatePilotSessionData, true>, TContext>({
     mutationKey: Common.UseUpdatePilotSessionKeyFn(mutationKey),
     mutationFn: (clientOptions) => updatePilotSession(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useInitializeWorkflow = <
+  TData = Common.InitializeWorkflowMutationResult,
+  TError = InitializeWorkflowError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<InitializeWorkflowData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<InitializeWorkflowData, true>, TContext>({
+    mutationKey: Common.UseInitializeWorkflowKeyFn(mutationKey),
+    mutationFn: (clientOptions) => initializeWorkflow(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateCheckoutSession = <

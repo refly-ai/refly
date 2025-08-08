@@ -309,6 +309,9 @@ import type {
   GetPilotSessionDetailData,
   GetPilotSessionDetailError,
   GetPilotSessionDetailResponse2,
+  InitializeWorkflowData,
+  InitializeWorkflowError,
+  InitializeWorkflowResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -2018,6 +2021,23 @@ export const getPilotSessionDetail = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/pilot/session/detail',
+  });
+};
+
+/**
+ * Initialize workflow execution
+ * Initialize a new workflow execution for a canvas
+ */
+export const initializeWorkflow = <ThrowOnError extends boolean = false>(
+  options: Options<InitializeWorkflowData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    InitializeWorkflowResponse2,
+    InitializeWorkflowError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/initialize',
   });
 };
 
