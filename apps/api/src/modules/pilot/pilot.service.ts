@@ -29,6 +29,8 @@ import { ProviderItemNotFoundError } from '@refly/errors';
 import { pilotSessionPO2DTO, pilotStepPO2DTO } from './pilot.dto';
 import { buildSummarySkillInput } from './prompt/summary';
 import { buildSubtaskSkillInput } from './prompt/subtask';
+import { buildBootstrapSummaryAndPlanInput } from './prompt/bootstrap';
+import { extractPlanFromMarkdown, mapPlanToRawSteps } from './plan-extractor';
 import { findBestMatch } from '../../utils/similarity';
 
 @Injectable()
@@ -64,6 +66,7 @@ export class PilotService {
         sessionId,
         uid: user.uid,
         maxEpoch: request.maxEpoch ?? 3,
+        currentEpoch: 0, // Start with epoch 0 for bootstrap
         title: request.title || request.input?.query || 'New Pilot Session',
         input: JSON.stringify(request.input),
         targetType: request.targetType,
@@ -73,10 +76,10 @@ export class PilotService {
       },
     });
 
-    // Queue the pilot process instead of running it directly
+    // Queue the bootstrap GlobalPlan process instead of running subtask directly
     await this.runPilotQueue.add(
       `run-pilot-${sessionId}`,
-      { user, sessionId, mode: 'subtask' },
+      { user, sessionId, mode: 'bootstrap' },
       { removeOnComplete: true, removeOnFail: 100 },
     );
 
@@ -315,10 +318,18 @@ export class PilotService {
     user: User,
     sessionId: string,
     session?: PilotSession,
-    mode?: 'subtask' | 'summary' | 'finalOutput',
+    mode?: 'subtask' | 'summary' | 'finalOutput' | 'bootstrap',
   ) {
     if (mode === 'summary') {
       return this.runPilotSummary(user, sessionId, session, mode);
+    }
+
+    if (mode === 'bootstrap') {
+      return this.runPilotBootstrap(user, sessionId, session);
+    }
+
+    if (mode === 'finalOutput') {
+      return this.runPilotFinalOutput(user, sessionId, session);
     }
 
     const pilotSession =
@@ -346,19 +357,6 @@ export class PilotService {
     const { steps } = await this.getPilotSessionDetail(user, sessionId);
     const latestSummarySteps =
       steps?.filter(({ step }) => step.epoch === currentEpoch - 1 && step.mode === 'summary') || [];
-
-    if (currentEpoch >= maxEpoch) {
-      this.logger.log(`Pilot session ${sessionId} finished due to max epoch`);
-
-      if (pilotSession.status !== 'finish') {
-        await this.prisma.pilotSession.update({
-          where: { sessionId },
-          data: { status: 'finish' },
-        });
-      }
-
-      return;
-    }
 
     this.logger.log(`Epoch (${currentEpoch}/${maxEpoch}) for session ${sessionId} started`);
 
@@ -392,7 +390,7 @@ export class PilotService {
       pilotSessionPO2DTO(pilotSession),
       latestSummarySteps.map(({ step, actionResult }) => pilotStepPO2DTO(step, actionResult)),
     );
-    const rawSteps = await engine.run(canvasContentItems, 3, locale);
+    const rawSteps = await engine.run(canvasContentItems, 5, locale);
 
     if (rawSteps.length === 0) {
       await this.prisma.pilotSession.update({
@@ -537,6 +535,346 @@ export class PilotService {
   }
 
   /**
+   * Run the bootstrap GlobalPlan for a new session
+   * @param user - The user to run the bootstrap for
+   * @param sessionId - The ID of the session to bootstrap
+   */
+  async runPilotBootstrap(user: User, sessionId: string, session?: PilotSession) {
+    const pilotSession =
+      session ??
+      (await this.prisma.pilotSession.findUnique({
+        where: {
+          sessionId,
+          uid: user.uid,
+        },
+      }));
+
+    if (!pilotSession) {
+      throw new Error('Pilot session not found');
+    }
+
+    const { targetId, targetType, maxEpoch } = pilotSession;
+    const sessionInputObj = JSON.parse(pilotSession.input ?? '{}');
+    const userQuestion = sessionInputObj?.query ?? '';
+
+    // Get user's output locale preference
+    const userPo = await this.prisma.user.findUnique({
+      select: { outputLocale: true },
+      where: { uid: user.uid },
+    });
+    const locale = userPo?.outputLocale;
+
+    const chatPi = await this.providerService.findDefaultProviderItem(user, 'chat');
+    if (!chatPi || chatPi.category !== 'llm' || !chatPi.enabled) {
+      throw new ProviderItemNotFoundError('provider item not valid for bootstrap');
+    }
+    const chatModelId = JSON.parse(chatPi.config).modelId;
+
+    const skills = this.skillService.listSkills(true);
+
+    // Create the GlobalPlan step
+    const stepId = genPilotStepID();
+    const skill = skills.find((skill) => skill.name === 'commonQnA');
+    if (!skill) {
+      this.logger.warn('Skill commonQnA not found, skip bootstrap');
+      return;
+    }
+
+    // No context/history for bootstrap (starting fresh)
+    const context = {
+      resources: [],
+      documents: [],
+      codeArtifacts: [],
+    };
+    const history = [];
+    const resultId = genActionResultID();
+
+    const actionResult = await this.prisma.actionResult.create({
+      data: {
+        uid: user.uid,
+        resultId,
+        title: 'GlobalPlan',
+        actionMeta: JSON.stringify({
+          type: 'skill',
+          name: skill.name,
+          icon: skill.icon,
+        } as ActionMeta),
+        input: JSON.stringify(
+          buildBootstrapSummaryAndPlanInput({
+            userQuestion,
+            maxEpoch,
+            locale,
+          }) as SkillInput,
+        ),
+        status: 'waiting',
+        targetId,
+        targetType,
+        context: JSON.stringify(context),
+        history: JSON.stringify(history),
+        modelName: chatModelId,
+        tier: chatPi.tier,
+        errors: '[]',
+        pilotStepId: stepId,
+        pilotSessionId: sessionId,
+        runtimeConfig: '{}',
+        tplConfig: '{}',
+        providerItemId: chatPi.itemId,
+      },
+    });
+
+    await this.prisma.pilotStep.create({
+      data: {
+        stepId,
+        name: 'GlobalPlan',
+        sessionId,
+        epoch: 0, // Bootstrap is epoch 0
+        entityId: actionResult.resultId,
+        entityType: 'skillResponse',
+        rawOutput: JSON.stringify({}),
+        status: 'executing',
+        mode: 'summary', // Use summary mode but this is actually bootstrap
+      },
+    });
+
+    const contextItems = convertResultContextToItems(context, history);
+
+    if (targetType === 'canvas') {
+      await this.canvasService.addNodeToCanvas(
+        user,
+        targetId,
+        {
+          type: 'skillResponse',
+          data: {
+            title: 'GlobalPlan',
+            entityId: resultId,
+            metadata: {
+              status: 'executing',
+              contextItems,
+              tplConfig: '{}',
+              runtimeConfig: '{}',
+              modelInfo: {
+                modelId: chatModelId,
+              },
+              // Mark this as a bootstrap/global plan node
+              summaryAndPlan: true,
+              epoch: 0,
+              isGlobalPlan: true,
+              globalPlanConfig: {
+                maxEpoch,
+                userQuestion,
+                expectedEpochs: Array.from({ length: maxEpoch }, (_, i) => i + 1),
+              },
+            },
+          },
+        },
+        convertContextItemsToNodeFilters(contextItems),
+      );
+    }
+
+    await this.skillService.sendInvokeSkillTask(user, {
+      resultId,
+      input: buildBootstrapSummaryAndPlanInput({
+        userQuestion,
+        maxEpoch,
+        locale,
+      }),
+      target: {
+        entityId: targetId,
+        entityType: targetType as EntityType,
+      },
+      modelName: chatModelId,
+      modelItemId: chatPi.itemId,
+      context,
+      resultHistory: history,
+      skillName: skill.name,
+      selectedMcpServers: [],
+    });
+
+    // Update session status to waiting
+    await this.prisma.pilotSession.update({
+      where: { sessionId },
+      data: {
+        status: 'waiting',
+      },
+    });
+  }
+
+  /**
+   * Run the final output generation for a session
+   * @param user - The user to run the final output for
+   * @param sessionId - The ID of the session to generate final output
+   */
+  async runPilotFinalOutput(user: User, sessionId: string, session?: PilotSession) {
+    const pilotSession =
+      session ??
+      (await this.prisma.pilotSession.findUnique({
+        where: {
+          sessionId,
+          uid: user.uid,
+        },
+      }));
+
+    if (!pilotSession) {
+      throw new Error('Pilot session not found');
+    }
+
+    const { targetId, targetType, currentEpoch } = pilotSession;
+    const sessionInputObj = JSON.parse(pilotSession.input ?? '{}');
+    const userQuestion = sessionInputObj?.query ?? '';
+
+    // Get user's output locale preference
+    const userPo = await this.prisma.user.findUnique({
+      select: { outputLocale: true },
+      where: { uid: user.uid },
+    });
+    const locale = userPo?.outputLocale;
+
+    const chatPi = await this.providerService.findDefaultProviderItem(user, 'chat');
+    if (!chatPi || chatPi.category !== 'llm' || !chatPi.enabled) {
+      throw new ProviderItemNotFoundError('provider item not valid for final output');
+    }
+    const chatModelId = JSON.parse(chatPi.config).modelId;
+
+    const skills = this.skillService.listSkills(true);
+
+    // Get all previous steps for context
+    const { steps } = await this.getPilotSessionDetail(user, sessionId);
+    const allCompletedSteps = steps?.filter(({ step }) => step.status === 'finish') || [];
+    const contextEntityIds = allCompletedSteps.map(({ step }) => step.entityId);
+
+    const canvasContentItems = await this.canvasService.getCanvasContentItems(user, targetId, true);
+
+    // Create the FinalOutput step
+    const stepId = genPilotStepID();
+    const skill = skills.find((skill) => skill.name === 'generateDoc'); // Use generateDoc for final output
+    if (!skill) {
+      this.logger.warn('Skill generateDoc not found, using commonQnA for final output');
+      const fallbackSkill = skills.find((skill) => skill.name === 'commonQnA');
+      if (!fallbackSkill) {
+        this.logger.error('No suitable skill found for final output');
+        return;
+      }
+    }
+
+    const finalSkill = skill || skills.find((skill) => skill.name === 'commonQnA')!;
+
+    const { context, history } = await this.buildContextAndHistory(
+      canvasContentItems,
+      contextEntityIds,
+    );
+    const resultId = genActionResultID();
+
+    // Build final output input
+    const finalOutputInput = {
+      query: `Based on all the research and analysis completed across ${currentEpoch} epochs, please provide a comprehensive final output for the user's original question: "${userQuestion}". 
+
+Please synthesize all findings, insights, and conclusions into a coherent, well-structured response that fully addresses the user's needs. The output should be in ${locale || 'en-US'}.
+
+Key requirements:
+1. Comprehensive synthesis of all research and analysis
+2. Clear, actionable insights and recommendations
+3. Well-structured and professional presentation
+4. Direct answers to the original question
+5. Supporting evidence and reasoning from the research conducted`,
+    };
+
+    const actionResult = await this.prisma.actionResult.create({
+      data: {
+        uid: user.uid,
+        resultId,
+        title: 'Final Output',
+        actionMeta: JSON.stringify({
+          type: 'skill',
+          name: finalSkill.name,
+          icon: finalSkill.icon,
+        } as ActionMeta),
+        input: JSON.stringify(finalOutputInput as SkillInput),
+        status: 'waiting',
+        targetId,
+        targetType,
+        context: JSON.stringify(context),
+        history: JSON.stringify(history),
+        modelName: chatModelId,
+        tier: chatPi.tier,
+        errors: '[]',
+        pilotStepId: stepId,
+        pilotSessionId: sessionId,
+        runtimeConfig: '{}',
+        tplConfig: '{}',
+        providerItemId: chatPi.itemId,
+      },
+    });
+
+    await this.prisma.pilotStep.create({
+      data: {
+        stepId,
+        name: 'Final Output',
+        sessionId,
+        epoch: currentEpoch, // Same epoch as final decision
+        entityId: actionResult.resultId,
+        entityType: 'skillResponse',
+        rawOutput: JSON.stringify({}),
+        status: 'executing',
+        mode: 'finalOutput', // New mode for final output
+      },
+    });
+
+    const contextItems = convertResultContextToItems(context, history);
+
+    if (targetType === 'canvas') {
+      await this.canvasService.addNodeToCanvas(
+        user,
+        targetId,
+        {
+          type: 'skillResponse',
+          data: {
+            title: 'Final Output',
+            entityId: resultId,
+            metadata: {
+              status: 'executing',
+              contextItems,
+              tplConfig: '{}',
+              runtimeConfig: '{}',
+              modelInfo: {
+                modelId: chatModelId,
+              },
+              // Mark as final output
+              finalOutput: true,
+              epoch: currentEpoch,
+            },
+          },
+        },
+        convertContextItemsToNodeFilters(contextItems),
+      );
+    }
+
+    await this.skillService.sendInvokeSkillTask(user, {
+      resultId,
+      input: finalOutputInput,
+      target: {
+        entityId: targetId,
+        entityType: targetType as EntityType,
+      },
+      modelName: chatModelId,
+      modelItemId: chatPi.itemId,
+      context,
+      resultHistory: history,
+      skillName: finalSkill.name,
+      selectedMcpServers: [],
+    });
+
+    // Mark session as finished
+    await this.prisma.pilotSession.update({
+      where: { sessionId },
+      data: {
+        status: 'finish',
+      },
+    });
+
+    this.logger.log(`Final output generated for session ${sessionId}`);
+  }
+
+  /**
    * Run the pilot for a given session
    * @param user - The user to run the pilot for
    * @param sessionId - The ID of the session to run the pilot for
@@ -570,19 +908,6 @@ export class PilotService {
     const { steps } = await this.getPilotSessionDetail(user, sessionId);
     const latestSubtaskSteps =
       steps?.filter(({ step }) => step.epoch === currentEpoch && step.mode === 'subtask') || [];
-
-    if (currentEpoch >= maxEpoch) {
-      this.logger.log(`Pilot session ${sessionId} finished due to max epoch`);
-
-      if (pilotSession.status !== 'finish') {
-        await this.prisma.pilotSession.update({
-          where: { sessionId },
-          data: { status: 'finish' },
-        });
-      }
-
-      return;
-    }
 
     this.logger.log(`Epoch (${currentEpoch}/${maxEpoch}) for session ${sessionId} started`);
 
@@ -667,7 +992,7 @@ export class PilotService {
       await this.prisma.pilotStep.create({
         data: {
           stepId,
-          name: 'Summary',
+          name: `Summary ${locale}`,
           sessionId,
           epoch: currentEpoch,
           entityId: actionResult.resultId,
@@ -744,6 +1069,186 @@ export class PilotService {
   }
 
   /**
+   * Create subtasks from a parsed plan (used when SummaryAndPlan provides next epoch plan)
+   * @param user - The user
+   * @param sessionId - The session ID
+   * @param targetEpoch - The target epoch for the new subtasks
+   * @param rawSteps - The raw steps from the plan
+   */
+  private async createSubtasksFromPlan(
+    user: User,
+    sessionId: string,
+    targetEpoch: number,
+    rawSteps: Array<{
+      name: string;
+      skillName: string;
+      priority: number;
+      query: string;
+      contextItemIds: string[];
+      workflowStage: string;
+    }>,
+  ) {
+    // Get session and canvas content
+    const pilotSession = await this.prisma.pilotSession.findUnique({
+      where: { sessionId, uid: user.uid },
+    });
+
+    if (!pilotSession) {
+      throw new Error('Pilot session not found');
+    }
+
+    const { targetId, targetType } = pilotSession;
+    const sessionInputObj = JSON.parse(pilotSession.input ?? '{}');
+    const userQuestion = sessionInputObj?.query ?? '';
+
+    const canvasContentItems = await this.canvasService.getCanvasContentItems(user, targetId, true);
+
+    // Get user's output locale preference
+    const userPo = await this.prisma.user.findUnique({
+      select: { outputLocale: true },
+      where: { uid: user.uid },
+    });
+    const locale = userPo?.outputLocale;
+
+    const chatPi = await this.providerService.findDefaultProviderItem(user, 'chat');
+    if (!chatPi || chatPi.category !== 'llm' || !chatPi.enabled) {
+      throw new ProviderItemNotFoundError('provider item not valid');
+    }
+    const chatModelId = JSON.parse(chatPi.config).modelId;
+
+    const skills = this.skillService.listSkills(true);
+
+    // Get previous summary step for context
+    const { steps } = await this.getPilotSessionDetail(user, sessionId);
+    const latestSummarySteps =
+      steps?.filter(({ step }) => step.epoch === targetEpoch - 1 && step.mode === 'summary') || [];
+
+    // Create subtasks from the plan
+    for (const rawStep of rawSteps) {
+      const stepId = genPilotStepID();
+      const skill = skills.find((skill) => skill.name === rawStep.skillName);
+      if (!skill) {
+        this.logger.warn(`Skill ${rawStep.skillName} not found, skip this step`);
+        continue;
+      }
+
+      const { context, history } = await this.buildContextAndHistory(
+        canvasContentItems,
+        rawStep.contextItemIds,
+      );
+      const resultId = genActionResultID();
+
+      const actionResult = await this.prisma.actionResult.create({
+        data: {
+          uid: user.uid,
+          resultId,
+          title: rawStep.name,
+          actionMeta: JSON.stringify({
+            type: 'skill',
+            name: skill.name,
+            icon: skill.icon,
+          } as ActionMeta),
+          input: JSON.stringify(
+            buildSubtaskSkillInput({
+              userQuestion,
+              locale,
+              summaryTitle:
+                latestSummarySteps?.[0]?.actionResult?.title || latestSummarySteps?.[0]?.step?.name,
+              plannedAction: {
+                priority: rawStep.priority,
+                skillName: rawStep.skillName as any,
+                query: rawStep.query,
+                contextHints: rawStep.contextItemIds,
+              },
+            }) as SkillInput,
+          ),
+          status: 'waiting',
+          targetId,
+          targetType,
+          context: JSON.stringify(context),
+          history: JSON.stringify(history),
+          modelName: chatModelId,
+          tier: chatPi.tier,
+          errors: '[]',
+          pilotStepId: stepId,
+          pilotSessionId: sessionId,
+          runtimeConfig: '{}',
+          tplConfig: '{}',
+          providerItemId: chatPi.itemId,
+        },
+      });
+
+      await this.prisma.pilotStep.create({
+        data: {
+          stepId,
+          name: rawStep.name,
+          sessionId,
+          epoch: targetEpoch,
+          entityId: actionResult.resultId,
+          entityType: 'skillResponse',
+          rawOutput: JSON.stringify(rawStep),
+          status: 'executing',
+          mode: 'subtask',
+        },
+      });
+
+      const contextItems = convertResultContextToItems(context, history);
+
+      if (targetType === 'canvas') {
+        await this.canvasService.addNodeToCanvas(
+          user,
+          targetId,
+          {
+            type: 'skillResponse',
+            data: {
+              title: rawStep.name,
+              entityId: resultId,
+              metadata: {
+                status: 'executing',
+                contextItems,
+                tplConfig: '{}',
+                runtimeConfig: '{}',
+                modelInfo: {
+                  modelId: chatModelId,
+                },
+              },
+            },
+          },
+          convertContextItemsToNodeFilters(contextItems),
+        );
+      }
+
+      await this.skillService.sendInvokeSkillTask(user, {
+        resultId,
+        input: buildSubtaskSkillInput({
+          userQuestion,
+          locale,
+          summaryTitle:
+            latestSummarySteps?.[0]?.actionResult?.title || latestSummarySteps?.[0]?.step?.name,
+          plannedAction: {
+            priority: rawStep.priority,
+            skillName: rawStep.skillName as any,
+            query: rawStep.query,
+            contextHints: rawStep.contextItemIds,
+          },
+        }),
+        target: {
+          entityId: targetId,
+          entityType: targetType as EntityType,
+        },
+        modelName: chatModelId,
+        modelItemId: chatPi.itemId,
+        context,
+        resultHistory: history,
+        skillName: skill.name,
+        selectedMcpServers: [],
+      });
+    }
+
+    this.logger.log(`Created ${rawSteps.length} subtasks for epoch ${targetEpoch} from plan`);
+  }
+
+  /**
    * Whenever a step is updated, check if all steps in the same epoch are completed.
    * If so, we need to update the session status to completed.
    * If not, we need to continue waiting.
@@ -786,11 +1291,146 @@ export class PilotService {
         .filter((step) => step.mode === 'summary')
         .every((step) => step.status === 'finish');
 
-    const reachedMaxEpoch = step.epoch >= session.maxEpoch;
+    // Epoch 0 is GlobalPlan, so actual work epochs are 1..maxEpoch
+    // We reach max when current epoch > maxEpoch (e.g., epoch 4 when maxEpoch=3)
+    const reachedMaxEpoch = step.epoch > session.maxEpoch;
+
+    // Special handling for Bootstrap (epoch 0) - only has GlobalPlan (summary mode)
+    const isBootstrapEpoch = step.epoch === 0;
+    const isBootstrapCompleted = isBootstrapEpoch && isAllSummaryStepsFinished;
+
+    // For display purposes: show 0 as "Bootstrap", others as actual work epoch (epoch-1)
+    const displayEpoch = isBootstrapEpoch ? 'Bootstrap' : `${step.epoch}/${session.maxEpoch}`;
+
     this.logger.log(
-      `Epoch (${session.currentEpoch}/${session.maxEpoch}) for session ${step.sessionId}: ` +
+      `Epoch ${displayEpoch} for session ${step.sessionId}: ` +
+        `${isBootstrapEpoch ? 'GlobalPlan' : 'Regular'} epoch, ` +
         `steps are ${isAllSummaryStepsFinished ? 'finished' : 'not finished'}`,
     );
+
+    // Handle Bootstrap completion (epoch 0)
+    if (isBootstrapCompleted) {
+      this.logger.log(
+        `Bootstrap GlobalPlan completed for session ${step.sessionId}, extracting first epoch plan`,
+      );
+
+      // Extract and execute plan from GlobalPlan
+      const summaryStep = epochSteps.find((s) => s.mode === 'summary');
+      let planExecuted = false;
+
+      if (summaryStep) {
+        const actionResult = await this.prisma.actionResult.findFirst({
+          where: { pilotStepId: summaryStep.stepId },
+          orderBy: { version: 'desc' },
+        });
+
+        if (actionResult) {
+          // Get the ActionStep content for this ActionResult
+          const actionSteps = await this.prisma.actionStep.findMany({
+            where: {
+              resultId: actionResult.resultId,
+              version: actionResult.version,
+            },
+            orderBy: { order: 'asc' },
+          });
+
+          const content = actionSteps.map((s) => s.content).join('\n\n');
+
+          if (content) {
+            // Extract plan from the GlobalPlan content
+            const extractionResult = extractPlanFromMarkdown(content, 5);
+
+            if (extractionResult.success) {
+              const plan = extractionResult.plan;
+              this.logger.log(
+                `Extracted plan from GlobalPlan: readyForFinal=${plan.readyForFinal}, steps=${plan.nextEpochPlan.length}`,
+              );
+
+              // Save global planning information if available
+              if (plan.globalPlanning) {
+                this.logger.log(
+                  `Global planning extracted with ${plan.globalPlanning.epochBreakdown.length} epochs`,
+                );
+
+                // Update the PilotStep's rawOutput with global planning info
+                await this.prisma.pilotStep.update({
+                  where: { stepId: summaryStep.stepId },
+                  data: {
+                    rawOutput: JSON.stringify({
+                      globalPlanning: plan.globalPlanning,
+                      extractedAt: new Date().toISOString(),
+                    }),
+                  },
+                });
+              }
+
+              if (plan.readyForFinal) {
+                // Rare case: ready for final output immediately after bootstrap
+                await this.runPilotQueue.add(
+                  `run-pilot-finalOutput-${step.sessionId}`,
+                  {
+                    user,
+                    sessionId: step.sessionId,
+                    mode: 'finalOutput',
+                  },
+                  { removeOnComplete: true, removeOnFail: 100 },
+                );
+
+                await this.prisma.pilotSession.update({
+                  where: { sessionId: step.sessionId },
+                  data: { status: 'executing' },
+                });
+
+                planExecuted = true;
+              } else if (plan.nextEpochPlan.length > 0) {
+                // Create first epoch subtasks from GlobalPlan
+                const rawSteps = mapPlanToRawSteps(plan);
+                await this.createSubtasksFromPlan(user, step.sessionId, 1, rawSteps); // Start with epoch 1
+
+                await this.prisma.pilotSession.update({
+                  where: { sessionId: step.sessionId },
+                  data: {
+                    status: 'executing',
+                    currentEpoch: 1, // Move to epoch 1
+                  },
+                });
+
+                planExecuted = true;
+              }
+            } else {
+              this.logger.warn(`Failed to extract plan from GlobalPlan: ${extractionResult}`);
+            }
+          }
+        }
+      }
+
+      // Fallback: if plan extraction failed, use traditional approach for epoch 1
+      if (!planExecuted) {
+        this.logger.warn(
+          'GlobalPlan extraction failed, falling back to traditional approach for epoch 1',
+        );
+
+        await this.prisma.pilotSession.update({
+          where: { sessionId: step.sessionId },
+          data: {
+            status: 'executing',
+            currentEpoch: 1, // Move to epoch 1
+          },
+        });
+
+        await this.runPilotQueue.add(
+          `run-pilot-${step.sessionId}-1`,
+          {
+            user,
+            sessionId: step.sessionId,
+            mode: 'subtask',
+          },
+          { removeOnComplete: true, removeOnFail: 100 },
+        );
+      }
+
+      return; // Exit early for bootstrap handling
+    }
 
     if (isAllSubtaskStepsFinished && !isAllSummaryStepsFinished) {
       await this.runPilotQueue.add(
@@ -806,25 +1446,125 @@ export class PilotService {
     }
 
     if (isAllSubtaskStepsFinished && isAllSummaryStepsFinished) {
-      await this.prisma.pilotSession.update({
-        where: { sessionId: step.sessionId },
-        data: {
-          status: reachedMaxEpoch ? 'finish' : 'executing',
-          ...(!reachedMaxEpoch ? { currentEpoch: session.currentEpoch + 1 } : {}),
-        },
-      });
+      // Try to extract and execute plan from SummaryAndPlan
+      const summaryStep = epochSteps.find((s) => s.mode === 'summary');
+      let planExecuted = false;
 
-      if (!reachedMaxEpoch) {
-        // Queue the next runPilot job instead of running it directly
-        await this.runPilotQueue.add(
-          `run-pilot-${step.sessionId}-${session.currentEpoch + 1}`,
-          {
-            user,
-            sessionId: step.sessionId,
-            mode: 'subtask',
-          },
-          { removeOnComplete: true, removeOnFail: 100 },
-        );
+      if (summaryStep) {
+        const actionResult = await this.prisma.actionResult.findFirst({
+          where: { pilotStepId: summaryStep.stepId },
+          orderBy: { version: 'desc' },
+        });
+
+        if (actionResult) {
+          // Get the ActionStep content for this ActionResult
+          const actionSteps = await this.prisma.actionStep.findMany({
+            where: {
+              resultId: actionResult.resultId,
+              version: actionResult.version,
+            },
+            orderBy: { order: 'asc' },
+          });
+
+          const content = actionSteps.map((s) => s.content).join('\n\n');
+
+          if (content) {
+            // Extract plan from the SummaryAndPlan content
+            const extractionResult = extractPlanFromMarkdown(content, 5);
+
+            if (extractionResult.success) {
+              const plan = extractionResult.plan;
+              this.logger.log(
+                `Extracted plan from SummaryAndPlan: readyForFinal=${plan.readyForFinal}, steps=${plan.nextEpochPlan.length}`,
+              );
+
+              if (plan.readyForFinal) {
+                // Ready for final output - trigger finalOutput mode
+                await this.runPilotQueue.add(
+                  `run-pilot-finalOutput-${step.sessionId}`,
+                  {
+                    user,
+                    sessionId: step.sessionId,
+                    mode: 'finalOutput',
+                  },
+                  { removeOnComplete: true, removeOnFail: 100 },
+                );
+
+                await this.prisma.pilotSession.update({
+                  where: { sessionId: step.sessionId },
+                  data: { status: 'executing' },
+                });
+
+                planExecuted = true;
+              } else if (!reachedMaxEpoch && plan.nextEpochPlan.length > 0) {
+                // Create next epoch subtasks directly from the plan
+                const rawSteps = mapPlanToRawSteps(plan);
+                await this.createSubtasksFromPlan(
+                  user,
+                  step.sessionId,
+                  session.currentEpoch + 1,
+                  rawSteps,
+                );
+
+                await this.prisma.pilotSession.update({
+                  where: { sessionId: step.sessionId },
+                  data: {
+                    status: 'executing',
+                    currentEpoch: session.currentEpoch + 1,
+                  },
+                });
+
+                planExecuted = true;
+              }
+            } else {
+              this.logger.warn(`Failed to extract plan from SummaryAndPlan: ${extractionResult}`);
+            }
+          }
+        }
+      }
+
+      // Fallback: use old approach if plan extraction failed or no summary step
+      if (!planExecuted) {
+        if (reachedMaxEpoch) {
+          // Force final output only as last resort when max epoch exceeded and plan extraction failed
+          this.logger.warn(
+            `Session ${step.sessionId} exceeded maxEpoch (${session.maxEpoch}) and plan extraction failed. Forcing final output as last resort.`,
+          );
+
+          await this.runPilotQueue.add(
+            `run-pilot-finalOutput-${step.sessionId}`,
+            {
+              user,
+              sessionId: step.sessionId,
+              mode: 'finalOutput',
+            },
+            { removeOnComplete: true, removeOnFail: 100 },
+          );
+
+          await this.prisma.pilotSession.update({
+            where: { sessionId: step.sessionId },
+            data: { status: 'executing' },
+          });
+        } else {
+          // Use old PilotEngine approach as fallback for non-final epochs
+          await this.prisma.pilotSession.update({
+            where: { sessionId: step.sessionId },
+            data: {
+              status: 'executing',
+              currentEpoch: session.currentEpoch + 1,
+            },
+          });
+
+          await this.runPilotQueue.add(
+            `run-pilot-${step.sessionId}-${session.currentEpoch + 1}`,
+            {
+              user,
+              sessionId: step.sessionId,
+              mode: 'subtask',
+            },
+            { removeOnComplete: true, removeOnFail: 100 },
+          );
+        }
       }
     }
   }

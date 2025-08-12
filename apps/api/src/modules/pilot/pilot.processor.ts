@@ -10,7 +10,7 @@ import { User } from '@refly/openapi-schema';
 export interface RunPilotJobData {
   user: User;
   sessionId: string;
-  mode: 'subtask' | 'summary' | 'finalOutput';
+  mode: 'subtask' | 'summary' | 'finalOutput' | 'bootstrap';
 }
 
 // Interface for SyncPilotStepJobData

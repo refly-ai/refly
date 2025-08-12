@@ -16,10 +16,20 @@ export function buildSummarySkillInput(params: {
   // Normalize display locale; default to en-US if not provided
   const displayLocale = locale ?? 'en-US';
 
+  // Determine if this is the final epoch or approaching the limit
+  const isLastEpoch = currentEpoch >= maxEpoch;
+  const isApproachingLimit = currentEpoch === maxEpoch - 1;
+
   // Optional section listing subtask titles to help the model focus
   const subtaskListSection = subtaskTitles?.length
     ? `\n- Subtasks in this epoch:\n${subtaskTitles.map((t, i) => `  ${i + 1}. ${t}`).join('\n')}`
     : '';
+
+  // Epoch context and urgency indicators
+  const epochContextSection = `
+EPOCH CONTEXT:
+- Current Epoch: ${currentEpoch}/${maxEpoch}
+- Progress Status: ${isLastEpoch ? 'FINAL EPOCH - Must complete the task' : isApproachingLimit ? 'Approaching deadline - Consider wrapping up' : 'In progress'}${isLastEpoch ? "\n- CRITICAL: This is your last opportunity to complete the user's request. You MUST produce a comprehensive final output." : ''}${isApproachingLimit ? '\n- IMPORTANT: The next epoch will be the last. Consider if you have enough information to conclude.' : ''}`;
 
   // English prompt with strict instructions to output in locale
   const query = `ROLE:
@@ -35,8 +45,8 @@ Write the entire output in ${displayLocale}. Do not use any other language.
 
 INPUTS:
 - Original user goal (userQuestion): "${userQuestion}"
-- Current epoch: ${currentEpoch + 1}/${maxEpoch + 1}
 - Context usage policy: read from provided context (resources/documents/codeArtifacts/contentList) and resultHistory (previous skill responses). When citing evidence, include their IDs like [doc:ID], [res:ID], [artifact:ID], or [result:ID] for traceability.${subtaskListSection}
+${epochContextSection}
 
 REQUIRED OUTPUTS (Markdown):
 1) Phase Structured Report
@@ -75,6 +85,17 @@ The structure must be exactly:
   ]
 }
 \`\`\`
+
+READINESS DECISION GUIDANCE:
+- Set "readyForFinal": true if:
+  ${isLastEpoch ? '• THIS IS THE FINAL EPOCH - You MUST set readyForFinal=true and provide comprehensive completion' : "• You have sufficient information to fully answer the user's question"}
+  • You can provide a complete, actionable response
+  • Further research would not significantly improve the answer
+  ${isLastEpoch ? '• Time constraint requires immediate completion' : ''}
+- Set "readyForFinal": false only if:
+  ${isLastEpoch ? '• NEVER in final epoch - you must complete the task' : '• Critical information is missing and obtainable'}
+  ${isLastEpoch ? '' : '• The current findings are insufficient for a quality response'}
+  ${isLastEpoch ? '' : '• Additional analysis would substantially improve the outcome'}
 
 CONSTRAINTS:
 - Only infer from the available context/history; explicitly mark unknowns.
