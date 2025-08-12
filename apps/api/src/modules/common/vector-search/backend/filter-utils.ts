@@ -107,6 +107,32 @@ export function toLanceDBFilter(filter: VectorFilter): string {
 }
 
 /**
+ * Convert any VectorFilter to Milvus filter expression format
+ * Milvus uses SQL-like expressions similar to LanceDB but with JSON field syntax
+ */
+export function toMilvusFilter(filter: VectorFilter): string {
+  if (!filter) {
+    return '';
+  }
+
+  if (isLanceDBFilter(filter)) {
+    // Convert LanceDB SQL to Milvus expression syntax
+    return filter
+      .replace(/\bAND\b/gi, ' && ')
+      .replace(/\bOR\b/gi, ' || ')
+      .replace(/\bNOT\b/gi, '!')
+      .replace(/(\w+)\s*=/g, 'payload["$1"] ==');
+  }
+
+  if (isSimpleFilter(filter)) {
+    return simpleToMilvusFilter(filter);
+  }
+
+  // For complex Qdrant filters, convert to simple format first, then to Milvus
+  return simpleToMilvusFilter(filter as SimpleFilter);
+}
+
+/**
  * Convert simple key-value filter to Qdrant format
  */
 function simpleToQdrantFilter(filter: SimpleFilter): QdrantFilter {
@@ -416,4 +442,40 @@ function validateSimpleFilter(filter: SimpleFilter): boolean {
             typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null,
         )),
   );
+}
+
+/**
+ * Convert simple key-value filter to Milvus expression format
+ */
+function simpleToMilvusFilter(filter: SimpleFilter): string {
+  const conditions: string[] = [];
+
+  for (const [key, value] of Object.entries(filter)) {
+    if (Array.isArray(value)) {
+      const values = value.map((v) => formatMilvusValue(v)).join(', ');
+      conditions.push(`payload["${key}"] in [${values}]`);
+    } else if (value === null) {
+      conditions.push(`payload["${key}"] == null`);
+    } else {
+      conditions.push(`payload["${key}"] == ${formatMilvusValue(value)}`);
+    }
+  }
+
+  return conditions.join(' && ');
+}
+
+/**
+ * Format a value for Milvus expression
+ */
+function formatMilvusValue(value: FilterValue): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (typeof value === 'string') {
+    return `"${value.replace(/"/g, '\\"')}"`;
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+  return String(value);
 }

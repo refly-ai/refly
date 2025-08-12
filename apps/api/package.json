@@ -76,6 +76,7 @@
     "@sentry/cli": "^2.31.2",
     "@sentry/node": "^7.113.0",
     "@sentry/profiling-node": "^7.113.0",
+    "@zilliz/milvus2-sdk-node": "^2.6.0",
     "apache-arrow": "^20.0.0",
     "argon2": "^0.41.1",
     "avsc": "^5.7.7",
