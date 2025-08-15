@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, memo, useCallback } from 'react';
 import { Button, Divider, Result, Skeleton, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useActionResultStoreShallow } from '@refly/stores';
@@ -57,33 +57,11 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   const { t } = useTranslation();
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(!result);
-  const editChatInputRef = useRef<HTMLDivElement>(null);
 
   const shareId = node.data?.metadata?.shareId;
   const { data: shareData } = useFetchShareData(shareId);
 
   const [statusText, setStatusText] = useState('');
-
-  // Handle click outside to close edit mode
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        editMode &&
-        editChatInputRef.current &&
-        !editChatInputRef.current.contains(event.target as Node)
-      ) {
-        setEditMode(false);
-      }
-    };
-
-    if (editMode) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [editMode]);
 
   useEffect(() => {
     if (shareData && !result) {
@@ -182,6 +160,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
   useEffect(() => {
     const skillName = actionMeta?.name || 'commonQnA';
     if (result?.status !== 'executing' && result?.status !== 'waiting') return;
+    setEditMode(false);
 
     const sortedSteps = sortSteps(steps);
 
@@ -272,28 +251,26 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
     <div className="flex flex-col gap-4 h-full max-w-[1024px] mx-auto overflow-hidden">
       {title && (
         <div className="px-4 pt-4">
-          <div ref={editChatInputRef}>
-            <EditChatInput
-              enabled={editMode}
-              resultId={resultId}
-              version={version}
-              contextItems={contextItems}
-              query={title}
-              actionMeta={actionMeta}
-              modelInfo={
-                modelInfo ?? {
-                  name: '',
-                  label: '',
-                  provider: '',
-                  contextLimit: 0,
-                  maxOutput: 0,
-                }
+          <EditChatInput
+            enabled={editMode}
+            resultId={resultId}
+            version={version}
+            contextItems={contextItems}
+            query={title}
+            actionMeta={actionMeta}
+            modelInfo={
+              modelInfo ?? {
+                name: '',
+                label: '',
+                provider: '',
+                contextLimit: 0,
+                maxOutput: 0,
               }
-              setEditMode={setEditMode}
-              tplConfig={tplConfig}
-              runtimeConfig={runtimeConfig}
-            />
-          </div>
+            }
+            setEditMode={setEditMode}
+            tplConfig={tplConfig}
+            runtimeConfig={runtimeConfig}
+          />
           <PreviewChatInput
             enabled={!editMode}
             readonly={readonly}
