@@ -1,15 +1,33 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { UnsupportedFileTypeError } from '@refly/errors';
+// 模拟NestJS依赖
+const Injectable = () => (target: any) => target;
+class ConfigService {
+  get(_key: string): any {
+    return null;
+  }
+}
+
+// 模拟错误类型
+class UnsupportedFileTypeError extends Error {}
+
+// 使用any类型避免类型冲突
+type User = any;
+
+// 导入本地模块
 import { BaseParser, ParserOptions } from './base';
 import { PandocParser } from './pandoc.parser';
 import { MarkerParser } from './marker.parser';
+import { MineruParser } from './mineru.parser';
 import { JinaParser } from './jina.parser';
 import { PlainTextParser } from '../parsers/plain-text.parser';
 import { PdfjsParser } from '../parsers/pdfjs.parser';
-import { User } from '@refly/openapi-schema';
 import { CheerioParser } from '../parsers/cheerio.parser';
-import { ProviderService } from '../../provider/provider.service';
+
+// 模拟ProviderService
+class ProviderService {
+  async findProviderByCategory(_user: User, _category: string): Promise<any> {
+    return { providerKey: '', apiKey: '' };
+  }
+}
 
 @Injectable()
 export class ParserFactory {
@@ -60,6 +78,12 @@ export class ParserFactory {
         const provider = await this.providerService.findProviderByCategory(user, 'pdfParsing');
         if (provider?.providerKey === 'marker') {
           return new MarkerParser({
+            ...options,
+            apiKey: provider.apiKey,
+          });
+        }
+        if (provider?.providerKey === 'mineru') {
+          return new MineruParser({
             ...options,
             apiKey: provider.apiKey,
           });

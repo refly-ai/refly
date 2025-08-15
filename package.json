@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
+    "@types/multer": "~1.4.11",
     "@types/node": "20.19.0",
     "commitizen": "^4.2.4",
     "cypress": "14.0.1",

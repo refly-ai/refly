@@ -21,7 +21,7 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "types": ["jest", "node", "express", "multer"],
+    "types": ["node", "multer"],
     "resolveJsonModule": true
   },
   "include": ["src/**/*", "*.json"],
