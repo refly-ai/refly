@@ -1,6 +1,7 @@
 // 使用类型声明来模拟NestJS依赖
 const Injectable = () => (target: any) => target;
 class Logger {
+  constructor(_context?: string) {}
   log(_message: any, _context?: string) {}
   error(_message: any, _trace?: string, _context?: string) {}
   warn(_message: any, _context?: string) {}
