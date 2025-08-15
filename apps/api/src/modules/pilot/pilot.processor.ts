@@ -10,6 +10,7 @@ import { User } from '@refly/openapi-schema';
 export interface RunPilotJobData {
   user: User;
   sessionId: string;
+  mode: 'subtask' | 'summary';
 }
 
 // Interface for SyncPilotStepJobData
@@ -32,7 +33,7 @@ export class RunPilotProcessor extends WorkerHost {
     );
 
     try {
-      await this.pilotService.runPilot(job.data.user, job.data.sessionId);
+      await this.pilotService.runPilot(job.data.user, job.data.sessionId, undefined, job.data.mode);
       this.logger.log(
         `[${QUEUE_RUN_PILOT}] Completed job: ${job.id} for session: ${job.data.sessionId}`,
       );

@@ -253,6 +253,8 @@ model PilotStep {
   status     String   @default("init") @map("status")
   /// Raw step output from LLM
   rawOutput  String?  @map("raw_output")
+  /// Divergent node fields
+  mode       String?  @default("subtask") @map("mode")
   /// Create timestamp
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
