@@ -12,6 +12,7 @@ import {
   CreateCanvasVersionResult,
   CanvasData,
   CanvasNode,
+  WorkflowVariable,
 } from '@refly/openapi-schema';
 import {
   getCanvasDataFromState,
@@ -459,6 +460,51 @@ export class CanvasSyncService {
         canvasId,
         newState,
       };
+    } finally {
+      await releaseLock();
+    }
+  }
+
+  /**
+   * Get workflow variables from canvas state
+   * @param user - The user
+   * @param param - The get workflow variables request
+   * @returns The workflow variables
+   */
+  async getWorkflowVariables(user: User, param: { canvasId: string }): Promise<WorkflowVariable[]> {
+    const { canvasId } = param;
+    const state = await this.getState(user, { canvasId });
+    return state.workflow?.variables ?? [];
+  }
+
+  /**
+   * Update workflow variables in canvas state
+   * @param user - The user
+   * @param param - The update workflow variables request
+   * @returns The updated workflow variables
+   */
+  async updateWorkflowVariables(
+    user: User,
+    param: { canvasId: string; variables: WorkflowVariable[] },
+  ): Promise<WorkflowVariable[]> {
+    const { canvasId, variables } = param;
+    const releaseLock = await this.lockState(canvasId);
+
+    try {
+      const state = await this.getState(user, { canvasId });
+
+      // Initialize workflow object if it doesn't exist
+      if (!state.workflow) {
+        state.workflow = { variables: [] };
+      }
+
+      // Update variables
+      state.workflow.variables = variables;
+      state.updatedAt = Date.now();
+
+      await this.saveState(canvasId, state);
+
+      return variables;
     } finally {
       await releaseLock();
     }

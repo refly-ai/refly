@@ -114,6 +114,12 @@ import type {
   CreateCanvasVersionData,
   CreateCanvasVersionError,
   CreateCanvasVersionResponse2,
+  GetWorkflowVariablesData,
+  GetWorkflowVariablesError,
+  GetWorkflowVariablesResponse2,
+  UpdateWorkflowVariablesData,
+  UpdateWorkflowVariablesError,
+  UpdateWorkflowVariablesResponse2,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
   ListCanvasTemplatesResponse,
@@ -309,6 +315,9 @@ import type {
   GetPilotSessionDetailData,
   GetPilotSessionDetailError,
   GetPilotSessionDetailResponse2,
+  InitializeWorkflowData,
+  InitializeWorkflowError,
+  InitializeWorkflowResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -951,6 +960,40 @@ export const createCanvasVersion = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/canvas/createVersion',
+  });
+};
+
+/**
+ * Get workflow variables
+ * Get workflow variables for a canvas
+ */
+export const getWorkflowVariables = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowVariablesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowVariablesResponse2,
+    GetWorkflowVariablesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/workflow/variables',
+  });
+};
+
+/**
+ * Update workflow variables
+ * Update workflow variables for a canvas
+ */
+export const updateWorkflowVariables = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateWorkflowVariablesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateWorkflowVariablesResponse2,
+    UpdateWorkflowVariablesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/workflow/variables',
   });
 };
 
@@ -2018,6 +2061,23 @@ export const getPilotSessionDetail = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/pilot/session/detail',
+  });
+};
+
+/**
+ * Initialize workflow execution
+ * Initialize a new workflow execution for a canvas
+ */
+export const initializeWorkflow = <ThrowOnError extends boolean = false>(
+  options: Options<InitializeWorkflowData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    InitializeWorkflowResponse2,
+    InitializeWorkflowError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/initialize',
   });
 };
 

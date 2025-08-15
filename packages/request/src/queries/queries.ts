@@ -77,7 +77,9 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getWorkflowVariables,
   importCanvas,
+  initializeWorkflow,
   invokeSkill,
   listActions,
   listCanvases,
@@ -133,6 +135,7 @@ import {
   updateSettings,
   updateSkillInstance,
   updateSkillTrigger,
+  updateWorkflowVariables,
   upload,
   validateMcpServer,
 } from '../requests/services.gen';
@@ -278,8 +281,12 @@ import {
   GetSettingsError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
+  GetWorkflowVariablesData,
+  GetWorkflowVariablesError,
   ImportCanvasData,
   ImportCanvasError,
+  InitializeWorkflowData,
+  InitializeWorkflowError,
   InvokeSkillData,
   InvokeSkillError,
   ListActionsError,
@@ -383,6 +390,8 @@ import {
   UpdateSkillInstanceError,
   UpdateSkillTriggerData,
   UpdateSkillTriggerError,
+  UpdateWorkflowVariablesData,
+  UpdateWorkflowVariablesError,
   UploadData,
   UploadError,
   ValidateMcpServerData,
@@ -567,6 +576,23 @@ export const useGetCanvasTransactions = <
     queryKey: Common.UseGetCanvasTransactionsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getCanvasTransactions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowVariables = <
+  TData = Common.GetWorkflowVariablesDefaultResponse,
+  TError = GetWorkflowVariablesError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowVariablesData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowVariablesKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowVariables({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,
@@ -1452,6 +1478,24 @@ export const useCreateCanvasVersion = <
     mutationFn: (clientOptions) => createCanvasVersion(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useUpdateWorkflowVariables = <
+  TData = Common.UpdateWorkflowVariablesMutationResult,
+  TError = UpdateWorkflowVariablesError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateWorkflowVariablesData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateWorkflowVariablesData, true>, TContext>({
+    mutationKey: Common.UseUpdateWorkflowVariablesKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      updateWorkflowVariables(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useCreateCanvasTemplate = <
   TData = Common.CreateCanvasTemplateMutationResult,
   TError = CreateCanvasTemplateError,
@@ -2216,6 +2260,23 @@ export const useUpdatePilotSession = <
   useMutation<TData, TError, Options<UpdatePilotSessionData, true>, TContext>({
     mutationKey: Common.UseUpdatePilotSessionKeyFn(mutationKey),
     mutationFn: (clientOptions) => updatePilotSession(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useInitializeWorkflow = <
+  TData = Common.InitializeWorkflowMutationResult,
+  TError = InitializeWorkflowError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<InitializeWorkflowData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<InitializeWorkflowData, true>, TContext>({
+    mutationKey: Common.UseInitializeWorkflowKeyFn(mutationKey),
+    mutationFn: (clientOptions) => initializeWorkflow(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateCheckoutSession = <

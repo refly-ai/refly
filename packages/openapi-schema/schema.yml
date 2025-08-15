@@ -38,6 +38,8 @@ tags:
     description: Provider management endpoints
   - name: misc
     description: Miscellaneous endpoints
+  - name: workflow
+    description: Workflow management endpoints
 
 paths:
   /mcp-server/list:
@@ -846,6 +848,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateCanvasVersionResponse'
+  /canvas/workflow/variables:
+    get:
+      tags:
+        - canvas
+      summary: Get workflow variables
+      description: Get workflow variables for a canvas
+      operationId: getWorkflowVariables
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowVariablesResponse'
+    post:
+      tags:
+        - canvas
+      summary: Update workflow variables
+      description: Update workflow variables for a canvas
+      operationId: updateWorkflowVariables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowVariablesRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkflowVariablesResponse'
   /template/list:
     get:
       tags:
@@ -2471,6 +2513,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetPilotSessionDetailResponse'
+  /workflow/initialize:
+    post:
+      tags:
+        - workflow
+      summary: Initialize workflow execution
+      description: Initialize a new workflow execution for a canvas
+      operationId: initializeWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitializeWorkflowRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitializeWorkflowResponse'
   /user/settings:
     get:
       tags:
@@ -4780,6 +4842,12 @@ components:
         pilotSessionId:
           type: string
           description: Pilot session ID
+        workflowExecutionId:
+          type: string
+          description: Workflow execution ID for workflow context
+        workflowNodeExecutionId:
+          type: string
+          description: Workflow node execution ID for workflow context
         createdAt:
           type: string
           format: date-time
@@ -5397,6 +5465,15 @@ components:
             hash:
               type: string
               description: Canvas state hash (sha256), calculated from nodes and edges
+            workflow:
+              type: object
+              description: Workflow configuration
+              properties:
+                variables:
+                  type: array
+                  description: List of workflow variables
+                  items:
+                    $ref: '#/components/schemas/WorkflowVariable'
             transactions:
               type: array
               description: Canvas transaction list
@@ -6656,6 +6733,9 @@ components:
         query:
           type: string
           description: User query
+        originalQuery:
+          type: string
+          description: Original user query
         images:
           type: array
           description: Image list (storage keys)
@@ -6925,6 +7005,12 @@ components:
           description: Selected MCP servers
           items:
             type: string
+        workflowExecutionId:
+          type: string
+          description: Workflow execution ID for workflow context
+        workflowNodeExecutionId:
+          type: string
+          description: Workflow node execution ID for workflow context
     InvokeSkillResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -7887,9 +7973,6 @@ components:
         apiKey:
           type: string
           description: Provider API key (this will never be exposed to the frontend)
-        extraParams:
-          type: string
-          description: Provider-specific extra params (JSON string)
     LLMModelConfig:
       type: object
       description: Provider config for LLMs
@@ -8484,6 +8567,86 @@ components:
         type:
           type: string
           description: Edge type
+    InitializeWorkflowRequest:
+      type: object
+      required:
+        - canvasId
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to initialize workflow for
+          example: "canvas-123"
+        newCanvasId:
+          type: string
+          description: New canvas ID
+          example: "canvas-456"
+    InitializeWorkflowResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - workflowExecutionId
+              properties:
+                workflowExecutionId:
+                  type: string
+                  description: Workflow execution ID
+                  example: "we-abc123"
+    WorkflowVariable:
+      type: object
+      description: Workflow variable definition
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          description: Variable name
+          example: "userName"
+        value:
+          type: string
+          description: Variable value
+          example: "张三"
+        description:
+          type: string
+          description: Variable description
+          example: "用户姓名"
+    GetWorkflowVariablesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of workflow variables
+              items:
+                $ref: '#/components/schemas/WorkflowVariable'
+    UpdateWorkflowVariablesRequest:
+      type: object
+      required:
+        - canvasId
+        - variables
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID
+        variables:
+          type: array
+          description: List of workflow variables
+          items:
+            $ref: '#/components/schemas/WorkflowVariable'
+    UpdateWorkflowVariablesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Updated list of workflow variables
+              items:
+                $ref: '#/components/schemas/WorkflowVariable'
   securitySchemes:
     api_key:
       type: apiKey

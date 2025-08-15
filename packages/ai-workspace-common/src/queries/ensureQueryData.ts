@@ -26,6 +26,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getWorkflowVariables,
   listActions,
   listCanvases,
   listCanvasTemplateCategories,
@@ -67,6 +68,7 @@ import {
   GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
+  GetWorkflowVariablesData,
   ListCanvasesData,
   ListCanvasTemplatesData,
   ListCodeArtifactsData,
@@ -181,6 +183,14 @@ export const ensureUseGetCanvasTransactionsData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetCanvasTransactionsKeyFn(clientOptions),
     queryFn: () => getCanvasTransactions({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetWorkflowVariablesData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowVariablesData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetWorkflowVariablesKeyFn(clientOptions),
+    queryFn: () => getWorkflowVariables({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListCanvasTemplatesData = (
   queryClient: QueryClient,

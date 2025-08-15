@@ -47,6 +47,7 @@ import {
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_SYNC_TOKEN_USAGE,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
+  QUEUE_SYNC_WORKFLOW,
 } from '../../utils/const';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -54,6 +55,7 @@ import { writeSSEResponse } from '../../utils/response';
 import { genBaseRespDataFromError } from '../../utils/exception';
 import { SyncPilotStepJobData } from '../pilot/pilot.processor';
 import { AutoNameCanvasJobData } from '../canvas/canvas.dto';
+import { SyncWorkflowJobData } from '../workflow/workflow.dto';
 import { ProviderService } from '../provider/provider.service';
 import { CodeArtifactService } from '../code-artifact/code-artifact.service';
 import { CollabContext } from '../collab/collab.dto';
@@ -105,6 +107,9 @@ export class SkillInvokerService {
     @Optional()
     @InjectQueue(QUEUE_SYNC_PILOT_STEP)
     private pilotStepQueue?: Queue<SyncPilotStepJobData>,
+    @Optional()
+    @InjectQueue(QUEUE_SYNC_WORKFLOW)
+    private syncWorkflowQueue?: Queue<SyncWorkflowJobData>,
   ) {
     this.skillEngine = this.skillEngineService.getEngine();
     this.skillInventory = createSkillInventory(this.skillEngine);
@@ -399,6 +404,20 @@ export class SkillInvokerService {
     };
 
     const resultAggregator = new ResultAggregator();
+
+    // Initialize structuredData with original query if available
+    const originalQuery = data.input?.originalQuery;
+    if (originalQuery) {
+      resultAggregator.addSkillEvent({
+        event: 'structured_data',
+        resultId,
+        step: { name: 'start' },
+        structuredData: {
+          query: originalQuery, // Store original query in structuredData
+          processedQuery: data.input?.query, // Store processed query for reference
+        },
+      });
+    }
 
     // NOTE: Artifacts include both code artifacts and documents
     type ArtifactOutput = Artifact & {
@@ -933,6 +952,14 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
               }),
             ]
           : []),
+        ...(result.workflowNodeExecutionId
+          ? [
+              this.prisma.workflowNodeExecution.updateMany({
+                where: { nodeExecutionId: result.workflowNodeExecutionId },
+                data: { status, endTime: new Date() },
+              }),
+            ]
+          : []),
       ]);
 
       writeSSEResponse(res, { event: 'end', resultId, version });
@@ -972,6 +999,15 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
         await this.pilotStepQueue.add('syncPilotStep', {
           user: { uid: user.uid },
           stepId: result.pilotStepId,
+        });
+      }
+
+      // Sync workflow if needed
+      if (result.workflowNodeExecutionId && this.syncWorkflowQueue) {
+        this.logger.log(`Sync workflow for nodeExecutionId ${result.workflowNodeExecutionId}`);
+        await this.syncWorkflowQueue.add('syncWorkflow', {
+          user: { uid: user.uid },
+          nodeExecutionId: result.workflowNodeExecutionId,
         });
       }
 

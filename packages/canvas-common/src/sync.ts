@@ -14,6 +14,9 @@ export const initEmptyCanvasState = (): CanvasState => {
     version: genCanvasVersionId(),
     nodes: [],
     edges: [],
+    workflow: {
+      variables: [],
+    },
     transactions: [],
     history: [],
     createdAt: Date.now(),

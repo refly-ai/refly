@@ -30,7 +30,16 @@ export function actionStepPO2DTO(step: ActionStepModel): ActionStep {
 
 export function actionResultPO2DTO(result: ActionDetail): ActionResult {
   return {
-    ...pick(result, ['resultId', 'version', 'title', 'targetId', 'pilotSessionId', 'pilotStepId']),
+    ...pick(result, [
+      'resultId',
+      'version',
+      'title',
+      'targetId',
+      'pilotSessionId',
+      'pilotStepId',
+      'workflowExecutionId',
+      'workflowNodeExecutionId',
+    ]),
     type: result.type as ActionType,
     tier: result.tier as ModelTier,
     targetType: result.targetType as EntityType,

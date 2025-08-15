@@ -316,7 +316,8 @@ export class CanvasService {
   }
 
   async createCanvas(user: User, param: UpsertCanvasRequest) {
-    const canvasId = genCanvasID();
+    // Use the canvasId from param if provided, otherwise generate a new one
+    const canvasId = param?.canvasId ?? genCanvasID();
 
     const state = initEmptyCanvasState();
     const stateStorageKey = await this.canvasSyncService.saveState(canvasId, state);
@@ -360,10 +361,17 @@ export class CanvasService {
    * @param node - The node to add
    * @param connectTo - The nodes to connect to
    */
+  /**
+   * Add a node to the canvas
+   * @param user - The user who is adding the node
+   * @param canvasId - The id of the canvas to add the node to
+   * @param node - The node to add (id is optional)
+   * @param connectTo - The nodes to connect to
+   */
   async addNodeToCanvas(
     user: User,
     canvasId: string,
-    node: Pick<CanvasNode, 'type' | 'data'>,
+    node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
     connectTo?: CanvasNodeFilter[],
   ) {
     const releaseLock = await this.canvasSyncService.lockState(canvasId);

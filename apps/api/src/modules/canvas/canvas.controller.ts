@@ -27,6 +27,7 @@ import {
   CreateCanvasVersionRequest,
   CreateCanvasVersionResponse,
   SetCanvasStateRequest,
+  WorkflowVariable,
 } from '@refly/openapi-schema';
 import { CanvasSyncService } from './canvas-sync.service';
 
@@ -156,5 +157,22 @@ export class CanvasController {
   ): Promise<CreateCanvasVersionResponse> {
     const result = await this.canvasSyncService.createCanvasVersion(user, body);
     return buildSuccessResponse(result);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('workflow/variables')
+  async getWorkflowVariables(@LoginedUser() user: User, @Query('canvasId') canvasId: string) {
+    const variables = await this.canvasSyncService.getWorkflowVariables(user, { canvasId });
+    return buildSuccessResponse(variables);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('workflow/variables')
+  async updateWorkflowVariables(
+    @LoginedUser() user: User,
+    @Body() body: { canvasId: string; variables: WorkflowVariable[] },
+  ) {
+    const variables = await this.canvasSyncService.updateWorkflowVariables(user, body);
+    return buildSuccessResponse(variables);
   }
 }

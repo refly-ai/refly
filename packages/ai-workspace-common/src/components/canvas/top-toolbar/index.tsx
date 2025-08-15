@@ -15,11 +15,13 @@ import ShareSettings from './share-settings';
 import { useUserStoreShallow } from '@refly/stores';
 import './index.scss';
 import { IconLink } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Undo, Redo, Copy } from 'refly-icons';
+import { Undo, Redo, Copy, Play } from 'refly-icons';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { useAuthStoreShallow } from '@refly/stores';
 import { CanvasLayoutControls } from '@refly-packages/ai-workspace-common/components/canvas/layout-control/canvas-layout-controls';
 import { TooltipButton } from './buttons';
+import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
+import { WorkflowVariablesDropdown } from './workflow-variables-dropdown';
 
 const buttonClass = '!p-0 h-[30px] w-[30px] flex items-center justify-center ';
 
@@ -64,12 +66,35 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
   const canvasTitle = shareData?.title || canvasTitleFromStore;
 
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
+  const {
+    initializeWorkflow,
+    initializeWorkflowInNewCanvas,
+    loading: initializing,
+    newModeLoading,
+  } = useInitializeWorkflow();
+
   const handleDuplicate = () => {
     if (!isLogin) {
       setLoginModalOpen(true);
       return;
     }
     duplicateCanvas(canvasId);
+  };
+
+  const handleInitializeWorkflow = () => {
+    if (!isLogin) {
+      setLoginModalOpen(true);
+      return;
+    }
+    initializeWorkflow(canvasId);
+  };
+
+  const handleInitializeWorkflowInNewCanvas = () => {
+    if (!isLogin) {
+      setLoginModalOpen(true);
+      return;
+    }
+    initializeWorkflowInNewCanvas(canvasId);
   };
 
   return (
@@ -126,6 +151,30 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
             </>
           )}
           <CanvasLayoutControls />
+
+          <TooltipButton
+            tooltip={t('canvas.toolbar.tooltip.initializeWorkflow') || 'Initialize Workflow'}
+            onClick={handleInitializeWorkflow}
+            disabled={initializing}
+            className={buttonClass}
+          >
+            <Play size={16} />
+          </TooltipButton>
+
+          <WorkflowVariablesDropdown canvasId={canvasId} className={buttonClass} />
+
+          {/* Add a button to trigger new execution mode, passing a new canvasId, and after successful initialization, navigate to the new canvas */}
+          <TooltipButton
+            tooltip={
+              t('canvas.toolbar.tooltip.initializeWorkflowInNewCanvas') ||
+              'Initialize Workflow in New Canvas'
+            }
+            onClick={handleInitializeWorkflowInNewCanvas}
+            disabled={newModeLoading}
+            className={buttonClass}
+          >
+            <Copy size={16} />
+          </TooltipButton>
 
           {isPreviewCanvas ? (
             <Button

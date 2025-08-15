@@ -1709,6 +1709,14 @@ export type ActionResult = {
    */
   pilotSessionId?: string;
   /**
+   * Workflow execution ID for workflow context
+   */
+  workflowExecutionId?: string;
+  /**
+   * Workflow node execution ID for workflow context
+   */
+  workflowNodeExecutionId?: string;
+  /**
    * Message creation time
    */
   createdAt?: string;
@@ -2310,6 +2318,15 @@ export type CanvasState = CanvasData & {
    * Canvas state hash (sha256), calculated from nodes and edges
    */
   hash?: string;
+  /**
+   * Workflow configuration
+   */
+  workflow?: {
+    /**
+     * List of workflow variables
+     */
+    variables?: Array<WorkflowVariable>;
+  };
   /**
    * Canvas transaction list
    */
@@ -3478,6 +3495,10 @@ export type SkillInput = {
    */
   query?: string;
   /**
+   * Original user query
+   */
+  originalQuery?: string;
+  /**
    * Image list (storage keys)
    */
   images?: Array<string>;
@@ -3769,6 +3790,14 @@ export type InvokeSkillRequest = {
    * Selected MCP servers
    */
   selectedMcpServers?: Array<string>;
+  /**
+   * Workflow execution ID for workflow context
+   */
+  workflowExecutionId?: string;
+  /**
+   * Workflow node execution ID for workflow context
+   */
+  workflowNodeExecutionId?: string;
 };
 
 export type InvokeSkillResponse = BaseResponse & {
@@ -4711,10 +4740,6 @@ export type Provider = {
    * Provider API key (this will never be exposed to the frontend)
    */
   apiKey?: string;
-  /**
-   * Provider-specific extra params (JSON string)
-   */
-  extraParams?: string;
 };
 
 /**
@@ -5315,6 +5340,69 @@ export type CanvasEdge = {
   type: string;
 };
 
+export type InitializeWorkflowRequest = {
+  /**
+   * Canvas ID to initialize workflow for
+   */
+  canvasId: string;
+  /**
+   * New canvas ID
+   */
+  newCanvasId?: string;
+};
+
+export type InitializeWorkflowResponse = BaseResponse & {
+  data?: {
+    /**
+     * Workflow execution ID
+     */
+    workflowExecutionId: string;
+  };
+};
+
+/**
+ * Workflow variable definition
+ */
+export type WorkflowVariable = {
+  /**
+   * Variable name
+   */
+  name: string;
+  /**
+   * Variable value
+   */
+  value: string;
+  /**
+   * Variable description
+   */
+  description?: string;
+};
+
+export type GetWorkflowVariablesResponse = BaseResponse & {
+  /**
+   * List of workflow variables
+   */
+  data?: Array<WorkflowVariable>;
+};
+
+export type UpdateWorkflowVariablesRequest = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * List of workflow variables
+   */
+  variables: Array<WorkflowVariable>;
+};
+
+export type UpdateWorkflowVariablesResponse = BaseResponse & {
+  /**
+   * Updated list of workflow variables
+   */
+  data?: Array<WorkflowVariable>;
+};
+
 export type ListMcpServersData2 = {
   query?: {
     /**
@@ -5707,6 +5795,27 @@ export type CreateCanvasVersionData = {
 export type CreateCanvasVersionResponse2 = CreateCanvasVersionResponse;
 
 export type CreateCanvasVersionError = unknown;
+
+export type GetWorkflowVariablesData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetWorkflowVariablesResponse2 = GetWorkflowVariablesResponse;
+
+export type GetWorkflowVariablesError = unknown;
+
+export type UpdateWorkflowVariablesData = {
+  body: UpdateWorkflowVariablesRequest;
+};
+
+export type UpdateWorkflowVariablesResponse2 = UpdateWorkflowVariablesResponse;
+
+export type UpdateWorkflowVariablesError = unknown;
 
 export type ListCanvasTemplatesData = {
   query?: {
@@ -6538,6 +6647,14 @@ export type GetPilotSessionDetailData = {
 export type GetPilotSessionDetailResponse2 = GetPilotSessionDetailResponse;
 
 export type GetPilotSessionDetailError = unknown;
+
+export type InitializeWorkflowData = {
+  body: InitializeWorkflowRequest;
+};
+
+export type InitializeWorkflowResponse2 = InitializeWorkflowResponse;
+
+export type InitializeWorkflowError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 
