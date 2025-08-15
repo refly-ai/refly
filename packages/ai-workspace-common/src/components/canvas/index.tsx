@@ -981,7 +981,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           {isPilotOpen ? (
             <motion.div
               key="pilot-panel"
-              className="absolute bottom-2 left-[calc(50%-284px)] transform -translate-x-1/2 z-20 shadow-sm rounded-[20px] w-[568px] border border-solid border-gray-100 dark:border-gray-800"
+              className="absolute bottom-2 left-[calc(50%-284px)] transform -translate-x-1/2 z-20 shadow-sm rounded-[20px] w-[568px] border border-gray-100 dark:border-gray-800"
               initial={{ opacity: 0, y: 40, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}

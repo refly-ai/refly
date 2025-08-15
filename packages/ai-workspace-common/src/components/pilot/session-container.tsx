@@ -105,7 +105,7 @@ export const SessionContainer = memo(
       setActiveSessionId: state.setActiveSessionId,
     }));
     const { query } = useFrontPageStoreShallow((state) => ({
-      query: state.query,
+      query: state.getQuery?.(canvasId) || '',
     }));
 
     const handleSessionClick = useCallback(
@@ -121,10 +121,8 @@ export const SessionContainer = memo(
       () =>
         cn(
           'flex-shrink-0',
-          'bg-white dark:bg-gray-900',
-          'border',
-          'dark:bg-refly-bg-content-z2',
-          'border-gray-200 dark:border-gray-700',
+          'bg-white dark:bg-refly-bg-content-z2',
+          'border border-gray-200 dark:border-gray-700',
           'flex',
           'flex-col',
           'w-full',
@@ -263,7 +261,7 @@ export const SessionContainer = memo(
                     >
                       {query}
                     </motion.div>
-                    <div className="pl-1 max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+                    <div className="pl-4 max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
                       {sortedSteps.map((step, index) => (
                         <motion.div
                           key={step.stepId}
@@ -309,7 +307,7 @@ export const SessionContainer = memo(
                         animate={{ scale: 1 }}
                         transition={{ duration: 0.2, delay: 0.3 }}
                       >
-                        <div className="ml-2 w-5 h-5 flex items-center justify-center">
+                        <div className="w-4 h-4 flex items-center justify-center">
                           <Thinking color="#76787B" className="w-4 h-4" />
                         </div>
                         <div className="text-sm text-center text-gray-500 font-normal">
