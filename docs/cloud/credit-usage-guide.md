@@ -40,21 +40,22 @@ No manual action required, can switch to new packages anytime for more flexible 
 - Retain "Unlimited Model Usage Rights"
 - Core models support unlimited calls, no credit consumption, no package switching needed
 
-**Early bird users can use these models unlimitedly:**
+**Early bird Pro/Max users can use these models unlimitedly:**
 1. Claude Sonnet 4
 2. Claude 4 Sonnet (thinking)
 3. Kimi K2
 4. GPT-4o
 5. GPT-4.1
 6. GPT-5
-7. GPT-o3
-8. GPT-OSS-120B
-9. Gemini 2.5 Pro
-10. Gemini 2.5 Flash
-11. DeepSeek V3
-12. DeepSeek R1
-13. Grok 4
-14. Qwen3 Coder
+7. GPT-5 chat
+8. GPT-o3
+9. GPT-OSS-120B
+10. Gemini 2.5 Pro
+11. Gemini 2.5 Flash
+12. DeepSeek V3
+13. DeepSeek R1
+14. Grok 4
+15. Qwen3 Coder
 
 ## 📊 How to Check Credit Balance and Usage
 
@@ -76,6 +77,7 @@ You can check in the following locations:
 | GPT-4o | ~7 credits |
 | GPT-4.1 | ~6 credits |
 | GPT-5 | ~7 credits |
+| GPT-5 chat | ~7 credits |
 | GPT-o3 | ~6 credits |
 | GPT-OSS-120B | ~1 credit |
 | Gemini 2.5 Pro | ~7 credits |
@@ -101,6 +103,7 @@ You can check in the following locations:
 | google / imagen-4-ultra | ~9 credits |
 | doubao-Seedream-3.0-t2i | ~6 credits |
 | Qwen-Image | ~4 credits |
+
 
 ### Video Models: Per Second Billing
 
@@ -160,7 +163,7 @@ For example, you can use credits to:
 
 ### Q5: I'm an early bird unlimited member, do I need to worry about credits?
 
-**A:** Not at all. You have Refly's "unlimited green card":
+**A:** Early-bird Pro/Max users have Refly’s “Unlimited Text Model Green Card.”
 - Core models permanently free with unlimited usage
 - Unaffected by new system, no need to consider credit consumption
 - Your permissions will be specially marked, and we'll launch a "Special Memorial Wall" in the future
@@ -174,4 +177,4 @@ For example, you can use credits to:
 - ✅ World-class model trials
 - ✅ Support for uploading 100 files
 
-Plus, there are friend invitation rewards and periodic promotional activities to easily unlock more credits! 
+Plus, there are friend invitation rewards and periodic promotional activities to easily unlock more credits! !
