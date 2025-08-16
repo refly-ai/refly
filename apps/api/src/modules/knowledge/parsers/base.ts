@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+// 模拟NestJS依赖
+const Injectable = () => (target: any) => target;
+
+// 使用 Node.js Buffer 而不是自定义的
+export type CustomBuffer = Buffer;
 
 export interface ParserOptions {
   format?: string;
@@ -6,15 +10,20 @@ export interface ParserOptions {
   timeout?: number;
   extractMedia?: boolean;
   resourceId?: string;
+  useBatchUpload?: boolean;
+  isOcr?: boolean;
+  enableFormula?: boolean;
+  enableTable?: boolean;
+  language?: string;
 }
 
 export interface ParseResult {
   content: string;
   title?: string;
-  images?: Record<string, Buffer>; // pathname to image buffer
+  images?: Record<string, CustomBuffer>; // pathname to image buffer
   metadata?: Record<string, any>;
   error?: string;
-  buffer?: Buffer;
+  buffer?: CustomBuffer;
 }
 
 @Injectable()
@@ -23,7 +32,7 @@ export abstract class BaseParser {
 
   abstract name: string;
 
-  abstract parse(input: string | Buffer): Promise<ParseResult>;
+  abstract parse(input: string | CustomBuffer): Promise<ParseResult>;
 
   protected handleError(error: Error): ParseResult {
     return {

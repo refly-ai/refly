@@ -110,16 +110,15 @@ server:
     X-Robots-Tag: noindex, nofollow
     Referrer-Policy: no-referrer
 
-redis:
-  # URL to connect redis database. Is overwritten by ${SEARXNG_REDIS_URL}.
-  # https://docs.searxng.org/admin/settings/settings_redis.html#settings-redis
+valkey:
+  # URL to connect valkey database. Is overwritten by ${SEARXNG_VALKEY_URL}.
+  # https://docs.searxng.org/admin/settings/settings_valkey.html#settings-valkey
+  # url: valkey://localhost:6379/0
   url: false
 
 ui:
   # Custom static path - leave it blank if you didn't change
   static_path: ""
-  # Is overwritten by ${SEARXNG_STATIC_USE_HASH}.
-  static_use_hash: false
   # Custom templates path - leave it blank if you didn't change
   templates_path: ""
   # query_in_title: When true, the result page's titles contains the query
@@ -176,7 +175,7 @@ outgoing:
   request_timeout: 3.0
   # the maximum timeout in seconds
   # max_request_timeout: 10.0
-  # suffix of searx_useragent, could contain information like an email address
+  # suffix of searxng_useragent, could contain information like an email address
   # to the administrator
   useragent_suffix: ""
   # The maximum number of concurrent connections that may be established.
@@ -278,7 +277,7 @@ checker:
   # disable checker when in debug mode
   off_when_debug: true
 
-  # use "scheduling: false" to disable scheduling
+  # use "scheduling: {}" to disable scheduling
   # scheduling: interval or int
 
   # to activate the scheduler:
@@ -1278,6 +1277,15 @@ engines:
       require_api_key: false
       results: HTML
 
+  - name: marginalia
+    engine: marginalia
+    shortcut: mar
+    # To get an API key, please follow the instructions at
+    # - https://about.marginalia-search.com/article/api/
+    # api_key: ...
+    disabled: true
+    inactive: true
+
   - name: mastodon users
     engine: mastodon
     mastodon_type: accounts
@@ -1583,6 +1591,20 @@ engines:
     url: https://thepiratebay.org/
     timeout: 3.0
 
+  - name: pixabay images
+    engine: pixabay
+    pixabay_type: images
+    categories: images
+    shortcut: pixi
+    disabled: true
+
+  - name: pixabay videos
+    engine: pixabay
+    pixabay_type: videos
+    categories: videos
+    shortcut: pixv
+    disabled: true
+
   - name: pixiv
     shortcut: pv
     engine: pixiv
@@ -1795,10 +1817,10 @@ engines:
     shortcut: rt
     disabled: true
 
-  # Required dependency: redis
-  # - name: myredis
+  # Required dependency: valkey
+  # - name: myvalkey
   #   shortcut : rds
-  #   engine: redis_server
+  #   engine: valkey_server
   #   exact_match_only: false
   #   host: '127.0.0.1'
   #   port: 6379
@@ -2481,8 +2503,7 @@ engines:
 
   - name: wordnik
     engine: wordnik
-    shortcut: def
-    categories: [dictionaries]
+    shortcut: wnik
     timeout: 5.0
 
   - name: woxikon.de synonyme
@@ -2582,11 +2603,6 @@ engines:
     engine: wttr
     shortcut: wttr
     timeout: 9.0
-
-  - name: yummly
-    engine: yummly
-    shortcut: yum
-    disabled: true
 
   - name: brave
     engine: brave

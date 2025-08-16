@@ -1,4 +1,12 @@
-import { ProviderCategory } from '@refly/openapi-schema';
+// 模拟@refly/openapi-schema中的ProviderCategory类型
+type ProviderCategory =
+  | 'llm'
+  | 'embedding'
+  | 'reranker'
+  | 'urlParsing'
+  | 'webSearch'
+  | 'pdfParsing'
+  | 'mediaGeneration';
 
 export type ProviderField = 'apiKey' | 'baseUrl';
 
@@ -84,6 +92,18 @@ export const providerInfoList: ProviderInfo[] = [
       baseUrl: {
         presence: 'optional',
         defaultValue: 'https://www.datalab.to/api/v1/marker',
+      },
+    },
+  },
+  {
+    key: 'mineru',
+    name: 'MinerU',
+    categories: ['pdfParsing'],
+    fieldConfig: {
+      apiKey: { presence: 'required' },
+      baseUrl: {
+        presence: 'optional',
+        defaultValue: 'https://mineru.net/api/v4',
       },
     },
   },

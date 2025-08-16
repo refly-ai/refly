@@ -119,6 +119,33 @@ export class ProviderChecker {
   }
 
   /**
+   * Detect if this is a Google Gemini provider based on baseUrl
+   */
+  private detectGeminiProvider(config: ProviderCheckConfig): boolean {
+    return (
+      config.baseUrl?.includes('generativelanguage.googleapis.com') ||
+      config.name?.toLowerCase().includes('gemini') ||
+      config.name?.toLowerCase().includes('google')
+    );
+  }
+
+  /**
+   * Get provider key for evaluation
+   * This helps route to the correct critical checks when the providerKey doesn't match the actual provider
+   */
+  private getEvaluationProviderKey(
+    details: Record<string, CheckResult>,
+    providerKey: string,
+  ): string {
+    // Check if this is a Gemini provider by looking for contextWindowCheck
+    if (details.contextWindowCheck) {
+      return 'gemini';
+    }
+
+    return providerKey;
+  }
+
+  /**
    * Check provider connection and API availability
    */
   async checkProvider(
@@ -144,6 +171,10 @@ export class ProviderChecker {
           // Check if this is actually an OpenRouter provider
           if (this.detectOpenRouterProvider(config)) {
             checkResult.details = await this.checkOpenRouterProvider(config, category);
+          }
+          // Check if this is a Google Gemini provider
+          else if (this.detectGeminiProvider(config)) {
+            checkResult.details = await this.checkGeminiProvider(config, category);
           } else {
             // Standard OpenAI provider
             checkResult.details = await this.checkLLMProvider(config, category);
@@ -167,15 +198,24 @@ export class ProviderChecker {
         case 'serper':
           checkResult.details = await this.checkSerperProvider(config);
           break;
+        case 'mineru':
+          checkResult.details = await this.checkMineruProvider(config);
+          break;
         default:
           // Generic OpenAI-compatible API check
           checkResult.details = await this.checkOpenAICompatibleProvider(config, category);
       }
 
+      // Get the correct provider key for evaluation
+      const evaluationProviderKey = this.getEvaluationProviderKey(
+        checkResult.details,
+        config.providerKey,
+      );
+
       // Evaluate overall status based on individual check results
       const { status, message } = this.evaluateOverallStatus(
         checkResult.details,
-        config.providerKey,
+        evaluationProviderKey,
         category,
       );
       checkResult.status = status;
@@ -212,7 +252,37 @@ export class ProviderChecker {
       jina: ['apiAvailability'], // Simple API availability check
       searxng: ['healthCheck'],
       serper: ['apiKeyValidation'],
+      mineru: ['apiKeyValidation', 'apiAvailability'],
+      gemini: ['apiAvailability', 'contextWindowCheck'], // Google Gemini with context window check
       default: ['apiAvailability'], // For generic OpenAI-compatible providers
+    };
+
+    // Define success messages for each provider
+    const _successMessages: Record<string, string> = {
+      ollama: 'Successfully connected to Ollama server',
+      openai: 'Successfully connected to OpenAI API',
+      anthropic: 'Successfully connected to Anthropic API',
+      jina: 'Successfully connected to Jina API',
+      searxng: 'Successfully connected to SearXNG API',
+      serper: 'Successfully connected to Serper API',
+      gemini: 'Successfully connected to Google Gemini API',
+      openrouter: 'Successfully connected to OpenRouter API',
+      mineru: 'Successfully connected to MinerU API',
+      default: 'Successfully connected to API',
+    };
+
+    // Define failure messages for each provider
+    const _failureMessages: Record<string, string> = {
+      ollama: 'Failed to connect to Ollama server',
+      openai: 'Failed to connect to OpenAI API',
+      anthropic: 'Failed to connect to Anthropic API',
+      jina: 'Failed to connect to Jina API',
+      searxng: 'Failed to connect to SearXNG API',
+      serper: 'Failed to connect to Serper API',
+      gemini: 'Failed to connect to Google Gemini API',
+      openrouter: 'Failed to connect to OpenRouter API',
+      mineru: 'Failed to connect to MinerU API',
+      default: 'Failed to connect to API',
     };
 
     const checksToEvaluate = criticalChecks[providerKey] || criticalChecks.default;
@@ -272,6 +342,20 @@ export class ProviderChecker {
         status: 'failed',
         message: 'Connection check failed - API availability could not be verified',
       };
+    }
+
+    // Special case for Google Gemini: check context window size
+    if (details.contextWindowCheck) {
+      // If context window check failed, include it in the error message
+      if (
+        details.contextWindowCheck.status === 'failed' &&
+        details.apiAvailability?.status === 'success'
+      ) {
+        return {
+          status: 'failed',
+          message: `Google Gemini API key is valid but ${details.contextWindowCheck.error || 'context window check failed'}`,
+        };
+      }
     }
 
     // Special case for OpenRouter: explicit URL-based routing
@@ -594,6 +678,247 @@ export class ProviderChecker {
     }
 
     return checkResults;
+  }
+
+  /**
+   * Check Mineru provider
+   */
+  private async checkMineruProvider(
+    config: ProviderCheckConfig,
+  ): Promise<Record<string, CheckResult>> {
+    const checkResults: Record<string, CheckResult> = {
+      apiKeyValidation: this.createCheckResult(),
+      apiAvailability: this.createCheckResult(),
+    };
+
+    // Validate API key
+    if (!config.apiKey) {
+      checkResults.apiKeyValidation.status = 'failed';
+      checkResults.apiKeyValidation.error = 'MinerU API key is required';
+      return checkResults;
+    }
+
+    // Test API availability with a status check
+    const baseUrl = config.baseUrl || 'https://mineru.net/api/v4';
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      `${baseUrl}/extract/task/status`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      },
+      10000,
+    );
+
+    if (isSuccess) {
+      checkResults.apiKeyValidation.status = 'success';
+      checkResults.apiAvailability.status = 'success';
+      checkResults.apiAvailability.data = {
+        statusCode: response.status,
+        responseTime: Date.now(),
+      };
+    } else {
+      // Check for specific error codes
+      if (response?.status === 401 || response?.status === 403) {
+        checkResults.apiKeyValidation.status = 'failed';
+        checkResults.apiKeyValidation.error = 'Invalid Mineru API key or unauthorized access';
+      } else if (response?.status === 429) {
+        checkResults.apiKeyValidation.status = 'success'; // API key is valid but rate limited
+        checkResults.apiAvailability.status = 'failed';
+        checkResults.apiAvailability.error = 'Rate limit exceeded';
+      } else {
+        checkResults.apiAvailability.status = 'failed';
+        checkResults.apiAvailability.error = errorMessage;
+      }
+    }
+
+    return checkResults;
+  }
+
+  /**
+   * Check Google Gemini provider
+   */
+  private async checkGeminiProvider(
+    config: ProviderCheckConfig,
+    _category?: ProviderCategory,
+  ): Promise<Record<string, CheckResult>> {
+    const checkResults: Record<string, CheckResult> = {
+      apiAvailability: this.createCheckResult(),
+      contextWindowCheck: this.createCheckResult(),
+    };
+
+    // Validate API key presence
+    const apiKeyError = this.validateApiKey(config, 'Google Gemini');
+    if (apiKeyError) {
+      checkResults.apiAvailability = apiKeyError;
+      return checkResults;
+    }
+
+    // Ensure the baseUrl is properly formatted for Gemini
+    let baseUrl = config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
+
+    // If baseUrl doesn't end with /v1beta, add it
+    if (!baseUrl.endsWith('/v1beta')) {
+      baseUrl = `${baseUrl.replace(/\/*$/, '')}/v1beta`;
+    }
+
+    // For Gemini, we need to check the models endpoint
+    const modelsUrl = `${baseUrl}/models`;
+
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      modelsUrl,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      },
+      10000,
+    );
+
+    if (isSuccess) {
+      try {
+        const responseData = await response.json();
+        const models = responseData.models || [];
+
+        checkResults.apiAvailability.status = 'success';
+        checkResults.apiAvailability.data = {
+          statusCode: response.status,
+          models: models.length,
+          responseTime: Date.now(),
+        };
+
+        // Check context window size for Gemini models
+        await this.checkGeminiContextWindow(config, baseUrl, checkResults);
+      } catch (parseError) {
+        checkResults.apiAvailability.status = 'failed';
+        checkResults.apiAvailability.error = `Failed to parse Gemini models response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`;
+      }
+    } else {
+      checkResults.apiAvailability.status = 'failed';
+
+      if (response?.status === 401) {
+        checkResults.apiAvailability.error = 'Invalid Google Gemini API key - unauthorized access';
+      } else if (response?.status === 403) {
+        checkResults.apiAvailability.error =
+          'Google Gemini API key access forbidden - check permissions';
+      } else if (response?.status === 429) {
+        checkResults.apiAvailability.error = 'Google Gemini rate limit exceeded';
+      } else if (response?.status === 400 && errorMessage?.includes('context length')) {
+        // Handle context window size error
+        const contextSizeMatch = errorMessage.match(/maximum context length is (\d+) tokens/i);
+        const requestedSizeMatch = errorMessage.match(/requested about (\d+) tokens/i);
+
+        const maxContextSize = contextSizeMatch ? Number.parseInt(contextSizeMatch[1], 10) : 32768;
+        const requestedSize = requestedSizeMatch ? Number.parseInt(requestedSizeMatch[1], 10) : 0;
+
+        const errorDetail =
+          requestedSize > 0
+            ? `Input exceeds model limit: ${requestedSize}/${maxContextSize} tokens`
+            : `Context window size exceeded (max: ${maxContextSize} tokens)`;
+
+        checkResults.apiAvailability.error = 'Google Gemini context window size exceeded';
+        checkResults.contextWindowCheck.status = 'failed';
+        checkResults.contextWindowCheck.error = errorDetail;
+        checkResults.contextWindowCheck.data = {
+          maxContextWindow: maxContextSize,
+          requestedTokens: requestedSize,
+          originalError: errorMessage,
+          responseTime: Date.now(),
+        };
+      } else {
+        checkResults.apiAvailability.error = this.generateHttpErrorMessage(
+          response?.status,
+          errorMessage,
+          'Google Gemini API',
+        );
+      }
+    }
+
+    return checkResults;
+  }
+
+  /**
+   * Check Gemini context window size
+   */
+  private async checkGeminiContextWindow(
+    config: ProviderCheckConfig,
+    baseUrl: string,
+    checkResults: Record<string, CheckResult>,
+  ): Promise<void> {
+    // Test endpoint for context window size
+    const testEndpoint = `${baseUrl}/models/gemini-pro:generateContent`;
+
+    // Create a small test request to check context window handling
+    const { response, isSuccess, errorMessage } = await this.performApiRequest(
+      testEndpoint,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: 'What is the maximum context window size for this model?',
+                },
+              ],
+            },
+          ],
+        }),
+      },
+      10000,
+    );
+
+    if (isSuccess) {
+      try {
+        const _responseData = await response.json();
+        checkResults.contextWindowCheck.status = 'success';
+        checkResults.contextWindowCheck.data = {
+          statusCode: response.status,
+          maxContextWindow: 32768, // Default for Gemini Pro
+          note: 'Context window size check successful',
+          responseTime: Date.now(),
+        };
+      } catch (parseError) {
+        checkResults.contextWindowCheck.status = 'failed';
+        checkResults.contextWindowCheck.error = `Failed to parse context window test response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`;
+      }
+    } else {
+      checkResults.contextWindowCheck.status = 'failed';
+
+      if (response?.status === 400 && errorMessage?.includes('context length')) {
+        // Extract context window size from error message if possible
+        const contextSizeMatch = errorMessage.match(/maximum context length is (\d+) tokens/i);
+        const requestedSizeMatch = errorMessage.match(/requested about (\d+) tokens/i);
+
+        const maxContextSize = contextSizeMatch ? Number.parseInt(contextSizeMatch[1], 10) : 32768;
+        const requestedSize = requestedSizeMatch ? Number.parseInt(requestedSizeMatch[1], 10) : 0;
+
+        const errorDetail =
+          requestedSize > 0
+            ? `Google Gemini has a maximum context window of ${maxContextSize} tokens. Your input of ${requestedSize} tokens exceeds this limit.`
+            : `Google Gemini has a maximum context window of ${maxContextSize} tokens. Your input exceeds this limit.`;
+
+        checkResults.contextWindowCheck.error = errorDetail;
+        checkResults.contextWindowCheck.data = {
+          maxContextWindow: maxContextSize,
+          requestedTokens: requestedSize,
+          originalError: errorMessage,
+          responseTime: Date.now(),
+          suggestion:
+            'Consider using the "middle-out" transform to compress your prompt automatically.',
+        };
+      } else {
+        checkResults.contextWindowCheck.error = 'Failed to verify context window size';
+      }
+    }
   }
 
   /**
