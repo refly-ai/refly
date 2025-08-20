@@ -24,6 +24,7 @@ export enum IDPrefix {
   WORKFLOW_NODE_EXECUTION = 'wne-',
   PROVIDER = 'pr-',
   PROVIDER_ITEM = 'pi-',
+  TOOLSET = 'ts-',
   CONTENT_SELECTOR = 'cs-',
   MEMO = 'm-',
   VERIFICATION_SESSION = 'vs-',
@@ -135,6 +136,10 @@ export function genProviderID(): string {
 
 export function genProviderItemID(): string {
   return IDPrefix.PROVIDER_ITEM + createId();
+}
+
+export function genToolsetID(): string {
+  return IDPrefix.TOOLSET + createId();
 }
 
 export function genSkillID(): string {

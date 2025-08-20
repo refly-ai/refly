@@ -48,6 +48,8 @@ import {
   listSkillInstances,
   listSkills,
   listSkillTriggers,
+  listTools,
+  listToolsets,
   serveStatic,
 } from '../requests/services.gen';
 import {
@@ -86,6 +88,8 @@ import {
   ListSharesData,
   ListSkillInstancesData,
   ListSkillTriggersData,
+  ListToolsData,
+  ListToolsetsData,
 } from '../requests/types.gen';
 import * as Common from './common';
 export const ensureUseListMcpServersData = (
@@ -448,6 +452,22 @@ export const ensureUseListProviderItemOptionsData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListProviderItemOptionsKeyFn(clientOptions),
     queryFn: () => listProviderItemOptions({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListToolsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListToolsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListToolsKeyFn(clientOptions),
+    queryFn: () => listTools({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListToolsetsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListToolsetsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListToolsetsKeyFn(clientOptions),
+    queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseServeStaticData = (
   queryClient: QueryClient,

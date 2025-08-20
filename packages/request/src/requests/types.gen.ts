@@ -69,21 +69,11 @@ export type McpServerDTO = {
   /**
    * MCP server creation time
    */
-  createdAt: string;
+  createdAt?: string;
   /**
    * MCP server update time
    */
-  updatedAt: string;
-};
-
-export type ListMcpServersData = {
-  query?: {
-    type?: McpServerType;
-    /**
-     * Filter by enabled status
-     */
-    enabled?: boolean;
-  };
+  updatedAt?: string;
 };
 
 export type ListMcpServersResponse = BaseResponse & {
@@ -3787,9 +3777,14 @@ export type InvokeSkillRequest = {
    */
   triggerId?: string;
   /**
-   * Selected MCP servers
+   * Selected MCP servers (deprecated, use `tools` instead)
+   * @deprecated
    */
   selectedMcpServers?: Array<string>;
+  /**
+   * Selected tools
+   */
+  tools?: Array<GenericToolset>;
   /**
    * Workflow execution ID for workflow context
    */
@@ -5221,6 +5216,110 @@ export type DeleteProviderItemRequest = {
   itemId: string;
 };
 
+export type ToolsetAuthType = 'manual' | 'oauth';
+
+export type Toolset = {
+  /**
+   * Toolset ID
+   */
+  toolsetId: string;
+  /**
+   * Whether the toolset is global
+   */
+  isGlobal?: boolean;
+  /**
+   * Whether the toolset is builtin
+   */
+  isBuiltin?: boolean;
+  /**
+   * Toolset name
+   */
+  name?: string;
+  /**
+   * Toolset key
+   */
+  key?: string;
+  /**
+   * Toolset auth type
+   */
+  authType?: ToolsetAuthType;
+  /**
+   * Toolset auth data
+   */
+  authData?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Toolset creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Toolset update timestamp
+   */
+  updatedAt?: string;
+};
+
+export type ListToolsetsResponse = BaseResponse & {
+  data?: Array<Toolset>;
+};
+
+export type UpsertToolsetRequest = {
+  /**
+   * Toolset ID (only for update)
+   */
+  toolsetId?: string;
+  /**
+   * Toolset name
+   */
+  name?: string;
+  /**
+   * Toolset key
+   */
+  key?: string;
+  /**
+   * Toolset auth type
+   */
+  authType?: ToolsetAuthType;
+  /**
+   * Toolset auth data
+   */
+  authData?: {
+    [key: string]: unknown;
+  };
+};
+
+export type UpsertToolsetResponse = BaseResponse & {
+  data?: Toolset;
+};
+
+export type GenericToolsetType = 'regular' | 'mcp';
+
+export type GenericToolset = {
+  /**
+   * Toolset type
+   */
+  type?: GenericToolsetType;
+  /**
+   * Toolset
+   */
+  toolset?: Toolset;
+  /**
+   * MCP server
+   */
+  mcpServer?: McpServerDTO;
+};
+
+export type ListToolsResponse = BaseResponse & {
+  data?: Array<GenericToolset>;
+};
+
+export type DeleteToolRequest = {
+  /**
+   * Toolset ID
+   */
+  toolsetId: string;
+};
+
 export type DocumentInterface = {
   /**
    * An optional identifier for the document. Ideally this should be unique across the document collection and formatted as a UUID.
@@ -5441,12 +5540,16 @@ export type UpdateWorkflowVariablesResponse = BaseResponse & {
   data?: Array<WorkflowVariable>;
 };
 
-export type ListMcpServersData2 = {
+export type ListMcpServersData = {
   query?: {
     /**
      * Filter by enabled status
      */
     enabled?: boolean;
+    /**
+     * Filter by isGlobal status. If not passed, return both global and user-specific MCP servers.
+     */
+    isGlobal?: boolean;
     /**
      * MCP server type
      */
@@ -6812,7 +6915,7 @@ export type ListProvidersData = {
      */
     enabled?: boolean;
     /**
-     * Whether the provider is global
+     * Whether the provider is global. If not passed, return both global and user-specific providers.
      */
     isGlobal?: boolean;
     /**
@@ -6869,7 +6972,7 @@ export type ListProviderItemsData = {
      */
     enabled?: boolean;
     /**
-     * Whether the provider item is global
+     * Whether the provider item is global. If not passed, return both global and user-specific provider items.
      */
     isGlobal?: boolean;
     /**
@@ -6939,6 +7042,56 @@ export type DeleteProviderItemData = {
 export type DeleteProviderItemResponse = BaseResponse;
 
 export type DeleteProviderItemError = unknown;
+
+export type ListToolsData = {
+  query?: {
+    /**
+     * Whether the tool is global. If not passed, return both global and user-specific tools.
+     */
+    isGlobal?: boolean;
+  };
+};
+
+export type ListToolsResponse2 = ListToolsResponse;
+
+export type ListToolsError = unknown;
+
+export type ListToolsetsData = {
+  query?: {
+    /**
+     * Whether the toolset is global. If not passed, return both global and user-specific toolsets.
+     */
+    isGlobal?: boolean;
+  };
+};
+
+export type ListToolsetsResponse2 = ListToolsetsResponse;
+
+export type ListToolsetsError = unknown;
+
+export type CreateToolsetData = {
+  body: UpsertToolsetRequest;
+};
+
+export type CreateToolsetResponse = UpsertToolsetResponse;
+
+export type CreateToolsetError = unknown;
+
+export type UpdateToolsetData = {
+  body: UpsertToolsetRequest;
+};
+
+export type UpdateToolsetResponse = UpsertToolsetResponse;
+
+export type UpdateToolsetError = unknown;
+
+export type DeleteToolsetData = {
+  body: DeleteToolRequest;
+};
+
+export type DeleteToolsetResponse = BaseResponse;
+
+export type DeleteToolsetError = unknown;
 
 export type ScrapeData = {
   body: ScrapeWeblinkRequest;

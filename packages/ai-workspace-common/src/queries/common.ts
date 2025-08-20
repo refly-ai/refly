@@ -33,6 +33,7 @@ import {
   createShare,
   createSkillInstance,
   createSkillTrigger,
+  createToolset,
   createVerification,
   deleteCanvas,
   deleteDocument,
@@ -50,6 +51,7 @@ import {
   deleteShare,
   deleteSkillInstance,
   deleteSkillTrigger,
+  deleteToolset,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
@@ -102,6 +104,8 @@ import {
   listSkillInstances,
   listSkills,
   listSkillTriggers,
+  listTools,
+  listToolsets,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -135,6 +139,7 @@ import {
   updateSettings,
   updateSkillInstance,
   updateSkillTrigger,
+  updateToolset,
   updateWorkflowVariables,
   upload,
   validateMcpServer,
@@ -629,6 +634,26 @@ export const UseListProviderItemOptionsKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useListProviderItemOptionsKey, ...(queryKey ?? [clientOptions])];
+export type ListToolsDefaultResponse = Awaited<ReturnType<typeof listTools>>['data'];
+export type ListToolsQueryResult<
+  TData = ListToolsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListToolsKey = 'ListTools';
+export const UseListToolsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListToolsKey, ...(queryKey ?? [clientOptions])];
+export type ListToolsetsDefaultResponse = Awaited<ReturnType<typeof listToolsets>>['data'];
+export type ListToolsetsQueryResult<
+  TData = ListToolsetsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListToolsetsKey = 'ListToolsets';
+export const UseListToolsetsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListToolsetsKey, ...(queryKey ?? [clientOptions])];
 export type ServeStaticDefaultResponse = Awaited<ReturnType<typeof serveStatic>>['data'];
 export type ServeStaticQueryResult<
   TData = ServeStaticDefaultResponse,
@@ -1139,6 +1164,24 @@ export type DeleteProviderItemMutationResult = Awaited<ReturnType<typeof deleteP
 export const useDeleteProviderItemKey = 'DeleteProviderItem';
 export const UseDeleteProviderItemKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteProviderItemKey,
+  ...(mutationKey ?? []),
+];
+export type CreateToolsetMutationResult = Awaited<ReturnType<typeof createToolset>>;
+export const useCreateToolsetKey = 'CreateToolset';
+export const UseCreateToolsetKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateToolsetKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateToolsetMutationResult = Awaited<ReturnType<typeof updateToolset>>;
+export const useUpdateToolsetKey = 'UpdateToolset';
+export const UseUpdateToolsetKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateToolsetKey,
+  ...(mutationKey ?? []),
+];
+export type DeleteToolsetMutationResult = Awaited<ReturnType<typeof deleteToolset>>;
+export const useDeleteToolsetKey = 'DeleteToolset';
+export const UseDeleteToolsetKeyFn = (mutationKey?: Array<unknown>) => [
+  useDeleteToolsetKey,
   ...(mutationKey ?? []),
 ];
 export type ScrapeMutationResult = Awaited<ReturnType<typeof scrape>>;

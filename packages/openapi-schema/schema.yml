@@ -36,6 +36,8 @@ tags:
     description: Search related endpoints
   - name: provider
     description: Provider management endpoints
+  - name: tool
+    description: Tool management endpoints
   - name: misc
     description: Miscellaneous endpoints
   - name: workflow
@@ -59,6 +61,11 @@ paths:
         - name: enabled
           in: query
           description: Filter by enabled status
+          schema:
+            type: boolean
+        - name: isGlobal
+          in: query
+          description: Filter by isGlobal status. If not passed, return both global and user-specific MCP servers.
           schema:
             type: boolean
       security:
@@ -2819,7 +2826,7 @@ paths:
             $ref: '#/components/schemas/ProviderCategory'
         - name: isGlobal
           in: query
-          description: Whether the provider is global
+          description: Whether the provider is global. If not passed, return both global and user-specific providers.
           schema:
             type: boolean
       responses:
@@ -2934,7 +2941,7 @@ paths:
             $ref: '#/components/schemas/ProviderCategory'
         - name: isGlobal
           in: query
-          description: Whether the provider item is global
+          description: Whether the provider item is global. If not passed, return both global and user-specific provider items.
           schema:
             type: boolean
       responses:
@@ -3070,6 +3077,106 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /tool/list:
+    get:
+      tags:
+        - tool
+      summary: List tool
+      description: List all available tools, including regular tools and MCP servers.
+      operationId: listTools
+      parameters:
+        - name: isGlobal
+          in: query
+          description: Whether the tool is global. If not passed, return both global and user-specific tools.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListToolsResponse'
+  /tool/toolset/list:
+    get:
+      tags:
+        - tool
+      summary: List toolsets
+      description: List all available toolsets
+      operationId: listToolsets
+      parameters:
+        - name: isGlobal
+          in: query
+          description: Whether the toolset is global. If not passed, return both global and user-specific toolsets.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListToolsetsResponse'
+  /tool/toolset/create:
+    post:
+      tags:
+        - tool
+      summary: Create regular tool
+      description: Create a new regular tool
+      operationId: createToolset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertToolsetRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertToolsetResponse'
+  /tool/toolset/update:
+    post:
+      tags:
+        - tool
+      summary: Update toolset
+      description: Update an existing toolset
+      operationId: updateToolset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertToolsetRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertToolsetResponse'
+  /tool/toolset/delete:
+    post:
+      tags:
+        - tool
+      summary: Delete toolset
+      description: Delete an existing toolset
+      operationId: deleteToolset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteToolRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /misc/scrape:
     post:
       tags:
@@ -3155,8 +3262,6 @@ components:
         - type
         - enabled
         - isGlobal
-        - createdAt
-        - updatedAt
       properties:
         name:
           type: string
@@ -3223,18 +3328,6 @@ components:
           type: string
           format: date-time
           description: MCP server update time
-
-    ListMcpServersData:
-      type: object
-      properties:
-        query:
-          type: object
-          properties:
-            type:
-              $ref: '#/components/schemas/McpServerType'
-            enabled:
-              type: boolean
-              description: Filter by enabled status
 
     ListMcpServersResponse:
       allOf:
@@ -7002,9 +7095,15 @@ components:
           description: Trigger ID
         selectedMcpServers:
           type: array
-          description: Selected MCP servers
+          description: Selected MCP servers (deprecated, use `tools` instead)
           items:
             type: string
+          deprecated: true
+        tools:
+          type: array
+          description: Selected tools
+          items:
+            $ref: '#/components/schemas/GenericToolset'
         workflowExecutionId:
           type: string
           description: Workflow execution ID for workflow context
@@ -8447,6 +8546,115 @@ components:
         itemId:
           type: string
           description: Provider item ID
+    ToolsetAuthType:
+      type: string
+      enum:
+        - manual
+        - oauth
+    Toolset:
+      type: object
+      required:
+        - toolsetId
+      properties:
+        toolsetId:
+          type: string
+          description: Toolset ID
+        isGlobal:
+          type: boolean
+          description: Whether the toolset is global
+        isBuiltin:
+          type: boolean
+          description: Whether the toolset is builtin
+        name:
+          type: string
+          description: Toolset name
+        key:
+          type: string
+          description: Toolset key
+        authType:
+          $ref: '#/components/schemas/ToolsetAuthType'
+          description: Toolset auth type
+        authData:
+          type: object
+          additionalProperties: true
+          description: Toolset auth data
+        createdAt:
+          type: string
+          format: date-time
+          description: Toolset creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Toolset update timestamp
+    ListToolsetsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Toolset'
+    UpsertToolsetRequest:
+      type: object
+      properties:
+        toolsetId:
+          type: string
+          description: Toolset ID (only for update)
+        name:
+          type: string
+          description: Toolset name
+        key:
+          type: string
+          description: Toolset key
+        authType:
+          $ref: '#/components/schemas/ToolsetAuthType'
+          description: Toolset auth type
+        authData:
+          type: object
+          additionalProperties: true
+          description: Toolset auth data
+    UpsertToolsetResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Toolset'
+    GenericToolsetType:
+      type: string
+      enum:
+        - regular
+        - mcp
+    GenericToolset:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/GenericToolsetType'
+          description: Toolset type
+        toolset:
+          $ref: '#/components/schemas/Toolset'
+          description: Toolset
+        mcpServer:
+          $ref: '#/components/schemas/McpServerDTO'
+          description: MCP server
+    ListToolsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/GenericToolset'
+    DeleteToolRequest:
+      type: object
+      required:
+        - toolsetId
+      properties:
+        toolsetId:
+          type: string
+          description: Toolset ID
     DocumentInterface:
       type: object
       properties:

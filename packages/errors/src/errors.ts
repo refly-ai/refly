@@ -288,6 +288,14 @@ export class ProviderMisconfigurationError extends BaseError {
   };
 }
 
+export class ToolsetNotFoundError extends BaseError {
+  code = 'E1020';
+  messageDict = {
+    en: 'Toolset not found, please refresh',
+    'zh-CN': '工具集不存在，请刷新重试',
+  };
+}
+
 export class StorageQuotaExceeded extends BaseError {
   code = 'E2001';
   messageDict = {
@@ -398,6 +406,7 @@ const errorMap = {
   E1017: McpServerNotFoundError,
   E1018: CanvasVersionNotFoundError,
   E1019: ProviderMisconfigurationError,
+  E1020: ToolsetNotFoundError,
   E2001: StorageQuotaExceeded,
   E2002: ModelUsageQuotaExceeded,
   E2003: ModelNotSupportedError,

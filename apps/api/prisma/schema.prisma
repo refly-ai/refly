@@ -1454,6 +1454,65 @@ model PageVersion {
   @@map("page_versions")
 }
 
+model Toolset {
+  /// Primary key
+  pk            Int       @id @default(autoincrement())
+  /// Toolset ID
+  toolsetId     String    @unique @map("toolset_id")
+  /// Whether the toolset is global
+  isGlobal      Boolean   @default(false) @map("is_global")
+  /// UID
+  uid           String?   @map("uid")
+  /// Toolset name
+  name          String    @map("name")
+  /// Toolset key
+  key           String    @map("key")
+  /// Toolset type (mcp, http, etc.)
+  authType      String    @map("auth_type")
+  /// Toolset auth data
+  authData      String?   @map("auth_data")
+  /// Toolset credit billing
+  creditBilling String?   @map("credit_billing")
+  /// Create timestamp
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Deletion timestamp
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([uid, isGlobal, deletedAt])
+  @@map("toolsets")
+}
+
+model ToolCallResult {
+  /// Primary key
+  pk        Int       @id @default(autoincrement())
+  /// Call ID
+  callId    String    @unique @map("call_id")
+  /// UID
+  uid       String    @map("uid")
+  /// Toolset ID
+  toolsetId String    @map("toolset_id")
+  /// Tool name
+  toolName  String    @map("tool_name")
+  /// Input data
+  input     String    @map("input")
+  /// Output data
+  output    String    @map("output")
+  /// Error message
+  error     String?   @map("error")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Deletion timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([toolsetId, deletedAt])
+  @@index([toolName, deletedAt])
+  @@map("tool_call_results")
+}
+
 model McpServer {
   /// Primary key
   pk        Int       @id @default(autoincrement())
