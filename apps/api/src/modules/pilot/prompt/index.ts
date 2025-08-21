@@ -26,9 +26,9 @@ export const pilotStepSchema = z
       .array(z.string())
       .describe('The ID list of the relevant canvas items for this step'),
     workflowStage: z
-      .enum(['research', 'creation'])
+      .enum(['research', 'analysis', 'synthesis', 'creation'])
       .describe(
-        'The workflow stage this step belongs to - simplified two-stage workflow: research (information gathering using webSearch/librarySearch/commonQnA) → creation (output generation using generateDoc/codeArtifacts/generateMedia). Research phase forbidden from using creation tools. Creation phase forbidden from using research tools.',
+        'The workflow stage this step belongs to - must follow proper sequencing: research (early) → analysis (middle) → synthesis (optional) → creation (final). Each stage uses specific tools: research uses webSearch/librarySearch/commonQnA, analysis uses commonQnA, synthesis uses commonQnA, creation uses generateDoc/codeArtifacts/generateMedia only after sufficient context gathering.',
       ),
   })
   .describe('A single action step of the pilot');
@@ -279,12 +279,17 @@ export function getRecommendedStageForEpoch(currentEpoch: number, totalEpochs: n
 
   // Calculate progress as a percentage
   const progress = normalizedCurrentEpoch / normalizedTotalEpochs;
+  const span = 1 / normalizedTotalEpochs;
 
-  // Simplified two-stage workflow: research → creation
-  if (progress < 0.9) {
-    return 'research'; // First 90% for comprehensive research
+  // Assign stages based on progress
+  if (progress < span) {
+    return 'research';
+  } else if (progress < span * 2) {
+    return 'analysis';
+  } else if (progress < span * 3) {
+    return 'synthesis';
   } else {
-    return 'creation'; // Last 10% for output creation
+    return 'creation';
   }
 }
 
@@ -297,99 +302,53 @@ export function generateStageGuidance(stage: string): string {
   switch (stage) {
     case 'research':
       return `
-## CURRENT EPOCH STAGE: RESEARCH (Information Gathering Phase)
-Focus exclusively on targeted, dependency-first information gathering that directly serves the user's original question.
+## CURRENT EPOCH STAGE: RESEARCH (Early Stage)
+In this early stage, focus exclusively on gathering information:
 
-## CRITICAL: USER QUESTION ALIGNMENT
-**Requirement**: Every search and analysis must directly serve answering the user's specific question.
-**Quality Check**: Continuously evaluate if research actions contribute to fulfilling the user's original intent.
+- REQUIRED: Use primarily webSearch and librarySearch tools
+- Use commonQnA only for basic information gathering
+- DO NOT use analysis, synthesis, or creation tools yet
+- Focus on broad information gathering about the topic
+- Collect diverse perspectives and factual information
+- Explore different aspects of the question systematically
+- ALL steps in this epoch should have workflowStage="research"`;
 
-### Core Research Principles: Focused, Question-Aligned Research
-- REQUIRED: Start with direct searches that exactly match the user's original question (verbatim), then search the question's explicit dependency statements
-- STRATEGY: Break the user question into essential dependency components and search each specifically
-- PRIORITIZE: Facts, data, and evidence that directly answer the user question
-- AVOID: Broad or tangential topics that do not directly help answer the user question
+    case 'analysis':
+      return `
+## CURRENT EPOCH STAGE: ANALYSIS (Middle Stage)
+In this middle stage, focus on analyzing the information collected:
 
-### STRICT TOOL RESTRICTIONS FOR RESEARCH PHASE:
-- ✅ **ALLOWED**: webSearch, librarySearch, commonQnA
-- ❌ **FORBIDDEN**: generateDoc, codeArtifacts, generateMedia
-- **VIOLATION WARNING**: Using creation tools in research phase will compromise workflow integrity
-- **ENFORCEMENT**: All steps in research epoch MUST have workflowStage="research" and use only allowed tools
+- REQUIRED: Use primarily commonQnA for analysis
+- Build upon research collected in previous epochs
+- Identify patterns, contradictions, and insights
+- Evaluate the quality and reliability of information
+- Compare different perspectives and approaches
+- Synthesize preliminary findings
+- MOST steps in this epoch should have workflowStage="analysis"
+- NO creation steps allowed yet`;
 
-### Dependency-First Workflow
-1. Direct query: Issue a precise search for the original user question text
-2. Dependency extraction: Identify prerequisite facts required to answer the question (who/what/when/where/numbers/definitions)
-3. Targeted queries: Generate focused searches for each dependency using exact terms from the user question
-4. Relevance filter: Keep only sources that directly contribute to answering the question; discard noisy or generic results
+    case 'synthesis':
+      return `
+## CURRENT EPOCH STAGE: SYNTHESIS (Late Middle Stage)
+In this late middle stage, focus on organizing and planning outputs:
 
-### Example (illustrative)
-User question: "Research the 2025 season 'I Am a Singer' grand final ranking and produce a final ranking report."
-Recommended dependency-first queries:
-- "2025 I Am a Singer grand final ranking"
-- "2025 I Am a Singer grand final news"
-- "2025 I Am a Singer grand final social media reactions"
-- "2025 I Am a Singer finalists and performance order"
-- "2025 I Am a Singer grand final official announcements"
-
-### Research Quality Standards:
-- Every search must align with answering the user's original question
-- Maintain strict relevance filtering - discard information not serving user intent
-- Document sources that directly contribute to the final answer
-- ALL steps in this epoch must have workflowStage="research"
-- LIMITATION: librarySearch and commonQnA can each appear at most ONCE in this stage due to their limited capabilities`;
+- REQUIRED: Use primarily commonQnA for synthesis
+- Organize information into coherent frameworks
+- Identify the most important findings and insights
+- Plan the structure of final deliverables
+- Draft outlines for documents or code
+- MOST steps should have workflowStage="synthesis"
+- LIMITED creation steps allowed (max 1)`;
 
     case 'creation':
       return `
-## CURRENT EPOCH STAGE: CREATION (Final Output Generation Phase)
-Focus exclusively on creating comprehensive outputs that directly fulfill the user's original question.
-
-## CRITICAL: USER QUESTION ALIGNMENT
-**Requirement**: All outputs must directly address the user's original question and requirements.
-**Quality Check**: Verify that every creation step serves the user's specific intent and fulfills their original request.
-
-### Core Creation Principles
-- REQUIRED: All outputs must directly address the user's original question and requirements
-- STRATEGY: Use gathered research to create exactly what the user requested
-- PRIORITIZE: User satisfaction through precise fulfillment of their original intent
-- QUALITY: Include format, style, and technical specifications as requested by user
-
-### STRICT TOOL RESTRICTIONS FOR CREATION PHASE:
-- ✅ **ALLOWED**: commonQnA, generateDoc, codeArtifacts, generateMedia
-- ❌ **FORBIDDEN**: webSearch, librarySearch
-- **VIOLATION WARNING**: Using research tools in creation phase indicates insufficient preparation
-- **ENFORCEMENT**: All steps in creation epoch MUST have workflowStage="creation" and use only allowed tools
-
-### CRITICAL CREATION TASK SELECTION RULES:
-**REQUIREMENT**: In creation stage, you MUST analyze the userQuestion and select ONLY ONE most appropriate skill from the allowed tools.
-
-**Skill Selection Logic Based on User Question:**
-1. **commonQnA**: Choose when user needs analysis, explanation, or synthesis of gathered information
-   - Use for: answering questions, providing insights, analyzing data, explaining concepts
-   - Example: "What are the key findings from this research?" or "Analyze the pros and cons of this approach"
-
-2. **generateDoc**: Choose when user needs a comprehensive document, report, or article
-   - Use for: creating reports, articles, summaries, documentation, written content
-   - Example: "Create a research report" or "Write an article about this topic"
-
-3. **codeArtifacts**: Choose when user needs code, software, or technical implementation
-   - Use for: generating code, creating applications, building tools, technical solutions
-   - Example: "Create a Python script" or "Build a web application"
-
-4. **generateMedia**: Choose when user needs visual, audio, or video content
-   - Use for: images, videos, audio, graphics, multimedia content
-   - Example: "Create a logo" or "Generate a video"
-
-**TASK GENERATION RULE**: 
-- Generate EXACTLY ONE creation task that best matches the user's original question
-- Do NOT create multiple creation tasks
-- Choose the skill that most directly addresses the user's primary request
-- Ensure the single task comprehensively fulfills the user's needs
+## CURRENT EPOCH STAGE: CREATION (Final Stage)
+In this final stage, focus on creating comprehensive outputs based on gathered information:
 
 ### Available Creation Tools:
-- **commonQnA**: Answer questions and provide analysis based on gathered research
-- **generateDoc**: Create comprehensive documents, articles, reports that answer user question
-- **codeArtifacts**: Generate complete code projects and applications that fulfill user requirements  
-- **generateMedia**: Create multimodal content including images, videos, and audio that serves user intent
+- **generateDoc**: Create comprehensive documents, articles, reports
+- **codeArtifacts**: Generate complete code projects and applications
+- **generateMedia**: Create multimodal content including images, videos, and audio (unified multimedia generator)
 
 ### Multimodal Content Detection Guidelines:
 When users request content that involves visual, video, or audio elements, use the unified **generateMedia** tool:
@@ -423,43 +382,28 @@ When users request content that involves visual, video, or audio elements, use t
 - Use generateMedia ONLY for multimedia content (images, videos, audio)
 - Use codeArtifacts for code projects and interactive applications
 - Use generateDoc for text documents and reports
-- Use commonQnA for analysis and explanation
 
 **STEP 3: Format the query correctly**
 - ALWAYS include "mediaType: [detected_type]" in generateMedia queries
 - Example: "Create a company logo with modern design. mediaType: image"
 
-### User Intent Compliance Framework:
-1. **Question Analysis**: Break down the user's original question into deliverable components
-2. **Requirement Mapping**: Ensure the single creation step maps to the user's primary requirement  
-3. **Format Adherence**: Follow any format, style, or technical specifications mentioned by user
-4. **Completeness Verification**: Verify that the single output comprehensively addresses the user's question
-
-### Creation Quality Standards:
-- MUST reference previous research context in contextItemIds (almost always required)
-- The single creation task must directly serve the user's original question
-- Use specific, descriptive queries that align with user requirements
-- Include style, format, and technical specifications as requested by user
-- ALL creation steps must have workflowStage="creation"
-- Generate EXACTLY ONE creation task that best fulfills the user's needs
-- Ensure the single output fulfills user expectations and original intent`;
+### Important Rules:
+- MUST reference previous research context in contextItemIds
+- Each creation step should build upon information gathered in previous stages
+- Use specific, descriptive queries that include style and format requirements
+- ALL creation steps should have workflowStage="creation"
+- Creation tools should ONLY be used in the final 1-2 steps
+- MUST reference previous context items in almost all cases`;
 
     default:
       return `
 ## CURRENT EPOCH STAGE: RESEARCH (Default Stage)
-Focus exclusively on targeted information gathering that directly serves the user's original question.
+Focus on gathering information:
 
-### STRICT TOOL RESTRICTIONS:
-- ✅ **ALLOWED**: webSearch, librarySearch, commonQnA
-- ❌ **FORBIDDEN**: generateDoc, codeArtifacts, generateMedia
-- **ENFORCEMENT**: ALL steps in this epoch must have workflowStage="research"
-- **LIMITATION**: librarySearch and commonQnA can only appear ONCE each in this stage due to their limited capabilities
-
-### Research Requirements:
-- Every search must align with answering the user's original question
-- Use webSearch primarily for up-to-date information gathering
-- Use librarySearch OR commonQnA (choose ONE, not both) for specialized knowledge
-- Maintain strict relevance to user's specific intent`;
+- Use primarily webSearch and librarySearch tools
+- Use commonQnA only for basic information gathering
+- DO NOT use creation tools yet
+- ALL steps in this epoch should have workflowStage="research"`;
   }
 }
 
@@ -589,7 +533,7 @@ export function formatTodoMd(session: PilotSession, steps: PilotStep[]): string 
   markdown += `## Status\n${session.status ?? 'pending'}\n\n`;
 
   // Add current epoch
-  markdown += `## Current Epoch: ${currentEpoch}/${totalEpochs}\n\n`;
+  markdown += `## Current Epoch: ${currentEpoch + 1}/${totalEpochs + 1}\n\n`;
 
   // Tasks section
   markdown += '## Tasks\n\n';
@@ -944,12 +888,6 @@ ${JSON.stringify(example, null, 2)}
 - Use **generateDoc** for: text documents, articles, reports
 - Use **codeArtifacts** for: code projects, applications, interactive tools
 
-### Important Usage Limitations:
-- **webSearch**: Can be used multiple times per stage (unlimited) - has broad search capabilities
-- **librarySearch**: Maximum ONE occurrence per stage - limited content scope
-- **commonQnA**: Maximum ONE occurrence per stage - limited search capabilities
-- **generateDoc/codeArtifacts/generateMedia**: Only in final 1-2 steps after sufficient research
-
 ### English Prompt Quality Guidelines:
 - **Technical Accuracy**: Use precise media generation terminology
 - **Specificity**: Include dimensions, style, format, duration, colors
@@ -1028,11 +966,11 @@ Follow these important guidelines about tool sequencing:
 
 1. **Research and Context Gathering Tools (Early Stages - MUST USE FIRST)**
    - **webSearch**: Use for gathering up-to-date information from the internet
-   - **librarySearch**: Use for searching through structured knowledge bases (LIMITED: max ONE occurrence per stage due to limited content scope)
-   - **commonQnA**: Use for basic information gathering and general knowledge (LIMITED: max ONE occurrence per stage due to limited search capabilities)
+   - **librarySearch**: Use for searching through structured knowledge bases
+   - **commonQnA**: Use for basic information gathering and general knowledge
 
 2. **Analysis and Intermediate Output Tools (Mid Stages - ONLY AFTER RESEARCH)**
-   - **commonQnA**: Use for analyzing gathered information and providing structured insights (LIMITED: max ONE occurrence per stage due to limited search capabilities)
+   - **commonQnA**: Use for analyzing gathered information and providing structured insights
    - Remember that all tools can produce intermediate outputs as markdown text or code blocks
 
 3. **Final Output Generation Tools (Final Stages - ONLY AT THE END)**
@@ -1042,16 +980,12 @@ Follow these important guidelines about tool sequencing:
 ## CRITICAL SEQUENCING RULES - STRICTLY FOLLOW THESE
 - First 60% of steps MUST be research tasks (webSearch, librarySearch, commonQnA for gathering information)
 - The first 2-3 steps MUST use webSearch or librarySearch to gather basic information
-- Last 30% can be creation tasks (commonQnA, generateDoc, codeArtifacts, generateMedia) and ONLY after sufficient research
-- NEVER use generateDoc, codeArtifacts, or generateMedia in the first 60% of steps
-- MUST ONLY use creation tools in the final 1-2 steps
-- Creation tools MUST almost always reference previous context items, only in extremely rare cases can they generate without context dependency
-- Tasks must follow the strict sequence: Research → Creation
-- **CRITICAL CREATION RULE**: In creation stage, generate EXACTLY ONE task using the most appropriate skill based on userQuestion analysis
-- **IMPORTANT LIMITATIONS**:
-  - **librarySearch**: Maximum ONE occurrence per stage due to limited content scope
-  - **commonQnA**: Maximum ONE occurrence per stage due to limited search capabilities
-  - **webSearch**: Can be used multiple times as it has broader search capabilities
+- Next 20% should be analysis tasks (commonQnA for analyzing gathered information)
+- Last 20% can be creation tasks (generateDoc, codeArtifacts) and ONLY after sufficient research and analysis
+- NEVER use generateDoc or codeArtifacts in the first 60% of steps
+- MUST ONLY use generateDoc and codeArtifacts in the final 1-2 steps
+- generateDoc and codeArtifacts MUST almost always reference previous context items, only in extremely rare cases can they generate without context dependency
+- Tasks must follow the strict sequence: Research → Analysis → Creation
 
 ## Step Generation Guidelines
 1. Break down the research into logical, sequential steps
@@ -1060,11 +994,10 @@ Follow these important guidelines about tool sequencing:
 4. Reference relevant context items from the canvas when appropriate
    - Use the exact context IDs (e.g., "quantum-intro-123") from the Canvas Content section
    - Include multiple context IDs when a step builds on multiple sources
-5. Assign the appropriate workflowStage value to each step (research, creation)
+5. Assign the appropriate workflowStage value to each step (research, analysis, synthesis, creation)
 6. Generate exactly ${maxStepsPerEpoch} research steps to efficiently explore the topic
 7. REQUIRED: First step MUST be webSearch or librarySearch to gather basic information
-8. Creation tools (commonQnA, generateDoc, codeArtifacts, generateMedia) MUST ONLY be used in the final 1-2 steps and MUST reference previous context items in almost all cases
-9. **CRITICAL**: In creation stage, generate EXACTLY ONE task using the most appropriate skill based on userQuestion analysis
+8. Creation tools (generateDoc, codeArtifacts) MUST ONLY be used in the final 1-2 steps and MUST reference previous context items in almost all cases
 
 ## Schema Instructions:
 
@@ -1132,11 +1065,11 @@ Follow these important guidelines about tool sequencing:
 
 1. **Research and Context Gathering Tools (Early Stages - MUST USE FIRST)**
    - **webSearch**: Use for gathering up-to-date information from the internet
-   - **librarySearch**: Use for searching through structured knowledge bases (LIMITED: max ONE occurrence per stage due to limited content scope)
-   - **commonQnA**: Use for basic information gathering and general knowledge (LIMITED: max ONE occurrence per stage due to limited search capabilities)
+   - **librarySearch**: Use for searching through structured knowledge bases
+   - **commonQnA**: Use for basic information gathering and general knowledge
 
 2. **Analysis and Intermediate Output Tools (Mid Stages - ONLY AFTER RESEARCH)**
-   - **commonQnA**: Use for analyzing gathered information and providing structured insights (LIMITED: max ONE occurrence per stage due to limited search capabilities)
+   - **commonQnA**: Use for analyzing gathered information and providing structured insights
    - Remember that all tools can produce intermediate outputs as markdown text or code blocks
 
 3. **Final Output Generation Tools (Final Stages - ONLY AT THE END)**
@@ -1146,22 +1079,22 @@ Follow these important guidelines about tool sequencing:
 ## CRITICAL SEQUENCING RULES - STRICTLY FOLLOW THESE
 - First 60% of steps MUST be research tasks (webSearch, librarySearch, commonQnA for gathering information)
 - The first 2-3 steps MUST use webSearch or librarySearch to gather basic information
-- Last 30% can be creation tasks (generateDoc, codeArtifacts, generateMedia) and ONLY after sufficient research
+- Next 20% should be analysis tasks (commonQnA for analyzing gathered information)
+- Last 20% can be creation tasks (generateDoc, codeArtifacts) and ONLY after sufficient research and analysis
 - NEVER use generateDoc or codeArtifacts in the first 60% of steps
 - MUST ONLY use generateDoc and codeArtifacts in the final 1-2 steps
 - generateDoc and codeArtifacts MUST almost always reference previous context items, only in extremely rare cases can they generate without context dependency
-- Tasks must follow the strict sequence: Research → Creation
+- Tasks must follow the strict sequence: Research → Analysis → Creation
 
 ## Step Generation Guidelines
 1. Break down the research into logical, sequential steps
 2. Select the most appropriate skill for each research step
 3. Craft specific and focused queries for each skill
 4. Use empty arrays for contextItemIds since no context is available yet
-5. Assign the appropriate workflowStage value to each step (research, creation)
+5. Assign the appropriate workflowStage value to each step (research, analysis, synthesis, creation)
 6. Generate exactly ${maxStepsPerEpoch} research steps to efficiently explore the topic
 7. REQUIRED: First step MUST be webSearch or librarySearch to gather basic information
-8. Creation tools (commonQnA, generateDoc, codeArtifacts, generateMedia) MUST ONLY be used in the final 1-2 steps and MUST reference previous context items in almost all cases
-9. **CRITICAL**: In creation stage, generate EXACTLY ONE task using the most appropriate skill based on userQuestion analysis
+8. Creation tools (generateDoc, codeArtifacts) MUST ONLY be used in the final 1-2 steps and MUST reference previous context items in almost all cases
 
 ${generateSchemaInstructions()}
 
@@ -1170,8 +1103,8 @@ ${buildResearchStepExamples()}
 
 Create a research plan that:
 1. Begins with broad information gathering (research stage) using webSearch or librarySearch
-2. Concludes with creation of final outputs (creation stage) using commonQnA/generateDoc/codeArtifacts/generateMedia for final steps only
-3. **CRITICAL**: In creation stage, generate EXACTLY ONE task using the most appropriate skill based on userQuestion analysis
+2. Progresses to analysis of gathered information (analysis stage) using commonQnA
+3. Concludes with steps to synthesize or apply the information (creation stage) for final steps only
 
 User Question: "${userQuestion}"
 
@@ -1229,11 +1162,11 @@ Follow these important guidelines about tool sequencing:
 
 1. **Research and Context Gathering Tools (Early Stages - MUST USE FIRST)**
    - **webSearch**: Use for gathering up-to-date information from the internet
-   - **librarySearch**: Use for searching through structured knowledge bases (LIMITED: max ONE occurrence per stage due to limited content scope)
-   - **commonQnA**: Use for basic information gathering and general knowledge (LIMITED: max ONE occurrence per stage due to limited search capabilities)
+   - **librarySearch**: Use for searching through structured knowledge bases
+   - **commonQnA**: Use for basic information gathering and general knowledge
 
 2. **Analysis and Intermediate Output Tools (Mid Stages - ONLY AFTER RESEARCH)**
-   - **commonQnA**: Use for analyzing gathered information and providing structured insights (LIMITED: max ONE occurrence per stage due to limited search capabilities)
+   - **commonQnA**: Use for analyzing gathered information and providing structured insights
    - Remember that all tools can produce intermediate outputs as markdown text or code blocks
 
 3. **Final Output Generation Tools (Final Stages - ONLY AT THE END)**
@@ -1243,22 +1176,22 @@ Follow these important guidelines about tool sequencing:
 ## CRITICAL SEQUENCING RULES - STRICTLY FOLLOW THESE
 - First 60% of steps MUST be research tasks (webSearch, librarySearch, commonQnA for gathering information)
 - The first 2-3 steps MUST use webSearch or librarySearch to gather basic information
-- Last 30% can be creation tasks (generateDoc, codeArtifacts, generateMedia) and ONLY after sufficient research
+- Next 20% should be analysis tasks (commonQnA for analyzing gathered information)
+- Last 20% can be creation tasks (generateDoc, codeArtifacts) and ONLY after sufficient research and analysis
 - NEVER use generateDoc or codeArtifacts in the first 60% of steps
 - MUST ONLY use generateDoc and codeArtifacts in the final 1-2 steps
 - generateDoc and codeArtifacts MUST almost always reference previous context items, only in extremely rare cases can they generate without context dependency
-- Tasks must follow the strict sequence: Research → Creation
+- Tasks must follow the strict sequence: Research → Analysis → Creation
 
 ## Guidelines
 1. Break down the research into logical, sequential steps
 2. Select the most appropriate skill for each research step
 3. Craft specific and focused queries for each skill
 4. Use empty arrays for contextItemIds since no context is available yet
-5. Assign the appropriate workflowStage value to each step (research, creation)
+5. Assign the appropriate workflowStage value to each step (research, analysis, synthesis, creation)
 6. Generate exactly ${maxStepsPerEpoch} research steps to efficiently explore the topic
 7. REQUIRED: First step MUST be webSearch or librarySearch to gather basic information
-8. Creation tools (commonQnA, generateDoc, codeArtifacts, generateMedia) MUST ONLY be used in the final 1-2 steps and MUST reference previous context items in almost all cases
-9. **CRITICAL**: In creation stage, generate EXACTLY ONE task using the most appropriate skill based on userQuestion analysis
+8. Creation tools (generateDoc, codeArtifacts) MUST ONLY be used in the final 1-2 steps and MUST reference previous context items in almost all cases
 
 ${schemaInstructions}
 

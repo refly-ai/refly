@@ -262,7 +262,7 @@ export class Agent extends BaseSkill {
       this.engine.logger.log('Using real JWT token generated via AuthService');
 
       // Get port from configuration, fallback to default 5800
-      const serverPort = this.engine.getConfig('port') || 5800;
+      const serverPort = this.engine.getConfig('port');
       const serverOrigin = `http://localhost:${serverPort}`;
       const mcpUrl = `${serverOrigin}/mcp`;
 

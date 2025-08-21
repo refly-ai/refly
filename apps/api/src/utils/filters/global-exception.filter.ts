@@ -19,22 +19,52 @@ import { User } from '../../generated/client';
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
+  // Maximum size for request body logging to prevent performance issues
+  private readonly MAX_BODY_LOG_SIZE = 1000;
+
   constructor(
     @Inject(ConfigService)
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Safely truncate request body for logging to prevent performance issues
+   * with large request bodies
+   */
+  private getSafeBodyForLogging(body: any): string {
+    if (!body) {
+      return 'null';
+    }
+
+    try {
+      const bodyString = JSON.stringify(body);
+
+      // If body is small enough, return it as is
+      if (bodyString.length <= this.MAX_BODY_LOG_SIZE) {
+        return bodyString;
+      }
+
+      // For large bodies, truncate and add indicator
+      return `${bodyString.substring(0, this.MAX_BODY_LOG_SIZE)}... [truncated, original size: ${bodyString.length} bytes]`;
+    } catch {
+      // If JSON.stringify fails (e.g., circular references), return a safe fallback
+      return '[body serialization failed]';
+    }
+  }
 
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    const user = request.user as User;
+
     // Handle http exceptions
     if (exception instanceof HttpException) {
       // Print warning logs for all exceptions except status 401
       if (exception.getStatus() !== HttpStatus.UNAUTHORIZED) {
         this.logger.warn(
-          `Request: ${request.method} ${request.url} http exception: (${exception.getStatus()}) ${
+          `Request from user ${user?.uid}: ${request.method} ${request.url} http exception: (${exception.getStatus()}) ${
             exception.message
           }, ` + `stack: ${exception.stack}`,
         );
@@ -44,8 +74,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       response?.status(status).json(exception.getResponse());
       return;
     }
-
-    const user = request.user as User;
 
     const baseRespData = genBaseRespDataFromError(exception);
 
@@ -63,13 +91,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           email: user?.email,
         },
       });
+
+      const safeBody = this.getSafeBodyForLogging(request.body);
       this.logger.error(
-        `Request: ${request.method} ${request.url} unknown err: ${exception.stack}`,
+        `Request from user ${user?.uid}: ${request.method} ${request.url} with body ${safeBody} ` +
+          `unknown err: ${exception.stack}`,
       );
     } else {
       // Handle other business exceptions
       this.logger.warn(
-        `Request: ${request.method} ${request.url} biz err: ${baseRespData.errMsg}, ` +
+        `Request from user ${user?.uid}: ${request.method} ${request.url} biz err: ${baseRespData.errMsg}, ` +
           `stack: ${baseRespData.stack}`,
       );
     }

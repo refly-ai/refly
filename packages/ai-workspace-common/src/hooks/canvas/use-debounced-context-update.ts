@@ -5,6 +5,7 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { Edge, useReactFlow } from '@xyflow/react';
 import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { useFindThreadHistory } from './use-find-thread-history';
+import { genUniqueId } from '@refly/utils/id';
 
 interface UseContextUpdateByEdgesProps {
   readonly: boolean;
@@ -26,7 +27,15 @@ export const useContextUpdateByEdges = ({
   nodeId,
   updateNodeData,
 }: UseContextUpdateByEdgesProps) => {
-  const { getNodes } = useReactFlow();
+  const { getNodes, addEdges } = useReactFlow();
+
+  // Helper function to get child nodes of a group (excluding skill and group types)
+  const getGroupChildNodes = useCallback((groupId: string, allNodes: CanvasNode<any>[]) => {
+    return allNodes.filter((node) => {
+      const isInGroup = node.parentId === groupId;
+      return isInGroup && !['skill', 'group', 'mediaSkill'].includes(node.type);
+    });
+  }, []);
 
   const updateContextItemsByEdges = useCallback(
     (contextItems: IContextItem[], edges: Edge[]) => {
@@ -37,36 +46,65 @@ export const useContextUpdateByEdges = ({
 
       const nodes = getNodes() as CanvasNode<any>[];
 
-      // 克隆现有的所有 context items，保留所有已有项
+      // Clone existing context items to preserve all existing items
       const updatedContextItems = [...contextItems];
 
-      // 创建一个已存在的 entityId 集合，用于快速查找
+      // Create a set of existing entityIds for quick lookup
       const existingEntityIds = new Set(contextItems.map((item) => item.entityId));
+      const edgesToAdd = [];
 
-      // 为每个连线检查并添加新的 context item（如果不存在）
+      // Check each edge and add new context items if they don't exist
       for (const edge of currentEdges) {
         const sourceNode = nodes.find((node) => node.id === edge.source);
-        if (!sourceNode?.data?.entityId || ['skill', 'group'].includes(sourceNode?.type)) continue;
+        if (!sourceNode?.data?.entityId || ['skill', 'mediaSkill'].includes(sourceNode?.type))
+          continue;
 
         const entityId = sourceNode.data.entityId;
 
-        // 如果 entityId 已存在于现有 items 中，跳过
+        // If entityId already exists in current items, skip
         if (existingEntityIds.has(entityId)) continue;
 
-        // 添加新的 context item
-        updatedContextItems.push({
-          entityId,
-          type: sourceNode.type as CanvasNodeType,
-          title: sourceNode.data.title || '',
-        });
-      }
+        // Special handling for group type nodes
+        if (sourceNode.type === 'group') {
+          const childNodes = getGroupChildNodes(sourceNode.id, nodes);
 
-      // 只有在真正添加了新项目时才更新
-      if (updatedContextItems.length > contextItems.length) {
+          // Add child nodes to context items
+          for (const childNode of childNodes) {
+            if (childNode.data?.entityId && !existingEntityIds.has(childNode.data.entityId)) {
+              updatedContextItems.push({
+                entityId: childNode.data.entityId,
+                type: childNode.type as CanvasNodeType,
+                title: childNode.data.title || '',
+              });
+
+              edgesToAdd.push({
+                id: `edge-${genUniqueId()}`,
+                source: childNode.id,
+                target: nodeId,
+                type: 'default',
+              });
+              // Update existing entityIds set to avoid duplicates
+              existingEntityIds.add(childNode.data.entityId);
+            }
+          }
+        } else {
+          updatedContextItems.push({
+            entityId,
+            type: sourceNode.type as CanvasNodeType,
+            title: sourceNode.data.title || '',
+          });
+          existingEntityIds.add(entityId);
+        }
+      }
+      // Only update if the context items have actually changed
+      if (updatedContextItems.length !== contextItems.length) {
+        if (edgesToAdd.length > 0) {
+          addEdges(edgesToAdd);
+        }
         updateNodeData({ metadata: { contextItems: updatedContextItems } });
       }
     },
-    [readonly, nodeId, getNodes, updateNodeData],
+    [readonly, nodeId, getNodes, updateNodeData, getGroupChildNodes],
   );
 
   const debouncedUpdateContextItems = useDebouncedCallback(

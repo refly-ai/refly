@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useReactFlow } from '@xyflow/react';
 import { PilotStep } from '@refly/openapi-schema';
 import { CanvasNode } from '@refly/canvas-common';
-import { Empty } from 'antd';
+import { Empty, Button } from 'antd';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import {
@@ -17,14 +17,14 @@ import { useFrontPageStoreShallow, usePilotStoreShallow } from '@refly/stores';
 // import { SessionChat } from './session-chat';
 import { NoSession } from '@refly-packages/ai-workspace-common/components/pilot/nosession';
 import SessionHeader from '@refly-packages/ai-workspace-common/components/pilot/session-header';
-import { Thinking } from 'refly-icons';
+import { Send, Thinking } from 'refly-icons';
 
 // Define the active statuses that require polling
 const ACTIVE_STATUSES = ['executing', 'waiting'];
 const POLLING_INTERVAL = 2000; // 2 seconds
 
 export interface SessionContainerProps {
-  sessionId: string;
+  sessionId: string | null;
   canvasId: string;
   className?: string;
   onStepClick?: (step: PilotStep) => void;
@@ -91,6 +91,42 @@ const AnimatedEllipsis = memo(() => {
 });
 
 AnimatedEllipsis.displayName = 'AnimatedEllipsis';
+
+// Component for new task button when session is completed
+const NewTaskButton = memo(() => {
+  const { t } = useTranslation();
+  const { setActiveSessionId } = usePilotStoreShallow((state) => ({
+    setActiveSessionId: state.setActiveSessionId,
+  }));
+
+  const handleNewTask = useCallback(() => {
+    // Clear the current session to show NoSession component
+    setActiveSessionId(null);
+  }, [setActiveSessionId]);
+
+  return (
+    <motion.div
+      className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeInOut' }}
+    >
+      <div className="pt-3 flex justify-end">
+        <Button
+          type="primary"
+          size="large"
+          className="w-24 h-8 text-[14px] font-medium px-1.5 py-2"
+          onClick={handleNewTask}
+          icon={<Send size={16} />}
+        >
+          {t('pilot.newTask', { defaultValue: 'New Task' })}
+        </Button>
+      </div>
+    </motion.div>
+  );
+});
+
+NewTaskButton.displayName = 'NewTaskButton';
 
 export const SessionContainer = memo(
   ({ sessionId, canvasId, className, onStepClick }: SessionContainerProps) => {
@@ -226,102 +262,105 @@ export const SessionContainer = memo(
               <NoSession canvasId={canvasId} />
             </motion.div>
           ) : (
-            <motion.div
-              key="session-content"
-              className="px-2 pb-2 flex-1 h-full w-full"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-            >
-              <AnimatePresence mode="wait">
-                {sortedSteps.length > 0 ? (
-                  <motion.div
-                    key="steps-list"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  >
+            <div className="flex flex-col h-full">
+              <motion.div
+                key="session-content"
+                className="px-2 pb-2 flex-1 h-full w-full max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <AnimatePresence mode="wait">
+                  {sortedSteps.length > 0 ? (
                     <motion.div
-                      className="px-4"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, delay: 0.1 }}
-                    >
-                      {query}
-                    </motion.div>
-                    <div className="pl-4 max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
-                      {sortedSteps.map((step, index) => (
-                        <motion.div
-                          key={step.stepId}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{
-                            duration: 0.2,
-                            delay: index * 0.05,
-                            ease: 'easeOut',
-                          }}
-                        >
-                          <PilotStepItem step={step} onClick={handleStepClick} />
-                        </motion.div>
-                      ))}
-                    </div>
-                  </motion.div>
-                ) : session?.status === 'executing' ? (
-                  <motion.div
-                    key="executing-state"
-                    className="flex flex-col h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  >
-                    <motion.div
-                      className="px-4"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, delay: 0.1 }}
-                    >
-                      {query}
-                    </motion.div>
-                    <motion.div
-                      className="flex flex-col h-full px-4 py-3"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, delay: 0.2 }}
+                      key="steps-list"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
                     >
                       <motion.div
-                        className="w-full bg-refly-bg-content-z2 rounded-lg py-3 flex items-center gap-2 border border-gray-100 bg-[#F4F4F4] dark:bg-gray-800"
-                        initial={{ scale: 0.95 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 0.2, delay: 0.3 }}
+                        className="px-4"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: 0.1 }}
                       >
-                        <div className="w-4 h-4 flex items-center justify-center">
-                          <Thinking color="#76787B" className="w-4 h-4" />
-                        </div>
-                        <div className="text-sm text-center text-gray-500 font-normal">
-                          {t('pilot.status.understandingIntent')}
-                        </div>
+                        {query}
+                      </motion.div>
+                      <div className="pl-1">
+                        {sortedSteps.map((step, index) => (
+                          <motion.div
+                            key={step.stepId}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{
+                              duration: 0.2,
+                              delay: index * 0.05,
+                              ease: 'easeOut',
+                            }}
+                          >
+                            <PilotStepItem step={step} onClick={handleStepClick} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  ) : session?.status === 'executing' ? (
+                    <motion.div
+                      key="executing-state"
+                      className="flex flex-col h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    >
+                      <motion.div
+                        className="px-4"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: 0.1 }}
+                      >
+                        {query}
+                      </motion.div>
+                      <motion.div
+                        className="flex flex-col h-full px-4 py-3"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: 0.2 }}
+                      >
+                        <motion.div
+                          className="w-full bg-refly-bg-content-z2 rounded-lg py-3 flex items-center gap-2 border border-gray-100 bg-[#F4F4F4] dark:bg-gray-800"
+                          initial={{ scale: 0.95 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.2, delay: 0.3 }}
+                        >
+                          <div className="w-4 h-4 flex items-center justify-center">
+                            <Thinking color="#76787B" className="w-4 h-4" />
+                          </div>
+                          <div className="text-sm text-center text-gray-500 font-normal">
+                            {t('pilot.status.understandingIntent')}
+                          </div>
+                        </motion.div>
                       </motion.div>
                     </motion.div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="empty-state"
-                    className="flex items-center justify-center h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  >
-                    <Empty
-                      description={t('pilot.noTasks', { defaultValue: 'No tasks available yet' })}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                  ) : (
+                    <motion.div
+                      key="empty-state"
+                      className="flex items-center justify-center h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    >
+                      <Empty
+                        description={t('pilot.noTasks', { defaultValue: 'No tasks available yet' })}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+              {session?.status === 'finish' && <NewTaskButton />}
+            </div>
           )}
         </AnimatePresence>
       </div>

@@ -19,7 +19,6 @@
       var(--bg---refly-bg-body-z0, #fff);
     .ant-modal-body {
       width: 100%;
-      padding: 40px 0; // Increased padding
       max-height: 100vh;
       overflow-y: auto;
     }
@@ -233,10 +232,15 @@
         &--disabled {
           cursor: not-allowed;
           opacity: 0.6;
+          &:hover {
+            background-color: var(--refly-bg-control-z0) !important;
+            border-color: var(--refly-Card-Border) !important;
+            color: var(--primary---refly-primary-default, #0e9f77) !important;
+          }
         }
 
-        background-color: #f3f4f6;
-        border-color: #d1d5db;
+        background-color: var(--refly-bg-control-z0);
+        border: 1px solid var(--refly-Card-Border);
         color: var(--primary---refly-primary-default, #0e9f77);
         font-family: "PingFang SC";
         font-size: 14px;
@@ -245,14 +249,15 @@
         line-height: 20px;
 
         &:disabled {
-          background-color: #f3f4f6;
+          background-color: var(--refly-bg-control-z0);
           color: #9ca3af;
           border-color: #d1d5db;
         }
 
         &:hover:not(:disabled) {
           background: var(--primary---refly-primary-hover, #1b9774);
-          border-color: #9ca3af;
+          border-color: var(--primary---refly-primary-hover);
+          color: var(--fill---refly-fill-StaticWhite, #fff);
         }
       }
 

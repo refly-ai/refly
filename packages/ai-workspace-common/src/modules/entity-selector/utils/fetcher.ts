@@ -17,6 +17,7 @@ export const domainToFetchData: Record<SearchDomain, DataFetcher> = {
       domain: 'resource',
       metadata: {
         resourceType: item?.resourceType,
+        resourceMeta: item?.data,
       },
       snippets: [
         {

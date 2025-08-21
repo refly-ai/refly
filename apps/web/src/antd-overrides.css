@@ -57,30 +57,34 @@
 
 /* Modal component border radius override */
 .ant-modal .ant-modal-content {
-  border-radius: 20px !important;
+  border-radius: 20px;
 }
 
 .ant-modal .ant-modal-header {
-  border-radius: 20px 20px 0 0 !important;
+  border-radius: 20px 20px 0 0;
 }
 
 .ant-modal .ant-modal-footer {
-  border-radius: 0 0 20px 20px !important;
+  border-radius: 0 0 20px 20px;
 }
 
 /* Segmented component styling */
 .ant-segmented {
   padding: 4px;
-  border: 1px solid var(--refly-Card-Border) !important;
-  background-color: var(--refly-bg-control-z0) !important;
+  border: 1px solid var(--refly-Card-Border);
+  background-color: var(--refly-bg-control-z0);
+}
+
+.ant-segmented-group {
+  gap: 2px;
 }
 
 .ant-segmented .ant-segmented-item {
-  border-radius: 16px !important;
+  border-radius: 16px;
 }
 
 .ant-segmented .ant-segmented-item:hover {
-  background-color: var(--refly-tertiary-hover) !important;
+  background-color: var(--refly-fill-hover);
 }
 
 .ant-segmented .ant-segmented-item-selected:hover {
@@ -88,17 +92,22 @@
 }
 
 .ant-segmented .ant-segmented-item-label {
-  color: var(--text-refly-text-0) !important;
+  color: var(--refly-text-0) !important;
   text-align: center;
   font-size: 14px;
   font-weight: 400;
   padding: 4px 8px;
-  min-height: unset;
-  line-height: unset;
+  line-height: 20px;
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.ant-segmented-sm .ant-segmented-item-label {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 2px 8px;
 }
 
 .ant-segmented .ant-segmented-item-selected {
@@ -107,9 +116,8 @@
 }
 
 .ant-segmented .ant-segmented-item-selected .ant-segmented-item-label {
-  color: var(--text-refly-text-0) !important;
+  color: var(--refly-text-0) !important;
   text-align: center;
-  font-size: 14px;
   font-weight: 600;
   border-radius: 16px;
 }

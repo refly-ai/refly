@@ -1,4 +1,4 @@
-import { Button, Dropdown, message } from 'antd';
+import { Button, Dropdown, message, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -135,22 +135,6 @@ export const DocumentTopButtons = () => {
 
   const moreMenuItems: MenuProps['items'] = useMemo(() => {
     return [
-      ...(readonly
-        ? []
-        : [
-            {
-              key: 'share',
-              disabled: isSharing,
-              loading: isSharing,
-              label: (
-                <div className="flex items-center gap-2 whitespace-nowrap">
-                  <Share size={16} color="var(--refly-text-0)" />
-                  {t('document.share')}
-                </div>
-              ),
-              onClick: handleShare,
-            },
-          ]),
       {
         key: 'locateNode',
         label: (
@@ -187,7 +171,22 @@ export const DocumentTopButtons = () => {
 
   return (
     <div className="flex items-center gap-3">
-      {!readonly && DownloadMenu}
+      {!readonly && (
+        <>
+          <Tooltip title={t('document.share', 'Share document')}>
+            <Button
+              className="!h-5 !w-5 p-0"
+              disabled={isSharing}
+              loading={isSharing}
+              size="small"
+              type="text"
+              onClick={handleShare}
+              icon={<Share size={16} />}
+            />
+          </Tooltip>
+          {DownloadMenu}
+        </>
+      )}
 
       <Dropdown menu={{ items: moreMenuItems }} trigger={['click']} placement="bottomRight">
         <Button className="!h-5 !w-5 p-0" size="small" type="text" icon={<More size={16} />} />

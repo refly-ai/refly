@@ -51,9 +51,9 @@ export const CustomHandle = React.memo(
     const handleStyle: CSSProperties = shouldShowPlusIcon
       ? {
           // Plus icon style
-          width: '18px',
-          height: '18px',
-          right: '-9px',
+          width: '28px',
+          height: '24px',
+          right: '-14px',
           top: '50%',
           transform: 'translateY(-50%)',
           backgroundColor: '#0E9F77',
@@ -61,7 +61,7 @@ export const CustomHandle = React.memo(
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '50%',
+          borderRadius: '20px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
           opacity: 1,
           cursor: 'crosshair',
@@ -126,7 +126,7 @@ export const CustomHandle = React.memo(
                 className="hover:scale-110"
                 onClick={handlePlusClick}
               >
-                <AiChat color="#FFFFFF" size={18} className="pointer-events-none" />
+                <AiChat color="#FFFFFF" size={16} className="pointer-events-none" />
               </Handle>
             </Tooltip>
           </div>

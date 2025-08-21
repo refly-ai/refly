@@ -2,11 +2,13 @@
  * This file contains example workflows that demonstrate proper tool sequencing
  * based on the requirements for the Pilot workflow system:
  *
- * 1. Research stage (70%): MUST use webSearch, librarySearch, commonQnA for information gathering and analysis
- * 2. Creation stage (30%): MUST ONLY use generateDoc, codeArtifacts, generateMedia in the final steps after sufficient context gathering
+ * 1. Research stage (early): MUST use webSearch, librarySearch, commonQnA for information gathering
+ * 2. Analysis stage (middle): MUST use commonQnA for analyzing gathered information
+ * 3. Synthesis stage (optional): MUST use commonQnA for organizing and planning outputs
+ * 4. Creation stage (final): MUST ONLY use generateDoc and codeArtifacts in the final 1-2 steps after sufficient context gathering
  *
- * The workflow MUST follow the correct sequence: research → creation
- * Final output tools (generateDoc, codeArtifacts, generateMedia) MUST ONLY be used in the final 1-2 steps
+ * The workflow MUST follow the correct sequence: research → analysis → synthesis → creation
+ * Final output tools (generateDoc, codeArtifacts) MUST ONLY be used in the final 1-2 steps
  * Final output tools MUST almost always reference previous context items (only in extremely rare cases can they generate without context dependency)
  * All codeArtifacts for visualizations MUST produce self-contained single-page HTML files
  */
@@ -31,7 +33,7 @@ export function exampleUserQuestions() {
 
 /**
  * Example 1: Market Research Workflow for Electric Vehicles
- * Demonstrates proper sequencing of tasks from research → creation
+ * Demonstrates proper sequencing of tasks from research → analysis → creation
  * Note: Creation tasks (generateDoc, codeArtifacts) are ONLY used in the final 1-2 steps
  * and MUST reference previous context items
  */
@@ -71,7 +73,7 @@ export function evMarketResearchExample(): PilotStepRawOutput[] {
       priority: 2,
     },
 
-    // RESEARCH STAGE CONTINUED - Analyze and synthesize the gathered information using commonQnA
+    // ANALYSIS STAGE - Process and analyze the gathered information
     {
       name: 'EV market trends analysis',
       skillName: 'commonQnA',
@@ -82,7 +84,7 @@ export function evMarketResearchExample(): PilotStepRawOutput[] {
         'ev-manufacturers-node-id',
         'ev-tech-trends-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
     {
@@ -90,7 +92,7 @@ export function evMarketResearchExample(): PilotStepRawOutput[] {
       skillName: 'commonQnA',
       query: 'Analyze the main barriers to EV adoption and potential solutions',
       contextItemIds: ['ev-market-overview-node-id', 'ev-consumer-barriers-node-id'],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
 
@@ -189,7 +191,7 @@ export function climateChangeResearchExample(): PilotStepRawOutput[] {
       priority: 3,
     },
 
-    // RESEARCH STAGE CONTINUED - Process and synthesize the research data using commonQnA
+    // ANALYSIS STAGE - Process and synthesize the research data
     {
       name: 'Climate research synthesis',
       skillName: 'commonQnA',
@@ -202,7 +204,7 @@ export function climateChangeResearchExample(): PilotStepRawOutput[] {
         'climate-policy-node-id',
         'climate-cases-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
     {
@@ -215,7 +217,7 @@ export function climateChangeResearchExample(): PilotStepRawOutput[] {
         'climate-policy-node-id',
         'climate-synthesis-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
 
@@ -303,7 +305,7 @@ export function renewableEnergyExample(): PilotStepRawOutput[] {
       priority: 2,
     },
 
-    // RESEARCH STAGE CONTINUED - In-depth analysis of research findings using commonQnA
+    // ANALYSIS STAGE - In-depth analysis of research findings
     {
       name: 'Renewable investment risk analysis',
       skillName: 'commonQnA',
@@ -315,7 +317,7 @@ export function renewableEnergyExample(): PilotStepRawOutput[] {
         'renewable-wind-node-id',
         'renewable-hydrogen-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
     {
@@ -328,7 +330,7 @@ export function renewableEnergyExample(): PilotStepRawOutput[] {
         'renewable-hydrogen-node-id',
         'renewable-risk-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
     {
@@ -341,9 +343,11 @@ export function renewableEnergyExample(): PilotStepRawOutput[] {
         'renewable-roi-node-id',
         'renewable-policy-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
+
+    // SYNTHESIS STAGE - Organize information for presentation
     {
       name: 'Presentation outline creation',
       skillName: 'commonQnA',
@@ -356,7 +360,7 @@ export function renewableEnergyExample(): PilotStepRawOutput[] {
         'renewable-hydrogen-node-id',
         'renewable-strategy-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'synthesis',
       priority: 4,
     },
 
@@ -461,7 +465,7 @@ export function cityLivabilityExample(): PilotStepRawOutput[] {
       priority: 2,
     },
 
-    // RESEARCH STAGE CONTINUED - Process and analyze the collected data using commonQnA
+    // ANALYSIS STAGE - Process and analyze the collected data
     {
       name: 'Data standardization plan',
       skillName: 'commonQnA',
@@ -476,7 +480,7 @@ export function cityLivabilityExample(): PilotStepRawOutput[] {
         'healthcare-data-node-id',
         'education-data-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
     {
@@ -485,7 +489,7 @@ export function cityLivabilityExample(): PilotStepRawOutput[] {
       query:
         'Define algorithm for calculating comprehensive livability scores based on weighted factors',
       contextItemIds: ['livability-metrics-node-id', 'standardization-node-id'],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
     {
@@ -501,15 +505,17 @@ export function cityLivabilityExample(): PilotStepRawOutput[] {
         'healthcare-data-node-id',
         'education-data-node-id',
       ],
-      workflowStage: 'research',
+      workflowStage: 'analysis',
       priority: 3,
     },
+
+    // SYNTHESIS STAGE - Design planning before implementation
     {
       name: 'Visualization interface design',
       skillName: 'commonQnA',
       query: 'Design interface requirements for interactive city livability visualization',
       contextItemIds: ['livability-score-node-id', 'city-analysis-node-id'],
-      workflowStage: 'research',
+      workflowStage: 'synthesis',
       priority: 4,
     },
 
@@ -560,11 +566,13 @@ export function cityLivabilityExample(): PilotStepRawOutput[] {
 /**
  * Builds formatted examples showing proper tool sequencing for LLM consumption
  * Includes examples for all workflow stages with clear labeling
- * @param stage The current workflow stage ('research' or 'creation')
+ * @param stage The current workflow stage ('research', 'analysis', 'synthesis', or 'creation')
  */
 export function buildFormattedExamples(): string {
   // Get the full workflow examples
   const evMarketSteps = evMarketResearchExample();
+  const climateChangeSteps = climateChangeResearchExample();
+  const renewableEnergySteps = renewableEnergyExample();
   const cityLivabilitySteps = cityLivabilityExample();
 
   // Filter steps based on stage type
@@ -572,36 +580,46 @@ export function buildFormattedExamples(): string {
     return steps.filter((step) => step.workflowStage === targetStage);
   };
 
-  // Get examples for each stage - simplified two-stage workflow
-  const researchSteps = getStageSteps(evMarketSteps, 'research').slice(0, 5);
+  // Get examples for each stage
+  const researchSteps = getStageSteps(evMarketSteps, 'research').slice(0, 3);
+  const analysisSteps = getStageSteps(climateChangeSteps, 'analysis').slice(0, 3);
+  const synthesisSteps = getStageSteps(renewableEnergySteps, 'synthesis').slice(0, 2);
   const creationSteps = getStageSteps(cityLivabilitySteps, 'creation').slice(0, 3);
 
   return `
 ## Proper Tool Sequencing Based on Epoch Progress
 
-Research projects are divided into epochs (iterations), with each epoch representing progress through the simplified two-stage workflow:
+Research projects are divided into epochs (iterations), with each epoch representing progress through the workflow:
 
-1. **Research Epochs (0-70% Progress)**
+1. **Early Epochs (0-40% Progress)**
    - Stage: RESEARCH
-   - Tools: webSearch, librarySearch, commonQnA for information gathering and analysis
-   - Focus: Collecting information, analyzing data, identifying patterns, and synthesizing insights
-   - Activities: Data collection, analysis, synthesis, planning - all using research tools
+   - Tools: webSearch, librarySearch, commonQnA for information gathering
+   - Focus: Collecting foundational information and diverse perspectives
 
-2. **Creation Epochs (70-100% Progress)**
+2. **Middle Epochs (40-70% Progress)**
+   - Stage: ANALYSIS
+   - Tools: primarily commonQnA for analysis
+   - Focus: Analyzing gathered information, identifying patterns and insights
+
+3. **Late Middle Epochs (70-85% Progress)**
+   - Stage: SYNTHESIS
+   - Tools: commonQnA for organization and planning
+   - Focus: Organizing findings and planning final deliverables
+
+4. **Final Epochs (85-100% Progress)**
    - Stage: CREATION
-   - Tools: generateDoc, codeArtifacts, generateMedia for final outputs
-   - Focus: Creating polished deliverables based on all research work
-   - Activities: Document generation, code creation, media production
+   - Tools: generateDoc, codeArtifacts for final outputs
+   - Focus: Creating polished deliverables based on all previous work
 
-IMPORTANT: Always follow the sequence appropriate for the current epoch. Research phase focuses on comprehensive information gathering and analysis, while creation phase focuses solely on output generation.
+IMPORTANT: Always follow the sequence appropriate for the current epoch. Each epoch should primarily contain steps from its corresponding stage, but can include a few steps from adjacent stages as needed for smooth transition.
 
 CRITICAL RULES FOR CREATION TOOLS:
-- generateDoc, codeArtifacts, and generateMedia MUST ONLY be used in the final 1-2 steps of the workflow
+- generateDoc and codeArtifacts MUST ONLY be used in the final 1-2 steps of the workflow
 - These tools MUST reference previous context items in almost all cases
 - Only in extremely rare cases can they generate without context dependency
 - Never use these tools until sufficient research and analysis has been completed
 
-## Research Stage Examples (Research Phase: 0-70% Progress)
+## Research Stage Examples (Early Epochs)
 User Question: "${exampleUserQuestions().marketResearch}"
 
 Canvas Content:
@@ -611,10 +629,48 @@ Canvas Content:
 This document provides a basic overview of the current state of the electric vehicle market, including trends and major players.
 **Context ID:** ev-market-overview-node-id
 
-Examples of good research steps including information gathering, analysis, and synthesis:
+Examples of good research steps for early epochs:
 ${JSON.stringify(researchSteps, null, 2)}
 
-## Creation Stage Examples (Creation Phase: 70-100% Progress)
+## Analysis Stage Examples (Middle Epochs)
+User Question: "${exampleUserQuestions().climateImpacts}"
+
+Canvas Content:
+### Canvas Item 1 (ID: climate-overview-node-id, Type: document)
+**Document Title:** Introduction to Climate Change
+**Document Preview:**
+This document provides an overview of global climate change science and observed impacts on different systems.
+**Context ID:** climate-overview-node-id
+
+### Canvas Item 2 (ID: climate-agriculture-node-id, Type: skillResponse)
+**Question:** How does climate change affect agriculture?
+**Answer:**
+Climate change affects agriculture through changing precipitation patterns, temperature increases, extreme weather events, and shifting growing seasons.
+**Context ID:** climate-agriculture-node-id
+
+Examples of good analysis steps for middle epochs:
+${JSON.stringify(analysisSteps, null, 2)}
+
+## Synthesis Stage Examples (Late Middle Epochs)
+User Question: "${exampleUserQuestions().renewableEnergy}"
+
+Canvas Content:
+### Canvas Item 1 (ID: renewable-market-node-id, Type: document)
+**Document Title:** Global Renewable Energy Market Overview
+**Document Preview:**
+This document provides an overview of the current state of the global renewable energy market, including trends, major players, and investment opportunities.
+**Context ID:** renewable-market-node-id
+
+### Canvas Item 2 (ID: renewable-solar-node-id, Type: skillResponse)
+**Question:** What are the key companies in solar energy?
+**Answer:**
+Major solar energy companies include First Solar, SunPower, JinkoSolar, Canadian Solar, and Tesla Solar with varying market shares and specializations.
+**Context ID:** renewable-solar-node-id
+
+Examples of good synthesis steps for late middle epochs:
+${JSON.stringify(synthesisSteps, null, 2)}
+
+## Creation Stage Examples (Final Epochs)
 User Question: "${exampleUserQuestions().cityLivability}"
 
 Canvas Content:
@@ -647,7 +703,7 @@ export function buildDetailedExamples(): string {
 
 /**
  * Builds examples relevant to the current research stage
- * @param stage The current workflow stage ('research' or 'creation')
+ * @param stage The current workflow stage ('research', 'analysis', 'synthesis', or 'creation')
  */
 export function buildResearchStepExamples(): string {
   return buildFormattedExamples();

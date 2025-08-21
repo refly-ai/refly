@@ -19,7 +19,7 @@ export const ResourceOverview = memo(() => {
   const { nodes } = useRealtimeCanvasData();
   const { createSingleDocumentInCanvas, isCreating: isCreatingDocument } = useCreateDocument();
 
-  const { activeTab, searchKeyword, setActiveTab, setSearchKeyword, parentType } =
+  const { searchKeyword, setSearchKeyword, parentType, activeTab, setActiveTab } =
     useCanvasResourcesPanelStoreShallow((state) => ({
       activeTab: state.activeTab,
       searchKeyword: state.searchKeyword,
@@ -27,6 +27,7 @@ export const ResourceOverview = memo(() => {
       setSearchKeyword: state.setSearchKeyword,
       parentType: state.parentType,
     }));
+
   const { setImportResourceModalVisible } = useImportResourceStoreShallow((state) => ({
     setImportResourceModalVisible: state.setImportResourceModalVisible,
   }));
@@ -42,15 +43,15 @@ export const ResourceOverview = memo(() => {
   const segmentedOptions = useMemo(() => {
     return [
       {
-        label: <div className="h-5">{t('canvas.resourceLibrary.stepsRecord')}</div>,
+        label: t('canvas.resourceLibrary.stepsRecord'),
         value: 'stepsRecord',
       },
       {
-        label: <div className="h-5">{t('canvas.resourceLibrary.resultsRecord')}</div>,
+        label: t('canvas.resourceLibrary.resultsRecord'),
         value: 'resultsRecord',
       },
       {
-        label: <div className="h-5">{t('canvas.resourceLibrary.myUpload')}</div>,
+        label: t('canvas.resourceLibrary.myUpload'),
         value: 'myUpload',
       },
     ];
@@ -112,11 +113,10 @@ export const ResourceOverview = memo(() => {
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
           </div>
+
           <Segmented
             className="w-full [&_.ant-segmented-item]:flex-1 [&_.ant-segmented-item]:text-center"
-            size="middle"
             shape="round"
-            style={{ width: '100%' }}
             options={segmentedOptions}
             value={activeTab}
             onChange={(value) => setActiveTab(value as CanvasResourcesParentType)}

@@ -992,7 +992,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           ) : nodes?.length > 0 ? (
             <motion.div
               key="session-header"
-              className="absolute bottom-2 left-[calc(50%-284px)] transform -translate-x-1/2 z-20 shadow-sm rounded-lg w-[568px] border border-solid border-refly-Card-Border dark:border-gray-700 bg-white dark:bg-neutral-900/95"
+              className="absolute bottom-2 left-[calc(50%-284px)] transform -translate-x-1/2 z-20 shadow-sm rounded-[20px] w-[568px] border border-solid border-refly-Card-Border dark:border-gray-700 bg-white dark:bg-neutral-900/95"
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}

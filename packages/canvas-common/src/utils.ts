@@ -13,6 +13,7 @@ export interface AddNodeParam {
   edges: Edge[];
   connectTo?: CanvasNodeFilter[];
   viewport?: Viewport;
+  autoLayout?: boolean; // Control whether to enable auto layout
 }
 
 export const deduplicateNodes = (nodes: CanvasNode[]) => {
@@ -34,7 +35,7 @@ export const deduplicateEdges = (edges: CanvasEdge[]) => {
 export const prepareAddNode = (
   param: AddNodeParam,
 ): { newNode: CanvasNode; newEdges: CanvasEdge[] } => {
-  const { node = {}, connectTo, nodes, edges, viewport } = param;
+  const { node = {}, connectTo, nodes, edges, viewport, autoLayout } = param;
 
   // Purge context items if they exist
   if (node.data?.metadata?.contextItems) {
@@ -66,6 +67,7 @@ export const prepareAddNode = (
     defaultPosition: node.position,
     edges,
     viewport,
+    autoLayout, // Pass autoLayout parameter to position calculation
   });
 
   if (node.offsetPosition && !node.position) {

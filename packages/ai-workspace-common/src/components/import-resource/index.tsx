@@ -25,6 +25,7 @@ import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo
 export const ImportResourceModal = memo(() => {
   const { t } = useTranslation();
   const {
+    extensionModalVisible,
     importResourceModalVisible,
     setImportResourceModalVisible,
     selectedMenuItem,
@@ -33,7 +34,9 @@ export const ImportResourceModal = memo(() => {
     insertNodePosition,
     waitingList,
     clearWaitingList,
+    setExtensionModalVisible,
   } = useImportResourceStoreShallow((state) => ({
+    extensionModalVisible: state.extensionModalVisible,
     importResourceModalVisible: state.importResourceModalVisible,
     setImportResourceModalVisible: state.setImportResourceModalVisible,
     selectedMenuItem: state.selectedMenuItem,
@@ -42,9 +45,9 @@ export const ImportResourceModal = memo(() => {
     insertNodePosition: state.insertNodePosition,
     waitingList: state.waitingList,
     clearWaitingList: state.clearWaitingList,
+    setExtensionModalVisible: state.setExtensionModalVisible,
   }));
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [extensionModalVisible, setExtensionModalVisible] = useState(false);
   const handleExtensionClick = useCallback(() => {
     setExtensionModalVisible(true);
   }, []);
@@ -201,6 +204,29 @@ export const ImportResourceModal = memo(() => {
   return (
     <>
       <Modal
+        width={740}
+        height={800}
+        className="extension-modal"
+        open={extensionModalVisible}
+        onCancel={() => setExtensionModalVisible(false)}
+        footer={null}
+        title={null}
+        closable={false}
+        centered
+      >
+        <div className="w-full h-full flex flex-col">
+          <div className="flex items-center justify-between py-5 px-6">
+            <Logo />
+            <Button
+              type="text"
+              icon={<Close size={24} color="var(--refly-text-0)" />}
+              onClick={() => setExtensionModalVisible(false)}
+            />
+          </div>
+          <ImportFromExtension />
+        </div>
+      </Modal>
+      <Modal
         open={importResourceModalVisible}
         centered
         title={null}
@@ -245,7 +271,6 @@ export const ImportResourceModal = memo(() => {
 
           <div className="flex flex-col gap-3 p-3 pb-1.5 rounded-xl border-solid border-[1px] border-refly-Card-Border">
             <Segmented
-              size="middle"
               shape="round"
               className="w-full [&_.ant-segmented-item]:flex-1 [&_.ant-segmented-item]:text-center "
               options={importResourceOptions}
@@ -298,30 +323,6 @@ export const ImportResourceModal = memo(() => {
               </Button>
             </div>
           </div>
-        </div>
-      </Modal>
-
-      <Modal
-        width={740}
-        height={800}
-        className="extension-modal"
-        open={extensionModalVisible}
-        onCancel={() => setExtensionModalVisible(false)}
-        footer={null}
-        title={null}
-        closable={false}
-        centered
-      >
-        <div className="w-full h-full flex flex-col">
-          <div className="flex items-center justify-between py-5 px-6">
-            <Logo />
-            <Button
-              type="text"
-              icon={<Close size={24} color="var(--refly-text-0)" />}
-              onClick={() => setExtensionModalVisible(false)}
-            />
-          </div>
-          <ImportFromExtension />
         </div>
       </Modal>
     </>

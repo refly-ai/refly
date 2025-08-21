@@ -145,6 +145,9 @@
     &::before {
       background: transparent!important;
     }
+    &::after {
+      display: none;
+    }
     &:hover {
       &::before {
         background: var(--refly-primary-default)!important;

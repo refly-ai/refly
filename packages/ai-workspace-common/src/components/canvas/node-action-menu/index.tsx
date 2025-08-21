@@ -2,25 +2,22 @@ import { Button, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { FC, useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import {
-  IconDelete,
-  IconAskAI,
-  IconSlideshow,
-  IconPreview,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
-import { RiFullscreenFill } from 'react-icons/ri';
+import { IconPreview } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { CanvasNode } from '@refly/canvas-common';
 import {
-  FileInput,
-  MessageSquareDiff,
-  Ungroup,
-  Group,
-  Target,
-  Layout,
-  ChevronDown,
   Edit,
-} from 'lucide-react';
+  AddContext,
+  Ppt,
+  Fullscreen,
+  InputContext,
+  SubNode,
+  Delete,
+  AiChat,
+  AutoLayout,
+  Group,
+} from 'refly-icons';
+import { Ungroup, ChevronDown } from 'lucide-react';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import {
   nodeActionEmitter,
@@ -232,7 +229,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         return [
           {
             key: 'askAI',
-            icon: IconAskAI,
+            icon: AiChat,
             label: t('canvas.nodeActions.askAI'),
             onClick: handleAskAI,
             type: 'button' as const,
@@ -246,7 +243,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
           { key: 'divider-1', type: 'divider' } as MenuItem,
           {
             key: 'addToContext',
-            icon: MessageSquareDiff,
+            icon: AddContext,
             label: t('canvas.nodeActions.addToContext'),
             onClick: handleAddToContext,
             type: 'button' as const,
@@ -260,7 +257,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
           { key: 'divider-2', type: 'divider' } as MenuItem,
           {
             key: 'delete',
-            icon: IconDelete,
+            icon: Delete,
             label: t('canvas.nodeActions.delete'),
             onClick: handleDelete,
             danger: true,
@@ -294,7 +291,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
           : []),
         {
           key: 'addToContext',
-          icon: MessageSquareDiff,
+          icon: AddContext,
           label: t('canvas.nodeActions.addToContext'),
           onClick: handleAddToContext,
           type: 'button' as const,
@@ -308,7 +305,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
           ? [
               {
                 key: 'addToSlideshow',
-                icon: IconSlideshow,
+                icon: Ppt,
                 label: t('canvas.nodeActions.addToSlideshow'),
                 onClick: handleAddToSlideshow,
                 loading: isAddingNodesToSlide,
@@ -337,7 +334,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
           : []),
         {
           key: 'fullScreen',
-          icon: RiFullscreenFill,
+          icon: Fullscreen,
           label: t('canvas.nodeActions.fullScreen'),
           onClick: handleFullScreenPreview,
           type: 'button' as const,
@@ -348,7 +345,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         memo: [
           {
             key: 'insertToDoc',
-            icon: FileInput,
+            icon: InputContext,
             label: t('canvas.nodeActions.insertToDoc'),
             loading: false,
             onClick: handleInsertToDoc,
@@ -365,7 +362,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         codeArtifact: [
           {
             key: 'insertToDoc',
-            icon: FileInput,
+            icon: InputContext,
             label: t('canvas.nodeActions.insertToDoc'),
             loading: false,
             onClick: handleInsertToDoc,
@@ -397,7 +394,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         skillResponse: [
           {
             key: 'insertToDoc',
-            icon: FileInput,
+            icon: InputContext,
             label: t('canvas.nodeActions.insertToDoc'),
             loading: false,
             onClick: handleInsertToDoc,
@@ -417,7 +414,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         { key: 'divider-cluster', type: 'divider' as const } as MenuItem,
         {
           key: 'selectCluster',
-          icon: Target,
+          icon: SubNode,
           label: t('canvas.nodeActions.selectCluster'),
           onClick: handleSelectCluster,
           type: 'button' as const,
@@ -443,7 +440,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         },
         {
           key: 'layoutCluster',
-          icon: Layout,
+          icon: AutoLayout,
           label: t('canvas.nodeActions.layoutCluster'),
           onClick: handleLayoutCluster,
           type: 'button' as const,
@@ -461,7 +458,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
           ? [
               {
                 key: 'delete',
-                icon: IconDelete,
+                icon: Delete,
                 label: t('canvas.nodeActions.delete'),
                 onClick: handleDelete,
                 danger: true,
@@ -544,16 +541,14 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
 
   return (
     menuItems.length > 0 && (
-      <div className="bg-white rounded-lg shadow-lg p-2 w-[200px] border border-[rgba(0,0,0,0.06)] relative dark:bg-gray-900 dark:border-gray-700">
+      <div className="rounded-[12px] shadow-lg p-2 w-[200px]">
         <div
           ref={contentRef}
           className={`node-action-menu-content ${hasFixedHeight ? 'max-h-[200px] overflow-y-auto' : ''}`}
         >
           {menuItems.map((item) => {
             if (item?.type === 'divider') {
-              return (
-                <Divider key={item.key} className="my-1 h-[1px] bg-gray-100 dark:bg-gray-900" />
-              );
+              return <Divider key={item.key} className="my-1 h-[1px] bg-refly-Card-Border" />;
             }
 
             const button = (
@@ -561,31 +556,30 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
                 key={item.key}
                 className={`
                 w-full
-                h-8
+                h-9
                 flex
                 items-center
-                gap-2
-                px-2
+                justify-start
+                gap-1
+                px-1.5
+                py-2
                 rounded
                 text-sm
                 transition-colors
-                text-gray-700 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-200 dark:hover:bg-gray-900 dark:hover:text-gray-200
-                ${item.danger ? '!text-red-600 hover:bg-red-50' : ''}
-                ${item.primary ? '!text-primary-600 hover:bg-primary-50' : ''}
+                text-refly-text-0
+                hover:!bg-refly-tertiary-hover
+                ${item.danger ? '!text-refly-func-danger-default' : ''}
+                ${item.primary ? '!text-refly-primary-default hover:!bg-refly-primary-hover' : ''}
                 ${item.loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 ${item.disabled ? 'pointer-events-none dark:opacity-30' : ''}
               `}
                 type="text"
-                icon={
-                  item.icon ? (
-                    <item.icon className="w-4 h-4 flex items-center justify-center" />
-                  ) : undefined
-                }
                 loading={item.loading}
                 onClick={item.onClick}
                 disabled={item.disabled}
               >
-                <span className="flex-1 text-left truncate">{item.label}</span>
+                {item.icon ? <item.icon size={18} /> : undefined}
+                {item.label}
               </Button>
             );
 

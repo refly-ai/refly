@@ -46,7 +46,7 @@ export const SubscribeModal = () => {
         logEvent('subscription::price_table_close', 'settings');
       }}
     >
-      <div className="w-full h-full overflow-auto flex flex-col items-center gap-3">
+      <div className="w-full h-full overflow-auto flex flex-col items-center gap-3 py-8">
         <div className="font-bold text-2xl m-auto flex items-center gap-2 text-[color:var(--text-icon-refly-text-0,#1C1F23)] [font-family:'PingFang_SC'] text-[22px] font-semibold leading-8">
           {t('subscription.modalTitle')}
         </div>

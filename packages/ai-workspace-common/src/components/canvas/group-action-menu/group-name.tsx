@@ -92,7 +92,7 @@ export const GroupName: FC<GroupNameProps> = ({
           <Button
             type="text"
             size="small"
-            className="text-refly-0"
+            className="text-refly-0 hover:!bg-refly-tertiary-hover"
             icon={<More size={18} />}
             onClick={handleOpenContextMenu}
           />

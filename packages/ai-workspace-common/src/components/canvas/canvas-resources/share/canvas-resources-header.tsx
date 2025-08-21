@@ -1,7 +1,16 @@
-import { memo, useCallback, useState, useRef, useEffect } from 'react';
+import { memo, useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Tooltip, Typography, Input, InputRef } from 'antd';
-import { Add, ScreenFull, ScreenDefault, SideRight } from 'refly-icons';
+import { Button, Tooltip, Typography, Input, InputRef, Dropdown, Menu, MenuProps } from 'antd';
+import {
+  Add,
+  ScreenFull,
+  ScreenDefault,
+  SideRight,
+  Download,
+  Doc,
+  KnowledgeBase,
+  Cuttools,
+} from 'refly-icons';
 import {
   useActiveNode,
   useCanvasResourcesPanelStoreShallow,
@@ -12,6 +21,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import cn from 'classnames';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { CanvasNodeType } from '@refly/openapi-schema';
+import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
+import { AddFromKnowledgeBase } from '../add-from-knowledgeBase';
 
 const { Text } = Typography;
 
@@ -42,10 +53,15 @@ export const CanvasResourcesHeader = memo(() => {
     setActiveTab: state.setActiveTab,
   }));
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
-  const { setImportResourceModalVisible } = useImportResourceStoreShallow((state) => ({
-    setImportResourceModalVisible: state.setImportResourceModalVisible,
-  }));
+  const { setImportResourceModalVisible, setExtensionModalVisible } = useImportResourceStoreShallow(
+    (state) => ({
+      setImportResourceModalVisible: state.setImportResourceModalVisible,
+      setExtensionModalVisible: state.setExtensionModalVisible,
+    }),
+  );
   const updateNodeTitle = useUpdateNodeTitle();
+  const [addFromKnowledgeBaseVisible, setAddFromKnowledgeBaseVisible] = useState(false);
+  const { createSingleDocumentInCanvas } = useCreateDocument();
 
   // Update editing title when activeNode changes
   useEffect(() => {
@@ -82,9 +98,59 @@ export const CanvasResourcesHeader = memo(() => {
     sidePanelVisible,
   ]);
 
-  const handleAddResource = useCallback(() => {
+  const handleImportResource = useCallback(() => {
     setImportResourceModalVisible(true);
   }, [setImportResourceModalVisible]);
+
+  const handleCreateDocument = useCallback(() => {
+    createSingleDocumentInCanvas();
+  }, [createSingleDocumentInCanvas]);
+
+  const handleImportFromKnowledgeBase = useCallback(() => {
+    setAddFromKnowledgeBaseVisible(true);
+  }, []);
+
+  const handleImportFromExtension = useCallback(() => {
+    setExtensionModalVisible(true);
+  }, [setExtensionModalVisible]);
+
+  const moreMenuItems = useMemo(() => {
+    return [
+      {
+        key: 'import',
+        icon: <Download size={18} />,
+        label: t('canvas.resourceLibrary.importResource'),
+        onClick: handleImportResource,
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'create',
+        icon: <Doc size={18} />,
+        label: t('canvas.resourceLibrary.createDocument'),
+        onClick: handleCreateDocument,
+      },
+
+      {
+        key: 'knowledge',
+        icon: <KnowledgeBase size={18} />,
+        label: t('canvas.resourceLibrary.importFromKnowledgeBase'),
+        onClick: handleImportFromKnowledgeBase,
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'extention',
+        icon: <Cuttools size={18} />,
+        label: t('canvas.resourceLibrary.importFromExtension'),
+        onClick: handleImportFromExtension,
+      },
+    ];
+  }, [handleImportResource, handleCreateDocument, handleImportFromKnowledgeBase, t]);
+
+  const addResourceMenu = <Menu items={moreMenuItems as MenuProps['items']} />;
 
   const handleWideScreen = useCallback(() => {
     setShowLeftOverview(false);
@@ -159,7 +225,11 @@ export const CanvasResourcesHeader = memo(() => {
               type="text"
               size="small"
               onClick={handleParentClick}
-              className={cn(wideScreenVisible ? 'pointer-events-none' : '', 'px-0.5')}
+              className={cn(
+                'h-[30px] hover:!bg-refly-tertiary-hover',
+                wideScreenVisible ? 'pointer-events-none' : '',
+                'px-0.5',
+              )}
             >
               <a
                 className="whitespace-nowrap text-refly-text-1 hover:refly-tertiary-hover hover:text-refly-text-1"
@@ -176,14 +246,14 @@ export const CanvasResourcesHeader = memo(() => {
                 onChange={(e) => setEditingTitle(e.target.value)}
                 onBlur={handleTitleSave}
                 onKeyDown={handleTitleKeyPress}
-                className="min-w-0 flex-1 !max-w-[400px]"
+                className="min-w-0 flex-1 !max-w-[400px] h-[30px]"
                 size="small"
                 autoFocus
               />
             ) : (
               <Text
                 ellipsis={{ tooltip: true }}
-                className="min-w-0 flex-1 !max-w-[400px] leading-5 cursor-pointer hover:text-refly-primary hover:bg-refly-tertiary-hover rounded-lg px-1 py-0.5"
+                className="min-w-0 flex-1 !max-w-[400px] leading-5 cursor-pointer hover:text-refly-primary hover:bg-refly-tertiary-hover rounded-lg px-1 py-[5px]"
                 onClick={handleTitleClick}
               >
                 {activeNode?.data?.title || t('common.untitled')}
@@ -199,17 +269,17 @@ export const CanvasResourcesHeader = memo(() => {
 
       <div className="flex items-center gap-3 flex-shrink-0">
         {!parentType && (
-          <Tooltip title={t('canvas.toolbar.addResource')} arrow={false}>
-            <Button size="small" type="text" icon={<Add size={16} />} onClick={handleAddResource} />
-          </Tooltip>
+          <Dropdown overlay={addResourceMenu} trigger={['click']} placement="bottomRight">
+            <Button size="small" type="text" icon={<Add size={16} />} />
+          </Dropdown>
         )}
 
         <TopButtons />
 
         {parentType && (
-          <Tooltip title={t('canvas.toolbar.addResource')} arrow={false}>
-            <Button size="small" type="text" icon={<Add size={16} />} onClick={handleAddResource} />
-          </Tooltip>
+          <Dropdown overlay={addResourceMenu} trigger={['click']} placement="bottomRight">
+            <Button size="small" type="text" icon={<Add size={16} />} />
+          </Dropdown>
         )}
 
         {activeNode && (
@@ -229,6 +299,10 @@ export const CanvasResourcesHeader = memo(() => {
           </Tooltip>
         )}
       </div>
+      <AddFromKnowledgeBase
+        visible={addFromKnowledgeBaseVisible}
+        setVisible={setAddFromKnowledgeBaseVisible}
+      />
     </div>
   );
 });

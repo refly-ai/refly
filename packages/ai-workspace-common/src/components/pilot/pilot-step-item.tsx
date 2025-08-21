@@ -30,7 +30,7 @@ export const StepStatusIcon = memo(({ status }: { status?: PilotStepStatus }) =>
     case 'failed':
       return (
         <div className="w-5 h-5 flex items-center justify-center">
-          <Cancelled className="w-4 h-4" color="var(--refly-error-default)" />
+          <Cancelled className="w-4 h-4" color="var(--refly-func-danger-default)" />
         </div>
       );
     default:

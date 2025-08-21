@@ -264,7 +264,7 @@ export const CanvasListItem = ({ canvas }: { canvas: SiderData }) => {
       }}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer">
           <IconCanvas />
           <div className="w-32 truncate">{canvas?.name || t('common.untitled')}</div>
         </div>

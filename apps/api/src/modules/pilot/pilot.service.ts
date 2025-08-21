@@ -327,10 +327,6 @@ export class PilotService {
     try {
       const { session, mode } = options;
 
-      if (mode === 'summary') {
-        return this.runPilotSummary(user, sessionId, session, mode);
-      }
-
       const pilotSession =
         session ??
         (await this.prisma.pilotSession.findUnique({
@@ -345,6 +341,30 @@ export class PilotService {
       }
 
       const { targetId, targetType, currentEpoch, maxEpoch } = pilotSession;
+
+      // Find all steps in the same epoch
+      const epochSteps = await this.prisma.pilotStep.findMany({
+        where: {
+          sessionId: sessionId,
+          epoch: currentEpoch,
+        },
+      });
+
+      const epochSubtaskSteps = epochSteps.filter((step) => step.mode === 'subtask');
+      const epochSummarySteps = epochSteps.filter((step) => step.mode === 'summary');
+
+      if (mode === 'subtask') {
+        if (epochSubtaskSteps.length !== 0) {
+          return;
+        }
+      } else {
+        if (epochSummarySteps.length !== 0) {
+          return;
+        }
+
+        return this.runPilotSummary(user, sessionId, session, mode);
+      }
+
       const sessionInputObj = JSON.parse(pilotSession.input ?? '{}');
       const userQuestion = sessionInputObj?.query ?? '';
       const canvasContentItems: CanvasContentItem[] =
@@ -499,6 +519,7 @@ export class PilotService {
               },
             },
             convertContextItemsToNodeFilters(contextItems),
+            { autoLayout: true }, // Enable auto layout for Agent mode
           );
         }
 
@@ -790,27 +811,19 @@ export class PilotService {
       const epochSubtaskSteps = epochSteps.filter((step) => step.mode === 'subtask');
       const epochSummarySteps = epochSteps.filter((step) => step.mode === 'summary');
 
-      if (
-        epochSubtaskSteps.length >= MAX_STEPS_PER_EPOCH ||
-        epochSummarySteps.length >= MAX_SUMMARY_STEPS_PER_EPOCH
-      ) {
-        return;
-      }
-
       const isAllSubtaskStepsFinished =
         epochSubtaskSteps.length > 0 && epochSubtaskSteps.every((step) => step.status === 'finish');
 
       const isAllSummaryStepsFinished =
         epochSummarySteps.length > 0 && epochSummarySteps.every((step) => step.status === 'finish');
 
-      // 测试不主动中断
       const reachedMaxEpoch = step.epoch > session.maxEpoch - 1;
       this.logger.log(
         `Epoch (${session.currentEpoch}/${session.maxEpoch}) for session ${step.sessionId}: ` +
           `steps are ${isAllSummaryStepsFinished ? 'finished' : 'not finished'}`,
       );
 
-      if (isAllSubtaskStepsFinished && !isAllSummaryStepsFinished) {
+      if (isAllSubtaskStepsFinished && epochSummarySteps.length === 0) {
         await this.runPilotQueue.add(
           `run-pilot-${step.sessionId}-${session.currentEpoch}`,
           {
@@ -834,6 +847,7 @@ export class PilotService {
 
         if (!reachedMaxEpoch) {
           // Queue the next runPilot job instead of running it directly
+
           await this.runPilotQueue.add(
             `run-pilot-${step.sessionId}-${session.currentEpoch + 1}`,
             {

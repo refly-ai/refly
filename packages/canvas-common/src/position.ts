@@ -16,6 +16,7 @@ export interface CalculateNodePositionParams {
     y: number;
     zoom: number;
   };
+  autoLayout?: boolean; // Control whether to enable auto layout
 }
 
 export const sortNodes = (nodes: Node[]) => {
@@ -304,6 +305,7 @@ export const calculateNodePosition = ({
   defaultPosition,
   edges = [],
   viewport,
+  autoLayout = false, // Default to false for backward compatibility
 }: CalculateNodePositionParams): XYPosition => {
   // If position is provided, use it
   if (defaultPosition) {
@@ -337,8 +339,7 @@ export const calculateNodePosition = ({
 
   // Case 3: Connected to existing nodes
   if (sourceNodes?.length > 0) {
-    // const { autoLayout } = useCanvasStore.getState();
-    const autoLayout = false;
+    // Use the autoLayout parameter passed in instead of hardcoded value
     // Convert relative positions to absolute positions for calculations
     const sourceNodesAbsolute = sourceNodes.map((node) => ({
       ...node,

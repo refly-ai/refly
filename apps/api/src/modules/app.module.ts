@@ -71,10 +71,6 @@ class CustomThrottlerGuard extends ThrottlerGuard {
         },
         autoLogging: false,
         genReqId: () => api.trace.getSpan(api.context.active())?.spanContext()?.traceId,
-        customSuccessObject: (req) => ({
-          env: process.env.NODE_ENV,
-          uid: (req as any).user?.uid || 'anonymous',
-        }),
         transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
         formatters: {
           level: (level) => ({ level }),

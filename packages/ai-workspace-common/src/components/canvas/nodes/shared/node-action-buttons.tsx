@@ -225,6 +225,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
         tooltip: t('canvas.nodeActions.delete'),
         onClick: () => nodeActionEmitter.emit(createNodeEventName(nodeId, 'delete')),
         danger: true,
+        color: 'var(--refly-func-danger-default)',
       });
 
       if (['resource', 'document'].includes(nodeType)) {
@@ -237,6 +238,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
               : t('canvas.nodeActions.deleteResource'),
           onClick: () => handleDeleteFile(nodeType as 'document' | 'resource'),
           danger: true,
+          color: 'var(--refly-func-danger-default)',
         });
       }
 
@@ -301,7 +303,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
                 <Button
                   type="text"
                   danger={button.danger}
-                  icon={<button.icon color={button.color} size={18} />}
+                  icon={<button.icon color={button.color || 'var(--refly-text-0)'} size={18} />}
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -310,8 +312,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
                   size="small"
                   loading={button.loading}
                   className={cn('h-6 p-0 flex items-center justify-center', {
-                    'text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100':
-                      !button.danger,
+                    'text-refly-text-1 hover:!bg-refly-tertiary-hover': !button.danger,
                   })}
                 />
               </Tooltip>
@@ -329,7 +330,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
                   size="small"
                   icon={<More size={18} />}
                   onClick={handleOpenContextMenu}
-                  className="h-6 p-0 flex items-center justify-center"
+                  className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
                 />
               </Tooltip>
             </div>

@@ -58,7 +58,7 @@ export type ImportResourceMenuItem =
 interface ImportResourceState {
   importResourceModalVisible: boolean;
   selectedMenuItem: ImportResourceMenuItem;
-
+  extensionModalVisible: boolean;
   // scrape
   scrapeLinks: LinkMeta[];
   fileList: FileItem[];
@@ -85,6 +85,7 @@ interface ImportResourceState {
   removeFromWaitingList: (id: string) => void;
   updateWaitingListItem: (id: string, updates: Partial<WaitingListItem>) => void;
   clearWaitingList: () => void;
+  setExtensionModalVisible: (visible: boolean) => void;
 }
 
 export const defaultState = {
@@ -96,6 +97,7 @@ export const defaultState = {
   selectedMenuItem: 'import-from-web-search' as ImportResourceMenuItem,
   insertNodePosition: null,
   waitingList: [],
+  extensionModalVisible: false,
 };
 
 export const useImportResourceStore = create<ImportResourceState>()(
@@ -104,6 +106,8 @@ export const useImportResourceStore = create<ImportResourceState>()(
 
     setImportResourceModalVisible: (visible: boolean) =>
       set((state) => ({ ...state, importResourceModalVisible: visible })),
+    setExtensionModalVisible: (visible: boolean) =>
+      set((state) => ({ ...state, extensionModalVisible: visible })),
     setScrapeLinks: (links: LinkMeta[]) => set((state) => ({ ...state, scrapeLinks: links })),
     setCopiedTextPayload: (payload: Partial<{ content: string; title: string; url?: string }>) =>
       set((state) => ({ ...state, copiedTextPayload: { ...state.copiedTextPayload, ...payload } })),

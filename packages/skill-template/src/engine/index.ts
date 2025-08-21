@@ -191,7 +191,7 @@ export class SkillEngine {
   }
 
   setOptions(options: SkillEngineOptions) {
-    this.options = options;
+    this.options = { ...this.options, ...options };
   }
 
   configure(config: SkillRunnableConfig) {
@@ -200,6 +200,7 @@ export class SkillEngine {
 
   getConfig(key?: string) {
     if (!this.options?.config) {
+      this.logger.warn('No config found in skill engine, returning null');
       return null;
     }
 

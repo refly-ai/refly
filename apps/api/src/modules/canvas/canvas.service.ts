@@ -365,6 +365,7 @@ export class CanvasService {
    * @param canvasId - The id of the canvas to add the node to
    * @param node - The node to add
    * @param connectTo - The nodes to connect to
+   * @param options - Additional options including autoLayout
    */
   /**
    * Add a node to the canvas
@@ -378,18 +379,20 @@ export class CanvasService {
     canvasId: string,
     node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
     connectTo?: CanvasNodeFilter[],
+    options?: { autoLayout?: boolean },
   ) {
     const releaseLock = await this.canvasSyncService.lockState(canvasId);
     const { nodes, edges } = await this.canvasSyncService.getCanvasData(user, { canvasId });
 
     this.logger.log(
-      `[addNodeToCanvas] add node to canvas ${canvasId}, node: ${JSON.stringify(node)}, nodes: ${JSON.stringify(nodes)}, edges: ${JSON.stringify(edges)}`,
+      `[addNodeToCanvas] add node to canvas ${canvasId}, node: ${JSON.stringify(node)}, autoLayout: ${options?.autoLayout}`,
     );
     const { newNode, newEdges } = prepareAddNode({
       node,
       nodes,
       edges,
       connectTo,
+      autoLayout: options?.autoLayout, // Pass autoLayout parameter
     });
 
     await this.canvasSyncService.syncState(

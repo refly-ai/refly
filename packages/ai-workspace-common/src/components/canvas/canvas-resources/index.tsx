@@ -58,9 +58,7 @@ export const CanvasResources = memo(({ className }: CanvasResourcesProps) => {
     <div
       className={cn(
         'w-full h-full overflow-hidden flex flex-col bg-refly-bg-content-z2 rounded-xl border-solid border border-refly-Card-Border shadow-refly-m',
-        {
-          'rounded-l-none': showLeftOverview,
-        },
+        { 'rounded-l-none': showLeftOverview },
         className,
       )}
     >

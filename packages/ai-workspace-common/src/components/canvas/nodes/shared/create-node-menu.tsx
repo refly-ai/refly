@@ -2,8 +2,7 @@ import { FC, memo, useCallback, useMemo, useState } from 'react';
 import { Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { CanvasNodeType } from '@refly/openapi-schema';
-import { IconAskAI, IconMemo } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { FilePlus } from 'lucide-react';
+import { AiChat, Note, Add, Clone } from 'refly-icons';
 import { GrClone } from 'react-icons/gr';
 import {
   nodeActionEmitter,
@@ -128,7 +127,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
 
     const askAI = {
       key: 'askAI',
-      icon: IconAskAI,
+      icon: AiChat,
       label: t('canvas.nodeActions.askAI'),
       onClick: handleAskAI,
       primary: true,
@@ -141,7 +140,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
 
     const createMemoItem = {
       key: 'createMemo',
-      icon: IconMemo,
+      icon: Note,
       label: t('canvas.nodeActions.createMemo'),
       onClick: handleCreateMemo,
       hoverContent: {
@@ -153,7 +152,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
 
     const createDocumentItem = {
       key: 'createDocument',
-      icon: FilePlus,
+      icon: Add,
       label: t('canvas.nodeStatus.createDocument'),
       onClick: handleCreateDocument,
       loading: isCreatingDocument,
@@ -166,7 +165,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
 
     const duplicateDocumentItem = {
       key: 'duplicateDocument',
-      icon: GrClone,
+      icon: Clone,
       label: t('canvas.nodeActions.duplicateDocument'),
       loading: beforeDuplicatingDocument,
       onClick: handleDuplicateDocument,
@@ -229,7 +228,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
     const menuItems = getMenuItems();
 
     return (
-      <div className="bg-white rounded-lg shadow-lg p-2 border border-[rgba(0,0,0,0.06)] relative dark:bg-gray-900 dark:border-gray-700">
+      <div className="bg-white rounded-[12px] shadow-lg p-2 border border-[rgba(0,0,0,0.06)] relative dark:bg-gray-900 dark:border-gray-700">
         {menuItems.map((item) => {
           const button = (
             <Button
@@ -239,20 +238,22 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
               h-7
               flex
               items-center
+              justify-start
               px-2
               rounded
               text-sm
               transition-colors
-              text-gray-700 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-200 dark:hover:bg-gray-900 dark:hover:text-gray-200
-              ${item.primary ? '!text-primary-600 hover:bg-primary-50' : ''}
+              text-refly-text-0
+              hover:!bg-refly-tertiary-hover
+              ${item.primary ? '!text-refly-primary-default' : ''}
               ${item.loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
               type="text"
-              icon={<item.icon className="w-4 h-4 flex items-center justify-center" />}
               loading={item.loading}
               onClick={item.onClick}
             >
-              <span className="flex-1 text-left truncate">{item.label}</span>
+              {item.icon ? <item.icon size={18} /> : undefined}
+              {item.label}
             </Button>
           );
 

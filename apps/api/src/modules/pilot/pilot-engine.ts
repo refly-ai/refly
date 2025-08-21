@@ -70,17 +70,28 @@ export class PilotEngine {
 
         if (recommendedStage === 'creation') {
           return (
-            steps.filter(
-              (step) =>
-                step.skill === 'generateDoc' ||
-                step.skill === 'codeArtifacts' ||
-                step.skill === 'generateMedia' ||
-                step.skill === 'commonQnA',
-            ) || []
+            steps
+              .filter(
+                (step) =>
+                  step.skillName === 'generateDoc' ||
+                  step.skillName === 'codeArtifacts' ||
+                  step.skillName === 'generateMedia' ||
+                  step.skillName === 'commonQnA',
+              )
+              .slice(0, 1) || []
+          );
+        } else {
+          return (
+            steps
+              .filter(
+                (step) =>
+                  step.skillName !== 'generateDoc' &&
+                  step.skillName !== 'codeArtifacts' &&
+                  step.skillName !== 'generateMedia',
+              )
+              .slice(0, MAX_STEPS_PER_EPOCH) || []
           );
         }
-
-        return steps;
       } catch (structuredError) {
         this.logger.warn(
           `Structured output failed: ${structuredError.message}, trying fallback approach`,
