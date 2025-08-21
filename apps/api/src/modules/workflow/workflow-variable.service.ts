@@ -4,7 +4,7 @@ import type { WorkflowVariable as WorkflowVariableType } from '@refly/openapi-sc
 
 export interface WorkflowVariable {
   name: string;
-  value: string;
+  value: string[] | string;
   description?: string;
 }
 
@@ -26,7 +26,9 @@ export class WorkflowVariableService {
     // Convert variables array to object for Handlebars
     const variableMap = variables.reduce(
       (acc, variable) => {
-        acc[variable.name] = variable.value;
+        acc[variable.name] = Array.isArray(variable.value)
+          ? variable.value.join(', ')
+          : variable.value;
         return acc;
       },
       {} as Record<string, string>,

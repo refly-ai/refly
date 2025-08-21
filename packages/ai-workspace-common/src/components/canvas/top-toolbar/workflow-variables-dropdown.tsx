@@ -14,7 +14,7 @@ interface WorkflowVariablesDropdownProps {
 
 interface VariableFormData {
   name: string;
-  value: string;
+  value: string[] | string;
   description?: string;
 }
 
@@ -90,7 +90,7 @@ export const WorkflowVariablesDropdown: React.FC<WorkflowVariablesDropdownProps>
     setEditingVariable(variable);
     form.setFieldsValue({
       name: variable.name,
-      value: variable.value,
+      value: Array.isArray(variable.value) ? variable.value.join(', ') : variable.value,
       description: variable.description,
     });
     setModalVisible(true);
@@ -113,16 +113,25 @@ export const WorkflowVariablesDropdown: React.FC<WorkflowVariablesDropdownProps>
       return;
     }
 
+    // Convert string value to array format
+    const valueArray =
+      typeof value === 'string'
+        ? value
+            .split(',')
+            .map((v) => v.trim())
+            .filter(Boolean)
+        : value;
+
     let newVariables: WorkflowVariable[];
 
     if (editingVariable) {
       // Edit existing variable
       newVariables = variables.map((v) =>
-        v.name === editingVariable.name ? { name, value, description } : v,
+        v.name === editingVariable.name ? { name, value: valueArray, description } : v,
       );
     } else {
       // Add new variable
-      newVariables = [...variables, { name, value, description }];
+      newVariables = [...variables, { name, value: valueArray, description }];
     }
 
     await saveVariables(newVariables);
@@ -162,7 +171,9 @@ export const WorkflowVariablesDropdown: React.FC<WorkflowVariablesDropdownProps>
         <div className="flex items-center justify-between p-2 hover:bg-gray-50">
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm truncate">{variable.name}</div>
-            <div className="text-xs text-gray-500 truncate">{variable.value}</div>
+            <div className="text-xs text-gray-500 truncate">
+              {Array.isArray(variable.value) ? variable.value.join(', ') : variable.value}
+            </div>
             {variable.description && (
               <div className="text-xs text-gray-400 truncate">{variable.description}</div>
             )}
@@ -267,7 +278,7 @@ export const WorkflowVariablesDropdown: React.FC<WorkflowVariablesDropdownProps>
 
           <Form.Item
             name="value"
-            label={t('canvas.workflow.variables.value') || 'Variable Value'}
+            label={t('canvas.workflow.variables.value') || 'Variable Values (comma-separated)'}
             rules={[
               {
                 required: true,
@@ -275,7 +286,11 @@ export const WorkflowVariablesDropdown: React.FC<WorkflowVariablesDropdownProps>
               },
             ]}
           >
-            <Input placeholder={t('canvas.workflow.variables.valuePlaceholder') || 'e.g., 张三'} />
+            <Input
+              placeholder={
+                t('canvas.workflow.variables.valuePlaceholder') || 'e.g., 张三, 李四, 王五'
+              }
+            />
           </Form.Item>
 
           <Form.Item
