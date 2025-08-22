@@ -11,6 +11,7 @@ import {
   ListToolsetsResponse,
   UpsertToolsetResponse,
   UpsertToolsetRequest,
+  ListToolsetInventoryResponse,
 } from '@refly/openapi-schema';
 import { toolsetPO2DTO } from './tool.dto';
 
@@ -28,6 +29,13 @@ export class ToolController {
       isGlobal,
     });
     return buildSuccessResponse(tools);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/inventory/list')
+  async listToolsetInventory(): Promise<ListToolsetInventoryResponse> {
+    const toolsets = this.toolService.listToolsetInventory();
+    return buildSuccessResponse(toolsets);
   }
 
   @UseGuards(JwtAuthGuard)

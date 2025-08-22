@@ -390,6 +390,8 @@ import type {
   ListToolsData,
   ListToolsError,
   ListToolsResponse2,
+  ListToolsetInventoryError,
+  ListToolsetInventoryResponse2,
   ListToolsetsData,
   ListToolsetsError,
   ListToolsetsResponse2,
@@ -2517,8 +2519,25 @@ export const listTools = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * List toolset inventory
+ * List all available toolsets in inventory, including uninstalled.
+ */
+export const listToolsetInventory = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListToolsetInventoryResponse2,
+    ListToolsetInventoryError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/tool/inventory/list',
+  });
+};
+
+/**
  * List toolsets
- * List all available toolsets
+ * List all installed toolsets
  */
 export const listToolsets = <ThrowOnError extends boolean = false>(
   options?: Options<ListToolsetsData, ThrowOnError>,

@@ -3,6 +3,31 @@ import { ToolParams } from '@langchain/core/tools';
 import { FirecrawlClient } from './client';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor } from '../base';
 import { InferInteropZodOutput } from '@langchain/core/dist/utils/types';
+import { ToolsetDefinition } from '@refly/openapi-schema';
+
+export const FirecrawlToolsetDefinition: ToolsetDefinition = {
+  key: 'firecrawl',
+  labelDict: {
+    en: 'Firecrawl',
+  },
+  descriptionDict: {
+    en: 'Firecrawl is a toolset for scraping and searching the web.',
+  },
+  tools: [
+    {
+      name: 'scrape',
+      descriptionDict: {
+        en: 'A web scraper. Useful for when you need to scrape a website.',
+      },
+    },
+    {
+      name: 'search',
+      descriptionDict: {
+        en: 'A search engine. Useful for when you need to answer questions about current events.',
+      },
+    },
+  ],
+};
 
 interface FirecrawlToolParams extends ToolParams {
   apiKey: string;
@@ -10,8 +35,8 @@ interface FirecrawlToolParams extends ToolParams {
 }
 
 export class FirecrawlScrape extends AgentBaseTool<FirecrawlToolParams> {
-  toolsetKey = 'firecrawl';
-  name = 'firecrawl_scrape';
+  name = 'scrape';
+  toolsetKey = FirecrawlToolsetDefinition.key;
 
   schema = z.object({
     url: z.string().describe('The URL to scrape'),
@@ -41,8 +66,8 @@ export class FirecrawlScrape extends AgentBaseTool<FirecrawlToolParams> {
 }
 
 export class FirecrawlSearch extends AgentBaseTool<FirecrawlToolParams> {
-  toolsetKey = 'firecrawl';
-  name = 'firecrawl_search';
+  name = 'search';
+  toolsetKey = FirecrawlToolsetDefinition.key;
 
   schema = z.object({
     query: z.string().describe('The search query to execute'),
@@ -73,13 +98,7 @@ export class FirecrawlSearch extends AgentBaseTool<FirecrawlToolParams> {
 }
 
 export class FirecrawlToolset extends AgentBaseToolset<FirecrawlToolParams> {
-  toolsetKey = 'firecrawl';
-  labelDict = {
-    en: 'Firecrawl',
-  };
-  descriptionDict = {
-    en: 'Firecrawl is a toolset for scraping and searching the web.',
-  };
+  toolsetKey = FirecrawlToolsetDefinition.key;
   tools = [
     FirecrawlScrape,
     FirecrawlSearch,

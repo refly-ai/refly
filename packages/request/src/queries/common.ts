@@ -105,6 +105,7 @@ import {
   listSkills,
   listSkillTriggers,
   listTools,
+  listToolsetInventory,
   listToolsets,
   logout,
   multiLingualWebSearch,
@@ -644,6 +645,18 @@ export const UseListToolsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsKey, ...(queryKey ?? [clientOptions])];
+export type ListToolsetInventoryDefaultResponse = Awaited<
+  ReturnType<typeof listToolsetInventory>
+>['data'];
+export type ListToolsetInventoryQueryResult<
+  TData = ListToolsetInventoryDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListToolsetInventoryKey = 'ListToolsetInventory';
+export const UseListToolsetInventoryKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListToolsetInventoryKey, ...(queryKey ?? [clientOptions])];
 export type ListToolsetsDefaultResponse = Awaited<ReturnType<typeof listToolsets>>['data'];
 export type ListToolsetsQueryResult<
   TData = ListToolsetsDefaultResponse,

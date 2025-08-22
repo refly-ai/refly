@@ -52,18 +52,6 @@ export abstract class AgentBaseToolset<TParams = unknown> {
   abstract toolsetKey: string;
 
   /**
-   * The label dictionary of the toolset.
-   * Key is the locale, value is the label.
-   */
-  abstract labelDict: Record<string, string>;
-
-  /**
-   * The description dictionary of the toolset.
-   * Key is the locale, value is the description.
-   */
-  abstract descriptionDict: Record<string, string>;
-
-  /**
    * Get the tools that belong to this toolset.
    * Tool constructors are typed to accept the shared params of this toolset.
    */

@@ -6,10 +6,12 @@ import {
   DeleteToolRequest,
   GenericToolset,
   ListToolsData,
+  ToolsetDefinition,
   UpsertToolsetRequest,
   User,
 } from '@refly/openapi-schema';
 import { genToolsetID } from '@refly/utils';
+import { toolsetInventory } from '@refly/agent-tools';
 import { ParamsError, ToolsetNotFoundError } from '@refly/errors';
 import { mcpServerPo2GenericToolset, toolsetPo2GenericToolset } from './tool.dto';
 import { McpServerService } from '../mcp-server/mcp-server.service';
@@ -23,6 +25,12 @@ export class ToolService {
     private readonly encryptionService: EncryptionService,
     private readonly mcpServerService: McpServerService,
   ) {}
+
+  listToolsetInventory(): ToolsetDefinition[] {
+    return Object.values(toolsetInventory)
+      .map((toolset) => toolset.definition)
+      .sort((a, b) => a.key.localeCompare(b.key));
+  }
 
   async listRegularTools(user: User, param: ListToolsData['query']): Promise<GenericToolset[]> {
     const { isGlobal } = param;
@@ -59,9 +67,10 @@ export class ToolService {
       throw new ParamsError('name is required');
     }
 
-    // TODO: check if key is valid
     if (!key) {
       throw new ParamsError('key is required');
+    } else if (!toolsetInventory[key]) {
+      throw new ParamsError(`Toolset ${key} not valid`);
     }
     if (!authType) {
       throw new ParamsError('authType is required');
@@ -116,8 +125,10 @@ export class ToolService {
     if (param.name !== undefined) {
       updates.name = param.name;
     }
-    // TODO: check if key is valid
     if (param.key !== undefined) {
+      if (!toolsetInventory[param.key]) {
+        throw new ParamsError(`Toolset ${param.key} not valid`);
+      }
       updates.key = param.key;
     }
     if (param.authType !== undefined) {

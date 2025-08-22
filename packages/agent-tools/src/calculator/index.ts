@@ -1,10 +1,36 @@
 import { z } from 'zod';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor } from '../base';
 import { InferInteropZodOutput } from '@langchain/core/dist/utils/types';
+import { ToolsetDefinition } from '@refly/openapi-schema';
+
+export const CalculatorToolsetDefinition: ToolsetDefinition = {
+  key: 'calculator',
+  labelDict: {
+    en: 'Calculator',
+  },
+  descriptionDict: {
+    en: 'A calculator that adds and subtracts two numbers together.',
+  },
+  tools: [
+    {
+      name: 'add',
+      descriptionDict: {
+        en: 'A calculator that adds two numbers together.',
+      },
+    },
+    {
+      name: 'subtract',
+      descriptionDict: {
+        en: 'A calculator that subtracts two numbers together.',
+      },
+    },
+  ],
+};
 
 export class CalculatorAdd extends AgentBaseTool {
-  toolsetKey = 'calculator';
   name = 'add';
+  toolsetKey = CalculatorToolsetDefinition.key;
+
   schema = z.object({
     a: z.number().describe('The first number to add'),
     b: z.number().describe('The second number to add'),
@@ -20,8 +46,9 @@ export class CalculatorAdd extends AgentBaseTool {
 }
 
 export class CalculatorSubtract extends AgentBaseTool {
-  toolsetKey = 'calculator';
   name = 'subtract';
+  toolsetKey = CalculatorToolsetDefinition.key;
+
   schema = z.object({
     a: z.number().describe('The value to subtract from'),
     b: z.number().describe('The value to subtract'),
@@ -37,12 +64,6 @@ export class CalculatorSubtract extends AgentBaseTool {
 }
 
 export class CalculatorToolset extends AgentBaseToolset {
-  toolsetKey = 'calculator';
-  labelDict = {
-    en: 'Calculator',
-  };
-  descriptionDict = {
-    en: 'A calculator that adds and subtracts two numbers together.',
-  };
+  toolsetKey = CalculatorToolsetDefinition.key;
   tools = [CalculatorAdd, CalculatorSubtract] satisfies readonly AgentToolConstructor<unknown>[];
 }

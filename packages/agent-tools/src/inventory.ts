@@ -1,20 +1,23 @@
 import { AgentBaseToolset } from './base';
-
-import { FirecrawlToolset } from './firecrawl';
-import { CalculatorToolset } from './calculator';
+import { ToolsetDefinition } from '@refly/openapi-schema';
+import { FirecrawlToolset, FirecrawlToolsetDefinition } from './firecrawl';
+import { CalculatorToolset, CalculatorToolsetDefinition } from './calculator';
 
 export type AnyToolsetClass = new (...args: any[]) => AgentBaseToolset<any>;
 
-export const toolsetInventory: {
-  key: string;
-  class: AnyToolsetClass;
-}[] = [
+export const toolsetInventory: Record<
+  string,
   {
-    key: 'firecrawl',
+    class: AnyToolsetClass;
+    definition: ToolsetDefinition;
+  }
+> = {
+  [FirecrawlToolsetDefinition.key]: {
     class: FirecrawlToolset,
+    definition: FirecrawlToolsetDefinition,
   },
-  {
-    key: 'calculator',
+  [CalculatorToolsetDefinition.key]: {
     class: CalculatorToolset,
+    definition: CalculatorToolsetDefinition,
   },
-];
+};

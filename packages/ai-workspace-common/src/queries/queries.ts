@@ -106,6 +106,7 @@ import {
   listSkills,
   listSkillTriggers,
   listTools,
+  listToolsetInventory,
   listToolsets,
   logout,
   multiLingualWebSearch,
@@ -339,6 +340,7 @@ import {
   ListSkillTriggersError,
   ListToolsData,
   ListToolsError,
+  ListToolsetInventoryError,
   ListToolsetsData,
   ListToolsetsError,
   LogoutError,
@@ -1118,6 +1120,23 @@ export const useListTools = <
     queryKey: Common.UseListToolsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listTools({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useListToolsetInventory = <
+  TData = Common.ListToolsetInventoryDefaultResponse,
+  TError = ListToolsetInventoryError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListToolsetInventoryKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listToolsetInventory({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useListToolsets = <

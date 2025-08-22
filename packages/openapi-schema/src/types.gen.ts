@@ -5218,11 +5218,47 @@ export type DeleteProviderItemRequest = {
 
 export type ToolsetAuthType = 'manual' | 'oauth';
 
-export type Toolset = {
+export type ToolDefinition = {
+  /**
+   * Tool name
+   */
+  name: string;
+  /**
+   * Tool description dictionary for humans
+   */
+  descriptionDict: {
+    [key: string]: unknown;
+  };
+};
+
+export type ToolsetDefinition = {
+  /**
+   * Toolset key
+   */
+  key: string;
+  /**
+   * Toolset label dictionary
+   */
+  labelDict?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Toolset description dictionary for humans
+   */
+  descriptionDict: {
+    [key: string]: unknown;
+  };
+  /**
+   * Toolset tools
+   */
+  tools: Array<ToolDefinition>;
+};
+
+export type ToolsetInstance = ToolsetDefinition & {
   /**
    * Toolset ID
    */
-  toolsetId: string;
+  toolsetId?: string;
   /**
    * Whether the toolset is global
    */
@@ -5231,14 +5267,6 @@ export type Toolset = {
    * Whether the toolset is builtin
    */
   isBuiltin?: boolean;
-  /**
-   * Toolset name
-   */
-  name?: string;
-  /**
-   * Toolset key
-   */
-  key?: string;
   /**
    * Toolset auth type
    */
@@ -5257,10 +5285,19 @@ export type Toolset = {
    * Toolset update timestamp
    */
   updatedAt?: string;
+} & {
+  /**
+   * Toolset ID
+   */
+  toolsetId: string;
+};
+
+export type ListToolsetInventoryResponse = BaseResponse & {
+  data?: Array<ToolsetDefinition>;
 };
 
 export type ListToolsetsResponse = BaseResponse & {
-  data?: Array<Toolset>;
+  data?: Array<ToolsetInstance>;
 };
 
 export type UpsertToolsetRequest = {
@@ -5289,7 +5326,7 @@ export type UpsertToolsetRequest = {
 };
 
 export type UpsertToolsetResponse = BaseResponse & {
-  data?: Toolset;
+  data?: ToolsetInstance;
 };
 
 export type GenericToolsetType = 'regular' | 'mcp';
@@ -5302,7 +5339,7 @@ export type GenericToolset = {
   /**
    * Toolset
    */
-  toolset?: Toolset;
+  toolset?: ToolsetInstance;
   /**
    * MCP server
    */
@@ -7055,6 +7092,10 @@ export type ListToolsData = {
 export type ListToolsResponse2 = ListToolsResponse;
 
 export type ListToolsError = unknown;
+
+export type ListToolsetInventoryResponse2 = ListToolsetInventoryResponse;
+
+export type ListToolsetInventoryError = unknown;
 
 export type ListToolsetsData = {
   query?: {

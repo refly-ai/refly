@@ -49,6 +49,7 @@ import {
   listSkills,
   listSkillTriggers,
   listTools,
+  listToolsetInventory,
   listToolsets,
   serveStatic,
 } from '../requests/services.gen';
@@ -460,6 +461,14 @@ export const prefetchUseListTools = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListToolsKeyFn(clientOptions),
     queryFn: () => listTools({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListToolsetInventory = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListToolsetInventoryKeyFn(clientOptions),
+    queryFn: () => listToolsetInventory({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListToolsets = (
   queryClient: QueryClient,

@@ -7442,50 +7442,113 @@ export const ToolsetAuthTypeSchema = {
   enum: ['manual', 'oauth'],
 } as const;
 
-export const ToolsetSchema = {
+export const ToolDefinitionSchema = {
   type: 'object',
-  required: ['toolsetId'],
+  required: ['name', 'descriptionDict'],
   properties: {
-    toolsetId: {
-      type: 'string',
-      description: 'Toolset ID',
-    },
-    isGlobal: {
-      type: 'boolean',
-      description: 'Whether the toolset is global',
-    },
-    isBuiltin: {
-      type: 'boolean',
-      description: 'Whether the toolset is builtin',
-    },
     name: {
       type: 'string',
-      description: 'Toolset name',
+      description: 'Tool name',
     },
+    descriptionDict: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Tool description dictionary for humans',
+    },
+  },
+} as const;
+
+export const ToolsetDefinitionSchema = {
+  type: 'object',
+  required: ['name', 'key', 'descriptionDict', 'tools'],
+  properties: {
     key: {
       type: 'string',
       description: 'Toolset key',
     },
-    authType: {
-      $ref: '#/components/schemas/ToolsetAuthType',
-      description: 'Toolset auth type',
-    },
-    authData: {
+    labelDict: {
       type: 'object',
       additionalProperties: true,
-      description: 'Toolset auth data',
+      description: 'Toolset label dictionary',
     },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Toolset creation timestamp',
+    descriptionDict: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Toolset description dictionary for humans',
     },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Toolset update timestamp',
+    tools: {
+      type: 'array',
+      description: 'Toolset tools',
+      items: {
+        $ref: '#/components/schemas/ToolDefinition',
+      },
     },
   },
+} as const;
+
+export const ToolsetInstanceSchema = {
+  type: 'object',
+  required: ['toolsetId'],
+  allOf: [
+    {
+      $ref: '#/components/schemas/ToolsetDefinition',
+    },
+    {
+      type: 'object',
+      properties: {
+        toolsetId: {
+          type: 'string',
+          description: 'Toolset ID',
+        },
+        isGlobal: {
+          type: 'boolean',
+          description: 'Whether the toolset is global',
+        },
+        isBuiltin: {
+          type: 'boolean',
+          description: 'Whether the toolset is builtin',
+        },
+        authType: {
+          $ref: '#/components/schemas/ToolsetAuthType',
+          description: 'Toolset auth type',
+        },
+        authData: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Toolset auth data',
+        },
+        createdAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Toolset creation timestamp',
+        },
+        updatedAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Toolset update timestamp',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ListToolsetInventoryResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/ToolsetDefinition',
+          },
+        },
+      },
+    },
+  ],
 } as const;
 
 export const ListToolsetsResponseSchema = {
@@ -7499,7 +7562,7 @@ export const ListToolsetsResponseSchema = {
         data: {
           type: 'array',
           items: {
-            $ref: '#/components/schemas/Toolset',
+            $ref: '#/components/schemas/ToolsetInstance',
           },
         },
       },
@@ -7543,7 +7606,7 @@ export const UpsertToolsetResponseSchema = {
       type: 'object',
       properties: {
         data: {
-          $ref: '#/components/schemas/Toolset',
+          $ref: '#/components/schemas/ToolsetInstance',
         },
       },
     },
@@ -7563,7 +7626,7 @@ export const GenericToolsetSchema = {
       description: 'Toolset type',
     },
     toolset: {
-      $ref: '#/components/schemas/Toolset',
+      $ref: '#/components/schemas/ToolsetInstance',
       description: 'Toolset',
     },
     mcpServer: {

@@ -49,6 +49,7 @@ import {
   listSkills,
   listSkillTriggers,
   listTools,
+  listToolsetInventory,
   listToolsets,
   serveStatic,
 } from '../requests/services.gen';
@@ -135,6 +136,7 @@ import {
   ListSkillTriggersError,
   ListToolsData,
   ListToolsError,
+  ListToolsetInventoryError,
   ListToolsetsData,
   ListToolsetsError,
   ServeStaticError,
@@ -844,6 +846,23 @@ export const useListToolsSuspense = <
     queryKey: Common.UseListToolsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listTools({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useListToolsetInventorySuspense = <
+  TData = Common.ListToolsetInventoryDefaultResponse,
+  TError = ListToolsetInventoryError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListToolsetInventoryKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listToolsetInventory({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useListToolsetsSuspense = <

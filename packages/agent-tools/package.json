@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@langchain/core": "0.3.68",
+    "@refly/openapi-schema": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {
