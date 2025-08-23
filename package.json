@@ -40,7 +40,8 @@
     "test:unit": "pnpm -r --if-present test:unit",
     "test:integration": "pnpm -r --if-present test:integration",
     "i18n:check": "node scripts/check-i18n-consistency.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check:deps": "sherif -f -s 'highest' --no-install"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
@@ -55,8 +56,9 @@
     "ncp": "^2.0.0",
     "nodemon": "~3.1.7",
     "rimraf": "^5.0.10",
+    "sherif": "^1.6.1",
     "turbo": "^2.1.2",
-    "typescript": "5.3.3",
+    "typescript": "^5.8.3",
     "vitest": "^2.1.9"
   },
   "packageManager": "pnpm@9.15.9",
@@ -66,7 +68,8 @@
     }
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json}": "biome check --write --unsafe --no-errors-on-unmatched"
+    "*.{js,jsx,ts,tsx,json}": "biome check --write --unsafe --no-errors-on-unmatched",
+    "package.json": "sherif -f -s 'highest' --no-install"
   },
   "pnpm": {
     "overrides": {

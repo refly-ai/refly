@@ -29,6 +29,6 @@
     "deepmerge": "^4.3.1"
   },
   "devDependencies": {
-    "@types/react": "^18.2.56"
+    "@types/react": "^18.3.18"
   }
 }

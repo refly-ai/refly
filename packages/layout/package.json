@@ -7,17 +7,17 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.1",
-    "antd": "^5.20.0",
     "@ant-design/icons": "^5.5.2",
+    "@sentry/react": "^9.1.0",
+    "antd": "^5.21.5",
     "clsx": "^2.1.0",
-    "@sentry/react": "^9.1.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.1"
   },
   "devDependencies": {
-    "@types/react": "^18.2.56",
-    "@types/react-dom": "^18.2.19",
-    "@refly/tsconfig": "workspace:*"
+    "@refly/tsconfig": "workspace:*",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5"
   }
 }

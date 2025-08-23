@@ -7,6 +7,6 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/react": "^18.3.10"
+    "@types/react": "^18.3.18"
   }
 }

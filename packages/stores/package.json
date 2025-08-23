@@ -7,19 +7,19 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@refly/common-types": "workspace:*",
-    "@refly/utils": "workspace:*",
-    "@refly/openapi-schema": "workspace:*",
     "@refly/canvas-common": "workspace:*",
+    "@refly/common-types": "workspace:*",
+    "@refly/openapi-schema": "workspace:*",
     "@refly/request": "workspace:*",
-    "zustand": "~4.5.1",
+    "@refly/utils": "workspace:*",
+    "@xyflow/react": "^12.3.5",
     "immer": "^10.1.1",
-    "react": "^18.2.0",
-    "@xyflow/react": "^12.3.5"
+    "react": "^18.3.1",
+    "zustand": "~4.5.1"
   },
   "devDependencies": {
     "@refly/tsconfig": "workspace:*",
-    "@types/react": "^18.2.66",
-    "typescript": "^5.4.5"
+    "@types/react": "^18.3.18",
+    "typescript": "^5.8.3"
   }
 }
