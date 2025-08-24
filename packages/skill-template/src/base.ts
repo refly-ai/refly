@@ -1,5 +1,5 @@
 import { Runnable } from '@langchain/core/runnables';
-import { ToolParams } from '@langchain/core/tools';
+import { StructuredToolInterface, ToolParams } from '@langchain/core/tools';
 import { BaseMessage } from '@langchain/core/messages';
 import { SkillEngine } from './engine';
 import { StateGraphArgs } from '@langchain/langgraph';
@@ -295,7 +295,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     tplConfig?: SkillTemplateConfig;
     runtimeConfig?: SkillRuntimeConfig;
     emitter?: EventEmitter<SkillEventMap>;
-    selectedMcpServers?: string[];
+    selectedTools?: StructuredToolInterface[];
   };
   metadata?: SkillRunnableMeta;
 }

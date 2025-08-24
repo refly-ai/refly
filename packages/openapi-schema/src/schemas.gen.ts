@@ -5342,11 +5342,11 @@ export const InvokeSkillRequestSchema = {
       },
       deprecated: true,
     },
-    tools: {
+    toolsets: {
       type: 'array',
-      description: 'Selected tools',
+      description: 'Selected toolsets',
       items: {
-        $ref: '#/components/schemas/GenericToolset',
+        $ref: '#/components/schemas/SelectedGenericToolset',
       },
     },
     workflowExecutionId: {
@@ -7557,6 +7557,12 @@ export const ToolsetInstanceSchema = {
           additionalProperties: true,
           description: 'Toolset config',
         },
+        tools: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/ToolDefinition',
+          },
+        },
         createdAt: {
           type: 'string',
           format: 'date-time',
@@ -7676,6 +7682,53 @@ export const GenericToolsetSchema = {
     },
     mcpServer: {
       $ref: '#/components/schemas/McpServerDTO',
+      description: 'MCP server',
+    },
+  },
+} as const;
+
+export const SelectedToolsetSchema = {
+  type: 'object',
+  description: 'Selected toolset, used for skill invocation',
+  properties: {
+    toolsetId: {
+      type: 'string',
+      description: 'Toolset ID',
+    },
+    tools: {
+      type: 'array',
+      description: 'Selected tools',
+      items: {
+        type: 'string',
+        description: 'Selected tool name',
+      },
+    },
+  },
+} as const;
+
+export const SelectedMcpServerSchema = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'MCP server name',
+    },
+  },
+} as const;
+
+export const SelectedGenericToolsetSchema = {
+  type: 'object',
+  properties: {
+    type: {
+      $ref: '#/components/schemas/GenericToolsetType',
+      description: 'Toolset type',
+    },
+    toolset: {
+      $ref: '#/components/schemas/SelectedToolset',
+      description: 'Toolset',
+    },
+    mcpServer: {
+      $ref: '#/components/schemas/SelectedMcpServer',
       description: 'MCP server',
     },
   },

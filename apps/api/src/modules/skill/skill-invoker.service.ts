@@ -65,6 +65,7 @@ import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas/canvas-sync.service';
 import { ActionService } from '../action/action.service';
 import { extractChunkContent } from '../../utils/llm';
+import { ToolService } from '../tool/tool.service';
 
 @Injectable()
 export class SkillInvokerService {
@@ -89,6 +90,7 @@ export class SkillInvokerService {
     private readonly canvasSyncService: CanvasSyncService,
     private readonly collabService: CollabService,
     private readonly providerService: ProviderService,
+    private readonly toolService: ToolService,
     private readonly codeArtifactService: CodeArtifactService,
     private readonly skillEngineService: SkillEngineService,
     private readonly actionService: ActionService,
@@ -170,7 +172,7 @@ export class SkillInvokerService {
       resultHistory,
       projectId,
       eventListener,
-      selectedMcpServers,
+      toolsets,
     } = data;
     const userPo = await this.prisma.user.findUnique({
       select: { uiLocale: true, outputLocale: true },
@@ -197,7 +199,6 @@ export class SkillInvokerService {
         tplConfig,
         runtimeConfig,
         resultId: data.result?.resultId,
-        selectedMcpServers,
       },
     };
 
@@ -216,6 +217,11 @@ export class SkillInvokerService {
       config.configurable.chatHistory = await Promise.all(
         resultHistory.map((r) => this.buildLangchainMessages(user, r, r.steps)),
       ).then((messages) => messages.flat());
+    }
+
+    if (toolsets?.length > 0) {
+      const tools = await this.toolService.instantiateToolsets(user, toolsets);
+      config.configurable.selectedTools = tools;
     }
 
     if (eventListener) {

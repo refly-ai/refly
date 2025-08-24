@@ -31,6 +31,7 @@ import { SkillEngineService } from './skill-engine.service';
 import { SkillInvokerService } from './skill-invoker.service';
 import { isDesktop } from '../../utils/runtime';
 import { ActionModule } from '../action/action.module';
+import { ToolModule } from '../tool/tool.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { ActionModule } from '../action/action.module';
     MiscModule,
     CodeArtifactModule,
     ProviderModule,
+    ToolModule,
     McpServerModule,
     MediaGeneratorModule,
     ...(isDesktop()

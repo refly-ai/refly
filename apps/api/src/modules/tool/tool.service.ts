@@ -1,21 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Ajv from 'ajv';
+import type { StructuredToolInterface } from '@langchain/core/tools';
 import { PrismaService } from '../common/prisma.service';
 import { EncryptionService } from '../common/encryption.service';
-import { Prisma, Toolset as ToolsetPO } from '../../generated/client';
+import { Prisma, Toolset as ToolsetPO, McpServer as McpServerPO } from '../../generated/client';
 import {
   DeleteToolsetRequest,
   GenericToolset,
   ListToolsData,
+  SelectedGenericToolset,
+  SelectedMcpServer,
+  SelectedToolset,
   ToolsetDefinition,
   UpsertToolsetRequest,
   User,
 } from '@refly/openapi-schema';
-import { genToolsetID } from '@refly/utils';
+import { genToolsetID, safeParseJSON } from '@refly/utils';
 import { toolsetInventory } from '@refly/agent-tools';
 import { ParamsError, ToolsetNotFoundError } from '@refly/errors';
 import { mcpServerPo2GenericToolset, toolsetPo2GenericToolset } from './tool.dto';
 import { McpServerService } from '../mcp-server/mcp-server.service';
+import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
+import { convertMcpServersToClientConfig, MultiServerMCPClient } from '@refly/skill-template';
 
 @Injectable()
 export class ToolService {
@@ -211,6 +217,172 @@ export class ToolService {
     });
   }
 
+  async validateSelectedToolsets(user: User, toolsets: SelectedGenericToolset[]): Promise<void> {
+    if (!toolsets?.length) {
+      return; // No toolsets to validate
+    }
+
+    const startTime = Date.now();
+    this.logger.debug(
+      `Starting validation of ${toolsets.length} selected toolsets for user ${user.uid}`,
+    );
+
+    // Separate regular toolsets and MCP servers for batch processing
+    const regularToolsetIds: string[] = [];
+    const mcpServerNames: string[] = [];
+    const toolsetToolMap = new Map<string, string[]>();
+    const mcpToolMap = new Map<string, string[]>();
+
+    for (const selectedToolset of toolsets) {
+      const { type, toolset, mcpServer } = selectedToolset;
+
+      if (type === 'regular' && toolset?.toolsetId) {
+        regularToolsetIds.push(toolset.toolsetId);
+        if (toolset.tools?.length) {
+          toolsetToolMap.set(toolset.toolsetId, toolset.tools);
+        }
+      } else if (type === 'mcp' && mcpServer?.name) {
+        mcpServerNames.push(mcpServer.name);
+        if (toolset?.tools?.length) {
+          mcpToolMap.set(mcpServer.name, toolset.tools);
+        }
+      } else {
+        throw new ParamsError('Invalid toolset selection: missing type or required fields');
+      }
+    }
+
+    // Early return if no toolsets to validate
+    if (regularToolsetIds.length === 0 && mcpServerNames.length === 0) {
+      this.logger.debug('No toolsets to validate, returning early');
+      return;
+    }
+
+    this.logger.log(
+      `Validating ${regularToolsetIds.length} regular toolsets and ${mcpServerNames.length} MCP servers`,
+    );
+
+    // Batch query for regular toolsets
+    let regularToolsets: ToolsetPO[] = [];
+    if (regularToolsetIds.length > 0) {
+      const toolsetQueryStart = Date.now();
+      regularToolsets = await this.prisma.toolset.findMany({
+        where: {
+          toolsetId: { in: regularToolsetIds },
+          OR: [{ uid: user.uid }, { isGlobal: true }],
+          deletedAt: null,
+        },
+      });
+      this.logger.debug(
+        `Regular toolsets query took ${Date.now() - toolsetQueryStart}ms, found ${regularToolsets.length} toolsets`,
+      );
+    }
+
+    // Batch query for MCP servers
+    let mcpServers: McpServerPO[] = [];
+    if (mcpServerNames.length > 0) {
+      const mcpQueryStart = Date.now();
+      mcpServers = await this.prisma.mcpServer.findMany({
+        where: {
+          name: { in: mcpServerNames },
+          OR: [{ uid: user.uid }, { isGlobal: true }],
+          deletedAt: null,
+        },
+      });
+      this.logger.debug(
+        `MCP servers query took ${Date.now() - mcpQueryStart}ms, found ${mcpServers.length} servers`,
+      );
+    }
+
+    // Validate regular toolsets
+    for (const toolset of regularToolsets) {
+      const selectedTools = toolsetToolMap.get(toolset.toolsetId);
+      await this.validateRegularToolset(toolset, selectedTools);
+    }
+
+    // Check for missing regular toolsets
+    const foundToolsetIds = new Set(regularToolsets.map((t) => t.toolsetId));
+    const missingToolsetIds = regularToolsetIds.filter((id) => !foundToolsetIds.has(id));
+    if (missingToolsetIds.length > 0) {
+      throw new ToolsetNotFoundError(
+        `Toolsets not found or not accessible: ${missingToolsetIds.join(', ')}`,
+      );
+    }
+
+    // Validate MCP servers
+    for (const server of mcpServers) {
+      const selectedTools = mcpToolMap.get(server.name);
+      this.validateMcpServer(server, selectedTools);
+    }
+
+    // Check for missing MCP servers
+    const foundServerNames = new Set(mcpServers.map((s) => s.name));
+    const missingServerNames = mcpServerNames.filter((name) => !foundServerNames.has(name));
+    if (missingServerNames.length > 0) {
+      throw new ParamsError(
+        `MCP servers not found or not accessible: ${missingServerNames.join(', ')}`,
+      );
+    }
+
+    const totalTime = Date.now() - startTime;
+    this.logger.debug(
+      `Validation completed successfully in ${totalTime}ms for ${toolsets.length} toolsets`,
+    );
+  }
+
+  /**
+   * Validate that a regular toolset exists and is accessible to the user
+   */
+  private async validateRegularToolset(
+    toolset: ToolsetPO,
+    selectedTools?: string[],
+  ): Promise<void> {
+    // Validate that the toolset key exists in inventory
+    if (!toolsetInventory[toolset.key]) {
+      throw new ParamsError(`Toolset ${toolset.key} is not valid`);
+    }
+
+    // Validate selected tools if specified
+    if (selectedTools?.length) {
+      this.validateToolsetTools(toolset.key, selectedTools);
+    }
+  }
+
+  /**
+   * Validate that an MCP server exists and is accessible to the user
+   */
+  private validateMcpServer(server: McpServerPO, selectedTools?: string[]): void {
+    if (!server.enabled) {
+      throw new ParamsError(`MCP server ${server.name} is not enabled`);
+    }
+
+    // Validate selected tools if specified
+    if (selectedTools?.length) {
+      // For MCP servers, we can't validate tools at this level since they're dynamic
+      // The actual tool validation will happen when the MCP client is initialized
+      this.logger.debug(`MCP server ${server.name} selected tools: ${selectedTools.join(', ')}`);
+    }
+  }
+
+  /**
+   * Validate that the selected tools exist in the toolset
+   */
+  private validateToolsetTools(toolsetKey: string, selectedTools: string[]): void {
+    const toolset = toolsetInventory[toolsetKey];
+    if (!toolset) {
+      throw new ParamsError(`Toolset ${toolsetKey} not found in inventory`);
+    }
+
+    const availableTools = toolset.definition.tools?.map((tool) => tool.name) ?? [];
+
+    for (const toolName of selectedTools) {
+      if (!availableTools.includes(toolName)) {
+        throw new ParamsError(
+          `Tool ${toolName} not found in toolset ${toolsetKey}. Available tools: ${availableTools.join(', ')}`,
+        );
+      }
+    }
+  }
+
   /**
    * Validate authData against the toolset's auth patterns
    */
@@ -254,6 +426,126 @@ export class ToolService {
     if (!validate(config)) {
       const errors = validate.errors?.map((err) => `${err.instancePath} ${err.message}`).join(', ');
       throw new ParamsError(`Invalid config: ${errors}`);
+    }
+  }
+
+  /**
+   * Instantiate toolsets into structured tools, ready to be used in skill invocation.
+   */
+  async instantiateToolsets(
+    user: User,
+    toolsets: SelectedGenericToolset[],
+  ): Promise<StructuredToolInterface[]> {
+    const regularToolsets = toolsets.filter((t) => t.type === 'regular').map((t) => t.toolset);
+    const mcpServers = toolsets.filter((t) => t.type === 'mcp').map((t) => t.mcpServer);
+
+    const regularTools = await this.instantiateRegularToolsets(user, regularToolsets);
+    const mcpTools = await this.instantiateMcpServers(user, mcpServers);
+
+    return [...regularTools, ...mcpTools];
+  }
+
+  /**
+   * Instantiate selected regular toolsets into structured tools.
+   */
+  private async instantiateRegularToolsets(
+    user: User,
+    toolsets: SelectedToolset[],
+  ): Promise<StructuredToolInterface[]> {
+    if (!toolsets?.length) {
+      return [];
+    }
+
+    const toolsetPOs = await this.prisma.toolset.findMany({
+      where: {
+        toolsetId: { in: toolsets.map((t) => t.toolsetId) },
+        OR: [{ uid: user.uid }, { isGlobal: true }],
+        deletedAt: null,
+      },
+    });
+
+    const tools = toolsetPOs.flatMap((t) => {
+      const toolset = toolsetInventory[t.key];
+      if (!toolset) {
+        throw new ParamsError(`Toolset ${t.key} not found in inventory`);
+      }
+
+      const config = t.config ? safeParseJSON(t.config) : {};
+      const authData = t.authData ? safeParseJSON(this.encryptionService.decrypt(t.authData)) : {};
+
+      // TODO: check for constructor parameters
+      const toolsetInstance = new toolset.class({ ...config, ...authData });
+
+      return toolset.definition.tools?.map((tool) => toolsetInstance.getToolInstance(tool.name));
+    });
+
+    return tools;
+  }
+
+  /**
+   * Instantiate selected MCP servers into structured tools, by creating a MCP client and getting the tools.
+   */
+  private async instantiateMcpServers(
+    user: User,
+    mcpServers: SelectedMcpServer[],
+  ): Promise<StructuredToolInterface[]> {
+    if (!mcpServers?.length) {
+      return [];
+    }
+
+    const mcpServerNames = mcpServers.map((s) => s.name);
+    const mcpServerList = await this.mcpServerService
+      .listMcpServers(user, { enabled: true })
+      .then((data) => data.filter((item) => mcpServerNames.includes(item.name)));
+
+    // TODO: should return cleanup function to close the client
+    let tempMcpClient: MultiServerMCPClient | undefined;
+
+    try {
+      // Pass mcpServersResponse (which is ListMcpServersResponse) to convertMcpServersToClientConfig
+      const mcpClientConfig = convertMcpServersToClientConfig({
+        data: mcpServerList.map(mcpServerPO2DTO),
+      });
+      tempMcpClient = new MultiServerMCPClient(mcpClientConfig);
+
+      await tempMcpClient.initializeConnections();
+      this.logger.log('MCP connections initialized successfully for new components');
+
+      const toolsFromMcp = (await tempMcpClient.getTools()) as StructuredToolInterface[];
+      if (!toolsFromMcp || toolsFromMcp.length === 0) {
+        this.logger.warn(
+          `No MCP tools found for user ${user.uid} after initializing client. Proceeding without MCP tools.`,
+        );
+        if (tempMcpClient) {
+          await tempMcpClient
+            .close()
+            .catch((closeError) =>
+              this.logger.error(
+                'Error closing MCP client when no tools found after connection:',
+                closeError,
+              ),
+            );
+        }
+      } else {
+        this.logger.log(
+          `Loaded ${toolsFromMcp.length} MCP tools: ${toolsFromMcp
+            .map((tool) => tool.name)
+            .join(', ')}`,
+        );
+      }
+
+      return toolsFromMcp;
+    } catch (mcpError) {
+      this.logger.error(
+        `Error during MCP client operation (initializeConnections or getTools): ${mcpError?.stack}`,
+      );
+      if (tempMcpClient) {
+        await tempMcpClient
+          .close()
+          .catch((closeError) =>
+            this.logger.error('Error closing MCP client after operation failure:', closeError),
+          );
+      }
     }
   }
 }

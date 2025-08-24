@@ -134,6 +134,8 @@ model ActionResult {
   history                 String?      @map("history")
   /// Errors
   errors                  String?      @map("errors")
+  /// Toolsets (JSON array of `SelectedGenericToolset`)
+  toolsets                String?      @map("toolsets")
   /// Locale setting
   locale                  String?      @default("") @map("locale")
   /// Project id

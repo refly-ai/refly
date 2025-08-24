@@ -59,6 +59,7 @@ import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
 import { SkillInvokerService } from './skill-invoker.service';
 import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
+import { ToolService } from '../tool/tool.service';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -86,6 +87,7 @@ export class SkillService implements OnModuleInit {
     private readonly credit: CreditService,
     private readonly codeArtifactService: CodeArtifactService,
     private readonly providerService: ProviderService,
+    private readonly toolService: ToolService,
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
     @Optional()
@@ -533,6 +535,11 @@ export class SkillService implements OnModuleInit {
       }
     }
 
+    // Validate toolsets if provided
+    if (param.toolsets && param.toolsets.length > 0) {
+      await this.toolService.validateSelectedToolsets(user, param.toolsets);
+    }
+
     // Validate workflowExecutionId and workflowNodeExecutionId if provided
     const workflowExecutionId = param.workflowExecutionId;
     const workflowNodeExecutionId = param.workflowNodeExecutionId;
@@ -684,6 +691,7 @@ export class SkillService implements OnModuleInit {
               tplConfig: JSON.stringify(param.tplConfig),
               runtimeConfig: JSON.stringify(param.runtimeConfig),
               history: JSON.stringify(purgeResultHistory(param.resultHistory)),
+              toolsets: JSON.stringify(param.toolsets),
               providerItemId: providerItem.itemId,
               workflowExecutionId: param.workflowExecutionId,
               workflowNodeExecutionId: param.workflowNodeExecutionId,
@@ -721,6 +729,7 @@ export class SkillService implements OnModuleInit {
           tplConfig: JSON.stringify(param.tplConfig),
           runtimeConfig: JSON.stringify(param.runtimeConfig),
           history: JSON.stringify(purgeResultHistory(param.resultHistory)),
+          toolsets: JSON.stringify(param.toolsets),
           providerItemId: providerItem.itemId,
           workflowExecutionId: param.workflowExecutionId,
           workflowNodeExecutionId: param.workflowNodeExecutionId,
