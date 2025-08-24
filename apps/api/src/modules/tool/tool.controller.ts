@@ -7,7 +7,7 @@ import { ToolService } from './tool.service';
 import {
   BaseResponse,
   ListToolsResponse,
-  DeleteToolRequest,
+  DeleteToolsetRequest,
   ListToolsetsResponse,
   UpsertToolsetResponse,
   UpsertToolsetRequest,
@@ -42,7 +42,7 @@ export class ToolController {
   @Get('/toolset/list')
   async listToolsets(
     @LoginedUser() user: UserModel,
-    @Query('isGlobal', new ParseBoolPipe({ optional: true })) isGlobal: boolean,
+    @Query('isGlobal', new ParseBoolPipe({ optional: true })) isGlobal?: boolean,
   ): Promise<ListToolsetsResponse> {
     const toolsets = await this.toolService.listRegularTools(user, { isGlobal });
     return buildSuccessResponse(toolsets.map((toolset) => toolset.toolset));
@@ -72,9 +72,9 @@ export class ToolController {
   @Post('/toolset/delete')
   async deleteTool(
     @LoginedUser() user: UserModel,
-    @Body() body: DeleteToolRequest,
+    @Body() body: DeleteToolsetRequest,
   ): Promise<BaseResponse> {
-    await this.toolService.deleteTool(user, body);
+    await this.toolService.deleteToolset(user, body);
     return buildSuccessResponse();
   }
 }

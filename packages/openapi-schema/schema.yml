@@ -3183,7 +3183,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeleteToolRequest'
+              $ref: '#/components/schemas/DeleteToolsetRequest'
       responses:
         '200':
           description: successful operation
@@ -8562,8 +8562,9 @@ components:
           description: Provider item ID
     ToolsetAuthType:
       type: string
+      description: Toolset auth type
       enum:
-        - manual
+        - credentials
         - oauth
     ToolDefinition:
       type: object
@@ -8578,6 +8579,20 @@ components:
           type: object
           additionalProperties: true
           description: Tool description dictionary for humans
+    AuthPattern:
+      type: object
+      required:
+        - type
+        - pattern
+      properties:
+        type:
+          type: string
+          description: Auth pattern type
+          $ref: '#/components/schemas/ToolsetAuthType'
+        credentialSchema:
+          type: object
+          additionalProperties: true
+          description: Credential schema (JSON schema), only for `credentials` type
     ToolsetDefinition:
       type: object
       required:
@@ -8602,6 +8617,19 @@ components:
           description: Toolset tools
           items:
             $ref: '#/components/schemas/ToolDefinition'
+        requiresAuth:
+          type: boolean
+          description: Whether the toolset requires auth
+          default: false
+        authPatterns:
+          type: array
+          description: Toolset auth patterns
+          items:
+            $ref: '#/components/schemas/AuthPattern'
+        configSchema:
+          type: object
+          additionalProperties: true
+          description: Toolset config schema (JSON schema)
     ToolsetInstance:
       type: object
       required:
@@ -8626,6 +8654,10 @@ components:
               type: object
               additionalProperties: true
               description: Toolset auth data
+            config:
+              type: object
+              additionalProperties: true
+              description: Toolset config
             createdAt:
               type: string
               format: date-time
@@ -8671,6 +8703,10 @@ components:
           type: object
           additionalProperties: true
           description: Toolset auth data
+        config:
+          type: object
+          additionalProperties: true
+          description: Toolset config
     UpsertToolsetResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -8704,7 +8740,7 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/GenericToolset'
-    DeleteToolRequest:
+    DeleteToolsetRequest:
       type: object
       required:
         - toolsetId

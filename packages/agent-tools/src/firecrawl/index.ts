@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ToolParams } from '@langchain/core/tools';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { FirecrawlClient } from './client';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor } from '../base';
 import { InferInteropZodOutput } from '@langchain/core/dist/utils/types';
@@ -27,6 +28,22 @@ export const FirecrawlToolsetDefinition: ToolsetDefinition = {
       },
     },
   ],
+  requiresAuth: true,
+  authPatterns: [
+    {
+      type: 'credentials',
+      credentialSchema: zodToJsonSchema(
+        z.object({
+          apiKey: z.string(),
+        }),
+      ),
+    },
+  ],
+  configSchema: zodToJsonSchema(
+    z.object({
+      baseUrl: z.string().describe('The base URL of the Firecrawl API').optional(),
+    }),
+  ),
 };
 
 interface FirecrawlToolParams extends ToolParams {

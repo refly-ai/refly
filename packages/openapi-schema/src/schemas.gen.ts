@@ -7439,7 +7439,8 @@ export const DeleteProviderItemRequestSchema = {
 
 export const ToolsetAuthTypeSchema = {
   type: 'string',
-  enum: ['manual', 'oauth'],
+  description: 'Toolset auth type',
+  enum: ['credentials', 'oauth'],
 } as const;
 
 export const ToolDefinitionSchema = {
@@ -7454,6 +7455,23 @@ export const ToolDefinitionSchema = {
       type: 'object',
       additionalProperties: true,
       description: 'Tool description dictionary for humans',
+    },
+  },
+} as const;
+
+export const AuthPatternSchema = {
+  type: 'object',
+  required: ['type', 'pattern'],
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Auth pattern type',
+      $ref: '#/components/schemas/ToolsetAuthType',
+    },
+    credentialSchema: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Credential schema (JSON schema), only for `credentials` type',
     },
   },
 } as const;
@@ -7482,6 +7500,23 @@ export const ToolsetDefinitionSchema = {
       items: {
         $ref: '#/components/schemas/ToolDefinition',
       },
+    },
+    requiresAuth: {
+      type: 'boolean',
+      description: 'Whether the toolset requires auth',
+      default: false,
+    },
+    authPatterns: {
+      type: 'array',
+      description: 'Toolset auth patterns',
+      items: {
+        $ref: '#/components/schemas/AuthPattern',
+      },
+    },
+    configSchema: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Toolset config schema (JSON schema)',
     },
   },
 } as const;
@@ -7516,6 +7551,11 @@ export const ToolsetInstanceSchema = {
           type: 'object',
           additionalProperties: true,
           description: 'Toolset auth data',
+        },
+        config: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Toolset config',
         },
         createdAt: {
           type: 'string',
@@ -7594,6 +7634,11 @@ export const UpsertToolsetRequestSchema = {
       additionalProperties: true,
       description: 'Toolset auth data',
     },
+    config: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Toolset config',
+    },
   },
 } as const;
 
@@ -7655,7 +7700,7 @@ export const ListToolsResponseSchema = {
   ],
 } as const;
 
-export const DeleteToolRequestSchema = {
+export const DeleteToolsetRequestSchema = {
   type: 'object',
   required: ['toolsetId'],
   properties: {

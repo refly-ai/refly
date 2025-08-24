@@ -5216,7 +5216,10 @@ export type DeleteProviderItemRequest = {
   itemId: string;
 };
 
-export type ToolsetAuthType = 'manual' | 'oauth';
+/**
+ * Toolset auth type
+ */
+export type ToolsetAuthType = 'credentials' | 'oauth';
 
 export type ToolDefinition = {
   /**
@@ -5227,6 +5230,19 @@ export type ToolDefinition = {
    * Tool description dictionary for humans
    */
   descriptionDict: {
+    [key: string]: unknown;
+  };
+};
+
+export type AuthPattern = {
+  /**
+   * Auth pattern type
+   */
+  type: ToolsetAuthType;
+  /**
+   * Credential schema (JSON schema), only for `credentials` type
+   */
+  credentialSchema?: {
     [key: string]: unknown;
   };
 };
@@ -5252,6 +5268,20 @@ export type ToolsetDefinition = {
    * Toolset tools
    */
   tools: Array<ToolDefinition>;
+  /**
+   * Whether the toolset requires auth
+   */
+  requiresAuth?: boolean;
+  /**
+   * Toolset auth patterns
+   */
+  authPatterns?: Array<AuthPattern>;
+  /**
+   * Toolset config schema (JSON schema)
+   */
+  configSchema?: {
+    [key: string]: unknown;
+  };
 };
 
 export type ToolsetInstance = ToolsetDefinition & {
@@ -5275,6 +5305,12 @@ export type ToolsetInstance = ToolsetDefinition & {
    * Toolset auth data
    */
   authData?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Toolset config
+   */
+  config?: {
     [key: string]: unknown;
   };
   /**
@@ -5323,6 +5359,12 @@ export type UpsertToolsetRequest = {
   authData?: {
     [key: string]: unknown;
   };
+  /**
+   * Toolset config
+   */
+  config?: {
+    [key: string]: unknown;
+  };
 };
 
 export type UpsertToolsetResponse = BaseResponse & {
@@ -5350,7 +5392,7 @@ export type ListToolsResponse = BaseResponse & {
   data?: Array<GenericToolset>;
 };
 
-export type DeleteToolRequest = {
+export type DeleteToolsetRequest = {
   /**
    * Toolset ID
    */
@@ -7127,7 +7169,7 @@ export type UpdateToolsetResponse = UpsertToolsetResponse;
 export type UpdateToolsetError = unknown;
 
 export type DeleteToolsetData = {
-  body: DeleteToolRequest;
+  body: DeleteToolsetRequest;
 };
 
 export type DeleteToolsetResponse = BaseResponse;

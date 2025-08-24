@@ -1467,10 +1467,12 @@ model Toolset {
   name          String    @map("name")
   /// Toolset key
   key           String    @map("key")
-  /// Toolset type (mcp, http, etc.)
-  authType      String    @map("auth_type")
+  /// Toolset auth type (credentials, oauth)
+  authType      String?   @map("auth_type")
   /// Toolset auth data
   authData      String?   @map("auth_data")
+  /// Toolset config
+  config        String?   @map("config")
   /// Toolset credit billing
   creditBilling String?   @map("credit_billing")
   /// Create timestamp

@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import Ajv from 'ajv';
 import { PrismaService } from '../common/prisma.service';
 import { EncryptionService } from '../common/encryption.service';
 import { Prisma, Toolset as ToolsetPO } from '../../generated/client';
 import {
-  DeleteToolRequest,
+  DeleteToolsetRequest,
   GenericToolset,
   ListToolsData,
   ToolsetDefinition,
@@ -19,6 +20,7 @@ import { McpServerService } from '../mcp-server/mcp-server.service';
 @Injectable()
 export class ToolService {
   private logger = new Logger(ToolService.name);
+  private ajv = new Ajv();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -61,7 +63,7 @@ export class ToolService {
   }
 
   async createToolset(user: User, param: UpsertToolsetRequest): Promise<ToolsetPO> {
-    const { name, key, authType, authData } = param;
+    const { name, key, authType, authData, config } = param;
 
     if (!name) {
       throw new ParamsError('name is required');
@@ -72,13 +74,32 @@ export class ToolService {
     } else if (!toolsetInventory[key]) {
       throw new ParamsError(`Toolset ${key} not valid`);
     }
-    if (!authType) {
-      throw new ParamsError('authType is required');
+
+    // Get toolset definition for validation
+    const toolsetDefinition = toolsetInventory[key]?.definition;
+    if (!toolsetDefinition) {
+      throw new ParamsError(`Toolset definition not found for key: ${key}`);
     }
 
-    let encryptedAuthData: string;
+    if (toolsetDefinition.requiresAuth) {
+      if (!authType || !authData) {
+        throw new ParamsError(`authType and authData are required for toolset ${key}`);
+      }
+
+      // Validate authData against toolset schema
+      this.validateAuthData(authData, toolsetDefinition, authType);
+    }
+
+    // Validate config against toolset schema
+    if (config && toolsetDefinition.configSchema) {
+      this.validateConfig(config, toolsetDefinition.configSchema);
+    }
+
+    let encryptedAuthData: string | null = null;
     try {
-      encryptedAuthData = this.encryptionService.encrypt(JSON.stringify(authData));
+      if (authData) {
+        encryptedAuthData = this.encryptionService.encrypt(JSON.stringify(authData));
+      }
     } catch {
       throw new ParamsError('Invalid authData');
     }
@@ -90,6 +111,7 @@ export class ToolService {
         key,
         authType,
         authData: encryptedAuthData,
+        config: config ? JSON.stringify(config) : null,
         uid: user.uid,
       },
     });
@@ -98,7 +120,7 @@ export class ToolService {
   }
 
   async updateToolset(user: User, param: UpsertToolsetRequest): Promise<ToolsetPO> {
-    const { toolsetId } = param;
+    const { toolsetId, config } = param;
 
     if (!toolsetId) {
       throw new ParamsError('toolsetId is required');
@@ -135,8 +157,27 @@ export class ToolService {
       updates.authType = param.authType;
     }
     if (param.authData !== undefined) {
+      // Validate authData against toolset schema
+      const toolsetDefinition = toolsetInventory[param.key ?? toolset.key]?.definition;
+      if (toolsetDefinition?.requiresAuth) {
+        this.validateAuthData(
+          param.authData,
+          toolsetDefinition,
+          param.authType ?? toolset.authType,
+        );
+      }
+
       const encryptedAuthData = this.encryptionService.encrypt(JSON.stringify(param.authData));
       updates.authData = encryptedAuthData;
+    }
+    if (config !== undefined) {
+      // Validate config against toolset schema
+      const toolsetDefinition = toolsetInventory[param.key ?? toolset.key]?.definition;
+      if (toolsetDefinition?.configSchema) {
+        this.validateConfig(config, toolsetDefinition.configSchema);
+      }
+
+      updates.config = JSON.stringify(config);
     }
 
     const updatedToolset = await this.prisma.toolset.update({
@@ -147,7 +188,7 @@ export class ToolService {
     return updatedToolset;
   }
 
-  async deleteTool(user: User, param: DeleteToolRequest): Promise<void> {
+  async deleteToolset(user: User, param: DeleteToolsetRequest): Promise<void> {
     const { toolsetId } = param;
 
     const toolset = await this.prisma.toolset.findUnique({
@@ -162,8 +203,57 @@ export class ToolService {
       throw new ToolsetNotFoundError(`Toolset ${toolsetId} not found`);
     }
 
-    await this.prisma.toolset.delete({
+    await this.prisma.toolset.update({
       where: { pk: toolset.pk },
+      data: {
+        deletedAt: new Date(),
+      },
     });
+  }
+
+  /**
+   * Validate authData against the toolset's auth patterns
+   */
+  private validateAuthData(
+    authData: Record<string, unknown>,
+    toolsetDefinition: ToolsetDefinition,
+    authType: string,
+  ): void {
+    if (!toolsetDefinition.authPatterns?.length) {
+      throw new ParamsError(`Toolset ${toolsetDefinition.key} does not support authentication`);
+    }
+
+    // Find matching auth pattern
+    const authPattern = toolsetDefinition.authPatterns.find((pattern) => pattern.type === authType);
+    if (!authPattern) {
+      throw new ParamsError(
+        `Auth type '${authType}' is not supported by toolset ${toolsetDefinition.key}`,
+      );
+    }
+
+    // Validate credentials schema if present
+    if (authPattern.credentialSchema && authType === 'credentials') {
+      const validate = this.ajv.compile(authPattern.credentialSchema);
+      if (!validate(authData)) {
+        const errors = validate.errors
+          ?.map((err) => `${err.instancePath} ${err.message}`)
+          .join(', ');
+        throw new ParamsError(`Invalid auth data: ${errors}`);
+      }
+    }
+  }
+
+  /**
+   * Validate config against the toolset's config schema
+   */
+  private validateConfig(
+    config: Record<string, unknown>,
+    configSchema: Record<string, unknown>,
+  ): void {
+    const validate = this.ajv.compile(configSchema);
+    if (!validate(config)) {
+      const errors = validate.errors?.map((err) => `${err.instancePath} ${err.message}`).join(', ');
+      throw new ParamsError(`Invalid config: ${errors}`);
+    }
   }
 }
