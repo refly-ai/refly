@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Ajv from 'ajv';
-import type { StructuredToolInterface } from '@langchain/core/tools';
+import { DynamicStructuredTool, type StructuredToolInterface } from '@langchain/core/tools';
 import { PrismaService } from '../common/prisma.service';
 import { EncryptionService } from '../common/encryption.service';
 import { Prisma, Toolset as ToolsetPO, McpServer as McpServerPO } from '../../generated/client';
@@ -448,7 +448,7 @@ export class ToolService {
   private async instantiateRegularToolsets(
     user: User,
     toolsets: GenericToolset[],
-  ): Promise<StructuredToolInterface[]> {
+  ): Promise<DynamicStructuredTool[]> {
     if (!toolsets?.length) {
       return [];
     }
@@ -473,7 +473,23 @@ export class ToolService {
       // TODO: check for constructor parameters
       const toolsetInstance = new toolset.class({ ...config, ...authData });
 
-      return toolset.definition.tools?.map((tool) => toolsetInstance.getToolInstance(tool.name));
+      return toolset.definition.tools
+        ?.map((tool) => toolsetInstance.getToolInstance(tool.name))
+        .map(
+          (tool) =>
+            new DynamicStructuredTool({
+              name: tool.name,
+              description: tool.description,
+              schema: tool.schema,
+              func: tool.invoke.bind(tool),
+              metadata: {
+                name: tool.name,
+                type: 'regular',
+                toolsetKey: t.key,
+                toolsetName: t.name,
+              },
+            }),
+        );
     });
 
     return tools;

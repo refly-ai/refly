@@ -383,6 +383,7 @@ const MCPCall: React.FC<MCPCallProps> = (props) => {
 
   // Extract tool name from props
   const toolName = useMemo(() => props['data-tool-name'] || 'unknown', [props]);
+  const toolsetKey = useMemo(() => props['data-tool-toolset-key'] || 'unknown', [props]);
 
   // Format the content for parameters
   const parametersContent = useMemo(() => {
@@ -442,7 +443,7 @@ const MCPCall: React.FC<MCPCallProps> = (props) => {
           />
           {/* Tool name displayed as the main text in the header */}
           <div className="flex-1 text-[15px] font-medium tracking-tight text-gray-900 dark:text-gray-100">
-            {toolName}
+            {`${toolsetKey} | ${toolName}`}
           </div>
           {/* Check icon for results, with adjusted margin */}
           {hasResult && (
@@ -463,7 +464,7 @@ const MCPCall: React.FC<MCPCallProps> = (props) => {
                 {t('components.markdown.parameters', 'Parameters:')}
               </div>
               {/* Parameter content block with background, rounded corners, margin and padding */}
-              <div className="mx-4 my-2 rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 font-mono text-[15px] font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
+              <div className="mx-4 my-2 rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
                 {parametersContent}
               </div>
             </div>
@@ -474,7 +475,7 @@ const MCPCall: React.FC<MCPCallProps> = (props) => {
                   {t('components.markdown.result', 'Result:')}
                 </div>
                 {/* Result content block with background, rounded corners, margin and padding */}
-                <div className="mx-4 my-2 rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 font-mono text-[15px] font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
+                <div className="mx-4 my-2 rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
                   {resultContent}
                 </div>
               </div>

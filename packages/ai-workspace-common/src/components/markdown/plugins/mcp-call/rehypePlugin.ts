@@ -11,6 +11,9 @@ const TOOL_USE_REGEX = new RegExp(`<${TOOL_USE_TAG}[^>]*>([\\s\\S]*?)<\\/${TOOL_
 
 // Regular expressions to extract data from tool tags with improved special character handling
 const NAME_REGEX = /<name>([\s\S]*?)<\/name>/i;
+const TYPE_REGEX = /<type>([\s\S]*?)<\/type>/i;
+const TOOLSET_KEY_REGEX = /<toolsetKey>([\s\S]*?)<\/toolsetKey>/i;
+const TOOLSET_NAME_REGEX = /<toolsetName>([\s\S]*?)<\/toolsetName>/i;
 const ARGUMENTS_REGEX = /<arguments>([\s\S]*?)<\/arguments>/i;
 const RESULT_REGEX = /<result>([\s\S]*?)<\/result>/i;
 const BASE64_IMAGE_URL_REGEX =
@@ -217,6 +220,24 @@ function rehypePlugin() {
             const toolNameStr = safeExtract(content, NAME_REGEX);
             if (toolNameStr) {
               attributes['data-tool-name'] = toolNameStr;
+            }
+
+            // Extract tool type using safe extraction
+            const toolTypeStr = safeExtract(content, TYPE_REGEX);
+            if (toolTypeStr) {
+              attributes['data-tool-type'] = toolTypeStr;
+            }
+
+            // Extract toolset key using safe extraction
+            const toolsetKeyStr = safeExtract(content, TOOLSET_KEY_REGEX);
+            if (toolsetKeyStr) {
+              attributes['data-tool-toolset-key'] = toolsetKeyStr;
+            }
+
+            // Extract toolset name using safe extraction
+            const toolsetNameStr = safeExtract(content, TOOLSET_NAME_REGEX);
+            if (toolsetNameStr) {
+              attributes['data-tool-toolset-name'] = toolsetNameStr;
             }
 
             // Extract arguments using safe extraction
@@ -491,6 +512,24 @@ function rehypePlugin() {
             const name = safeExtract(content, NAME_REGEX);
             if (name) {
               attributes['data-tool-name'] = name;
+            }
+
+            // Extract tool type using safe extraction
+            const toolTypeStr = safeExtract(content, TYPE_REGEX);
+            if (toolTypeStr) {
+              attributes['data-tool-type'] = toolTypeStr;
+            }
+
+            // Extract toolset key using safe extraction
+            const toolsetKeyStr = safeExtract(content, TOOLSET_KEY_REGEX);
+            if (toolsetKeyStr) {
+              attributes['data-tool-toolset-key'] = toolsetKeyStr;
+            }
+
+            // Extract toolset name using safe extraction
+            const toolsetNameStr = safeExtract(content, TOOLSET_NAME_REGEX);
+            if (toolsetNameStr) {
+              attributes['data-tool-toolset-name'] = toolsetNameStr;
             }
 
             // Extract arguments using safe extraction

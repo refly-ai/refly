@@ -444,6 +444,7 @@ export const McpServerList: React.FC<McpServerListProps> = ({
 
       {/* Form Modal */}
       <Modal
+        centered
         title={
           editingServer ? t('settings.mcpServer.editServer') : t('settings.mcpServer.addServer')
         }

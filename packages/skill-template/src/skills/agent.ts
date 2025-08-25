@@ -37,7 +37,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import type { AIMessage, BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
-import type { StructuredToolInterface } from '@langchain/core/tools'; // For MCP Tools
+import { type StructuredToolInterface } from '@langchain/core/tools'; // For MCP Tools
 
 /**
  * Converts LangChain StructuredToolInterface array to MCPTool array.
@@ -226,86 +226,77 @@ export class Agent extends BaseSkill {
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
     const userId = user?.uid ?? user?.email ?? JSON.stringify(user);
-    const { selectedTools } = config?.configurable ?? {};
+    const { selectedTools = [] } = config?.configurable ?? {};
 
     this.engine.logger.log(`Initializing new agent components for user ${userId}`);
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
 
-    try {
-      // LLM and LangGraph Setup
-      const baseLlm = this.engine.chatModel({ temperature: 0.1 });
-      let llmForGraph: Runnable<BaseMessage[], AIMessage>;
+    // LLM and LangGraph Setup
+    const baseLlm = this.engine.chatModel({ temperature: 0.1 });
+    let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
-      if (selectedTools.length > 0) {
-        llmForGraph = baseLlm.bindTools(selectedTools);
-        actualToolNodeInstance = new ToolNode(selectedTools);
-      } else {
-        llmForGraph = baseLlm;
-      }
-
-      const llmNodeForCachedGraph = async (nodeState: typeof MessagesAnnotation.State) => {
-        // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
-        const response = await llmForGraph.invoke(nodeState.messages);
-        return { messages: [response as AIMessage] }; // Ensure response is treated as AIMessage
-      };
-
-      // Initialize StateGraph with explicit generic arguments for State and all possible Node names
-      // @ts-ignore - Suppressing persistent type error with StateGraph constructor and generics
-      let workflow = new StateGraph(
-        MessagesAnnotation, // This provides the schema and channel definitions
-      );
-
-      // Build the graph step-by-step, using 'as typeof workflow' to maintain the broad type.
-      // @ts-ignore - Suppressing persistent type error with addNode and runnable type mismatch
-      workflow = workflow.addNode('llm', llmNodeForCachedGraph);
-      // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
-      workflow = workflow.addEdge(START, 'llm');
-
-      if (actualToolNodeInstance) {
-        // @ts-ignore - Suppressing persistent type error with addNode and runnable type mismatch
-        workflow = workflow.addNode('tools', actualToolNodeInstance);
-        // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
-        workflow = workflow.addEdge('tools', 'llm'); // Output of tools goes back to LLM
-
-        // addConditionalEdges does not return the graph instance, so no 'as typeof workflow' needed here
-        // if the 'workflow' variable already has the correct comprehensive type.
-        // @ts-ignore - Suppressing persistent type error with addConditionalEdges and node name mismatch
-        workflow.addConditionalEdges('llm', (graphState: typeof MessagesAnnotation.State) => {
-          const lastMessage = graphState.messages[graphState.messages.length - 1] as AIMessage;
-          if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-            this.engine.logger.log(
-              'Tool calls detected (MCP tools available), routing to tools node',
-            );
-            return 'tools';
-          }
-          this.engine.logger.log('No tool calls (MCP tools available), routing to END');
-          return END;
-        });
-      } else {
-        this.engine.logger.log(
-          'No MCP tools initialized or available. LLM output will directly go to END.',
-        );
-        // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
-        workflow = workflow.addEdge('llm', END);
-      }
-
-      // Compile the graph
-      const compiledGraph = workflow.compile();
-
-      const components: AgentComponents = {
-        mcpTools: selectedTools, // Store the successfully initialized tools
-        compiledLangGraphApp: compiledGraph, // Store the compiled graph
-        mcpAvailable: selectedTools.length > 0,
-      };
-
-      this.engine.logger.log(`Agent components initialized and cached for user ${userId}`);
-      return components;
-    } catch (error) {
-      if (error instanceof Error) {
-        this.engine.logger.error(`Error stack for new components initialization: ${error.stack}`);
-      }
-      throw new Error('Failed to initialize agent components');
+    if (selectedTools.length > 0) {
+      llmForGraph = baseLlm.bindTools(selectedTools);
+      actualToolNodeInstance = new ToolNode(selectedTools);
+    } else {
+      llmForGraph = baseLlm;
     }
+
+    const llmNodeForCachedGraph = async (nodeState: typeof MessagesAnnotation.State) => {
+      // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
+      const response = await llmForGraph.invoke(nodeState.messages);
+      return { messages: [response as AIMessage] }; // Ensure response is treated as AIMessage
+    };
+
+    // Initialize StateGraph with explicit generic arguments for State and all possible Node names
+    // @ts-ignore - Suppressing persistent type error with StateGraph constructor and generics
+    let workflow = new StateGraph(
+      MessagesAnnotation, // This provides the schema and channel definitions
+    );
+
+    // Build the graph step-by-step, using 'as typeof workflow' to maintain the broad type.
+    // @ts-ignore - Suppressing persistent type error with addNode and runnable type mismatch
+    workflow = workflow.addNode('llm', llmNodeForCachedGraph);
+    // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
+    workflow = workflow.addEdge(START, 'llm');
+
+    if (actualToolNodeInstance) {
+      // @ts-ignore - Suppressing persistent type error with addNode and runnable type mismatch
+      workflow = workflow.addNode('tools', actualToolNodeInstance);
+      // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
+      workflow = workflow.addEdge('tools', 'llm'); // Output of tools goes back to LLM
+
+      // addConditionalEdges does not return the graph instance, so no 'as typeof workflow' needed here
+      // if the 'workflow' variable already has the correct comprehensive type.
+      // @ts-ignore - Suppressing persistent type error with addConditionalEdges and node name mismatch
+      workflow.addConditionalEdges('llm', (graphState: typeof MessagesAnnotation.State) => {
+        const lastMessage = graphState.messages[graphState.messages.length - 1] as AIMessage;
+        if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+          this.engine.logger.log('Tool calls detected, routing to tools node');
+          return 'tools';
+        }
+        this.engine.logger.log('No tool call, routing to END');
+        return END;
+      });
+    } else {
+      this.engine.logger.log(
+        'No tools initialized or available. LLM output will directly go to END.',
+      );
+      // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
+      workflow = workflow.addEdge('llm', END);
+    }
+
+    // Compile the graph
+    const compiledGraph = workflow.compile();
+
+    const components: AgentComponents = {
+      mcpTools: selectedTools, // Store the successfully initialized tools
+      compiledLangGraphApp: compiledGraph, // Store the compiled graph
+      mcpAvailable: selectedTools.length > 0,
+    };
+
+    this.engine.logger.log(`Agent components initialized and cached for user ${userId}`);
+    return components;
   }
 
   agentNode = async (

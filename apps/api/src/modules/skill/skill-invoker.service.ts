@@ -755,23 +755,29 @@ export class SkillInvokerService {
             if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
               // Update result content and forward stream events to client
 
-              const [, , eventName] = event.name?.split('__') ?? event.name;
+              const { name, type, toolsetKey, toolsetName } = event.metadata ?? {};
 
               const content = event.data?.output
                 ? `
 <tool_use>
-<name>${`${eventName}`}</name>
+<name>${name}</name>
+<type>${type}</type>
+<toolsetKey>${toolsetKey}</toolsetKey>
+<toolsetName>${toolsetName}</toolsetName>
 <arguments>
-${event.data?.input ? JSON.stringify({ params: event.data?.input?.input }) : ''}
+${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
 </arguments>
 <result>
-${event.data?.output ? JSON.stringify({ response: event.data?.output?.content ?? '' }) : ''}
+${event.data?.output ? JSON.stringify(event.data.output) : ''}
 </result>
 </tool_use>
 `
                 : `
 <tool_use>
-<name>${`${eventName}`}</name>
+<name>${name}</name>
+<type>${type}</type>
+<toolsetKey>${toolsetKey}</toolsetKey>
+<toolsetName>${toolsetName}</toolsetName>
 <arguments>
 ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
 </arguments>
