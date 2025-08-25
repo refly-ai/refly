@@ -6,7 +6,7 @@ import { CustomHandle } from './shared/custom-handle';
 import { useState, useCallback } from 'react';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
 import { useEdgeStyles } from '../constants';
-import { getNodeCommonStyles } from './index';
+import { getNodeCommonStyles } from './shared/styles';
 
 type ToolNode = Node<CanvasNodeData<ToolNodeMeta>, 'tool'>;
 

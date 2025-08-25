@@ -77,7 +77,9 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getWorkflowVariables,
   importCanvas,
+  initializeWorkflow,
   invokeSkill,
   listActions,
   listCanvases,
@@ -133,6 +135,7 @@ import {
   updateSettings,
   updateSkillInstance,
   updateSkillTrigger,
+  updateWorkflowVariables,
   upload,
   validateMcpServer,
 } from '../requests/services.gen';
@@ -260,6 +263,18 @@ export const UseGetCanvasTransactionsKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCanvasTransactionsKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowVariablesDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowVariables>
+>['data'];
+export type GetWorkflowVariablesQueryResult<
+  TData = GetWorkflowVariablesDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowVariablesKey = 'GetWorkflowVariables';
+export const UseGetWorkflowVariablesKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowVariablesKey, ...(queryKey ?? [clientOptions])];
 export type ListCanvasTemplatesDefaultResponse = Awaited<
   ReturnType<typeof listCanvasTemplates>
 >['data'];
@@ -756,6 +771,14 @@ export const UseCreateCanvasVersionKeyFn = (mutationKey?: Array<unknown>) => [
   useCreateCanvasVersionKey,
   ...(mutationKey ?? []),
 ];
+export type UpdateWorkflowVariablesMutationResult = Awaited<
+  ReturnType<typeof updateWorkflowVariables>
+>;
+export const useUpdateWorkflowVariablesKey = 'UpdateWorkflowVariables';
+export const UseUpdateWorkflowVariablesKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateWorkflowVariablesKey,
+  ...(mutationKey ?? []),
+];
 export type CreateCanvasTemplateMutationResult = Awaited<ReturnType<typeof createCanvasTemplate>>;
 export const useCreateCanvasTemplateKey = 'CreateCanvasTemplate';
 export const UseCreateCanvasTemplateKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1026,6 +1049,12 @@ export type UpdatePilotSessionMutationResult = Awaited<ReturnType<typeof updateP
 export const useUpdatePilotSessionKey = 'UpdatePilotSession';
 export const UseUpdatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
   useUpdatePilotSessionKey,
+  ...(mutationKey ?? []),
+];
+export type InitializeWorkflowMutationResult = Awaited<ReturnType<typeof initializeWorkflow>>;
+export const useInitializeWorkflowKey = 'InitializeWorkflow';
+export const UseInitializeWorkflowKeyFn = (mutationKey?: Array<unknown>) => [
+  useInitializeWorkflowKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;

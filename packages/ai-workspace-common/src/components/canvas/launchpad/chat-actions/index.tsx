@@ -144,7 +144,7 @@ export const ChatActions = memo(
               <Button
                 type="text"
                 size="small"
-                icon={<IconImage className="flex items-center" />}
+                icon={<IconImage className="flex items-center w-4 h-4" />}
                 className="h-7 w-7 flex items-center justify-center"
               />
             </Tooltip>

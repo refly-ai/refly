@@ -4,10 +4,17 @@ import type { MenuProps } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
-import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
+import { RichChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input';
+import {
+  ModelInfo,
+  Skill,
+  SkillRuntimeConfig,
+  SkillTemplateConfig,
+  WorkflowVariable,
+} from '@refly/openapi-schema';
 import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
-import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
-import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
+// import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
+// import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { IContextItem, ContextTarget } from '@refly/common-types';
 import { useContextPanelStoreShallow } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
@@ -216,6 +223,8 @@ export interface ChatPanelProps {
   resultId?: string;
   projectId?: string;
   handleProjectChange?: (newProjectId: string) => void;
+  workflowVariables?: WorkflowVariable[];
+  enableRichInput?: boolean;
 }
 
 export const ChatPanel = memo(
@@ -231,8 +240,8 @@ export const ChatPanel = memo(
     setModelInfo,
     runtimeConfig = {},
     setRuntimeConfig,
-    tplConfig,
-    setTplConfig,
+    tplConfig: _tplConfig,
+    setTplConfig: _setTplConfig,
     handleSendMessage,
     handleAbortAction,
     onInputHeightChange,
@@ -241,9 +250,11 @@ export const ChatPanel = memo(
     resultId,
     projectId,
     handleProjectChange,
+    workflowVariables = [],
+    enableRichInput = false,
   }: ChatPanelProps) => {
     const [form] = Form.useForm();
-    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [_formErrors, setFormErrors] = useState<Record<string, string>>({});
     const chatInputRef = useRef<HTMLDivElement>(null);
     const userProfile = useUserStoreShallow((state) => state.userProfile);
     const isList = mode === 'list';
@@ -268,18 +279,18 @@ export const ChatPanel = memo(
     }, [contextItems]);
 
     // Memoize initialTplConfig to prevent unnecessary recalculations
-    const initialTplConfig = useMemo(() => {
-      return tplConfig || selectedSkill?.tplConfig || {};
-    }, [tplConfig, selectedSkill?.tplConfig]);
+    // const initialTplConfig = useMemo(() => {
+    //   return tplConfig || selectedSkill?.tplConfig || {};
+    // }, [tplConfig, selectedSkill?.tplConfig]);
 
-    const handleTplConfigChange = useCallback(
-      (config: SkillTemplateConfig) => {
-        if (setTplConfig && JSON.stringify(config) !== JSON.stringify(initialTplConfig)) {
-          setTplConfig(config);
-        }
-      },
-      [setTplConfig, initialTplConfig],
-    );
+    // const _handleTplConfigChange = useCallback(
+    //   (config: SkillTemplateConfig) => {
+    //     if (setTplConfig && JSON.stringify(config) !== JSON.stringify(initialTplConfig)) {
+    //       setTplConfig(config);
+    //     }
+    //   },
+    //   [setTplConfig, initialTplConfig],
+    // );
 
     const handleImageUpload = useCallback(
       async (file: File) => {
@@ -388,38 +399,60 @@ export const ChatPanel = memo(
 
     const renderContent = () => (
       <>
-        <ContextManager
+        {/* <ContextManager
           className={classNames({
             'py-2': isList,
           })}
           contextItems={contextItems}
           setContextItems={setContextItems}
-        />
+        /> */}
 
-        <ChatInput
-          readonly={canvasReadonly}
-          ref={chatInputRef}
-          query={query}
-          setQuery={(value) => {
-            setQuery(value);
-            if (onInputHeightChange) {
-              setTimeout(onInputHeightChange, 0);
-            }
-          }}
-          selectedSkillName={selectedSkill?.name ?? null}
-          inputClassName="px-1 py-0"
-          maxRows={6}
-          handleSendMessage={handleMessageSend}
-          handleSelectSkill={(skill) => {
-            setQuery(query?.slice(0, -1));
-            setSelectedSkill(skill);
-          }}
-          onUploadImage={handleImageUpload}
-          onUploadMultipleImages={handleMultipleImagesUpload}
-          onFocus={handleInputFocus}
-        />
+        {enableRichInput && workflowVariables?.length > 0 ? (
+          <RichChatInput
+            readonly={canvasReadonly}
+            ref={chatInputRef}
+            query={query}
+            setQuery={(value) => {
+              setQuery(value);
+              if (onInputHeightChange) {
+                setTimeout(onInputHeightChange, 0);
+              }
+            }}
+            variables={workflowVariables}
+            selectedSkillName={selectedSkill?.name ?? null}
+            inputClassName="px-1 py-0"
+            maxRows={6}
+            handleSendMessage={handleMessageSend}
+            onUploadImage={handleImageUpload}
+            onUploadMultipleImages={handleMultipleImagesUpload}
+            onFocus={handleInputFocus}
+          />
+        ) : (
+          <ChatInput
+            readonly={canvasReadonly}
+            ref={chatInputRef}
+            query={query}
+            setQuery={(value) => {
+              setQuery(value);
+              if (onInputHeightChange) {
+                setTimeout(onInputHeightChange, 0);
+              }
+            }}
+            selectedSkillName={selectedSkill?.name ?? null}
+            inputClassName="px-1 py-0"
+            maxRows={6}
+            handleSendMessage={handleMessageSend}
+            handleSelectSkill={(skill) => {
+              setQuery(query?.slice(0, -1));
+              setSelectedSkill(skill);
+            }}
+            onUploadImage={handleImageUpload}
+            onUploadMultipleImages={handleMultipleImagesUpload}
+            onFocus={handleInputFocus}
+          />
+        )}
 
-        {selectedSkill?.configSchema?.items?.length && setTplConfig ? (
+        {/* {selectedSkill?.configSchema?.items?.length && setTplConfig ? (
           <ConfigManager
             readonly={canvasReadonly}
             key={`${selectedSkill?.name}-${Object.keys(initialTplConfig).length}`}
@@ -450,7 +483,7 @@ export const ChatPanel = memo(
               }
             }}
           />
-        ) : null}
+        ) : null} */}
 
         <ChatActions
           className={classNames({
@@ -497,17 +530,17 @@ export const ChatPanel = memo(
 
     return (
       <div className={`flex flex-col gap-3 h-full box-border ${className} max-w-[1024px]`}>
-        <NodeHeader
+        {/* <NodeHeader
           readonly={readonly}
           selectedSkillName={selectedSkill?.name ?? undefined}
           setSelectedSkill={setSelectedSkill}
-        />
+        /> */}
         {renderContent()}
-        <ProjectKnowledgeToggle
+        {/* <ProjectKnowledgeToggle
           className="!pb-0 !pt-0"
           currentProjectId={projectId}
           onProjectChange={handleProjectChange}
-        />
+        /> */}
       </div>
     );
   },

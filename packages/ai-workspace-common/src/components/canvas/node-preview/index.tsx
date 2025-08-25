@@ -3,6 +3,7 @@ import { ResourceNodePreview } from './resource';
 import { SkillNodePreview } from './skill';
 import { ToolNodePreview } from './tool';
 import { DocumentNodePreview } from './document';
+import { StartNodePreview } from './start';
 import { NodePreviewHeader } from './node-preview-header';
 import { useState, useMemo, useCallback, useRef, memo, useEffect } from 'react';
 import { useCanvasStoreShallow } from '@refly/stores';
@@ -65,6 +66,8 @@ export const PreviewComponent = memo(
           return <AudioNodePreview node={node} />;
         case 'image':
           return <ImageNodePreview node={node} />;
+        case 'start':
+          return <StartNodePreview />;
         default:
           return null;
       }

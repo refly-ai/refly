@@ -4,7 +4,7 @@ import { Node } from '@xyflow/react';
 import { Typography } from 'antd';
 import { CustomHandle } from '../shared/custom-handle';
 import { useState, useCallback, useEffect, useMemo, memo } from 'react';
-import { getNodeCommonStyles } from '../index';
+import { getNodeCommonStyles } from '../shared/styles';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';

@@ -392,7 +392,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
               )}
               placeholder={placeholder ?? getPlaceholder(selectedSkillName)}
               autoSize={{
-                minRows: 1,
+                minRows: 2,
                 maxRows: 6,
               }}
               data-cy="chat-input"
@@ -423,7 +423,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
             )}
             placeholder={placeholder ?? getPlaceholder(selectedSkillName)}
             autoSize={{
-              minRows: minRows ?? 1,
+              minRows: minRows ?? 2,
               maxRows: maxRows ?? 6,
             }}
             data-cy="chat-input"

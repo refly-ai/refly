@@ -240,7 +240,7 @@ export const ChatPanel = ({
 
     const { selectedSkill } = useSkillStore.getState();
     const { newQAText, selectedModel } = useChatStore.getState();
-    const query = userInput || newQAText.trim();
+    const originalQuery = userInput || newQAText.trim();
 
     const { contextItems, runtimeConfig } = useContextPanelStore.getState();
 
@@ -263,7 +263,7 @@ export const ChatPanel = ({
           resultId: newResultId,
           nodeId,
           data: {
-            title: query,
+            title: originalQuery,
             entityId: newResultId,
             metadata: {
               status: 'executing' as ActionStatus,
@@ -274,13 +274,13 @@ export const ChatPanel = ({
               runtimeConfig,
               tplConfig,
               structuredData: {
-                query,
+                query: originalQuery,
               },
               projectId: finalProjectId,
             },
           },
         },
-        query,
+        originalQuery,
         contextItems,
       );
     }
@@ -290,7 +290,7 @@ export const ChatPanel = ({
     // Invoke the action with the API
     invokeAction(
       {
-        query,
+        query: originalQuery,
         resultId: newResultId,
         selectedSkill: selectedSkill ?? undefined,
         modelInfo: selectedModel ?? undefined,
@@ -313,7 +313,7 @@ export const ChatPanel = ({
       {
         type: 'skillResponse',
         data: {
-          title: query,
+          title: originalQuery,
           entityId: newResultId,
           metadata: {
             status: 'executing',
@@ -324,7 +324,7 @@ export const ChatPanel = ({
             runtimeConfig,
             tplConfig,
             structuredData: {
-              query,
+              query: originalQuery,
             },
           },
         },

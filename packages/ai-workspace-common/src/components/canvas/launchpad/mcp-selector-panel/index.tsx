@@ -395,7 +395,7 @@ export const McpSelectorPopover: React.FC<McpSelectorPopoverProps> = ({
         className="gap-0 h-7 w-7 flex items-center justify-center"
         type="text"
         size="small"
-        icon={<Mcp size={16} className="flex items-center" />}
+        icon={<Mcp size={20} className="flex items-center" />}
       >
         <span className="text-refly-text-2 text-xs font-semibold ml-[2px]">
           {selectedMcpServers?.length > 0 ? selectedMcpServers.length : ''}

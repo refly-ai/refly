@@ -28,7 +28,7 @@ const { Text } = Typography;
 
 export const CanvasResourcesHeader = memo(() => {
   const { t } = useTranslation();
-  const { canvasId } = useCanvasContext();
+  const { canvasId, readonly } = useCanvasContext();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const titleInputRef = useRef<InputRef>(null);
@@ -53,6 +53,11 @@ export const CanvasResourcesHeader = memo(() => {
     setActiveTab: state.setActiveTab,
   }));
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
+
+  const isStartNode = useMemo(() => {
+    return activeNode?.type === 'start';
+  }, [activeNode?.type]);
+
   const { setImportResourceModalVisible, setExtensionModalVisible } = useImportResourceStoreShallow(
     (state) => ({
       setImportResourceModalVisible: state.setImportResourceModalVisible,
@@ -71,6 +76,9 @@ export const CanvasResourcesHeader = memo(() => {
   }, [activeNode?.data?.title]);
 
   const handleClose = useCallback(() => {
+    if (isStartNode) {
+      setActiveNode(null);
+    }
     setSidePanelVisible(false);
     setShowLeftOverview(false);
     setWideScreenVisible(false);
@@ -239,7 +247,7 @@ export const CanvasResourcesHeader = memo(() => {
               </a>
             </Button>
             <div className="text-refly-text-2">/</div>
-            {isEditingTitle ? (
+            {isEditingTitle && !readonly ? (
               <Input
                 ref={titleInputRef}
                 value={editingTitle}
@@ -253,8 +261,11 @@ export const CanvasResourcesHeader = memo(() => {
             ) : (
               <Text
                 ellipsis={{ tooltip: true }}
-                className="min-w-0 flex-1 !max-w-[400px] leading-5 cursor-pointer hover:text-refly-primary hover:bg-refly-tertiary-hover rounded-lg px-1 py-[5px]"
-                onClick={handleTitleClick}
+                className={cn(
+                  'min-w-0 flex-1 !max-w-[400px] leading-5 rounded-lg px-1 py-[5px]',
+                  readonly ? 'cursor-default' : 'cursor-pointer hover:bg-refly-tertiary-hover',
+                )}
+                onClick={!readonly ? handleTitleClick : undefined}
               >
                 {activeNode?.data?.title || t('common.untitled')}
               </Text>
@@ -262,13 +273,13 @@ export const CanvasResourcesHeader = memo(() => {
           </div>
         ) : (
           <div className="text-refly-text-0 text-base font-semibold leading-[26px] min-w-0 flex-1">
-            {t('canvas.resourceLibrary.title')}
+            {isStartNode ? t('canvas.nodeTypes.start') : t('canvas.resourceLibrary.title')}
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
-        {!parentType && (
+        {!parentType && !isStartNode && !readonly && (
           <Dropdown overlay={addResourceMenu} trigger={['click']} placement="bottomRight">
             <Button size="small" type="text" icon={<Add size={16} />} />
           </Dropdown>
@@ -276,7 +287,7 @@ export const CanvasResourcesHeader = memo(() => {
 
         <TopButtons />
 
-        {parentType && (
+        {parentType && !readonly && (
           <Dropdown overlay={addResourceMenu} trigger={['click']} placement="bottomRight">
             <Button size="small" type="text" icon={<Add size={16} />} />
           </Dropdown>

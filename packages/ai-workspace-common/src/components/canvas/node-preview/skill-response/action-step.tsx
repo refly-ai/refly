@@ -314,6 +314,15 @@ export const ActionStepCard = memo(
       [result.resultId, result.title],
     );
 
+    // Prioritize original query from structuredData over other sources
+    const displayQuery = useMemo(() => {
+      const structuredData = step?.structuredData;
+      if (structuredData?.query) {
+        return structuredData.query; // Original query with variables
+      }
+      return query; // Fallback to processed query
+    }, [step?.structuredData, query]);
+
     const parsedData = useMemo(
       () => ({
         sources: parseStructuredData(step?.structuredData ?? {}, 'sources'),
@@ -351,11 +360,17 @@ export const ActionStepCard = memo(
           />
         )}
 
-        {parsedData.sources && <SourceViewer sources={parsedData.sources} query={query} />}
+        {/* Ensure sources is an array and query is a string */}
+        {Array.isArray(parsedData.sources) && (
+          <SourceViewer
+            sources={parsedData.sources}
+            query={typeof displayQuery === 'string' ? displayQuery : ''}
+          />
+        )}
 
-        {step.reasoningContent && (
+        {step?.reasoningContent && (
           <ReasoningContent
-            resultId={result.resultId}
+            resultId={result?.resultId}
             reasoningContent={step.reasoningContent}
             sources={parsedData.sources}
             buildContextItem={buildContextItem}

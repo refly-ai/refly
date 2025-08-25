@@ -5,7 +5,7 @@ import type { InputRef } from 'antd';
 import { CanvasNode } from '@refly/canvas-common';
 import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
 import { CustomHandle } from './shared/custom-handle';
-import { getNodeCommonStyles } from './index';
+import { getNodeCommonStyles } from './shared/styles';
 import { SkillResponseNodeProps } from './shared/types';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';

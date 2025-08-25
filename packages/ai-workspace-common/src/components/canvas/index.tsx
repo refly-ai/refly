@@ -77,6 +77,7 @@ import SessionHeader from '@refly-packages/ai-workspace-common/components/pilot/
 import { CanvasResources, CanvasResourcesWidescreenModal } from './canvas-resources';
 import { ResourceOverview } from './canvas-resources/share/resource-overview';
 import { NodePreviewContainer } from '@refly-packages/ai-workspace-common/components/canvas/node-preview';
+import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
 
 const GRID_SIZE = 10;
 
@@ -167,6 +168,8 @@ const MiniMapNode = (props: any) => {
 
 const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
+
+  useHandleOrphanNode();
 
   useCanvasInitialActions(canvasId);
   // useFollowPilotSteps();
@@ -597,6 +600,9 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           break;
         case 'video':
           menuNodeType = 'video';
+          break;
+        case 'start':
+          menuNodeType = 'start';
           break;
         default:
           return; // Don't show context menu for unknown node types

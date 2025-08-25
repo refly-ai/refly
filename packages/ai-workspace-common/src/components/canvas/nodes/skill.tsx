@@ -5,7 +5,7 @@ import { Form } from 'antd';
 import { CustomHandle } from './shared/custom-handle';
 import { useState, useCallback, useEffect, useMemo, memo } from 'react';
 
-import { getNodeCommonStyles } from './index';
+import { getNodeCommonStyles } from './shared/styles';
 import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -32,6 +32,7 @@ import { useContextPanelStore } from '@refly/stores';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
+import { useGetWorkflowVariables } from '@refly-packages/ai-workspace-common/queries';
 
 const NODE_WIDTH = 480;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto' };
@@ -66,7 +67,48 @@ export const SkillNode = memo(
     const skill = useFindSkill(selectedSkill?.name);
 
     const [localQuery, setLocalQuery] = useState(query);
+    const { data: workflowVariables } = useGetWorkflowVariables({
+      query: {
+        canvasId,
+      },
+    });
+    console.log('workflowVariables', workflowVariables?.data);
 
+    const variables = [
+      // Default example variables for testing @mention functionality
+      {
+        variableId: 'userName',
+        name: 'userName',
+        value: [{ text: '张三', type: 'text' as const }],
+        description: '用户姓名',
+        source: 'startNode' as const,
+        variableType: 'string' as const,
+      },
+      {
+        variableId: 'projectName',
+        name: 'projectName',
+        value: [{ text: 'AI智能助手项目', type: 'text' as const }],
+        description: '当前项目名称',
+        source: 'startNode' as const,
+        variableType: 'string' as const,
+      },
+      {
+        variableId: 'knowledgeBase',
+        name: 'knowledgeBase',
+        value: [{ text: 'research-papers-2024', type: 'resource' as const }],
+        description: '研究论文知识库',
+        source: 'resourceLibrary' as const,
+        variableType: 'resource' as const,
+      },
+      {
+        variableId: 'documentTemplate',
+        name: 'documentTemplate',
+        value: [{ text: 'tech-report-template', type: 'resource' as const }],
+        description: '技术报告模板',
+        source: 'resourceLibrary' as const,
+        variableType: 'resource' as const,
+      },
+    ];
     // Check if node has any connections
     const isTargetConnected = useMemo(() => edges?.some((edge) => edge.target === id), [edges, id]);
     const isSourceConnected = useMemo(() => edges?.some((edge) => edge.source === id), [edges, id]);
@@ -343,7 +385,7 @@ export const SkillNode = memo(
         />
 
         <div
-          className={`h-full flex flex-col relative z-1 p-4 box-border ${getNodeCommonStyles({ selected, isHovered })}`}
+          className={`h-full flex flex-col relative z-1 px-4 py-3 box-border ${getNodeCommonStyles({ selected, isHovered })}`}
         >
           <ChatPanel
             mode="node"
@@ -367,6 +409,8 @@ export const SkillNode = memo(
               handleProjectChange(projectId);
               updateNodeData({ metadata: { projectId } });
             }}
+            workflowVariables={variables}
+            enableRichInput={true}
           />
         </div>
       </div>

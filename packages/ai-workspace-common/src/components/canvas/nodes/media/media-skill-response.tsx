@@ -6,7 +6,7 @@ import {
   useNodeSize,
   MAX_HEIGHT_CLASS,
 } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
-import { getNodeCommonStyles } from '../index';
+import { getNodeCommonStyles } from '../shared/styles';
 import { CustomHandle } from '../shared/custom-handle';
 import { useActionResultStoreShallow } from '@refly/stores';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';

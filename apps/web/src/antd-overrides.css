@@ -37,6 +37,15 @@
   box-shadow: none !important;
 }
 
+/* Text button hover background color override */
+.ant-btn-text:hover {
+  background: var(--refly-tertiary-hover) !important;
+}
+
+.ant-btn-text {
+  color: var(--refly-text-0);
+}
+
 .ant-btn-variant-solid:disabled {
   background: var(--refly-primary-disabled);
 }

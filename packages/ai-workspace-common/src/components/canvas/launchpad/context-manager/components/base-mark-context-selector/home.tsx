@@ -18,7 +18,6 @@ export function Home({
   useEffect(() => {
     setValue('refly-built-in-ask-ai');
   }, [setValue]);
-  console.log(data);
 
   return (
     <>

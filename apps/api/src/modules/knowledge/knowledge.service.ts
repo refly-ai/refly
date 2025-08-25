@@ -1570,4 +1570,23 @@ export class KnowledgeService {
       },
     });
   }
+
+  /**
+   * Get resource by storage key (rawFileKey)
+   */
+  async getResourceByStorageKey(user: User, storageKey: string) {
+    return this.prisma.resource.findFirst({
+      where: { rawFileKey: storageKey, deletedAt: null, uid: user.uid },
+    });
+  }
+
+  /**
+   * Bind resource to canvas
+   */
+  async bindResourceToCanvas(resourceId: string, canvasId: string) {
+    return this.prisma.resource.update({
+      where: { resourceId },
+      data: { canvasId },
+    });
+  }
 }

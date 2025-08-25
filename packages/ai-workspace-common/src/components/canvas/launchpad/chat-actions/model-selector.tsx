@@ -72,7 +72,7 @@ const SelectedModelDisplay = memo(
           open && 'border-refly-Card-Border',
         )}
       >
-        <ModelIcon model={model.name} type={'color'} size={16} />
+        <ModelIcon model={model.name} type={'color'} size={18} />
         <Paragraph
           className={cn(
             'truncate leading-5 !mb-0',

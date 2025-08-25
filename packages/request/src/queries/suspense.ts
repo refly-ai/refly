@@ -26,6 +26,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getWorkflowVariables,
   listActions,
   listCanvases,
   listCanvasTemplateCategories,
@@ -90,6 +91,8 @@ import {
   GetSettingsError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
+  GetWorkflowVariablesData,
+  GetWorkflowVariablesError,
   ListActionsError,
   ListCanvasesData,
   ListCanvasesError,
@@ -309,6 +312,23 @@ export const useGetCanvasTransactionsSuspense = <
     queryKey: Common.UseGetCanvasTransactionsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getCanvasTransactions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowVariablesSuspense = <
+  TData = Common.GetWorkflowVariablesDefaultResponse,
+  TError = GetWorkflowVariablesError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowVariablesData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowVariablesKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowVariables({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,

@@ -205,13 +205,12 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
         case 'codeArtifact':
         case 'website':
         case 'image':
+        case 'group':
+        case 'start':
           return [askAI, createMemoItem];
 
         case 'memo':
           return [askAI, createMemoItem, duplicateMemoItem];
-
-        case 'group':
-          return [askAI, createMemoItem];
 
         default:
           return [];

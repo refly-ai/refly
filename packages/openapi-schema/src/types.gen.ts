@@ -1709,6 +1709,14 @@ export type ActionResult = {
    */
   pilotSessionId?: string;
   /**
+   * Workflow execution ID for workflow context
+   */
+  workflowExecutionId?: string;
+  /**
+   * Workflow node execution ID for workflow context
+   */
+  workflowNodeExecutionId?: string;
+  /**
    * Message creation time
    */
   createdAt?: string;
@@ -2310,6 +2318,15 @@ export type CanvasState = CanvasData & {
    * Canvas state hash (sha256), calculated from nodes and edges
    */
   hash?: string;
+  /**
+   * Workflow configuration
+   */
+  workflow?: {
+    /**
+     * List of workflow variables
+     */
+    variables?: Array<WorkflowVariable>;
+  };
   /**
    * Canvas transaction list
    */
@@ -3478,6 +3495,10 @@ export type SkillInput = {
    */
   query?: string;
   /**
+   * Original user query
+   */
+  originalQuery?: string;
+  /**
    * Image list (storage keys)
    */
   images?: Array<string>;
@@ -3769,6 +3790,14 @@ export type InvokeSkillRequest = {
    * Selected MCP servers
    */
   selectedMcpServers?: Array<string>;
+  /**
+   * Workflow execution ID for workflow context
+   */
+  workflowExecutionId?: string;
+  /**
+   * Workflow node execution ID for workflow context
+   */
+  workflowNodeExecutionId?: string;
 };
 
 export type InvokeSkillResponse = BaseResponse & {
@@ -4715,10 +4744,6 @@ export type Provider = {
    * Provider API key (this will never be exposed to the frontend)
    */
   apiKey?: string;
-  /**
-   * Provider-specific extra params (JSON string)
-   */
-  extraParams?: string;
 };
 
 /**
@@ -5232,7 +5257,8 @@ export type CanvasNodeType =
   | 'video'
   | 'audio'
   | 'mediaSkill'
-  | 'mediaSkillResponse';
+  | 'mediaSkillResponse'
+  | 'start';
 
 export type CanvasNodeData = {
   /**
@@ -5321,6 +5347,141 @@ export type CanvasEdge = {
    * Edge type
    */
   type: string;
+};
+
+export type InitializeWorkflowRequest = {
+  /**
+   * Canvas ID to initialize workflow for
+   */
+  canvasId: string;
+  /**
+   * New canvas ID
+   */
+  newCanvasId?: string;
+};
+
+export type InitializeWorkflowResponse = BaseResponse & {
+  data?: {
+    /**
+     * Workflow execution ID
+     */
+    workflowExecutionId: string;
+  };
+};
+
+export type VariableType = 'text' | 'resource';
+
+export type ResourceValue = {
+  /**
+   * Resource name
+   */
+  name: string;
+  /**
+   * Resource file type
+   */
+  fileType: string;
+  /**
+   * Resource storage key
+   */
+  storageKey: string;
+};
+
+export type VariableValue = {
+  /**
+   * Variable type
+   */
+  type: VariableType;
+  /**
+   * Variable text value (for text type)
+   */
+  text?: string;
+  /**
+   * Variable resource value (for resource type)
+   */
+  resource?: ResourceValue;
+};
+
+export type VariableResourceType = 'document' | 'image' | 'video' | 'audio';
+
+/**
+ * Workflow variable definition
+ */
+export type WorkflowVariable = {
+  /**
+   * Variable ID, unique and readonly
+   */
+  variableId: string;
+  /**
+   * Variable name
+   */
+  name: string;
+  /**
+   * Variable values
+   */
+  value: Array<VariableValue>;
+  /**
+   * Variable description
+   */
+  description?: string;
+  /**
+   * Variable source
+   */
+  source?: 'startNode' | 'resourceLibrary';
+  /**
+   * Variable type
+   */
+  variableType?: 'string' | 'option' | 'resource';
+  /**
+   * Whether the variable is required
+   */
+  required?: boolean;
+  /**
+   * Whether the variable value is single (not multiple)
+   */
+  isSingle?: boolean;
+  /**
+   * Variable options (only valid when variable type is option)
+   */
+  options?: Array<string>;
+  /**
+   * Supported resource types (only valid when variable type is resource)
+   */
+  resourceTypes?: Array<VariableResourceType>;
+};
+
+/**
+ * Variable source
+ */
+export type source2 = 'startNode' | 'resourceLibrary';
+
+/**
+ * Variable type
+ */
+export type variableType = 'string' | 'option' | 'resource';
+
+export type GetWorkflowVariablesResponse = BaseResponse & {
+  /**
+   * List of workflow variables
+   */
+  data?: Array<WorkflowVariable>;
+};
+
+export type UpdateWorkflowVariablesRequest = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * List of workflow variables
+   */
+  variables: Array<WorkflowVariable>;
+};
+
+export type UpdateWorkflowVariablesResponse = BaseResponse & {
+  /**
+   * Updated list of workflow variables
+   */
+  data?: Array<WorkflowVariable>;
 };
 
 export type ListMcpServersData2 = {
@@ -5715,6 +5876,27 @@ export type CreateCanvasVersionData = {
 export type CreateCanvasVersionResponse2 = CreateCanvasVersionResponse;
 
 export type CreateCanvasVersionError = unknown;
+
+export type GetWorkflowVariablesData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetWorkflowVariablesResponse2 = GetWorkflowVariablesResponse;
+
+export type GetWorkflowVariablesError = unknown;
+
+export type UpdateWorkflowVariablesData = {
+  body: UpdateWorkflowVariablesRequest;
+};
+
+export type UpdateWorkflowVariablesResponse2 = UpdateWorkflowVariablesResponse;
+
+export type UpdateWorkflowVariablesError = unknown;
 
 export type ListCanvasTemplatesData = {
   query?: {
@@ -6546,6 +6728,14 @@ export type GetPilotSessionDetailData = {
 export type GetPilotSessionDetailResponse2 = GetPilotSessionDetailResponse;
 
 export type GetPilotSessionDetailError = unknown;
+
+export type InitializeWorkflowData = {
+  body: InitializeWorkflowRequest;
+};
+
+export type InitializeWorkflowResponse2 = InitializeWorkflowResponse;
+
+export type InitializeWorkflowError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 
