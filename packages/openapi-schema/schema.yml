@@ -7117,7 +7117,7 @@ components:
           type: array
           description: Selected toolsets
           items:
-            $ref: '#/components/schemas/SelectedGenericToolset'
+            $ref: '#/components/schemas/GenericToolset'
         workflowExecutionId:
           type: string
           description: Workflow execution ID for workflow context
@@ -8596,7 +8596,6 @@ components:
     ToolsetDefinition:
       type: object
       required:
-        - name
         - key
         - descriptionDict
         - tools
@@ -8634,6 +8633,7 @@ components:
       type: object
       required:
         - toolsetId
+        - name
       allOf:
         - $ref: '#/components/schemas/ToolsetDefinition'
         - type: object
@@ -8641,6 +8641,9 @@ components:
             toolsetId:
               type: string
               description: Toolset ID
+            name:
+              type: string
+              description: Toolset name
             isGlobal:
               type: boolean
               description: Whether the toolset is global
@@ -8725,47 +8728,31 @@ components:
         - mcp
     GenericToolset:
       type: object
+      required:
+        - type
+        - id
+        - name
       properties:
         type:
           $ref: '#/components/schemas/GenericToolsetType'
           description: Toolset type
+        id:
+          type: string
+          description: Toolset ID (toolsetId for regular toolset, name for MCP toolset)
+        name:
+          type: string
+          description: Toolset name
         toolset:
           $ref: '#/components/schemas/ToolsetInstance'
-          description: Toolset
+          description: Toolset detail
         mcpServer:
           $ref: '#/components/schemas/McpServerDTO'
           description: MCP server
-    SelectedToolset:
-      type: object
-      description: Selected toolset, used for skill invocation
-      properties:
-        toolsetId:
-          type: string
-          description: Toolset ID
-        tools:
+        selectedTools:
           type: array
-          description: Selected tools
+          description: Selected tools (used for skill invocation)
           items:
             type: string
-            description: Selected tool name
-    SelectedMcpServer:
-      type: object
-      properties:
-        name:
-          type: string
-          description: MCP server name
-    SelectedGenericToolset:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/GenericToolsetType'
-          description: Toolset type
-        toolset:
-          $ref: '#/components/schemas/SelectedToolset'
-          description: Toolset
-        mcpServer:
-          $ref: '#/components/schemas/SelectedMcpServer'
-          description: MCP server
     ListToolsResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

@@ -74,37 +74,7 @@ export const SkillNode = memo(
     });
     console.log('workflowVariables', workflowVariables?.data);
 
-    const variables = [
-      // Default example variables for testing @mention functionality
-      {
-        name: 'userName',
-        value: '张三',
-        description: '用户姓名',
-        source: 'startNode' as const,
-        variableType: 'string' as const,
-      },
-      {
-        name: 'projectName',
-        value: 'AI智能助手项目',
-        description: '当前项目名称',
-        source: 'startNode' as const,
-        variableType: 'string' as const,
-      },
-      {
-        name: 'knowledgeBase',
-        value: 'research-papers-2024',
-        description: '研究论文知识库',
-        source: 'resourceLibrary' as const,
-        variableType: 'resource' as const,
-      },
-      {
-        name: 'documentTemplate',
-        value: 'tech-report-template',
-        description: '技术报告模板',
-        source: 'resourceLibrary' as const,
-        variableType: 'resource' as const,
-      },
-    ];
+    const variables = [];
     // Check if node has any connections
     const isTargetConnected = useMemo(() => edges?.some((edge) => edge.target === id), [edges, id]);
     const isSourceConnected = useMemo(() => edges?.some((edge) => edge.source === id), [edges, id]);

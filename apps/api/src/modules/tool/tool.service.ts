@@ -8,9 +8,6 @@ import {
   DeleteToolsetRequest,
   GenericToolset,
   ListToolsData,
-  SelectedGenericToolset,
-  SelectedMcpServer,
-  SelectedToolset,
   ToolsetDefinition,
   UpsertToolsetRequest,
   User,
@@ -217,7 +214,7 @@ export class ToolService {
     });
   }
 
-  async validateSelectedToolsets(user: User, toolsets: SelectedGenericToolset[]): Promise<void> {
+  async validateSelectedToolsets(user: User, toolsets: GenericToolset[]): Promise<void> {
     if (!toolsets?.length) {
       return; // No toolsets to validate
     }
@@ -234,17 +231,17 @@ export class ToolService {
     const mcpToolMap = new Map<string, string[]>();
 
     for (const selectedToolset of toolsets) {
-      const { type, toolset, mcpServer } = selectedToolset;
+      const { type, id, selectedTools } = selectedToolset;
 
-      if (type === 'regular' && toolset?.toolsetId) {
-        regularToolsetIds.push(toolset.toolsetId);
-        if (toolset.tools?.length) {
-          toolsetToolMap.set(toolset.toolsetId, toolset.tools);
+      if (type === 'regular') {
+        regularToolsetIds.push(id);
+        if (selectedTools?.length) {
+          toolsetToolMap.set(id, selectedTools);
         }
-      } else if (type === 'mcp' && mcpServer?.name) {
-        mcpServerNames.push(mcpServer.name);
-        if (toolset?.tools?.length) {
-          mcpToolMap.set(mcpServer.name, toolset.tools);
+      } else if (type === 'mcp') {
+        mcpServerNames.push(id);
+        if (selectedTools?.length) {
+          mcpToolMap.set(id, selectedTools);
         }
       } else {
         throw new ParamsError('Invalid toolset selection: missing type or required fields');
@@ -434,10 +431,10 @@ export class ToolService {
    */
   async instantiateToolsets(
     user: User,
-    toolsets: SelectedGenericToolset[],
+    toolsets: GenericToolset[],
   ): Promise<StructuredToolInterface[]> {
-    const regularToolsets = toolsets.filter((t) => t.type === 'regular').map((t) => t.toolset);
-    const mcpServers = toolsets.filter((t) => t.type === 'mcp').map((t) => t.mcpServer);
+    const regularToolsets = toolsets.filter((t) => t.type === 'regular');
+    const mcpServers = toolsets.filter((t) => t.type === 'mcp');
 
     const regularTools = await this.instantiateRegularToolsets(user, regularToolsets);
     const mcpTools = await this.instantiateMcpServers(user, mcpServers);
@@ -450,7 +447,7 @@ export class ToolService {
    */
   private async instantiateRegularToolsets(
     user: User,
-    toolsets: SelectedToolset[],
+    toolsets: GenericToolset[],
   ): Promise<StructuredToolInterface[]> {
     if (!toolsets?.length) {
       return [];
@@ -458,7 +455,7 @@ export class ToolService {
 
     const toolsetPOs = await this.prisma.toolset.findMany({
       where: {
-        toolsetId: { in: toolsets.map((t) => t.toolsetId) },
+        toolsetId: { in: toolsets.map((t) => t.id) },
         OR: [{ uid: user.uid }, { isGlobal: true }],
         deletedAt: null,
       },
@@ -487,7 +484,7 @@ export class ToolService {
    */
   private async instantiateMcpServers(
     user: User,
-    mcpServers: SelectedMcpServer[],
+    mcpServers: GenericToolset[],
   ): Promise<StructuredToolInterface[]> {
     if (!mcpServers?.length) {
       return [];

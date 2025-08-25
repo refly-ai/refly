@@ -3784,7 +3784,7 @@ export type InvokeSkillRequest = {
   /**
    * Selected toolsets
    */
-  toolsets?: Array<SelectedGenericToolset>;
+  toolsets?: Array<GenericToolset>;
   /**
    * Workflow execution ID for workflow context
    */
@@ -5290,6 +5290,10 @@ export type ToolsetInstance = ToolsetDefinition & {
    */
   toolsetId?: string;
   /**
+   * Toolset name
+   */
+  name?: string;
+  /**
    * Whether the toolset is global
    */
   isGlobal?: boolean;
@@ -5327,6 +5331,10 @@ export type ToolsetInstance = ToolsetDefinition & {
    * Toolset ID
    */
   toolsetId: string;
+  /**
+   * Toolset name
+   */
+  name: string;
 };
 
 export type ListToolsetInventoryResponse = BaseResponse & {
@@ -5378,51 +5386,27 @@ export type GenericToolset = {
   /**
    * Toolset type
    */
-  type?: GenericToolsetType;
+  type: GenericToolsetType;
   /**
-   * Toolset
+   * Toolset ID (toolsetId for regular toolset, name for MCP toolset)
+   */
+  id: string;
+  /**
+   * Toolset name
+   */
+  name: string;
+  /**
+   * Toolset detail
    */
   toolset?: ToolsetInstance;
   /**
    * MCP server
    */
   mcpServer?: McpServerDTO;
-};
-
-/**
- * Selected toolset, used for skill invocation
- */
-export type SelectedToolset = {
   /**
-   * Toolset ID
+   * Selected tools (used for skill invocation)
    */
-  toolsetId?: string;
-  /**
-   * Selected tools
-   */
-  tools?: Array<string>;
-};
-
-export type SelectedMcpServer = {
-  /**
-   * MCP server name
-   */
-  name?: string;
-};
-
-export type SelectedGenericToolset = {
-  /**
-   * Toolset type
-   */
-  type?: GenericToolsetType;
-  /**
-   * Toolset
-   */
-  toolset?: SelectedToolset;
-  /**
-   * MCP server
-   */
-  mcpServer?: SelectedMcpServer;
+  selectedTools?: Array<string>;
 };
 
 export type ListToolsResponse = BaseResponse & {

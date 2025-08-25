@@ -13,7 +13,7 @@ import {
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
 import { getRuntime } from '@refly/utils/env';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
-import { useActionResultStore } from '@refly/stores';
+import { useActionResultStore, useLaunchpadStoreShallow } from '@refly/stores';
 import { aggregateTokenUsage, genActionResultID, detectActualTypeFromType } from '@refly/utils';
 import { SkillNodeMeta, convertContextItemsToInvokeParams } from '@refly/canvas-common';
 import { useFindThreadHistory } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-thread-history';
@@ -26,7 +26,6 @@ import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@ref
 import { useFindWebsite } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-website';
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
-import { useLaunchpadStoreShallow } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import {
   useAbortAction,
@@ -553,8 +552,8 @@ export const useInvokeAction = (params?: { source?: string }) => {
   const findWebsite = useFindWebsite();
   const findImages = useFindImages();
 
-  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
-    selectedMcpServers: state.selectedMcpServers,
+  const { selectedToolsets } = useLaunchpadStoreShallow((state) => ({
+    selectedToolsets: state.selectedToolsets,
   }));
 
   const invokeAction = useCallback(
@@ -632,7 +631,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         context,
         resultHistory,
         skillName: selectedSkill?.name,
-        selectedMcpServers,
+        toolsets: selectedToolsets,
         tplConfig,
         runtimeConfig,
         projectId,
@@ -692,7 +691,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         timeoutCleanup();
       };
     },
-    [setNodeDataByEntity, onUpdateResult, createTimeoutHandler, selectedMcpServers],
+    [setNodeDataByEntity, onUpdateResult, createTimeoutHandler, selectedToolsets],
   );
 
   return { invokeAction, abortAction };

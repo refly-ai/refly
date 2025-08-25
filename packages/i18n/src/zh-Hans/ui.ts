@@ -2866,14 +2866,6 @@ const translations = {
       refresh: '换一批',
       empty: '暂无推荐问题',
     },
-    mcpSelector: {
-      title: '选择 MCP 服务器',
-      empty: '暂无 MCP 服务器',
-      selected: '已选择',
-      browseMcpStore: '去安装',
-      manageMcpServers: '管理 MCP',
-      useMcpServers: '使用 MCP',
-    },
     contextItem: {
       current: '当前',
       documentSelection: '文档选中',
@@ -2945,6 +2937,14 @@ const translations = {
       terms: '条款',
       privacy: '隐私',
     },
+  },
+  tools: {
+    title: '选择工具',
+    empty: '暂无工具可用',
+    selected: '已选择',
+    browseToolStore: '去安装',
+    manageTools: '管理工具',
+    useTools: '使用工具',
   },
   pilot: {
     name: 'Agent',

@@ -5346,7 +5346,7 @@ export const InvokeSkillRequestSchema = {
       type: 'array',
       description: 'Selected toolsets',
       items: {
-        $ref: '#/components/schemas/SelectedGenericToolset',
+        $ref: '#/components/schemas/GenericToolset',
       },
     },
     workflowExecutionId: {
@@ -7478,7 +7478,7 @@ export const AuthPatternSchema = {
 
 export const ToolsetDefinitionSchema = {
   type: 'object',
-  required: ['name', 'key', 'descriptionDict', 'tools'],
+  required: ['key', 'descriptionDict', 'tools'],
   properties: {
     key: {
       type: 'string',
@@ -7523,7 +7523,7 @@ export const ToolsetDefinitionSchema = {
 
 export const ToolsetInstanceSchema = {
   type: 'object',
-  required: ['toolsetId'],
+  required: ['toolsetId', 'name'],
   allOf: [
     {
       $ref: '#/components/schemas/ToolsetDefinition',
@@ -7534,6 +7534,10 @@ export const ToolsetInstanceSchema = {
         toolsetId: {
           type: 'string',
           description: 'Toolset ID',
+        },
+        name: {
+          type: 'string',
+          description: 'Toolset name',
         },
         isGlobal: {
           type: 'boolean',
@@ -7671,65 +7675,34 @@ export const GenericToolsetTypeSchema = {
 
 export const GenericToolsetSchema = {
   type: 'object',
+  required: ['type', 'id', 'name'],
   properties: {
     type: {
       $ref: '#/components/schemas/GenericToolsetType',
       description: 'Toolset type',
     },
+    id: {
+      type: 'string',
+      description: 'Toolset ID (toolsetId for regular toolset, name for MCP toolset)',
+    },
+    name: {
+      type: 'string',
+      description: 'Toolset name',
+    },
     toolset: {
       $ref: '#/components/schemas/ToolsetInstance',
-      description: 'Toolset',
+      description: 'Toolset detail',
     },
     mcpServer: {
       $ref: '#/components/schemas/McpServerDTO',
       description: 'MCP server',
     },
-  },
-} as const;
-
-export const SelectedToolsetSchema = {
-  type: 'object',
-  description: 'Selected toolset, used for skill invocation',
-  properties: {
-    toolsetId: {
-      type: 'string',
-      description: 'Toolset ID',
-    },
-    tools: {
+    selectedTools: {
       type: 'array',
-      description: 'Selected tools',
+      description: 'Selected tools (used for skill invocation)',
       items: {
         type: 'string',
-        description: 'Selected tool name',
       },
-    },
-  },
-} as const;
-
-export const SelectedMcpServerSchema = {
-  type: 'object',
-  properties: {
-    name: {
-      type: 'string',
-      description: 'MCP server name',
-    },
-  },
-} as const;
-
-export const SelectedGenericToolsetSchema = {
-  type: 'object',
-  properties: {
-    type: {
-      $ref: '#/components/schemas/GenericToolsetType',
-      description: 'Toolset type',
-    },
-    toolset: {
-      $ref: '#/components/schemas/SelectedToolset',
-      description: 'Toolset',
-    },
-    mcpServer: {
-      $ref: '#/components/schemas/SelectedMcpServer',
-      description: 'MCP server',
     },
   },
 } as const;

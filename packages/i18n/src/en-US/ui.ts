@@ -2874,14 +2874,6 @@ const translations = {
       refresh: 'Refresh',
       empty: 'No recommended questions',
     },
-    mcpSelector: {
-      title: 'Choose MCP Servers',
-      empty: 'No MCP servers available',
-      selected: 'Selected',
-      browseMcpStore: 'Go to Install',
-      manageMcpServers: 'Manage MCP',
-      useMcpServers: 'Use MCP',
-    },
     contextItem: {
       current: 'Current ',
       documentSelection: 'Document Selection',
@@ -2966,6 +2958,14 @@ const translations = {
       terms: 'Terms',
       privacy: 'Privacy',
     },
+  },
+  tools: {
+    title: 'Choose Tools',
+    empty: 'No tools available',
+    selected: 'Selected',
+    browseToolStore: 'Go to Install',
+    manageTools: 'Manage Tools',
+    useTools: 'Use Tools',
   },
   pilot: {
     name: 'Agent',

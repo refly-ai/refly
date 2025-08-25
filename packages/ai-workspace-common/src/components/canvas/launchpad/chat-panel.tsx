@@ -138,9 +138,8 @@ export const ChatPanel = ({
     setActiveResultId: state.setActiveResultId,
   }));
 
-  // 获取选择的 MCP 服务器
-  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
-    selectedMcpServers: state.selectedMcpServers,
+  const { selectedToolsets } = useLaunchpadStoreShallow((state) => ({
+    selectedToolsets: state.selectedToolsets,
   }));
 
   const [form] = Form.useForm();
@@ -269,7 +268,7 @@ export const ChatPanel = ({
               status: 'executing' as ActionStatus,
               contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
               selectedSkill,
-              selectedMcpServers,
+              selectedToolsets,
               modelInfo: selectedModel,
               runtimeConfig,
               tplConfig,
@@ -318,7 +317,7 @@ export const ChatPanel = ({
           metadata: {
             status: 'executing',
             contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
-            selectedMcpServers,
+            selectedToolsets,
             selectedSkill,
             modelInfo: selectedModel,
             runtimeConfig,

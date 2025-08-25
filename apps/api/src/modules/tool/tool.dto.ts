@@ -18,10 +18,14 @@ export const toolsetPO2DTO = (toolset: ToolsetPO): ToolsetInstance => {
 
 export const toolsetPo2GenericToolset = (toolset: ToolsetPO): GenericToolset => ({
   type: 'regular',
+  id: toolset.toolsetId,
+  name: toolset.name,
   toolset: toolsetPO2DTO(toolset),
 });
 
 export const mcpServerPo2GenericToolset = (server: McpServerPO): GenericToolset => ({
   type: 'mcp',
+  id: server.name,
+  name: server.name,
   mcpServer: mcpServerPO2DTO(server),
 });

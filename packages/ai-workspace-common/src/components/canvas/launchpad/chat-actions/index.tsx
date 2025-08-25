@@ -13,7 +13,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { IContextItem } from '@refly/common-types';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
-import { McpSelectorPopover } from '../mcp-selector-panel';
+import { ToolSelectorPopover } from '../tool-selector-panel';
 import { logEvent } from '@refly/telemetry-web';
 
 export interface CustomAction {
@@ -64,14 +64,14 @@ export const ChatActions = memo(
         contextItems?.some((item) => item?.type === 'resource' || item?.type === 'document') ??
         false;
 
-      const { selectedMcpServers } = useLaunchpadStore.getState();
-      const usedMcp = selectedMcpServers?.length > 0;
+      const { selectedToolsets } = useLaunchpadStore.getState();
+      const usedTools = selectedToolsets?.length > 0;
 
       logEvent('canvas::node_execute', Date.now(), {
         node_type: 'askAI',
         model_name: model?.name ?? '',
         used_knowledge_base: usedKnowledgeBase,
-        used_mcp: usedMcp,
+        used_tools: usedTools,
       });
       handleSendMessage();
     }, [contextItems, model, handleSendMessage]);
@@ -150,7 +150,7 @@ export const ChatActions = memo(
             </Tooltip>
           </Upload>
 
-          <McpSelectorPopover />
+          <ToolSelectorPopover />
 
           {detectedUrls?.length > 0 && (
             <div className="flex items-center gap-1 ml-2">

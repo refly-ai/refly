@@ -6,6 +6,7 @@ import {
   Artifact,
   CanvasNodeType,
   CodeArtifactType,
+  GenericToolset,
   IndexError,
   IndexStatus,
   MediaType,
@@ -86,6 +87,7 @@ export type SkillNodeMeta = {
   resultId?: string;
   version?: number;
   selectedSkill?: Skill;
+  selectedToolsets?: GenericToolset[];
   modelInfo?: ModelInfo | null;
   contextItems?: IContextItem[];
   tplConfig?: SkillTemplateConfig;

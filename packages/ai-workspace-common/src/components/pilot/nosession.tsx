@@ -10,7 +10,7 @@ import {
 import { MediaChatInput } from '@refly-packages/ai-workspace-common/components/canvas/nodes/media/media-input';
 import { ChatModeSelector } from '@refly-packages/ai-workspace-common/components/canvas/front-page/chat-mode-selector';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
-import { McpSelectorPopover } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { ToolSelectorPopover } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/tool-selector-panel';
 import { Button, message } from 'antd';
 import { logEvent } from '@refly/telemetry-web';
 
@@ -212,7 +212,7 @@ export const NoSession = memo(({ canvasId }: { canvasId: string }) => {
                           trigger={['click']}
                         />
                       )}
-                      {userStore.isLogin && <McpSelectorPopover />}
+                      {userStore.isLogin && <ToolSelectorPopover />}
                       <div className="flex items-center gap-2 ml-auto pr-4">
                         <Button
                           className="flex items-center !h-9 !w-9 rounded-full border-none"
