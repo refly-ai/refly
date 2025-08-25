@@ -1,5 +1,6 @@
 import { AgentBaseToolset } from './base';
 import { ToolsetDefinition } from '@refly/openapi-schema';
+import { BuiltinToolset, BuiltinToolsetDefinition } from './builtin';
 import { FirecrawlToolset, FirecrawlToolsetDefinition } from './firecrawl';
 import { CalculatorToolset, CalculatorToolsetDefinition } from './calculator';
 
@@ -12,6 +13,10 @@ export const toolsetInventory: Record<
     definition: ToolsetDefinition;
   }
 > = {
+  [BuiltinToolsetDefinition.key]: {
+    class: BuiltinToolset,
+    definition: BuiltinToolsetDefinition,
+  },
   [FirecrawlToolsetDefinition.key]: {
     class: FirecrawlToolset,
     definition: FirecrawlToolsetDefinition,

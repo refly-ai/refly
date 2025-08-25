@@ -74,14 +74,6 @@ export class SkillInvokerService {
   private skillEngine: SkillEngine;
   private skillInventory: BaseSkill[];
 
-  // Optimize frequent event type checking with Set
-  private static readonly OUTPUT_EVENTS = new Set([
-    'artifact',
-    'log',
-    'structured_data',
-    'create_node',
-  ]);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
@@ -220,7 +212,7 @@ export class SkillInvokerService {
     }
 
     if (toolsets?.length > 0) {
-      const tools = await this.toolService.instantiateToolsets(user, toolsets);
+      const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine);
       config.configurable.selectedTools = tools;
     }
 

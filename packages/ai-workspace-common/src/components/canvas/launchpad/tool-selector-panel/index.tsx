@@ -28,7 +28,7 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
-  // Get selected MCP servers from store
+  // Get selected toolsets from store
   const { selectedToolsets, setSelectedToolsets } = useLaunchpadStoreShallow((state) => ({
     selectedToolsets: state.selectedToolsets,
     setSelectedToolsets: state.setSelectedToolsets,
@@ -44,7 +44,7 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
 
-  // Fetch MCP servers from API
+  // Fetch tools from API
   const { data, isLoading, isRefetching } = useListTools({ query: { enabled: true } }, [], {
     enabled: open && isLogin,
     refetchOnWindowFocus: false,
@@ -155,7 +155,7 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
                   <div className="flex items-center gap-2">
                     <Mcp size={16} color="var(--refly-text-0)" />
                     <span className="text-[12px] text-gray-700 dark:text-gray-200 font-medium block truncate">
-                      {toolset.type === 'mcp' ? toolset.mcpServer?.name : toolset.toolset?.name}
+                      {toolset.name}
                     </span>
                   </div>
                 </div>

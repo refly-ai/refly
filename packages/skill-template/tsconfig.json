@@ -33,6 +33,7 @@
     { "path": "../openapi-schema" },
     { "path": "../common-types" },
     { "path": "../errors" },
-    { "path": "../utils" }
+    { "path": "../utils" },
+    { "path": "../agent-tools" }
   ]
 }

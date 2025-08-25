@@ -564,7 +564,7 @@ export async function knowledgeBaseSearchGetRelevantChunks(
 ): Promise<DocumentInterface[]> {
   try {
     // 1. search relevant chunks
-    const res = await ctx.ctxThis.engine.service.search(
+    const res = await ctx.ctxThis.engine.service.librarySearch(
       ctx.config.configurable.user,
       {
         query,

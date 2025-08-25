@@ -32,7 +32,7 @@ export class ReflySearch extends Tool {
   }
 
   async _call(input: string): Promise<string> {
-    const res = await this.engine.service.search(
+    const res = await this.engine.service.librarySearch(
       this.user,
       {
         query: input,

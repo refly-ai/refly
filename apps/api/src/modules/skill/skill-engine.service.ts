@@ -1,9 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { ReflyService, SkillEngine, SkillEngineOptions } from '@refly/skill-template';
+import { ReflyService } from '@refly/agent-tools';
+import { SkillEngine, SkillEngineOptions } from '@refly/skill-template';
 import { CanvasService } from '../canvas/canvas.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
-import { LabelService } from '../label/label.service';
 import { McpServerService } from '../mcp-server/mcp-server.service';
 import { ProviderService } from '../provider/provider.service';
 import { RAGService } from '../rag/rag.service';
@@ -13,7 +13,6 @@ import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
 import { canvasPO2DTO } from '../canvas/canvas.dto';
 import { ParserFactory } from '../knowledge/parsers/factory';
 import { documentPO2DTO, referencePO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
-import { labelClassPO2DTO, labelPO2DTO } from '../label/label.dto';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth/auth.service';
 import { MediaGeneratorService } from '../media-generator/media-generator.service';
@@ -23,7 +22,6 @@ import { ActionService } from '../action/action.service';
 export class SkillEngineService implements OnModuleInit {
   private logger = new Logger(SkillEngineService.name);
 
-  private labelService: LabelService;
   private searchService: SearchService;
   private knowledgeService: KnowledgeService;
   private ragService: RAGService;
@@ -42,7 +40,6 @@ export class SkillEngineService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.labelService = this.moduleRef.get(LabelService, { strict: false });
     this.searchService = this.moduleRef.get(SearchService, { strict: false });
     this.knowledgeService = this.moduleRef.get(KnowledgeService, { strict: false });
     this.ragService = this.moduleRef.get(RAGService, { strict: false });
@@ -59,7 +56,6 @@ export class SkillEngineService implements OnModuleInit {
    */
   buildReflyService = (): ReflyService => {
     return {
-      async: true,
       getUserMediaConfig: async (user, mediaType) => {
         const result = await this.providerService.getUserMediaConfig(user, mediaType);
         return result;
@@ -120,14 +116,6 @@ export class SkillEngineService implements OnModuleInit {
         const resource = await this.knowledgeService.updateResource(user, req);
         return buildSuccessResponse(resourcePO2DTO(resource));
       },
-      createLabelClass: async (user, req) => {
-        const labelClass = await this.labelService.createLabelClass(user, req);
-        return buildSuccessResponse(labelClassPO2DTO(labelClass));
-      },
-      createLabelInstance: async (user, req) => {
-        const labels = await this.labelService.createLabelInstance(user, req);
-        return buildSuccessResponse(labels.map((label) => labelPO2DTO(label)));
-      },
       webSearch: async (user, req) => {
         const result = await this.searchService.webSearch(user, req);
         return buildSuccessResponse(result);
@@ -136,7 +124,7 @@ export class SkillEngineService implements OnModuleInit {
         const result = await this.ragService.rerank(user, query, results, options);
         return buildSuccessResponse(result);
       },
-      search: async (user, req, options) => {
+      librarySearch: async (user, req, options) => {
         const result = await this.searchService.search(user, req, options);
         return buildSuccessResponse(result);
       },
