@@ -10,6 +10,7 @@ import {
 } from './backend/interface';
 import { QdrantVectorSearchBackend } from './backend/qdrant';
 import { LanceDBVectorSearchBackend } from './backend/lancedb';
+import { MilvusVectorSearchBackend } from './backend/milvus';
 
 @Injectable()
 export class VectorSearchService implements OnModuleInit {
@@ -96,9 +97,11 @@ export const createVectorSearchFactory = () => {
       backend = new QdrantVectorSearchBackend(configService);
     } else if (backendType === 'lancedb') {
       backend = new LanceDBVectorSearchBackend(configService);
+    } else if (backendType === 'milvus') {
+      backend = new MilvusVectorSearchBackend(configService);
     } else {
       throw new Error(
-        `Unknown vector search backend type: ${backendType}. Supported backends: qdrant, lancedb`,
+        `Unknown vector search backend type: ${backendType}. Supported backends: qdrant, lancedb, milvus`,
       );
     }
 
