@@ -1,6 +1,5 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor } from '../base';
-import { InferInteropZodOutput } from '@langchain/core/dist/utils/types';
 import { ToolsetDefinition } from '@refly/openapi-schema';
 
 export const CalculatorToolsetDefinition: ToolsetDefinition = {
@@ -37,9 +36,7 @@ export class CalculatorAdd extends AgentBaseTool {
   });
   description = 'A calculator that adds two numbers together.';
 
-  async _call(
-    input: InferInteropZodOutput<typeof CalculatorAdd.prototype.schema>,
-  ): Promise<string> {
+  async _call(input: z.infer<typeof this.schema>): Promise<string> {
     const res = input.a + input.b;
     return res.toString();
   }
@@ -55,9 +52,7 @@ export class CalculatorSubtract extends AgentBaseTool {
   });
   description = 'A calculator that subtracts two numbers.';
 
-  async _call(
-    input: InferInteropZodOutput<typeof CalculatorSubtract.prototype.schema>,
-  ): Promise<string> {
+  async _call(input: z.infer<typeof this.schema>): Promise<string> {
     const res = input.a - input.b;
     return res.toString();
   }
