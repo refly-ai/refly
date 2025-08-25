@@ -42,6 +42,50 @@ tags:
     description: Workflow management endpoints
 
 paths:
+  /variable-extraction/extract:
+    post:
+      tags:
+        - variable-extraction
+      summary: Extract variables from prompt
+      description: |
+        Unified variable extraction interface that supports two modes:
+        - 'direct': Directly update Canvas variables
+        - 'candidate': Return candidate solutions for user selection
+        
+        This endpoint analyzes natural language prompts and extracts workflow variables
+        based on the context of existing Canvas variables and content.
+      operationId: extractVariables
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractVariablesRequest'
+              candidate_mode:
+                summary: Candidate mode example
+                description: Example request for candidate mode
+                value:
+                  prompt: "Create a user registration form with username, email, and password fields"
+                  canvasId: "canvas-123"
+                  mode: "candidate"
+              direct_mode:
+                summary: Direct mode example
+                description: Example request for direct mode with session ID
+                value:
+                  prompt: "Generate an e-commerce product list page with pagination and search"
+                  canvasId: "canvas-456"
+                  mode: "direct"
+                  sessionId: "session-789"
+      responses:
+        '200':
+          description: Variables extracted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableExtractionResult'
+
   /mcp-server/list:
     get:
       tags:
@@ -3143,6 +3187,106 @@ paths:
 
 components:
   schemas:
+    ExtractVariablesRequest:
+      type: object
+      required:
+        - prompt
+        - canvasId
+        - mode
+      properties:
+        prompt:
+          type: string
+          description: Natural language prompt describing the desired functionality
+          minLength: 1
+          maxLength: 500
+          example: "Create a user registration form with username, email, and password fields"
+        canvasId:
+          type: string
+          description: Canvas ID to retrieve existing variable context and content
+          pattern: '^[a-zA-Z0-9_-]+$'
+          example: "canvas-123"
+        mode:
+          type: string
+          enum: [direct, candidate]
+          description: |
+            Processing mode for variable extraction:
+            - direct: Directly update Canvas variables and return results
+            - candidate: Return candidate solutions for user selection
+          example: "candidate"
+        sessionId:
+          type: string
+          description: |
+            Optional session ID for direct mode to check for existing candidate records.
+            When provided in direct mode, the system will check if there are
+            unapplied candidate records for this session.
+          example: "session-789"
+
+    VariableExtractionResult:
+      type: object
+      required:
+        - originalPrompt
+        - processedPrompt
+        - variables
+        - reusedVariables
+      properties:
+        originalPrompt:
+          type: string
+          description: Original natural language prompt from user input
+          example: "Create a user registration form with username, email, and password fields"
+        processedPrompt:
+          type: string
+          description: |
+            Processed prompt with variable references embedded.
+            Variables are represented using handlebars syntax (e.g., {{variableName}}).
+          example: "Create a user registration form with {{username}}, {{email}}, and {{password}} fields"
+        variables:
+          type: array
+          description: List of extracted workflow variables
+          items:
+            $ref: '#/components/schemas/WorkflowVariable'
+        reusedVariables:
+          type: array
+          description: List of variables that were reused from existing context
+          items:
+            $ref: '#/components/schemas/VariableReuse'
+        sessionId:
+          type: string
+          description: |
+            Session ID for candidate mode responses.
+            This ID can be used in subsequent direct mode requests
+            to apply the selected candidate solution.
+          example: "session-abc123"
+
+    VariableReuse:
+      type: object
+      description: Information about variables reused from existing context
+      required:
+        - detectedText
+        - reusedVariableName
+        - confidence
+        - reason
+      properties:
+        detectedText:
+          type: string
+          description: Text in the prompt that triggered variable reuse detection
+          example: "form"
+        reusedVariableName:
+          type: string
+          description: Name of the existing variable that was reused
+          example: "formType"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Confidence score for the reuse detection (0.0 to 1.0)
+          example: 0.78
+        reason:
+          type: string
+          description: Explanation of why this variable was reused
+          example: "Similar form structure detected in existing variables"
+
+
     McpServerType:
       type: string
       description: MCP Server type
@@ -8627,6 +8771,14 @@ components:
           type: string
           description: Variable description
           example: "用户姓名"
+        createdAt:
+          type: string
+          description: Variable created at
+          example: "2021-01-01T00:00:00.000Z"
+        updatedAt:
+          type: string
+          description: Variable updated at
+          example: "2021-01-01T00:00:00.000Z"
         source:
           type: string
           description: Variable source

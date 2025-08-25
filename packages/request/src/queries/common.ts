@@ -56,6 +56,7 @@ import {
   emailSignup,
   exportCanvas,
   exportDocument,
+  extractVariables,
   generateMedia,
   getActionResult,
   getAuthConfig,
@@ -639,6 +640,12 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type ExtractVariablesMutationResult = Awaited<ReturnType<typeof extractVariables>>;
+export const useExtractVariablesKey = 'ExtractVariables';
+export const UseExtractVariablesKeyFn = (mutationKey?: Array<unknown>) => [
+  useExtractVariablesKey,
+  ...(mutationKey ?? []),
+];
 export type CreateMcpServerMutationResult = Awaited<ReturnType<typeof createMcpServer>>;
 export const useCreateMcpServerKey = 'CreateMcpServer';
 export const UseCreateMcpServerKeyFn = (mutationKey?: Array<unknown>) => [

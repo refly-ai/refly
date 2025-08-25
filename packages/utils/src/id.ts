@@ -39,6 +39,7 @@ export enum IDPrefix {
   CREDIT_USAGE = 'cu-',
   CREDIT_DEBT = 'cd-',
   NODE = 'node-',
+  VARIABLE_EXTRACTION_SESSION = 'ves-',
 }
 
 export function genUID(): string {
@@ -63,6 +64,10 @@ export function genPilotSessionID(): string {
 
 export function genPilotStepID(): string {
   return IDPrefix.PILOT_STEP + createId();
+}
+
+export function genVariableExtractionSessionID(): string {
+  return IDPrefix.VARIABLE_EXTRACTION_SESSION + createId();
 }
 
 export function genWorkflowExecutionID(): string {

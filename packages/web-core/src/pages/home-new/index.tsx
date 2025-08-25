@@ -12,12 +12,14 @@ import { TemplateList } from '@refly-packages/ai-workspace-common/components/can
 import { useAuthStoreShallow } from '@refly/stores';
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import Header from '../../components/landing-page-partials/Header';
+import { useNavigate } from 'react-router-dom';
 
 import cn from 'classnames';
 import { Title } from '@refly-packages/ai-workspace-common/components/canvas/front-page/title';
 
 const UnsignedFrontPage = memo(() => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const templateLanguage = i18n.language;
@@ -158,6 +160,21 @@ const UnsignedFrontPage = memo(() => {
                     handleAbort={() => {}}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Test Page Link */}
+            <div className="mt-8 text-center">
+              <div className="inline-flex items-center gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <span className="text-sm text-blue-700 dark:text-blue-300">开发者测试工具</span>
+                <Button
+                  type="link"
+                  size="small"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                  onClick={() => navigate('/test/variable-extraction')}
+                >
+                  变量提取接口测试 →
+                </Button>
               </div>
             </div>
 

@@ -1493,3 +1493,44 @@ model McpServer {
   @@index([isGlobal])
   @@map("mcp_servers")
 }
+
+/// Variable extraction history for workflow 3.0
+model VariableExtractionHistory {
+  /// Primary key
+  pk                   BigInt    @id @default(autoincrement())
+  /// Session ID (required for candidate mode, optional for direct mode)
+  sessionId            String?   @unique @map("session_id")
+  /// Canvas ID
+  canvasId             String    @map("canvas_id")
+  /// User ID
+  uid                  String    @map("uid")
+  /// Trigger type: agent | askAI_direct | askAI_candidate
+  triggerType          String    @map("trigger_type")
+  /// Extraction mode: direct | candidate
+  extractionMode       String    @map("extraction_mode")
+  /// Original user input prompt
+  originalPrompt       String    @map("original_prompt")
+  /// Processed prompt template
+  processedPrompt      String?   @map("processed_prompt")
+  /// Extracted variables (JSON array)
+  extractedVariables   String    @map("extracted_variables")
+  /// Reused variables information (JSON array)
+  reusedVariables      String    @default("[]") @map("reused_variables")
+  /// LLM extraction confidence (0.00-1.00)
+  extractionConfidence Decimal?  @map("extraction_confidence") @db.Decimal(3, 2)
+  /// LLM model used
+  llmModel             String?   @map("llm_model")
+  /// Status: pending(candidate) | applied(already applied) | expired(expired)
+  status               String    @default("pending") @map("status")
+  /// Applied timestamp (when candidate mode converts to direct mode)
+  appliedAt            DateTime? @map("applied_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([canvasId, uid, createdAt])
+  @@index([triggerType, extractionMode])
+  @@index([extractionConfidence])
+  @@map("variable_extraction_history")
+}
