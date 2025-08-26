@@ -1,4 +1,4 @@
-![refly-cover](https://static.refly.ai/landing/refly-cover.webp)
+![refly-cover](https://youke1.picui.cn/s1/2025/08/26/68ad906bc3408.png)
 
 <div align="center">
 
