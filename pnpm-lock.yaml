@@ -1200,8 +1200,8 @@ importers:
         specifier: ^17.5.0
         version: 17.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       refly-icons:
-        specifier: ^1.0.5
-        version: 1.0.5(react@18.3.1)
+        specifier: ^1.0.6
+        version: 1.0.6(react@18.3.1)
       rehype-highlight:
         specifier: ^6.0.0
         version: 6.0.0
@@ -14703,6 +14703,11 @@ packages:
 
   refly-icons@1.0.5:
     resolution: {integrity: sha512-43tjDQ1bMcfy0KEdIPzZP+HZqK8K+Ol0oQGA8eCb1N1xySPP42fJadAoxyGRNH4vZkBQzRo0qrs8Zex1zknImw==}
+    peerDependencies:
+      react: '>=17.0.0'
+
+  refly-icons@1.0.6:
+    resolution: {integrity: sha512-TIh7YTe7uZuCoNuOLVZ0Jq1ybTRcXE4adFp+NrytARdzp57QR1MaxFVg7UXeIU+Xfew6TGctvDZ2QK9n5Y32Rw==}
     peerDependencies:
       react: '>=17.0.0'
 
@@ -32780,6 +32785,10 @@ snapshots:
       react: 18.3.1
 
   refly-icons@1.0.5(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+
+  refly-icons@1.0.6(react@18.3.1):
     dependencies:
       react: 18.3.1
 
