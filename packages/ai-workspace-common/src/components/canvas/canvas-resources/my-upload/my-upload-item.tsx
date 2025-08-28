@@ -5,7 +5,7 @@ import { cn } from '@refly/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { ResourceItemAction } from '../share/resource-item-action';
 import type { CanvasNode } from '@refly/canvas-common';
-import { Refresh, X, Delete, Location, Doc1 } from 'refly-icons';
+import { Refresh, X, Delete, Location, Doc1, Pdf, Doc, Data, Markdown } from 'refly-icons';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -22,6 +22,226 @@ interface MyUploadItemProps {
 }
 
 /**
+ * Get appropriate icon and styling based on node type
+ */
+const getNodeTypeIcon = (node: CanvasNode) => {
+  const nodeType = node?.type;
+  const metadata = node?.data?.metadata;
+
+  // Helper function to safely check contentType
+  const getContentType = () => {
+    if (
+      metadata?.resourceMeta &&
+      typeof metadata.resourceMeta === 'object' &&
+      'contentType' in metadata.resourceMeta &&
+      typeof metadata.resourceMeta.contentType === 'string'
+    ) {
+      return metadata.resourceMeta.contentType;
+    }
+    return null;
+  };
+
+  const contentType = getContentType();
+
+  // Image type - show thumbnail (both direct image type and resource with image content type)
+  if (
+    (nodeType === 'image' && metadata?.imageUrl && typeof metadata.imageUrl === 'string') ||
+    (nodeType === 'resource' && contentType && contentType.startsWith('image/'))
+  ) {
+    // Get image URL from either direct imageUrl or construct from entityId for resource type
+    let imageUrl: string | null = null;
+
+    if (metadata?.imageUrl && typeof metadata.imageUrl === 'string') {
+      // Use existing imageUrl if available
+      imageUrl = metadata.imageUrl;
+    } else if (
+      nodeType === 'resource' &&
+      contentType?.startsWith('image/') &&
+      node?.data?.entityId
+    ) {
+      // For resource type, try to construct URL from existing imageUrl pattern
+      // First try to find any existing imageUrl in metadata to extract base URL
+      const existingImageUrl = Object.values(metadata || {}).find(
+        (value) => typeof value === 'string' && value.includes('/v1/misc/'),
+      ) as string | undefined;
+
+      if (existingImageUrl) {
+        // Extract base URL from existing imageUrl and construct new one
+        const baseUrl = existingImageUrl.split('/v1/misc/')[0];
+        imageUrl = `${baseUrl}/v1/misc/${node.data.entityId}`;
+      }
+    }
+
+    if (imageUrl) {
+      return {
+        type: 'image',
+        content: (
+          <img
+            src={imageUrl}
+            alt={node?.data?.title || 'Image'}
+            className="w-6 h-6 object-cover rounded-md flex-shrink-0"
+            onError={(e) => {
+              // Fallback to default icon if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ),
+        fallback: (
+          <div className="w-6 h-6 bg-[#0064FA] rounded-md flex items-center justify-center flex-shrink-0">
+            <Doc1 size={24} color="white" />
+          </div>
+        ),
+      };
+    }
+  }
+
+  // PDF type - check both direct type and resource with PDF content type
+  if (
+    nodeType === 'pdf' ||
+    (metadata?.storageKey &&
+      typeof metadata.storageKey === 'string' &&
+      metadata.storageKey.toLowerCase().endsWith('.pdf')) ||
+    (nodeType === 'resource' && contentType === 'application/pdf')
+  ) {
+    return {
+      type: 'pdf',
+      content: (
+        <div className="w-6 h-6 bg-[#F04438] rounded-md flex items-center justify-center flex-shrink-0">
+          <Pdf size={24} color="white" />
+        </div>
+      ),
+    };
+  }
+
+  // PPT type - check both direct type and resource with PPT content type
+  if (
+    nodeType === 'ppt' ||
+    (metadata?.storageKey &&
+      typeof metadata.storageKey === 'string' &&
+      (metadata.storageKey.toLowerCase().endsWith('.ppt') ||
+        metadata.storageKey.toLowerCase().endsWith('.pptx'))) ||
+    (nodeType === 'resource' &&
+      contentType &&
+      (contentType.includes('powerpoint') || contentType.includes('presentation')))
+  ) {
+    return {
+      type: 'ppt',
+      content: (
+        <div className="w-6 h-6 bg-[#9C27B0] rounded-md flex items-center justify-center flex-shrink-0">
+          <Doc size={24} color="white" />
+        </div>
+      ),
+    };
+  }
+
+  // Word document type - check both direct type and resource with Word content type
+  if (
+    nodeType === 'doc' ||
+    (metadata?.storageKey &&
+      typeof metadata.storageKey === 'string' &&
+      (metadata.storageKey.toLowerCase().endsWith('.doc') ||
+        metadata.storageKey.toLowerCase().endsWith('.docx'))) ||
+    (nodeType === 'resource' && contentType && contentType.includes('word'))
+  ) {
+    return {
+      type: 'doc',
+      content: (
+        <div className="w-6 h-6 bg-[#0064FA] rounded-md flex items-center justify-center flex-shrink-0">
+          <Doc1 size={24} color="white" />
+        </div>
+      ),
+    };
+  }
+
+  // Excel type - check both direct type and resource with Excel content type
+  if (
+    nodeType === 'excel' ||
+    (metadata?.storageKey &&
+      typeof metadata.storageKey === 'string' &&
+      (metadata.storageKey.toLowerCase().endsWith('.xls') ||
+        metadata.storageKey.toLowerCase().endsWith('.xlsx'))) ||
+    (nodeType === 'resource' &&
+      contentType &&
+      (contentType.includes('spreadsheet') || contentType.includes('excel')))
+  ) {
+    return {
+      type: 'excel',
+      content: (
+        <div className="w-6 h-6 bg-[#12B76A] rounded-md flex items-center justify-center flex-shrink-0">
+          <Data size={24} color="white" />
+        </div>
+      ),
+    };
+  }
+
+  // Text file type - check both direct type and resource with text content type
+  if (
+    (metadata?.storageKey &&
+      typeof metadata.storageKey === 'string' &&
+      (metadata.storageKey.toLowerCase().endsWith('.txt') ||
+        metadata.storageKey.toLowerCase().endsWith('.md'))) ||
+    (nodeType === 'resource' && contentType && contentType.startsWith('text/'))
+  ) {
+    const isMarkdown =
+      (metadata?.storageKey &&
+        typeof metadata.storageKey === 'string' &&
+        metadata.storageKey.toLowerCase().endsWith('.md')) ||
+      (nodeType === 'resource' && contentType === 'text/markdown');
+
+    return {
+      type: 'text',
+      content: (
+        <div className="w-6 h-6 bg-[#667085] rounded-md flex items-center justify-center flex-shrink-0">
+          {isMarkdown ? <Markdown size={24} color="white" /> : <Doc size={24} color="white" />}
+        </div>
+      ),
+    };
+  }
+
+  // Code file type - check both direct type and resource with code content type
+  if (
+    (metadata?.storageKey &&
+      typeof metadata.storageKey === 'string' &&
+      (metadata.storageKey.toLowerCase().endsWith('.js') ||
+        metadata.storageKey.toLowerCase().endsWith('.ts') ||
+        metadata.storageKey.toLowerCase().endsWith('.py') ||
+        metadata.storageKey.toLowerCase().endsWith('.java') ||
+        metadata.storageKey.toLowerCase().endsWith('.cpp') ||
+        metadata.storageKey.toLowerCase().endsWith('.html') ||
+        metadata.storageKey.toLowerCase().endsWith('.css'))) ||
+    (nodeType === 'resource' &&
+      contentType &&
+      (contentType.includes('javascript') ||
+        contentType.includes('typescript') ||
+        contentType.includes('python') ||
+        contentType.includes('java') ||
+        contentType.includes('html') ||
+        contentType.includes('css')))
+  ) {
+    return {
+      type: 'code',
+      content: (
+        <div className="w-6 h-6 bg-[#7C3AED] rounded-md flex items-center justify-center flex-shrink-0">
+          <Data size={24} color="white" />
+        </div>
+      ),
+    };
+  }
+
+  // Default to document icon
+  return {
+    type: 'doc',
+    content: (
+      <div className="w-6 h-6 bg-[#0064FA] rounded-md flex items-center justify-center flex-shrink-0">
+        <Doc1 size={24} color="white" />
+      </div>
+    ),
+  };
+};
+
+/**
  * Render a single uploaded resource item.
  */
 export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect }) => {
@@ -36,6 +256,9 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
   const { getNodes, fitView } = useReactFlow();
   const { deleteNode } = useDeleteNode();
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
+
+  // Get icon based on node type
+  const nodeIcon = getNodeTypeIcon(node);
 
   // Update editing title when node changes
   useEffect(() => {
@@ -205,22 +428,30 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
         </Tooltip>
       </div>
 
-      {/* Bottom row: Blue document icon + title text */}
+      {/* Bottom row: Dynamic icon + title text */}
       <div
         className="flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-[var(--tertiary---refly-tertiary-hover,rgba(0,0,0,0.08))] dark:hover:bg-[var(--tertiary---refly-tertiary-hover,rgba(255,255,255,0.08))] rounded-lg"
         onClick={() => onSelect(node, false)}
       >
-        {/* Blue document icon - Figma design: 24x24 pixels */}
-        <div className="w-6 h-6 bg-[#0064FA] rounded-md flex items-center justify-center flex-shrink-0">
-          {/* Document icon - Figma design: 24x24 container */}
-          <Doc1 size={24} color="white" />
+        {/* Dynamic icon based on node type */}
+        <div className="flex-shrink-0 flex items-center justify-center">
+          {nodeIcon.type === 'image' ? (
+            <>
+              {nodeIcon.content}
+              {nodeIcon.fallback && (
+                <div className="absolute inset-0 hidden">{nodeIcon.fallback}</div>
+              )}
+            </>
+          ) : (
+            nodeIcon.content
+          )}
         </div>
 
         {/* Title text - Figma design: 14px font, normal weight */}
         <Text
           ellipsis={{ tooltip: { placement: 'left' } }}
           className={cn(
-            'text-sm leading-[1.43] text-[#1C1F23] dark:text-white flex-1 min-w-0 truncate',
+            'text-sm leading-[1.43] text-[#1C1F23] dark:text-white flex-1 min-w-0 truncate flex items-center',
             {
               'font-semibold': isActive,
             },
