@@ -98,8 +98,8 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
       <div className="flex items-center justify-between gap-2 px-2 py-1">
         <div className="flex items-center gap-1 flex-1 min-w-0">
           {/* Green X icon - Figma design: 10x9 pixels */}
-          <div className="text-[#0E9F77] dark:text-[#0E9F77] flex-shrink-0">
-            <X size={12} color="currentColor" />
+          <div className="text-[#0E9F77] dark:text-[#0E9F77] flex-shrink-0 h-4 w-4">
+            <X size={16} color="currentColor" />
           </div>
 
           {/* doc02 text - Figma design: 12px font, semibold */}
@@ -146,9 +146,9 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
             }}
           >
             <Refresh
-              size={16}
+              size={20}
               color="currentColor"
-              className="text-[#1C1F23]/60 dark:text-white/60"
+              className="text-[var(--text-icon-refly-text-2,rgba(28,31,35,0.60))] dark:text-white/60"
             />
           </Button>
         </Tooltip>
@@ -182,12 +182,12 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
         <div className="flex items-center gap-3 flex-shrink-0">
           {/* Location icon */}
           <div className="w-5 h-5 text-[#1C1F23]/80 hover:text-[#1C1F23] dark:text-white/80 dark:hover:text-white cursor-pointer">
-            <Location size={16} color="currentColor" />
+            <Location size={20} color="currentColor" />
           </div>
 
           {/* Delete icon */}
           <div className="w-5 h-5 text-[#F93920] hover:text-[#F93920]/80 cursor-pointer">
-            <Delete size={16} color="currentColor" />
+            <Delete size={20} color="currentColor" />
           </div>
 
           {/* Original ResourceItemAction */}
