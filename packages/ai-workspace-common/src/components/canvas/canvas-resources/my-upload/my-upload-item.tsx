@@ -9,6 +9,9 @@ import { Refresh, X, Delete, Location, Doc1 } from 'refly-icons';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useReactFlow } from '@xyflow/react';
+import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
+import { useActiveNode } from '@refly/stores';
 
 const { Text } = Typography;
 
@@ -23,11 +26,16 @@ interface MyUploadItemProps {
  */
 export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect }) => {
   const { t } = useTranslation();
-  const { readonly } = useCanvasContext();
+  const { readonly, canvasId } = useCanvasContext();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const titleInputRef = useRef<InputRef>(null);
   const updateNodeTitle = useUpdateNodeTitle();
+
+  // Add hooks for node operations
+  const { getNodes, fitView } = useReactFlow();
+  const { deleteNode } = useDeleteNode();
+  const { activeNode, setActiveNode } = useActiveNode(canvasId);
 
   // Update editing title when node changes
   useEffect(() => {
@@ -78,6 +86,49 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
       }
     },
     [handleTitleSave, handleTitleCancel],
+  );
+
+  // Handle locate node
+  const handleLocateNode = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (node?.type === 'group') {
+        return;
+      }
+      const nodes = getNodes();
+      const foundNode = nodes.find((n) => n.data?.entityId === node.data?.entityId);
+      if (foundNode) {
+        // Use fitView to center and zoom to the node
+        fitView({
+          nodes: [foundNode],
+          padding: 0.2,
+          duration: 300,
+          minZoom: 0.6,
+          maxZoom: 1.2,
+        });
+      }
+    },
+    [node, getNodes, fitView],
+  );
+
+  // Handle delete node
+  const handleDeleteNode = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!node?.id || readonly) {
+        return;
+      }
+      deleteNode({
+        id: node.id,
+        type: node.type,
+        data: node.data,
+        position: node.position ?? { x: 0, y: 0 },
+      } as CanvasNode);
+      if (activeNode?.id === node.id) {
+        setActiveNode(null);
+      }
+    },
+    [node, readonly, deleteNode, activeNode?.id, setActiveNode],
   );
 
   return (
@@ -181,14 +232,26 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
         {/* Actions - Figma design: location + delete icons with 12px gap */}
         <div className="flex items-center gap-3 flex-shrink-0">
           {/* Location icon */}
-          <div className="w-5 h-5 text-[#1C1F23]/80 hover:text-[#1C1F23] dark:text-white/80 dark:hover:text-white cursor-pointer">
-            <Location size={20} color="currentColor" />
-          </div>
+          <Tooltip title={t('canvas.nodeActions.centerNode')} arrow={false}>
+            <div
+              className="w-5 h-5 text-[#1C1F23]/80 hover:text-[#1C1F23] dark:text-white/80 dark:hover:text-white cursor-pointer"
+              onClick={handleLocateNode}
+            >
+              <Location size={20} color="currentColor" />
+            </div>
+          </Tooltip>
 
           {/* Delete icon */}
-          <div className="w-5 h-5 text-[#F93920] hover:text-[#F93920]/80 cursor-pointer">
-            <Delete size={20} color="currentColor" />
-          </div>
+          {!readonly && (
+            <Tooltip title={t('common.delete')} arrow={false}>
+              <div
+                className="w-5 h-5 text-[#F93920] hover:text-[#F93920]/80 cursor-pointer"
+                onClick={handleDeleteNode}
+              >
+                <Delete size={20} color="currentColor" />
+              </div>
+            </Tooltip>
+          )}
 
           {/* Original ResourceItemAction */}
           <ResourceItemAction node={node} />
