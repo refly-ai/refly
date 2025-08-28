@@ -5,7 +5,7 @@ import { cn } from '@refly/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { ResourceItemAction } from '../share/resource-item-action';
 import type { CanvasNode } from '@refly/canvas-common';
-import { Refresh, X } from 'refly-icons';
+import { Refresh, X, Delete, Location, Doc1 } from 'refly-icons';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -98,7 +98,9 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
       <div className="flex items-center justify-between gap-2 px-2 py-1">
         <div className="flex items-center gap-1 flex-1 min-w-0">
           {/* Green X icon - Figma design: 10x9 pixels */}
-          <X size={12} color="#0E9F77" className="flex-shrink-0" />
+          <div className="text-[#0E9F77] dark:text-[#0E9F77] flex-shrink-0">
+            <X size={12} color="currentColor" />
+          </div>
 
           {/* doc02 text - Figma design: 12px font, semibold */}
           {isEditingTitle && !readonly ? (
@@ -108,7 +110,13 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
               onChange={(e) => setEditingTitle(e.target.value)}
               onBlur={handleTitleSave}
               onKeyDown={handleTitleKeyPress}
-              className="min-w-0 flex-1 !max-w-[200px] h-[20px] text-xs !bg-gray-100 rounded-lg !border-0 shadow-sm px-2 leading-[1.33]"
+              className="min-w-0 flex-1 !max-w-[200px] h-[20px] text-xs rounded-lg shadow-sm px-2 leading-[1.33]"
+              style={{
+                borderRadius: '8px',
+                border: '1px solid var(--refly-primary-default, #0E9F77)',
+                background: 'var(--refly-bg-control-z0, #F6F6F6)',
+                color: 'var(--refly-text-0, #1C1F23)',
+              }}
               size="small"
               autoFocus
             />
@@ -139,8 +147,8 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
           >
             <Refresh
               size={16}
-              color="rgba(28, 31, 35, 0.60)"
-              className="text-[var(--text-icon-refly-text-2,rgba(28,31,35,0.60))]"
+              color="currentColor"
+              className="text-[#1C1F23]/60 dark:text-white/60"
             />
           </Button>
         </Tooltip>
@@ -148,15 +156,13 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
 
       {/* Bottom row: Blue document icon + title text */}
       <div
-        className="flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
+        className="flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-[var(--tertiary---refly-tertiary-hover,rgba(0,0,0,0.08))] dark:hover:bg-[var(--tertiary---refly-tertiary-hover,rgba(255,255,255,0.08))] rounded-lg"
         onClick={() => onSelect(node, false)}
       >
-        {/* Blue document icon - Figma design: 20x20 pixels */}
-        <div className="w-5 h-5 bg-[#0062D6] rounded-md flex items-center justify-center flex-shrink-0">
-          {/* Document icon - Figma design: 20x20 container */}
-          <svg viewBox="0 0 20 20" fill="white" className="w-5 h-5">
-            <path d="M4 2h8l4 4v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-          </svg>
+        {/* Blue document icon - Figma design: 24x24 pixels */}
+        <div className="w-6 h-6 bg-[#0064FA] rounded-md flex items-center justify-center flex-shrink-0">
+          {/* Document icon - Figma design: 24x24 container */}
+          <Doc1 size={24} color="white" />
         </div>
 
         {/* Title text - Figma design: 14px font, normal weight */}
@@ -172,8 +178,19 @@ export const MyUploadItem = memo<MyUploadItemProps>(({ node, isActive, onSelect 
           {node?.data?.title ?? t('common.untitled')}
         </Text>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Actions - Figma design: location + delete icons with 12px gap */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Location icon */}
+          <div className="w-5 h-5 text-[#1C1F23]/80 hover:text-[#1C1F23] dark:text-white/80 dark:hover:text-white cursor-pointer">
+            <Location size={16} color="currentColor" />
+          </div>
+
+          {/* Delete icon */}
+          <div className="w-5 h-5 text-[#F93920] hover:text-[#F93920]/80 cursor-pointer">
+            <Delete size={16} color="currentColor" />
+          </div>
+
+          {/* Original ResourceItemAction */}
           <ResourceItemAction node={node} />
         </div>
       </div>
