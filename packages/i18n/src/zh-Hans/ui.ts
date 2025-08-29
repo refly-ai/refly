@@ -1427,6 +1427,8 @@ const translations = {
       layoutClusterDescription: '自动布局选中的节点下的所有子节点',
       centerNode: '定位节点',
       centerNodeDescription: '将选中的节点定位到画布中心',
+      createVariable: '该资源可转化为变量',
+      alreadyCreated: '该资源已被转化为变量，后续流程中将使用新的值替代。',
       editQuery: '编辑提问',
       editQueryDescription: '编辑选中的节点提问',
       duplicateDocument: '创建文档副本',

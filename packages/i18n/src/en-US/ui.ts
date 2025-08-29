@@ -1462,6 +1462,9 @@ const translations = {
       layoutClusterDescription: 'Automatically layout all sub-nodes of the selected node',
       centerNode: 'Center Node Position',
       centerNodeDescription: 'Center the selected node on the canvas',
+      createVariable: 'This resource can be converted to a variable',
+      alreadyCreated:
+        'This resource has already been converted to a variable and will be replaced with new values in subsequent workflows.',
       editQuery: 'Edit Query',
       editQueryDescription: 'Edit the query of the selected node',
       duplicateDocument: 'Duplicate Document',
