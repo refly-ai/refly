@@ -5,16 +5,32 @@ import {
   CanvasTransaction,
   CanvasData,
 } from '@refly/openapi-schema';
-import { genCanvasVersionId } from '@refly/utils';
+import { genCanvasVersionId, genStartID, genNodeID } from '@refly/utils';
 import deepmerge from 'deepmerge';
 import { deduplicateNodes, deduplicateEdges } from './utils';
 import { MAX_STATE_TX_COUNT, MAX_VERSION_AGE } from './constants';
 
 export const initEmptyCanvasState = (): CanvasState => {
+  // Create a start node for the initial canvas
+  const startNode: CanvasNode = {
+    id: genNodeID(),
+    type: 'start',
+    position: { x: 0, y: 0 },
+    data: {
+      title: 'Start',
+      entityId: genStartID(),
+    },
+    selected: false,
+    dragging: false,
+  };
+
   return {
     version: genCanvasVersionId(),
-    nodes: [],
+    nodes: [startNode],
     edges: [],
+    workflow: {
+      variables: [],
+    },
     transactions: [],
     history: [],
     createdAt: Date.now(),

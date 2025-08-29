@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { CanvasNode } from '@refly/canvas-common';
 import { CodeArtifactNodeProps } from './shared/types';
 import { CustomHandle } from './shared/custom-handle';
-import { getNodeCommonStyles } from './index';
+import { getNodeCommonStyles } from './shared/styles';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';

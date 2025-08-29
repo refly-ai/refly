@@ -86,7 +86,7 @@ const ActionDropdown = ({
 
   return (
     <Dropdown trigger={['click']} open={visible} onOpenChange={handleOpenChange} menu={{ items }}>
-      <Button type="text" icon={<More size={18} />} />
+      <Button type="text" icon={<More size={18} />} size="small" />
     </Dropdown>
   );
 };

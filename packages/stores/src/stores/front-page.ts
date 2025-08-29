@@ -4,6 +4,7 @@ import type {
   SkillTemplateConfig,
   SkillRuntimeConfig,
   MediaType,
+  GenericToolset,
   ModelInfo,
 } from '@refly/openapi-schema';
 
@@ -18,6 +19,7 @@ interface FrontPageState {
   query: string;
   canvasQueries: Record<string, string>; // Map canvasId to query
   selectedSkill: Skill | null;
+  selectedToolsets: GenericToolset[];
   tplConfig: SkillTemplateConfig | null;
   runtimeConfig: SkillRuntimeConfig | null;
   mediaQueryData: MediaQueryData | null;
@@ -25,6 +27,7 @@ interface FrontPageState {
   getQuery?: (canvasId?: string) => string;
   clearCanvasQuery?: (canvasId: string) => void;
   setSelectedSkill?: (skill: Skill | null) => void;
+  setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
   setTplConfig?: (tplConfig: SkillTemplateConfig | null) => void;
   setRuntimeConfig?: (runtimeConfig: SkillRuntimeConfig | null) => void;
   setMediaQueryData?: (mediaQueryData: MediaQueryData | null) => void;
@@ -35,6 +38,7 @@ const initialState: FrontPageState = {
   query: '',
   canvasQueries: {},
   selectedSkill: null,
+  selectedToolsets: [],
   tplConfig: null,
   runtimeConfig: { disableLinkParsing: true, enabledKnowledgeBase: false },
   mediaQueryData: null,
@@ -70,6 +74,7 @@ export const useFrontPageStore = create<FrontPageState>((set, get) => ({
     });
   },
   setSelectedSkill: (selectedSkill) => set({ selectedSkill }),
+  setSelectedToolsets: (selectedToolsets) => set({ selectedToolsets }),
   setTplConfig: (tplConfig) => {
     set({ tplConfig });
   },

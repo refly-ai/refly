@@ -4,13 +4,11 @@ import { Skill } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { useFrontPageStoreShallow } from '@refly/stores';
-import { SkillDisplay } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/skill-display';
 import {
   getSkillIcon,
   IconRight,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Form, Button } from 'antd';
-import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
+import { Button } from 'antd';
 import { Actions } from './action';
 import { useChatStoreShallow } from '@refly/stores';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
@@ -24,8 +22,6 @@ import { logEvent } from '@refly/telemetry-web';
 
 export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const { t, i18n } = useTranslation();
-  const [form] = Form.useForm();
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
   const templateLanguage = i18n.language;
@@ -42,16 +38,19 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
     selectedSkill,
     setQuery,
     setSelectedSkill,
-    tplConfig,
     setTplConfig,
     runtimeConfig,
     setRuntimeConfig,
     reset,
+    selectedToolsets,
+    setSelectedToolsets,
   } = useFrontPageStoreShallow((state) => ({
     query: state.query,
     selectedSkill: state.selectedSkill,
     setQuery: state.setQuery,
     setSelectedSkill: state.setSelectedSkill,
+    selectedToolsets: state.selectedToolsets,
+    setSelectedToolsets: state.setSelectedToolsets,
     tplConfig: state.tplConfig,
     setTplConfig: state.setTplConfig,
     runtimeConfig: state.runtimeConfig,
@@ -167,11 +166,6 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
               />
             ) : (
               <>
-                <SkillDisplay
-                  containCnt={7}
-                  selectedSkill={selectedSkill}
-                  setSelectedSkill={handleSelectSkill}
-                />
                 <div className="flex flex-col">
                   <ChatInput
                     readonly={false}
@@ -183,29 +177,6 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                     maxRows={6}
                     inputClassName="px-3 py-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-
-                  {selectedSkill?.configSchema?.items?.length > 0 && (
-                    <ConfigManager
-                      readonly={false}
-                      key={selectedSkill?.name}
-                      form={form}
-                      formErrors={formErrors}
-                      setFormErrors={setFormErrors}
-                      schema={selectedSkill?.configSchema}
-                      tplConfig={tplConfig}
-                      fieldPrefix="tplConfig"
-                      configScope="runtime"
-                      resetConfig={() => {
-                        const defaultConfig = selectedSkill?.tplConfig ?? {};
-                        setTplConfig(defaultConfig);
-                        form.setFieldValue('tplConfig', defaultConfig);
-                      }}
-                      onFormValuesChange={(_changedValues, allValues) => {
-                        setTplConfig(allValues.tplConfig);
-                      }}
-                    />
-                  )}
-
                   <Actions
                     query={query}
                     model={skillSelectedModel}
@@ -216,6 +187,8 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
                     handleAbort={handleAbort}
                     loading={isCreating}
                     isExecuting={isExecuting}
+                    selectedToolsets={selectedToolsets}
+                    onSelectedToolsetsChange={setSelectedToolsets}
                   />
                 </div>
               </>

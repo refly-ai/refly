@@ -98,7 +98,7 @@ const ActionDropdown = React.memo(
 
     return (
       <Dropdown trigger={['click']} open={visible} onOpenChange={handleOpenChange} menu={{ items }}>
-        <Button type="text" icon={<More size={18} />} />
+        <Button type="text" icon={<More size={18} />} size="small" />
       </Dropdown>
     );
   },
@@ -137,10 +137,10 @@ const ServerItem = React.memo(
     }, []);
 
     return (
-      <div className="mb-5 p-2 rounded-lg cursor-pointer hover:bg-refly-tertiary-hover">
+      <div className="mb-2 px-2 py-3 rounded-lg cursor-pointer hover:bg-refly-tertiary-hover">
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div className="flex-1 flex">
-            <div className="flex-shrink-0 h-10 w-10 rounded-md bg-refly-tertiary-default flex items-center justify-center mr-3">
+            <div className="flex-shrink-0 h-10 w-10 rounded-[8px] bg-refly-tertiary-default flex items-center justify-center mr-3">
               <Mcp size={24} />
             </div>
 
@@ -444,6 +444,7 @@ export const McpServerList: React.FC<McpServerListProps> = ({
 
       {/* Form Modal */}
       <Modal
+        centered
         title={
           editingServer ? t('settings.mcpServer.editServer') : t('settings.mcpServer.addServer')
         }

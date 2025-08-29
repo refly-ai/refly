@@ -36,10 +36,112 @@ tags:
     description: Search related endpoints
   - name: provider
     description: Provider management endpoints
+  - name: tool
+    description: Tool management endpoints
   - name: misc
     description: Miscellaneous endpoints
+  - name: workflow
+    description: Workflow management endpoints
 
 paths:
+  /variable-extraction/extract:
+    post:
+      tags:
+        - variable-extraction
+      summary: Extract variables from prompt
+      description: |
+        Unified variable extraction interface that supports two modes:
+        - 'direct': Directly update Canvas variables
+        - 'candidate': Return candidate solutions for user selection
+        
+        This endpoint analyzes natural language prompts and extracts workflow variables
+        based on the context of existing Canvas variables and content.
+      operationId: extractVariables
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractVariablesRequest'
+              candidate_mode:
+                summary: Candidate mode example
+                description: Example request for candidate mode
+                value:
+                  prompt: "Create a user registration form with username, email, and password fields"
+                  canvasId: "canvas-123"
+                  mode: "candidate"
+              direct_mode:
+                summary: Direct mode example
+                description: Example request for direct mode with session ID
+                value:
+                  prompt: "Generate an e-commerce product list page with pagination and search"
+                  canvasId: "canvas-456"
+                  mode: "direct"
+                  sessionId: "session-789"
+      responses:
+        '200':
+          description: Variables extracted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableExtractionResult'
+
+  /variable-extraction/generate-template:
+    post:
+      tags:
+        - variable-extraction
+      summary: Generate APP publish template
+      description: |
+        Generate a user intent template based on all original prompts and variables in a Canvas.
+        This endpoint analyzes the Canvas content and creates a template with placeholders
+        that can be used for APP publishing and user interaction.
+      operationId: generateAppTemplate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateAppTemplateRequest'
+            examples:
+              basic_request:
+                summary: Basic template generation request
+                description: Generate template for a canvas with basic configuration
+                value:
+                  canvasId: "canvas-123"
+      responses:
+        '200':
+          description: APP template generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppTemplateResult'
+            examples:
+              success_response:
+                summary: Successful template generation
+                description: Template with variables and metadata
+                value:
+                  templateContent: "Create a {{workflowType}} workflow with {{variableCount}} variables including {{primarySkill}} functionality"
+                  variables:
+                    - name: "workflowType"
+                      value: ["data-processing"]
+                      description: "Type of workflow to create"
+                      variableType: "option"
+                  metadata:
+                    extractedAt: 1703123456789
+                    variableCount: 5
+                    promptCount: 3
+                    canvasComplexity: "medium"
+                    workflowType: "data-processing"
+                    templateVersion: 1
+                    workflowTitle: "Data Processing Pipeline"
+                    workflowDescription: "Automated data processing workflow"
+                    estimatedExecutionTime: "5-10 minutes"
+                    skillTags: ["data-processing", "automation"]
+
   /mcp-server/list:
     get:
       tags:
@@ -57,6 +159,11 @@ paths:
         - name: enabled
           in: query
           description: Filter by enabled status
+          schema:
+            type: boolean
+        - name: isGlobal
+          in: query
+          description: Filter by isGlobal status. If not passed, return both global and user-specific MCP servers.
           schema:
             type: boolean
       security:
@@ -846,6 +953,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateCanvasVersionResponse'
+  /canvas/workflow/variables:
+    get:
+      tags:
+        - canvas
+      summary: Get workflow variables
+      description: Get workflow variables for a canvas
+      operationId: getWorkflowVariables
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowVariablesResponse'
+    post:
+      tags:
+        - canvas
+      summary: Update workflow variables
+      description: Update workflow variables for a canvas
+      operationId: updateWorkflowVariables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowVariablesRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkflowVariablesResponse'
   /template/list:
     get:
       tags:
@@ -2471,6 +2618,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetPilotSessionDetailResponse'
+  /workflow/initialize:
+    post:
+      tags:
+        - workflow
+      summary: Initialize workflow execution
+      description: Initialize a new workflow execution for a canvas
+      operationId: initializeWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitializeWorkflowRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitializeWorkflowResponse'
   /user/settings:
     get:
       tags:
@@ -2757,7 +2924,7 @@ paths:
             $ref: '#/components/schemas/ProviderCategory'
         - name: isGlobal
           in: query
-          description: Whether the provider is global
+          description: Whether the provider is global. If not passed, return both global and user-specific providers.
           schema:
             type: boolean
       responses:
@@ -2872,7 +3039,7 @@ paths:
             $ref: '#/components/schemas/ProviderCategory'
         - name: isGlobal
           in: query
-          description: Whether the provider item is global
+          description: Whether the provider item is global. If not passed, return both global and user-specific provider items.
           schema:
             type: boolean
       responses:
@@ -3008,6 +3175,120 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /tool/list:
+    get:
+      tags:
+        - tool
+      summary: List tool
+      description: List all available tools, including regular tools and MCP servers.
+      operationId: listTools
+      parameters:
+        - name: isGlobal
+          in: query
+          description: Whether the tool is global. If not passed, return both global and user-specific tools.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListToolsResponse'
+  /tool/inventory/list:
+    get:
+      tags:
+        - tool
+      summary: List toolset inventory
+      description: List all available toolsets in inventory, including uninstalled.
+      operationId: listToolsetInventory
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListToolsetInventoryResponse'
+  /tool/toolset/list:
+    get:
+      tags:
+        - tool
+      summary: List toolsets
+      description: List all installed toolsets
+      operationId: listToolsets
+      parameters:
+        - name: isGlobal
+          in: query
+          description: Whether the toolset is global. If not passed, return both global and user-specific toolsets.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListToolsetsResponse'
+  /tool/toolset/create:
+    post:
+      tags:
+        - tool
+      summary: Create regular tool
+      description: Create a new regular tool
+      operationId: createToolset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertToolsetRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertToolsetResponse'
+  /tool/toolset/update:
+    post:
+      tags:
+        - tool
+      summary: Update toolset
+      description: Update an existing toolset
+      operationId: updateToolset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertToolsetRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertToolsetResponse'
+  /tool/toolset/delete:
+    post:
+      tags:
+        - tool
+      summary: Delete toolset
+      description: Delete an existing toolset
+      operationId: deleteToolset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteToolsetRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /misc/scrape:
     post:
       tags:
@@ -3081,6 +3362,110 @@ paths:
 
 components:
   schemas:
+    ExtractVariablesRequest:
+      type: object
+      required:
+        - prompt
+        - canvasId
+        - mode
+      properties:
+        prompt:
+          type: string
+          description: Natural language prompt describing the desired functionality
+          minLength: 1
+          maxLength: 500
+          example: "Create a user registration form with username, email, and password fields"
+        canvasId:
+          type: string
+          description: Canvas ID to retrieve existing variable context and content
+          pattern: '^[a-zA-Z0-9_-]+$'
+          example: "canvas-123"
+        mode:
+          type: string
+          enum: [direct, candidate]
+          description: |
+            Processing mode for variable extraction:
+            - direct: Directly update Canvas variables and return results
+            - candidate: Return candidate solutions for user selection
+          example: "candidate"
+        sessionId:
+          type: string
+          description: |
+            Optional session ID for direct mode to check for existing candidate records.
+            When provided in direct mode, the system will check if there are
+            unapplied candidate records for this session.
+          example: "session-789"
+
+    VariableExtractionResult:
+      type: object
+      required:
+        - originalPrompt
+        - processedPrompt
+        - variables
+        - reusedVariables
+      properties:
+        originalPrompt:
+          type: string
+          description: Original natural language prompt from user input
+          example: "Create a user registration form with username, email, and password fields"
+        processedPrompt:
+          type: string
+          description: |
+            Processed prompt with variable references embedded.
+            Variables are represented using handlebars syntax (e.g., {{variableName}}).
+          example: "Create a user registration form with {{username}}, {{email}}, and {{password}} fields"
+        variables:
+          type: array
+          description: List of extracted workflow variables
+          items:
+            $ref: '#/components/schemas/WorkflowVariable'
+        reusedVariables:
+          type: array
+          description: List of variables that were reused from existing context
+          items:
+            $ref: '#/components/schemas/VariableReuse'
+        sessionId:
+          type: string
+          description: |
+            Session ID for candidate mode responses.
+            This ID can be used in subsequent direct mode requests
+            to apply the selected candidate solution.
+          example: "session-abc123"
+        extractionConfidence:
+          type: number
+          description: Confidence score for the extraction (0.0 to 1.0)
+          example: 0.78
+
+    VariableReuse:
+      type: object
+      description: Information about variables reused from existing context
+      required:
+        - detectedText
+        - reusedVariableName
+        - confidence
+        - reason
+      properties:
+        detectedText:
+          type: string
+          description: Text in the prompt that triggered variable reuse detection
+          example: "form"
+        reusedVariableName:
+          type: string
+          description: Name of the existing variable that was reused
+          example: "formType"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Confidence score for the reuse detection (0.0 to 1.0)
+          example: 0.78
+        reason:
+          type: string
+          description: Explanation of why this variable was reused
+          example: "Similar form structure detected in existing variables"
+
+
     McpServerType:
       type: string
       description: MCP Server type
@@ -3093,8 +3478,6 @@ components:
         - type
         - enabled
         - isGlobal
-        - createdAt
-        - updatedAt
       properties:
         name:
           type: string
@@ -3161,18 +3544,6 @@ components:
           type: string
           format: date-time
           description: MCP server update time
-
-    ListMcpServersData:
-      type: object
-      properties:
-        query:
-          type: object
-          properties:
-            type:
-              $ref: '#/components/schemas/McpServerType'
-            enabled:
-              type: boolean
-              description: Filter by enabled status
 
     ListMcpServersResponse:
       allOf:
@@ -4006,9 +4377,9 @@ components:
       type: string
       description: Data input mode
       enum:
-        - input
-        - inputNumber
-        - inputTextArea
+        - text
+        - textarea
+        - number
         - select
         - multiSelect
         - radio
@@ -4053,19 +4424,9 @@ components:
           description: Config input mode
           $ref: '#/components/schemas/InputMode'
         required:
-          type: object
-          description: Specifies whether this config is required and in which contexts
-          properties:
-            value:
-              type: boolean
-              description: Whether this config is required
-              default: false
-            configScope:
-              description: The contexts in which the requirement applies
-              $ref: '#/components/schemas/ConfigScope'
-          default:
-            value: false
-            scope: [runtime, template]
+          type: boolean
+          description: Specifies whether this config is required
+          default: false
         labelDict:
           type: object
           description: Config label (key is locale, value is label)
@@ -4780,6 +5141,12 @@ components:
         pilotSessionId:
           type: string
           description: Pilot session ID
+        workflowExecutionId:
+          type: string
+          description: Workflow execution ID for workflow context
+        workflowNodeExecutionId:
+          type: string
+          description: Workflow node execution ID for workflow context
         createdAt:
           type: string
           format: date-time
@@ -5397,6 +5764,15 @@ components:
             hash:
               type: string
               description: Canvas state hash (sha256), calculated from nodes and edges
+            workflow:
+              type: object
+              description: Workflow configuration
+              properties:
+                variables:
+                  type: array
+                  description: List of workflow variables
+                  items:
+                    $ref: '#/components/schemas/WorkflowVariable'
             transactions:
               type: array
               description: Canvas transaction list
@@ -6656,6 +7032,9 @@ components:
         query:
           type: string
           description: User query
+        originalQuery:
+          type: string
+          description: Original user query
         images:
           type: array
           description: Image list (storage keys)
@@ -6922,9 +7301,21 @@ components:
           description: Trigger ID
         selectedMcpServers:
           type: array
-          description: Selected MCP servers
+          description: Selected MCP servers (deprecated, use `tools` instead)
           items:
             type: string
+          deprecated: true
+        toolsets:
+          type: array
+          description: Selected toolsets
+          items:
+            $ref: '#/components/schemas/GenericToolset'
+        workflowExecutionId:
+          type: string
+          description: Workflow execution ID for workflow context
+        workflowNodeExecutionId:
+          type: string
+          description: Workflow node execution ID for workflow context
     InvokeSkillResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -7058,6 +7449,10 @@ components:
           prompt:
             type: string
             description: Text prompt for content generation
+          wait:
+            type: boolean
+            description: Whether to wait for the generation to complete
+            default: false
           resultId:
             type: string
             description: Media generation result ID
@@ -7081,12 +7476,11 @@ components:
               example: ar-g30e1b80b5g1itbemc0g5jj3
             outputUrl:
               type: string
-              format: uri
-              description: Media generation output URL
+              description: Media generation output URL (only available when `wait` is true)
             storageKey:
               type: string
-              description: Media generation output storage key
-            
+              description: Media generation output storage key (only available when `wait` is true)
+
     PilotStepStatus:
       type: string
       enum:
@@ -7928,9 +8322,6 @@ components:
         apiKey:
           type: string
           description: Provider API key (this will never be exposed to the frontend)
-        extraParams:
-          type: string
-          description: Provider-specific extra params (JSON string)
     LLMModelConfig:
       type: object
       description: Provider config for LLMs
@@ -8475,6 +8866,223 @@ components:
         itemId:
           type: string
           description: Provider item ID
+    ToolsetAuthType:
+      type: string
+      description: Toolset auth type
+      enum:
+        - credentials
+        - oauth
+    ToolDefinition:
+      type: object
+      required:
+        - name
+        - descriptionDict
+      properties:
+        name:
+          type: string
+          description: Tool name
+        descriptionDict:
+          type: object
+          additionalProperties: true
+          description: Tool description dictionary for humans
+    AuthPattern:
+      type: object
+      required:
+        - type
+        - pattern
+      properties:
+        type:
+          type: string
+          description: Auth pattern type
+          $ref: '#/components/schemas/ToolsetAuthType'
+        credentialItems:
+          type: array
+          description: Credential items, only for `credentials` type
+          items:
+            $ref: '#/components/schemas/DynamicConfigItem'
+    ToolsetDefinition:
+      type: object
+      required:
+        - key
+        - descriptionDict
+        - tools
+      properties:
+        key:
+          type: string
+          description: Toolset key
+        domain:
+          type: string
+          description: Toolset domain (used for display icon)
+        labelDict:
+          type: object
+          additionalProperties: true
+          description: Toolset label dictionary
+        descriptionDict:
+          type: object
+          additionalProperties: true
+          description: Toolset description dictionary for humans
+        tools:
+          type: array
+          description: Toolset tools
+          items:
+            $ref: '#/components/schemas/ToolDefinition'
+        requiresAuth:
+          type: boolean
+          description: Whether the toolset requires auth
+          default: false
+        authPatterns:
+          type: array
+          description: Toolset auth patterns
+          items:
+            $ref: '#/components/schemas/AuthPattern'
+        configItems:
+          type: array
+          description: Toolset config items
+          items:
+            $ref: '#/components/schemas/DynamicConfigItem'
+    ToolsetInstance:
+      type: object
+      required:
+        - toolsetId
+        - name
+      properties:
+        toolsetId:
+          type: string
+          description: Toolset ID
+        name:
+          type: string
+          description: Toolset name
+        key:
+          type: string
+          description: Toolset key
+        isGlobal:
+          type: boolean
+          description: Whether the toolset is global
+        enabled:
+          type: boolean
+          description: Whether the toolset is enabled
+        authType:
+          $ref: '#/components/schemas/ToolsetAuthType'
+          description: Toolset auth type
+        authData:
+          type: object
+          additionalProperties: true
+          description: Toolset auth data
+        config:
+          type: object
+          additionalProperties: true
+          description: Toolset config
+        definition:
+          description: Toolset definition
+          $ref: '#/components/schemas/ToolsetDefinition'
+        createdAt:
+          type: string
+          format: date-time
+          description: Toolset creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Toolset update timestamp
+    ListToolsetInventoryResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolsetDefinition'
+    ListToolsetsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolsetInstance'
+    UpsertToolsetRequest:
+      type: object
+      properties:
+        toolsetId:
+          type: string
+          description: Toolset ID (only for update)
+        name:
+          type: string
+          description: Toolset name
+        key:
+          type: string
+          description: Toolset key
+        enabled:
+          type: boolean
+          description: Whether the toolset is enabled
+        authType:
+          $ref: '#/components/schemas/ToolsetAuthType'
+          description: Toolset auth type
+        authData:
+          type: object
+          additionalProperties: true
+          description: Toolset auth data
+        config:
+          type: object
+          additionalProperties: true
+          description: Toolset config
+    UpsertToolsetResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ToolsetInstance'
+    GenericToolsetType:
+      type: string
+      enum:
+        - regular
+        - mcp
+    GenericToolset:
+      type: object
+      required:
+        - type
+        - id
+        - name
+      properties:
+        type:
+          $ref: '#/components/schemas/GenericToolsetType'
+          description: Toolset type
+        id:
+          type: string
+          description: Toolset ID (toolsetId for regular toolset, name for MCP toolset)
+        name:
+          type: string
+          description: Toolset name
+        toolset:
+          $ref: '#/components/schemas/ToolsetInstance'
+          description: Toolset detail
+        mcpServer:
+          $ref: '#/components/schemas/McpServerDTO'
+          description: MCP server
+        selectedTools:
+          type: array
+          description: Selected tools (used for skill invocation)
+          items:
+            type: string
+    ListToolsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/GenericToolset'
+    DeleteToolsetRequest:
+      type: object
+      required:
+        - toolsetId
+      properties:
+        toolsetId:
+          type: string
+          description: Toolset ID
     DocumentInterface:
       type: object
       properties:
@@ -8515,6 +9123,7 @@ components:
         - audio
         - mediaSkill
         - mediaSkillResponse
+        - start
     CanvasNodeData:
       type: object
       required:
@@ -8601,6 +9210,252 @@ components:
         type:
           type: string
           description: Edge type
+    InitializeWorkflowRequest:
+      type: object
+      required:
+        - canvasId
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to initialize workflow for
+          example: "canvas-123"
+        newCanvasId:
+          type: string
+          description: New canvas ID
+          example: "canvas-456"
+    InitializeWorkflowResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - workflowExecutionId
+              properties:
+                workflowExecutionId:
+                  type: string
+                  description: Workflow execution ID
+                  example: "we-abc123"
+    VariableType:
+      type: string
+      enum:
+        - text
+        - resource
+    ResourceValue:
+      type: object
+      required:
+        - name
+        - fileType
+        - storageKey
+      properties:
+        name:
+          type: string
+          description: Resource name
+        fileType:
+          type: string
+          description: Resource file type
+        storageKey:
+          type: string
+          description: Resource storage key
+    VariableValue:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          description: Variable type
+          $ref: '#/components/schemas/VariableType'
+        text:
+          type: string
+          description: Variable text value (for text type)
+        resource:
+          description: Variable resource value (for resource type)
+          $ref: '#/components/schemas/ResourceValue'
+    VariableResourceType:
+      type: string
+      enum:
+        - document
+        - image
+        - video
+        - audio
+    WorkflowVariable:
+      type: object
+      description: Workflow variable definition
+      required:
+        - name
+        - value
+        - variableId
+      properties:
+        variableId:
+          type: string
+          description: Variable ID, unique and readonly
+        name:
+          type: string
+          description: Variable name
+          example: "userName"
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariableValue'
+          description: Variable values
+        description:
+          type: string
+          description: Variable description
+          example: "用户姓名"
+        createdAt:
+          type: string
+          description: Variable created at
+          example: "2021-01-01T00:00:00.000Z"
+        updatedAt:
+          type: string
+          description: Variable updated at
+          example: "2021-01-01T00:00:00.000Z"
+        source:
+          type: string
+          description: Variable source
+          enum:
+            - startNode
+            - resourceLibrary
+        variableType:
+          type: string
+          description: Variable type
+          enum:
+            - string
+            - option
+            - resource
+        required:
+          type: boolean
+          description: Whether the variable is required
+          example: true
+        isSingle:
+          type: boolean
+          description: Whether the variable value is single (not multiple)
+          example: true
+        options:
+          type: array
+          items:
+            type: string
+          description: Variable options (only valid when variable type is option)
+          example: ["张三", "李四"]
+        resourceTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariableResourceType'
+          description: Supported resource types (only valid when variable type is resource)
+    GetWorkflowVariablesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of workflow variables
+              items:
+                $ref: '#/components/schemas/WorkflowVariable'
+    UpdateWorkflowVariablesRequest:
+      type: object
+      required:
+        - canvasId
+        - variables
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID
+        variables:
+          type: array
+          description: List of workflow variables
+          items:
+            $ref: '#/components/schemas/WorkflowVariable'
+    UpdateWorkflowVariablesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Updated list of workflow variables
+              items:
+                $ref: '#/components/schemas/WorkflowVariable'
+
+    GenerateAppTemplateRequest:
+      type: object
+      required:
+        - canvasId
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to generate template for
+          pattern: '^[a-zA-Z0-9_-]+$'
+          example: "canvas-123"
+
+    AppTemplateResult:
+      type: object
+      required:
+        - templateContent
+        - variables
+        - metadata
+      properties:
+        templateContent:
+          type: string
+          description: |
+            Template with placeholders for user interaction.
+            Variables are represented using handlebars syntax (e.g., {{variableName}}).
+          example: "Create a {{workflowType}} workflow with {{variableCount}} variables including {{primarySkill}} functionality"
+        variables:
+          type: array
+          description: List of related workflow variables used in the template
+          items:
+            $ref: '#/components/schemas/WorkflowVariable'
+        metadata:
+          type: object
+          required:
+            - extractedAt
+            - variableCount
+          properties:
+            extractedAt:
+              type: number
+              description: Template generation timestamp (for version control)
+              example: 1703123456789
+            variableCount:
+              type: number
+              description: Total variable count (for frontend statistics display)
+              example: 5
+            promptCount:
+              type: number
+              description: Original prompt count (for quality assessment)
+              example: 3
+            canvasComplexity:
+              type: string
+              description: Canvas complexity level
+              enum: [simple, medium, complex]
+              example: "medium"
+            workflowType:
+              type: string
+              description: Workflow type (for template classification and display)
+              example: "data-processing"
+            templateVersion:
+              type: number
+              description: Template version number (supports template iteration)
+              example: 1
+            workflowTitle:
+              type: string
+              description: Workflow title for display
+              example: "Data Processing Pipeline"
+            workflowDescription:
+              type: string
+              description: Workflow description
+              example: "Automated data processing workflow"
+            estimatedExecutionTime:
+              type: string
+              description: Estimated execution time
+              example: "5-10 minutes"
+            skillTags:
+              type: array
+              description: Skill tags for categorization
+              items:
+                type: string
+              example: ["data-processing", "automation"]
   securitySchemes:
     api_key:
       type: apiKey

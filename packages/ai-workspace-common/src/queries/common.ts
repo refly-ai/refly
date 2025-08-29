@@ -33,6 +33,7 @@ import {
   createShare,
   createSkillInstance,
   createSkillTrigger,
+  createToolset,
   createVerification,
   deleteCanvas,
   deleteDocument,
@@ -50,12 +51,15 @@ import {
   deleteShare,
   deleteSkillInstance,
   deleteSkillTrigger,
+  deleteToolset,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
   emailSignup,
   exportCanvas,
   exportDocument,
+  extractVariables,
+  generateAppTemplate,
   generateMedia,
   getActionResult,
   getAuthConfig,
@@ -77,7 +81,9 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getWorkflowVariables,
   importCanvas,
+  initializeWorkflow,
   invokeSkill,
   listActions,
   listCanvases,
@@ -100,6 +106,9 @@ import {
   listSkillInstances,
   listSkills,
   listSkillTriggers,
+  listTools,
+  listToolsetInventory,
+  listToolsets,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -133,6 +142,8 @@ import {
   updateSettings,
   updateSkillInstance,
   updateSkillTrigger,
+  updateToolset,
+  updateWorkflowVariables,
   upload,
   validateMcpServer,
 } from '../requests/services.gen';
@@ -260,6 +271,18 @@ export const UseGetCanvasTransactionsKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCanvasTransactionsKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowVariablesDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowVariables>
+>['data'];
+export type GetWorkflowVariablesQueryResult<
+  TData = GetWorkflowVariablesDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowVariablesKey = 'GetWorkflowVariables';
+export const UseGetWorkflowVariablesKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowVariablesKey, ...(queryKey ?? [clientOptions])];
 export type ListCanvasTemplatesDefaultResponse = Awaited<
   ReturnType<typeof listCanvasTemplates>
 >['data'];
@@ -614,6 +637,38 @@ export const UseListProviderItemOptionsKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useListProviderItemOptionsKey, ...(queryKey ?? [clientOptions])];
+export type ListToolsDefaultResponse = Awaited<ReturnType<typeof listTools>>['data'];
+export type ListToolsQueryResult<
+  TData = ListToolsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListToolsKey = 'ListTools';
+export const UseListToolsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListToolsKey, ...(queryKey ?? [clientOptions])];
+export type ListToolsetInventoryDefaultResponse = Awaited<
+  ReturnType<typeof listToolsetInventory>
+>['data'];
+export type ListToolsetInventoryQueryResult<
+  TData = ListToolsetInventoryDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListToolsetInventoryKey = 'ListToolsetInventory';
+export const UseListToolsetInventoryKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListToolsetInventoryKey, ...(queryKey ?? [clientOptions])];
+export type ListToolsetsDefaultResponse = Awaited<ReturnType<typeof listToolsets>>['data'];
+export type ListToolsetsQueryResult<
+  TData = ListToolsetsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListToolsetsKey = 'ListToolsets';
+export const UseListToolsetsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListToolsetsKey, ...(queryKey ?? [clientOptions])];
 export type ServeStaticDefaultResponse = Awaited<ReturnType<typeof serveStatic>>['data'];
 export type ServeStaticQueryResult<
   TData = ServeStaticDefaultResponse,
@@ -624,6 +679,18 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type ExtractVariablesMutationResult = Awaited<ReturnType<typeof extractVariables>>;
+export const useExtractVariablesKey = 'ExtractVariables';
+export const UseExtractVariablesKeyFn = (mutationKey?: Array<unknown>) => [
+  useExtractVariablesKey,
+  ...(mutationKey ?? []),
+];
+export type GenerateAppTemplateMutationResult = Awaited<ReturnType<typeof generateAppTemplate>>;
+export const useGenerateAppTemplateKey = 'GenerateAppTemplate';
+export const UseGenerateAppTemplateKeyFn = (mutationKey?: Array<unknown>) => [
+  useGenerateAppTemplateKey,
+  ...(mutationKey ?? []),
+];
 export type CreateMcpServerMutationResult = Awaited<ReturnType<typeof createMcpServer>>;
 export const useCreateMcpServerKey = 'CreateMcpServer';
 export const UseCreateMcpServerKeyFn = (mutationKey?: Array<unknown>) => [
@@ -754,6 +821,14 @@ export type CreateCanvasVersionMutationResult = Awaited<ReturnType<typeof create
 export const useCreateCanvasVersionKey = 'CreateCanvasVersion';
 export const UseCreateCanvasVersionKeyFn = (mutationKey?: Array<unknown>) => [
   useCreateCanvasVersionKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateWorkflowVariablesMutationResult = Awaited<
+  ReturnType<typeof updateWorkflowVariables>
+>;
+export const useUpdateWorkflowVariablesKey = 'UpdateWorkflowVariables';
+export const UseUpdateWorkflowVariablesKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateWorkflowVariablesKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCanvasTemplateMutationResult = Awaited<ReturnType<typeof createCanvasTemplate>>;
@@ -1028,6 +1103,12 @@ export const UseUpdatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
   useUpdatePilotSessionKey,
   ...(mutationKey ?? []),
 ];
+export type InitializeWorkflowMutationResult = Awaited<ReturnType<typeof initializeWorkflow>>;
+export const useInitializeWorkflowKey = 'InitializeWorkflow';
+export const UseInitializeWorkflowKeyFn = (mutationKey?: Array<unknown>) => [
+  useInitializeWorkflowKey,
+  ...(mutationKey ?? []),
+];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;
 export const useCreateCheckoutSessionKey = 'CreateCheckoutSession';
 export const UseCreateCheckoutSessionKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1110,6 +1191,24 @@ export type DeleteProviderItemMutationResult = Awaited<ReturnType<typeof deleteP
 export const useDeleteProviderItemKey = 'DeleteProviderItem';
 export const UseDeleteProviderItemKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteProviderItemKey,
+  ...(mutationKey ?? []),
+];
+export type CreateToolsetMutationResult = Awaited<ReturnType<typeof createToolset>>;
+export const useCreateToolsetKey = 'CreateToolset';
+export const UseCreateToolsetKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateToolsetKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateToolsetMutationResult = Awaited<ReturnType<typeof updateToolset>>;
+export const useUpdateToolsetKey = 'UpdateToolset';
+export const UseUpdateToolsetKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateToolsetKey,
+  ...(mutationKey ?? []),
+];
+export type DeleteToolsetMutationResult = Awaited<ReturnType<typeof deleteToolset>>;
+export const useDeleteToolsetKey = 'DeleteToolset';
+export const UseDeleteToolsetKeyFn = (mutationKey?: Array<unknown>) => [
+  useDeleteToolsetKey,
   ...(mutationKey ?? []),
 ];
 export type ScrapeMutationResult = Awaited<ReturnType<typeof scrape>>;

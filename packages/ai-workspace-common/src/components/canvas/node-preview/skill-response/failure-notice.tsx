@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { ActionResult } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { Button, message } from 'antd';
@@ -29,9 +29,11 @@ export const FailureNotice = ({ result, handleRetry }: FailureNoticeProps) => {
 
   const error = guessModelProviderError(result?.errors?.[0] ?? '');
 
-  const errDescription = useMemo(() => {
-    return `${errCode} ${errMsg} ${rawError ? `: ${String(rawError)}` : ''}`;
-  }, [errCode, errMsg, rawError]);
+  const errDescription = t('canvas.skillResponse.error.description', {
+    errCode,
+    errMsg,
+    rawError,
+  });
 
   const { data: balanceData, isSuccess: isBalanceSuccess } = useGetCreditBalance();
   const creditBalance = balanceData?.data?.creditBalance ?? 0;

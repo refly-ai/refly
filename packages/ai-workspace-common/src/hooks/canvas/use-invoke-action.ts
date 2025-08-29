@@ -26,7 +26,6 @@ import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@ref
 import { useFindWebsite } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-website';
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
-import { useLaunchpadStoreShallow } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import {
   useAbortAction,
@@ -553,10 +552,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
   const findWebsite = useFindWebsite();
   const findImages = useFindImages();
 
-  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
-    selectedMcpServers: state.selectedMcpServers,
-  }));
-
   const invokeAction = useCallback(
     async (payload: SkillNodeMeta, target: Entity) => {
       deletedNodeIdsRef.current = new Set();
@@ -574,6 +569,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         tplConfig = {},
         runtimeConfig = {},
         projectId,
+        selectedToolsets = [],
       } = payload;
 
       logEvent('model::invoke_trigger', Date.now(), {
@@ -632,7 +628,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         context,
         resultHistory,
         skillName: selectedSkill?.name,
-        selectedMcpServers,
+        toolsets: selectedToolsets,
         tplConfig,
         runtimeConfig,
         projectId,
@@ -692,7 +688,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         timeoutCleanup();
       };
     },
-    [setNodeDataByEntity, onUpdateResult, createTimeoutHandler, selectedMcpServers],
+    [setNodeDataByEntity, onUpdateResult, createTimeoutHandler],
   );
 
   return { invokeAction, abortAction };

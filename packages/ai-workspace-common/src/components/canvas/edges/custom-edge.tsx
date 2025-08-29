@@ -22,8 +22,19 @@ const DeleteButton = ({ handleDelete }: { handleDelete: (e: React.MouseEvent) =>
 };
 
 export const CustomEdge = memo(
-  ({ sourceX, sourceY, targetX, targetY, selected, data, id }: EdgeProps) => {
+  ({ sourceX, sourceY, targetX, targetY, selected, data, id, source, target }: EdgeProps) => {
     const edgeStyles = useEdgeStyles();
+    const { getNode } = useReactFlow();
+
+    // Check if the edge is connected to a start node
+    const isConnectedToStartNode = useCallback(() => {
+      if (!source || !target) return false;
+
+      const sourceNode = getNode(source);
+      const targetNode = getNode(target);
+
+      return sourceNode?.type === 'start' || targetNode?.type === 'start';
+    }, [source, target, getNode]);
 
     const [edgePath, labelX, labelY] = getBezierPath({
       sourceX,
@@ -170,7 +181,8 @@ export const CustomEdge = memo(
           </foreignObject>
         ) : null}
 
-        {selected && (
+        {/* Only show delete button if selected and not connected to start node */}
+        {selected && !isConnectedToStartNode() && (
           <foreignObject
             width={20}
             height={20}

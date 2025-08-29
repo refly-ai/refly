@@ -3,24 +3,24 @@ import { BaseError } from './base';
 export class UnknownError extends BaseError {
   code = 'E0000';
   messageDict = {
-    en: 'An unknown error has occurred. The Refly team is working quickly to resolve it. Please try again later.',
-    'zh-CN': '出现未知错误，Refly 团队正在火速处理中，请稍后重试。',
+    en: 'An unknown error has occurred. Please try again later.',
+    'zh-CN': '出现未知错误，请稍后重试。',
   };
 }
 
 export class ConnectionError extends BaseError {
   code = 'E0001';
   messageDict = {
-    en: 'Cannot connect to the Refly server, please try again later.',
-    'zh-CN': '无法连接到 Refly 服务器，请稍后重试。',
+    en: 'Cannot connect to the server, please try again later.',
+    'zh-CN': '无法连接到服务器，请稍后重试。',
   };
 }
 
 export class ParamsError extends BaseError {
   code = 'E0003';
   messageDict = {
-    en: 'System parameter error. The Refly team is working quickly to address it. Please try again later.',
-    'zh-CN': '系统参数错误，Refly 团队正在火速处理中，请稍后重试。',
+    en: 'System parameter error. Please try again later.',
+    'zh-CN': '系统参数错误，请稍后重试。',
   };
 }
 
@@ -288,6 +288,14 @@ export class ProviderMisconfigurationError extends BaseError {
   };
 }
 
+export class ToolsetNotFoundError extends BaseError {
+  code = 'E1020';
+  messageDict = {
+    en: 'Toolset not found, please refresh',
+    'zh-CN': '工具集不存在，请刷新重试',
+  };
+}
+
 export class StorageQuotaExceeded extends BaseError {
   code = 'E2001';
   messageDict = {
@@ -398,6 +406,7 @@ const errorMap = {
   E1017: McpServerNotFoundError,
   E1018: CanvasVersionNotFoundError,
   E1019: ProviderMisconfigurationError,
+  E1020: ToolsetNotFoundError,
   E2001: StorageQuotaExceeded,
   E2002: ModelUsageQuotaExceeded,
   E2003: ModelNotSupportedError,

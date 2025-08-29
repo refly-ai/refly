@@ -54,7 +54,6 @@ export const buildFinalRequestMessages = ({
   locale,
   chatHistory,
   messages,
-  needPrepareContext,
   context,
   images,
   originalQuery,
@@ -67,7 +66,6 @@ export const buildFinalRequestMessages = ({
   locale: string;
   chatHistory: BaseMessage[];
   messages: BaseMessage[];
-  needPrepareContext: boolean;
   context: string;
   images: string[];
   originalQuery: string;
@@ -76,8 +74,8 @@ export const buildFinalRequestMessages = ({
   modelInfo?: LLMModelConfig;
   customInstructions?: string;
 }) => {
-  const systemPrompt = module.buildSystemPrompt(locale, needPrepareContext);
-  const contextUserPrompt = module.buildContextUserPrompt?.(context, needPrepareContext) || '';
+  const systemPrompt = module.buildSystemPrompt(locale, !!context);
+  const contextUserPrompt = module.buildContextUserPrompt?.(context, !!context) || '';
   const userPrompt = module.buildUserPrompt({
     originalQuery,
     optimizedQuery,

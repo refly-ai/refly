@@ -1,4 +1,4 @@
-import { GraphState, IContext } from '../types';
+import { IContext } from '../types';
 import { countContextTokens, countSourcesTokens, checkHasContext } from './token';
 import {
   processSelectedContentWithSimilarity,
@@ -13,7 +13,6 @@ import { LLMModelConfig, SkillTemplateConfig, Source } from '@refly/openapi-sche
 import { uniqBy } from 'lodash';
 import { MAX_CONTEXT_RATIO, MAX_URL_SOURCES_RATIO } from './constants';
 import { safeStringifyJSON } from '@refly/utils';
-import { callMultiLingualWebSearch } from '../module/multiLingualSearch';
 import { callMultiLingualLibrarySearch } from '../module/multiLingualLibrarySearch';
 import { checkIsSupportedModel, checkModelContextLenSupport } from './model';
 import { SkillContextContentItemMetadata } from '../types';
@@ -38,7 +37,6 @@ export async function prepareContext(
   ctx: {
     config: SkillRunnableConfig;
     ctxThis: BaseSkill;
-    state: GraphState;
     tplConfig: SkillTemplateConfig;
   },
 ): Promise<{ contextStr: string; sources: Source[] }> {
@@ -74,24 +72,12 @@ export async function prepareContext(
     const isSupportedModel = checkIsSupportedModel(modelInfo);
 
     // 1. web search context
-    let processedWebSearchContext: IContext = {
+    const processedWebSearchContext: IContext = {
       contentList: [],
       resources: [],
       documents: [],
       webSearchSources: [],
     };
-    if (enableWebSearch) {
-      const preparedRes = await prepareWebSearchContext(
-        {
-          query,
-          modelInfo,
-          rewrittenQueries,
-          enableQueryRewrite: isSupportedModel,
-        },
-        ctx,
-      );
-      processedWebSearchContext = preparedRes.processedWebSearchContext;
-    }
     const webSearchContextTokens = countSourcesTokens(processedWebSearchContext.webSearchSources);
     remainingTokens -= webSearchContextTokens;
     ctx.ctxThis.engine.logger.log(`Web Search Context Tokens: ${webSearchContextTokens}`);
@@ -249,99 +235,6 @@ export async function prepareContext(
   }
 }
 
-export async function prepareWebSearchContext(
-  {
-    query,
-    modelInfo,
-    rewrittenQueries,
-    enableQueryRewrite = true,
-    enableTranslateQuery = false,
-    enableTranslateResult = false,
-  }: {
-    query: string;
-    modelInfo: LLMModelConfig;
-    rewrittenQueries?: string[];
-    enableQueryRewrite?: boolean;
-    enableTranslateQuery?: boolean;
-    enableTranslateResult?: boolean;
-  },
-  ctx: {
-    config: SkillRunnableConfig;
-    ctxThis: BaseSkill;
-    state: GraphState;
-    tplConfig: SkillTemplateConfig;
-  },
-): Promise<{
-  processedWebSearchContext: IContext;
-}> {
-  ctx.ctxThis.engine.logger.log('Prepare Web Search Context...');
-
-  // two searchMode
-  const enableDeepReasonWebSearch =
-    (ctx.tplConfig?.enableDeepReasonWebSearch?.value as boolean) || false;
-  const { locale = 'en' } = ctx?.config?.configurable || {};
-
-  let searchLimit = 10;
-  const enableRerank = true;
-  const searchLocaleList: string[] = ['en'];
-  let rerankRelevanceThreshold = 0.2;
-
-  if (enableDeepReasonWebSearch) {
-    searchLimit = 20;
-    enableTranslateQuery = true;
-    rerankRelevanceThreshold = 0.4;
-  }
-
-  const processedWebSearchContext: IContext = {
-    contentList: [],
-    resources: [],
-    documents: [],
-    webSearchSources: [],
-  };
-
-  // Call multiLingualWebSearch instead of webSearch
-  const searchResult = await callMultiLingualWebSearch(
-    {
-      modelInfo,
-      rewrittenQueries,
-      searchLimit,
-      searchLocaleList,
-      resultDisplayLocale: locale || 'auto',
-      enableRerank,
-      enableTranslateQuery,
-      enableTranslateResult,
-      rerankRelevanceThreshold,
-      translateConcurrencyLimit: 10,
-      webSearchConcurrencyLimit: 3,
-      batchSize: 5,
-      enableDeepReasonWebSearch,
-      enableQueryRewrite,
-    },
-    {
-      config: ctx.config,
-      ctxThis: ctx.ctxThis,
-      state: { ...ctx.state, query },
-    },
-  );
-
-  // Take only first 10 sources
-  const isModelContextLenSupport = checkModelContextLenSupport(modelInfo);
-  let webSearchSources = searchResult.sources || [];
-  if (!isModelContextLenSupport) {
-    webSearchSources = webSearchSources.slice(0, 10);
-  }
-
-  processedWebSearchContext.webSearchSources = webSearchSources;
-
-  ctx.ctxThis.engine.logger.log(
-    `Prepared Web Search Context successfully! ${safeStringifyJSON(processedWebSearchContext)}`,
-  );
-
-  return {
-    processedWebSearchContext,
-  };
-}
-
 export async function prepareMentionedContext(
   {
     query,
@@ -352,7 +245,7 @@ export async function prepareMentionedContext(
     mentionedContext: IContext;
     maxMentionedContextTokens: number;
   },
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<{
   mentionedContextTokens: number;
   processedMentionedContext: IContext;
@@ -425,7 +318,7 @@ export async function prepareRelevantContext(
     query: string;
     context: IContext;
   },
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<IContext> {
   const { contentList = [], resources = [], documents = [] } = context;
   const relevantContexts: IContext = {
@@ -595,7 +488,6 @@ export async function performLibrarySearchContext(
   ctx: {
     config: SkillRunnableConfig;
     ctxThis: BaseSkill;
-    state: GraphState;
     tplConfig: SkillTemplateConfig;
   },
 ): Promise<{
@@ -628,6 +520,7 @@ export async function performLibrarySearchContext(
   // Call multiLingualLibrarySearch
   const searchResult = await callMultiLingualLibrarySearch(
     {
+      query,
       rewrittenQueries,
       searchLimit,
       searchLocaleList,
@@ -646,7 +539,6 @@ export async function performLibrarySearchContext(
     {
       config: ctx.config,
       ctxThis: ctx.ctxThis,
-      state: { ...ctx.state, query },
     },
   );
 

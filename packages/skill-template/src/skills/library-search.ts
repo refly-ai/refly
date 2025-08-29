@@ -4,17 +4,11 @@ import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition } from '@refly/openapi-schema';
 import { GraphState } from '../scheduler/types';
-import { safeStringifyJSON } from '@refly/utils';
-
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
 
 // prompts
-import { prepareContext } from '../scheduler/utils/context';
 import { truncateSource } from '../scheduler/utils/truncator';
 import * as librarySearch from '../scheduler/module/librarySearch';
-import { processQuery } from '../scheduler/utils/queryProcessor';
-import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
-import { processContextUrls } from '../utils/url-processing';
 
 export class LibrarySearch extends BaseSkill {
   name = 'librarySearch';
@@ -42,8 +36,14 @@ export class LibrarySearch extends BaseSkill {
     state: GraphState,
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
-    const { messages = [], images = [] } = state;
-    const { locale = 'en', currentSkill, project, modelConfigMap } = config.configurable;
+    const { query, messages = [], images = [] } = state;
+    const {
+      locale = 'en',
+      currentSkill,
+      project,
+      modelConfigMap,
+      preprocessResult,
+    } = config.configurable;
 
     // Extract customInstructions from project if available
     const customInstructions = project?.customInstructions;
@@ -65,61 +65,13 @@ export class LibrarySearch extends BaseSkill {
       enableSearchWholeSpace: { value: true, label: 'Search Whole Space', displayValue: 'true' },
     };
 
-    // Use shared query processor
     const {
       optimizedQuery,
-      rewrittenQueries,
-      query,
+      context: contextStr,
+      sources,
       usedChatHistory,
-      remainingTokens,
-      mentionedContext,
-    } = await processQuery({
-      config,
-      ctxThis: this,
-      state,
-    });
-
-    // Extract URLs from the query and crawl them with optimized concurrent processing
-    const { sources: queryUrlSources, analysis } = await extractAndCrawlUrls(query, config, this, {
-      concurrencyLimit: 5, // Increase concurrent URL crawling limit
-      batchSize: 8, // Increase batch size for URL processing
-    });
-
-    this.engine.logger.log(`URL extraction analysis: ${safeStringifyJSON(analysis)}`);
-    this.engine.logger.log(`Extracted query URL sources count: ${queryUrlSources.length}`);
-
-    // Process URLs from frontend context if available
-    const contextUrls = config.configurable?.urls || [];
-    const contextUrlSources = await processContextUrls(contextUrls, config, this);
-
-    if (contextUrlSources.length > 0) {
-      this.engine.logger.log(`Added ${contextUrlSources.length} URL sources from context`);
-    }
-
-    // Combine URL sources from context and query extraction
-    const urlSources = [...contextUrlSources, ...(queryUrlSources || [])];
-    this.engine.logger.log(`Total combined URL sources: ${urlSources.length}`);
-
-    // Set current step
-    config.metadata.step = { name: 'librarySearch' };
-
-    // Prepare context with library search focus
-    const { contextStr, sources } = await prepareContext(
-      {
-        query: optimizedQuery,
-        rewrittenQueries,
-        mentionedContext,
-        maxTokens: remainingTokens,
-        enableMentionedContext: true,
-        urlSources, // Pass URL sources to the prepareContext function
-      },
-      {
-        config,
-        ctxThis: this,
-        state,
-        tplConfig: config.configurable.tplConfig,
-      },
-    );
+      rewrittenQueries,
+    } = preprocessResult;
 
     // Set current step for answer generation
     config.metadata.step = { name: 'answerQuestion' };
@@ -157,7 +109,6 @@ export class LibrarySearch extends BaseSkill {
       locale,
       chatHistory: usedChatHistory,
       messages,
-      needPrepareContext: true,
       context: contextStr,
       images,
       originalQuery: query,

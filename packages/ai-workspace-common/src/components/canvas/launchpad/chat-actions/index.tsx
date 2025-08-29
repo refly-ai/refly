@@ -1,10 +1,9 @@
 import { Button, Tooltip, Upload, Switch, FormInstance } from 'antd';
 import { memo, useMemo, useRef, useCallback } from 'react';
-import { IconImage } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LinkOutlined } from '@ant-design/icons';
-import { Send, Stop } from 'refly-icons';
+import { Attachment, Send, Stop } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
-import { useUserStoreShallow, useLaunchpadStore } from '@refly/stores';
+import { useUserStoreShallow } from '@refly/stores';
 import { getRuntime } from '@refly/utils/env';
 import { ModelSelector } from './model-selector';
 import { ModelInfo } from '@refly/openapi-schema';
@@ -12,8 +11,8 @@ import { cn, extractUrlsWithLinkify } from '@refly/utils/index';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { IContextItem } from '@refly/common-types';
-import { SkillRuntimeConfig } from '@refly/openapi-schema';
-import { McpSelectorPopover } from '../mcp-selector-panel';
+import { SkillRuntimeConfig, GenericToolset } from '@refly/openapi-schema';
+import { ToolSelectorPopover } from '../tool-selector-panel';
 import { logEvent } from '@refly/telemetry-web';
 
 export interface CustomAction {
@@ -36,6 +35,8 @@ interface ChatActionsProps {
   onUploadImage?: (file: File) => Promise<void>;
   contextItems: IContextItem[];
   isExecuting?: boolean;
+  selectedToolsets?: GenericToolset[];
+  setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
 }
 
 export const ChatActions = memo(
@@ -53,6 +54,8 @@ export const ChatActions = memo(
       handleAbort,
       contextItems,
       isExecuting = false,
+      selectedToolsets,
+      setSelectedToolsets,
     } = props;
     const { t } = useTranslation();
     const { canvasId, readonly } = useCanvasContext();
@@ -64,17 +67,16 @@ export const ChatActions = memo(
         contextItems?.some((item) => item?.type === 'resource' || item?.type === 'document') ??
         false;
 
-      const { selectedMcpServers } = useLaunchpadStore.getState();
-      const usedMcp = selectedMcpServers?.length > 0;
+      const usedTools = selectedToolsets?.length > 0;
 
       logEvent('canvas::node_execute', Date.now(), {
         node_type: 'askAI',
         model_name: model?.name ?? '',
         used_knowledge_base: usedKnowledgeBase,
-        used_mcp: usedMcp,
+        used_tools: usedTools,
       });
       handleSendMessage();
-    }, [contextItems, model, handleSendMessage]);
+    }, [contextItems, model, handleSendMessage, selectedToolsets]);
 
     const handleAbortClick = useCallback(() => {
       handleAbort();
@@ -148,13 +150,16 @@ export const ChatActions = memo(
               <Button
                 type="text"
                 size="small"
-                icon={<IconImage className="flex items-center" />}
+                icon={<Attachment className="flex items-center w-5 h-5" />}
                 className="h-7 w-7 flex items-center justify-center"
               />
             </Tooltip>
           </Upload>
 
-          <McpSelectorPopover />
+          <ToolSelectorPopover
+            selectedToolsets={selectedToolsets}
+            onSelectedToolsetsChange={setSelectedToolsets}
+          />
 
           {detectedUrls?.length > 0 && (
             <div className="flex items-center gap-1 ml-2">
@@ -213,7 +218,9 @@ export const ChatActions = memo(
       prevProps.onUploadImage === nextProps.onUploadImage &&
       prevProps.model === nextProps.model &&
       prevProps.customActions === nextProps.customActions &&
-      prevProps.isExecuting === nextProps.isExecuting
+      prevProps.isExecuting === nextProps.isExecuting &&
+      prevProps.selectedToolsets === nextProps.selectedToolsets &&
+      prevProps.setSelectedToolsets === nextProps.setSelectedToolsets
     );
   },
 );

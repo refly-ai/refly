@@ -42,13 +42,18 @@ interface StepRowTitleProps {
 const StepRowTitle = memo(({ node, isActive, onLocate, onDelete }: StepRowTitleProps) => {
   const { t } = useTranslation();
   const { readonly } = useCanvasContext();
+
+  const getNodeTitle = () => {
+    return node?.data?.title || t('common.untitled');
+  };
+
   return (
     <div className="w-full flex items-center justify-between gap-2">
       <Text
         ellipsis={{ tooltip: { placement: 'right' } }}
         className={`block flex-1 min-w-0 truncate ${isActive ? 'font-semibold' : ''}`}
       >
-        {node?.data?.title || t('common.untitled')}{' '}
+        {getNodeTitle()}{' '}
       </Text>
       <div className="steps-row-actions flex items-center gap-1 opacity-0 transition-opacity flex-shrink-0">
         <Tooltip title={t('canvas.nodeActions.centerNode')} arrow={false}>
@@ -109,6 +114,7 @@ export const StepList = memo(() => {
       if (!node?.id) {
         return;
       }
+
       deleteNode({
         id: node.id,
         type: node.type,
@@ -129,6 +135,7 @@ export const StepList = memo(() => {
     }
 
     // Filter nodes by type
+
     const skillResponseNodes = nodes.filter((node) => node.type === 'skillResponse');
     const groupNodes = nodes.filter((node) => node.type === 'group');
 
@@ -143,8 +150,16 @@ export const StepList = memo(() => {
       if (!searchKeyword?.trim()) {
         return true;
       }
+
+      const searchTerm = searchKeyword.toLowerCase();
+
+      // Check node title
       const title = node?.data?.title ?? '';
-      return title.toLowerCase().includes(searchKeyword.toLowerCase());
+      if (title.toLowerCase().includes(searchTerm)) {
+        return true;
+      }
+
+      return false;
     };
 
     // Build tree structure
@@ -164,7 +179,7 @@ export const StepList = memo(() => {
       return false;
     };
 
-    // Process group nodes first
+    // Process group nodes
     for (const groupNode of groupNodes) {
       const groupTreeNode: TreeNode = {
         key: groupNode.id,

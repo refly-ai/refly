@@ -6,20 +6,11 @@ import { z } from 'zod';
 // types
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, SkillRunnableConfig, baseStateGraphArgs } from '../base';
-import { CanvasEditConfig, safeStringifyJSON } from '@refly/utils';
-import {
-  Icon,
-  SkillInvocationConfig,
-  SkillTemplateConfigDefinition,
-  Source,
-} from '@refly/openapi-schema';
+import { CanvasEditConfig } from '@refly/utils';
+import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition } from '@refly/openapi-schema';
 // types
-import { GraphState, IContext } from '../scheduler/types';
+import { GraphState } from '../scheduler/types';
 // utils
-import { prepareContext } from '../scheduler/utils/context';
-import { analyzeQueryAndContext, preprocessQuery } from '../scheduler/utils/query-rewrite';
-import { truncateMessages, truncateSource } from '../scheduler/utils/truncator';
-import { countMessagesTokens, countToken, checkHasContext } from '../scheduler/utils/token';
 import { buildFinalRequestMessages, SkillPromptModule } from '../scheduler/utils/message';
 
 // prompts
@@ -30,8 +21,6 @@ import { HighlightSelection, SelectedRange } from '../scheduler/module/editDocum
 
 import { InPlaceEditType } from '@refly/utils';
 import { DocumentNotFoundError } from '@refly/errors';
-import { DEFAULT_MODEL_CONTEXT_LIMIT } from '../scheduler/utils/constants';
-import { checkModelContextLenSupport } from '../scheduler/utils/model';
 
 export class EditDoc extends BaseSkill {
   name = 'editDoc';
@@ -69,131 +58,17 @@ export class EditDoc extends BaseSkill {
     config: SkillRunnableConfig,
     module: SkillPromptModule,
   ) => {
-    const { messages = [], query: originalQuery, images = [] } = state;
-    const {
-      locale = 'en',
-      chatHistory = [],
-      modelConfigMap,
-      resources,
-      documents,
-      contentList,
-    } = config.configurable;
+    const { query, messages = [], images = [] } = state;
+    const { locale = 'en', modelConfigMap, preprocessResult } = config.configurable;
     const modelInfo = modelConfigMap.chat;
 
-    const { tplConfig } = config?.configurable || {};
-
-    let optimizedQuery = '';
-    let mentionedContext: IContext;
-    let context = '';
-    let sources: Source[] = [];
-
-    // preprocess query, ensure query is not too long
-    const query = preprocessQuery(originalQuery, {
-      config: config,
-      ctxThis: this,
-      state: state,
-      tplConfig,
-    });
-    optimizedQuery = query;
-    this.engine.logger.log(`preprocess query: ${query}`);
-
-    // preprocess chat history, ensure chat history is not too long
-    const usedChatHistory = truncateMessages(chatHistory);
-
-    const isModelContextLenSupport = checkModelContextLenSupport(modelInfo);
-
-    // check if there is any context
-    const hasContext = checkHasContext({
-      contentList,
-      resources,
-      documents,
-    });
-    this.engine.logger.log(`checkHasContext: ${hasContext}`);
-
-    const maxTokens = modelInfo.contextLimit || DEFAULT_MODEL_CONTEXT_LIMIT;
-    const queryTokens = countToken(query);
-    const chatHistoryTokens = countMessagesTokens(usedChatHistory);
-    const remainingTokens = maxTokens - queryTokens - chatHistoryTokens;
-    this.engine.logger.log(
-      `maxTokens: ${maxTokens}, queryTokens: ${queryTokens}, chatHistoryTokens: ${chatHistoryTokens}, remainingTokens: ${remainingTokens}`,
-    );
-
-    const LONG_QUERY_TOKENS_THRESHOLD = 100; // About 50-75 English words or 25-35 Chinese characters
-
-    // Optimize needRewriteQuery judgment logic
-    const needRewriteQuery =
-      queryTokens < LONG_QUERY_TOKENS_THRESHOLD && // Only rewrite short queries
-      (hasContext || chatHistoryTokens > 0); // Keep original context-related judgment
-
-    const needPrepareContext = hasContext && remainingTokens > 0;
-    this.engine.logger.log(
-      `needRewriteQuery: ${needRewriteQuery}, needPrepareContext: ${needPrepareContext}`,
-    );
-
-    if (needRewriteQuery) {
-      config.metadata.step = { name: 'analyzeContext' };
-      const analyedRes = await analyzeQueryAndContext(query, {
-        config,
-        ctxThis: this,
-        state: state,
-        tplConfig,
-      });
-      optimizedQuery = analyedRes.optimizedQuery;
-      mentionedContext = analyedRes.mentionedContext;
-    }
-
-    this.engine.logger.log(`optimizedQuery: ${optimizedQuery}`);
-    this.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
-
-    if (needPrepareContext) {
-      config.metadata.step = { name: 'prepareContext' };
-      const preparedRes = await prepareContext(
-        {
-          query: optimizedQuery,
-          mentionedContext,
-          maxTokens: remainingTokens,
-          enableMentionedContext: hasContext,
-        },
-        {
-          config: config,
-          ctxThis: this,
-          state: state,
-          tplConfig,
-        },
-      );
-
-      context = preparedRes.contextStr;
-      sources = preparedRes.sources;
-
-      this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
-
-      if (sources.length > 0) {
-        // Split sources into smaller chunks based on size and emit them separately
-        const truncatedSources = truncateSource(sources);
-        await this.emitLargeDataEvent(
-          {
-            data: truncatedSources,
-            buildEventData: (chunk, { isPartial, chunkIndex, totalChunks }) => ({
-              structuredData: {
-                // Build your event data here
-                sources: chunk,
-                isPartial,
-                chunkIndex,
-                totalChunks,
-              },
-            }),
-          },
-          config,
-        );
-      }
-    }
+    const { optimizedQuery, context, usedChatHistory } = preprocessResult;
 
     const requestMessages = buildFinalRequestMessages({
       module,
       locale,
       chatHistory: usedChatHistory,
       messages,
-      needPrepareContext: needPrepareContext && isModelContextLenSupport,
       context,
       images,
       originalQuery: query,

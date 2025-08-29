@@ -26,6 +26,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getWorkflowVariables,
   listActions,
   listCanvases,
   listCanvasTemplateCategories,
@@ -47,6 +48,9 @@ import {
   listSkillInstances,
   listSkills,
   listSkillTriggers,
+  listTools,
+  listToolsetInventory,
+  listToolsets,
   serveStatic,
 } from '../requests/services.gen';
 import {
@@ -67,6 +71,7 @@ import {
   GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
+  GetWorkflowVariablesData,
   ListCanvasesData,
   ListCanvasTemplatesData,
   ListCodeArtifactsData,
@@ -84,6 +89,8 @@ import {
   ListSharesData,
   ListSkillInstancesData,
   ListSkillTriggersData,
+  ListToolsData,
+  ListToolsetsData,
 } from '../requests/types.gen';
 import * as Common from './common';
 export const prefetchUseListMcpServers = (
@@ -181,6 +188,14 @@ export const prefetchUseGetCanvasTransactions = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetCanvasTransactionsKeyFn(clientOptions),
     queryFn: () => getCanvasTransactions({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWorkflowVariables = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowVariablesData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWorkflowVariablesKeyFn(clientOptions),
+    queryFn: () => getWorkflowVariables({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListCanvasTemplates = (
   queryClient: QueryClient,
@@ -438,6 +453,30 @@ export const prefetchUseListProviderItemOptions = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListProviderItemOptionsKeyFn(clientOptions),
     queryFn: () => listProviderItemOptions({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListTools = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListToolsData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListToolsKeyFn(clientOptions),
+    queryFn: () => listTools({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListToolsetInventory = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListToolsetInventoryKeyFn(clientOptions),
+    queryFn: () => listToolsetInventory({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListToolsets = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListToolsetsData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListToolsetsKeyFn(clientOptions),
+    queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseServeStatic = (
   queryClient: QueryClient,

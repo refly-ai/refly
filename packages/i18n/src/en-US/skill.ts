@@ -2,8 +2,8 @@ const translations = {
   agent: {
     name: 'Agent',
     description: 'Answer questions based on the context',
-    placeholder: 'Ask AI a question, press Ctrl + / to select skill...',
-    placeholderMac: 'Ask AI a question, press ⌘ + / to select skill...',
+    placeholder: 'Ask AI a question...',
+    placeholderMac: 'Ask AI a question...',
     steps: {
       analyzeQuery: {
         name: 'Query Analysis',
@@ -22,8 +22,8 @@ const translations = {
   commonQnA: {
     name: 'Question Answering',
     description: 'Answer questions based on the context',
-    placeholder: 'Ask AI a question, press Ctrl + / to select skill...',
-    placeholderMac: 'Ask AI a question, press ⌘ + / to select skill...',
+    placeholder: 'Ask AI a question...',
+    placeholderMac: 'Ask AI a question...',
     steps: {
       analyzeQuery: {
         name: 'Query Analysis',

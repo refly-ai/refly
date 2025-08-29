@@ -6,6 +6,7 @@ import { Edge, useReactFlow } from '@xyflow/react';
 import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { useFindThreadHistory } from './use-find-thread-history';
 import { genUniqueId } from '@refly/utils/id';
+import { CONTEXT_FILTER_NODE_TYPES } from '@refly/canvas-common';
 
 interface UseContextUpdateByEdgesProps {
   readonly: boolean;
@@ -33,7 +34,7 @@ export const useContextUpdateByEdges = ({
   const getGroupChildNodes = useCallback((groupId: string, allNodes: CanvasNode<any>[]) => {
     return allNodes.filter((node) => {
       const isInGroup = node.parentId === groupId;
-      return isInGroup && !['skill', 'group', 'mediaSkill'].includes(node.type);
+      return isInGroup && !CONTEXT_FILTER_NODE_TYPES.includes(node.type);
     });
   }, []);
 
@@ -56,7 +57,10 @@ export const useContextUpdateByEdges = ({
       // Check each edge and add new context items if they don't exist
       for (const edge of currentEdges) {
         const sourceNode = nodes.find((node) => node.id === edge.source);
-        if (!sourceNode?.data?.entityId || ['skill', 'mediaSkill'].includes(sourceNode?.type))
+        if (
+          !sourceNode?.data?.entityId ||
+          ['skill', 'mediaSkill', 'start'].includes(sourceNode?.type)
+        )
           continue;
 
         const entityId = sourceNode.data.entityId;

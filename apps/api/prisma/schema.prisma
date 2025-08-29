@@ -101,61 +101,67 @@ model User {
 
 model ActionResult {
   /// Primary key
-  pk             BigInt       @id @default(autoincrement())
+  pk                      BigInt       @id @default(autoincrement())
   /// Action result id
-  resultId       String       @map("result_id")
+  resultId                String       @map("result_id")
   /// Action result version
-  version        Int          @default(0) @map("version")
+  version                 Int          @default(0) @map("version")
   /// Action type
-  type           String       @default("skill") @map("type")
+  type                    String       @default("skill") @map("type")
   /// UID
-  uid            String       @default("") @map("uid")
+  uid                     String       @default("") @map("uid")
   /// Result title
-  title          String       @default("") @map("title")
+  title                   String       @default("") @map("title")
   /// Used model tier
-  tier           String?      @default("") @map("tier")
+  tier                    String?      @default("") @map("tier")
   /// Used model
-  modelName      String?      @map("model_name")
+  modelName               String?      @map("model_name")
   /// Action target type
-  targetType     String?      @map("target_type")
+  targetType              String?      @map("target_type")
   /// Action target ID
-  targetId       String?      @map("target_id")
+  targetId                String?      @map("target_id")
   /// Action metadata
-  actionMeta     String?      @map("action_meta")
+  actionMeta              String?      @map("action_meta")
   /// Input (JSON)
-  input          String?      @map("input")
+  input                   String?      @map("input")
   /// Context (JSON of `SkillContext`)
-  context        String?      @map("context")
+  context                 String?      @map("context")
   /// Skill template config (JSON)
-  tplConfig      String?      @map("tpl_config")
+  tplConfig               String?      @map("tpl_config")
   /// Skill runtime config (JSON)
-  runtimeConfig  String?      @map("runtime_config")
+  runtimeConfig           String?      @map("runtime_config")
   /// Result history (JSON array of `ActionResult`)
-  history        String?      @map("history")
+  history                 String?      @map("history")
   /// Errors
-  errors         String?      @map("errors")
+  errors                  String?      @map("errors")
+  /// Toolsets (JSON array of `GenericToolset`)
+  toolsets                String?      @map("toolsets")
   /// Locale setting
-  locale         String?      @default("") @map("locale")
+  locale                  String?      @default("") @map("locale")
   /// Project id
-  projectId      String?      @map("project_id")
+  projectId               String?      @map("project_id")
   /// Action result status
-  status         ActionStatus @default(waiting) @map("status")
+  status                  ActionStatus @default(waiting) @map("status")
   /// Duplicate from another action result id
-  duplicateFrom  String?      @map("duplicate_from")
+  duplicateFrom           String?      @map("duplicate_from")
   /// Provider item id
-  providerItemId String?      @map("provider_item_id")
+  providerItemId          String?      @map("provider_item_id")
   /// Pilot step id
-  pilotStepId    String?      @map("pilot_step_id")
+  pilotStepId             String?      @map("pilot_step_id")
   /// Pilot session id
-  pilotSessionId String?      @map("pilot_session_id")
+  pilotSessionId          String?      @map("pilot_session_id")
+  /// Workflow execution id
+  workflowExecutionId     String?      @map("workflow_execution_id")
+  /// Workflow node execution id
+  workflowNodeExecutionId String?      @map("workflow_node_execution_id")
   /// Media generation output URL
-  outputUrl      String?      @map("output_url")
+  outputUrl               String?      @map("output_url")
   /// Media result storage key
-  storageKey     String?      @map("storage_key")
+  storageKey              String?      @map("storage_key")
   /// Create timestamp
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt               DateTime     @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt               DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@unique([resultId, version])
   @@index([targetType, targetId])
@@ -264,6 +270,86 @@ model PilotStep {
   @@map("pilot_steps")
 }
 
+model WorkflowExecution {
+  /// Primary key
+  pk            BigInt   @id @default(autoincrement())
+  /// Workflow execution id
+  executionId   String   @unique @map("execution_id")
+  /// UID
+  uid           String   @map("uid")
+  /// Canvas id
+  canvasId      String   @map("canvas_id")
+  /// New canvas id
+  newCanvasId   String?  @map("new_canvas_id")
+  /// Workflow title
+  title         String   @map("title")
+  /// Workflow status: init, executing, finished, failed
+  status        String   @default("init") @map("status")
+  /// Total nodes count
+  totalNodes    Int      @default(0) @map("total_nodes")
+  /// Executed nodes count
+  executedNodes Int      @default(0) @map("executed_nodes")
+  /// Failed nodes count
+  failedNodes   Int      @default(0) @map("failed_nodes")
+  /// Create timestamp
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([uid, canvasId])
+  @@map("workflow_executions")
+}
+
+model WorkflowNodeExecution {
+  /// Primary key
+  pk              BigInt             @id @default(autoincrement())
+  /// Node execution id
+  nodeExecutionId String             @unique @map("node_execution_id")
+  /// Workflow execution id
+  executionId     String             @map("execution_id")
+  /// Canvas node id
+  nodeId          String             @map("node_id")
+  /// New canvas node id
+  newNodeId       String?            @map("new_node_id")
+  /// Node type
+  nodeType        String             @map("node_type")
+  /// Node entity id
+  entityId        String             @map("entity_id")
+  /// New node entity id
+  newEntityId     String?            @map("new_entity_id")
+  /// Node title
+  title           String             @map("title")
+  /// Node status: waiting, executing, finish, failed
+  status          WorkflowNodeStatus @default(waiting) @map("status")
+  /// Execution progress (0-100)
+  progress        Int                @default(0) @map("progress")
+  /// Parent node ids (JSON array)
+  parentNodeIds   String             @default("[]") @map("parent_node_ids")
+  /// Child node ids (JSON array)
+  childNodeIds    String             @default("[]") @map("child_node_ids")
+  /// Execution start time
+  startTime       DateTime?          @map("start_time") @db.Timestamptz()
+  /// Execution end time
+  endTime         DateTime?          @map("end_time") @db.Timestamptz()
+  /// Error message if failed
+  errorMessage    String?            @map("error_message")
+  /// Create timestamp
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([executionId, nodeId])
+  @@index([executionId, status])
+  @@map("workflow_node_executions")
+}
+
+enum WorkflowNodeStatus {
+  waiting
+  executing
+  finish
+  failed
+}
+
 enum ActionStatus {
   waiting
   executing
@@ -370,6 +456,8 @@ model Canvas {
   Resource          Resource[]
   Document          Document[]
   CodeArtifact      CodeArtifact[]
+  /// Workflow configuration (JSON)
+  workflow          String?        @map("workflow")
 
   @@index([uid, updatedAt])
   @@map("canvases")
@@ -1368,6 +1456,69 @@ model PageVersion {
   @@map("page_versions")
 }
 
+model Toolset {
+  /// Primary key
+  pk            Int       @id @default(autoincrement())
+  /// Toolset ID
+  toolsetId     String    @unique @map("toolset_id")
+  /// Whether the toolset is global
+  isGlobal      Boolean   @default(false) @map("is_global")
+  /// UID
+  uid           String?   @map("uid")
+  /// Toolset name
+  name          String    @map("name")
+  /// Toolset key
+  key           String    @map("key")
+  /// Toolset auth type (credentials, oauth)
+  authType      String?   @map("auth_type")
+  /// Toolset auth data
+  authData      String?   @map("auth_data")
+  /// Toolset config
+  config        String?   @map("config")
+  /// Whether the toolset is enabled
+  enabled       Boolean   @default(true) @map("enabled")
+  /// Toolset credit billing
+  creditBilling String?   @map("credit_billing")
+  /// Create timestamp
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Deletion timestamp
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([uid, isGlobal, deletedAt])
+  @@map("toolsets")
+}
+
+model ToolCallResult {
+  /// Primary key
+  pk        Int       @id @default(autoincrement())
+  /// Call ID
+  callId    String    @unique @map("call_id")
+  /// UID
+  uid       String    @map("uid")
+  /// Toolset ID
+  toolsetId String    @map("toolset_id")
+  /// Tool name
+  toolName  String    @map("tool_name")
+  /// Input data
+  input     String    @map("input")
+  /// Output data
+  output    String    @map("output")
+  /// Error message
+  error     String?   @map("error")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Deletion timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([toolsetId, deletedAt])
+  @@index([toolName, deletedAt])
+  @@map("tool_call_results")
+}
+
 model McpServer {
   /// Primary key
   pk        Int       @id @default(autoincrement())
@@ -1406,4 +1557,45 @@ model McpServer {
   @@index([uid, deletedAt])
   @@index([isGlobal])
   @@map("mcp_servers")
+}
+
+/// Variable extraction history for workflow 3.0
+model VariableExtractionHistory {
+  /// Primary key
+  pk                   BigInt    @id @default(autoincrement())
+  /// Session ID (required for candidate mode, optional for direct mode)
+  sessionId            String?   @unique @map("session_id")
+  /// Canvas ID
+  canvasId             String    @map("canvas_id")
+  /// User ID
+  uid                  String    @map("uid")
+  /// Trigger type: agent | askAI_direct | askAI_candidate
+  triggerType          String    @map("trigger_type")
+  /// Extraction mode: direct | candidate
+  extractionMode       String    @map("extraction_mode")
+  /// Original user input prompt
+  originalPrompt       String    @map("original_prompt")
+  /// Processed prompt template
+  processedPrompt      String?   @map("processed_prompt")
+  /// Extracted variables (JSON array)
+  extractedVariables   String    @map("extracted_variables")
+  /// Reused variables information (JSON array)
+  reusedVariables      String    @default("[]") @map("reused_variables")
+  /// LLM extraction confidence (0.00-1.00)
+  extractionConfidence Decimal?  @map("extraction_confidence") @db.Decimal(3, 2)
+  /// LLM model used
+  llmModel             String?   @map("llm_model")
+  /// Status: pending(candidate) | applied(already applied) | expired(expired)
+  status               String    @default("pending") @map("status")
+  /// Applied timestamp (when candidate mode converts to direct mode)
+  appliedAt            DateTime? @map("applied_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([canvasId, uid, createdAt])
+  @@index([triggerType, extractionMode])
+  @@index([extractionConfidence])
+  @@map("variable_extraction_history")
 }

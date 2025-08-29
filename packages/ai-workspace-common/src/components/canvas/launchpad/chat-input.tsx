@@ -1,10 +1,9 @@
-import { AutoComplete, AutoCompleteProps, Input } from 'antd';
+import { Input } from 'antd';
 import { memo, useRef, useMemo, useState, useCallback, forwardRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { useSearchStoreShallow } from '@refly/stores';
 import type { Skill } from '@refly/openapi-schema';
-import { useSkillStoreShallow } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
 import { useListSkills } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -21,7 +20,6 @@ interface ChatInputProps {
   inputClassName?: string;
   maxRows?: number;
   minRows?: number;
-  autoCompletionPlacement?: 'bottomLeft' | 'bottomRight' | 'topLeft' | 'topRight';
   handleSendMessage: () => void;
   handleSelectSkill?: (skill: Skill) => void;
   onUploadImage?: (file: File) => Promise<void>;
@@ -38,11 +36,9 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       setQuery,
       selectedSkillName,
       inputClassName,
-      autoCompletionPlacement,
       maxRows,
       minRows,
       handleSendMessage,
-      handleSelectSkill,
       onUploadImage,
       onUploadMultipleImages,
       onFocus,
@@ -65,9 +61,6 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
 
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
-    }));
-    const { setSelectedSkill } = useSkillStoreShallow((state) => ({
-      setSelectedSkill: state.setSelectedSkill,
     }));
     const [showSkillSelector, setShowSkillSelector] = useState(false);
 
@@ -124,7 +117,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       }));
     }, [t, skills]);
 
-    const [options, setOptions] = useState<AutoCompleteProps['options']>([]);
+    const [options, setOptions] = useState<any[]>([]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -220,52 +213,6 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       [setQuery],
     );
 
-    const handleSearchListConfirm = useCallback(
-      (value: string) => {
-        setOptions([]);
-        setShowSkillSelector(false);
-        const skill = skills.find((skill) => skill.name === value);
-        if (!skill) {
-          return;
-        }
-        if (handleSelectSkill) {
-          handleSelectSkill(skill);
-        } else {
-          setQuery('');
-          setSelectedSkill(skill);
-        }
-      },
-      [skills, setSelectedSkill, handleSelectSkill, setQuery],
-    );
-
-    const filterOption = useCallback(
-      (inputValue: string, option: any) => {
-        // Ctrl+/ was just pressed, show all options
-        if (showSkillSelector && inputValue === query) {
-          return true;
-        }
-
-        const searchVal = inputValue.toLowerCase();
-        const isMatch =
-          !searchVal ||
-          option.value.toString().toLowerCase().includes(searchVal) ||
-          option.textLabel.toLowerCase().includes(searchVal);
-
-        if (isMatch) {
-          hasMatchedOptions.current = true;
-        }
-        return isMatch;
-      },
-      [showSkillSelector, query],
-    );
-
-    const onSelect = useCallback(
-      (value: string) => {
-        if (!readonly) handleSearchListConfirm(value);
-      },
-      [readonly, handleSearchListConfirm],
-    );
-
     // Handle focus event and propagate it upward, then move cursor to end
     const handleFocus = useCallback(() => {
       setIsFocused(true);
@@ -355,80 +302,35 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
             <div className="text-green-600 text-sm font-medium">{t('common.dropImageHere')}</div>
           </div>
         )}
-        {showSkillSelector && !readonly ? (
-          <AutoComplete
-            className="h-full"
-            autoFocus={!readonly}
-            open={true}
-            options={options}
-            popupMatchSelectWidth={false}
-            placement={autoCompletionPlacement}
-            value={query}
-            disabled={readonly}
-            filterOption={filterOption}
-            onSelect={onSelect}
-          >
-            <TextArea
-              style={{ paddingLeft: 0, paddingRight: 0 }}
-              ref={inputRef}
-              autoFocus={!readonly}
-              disabled={readonly}
-              onFocus={handleFocus}
-              onBlur={() => {
-                setIsFocused(false);
-                setTimeout(() => {
-                  setShowSkillSelector(false);
-                }, 100);
-              }}
-              value={query ?? ''}
-              onChange={handleInputChange}
-              onKeyDownCapture={handleKeyDown}
-              onPaste={handlePaste}
-              className={cn(
-                '!m-0 !bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
-                inputClassName,
-                readonly && 'cursor-not-allowed',
-                isFocused ? 'nodrag nopan nowheel cursor-text' : '!cursor-pointer',
-              )}
-              placeholder={placeholder ?? getPlaceholder(selectedSkillName)}
-              autoSize={{
-                minRows: 1,
-                maxRows: 6,
-              }}
-              data-cy="chat-input"
-            />
-          </AutoComplete>
-        ) : (
-          <TextArea
-            ref={inputRef}
-            style={{ paddingLeft: 0, paddingRight: 0 }}
-            autoFocus={!readonly}
-            disabled={readonly}
-            onFocus={handleFocus}
-            onBlur={() => {
-              setIsFocused(false);
-              setTimeout(() => {
-                setShowSkillSelector(false);
-              }, 100);
-            }}
-            value={query ?? ''}
-            onChange={handleInputChange}
-            onKeyDownCapture={handleKeyDown}
-            onPaste={handlePaste}
-            className={cn(
-              '!m-0 !bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
-              inputClassName,
-              readonly && 'cursor-not-allowed',
-              isFocused ? 'nodrag nopan nowheel cursor-text' : '!cursor-pointer',
-            )}
-            placeholder={placeholder ?? getPlaceholder(selectedSkillName)}
-            autoSize={{
-              minRows: minRows ?? 1,
-              maxRows: maxRows ?? 6,
-            }}
-            data-cy="chat-input"
-          />
-        )}
+        <TextArea
+          ref={inputRef}
+          style={{ paddingLeft: 0, paddingRight: 0, paddingTop: '4px', paddingBottom: '4px' }}
+          autoFocus={!readonly}
+          disabled={readonly}
+          onFocus={handleFocus}
+          onBlur={() => {
+            setIsFocused(false);
+            setTimeout(() => {
+              setShowSkillSelector(false);
+            }, 100);
+          }}
+          value={query ?? ''}
+          onChange={handleInputChange}
+          onKeyDownCapture={handleKeyDown}
+          onPaste={handlePaste}
+          className={cn(
+            '!m-0 !bg-transparent outline-none box-border border-none resize-none focus:outline-none focus:shadow-none focus:border-none',
+            inputClassName,
+            readonly && 'cursor-not-allowed',
+            isFocused ? 'nodrag nopan nowheel cursor-text' : '!cursor-pointer',
+          )}
+          placeholder={placeholder ?? getPlaceholder(selectedSkillName)}
+          autoSize={{
+            minRows: minRows ?? 2,
+            maxRows: maxRows ?? 6,
+          }}
+          data-cy="chat-input"
+        />
       </div>
     );
   },

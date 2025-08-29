@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Agent, Chat, Media } from 'refly-icons';
 import { ChatMode } from '@refly/stores';
+import cn from 'classnames';
 
 interface ChatModeSelectorProps {
   chatMode: ChatMode;
@@ -80,7 +81,7 @@ export const ChatModeSelector = memo(
             value: 'media',
           },
         ]}
-        className={className}
+        className={cn('p-0.5', className)}
       />
     );
   },

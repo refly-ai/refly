@@ -284,6 +284,12 @@ export async function loadMcpTools(
                 tool.name,
                 client,
               ) as DynamicStructuredToolInput['func'],
+              metadata: {
+                name: tool.name,
+                type: 'mcp',
+                toolsetKey: serverName,
+                toolsetName: serverName,
+              },
             });
             return dst;
           } catch (error) {

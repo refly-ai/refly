@@ -2,7 +2,7 @@ import { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useReactFlow, Position } from '@xyflow/react';
 import { CanvasNode } from '@refly/canvas-common';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
-import { getNodeCommonStyles } from './index';
+import { getNodeCommonStyles } from './shared/styles';
 import { CustomHandle } from './shared/custom-handle';
 import { NodeHeader } from './shared/node-header';
 import {

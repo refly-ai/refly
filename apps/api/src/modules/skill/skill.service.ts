@@ -59,6 +59,7 @@ import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
 import { SkillInvokerService } from './skill-invoker.service';
 import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
+import { ToolService } from '../tool/tool.service';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -86,6 +87,7 @@ export class SkillService implements OnModuleInit {
     private readonly credit: CreditService,
     private readonly codeArtifactService: CodeArtifactService,
     private readonly providerService: ProviderService,
+    private readonly toolService: ToolService,
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
     @Optional()
@@ -533,6 +535,82 @@ export class SkillService implements OnModuleInit {
       }
     }
 
+    // Validate toolsets if provided
+    if (param.toolsets && param.toolsets.length > 0) {
+      await this.toolService.validateSelectedToolsets(user, param.toolsets);
+    }
+
+    // Validate workflowExecutionId and workflowNodeExecutionId if provided
+    const workflowExecutionId = param.workflowExecutionId;
+    const workflowNodeExecutionId = param.workflowNodeExecutionId;
+
+    if (workflowExecutionId) {
+      // Validate workflowExecutionId exists and belongs to the current user
+      const workflowExecution = await this.prisma.workflowExecution.findUnique({
+        where: { executionId: workflowExecutionId },
+      });
+
+      if (!workflowExecution) {
+        // Create failed action result record before throwing error
+        await this.createFailedActionResult(
+          resultId,
+          uid,
+          `Workflow execution ${workflowExecutionId} not found`,
+          param,
+        );
+        throw new ParamsError(`workflow execution ${workflowExecutionId} not found`);
+      }
+
+      if (workflowExecution.uid !== uid) {
+        // Create failed action result record before throwing error
+        await this.createFailedActionResult(
+          resultId,
+          uid,
+          `Workflow execution ${workflowExecutionId} does not belong to current user`,
+          param,
+        );
+        throw new ParamsError(
+          `workflow execution ${workflowExecutionId} does not belong to current user`,
+        );
+      }
+    }
+
+    if (workflowNodeExecutionId) {
+      // Validate workflowNodeExecutionId exists and belongs to the current user
+      const workflowNodeExecution = await this.prisma.workflowNodeExecution.findUnique({
+        where: { nodeExecutionId: workflowNodeExecutionId },
+      });
+
+      if (!workflowNodeExecution) {
+        // Create failed action result record before throwing error
+        await this.createFailedActionResult(
+          resultId,
+          uid,
+          `Workflow node execution ${workflowNodeExecutionId} not found`,
+          param,
+        );
+        throw new ParamsError(`workflow node execution ${workflowNodeExecutionId} not found`);
+      }
+
+      // Check if the associated workflow execution belongs to the current user
+      const associatedWorkflowExecution = await this.prisma.workflowExecution.findUnique({
+        where: { executionId: workflowNodeExecution.executionId },
+      });
+
+      if (!associatedWorkflowExecution || associatedWorkflowExecution.uid !== uid) {
+        // Create failed action result record before throwing error
+        await this.createFailedActionResult(
+          resultId,
+          uid,
+          `Workflow node execution ${workflowNodeExecutionId} does not belong to current user`,
+          param,
+        );
+        throw new ParamsError(
+          `workflow node execution ${workflowNodeExecutionId} does not belong to current user`,
+        );
+      }
+    }
+
     param.skillName ||= 'commonQnA';
     let skill = this.skillInventory.find((s) => s.name === param.skillName);
     if (!skill) {
@@ -597,7 +675,7 @@ export class SkillService implements OnModuleInit {
               type: 'skill',
               tier: providerItem?.tier ?? '',
               status: 'executing',
-              title: param.input.query,
+              title: param.input.query || param.input.originalQuery,
               targetId: param.target?.entityId,
               targetType: param.target?.entityType,
               modelName: modelConfigMap.chat.modelId,
@@ -613,7 +691,10 @@ export class SkillService implements OnModuleInit {
               tplConfig: JSON.stringify(param.tplConfig),
               runtimeConfig: JSON.stringify(param.runtimeConfig),
               history: JSON.stringify(purgeResultHistory(param.resultHistory)),
+              toolsets: JSON.stringify(param.toolsets),
               providerItemId: providerItem.itemId,
+              workflowExecutionId: param.workflowExecutionId,
+              workflowNodeExecutionId: param.workflowNodeExecutionId,
             },
           }),
           // Delete existing step data
@@ -633,7 +714,7 @@ export class SkillService implements OnModuleInit {
           tier: providerItem?.tier ?? '',
           targetId: param.target?.entityId,
           targetType: param.target?.entityType,
-          title: param.input?.query,
+          title: param.input?.query || param.input?.originalQuery,
           modelName: modelConfigMap.chat.modelId,
           type: 'skill',
           status: 'executing',
@@ -648,7 +729,10 @@ export class SkillService implements OnModuleInit {
           tplConfig: JSON.stringify(param.tplConfig),
           runtimeConfig: JSON.stringify(param.runtimeConfig),
           history: JSON.stringify(purgeResultHistory(param.resultHistory)),
+          toolsets: JSON.stringify(param.toolsets),
           providerItemId: providerItem.itemId,
+          workflowExecutionId: param.workflowExecutionId,
+          workflowNodeExecutionId: param.workflowNodeExecutionId,
         },
       });
       data.result = actionResultPO2DTO(result);

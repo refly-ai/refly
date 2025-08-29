@@ -22,6 +22,7 @@ import { genActionResultID } from '@refly/utils/id';
 import { convertContextItemsToNodeFilters } from '@refly/canvas-common';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useReactFlow } from '@xyflow/react';
+import { GenericToolset } from '@refly/openapi-schema';
 
 // Memoized Header Component
 const NodeHeader = memo(
@@ -76,10 +77,20 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
   const { deleteElements } = useReactFlow();
 
   const { entityId, metadata = {} } = node?.data ?? {};
-  const { query, selectedSkill, modelInfo, contextItems = [], tplConfig, runtimeConfig } = metadata;
+  const {
+    query,
+    selectedSkill,
+    modelInfo,
+    contextItems = [],
+    tplConfig,
+    runtimeConfig,
+    selectedToolsets: metadataSelectedToolsets = [],
+  } = metadata;
   const skill = useFindSkill(selectedSkill?.name ?? '');
 
   const [localQuery, setLocalQuery] = useState(query);
+  const [selectedToolsets, setLocalSelectedToolsets] =
+    useState<GenericToolset[]>(metadataSelectedToolsets);
 
   // Update local state when query changes from external sources
   useEffect(() => {
@@ -87,6 +98,13 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
       setLocalQuery(query);
     }
   }, [query]);
+
+  // Update local state when selectedToolsets changes from external sources
+  useEffect(() => {
+    if (metadataSelectedToolsets !== selectedToolsets) {
+      setLocalSelectedToolsets(metadataSelectedToolsets);
+    }
+  }, [metadataSelectedToolsets, selectedToolsets]);
 
   const { skillSelectedModel, setSkillSelectedModel } = useChatStoreShallow((state) => ({
     skillSelectedModel: state.skillSelectedModel,
@@ -216,6 +234,7 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
               status: 'executing',
               contextItems,
               tplConfig,
+              selectedToolsets,
             },
           },
           position: node.position,
@@ -223,7 +242,7 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
         convertContextItemsToNodeFilters(contextItems),
       );
     });
-  }, [node, deleteElements, invokeAction, canvasId, addNode, form]);
+  }, [node, deleteElements, invokeAction, canvasId, addNode, form, selectedToolsets]);
 
   const handleImageUpload = async (file: File) => {
     const nodeData = await handleUploadImage(file, canvasId);
@@ -244,6 +263,14 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
       setNodeDataByEntity({ entityId, type: 'skill' }, { metadata: { tplConfig: config } });
     },
     [entityId, setNodeDataByEntity],
+  );
+
+  const setSelectedToolsets = useCallback(
+    (toolsets: GenericToolset[]) => {
+      setLocalSelectedToolsets(toolsets);
+      updateNodeData({ metadata: { selectedToolsets: toolsets } });
+    },
+    [updateNodeData],
   );
 
   if (!node) return null;
@@ -303,6 +330,8 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
         contextItems={contextItems}
         runtimeConfig={runtimeConfig ?? {}}
         setRuntimeConfig={setRuntimeConfig}
+        selectedToolsets={selectedToolsets}
+        setSelectedToolsets={setSelectedToolsets}
       />
     </div>
   );

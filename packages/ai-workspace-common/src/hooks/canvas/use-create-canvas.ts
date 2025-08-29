@@ -18,7 +18,6 @@ export const useCreateCanvas = ({
 }: { source?: string; projectId?: string; afterCreateSuccess?: () => void } = {}) => {
   const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
-
   const createCanvas = async (canvasTitle: string) => {
     setIsCreating(true);
     const { data, error } = await getClient().createCanvas({
@@ -32,6 +31,7 @@ export const useCreateCanvas = ({
     if (!data?.success || error) {
       return;
     }
+
     return data?.data?.canvasId;
   };
 

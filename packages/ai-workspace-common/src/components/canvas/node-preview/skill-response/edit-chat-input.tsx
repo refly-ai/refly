@@ -4,7 +4,10 @@ import { useMemo, memo, useState, useCallback, useEffect, useRef } from 'react';
 import { SelectedSkillHeader } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/selected-skill-header';
 import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
-import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
+import {
+  ChatActions,
+  CustomAction,
+} from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
 import {
   ModelInfo,
   Skill,
@@ -20,8 +23,13 @@ import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-up
 import { notification, Form } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import { useUpdateNodeQuery } from '@refly-packages/ai-workspace-common/hooks/use-update-node-query';
+import { useActionResultStoreShallow } from '@refly/stores';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { Undo } from 'refly-icons';
+import { GenericToolset } from '@refly/openapi-schema';
+import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
-
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 
 interface EditChatInputProps {
@@ -39,6 +47,9 @@ interface EditChatInputProps {
   readonly?: boolean;
   tplConfig?: SkillTemplateConfig;
   runtimeConfig?: SkillRuntimeConfig;
+  onQueryChange?: (newQuery: string) => void;
+  selectedToolsets?: GenericToolset[];
+  setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
 }
 
 const EditChatInputComponent = (props: EditChatInputProps) => {
@@ -54,6 +65,9 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
     readonly,
     tplConfig: initialTplConfig,
     runtimeConfig,
+    onQueryChange,
+    selectedToolsets,
+    setSelectedToolsets,
   } = props;
 
   const { getEdges, getNodes, deleteElements, addEdges } = useReactFlow();
@@ -62,6 +76,7 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   const [editModelInfo, setEditModelInfo] = useState<ModelInfo>(modelInfo);
   const [editRuntimeConfig, setEditRuntimeConfig] = useState<SkillRuntimeConfig>(runtimeConfig);
   const contextItemsRef = useRef(editContextItems);
+  const setNodeDataByEntity = useSetNodeDataByEntity();
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { t } = useTranslation();
@@ -72,12 +87,43 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
 
   const [form] = Form.useForm();
   const { getFinalProjectId } = useAskProject();
+  const updateNodeQuery = useUpdateNodeQuery();
+
+  // Get action result from store to access original input.query
+  const { resultMap } = useActionResultStoreShallow((state) => ({
+    resultMap: state.resultMap,
+  }));
   const { addNode } = useAddNode();
 
   const hideSelectedSkillHeader = useMemo(
     () => !localActionMeta || localActionMeta?.name === 'commonQnA' || !localActionMeta?.name,
     [localActionMeta],
   );
+
+  // Function to get original query from action result
+  const getOriginalQuery = useCallback(async (): Promise<string> => {
+    // First try to get from store
+    const actionResult = resultMap[resultId];
+    if (actionResult?.input?.query) {
+      return actionResult.input.query;
+    }
+
+    // Fallback to API call if not in store
+    try {
+      const { data, error } = await getClient().getActionResult({
+        query: { resultId },
+      });
+
+      if (!error && data?.success && data?.data?.input?.query) {
+        return data.data.input.query;
+      }
+    } catch (error) {
+      console.error('Failed to fetch action result:', error);
+    }
+
+    // Final fallback to current query prop
+    return query;
+  }, [resultMap, resultId, query]);
 
   const { canvasId, readonly: canvasReadonly } = useCanvasContext();
   const { invokeAction } = useInvokeAction({ source: 'edit-chat-input' });
@@ -134,6 +180,23 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   useEffect(() => {
     contextItemsRef.current = editContextItems;
   }, [editContextItems]);
+
+  // Real-time query update to canvas and parent component
+  useEffect(() => {
+    // Find current node to get nodeId
+    const nodes = getNodes();
+    const currentNode = nodes.find((node) => node.data?.entityId === resultId);
+
+    if (currentNode && editQuery !== query) {
+      // Update the query in real-time to MinIO
+      updateNodeQuery(editQuery, resultId, currentNode.id, 'skillResponse');
+
+      // Notify parent component of the query change
+      if (onQueryChange) {
+        onQueryChange(editQuery);
+      }
+    }
+  }, [editQuery, resultId, query, getNodes, updateNodeQuery, onQueryChange]);
 
   // Sync internal state with props changes
   useEffect(() => {
@@ -236,12 +299,18 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
         selectedSkill: skill,
         tplConfig,
         projectId: finalProjectId,
+        selectedToolsets,
       },
       {
         entityId: canvasId,
         entityType: 'canvas',
       },
     );
+    setNodeDataByEntity(
+      { entityId: resultId, type: 'skillResponse' },
+      { metadata: { selectedToolsets } },
+    );
+
     setEditMode(false);
   }, [
     resultId,
@@ -261,6 +330,8 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
     t,
     form,
     getFinalProjectId,
+    selectedToolsets,
+    setNodeDataByEntity,
     addNode,
   ]);
 
@@ -318,6 +389,41 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
       setEditContextItems([...editContextItems, ...newContextItems]);
     }
   };
+
+  const customActions: CustomAction[] = useMemo(
+    () => [
+      {
+        icon: <Undo className="flex items-center" />,
+        title: t('copilot.chatActions.discard'),
+        onClick: async () => {
+          setEditMode(false);
+
+          // Get original query from action result
+          const originalQuery = await getOriginalQuery();
+          setEditQuery(originalQuery);
+
+          setEditContextItems(contextItems);
+          setEditModelInfo(modelInfo);
+          setEditRuntimeConfig(runtimeConfig);
+
+          // Reset form values
+          if (initialTplConfig) {
+            form.setFieldValue('tplConfig', initialTplConfig);
+          }
+        },
+      },
+    ],
+    [
+      t,
+      setEditMode,
+      contextItems,
+      modelInfo,
+      runtimeConfig,
+      form,
+      initialTplConfig,
+      getOriginalQuery,
+    ],
+  );
 
   if (!enabled) {
     return null;
@@ -402,6 +508,9 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
         onUploadImage={handleImageUpload}
         contextItems={editContextItems}
         form={form}
+        customActions={customActions}
+        selectedToolsets={selectedToolsets}
+        setSelectedToolsets={setSelectedToolsets}
       />
     </div>
   );
@@ -416,7 +525,10 @@ const arePropsEqual = (prevProps: EditChatInputProps, nextProps: EditChatInputPr
     prevProps.readonly === nextProps.readonly &&
     prevProps.contextItems === nextProps.contextItems &&
     prevProps.actionMeta?.name === nextProps.actionMeta?.name &&
-    prevProps.tplConfig === nextProps.tplConfig
+    prevProps.tplConfig === nextProps.tplConfig &&
+    prevProps.onQueryChange === nextProps.onQueryChange &&
+    prevProps.selectedToolsets === nextProps.selectedToolsets &&
+    prevProps.setSelectedToolsets === nextProps.setSelectedToolsets
   );
 };
 

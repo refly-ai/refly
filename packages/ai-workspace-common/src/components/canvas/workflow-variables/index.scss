@@ -1,0 +1,61 @@
+.create-variables-modal {
+  .ant-form-item {
+    margin-top: 20px;
+    margin-bottom: 0;
+    &:first-child {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+  }
+
+  .required-checkbox {
+    .ant-checkbox {
+        .ant-checkbox-inner {
+            border-radius: 3px;
+        }
+    }
+  }
+
+  .ant-form-item-label {
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 16px;
+    }
+  }
+
+  .ant-form-item-control-input {
+    .ant-input-affix-wrapper {
+        background: var(--refly-bg-control-z0);
+        border-color: transparent;
+        &:hover {
+            background: var(--refly-tertiary-hover);
+        }
+    }
+
+    .ant-input-affix-wrapper-focused {
+        background: var(--refly-bg-control-z1);
+        border-color: var(--refly-primary-default);
+        &:hover {
+            background: var(--refly-bg-control-z1);
+        }
+    }
+  }
+
+  .file-upload-container {
+    .ant-upload {
+      padding: 0;
+      width: 100%;
+    }
+  }
+
+  .resource-type-select {
+    .ant-select-selector {
+      background: var(--refly-bg-control-z0) !important;
+      border-color: transparent !important;
+      &:hover {
+        background: var(--refly-tertiary-hover) !important;
+      }
+    }
+  }
+}

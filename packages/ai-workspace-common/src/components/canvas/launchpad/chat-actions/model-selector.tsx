@@ -87,7 +87,7 @@ const SelectedModelDisplay = memo(
           open && 'border-refly-Card-Border',
         )}
       >
-        <ModelIcon model={model.name} type={'color'} size={16} />
+        <ModelIcon model={model.name} type={'color'} size={18} />
         <Paragraph
           className={cn(
             'truncate leading-5 !mb-0',
@@ -359,7 +359,7 @@ export const ModelSelector = memo(
     // Custom dropdown overlay component
     const dropdownOverlay = useMemo(
       () => (
-        <div className="w-[260px] bg-refly-bg-content-z2 rounded-lg border-[1px] border-solid border-refly-Card-Border">
+        <div className="w-[260px] bg-refly-bg-content-z2 rounded-lg border-[1px] border-solid border-refly-Card-Border shadow-refly-m">
           {/* Category Switch */}
           <div className="p-2 pb-0">
             <Segmented

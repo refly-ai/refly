@@ -21,8 +21,11 @@ export enum IDPrefix {
   SKILL_JOB = 'sj-',
   PILOT_SESSION = 'ps-',
   PILOT_STEP = 'pst-',
+  WORKFLOW_EXECUTION = 'we-',
+  WORKFLOW_NODE_EXECUTION = 'wne-',
   PROVIDER = 'pr-',
   PROVIDER_ITEM = 'pi-',
+  TOOLSET = 'ts-',
   CONTENT_SELECTOR = 'cs-',
   MEMO = 'm-',
   VERIFICATION_SESSION = 'vs-',
@@ -37,6 +40,10 @@ export enum IDPrefix {
   CREDIT_RECHARGE = 'cr-',
   CREDIT_USAGE = 'cu-',
   CREDIT_DEBT = 'cd-',
+  NODE = 'node-',
+  VARIABLE_EXTRACTION_SESSION = 'ves-',
+  START = 'start-',
+  VARIABLE = 'var-',
 }
 
 export function genUID(): string {
@@ -61,6 +68,18 @@ export function genPilotSessionID(): string {
 
 export function genPilotStepID(): string {
   return IDPrefix.PILOT_STEP + createId();
+}
+
+export function genVariableExtractionSessionID(): string {
+  return IDPrefix.VARIABLE_EXTRACTION_SESSION + createId();
+}
+
+export function genWorkflowExecutionID(): string {
+  return IDPrefix.WORKFLOW_EXECUTION + createId();
+}
+
+export function genWorkflowNodeExecutionID(): string {
+  return IDPrefix.WORKFLOW_NODE_EXECUTION + createId();
 }
 
 export function genActionResultID(): string {
@@ -127,6 +146,10 @@ export function genProviderItemID(): string {
   return IDPrefix.PROVIDER_ITEM + createId();
 }
 
+export function genToolsetID(): string {
+  return IDPrefix.TOOLSET + createId();
+}
+
 export function genSkillID(): string {
   return IDPrefix.SKILL + createId();
 }
@@ -153,6 +176,10 @@ export function genProjectID(): string {
 
 export function genMcpServerID(): string {
   return IDPrefix.MCP_SERVER + createId();
+}
+
+export function genVariableID(): string {
+  return IDPrefix.VARIABLE + createId();
 }
 
 export const genUniqueId = () => {
@@ -190,4 +217,12 @@ export const genCreditUsageId = () => {
 export function genCreditDebtId() {
   const timestamp = Date.now();
   return `${IDPrefix.CREDIT_DEBT}${timestamp}-${createId()}`;
+}
+
+export function genStartID(): string {
+  return IDPrefix.START + createId();
+}
+
+export function genNodeID(): string {
+  return IDPrefix.NODE + createId();
 }

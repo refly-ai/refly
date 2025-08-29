@@ -15,6 +15,7 @@ import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
+  QUEUE_SYNC_WORKFLOW,
 } from '../../utils';
 import { LabelModule } from '../label/label.module';
 import { SkillProcessor, CheckStuckActionsProcessor } from '../skill/skill.processor';
@@ -30,6 +31,7 @@ import { SkillEngineService } from './skill-engine.service';
 import { SkillInvokerService } from './skill-invoker.service';
 import { isDesktop } from '../../utils/runtime';
 import { ActionModule } from '../action/action.module';
+import { ToolModule } from '../tool/tool.module';
 
 @Module({
   imports: [
@@ -46,6 +48,7 @@ import { ActionModule } from '../action/action.module';
     MiscModule,
     CodeArtifactModule,
     ProviderModule,
+    ToolModule,
     McpServerModule,
     MediaGeneratorModule,
     ...(isDesktop()
@@ -65,6 +68,7 @@ import { ActionModule } from '../action/action.module';
           BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
           BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
           BullModule.registerQueue({ name: QUEUE_SYNC_PILOT_STEP }),
+          BullModule.registerQueue({ name: QUEUE_SYNC_WORKFLOW }),
         ]),
   ],
   providers: [

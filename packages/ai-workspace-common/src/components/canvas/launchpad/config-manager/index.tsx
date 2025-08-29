@@ -96,7 +96,7 @@ const ConfigItem = React.memo(
       props.onValueChange(field, val, displayValue);
     };
 
-    if (item.inputMode === 'input') {
+    if (item.inputMode === 'text') {
       return (
         <Input
           ref={inputRef}
@@ -114,7 +114,7 @@ const ConfigItem = React.memo(
       );
     }
 
-    if (item.inputMode === 'inputTextArea') {
+    if (item.inputMode === 'textarea') {
       return (
         <TextArea
           ref={inputRef}
@@ -136,7 +136,7 @@ const ConfigItem = React.memo(
       );
     }
 
-    if (item.inputMode === 'inputNumber') {
+    if (item.inputMode === 'number') {
       return (
         <InputNumber
           ref={inputRef}
@@ -279,9 +279,7 @@ export const ConfigManager = React.memo(
 
     const isConfigItemRequired = useCallback(
       (schemaItem: DynamicConfigItem) => {
-        return (
-          schemaItem?.required?.value && schemaItem?.required?.configScope.includes(configScope)
-        );
+        return schemaItem?.required;
       },
       [configScope],
     );
@@ -513,10 +511,7 @@ export const ConfigManager = React.memo(
                       label={
                         <div className="config-manager__item-label">
                           <div>
-                            {item.required?.value &&
-                              item.required?.configScope.includes(configScope) && (
-                                <span style={{ color: 'red' }}>* </span>
-                              )}
+                            {item.required && <span style={{ color: 'red' }}>* </span>}
                             {getDictValue(item.labelDict, locale)}
                           </div>
                           <Button
@@ -532,9 +527,7 @@ export const ConfigManager = React.memo(
                         </div>
                       }
                       name={field}
-                      required={
-                        item.required?.value && item.required?.configScope.includes(configScope)
-                      }
+                      required={item.required}
                       validateStatus={formErrors[field] ? 'error' : undefined}
                       help={formErrors[field]}
                     >

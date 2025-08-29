@@ -10,7 +10,7 @@ import {
 import { MediaChatInput } from '@refly-packages/ai-workspace-common/components/canvas/nodes/media/media-input';
 import { ChatModeSelector } from '@refly-packages/ai-workspace-common/components/canvas/front-page/chat-mode-selector';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
-import { McpSelectorPopover } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { ToolSelectorPopover } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/tool-selector-panel';
 import { Button, message } from 'antd';
 import { logEvent } from '@refly/telemetry-web';
 
@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { genActionResultID } from '@refly/utils/id';
-import { CreatePilotSessionRequest } from '@refly/openapi-schema';
+import { CreatePilotSessionRequest, GenericToolset } from '@refly/openapi-schema';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 /**
@@ -32,6 +32,8 @@ export const NoSession = memo(({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
 
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [selectedToolsets, setSelectedToolsets] = useState<GenericToolset[]>([]);
+
   const { query, setQuery, clearCanvasQuery } = useFrontPageStoreShallow((state) => ({
     query: state.getQuery?.(canvasId) || '',
     setQuery: state.setQuery,
@@ -113,6 +115,7 @@ export const NoSession = memo(({ canvasId }: { canvasId: string }) => {
         {
           query,
           resultId,
+          selectedToolsets,
           selectedSkill: undefined,
           modelInfo: skillSelectedModel,
           tplConfig: {},
@@ -130,6 +133,7 @@ export const NoSession = memo(({ canvasId }: { canvasId: string }) => {
           entityId: resultId,
           metadata: {
             status: 'executing',
+            selectedToolsets,
             selectedSkill: undefined,
             modelInfo: skillSelectedModel,
             runtimeConfig: {},
@@ -166,6 +170,7 @@ export const NoSession = memo(({ canvasId }: { canvasId: string }) => {
     skillSelectedModel,
     //clearCanvasQuery,
     handleCreatePilotSession,
+    selectedToolsets,
   ]);
 
   return (
@@ -212,7 +217,12 @@ export const NoSession = memo(({ canvasId }: { canvasId: string }) => {
                           trigger={['click']}
                         />
                       )}
-                      {userStore.isLogin && <McpSelectorPopover />}
+                      {userStore.isLogin && chatMode === 'ask' && (
+                        <ToolSelectorPopover
+                          selectedToolsets={selectedToolsets}
+                          onSelectedToolsetsChange={setSelectedToolsets}
+                        />
+                      )}
                       <div className="flex items-center gap-2 ml-auto pr-4">
                         <Button
                           className="flex items-center !h-9 !w-9 rounded-full border-none"

@@ -2,27 +2,16 @@ import { START, END, StateGraphArgs, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
-import { safeStringifyJSON } from '@refly/utils';
-import {
-  Icon,
-  SkillInvocationConfig,
-  SkillTemplateConfigDefinition,
-  Source,
-} from '@refly/openapi-schema';
+import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition } from '@refly/openapi-schema';
 
 // types
 import { GraphState } from '../scheduler/types';
 // utils
-import { prepareContext } from '../scheduler/utils/context';
 import { truncateSource } from '../scheduler/utils/truncator';
 import { buildFinalRequestMessages, SkillPromptModule } from '../scheduler/utils/message';
-import { processQuery } from '../scheduler/utils/queryProcessor';
-import { extractAndCrawlUrls, crawlExtractedUrls } from '../scheduler/utils/extract-weblink';
-import { isValidUrl } from '@refly/utils';
 
 // prompts
 import * as commonQnA from '../scheduler/module/commonQnA';
-import { checkModelContextLenSupport } from '../scheduler/utils/model';
 
 export class CommonQnA extends BaseSkill {
   name = 'commonQnA';
@@ -52,119 +41,19 @@ export class CommonQnA extends BaseSkill {
     module: SkillPromptModule,
     customInstructions?: string,
   ) => {
-    const { messages = [], images = [] } = state;
-    const { locale = 'en', modelConfigMap, project, runtimeConfig } = config.configurable;
+    const { query, messages = [], images = [] } = state;
+    const { locale = 'en', modelConfigMap, preprocessResult } = config.configurable;
 
     config.metadata.step = { name: 'analyzeQuery' };
 
-    // Use shared query processor with shouldSkipAnalysis option
-    const {
-      optimizedQuery,
-      query,
-      usedChatHistory,
-      hasContext,
-      remainingTokens,
-      mentionedContext,
-      rewrittenQueries,
-    } = await processQuery({
-      config,
-      ctxThis: this,
-      state,
-      shouldSkipAnalysis: true, // For common QnA, we can skip analysis when there's no context and chat history
-    });
-
-    // Extract custom instructions only if project ID exists
-    const projectId = project?.projectId;
-
-    // Only enable knowledge base search if both projectId AND runtimeConfig.enabledKnowledgeBase are true
-    const enableKnowledgeBaseSearch = !!projectId && !!runtimeConfig?.enabledKnowledgeBase;
-
-    this.engine.logger.log(
-      `ProjectId: ${projectId}, Enable KB Search: ${enableKnowledgeBaseSearch}`,
-    );
-
-    // Process URLs from context first (frontend)
-    const contextUrls = config.configurable?.urls || [];
-    this.engine.logger.log(`Context URLs: ${safeStringifyJSON(contextUrls)}`);
-
-    // Process context URLs
-    let contextUrlSources: Source[] = [];
-    if (contextUrls.length > 0) {
-      const urls = contextUrls.map((item) => item.url).filter((url) => url && isValidUrl(url));
-      if (urls.length > 0) {
-        this.engine.logger.log(`Processing ${urls.length} URLs from context`);
-        contextUrlSources = await crawlExtractedUrls(urls, config, this, {
-          concurrencyLimit: 5,
-          batchSize: 8,
-        });
-        this.engine.logger.log(`Processed context URL sources count: ${contextUrlSources.length}`);
-      }
-    }
-
-    // Extract URLs from the query and crawl them with optimized concurrent processing
-    const { sources: queryUrlSources, analysis } = await extractAndCrawlUrls(query, config, this, {
-      concurrencyLimit: 5, // 增加并发爬取的URL数量限制
-      batchSize: 8, // 增加每批处理的URL数量
-    });
-
-    this.engine.logger.log(`URL extraction analysis: ${safeStringifyJSON(analysis)}`);
-    this.engine.logger.log(`Extracted query URL sources count: ${queryUrlSources.length}`);
-
-    // Combine URL sources, prioritizing context URLs
-    const urlSources = [...contextUrlSources, ...queryUrlSources];
-    this.engine.logger.log(`Total URL sources count: ${urlSources.length}`);
-
-    let context = '';
-    let sources: Source[] = [];
-
-    // Consider URL sources for context preparation
-    const hasUrlSources = urlSources.length > 0;
-    const needPrepareContext =
-      (hasContext || hasUrlSources || enableKnowledgeBaseSearch) && remainingTokens > 0;
-    const isModelContextLenSupport = checkModelContextLenSupport(modelConfigMap.chat);
-
-    this.engine.logger.log(`optimizedQuery: ${optimizedQuery}`);
-    this.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
-    this.engine.logger.log(`hasUrlSources: ${hasUrlSources}`);
-
-    if (needPrepareContext) {
-      config.metadata.step = { name: 'analyzeContext' };
-      const preparedRes = await prepareContext(
-        {
-          query: optimizedQuery,
-          mentionedContext,
-          maxTokens: remainingTokens,
-          enableMentionedContext: hasContext,
-          rewrittenQueries,
-          urlSources, // Pass URL sources to the prepareContext function
-        },
-        {
-          config,
-          ctxThis: this,
-          state,
-          tplConfig: {
-            ...(config?.configurable?.tplConfig || {}),
-            enableKnowledgeBaseSearch: {
-              value: enableKnowledgeBaseSearch,
-              label: 'Knowledge Base Search',
-              displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
-            },
-          },
-        },
-      );
-
-      context = preparedRes.contextStr;
-      sources = preparedRes.sources;
-      this.engine.logger.log(`context: ${safeStringifyJSON(context)}`);
-      this.engine.logger.log(`sources: ${safeStringifyJSON(sources)}`);
-    }
+    const { optimizedQuery, rewrittenQueries, context, sources, usedChatHistory } =
+      preprocessResult;
 
     const requestMessages = buildFinalRequestMessages({
       module,
       locale,
       chatHistory: usedChatHistory,
       messages,
-      needPrepareContext: needPrepareContext && isModelContextLenSupport,
       context,
       images,
       originalQuery: query,

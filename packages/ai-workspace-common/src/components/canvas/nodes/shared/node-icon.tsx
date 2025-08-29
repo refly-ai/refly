@@ -25,12 +25,14 @@ import {
   CodeZip,
   GeneralFile,
   Html,
+  Start,
 } from 'refly-icons';
 import { Avatar } from 'antd';
 import { Favicon } from '../../../common/favicon';
 
 type IconComponent = ComponentType<{ size?: number | string; color?: string }>;
 const ICONS: Record<CanvasNodeType | SelectionKey, IconComponent> = {
+  start: Start,
   group: Group,
   image: Image,
   video: Video,

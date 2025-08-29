@@ -4,15 +4,8 @@ import { BaseSkill, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { GraphState } from '../scheduler/types';
 import { z } from 'zod';
 import { extractStructuredData } from '../scheduler/utils/extractor';
-import { truncateMessages, truncateSource } from '../scheduler/utils/truncator';
-import {
-  Icon,
-  SkillInvocationConfig,
-  SkillTemplateConfigDefinition,
-  Source,
-} from '@refly/openapi-schema';
-import { prepareContext } from '../scheduler/utils/context';
-import { DEFAULT_MODEL_CONTEXT_LIMIT } from '../scheduler/utils/constants';
+import { truncateSource } from '../scheduler/utils/truncator';
+import { Icon, SkillInvocationConfig, SkillTemplateConfigDefinition } from '@refly/openapi-schema';
 
 // Schema for recommended questions with reasoning
 const recommendQuestionsSchema = z.object({
@@ -68,11 +61,12 @@ export class RecommendQuestions extends BaseSkill {
     const { messages = [], query } = state;
     const {
       locale = 'en',
-      chatHistory = [],
       modelConfigMap,
       tplConfig,
       project,
+      preprocessResult,
     } = config.configurable ?? {};
+    const modelInfo = modelConfigMap.chat;
 
     // Extract customInstructions from project if available
     const customInstructions = project?.customInstructions;
@@ -93,49 +87,7 @@ export class RecommendQuestions extends BaseSkill {
 
     const isRefresh = tplConfig?.refresh?.value;
 
-    // Process query and context using shared utilities
-    const modelInfo = modelConfigMap.chat;
-    const remainingTokens = modelInfo.contextLimit || DEFAULT_MODEL_CONTEXT_LIMIT;
-
-    // Truncate chat history with larger window for better context
-    const usedChatHistory = truncateMessages(chatHistory, 10, 800, 4000);
-
-    let context = '';
-    let sources: Source[] = [];
-
-    const needPrepareContext = remainingTokens > 0 && enableKnowledgeBaseSearch;
-
-    if (needPrepareContext) {
-      config.metadata.step = { name: 'analyzeContext' };
-      const preparedRes = await prepareContext(
-        {
-          query: query,
-          mentionedContext: {
-            contentList: [],
-            resources: [],
-            documents: [],
-          },
-          maxTokens: remainingTokens,
-          enableMentionedContext: true,
-        },
-        {
-          config,
-          ctxThis: this,
-          state,
-          tplConfig: {
-            ...(config?.configurable?.tplConfig || {}),
-            enableKnowledgeBaseSearch: {
-              value: enableKnowledgeBaseSearch,
-              label: 'Knowledge Base Search',
-              displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
-            },
-          },
-        },
-      );
-
-      context = preparedRes.contextStr;
-      sources = preparedRes.sources;
-    }
+    const { context, sources, usedChatHistory } = preprocessResult;
 
     // Generate title first
     config.metadata.step = { name: 'recommendQuestions' };

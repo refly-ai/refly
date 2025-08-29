@@ -20,6 +20,7 @@
     "@langchain/ollama": "^0.2.0",
     "@langchain/openai": "0.6.7",
     "@modelcontextprotocol/sdk": "^1.10.1",
+    "@refly/agent-tools": "workspace:*",
     "@refly/common-types": "workspace:*",
     "@refly/errors": "workspace:*",
     "@refly/openapi-schema": "workspace:*",

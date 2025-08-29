@@ -34,6 +34,9 @@ import { McpServerModule } from './mcp-server/mcp-server.module';
 import { InternalMcpModule } from './internal-mcp/internal-mcp.module';
 import { MediaGeneratorModule } from './media-generator/media-generator.module';
 import { CreditModule } from './credit/credit.module';
+import { WorkflowModule } from './workflow/workflow.module';
+import { ToolModule } from './tool/tool.module';
+import { VariableExtractionModule } from './variable-extraction/variable-extraction.module';
 
 import { isDesktop } from '../utils/runtime';
 
@@ -92,6 +95,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     ActionModule,
     ShareModule,
     ProviderModule,
+    ToolModule,
     TemplateModule,
     CodeArtifactModule,
     PagesModule,
@@ -100,6 +104,8 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     InternalMcpModule,
     MediaGeneratorModule,
     CreditModule,
+    WorkflowModule,
+    VariableExtractionModule,
     ...(isDesktop()
       ? []
       : [

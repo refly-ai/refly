@@ -12,13 +12,21 @@ import { buildQueryIntentAnalysisInstruction } from '../../utils/common-prompt';
 import { buildFormatDisplayInstruction } from '../common/format';
 import { buildCustomProjectInstructionsForUserPrompt } from '../common/personalization';
 
+// Add strict output rules to ensure only document content is returned
+const buildStrictOutputRules = () => `
+## Output Rules
+1. Output ONLY the document content in Markdown
+2. Do NOT include any preface like 'Here is the document' or any meta commentary
+3. Do NOT include summaries outside the document content
+4. Do NOT include JSON, XML/tags, or any additional notes before or after the content
+`;
+
 export const buildGenerateDocumentCommonPrompt = (example: string) => `
 ## Core Capabilities and Goals
 1. Address user's original request precisely and comprehensively
 2. Generate detailed, well-structured content (minimum 2000 words)
 3. Only incorporate relevant context that serves the original request
 4. Create engaging and informative documents
-5. Deliver concise summaries of generated content
 
 ## Query Processing Order
 1. First, fully understand the original request's intent
@@ -31,6 +39,8 @@ export const buildGenerateDocumentCommonPrompt = (example: string) => `
 
 1. Format Requirements:
    - Use proper markdown formatting
+
+${buildStrictOutputRules()}
 
 ## Important Notes
 1. The <response> tags in examples are for demonstration purposes only - DO NOT include these tags in your actual response
@@ -145,7 +155,6 @@ export const buildGenerateDocumentUserPrompt = ({
     prompt = `## User Query
      ${originalQuery}
 
-
      ${commonImportantNotes()}
 
      ${commonQueryAndContextPriorityRules()}
@@ -155,6 +164,8 @@ export const buildGenerateDocumentUserPrompt = ({
      ${buildLocaleFollowInstruction(locale)}
 
      ${buildFormatDisplayInstruction()}
+
+     ${buildStrictOutputRules()}
      `;
   } else {
     prompt = `## User Query
@@ -179,6 +190,8 @@ ${buildQueryIntentAnalysisInstruction()}
  ${buildLocaleFollowInstruction(locale)}
 
  ${buildFormatDisplayInstruction()}
+
+ ${buildStrictOutputRules()}
  `;
   }
 

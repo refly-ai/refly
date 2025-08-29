@@ -1,5 +1,4 @@
 import { SkillRunnableConfig, BaseSkill } from '../../../base';
-import { GraphState } from '../../types';
 import { deduplicateSourcesByTitle, TimeTracker, batchTranslateText } from '@refly/utils';
 import { Source } from '@refly/openapi-schema';
 
@@ -33,6 +32,7 @@ import { performConcurrentLibrarySearch } from './librarySearch';
  */
 
 interface CallMultiLingualLibrarySearchParams {
+  query: string;
   rewrittenQueries?: string[];
   searchLimit: number;
   searchLocaleList: string[];
@@ -55,15 +55,12 @@ export const callMultiLingualLibrarySearch = async (
   ctx: {
     config: SkillRunnableConfig;
     ctxThis: BaseSkill;
-    state: GraphState & { rewrittenQueries?: string[] };
   },
 ): Promise<{ sources: Source[] }> => {
-  const { config, ctxThis, state } = ctx;
+  const { config, ctxThis } = ctx;
   const { engine } = ctxThis;
 
-  const { query } = state;
-
-  const { rewrittenQueries } = params;
+  const { rewrittenQueries, query } = params;
   let searchLocaleList = params.searchLocaleList || ['en'];
   const resultDisplayLocale = params.resultDisplayLocale || 'auto';
   const enableRerank = params.enableRerank || false;

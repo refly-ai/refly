@@ -5,17 +5,21 @@ import { Form } from 'antd';
 import { CustomHandle } from './shared/custom-handle';
 import { useState, useCallback, useEffect, useMemo, memo } from 'react';
 
-import { getNodeCommonStyles } from './index';
+import { getNodeCommonStyles } from './shared/styles';
 import {
   ModelCapabilities,
   ModelInfo,
   Skill,
   SkillRuntimeConfig,
   SkillTemplateConfig,
+  WorkflowVariable,
 } from '@refly/openapi-schema';
+
+// Use union type from launchpad/types for mention-capable variables
+import type { MentionVariable } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/types';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useChatStoreShallow } from '@refly/stores';
+import { useChatStoreShallow, useLaunchpadStoreShallow } from '@refly/stores';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { cleanupNodeEvents } from '@refly-packages/ai-workspace-common/events/nodeActions';
@@ -38,6 +42,8 @@ import { useContextPanelStore } from '@refly/stores';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
+import { useGetWorkflowVariables } from '@refly-packages/ai-workspace-common/queries';
+import { GenericToolset } from '@refly/openapi-schema';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 const NODE_WIDTH = 480;
@@ -48,7 +54,7 @@ type SkillNode = Node<CanvasNodeData<SkillNodeMeta>, 'skill'>;
 export const SkillNode = memo(
   ({ data, selected, id }: NodeProps<SkillNode>) => {
     const [isHovered, setIsHovered] = useState(false);
-    const { edges } = useCanvasData();
+    const { edges, nodes } = useCanvasData();
     const { setNodeData, setNodeStyle } = useNodeData();
     const edgeStyles = useEdgeStyles();
     const { getNode, getNodes, getEdges, addEdges, deleteElements } = useReactFlow();
@@ -69,11 +75,55 @@ export const SkillNode = memo(
       contextItems = [],
       tplConfig,
       runtimeConfig,
+      selectedToolsets: metadataSelectedToolsets,
     } = metadata;
     const skill = useFindSkill(selectedSkill?.name);
 
-    const [localQuery, setLocalQuery] = useState(query);
+    const { selectedToolsets: selectedToolsetsFromStore } = useLaunchpadStoreShallow((state) => ({
+      selectedToolsets: state.selectedToolsets,
+    }));
 
+    const [localQuery, setLocalQuery] = useState(query);
+    const [selectedToolsets, setLocalSelectedToolsets] = useState<GenericToolset[]>(
+      metadataSelectedToolsets ?? selectedToolsetsFromStore ?? [],
+    );
+
+    const { data: workflowVariables } = useGetWorkflowVariables({
+      query: {
+        canvasId,
+      },
+    });
+    // Generate variables including canvas nodes
+    const variables: MentionVariable[] = useMemo(() => {
+      const baseVariables: MentionVariable[] = (workflowVariables?.data ?? []) as MentionVariable[];
+      // Add step record variables from skillResponse nodes
+      const stepRecordVariables: MentionVariable[] =
+        nodes
+          ?.filter((node) => node.type === 'skillResponse')
+          ?.map((node) => ({
+            name: node.data?.title ?? '未命名步骤',
+            description: '步骤记录',
+            source: 'stepRecord',
+            variableType: 'step',
+            entityId: node.data?.entityId,
+            nodeId: node.id,
+          })) ?? [];
+
+      // Add result record variables from non-skill nodes
+      const resultRecordVariables: MentionVariable[] =
+        nodes
+          ?.filter((node) => node.type !== 'skill' && node.type !== 'skillResponse')
+          ?.map((node) => ({
+            name: node.data?.title ?? '未命名结果',
+            description: '结果记录',
+            source: 'resultRecord',
+            variableType: 'result',
+            entityId: node.data?.entityId,
+            nodeId: node.id,
+          })) ?? [];
+
+      return [...baseVariables, ...stepRecordVariables, ...resultRecordVariables];
+    }, [nodes, workflowVariables?.data]);
     // Check if node has any connections
     const isTargetConnected = useMemo(() => edges?.some((edge) => edge.target === id), [edges, id]);
     const isSourceConnected = useMemo(() => edges?.some((edge) => edge.source === id), [edges, id]);
@@ -147,6 +197,14 @@ export const SkillNode = memo(
         setNodeData(id, { metadata: { runtimeConfig } });
       },
       [id, setNodeData],
+    );
+
+    const setSelectedToolsets = useCallback(
+      (toolsets: GenericToolset[]) => {
+        setLocalSelectedToolsets(toolsets);
+        updateNodeData({ metadata: { selectedToolsets: toolsets } });
+      },
+      [updateNodeData],
     );
 
     const setNodeDataByEntity = useSetNodeDataByEntity();
@@ -262,6 +320,7 @@ export const SkillNode = memo(
             ...runtimeConfig,
           },
           projectId: finalProjectId,
+          selectedToolsets,
         },
         {
           entityId: canvasId,
@@ -279,6 +338,7 @@ export const SkillNode = memo(
               status: 'executing',
               contextItems,
               tplConfig,
+              selectedToolsets,
               selectedSkill,
               modelInfo,
               runtimeConfig: {
@@ -297,7 +357,17 @@ export const SkillNode = memo(
       );
 
       deleteElements({ nodes: [node] });
-    }, [id, getNode, deleteElements, invokeAction, canvasId, addNode, form]);
+    }, [
+      id,
+      getNode,
+      deleteElements,
+      invokeAction,
+      canvasId,
+      addNode,
+      form,
+      selectedToolsets,
+      contextItems,
+    ]);
 
     const handleDelete = useCallback(() => {
       const currentNode = getNode(id);
@@ -381,7 +451,7 @@ export const SkillNode = memo(
         />
 
         <div
-          className={`h-full flex flex-col relative z-1 p-4 box-border ${getNodeCommonStyles({ selected, isHovered })}`}
+          className={`h-full flex flex-col relative z-1 px-4 py-3 box-border ${getNodeCommonStyles({ selected, isHovered })}`}
         >
           <ChatPanel
             mode="node"
@@ -405,6 +475,26 @@ export const SkillNode = memo(
               handleProjectChange(projectId);
               updateNodeData({ metadata: { projectId } });
             }}
+            workflowVariables={variables
+              .filter((v): v is WorkflowVariable => {
+                // Guard to narrow union to WorkflowVariable only
+                const src = (v as any)?.source;
+                return (src === 'startNode' || src === 'resourceLibrary') && 'value' in (v as any);
+              })
+              .map((v) => ({
+                variableId: v.variableId,
+                name: v.name,
+                value: v.value,
+                description: v.description,
+                source: v.source,
+                variableType: v.variableType,
+              }))}
+            extendedWorkflowVariables={variables.filter(
+              (v) => v.source === 'stepRecord' || v.source === 'resultRecord',
+            )}
+            enableRichInput={true}
+            selectedToolsets={selectedToolsets}
+            onSelectedToolsetsChange={setSelectedToolsets}
           />
         </div>
       </div>

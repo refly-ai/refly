@@ -4,10 +4,19 @@ import type { MenuProps } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
-import { ModelInfo, Skill, SkillRuntimeConfig, SkillTemplateConfig } from '@refly/openapi-schema';
+import { RichChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input';
+import {
+  ModelInfo,
+  Skill,
+  SkillRuntimeConfig,
+  SkillTemplateConfig,
+  WorkflowVariable,
+  GenericToolset,
+} from '@refly/openapi-schema';
+import type { MentionVariable } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/types';
 import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
-import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
-import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
+// import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
+// import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
 import { IContextItem, ContextTarget } from '@refly/common-types';
 import { useContextPanelStoreShallow } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
@@ -216,6 +225,11 @@ export interface ChatPanelProps {
   resultId?: string;
   projectId?: string;
   handleProjectChange?: (newProjectId: string) => void;
+  workflowVariables?: WorkflowVariable[];
+  extendedWorkflowVariables?: MentionVariable[]; // Extended variables for canvas nodes
+  enableRichInput?: boolean;
+  selectedToolsets?: GenericToolset[];
+  onSelectedToolsetsChange?: (toolsets: GenericToolset[]) => void;
 }
 
 export const ChatPanel = memo(
@@ -231,8 +245,8 @@ export const ChatPanel = memo(
     setModelInfo,
     runtimeConfig = {},
     setRuntimeConfig,
-    tplConfig,
-    setTplConfig,
+    tplConfig: _tplConfig,
+    setTplConfig: _setTplConfig,
     handleSendMessage,
     handleAbortAction,
     onInputHeightChange,
@@ -241,9 +255,14 @@ export const ChatPanel = memo(
     resultId,
     projectId,
     handleProjectChange,
+    workflowVariables = [],
+    extendedWorkflowVariables = [],
+    enableRichInput = false,
+    selectedToolsets,
+    onSelectedToolsetsChange,
   }: ChatPanelProps) => {
     const [form] = Form.useForm();
-    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [_formErrors, setFormErrors] = useState<Record<string, string>>({});
     const chatInputRef = useRef<HTMLDivElement>(null);
     const userProfile = useUserStoreShallow((state) => state.userProfile);
     const isList = mode === 'list';
@@ -266,20 +285,6 @@ export const ChatPanel = memo(
     useEffect(() => {
       contextItemsRef.current = contextItems;
     }, [contextItems]);
-
-    // Memoize initialTplConfig to prevent unnecessary recalculations
-    const initialTplConfig = useMemo(() => {
-      return tplConfig || selectedSkill?.tplConfig || {};
-    }, [tplConfig, selectedSkill?.tplConfig]);
-
-    const handleTplConfigChange = useCallback(
-      (config: SkillTemplateConfig) => {
-        if (setTplConfig && JSON.stringify(config) !== JSON.stringify(initialTplConfig)) {
-          setTplConfig(config);
-        }
-      },
-      [setTplConfig, initialTplConfig],
-    );
 
     const handleImageUpload = useCallback(
       async (file: File) => {
@@ -388,69 +393,61 @@ export const ChatPanel = memo(
 
     const renderContent = () => (
       <>
-        <ContextManager
+        {/* <ContextManager
           className={classNames({
             'py-2': isList,
           })}
           contextItems={contextItems}
           setContextItems={setContextItems}
-        />
+        /> */}
 
-        <ChatInput
-          readonly={canvasReadonly}
-          ref={chatInputRef}
-          query={query}
-          setQuery={(value) => {
-            setQuery(value);
-            if (onInputHeightChange) {
-              setTimeout(onInputHeightChange, 0);
-            }
-          }}
-          selectedSkillName={selectedSkill?.name ?? null}
-          inputClassName="px-1 py-0"
-          maxRows={6}
-          handleSendMessage={handleMessageSend}
-          handleSelectSkill={(skill) => {
-            setQuery(query?.slice(0, -1));
-            setSelectedSkill(skill);
-          }}
-          onUploadImage={handleImageUpload}
-          onUploadMultipleImages={handleMultipleImagesUpload}
-          onFocus={handleInputFocus}
-        />
-
-        {selectedSkill?.configSchema?.items?.length && setTplConfig ? (
-          <ConfigManager
+        {enableRichInput &&
+        (workflowVariables?.length > 0 || extendedWorkflowVariables?.length > 0) ? (
+          <RichChatInput
             readonly={canvasReadonly}
-            key={`${selectedSkill?.name}-${Object.keys(initialTplConfig).length}`}
-            form={form}
-            formErrors={formErrors}
-            setFormErrors={setFormErrors}
-            schema={selectedSkill?.configSchema}
-            tplConfig={initialTplConfig}
-            fieldPrefix="tplConfig"
-            configScope="runtime"
-            onExpandChange={(_expanded) => {
+            ref={chatInputRef}
+            query={query}
+            setQuery={(value) => {
+              setQuery(value);
               if (onInputHeightChange) {
                 setTimeout(onInputHeightChange, 0);
               }
             }}
-            resetConfig={() => {
-              // Use setTimeout to move outside of React's render cycle
-              setTimeout(() => {
-                const defaultConfig = selectedSkill?.tplConfig ?? {};
-                form.setFieldValue('tplConfig', defaultConfig);
-              }, 0);
-            }}
-            onFormValuesChange={(_, allValues) => {
-              // Debounce form value changes to prevent cascading updates
-              const newConfig = allValues.tplConfig;
-              if (JSON.stringify(newConfig) !== JSON.stringify(initialTplConfig)) {
-                handleTplConfigChange(newConfig);
+            variables={[...workflowVariables, ...extendedWorkflowVariables] as WorkflowVariable[]}
+            selectedSkillName={selectedSkill?.name ?? null}
+            inputClassName="px-1 py-0"
+            maxRows={6}
+            handleSendMessage={handleMessageSend}
+            onUploadImage={handleImageUpload}
+            onUploadMultipleImages={handleMultipleImagesUpload}
+            onFocus={handleInputFocus}
+            contextItems={contextItems}
+            setContextItems={setContextItems}
+          />
+        ) : (
+          <ChatInput
+            readonly={canvasReadonly}
+            ref={chatInputRef}
+            query={query}
+            setQuery={(value) => {
+              setQuery(value);
+              if (onInputHeightChange) {
+                setTimeout(onInputHeightChange, 0);
               }
             }}
+            selectedSkillName={selectedSkill?.name ?? null}
+            inputClassName="px-1 py-0"
+            maxRows={6}
+            handleSendMessage={handleMessageSend}
+            handleSelectSkill={(skill) => {
+              setQuery(query?.slice(0, -1));
+              setSelectedSkill(skill);
+            }}
+            onUploadImage={handleImageUpload}
+            onUploadMultipleImages={handleMultipleImagesUpload}
+            onFocus={handleInputFocus}
           />
-        ) : null}
+        )}
 
         <ChatActions
           className={classNames({
@@ -465,6 +462,8 @@ export const ChatPanel = memo(
           contextItems={contextItems}
           runtimeConfig={runtimeConfig}
           setRuntimeConfig={setRuntimeConfig}
+          selectedToolsets={selectedToolsets}
+          setSelectedToolsets={onSelectedToolsetsChange}
         />
       </>
     );
@@ -497,17 +496,17 @@ export const ChatPanel = memo(
 
     return (
       <div className={`flex flex-col gap-3 h-full box-border ${className} max-w-[1024px]`}>
-        <NodeHeader
+        {/* <NodeHeader
           readonly={readonly}
           selectedSkillName={selectedSkill?.name ?? undefined}
           setSelectedSkill={setSelectedSkill}
-        />
+        /> */}
         {renderContent()}
-        <ProjectKnowledgeToggle
+        {/* <ProjectKnowledgeToggle
           className="!pb-0 !pt-0"
           currentProjectId={projectId}
           onProjectChange={handleProjectChange}
-        />
+        /> */}
       </div>
     );
   },

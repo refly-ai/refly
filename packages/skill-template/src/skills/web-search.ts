@@ -7,14 +7,9 @@ import { GraphState } from '../scheduler/types';
 
 // utils
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
-import { prepareContext } from '../scheduler/utils/context';
 // prompts
 import * as webSearch from '../scheduler/module/webSearch/index';
 import { truncateSource } from '../scheduler/utils/truncator';
-import { processQuery } from '../scheduler/utils/queryProcessor';
-import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
-import { safeStringifyJSON } from '@refly/utils';
-import { processContextUrls } from '../utils/url-processing';
 
 export class WebSearch extends BaseSkill {
   name = 'webSearch';
@@ -56,13 +51,14 @@ export class WebSearch extends BaseSkill {
     state: GraphState,
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
-    const { messages = [], images = [] } = state;
+    const { query, messages = [], images = [] } = state;
     const {
       locale = 'en',
       currentSkill,
       project,
       runtimeConfig,
       modelConfigMap,
+      preprocessResult,
     } = config.configurable;
 
     // Extract customInstructions from project if available
@@ -90,61 +86,13 @@ export class WebSearch extends BaseSkill {
       },
     };
 
-    // Use shared query processor
     const {
       optimizedQuery,
-      query,
+      context: contextStr,
+      sources,
       usedChatHistory,
-      remainingTokens,
-      mentionedContext,
       rewrittenQueries,
-    } = await processQuery({
-      config,
-      ctxThis: this,
-      state,
-    });
-
-    // Extract URLs from the query and crawl them with optimized concurrent processing
-    const { sources: queryUrlSources, analysis } = await extractAndCrawlUrls(query, config, this, {
-      concurrencyLimit: 5, // Increase concurrent URL crawling limit
-      batchSize: 8, // Increase batch size for URL processing
-    });
-
-    this.engine.logger.log(`URL extraction analysis: ${safeStringifyJSON(analysis)}`);
-    this.engine.logger.log(`Extracted query URL sources count: ${queryUrlSources.length}`);
-
-    // Process URLs from frontend context if available
-    const contextUrls = config.configurable?.urls || [];
-    const contextUrlSources = await processContextUrls(contextUrls, config, this);
-
-    if (contextUrlSources.length > 0) {
-      this.engine.logger.log(`Added ${contextUrlSources.length} URL sources from context`);
-    }
-
-    // Combine URL sources from context and query extraction
-    const urlSources = [...contextUrlSources, ...(queryUrlSources || [])];
-    this.engine.logger.log(`Total combined URL sources: ${urlSources.length}`);
-
-    // Set current step
-    config.metadata.step = { name: 'webSearch' };
-
-    // Prepare context with web search focus
-    const { contextStr, sources } = await prepareContext(
-      {
-        query: optimizedQuery,
-        mentionedContext,
-        maxTokens: remainingTokens,
-        enableMentionedContext: true,
-        rewrittenQueries,
-        urlSources, // Use combined URL sources
-      },
-      {
-        config,
-        ctxThis: this,
-        state,
-        tplConfig: config.configurable.tplConfig,
-      },
-    );
+    } = preprocessResult;
 
     // Set current step for answer generation
     config.metadata.step = { name: 'answerQuestion' };
@@ -185,7 +133,6 @@ export class WebSearch extends BaseSkill {
       locale,
       chatHistory: usedChatHistory,
       messages,
-      needPrepareContext: true,
       context: contextStr,
       images,
       originalQuery: query,

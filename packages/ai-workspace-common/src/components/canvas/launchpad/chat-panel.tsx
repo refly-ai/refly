@@ -28,7 +28,12 @@ import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action
 import { subscriptionEnabled } from '@refly/ui-kit';
 import { omit } from '@refly/utils/index';
 import { cn } from '@refly/utils/cn';
-import { ActionStatus, SkillTemplateConfig, ModelInfo } from '@refly/openapi-schema';
+import {
+  ActionStatus,
+  SkillTemplateConfig,
+  ModelInfo,
+  GenericToolset,
+} from '@refly/openapi-schema';
 import { ContextTarget } from '@refly/common-types';
 import { ProjectKnowledgeToggle } from '@refly-packages/ai-workspace-common/components/project/project-knowledge-toggle';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
@@ -95,6 +100,8 @@ interface ChatPanelProps {
   tplConfig?: SkillTemplateConfig | null;
   onUpdateTplConfig?: (config: SkillTemplateConfig | null) => void;
   resultId?: string;
+  selectedToolsets?: GenericToolset[];
+  onSelectedToolsetsChange?: (toolsets: GenericToolset[]) => void;
 }
 
 export const ChatPanel = ({
@@ -104,6 +111,8 @@ export const ChatPanel = ({
   tplConfig: initialTplConfig,
   onUpdateTplConfig,
   resultId = ContextTarget.Global,
+  selectedToolsets,
+  onSelectedToolsetsChange,
 }: ChatPanelProps) => {
   const { t } = useTranslation();
   const { formErrors, setFormErrors } = useContextPanelStore((state) => ({
@@ -136,11 +145,6 @@ export const ChatPanel = ({
   // Get setActiveResultId from context panel store
   const { setActiveResultId } = useContextPanelStoreShallow((state) => ({
     setActiveResultId: state.setActiveResultId,
-  }));
-
-  // 获取选择的 MCP 服务器
-  const { selectedMcpServers } = useLaunchpadStoreShallow((state) => ({
-    selectedMcpServers: state.selectedMcpServers,
   }));
 
   const [form] = Form.useForm();
@@ -240,7 +244,7 @@ export const ChatPanel = ({
 
     const { selectedSkill } = useSkillStore.getState();
     const { newQAText, selectedModel } = useChatStore.getState();
-    const query = userInput || newQAText.trim();
+    const originalQuery = userInput || newQAText.trim();
 
     const { contextItems, runtimeConfig } = useContextPanelStore.getState();
 
@@ -263,24 +267,24 @@ export const ChatPanel = ({
           resultId: newResultId,
           nodeId,
           data: {
-            title: query,
+            title: originalQuery,
             entityId: newResultId,
             metadata: {
               status: 'executing' as ActionStatus,
               contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
               selectedSkill,
-              selectedMcpServers,
+              selectedToolsets,
               modelInfo: selectedModel,
               runtimeConfig,
               tplConfig,
               structuredData: {
-                query,
+                query: originalQuery,
               },
               projectId: finalProjectId,
             },
           },
         },
-        query,
+        originalQuery,
         contextItems,
       );
     }
@@ -290,8 +294,9 @@ export const ChatPanel = ({
     // Invoke the action with the API
     invokeAction(
       {
-        query,
+        query: originalQuery,
         resultId: newResultId,
+        selectedToolsets,
         selectedSkill: selectedSkill ?? undefined,
         modelInfo: selectedModel ?? undefined,
         contextItems,
@@ -313,18 +318,18 @@ export const ChatPanel = ({
       {
         type: 'skillResponse',
         data: {
-          title: query,
+          title: originalQuery,
           entityId: newResultId,
           metadata: {
             status: 'executing',
             contextItems: contextItems.map((item) => omit(item, ['isPreview'])),
-            selectedMcpServers,
+            selectedToolsets,
             selectedSkill,
             modelInfo: selectedModel,
             runtimeConfig,
             tplConfig,
             structuredData: {
-              query,
+              query: originalQuery,
             },
           },
         },
@@ -433,7 +438,6 @@ export const ChatPanel = ({
                 query={chatStore.newQAText}
                 setQuery={chatStore.setNewQAText}
                 selectedSkillName={selectedSkill?.name ?? null}
-                autoCompletionPlacement={'topLeft'}
                 handleSendMessage={handleSendMessage}
                 onUploadImage={handleImageUpload}
                 onUploadMultipleImages={handleMultipleImagesUpload}
@@ -497,6 +501,8 @@ export const ChatPanel = ({
               onUploadImage={handleImageUpload}
               contextItems={contextItems}
               isExecuting={!!currentActionResultId}
+              selectedToolsets={selectedToolsets}
+              setSelectedToolsets={onSelectedToolsetsChange}
             />
           </div>
         </div>

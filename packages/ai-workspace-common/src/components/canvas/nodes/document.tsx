@@ -3,7 +3,7 @@ import { DocumentNodeProps } from './shared/types';
 import { CustomHandle } from './shared/custom-handle';
 import { useState, useCallback, useEffect, memo, useMemo } from 'react';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
-import { getNodeCommonStyles } from './index';
+import { getNodeCommonStyles } from './shared/styles';
 import { useTranslation } from 'react-i18next';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';

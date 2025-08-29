@@ -191,7 +191,7 @@ const performBatchLibrarySearch = async ({
         }
 
         // Prepare search request based on semanticSearch.ts implementation
-        return await engine.service.search(
+        return await engine.service.librarySearch(
           user,
           {
             query: query.q,

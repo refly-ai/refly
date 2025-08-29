@@ -24,6 +24,7 @@ import { useContextUpdateByResultId } from '@refly-packages/ai-workspace-common/
 import { useReactFlow } from '@xyflow/react';
 import { contextEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/context';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import { GenericToolset } from '@refly/openapi-schema';
 
 interface EnhancedSkillResponseProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -45,6 +46,10 @@ export const EnhancedSkillResponse = memo(
     const [contextItems, setContextItems] = useState<IContextItem[]>([]);
     const [runtimeConfig, setRuntimeConfig] = useState<SkillRuntimeConfig>({});
     const [tplConfig, setTplConfig] = useState<SkillTemplateConfig | undefined>();
+    const nodeSelectedToolsets = node?.data?.metadata?.selectedToolsets;
+    const [selectedToolsets, setSelectedToolsets] = useState<GenericToolset[]>(
+      nodeSelectedToolsets ?? [],
+    );
 
     const { projectId, handleProjectChange, getFinalProjectId } = useAskProject();
     const { readonly, canvasId } = useCanvasContext();
@@ -133,6 +138,7 @@ export const EnhancedSkillResponse = memo(
 
             if (metadata.selectedSkill?.name) setSelectedSkillName(metadata.selectedSkill.name);
             if (metadata.modelInfo) setModelInfo(metadata.modelInfo);
+            if (metadata.selectedToolsets) setSelectedToolsets(metadata.selectedToolsets);
 
             // Preserve tplConfig stability
             if (
@@ -268,6 +274,7 @@ export const EnhancedSkillResponse = memo(
             ...runtimeConfig,
           },
           projectId: finalProjectId,
+          selectedToolsets,
         },
         {
           entityId: canvasId,
@@ -287,6 +294,7 @@ export const EnhancedSkillResponse = memo(
               contextItems,
               tplConfig,
               selectedSkill,
+              selectedToolsets,
               modelInfo,
               runtimeConfig: {
                 ...contextRuntimeConfig,
@@ -313,6 +321,7 @@ export const EnhancedSkillResponse = memo(
       canvasId,
       invokeAction,
       addNode,
+      selectedToolsets,
     ]);
 
     // Handler for setting selected skill - memoized to ensure referential stability
@@ -373,6 +382,8 @@ export const EnhancedSkillResponse = memo(
           resultId={resultId}
           projectId={projectId}
           handleProjectChange={handleProjectChange}
+          selectedToolsets={selectedToolsets}
+          onSelectedToolsetsChange={setSelectedToolsets}
         />
       ),
       [
@@ -389,6 +400,7 @@ export const EnhancedSkillResponse = memo(
         handleSendMessage,
         abortAction,
         resultId,
+        selectedToolsets,
       ],
     );
 

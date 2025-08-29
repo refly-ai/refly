@@ -6,12 +6,12 @@ import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly/stores';
 import { getRuntime } from '@refly/utils/env';
 import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
-import { ModelInfo } from '@refly/openapi-schema';
+import { ModelInfo, GenericToolset } from '@refly/openapi-schema';
 import { cn, extractUrlsWithLinkify } from '@refly/utils/index';
 import { SkillRuntimeConfig } from '@refly/openapi-schema';
 import { useChatStoreShallow } from '@refly/stores';
 import { ChatModeSelector } from './chat-mode-selector';
-import { McpSelectorPopover } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/mcp-selector-panel';
+import { ToolSelectorPopover } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/tool-selector-panel';
 
 export interface CustomAction {
   content?: string;
@@ -32,6 +32,8 @@ interface ActionsProps {
   customActions?: CustomAction[];
   loading?: boolean;
   isExecuting?: boolean;
+  selectedToolsets?: GenericToolset[];
+  onSelectedToolsetsChange?: (toolsets: GenericToolset[]) => void;
 }
 
 export const Actions = memo(
@@ -48,6 +50,8 @@ export const Actions = memo(
       className,
       loading = false,
       isExecuting = false,
+      selectedToolsets,
+      onSelectedToolsetsChange,
     } = props;
     const { t } = useTranslation();
 
@@ -112,7 +116,12 @@ export const Actions = memo(
             />
           )}
 
-          {userStore.isLogin && <McpSelectorPopover />}
+          {userStore.isLogin && chatMode === 'ask' && (
+            <ToolSelectorPopover
+              selectedToolsets={selectedToolsets}
+              onSelectedToolsetsChange={onSelectedToolsetsChange}
+            />
+          )}
 
           {detectedUrls?.length > 0 && (
             <div className="flex items-center gap-1 ml-2">
@@ -173,7 +182,9 @@ export const Actions = memo(
       prevProps.model === nextProps.model &&
       prevProps.loading === nextProps.loading &&
       prevProps.isExecuting === nextProps.isExecuting &&
-      prevProps.customActions === nextProps.customActions
+      prevProps.customActions === nextProps.customActions &&
+      prevProps.selectedToolsets === nextProps.selectedToolsets &&
+      prevProps.onSelectedToolsetsChange === nextProps.onSelectedToolsetsChange
     );
   },
 );

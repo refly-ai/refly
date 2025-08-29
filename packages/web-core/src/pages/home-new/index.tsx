@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Skill } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { useFrontPageStoreShallow } from '@refly/stores';
-import { SkillDisplay } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/skill-display';
 import { getSkillIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { Button, Form } from 'antd';
 import { ConfigManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/config-manager';
@@ -107,12 +106,6 @@ const UnsignedFrontPage = memo(() => {
                     </div>
                   </div>
                 )}
-
-                <SkillDisplay
-                  containCnt={5}
-                  selectedSkill={selectedSkill}
-                  setSelectedSkill={handleSelectSkill}
-                />
 
                 <div className="flex flex-col">
                   <ChatInput

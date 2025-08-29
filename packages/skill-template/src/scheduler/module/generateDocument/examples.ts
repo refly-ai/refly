@@ -11,7 +11,6 @@ ${commonNote()}
 Write a technical guide about React performance optimization
 </query>
 <response>
-[Note: Actual content should be 2000+ words with detailed examples]
 ## Understanding React Rendering
 React's rendering process is fundamental to application performance...
 
@@ -21,8 +20,7 @@ Several common issues can impact React application performance...
 ## Optimization Techniques
 Let's explore proven techniques for optimizing React applications...
 
-...[Note: Full response would continue with 2000+ words]
-</response>
+...</response>
 </example>
 
 <example index="2">
@@ -30,7 +28,6 @@ Let's explore proven techniques for optimizing React applications...
 Create a product launch announcement for our new AI tool
 </query>
 <response>
-[Note: Actual content should be 2000+ words with detailed examples]
 ## Executive Summary
 We are thrilled to announce the launch of our groundbreaking AI tool...
 
@@ -40,8 +37,7 @@ Our innovative AI solution offers several industry-leading features...
 ## Market Impact
 This launch represents a significant advancement in the AI industry...
 
-...[Note: Full response would continue with 2000+ words]
-</response>
+...</response>
 </example>
 `;
 
@@ -77,7 +73,7 @@ Our platform's distinctive features align perfectly with emerging industry trend
 - Real-time analysis capabilities meeting the growing demand for instant insights
 - Automated reporting systems enhancing operational efficiency
 - Robust integration features supporting enterprise-wide deployment
-...[Note: Full response would continue with 2000+ words]
+...
 </response>
 </example>
 
@@ -118,7 +114,7 @@ Our system directly addresses key market challenges identified through extensive
 2. Enhanced Performance: Advanced neural processing unit significantly reduces processing times
 3. Enterprise Scalability: Flexible architecture supports growing business needs
 4. Cost Efficiency: Reduced maintenance requirements through automated optimization
-...[Note: Full response would continue with 2000+ words]
+...
 </response>
 </example>
 
@@ -166,7 +162,7 @@ Building on our established technological foundation [citation:1], our AI analyt
    - Customizable report templates
    - Automated report generation
 
-...[Note: Full response would continue with 2000+ words]
+...
 </response>
 </example>
 
@@ -211,7 +207,7 @@ Building upon our robust security infrastructure [citation:1], this documentatio
    - Multi-factor authentication requirements
    - Granular permission controls
 
-...[Note: Full response would continue with 2000+ words]
+...
 </response>
 </example>
 `;

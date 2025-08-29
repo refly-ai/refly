@@ -1,9 +1,9 @@
 import {
-  ModelProviderError,
   ModelProviderRateLimitExceeded,
   ModelProviderTimeout,
   ActionAborted,
   ModelUsageQuotaExceeded,
+  UnknownError,
 } from './errors';
 
 export const guessModelProviderError = (error: string | Error) => {
@@ -37,5 +37,5 @@ export const guessModelProviderError = (error: string | Error) => {
   if (e.includes('timeout')) {
     return new ModelProviderTimeout();
   }
-  return new ModelProviderError();
+  return new UnknownError();
 };

@@ -7,7 +7,13 @@ import {
   formDataBodySerializer,
 } from '@hey-api/client-fetch';
 import type {
-  ListMcpServersData2,
+  ExtractVariablesData,
+  ExtractVariablesError,
+  ExtractVariablesResponse,
+  GenerateAppTemplateData,
+  GenerateAppTemplateError,
+  GenerateAppTemplateResponse,
+  ListMcpServersData,
   ListMcpServersError,
   ListMcpServersResponse2,
   CreateMcpServerData,
@@ -114,6 +120,12 @@ import type {
   CreateCanvasVersionData,
   CreateCanvasVersionError,
   CreateCanvasVersionResponse2,
+  GetWorkflowVariablesData,
+  GetWorkflowVariablesError,
+  GetWorkflowVariablesResponse2,
+  UpdateWorkflowVariablesData,
+  UpdateWorkflowVariablesError,
+  UpdateWorkflowVariablesResponse2,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
   ListCanvasTemplatesResponse,
@@ -309,6 +321,9 @@ import type {
   GetPilotSessionDetailData,
   GetPilotSessionDetailError,
   GetPilotSessionDetailResponse2,
+  InitializeWorkflowData,
+  InitializeWorkflowError,
+  InitializeWorkflowResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -378,6 +393,23 @@ import type {
   DeleteProviderItemData,
   DeleteProviderItemError,
   DeleteProviderItemResponse,
+  ListToolsData,
+  ListToolsError,
+  ListToolsResponse2,
+  ListToolsetInventoryError,
+  ListToolsetInventoryResponse2,
+  ListToolsetsData,
+  ListToolsetsError,
+  ListToolsetsResponse2,
+  CreateToolsetData,
+  CreateToolsetError,
+  CreateToolsetResponse,
+  UpdateToolsetData,
+  UpdateToolsetError,
+  UpdateToolsetResponse,
+  DeleteToolsetData,
+  DeleteToolsetError,
+  DeleteToolsetResponse,
   ScrapeData,
   ScrapeError,
   ScrapeResponse,
@@ -394,11 +426,54 @@ import type {
 export const client = createClient(createConfig());
 
 /**
+ * Extract variables from prompt
+ * Unified variable extraction interface that supports two modes:
+ * - 'direct': Directly update Canvas variables
+ * - 'candidate': Return candidate solutions for user selection
+ *
+ * This endpoint analyzes natural language prompts and extracts workflow variables
+ * based on the context of existing Canvas variables and content.
+ *
+ */
+export const extractVariables = <ThrowOnError extends boolean = false>(
+  options: Options<ExtractVariablesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ExtractVariablesResponse,
+    ExtractVariablesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/variable-extraction/extract',
+  });
+};
+
+/**
+ * Generate APP publish template
+ * Generate a user intent template based on all original prompts and variables in a Canvas.
+ * This endpoint analyzes the Canvas content and creates a template with placeholders
+ * that can be used for APP publishing and user interaction.
+ *
+ */
+export const generateAppTemplate = <ThrowOnError extends boolean = false>(
+  options: Options<GenerateAppTemplateData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GenerateAppTemplateResponse,
+    GenerateAppTemplateError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/variable-extraction/generate-template',
+  });
+};
+
+/**
  * List MCP servers
  * List all MCP servers for a user
  */
 export const listMcpServers = <ThrowOnError extends boolean = false>(
-  options?: Options<ListMcpServersData2, ThrowOnError>,
+  options?: Options<ListMcpServersData, ThrowOnError>,
 ) => {
   return (options?.client ?? client).get<
     ListMcpServersResponse2,
@@ -951,6 +1026,40 @@ export const createCanvasVersion = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/canvas/createVersion',
+  });
+};
+
+/**
+ * Get workflow variables
+ * Get workflow variables for a canvas
+ */
+export const getWorkflowVariables = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowVariablesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowVariablesResponse2,
+    GetWorkflowVariablesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/workflow/variables',
+  });
+};
+
+/**
+ * Update workflow variables
+ * Update workflow variables for a canvas
+ */
+export const updateWorkflowVariables = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateWorkflowVariablesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateWorkflowVariablesResponse2,
+    UpdateWorkflowVariablesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/workflow/variables',
   });
 };
 
@@ -2022,6 +2131,23 @@ export const getPilotSessionDetail = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Initialize workflow execution
+ * Initialize a new workflow execution for a canvas
+ */
+export const initializeWorkflow = <ThrowOnError extends boolean = false>(
+  options: Options<InitializeWorkflowData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    InitializeWorkflowResponse2,
+    InitializeWorkflowError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/initialize',
+  });
+};
+
+/**
  * Get user settings
  * Return settings for current user
  */
@@ -2425,6 +2551,88 @@ export const deleteProviderItem = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/provider/item/delete',
+  });
+};
+
+/**
+ * List tool
+ * List all available tools, including regular tools and MCP servers.
+ */
+export const listTools = <ThrowOnError extends boolean = false>(
+  options?: Options<ListToolsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<ListToolsResponse2, ListToolsError, ThrowOnError>({
+    ...options,
+    url: '/tool/list',
+  });
+};
+
+/**
+ * List toolset inventory
+ * List all available toolsets in inventory, including uninstalled.
+ */
+export const listToolsetInventory = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListToolsetInventoryResponse2,
+    ListToolsetInventoryError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/tool/inventory/list',
+  });
+};
+
+/**
+ * List toolsets
+ * List all installed toolsets
+ */
+export const listToolsets = <ThrowOnError extends boolean = false>(
+  options?: Options<ListToolsetsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<ListToolsetsResponse2, ListToolsetsError, ThrowOnError>({
+    ...options,
+    url: '/tool/toolset/list',
+  });
+};
+
+/**
+ * Create regular tool
+ * Create a new regular tool
+ */
+export const createToolset = <ThrowOnError extends boolean = false>(
+  options: Options<CreateToolsetData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<CreateToolsetResponse, CreateToolsetError, ThrowOnError>({
+    ...options,
+    url: '/tool/toolset/create',
+  });
+};
+
+/**
+ * Update toolset
+ * Update an existing toolset
+ */
+export const updateToolset = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateToolsetData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<UpdateToolsetResponse, UpdateToolsetError, ThrowOnError>({
+    ...options,
+    url: '/tool/toolset/update',
+  });
+};
+
+/**
+ * Delete toolset
+ * Delete an existing toolset
+ */
+export const deleteToolset = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteToolsetData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<DeleteToolsetResponse, DeleteToolsetError, ThrowOnError>({
+    ...options,
+    url: '/tool/toolset/delete',
   });
 };
 

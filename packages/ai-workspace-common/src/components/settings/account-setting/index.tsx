@@ -235,13 +235,10 @@ export const AccountSetting = () => {
 
           {/* Logout Button */}
           <div>
-            <Button
-              color="danger"
-              variant="filled"
-              onClick={handleLogout}
-              className="text-refly-func-danger-default font-semibold"
-            >
-              {t('settings.account.logout')}
+            <Button variant="filled" onClick={handleLogout}>
+              <span className="text-refly-func-danger-default font-semibold">
+                {t('settings.account.logout')}
+              </span>
             </Button>
           </div>
         </div>

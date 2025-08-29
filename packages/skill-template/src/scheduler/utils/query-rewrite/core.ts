@@ -1,8 +1,7 @@
-import { GraphState, IContext, MentionedContextItem, QueryAnalysis } from '../../types';
+import { IContext, MentionedContextItem, QueryAnalysis } from '../../types';
 import { summarizeChatHistory, summarizeContext } from '../summarizer';
 import { z } from 'zod';
 import { BaseSkill, SkillRunnableConfig } from '../../../base';
-import { SkillTemplateConfig } from '@refly/openapi-schema';
 import {
   MAX_CONTEXT_RATIO,
   MAX_QUERY_TOKENS_RATIO,
@@ -197,8 +196,6 @@ export async function analyzeQueryAndContext(
   ctx: {
     config: SkillRunnableConfig;
     ctxThis: BaseSkill;
-    state: GraphState;
-    tplConfig: SkillTemplateConfig;
   },
 ): Promise<QueryAnalysis> {
   const {
@@ -332,16 +329,8 @@ Please analyze the query, focusing primarily on the current query and available 
   }
 }
 
-export const preprocessQuery = (
-  query: string,
-  ctx: {
-    config: SkillRunnableConfig;
-    ctxThis: BaseSkill;
-    state: GraphState;
-    tplConfig: SkillTemplateConfig;
-  },
-) => {
-  const { modelConfigMap } = ctx.config.configurable;
+export const preprocessQuery = (query: string, config: SkillRunnableConfig) => {
+  const { modelConfigMap } = config.configurable;
   const modelInfo = modelConfigMap?.queryAnalysis;
   const maxQueryTokens =
     (modelInfo.contextLimit || DEFAULT_MODEL_CONTEXT_LIMIT) * MAX_QUERY_TOKENS_RATIO;

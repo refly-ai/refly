@@ -1,5 +1,5 @@
 import { Runnable } from '@langchain/core/runnables';
-import { ToolParams } from '@langchain/core/tools';
+import { StructuredToolInterface, ToolParams } from '@langchain/core/tools';
 import { BaseMessage } from '@langchain/core/messages';
 import { SkillEngine } from './engine';
 import { StateGraphArgs } from '@langchain/langgraph';
@@ -25,6 +25,7 @@ import {
   MediaGenerationModelConfig,
 } from '@refly/openapi-schema';
 import { EventEmitter } from 'node:stream';
+import { preprocess, PreprocessResult } from './scheduler/utils/preprocess';
 
 export abstract class BaseSkill {
   /**
@@ -183,6 +184,9 @@ export abstract class BaseSkill {
       icon: this.icon,
     };
 
+    // Preprocess query and context
+    config.configurable.preprocessResult ??= await preprocess(input.query, config, this);
+
     const response = await this.toRunnable().invoke(input, {
       ...config,
       metadata: {
@@ -208,6 +212,9 @@ export abstract class BaseSkill {
       name: this.name,
       icon: this.icon,
     };
+
+    // Preprocess query and context
+    config.configurable.preprocessResult ??= await preprocess(input.query, config, this);
 
     const runnable = this.toRunnable();
 
@@ -295,7 +302,8 @@ export interface SkillRunnableConfig extends RunnableConfig {
     tplConfig?: SkillTemplateConfig;
     runtimeConfig?: SkillRuntimeConfig;
     emitter?: EventEmitter<SkillEventMap>;
-    selectedMcpServers?: string[];
+    selectedTools?: StructuredToolInterface[];
+    preprocessResult?: PreprocessResult;
   };
   metadata?: SkillRunnableMeta;
 }

@@ -17,13 +17,7 @@ import {
 import { InvokeSkillJobData } from './skill.dto';
 import { PrismaService } from '../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import {
-  detectLanguage,
-  incrementalMarkdownUpdate,
-  safeParseJSON,
-  getArtifactContentAndAttributes,
-  genTransactionId,
-} from '@refly/utils';
+import { detectLanguage, safeParseJSON } from '@refly/utils';
 import {
   SkillRunnableConfig,
   SkillEventMap,
@@ -32,7 +26,6 @@ import {
   SkillEngine,
   createSkillInventory,
 } from '@refly/skill-template';
-import { throttle } from 'lodash';
 import { MiscService } from '../misc/misc.service';
 import { ResultAggregator } from '../../utils/result';
 import { DirectConnection } from '@hocuspocus/server';
@@ -47,6 +40,7 @@ import {
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_SYNC_TOKEN_USAGE,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
+  QUEUE_SYNC_WORKFLOW,
 } from '../../utils/const';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -54,15 +48,16 @@ import { writeSSEResponse } from '../../utils/response';
 import { genBaseRespDataFromError } from '../../utils/exception';
 import { SyncPilotStepJobData } from '../pilot/pilot.processor';
 import { AutoNameCanvasJobData } from '../canvas/canvas.dto';
+import { SyncWorkflowJobData } from '../workflow/workflow.dto';
 import { ProviderService } from '../provider/provider.service';
 import { CodeArtifactService } from '../code-artifact/code-artifact.service';
-import { CollabContext } from '../collab/collab.dto';
 import { CollabService } from '../collab/collab.service';
 import { SkillEngineService } from '../skill/skill-engine.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas/canvas-sync.service';
 import { ActionService } from '../action/action.service';
 import { extractChunkContent } from '../../utils/llm';
+import { ToolService } from '../tool/tool.service';
 
 @Injectable()
 export class SkillInvokerService {
@@ -70,14 +65,6 @@ export class SkillInvokerService {
 
   private skillEngine: SkillEngine;
   private skillInventory: BaseSkill[];
-
-  // Optimize frequent event type checking with Set
-  private static readonly OUTPUT_EVENTS = new Set([
-    'artifact',
-    'log',
-    'structured_data',
-    'create_node',
-  ]);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -87,6 +74,7 @@ export class SkillInvokerService {
     private readonly canvasSyncService: CanvasSyncService,
     private readonly collabService: CollabService,
     private readonly providerService: ProviderService,
+    private readonly toolService: ToolService,
     private readonly codeArtifactService: CodeArtifactService,
     private readonly skillEngineService: SkillEngineService,
     private readonly actionService: ActionService,
@@ -105,6 +93,9 @@ export class SkillInvokerService {
     @Optional()
     @InjectQueue(QUEUE_SYNC_PILOT_STEP)
     private pilotStepQueue?: Queue<SyncPilotStepJobData>,
+    @Optional()
+    @InjectQueue(QUEUE_SYNC_WORKFLOW)
+    private syncWorkflowQueue?: Queue<SyncWorkflowJobData>,
   ) {
     this.skillEngine = this.skillEngineService.getEngine();
     this.skillInventory = createSkillInventory(this.skillEngine);
@@ -165,7 +156,7 @@ export class SkillInvokerService {
       resultHistory,
       projectId,
       eventListener,
-      selectedMcpServers,
+      toolsets,
     } = data;
     const userPo = await this.prisma.user.findUnique({
       select: { uiLocale: true, outputLocale: true },
@@ -192,7 +183,6 @@ export class SkillInvokerService {
         tplConfig,
         runtimeConfig,
         resultId: data.result?.resultId,
-        selectedMcpServers,
       },
     };
 
@@ -211,6 +201,11 @@ export class SkillInvokerService {
       config.configurable.chatHistory = await Promise.all(
         resultHistory.map((r) => this.buildLangchainMessages(user, r, r.steps)),
       ).then((messages) => messages.flat());
+    }
+
+    if (toolsets?.length > 0) {
+      const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine);
+      config.configurable.selectedTools = tools;
     }
 
     if (eventListener) {
@@ -285,7 +280,7 @@ export class SkillInvokerService {
   }
 
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
-    const { input, result, target } = data;
+    const { input, result } = data;
     this.logger.log(`invoke skill with data: ${JSON.stringify(data)}`);
 
     const { resultId, version, actionMeta, tier } = result;
@@ -400,6 +395,20 @@ export class SkillInvokerService {
 
     const resultAggregator = new ResultAggregator();
 
+    // Initialize structuredData with original query if available
+    const originalQuery = data.input?.originalQuery;
+    if (originalQuery) {
+      resultAggregator.addSkillEvent({
+        event: 'structured_data',
+        resultId,
+        step: { name: 'start' },
+        structuredData: {
+          query: originalQuery, // Store original query in structuredData
+          processedQuery: data.input?.query, // Store processed query for reference
+        },
+      });
+    }
+
     // NOTE: Artifacts include both code artifacts and documents
     type ArtifactOutput = Artifact & {
       nodeCreated: boolean; // Whether the canvas node is created
@@ -438,140 +447,6 @@ export class SkillInvokerService {
             return;
           case 'artifact':
             this.logger.log(`artifact event received: ${JSON.stringify(artifact)}`);
-            if (artifact) {
-              resultAggregator.addSkillEvent(data);
-
-              const { entityId, type, status } = artifact;
-              if (!artifactMap[entityId]) {
-                artifactMap[entityId] = { ...artifact, content: '', nodeCreated: false };
-              } else {
-                // Only update artifact status
-                artifactMap[entityId].status = status;
-              }
-
-              if (!artifactMap[entityId].nodeCreated) {
-                this.logger.log(
-                  `add node to canvas ${target.entityId}, artifact: ${JSON.stringify(artifact)}`,
-                );
-
-                // For media types, include initial metadata
-                const nodeMetadata: any = {
-                  status: 'generating',
-                };
-
-                // If this is a completed media artifact, include the media URL
-                if (
-                  ['image', 'video', 'audio'].includes(type) &&
-                  status === 'finish' &&
-                  artifact.metadata
-                ) {
-                  Object.assign(nodeMetadata, artifact.metadata);
-                }
-
-                await this.canvasService.addNodeToCanvas(
-                  user,
-                  target.entityId,
-                  {
-                    type: artifact.type,
-                    data: {
-                      title: artifact.title,
-                      entityId: artifact.entityId,
-                      metadata: nodeMetadata,
-                    },
-                  },
-                  [{ type: 'skillResponse', entityId: resultId }],
-                );
-                artifactMap[entityId].nodeCreated = true;
-              }
-
-              // Handle media artifact completion - update node metadata
-              if (
-                ['image', 'video', 'audio'].includes(type) &&
-                status === 'finish' &&
-                artifact.metadata &&
-                artifactMap[entityId].nodeCreated
-              ) {
-                this.logger.log(
-                  `updating media node metadata for ${entityId}, metadata: ${JSON.stringify(artifact.metadata)}`,
-                );
-
-                try {
-                  // Get current canvas state to find and update the node
-                  const { nodes } = await this.canvasSyncService.getCanvasData(user, {
-                    canvasId: target.entityId,
-                  });
-
-                  // Find the node to update
-                  const nodeToUpdate = nodes.find(
-                    (node) =>
-                      node.data?.entityId === artifact.entityId && node.type === artifact.type,
-                  );
-
-                  if (nodeToUpdate) {
-                    // Update the node metadata with media URL and completion status
-                    const updatedNode = {
-                      ...nodeToUpdate,
-                      data: {
-                        ...nodeToUpdate.data,
-                        metadata: {
-                          ...nodeToUpdate.data.metadata,
-                          status: 'finish',
-                          ...artifact.metadata,
-                        },
-                      },
-                    };
-
-                    // Sync the updated node to canvas
-                    await this.canvasSyncService.syncState(user, {
-                      canvasId: target.entityId,
-                      transactions: [
-                        {
-                          txId: genTransactionId(),
-                          createdAt: Date.now(),
-                          syncedAt: Date.now(),
-                          nodeDiffs: [
-                            {
-                              type: 'update',
-                              id: nodeToUpdate.id,
-                              from: nodeToUpdate,
-                              to: updatedNode,
-                            },
-                          ],
-                          edgeDiffs: [],
-                        },
-                      ],
-                    });
-                  } else {
-                    this.logger.warn(`Media node not found for artifact ${artifact.entityId}`);
-                  }
-                } catch (error) {
-                  this.logger.error(`Failed to update media node metadata: ${error.message}`);
-                }
-              }
-
-              // Open direct connection to yjs doc if artifact type is document
-              if (type === 'document' && !artifactMap[entityId].connection) {
-                const doc = await this.prisma.document.findFirst({
-                  where: { docId: entityId },
-                });
-                const collabContext: CollabContext = {
-                  user,
-                  entity: doc,
-                  entityType: 'document',
-                };
-                const connection = await this.collabService.openDirectConnection(
-                  entityId,
-                  collabContext,
-                );
-
-                this.logger.log(
-                  `open direct connection to document ${entityId}, doc: ${JSON.stringify(
-                    connection.document?.toJSON(),
-                  )}`,
-                );
-                artifactMap[entityId].connection = connection;
-              }
-            }
             return;
           case 'error':
             result.errors.push(data.content);
@@ -588,42 +463,6 @@ export class SkillInvokerService {
       resultId,
       actionMeta,
     };
-
-    const throttledMarkdownUpdate = throttle(
-      ({ connection, content }: ArtifactOutput) => {
-        incrementalMarkdownUpdate(connection.document, content);
-      },
-      20,
-      {
-        leading: true,
-        trailing: true,
-      },
-    );
-
-    const throttledCodeArtifactUpdate = throttle(
-      async ({ entityId, content }: ArtifactOutput) => {
-        // Extract code content and attributes from content string
-        const {
-          content: codeContent,
-          language,
-          type,
-          title,
-        } = getArtifactContentAndAttributes(content);
-
-        await this.codeArtifactService.updateCodeArtifact(user, {
-          artifactId: entityId,
-          title,
-          type,
-          language,
-          content: codeContent,
-          createIfNotExists: true,
-          resultId,
-          resultVersion: version,
-        });
-      },
-      1000,
-      { leading: true, trailing: true },
-    );
 
     if (res) {
       writeSSEResponse(res, { event: 'start', resultId, version });
@@ -699,6 +538,9 @@ export class SkillInvokerService {
       // Start initial network timeout
       createNetworkTimeout();
 
+      // Track whether a tool is currently executing to suppress duplicate streaming
+      let isToolExecuting = false;
+
       for await (const event of skill.streamEvents(input, {
         ...config,
         version: 'v2',
@@ -726,31 +568,48 @@ export class SkillInvokerService {
         switch (event.event) {
           case 'on_tool_end':
           case 'on_tool_start': {
+            // Toggle tool execution flag
+            if (event.event === 'on_tool_start') {
+              isToolExecuting = true;
+            }
+            if (event.event === 'on_tool_end') {
+              isToolExecuting = false;
+            }
             // Extract tool_call_chunks from AIMessageChunk
             if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
               // Update result content and forward stream events to client
 
-              const [, , eventName] = event.name?.split('__') ?? event.name;
+              const { name, type, toolsetKey, toolsetName } = event.metadata ?? {};
 
               const content = event.data?.output
                 ? `
+
 <tool_use>
-<name>${`${eventName}`}</name>
+<name>${name}</name>
+<type>${type}</type>
+<toolsetKey>${toolsetKey}</toolsetKey>
+<toolsetName>${toolsetName}</toolsetName>
 <arguments>
-${event.data?.input ? JSON.stringify({ params: event.data?.input?.input }) : ''}
+${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
 </arguments>
 <result>
-${event.data?.output ? JSON.stringify({ response: event.data?.output?.content ?? '' }) : ''}
+${event.data?.output ? JSON.stringify(event.data.output) : ''}
 </result>
 </tool_use>
+
 `
                 : `
+
 <tool_use>
-<name>${`${eventName}`}</name>
+<name>${name}</name>
+<type>${type}</type>
+<toolsetKey>${toolsetKey}</toolsetKey>
+<toolsetName>${toolsetName}</toolsetName>
 <arguments>
 ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
 </arguments>
 </tool_use>
+
 `;
               resultAggregator.handleStreamContent(runMeta, content, '');
 
@@ -770,52 +629,26 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
             break;
           }
           case 'on_chat_model_stream': {
+            // Suppress streaming content when inside tool execution to avoid duplicate outputs
+            // Tools like generateDoc stream to their own targets (e.g., documents) and should not
+            // also stream to the skill response channel.
+            if (isToolExecuting || event?.metadata?.langgraph_node === 'tools') {
+              break;
+            }
+
             const { content, reasoningContent } = extractChunkContent(chunk);
 
             if ((content || reasoningContent) && !runMeta?.suppressOutput) {
-              if (runMeta?.artifact) {
-                const { entityId } = runMeta.artifact;
-                const artifact = artifactMap[entityId];
-
-                // Update artifact content based on type
-                artifact.content += content;
-
-                if (artifact.type === 'document' && artifact.connection) {
-                  // For document artifacts, update the yjs document
-                  throttledMarkdownUpdate(artifact);
-                } else if (artifact.type === 'codeArtifact') {
-                  // For code artifacts, save to MinIO and database
-                  throttledCodeArtifactUpdate(artifact);
-
-                  // Send stream and stream_artifact event to client
-                  resultAggregator.handleStreamContent(runMeta, content, reasoningContent);
-                  if (res) {
-                    writeSSEResponse(res, {
-                      event: 'stream',
-                      resultId,
-                      content,
-                      reasoningContent: reasoningContent || undefined,
-                      step: runMeta?.step,
-                      artifact: {
-                        entityId: artifact.entityId,
-                        type: artifact.type,
-                        title: artifact.title,
-                      },
-                    });
-                  }
-                }
-              } else {
-                // Update result content and forward stream events to client
-                resultAggregator.handleStreamContent(runMeta, content, reasoningContent);
-                if (res) {
-                  writeSSEResponse(res, {
-                    event: 'stream',
-                    resultId,
-                    content,
-                    reasoningContent,
-                    step: runMeta?.step,
-                  });
-                }
+              // Update result content and forward stream events to client
+              resultAggregator.handleStreamContent(runMeta, content, reasoningContent);
+              if (res) {
+                writeSSEResponse(res, {
+                  event: 'stream',
+                  resultId,
+                  content,
+                  reasoningContent,
+                  step: runMeta?.step,
+                });
               }
             }
             break;
@@ -933,6 +766,14 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
               }),
             ]
           : []),
+        ...(result.workflowNodeExecutionId
+          ? [
+              this.prisma.workflowNodeExecution.updateMany({
+                where: { nodeExecutionId: result.workflowNodeExecutionId },
+                data: { status, endTime: new Date() },
+              }),
+            ]
+          : []),
       ]);
 
       writeSSEResponse(res, { event: 'end', resultId, version });
@@ -972,6 +813,15 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
         await this.pilotStepQueue.add('syncPilotStep', {
           user: { uid: user.uid },
           stepId: result.pilotStepId,
+        });
+      }
+
+      // Sync workflow if needed
+      if (result.workflowNodeExecutionId && this.syncWorkflowQueue) {
+        this.logger.log(`Sync workflow for nodeExecutionId ${result.workflowNodeExecutionId}`);
+        await this.syncWorkflowQueue.add('syncWorkflow', {
+          user: { uid: user.uid },
+          nodeExecutionId: result.workflowNodeExecutionId,
         });
       }
 
@@ -1106,9 +956,18 @@ ${event.data?.input ? JSON.stringify(event.data?.input?.input) : ''}
           resultId,
           version,
           content: JSON.stringify(genBaseRespDataFromError(err)),
+          originError: err.message,
         });
       }
       this.logger.error(`invoke skill error: ${err.stack}`);
+
+      await this.prisma.actionResult.updateMany({
+        where: { resultId, version },
+        data: {
+          status: 'failed',
+          errors: JSON.stringify([err.message]),
+        },
+      });
     } finally {
       if (res) {
         res.end('');

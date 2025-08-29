@@ -6,7 +6,7 @@ import {
   Entity,
 } from '@refly/openapi-schema';
 import { BaseSkill, SkillRunnableConfig } from '../../base';
-import { IContext, GraphState, SkillContextContentItemMetadata } from '../types';
+import { IContext, SkillContextContentItemMetadata } from '../types';
 import { countToken } from './token';
 import {
   MAX_NEED_RECALL_CONTENT_TOKEN,
@@ -40,7 +40,7 @@ export function assembleChunks(chunks: DocumentInterface[] = []): string {
 export async function sortContentBySimilarity(
   query: string,
   contentList: SkillContextContentItem[],
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<SkillContextContentItem[]> {
   // 1. construct documents
   const documents: Document<NodeMeta>[] = contentList.map((item) => {
@@ -78,7 +78,7 @@ export async function sortContentBySimilarity(
 export async function sortDocumentsBySimilarity(
   query: string,
   comingDocuments: SkillContextDocumentItem[],
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<SkillContextDocumentItem[]> {
   // 1. construct documents
   const documents: Document<NodeMeta>[] = comingDocuments.map((item) => {
@@ -116,7 +116,7 @@ export async function sortDocumentsBySimilarity(
 export async function sortResourcesBySimilarity(
   query: string,
   resources: SkillContextResourceItem[],
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<SkillContextResourceItem[]> {
   // 1. construct documents
   const documents: Document<NodeMeta>[] = resources.map((item) => {
@@ -155,7 +155,7 @@ export async function processSelectedContentWithSimilarity(
   query: string,
   contentList: SkillContextContentItem[],
   maxTokens: number,
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<SkillContextContentItem[]> {
   const MAX_RAG_RELEVANT_CONTENT_MAX_TOKENS = Math.floor(
     maxTokens * MAX_RAG_RELEVANT_CONTENT_RATIO,
@@ -243,7 +243,7 @@ export async function processDocumentsWithSimilarity(
   query: string,
   comingDocuments: SkillContextDocumentItem[],
   maxTokens: number,
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<SkillContextDocumentItem[]> {
   const MAX_RAG_RELEVANT_DOCUMENTS_MAX_TOKENS = Math.floor(
     maxTokens * MAX_RAG_RELEVANT_DOCUMENTS_RATIO,
@@ -377,7 +377,7 @@ export async function processResourcesWithSimilarity(
   query: string,
   resources: SkillContextResourceItem[],
   maxTokens: number,
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<SkillContextResourceItem[]> {
   const MAX_RAG_RELEVANT_RESOURCES_MAX_TOKENS = Math.floor(
     maxTokens * MAX_RAG_RELEVANT_RESOURCES_RATIO,
@@ -508,7 +508,7 @@ export async function processMentionedContextWithSimilarity(
   query: string,
   mentionedContext: IContext,
   maxTokens: number,
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<IContext> {
   const MAX_CONTENT_RAG_RELEVANT_RATIO = 0.4;
   const MAX_RESOURCE_RAG_RELEVANT_RATIO = 0.3;
@@ -560,11 +560,11 @@ export async function processMentionedContextWithSimilarity(
 export async function knowledgeBaseSearchGetRelevantChunks(
   query: string,
   metadata: { entities: Entity[]; domains: SearchDomain[]; limit: number },
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<DocumentInterface[]> {
   try {
     // 1. search relevant chunks
-    const res = await ctx.ctxThis.engine.service.search(
+    const res = await ctx.ctxThis.engine.service.librarySearch(
       ctx.config.configurable.user,
       {
         query,
@@ -598,7 +598,7 @@ export async function inMemoryGetRelevantChunks(
   query: string,
   content: string,
   metadata: { entityId: string; title: string; entityType: ContentNodeType },
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<DocumentInterface[]> {
   try {
     // 1. 获取 relevantChunks
@@ -670,7 +670,7 @@ export async function processUrlSourcesWithSimilarity(
   query: string,
   urlSources: Source[],
   maxTokens: number,
-  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill; state: GraphState },
+  ctx: { config: SkillRunnableConfig; ctxThis: BaseSkill },
 ): Promise<Source[]> {
   // set the appropriate maximum token ratio, similar to the processing of contentList
   const MAX_RAG_RELEVANT_URLS_RATIO = 0.7; // 70% of tokens used for high-related URL content

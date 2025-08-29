@@ -26,6 +26,9 @@ export const useDeleteNode = () => {
 
   const deleteSingleNode = useCallback(
     (node: CanvasNode<any>, options: DeleteNodeOptions = {}) => {
+      if (node.type === 'start') {
+        return;
+      }
       const { showMessage = true } = options;
 
       // Delete node from canvas

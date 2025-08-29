@@ -17,6 +17,7 @@ import {
   CanvasState,
   CanvasTransaction,
   VersionConflict,
+  WorkflowVariable,
 } from '@refly/openapi-schema';
 import { RawCanvasData } from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
@@ -33,7 +34,10 @@ import {
 import { useCanvasStore, useCanvasStoreShallow } from '@refly/stores';
 import { useDebouncedCallback } from 'use-debounce';
 import { IContextItem } from '@refly/common-types';
-import { useGetCanvasDetail } from '@refly-packages/ai-workspace-common/queries';
+import {
+  useGetCanvasDetail,
+  useGetWorkflowVariables,
+} from '@refly-packages/ai-workspace-common/queries';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { logEvent } from '@refly/telemetry-web';
@@ -62,6 +66,11 @@ interface CanvasContextType {
   shareNotFound?: boolean;
   shareData?: RawCanvasData;
   lastUpdated?: number;
+  workflow: {
+    workflowVariables: WorkflowVariable[];
+    workflowVariablesLoading: boolean;
+    refetchWorkflowVariables: () => void;
+  };
 
   syncCanvasData: () => Promise<void>;
   undo: () => Promise<void>;
@@ -184,6 +193,14 @@ export const CanvasProvider = ({
 
   const { data: canvasDetail } = useGetCanvasDetail({ query: { canvasId } }, undefined, {
     enabled: !readonly && !!canvasId,
+  });
+
+  const {
+    data: workflowVariables,
+    refetch: refetchWorkflowVariables,
+    isLoading: workflowVariablesLoading,
+  } = useGetWorkflowVariables({ query: { canvasId } }, undefined, {
+    enabled: !!canvasId,
   });
 
   // Use the hook to fetch canvas data when in readonly mode
@@ -666,6 +683,11 @@ export const CanvasProvider = ({
         },
         undo,
         redo,
+        workflow: {
+          workflowVariables: workflowVariables?.data ?? [],
+          workflowVariablesLoading,
+          refetchWorkflowVariables,
+        },
       }}
     >
       {contextHolder}

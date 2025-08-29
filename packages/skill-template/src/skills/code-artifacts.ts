@@ -15,20 +15,10 @@ import { reactiveArtifactInstructions } from '../scheduler/module/artifacts/prom
 
 // utils
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
-import { prepareContext } from '../scheduler/utils/context';
-import { processQuery } from '../scheduler/utils/queryProcessor';
-import { extractAndCrawlUrls } from '../scheduler/utils/extract-weblink';
-import { genCodeArtifactID, safeStringifyJSON } from '@refly/utils';
+import { genCodeArtifactID } from '@refly/utils';
 import { truncateSource } from '../scheduler/utils/truncator';
-import { checkModelContextLenSupport } from '../scheduler/utils/model';
-import { processContextUrls } from '../utils/url-processing';
 
-// Import prompt building functions - only import what we need
-import {
-  buildArtifactsUserPrompt,
-  buildArtifactsContextUserPrompt,
-  buildArtifactsSystemPrompt,
-} from '../scheduler/module/artifacts';
+import { codeArtifactsPromptModule } from '../scheduler/module/artifacts';
 
 import { extractStructuredData } from '../scheduler/utils/extractor';
 import { BaseMessage, HumanMessage } from '@langchain/core/dist/messages';
@@ -116,111 +106,22 @@ export class CodeArtifacts extends BaseSkill {
   };
 
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
-    const { messages = [], images = [] } = state;
+    const { query, messages = [], images = [] } = state;
     const {
       locale = 'en',
       modelConfigMap,
-      tplConfig,
       project,
-      runtimeConfig,
+      tplConfig,
+      preprocessResult,
     } = config.configurable;
     const modelInfo = modelConfigMap.chat;
+    const artifactType = tplConfig?.artifactType?.value ?? 'auto';
 
     // Get project-specific customInstructions if available
     const customInstructions = project?.customInstructions;
 
-    // Only enable knowledge base search if both projectId AND runtimeConfig.enabledKnowledgeBase are true
-    const projectId = project?.projectId;
-    const enableKnowledgeBaseSearch = !!projectId && !!runtimeConfig?.enabledKnowledgeBase;
-
-    this.engine.logger.log(
-      `ProjectId: ${projectId}, Enable KB Search: ${enableKnowledgeBaseSearch}`,
-    );
-
-    // Get configuration values
-    const artifactType = tplConfig?.artifactType?.value ?? 'auto';
-
-    config.metadata.step = { name: 'analyzeQuery' };
-
-    // Use shared query processor
-    const {
-      optimizedQuery,
-      query,
-      usedChatHistory,
-      hasContext,
-      remainingTokens,
-      mentionedContext,
-      rewrittenQueries,
-    } = await processQuery({
-      config,
-      ctxThis: this,
-      state,
-    });
-
-    // Process URLs from frontend context if available
-    const contextUrls = config.configurable?.urls || [];
-    const contextUrlSources = await processContextUrls(contextUrls, config, this);
-
-    // Combine contextUrlSources with other sources if needed
-    if (contextUrlSources.length > 0) {
-      // If you have existing sources array, you can combine them
-      // sources = [...sources, ...contextUrlSources];
-      this.engine.logger.log(`Added ${contextUrlSources.length} URL sources from context`);
-    }
-
-    // Extract URLs from the query and crawl them if needed
-    const { sources: querySources, analysis } = await extractAndCrawlUrls(query, config, this, {
-      concurrencyLimit: 5,
-      batchSize: 8,
-    });
-
-    this.engine.logger.log(`URL extraction analysis: ${safeStringifyJSON(analysis)}`);
-    this.engine.logger.log(`Extracted URL sources count: ${querySources.length}`);
-
-    let context = '';
-    let sources = [];
-
-    const urlSources = [...contextUrlSources, ...querySources];
-
-    // Consider URL sources for context preparation
-    const hasUrlSources = urlSources.length > 0;
-    const needPrepareContext =
-      (hasContext || hasUrlSources || enableKnowledgeBaseSearch) && remainingTokens > 0;
-    const isModelContextLenSupport = checkModelContextLenSupport(modelInfo);
-
-    this.engine.logger.log(`optimizedQuery: ${optimizedQuery}`);
-    this.engine.logger.log(`mentionedContext: ${safeStringifyJSON(mentionedContext)}`);
-    this.engine.logger.log(`hasUrlSources: ${hasUrlSources}`);
-
-    if (needPrepareContext) {
-      config.metadata.step = { name: 'analyzeContext' };
-      const preparedRes = await prepareContext(
-        {
-          query: optimizedQuery,
-          mentionedContext,
-          maxTokens: remainingTokens,
-          enableMentionedContext: hasContext,
-          rewrittenQueries,
-          urlSources,
-        },
-        {
-          config,
-          ctxThis: this,
-          state,
-          tplConfig: {
-            ...config.configurable.tplConfig,
-            enableKnowledgeBaseSearch: {
-              value: enableKnowledgeBaseSearch,
-              label: 'Knowledge Base Search',
-              displayValue: enableKnowledgeBaseSearch ? 'true' : 'false',
-            },
-          },
-        },
-      );
-
-      context = preparedRes.contextStr;
-      sources = preparedRes.sources;
-    }
+    const { optimizedQuery, rewrittenQueries, context, sources, usedChatHistory } =
+      preprocessResult;
 
     // Prepare additional instructions based on selected artifact type
     let typeInstructions = '';
@@ -232,22 +133,7 @@ export class CodeArtifacts extends BaseSkill {
     const combinedInstructions = typeInstructions;
 
     // Custom module for building messages
-    const module = {
-      // Custom system prompt that includes examples
-      buildSystemPrompt: () => {
-        return buildArtifactsSystemPrompt();
-      },
-      buildContextUserPrompt: buildArtifactsContextUserPrompt,
-      buildUserPrompt: ({ originalQuery, optimizedQuery, rewrittenQueries, locale }) => {
-        return buildArtifactsUserPrompt({
-          originalQuery,
-          optimizedQuery,
-          rewrittenQueries,
-          customInstructions,
-          locale,
-        });
-      },
-    };
+    const module = codeArtifactsPromptModule;
 
     // Modify query to include instructions if provided
     const enhancedQuery = combinedInstructions
@@ -260,7 +146,6 @@ export class CodeArtifacts extends BaseSkill {
       locale,
       chatHistory: usedChatHistory,
       messages,
-      needPrepareContext: needPrepareContext && isModelContextLenSupport,
       context,
       images,
       originalQuery: originalQuery,
