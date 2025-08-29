@@ -296,7 +296,7 @@ export const ImportResourceModal = memo(() => {
           <div className="flex flex-col gap-3 p-3 pb-1.5 rounded-xl border-solid border-[1px] border-refly-Card-Border">
             <Segmented
               shape="round"
-              className="w-full [&_.ant-segmented-item]:flex-1 [&_.ant-segmented-item]:text-center "
+              className="w-full [&_.ant-segmented-item]:flex-1 [&_.ant-segmented-item]:text-center"
               options={importResourceOptions}
               value={selectedMenuItem}
               onChange={(value) => {

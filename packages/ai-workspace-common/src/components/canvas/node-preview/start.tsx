@@ -1,7 +1,7 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useState } from 'react';
 import { Divider, Button, Popconfirm, message } from 'antd';
-import { Add, Edit, Delete } from 'refly-icons';
+import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { VARIABLE_TYPE_ICON_MAP } from '../nodes/start';
@@ -12,9 +12,16 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 
 type VariableType = 'string' | 'option' | 'resource';
 export const MAX_VARIABLE_LENGTH = {
-  string: 10,
-  option: 10,
-  resource: 30,
+  string: 20,
+  option: 20,
+  resource: 50,
+};
+
+const RESOURCE_TYPE_ICON_MAP = {
+  image: Image,
+  document: Doc2,
+  video: Video,
+  audio: Audio,
 };
 
 const VariableItem = memo(
@@ -80,6 +87,15 @@ const VariableItem = memo(
             </div>
           )}
         </div>
+
+        {variableType === 'resource' && (
+          <div className="flex items-center gap-1">
+            {variable.resourceTypes?.map((type) => {
+              const Icon = RESOURCE_TYPE_ICON_MAP[type];
+              return <Icon size={16} key={type} color="var(--refly-text-3)" />;
+            })}
+          </div>
+        )}
 
         <div
           className={`items-center gap-1 flex-shrik-0 ${

@@ -133,7 +133,7 @@ const ToolItem = ({
       className="mb-2 px-2 py-3 rounded-[8px] cursor-pointer hover:bg-refly-tertiary-hover flex items-start gap-3"
       key={tool.toolsetId}
     >
-      <div className="flex-shrink-0 h-10 w-10 rounded-md bg-refly-tertiary-default flex items-center justify-center">
+      <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-refly-tertiary-default flex items-center justify-center">
         <Favicon url={tool.definition?.domain} size={24} />
       </div>
 

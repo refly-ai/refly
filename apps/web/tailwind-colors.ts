@@ -29,6 +29,7 @@ export const reflyColors = {
   'refly-modal-mask': 'var(--refly-modal-mask)',
   'refly-primary-active': 'var(--refly-primary-active)',
   'refly-primary-default': 'var(--refly-primary-default)',
+  'refly-primary-light': 'var(--refly-primary-light)',
   'refly-primary-default-last': 'var(--refly-primary-default-last)',
   'refly-primary-disabled': 'var(--refly-primary-disabled)',
   'refly-primary-hover': 'var(--refly-primary-hover)',

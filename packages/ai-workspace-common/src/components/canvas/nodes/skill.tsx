@@ -216,6 +216,12 @@ export const SkillNode = memo(
     );
 
     useEffect(() => {
+      if (!metadataSelectedToolsets) {
+        setSelectedToolsets(selectedToolsetsFromStore ?? []);
+      }
+    }, [selectedToolsetsFromStore, metadataSelectedToolsets]);
+
+    useEffect(() => {
       setNodeStyle(id, NODE_SIDE_CONFIG);
     }, [id, setNodeStyle]);
 

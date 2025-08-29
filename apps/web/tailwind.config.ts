@@ -74,6 +74,10 @@ export function defineConfig(): Config {
             },
           },
         },
+        backgroundImage: {
+          'gradient-tools-open':
+            'linear-gradient(124deg, rgba(31, 201, 150, 0.10) 0%, rgba(69, 190, 255, 0.06) 24.85%)',
+        },
         colors: {
           ...reflyColors,
           // TODO: remove below hardcoded colors after reflyColors is correctly configured

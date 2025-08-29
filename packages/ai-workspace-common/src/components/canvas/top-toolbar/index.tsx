@@ -21,6 +21,7 @@ import { useAuthStoreShallow } from '@refly/stores';
 import { CanvasLayoutControls } from '@refly-packages/ai-workspace-common/components/canvas/layout-control/canvas-layout-controls';
 import { TooltipButton } from './buttons';
 import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
+import { ToolsDependency } from '../tools-dependency';
 
 const buttonClass = '!p-0 h-[30px] w-[30px] flex items-center justify-center ';
 
@@ -172,6 +173,8 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
           >
             <Copy size={16} />
           </TooltipButton>
+
+          <ToolsDependency />
 
           {isPreviewCanvas ? (
             <Button

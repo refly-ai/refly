@@ -8,7 +8,7 @@ import { useLaunchpadStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { useSiderStoreShallow, SettingsModalActiveTab } from '@refly/stores';
 import { Mcp, Checked, Settings } from 'refly-icons';
 import { GenericToolset } from '@refly/openapi-schema';
-import { Favicon } from '@refly-packages/ai-workspace-common/components/common/favicon';
+import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 
 interface ToolsetSelectorPopoverProps {
   trigger?: React.ReactNode;
@@ -108,27 +108,6 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
     );
   }, [handleOpenToolStore, t]);
 
-  interface ToolsetIconConfig {
-    size?: number;
-    className?: string;
-  }
-
-  const renderToolsetIcon = useCallback((toolset: GenericToolset, config?: ToolsetIconConfig) => {
-    const { size = 24, className } = config ?? {};
-    if (toolset.type === 'mcp') {
-      return (
-        <div className={cn('flex items-center justify-center overflow-hidden', className)}>
-          <Mcp size={size} color="var(--refly-text-1)" />
-        </div>
-      );
-    }
-    return (
-      <div className={cn('flex items-center justify-center overflow-hidden', className)}>
-        <Favicon url={toolset.toolset?.definition?.domain} size={size} />
-      </div>
-    );
-  }, []);
-
   const renderContent = useCallback(() => {
     if (loading) {
       return (
@@ -185,7 +164,7 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
               >
                 <div className="flex-1 min-w-0 flex flex-col">
                   <div className="flex items-center gap-3">
-                    {renderToolsetIcon(toolset)}
+                    <ToolsetIcon toolset={toolset} />
                     <div className="flex-1 min-w-0 flex flex-col">
                       <div className="text-sm text-refly-text-0 font-semibold block truncate leading-5">
                         {toolset.name}
@@ -233,11 +212,17 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
         {selectedToolsets?.length > 0 && (
           <div className="ml-1.5 flex items-center">
             {selectedToolsets.slice(0, 3).map((toolset) => {
-              return renderToolsetIcon(toolset, {
-                size: 14,
-                className:
-                  'bg-refly-bg-body-z0 shadow-refly-s p-0.5 -mr-[7px] last:mr-0 rounded-full',
-              });
+              return (
+                <ToolsetIcon
+                  key={toolset.id}
+                  toolset={toolset}
+                  config={{
+                    size: 14,
+                    className:
+                      'bg-refly-bg-body-z0 shadow-refly-s p-0.5 -mr-[7px] last:mr-0 rounded-full',
+                  }}
+                />
+              );
             })}
             {selectedToolsets.length > 3 && (
               <div className="min-w-[18px] h-[18px] p-0.5 box-border flex items-center justify-center rounded-full bg-refly-bg-body-z0 shadow-refly-s text-refly-text-1 text-[10px]">

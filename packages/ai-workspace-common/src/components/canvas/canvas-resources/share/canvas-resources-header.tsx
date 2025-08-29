@@ -82,7 +82,7 @@ export const CanvasResourcesHeader = memo(() => {
     setSidePanelVisible(false);
     setShowLeftOverview(false);
     setWideScreenVisible(false);
-  }, [setSidePanelVisible, setShowLeftOverview, setWideScreenVisible]);
+  }, [setSidePanelVisible, setShowLeftOverview, setWideScreenVisible, isStartNode]);
 
   const handleShowLeftOverview = useCallback(() => {
     if (sidePanelVisible && !wideScreenVisible) {

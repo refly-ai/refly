@@ -23,6 +23,7 @@
   --text-icon-refly-text-2: rgba(28, 31, 35, 0.6);
   --refly-text-StaticWhite: rgb(3, 3, 3);
   --refly-primary-default: #0e9f77;
+  --refly-primary-light: #cdfff1;
   --refly-primary-hover: #1b9774;
   --refly-primary-active: #16926f;
   --refly-primary-disabled: #d6d6d6;
@@ -78,7 +79,8 @@
   --text-icon-refly-text-2: rgba(243, 243, 243, 0.6);
   --refly-text-StaticWhite: #ffffff;
   --refly-primary-default: #009589;
-  --refly-primary-hover: #33c2b0;
+  --refly-primary-light: #cdfff1;
+  --refly-primary-hover: rgb(3, 4, 4);
   --refly-primary-active: #8ee1d3;
   --refly-primary-disabled: #007777;
   --refly-primary-default-last: #009589;
