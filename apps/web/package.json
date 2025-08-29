@@ -48,7 +48,7 @@
     "react-router-dom": "^6.22.1",
     "react-tweet": "^3.2.1",
     "react-use": "^17.5.0",
-    "refly-icons": "^1.0.5"
+    "refly-icons": "^1.0.6"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.4.6",

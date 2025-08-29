@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import {
   IconDeleteFile,
-  IconRun,
+  IconVariable,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { AiChat, Reload, Copy, Clone, More, Delete, Download } from 'refly-icons';
 import cn from 'classnames';
@@ -38,10 +38,11 @@ type NodeActionButtonsProps = {
   isSelected?: boolean;
   bgColor?: string;
   onChangeBackground?: (bgColor: string) => void;
+  isExtracting?: boolean;
 };
 
 export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
-  ({ nodeId, nodeType, isNodeHovered, bgColor, onChangeBackground }) => {
+  ({ nodeId, nodeType, isNodeHovered, bgColor, onChangeBackground, isExtracting }) => {
     const { t } = useTranslation();
     const { readonly } = useCanvasContext();
     const { getNode } = useReactFlow();
@@ -75,7 +76,9 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
     const [downloadRunning, setDownloadRunning] = useState(false);
 
     const shouldShowButtons =
-      !readonly && !isMultiSelected && (isNodeHovered || contextMenuOpenedCanvasId === nodeId);
+      !readonly &&
+      !isMultiSelected &&
+      (isNodeHovered || contextMenuOpenedCanvasId === nodeId || !!isExtracting);
 
     const handleCloneAskAI = useCallback(() => {
       setCloneAskAIRunning(true);
@@ -191,10 +194,11 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
 
         case 'skill':
           buttons.push({
-            key: 'run',
-            icon: IconRun,
-            tooltip: t('canvas.nodeActions.run'),
-            onClick: () => nodeActionEmitter.emit(createNodeEventName(nodeId, 'run')),
+            key: 'variable',
+            icon: IconVariable,
+            tooltip: t('canvas.nodeActions.extractVariables' as any) || t('canvas.nodeActions.run'),
+            onClick: () => nodeActionEmitter.emit(createNodeEventName(nodeId, 'extractVariables')),
+            loading: isExtracting,
           });
           break;
 
@@ -345,6 +349,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
             '!justify-end': !showMoreButton,
           })}
         >
+          {' '}
           <div className="flex items-center gap-3">
             {actionButtons.map((button) => (
               <Tooltip key={button.key} title={button.tooltip} placement="top">
@@ -366,7 +371,6 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
               </Tooltip>
             ))}
           </div>
-
           {showMoreButton && (
             <div className="flex items-center gap-2">
               {nodeType === 'memo' && (

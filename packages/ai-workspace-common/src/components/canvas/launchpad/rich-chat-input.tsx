@@ -19,6 +19,12 @@ import {
 import { AiChat } from 'refly-icons';
 import { mentionStyles } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/variable/mention-style';
 import { createRoot } from 'react-dom/client';
+import { useStore } from '@xyflow/react';
+import { useShallow } from 'zustand/react/shallow';
+import {
+  nodeActionEmitter,
+  createNodeEventName,
+} from '@refly-packages/ai-workspace-common/events/nodeActions';
 
 interface RichChatInputProps {
   readonly: boolean;
@@ -45,7 +51,7 @@ const MentionList = ({ items, command }: { items: any[]; command: any }) => {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [resourceLibraryType, setResourceLibraryType] = useState<
     'uploads' | 'stepRecord' | 'resultRecord'
-  >('uploads');
+  >('resultRecord');
   const { nodes } = useCanvasData();
 
   // Group items by source and create canvas-based items
@@ -154,70 +160,64 @@ const MentionList = ({ items, command }: { items: any[]; command: any }) => {
         {/* First level menu - Categories */}
         <div className="w-[174px] border-r border-refly-Card-Border p-2">
           {/* Start Node Category */}
-          {groupedItems.startNode.length > 0 && (
-            <div
-              className="p-1.5 cursor-pointer border-b border-refly-Card-Border transition-colors hover:bg-refly-fill-hover rounded-md"
-              onMouseEnter={() => setHoveredCategory('startNode')}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
-                  {t('canvas.richChatInput.startNode')}
-                </span>
-                <svg
-                  className="w-3 h-3 text-gray-400 dark:text-gray-500 ml-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
+          <div
+            className="p-1.5 cursor-pointer border-b border-refly-Card-Border transition-colors hover:bg-refly-fill-hover rounded-md"
+            onMouseEnter={() => setHoveredCategory('startNode')}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                {t('canvas.richChatInput.startNode')}
+              </span>
+              <svg
+                className="w-3 h-3 text-gray-400 dark:text-gray-500 ml-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </div>
-          )}
+          </div>
 
           {/* Resource Library Category */}
-          {(groupedItems.resourceLibrary.length > 0 ||
-            groupedItems.stepRecord.length > 0 ||
-            groupedItems.resultRecord.length > 0) && (
-            <div
-              className="p-1.5 cursor-pointer border-b border-refly-Card-Border transition-colors hover:bg-refly-fill-hover rounded-md"
-              onMouseEnter={() => {
-                setHoveredCategory('resourceLibrary');
-                // Reset to uploads when hovering resource library
-                setResourceLibraryType('uploads');
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
-                  {t('canvas.richChatInput.resourceLibrary')}
-                </span>
-                <svg
-                  className="w-3 h-3 text-gray-400 dark:text-gray-500 ml-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
+          <div
+            className="p-1.5 cursor-pointer border-b border-refly-Card-Border transition-colors hover:bg-refly-fill-hover rounded-md"
+            onMouseEnter={() => {
+              setHoveredCategory('resourceLibrary');
+              // Reset to uploads when hovering resource library
+              setResourceLibraryType('uploads');
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                {t('canvas.richChatInput.resourceLibrary')}
+              </span>
+              <svg
+                className="w-3 h-3 text-gray-400 dark:text-gray-500 ml-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Second level menu - Variables */}
         <div className="flex-1 max-w-[400px]">
           {hoveredCategory === 'startNode' && groupedItems.startNode?.length > 0 && (
-            <div className="p-2 max-h-56 overflow-y-auto">
+            <div className="p-2 max-h-40 overflow-y-auto">
               {groupedItems.startNode.map((item) => (
                 <div
                   key={item.name}
@@ -242,19 +242,7 @@ const MentionList = ({ items, command }: { items: any[]; command: any }) => {
             <>
               {/* Switch button for resource library types */}
               <div className="px-4 py-3 border-b border-refly-Card-Border">
-                <div className="flex space-x-1 bg-refly-fill-default rounded-lg p-1">
-                  <button
-                    type="button"
-                    className={cn(
-                      'flex-1 px-2 py-1 text-xs rounded-md transition-all duration-200 whitespace-nowrap min-w-0 relative border-none',
-                      resourceLibraryType === 'resultRecord'
-                        ? 'bg-refly-bg-content-z2 text-gray-900 dark:text-gray-100 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100',
-                    )}
-                    onClick={() => setResourceLibraryType('resultRecord')}
-                  >
-                    {t('canvas.richChatInput.resultRecord')}
-                  </button>
+                <div className="flex space-x-1 bg-refly-bg-control-z0 rounded-lg p-1">
                   <button
                     type="button"
                     className={cn(
@@ -271,6 +259,18 @@ const MentionList = ({ items, command }: { items: any[]; command: any }) => {
                     type="button"
                     className={cn(
                       'flex-1 px-2 py-1 text-xs rounded-md transition-all duration-200 whitespace-nowrap min-w-0 relative border-none',
+                      resourceLibraryType === 'resultRecord'
+                        ? 'bg-refly-bg-content-z2 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 ',
+                    )}
+                    onClick={() => setResourceLibraryType('resultRecord')}
+                  >
+                    {t('canvas.richChatInput.resultRecord')}
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex-1 px-2 py-1 text-xs rounded-md transition-all duration-200 whitespace-nowrap min-w-0 relative border-none',
                       resourceLibraryType === 'uploads'
                         ? 'bg-refly-bg-content-z2 text-gray-900 dark:text-gray-100 shadow-sm'
                         : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100',
@@ -281,7 +281,7 @@ const MentionList = ({ items, command }: { items: any[]; command: any }) => {
                   </button>
                 </div>
               </div>
-              <div className="py-2  px-2 max-h-56 overflow-y-auto">
+              <div className="py-2  px-2 max-h-40 overflow-y-auto">
                 {resourceLibraryType === 'uploads' &&
                   groupedItems.resourceLibrary?.length > 0 &&
                   groupedItems.resourceLibrary.map((item) => (
@@ -414,8 +414,6 @@ const CustomMention = Mention.extend({
       textContainer.className = 'mention-text';
       textContainer.textContent = node.attrs.label || node.attrs.id;
 
-      // Get variable type and render the appropriate icon
-      // Align logic with MentionList and allItems handling
       const variableType = node.attrs.variableType || node.attrs.source;
 
       let reactRoot: any = null;
@@ -643,15 +641,43 @@ const RichChatInputComponent = forwardRef<HTMLDivElement, RichChatInputProps>(
     // Create Tiptap editor
     const internalUpdateRef = useRef(false);
 
+    // Keyboard shortcut: Alt+Cmd+V (Mac) or Alt+Ctrl+V (Windows) to trigger variable extraction
+    const selectedSkillNodeId = useStore(
+      useShallow((state: any) => {
+        const nodes = state.nodes || [];
+        const selected = nodes.find((n: any) => n?.selected && n?.type === 'skill');
+        return selected?.id || '';
+      }),
+    );
+
+    useEffect(() => {
+      const onKeyDown = (e: KeyboardEvent) => {
+        const isV = (e.key || '').toLowerCase() === 'v';
+        const isAlt = !!e.altKey;
+        const isCmd = !!e.metaKey; // Mac
+        const isCtrl = !!e.ctrlKey;
+
+        if (isV && isAlt && (isCmd || isCtrl)) {
+          if (selectedSkillNodeId) {
+            e.preventDefault();
+            nodeActionEmitter.emit(createNodeEventName(selectedSkillNodeId, 'extractVariables'));
+          }
+        }
+      };
+
+      window.addEventListener('keydown', onKeyDown);
+      return () => window.removeEventListener('keydown', onKeyDown);
+    }, [selectedSkillNodeId]);
+
     const editor = useEditor({
       extensions: [StarterKit, mentionExtension],
       content: query,
       editable: !readonly,
       onUpdate: ({ editor }) => {
         const content = editor.getText();
-        const processedContent = convertMentionsToHandlebars(content);
+        // Keep raw text in state for UX; convert to handlebars only on send
         internalUpdateRef.current = true;
-        setQuery(processedContent);
+        setQuery(content);
       },
       editorProps: {
         attributes: {
@@ -696,6 +722,58 @@ const RichChatInputComponent = forwardRef<HTMLDivElement, RichChatInputProps>(
       [editor],
     );
 
+    // Build tiptap JSON content from a string with handlebars variables like {{var}}
+    const buildContentFromHandlebars = useCallback(
+      (content: string) => {
+        const nodes: any[] = [];
+        if (!content) return nodes;
+        const varRegex = /{{\s*([a-zA-Z0-9_\-\.]+)\s*}}/g;
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+
+        const findVarMeta = (name: string) => {
+          // Try to find variable in provided variables prop
+          const found = (variables || []).find((v: any) => v?.name === name);
+          return {
+            source: found?.source || 'startNode',
+            variableType: found?.variableType || 'string',
+          };
+        };
+
+        for (;;) {
+          match = varRegex.exec(content);
+          if (match === null) break;
+          const start = match.index;
+          const end = varRegex.lastIndex;
+          const varName = match[1];
+
+          if (start > lastIndex) {
+            nodes.push({ type: 'text', text: content.slice(lastIndex, start) });
+          }
+
+          const meta = findVarMeta(varName);
+          nodes.push({
+            type: 'mention',
+            attrs: {
+              id: varName,
+              label: varName,
+              source: meta.source,
+              variableType: meta.variableType,
+            },
+          });
+
+          lastIndex = end;
+        }
+
+        if (lastIndex < content.length) {
+          nodes.push({ type: 'text', text: content.slice(lastIndex) });
+        }
+
+        return nodes;
+      },
+      [variables],
+    );
+
     // Enhanced handleSendMessage that converts mentions to Handlebars
     const handleSendMessageWithHandlebars = useCallback(() => {
       if (editor) {
@@ -718,10 +796,29 @@ const RichChatInputComponent = forwardRef<HTMLDivElement, RichChatInputProps>(
         internalUpdateRef.current = false;
         return;
       }
-      if (editor.getText() !== (query ?? '')) {
-        editor.commands.setContent(query ?? '');
+      const currentText = editor.getText();
+      const nextText = query ?? '';
+      if (currentText !== nextText) {
+        // Convert handlebars variables back to mention nodes for rendering
+        const nodes = buildContentFromHandlebars(nextText);
+        if (nodes.length > 0) {
+          const jsonDoc = {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: nodes,
+              },
+            ],
+          } as any;
+          internalUpdateRef.current = true;
+          editor.commands.setContent(jsonDoc);
+        } else {
+          internalUpdateRef.current = true;
+          editor.commands.setContent(nextText);
+        }
       }
-    }, [query, editor]);
+    }, [query, editor, buildContentFromHandlebars]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {

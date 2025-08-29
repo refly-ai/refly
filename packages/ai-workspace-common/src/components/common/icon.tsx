@@ -83,7 +83,7 @@ import { TbWorldSearch, TbWorldCog, TbInputSpark } from 'react-icons/tb';
 import { GrCircleQuestion } from 'react-icons/gr';
 import { AiOutlineLink } from 'react-icons/ai';
 import { HiOutlineTableCells } from 'react-icons/hi2';
-
+import { X } from 'refly-icons';
 import OpenAIIcon from '@refly-packages/ai-workspace-common/assets/openai.svg';
 import ClaudeIcon from '@refly-packages/ai-workspace-common/assets/claude.svg';
 import GeminiIcon from '@refly-packages/ai-workspace-common/assets/gemini.svg';
@@ -194,7 +194,7 @@ export const IconVideo = HiOutlineFilm;
 export const IconAudio = HiOutlineSpeakerWave;
 export const IconLightMode = MdOutlineLightMode;
 export const IconDarkMode = MdOutlineDarkMode;
-
+export const IconVariable = X;
 export const IconChrome = ChromeIcon;
 export const ModelProviderIcons = {
   openai: OpenAIIcon,

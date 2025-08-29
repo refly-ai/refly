@@ -1373,6 +1373,7 @@ const translations = {
       nodeNotFound: '源节点未找到或已被删除，请先添加到画布',
     },
     nodeActions: {
+      extractVariables: '提取变量',
       dragToConnect: '拖拽连线',
       clickToAdd: '点击添加',
       duplicateMemo: '复制备忘录',
