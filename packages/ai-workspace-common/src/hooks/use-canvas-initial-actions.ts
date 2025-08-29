@@ -63,7 +63,7 @@ export const useCanvasInitialActions = (canvasId: string) => {
   useEffect(() => {
     const source = searchParams.get('source');
     const isPilotActivated = Boolean(searchParams.get('isPilotActivated'));
-    const isMediaGeneration = Boolean(searchParams.get('isMediaGeneration'));
+    const isMediaGeneration = skillSelectedModel?.category === 'mediaGeneration';
     const newParams = new URLSearchParams();
 
     // Copy all params except 'source'
@@ -127,20 +127,20 @@ export const useCanvasInitialActions = (canvasId: string) => {
         runtimeConfig,
         isPilotActivated,
         isMediaGeneration,
-        mediaQueryData: pendingMediaQueryData,
       } = pendingActionRef.current;
 
       if (isMediaGeneration) {
-        if (!pendingMediaQueryData) {
-          return;
-        }
-
-        const { mediaType, query, modelInfo, providerItemId } = pendingMediaQueryData;
         nodeOperationsEmitter.emit('generateMedia', {
-          providerItemId,
+          providerItemId: modelInfo.providerItemId,
           targetType: 'canvas',
           targetId: canvasId,
-          mediaType: mediaType,
+          mediaType: modelInfo.capabilities?.image
+            ? 'image'
+            : modelInfo.capabilities?.video
+              ? 'video'
+              : modelInfo.capabilities?.audio
+                ? 'audio'
+                : 'image',
           query: query,
           modelInfo: modelInfo,
           nodeId: '',

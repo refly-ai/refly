@@ -210,19 +210,20 @@ export const useListenNodeOperationEvents = () => {
           const mediaSkillEntityId = genMediaSkillID();
 
           const mediaSkillNode = {
-            type: 'mediaSkill' as const,
+            type: 'skill' as const,
             data: {
               title: query,
               entityId: mediaSkillEntityId,
               metadata: {
                 query,
                 selectedModel: omit(mediaSelectedModel, ['creditBilling', 'provider']),
+                contextItems,
               },
             },
           };
 
           // Add the mediaSkill node to canvas
-          addNode(mediaSkillNode, [], false, true);
+          addNode(mediaSkillNode, convertContextItemsToNodeFilters(contextItems), false, true);
 
           // Get the created node ID
           const nodes = getNodes();

@@ -5,6 +5,10 @@ import type { ModelInfo } from '@refly/openapi-schema';
 import { PreviewChatInput } from './skill-response/preview-chat-input';
 import { EditChatInput } from './skill-response/edit-chat-input';
 import { cn } from '@refly/utils/cn';
+//import { ActionContainer } from './skill-response/action-container';
+import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
+import { MediaActionContainer } from './media-action-container';
+import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 
 interface ImageNodePreviewProps {
   node: CanvasNode<ImageNodeMeta>;
@@ -17,6 +21,7 @@ const ImageNodePreviewComponent = ({ node }: ImageNodePreviewProps) => {
   const resultId = node?.data?.metadata?.resultId ?? '';
   const modelInfo: ModelInfo | undefined = node?.data?.metadata?.modelInfo;
   const [editMode, setEditMode] = useState(false);
+  const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
 
   if (!imageUrl) {
     return (
@@ -28,7 +33,7 @@ const ImageNodePreviewComponent = ({ node }: ImageNodePreviewProps) => {
 
   return (
     <div
-      className="w-full h-full flex flex-col gap-4 max-w-[1024px] mx-auto overflow-hidden"
+      className="w-full h-full flex flex-col gap-4 max-w-[1024px] mx-auto overflow-hidden relative"
       onClick={() => {
         if (editMode) {
           setEditMode(false);
@@ -72,11 +77,31 @@ const ImageNodePreviewComponent = ({ node }: ImageNodePreviewProps) => {
           <img
             src={imageUrl}
             alt={title}
-            className="max-w-full max-h-full object-contain"
+            className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
             loading="lazy"
             referrerPolicy="no-referrer"
+            onClick={() => setIsPreviewModalVisible(true)}
           />
         </div>
+      </div>
+
+      <MediaActionContainer
+        title={title}
+        contextItems={contextItems}
+        modelInfo={modelInfo ?? null}
+        mediaType={'image'}
+        resultId={resultId}
+        storageKey={node?.data?.metadata?.storageKey ?? ''}
+      />
+      <SourceListModal classNames="w-full h-full" />
+
+      {/* Image Preview Modal */}
+      <div className="absolute inset-0 pointer-events-none">
+        <ImagePreview
+          isPreviewModalVisible={isPreviewModalVisible}
+          setIsPreviewModalVisible={setIsPreviewModalVisible}
+          imageUrl={imageUrl}
+        />
       </div>
     </div>
   );

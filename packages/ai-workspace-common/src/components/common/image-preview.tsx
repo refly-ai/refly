@@ -15,7 +15,6 @@ export const ImagePreview = ({
   isPreviewModalVisible,
   setIsPreviewModalVisible,
   imageUrl,
-  imageTitle,
 }: {
   isPreviewModalVisible: boolean;
   setIsPreviewModalVisible: (value: boolean) => void;
@@ -28,7 +27,7 @@ export const ImagePreview = ({
     const triggerDownload = (href: string) => {
       const link = document.createElement('a');
       link.href = href;
-      link.download = imageTitle ?? 'image';
+      link.download = 'image';
       link.target = '_blank';
       document.body.appendChild(link);
       link.click();
@@ -68,7 +67,7 @@ export const ImagePreview = ({
       // Fallback to original method if fetch fails
       triggerDownload(imageUrl);
     }
-  }, [imageUrl, imageTitle]);
+  }, [imageUrl]);
 
   return (
     <Image
@@ -77,7 +76,6 @@ export const ImagePreview = ({
         visible: isPreviewModalVisible,
         src: imageUrl,
         destroyOnHidden: true,
-        title: imageTitle,
         onVisibleChange: (value) => {
           setIsPreviewModalVisible(value);
         },

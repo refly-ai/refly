@@ -249,8 +249,8 @@ export class MediaGeneratorService {
               param.value as string,
             );
             if (
-              languageDetection.isEnglish ||
-              !supportedLanguages.includes(languageDetection.language)
+              languageDetection.isEnglish /*||
+              !supportedLanguages.includes(languageDetection.language)*/
             ) {
               input[param.name] = param.value;
             } else {

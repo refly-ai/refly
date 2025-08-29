@@ -34,6 +34,7 @@ import { SelectedSkillHeader } from '@refly-packages/ai-workspace-common/compone
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { useFindSkill } from '@refly-packages/ai-workspace-common/hooks/use-find-skill';
 import { IContextItem } from '@refly/common-types';
+import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface ActionContainerProps {
   step: ActionStep;
@@ -283,8 +284,44 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
             contextLimit: (providerItem.config as any)?.contextLimit || 0,
             maxOutput: (providerItem.config as any)?.maxOutput || 0,
             capabilities: (providerItem.config as any)?.capabilities || {},
+            category: providerItem.category,
           }
         : undefined);
+
+    // Check if this is a media generation model
+    const isMediaGeneration = modelInfo?.category === 'mediaGeneration';
+    if (isMediaGeneration) {
+      const capabilities = modelInfo?.capabilities as any;
+      const mediaType = capabilities?.image
+        ? 'image'
+        : capabilities?.video
+          ? 'video'
+          : capabilities?.audio
+            ? 'audio'
+            : 'image'; // Default fallback
+
+      // Emit media generation event
+      nodeOperationsEmitter.emit('generateMedia', {
+        providerItemId: modelInfo?.providerItemId ?? '',
+        targetType: 'canvas',
+        targetId: canvasId ?? '',
+        mediaType,
+        query: followUpQuery,
+        modelInfo: modelInfo,
+        nodeId: '',
+        contextItems: followUpContextItems,
+      });
+
+      setFollowUpQuery('');
+      setFollowUpContextItems([]);
+      setFollowUpModelInfo(null);
+      setFollowUpRuntimeConfig({});
+      setFollowUpTplConfig({});
+      setFollowUpActionMeta(null);
+      setFormErrors({});
+      setShowFollowUpInput(false);
+      return;
+    }
 
     // Invoke the action
     invokeAction(

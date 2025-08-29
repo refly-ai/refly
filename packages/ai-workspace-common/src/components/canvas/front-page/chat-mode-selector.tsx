@@ -1,7 +1,7 @@
 import { Segmented, Tooltip } from 'antd';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Agent, Chat, Media } from 'refly-icons';
+import { Agent, Chat } from 'refly-icons';
 import { ChatMode } from '@refly/stores';
 
 interface ChatModeSelectorProps {
@@ -67,7 +67,7 @@ export const ChatModeSelector = memo(
             ),
             value: 'ask',
           },
-          {
+          /*{
             label: (
               <ModeOptionLabel
                 icon={<Media size={20} />}
@@ -78,7 +78,7 @@ export const ChatModeSelector = memo(
               />
             ),
             value: 'media',
-          },
+          },*/
         ]}
         className={className}
       />

@@ -14,7 +14,11 @@ const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.ti
 const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv'];
 const ALLOWED_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac'];
 
-export const ImportFromFile = () => {
+interface ImportFromFileProps {
+  canvasId: string;
+}
+
+export const ImportFromFile = ({ canvasId }: ImportFromFileProps) => {
   const { t } = useTranslation();
   const {
     fileList: storageFileList,
@@ -44,6 +48,8 @@ export const ImportFromFile = () => {
     const { data } = await getClient().upload({
       body: {
         file,
+        entityId: canvasId,
+        entityType: 'canvas',
       },
     });
     if (data?.success) {

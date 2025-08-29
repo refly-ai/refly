@@ -54,7 +54,7 @@ export const ImportResourceModal = memo(() => {
   }, []);
 
   const [saveLoading, setSaveLoading] = useState(false);
-  const { projectId } = useGetProjectCanvasId();
+  const { projectId, canvasId } = useGetProjectCanvasId();
   const { refetchUsage, storageUsage } = useSubscriptionUsage();
   const canImportCount = getAvailableFileCount(storageUsage);
   const { updateSourceList } = useUpdateSourceList();
@@ -310,7 +310,7 @@ export const ImportResourceModal = memo(() => {
               />
             )}
             {selectedMenuItem === 'import-from-weblink' && <ImportFromWeblink />}
-            {selectedMenuItem === 'import-from-file' && <ImportFromFile />}
+            {selectedMenuItem === 'import-from-file' && <ImportFromFile canvasId={canvasId} />}
           </div>
 
           <div className="flex-grow min-h-0 overflow-hidden rounded-xl border-solid border-[1px] border-refly-Card-Border flex flex-col">

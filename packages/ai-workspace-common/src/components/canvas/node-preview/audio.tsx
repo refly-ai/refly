@@ -5,6 +5,7 @@ import type { ModelInfo } from '@refly/openapi-schema';
 import { PreviewChatInput } from './skill-response/preview-chat-input';
 import { EditChatInput } from './skill-response/edit-chat-input';
 import { cn } from '@refly/utils/cn';
+import { MediaActionContainer } from './media-action-container';
 
 type AudioNodeMeta = {
   audioUrl?: string;
@@ -120,6 +121,14 @@ const AudioNodePreviewComponent = ({ node }: AudioNodePreviewProps) => {
           )}
         </div>
       </div>
+      <MediaActionContainer
+        title={title}
+        contextItems={contextItems}
+        modelInfo={modelInfo ?? null}
+        mediaType={'audio'}
+        resultId={resultId}
+        storageKey={node?.data?.metadata?.storageKey ?? ''}
+      />
     </div>
   );
 };
