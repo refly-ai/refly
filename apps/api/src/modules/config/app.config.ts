@@ -52,7 +52,7 @@ export default () => ({
     },
   },
   vectorStore: {
-    backend: process.env.VECTOR_STORE_BACKEND || 'qdrant', // 'qdrant' or 'lancedb'
+    backend: process.env.VECTOR_STORE_BACKEND || 'qdrant', // 'qdrant', 'lancedb', or 'milvus'
     qdrant: {
       host: process.env.QDRANT_HOST || 'localhost',
       port: Number.parseInt(process.env.QDRANT_PORT) || 6333,
@@ -60,6 +60,14 @@ export default () => ({
     },
     lancedb: {
       uri: process.env.LANCEDB_URI || './data/lancedb',
+    },
+    milvus: {
+      address: process.env.MILVUS_ADDRESS || 'localhost:19530',
+      username: process.env.MILVUS_USERNAME,
+      password: process.env.MILVUS_PASSWORD,
+      ssl: process.env.MILVUS_SSL === 'true',
+      collectionName: process.env.MILVUS_COLLECTION_NAME || 'refly_vectors',
+      vectorDimension: Number.parseInt(process.env.MILVUS_VECTOR_DIMENSION) || 1536,
     },
   },
   fulltextSearch: {
