@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Modal, Form, Input, Checkbox, message } from 'antd';
-import { Attachment, Close, List } from 'refly-icons';
+import { Attachment, Close, List, Text1 } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -17,7 +17,6 @@ import { getFileExtension } from './utils';
 import type { CreateVariablesModalProps, VariableFormData } from './types';
 import type { WorkflowVariable, VariableValue } from '@refly/openapi-schema';
 import './index.scss';
-import { BiText } from 'react-icons/bi';
 import { RESOURCE_TYPE } from './constants';
 
 export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.memo(
@@ -44,7 +43,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
         {
           label: t('canvas.workflow.variables.variableTypeOptions.string'),
           value: 'string',
-          icon: <BiText size={16} />,
+          icon: <Text1 size={16} />,
         },
         {
           label: t('canvas.workflow.variables.variableTypeOptions.resource'),
@@ -529,7 +528,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                 <div
                   key={option.value}
                   className={cn(
-                    'flex-1 px-2 py-1 text-sm leading-5 flex items-center justify-center gap-1 rounded-lg bg-refly-bg-control-z1 border-[1px] border-solid border-refly-Card-Border hover:!text-refly-primary-default hover:!border-refly-primary-default cursor-pointer',
+                    'flex-1 h-9 box-border px-2 py-1 text-sm leading-5 flex items-center justify-center gap-1 rounded-lg bg-refly-bg-control-z1 border-[1px] border-solid border-refly-Card-Border hover:!text-refly-primary-default hover:!border-refly-primary-default cursor-pointer',
                     variableType === option.value
                       ? 'text-refly-primary-default border-refly-primary-default font-semibold'
                       : '',

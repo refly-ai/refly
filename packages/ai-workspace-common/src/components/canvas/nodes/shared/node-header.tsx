@@ -1,5 +1,5 @@
 import { memo, useState, useRef, useEffect, useCallback } from 'react';
-import { Input, Typography } from 'antd';
+import { Input } from 'antd';
 import type { InputRef } from 'antd';
 import cn from 'classnames';
 import { CanvasNodeType, ResourceType, ResourceMeta } from '@refly/openapi-schema';
@@ -60,14 +60,14 @@ export const NodeHeader = memo(
           {canEdit && isEditing ? (
             <Input
               ref={inputRef}
-              className="!border-transparent font-bold focus:!bg-transparent px-0.5 py-0"
+              className="!border-transparent rounded-md font-bold focus:!bg-refly-tertiary-hover px-0.5 py-0 !bg-refly-tertiary-hover !text-refly-text-0"
               value={editTitle}
               onBlur={handleBlur}
               onChange={handleChange}
             />
           ) : (
-            <Typography.Text
-              className="text-sm font-bold leading-normal truncate"
+            <div
+              className="flex-1 rounded-md h-6 px-0.5 box-border font-bold leading-6 truncate block hover:bg-refly-tertiary-hover"
               title={title || fixedTitle}
               onClick={() => {
                 if (canEdit) {
@@ -76,7 +76,7 @@ export const NodeHeader = memo(
               }}
             >
               {title || fixedTitle}
-            </Typography.Text>
+            </div>
           )}
         </div>
       </div>

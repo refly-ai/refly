@@ -65,7 +65,7 @@ export const CanvasLayoutControls = memo(() => {
           if (Math.abs(zoom - currentZoom) > 0.01) {
             setCurrentZoom(zoom);
           }
-        }, 100);
+        }, 15);
       },
       [currentZoom],
     ),

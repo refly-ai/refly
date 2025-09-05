@@ -448,15 +448,13 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
               {nodeType === 'memo' && (
                 <CommonColorPicker color={bgColor} onChange={onChangeBackground} />
               )}
-              <Tooltip title={t('canvas.nodeActions.more')} placement="top">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<More size={18} />}
-                  onClick={handleOpenContextMenu}
-                  className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
-                />
-              </Tooltip>
+              <Button
+                type="text"
+                size="small"
+                icon={<More size={18} />}
+                onClick={handleOpenContextMenu}
+                className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+              />
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
-import { Divider, Input, message, Typography } from 'antd';
+import { Divider, Input, message } from 'antd';
 import type { InputRef } from 'antd';
 import { CanvasNode } from '@refly/canvas-common';
 import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
@@ -116,15 +116,15 @@ export const NodeHeader = memo(
                 ref={inputRef}
                 className={`${
                   source === 'skillResponsePreview' ? 'text-lg' : ''
-                } !border-transparent font-bold focus:!bg-transparent px-0.5 py-0 !bg-transparent !text-gray-700 dark:!text-gray-200`}
+                } !border-transparent rounded-md font-bold focus:!bg-refly-tertiary-hover px-0.5 py-0 !bg-refly-tertiary-hover !text-refly-text-0`}
                 value={editTitle}
                 data-cy="skill-response-node-header-input"
                 onBlur={handleBlur}
                 onChange={handleChange}
               />
             ) : (
-              <Typography.Text
-                className={`font-bold leading-normal truncate block ${
+              <div
+                className={`flex-1 rounded-md h-6 px-0.5 box-border font-bold leading-6 truncate block hover:bg-refly-tertiary-hover ${
                   source === 'skillResponsePreview' ? 'text-lg' : 'text-sm'
                 }`}
                 title={editTitle}
@@ -133,7 +133,7 @@ export const NodeHeader = memo(
                 }}
               >
                 {editTitle || t('common.untitled')}
-              </Typography.Text>
+              </div>
             )}
           </div>
         </div>

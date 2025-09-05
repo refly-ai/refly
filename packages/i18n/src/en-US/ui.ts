@@ -1372,6 +1372,7 @@ const translations = {
         'Canvas has reached the maximum limit of {{max}} nodes. Please remove some nodes before adding new ones.',
       approachingNodeLimit:
         'Canvas is approaching the node limit ({{current}}/{{max}}). Consider removing unnecessary nodes.',
+      initializationFailed: 'Canvas initialization failed, please try again later.',
     },
     skill: {
       askAI: 'AI Common Question Answer',

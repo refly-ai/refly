@@ -11,7 +11,10 @@ interface PilotState {
   // method
   setIsPilotOpen: (val: boolean) => void;
   setActiveSessionId: (canvasId: string, sessionId: string | null) => void;
-  setContextItems: (canvasId: string, items: IContextItem[]) => void;
+  setContextItems: (
+    canvasId: string,
+    items: IContextItem[] | ((prevItems: IContextItem[]) => IContextItem[]),
+  ) => void;
 }
 
 export const usePilotStore = create<PilotState>()(
@@ -21,13 +24,20 @@ export const usePilotStore = create<PilotState>()(
         isPilotOpen: false,
         activeSessionIdByCanvas: {},
         contextItemsByCanvas: {},
-        setContextItems: (canvasId: string, items: IContextItem[]) =>
-          set((state) => ({
-            contextItemsByCanvas: {
-              ...state.contextItemsByCanvas,
-              [canvasId]: items,
-            },
-          })),
+        setContextItems: (
+          canvasId: string,
+          items: IContextItem[] | ((prevItems: IContextItem[]) => IContextItem[]),
+        ) =>
+          set((state) => {
+            const currentItems = state.contextItemsByCanvas[canvasId] || [];
+            const newItems = typeof items === 'function' ? items(currentItems) : items;
+            return {
+              contextItemsByCanvas: {
+                ...state.contextItemsByCanvas,
+                [canvasId]: newItems,
+              },
+            };
+          }),
         setIsPilotOpen: (val: boolean) => set({ isPilotOpen: val }),
         setActiveSessionId: (canvasId: string, sessionId: string | null) =>
           set((state) => ({
