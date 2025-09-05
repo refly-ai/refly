@@ -14,6 +14,9 @@ export interface ProgressSubtask {
   createdAt?: string;
   completedAt?: string;
   errorMessage?: string;
+  context?: string;
+  scope?: string;
+  outputRequirements?: string;
 }
 
 export interface ProgressStage {

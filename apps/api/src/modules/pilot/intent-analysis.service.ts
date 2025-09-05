@@ -114,10 +114,22 @@ export class IntentAnalysisService {
               type: 'object',
               properties: {
                 name: { type: 'string' },
-                query: { type: 'string' },
+                objective: { type: 'string' },
+                expectedOutcome: { type: 'string' },
+                context: { type: 'string' },
+                scope: { type: 'string' },
+                outputRequirements: { type: 'string' },
                 status: { type: 'string', enum: ['pending', 'executing', 'completed', 'failed'] },
               },
-              required: ['name', 'query', 'status'],
+              required: [
+                'name',
+                'objective',
+                'expectedOutcome',
+                'context',
+                'scope',
+                'outputRequirements',
+                'status',
+              ],
             },
           },
           planningLogic: { type: 'string' },
@@ -157,9 +169,13 @@ export class IntentAnalysisService {
         (subtaskInfo: any, index: number) => ({
           id: `subtask_${Date.now()}_${index}`,
           name: subtaskInfo.name,
-          query: subtaskInfo.query,
+          query: subtaskInfo.objective, // Use objective as query for backward compatibility
           status: subtaskInfo.status,
           createdAt: new Date().toISOString(),
+          // Store additional context information for better execution
+          context: subtaskInfo.context || '',
+          scope: subtaskInfo.scope || '',
+          outputRequirements: subtaskInfo.outputRequirements || '',
         }),
       );
 
@@ -225,9 +241,13 @@ export class IntentAnalysisService {
         (subtaskInfo: any, index: number) => ({
           id: `subtask_${Date.now()}_${index}`,
           name: subtaskInfo.name || 'Unnamed Subtask',
-          query: subtaskInfo.query || userQuestion,
+          query: subtaskInfo.objective || subtaskInfo.query || userQuestion, // Support both new and old format
           status: subtaskInfo.status || 'pending',
           createdAt: new Date().toISOString(),
+          // Store additional context information for better execution
+          context: subtaskInfo.context || '',
+          scope: subtaskInfo.scope || '',
+          outputRequirements: subtaskInfo.outputRequirements || '',
         }),
       );
 
@@ -437,18 +457,16 @@ ${isInitialPlan ? 'Creating a new execution plan from scratch.' : 'Re-planning b
 ## AVAILABLE TOOLS
 ${toolInfo}
 
-## CRITICAL BUILT-IN TOOLS (Use These When Applicable)
-The following built-in tools are available and should be explicitly used when their functionality matches the task:
-
-- **library_search**: Search and retrieve information from knowledge libraries
-- **web_search**: Search the web for current information and data
+### Built-in Tools:
+- **library_search**: Search knowledge libraries
+- **web_search**: Search the web for current information
 - **generate_media**: Generate images, videos, or other media content
 - **generate_doc**: Generate documents, reports, or written content
 - **generate_code_artifact**: Generate code, scripts, or technical artifacts
 - **send_email**: Send emails or notifications
 - **get_time**: Get current time, date, or timezone information
 
-**IMPORTANT**: When a subtask requires any of these built-in tools, the query MUST explicitly mention the tool name and be specific about what the tool should accomplish.
+**IMPORTANT**: Subtask objectives should focus on goals and expected outcomes, allowing the executing agent to choose the most appropriate tool combination.
 
 ## CANVAS CONTENT
 ${contentInfo}
@@ -483,98 +501,86 @@ When analyzing execution results, pay special attention to:
     : ''
 }
 
-## COMPREHENSIVE PLANNING REQUIREMENTS
+## PLANNING REQUIREMENTS
 
-### 1. SEQUENTIAL STAGE PLANNING
+### Stage Planning:
 - **Sequential Execution**: Stages must be executed in order, one after another
 - **Dependency-Based**: Each stage must wait for the previous stage to complete
 - **Logical Progression**: Stages should build upon each other logically
-- **Objective Logic Alignment**: Stage sequence must follow the objective logic of progressive completion
 - **Natural Dependencies**: Each stage must naturally depend on the previous stage's outcomes
-- **Minimal Stage Subtasks**: If a stage logically requires only a few subtasks, do not generate excessive subtasks
-- **Stage-Specific Optimization**: Optimize subtask count based on each stage's specific requirements and logic
-- **Global Optimization**: ${isInitialPlan ? 'Create optimal stage sequence' : 'Re-optimize remaining stages based on progress'}
 
-### 2. PARALLEL SUBTASK GENERATION
-- **Parallel Execution**: Subtasks within a stage must be able to run simultaneously
-- **Independence**: No subtask should depend on another subtask's completion
+### Subtask Generation:
+- **Dependency Analysis First**: Before generating subtasks, analyze all task dependencies
+- **Sequential Task Identification**: Identify tasks that must be executed in sequence (e.g., "organize content then send email")
+- **Parallel Task Identification**: Identify tasks that can be executed simultaneously (e.g., "search for information A and information B")
+- **Stage Promotion**: If subtasks have sequential dependencies, promote them to separate stages
 - **Goal-Oriented**: Each subtask should directly contribute to stage objectives
-- **Necessity**: ONLY generate essential subtasks - avoid redundant or overlapping subtasks
-- **Uniqueness**: Each subtask must have distinct objectives and outcomes
-- **Tool-Specific Execution**: Each subtask query MUST specify the exact tool to use based on available tools
-- **Unambiguous Instructions**: Avoid vague descriptions - be specific about tool usage and expected outcomes
+- **Essential Only**: Generate only necessary subtasks - avoid redundant or overlapping ones
 - **Current Stage Focus**: Generate subtasks for the current active stage
+- **Context Preservation**: Include specific data, findings, and insights from previous stages in subtask context
+- **Output Specification**: Clearly define expected output format, quality criteria, and specific requirements
 
-## PLANNING PRINCIPLES
+## SUBTASK DESIGN GUIDELINES
 
-### Subtask Granularity and Quantity Control:
-- **Maximum Granularity**: Break down tasks into the smallest possible independent units
-- **Concurrency Optimization**: Generate as many parallel subtasks as possible to maximize concurrent execution
-- **Resource Utilization**: Ensure each subtask can be executed independently without waiting for others
-- **Quality Over Quantity**: Generate ONLY essential subtasks - avoid redundant, overlapping, or unnecessary subtasks
-- **Minimal Viable Subtasks**: Each subtask must have distinct, non-overlapping objectives and outcomes
-- **Burden Avoidance**: Excessive subtasks create overhead - maintain subtask simplicity and necessity
-- **Essential Only**: Generate subtasks only when they are absolutely necessary for stage completion
-- **No Redundancy**: Avoid creating multiple subtasks that achieve similar or overlapping results
-- **Logical Necessity**: Each subtask must be logically required for the stage's success
-- **Stage-Appropriate Count**: Simple stages (1-2 subtasks), Complex stages (3-5 subtasks maximum)
-- **Avoid Over-Engineering**: Do not artificially inflate subtask count for the sake of concurrency
+### Subtask Design Requirements:
+- **Objective-Focused**: Describe what needs to be accomplished, not which tool to use
+- **Clear Outcome**: Specify the expected deliverable or result
+- **Flexible Tool Selection**: Let the executing agent determine the best tool combination
+- **Goal-Oriented**: Focus on achieving specific objectives rather than using specific tools
+- **Context-Rich**: Include sufficient context from previous stages to avoid information loss
+- **Specific Output Requirements**: Clearly specify the format, scope, and quality of expected outputs
 
-### For Initial Planning:
-1. **User Intent Analysis**: Understand what the user wants to achieve
-2. **Task Complexity Assessment**: Determine if the task is simple, medium, or complex
-3. **Sequential Stage Identification**: Identify logical stages that must be executed in order
-4. **Tool Category Mapping**: Recommend appropriate tool categories for each stage
-5. **Current Stage Subtasks**: Generate parallel subtasks for the first stage
+### Context Preservation Requirements:
+- **MUST** include relevant data, findings, or insights from previous stages
+- **MUST** specify the scope and boundaries of the current subtask
+- **MUST** reference specific information that needs to be built upon
+- **MUST** include quality criteria and output format requirements
+- **MUST** provide enough context for independent execution without information gaps
 
-### For Dynamic Re-planning:
-1. **Execution Quality Analysis**: Thoroughly analyze the execution summaries from completed stages
-2. **Progress Assessment**: Evaluate current execution status, quality, and completeness
-3. **Stage Re-optimization**: Adjust remaining stages based on lessons learned from execution results
-4. **Context Integration**: Incorporate insights, findings, and outcomes from completed stages
-5. **Current Stage Subtasks**: Generate or update subtasks for the current active stage based on execution context
-6. **Adaptive Planning**: Modify future stages based on actual execution results and quality assessment
-7. **Quality Improvement**: Identify areas for improvement and adjust planning accordingly
+### Examples of Good vs Bad Subtask Objectives:
 
-## TOOL USAGE GUIDELINES
+#### Good Examples (Context-Rich):
+- **Good**: "Analyze the renewable energy statistics collected in Stage 1, focusing on 2024 adoption trends in Europe and North America, and create a comparative analysis report with specific metrics including growth rates, market share, and policy impacts"
+- **Good**: "Based on the market analysis data from Stage 2, generate a comprehensive presentation deck with 15-20 slides covering key findings, market opportunities, and strategic recommendations for renewable energy investment"
 
-### Built-in Tool Selection:
-- **Information Gathering**: Use \`web_search\` for current web information, \`library_search\` for knowledge base queries
-- **Content Generation**: Use \`generate_doc\` for documents/reports, \`generate_media\` for visual content, \`generate_code_artifact\` for code
-- **Communication**: Use \`send_email\` for notifications or communications
-- **System Operations**: Use \`get_time\` for time-related information
+#### Bad Examples (Context-Poor):
+- **Bad**: "Find current statistics and trends about renewable energy adoption in 2024"
+- **Bad**: "Create a comprehensive market analysis report about the renewable energy sector"
+- **Bad**: "Use web_search to find the latest statistics about renewable energy adoption in 2024"
 
-### Query Format Requirements:
-- **Specific Tool Reference**: Always mention the exact tool name
-- **Clear Objective**: Specify what the tool should accomplish
-- **Actionable Instructions**: Provide enough detail for immediate execution
-- **Expected Output**: Describe what kind of result is expected
 
-### Examples of Good vs Bad Queries:
-- **Good**: "Use web_search to find the latest statistics about renewable energy adoption in 2024"
-- **Bad**: "Search for information about renewable energy"
-- **Good**: "Use generate_doc to create a comprehensive market analysis report about the renewable energy sector"
-- **Bad**: "Generate a report about renewable energy"
+## DEPENDENCY ANALYSIS
 
-## STAGE LOGIC AND DEPENDENCY GUIDELINES
+### Dependency Types:
+- **Data Dependency**: Tasks requiring output from previous tasks
+- **Logical Dependency**: Tasks following natural sequence (e.g., "collect" → "analyze")
+- **Time Dependency**: Tasks requiring specific chronological order
 
-### Objective Logic Alignment:
-- **Progressive Completion**: Each stage must naturally build toward the final objective
-- **Logical Dependencies**: Stage dependencies must reflect the natural order of task completion
-- **Prerequisite Awareness**: Each stage must complete its prerequisites before the next stage begins
-- **Outcome-Based Planning**: Plan stages based on what outcomes are needed for the next stage
+### Task Classification:
+- **Sequential Tasks**: Must be separate stages (e.g., "collect data then analyze")
+- **Parallel Tasks**: Can be subtasks in same stage (e.g., "search A and search B")
 
-### Subtask Count Optimization:
-- **Stage-Specific**: Adjust subtask count based on each stage's complexity and requirements
-- **Necessity-Driven**: Generate subtasks only when they are essential for stage completion
-- **Efficiency-Focused**: Avoid over-engineering - sometimes fewer, well-designed subtasks are better
-- **Quality Over Quantity**: Prioritize subtask quality and necessity over quantity
+### Dependency Identification Methods:
+- **Verb Analysis**: Look for sequential patterns in task verbs (e.g., "collect" → "analyze" → "generate")
+- **Input-Output Check**: Verify if subsequent tasks depend on previous task outputs
+- **Logical Flow Validation**: Ensure tasks follow natural execution order
 
-### Examples of Appropriate Subtask Counts:
-- **Data Collection Stage**: 2-3 subtasks (web search, library search, data validation)
-- **Analysis Stage**: 1-2 subtasks (data analysis, pattern identification)
-- **Synthesis Stage**: 1-2 subtasks (content generation, review)
-- **Simple Stages**: 1 subtask may be sufficient
+### Validation Rules:
+- No circular dependencies
+- Clear prerequisites for each task
+- Outputs available when needed
+
+## STAGE DESIGN GUIDELINES
+
+### Stage Design:
+- **Progressive Completion**: Each stage builds toward the final objective
+- **Logical Dependencies**: Stages follow natural completion order
+- **Prerequisite Awareness**: Complete prerequisites before next stage
+
+### Subtask Guidelines:
+- **Essential Only**: Generate only necessary subtasks
+- **Stage-Appropriate Count**: Simple stages (1-2), Complex stages (3-5 maximum)
+- **Quality Over Quantity**: Prioritize effectiveness over quantity
 
 ## OUTPUT FORMAT
 Provide a JSON response with the following structure:
@@ -587,16 +593,17 @@ Provide a JSON response with the following structure:
       "name": "Stage name (e.g., 'Data Collection', 'Analysis', 'Synthesis')",
       "description": "What this stage accomplishes and why it's needed",
       "objectives": ["Specific objective 1", "Specific objective 2"],
-      "toolCategories": ["web_search", "analysis", "generation"],
-      "priority": 1,
-      "estimatedEpochs": 1,
       "status": "pending|in_progress|completed"
     }
   ],
   "currentStageSubtasks": [
     {
       "name": "Clear, specific task name",
-      "query": "EXPLICIT tool usage instruction - specify the exact tool name and what it should accomplish. Example: 'Use web_search to find current information about [specific topic]' or 'Use generate_doc to create a [specific type] document about [topic]'",
+      "objective": "What needs to be accomplished (focus on goals, not tools)",
+      "expectedOutcome": "Expected deliverable or result",
+      "context": "Relevant context from previous stages, including specific data, findings, or insights to build upon",
+      "scope": "Specific scope and boundaries of this subtask",
+      "outputRequirements": "Detailed output format, quality criteria, and specific requirements",
       "status": "pending"
     }
   ],
@@ -607,61 +614,35 @@ Provide a JSON response with the following structure:
 \`\`\`
 
 ## CRITICAL REQUIREMENTS
+
+### Core Planning Requirements:
 - **MUST** create sequential stages that depend on each other
 - **MUST** generate parallel subtasks for the current active stage
 - **MUST** ensure subtasks can run simultaneously within a stage
-- **MUST** provide clear dependency explanations between stages
-- **MUST** make each stage and subtask actionable and specific
-- **MUST** design subtask queries to be tool-executable and action-oriented
-- **MUST** ensure each subtask query is specific enough for direct tool implementation
-- **MUST** explicitly specify tool names in subtask queries when using built-in tools
-- **MUST** avoid ambiguous tool references - be specific about which tool to use
-- **MUST** match subtask requirements with appropriate built-in tools
-- **MUST** provide clear, actionable instructions for each tool usage
+- **MUST** focus on goals and expected outcomes rather than specific tool usage
+- **MUST** allow executing agents to choose appropriate tool combinations
 - **MUST** avoid generating overlapping or redundant subtasks
-- **MUST** maintain subtask simplicity and avoid unnecessary complexity
 - **MUST** ensure each subtask is absolutely necessary for stage completion
 - **MUST** follow objective logic for stage dependencies and progression
-- **MUST** optimize subtask count based on each stage's specific requirements
-- **MUST** prioritize task completion efficiency over subtask quantity
-- **MUST** maximize subtask granularity for optimal concurrency
-- **MUST** ${isInitialPlan ? 'create optimal initial plan' : 're-optimize based on current progress and execution results'}
-- **MUST** ensure logical progression between stages
-- **MUST** be realistic about time estimates
-- **MUST** ${isInitialPlan ? 'plan comprehensively from scratch' : 'analyze execution quality and adapt planning accordingly'}
-- **MUST** incorporate insights from completed stage summaries into future planning
-- **MUST** identify and address any quality issues or gaps from previous execution
+- **MUST** include rich context from previous stages in subtask descriptions
+- **MUST** specify detailed output requirements and quality criteria for each subtask
+- **MUST** ensure subtasks contain sufficient information for independent execution
 
 ## VALIDATION CHECKLIST
 Before submitting, verify:
+
+### Core Validation:
 □ Stages are sequential and cannot run in parallel
 □ Subtasks within current stage can run in parallel
-□ Each stage has clear dependencies on previous stages
-□ Current stage subtasks are independent and parallelizable
 □ Each subtask has unique, non-overlapping objectives
 □ Each subtask is absolutely necessary for stage completion
 □ No redundant or overlapping subtasks exist
 □ Stage sequence follows objective logic of progressive completion
-□ Subtask count is optimized for each stage's specific requirements
-□ No artificial inflation of subtask count for concurrency sake
-□ Stage dependencies are based on natural, logical progression
-□ Overall plan prioritizes completion efficiency over subtask quantity
-□ Subtask queries are tool-specific and immediately actionable
-□ Each subtask query explicitly mentions the tool to be used
-□ Built-in tools are properly identified and specified in queries
-□ No ambiguous tool references or vague instructions
-□ Tool usage matches the subtask requirements and objectives
-□ Each tool instruction is specific and actionable
-□ Maximum number of parallel subtasks generated for optimal concurrency
-□ Each subtask can be executed independently with available tools
-□ The execution order is logical and necessary
-□ Each stage and subtask has defined objectives
-□ The progression makes sense for the user's request
-□ ${isInitialPlan ? 'Initial plan is comprehensive and optimal' : 'Re-planning incorporates lessons learned from execution summaries'}
-□ ${isInitialPlan ? 'Initial planning is thorough and well-structured' : 'Execution quality has been analyzed and incorporated into planning'}
-□ ${isInitialPlan ? 'All stages are properly planned' : 'Completed stage summaries have been thoroughly reviewed and insights applied'}
-□ ${isInitialPlan ? 'Tool categories are appropriately assigned' : 'Tool categories have been adjusted based on execution results'}
-□ ${isInitialPlan ? 'Time estimates are realistic' : 'Time estimates have been updated based on actual execution experience'}
+□ Subtask objectives focus on goals rather than specific tools
+□ Each subtask includes rich context from previous stages
+□ Each subtask specifies detailed output requirements and quality criteria
+□ Each subtask contains sufficient information for independent execution
+
 
 ${locale ? `\n## LANGUAGE REQUIREMENT\nAll output should be in ${locale} language.` : ''}`;
   }

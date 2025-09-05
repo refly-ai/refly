@@ -25,13 +25,10 @@ import { Queue } from 'bullmq';
 import { QUEUE_RUN_PILOT } from '../../utils/const';
 import { RunPilotJobData } from './pilot.processor';
 import { ProviderItemNotFoundError } from '@refly/errors';
-
-import { buildSummarySkillInput } from './prompt/summary';
 import { buildSubtaskSkillInput } from './prompt/subtask';
 import { findBestMatch } from '../../utils/similarity';
 import { ToolService } from '../tool/tool.service';
 import { PilotEngineService } from './pilot-engine.service';
-import { PilotSessionWithProgress, PilotStepWithMode, ActionResultWithOutput } from './pilot.types';
 
 export const MAX_STEPS_PER_EPOCH = 10;
 export const MAX_SUMMARY_STEPS_PER_EPOCH = 1;
@@ -186,7 +183,7 @@ export class PilotService {
     const actionResults = await this.prisma.actionResult.findMany({
       where: {
         pilotStepId: {
-          in: steps.map((step) => step.stepId).filter(Boolean),
+          in: steps.map((step) => step.stepId).filter((id): id is string => Boolean(id)),
         },
       },
       orderBy: { version: 'desc' },
@@ -211,63 +208,188 @@ export class PilotService {
   }
 
   /**
-   * Convert PilotSession to PilotSessionWithProgress
+   * Find downstream nodes for latest summary steps based on canvas edges
+   * @param user - The user
+   * @param targetId - The canvas ID
+   * @param latestSummarySteps - The latest summary steps
+   * @returns Object containing downstream node IDs, nodes, and edges
    */
-  private convertToPilotSessionWithProgress(
-    session: PilotSession,
-    progress?: string | null,
-  ): PilotSessionWithProgress {
-    return {
-      pk: BigInt(0), // Default value, will be overridden by actual data
-      sessionId: session.sessionId || '',
-      uid: session.uid || '',
-      currentEpoch: session.currentEpoch || 0,
-      maxEpoch: session.maxEpoch || MAX_EPOCH,
-      title: session.title || '',
-      input: session.input || '',
-      progress: progress || undefined,
-      modelName: session.modelName || '',
-      targetType: session.targetType || '',
-      targetId: session.targetId || '',
-      providerItemId: session.providerItemId || '',
-      status: session.status || 'waiting',
-      createdAt: session.createdAt ? new Date(session.createdAt) : new Date(),
-      updatedAt: session.updatedAt ? new Date(session.updatedAt) : new Date(),
-    };
+  private async findDownstreamNodes(
+    user: User,
+    targetId: string,
+    latestSummarySteps: Array<{ step: { entityId?: string } }>,
+  ) {
+    try {
+      // Get canvas state data
+      const canvasState = await this.canvasSyncService.getCanvasData(user, { canvasId: targetId });
+
+      // Extract summary step entity IDs
+      const summaryStepEntityIds = latestSummarySteps
+        .map(({ step }) => step.entityId)
+        .filter(Boolean);
+
+      if (summaryStepEntityIds.length === 0) {
+        this.logger.log('No summary step entity IDs found');
+        return { downstreamEntityIds: [], downstreamNodes: [], downstreamEdges: [] };
+      }
+
+      // Create a mapping from entityId to nodeId for summary steps
+      const entityIdToNodeIdMap = new Map<string, string>();
+      for (const node of canvasState.nodes || []) {
+        if (node.data?.entityId && summaryStepEntityIds.includes(node.data.entityId)) {
+          entityIdToNodeIdMap.set(node.data.entityId, node.id);
+        }
+      }
+
+      // Find canvas node IDs that correspond to summary step entity IDs
+      const summaryStepNodeIds = Array.from(entityIdToNodeIdMap.values());
+
+      if (summaryStepNodeIds.length === 0) {
+        this.logger.log('No matching canvas nodes found for summary step entity IDs');
+        return { downstreamEntityIds: [], downstreamNodes: [], downstreamEdges: [] };
+      }
+
+      // Find all leaf nodes (most downstream nodes) starting from summary step nodes
+      const leafNodeIds = this.findLeafNodes(summaryStepNodeIds, canvasState.edges || []);
+
+      // Get complete leaf node information and extract their entity IDs
+      const leafNodes = canvasState.nodes?.filter((node) => leafNodeIds.includes(node.id)) || [];
+
+      // Extract entity IDs from leaf nodes
+      const leafEntityIds = leafNodes.map((node) => node.data?.entityId).filter(Boolean);
+
+      // Find all edges that lead to these leaf nodes
+      const leafEdges =
+        canvasState.edges?.filter((edge) => leafNodeIds.includes(edge.target)) || [];
+
+      this.logger.log(
+        `Found ${leafEntityIds.length} leaf entity IDs for ${summaryStepEntityIds.length} summary steps`,
+      );
+
+      return {
+        downstreamEntityIds: leafEntityIds,
+        downstreamNodes: leafNodes,
+        downstreamEdges: leafEdges,
+      };
+    } catch (error) {
+      this.logger.error(`Error finding downstream nodes: ${error?.message}`, error?.stack);
+      return { downstreamEntityIds: [], downstreamNodes: [], downstreamEdges: [] };
+    }
   }
 
   /**
-   * Convert PilotStep to PilotStepWithMode
+   * Find leaf nodes (most downstream nodes) starting from given node IDs
+   * @param startNodeIds - The starting node IDs
+   * @param edges - The canvas edges
+   * @returns Array of leaf node IDs
    */
-  private convertToPilotStepWithMode(step: any, mode?: string): PilotStepWithMode {
-    return {
-      stepId: step.stepId || '',
-      name: step.name || '',
-      epoch: step.epoch || 0,
-      entityId: step.entityId,
-      entityType: step.entityType,
-      status: step.status || 'waiting',
-      rawOutput: step.rawOutput,
-      mode: mode || 'subtask',
-      createdAt: step.createdAt ? new Date(step.createdAt) : new Date(),
-      updatedAt: step.updatedAt ? new Date(step.updatedAt) : new Date(),
+  private findLeafNodes(
+    startNodeIds: string[],
+    edges: Array<{ source: string; target: string }>,
+  ): string[] {
+    const visited = new Set<string>();
+    const leafNodes = new Set<string>();
+
+    const findLeavesRecursive = (nodeId: string) => {
+      if (visited.has(nodeId)) {
+        return;
+      }
+      visited.add(nodeId);
+
+      // Find all outgoing edges from this node
+      const outgoingEdges = edges.filter((edge) => edge.source === nodeId);
+
+      if (outgoingEdges.length === 0) {
+        // This is a leaf node (no outgoing edges)
+        leafNodes.add(nodeId);
+      } else {
+        // Recursively process all target nodes
+        for (const edge of outgoingEdges) {
+          findLeavesRecursive(edge.target);
+        }
+      }
     };
+
+    // Start from all summary step nodes
+    for (const nodeId of startNodeIds) {
+      findLeavesRecursive(nodeId);
+    }
+
+    return Array.from(leafNodes);
   }
 
   /**
-   * Convert ActionResult to ActionResultWithOutput
+   * Build CanvasContentItems from downstream entity IDs for document and codeArtifact types
+   * @param user - The user
+   * @param targetId - The canvas ID
+   * @param downstreamEntityIds - The downstream entity IDs
+   * @returns Array of CanvasContentItems
    */
-  private convertToActionResultWithOutput(result: any): ActionResultWithOutput {
-    return {
-      resultId: result.resultId || '',
-      title: result.title || '',
-      input: result.input || '',
-      output: result.output,
-      errors: result.errors,
-      status: result.status || 'waiting',
-      createdAt: result.createdAt ? new Date(result.createdAt) : new Date(),
-      updatedAt: result.updatedAt ? new Date(result.updatedAt) : new Date(),
-    };
+  private async buildDownstreamContentItems(
+    user: User,
+    canvasId: string,
+    downstreamEntityIds: string[],
+  ): Promise<CanvasContentItem[]> {
+    if (downstreamEntityIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const contentItems: CanvasContentItem[] = [];
+
+      // Get documents for downstream entity IDs
+      const documents = await this.prisma.document.findMany({
+        select: { docId: true, title: true, contentPreview: true },
+        where: {
+          docId: { in: downstreamEntityIds },
+          canvasId,
+          uid: user.uid,
+          deletedAt: null,
+        },
+      });
+
+      // Get code artifacts for downstream entity IDs
+      const codeArtifacts = await this.prisma.codeArtifact.findMany({
+        select: { artifactId: true, title: true, type: true },
+        where: {
+          artifactId: { in: downstreamEntityIds },
+          canvasId,
+          uid: user.uid,
+          deletedAt: null,
+        },
+      });
+
+      // Build content items from documents
+      for (const doc of documents) {
+        contentItems.push({
+          id: doc.docId,
+          title: doc.title,
+          contentPreview: doc.contentPreview,
+          content: doc.contentPreview, // TODO: check if we need to get the whole content
+          type: 'document',
+        });
+      }
+
+      // Build content items from code artifacts
+      for (const artifact of codeArtifacts) {
+        contentItems.push({
+          id: artifact.artifactId,
+          title: artifact.title,
+          contentPreview: `Code artifact: ${artifact.type}`,
+          content: `Code artifact: ${artifact.type}`, // TODO: get actual content if needed
+          type: 'codeArtifact',
+        });
+      }
+
+      this.logger.log(
+        `Built ${contentItems.length} downstream content items (${documents.length} documents, ${codeArtifacts.length} code artifacts)`,
+      );
+
+      return contentItems;
+    } catch (error) {
+      this.logger.error(`Error building downstream content items: ${error?.message}`, error?.stack);
+      return [];
+    }
   }
 
   private async buildContextAndHistory(
@@ -305,7 +427,10 @@ export class PilotService {
       // If a match was found and it's reasonably close, add it to the matched items
       // (Using a threshold to avoid completely unrelated matches)
       if (bestMatch) {
-        matchedItems.push(contentItemMap.get(bestMatch));
+        const matchedItem = contentItemMap.get(bestMatch);
+        if (matchedItem) {
+          matchedItems.push(matchedItem);
+        }
       }
     }
 
@@ -376,30 +501,6 @@ export class PilotService {
   }
 
   /**
-   * Generates a summary title based on user's locale preference
-   * @param locale User's preferred output locale
-   * @returns Localized summary title
-   */
-  private getSummaryTitle(locale?: string): string {
-    // Default to English if no locale is specified
-    const userLocale = locale?.toLowerCase() ?? 'en';
-
-    // Map locale to summary title
-    const summaryTitles: Record<string, string> = {
-      zh: '阶段总结',
-      'zh-cn': '阶段总结',
-      'zh-hans': '阶段总结',
-      'zh-hans-cn': '阶段总结',
-      en: 'Stage Summary',
-      'en-us': 'Stage Summary',
-      'en-gb': 'Stage Summary',
-    };
-
-    // Return localized title or fallback to English
-    return summaryTitles[userLocale] ?? summaryTitles.en;
-  }
-
-  /**
    * Run the pilot for a given session
    * @param user - The user to run the pilot for
    * @param sessionId - The ID of the session to run the pilot for
@@ -446,12 +547,6 @@ export class PilotService {
         if (epochSubtaskSteps.length !== 0 || epochSummarySteps.length !== 0) {
           return;
         }
-      } else {
-        if (epochSummarySteps.length !== 0 || epochSubtaskSteps.length === 0) {
-          return;
-        }
-
-        return this.runPilotSummary(user, sessionId, session, mode);
       }
 
       this.logger.log(`Epoch (${currentEpoch}/${maxEpoch}) for session ${sessionId} started`);
@@ -490,7 +585,7 @@ export class PilotService {
       const chatModelId = JSON.parse(chatPi.config).modelId;
 
       // Use PilotEngineService to handle all planning and execution logic
-      const rawSteps = await this.pilotEngineService.runPilot(
+      const progressPlan = await this.pilotEngineService.runPilot(
         agentModel,
         sessionId,
         userQuestion,
@@ -498,6 +593,9 @@ export class PilotService {
         canvasContentItems,
         locale,
       );
+
+      const currentStage = progressPlan?.stages[currentEpoch];
+      const rawSteps = currentStage?.subtasks || [];
 
       if (rawSteps.length === 0) {
         await this.prisma.pilotSession.update({
@@ -511,10 +609,29 @@ export class PilotService {
       // Get session details for context building
       const { steps } = await this.getPilotSessionDetail(user, sessionId);
       const latestSummarySteps = steps?.filter(({ step }) => step.epoch === currentEpoch - 1) || [];
-      const contextEntityIds = latestSummarySteps.map(({ step }) => step.entityId);
+
+      // Get canvas state data and find downstream nodes
+      let downstreamContentItems: CanvasContentItem[] = [];
+      let downstreamEntityIds: string[] = [];
+      if (targetType === 'canvas' && latestSummarySteps.length > 0) {
+        const downstreamData = await this.findDownstreamNodes(user, targetId, latestSummarySteps);
+        downstreamEntityIds = downstreamData.downstreamEntityIds;
+
+        // Build content items for downstream entities (documents and codeArtifacts)
+        downstreamContentItems = await this.buildDownstreamContentItems(
+          user,
+          targetId,
+          downstreamEntityIds,
+        );
+
+        this.logger.log(
+          `Found ${downstreamEntityIds.length} downstream entity IDs and built ${downstreamContentItems.length} content items`,
+        );
+      }
+
       const { context, history } = await this.buildContextAndHistory(
-        canvasContentItems,
-        contextEntityIds,
+        canvasContentItems.concat(downstreamContentItems),
+        downstreamEntityIds,
       );
 
       // Process all steps in parallel instead of sequentially
@@ -555,8 +672,12 @@ export class PilotService {
             title: rawStep.name,
             input: JSON.stringify(
               buildSubtaskSkillInput({
-                userQuestion,
+                stage: currentStage,
                 query: rawStep?.query,
+                context: rawStep?.context,
+                scope: rawStep?.scope,
+                outputRequirements: rawStep?.outputRequirements,
+                locale,
               }),
             ),
             status: 'waiting',
@@ -617,8 +738,12 @@ export class PilotService {
         await this.skillService.sendInvokeSkillTask(user, {
           resultId,
           input: buildSubtaskSkillInput({
-            userQuestion,
+            stage: currentStage,
             query: rawStep?.query,
+            context: rawStep?.context,
+            scope: rawStep?.scope,
+            outputRequirements: rawStep?.outputRequirements,
+            locale,
           }),
           target: {
             entityId: targetId,
@@ -649,227 +774,6 @@ export class PilotService {
           data: { status: 'failed' },
         });
         this.logger.log(`Pilot session ${sessionId} status set to failed due to error`);
-      } catch (updateError) {
-        this.logger.error(`Failed to update session ${sessionId} status to failed:`, updateError);
-      }
-
-      // Re-throw the original error to maintain the error handling chain
-      throw error;
-    }
-  }
-
-  /**
-   * Run the pilot for a given session
-   * @param user - The user to run the pilot for
-   * @param sessionId - The ID of the session to run the pilot for
-   */
-  async runPilotSummary(
-    user: User,
-    sessionId: string,
-    session?: PilotSession,
-    _mode?: 'subtask' | 'summary',
-  ) {
-    try {
-      const pilotSession =
-        session ??
-        (await this.prisma.pilotSession.findUnique({
-          where: {
-            sessionId,
-            uid: user.uid,
-          },
-        }));
-
-      if (!pilotSession) {
-        throw new Error('Pilot session not found');
-      }
-
-      const { targetId, targetType, currentEpoch, maxEpoch } = pilotSession;
-      const canvasContentItems: CanvasContentItem[] =
-        await this.canvasService.getCanvasContentItems(user, targetId, true);
-
-      if (currentEpoch >= maxEpoch) {
-        this.logger.log(`Pilot session ${sessionId} finished due to max epoch`);
-
-        if (pilotSession.status !== 'finish') {
-          await this.prisma.pilotSession.update({
-            where: { sessionId },
-            data: { status: 'finish' },
-          });
-        }
-
-        return;
-      }
-
-      this.logger.log(`Epoch (${currentEpoch}/${maxEpoch}) for session ${sessionId} started`);
-
-      // Get user's output locale preference
-      const userPo = await this.prisma.user.findUnique({
-        select: { outputLocale: true },
-        where: { uid: user.uid },
-      });
-      const locale = userPo?.outputLocale;
-
-      const summaryTitle = this.getSummaryTitle(locale);
-
-      const agentPi = await this.providerService.findProviderItemById(
-        user,
-        pilotSession.providerItemId,
-      );
-      if (!agentPi || agentPi.category !== 'llm' || !agentPi.enabled) {
-        throw new ProviderItemNotFoundError(
-          `provider item ${pilotSession.providerItemId} not valid for agent`,
-        );
-      }
-
-      const chatPi = await this.providerService.findDefaultProviderItem(user, 'chat');
-      if (!chatPi || chatPi.category !== 'llm' || !chatPi.enabled) {
-        throw new ProviderItemNotFoundError(
-          `provider item ${pilotSession.providerItemId} not valid`,
-        );
-      }
-      const chatModelId = JSON.parse(chatPi.config).modelId;
-
-      const { steps } = await this.getPilotSessionDetail(user, sessionId);
-
-      // const recommendedContext = await this.buildContextAndHistory(
-      //   canvasContentItems,
-      //   steps.map(({ step }) => step.entityId),
-      // );
-
-      const stepId = genPilotStepID();
-      const latestSubtaskSteps =
-        steps?.filter(({ step }) => step.epoch === currentEpoch && step.mode === 'subtask') || [];
-
-      const contextEntityIds = latestSubtaskSteps.map(({ step }) => step.entityId);
-
-      const { context, history } = await this.buildContextAndHistory(
-        canvasContentItems,
-        contextEntityIds,
-      );
-      const resultId = genActionResultID();
-
-      const input = buildSummarySkillInput({
-        userQuestion: JSON.parse(pilotSession.input ?? '{}')?.query ?? '',
-        currentEpoch,
-        maxEpoch,
-        subtaskTitles:
-          latestSubtaskSteps?.map(({ actionResult }) => actionResult?.title)?.filter(Boolean) ?? [],
-        locale,
-      });
-
-      // *** NEW: Variable extraction for Summary input (only updates variables, does not affect skill calls) ***
-      if (targetType === 'canvas') {
-        this.variableExtractionService
-          .extractVariables(
-            user,
-            input.query, // Summary query
-            targetId, // Canvas ID
-            {
-              mode: 'direct',
-              triggerType: 'pilot',
-            },
-          )
-          .then(() => {
-            this.logger.log('Variable extraction for summary step completed');
-          })
-          .catch((error) => {
-            this.logger.warn('Variable extraction failed for summary step:', error);
-          });
-      }
-
-      const actionResult = await this.prisma.actionResult.create({
-        data: {
-          uid: user.uid,
-          resultId,
-          title: summaryTitle,
-          input: JSON.stringify(input),
-          status: 'waiting',
-          targetId,
-          targetType,
-          context: JSON.stringify(context),
-          history: JSON.stringify(history),
-          modelName: chatModelId,
-          tier: chatPi.tier,
-          errors: '[]',
-          pilotStepId: stepId,
-          pilotSessionId: sessionId,
-          runtimeConfig: '{}',
-          tplConfig: '{}',
-          providerItemId: chatPi.itemId,
-        },
-      });
-      await this.prisma.pilotStep.create({
-        data: {
-          stepId,
-          name: summaryTitle,
-          sessionId,
-          epoch: currentEpoch,
-          entityId: actionResult.resultId,
-          entityType: 'skillResponse',
-          rawOutput: JSON.stringify({}),
-          status: 'executing',
-          mode: 'summary',
-        },
-      });
-
-      const contextItems = convertResultContextToItems(context, history);
-
-      if (targetType === 'canvas') {
-        await this.canvasSyncService.addNodeToCanvas(
-          user,
-          targetId,
-          {
-            type: 'skillResponse',
-            data: {
-              title: summaryTitle,
-              entityId: resultId,
-              metadata: {
-                status: 'executing',
-                contextItems,
-                tplConfig: '{}',
-                runtimeConfig: '{}',
-                modelInfo: {
-                  modelId: chatModelId,
-                },
-              },
-            },
-          },
-          convertContextItemsToNodeFilters(contextItems),
-          { autoLayout: true },
-        );
-      }
-
-      await this.skillService.sendInvokeSkillTask(user, {
-        resultId,
-        input: input,
-        target: {
-          entityId: targetId,
-          entityType: targetType as EntityType,
-        },
-        modelName: chatModelId,
-        modelItemId: chatPi.itemId,
-        context: context,
-        resultHistory: history,
-        toolsets: [],
-      });
-
-      // Rotate the session status to waiting
-      await this.prisma.pilotSession.update({
-        where: { sessionId },
-        data: {
-          status: 'waiting',
-        },
-      });
-    } catch (error) {
-      this.logger.error(`Error running pilot summary for session ${sessionId}:`, error);
-
-      // Update session status to failed when an error occurs
-      try {
-        await this.prisma.pilotSession.update({
-          where: { sessionId },
-          data: { status: 'failed' },
-        });
-        this.logger.log(`Pilot session ${sessionId} status set to failed due to error in summary`);
       } catch (updateError) {
         this.logger.error(`Failed to update session ${sessionId} status to failed:`, updateError);
       }
@@ -911,6 +815,11 @@ export class PilotService {
         return;
       }
 
+      if (session.currentEpoch !== step.epoch) {
+        this.logger.warn(`Pilot session ${step.sessionId} has reached max epoch`);
+        return;
+      }
+
       const epochSubtaskSteps = epochSteps.filter((step) => step.mode === 'subtask');
 
       const isAllSubtaskStepsFinished =
@@ -928,7 +837,7 @@ export class PilotService {
           where: { sessionId: step.sessionId },
           data: {
             status: reachedMaxEpoch ? 'finish' : 'executing',
-            ...(!reachedMaxEpoch ? { currentEpoch: session.currentEpoch + 1 } : {}),
+            ...(!reachedMaxEpoch ? { currentEpoch: step.epoch + 1 } : {}),
           },
         });
 
@@ -936,7 +845,7 @@ export class PilotService {
           // Queue the next runPilot job instead of running it directly
 
           await this.runPilotQueue.add(
-            `run-pilot-${step.sessionId}-${session.currentEpoch + 1}`,
+            `run-pilot-${step.sessionId}-${step.epoch + 1}`,
             {
               user,
               sessionId: step.sessionId,

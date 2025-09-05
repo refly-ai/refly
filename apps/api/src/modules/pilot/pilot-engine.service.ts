@@ -3,8 +3,6 @@ import { BaseChatModel } from '@refly/providers';
 import { PrismaService } from '../common/prisma.service';
 import { CanvasContentItem } from '../canvas/canvas.dto';
 import { GenericToolset } from '@refly/openapi-schema';
-import { PilotStepRawOutput } from './prompt/schema';
-import { MAX_STEPS_PER_EPOCH } from './pilot.service';
 import { ProgressPlan, ProgressStage, ProgressSubtask } from './pilot.types';
 
 // Types for progress management
@@ -40,8 +38,7 @@ export class PilotEngineService {
     availableTools: GenericToolset[],
     canvasContent: CanvasContentItem[],
     locale?: string,
-    maxStepsPerEpoch = MAX_STEPS_PER_EPOCH,
-  ): Promise<PilotStepRawOutput[]> {
+  ): Promise<ProgressPlan> {
     try {
       this.logger.log(`Starting pilot execution for session ${sessionId}`);
 
@@ -95,23 +92,12 @@ export class PilotEngineService {
       // Persist the updated plan
       await this.persistProgressPlan(sessionId, progressPlan);
 
-      // 4. Generate tasks based on current status
-      const tasks = await this.generateTasksBasedOnStatus(
-        sessionId,
-        progressPlan,
-        model,
-        availableTools,
-        canvasContent,
-        maxStepsPerEpoch,
-        locale,
-      );
-
       // 5. Update and persist progress plan
-      await this.updateAndPersistProgress(sessionId, progressPlan, tasks);
+      await this.updateAndPersistProgress(sessionId, progressPlan);
 
       this.logger.log(`Pilot execution completed for session ${sessionId}`);
 
-      return tasks;
+      return progressPlan;
     } catch (error) {
       this.logger.error(`Error in pilot execution for session ${sessionId}: ${error.message}`);
       throw error;
@@ -466,77 +452,11 @@ export class PilotEngineService {
   }
 
   /**
-   * Generate tasks based on current execution status
-   */
-  private async generateTasksBasedOnStatus(
-    sessionId: string,
-    progressPlan: ProgressPlan,
-    _model: BaseChatModel,
-    _availableTools: GenericToolset[],
-    _canvasContent: CanvasContentItem[],
-    maxStepsPerEpoch: number,
-    _locale?: string,
-  ): Promise<PilotStepRawOutput[]> {
-    try {
-      const session = await this.prisma.pilotSession.findUnique({
-        where: { sessionId },
-        select: { currentEpoch: true },
-      });
-
-      if (!session) {
-        throw new Error(`Session ${sessionId} not found`);
-      }
-
-      const currentEpoch = session.currentEpoch ?? 0;
-      const currentStage = progressPlan.stages[currentEpoch];
-
-      if (!currentStage) {
-        this.logger.warn(`No stage found for epoch ${currentEpoch} in session ${sessionId}`);
-        return [];
-      }
-
-      // Get pending subtasks for execution
-      const pendingSubtasks = currentStage.subtasks.filter((st) => st.status === 'pending');
-
-      // Since we always re-plan for existing plans, we should have sufficient subtasks
-      if (pendingSubtasks.length === 0) {
-        this.logger.warn(
-          `No pending subtasks found for stage "${currentStage.name}". This should not happen after re-planning.`,
-        );
-        return [];
-      }
-
-      // Return the first batch of pending subtasks
-      const tasksToExecute = pendingSubtasks.slice(0, maxStepsPerEpoch);
-      this.logger.log(
-        `Executing ${tasksToExecute.length} pending subtasks for stage "${currentStage.name}"`,
-      );
-      return this.convertSubtasksToPilotSteps(tasksToExecute);
-    } catch (error) {
-      this.logger.error(`Error generating tasks based on status: ${error.message}`);
-      throw new Error(`Failed to generate tasks: ${error.message}`);
-    }
-  }
-
-  /**
-   * Convert ProgressSubtask to PilotStepRawOutput
-   */
-  private convertSubtasksToPilotSteps(subtasks: ProgressSubtask[]): PilotStepRawOutput[] {
-    return subtasks.map((subtask) => ({
-      name: subtask.name,
-      query: subtask.query,
-      contextItemIds: [],
-      workflowStage: 'research',
-    }));
-  }
-
-  /**
    * Update and persist progress plan to database
    */
   private async updateAndPersistProgress(
     sessionId: string,
     progressPlan: ProgressPlan,
-    _newTasks: PilotStepRawOutput[],
   ): Promise<void> {
     try {
       progressPlan.lastUpdated = new Date().toISOString();

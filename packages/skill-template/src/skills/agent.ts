@@ -15,7 +15,8 @@ import { buildSystemPrompt } from '../mcp/core/prompt';
 import { MCPTool, MCPToolInputSchema } from '../mcp/core/prompt';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import type { AIMessage, BaseMessage } from '@langchain/core/messages';
+import { AIMessage } from '@langchain/core/messages';
+import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools'; // For MCP Tools
 
@@ -55,9 +56,17 @@ function convertToMCPTools(langchainTools: StructuredToolInterface[]): MCPTool[]
   });
 }
 
+// Define a more specific type for the compiled graph
+type CompiledGraphApp = {
+  invoke: (
+    input: { messages: BaseMessage[] },
+    config?: any,
+  ) => Promise<{ messages: BaseMessage[] }>;
+};
+
 interface AgentComponents {
   tools: StructuredToolInterface[];
-  compiledLangGraphApp: any;
+  compiledLangGraphApp: CompiledGraphApp;
   mcpAvailable: boolean;
 }
 
@@ -124,16 +133,48 @@ export class Agent extends BaseSkill {
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
     if (selectedTools.length > 0) {
-      llmForGraph = baseLlm.bindTools(selectedTools);
-      actualToolNodeInstance = new ToolNode(selectedTools);
+      // Ensure tool definitions are valid before binding
+      const validTools = selectedTools.filter(
+        (tool) => tool.name && tool.description && tool.schema,
+      );
+
+      if (validTools.length > 0) {
+        this.engine.logger.log(
+          `Binding ${validTools.length} valid tools to LLM with tool_choice="auto"`,
+        );
+        // Use tool_choice="auto" to force LLM to decide when to use tools
+        // This ensures proper tool_calls format generation
+        llmForGraph = baseLlm.bindTools(validTools, { tool_choice: 'auto' });
+        actualToolNodeInstance = new ToolNode(validTools);
+      } else {
+        this.engine.logger.warn('No valid tools found, using base LLM without tools');
+        llmForGraph = baseLlm;
+      }
     } else {
+      this.engine.logger.log('No tools selected, using base LLM without tools');
       llmForGraph = baseLlm;
     }
 
     const llmNodeForCachedGraph = async (nodeState: typeof MessagesAnnotation.State) => {
-      // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
-      const response = await llmForGraph.invoke(nodeState.messages);
-      return { messages: [response as AIMessage] }; // Ensure response is treated as AIMessage
+      try {
+        // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
+        const response = await llmForGraph.invoke(nodeState.messages);
+
+        this.engine.logger.log('LLM response received:', {
+          hasToolCalls: !!response.tool_calls,
+          toolCallsCount: response.tool_calls?.length || 0,
+          toolCalls: response.tool_calls,
+          content:
+            typeof response.content === 'string'
+              ? response.content.substring(0, 100)
+              : 'Non-string content',
+        });
+
+        return { messages: [response] };
+      } catch (error) {
+        this.engine.logger.error('LLM node execution failed:', error);
+        throw error;
+      }
     };
 
     // Initialize StateGraph with explicit generic arguments for State and all possible Node names
@@ -149,8 +190,35 @@ export class Agent extends BaseSkill {
     workflow = workflow.addEdge(START, 'llm');
 
     if (actualToolNodeInstance) {
+      // Enhanced tool node with better error handling and logging
+      const enhancedToolNode = async (toolState: typeof MessagesAnnotation.State) => {
+        try {
+          this.engine.logger.log('Executing tool node with enhanced error handling');
+
+          const result = await actualToolNodeInstance.invoke(toolState);
+
+          // Check tool execution results
+          const lastToolMessage = result.messages[result.messages.length - 1];
+          if (lastToolMessage && typeof lastToolMessage.content === 'string') {
+            const toolResult = lastToolMessage.content;
+
+            // Log tool execution results
+            if (toolResult.includes('error') || toolResult.includes('failed')) {
+              this.engine.logger.warn('Tool execution failed:', toolResult);
+            } else {
+              this.engine.logger.log('Tool execution successful');
+            }
+          }
+
+          return result;
+        } catch (error) {
+          this.engine.logger.error('Tool execution failed:', error);
+          throw error;
+        }
+      };
+
       // @ts-ignore - Suppressing persistent type error with addNode and runnable type mismatch
-      workflow = workflow.addNode('tools', actualToolNodeInstance);
+      workflow = workflow.addNode('tools', enhancedToolNode);
       // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
       workflow = workflow.addEdge('tools', 'llm'); // Output of tools goes back to LLM
 
@@ -159,11 +227,16 @@ export class Agent extends BaseSkill {
       // @ts-ignore - Suppressing persistent type error with addConditionalEdges and node name mismatch
       workflow.addConditionalEdges('llm', (graphState: typeof MessagesAnnotation.State) => {
         const lastMessage = graphState.messages[graphState.messages.length - 1] as AIMessage;
-        if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-          this.engine.logger.log('Tool calls detected, routing to tools node');
+
+        if (lastMessage?.tool_calls && lastMessage?.tool_calls?.length > 0) {
+          this.engine.logger.log(
+            `Tool calls detected (${lastMessage.tool_calls.length} calls), routing to tools node`,
+            { toolCalls: lastMessage.tool_calls },
+          );
           return 'tools';
         }
-        this.engine.logger.log('No tool call, routing to END');
+
+        this.engine.logger.log('No tool calls detected, routing to END');
         return END;
       });
     } else {
@@ -192,6 +265,7 @@ export class Agent extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { currentSkill, user } = config.configurable;
+    const { locale = 'auto' } = config.configurable;
 
     const project = config.configurable?.project as
       | { projectId: string; customInstructions?: string }
@@ -208,15 +282,8 @@ export class Agent extends BaseSkill {
       buildSystemPrompt: mcpAvailable
         ? () => {
             return buildSystemPrompt(
-              'You are an advanced AI assistant with specialized expertise in leveraging the Model Context Protocol (MCP) to solve complex problems efficiently. Your intelligence manifests through precise tool orchestration, context-aware execution, and proactive optimization of MCP server capabilities. ' +
-                'When a tool call is made, you will receive a ToolMessage with the result. ' +
-                'If an MCP server call fails or returns malformed data, the ToolMessage will contain the error details. ' +
-                'You MUST carefully analyze this error message. ' +
-                'If the error indicates incorrect arguments (e.g., missing parameters, invalid values, type mismatches), you MUST revise the arguments and attempt the tool call again. Do NOT repeat the previous mistake. ' +
-                'If the error seems to be a transient issue (e.g., network error, temporary unavailability), you should retry the call, perhaps after a brief conceptual pause. ' +
-                "You must continuously retry and adapt your approach to achieve the user's expected outcome. Never abandon the operation prematurely. " +
-                'After several (e.g., 3-5) persistent failures for the same tool call despite your best efforts to correct it, and if no alternative tools or approaches are viable, you may then inform the user about the specific difficulty encountered and suggest a different course of action or ask for clarification.',
               convertToMCPTools(mcpTools), // Use the conversion function, mcpServerList removed
+              locale,
             );
           }
         : commonQnA.buildCommonQnASystemPrompt,
@@ -234,6 +301,8 @@ export class Agent extends BaseSkill {
     config.metadata.step = { name: 'answerQuestion' };
 
     try {
+      this.engine.logger.log('Starting agent execution with messages:', requestMessages.length);
+
       const result = await compiledLangGraphApp.invoke(
         { messages: requestMessages },
         {
@@ -242,13 +311,41 @@ export class Agent extends BaseSkill {
           metadata: {
             ...config.metadata,
             ...currentSkill,
+            mcpAvailable,
+            toolCount: mcpTools?.length || 0,
           },
         },
       );
+
+      this.engine.logger.log('Agent execution completed:', {
+        messagesCount: result.messages?.length || 0,
+        toolCallCount:
+          result.messages?.filter((msg) => (msg as AIMessage).tool_calls?.length > 0).length || 0,
+        mcpAvailable,
+        toolCount: mcpTools?.length || 0,
+      });
+
       return { messages: result.messages };
+    } catch (error) {
+      this.engine.logger.error('Agent execution failed:', error);
+
+      const errorMessage = new AIMessage(`
+I encountered technical difficulties while processing your request. Here's what happened:
+
+**Error Details**: ${error.message}
+
+**Next Steps**:
+1. Try rephrasing your request in simpler terms
+2. Break down complex tasks into smaller steps
+3. Try again - this might be a temporary issue
+4. Provide more context about what you're trying to achieve
+
+I'll do my best to help you find a solution!
+      `);
+
+      return { messages: [errorMessage] };
     } finally {
-      this.engine.logger.log('agentNode execution finished.');
-      // Intentionally do not dispose globally here to preserve MCP connections.
+      this.engine.logger.log('Agent execution finished.');
     }
   };
 
