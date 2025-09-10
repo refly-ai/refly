@@ -91,7 +91,13 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
       return;
     }
 
-    updateActionResult(resultId, data.data!);
+    // Make sure the result has at least one step to prevent infinite loading
+    const result = data.data;
+    if (result.status === 'finish' && result.steps?.length === 0) {
+      result.steps = [{ name: 'answerQuestion', content: '' }];
+    }
+
+    updateActionResult(resultId, result);
 
     const remoteResult = data.data;
     const node = getNodes().find((node) => node.data?.entityId === resultId);
@@ -114,7 +120,7 @@ const SkillResponseNodePreviewComponent = ({ node, resultId }: SkillResponseNode
     if (isStreaming) {
       return;
     }
-    if (!result && !shareId) {
+    if ((!result || (result.status === 'finish' && result.steps?.length === 0)) && !shareId) {
       fetchActionResult(resultId);
     } else if (result) {
       setLoading(false);
