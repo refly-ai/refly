@@ -23,7 +23,12 @@ export const DocumentNodePreview = memo(
 
     return (
       <div className="h-full overflow-hidden">
-        <DocumentEditor docId={entityId} readonly={readonly} shareId={metadata?.shareId} />
+        <DocumentEditor
+          docId={entityId}
+          readonly={readonly}
+          shareId={metadata?.shareId}
+          nodeId={node.id}
+        />
       </div>
     );
   },

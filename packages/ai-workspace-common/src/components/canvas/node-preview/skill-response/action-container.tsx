@@ -24,7 +24,7 @@ interface ActionContainerProps {
 
 const buttonClassName = 'text-xs flex justify-center items-center h-6 px-1 rounded-lg';
 
-const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
+const ActionContainerComponent = ({ result, step, nodeId }: ActionContainerProps) => {
   const { t } = useTranslation();
   const { debouncedCreateDocument, isCreating } = useCreateDocument();
   const { readonly } = useCanvasContext();
@@ -180,7 +180,11 @@ const ActionContainerComponent = ({ result, step }: ActionContainerProps) => {
       }}
     >
       {!readonly && (
-        <FollowingActions initContextItems={initContextItems} initModelInfo={initModelInfo} />
+        <FollowingActions
+          initContextItems={initContextItems}
+          initModelInfo={initModelInfo}
+          nodeId={nodeId}
+        />
       )}
 
       <div className="flex items-center justify-between p-3 rounded-b-xl">

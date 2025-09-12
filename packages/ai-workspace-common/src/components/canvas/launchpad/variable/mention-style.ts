@@ -42,6 +42,8 @@ export const mentionStyles = `
     color: var(--refly-text-3, #9ca3af);
     pointer-events: none;
     height: 0;
+    line-height: 20px;
+    font-size: 15px;
   }
   
   [data-cy="rich-chat-input"] .mention {

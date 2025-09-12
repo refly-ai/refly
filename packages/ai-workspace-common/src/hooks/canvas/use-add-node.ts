@@ -7,7 +7,6 @@ import { CanvasNode, CanvasNodeFilter, prepareAddNode } from '@refly/canvas-comm
 import { useEdgeStyles } from '../../components/canvas/constants';
 import { useNodeSelection } from './use-node-selection';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { useNodePosition } from './use-node-position';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { adoptUserNodes } from '@xyflow/system';
@@ -163,13 +162,19 @@ export const useAddNode = () => {
       }, 10);
 
       if (
-        ['document', 'resource', 'website', 'skillResponse', 'codeArtifact'].includes(
-          newNode.type,
-        ) &&
+        [
+          'document',
+          'resource',
+          'website',
+          'skillResponse',
+          'codeArtifact',
+          'image',
+          'video',
+          'audio',
+        ].includes(newNode.type) &&
         shouldPreview
       ) {
         previewNode(newNode as unknown as CanvasNode);
-        locateToNodePreviewEmitter.emit('locateToNodePreview', { canvasId, id: newNode.id });
       }
 
       // Return the calculated position

@@ -135,7 +135,7 @@ const DocumentToc = memo(() => {
 });
 
 const StatusBar = memo(
-  ({ docId }: { docId: string }) => {
+  ({ docId, nodeId }: { docId: string; nodeId: string }) => {
     const { provider, ydoc } = useDocumentContext();
 
     const { t, i18n } = useTranslation();
@@ -231,7 +231,13 @@ const StatusBar = memo(
 
     return (
       <div className="w-full pt-3 border-x-0 border-b-0 border-t-[1px] border-solid border-refly-Card-Border">
-        {!readonly && <FollowingActions initContextItems={initContextItems} initModelInfo={null} />}
+        {!readonly && (
+          <FollowingActions
+            initContextItems={initContextItems}
+            initModelInfo={null}
+            nodeId={nodeId}
+          />
+        )}
 
         {/* Status bar with follow-up button */}
         <div className="h-10 p-3 flex flex-row items-center justify-between">
@@ -287,7 +293,7 @@ const StatusBar = memo(
     );
   },
   (prevProps, nextProps) => {
-    return prevProps.docId === nextProps.docId;
+    return prevProps.docId === nextProps.docId && prevProps.nodeId === nextProps.nodeId;
   },
 );
 
@@ -459,7 +465,14 @@ export const DocumentEditor = memo(
     docId,
     shareId,
     readonly,
-  }: { docId: string; shareId?: string; readonly?: boolean; _isMaximized?: boolean }) => {
+    nodeId,
+  }: {
+    docId: string;
+    shareId?: string;
+    readonly?: boolean;
+    _isMaximized?: boolean;
+    nodeId: string;
+  }) => {
     const { resetState } = useDocumentStoreShallow((state) => ({
       resetState: state.resetState,
     }));
@@ -475,7 +488,7 @@ export const DocumentEditor = memo(
       <DocumentProvider docId={docId} shareId={shareId} readonly={readonly}>
         <div className="flex flex-col ai-note-container">
           <DocumentBody docId={docId} />
-          {!canvasReadOnly && <StatusBar docId={docId} />}
+          {!canvasReadOnly && <StatusBar docId={docId} nodeId={nodeId} />}
         </div>
       </DocumentProvider>
     );

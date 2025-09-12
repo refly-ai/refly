@@ -47,7 +47,11 @@ const ResourceNodePreviewComponent = ({ node, resourceId }: ResourceNodePreviewP
       </div>
       {!readonly && (
         <div className="py-3 border-[1px] border-solid border-refly-Card-Border border-x-0 border-b-0">
-          <FollowingActions initContextItems={initContextItems} initModelInfo={null} />
+          <FollowingActions
+            initContextItems={initContextItems}
+            initModelInfo={null}
+            nodeId={node.id}
+          />
         </div>
       )}
     </div>

@@ -16,7 +16,6 @@ import {
   IconResource,
   IconWebsite,
   IconMindMap,
-  IconMedia,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { genMediaSkillID, genMemoID, genSkillID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
@@ -79,11 +78,6 @@ export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }
         description: t('canvas.toolbar.askAIDescription'),
         videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-askAI.webm',
       },
-    },
-    {
-      key: 'mediaGenerate',
-      icon: IconMedia,
-      type: 'button',
     },
     { key: 'divider-1', type: 'divider' },
     {

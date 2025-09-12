@@ -98,6 +98,7 @@ const VideoNodePreviewComponent = ({ node }: VideoNodePreviewProps) => {
         modelInfo={modelInfo ?? null}
         mediaType={'video'}
         entityId={entityId}
+        nodeId={node.id}
         storageKey={node?.data?.metadata?.storageKey ?? ''}
       />
     </div>

@@ -91,6 +91,7 @@ const ImageNodePreviewComponent = ({ node }: ImageNodePreviewProps) => {
         modelInfo={modelInfo ?? null}
         mediaType={'image'}
         entityId={entityId}
+        nodeId={node.id}
         storageKey={node?.data?.metadata?.storageKey ?? ''}
       />
       <SourceListModal classNames="w-full h-full" />

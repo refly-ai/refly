@@ -127,6 +127,7 @@ const AudioNodePreviewComponent = ({ node }: AudioNodePreviewProps) => {
         modelInfo={modelInfo ?? null}
         mediaType={'audio'}
         entityId={entityId}
+        nodeId={node.id}
         storageKey={node?.data?.metadata?.storageKey ?? ''}
       />
     </div>

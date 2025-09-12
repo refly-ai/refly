@@ -11,13 +11,13 @@ import {
   List,
   Attachment,
   Icon,
+  Text1,
 } from 'refly-icons';
-import { BiText } from 'react-icons/bi';
 export const getVariableIcon = (type: string) => {
   switch (type) {
     // Start node variable types
     case 'string':
-      return <BiText size={14} color="#0E9F77" />;
+      return <Text1 size={14} color="#0E9F77" />;
     case 'option':
       return <List size={14} color="#0E9F77" />;
     case 'resource':
@@ -70,7 +70,7 @@ export const getVariableIcon = (type: string) => {
 export const getStartNodeIcon = (type: string) => {
   switch (type) {
     case 'string':
-      return <BiText size={16} color="var(--refly-text-3)" />;
+      return <Text1 size={16} color="var(--refly-text-3)" />;
     case 'option':
       return <List size={16} color="var(--refly-text-3)" />;
     case 'resource':

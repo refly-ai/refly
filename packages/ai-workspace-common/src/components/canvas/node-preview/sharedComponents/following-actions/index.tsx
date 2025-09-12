@@ -12,14 +12,40 @@ import { useLaunchpadStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { genActionResultID } from '@refly/utils/id';
 import { ChatComposer } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
-import { AiChat } from 'refly-icons';
+import { AddContext, AiChat } from 'refly-icons';
 import { useListProviderItems } from '@refly-packages/ai-workspace-common/queries';
+import {
+  createNodeEventName,
+  nodeActionEmitter,
+} from '@refly-packages/ai-workspace-common/events/nodeActions';
+
+interface FollowingActionButtonProps {
+  text: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+const FollowingActionButton = ({ text, icon, onClick }: FollowingActionButtonProps) => {
+  return (
+    <div
+      className="h-6 bg-refly-primary-light border-[1px] border-solid border-refly-Card-Border hover:bg-[#CDFFF1] hover:border-refly-Card-Border px-2 py-1 rounded-lg flex items-center justify-center gap-0.5 cursor-pointer text-refly-primary-default text-xs font-semibold hover:shadow-refly-s"
+      onClick={onClick}
+    >
+      {icon}
+      <span>{text}</span>
+    </div>
+  );
+};
 
 interface FollowingActionsProps {
   initContextItems: IContextItem[];
   initModelInfo: ModelInfo | null;
+  nodeId: string;
 }
-export const FollowingActions = ({ initContextItems, initModelInfo }: FollowingActionsProps) => {
+export const FollowingActions = ({
+  initContextItems,
+  initModelInfo,
+  nodeId,
+}: FollowingActionsProps) => {
   const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
@@ -186,20 +212,27 @@ export const FollowingActions = ({ initContextItems, initModelInfo }: FollowingA
     setFollowUpModelInfo(initModelInfo || defaultModelInfo);
   }, [initModelInfo]);
 
+  const handleAddToContext = useCallback(() => {
+    nodeActionEmitter.emit(createNodeEventName(nodeId, 'addToContext'));
+  }, [nodeActionEmitter, nodeId]);
+
   return (
     <div className="px-3">
-      <div className="flex flex-row items-center justify-between bg-refly-tertiary-default px-3 py-2 rounded-xl">
-        <div className="flex flex-row items-center px-2">
-          <span className="font-[600] pr-4">{t('canvas.nodeActions.nextStepSuggestions')}</span>
-          <div
-            className="bg-[#CDFFF1] border-[1px] border-solid border-refly-Card-Border hover:bg-[#CDFFF1] hover:border-refly-Card-Border px-2 py-1 rounded-lg flex items-center justify-center cursor-pointer"
+      <div className="flex flex-row items-center gap-4 bg-refly-tertiary-default px-4 py-2 rounded-xl">
+        <span className="font-semibold">{t('canvas.nodeActions.nextStepSuggestions')}</span>
+
+        <div className="flex flex-row items-center gap-2">
+          <FollowingActionButton
+            text={t('canvas.nodeActions.followUpQuestion')}
+            icon={<AiChat size={16} color="var(--refly-primary-default)" />}
             onClick={initializeFollowUpInput}
-          >
-            <AiChat className="w-4 h-4 mr-[2px]" color="#0E9F77" />
-            <span className="text-[#0E9F77] font-[600] text-xs">
-              {t('canvas.nodeActions.followUpQuestion')}
-            </span>
-          </div>
+          />
+
+          <FollowingActionButton
+            text={t('canvas.nodeActions.addToContext')}
+            icon={<AddContext size={16} color="var(--refly-primary-default)" />}
+            onClick={handleAddToContext}
+          />
         </div>
       </div>
 
