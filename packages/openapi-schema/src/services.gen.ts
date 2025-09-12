@@ -76,6 +76,9 @@ import type {
   ListAccountsResponse2,
   LogoutError,
   LogoutResponse,
+  CheckToolOauthStatusData,
+  CheckToolOauthStatusError,
+  CheckToolOauthStatusResponse,
   GetCollabTokenError,
   GetCollabTokenResponse2,
   ListCanvasesData,
@@ -813,6 +816,23 @@ export const logout = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<LogoutResponse, LogoutError, ThrowOnError>({
     ...options,
     url: '/auth/logout',
+  });
+};
+
+/**
+ * Check tool OAuth status
+ * Check if user has OAuth authorization for specific provider and scopes
+ */
+export const checkToolOauthStatus = <ThrowOnError extends boolean = false>(
+  options: Options<CheckToolOauthStatusData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    CheckToolOauthStatusResponse,
+    CheckToolOauthStatusError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/tool-oauth/status',
   });
 };
 

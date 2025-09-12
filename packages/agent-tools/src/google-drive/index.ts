@@ -2,6 +2,7 @@ import { z } from 'zod/v3';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor, ToolCallResult } from '../base';
 import { ToolsetDefinition } from '@refly/openapi-schema';
 import { google } from 'googleapis';
+import { ToolParams } from '@langchain/core/tools';
 
 export const GoogleDriveToolsetDefinition: ToolsetDefinition = {
   key: 'google_drive',
@@ -90,6 +91,8 @@ export const GoogleDriveToolsetDefinition: ToolsetDefinition = {
   authPatterns: [
     {
       type: 'oauth',
+      provider: 'google',
+      scope: ['https://www.googleapis.com/auth/drive'],
     },
   ],
   configItems: [
@@ -109,10 +112,12 @@ export const GoogleDriveToolsetDefinition: ToolsetDefinition = {
   ],
 };
 
-export interface GoogleDriveParams {
+//automatic assemble clientId, clientSecret, refreshToken, accessToken if authType is oauth
+export interface GoogleDriveParams extends ToolParams {
   clientId: string;
   clientSecret: string;
   refreshToken: string;
+  accessToken: string;
   redirectUri?: string;
 }
 

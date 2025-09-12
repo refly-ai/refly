@@ -2317,6 +2317,14 @@ const translations = {
         required: '{{name}} is required',
         toolEnabled: '{{name}} enabled',
         toolDisabled: '{{name}} disabled',
+        oauthStatus: 'OAuth Status',
+      },
+      oauth: {
+        checking: 'Checking OAuth status...',
+        authorized: 'OAuth authorized',
+        required: 'OAuth authorization required',
+        authorizeWith: 'Authorize with {{provider}}',
+        checkFailed: 'Failed to check OAuth status',
       },
     },
     appearance: {

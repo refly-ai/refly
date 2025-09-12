@@ -872,6 +872,9 @@ importers:
       gpt-tokenizer:
         specifier: ^2.9.0
         version: 2.9.0
+      pyodide:
+        specifier: ^0.28.2
+        version: 0.28.2
       zod:
         specifier: 3.25.76
         version: 3.25.76
@@ -14053,6 +14056,10 @@ packages:
 
   pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
+
+  pyodide@0.28.2:
+    resolution: {integrity: sha512-2BrZHrALvhYZfIuTGDHOvyiirHNLziHfBiBb1tpBFzLgAvDBb2ACxNPFFROCOzLnqapORmgArDYY8mJmMWH1Eg==}
+    engines: {node: '>=18.0.0'}
 
   qs@6.11.0:
     resolution: {integrity: sha512-MvjoMCJwEarSbUYk5O+nmoSzSutSsTwF85zcHPQ9OrlFoZOYIjaqBAJIqIXjptyD5vThxGq52Xu/MaJzRkIk4Q==}
@@ -32087,6 +32094,13 @@ snapshots:
       escape-goat: 4.0.0
 
   pure-rand@6.1.0: {}
+
+  pyodide@0.28.2:
+    dependencies:
+      ws: 8.17.1
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   qs@6.11.0:
     dependencies:

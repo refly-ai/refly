@@ -16,6 +16,7 @@
     "@refly/openapi-schema": "workspace:*",
     "googleapis": "^159.0.0",
     "gpt-tokenizer": "^2.9.0",
+    "pyodide": "^0.28.2",
     "zod": "^3.25.76",
     "zod-to-json-schema": "3.24.6"
   },

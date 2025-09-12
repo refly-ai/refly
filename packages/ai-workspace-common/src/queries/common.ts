@@ -12,6 +12,7 @@ import {
   batchUpdateDocument,
   batchUpdateProviderItems,
   checkSettingsField,
+  checkToolOauthStatus,
   checkVerification,
   convert,
   createCanvas,
@@ -215,6 +216,18 @@ export const UseListAccountsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListAccountsKey, ...(queryKey ?? [clientOptions])];
+export type CheckToolOauthStatusDefaultResponse = Awaited<
+  ReturnType<typeof checkToolOauthStatus>
+>['data'];
+export type CheckToolOauthStatusQueryResult<
+  TData = CheckToolOauthStatusDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useCheckToolOauthStatusKey = 'CheckToolOauthStatus';
+export const UseCheckToolOauthStatusKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useCheckToolOauthStatusKey, ...(queryKey ?? [clientOptions])];
 export type GetCollabTokenDefaultResponse = Awaited<ReturnType<typeof getCollabToken>>['data'];
 export type GetCollabTokenQueryResult<
   TData = GetCollabTokenDefaultResponse,

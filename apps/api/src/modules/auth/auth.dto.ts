@@ -20,7 +20,7 @@ export const accountPO2DTO = (account: AccountPO): Account => {
   return {
     type: account.type as AuthType,
     provider: account.provider,
-    scope: account.scope,
+    scope: account.scope ? JSON.parse(account.scope) : [],
     providerAccountId: account.providerAccountId,
   };
 };

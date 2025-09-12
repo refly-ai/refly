@@ -4,6 +4,7 @@ import { type Options } from '@hey-api/client-fetch';
 import { type QueryClient } from '@tanstack/react-query';
 import {
   checkSettingsField,
+  checkToolOauthStatus,
   exportCanvas,
   exportDocument,
   getActionResult,
@@ -58,6 +59,7 @@ import {
 } from '../requests/services.gen';
 import {
   CheckSettingsFieldData,
+  CheckToolOauthStatusData,
   ExportCanvasData,
   ExportDocumentData,
   GetActionResultData,
@@ -146,6 +148,14 @@ export const prefetchUseListAccounts = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListAccountsKeyFn(clientOptions),
     queryFn: () => listAccounts({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseCheckToolOauthStatus = (
+  queryClient: QueryClient,
+  clientOptions: Options<CheckToolOauthStatusData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseCheckToolOauthStatusKeyFn(clientOptions),
+    queryFn: () => checkToolOauthStatus({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetCollabToken = (
   queryClient: QueryClient,

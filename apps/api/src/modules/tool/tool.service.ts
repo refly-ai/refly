@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DynamicStructuredTool, type StructuredToolInterface } from '@langchain/core/tools';
 import { PrismaService } from '../common/prisma.service';
 import { EncryptionService } from '../common/encryption.service';
@@ -9,6 +10,7 @@ import {
   GenericToolset,
   ListToolsData,
   ToolsetDefinition,
+  ToolsetAuthType,
   UpsertToolsetRequest,
   User,
 } from '@refly/openapi-schema';
@@ -31,6 +33,7 @@ export class ToolService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly encryptionService: EncryptionService,
+    private readonly configService: ConfigService,
     private readonly mcpServerService: McpServerService,
   ) {}
 
@@ -79,6 +82,45 @@ export class ToolService {
     return [...regularTools, ...mcpTools];
   }
 
+  /**
+   * Assemble OAuth authData from config and account table
+   */
+  private async assembleOAuthAuthData(
+    user: User,
+    provider: string,
+  ): Promise<Record<string, unknown>> {
+    // Get clientId and clientSecret from config
+    const clientId = this.configService.get(`auth.${provider}.clientId`);
+    const clientSecret = this.configService.get(`auth.${provider}.clientSecret`);
+
+    if (!clientId || !clientSecret) {
+      throw new ParamsError(`OAuth config not found for provider: ${provider}`);
+    }
+
+    // Get refreshToken and accessToken from account table
+    const account = await this.prisma.account.findFirst({
+      where: {
+        uid: user.uid,
+        provider,
+        type: 'oauth',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!account) {
+      throw new ParamsError(`OAuth account not found for provider: ${provider}`);
+    }
+
+    return {
+      clientId,
+      clientSecret,
+      refreshToken: account.refreshToken,
+      accessToken: account.accessToken,
+    };
+  }
+
   async createToolset(user: User, param: UpsertToolsetRequest): Promise<ToolsetPO> {
     const { name, key, enabled, authType, authData, config } = param;
 
@@ -98,13 +140,31 @@ export class ToolService {
       throw new ParamsError(`Toolset definition not found for key: ${key}`);
     }
 
+    let finalAuthData = authData;
+
     if (toolsetDefinition.requiresAuth) {
-      if (!authType || !authData) {
-        throw new ParamsError(`authType and authData are required for toolset ${key}`);
+      if (!authType) {
+        throw new ParamsError(`authType is required for toolset ${key}`);
       }
 
-      // Validate authData against toolset schema
-      this.validateAuthData(authData, toolsetDefinition, authType);
+      // Handle OAuth type: assemble authData from config and account table
+      if (authType === ('oauth' as ToolsetAuthType)) {
+        if (!param.provider) {
+          throw new ParamsError(`provider is required for oauth type toolset ${key}`);
+        }
+        finalAuthData = await this.assembleOAuthAuthData(user, param.provider);
+      } else {
+        // For non-OAuth types, authData is required from request
+        if (!authData) {
+          throw new ParamsError(`authData is required for toolset ${key}`);
+        }
+        finalAuthData = authData;
+      }
+
+      // Validate authData against toolset schema (skip for OAuth type)
+      if (authType !== ('oauth' as ToolsetAuthType)) {
+        this.validateAuthData(finalAuthData, toolsetDefinition, authType);
+      }
     }
 
     // Validate config against toolset schema
@@ -114,8 +174,8 @@ export class ToolService {
 
     let encryptedAuthData: string | null = null;
     try {
-      if (authData) {
-        encryptedAuthData = this.encryptionService.encrypt(JSON.stringify(authData));
+      if (finalAuthData) {
+        encryptedAuthData = this.encryptionService.encrypt(JSON.stringify(finalAuthData));
       }
     } catch {
       throw new ParamsError('Invalid authData');
@@ -178,17 +238,24 @@ export class ToolService {
       updates.authType = param.authType;
     }
     if (param.authData !== undefined) {
-      // Validate authData against toolset schema
-      const toolsetDefinition = toolsetInventory[param.key ?? toolset.key]?.definition;
-      if (toolsetDefinition?.requiresAuth) {
-        this.validateAuthData(
-          param.authData,
-          toolsetDefinition,
-          param.authType ?? toolset.authType,
-        );
+      let finalAuthData = param.authData;
+
+      // Handle OAuth type: assemble authData from config and account table
+      const authType = param.authType ?? toolset.authType;
+      if (authType === ('oauth' as ToolsetAuthType)) {
+        if (!param.provider) {
+          throw new ParamsError('provider is required for oauth type toolset update');
+        }
+        finalAuthData = await this.assembleOAuthAuthData(user, param.provider);
       }
 
-      const encryptedAuthData = this.encryptionService.encrypt(JSON.stringify(param.authData));
+      // Validate authData against toolset schema (skip for OAuth type)
+      const toolsetDefinition = toolsetInventory[param.key ?? toolset.key]?.definition;
+      if (toolsetDefinition?.requiresAuth && authType !== ('oauth' as ToolsetAuthType)) {
+        this.validateAuthData(finalAuthData, toolsetDefinition, authType);
+      }
+
+      const encryptedAuthData = this.encryptionService.encrypt(JSON.stringify(finalAuthData));
       updates.authData = encryptedAuthData;
     }
     if (config !== undefined) {

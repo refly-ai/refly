@@ -4,6 +4,7 @@ import { type Options } from '@hey-api/client-fetch';
 import { UseQueryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import {
   checkSettingsField,
+  checkToolOauthStatus,
   exportCanvas,
   exportDocument,
   getActionResult,
@@ -59,6 +60,8 @@ import {
 import {
   CheckSettingsFieldData,
   CheckSettingsFieldError,
+  CheckToolOauthStatusData,
+  CheckToolOauthStatusError,
   ExportCanvasData,
   ExportCanvasError,
   ExportDocumentData,
@@ -239,6 +242,23 @@ export const useListAccountsSuspense = <
     queryKey: Common.UseListAccountsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listAccounts({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useCheckToolOauthStatusSuspense = <
+  TData = Common.CheckToolOauthStatusDefaultResponse,
+  TError = CheckToolOauthStatusError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<CheckToolOauthStatusData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseCheckToolOauthStatusKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      checkToolOauthStatus({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetCollabTokenSuspense = <

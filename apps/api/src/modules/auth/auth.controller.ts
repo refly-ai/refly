@@ -101,10 +101,20 @@ export class AuthController {
     // auth guard will automatically handle this
   }
 
-  @UseGuards(GoogleOauthGuard)
   @Get('google')
-  async google() {
-    // auth guard will automatically handle this
+  async google(
+    @Query('scope') scope: string,
+    @Query('redirect') redirect: string,
+    @Query('uid') uid: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const authUrl = await this.authService.generateGoogleOAuthUrl(scope, redirect, uid);
+      res.redirect(authUrl);
+    } catch (error) {
+      this.logger.error('Google OAuth initiation failed:', error.stack);
+      throw new OAuthError();
+    }
   }
 
   @UseGuards(GithubOauthGuard)
@@ -125,16 +135,53 @@ export class AuthController {
 
   @UseGuards(GoogleOauthGuard)
   @Get('callback/google')
-  async googleAuthCallback(@LoginedUser() user: User, @Res() res: Response) {
+  async googleAuthCallback(
+    @LoginedUser() user: User,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
     try {
       this.logger.log(`google oauth callback success, req.user = ${user?.email}`);
+      this.logger.log(`state: ${state}`);
+      // Check if the requested scope exceeds basic login permissions
+
+      if (JSON.parse(state).uid) {
+        // Skip login methods and redirect to tool OAuth path
+        const redirectUrl = state
+          ? JSON.parse(state).redirect
+          : this.configService.get('auth.redirectUrl');
+        return res.redirect(redirectUrl);
+      }
 
       const tokens = await this.authService.login(user);
       this.authService
         .setAuthCookie(res, tokens)
-        .redirect(this.configService.get('auth.redirectUrl'));
+        .redirect(state ? JSON.parse(state).redirect : this.configService.get('auth.redirectUrl'));
     } catch (error) {
       this.logger.error('Google OAuth callback failed:', error.stack);
+      throw new OAuthError();
+    }
+  }
+
+  // Tool OAuth endpoints - specific routes first
+  @UseGuards(JwtAuthGuard)
+  @Get('tool-oauth/status')
+  async checkToolOAuthStatus(
+    @LoginedUser() user: User,
+    @Query('provider') provider: string,
+    @Query('scope') scope: string,
+  ) {
+    try {
+      const requiredScope = scope ? scope.split(',') : [];
+      const hasAuth = await this.authService.checkToolOAuthStatus(
+        user.uid,
+        provider,
+        requiredScope,
+      );
+
+      return buildSuccessResponse({ authorized: hasAuth });
+    } catch (error) {
+      this.logger.error('Check tool OAuth status failed:', error.stack);
       throw new OAuthError();
     }
   }

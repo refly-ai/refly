@@ -626,6 +626,35 @@ paths:
       responses:
         '200':
           description: Successful operation
+  /auth/tool-oauth/status:
+    get:
+      tags:
+        - auth
+      summary: Check tool OAuth status
+      description: Check if user has OAuth authorization for specific provider and scopes
+      operationId: checkToolOAuthStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: provider
+          in: query
+          required: true
+          description: OAuth provider (e.g., google, github)
+          schema:
+            type: string
+        - name: scope
+          in: query
+          required: true
+          description: Comma-separated list of required OAuth scopes
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OAuth status checked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckToolOAuthStatusResponse'
   /collab/getToken:
     get:
       tags:
@@ -4072,8 +4101,10 @@ components:
           type: string
           description: Provider
         scope:
-          type: string
+          type: array
           description: Auth scope
+          items:
+            type: string
         providerAccountId:
           type: string
           description: Provider account ID
@@ -4089,6 +4120,28 @@ components:
               description: List of auth accounts
               items:
                 $ref: '#/components/schemas/Account'
+    CheckToolOAuthStatusResponse:
+      type: object
+      description: Check tool OAuth status response
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: OAuth status information
+              properties:
+                authorized:
+                  type: boolean
+                  description: Whether user has sufficient OAuth authorization
+                provider:
+                  type: string
+                  description: OAuth provider
+                scope:
+                  type: array
+                  description: Required OAuth scopes
+                  items:
+                    type: string
     ShareUser:
       type: object
       description: Refly user in shared entity
@@ -9045,6 +9098,14 @@ components:
           description: Credential items, only for `credentials` type
           items:
             $ref: '#/components/schemas/DynamicConfigItem'
+        provider:
+          type: string
+          description: Auth provider, only for `oauth` type
+        scope:
+          type: array
+          description: Auth scope, only for `oauth` type
+          items:
+            type: string
     ToolsetDefinition:
       type: object
       required:
@@ -9172,6 +9233,14 @@ components:
           type: object
           additionalProperties: true
           description: Toolset config
+        provider:
+          type: string
+          description: OAuth toolset provider
+        scope:
+          type: array
+          description: OAuth toolset scope
+          items:
+            type: string
     UpsertToolsetResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

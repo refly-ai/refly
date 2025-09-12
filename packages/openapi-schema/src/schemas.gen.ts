@@ -792,8 +792,11 @@ export const AccountSchema = {
       description: 'Provider',
     },
     scope: {
-      type: 'string',
+      type: 'array',
       description: 'Auth scope',
+      items: {
+        type: 'string',
+      },
     },
     providerAccountId: {
       type: 'string',
@@ -817,6 +820,42 @@ export const ListAccountsResponseSchema = {
           description: 'List of auth accounts',
           items: {
             $ref: '#/components/schemas/Account',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const CheckToolOAuthStatusResponseSchema = {
+  type: 'object',
+  description: 'Check tool OAuth status response',
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'OAuth status information',
+          properties: {
+            authorized: {
+              type: 'boolean',
+              description: 'Whether user has sufficient OAuth authorization',
+            },
+            provider: {
+              type: 'string',
+              description: 'OAuth provider',
+            },
+            scope: {
+              type: 'array',
+              description: 'Required OAuth scopes',
+              items: {
+                type: 'string',
+              },
+            },
           },
         },
       },
@@ -7744,6 +7783,17 @@ export const AuthPatternSchema = {
         $ref: '#/components/schemas/DynamicConfigItem',
       },
     },
+    provider: {
+      type: 'string',
+      description: 'Auth provider, only for `oauth` type',
+    },
+    scope: {
+      type: 'array',
+      description: 'Auth scope, only for `oauth` type',
+      items: {
+        type: 'string',
+      },
+    },
   },
 } as const;
 
@@ -7923,6 +7973,17 @@ export const UpsertToolsetRequestSchema = {
       type: 'object',
       additionalProperties: true,
       description: 'Toolset config',
+    },
+    provider: {
+      type: 'string',
+      description: 'OAuth toolset provider',
+    },
+    scope: {
+      type: 'array',
+      description: 'OAuth toolset scope',
+      items: {
+        type: 'string',
+      },
     },
   },
 } as const;

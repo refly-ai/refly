@@ -27,8 +27,8 @@ model Account {
   accessToken       String?  @map("access_token")
   /// Token expiration timestamp
   expiresAt         Int?     @map("expires_at")
-  /// Scope
-  scope             String?  @map("scope")
+  /// Scope (JSON array)
+  scope             String?  @default("[]") @map("scope")
   /// Create timestamp
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp

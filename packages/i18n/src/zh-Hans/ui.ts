@@ -2267,6 +2267,14 @@ const translations = {
         required: '{{name}} 必填',
         toolEnabled: '已启用{{name}}',
         toolDisabled: '已禁用{{name}}',
+        oauthStatus: 'OAuth 状态',
+      },
+      oauth: {
+        checking: '检查 OAuth 状态中...',
+        authorized: 'OAuth 已授权',
+        required: '需要 OAuth 授权',
+        authorizeWith: '使用 {{provider}} 授权',
+        checkFailed: '检查 OAuth 状态失败',
       },
     },
     appearance: {
