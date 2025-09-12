@@ -4,10 +4,8 @@ import { SearchOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { McpServerDTO } from '@refly/openapi-schema';
 import { useListCommunityMcpConfigs } from '@refly-packages/ai-workspace-common/queries/mcp-community';
-import {
-  CommunityMcpCard,
-  CommunityMcpCardSkeleton,
-} from '@refly-packages/ai-workspace-common/components/settings/mcp-server';
+import { CommunityMcpCard } from './CommunityMcpCard';
+import { CommunityMcpCardSkeleton } from './CommunityMcpCardSkeleton';
 import { CommunityMcpConfig } from './types';
 
 interface CommunityMcpListProps {

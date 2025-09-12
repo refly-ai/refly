@@ -1,6 +1,6 @@
 import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
 
-import { CommunityMcpResponse } from '@refly-packages/ai-workspace-common/components/settings/mcp-server/types';
+import { CommunityMcpResponse } from '@refly-packages/ai-workspace-common/components/settings/tools-config/types';
 import {
   checkCommunityMcpApiHealth,
   fetchCommunityMcpConfigs,

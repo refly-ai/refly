@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { McpServerJsonEditor } from './McpServerJsonEditor';
 import { useCreateMcpServer, useListMcpServers } from '@refly-packages/ai-workspace-common/queries';
 import { McpServerBatchImportProps, McpServerFormData } from './types';
-import { mapServerType } from '@refly-packages/ai-workspace-common/components/settings/mcp-server/utils';
+import { mapServerType } from './utils';
 
 export const McpServerBatchImport: React.FC<McpServerBatchImportProps> = ({ onSuccess }) => {
   const { t } = useTranslation();

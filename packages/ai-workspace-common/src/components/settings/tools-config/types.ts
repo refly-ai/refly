@@ -79,6 +79,7 @@ export interface McpServerFormData {
 
 // Props for MCP server form component
 export interface McpServerFormProps {
+  formMode: 'create' | 'edit';
   initialData?: McpServerDTO;
   onSubmit: (data: McpServerFormData) => void;
   onCancel: () => void;

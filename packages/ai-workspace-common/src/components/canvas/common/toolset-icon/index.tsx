@@ -4,6 +4,7 @@ import { GenericToolset } from '@refly/openapi-schema';
 import { Mcp } from 'refly-icons';
 import { Favicon } from '@refly-packages/ai-workspace-common/components/common/favicon';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
+import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
 interface ToolsetIconConfig {
   size?: number;
@@ -17,6 +18,14 @@ export const ToolsetIcon: React.FC<{
   config?: ToolsetIconConfig;
 }> = React.memo(({ toolset, config, isBuiltin }) => {
   const { size = 24, className, builtinClassName } = config ?? {};
+  const domain = toolset.toolset?.definition?.domain ?? toolset.mcpServer?.url;
+
+  const { data } = useListToolsetInventory({}, null, {
+    enabled: !domain && toolset.type === 'regular',
+  });
+  const toolsetDefinition = data?.data?.find((t) => t.key === toolset.toolset?.key);
+
+  const finalUrl = toolsetDefinition?.domain ?? domain ?? '';
 
   if (toolset.type === 'mcp') {
     return (
@@ -34,7 +43,7 @@ export const ToolsetIcon: React.FC<{
       {isBuiltin ? (
         <Logo logoProps={{ show: true, className: builtinClassName }} textProps={{ show: false }} />
       ) : (
-        <Favicon url={toolset.toolset?.definition?.domain ?? ''} size={size} />
+        <Favicon url={finalUrl} size={size} />
       )}
     </div>
   );

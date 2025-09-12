@@ -4,5 +4,5 @@ export * from './McpServerJsonEditor';
 export * from './CommunityMcpCard';
 export * from './CommunityMcpCardSkeleton';
 export * from './CommunityMcpList';
+export * from './ToolsConfigTab';
 export * from './types';
-export * from './mcpServerTab';

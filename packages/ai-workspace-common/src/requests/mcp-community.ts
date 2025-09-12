@@ -1,4 +1,4 @@
-import { CommunityMcpResponse } from '@refly-packages/ai-workspace-common/components/settings/mcp-server/types';
+import { CommunityMcpResponse } from '@refly-packages/ai-workspace-common/components/settings/tools-config/types';
 
 // Community MCP configuration API URL
 const COMMUNITY_MCP_API_URL = 'https://static.refly.ai/mcp-config/mcp-catalog.json';

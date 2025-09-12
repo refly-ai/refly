@@ -172,7 +172,7 @@ export class Agent extends BaseSkill {
 
         return { messages: [response] };
       } catch (error) {
-        this.engine.logger.error('LLM node execution failed:', error);
+        this.engine.logger.error(`LLM node execution failed: ${error.stack}`);
         throw error;
       }
     };
@@ -327,7 +327,7 @@ export class Agent extends BaseSkill {
 
       return { messages: result.messages };
     } catch (error) {
-      this.engine.logger.error('Agent execution failed:', error);
+      this.engine.logger.error(`Agent execution failed: ${error.stack}`);
 
       const errorMessage = new AIMessage(`
 I encountered technical difficulties while processing your request. Here's what happened:

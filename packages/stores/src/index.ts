@@ -67,6 +67,7 @@ export {
   useMultilingualSearchStoreShallow,
 } from './stores/multilingual-search';
 export { useThemeStore, useThemeStoreShallow } from './stores/theme';
+export { useToolStore, useToolStoreShallow } from './stores/tool';
 export { type LocalSettings, useUserStore, useUserStoreShallow } from './stores/user';
 export {
   createAutoEvictionStorage,

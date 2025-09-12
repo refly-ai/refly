@@ -34,7 +34,7 @@ import {
   useUpdateMcpServer,
   useValidateMcpServer,
 } from '@refly-packages/ai-workspace-common/queries';
-import { mapServerType } from '@refly-packages/ai-workspace-common/components/settings/mcp-server/utils';
+import { mapServerType } from './utils';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -46,6 +46,7 @@ interface KeyValuePair {
 }
 
 export const McpServerForm: React.FC<McpServerFormProps> = ({
+  formMode,
   initialData,
   onSubmit,
   onCancel,
@@ -140,7 +141,7 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
       const currentValues = form.getFieldsValue();
       const processedValues = processFormDataForSubmission({ ...currentValues, enabled: true });
 
-      if (initialData) {
+      if (formMode === 'edit') {
         updateMutation.mutate({ body: processedValues });
       } else {
         createMutation.mutate({ body: processedValues });
@@ -372,7 +373,7 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
     }
 
     // Proceed with save operation
-    if (initialData) {
+    if (formMode === 'edit') {
       updateMutation.mutate({ body: submitValues });
     } else {
       createMutation.mutate({ body: submitValues });
@@ -714,7 +715,7 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
                     validateMutation.isPending
                   }
                 >
-                  {initialData ? t('common.update') : t('common.create')}
+                  {formMode === 'create' ? t('common.create') : t('common.update')}
                 </Button>
                 <Button onClick={onCancel}>{t('common.cancel')}</Button>
               </Space>
@@ -748,7 +749,7 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
                   createMutation.isPending || updateMutation.isPending || validateMutation.isPending
                 }
               >
-                {initialData ? t('common.update') : t('common.create')}
+                {formMode === 'edit' ? t('common.update') : t('common.create')}
               </Button>
               <Button onClick={onCancel}>{t('common.cancel')}</Button>
             </Space>

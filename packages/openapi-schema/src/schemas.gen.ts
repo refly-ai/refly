@@ -2301,11 +2301,13 @@ export const ActionResultSchema = {
       type: 'object',
       description: 'Action template config',
       $ref: '#/components/schemas/SkillTemplateConfig',
+      deprecated: true,
     },
     runtimeConfig: {
       type: 'object',
       description: 'Action runtime config',
       $ref: '#/components/schemas/SkillRuntimeConfig',
+      deprecated: true,
     },
     history: {
       type: 'array',
@@ -2326,6 +2328,13 @@ export const ActionResultSchema = {
       description: 'Errors',
       items: {
         type: 'string',
+      },
+    },
+    toolsets: {
+      type: 'array',
+      description: 'Action toolsets',
+      items: {
+        $ref: '#/components/schemas/GenericToolset',
       },
     },
     outputUrl: {
@@ -7963,6 +7972,14 @@ export const GenericToolsetSchema = {
     name: {
       type: 'string',
       description: 'Toolset name',
+    },
+    builtin: {
+      type: 'boolean',
+      description: 'Whether the toolset is builtin',
+    },
+    uninstalled: {
+      type: 'boolean',
+      description: 'Whether the toolset is uninstalled',
     },
     toolset: {
       $ref: '#/components/schemas/ToolsetInstance',

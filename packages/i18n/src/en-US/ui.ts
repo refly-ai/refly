@@ -2243,8 +2243,13 @@ const translations = {
       reflyFormat: 'Refly Format',
       autoValidateHint: 'Auto-validate server configuration on save',
       enabledTooltip: 'Enable or disable this MCP server',
+      validatingBeforeEnable: 'Validating server connection, will be enabled after validation',
       reconnectTooltip:
         'Configure automatic reconnection attempts if the server connection is lost',
+      envKeyRequired: 'Environment variable key cannot be empty',
+      envValueRequired: 'Environment variable value cannot be empty',
+      headerKeyRequired: 'Header key cannot be empty',
+      headerValueRequired: 'Header value cannot be empty',
       stdioWebDisabledTooltip: 'Stdio protocol is not supported in the web version.',
       jsonModeStdioWarning:
         "When configuring via JSON, please note: The 'stdio' type is not supported in the web version and may lead to unexpected behavior.",

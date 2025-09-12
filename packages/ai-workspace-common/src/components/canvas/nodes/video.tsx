@@ -28,6 +28,7 @@ import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks
 import { ModelInfo } from '@refly/openapi-schema';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
+import { HiExclamationTriangle } from 'react-icons/hi2';
 
 // Define VideoNodeMeta interface
 interface VideoNodeMeta {
@@ -56,6 +57,7 @@ export const VideoNode = memo(
     const { metadata } = data ?? {};
     const videoUrl = metadata?.videoUrl ?? '';
     const [isHovered, setIsHovered] = useState(false);
+    const [videoError, setVideoError] = useState(false);
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const videoRef = useRef<HTMLVideoElement>(null);
     useSelectedNodeZIndex(id, selected);
@@ -190,6 +192,22 @@ export const VideoNode = memo(
       previewNode(nodeForPreview);
     }, [previewNode, id, data]);
 
+    const handleVideoError = useCallback((e: any) => {
+      // Mark error to show friendly fallback UI
+      console.error('Video failed to load:', e?.message ?? e);
+      setVideoError(true);
+    }, []);
+
+    const handleRetry = useCallback(() => {
+      // Retry by resetting error and forcing a reload on the video element
+      setVideoError(false);
+      const videoEl = videoRef?.current;
+      if (videoEl) {
+        // load() will attempt to reload the current source without changing it
+        videoEl.load();
+      }
+    }, []);
+
     // Add event handling
     useEffect(() => {
       // Create node-specific event handlers
@@ -286,19 +304,42 @@ export const VideoNode = memo(
           style={{ cursor: isPreview || readonly ? 'default' : 'pointer' }}
           onClick={handleVideoClick}
         >
-          <video
-            ref={videoRef}
-            src={videoUrl}
-            controls
-            className="w-full h-full object-contain bg-black"
-            preload="metadata"
-            onError={(e) => {
-              console.error('Video failed to load:', e);
-            }}
-          >
-            <track kind="captions" />
-            Your browser does not support the video tag.
-          </video>
+          {videoError ? (
+            <div className="flex flex-col items-center justify-center gap-2 text-red-500 p-4 w-full h-full bg-black/60 rounded-2xl">
+              <HiExclamationTriangle className="w-8 h-8" />
+              <p className="text-sm text-center">Video failed to load</p>
+              <p className="text-xs text-gray-400 text-center">
+                Please check your network connection
+              </p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRetry();
+                }}
+                className="mt-1 px-3 py-1 rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              controls
+              className="w-full h-full object-contain bg-black rounded-2xl"
+              preload="metadata"
+              onError={handleVideoError}
+              onLoadStart={() => setVideoError(false)}
+              onClick={(e) => {
+                // Prevent video controls from triggering the parent click
+                e.stopPropagation();
+              }}
+            >
+              <track kind="captions" />
+              Your browser does not support the video tag.
+            </video>
+          )}
         </div>
       </div>
     );

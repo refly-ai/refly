@@ -6,11 +6,7 @@ import { Search } from 'refly-icons';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ToolInstallModal } from './tool-install-modal';
 import { Favicon } from '@refly-packages/ai-workspace-common/components/common/favicon';
-
-interface ToolStoreProps {
-  visible: boolean;
-  setToolStoreVisible: (visible: boolean) => void;
-}
+import { useToolStoreShallow } from '@refly/stores';
 
 const ToolItemSkeleton = () => {
   return (
@@ -37,13 +33,13 @@ const ToolItemSkeleton = () => {
   );
 };
 
-const ToolItem = ({
-  tool,
-  setToolStoreVisible,
-}: { tool: ToolsetDefinition; setToolStoreVisible: (visible: boolean) => void }) => {
+const ToolItem = ({ tool }: { tool: ToolsetDefinition }) => {
   const { i18n, t } = useTranslation();
   const currentLanguage = i18n.language as 'en' | 'zh';
-  const [openInstallModal, setOpenInstallModal] = useState(false);
+  const { setCurrentToolDefinition, setToolInstallModalOpen } = useToolStoreShallow((state) => ({
+    setCurrentToolDefinition: state.setCurrentToolDefinition,
+    setToolInstallModalOpen: state.setToolInstallModalOpen,
+  }));
 
   const name = (tool.labelDict[currentLanguage] as string) ?? (tool.labelDict.en as string);
   const description =
@@ -52,29 +48,8 @@ const ToolItem = ({
     '';
 
   const handleInstall = () => {
-    setOpenInstallModal(true);
-  };
-
-  const handleInstallSuccess = () => {
-    const closeMessage = message.success(
-      <div className="flex items-center gap-2">
-        <span>
-          {t('settings.toolStore.install.installSuccess') || 'Tool installed successfully'}
-        </span>
-        <Button
-          type="link"
-          size="small"
-          className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
-          onClick={() => {
-            closeMessage();
-            setToolStoreVisible(false);
-          }}
-        >
-          {t('common.view') || 'View'}
-        </Button>
-      </div>,
-      5,
-    );
+    setCurrentToolDefinition(tool);
+    setToolInstallModalOpen(true);
   };
 
   return (
@@ -117,24 +92,32 @@ const ToolItem = ({
           {t('settings.toolStore.install.install')}
         </Button>
       </div>
-
-      <ToolInstallModal
-        mode="install"
-        toolDefinition={tool}
-        visible={openInstallModal}
-        onCancel={() => setOpenInstallModal(false)}
-        onSuccess={handleInstallSuccess}
-      />
     </div>
   );
 };
 
-export const ToolStore = ({ visible, setToolStoreVisible }: ToolStoreProps) => {
+export const ToolStore = () => {
   const { t } = useTranslation();
   const [searchText, setSearchText] = useState('');
   const [debouncedSearchText, setDebouncedSearchText] = useState('');
+  const {
+    toolStoreModalOpen,
+    toolInstallModalOpen,
+    currentToolDefinition,
+    setToolStoreModalOpen,
+    setToolInstallModalOpen,
+    setCurrentToolDefinition,
+  } = useToolStoreShallow((state) => ({
+    toolStoreModalOpen: state.toolStoreModalOpen,
+    toolInstallModalOpen: state.toolInstallModalOpen,
+    currentToolDefinition: state.currentToolDefinition,
+    setToolStoreModalOpen: state.setToolStoreModalOpen,
+    setToolInstallModalOpen: state.setToolInstallModalOpen,
+    setCurrentToolDefinition: state.setCurrentToolDefinition,
+  }));
+
   const { data, isLoading } = useListToolsetInventory({}, [], {
-    enabled: visible,
+    enabled: toolStoreModalOpen,
   });
 
   const tools = useMemo(
@@ -186,6 +169,29 @@ export const ToolStore = ({ visible, setToolStoreVisible }: ToolStoreProps) => {
     setSearchText('');
   }, []);
 
+  const handleInstallSuccess = useCallback(() => {
+    const closeMessage = message.success(
+      <div className="flex items-center gap-2">
+        <span>
+          {t('settings.toolStore.install.installSuccess') || 'Tool installed successfully'}
+        </span>
+        <Button
+          type="link"
+          size="small"
+          className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
+          onClick={() => {
+            closeMessage();
+            setCurrentToolDefinition(null);
+            setToolStoreModalOpen(false);
+          }}
+        >
+          {t('common.view') || 'View'}
+        </Button>
+      </div>,
+      5,
+    );
+  }, [t, setToolStoreModalOpen, setCurrentToolDefinition]);
+
   return (
     <div className="h-full flex flex-col px-5 py-3">
       <Input
@@ -220,12 +226,19 @@ export const ToolStore = ({ visible, setToolStoreVisible }: ToolStoreProps) => {
           <Row gutter={[16, 12]}>
             {filteredTools.map((tool, index) => (
               <Col key={index} xs={24} sm={12} md={6} lg={6} xl={6}>
-                <ToolItem tool={tool} setToolStoreVisible={setToolStoreVisible} />
+                <ToolItem tool={tool} />
               </Col>
             ))}
           </Row>
         )}
       </div>
+      <ToolInstallModal
+        mode="install"
+        toolDefinition={currentToolDefinition}
+        visible={toolInstallModalOpen}
+        onCancel={() => setToolInstallModalOpen(false)}
+        onSuccess={handleInstallSuccess}
+      />
     </div>
   );
 };

@@ -1,15 +1,12 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import * as Y from 'yjs';
 import { PrismaService } from '../common/prisma.service';
-import { MiscService } from '../misc/misc.service';
 import { CanvasService } from '../canvas/canvas.service';
-import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
 import { User } from '@refly/openapi-schema';
 import { CanvasNotFoundError, PageNotFoundError } from '@refly/errors';
-import { CodeArtifactService } from '../code-artifact/code-artifact.service';
-import { ShareService } from '../share/share.service';
+import { ShareCreationService } from '../share/share-creation.service';
 import { UpdatePageDto, ResolveUserResponse, CanvasData, NodeInfo } from './pages.dto';
 import { createId } from '@paralleldrive/cuid2';
 import {
@@ -28,11 +25,8 @@ export class PagesService {
 
   constructor(
     private prisma: PrismaService,
-    private miscService: MiscService,
     private canvasService: CanvasService,
-    private knowledgeService: KnowledgeService,
-    private codeArtifactService: CodeArtifactService,
-    private shareService: ShareService,
+    private shareCreationService: ShareCreationService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
   ) {}
 
@@ -314,7 +308,7 @@ export class PagesService {
     }
 
     // Use ShareService to create share
-    const shareRecord = await this.shareService.createShare(user as User, {
+    const shareRecord = await this.shareCreationService.createShare(user as User, {
       entityId: pageId,
       entityType: 'page',
       title: page.title,

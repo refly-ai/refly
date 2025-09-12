@@ -11,6 +11,7 @@ import {
   AutoNameCanvasRequest,
   DeleteCanvasRequest,
   DuplicateCanvasRequest,
+  CanvasState,
   Entity,
   EntityType,
   ListCanvasesData,
@@ -315,11 +316,9 @@ export class CanvasService {
     return newCanvas;
   }
 
-  async createCanvas(user: User, param: UpsertCanvasRequest) {
-    // Use the canvasId from param if provided, otherwise generate a new one
-    const canvasId = param.canvasId ?? genCanvasID();
-
-    const state = initEmptyCanvasState();
+  async createCanvasWithState(user: User, param: UpsertCanvasRequest, state: CanvasState) {
+    param.canvasId ||= genCanvasID();
+    const { canvasId } = param;
     const stateStorageKey = await this.canvasSyncService.saveState(canvasId, state);
 
     const [canvas] = await this.prisma.$transaction([
@@ -353,6 +352,14 @@ export class CanvasService {
     });
 
     return canvas;
+  }
+
+  async createCanvas(user: User, param: UpsertCanvasRequest) {
+    // Use the canvasId from param if provided, otherwise generate a new one
+    param.canvasId ||= genCanvasID();
+
+    const state = initEmptyCanvasState();
+    return this.createCanvasWithState(user, param, state);
   }
 
   async updateCanvas(user: User, param: UpsertCanvasRequest) {

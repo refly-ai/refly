@@ -449,7 +449,7 @@ model Canvas {
   storageSize       BigInt         @default(0) @map("storage_size")
   /// Canvas version
   version           String         @default("") @map("version")
-  /// Canvas yjs doc storage key (deprecated, use `dataStorageKey` instead)
+  /// Canvas yjs doc storage key (deprecated, canvas state will be stored in `CanvasVersion`)
   stateStorageKey   String?        @map("state_storage_key")
   /// Minimap storage key
   minimapStorageKey String?        @map("minimap_storage_key")
@@ -1523,6 +1523,8 @@ model Toolset {
   config        String?   @map("config")
   /// Whether the toolset is enabled
   enabled       Boolean   @default(true) @map("enabled")
+  /// Whether the toolset is uninstalled
+  uninstalled   Boolean   @default(false) @map("uninstalled")
   /// Toolset credit billing
   creditBilling String?   @map("credit_billing")
   /// Create timestamp

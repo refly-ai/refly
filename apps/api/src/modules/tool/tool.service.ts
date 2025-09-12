@@ -45,6 +45,7 @@ export class ToolService {
       type: 'regular',
       id: 'builtin',
       name: 'Builtin',
+      builtin: true,
       toolset: {
         toolsetId: 'builtin',
         name: 'Builtin',
@@ -56,6 +57,7 @@ export class ToolService {
       where: {
         OR: [{ isGlobal }, { uid: user.uid }],
         enabled,
+        uninstalled: false,
         deletedAt: null,
       },
     });
@@ -119,6 +121,38 @@ export class ToolService {
       }
     } catch {
       throw new ParamsError('Invalid authData');
+    }
+
+    // Check if there is any uninstalled toolset with the same key
+    const uninstalledToolset = await this.prisma.toolset.findFirst({
+      select: {
+        pk: true,
+        toolsetId: true,
+      },
+      where: {
+        key,
+        OR: [{ uid: user.uid }, { isGlobal: true }],
+        uninstalled: true,
+        deletedAt: null,
+      },
+    });
+
+    // If there is any uninstalled toolset with the same key, update it to installed
+    if (uninstalledToolset) {
+      this.logger.log(
+        `Detected uninstalled toolset ${key}: ${uninstalledToolset.toolsetId}, updating to installed`,
+      );
+      return this.prisma.toolset.update({
+        where: { pk: uninstalledToolset.pk },
+        data: {
+          uninstalled: false,
+          enabled,
+          authType,
+          authData: encryptedAuthData,
+          config: config ? JSON.stringify(config) : null,
+          uid: user.uid,
+        },
+      });
     }
 
     const toolset = await this.prisma.toolset.create({
@@ -425,6 +459,141 @@ export class ToolService {
     if (authType === 'credentials') {
       this.validateConfig(authData, authPattern.credentialItems);
     }
+  }
+
+  /**
+   * Import toolsets from other users. Useful when duplicating canvases between users.
+   */
+  async importToolsets(
+    user: User,
+    toolsets: GenericToolset[],
+  ): Promise<{ toolsets: GenericToolset[]; replaceToolsetMap: Record<string, GenericToolset> }> {
+    if (!toolsets?.length) {
+      return { toolsets: [], replaceToolsetMap: {} };
+    }
+
+    const importedToolsets: GenericToolset[] = [];
+    const replaceToolsetMap: Record<string, GenericToolset> = {};
+
+    for (const toolset of toolsets) {
+      let importedToolset: GenericToolset | null = null;
+
+      if (toolset.type === 'regular') {
+        importedToolset = await this.importRegularToolset(user, toolset);
+      } else if (toolset.type === 'mcp') {
+        importedToolset = await this.importMcpToolset(user, toolset);
+      } else {
+        this.logger.warn(`Unknown toolset type: ${toolset.type}, skipping`);
+      }
+
+      if (importedToolset) {
+        importedToolsets.push(importedToolset);
+        replaceToolsetMap[toolset.id] = importedToolset;
+      }
+    }
+
+    return { toolsets: importedToolsets, replaceToolsetMap };
+  }
+
+  /**
+   * Import a regular toolset - search for existing or create uninstalled
+   */
+  private async importRegularToolset(
+    user: User,
+    toolset: GenericToolset,
+  ): Promise<GenericToolset | null> {
+    const { name, toolset: toolsetInstance } = toolset;
+
+    // For regular toolsets, we search by key (not ID since ID is user-specific)
+    const key = toolsetInstance?.key || toolset.id;
+
+    if (!key) {
+      this.logger.warn(`Regular toolset missing key, skipping: ${name}`);
+      return null;
+    }
+
+    // Builtin toolset does not need to be imported
+    if (key === 'builtin') {
+      return null;
+    }
+
+    // Check if toolset key exists in inventory
+    const toolsetDefinition = toolsetInventory[key];
+    if (!toolsetDefinition) {
+      this.logger.warn(`Toolset key not found in inventory: ${key}, skipping`);
+      return null;
+    }
+
+    // Search for existing toolset with same key for this user
+    const existingToolset = await this.prisma.toolset.findFirst({
+      where: {
+        key,
+        OR: [{ uid: user.uid }, { isGlobal: true }],
+        deletedAt: null,
+      },
+    });
+
+    if (existingToolset) {
+      this.logger.debug(
+        `Found existing regular toolset for key ${key}: ${existingToolset.toolsetId}`,
+      );
+      return toolsetPo2GenericToolset(existingToolset);
+    }
+
+    // Create uninstalled toolset with pre-generated ID
+    const toolsetId = genToolsetID();
+    const createdToolset = await this.prisma.toolset.create({
+      data: {
+        toolsetId,
+        name: name || (toolsetDefinition.definition.labelDict?.en as string) || key,
+        key,
+        uid: user.uid,
+        enabled: false, // Uninstalled toolsets are disabled
+        uninstalled: true,
+      },
+    });
+
+    this.logger.log(`Created uninstalled regular toolset: ${toolsetId} for key ${key}`);
+    return toolsetPo2GenericToolset(createdToolset);
+  }
+
+  /**
+   * Import an MCP toolset - search for existing or create uninstalled
+   */
+  private async importMcpToolset(user: User, toolset: GenericToolset): Promise<GenericToolset> {
+    const { name, mcpServer } = toolset;
+
+    if (!name || !mcpServer) {
+      this.logger.warn(`MCP toolset missing name or mcpServer, skipping: ${name}`);
+      return null;
+    }
+
+    // Search for existing MCP server with same name for this user
+    const existingServer = await this.prisma.mcpServer.findFirst({
+      where: {
+        name,
+        OR: [{ uid: user.uid }, { isGlobal: true }],
+        deletedAt: null,
+      },
+    });
+
+    if (existingServer) {
+      this.logger.debug(`Found existing MCP server: ${name}`);
+      return mcpServerPo2GenericToolset(existingServer);
+    }
+
+    const clearMcpFields = (obj: Record<string, string>): Record<string, string> => {
+      return Object.fromEntries(Object.entries(obj).map(([key, _]) => [key, '']));
+    };
+
+    return {
+      ...toolset,
+      mcpServer: {
+        ...mcpServer,
+        headers: mcpServer.headers ? clearMcpFields(mcpServer.headers) : undefined,
+        env: mcpServer.env ? clearMcpFields(mcpServer.env) : undefined,
+      },
+    };
   }
 
   /**

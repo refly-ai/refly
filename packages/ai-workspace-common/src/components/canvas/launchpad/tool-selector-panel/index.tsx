@@ -108,7 +108,7 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
   );
 
   const handleOpenToolStore = useCallback(() => {
-    setSettingsModalActiveTab(SettingsModalActiveTab.McpServer);
+    setSettingsModalActiveTab(SettingsModalActiveTab.ToolsConfig);
     setShowSettingModal(true);
     setOpen(false);
   }, [setSettingsModalActiveTab, setShowSettingModal]);

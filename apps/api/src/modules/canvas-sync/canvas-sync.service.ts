@@ -31,6 +31,7 @@ import {
   CanvasNotFoundError,
   CanvasVersionNotFoundError,
   OperationTooFrequent,
+  ParamsError,
 } from '@refly/errors';
 import { Canvas as CanvasModel } from '../../generated/client';
 import { PrismaService } from '../common/prisma.service';
@@ -89,6 +90,10 @@ export class CanvasSyncService {
    * @param state - The canvas state
    */
   async saveState(canvasId: string, state: CanvasState) {
+    if (!canvasId) {
+      throw new ParamsError('Canvas ID is required for saveState');
+    }
+
     state.version ||= genCanvasVersionId();
     const stateStorageKey = `canvas-state/${canvasId}/${state.version}`;
     await this.oss.putObject(stateStorageKey, JSON.stringify(state));
@@ -106,6 +111,11 @@ export class CanvasSyncService {
     canvasPo?: CanvasModel,
   ): Promise<CanvasState> {
     const { canvasId, version } = param;
+
+    if (!canvasId) {
+      throw new ParamsError('Canvas ID is required for getState');
+    }
+
     const canvas =
       canvasPo ??
       (await this.prisma.canvas.findUnique({

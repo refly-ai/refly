@@ -1,5 +1,4 @@
 import { Body, Controller, Get, Post, UseGuards, Query } from '@nestjs/common';
-import { ShareService } from '../share/share.service';
 import {
   User,
   CreateShareRequest,
@@ -14,10 +13,17 @@ import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { buildSuccessResponse } from '../../utils';
 import { shareRecordPO2DTO } from '../share/share.dto';
+import { ShareCommonService } from './share-common.service';
+import { ShareCreationService } from './share-creation.service';
+import { ShareDuplicationService } from './share-duplication.service';
 
 @Controller('v1/share')
 export class ShareController {
-  constructor(private readonly shareService: ShareService) {}
+  constructor(
+    private readonly shareCommonService: ShareCommonService,
+    private readonly shareCreationService: ShareCreationService,
+    private readonly shareDuplicationService: ShareDuplicationService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('list')
@@ -27,7 +33,11 @@ export class ShareController {
     @Query('entityId') entityId: string,
     @Query('entityType') entityType: EntityType,
   ): Promise<ListShareResponse> {
-    const results = await this.shareService.listShares(user, { shareId, entityId, entityType });
+    const results = await this.shareCommonService.listShares(user, {
+      shareId,
+      entityId,
+      entityType,
+    });
     return buildSuccessResponse(results.map(shareRecordPO2DTO));
   }
 
@@ -37,14 +47,15 @@ export class ShareController {
     @LoginedUser() user: User,
     @Body() body: CreateShareRequest,
   ): Promise<CreateShareResponse> {
-    const result = await this.shareService.createShare(user, body);
+    const result = await this.shareCreationService.createShare(user, body);
+    // Immediately return minimal share record (contains shareId)
     return buildSuccessResponse(shareRecordPO2DTO(result));
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('delete')
   async deleteShare(@LoginedUser() user: User, @Body() body: DeleteShareRequest) {
-    await this.shareService.deleteShare(user, body);
+    await this.shareCommonService.deleteShare(user, body);
     return buildSuccessResponse(null);
   }
 
@@ -54,7 +65,7 @@ export class ShareController {
     @LoginedUser() user: User,
     @Body() body: DuplicateShareRequest,
   ): Promise<DuplicateShareResponse> {
-    const result = await this.shareService.duplicateShare(user, body);
+    const result = await this.shareDuplicationService.duplicateShare(user, body);
     return buildSuccessResponse(result);
   }
 }

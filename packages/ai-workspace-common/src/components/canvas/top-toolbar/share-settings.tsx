@@ -9,8 +9,8 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { CreateWorkflowAppModal } from '@refly-packages/ai-workspace-common/components/workflow-app/create-modal';
 import { useListShares } from '@refly-packages/ai-workspace-common/queries';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
-import { useExportCanvasAsImage } from '@refly-packages/ai-workspace-common/hooks/use-export-canvas-as-image';
 import { logEvent } from '@refly/telemetry-web';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 type ShareAccess = 'off' | 'anyone';
 
@@ -74,6 +74,7 @@ AccessOptionItem.displayName = 'AccessOptionItem';
 const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const { syncCanvasData } = useCanvasContext();
   const [createTemplateModalVisible, setCreateTemplateModalVisible] = useState(false);
   const [access, setAccess] = useState<ShareAccess>('off');
   const [updateLoading, setUpdateLoading] = useState(false);
@@ -98,8 +99,6 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
     [shareRecord],
   );
 
-  const { uploadCanvasCover } = useExportCanvasAsImage();
-
   // Memoized function to re-share latest content before copying link
   const updateShare = useCallback(async () => {
     if (access === 'off') return;
@@ -108,13 +107,15 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
     (async () => {
       try {
         setUpdateShareLoading(true);
-        const { storageKey } = await uploadCanvasCover();
+
+        // Make sure the canvas data is synced to the remote
+        await syncCanvasData({ syncRemote: true });
+
         const { data, error } = await getClient().createShare({
           body: {
             entityId: canvasId,
             entityType: 'canvas',
             allowDuplication: true,
-            coverStorageKey: storageKey,
           },
         });
 
@@ -128,7 +129,7 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
         setUpdateShareLoading(false);
       }
     })();
-  }, [access, canvasId, refetchShares, shareRecord?.shareId, t, uploadCanvasCover]);
+  }, [access, canvasId, refetchShares, shareRecord?.shareId, t]);
 
   const copyLink = useCallback(async () => {
     if (access === 'off') return;
@@ -136,7 +137,6 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
     const newShareLink = getShareLink('canvas', shareRecord?.shareId ?? '');
     await navigator.clipboard.writeText(newShareLink);
     setLinkCopied(true);
-    message.success(t('shareContent.copyLinkSuccess'));
     // Reset copied state after 3 seconds
     setTimeout(() => setLinkCopied(false), 3000);
   }, [access, shareRecord?.shareId, t]);
@@ -173,13 +173,11 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
             success = true;
           }
         } else {
-          const { storageKey } = await uploadCanvasCover();
           const { data } = await getClient().createShare({
             body: {
               entityId: canvasId,
               entityType: 'canvas',
               allowDuplication: true,
-              coverStorageKey: storageKey,
             },
           });
           success = data?.success;
@@ -202,7 +200,7 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
 
       return success;
     },
-    [canvasId, t, refetchShares, uploadCanvasCover],
+    [canvasId, t, refetchShares],
   );
 
   const handleAccessChange = useCallback(

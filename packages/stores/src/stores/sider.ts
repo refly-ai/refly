@@ -20,7 +20,7 @@ export enum SettingsModalActiveTab {
   ModelConfig = 'modelConfig',
   ParserConfig = 'parserConfig',
   DefaultModel = 'defaultModel',
-  McpServer = 'mcpServer',
+  ToolsConfig = 'toolsConfig',
   Appearance = 'appearance',
 }
 

@@ -216,14 +216,15 @@ export const AudioNode = memo(
       }
     }, [currentAudioUrl, fallbackIndex]);
 
-    // Reset audio URL when original URL changes
+    // Reset audio URL only when the original audioUrl prop changes
+    // Avoid resetting when switching to fallback URLs to prevent infinite retries
     useEffect(() => {
-      if (audioUrl && audioUrl !== currentAudioUrl) {
+      if (audioUrl) {
         setCurrentAudioUrl(audioUrl);
         setFallbackIndex(0);
         setAudioError(false);
       }
-    }, [audioUrl, currentAudioUrl]);
+    }, [audioUrl]);
 
     // Add event handling
     useEffect(() => {

@@ -9,7 +9,7 @@ import {
 import { Prisma } from '../../generated/client';
 import { PrismaService } from '../common/prisma.service';
 import { genCanvasTemplateID } from '@refly/utils';
-import { ShareService } from '../share/share.service';
+import { ShareCreationService } from '../share/share-creation.service';
 import { MiscService } from '../misc/misc.service';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class TemplateService {
 
   constructor(
     private prisma: PrismaService,
-    private shareService: ShareService,
+    private shareCreationService: ShareCreationService,
     private miscService: MiscService,
   ) {}
 
@@ -61,7 +61,7 @@ export class TemplateService {
       return;
     }
 
-    const { shareRecord } = await this.shareService.createShareForCanvas(user, {
+    const { shareRecord } = await this.shareCreationService.createShareForCanvas(user, {
       entityType: 'canvas',
       entityId: canvasId,
       title,

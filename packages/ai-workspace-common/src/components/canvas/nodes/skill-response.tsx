@@ -289,6 +289,7 @@ export const SkillResponseNode = memo(
       actionMeta,
       tokenUsage,
       version,
+      shareId,
     } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
@@ -306,7 +307,7 @@ export const SkillResponseNode = memo(
 
     useEffect(() => {
       if (!isStreaming) {
-        if (['executing', 'waiting'].includes(status)) {
+        if (['executing', 'waiting'].includes(status) && !shareId) {
           startPolling(entityId, version);
         }
       } else {
@@ -325,7 +326,7 @@ export const SkillResponseNode = memo(
           return () => clearTimeout(timeoutId);
         }
       }
-    }, [isStreaming, status, startPolling, entityId, version, removeStreamResult]);
+    }, [isStreaming, status, startPolling, entityId, shareId, version, removeStreamResult]);
 
     // Listen to pilot step status changes and sync with node status
     useEffect(() => {

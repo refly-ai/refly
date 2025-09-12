@@ -376,6 +376,14 @@ export class ActionAborted extends BaseError {
   };
 }
 
+export class DuplicationNotAllowedError extends BaseError {
+  code = 'E3005';
+  messageDict = {
+    en: 'Duplication is not allowed for this shared content',
+    'zh-CN': '此共享内容不允许被复制',
+  };
+}
+
 // Create a mapping of error codes to error classes
 const errorMap = {
   E0000: UnknownError,
@@ -425,6 +433,7 @@ const errorMap = {
   E3002: ModelProviderRateLimitExceeded,
   E3003: ModelProviderTimeout,
   E3004: ActionAborted,
+  E3005: DuplicationNotAllowedError,
 };
 
 export function getErrorMessage(code: string, locale: string): string {

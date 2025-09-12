@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { get, set, update } from 'idb-keyval';
 import { Modal, Radio } from 'antd';
+import { ModalFunc } from 'antd/es/modal/confirm';
 import { Node, Edge, useStoreApi, InternalNode, useReactFlow } from '@xyflow/react';
 import { adoptUserNodes, updateConnectionLookup } from '@xyflow/system';
 import {
@@ -82,7 +83,7 @@ interface CanvasContextType {
     pollingError?: any;
   };
 
-  syncCanvasData: () => Promise<void>;
+  syncCanvasData: (options?: { syncRemote?: boolean }) => Promise<void>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
 }
@@ -180,26 +181,30 @@ export const CanvasProvider = ({
   const [loading, setLoading] = useState(false);
 
   const [syncFailureCount, setSyncFailureCount] = useState(0);
-  const [syncFailureModalOpen, setSyncFailureModalOpen] = useState(false);
+
+  const warningModalRef = useRef<ReturnType<ModalFunc> | null>(null);
 
   useEffect(() => {
-    if (syncFailureCount > CANVAS_SYNC_FAILURE_COUNT_THRESHOLD && !syncFailureModalOpen) {
-      setSyncFailureModalOpen(true);
-      modal.warning({
-        title: t('canvas.syncFailure.title'),
-        content: t('canvas.syncFailure.content'),
-        centered: true,
-        okText: t('canvas.syncFailure.reload'),
-        cancelText: t('common.cancel'),
-        onOk: () => {
-          window.location.reload();
-        },
-        onCancel: () => {
-          setSyncFailureModalOpen(false);
-        },
-      });
+    if (syncFailureCount > CANVAS_SYNC_FAILURE_COUNT_THRESHOLD) {
+      if (!warningModalRef.current) {
+        warningModalRef.current = modal.warning({
+          title: t('canvas.syncFailure.title'),
+          content: t('canvas.syncFailure.content'),
+          centered: true,
+          okText: t('canvas.syncFailure.reload'),
+          cancelText: t('common.cancel'),
+          onOk: () => {
+            window.location.reload();
+          },
+        });
+      }
+    } else {
+      if (warningModalRef.current) {
+        warningModalRef.current.destroy();
+        warningModalRef.current = null;
+      }
     }
-  }, [syncFailureCount, syncFailureModalOpen, modal, t]);
+  }, [syncFailureCount, modal, t]);
 
   const isSyncingRemoteRef = useRef(false); // Lock for syncWithRemote
   const isSyncingLocalRef = useRef(false); // Lock for syncCanvasData
@@ -698,8 +703,13 @@ export const CanvasProvider = ({
         shareData: canvasData ?? undefined,
         lastUpdated,
         workflowRun,
-        syncCanvasData: async () => {
+        syncCanvasData: async (options?: { syncRemote?: boolean }) => {
           await syncCanvasData();
+          syncCanvasData.flush();
+
+          if (options?.syncRemote) {
+            await syncWithRemote(canvasId);
+          }
         },
         undo,
         redo,

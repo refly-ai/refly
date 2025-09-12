@@ -11,7 +11,7 @@ import {
 } from './provider-store-types';
 import { CommunityProviderCard } from './CommunityProviderCard';
 import { filterProviders, isProviderInstalled } from './provider-store-utils';
-import { CommunityMcpCardSkeleton } from '@refly-packages/ai-workspace-common/components/settings/mcp-server/CommunityMcpCardSkeleton';
+import { CommunityMcpCardSkeleton } from '@refly-packages/ai-workspace-common/components/settings/tools-config';
 import { Search } from 'refly-icons';
 
 const { Text } = Typography;

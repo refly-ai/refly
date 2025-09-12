@@ -9,10 +9,13 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import cn from 'classnames';
-import { useSiderStoreShallow, SettingsModalActiveTab, useUserStoreShallow } from '@refly/stores';
+import { useUserStoreShallow } from '@refly/stores';
 import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
 import { useReactFlow } from '@xyflow/react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
+import { extractToolsetsWithNodes } from '@refly/canvas-common';
+import { useOpenInstallTool } from '@refly-packages/ai-workspace-common/hooks/use-open-install-tool';
+import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use-open-install-mcp';
 
 const isToolsetInstalled = (
   toolset: GenericToolset,
@@ -20,7 +23,7 @@ const isToolsetInstalled = (
 ): boolean => {
   return installedToolsets.some((t) => {
     if (toolset.type === 'regular') {
-      return t.toolset?.definition?.key === toolset.toolset?.definition?.key || t.id === 'builtin';
+      return toolset.id === 'builtin' || t.toolset?.key === toolset.toolset?.key;
     } else if (toolset.type === 'mcp') {
       return t.name === toolset.name;
     }
@@ -260,16 +263,21 @@ const ToolsDependencyContent = React.memo(
   }) => {
     const { t, i18n } = useTranslation();
     const currentLanguage = i18n.language;
-    const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
-      setShowSettingModal: state.setShowSettingModal,
-      setSettingsModalActiveTab: state.setSettingsModalActiveTab,
-    }));
 
-    const handleOpenToolStore = useCallback(() => {
-      setSettingsModalActiveTab(SettingsModalActiveTab.McpServer);
-      setShowSettingModal(true);
-      setOpen(false);
-    }, [setSettingsModalActiveTab, setShowSettingModal, setOpen]);
+    const { openInstallToolByKey } = useOpenInstallTool();
+    const { openInstallMcp } = useOpenInstallMcp();
+
+    const handleInstallTool = useCallback(
+      (toolset: GenericToolset) => {
+        if (toolset.type === 'mcp') {
+          openInstallMcp(toolset.mcpServer);
+        } else {
+          openInstallToolByKey(toolset.toolset?.key);
+        }
+        setOpen(false);
+      },
+      [openInstallToolByKey, openInstallMcp, setOpen],
+    );
 
     return (
       <div className="flex flex-col gap-4 w-[480px] p-6">
@@ -366,7 +374,7 @@ const ToolsDependencyContent = React.memo(
                         {!isInstalled && isLogin && (
                           <Button
                             className="text-refly-primary-default hover:!text-refly-primary-hover"
-                            onClick={handleOpenToolStore}
+                            onClick={() => handleInstallTool(toolset)}
                           >
                             {t('canvas.toolsDepencency.goToInstall')}
                           </Button>
@@ -409,41 +417,7 @@ export const ToolsDependency = () => {
 
   // Process canvas data to find tool dependencies
   const toolsetsWithNodes = useMemo(() => {
-    const toolMap = new Map<string, ToolWithNodes>();
-
-    for (const node of nodes) {
-      if (node.type === 'skillResponse' && node.data?.metadata?.selectedToolsets) {
-        const selectedToolsets = node.data.metadata.selectedToolsets as GenericToolset[];
-
-        for (const toolset of selectedToolsets) {
-          const toolId = toolset.id;
-          const existingTool = toolMap.get(toolId);
-
-          const nodeInfo = {
-            id: node.id,
-            entityId: node.data?.entityId,
-            title: node.data?.title || 'Untitled',
-            type: node.type,
-          };
-
-          if (existingTool) {
-            // Add node to existing tool if not already present
-            const nodeExists = existingTool.referencedNodes.some((n) => n.id === nodeInfo.id);
-            if (!nodeExists) {
-              existingTool.referencedNodes.push(nodeInfo);
-            }
-          } else {
-            // Create new tool entry
-            toolMap.set(toolId, {
-              toolset,
-              referencedNodes: [nodeInfo],
-            });
-          }
-        }
-      }
-    }
-
-    return Array.from(toolMap.values());
+    return extractToolsetsWithNodes(nodes);
   }, [nodes]);
 
   const filteredToolsets = useMemo(() => {

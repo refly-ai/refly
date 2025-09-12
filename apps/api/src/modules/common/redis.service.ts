@@ -110,6 +110,76 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return item.value;
   }
 
+  async incr(key: string): Promise<number> {
+    if (this.client) {
+      return this.client.incr(key);
+    }
+
+    // In-memory implementation
+    const item = this.inMemoryStore.get(key);
+    let currentValue = 0;
+
+    if (item && !this.isExpired(item)) {
+      currentValue = Number.parseInt(item.value, 10) || 0;
+    }
+
+    const newValue = currentValue + 1;
+    const expiresAt = item?.expiresAt ?? Date.now() + 24 * 60 * 60 * 1000; // Default 24h expiry if not set
+    this.inMemoryStore.set(key, { value: newValue.toString(), expiresAt });
+
+    return newValue;
+  }
+
+  async expire(key: string, seconds: number): Promise<boolean> {
+    if (this.client) {
+      const result = await this.client.expire(key, seconds);
+      return result === 1;
+    }
+
+    // In-memory implementation
+    const item = this.inMemoryStore.get(key);
+    if (!item) {
+      return false;
+    }
+
+    item.expiresAt = Date.now() + seconds * 1000;
+    return true;
+  }
+
+  /**
+   * Atomically increment counter and set expiry only if key is new (returns 1)
+   * @param key - Redis key
+   * @param expireSeconds - Expiry time in seconds
+   * @returns The new counter value
+   */
+  async incrementWithExpire(key: string, expireSeconds: number): Promise<number> {
+    if (this.client) {
+      // Use Lua script for atomic operation
+      const script = `
+        local count = redis.call('INCR', KEYS[1])
+        if count == 1 then
+          redis.call('EXPIRE', KEYS[1], ARGV[1])
+        end
+        return count
+      `;
+      return this.client.eval(script, 1, key, expireSeconds) as unknown as number;
+    }
+
+    // In-memory implementation (not truly atomic but close enough for desktop mode)
+    const item = this.inMemoryStore.get(key);
+    const isValid = !!item && !this.isExpired(item);
+    const currentValue = isValid ? Number.parseInt(item!.value, 10) || 0 : 0;
+    const newValue = currentValue + 1;
+    const expiresAt = isValid ? item!.expiresAt : Date.now() + 24 * 60 * 60 * 1000; // reset TTL when missing/expired
+    if (item && !isValid) {
+      // drop stale entry to avoid lingering expired records
+      this.inMemoryStore.delete(key);
+    }
+    this.inMemoryStore.set(key, { value: String(newValue), expiresAt });
+
+    return newValue;
+  }
+
   async acquireLock(key: string): Promise<LockReleaseFn | null> {
     if (!this.client) {
       return async () => true;
