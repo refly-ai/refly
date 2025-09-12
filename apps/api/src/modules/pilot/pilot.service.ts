@@ -75,7 +75,7 @@ export class PilotService {
       data: {
         sessionId,
         uid: user.uid,
-        maxEpoch: request.maxEpoch ?? MAX_EPOCH,
+        maxEpoch: MAX_EPOCH ?? request.maxEpoch,
         title: request.title || request.input?.query || 'New Pilot Session',
         input: JSON.stringify(request.input),
         targetType: request.targetType,
