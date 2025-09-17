@@ -111,6 +111,10 @@ function Header() {
       ),
       value: 'community',
     },
+    {
+      label: t('landingPage.loginModal.privacyPolicy'),
+      value: 'privacy',
+    },
   ];
 
   useEffect(() => {
@@ -149,6 +153,9 @@ function Header() {
                     break;
                   case 'pricing':
                     navigate('/pricing');
+                    break;
+                  case 'privacy':
+                    window.open('https://docs.refly.ai/about/privacy-policy', '_blank');
                     break;
                 }
               }}
