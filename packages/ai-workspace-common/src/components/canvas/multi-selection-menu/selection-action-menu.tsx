@@ -23,8 +23,6 @@ import { IContextItem } from '@refly/common-types';
 import { useContextPanelStore } from '@refly/stores';
 import { convertContextItemsToNodeFilters } from '@refly/canvas-common';
 import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-cluster';
-import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
-import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useAddNodeToSlide } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node-to-slide';
 
 interface MenuItem {
@@ -37,7 +35,6 @@ interface MenuItem {
   primary?: boolean;
   type: 'button' | 'divider';
   disabled?: boolean;
-  hoverContent?: HoverContent;
 }
 
 interface SelectionActionMenuProps {
@@ -55,7 +52,6 @@ export const SelectionActionMenu: FC<SelectionActionMenuProps> = ({ onClose }) =
   const { invokeAction } = useInvokeAction({ source: 'selection-action-menu' });
   const { selectNodeCluster, groupNodeCluster, layoutNodeCluster } = useNodeCluster();
   const nodes = useStore((state) => state.nodes);
-  const { hoverCardEnabled } = useHoverCard();
 
   const checkHasSkill = useCallback(() => {
     return nodes.filter((node) => node.selected).some((node) => node.type === 'skill');
@@ -415,20 +411,6 @@ export const SelectionActionMenu: FC<SelectionActionMenuProps> = ({ onClose }) =
             <span className="flex-1 text-left truncate">{item.label}</span>
           </Button>
         );
-
-        if (item.hoverContent && hoverCardEnabled) {
-          return (
-            <HoverCard
-              key={item.key}
-              title={item.hoverContent.title}
-              description={item.hoverContent.description}
-              videoUrl={item.hoverContent.videoUrl}
-              placement="right"
-            >
-              {button}
-            </HoverCard>
-          );
-        }
 
         return button;
       })}

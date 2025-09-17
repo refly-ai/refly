@@ -12,7 +12,6 @@ type ActionButtonsProps = {
 export const ActionButtons: FC<ActionButtonsProps> = memo(
   ({ nodeId, type, isNodeHovered }) => {
     const [isMenuHovered, setIsMenuHovered] = useState(false);
-    const [isHoverCardOpen, setIsHoverCardOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ top: 0 });
     const [shouldAdjustPosition, setShouldAdjustPosition] = useState(true);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -23,7 +22,7 @@ export const ActionButtons: FC<ActionButtonsProps> = memo(
 
     const SAFETY_MARGIN = 5;
 
-    const shouldShowMenu = isNodeHovered || isMenuHovered || isHoverCardOpen;
+    const shouldShowMenu = isNodeHovered || isMenuHovered;
 
     const resetMenuPosition = useCallback(() => {
       setMenuPosition({ top: 0 });
@@ -234,13 +233,7 @@ export const ActionButtons: FC<ActionButtonsProps> = memo(
               e.preventDefault();
             }}
           >
-            {shouldShowMenu && (
-              <NodeActionMenu
-                nodeId={nodeId}
-                nodeType={type}
-                onHoverCardStateChange={setIsHoverCardOpen}
-              />
-            )}
+            {shouldShowMenu && <NodeActionMenu nodeId={nodeId} nodeType={type} />}
           </div>
 
           {/* Transparent bridge layer */}

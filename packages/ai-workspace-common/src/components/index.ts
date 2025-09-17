@@ -15,7 +15,6 @@ export * from './output-locale-list';
 export * from './markdown';
 export * from './import-resource';
 export * from './home-redirect';
-export * from './hover-card';
 export * from './canvas-template';
 export * from './ui-locale-list';
 

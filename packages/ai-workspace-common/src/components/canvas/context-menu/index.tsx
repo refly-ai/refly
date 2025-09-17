@@ -11,7 +11,6 @@ import { ContextItem } from '@refly-packages/ai-workspace-common/types/context';
 import {
   IconPreview,
   IconAskAIInput,
-  IconGuideLine,
   IconAskAI,
   IconCodeArtifact,
   IconCreateDocument,
@@ -26,8 +25,6 @@ import { useEdgeVisible } from '@refly-packages/ai-workspace-common/hooks/canvas
 import { genMemoID, genSkillID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { cn } from '@refly/utils/cn';
-import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
-import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 import { logEvent } from '@refly/telemetry-web';
 
@@ -52,7 +49,6 @@ interface MenuItem {
   domain?: string;
   showSearchList?: boolean;
   setShowSearchList?: (show: boolean) => void;
-  hoverContent?: HoverContent;
 }
 
 export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) => {
@@ -93,7 +89,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     setAutoLayout: state.setAutoLayout,
   }));
 
-  const { hoverCardEnabled, toggleHoverCard } = useHoverCard();
   const { toggleEdgeVisible } = useEdgeVisible();
 
   // Creation utility functions
@@ -154,11 +149,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
       type: 'button',
       primary: true,
       title: t('canvas.toolbar.askAI'),
-      hoverContent: {
-        title: t('canvas.toolbar.askAI'),
-        description: t('canvas.toolbar.askAIDescription'),
-        videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-askAI.webm',
-      },
     },
 
     { key: 'divider-creation-1', type: 'divider' },
@@ -167,49 +157,24 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
       icon: IconCodeArtifact,
       type: 'button',
       title: t('canvas.toolbar.createCodeArtifact'),
-      hoverContent: {
-        title: t('canvas.toolbar.createCodeArtifact'),
-        description: t('canvas.toolbar.createCodeArtifactDescription'),
-        videoUrl:
-          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
-      },
     },
     {
       key: 'createWebsite',
       icon: IconWebsite,
       type: 'button',
       title: t('canvas.toolbar.createWebsite', 'Create Website Node'),
-      hoverContent: {
-        title: t('canvas.toolbar.createWebsite', 'Create Website Node'),
-        description: t(
-          'canvas.toolbar.createWebsiteDescription',
-          'Create a website node to embed a website in your canvas',
-        ),
-        videoUrl:
-          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
-      },
     },
     {
       key: 'createDocument',
       icon: IconCreateDocument,
       type: 'button',
       title: t('canvas.toolbar.createDocument'),
-      hoverContent: {
-        title: t('canvas.toolbar.createDocument'),
-        description: t('canvas.toolbar.createDocumentDescription'),
-        videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-createDocument.webm',
-      },
     },
     {
       key: 'createMemo',
       icon: IconMemo,
       type: 'button',
       title: t('canvas.toolbar.createMemo'),
-      hoverContent: {
-        title: t('canvas.toolbar.createMemo'),
-        description: t('canvas.toolbar.createMemoDescription'),
-        videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-createMemo.webm',
-      },
     },
     {
       key: 'addResource',
@@ -234,12 +199,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
       icon: IconImportResource,
       type: 'button',
       title: t('canvas.toolbar.importResource'),
-      hoverContent: {
-        title: t('canvas.toolbar.importResource'),
-        description: t('canvas.toolbar.importResourceDescription'),
-        videoUrl:
-          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
-      },
     },
     { key: 'divider-settings', type: 'divider' },
     // Settings menu items
@@ -274,18 +233,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
         : t('canvas.contextMenu.enableClickPreview'),
       description: t('canvas.contextMenu.toggleClickPreviewDescription'),
       videoUrl: 'https://static.refly.ai/onboarding/contextMenu/contextMenu-toggleClickView.webm',
-    },
-
-    {
-      key: 'toggleHoverCard',
-      icon: IconGuideLine,
-      type: 'button',
-      active: hoverCardEnabled,
-      title: hoverCardEnabled
-        ? t('canvas.contextMenu.disableHoverCard')
-        : t('canvas.contextMenu.enableHoverCard'),
-      description: t('canvas.contextMenu.toggleHoverCardDescription'),
-      videoUrl: 'https://static.refly.ai/onboarding/contextMenu/contextMenu-toggleHoverCard.webm',
     },
   ];
 
@@ -395,10 +342,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
         setAutoLayout(!autoLayout);
         setOpen(false);
         break;
-      case 'toggleHoverCard':
-        toggleHoverCard(!hoverCardEnabled);
-        setOpen(false);
-        break;
     }
   };
 
@@ -458,22 +401,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
         <span className="flex-1 text-left truncate">{item.title}</span>
       </Button>
     );
-
-    if ((item.description || item.hoverContent) && hoverCardEnabled) {
-      return (
-        <HoverCard
-          key={item.key}
-          title={item.hoverContent?.title || item.title || ''}
-          description={item.hoverContent?.description || item.description || ''}
-          videoUrl={item.hoverContent?.videoUrl || item.videoUrl}
-          placement="right"
-          overlayStyle={{ marginLeft: '12px' }}
-          align={{ offset: [12, 0] }}
-        >
-          {button}
-        </HoverCard>
-      );
-    }
 
     return button;
   };

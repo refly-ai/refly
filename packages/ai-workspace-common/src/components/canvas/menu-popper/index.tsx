@@ -22,8 +22,6 @@ import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useReactFlow } from '@xyflow/react';
 import { cn } from '@refly/utils/cn';
-import { HoverCard, HoverContent } from '@refly-packages/ai-workspace-common/components/hover-card';
-import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 import { getDefaultContentForType } from '@refly/utils';
 
@@ -38,7 +36,6 @@ interface ToolbarItem {
   loading?: boolean;
   showSearchList?: boolean;
   setShowSearchList?: (show: boolean) => void;
-  hoverContent?: HoverContent;
 }
 
 interface MenuPopperProps {
@@ -54,7 +51,6 @@ export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }
   const { createSingleDocumentInCanvas, isCreating: isCreatingDocument } = useCreateDocument();
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const { addNode } = useAddNode();
-  const { hoverCardEnabled } = useHoverCard();
 
   const [showSearchResourceList, setShowSearchResourceList] = useState(false);
   const [showSearchDocumentList, setShowSearchDocumentList] = useState(false);
@@ -73,71 +69,32 @@ export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }
       icon: IconAskAI,
       type: 'button',
       primary: true,
-      hoverContent: {
-        title: t('canvas.toolbar.askAI'),
-        description: t('canvas.toolbar.askAIDescription'),
-        videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-askAI.webm',
-      },
     },
     { key: 'divider-1', type: 'divider' },
     {
       key: 'createCodeArtifact',
       icon: IconCodeArtifact,
       type: 'button',
-      hoverContent: {
-        title: t('canvas.toolbar.createCodeArtifact'),
-        description: t('canvas.toolbar.createCodeArtifactDescription'),
-        videoUrl:
-          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
-      },
     },
     {
       key: 'createMindMap',
       icon: IconMindMap,
       type: 'button',
-      hoverContent: {
-        title: t('canvas.toolbar.createMindMap', 'Create Mind Map'),
-        description: t(
-          'canvas.toolbar.createMindMapDescription',
-          'Create a mind map to visualize and organize ideas',
-        ),
-        videoUrl:
-          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
-      },
     },
     {
       key: 'createWebsite',
       icon: IconWebsite,
       type: 'button',
-      hoverContent: {
-        title: t('canvas.toolbar.createWebsite', 'Create Website Node'),
-        description: t(
-          'canvas.toolbar.createWebsiteDescription',
-          'Create a website node to embed a website in your canvas',
-        ),
-        videoUrl:
-          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
-      },
     },
     {
       key: 'createDocument',
       icon: IconCreateDocument,
       type: 'button',
-      hoverContent: {
-        title: t('canvas.toolbar.createDocument'),
-        description: t('canvas.toolbar.createDocumentDescription'),
-        videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-createDocument.webm',
-      },
     },
     {
       key: 'createMemo',
       icon: IconMemo,
       type: 'button',
-      hoverContent: {
-        title: t('canvas.toolbar.createMemo'),
-        description: t('canvas.toolbar.createMemoDescription'),
-        videoUrl: 'https://static.refly.ai/onboarding/menuPopper/menuPopper-createMemo.webm',
-      },
     },
     {
       key: 'addResource',
@@ -160,12 +117,6 @@ export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }
       key: 'importResource',
       icon: IconImportResource,
       type: 'button',
-      hoverContent: {
-        title: t('canvas.toolbar.importResource'),
-        description: t('canvas.toolbar.importResourceDescription'),
-        videoUrl:
-          'https://static.refly.ai/onboarding/canvas-toolbar/canvas-toolbar-import-resource.webm',
-      },
     },
   ];
 
@@ -388,21 +339,6 @@ export const MenuPopper: FC<MenuPopperProps> = memo(({ open, position, setOpen }
         <span>{t(`canvas.toolbar.${item.key ?? ''}`)}</span>
       </Button>
     );
-
-    if (item.hoverContent && hoverCardEnabled) {
-      return (
-        <HoverCard
-          title={item.hoverContent.title}
-          description={item.hoverContent.description}
-          videoUrl={item.hoverContent.videoUrl}
-          placement="right"
-          overlayStyle={{ marginLeft: '12px' }}
-          align={{ offset: [12, 0] }}
-        >
-          {button}
-        </HoverCard>
-      );
-    }
 
     return button;
   };

@@ -9,8 +9,6 @@ import {
   createNodeEventName,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { message } from 'antd';
-import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-card';
-import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
 import { useReactFlow } from '@xyflow/react';
 import { useGetNodeContent } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-content';
@@ -46,7 +44,6 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
     const nodeData = useMemo(() => node?.data, [node]);
     const { fetchNodeContent } = useGetNodeContent(node);
 
-    const { hoverCardEnabled } = useHoverCard();
     const { createMemo } = useCreateMemo();
     const [isCreatingDocument, setIsCreatingDocument] = useState(false);
     const [beforeDuplicatingDocument, setBeforeDuplicatingDocument] = useState(false);
@@ -257,22 +254,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
             </Button>
           );
 
-          return (
-            <div key={item.key}>
-              {item.hoverContent && hoverCardEnabled ? (
-                <HoverCard
-                  title={item.hoverContent.title}
-                  description={item.hoverContent.description}
-                  videoUrl={item.hoverContent.videoUrl}
-                  placement="right"
-                >
-                  {button}
-                </HoverCard>
-              ) : (
-                button
-              )}
-            </div>
-          );
+          return <div key={item.key}>{button}</div>;
         })}
       </div>
     );

@@ -27,9 +27,7 @@ import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/can
 import { useContextPanelStoreShallow } from '@refly/stores';
 import { useEdgeVisible } from '@refly-packages/ai-workspace-common/hooks/canvas/use-edge-visible';
 import { ToolButton, type ToolbarItem } from './tool-button';
-import { HoverCard } from '@refly-packages/ai-workspace-common/components/hover-card';
 import { genMemoID, genSkillID } from '@refly/utils/id';
-import { useHoverCard } from '@refly-packages/ai-workspace-common/hooks/use-hover-card';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 import { getDefaultContentForType } from '@refly/utils';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
@@ -228,7 +226,6 @@ const SearchListWrapper = memo(
     }, []);
 
     const [open, setOpen] = useState(false);
-    const { hoverCardEnabled } = useHoverCard();
 
     const button = (
       <Button
@@ -257,20 +254,7 @@ const SearchListWrapper = memo(
         open={open}
         setOpen={setOpen}
       >
-        {tool.hoverContent && hoverCardEnabled ? (
-          <HoverCard
-            title={tool.hoverContent.title}
-            description={tool.hoverContent.description}
-            videoUrl={tool.hoverContent.videoUrl}
-            placement="right"
-            overlayStyle={{ marginLeft: '12px' }}
-            align={{ offset: [12, 0] }}
-          >
-            {button}
-          </HoverCard>
-        ) : (
-          <TooltipWrapper tooltip={tool.tooltip}>{button}</TooltipWrapper>
-        )}
+        <TooltipWrapper tooltip={tool.tooltip}>{button}</TooltipWrapper>
       </SearchList>
     );
   },
