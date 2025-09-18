@@ -25,6 +25,12 @@ A flexible, backend-agnostic vector search service that supports multiple vector
 - **Features**: No server required, multi-modal support, cloud storage
 - **Setup**: No additional setup required
 
+### Milvus
+- **Type**: Distributed vector database
+- **Best for**: Enterprise deployments, high-scale applications, cloud-native
+- **Features**: Horizontal scaling, high availability, advanced indexing, cloud-native
+- **Setup**: Requires Milvus cluster or standalone instance
+
 ## Installation
 
 The service is automatically available when you import the common module:
@@ -52,6 +58,19 @@ vectorStore:
   uri: 's3://my-bucket/lancedb'  # S3 storage
   # OR
   uri: 'gs://my-bucket/lancedb'  # Google Cloud Storage
+```
+
+### Milvus Backend
+```yaml
+vectorStore:
+  backend: 'milvus'
+  milvus:
+    address: 'localhost:19530'
+    username: 'your_username'
+    password: 'your_password'
+    ssl: false
+    collectionName: 'refly_vectors'
+    vectorDimension: 1536
 ```
 
 ## Usage

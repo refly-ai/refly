@@ -107,6 +107,30 @@ export function toLanceDBFilter(filter: VectorFilter): string {
 }
 
 /**
+ * Convert any VectorFilter to Milvus expression format
+ */
+export function toMilvusFilter(filter: VectorFilter): string {
+  if (!filter) {
+    return '';
+  }
+
+  if (isQdrantFilter(filter)) {
+    return qdrantToMilvusFilter(filter);
+  }
+
+  if (isLanceDBFilter(filter)) {
+    return sqlToMilvusFilter(filter);
+  }
+
+  if (isSimpleFilter(filter)) {
+    return simpleToMilvusFilter(filter);
+  }
+
+  // Fallback: treat as simple filter
+  return simpleToMilvusFilter(filter as SimpleFilter);
+}
+
+/**
  * Convert simple key-value filter to Qdrant format
  */
 function simpleToQdrantFilter(filter: SimpleFilter): QdrantFilter {
@@ -416,4 +440,214 @@ function validateSimpleFilter(filter: SimpleFilter): boolean {
             typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null,
         )),
   );
+}
+
+/**
+ * Convert Qdrant filter to Milvus expression
+ */
+function qdrantToMilvusFilter(filter: QdrantFilter): string {
+  const conditions: string[] = [];
+
+  if (filter.must) {
+    const mustConditions = filter.must.map(conditionToMilvusExpr);
+    if (mustConditions.length > 0) {
+      conditions.push(`(${mustConditions.join(' && ')})`);
+    }
+  }
+
+  if (filter.should) {
+    const shouldConditions = filter.should.map(conditionToMilvusExpr);
+    if (shouldConditions.length > 0) {
+      conditions.push(`(${shouldConditions.join(' || ')})`);
+    }
+  }
+
+  if (filter.must_not) {
+    const mustNotConditions = filter.must_not.map(conditionToMilvusExpr);
+    if (mustNotConditions.length > 0) {
+      conditions.push(`!(${mustNotConditions.join(' || ')})`);
+    }
+  }
+
+  return conditions.join(' && ');
+}
+
+/**
+ * Convert SQL filter to Milvus expression
+ */
+function sqlToMilvusFilter(sql: string): string {
+  // Simple conversion from SQL WHERE clause to Milvus expression
+  // This is a basic implementation - may need enhancement for complex SQL
+  if (!sql || sql.trim() === '') {
+    return '';
+  }
+
+  // Remove WHERE keyword if present
+  let expression = sql.replace(/^where\s+/i, '').trim();
+  
+  // Convert SQL operators to Milvus operators
+  expression = expression
+    .replace(/\s+and\s+/gi, ' && ')
+    .replace(/\s+or\s+/gi, ' || ')
+    .replace(/\s*=\s*/g, ' == ')
+    .replace(/\s*!=\s*/g, ' != ')
+    .replace(/\s*<>\s*/g, ' != ')
+    .replace(/\s*>\s*/g, ' > ')
+    .replace(/\s*<\s*/g, ' < ')
+    .replace(/\s*>=\s*/g, ' >= ')
+    .replace(/\s*<=\s*/g, ' <= ');
+
+  return expression;
+}
+
+/**
+ * Convert simple filter to Milvus expression
+ */
+function simpleToMilvusFilter(filter: SimpleFilter): string {
+  if (!filter || Object.keys(filter).length === 0) {
+    return '';
+  }
+
+  const conditions = Object.entries(filter).map(([key, value]) => {
+    if (value === null) {
+      return `${key} == null`;
+    }
+    if (Array.isArray(value)) {
+      return `${key} in [${value.map(formatMilvusValue).join(', ')}]`;
+    }
+    return `${key} == ${formatMilvusValue(value)}`;
+  });
+
+  return conditions.join(' && ');
+}
+
+/**
+ * Convert filter condition to Milvus expression
+ */
+function conditionToMilvusExpr(condition: FilterCondition): string {
+  const { key } = condition;
+
+  if (condition.match) {
+    return matchConditionToMilvusExpr(key, condition.match);
+  }
+  if (condition.range) {
+    return rangeConditionToMilvusExpr(key, condition.range);
+  }
+  if (condition.geo_bounding_box) {
+    return geoBoundingBoxConditionToMilvusExpr(key, condition.geo_bounding_box);
+  }
+  if (condition.geo_radius) {
+    return geoRadiusConditionToMilvusExpr(key, condition.geo_radius);
+  }
+  if (condition.values_count) {
+    return valuesCountConditionToMilvusExpr(key, condition.values_count);
+  }
+  if (condition.is_empty) {
+    return `${key} == ""`;
+  }
+  if (condition.is_null) {
+    return `${key} == null`;
+  }
+  if (condition.has_id) {
+    return `id in [${condition.has_id.has_id.map(formatMilvusValue).join(', ')}]`;
+  }
+
+  return '';
+}
+
+/**
+ * Convert match condition to Milvus expression
+ */
+function matchConditionToMilvusExpr(key: string, match: MatchCondition): string {
+  if (match.value !== undefined) {
+    return `${key} == ${formatMilvusValue(match.value)}`;
+  }
+  if (match.any && match.any.length > 0) {
+    return `${key} in [${match.any.map(formatMilvusValue).join(', ')}]`;
+  }
+  if (match.except && match.except.length > 0) {
+    return `!(${key} in [${match.except.map(formatMilvusValue).join(', ')}])`;
+  }
+  if (match.text) {
+    return `${key} like "%${match.text}%"`;
+  }
+  return '';
+}
+
+/**
+ * Convert range condition to Milvus expression
+ */
+function rangeConditionToMilvusExpr(key: string, range: RangeCondition): string {
+  const conditions: string[] = [];
+
+  if (range.gt !== undefined) {
+    conditions.push(`${key} > ${range.gt}`);
+  }
+  if (range.gte !== undefined) {
+    conditions.push(`${key} >= ${range.gte}`);
+  }
+  if (range.lt !== undefined) {
+    conditions.push(`${key} < ${range.lt}`);
+  }
+  if (range.lte !== undefined) {
+    conditions.push(`${key} <= ${range.lte}`);
+  }
+
+  return conditions.join(' && ');
+}
+
+/**
+ * Convert geo bounding box condition to Milvus expression
+ */
+function geoBoundingBoxConditionToMilvusExpr(key: string, geo: any): string {
+  // Milvus supports geo operations, but this is a simplified implementation
+  // For production use, you may need to implement proper geo filtering
+  return `${key} in geo_bounding_box([${geo.top_left.lat}, ${geo.top_left.lon}], [${geo.bottom_right.lat}, ${geo.bottom_right.lon}])`;
+}
+
+/**
+ * Convert geo radius condition to Milvus expression
+ */
+function geoRadiusConditionToMilvusExpr(key: string, geo: any): string {
+  // Milvus supports geo operations, but this is a simplified implementation
+  // For production use, you may need to implement proper geo filtering
+  return `${key} in geo_radius([${geo.center.lat}, ${geo.center.lon}], ${geo.radius})`;
+}
+
+/**
+ * Convert values count condition to Milvus expression
+ */
+function valuesCountConditionToMilvusExpr(key: string, count: any): string {
+  const conditions: string[] = [];
+
+  if (count.gt !== undefined) {
+    conditions.push(`len(${key}) > ${count.gt}`);
+  }
+  if (count.gte !== undefined) {
+    conditions.push(`len(${key}) >= ${count.gte}`);
+  }
+  if (count.lt !== undefined) {
+    conditions.push(`len(${key}) < ${count.lt}`);
+  }
+  if (count.lte !== undefined) {
+    conditions.push(`len(${key}) <= ${count.lte}`);
+  }
+
+  return conditions.join(' && ');
+}
+
+/**
+ * Format a value for Milvus expression
+ */
+function formatMilvusValue(value: FilterValue): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (typeof value === 'string') {
+    return `"${value.replace(/"/g, '\\"')}"`;
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+  return String(value);
 }
