@@ -1359,6 +1359,7 @@ const translations = {
         reloadFile: 'Reload File',
         duplicateFileName: 'File with the same name already exists, please replace the file',
         tooManyFiles: 'Maximum {{max}} file allowed',
+        noSpacesAllowed: 'Variable name cannot contain spaces',
       },
       run: {
         title: 'Run Workflow',

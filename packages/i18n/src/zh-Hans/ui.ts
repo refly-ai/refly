@@ -1337,6 +1337,7 @@ const translations = {
         reloadFile: '替换文件',
         duplicateFileName: '相同文件名已存在，请替换文件',
         tooManyFiles: '最多可上传{{max}}个文件',
+        noSpacesAllowed: '变量名称不能包含空格',
       },
       run: {
         title: '运行调试',
