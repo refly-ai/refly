@@ -200,6 +200,14 @@ export class SkillEngineService implements OnModuleInit {
         const tokenData = await this.authService.login(user);
         return tokenData.accessToken;
       },
+      processURL: async (url) => {
+        const result = await this.notificationService.processURL(url);
+        return result;
+      },
+      batchProcessURL: async (urls) => {
+        const result = await this.notificationService.batchProcessURL(urls);
+        return result;
+      },
     };
   };
 

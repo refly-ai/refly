@@ -62,7 +62,7 @@ export class GenerateAudioWithVibeVoiceFal extends AgentBaseTool<GenerateAudioFa
     script: z
       .string()
       .describe(
-        "The script to convert to speech. Can be formatted with 'Speaker X:' prefixes for multi-speaker dialogues. supports up to four speakers at once, match the speakers and speaker's language. example: \"Speaker 0: VibeVoice is now available on Fal. Isn't that right, Carter?\nSpeaker 1: That's right Frank, and it supports up to four speakers at once. Try it now!\"",
+        "The script to convert to speech up to 25 minutes. Can be formatted with 'Speaker X:' prefixes for multi-speaker dialogues. supports up to four speakers at once, match the speakers and speaker's language. example: \"Speaker 0: VibeVoice is now available on Fal. Isn't that right, Carter?\nSpeaker 1: That's right Frank, and it supports up to four speakers at once. Try it now!\"",
       ),
     speakers: z
       .array(

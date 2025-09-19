@@ -64,6 +64,62 @@ export class NotificationService {
     }
   }
 
+  async processURL(url: string): Promise<string> {
+    const privateStaticEndpoint = this.configService
+      .get('static.private.endpoint')
+      ?.replace(/\/$/, '');
+    const payloadMode = this.configService.get<'base64' | 'url'>('email.payloadMode');
+
+    // For external URLs, always use path parameter
+    if (!url.startsWith(privateStaticEndpoint)) {
+      return url;
+    }
+
+    const storageKey = url.replace(`${privateStaticEndpoint}/`, '');
+
+    if (payloadMode === 'base64') {
+      const file = await this.miscService.downloadFile({ storageKey, visibility: 'private' });
+      const base64Content = file.toString('base64');
+
+      return base64Content;
+    } else if (payloadMode === 'url') {
+      const externalUrl = await this.miscService.generateTempPublicURL(storageKey, 60 * 60 * 24);
+      return externalUrl;
+    } else {
+      throw new Error('Invalid payload mode');
+    }
+  }
+
+  async batchProcessURL(urls: string[]): Promise<string[]> {
+    const privateStaticEndpoint = this.configService
+      .get('static.private.endpoint')
+      ?.replace(/\/$/, '');
+    const payloadMode = this.configService.get<'base64' | 'url'>('email.payloadMode');
+
+    const processSingleURL = async (url: string): Promise<string> => {
+      // For external URLs, always use path parameter
+      if (!url.startsWith(privateStaticEndpoint)) {
+        return url;
+      }
+
+      const storageKey = url.replace(`${privateStaticEndpoint}/`, '');
+
+      if (payloadMode === 'base64') {
+        const file = await this.miscService.downloadFile({ storageKey, visibility: 'private' });
+        const base64Content = file.toString('base64');
+
+        return base64Content;
+      } else if (payloadMode === 'url') {
+        const externalUrl = await this.miscService.generateTempPublicURL(storageKey, 60 * 60 * 24);
+        return externalUrl;
+      } else {
+        throw new Error('Invalid payload mode');
+      }
+    };
+
+    return Promise.all(urls.map(processSingleURL));
+  }
+
   /**
    * Send email using Resend service
    * @param param - Email parameters

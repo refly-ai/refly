@@ -108,6 +108,8 @@ export interface ReflyService {
   ) => Promise<{ title?: string; content?: string; metadata?: Record<string, any> }>;
 
   sendEmail: (user: User, req: SendEmailRequest) => Promise<BaseResponse>;
+  processURL: (url: string) => Promise<string>;
+  batchProcessURL: (urls: string[]) => Promise<string[]>;
 
   // Generate JWT token for user (same as AuthService.login)
   generateJwtToken: (user: User) => Promise<string>;
