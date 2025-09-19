@@ -282,14 +282,14 @@ export const StartNodePreview = () => {
           readonly={readonly}
         />
 
-        {/* <VariableTypeSection
+        <VariableTypeSection
           canvasId={canvasId}
           type="resource"
           variables={groupedVariables.resource}
           totalVariables={workflowVariables}
           refetchWorkflowVariables={refetchWorkflowVariables}
           readonly={readonly}
-        /> */}
+        />
 
         <VariableTypeSection
           canvasId={canvasId}
