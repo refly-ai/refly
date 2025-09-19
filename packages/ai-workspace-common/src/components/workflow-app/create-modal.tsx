@@ -34,6 +34,10 @@ const SuccessMessage = memo(({ appId }: SuccessMessageProps) => {
     }
   }, [shareLink]);
 
+  const handleClose = useCallback(() => {
+    message.destroy();
+  }, []);
+
   // Auto copy link when component mounts
   useEffect(() => {
     if (shareLink) {
@@ -48,7 +52,7 @@ const SuccessMessage = memo(({ appId }: SuccessMessageProps) => {
         {t('workflowApp.publishSuccess')}
       </span>
       <div className="flex items-center gap-2 border border-refly-Card-Border bg-refly-bg-content-z1 rounded-full pl-3 pr-1 py-1 max-w-[500px] bg-gray-100 dark:bg-gray-800">
-        <span className="flex-1 text-sm text-refly-text-1 leading-5 max-w-[260px] overflow-hidden text-ellipsis">
+        <span className="flex-1 text-sm text-refly-text-1 max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap">
           {shareLink}
         </span>
         <Button
@@ -57,6 +61,14 @@ const SuccessMessage = memo(({ appId }: SuccessMessageProps) => {
           onClick={handleCopy}
         >
           {copied ? t('shareContent.linkCopied') : t('shareContent.copyLink')}
+        </Button>
+        <Button
+          size="small"
+          className="!h-[28px] !px-2 rounded-full text-sm text-refly-text-2 hover:text-refly-text-0"
+          onClick={handleClose}
+          type="text"
+        >
+          ×
         </Button>
       </div>
     </div>

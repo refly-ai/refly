@@ -151,9 +151,14 @@ export class WorkflowService {
       }),
     ]);
 
-    // Add start nodes to runWorkflowQueue
+    // Add start nodes to runWorkflowQueue in sorted order to maintain original canvas order
     if (this.runWorkflowQueue) {
-      for (const startNodeId of startNodes) {
+      // Sort start nodes by their original order in the canvas
+      const sortedStartNodes = [...startNodes].sort((a, b) => {
+        return a.localeCompare(b);
+      });
+
+      for (const startNodeId of sortedStartNodes) {
         await this.runWorkflowQueue.add('runWorkflow', {
           user: { uid: user.uid },
           executionId,
@@ -369,9 +374,15 @@ export class WorkflowService {
           status: n.status as ActionStatus,
         })),
       );
+
+      // Sort ready child nodes by their original order in the canvas to maintain execution order
+      const sortedReadyChildNodeIds = readyChildNodeIds.sort((a, b) => {
+        return a.localeCompare(b);
+      });
+
       const existingJobs = await this.runWorkflowQueue?.getJobs(['waiting', 'active']);
 
-      for (const childNodeId of readyChildNodeIds) {
+      for (const childNodeId of sortedReadyChildNodeIds) {
         const isAlreadyQueued = existingJobs?.some(
           (job) => job?.data?.executionId === executionId && job?.data?.nodeId === childNodeId,
         );
@@ -570,10 +581,67 @@ export class WorkflowService {
     // Get node executions
     const nodeExecutions = await this.prisma.workflowNodeExecution.findMany({
       where: { executionId },
-      orderBy: { createdAt: 'asc' },
     });
 
+    // Sort node executions by execution order (topological sort based on parent-child relationships)
+    const sortedNodeExecutions = this.sortNodeExecutionsByExecutionOrder(nodeExecutions);
+
     // Return workflow execution detail
-    return { ...workflowExecution, nodeExecutions };
+    return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
+  }
+
+  /**
+   * Sort node executions by execution order using topological sort
+   * Parents should always come before their children, maintaining original canvas order
+   * @param nodeExecutions - Array of WorkflowNodeExecutionPO
+   * @returns Sorted array of WorkflowNodeExecutionPO
+   */
+  private sortNodeExecutionsByExecutionOrder(
+    nodeExecutions: WorkflowNodeExecutionPO[],
+  ): WorkflowNodeExecutionPO[] {
+    // Build a map from nodeId to nodeExecution
+    const nodeMap = new Map(nodeExecutions.map((n) => [n.nodeId, n]));
+    // Track visited nodes
+    const visited = new Set<string>();
+    // Result array
+    const result: WorkflowNodeExecutionPO[] = [];
+
+    // Helper for DFS that maintains original canvas order
+    const visit = (nodeExecution: WorkflowNodeExecutionPO) => {
+      if (visited.has(nodeExecution.nodeId)) return;
+      // Mark as visited BEFORE recursing to parents to prevent infinite loop on cycles
+      visited.add(nodeExecution.nodeId);
+
+      // Visit parents first if they exist and are in the map
+      // Sort parents by their original order in the canvas to maintain consistency
+      const parentNodeIds = JSON.parse(nodeExecution.parentNodeIds || '[]') as string[];
+      const parentNodes = parentNodeIds
+        .map((parentId) => nodeMap.get(parentId))
+        .filter((node): node is WorkflowNodeExecutionPO => node !== undefined)
+        .sort((a, b) => {
+          // Sort by creation order or nodeId to maintain consistent ordering
+          return a.nodeId.localeCompare(b.nodeId);
+        });
+
+      for (const parentNode of parentNodes) {
+        visit(parentNode);
+      }
+
+      result.push(nodeExecution);
+    };
+
+    // Sort nodes by their original order in the canvas before processing
+    // This ensures that when multiple nodes have no dependencies, they maintain their original order
+    const sortedNodeExecutions = [...nodeExecutions].sort((a, b) => {
+      // First sort by creation order (if available) or nodeId
+      return a.nodeId.localeCompare(b.nodeId);
+    });
+
+    // Visit all nodes in sorted order
+    for (const nodeExecution of sortedNodeExecutions) {
+      visit(nodeExecution);
+    }
+
+    return result;
   }
 }
