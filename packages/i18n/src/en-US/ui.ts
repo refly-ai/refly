@@ -15,6 +15,7 @@ const translations = {
     delete: 'Delete',
     edit: 'Edit',
     save: 'Save',
+    import: 'Import',
     saveToCanvas: 'Add to Canvas',
     noData: 'No data',
     search: 'Search',

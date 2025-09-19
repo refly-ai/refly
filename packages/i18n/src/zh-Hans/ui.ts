@@ -180,6 +180,7 @@ const translations = {
     delete: '删除',
     edit: '编辑',
     save: '保存',
+    import: '导入',
     saveToCanvas: '添加到画布',
     noData: '暂无数据',
     search: '搜索',
