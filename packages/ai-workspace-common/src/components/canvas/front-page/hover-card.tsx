@@ -3,6 +3,7 @@ import { Button } from 'antd';
 import { Edit } from 'refly-icons';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import cn from 'classnames';
+import { useTranslation } from 'react-i18next';
 
 interface HoverCardProps {
   canvasId: string;
@@ -15,6 +16,7 @@ interface HoverCardProps {
 export const HoverCard = memo(
   ({ canvasId, canvasName, children, onEdit, className }: HoverCardProps) => {
     const [isHovered, setIsHovered] = useState(false);
+    const { t } = useTranslation();
 
     const handleEdit = useCallback(() => {
       onEdit?.(canvasId);
@@ -28,30 +30,32 @@ export const HoverCard = memo(
       >
         {children}
 
-        {/* Action buttons overlay */}
         <div
           className={cn(
-            'absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 p-3 bg-refly-bg-content-z2 border-t border-refly-Card-Border transition-all duration-300 ease-in-out',
+            'absolute bottom-[1px] left-[1px] right-[1px] flex items-center gap-2 py-3 px-4 rounded-b-xl transition-all duration-300 ease-in-out bg-refly-bg-glass-content backdrop-blur-[20px]',
             isHovered ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0',
           )}
-          style={{
-            boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.1)',
-            borderRadius: '0 0 12px 12px', // Match the card's border radius
-          }}
         >
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.05) 0%, transparent 100%)',
+              height: '8px',
+              top: '-8px',
+            }}
+          />
           <Button
             type="primary"
-            size="small"
             icon={<Edit size={16} />}
             onClick={handleEdit}
-            className="flex items-center gap-1 h-8 px-3"
+            className="flex-1 h-8 rounded-lg"
           >
-            编辑
+            {t('frontPage.recentWorkflows.edit')}
           </Button>
 
           <CanvasActionDropdown canvasId={canvasId} canvasName={canvasName} btnSize="small">
-            <Button size="small" className="flex items-center gap-1 h-8 px-3">
-              更多
+            <Button className="flex items-center w-20 h-8 px-3 rounded-lg">
+              {t('frontPage.recentWorkflows.more')}
             </Button>
           </CanvasActionDropdown>
         </div>

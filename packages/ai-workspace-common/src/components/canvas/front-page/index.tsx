@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
 import { canvasTemplateEnabled } from '@refly/ui-kit';
-import { useCanvasTemplateModalShallow } from '@refly/stores';
+import { useCanvasTemplateModalShallow, useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 import { IconRight } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { DocInline } from 'refly-icons';
@@ -25,6 +25,10 @@ const ModuleContainer = ({
 export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   const { t, i18n } = useTranslation();
   console.log('projectId', projectId);
+  const { canvasList } = useSiderStoreShallow((state) => ({
+    canvasList: state.canvasList,
+  }));
+  const canvases = canvasList?.slice(0, 4);
 
   const templateLanguage = i18n.language;
   const templateCategoryId = '';
@@ -81,9 +85,11 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
         </div>
       </ModuleContainer>
 
-      <ModuleContainer title={t('frontPage.recentWorkflows')}>
-        <RecentWorkflow />
-      </ModuleContainer>
+      {canvases?.length > 0 && (
+        <ModuleContainer title={t('frontPage.recentWorkflows.title')}>
+          <RecentWorkflow canvases={canvases} />
+        </ModuleContainer>
+      )}
 
       {canvasTemplateEnabled && (
         <div className="h-full flex flex-col mt-10">

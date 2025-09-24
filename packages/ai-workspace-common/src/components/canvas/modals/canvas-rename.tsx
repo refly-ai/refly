@@ -42,7 +42,7 @@ export const CanvasRenameModal = memo(() => {
   const setCanvasTitle = useCanvasStoreShallow((state) => state.setCanvasTitle);
   const [editedTitle, setEditedTitle] = useState(canvasTitle);
 
-  const updateCanvasTitleInSider = useSiderStoreShallow((state) => state.updateCanvasTitle);
+  const updateCanvasTitleInStore = useSiderStoreShallow((state) => state.updateCanvasTitle);
   const inputRef = useRef<InputRef | null>(null);
 
   useEffect(() => {
@@ -72,12 +72,12 @@ export const CanvasRenameModal = memo(() => {
       const newTitle = await updateRemoteCanvasTitle(canvasId, editedTitle);
       if (newTitle) {
         setCanvasTitle(canvasId, newTitle);
-        updateCanvasTitleInSider(canvasId, newTitle);
+        updateCanvasTitleInStore(canvasId, newTitle);
 
         resetCanvasOperationState();
       }
     }
-  }, [canvasId, editedTitle, setCanvasTitle, updateCanvasTitleInSider, resetCanvasOperationState]);
+  }, [canvasId, editedTitle, setCanvasTitle, updateCanvasTitleInStore, resetCanvasOperationState]);
 
   const handleCancel = useCallback(() => {
     resetCanvasOperationState();
