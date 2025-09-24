@@ -57,9 +57,30 @@ export class WorkflowAppController {
   @Get('list')
   async listWorkflowApps(
     @LoginedUser() user: UserModel,
-    @Query() query: ListWorkflowAppsData,
+    @Query('canvasId') canvasId?: string,
+    @Query('categoryTags') categoryTags?: string | string[],
   ): Promise<ListWorkflowAppsResponse> {
+    // Convert categoryTags to array if it's a string
+    const categoryTagsArray = categoryTags
+      ? Array.isArray(categoryTags)
+        ? categoryTags
+        : [categoryTags]
+      : undefined;
+
+    const query: ListWorkflowAppsData = {
+      query: {
+        canvasId,
+        ...(categoryTagsArray && { categoryTags: categoryTagsArray as any }),
+      },
+    };
+
     const workflowApps = await this.workflowAppService.listWorkflowApps(user, query);
     return buildSuccessResponse(workflowApps);
+  }
+
+  @Get('categories')
+  async getWorkflowAppCategories(): Promise<any> {
+    const categories = await this.workflowAppService.getWorkflowAppCategories();
+    return buildSuccessResponse(categories);
   }
 }

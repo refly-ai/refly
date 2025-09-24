@@ -2758,6 +2758,17 @@ paths:
           required: false
           schema:
             type: string
+        - name: categoryTags
+          in: query
+          description: Category tags to filter by
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [education, business, creative, sales, life]
+          style: form
+          explode: false
       responses:
         '200':
           description: successful operation
@@ -2765,6 +2776,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListWorkflowAppsResponse'
+  /workflow-app/categories:
+    get:
+      tags:
+        - app
+      summary: Get workflow app categories
+      description: Get available category tags for workflow apps
+      operationId: getWorkflowAppCategories
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowAppCategoriesResponse'
   /user/settings:
     get:
       tags:
@@ -9470,6 +9495,7 @@ components:
         - description
         - query
         - variables
+        - coverStorageKey
       properties:
         canvasId:
           type: string
@@ -9488,6 +9514,16 @@ components:
           description: Workflow app variables
           items:
             $ref: '#/components/schemas/WorkflowVariable'
+        coverStorageKey:
+          type: string
+          description: Cover image storage key
+        categoryTags:
+          type: array
+          description: Category tags for the workflow app
+          items:
+            type: string
+            enum: [education, business, creative, sales, life]
+          default: [education]
     WorkflowApp:
       type: object
       required:
@@ -9518,6 +9554,15 @@ components:
           description: Workflow app variables
           items:
             $ref: '#/components/schemas/WorkflowVariable'
+        coverUrl:
+          type: string
+          description: Cover image URL
+        categoryTags:
+          type: array
+          description: Category tags for the workflow app
+          items:
+            type: string
+            enum: [education, business, creative, sales, life]
         createdAt:
           type: string
           format: date-time
@@ -9579,6 +9624,38 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/ExecuteWorkflowAppResult'
+    WorkflowAppCategory:
+      type: object
+      required:
+        - categoryId
+        - name
+        - displayName
+      properties:
+        categoryId:
+          type: string
+          description: Category ID
+        name:
+          type: string
+          description: Category name
+        displayName:
+          type: string
+          description: Category display name
+        description:
+          type: string
+          description: Category description
+        icon:
+          type: string
+          description: Category icon
+    GetWorkflowAppCategoriesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of workflow app categories
+              items:
+                $ref: '#/components/schemas/WorkflowAppCategory'
     ValueType:
       type: string
       enum:

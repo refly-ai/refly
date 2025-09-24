@@ -771,34 +771,39 @@ model Project {
 
 model WorkflowApp {
   /// Primary key
-  pk          BigInt    @id @default(autoincrement())
+  pk              BigInt    @id @default(autoincrement())
   /// Workflow app id
-  appId       String    @unique @map("app_id")
+  appId           String    @unique @map("app_id")
   /// UID
-  uid         String    @map("uid")
+  uid             String    @map("uid")
   /// Title
-  title       String    @default("") @map("title")
+  title           String    @default("") @map("title")
   /// Description
-  description String?   @map("description")
+  description     String?   @map("description")
   /// Query
-  query       String?   @map("query")
+  query           String?   @map("query")
   /// Variables
-  variables   String?   @map("variables")
+  variables       String?   @map("variables")
   /// Canvas id
-  canvasId    String?   @map("canvas_id")
+  canvasId        String?   @map("canvas_id")
   /// Storage key
-  storageKey  String?   @map("storage_key")
+  storageKey      String?   @map("storage_key")
   /// Share id for public access
-  shareId     String?   @map("share_id")
+  shareId         String?   @map("share_id")
+  /// Cover image storage key
+  coverStorageKey String?   @map("cover_storage_key")
+  /// Category tags (JSON array of strings)
+  categoryTags    String?   @map("category_tags")
   /// Create timestamp
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz()
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@index([canvasId, deletedAt])
   @@index([shareId])
+  @@index([categoryTags])
   @@map("workflow_apps")
 }
 

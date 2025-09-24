@@ -1,11 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Form, Input, message, Modal } from 'antd';
+import { Button, Form, Input, message, Modal, Upload, Select } from 'antd';
+import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import { Checked } from 'refly-icons';
+import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 
 interface CreateWorkflowAppModalProps {
   title: string;
@@ -78,6 +80,17 @@ const SuccessMessage = memo(({ shareId }: SuccessMessageProps) => {
 
 SuccessMessage.displayName = 'SuccessMessage';
 
+// Predefined categories
+const CATEGORY_OPTIONS = [
+  { label: '🎓 教育', value: 'education' },
+  { label: '💼 商业', value: 'business' },
+  { label: '🎨 创意', value: 'creative' },
+  { label: '💰 销售', value: 'sales' },
+  { label: '🏠 生活', value: 'life' },
+];
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
 export const CreateWorkflowAppModal = ({
   canvasId,
   title,
@@ -88,10 +101,80 @@ export const CreateWorkflowAppModal = ({
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const [confirmLoading, setConfirmLoading] = useState(false);
-  // const { uploadCanvasCover } = useExportCanvasAsImage();
+
+  // Cover image upload state
+  const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverStorageKey, setCoverStorageKey] = useState<string>('');
+
+  // Category tags state
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['education']);
 
   const { workflow } = useCanvasContext();
   const { workflowVariables } = workflow ?? {};
+
+  // Handle cover image upload
+  const uploadCoverImage = async (file: File): Promise<string> => {
+    try {
+      const { data } = await getClient().upload({
+        body: {
+          file,
+          entityType: 'workflowApp',
+          visibility: 'public',
+        },
+      });
+
+      if (data?.success && data?.data?.storageKey) {
+        return data.data.storageKey;
+      }
+      throw new Error('Upload failed');
+    } catch (error) {
+      console.error('Error uploading cover image:', error);
+      throw error;
+    }
+  };
+
+  // Handle cover upload change
+  const handleCoverUploadChange: UploadProps['onChange'] = (info) => {
+    setCoverFileList(info.fileList);
+  };
+
+  // Custom upload request for cover image
+  const customUploadRequest: UploadProps['customRequest'] = async ({
+    file,
+    onSuccess,
+    onError,
+  }) => {
+    setCoverUploading(true);
+    try {
+      const storageKey = await uploadCoverImage(file as File);
+      setCoverStorageKey(storageKey);
+      onSuccess?.(storageKey);
+      message.success(t('common.uploadSuccess'));
+    } catch (error) {
+      onError?.(error as Error);
+      message.error(t('common.uploadFailed'));
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
+  // Before upload validation
+  const beforeUpload = (file: File) => {
+    const isAllowedType = ALLOWED_IMAGE_TYPES.includes(file.type);
+    if (!isAllowedType) {
+      message.error(t('workflowApp.invalidImageType'));
+      return false;
+    }
+
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error(t('workflowApp.imageTooLarge'));
+      return false;
+    }
+
+    return true;
+  };
 
   const createWorkflowApp = async ({
     title,
@@ -102,6 +185,12 @@ export const CreateWorkflowAppModal = ({
     setConfirmLoading(true);
 
     try {
+      // Validate cover image is uploaded
+      if (!coverStorageKey) {
+        message.error(t('workflowApp.coverImageRequired'));
+        return;
+      }
+
       const { data } = await getClient().createWorkflowApp({
         body: {
           title,
@@ -109,7 +198,9 @@ export const CreateWorkflowAppModal = ({
           canvasId,
           query: '', // TODO: support query edit
           variables: workflowVariables ?? [],
-        },
+          coverStorageKey,
+          categoryTags: selectedCategories,
+        } as any,
       });
 
       const shareId = data?.data?.shareId ?? '';
@@ -139,14 +230,26 @@ export const CreateWorkflowAppModal = ({
     }
   };
 
+  // Reset form state when modal opens
   useEffect(() => {
     if (visible) {
       form.setFieldsValue({
         title,
         description: '',
       });
+      setCoverFileList([]);
+      setCoverStorageKey('');
+      setSelectedCategories(['education']);
     }
   }, [visible, title]);
+
+  // Upload button component
+  const uploadButton = (
+    <div>
+      {coverUploading ? <LoadingOutlined /> : <PlusOutlined />}
+      <div style={{ marginTop: 8 }}>{t('workflowApp.uploadCover')}</div>
+    </div>
+  );
 
   return (
     <Modal
@@ -203,6 +306,61 @@ export const CreateWorkflowAppModal = ({
                   autoSize={{ minRows: 3, maxRows: 6 }}
                 />
               </Form.Item>
+            </div>
+
+            {/* Cover Image Upload */}
+            <div className="flex flex-col gap-2 mt-5">
+              <div className="text-xs font-semibold text-refly-text-0 leading-[1.33]">
+                {t('workflowApp.coverImage')}
+                <span className="text-refly-func-danger-default ml-1">*</span>
+              </div>
+              <div className="w-full">
+                <Upload
+                  customRequest={customUploadRequest}
+                  listType="picture-card"
+                  fileList={coverFileList}
+                  onChange={handleCoverUploadChange}
+                  beforeUpload={beforeUpload}
+                  accept={ALLOWED_IMAGE_TYPES.join(',')}
+                  maxCount={1}
+                  className="cover-upload"
+                  style={
+                    {
+                      // Custom styles for cover upload
+                      '--upload-card-width': '100px',
+                      '--upload-card-height': '100px',
+                    } as React.CSSProperties
+                  }
+                >
+                  {coverFileList.length >= 1 ? null : uploadButton}
+                </Upload>
+                <div className="text-xs text-refly-text-2 mt-1">
+                  {t('workflowApp.coverImageHint')}
+                </div>
+              </div>
+            </div>
+
+            {/* Category Tags */}
+            <div className="flex flex-col gap-2 mt-5">
+              <div className="text-xs font-semibold text-refly-text-0 leading-[1.33]">
+                {t('workflowApp.categoryTags')}
+              </div>
+              <Select
+                mode="multiple"
+                placeholder={t('workflowApp.selectCategories')}
+                value={selectedCategories}
+                onChange={setSelectedCategories}
+                options={CATEGORY_OPTIONS}
+                maxTagCount={3}
+                className="h-8 rounded-lg border-0 bg-refly-bg-control-z0"
+                size="middle"
+                style={{
+                  // Custom styles for category select
+                  backgroundColor: 'var(--refly-bg-control-z0)',
+                  borderRadius: '8px',
+                }}
+              />
+              <div className="text-xs text-refly-text-2">{t('workflowApp.categoryTagsHint')}</div>
             </div>
           </div>
         </Form>
