@@ -822,11 +822,17 @@ const translations = {
     ],
   },
   frontPage: {
-    welcome: {
-      part1: '全球首个开源',
-      part2: '人机协作 Agent',
-      part3: '平台',
+    guide: {
+      title: '5分钟上手',
+      description: '教程学会如何构建一个AI 驱动的工作流',
+      view: '去查看',
     },
+    newWorkflow: {
+      title: '新建',
+      buttonText: '新建工作流',
+      buttonDescription: '从空白或模板新建工作流',
+    },
+    recentWorkflows: '近期工作流',
     agentInputPlaceholder: '输入任务描述，Agent 将生成可复用的工作流',
     chatInputPlaceholder: '输入一个任务，支持选择模型和工具',
     githubStar: '在 GitHub 为我们点 Star!',

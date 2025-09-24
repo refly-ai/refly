@@ -834,11 +834,17 @@ const translations = {
     ],
   },
   frontPage: {
-    welcome: {
-      part1: 'The World #1 Open Source',
-      part2: 'Human-AI Collaborative Agent',
-      part3: 'Platform',
+    guide: {
+      title: '5 minutes to get started',
+      description: 'Tutorial to learn how to build an AI-driven workflow',
+      view: 'Go to view',
     },
+    newWorkflow: {
+      title: 'New',
+      buttonText: 'New Workflow',
+      buttonDescription: 'Create a new workflow from scratch or use a template',
+    },
+    recentWorkflows: 'Recent Workflows',
     agentInputPlaceholder: 'Enter task description, Agent will generate reusable workflows',
     chatInputPlaceholder: 'Enter a task (choose model & tools)',
     githubStar: 'Star us on GitHub!',

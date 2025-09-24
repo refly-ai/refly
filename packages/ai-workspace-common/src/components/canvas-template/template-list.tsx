@@ -163,7 +163,7 @@ export const TemplateList = ({
         query: {
           language,
           categoryId: categoryId === 'my-templates' ? undefined : categoryId,
-          scope: categoryId === 'my-templates' ? 'private' : 'public',
+          scope: categoryId === 'my-templates' ? 'private' : 'private',
           ...queryPayload,
         },
       });
