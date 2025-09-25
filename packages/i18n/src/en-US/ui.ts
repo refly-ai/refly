@@ -849,6 +849,9 @@ const translations = {
       edit: 'Edit',
       more: 'More',
     },
+    template: {
+      title: 'Community Templates',
+    },
     agentInputPlaceholder: 'Enter task description, Agent will generate reusable workflows',
     chatInputPlaceholder: 'Enter a task (choose model & tools)',
     githubStar: 'Star us on GitHub!',
@@ -3567,7 +3570,7 @@ const translations = {
     templateDescriptionPlaceholder: 'Please enter template description',
     createSuccess: 'Template created successfully, please view in template library',
     preview: 'Preview',
-    use: 'Use Template',
+    use: 'Copy Template',
     duplicateCanvas: 'Remix Workflow',
     canvasTitle: 'Workflow Name',
     duplicateCanvasTitlePlaceholder: 'Please enter canvas name',

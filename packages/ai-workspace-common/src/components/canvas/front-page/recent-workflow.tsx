@@ -23,7 +23,7 @@ export const RecentWorkflow = ({ canvases }: { canvases: SiderData[] }) => {
           canvasName={canvas.name}
           onEdit={handleEditCanvas}
         >
-          <div className="h-[120px] flex flex-col justify-between p-4 border-[1px] border-solid border-refly-Card-Border rounded-xl bg-refly-bg-content-z2 hover:shadow-refly-m transition-shadow">
+          <div className="h-[120px] flex flex-col justify-between p-4 border-[1px] border-solid border-refly-Card-Border rounded-xl bg-refly-bg-content-z2 hover:shadow-refly-m transition-shadow cursor-pointer">
             <div>
               <div className="text-sm leading-5 font-semibold text-refly-text-0 line-clamp-1">
                 {canvas.name}

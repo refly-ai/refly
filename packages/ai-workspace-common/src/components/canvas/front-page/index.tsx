@@ -5,18 +5,31 @@ import { TemplateList } from '@refly-packages/ai-workspace-common/components/can
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useCanvasTemplateModalShallow, useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
-import { IconRight } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { DocInline } from 'refly-icons';
+import { DocInline, ArrowRight } from 'refly-icons';
 import { RecentWorkflow } from './recent-workflow';
+import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries/queries';
 
 const ModuleContainer = ({
   title,
   children,
   className,
-}: { title: string; children?: React.ReactNode; className?: string }) => {
+  handleTitleClick,
+}: {
+  title: string;
+  children?: React.ReactNode;
+  className?: string;
+  handleTitleClick?: () => void;
+}) => {
   return (
     <div className={cn('flex flex-col gap-4 mb-10', className)}>
-      <div className="text-[18px] leading-7 font-semibold text-refly-text-1">{title}</div>
+      <div className="text-[18px] leading-7 font-semibold text-refly-text-1 flex items-center gap-2 justify-between">
+        {title}
+        {handleTitleClick && (
+          <Button className="!h-8 !w-8 p-0" type="text" size="small" onClick={handleTitleClick}>
+            <ArrowRight size={20} />
+          </Button>
+        )}
+      </div>
       {children}
     </div>
   );
@@ -30,8 +43,13 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   }));
   const canvases = canvasList?.slice(0, 4);
 
+  const { data } = useListCanvasTemplateCategories({}, undefined, {
+    enabled: true,
+  });
+  const templateCategories = data?.data ?? [];
+
   const templateLanguage = i18n.language;
-  const templateCategoryId = '';
+  const templateCategoryId = templateCategories[0]?.categoryId ?? '';
 
   const { setVisible: setCanvasTemplateModalVisible } = useCanvasTemplateModalShallow((state) => ({
     setVisible: state.setVisible,
@@ -92,20 +110,16 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
       )}
 
       {canvasTemplateEnabled && (
-        <div className="h-full flex flex-col mt-10">
-          <div className="flex justify-between items-center mx-2">
-            <div>
-              <h3 className="text-base font-medium">{t('frontPage.fromCommunity')}</h3>
-              <p className="text-xs text-gray-500 mt-1">{t('frontPage.fromCommunityDesc')}</p>
-            </div>
-            <Button
-              type="text"
-              size="small"
-              className="text-xs text-gray-500 gap-1 hover:!text-green-500 transition-colors"
-              onClick={handleViewAllTemplates}
-            >
-              {t('common.viewAll')} <IconRight className="w-3 h-3" />
-            </Button>
+        <ModuleContainer
+          title={t('frontPage.template.title')}
+          handleTitleClick={handleViewAllTemplates}
+        >
+          <div className="flex items-center gap-2">
+            {templateCategories.map((category) => (
+              <div key={category.categoryId} className="text-xs text-refly-text-3 leading-4">
+                {category.labelDict[templateLanguage]}
+              </div>
+            ))}
           </div>
           <div className="flex-1">
             <TemplateList
@@ -116,7 +130,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
               className="!bg-transparent !px-0"
             />
           </div>
-        </div>
+        </ModuleContainer>
       )}
     </div>
   );

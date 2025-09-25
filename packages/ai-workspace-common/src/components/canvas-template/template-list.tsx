@@ -72,7 +72,7 @@ export const TemplateCard = ({
 
   return (
     <div
-      className={`${className} m-2 group relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out h-[245px]`}
+      className={`${className} m-2 flex flex-col group relative bg-refly-bg-content-z2 rounded-xl overflow-hidden cursor-pointer border-[0.5px] border-solid border-refly-Card-Border hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out h-[245px]`}
     >
       {template?.featured && (
         <Tag color="green" className="absolute top-2 right-0 z-10 shadow-sm">
@@ -87,49 +87,51 @@ export const TemplateCard = ({
         />
       </div>
 
-      <div className="px-3 py-1 text-[13px] font-medium truncate">
-        <span>{template?.title || t('common.untitled')}</span>
-      </div>
-
-      {showUser ? (
-        <div className="px-3 mb-2 flex items-center gap-1">
-          <Avatar
-            size={18}
-            src={template.shareUser?.avatar}
-            icon={!template.shareUser?.avatar && <IoPersonOutline />}
-          />
-          <div className="font-light truncate text-xs text-gray-500">{`@${template.shareUser?.name}`}</div>
+      <div className="p-4 flex-1 flex flex-col gap-1">
+        <div className="text-sm font-medium truncate">
+          {template?.title || t('common.untitled')}
         </div>
-      ) : null}
 
-      <div className="px-3 h-[20px]">
-        <Typography.Paragraph
-          className="text-gray-400 text-xs"
-          ellipsis={{ tooltip: true, rows: 1 }}
-        >
-          {template.description || t('template.noDescription')}
-        </Typography.Paragraph>
+        {showUser ? (
+          <div className="flex items-center gap-1">
+            <Avatar
+              className="flex-shrink-0"
+              size={18}
+              src={template.shareUser?.avatar}
+              icon={!template.shareUser?.avatar && <IoPersonOutline />}
+            />
+            <div className="truncate text-xs text-refly-text-1">
+              {`@${template.shareUser?.name}`}
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <div className="absolute left-0 bottom-0 w-full">
-        <div className="absolute left-0 -top-8 w-full h-8 bg-gradient-to-b from-transparent to-white dark:to-gray-900 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+      {/* Hover overlay that slides up from bottom */}
+      <div className="absolute left-0 bottom-0 w-full rounded-xl bg-refly-bg-glass-content backdrop-blur-[20px] shadow-refly-xl transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+        <div className="p-4 h-full flex flex-col justify-between">
+          {/* Title and description section */}
+          <div className="flex-1 flex flex-col gap-1">
+            <div className="text-sm font-semibold text-refly-text-0 truncate">
+              {template?.title || t('common.untitled')}
+            </div>
+            <Typography.Paragraph
+              className="text-refly-text-2 text-xs !m-0"
+              ellipsis={{ tooltip: true, rows: 4 }}
+            >
+              {template.description || t('template.noDescription')}
+            </Typography.Paragraph>
+          </div>
 
-        <div className="relative w-full h-16 py-2 px-4 bg-white dark:bg-gray-900 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between gap-3">
-          <Button
-            type="default"
-            className="flex-1 p-1 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-            onClick={handlePreview}
-          >
-            {t('template.preview')}
-          </Button>
-          <Button
-            loading={duplicating}
-            type="primary"
-            className="flex-1 p-1 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 delay-100"
-            onClick={handleUse}
-          >
-            {t('template.use')}
-          </Button>
+          {/* Action buttons section */}
+          <div className="flex items-center justify-between gap-3 mt-3">
+            <Button loading={duplicating} type="primary" className="flex-1" onClick={handleUse}>
+              {t('template.use')}
+            </Button>
+            <Button type="default" className="w-20" onClick={handlePreview}>
+              {t('template.preview')}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -225,7 +227,7 @@ export const TemplateList = ({
               endMessage={<EndMessage />}
               scrollableTarget={scrollableTargetId}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {templateCards}
               </div>
             </InfiniteScroll>

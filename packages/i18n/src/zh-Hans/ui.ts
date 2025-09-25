@@ -837,6 +837,9 @@ const translations = {
       edit: '编辑',
       more: '更多',
     },
+    template: {
+      title: '社区模板',
+    },
     agentInputPlaceholder: '输入任务描述，Agent 将生成可复用的工作流',
     chatInputPlaceholder: '输入一个任务，支持选择模型和工具',
     githubStar: '在 GitHub 为我们点 Star!',
@@ -3309,7 +3312,7 @@ const translations = {
     templateDescriptionPlaceholder: '请输入模板描述',
     createSuccess: '模板创建成功, 请在模板库中查看',
     preview: '预览',
-    use: '使用模板',
+    use: '复制同款',
     duplicateCanvas: 'Remix 工作流',
     canvasTitle: '工作流名称',
     duplicateCanvasTitlePlaceholder: '请输入新画布名称',
