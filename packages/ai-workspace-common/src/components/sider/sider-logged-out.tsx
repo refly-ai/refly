@@ -23,9 +23,8 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
   const { t } = useTranslation();
   const { source = 'sider' } = props;
   const navigate = useNavigate();
-  const { collapse, setCollapse } = useSiderStoreShallow((state) => ({
+  const { collapse } = useSiderStoreShallow((state) => ({
     collapse: state.collapse,
-    setCollapse: state.setCollapse,
   }));
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
@@ -57,12 +56,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
     >
       <div className="flex h-full flex-col overflow-y-auto">
         <div className="p-4 pt-6">
-          <SiderLogo
-            source={source}
-            navigate={(path) => navigate(path)}
-            collapse={collapse}
-            setCollapse={setCollapse}
-          />
+          <SiderLogo navigate={(path) => navigate(path)} />
         </div>
         <div className="flex-grow flex flex-col items-center justify-center px-3">
           <div className="text-xl font-bold dark:text-gray-100">AI Native</div>

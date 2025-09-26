@@ -81,9 +81,9 @@ export const useCanvasOperationStore = create<CanvasOperationState>()(
       set({
         canvasId,
         canvasTitle,
+        shareId,
         modalVisible: true,
         modalType: 'duplicate',
-        shareId,
       }),
 
     triggerRenameSuccess: (canvas: Canvas) => {

@@ -88,7 +88,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
 
       <ModuleContainer title={t('frontPage.newWorkflow.title')} className="mt-[120px]">
         <div
-          className="w-fit flex items-center gap-2  border-[0.5px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer hover:border-refly-primary-default hover:shadow-refly-m transition-colors"
+          className="w-fit flex items-center gap-2  border-[0.5px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer hover:bg-refly-fill-hover transition-colors"
           onClick={handleNewWorkflow}
         >
           <DocInline size={42} color="var(--refly-primary-default)" />

@@ -22,17 +22,7 @@ import { StorageExceededModal } from '@refly-packages/ai-workspace-common/compon
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
-import {
-  SideLeft,
-  SideRight,
-  Account,
-  File,
-  Project,
-  Flow,
-  KnowledgeBase,
-  Subscription,
-  Contact,
-} from 'refly-icons';
+import { Account, File, Project, Flow, KnowledgeBase, Subscription, Contact } from 'refly-icons';
 
 import { useKnowledgeBaseStoreShallow } from '@refly/stores';
 import { subscriptionEnabled } from '@refly/ui-kit';
@@ -89,47 +79,16 @@ const SiderSectionHeader = ({
 };
 
 export const SiderLogo = (props: {
-  source: 'sider' | 'popover';
   navigate?: (path: string) => void;
-  collapse: boolean;
-  setCollapse: (collapse: boolean) => void;
 }) => {
-  const { source, navigate, collapse, setCollapse } = props;
+  const { navigate } = props;
 
   return (
-    <div className={cn('flex items-center mb-6 gap-2', source === 'sider' && 'justify-between')}>
-      {source === 'popover' && (
-        <Button
-          type="text"
-          icon={
-            collapse ? (
-              <SideRight size={20} className="text-refly-text-0" />
-            ) : (
-              <SideLeft size={20} className="text-refly-text-0" />
-            )
-          }
-          onClick={() => setCollapse(!collapse)}
-        />
-      )}
-
+    <div className={cn('flex items-center mb-6 gap-2 justify-between')}>
       <div className="flex items-center gap-2">
         <Logo onClick={() => navigate?.('/')} />
         <GithubStar />
       </div>
-
-      {source === 'sider' && (
-        <Button
-          type="text"
-          icon={
-            collapse ? (
-              <SideRight size={20} className="text-refly-text-0" />
-            ) : (
-              <SideLeft size={20} className="text-refly-text-0" />
-            )
-          }
-          onClick={() => setCollapse(!collapse)}
-        />
-      )}
     </div>
   );
 };
@@ -233,20 +192,14 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     userProfile: state.userProfile,
   }));
 
-  const {
-    collapse,
-    setCollapse,
-    setShowSettingModal,
-    setShowLibraryModal,
-    setSettingsModalActiveTab,
-  } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
-    setCollapse: state.setCollapse,
-    setShowSettingModal: state.setShowSettingModal,
-    setShowLibraryModal: state.setShowLibraryModal,
-    showLibraryModal: state.showLibraryModal,
-    setSettingsModalActiveTab: state.setSettingsModalActiveTab,
-  }));
+  const { collapse, setShowSettingModal, setShowLibraryModal, setSettingsModalActiveTab } =
+    useSiderStoreShallow((state) => ({
+      collapse: state.collapse,
+      setShowSettingModal: state.setShowSettingModal,
+      setShowLibraryModal: state.setShowLibraryModal,
+      showLibraryModal: state.showLibraryModal,
+      setSettingsModalActiveTab: state.setSettingsModalActiveTab,
+    }));
 
   useHandleSiderData(true);
 
@@ -361,12 +314,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     >
       <div className="flex h-full flex-col gap-3 overflow-hidden p-4 pr-2 pt-6">
         <div className="flex flex-col gap-2 flex-1 overflow-hidden">
-          <SiderLogo
-            source={source}
-            navigate={(path) => navigate(path)}
-            collapse={collapse}
-            setCollapse={setCollapse}
-          />
+          <SiderLogo navigate={(path) => navigate(path)} />
 
           <SearchQuickOpenBtn className="mb-1" />
 

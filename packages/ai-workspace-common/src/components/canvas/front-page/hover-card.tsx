@@ -24,7 +24,7 @@ export const HoverCard = memo(
 
     return (
       <div
-        className={cn('relative group overflow-hidden', className)}
+        className={cn('relative group overflow-hidden hover:shadow-refly-m', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -32,18 +32,13 @@ export const HoverCard = memo(
 
         <div
           className={cn(
-            'absolute bottom-[1px] left-[1px] right-[1px] flex items-center gap-2 py-3 px-4 rounded-b-xl transition-all duration-300 ease-in-out bg-refly-bg-glass-content backdrop-blur-[20px]',
+            'absolute bottom-[1px] left-[1px] right-[1px] flex items-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 ease-in-out bg-refly-bg-glass-content backdrop-blur-[20px]',
             isHovered ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0',
           )}
+          style={{
+            boxShadow: '0px 0px 60px 0px rgba(0, 0, 0, 0.08)',
+          }}
         >
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.05) 0%, transparent 100%)',
-              height: '8px',
-              top: '-8px',
-            }}
-          />
           <Button
             type="primary"
             icon={<Edit size={16} />}

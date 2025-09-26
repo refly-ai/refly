@@ -3,7 +3,6 @@ import { useMemo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Spin, Button, Modal } from 'antd';
 import { FileTextOutlined, PlayCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { useSiderStoreShallow } from '@refly/stores';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import '@refly-packages/ai-workspace-common/components/slideshow/styles/preview-mode.css';
 
@@ -20,10 +19,7 @@ import { useCardScroll } from '@refly-packages/ai-workspace-common/components/sl
 const SharePage = () => {
   const { shareId = '' } = useParams();
   const { t } = useTranslation();
-  const { collapse, setCollapse } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
-    setCollapse: state.setCollapse,
-  }));
+
   const { data: shareData, loading: isLoading } = useFetchShareData(shareId);
 
   // Regular mode and preview mode related states
@@ -103,16 +99,6 @@ const SharePage = () => {
       return !prev;
     });
   }, [resetSlideIndex]);
-
-  // Force hide sidebar by default
-  useEffect(() => {
-    setCollapse(true);
-  }, [setCollapse]);
-
-  // Toggle sidebar
-  const toggleSidebar = useCallback(() => {
-    setCollapse(!collapse);
-  }, [collapse, setCollapse]);
 
   // Toggle minimap
   const toggleMinimap = useCallback(() => setShowMinimap(!showMinimap), [showMinimap]);
@@ -245,13 +231,10 @@ const SharePage = () => {
   return (
     <>
       <PageLayout
-        source="page"
         showMinimap={showMinimap}
-        collapse={collapse}
         nodes={nodes}
         activeNodeIndex={activeNodeIndex}
         onNodeSelect={handleNodeSelect}
-        toggleSidebar={toggleSidebar}
         toggleMinimap={toggleMinimap}
         readonly={true}
         headerContent={

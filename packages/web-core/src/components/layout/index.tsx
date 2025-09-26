@@ -29,6 +29,7 @@ import { isDesktop } from '@refly/ui-kit';
 import { useGetUserSettings } from '@refly-packages/ai-workspace-common/hooks/use-get-user-settings';
 import { useGetMediaModel } from '@refly-packages/ai-workspace-common/hooks/use-get-media-model';
 import { useHandleUrlParamsCallback } from '@refly-packages/ai-workspace-common/hooks/use-handle-url-params-callback';
+import { useRouteCollapse } from '@refly-packages/ai-workspace-common/hooks/use-route-collapse';
 
 const Content = Layout.Content;
 
@@ -84,6 +85,9 @@ export const AppLayout = (props: AppLayoutProps) => {
 
   // Handle payment callback
   useHandleUrlParamsCallback();
+
+  // Handle sidebar collapse based on route changes
+  useRouteCollapse();
 
   const routeLogin = useMatch('/');
   const isPricing = useMatch('/pricing');
