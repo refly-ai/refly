@@ -3570,7 +3570,7 @@ const translations = {
     templateDescriptionPlaceholder: 'Please enter template description',
     createSuccess: 'Template created successfully, please view in template library',
     preview: 'Preview',
-    use: 'Copy Template',
+    use: 'Make the Same',
     duplicateCanvas: 'Remix Workflow',
     canvasTitle: 'Workflow Name',
     duplicateCanvasTitlePlaceholder: 'Please enter canvas name',
@@ -3710,6 +3710,15 @@ const translations = {
         subscription: 'Subscription',
       },
     },
+  },
+  workflowList: {
+    title: 'Workflow',
+    createWorkflow: 'Create Workflow',
+    creatYourWorkflow: 'Create your workflow',
+    noWorkflows: 'No workflows',
+    searchWorkflows: 'Search workflows',
+    shared: 'Shared',
+    personal: 'Personal',
   },
 };
 

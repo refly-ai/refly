@@ -16,7 +16,7 @@ export const DuplicateCanvasModal = memo(() => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const { canvasId, canvasName, shareId, modalVisible, modalType, reset } =
+  const { canvasId, canvasName, shareId, modalVisible, modalType, reset, triggerDuplicateSuccess } =
     useCanvasOperationStoreShallow((state) => ({
       canvasId: state.canvasId,
       canvasName: state.canvasTitle,
@@ -24,6 +24,7 @@ export const DuplicateCanvasModal = memo(() => {
       modalVisible: state.modalVisible,
       modalType: state.modalType,
       reset: state.reset,
+      triggerDuplicateSuccess: state.triggerDuplicateSuccess,
     }));
   const visible = modalVisible && modalType === 'duplicate';
 
@@ -74,6 +75,10 @@ export const DuplicateCanvasModal = memo(() => {
         message.success(t('canvas.action.duplicateSuccess'));
         reset();
         getCanvasList();
+        triggerDuplicateSuccess({
+          canvasId: data.data.canvasId,
+          title: data.data.title,
+        } as any);
 
         const newEntityId = shareId ? data.data?.entityId : data.data?.canvasId;
         if (newEntityId) {

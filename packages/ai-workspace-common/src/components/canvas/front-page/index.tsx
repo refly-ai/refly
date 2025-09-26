@@ -66,7 +66,7 @@ export const FrontPage = memo(({ projectId }: { projectId: string | null }) => {
   return (
     <div
       className={cn(
-        'w-full h-full bg-refly-bg-content-z2 overflow-y-auto rounded-lg border border-solid border-refly-Card-Border shadow-sm p-5',
+        'w-full h-full bg-refly-bg-content-z2 overflow-y-auto p-5 rounded-xl border border-solid border-refly-Card-Border',
       )}
       id="front-page-scrollable-div"
     >

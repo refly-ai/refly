@@ -238,7 +238,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     setCollapse,
     setShowSettingModal,
     setShowLibraryModal,
-    setShowCanvasListModal,
     setSettingsModalActiveTab,
   } = useSiderStoreShallow((state) => ({
     collapse: state.collapse,
@@ -246,7 +245,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     setShowSettingModal: state.setShowSettingModal,
     setShowLibraryModal: state.setShowLibraryModal,
     showLibraryModal: state.showLibraryModal,
-    setShowCanvasListModal: state.setShowCanvasListModal,
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
 
@@ -278,12 +276,12 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
       {
         icon: <Flow key="canvas" style={{ fontSize: 20 }} />,
         title: t('loggedHomePage.siderMenu.canvas'),
-        onActionClick: () => setShowCanvasListModal(true),
+        onActionClick: () => navigate('/workflow-list'),
       },
       {
         icon: <Project key="appManager" style={{ fontSize: 20 }} />,
         title: t('loggedHomePage.siderMenu.appManager'),
-        onActionClick: () => setShowLibraryModal(true),
+        onActionClick: () => navigate('/app-manager'),
       },
       {
         icon: <KnowledgeBase key="library" style={{ fontSize: 20 }} />,
@@ -291,7 +289,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         onActionClick: () => setShowLibraryModal(true),
       },
     ],
-    [t, navigate, setShowCanvasListModal, setShowLibraryModal],
+    [t, navigate, setShowLibraryModal],
   );
 
   const bottomMenuItems = useMemo(
@@ -361,7 +359,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
           : 'h-[calc(100vh-16px)] rounded-lg border-r border-solid border-[1px] border-refly-Card-Border bg-refly-bg-Glass-content backdrop-blur-md shadow-[0_6px_60px_0px_rgba(0,0,0,0.08)]',
       )}
     >
-      <div className="flex h-full flex-col gap-3 overflow-hidden p-4 pt-6">
+      <div className="flex h-full flex-col gap-3 overflow-hidden p-4 pr-2 pt-6">
         <div className="flex flex-col gap-2 flex-1 overflow-hidden">
           <SiderLogo
             source={source}

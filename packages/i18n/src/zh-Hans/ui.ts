@@ -3312,7 +3312,7 @@ const translations = {
     templateDescriptionPlaceholder: '请输入模板描述',
     createSuccess: '模板创建成功, 请在模板库中查看',
     preview: '预览',
-    use: '复制同款',
+    use: '制作同款',
     duplicateCanvas: 'Remix 工作流',
     canvasTitle: '工作流名称',
     duplicateCanvasTitlePlaceholder: '请输入新画布名称',
@@ -3745,6 +3745,15 @@ const translations = {
       loginFailed: '❌ 登录失败，请检查网络或服务器状态',
       loginError: '❌ 登录过程中发生错误',
     },
+  },
+  workflowList: {
+    title: '工作流',
+    createWorkflow: '创建工作流',
+    creatYourWorkflow: '创建你的工作流',
+    noWorkflows: '暂无工作流',
+    searchWorkflows: '搜索工作流',
+    shared: '共享',
+    personal: '个人',
   },
 };
 

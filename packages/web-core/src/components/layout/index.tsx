@@ -108,7 +108,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         }}
       >
         {showSider ? <SiderLayout source="sider" /> : null}
-        <Layout className="content-layout bg-transparent h-full flex-grow overflow-y-auto">
+        <Layout className="content-layout bg-transparent h-[calc(100vh-16px)] flex-grow overflow-y-auto m-2 rounded-xl shadow-refly-m">
           <Content>{props.children}</Content>
         </Layout>
         <BigSearchModal />
