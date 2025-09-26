@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo } from 'react';
-import { Empty, Avatar, Button, Typography, Tag } from 'antd';
+import { Empty } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import {
@@ -9,132 +9,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { CanvasTemplate } from '@refly/openapi-schema';
-import { IoPersonOutline } from 'react-icons/io5';
 import { useCanvasTemplateModal } from '@refly/stores';
 import { useDebouncedCallback } from 'use-debounce';
-import { useNavigate } from 'react-router-dom';
-import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
-import { staticPublicEndpoint } from '@refly/ui-kit';
+import { TemplateCard } from './template-card';
+
 import cn from 'classnames';
-import { useUserStoreShallow } from '@refly/stores';
-import { useAuthStoreShallow } from '@refly/stores';
-import { logEvent } from '@refly/telemetry-web';
-
-export const TemplateCard = ({
-  template,
-  className,
-  showUser = true,
-}: {
-  template: CanvasTemplate;
-  className?: string;
-  showUser?: boolean;
-}) => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { setVisible: setModalVisible } = useCanvasTemplateModal((state) => ({
-    setVisible: state.setVisible,
-  }));
-  const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
-  const isLogin = useUserStoreShallow((state) => state.isLogin);
-  const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
-    setLoginModalOpen: state.setLoginModalOpen,
-  }));
-
-  const handlePreview = (e: React.MouseEvent<HTMLDivElement>) => {
-    logEvent('home::template_preview', null, {
-      templateId: template.templateId,
-      templateName: template.title,
-    });
-
-    e.stopPropagation();
-    if (template.shareId) {
-      setModalVisible(false);
-      navigate(`/preview/canvas/${template.shareId}`);
-    }
-  };
-
-  const handleUse = (e: React.MouseEvent<HTMLDivElement>) => {
-    logEvent('home::template_use', null, {
-      templateId: template.templateId,
-      templateName: template.title,
-    });
-
-    e.stopPropagation();
-    if (!isLogin) {
-      setLoginModalOpen(true);
-      return;
-    }
-    if (template.shareId) {
-      duplicateCanvas(template.shareId, template.templateId);
-    }
-  };
-
-  return (
-    <div
-      className={`${className} m-2 group relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 ease-in-out h-[245px]`}
-    >
-      {template?.featured && (
-        <Tag color="green" className="absolute top-2 right-0 z-10 shadow-sm">
-          {t('common.featured')}
-        </Tag>
-      )}
-      <div className="h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        <img
-          src={`${staticPublicEndpoint}/share-cover/${template?.shareId}.png`}
-          alt={`${template?.title} cover`}
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      <div className="px-3 py-1 text-[13px] font-medium truncate">
-        <span>{template?.title || t('common.untitled')}</span>
-      </div>
-
-      {showUser ? (
-        <div className="px-3 mb-2 flex items-center gap-1">
-          <Avatar
-            size={18}
-            src={template.shareUser?.avatar}
-            icon={!template.shareUser?.avatar && <IoPersonOutline />}
-          />
-          <div className="font-light truncate text-xs text-gray-500">{`@${template.shareUser?.name}`}</div>
-        </div>
-      ) : null}
-
-      <div className="px-3 h-[20px]">
-        <Typography.Paragraph
-          className="text-gray-400 text-xs"
-          ellipsis={{ tooltip: true, rows: 1 }}
-        >
-          {template.description || t('template.noDescription')}
-        </Typography.Paragraph>
-      </div>
-
-      <div className="absolute left-0 bottom-0 w-full">
-        <div className="absolute left-0 -top-8 w-full h-8 bg-gradient-to-b from-transparent to-white dark:to-gray-900 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-
-        <div className="relative w-full h-16 py-2 px-4 bg-white dark:bg-gray-900 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between gap-3">
-          <Button
-            type="default"
-            className="flex-1 p-1 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-            onClick={handlePreview}
-          >
-            {t('template.preview')}
-          </Button>
-          <Button
-            loading={duplicating}
-            type="primary"
-            className="flex-1 p-1 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 delay-100"
-            onClick={handleUse}
-          >
-            {t('template.use')}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 interface TemplateListProps {
   source: 'front-page' | 'template-library';
@@ -163,7 +42,7 @@ export const TemplateList = ({
         query: {
           language,
           categoryId: categoryId === 'my-templates' ? undefined : categoryId,
-          scope: categoryId === 'my-templates' ? 'private' : 'public',
+          scope: categoryId === 'my-templates' ? 'private' : 'private',
           ...queryPayload,
         },
       });
@@ -225,7 +104,7 @@ export const TemplateList = ({
               endMessage={<EndMessage />}
               scrollableTarget={scrollableTargetId}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {templateCards}
               </div>
             </InfiniteScroll>

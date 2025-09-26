@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Divider } from 'antd';
 import { useListCanvasTemplates } from '@refly-packages/ai-workspace-common/queries';
-import { TemplateCard } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
+import { TemplateCard } from '@refly-packages/ai-workspace-common/components/canvas-template/template-card';
 import { useCanvasTemplateModal } from '@refly/stores';
 import { VscNotebookTemplate } from 'react-icons/vsc';
 import { useDebouncedCallback } from 'use-debounce';

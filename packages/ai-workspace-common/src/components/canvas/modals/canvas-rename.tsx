@@ -32,17 +32,19 @@ export const CanvasRenameModal = memo(() => {
     modalVisible,
     modalType,
     reset: resetCanvasOperationState,
+    triggerRenameSuccess,
   } = useCanvasOperationStoreShallow((state) => ({
     canvasId: state.canvasId,
     canvasTitle: state.canvasTitle,
     modalVisible: state.modalVisible,
     modalType: state.modalType,
     reset: state.reset,
+    triggerRenameSuccess: state.triggerRenameSuccess,
   }));
   const setCanvasTitle = useCanvasStoreShallow((state) => state.setCanvasTitle);
   const [editedTitle, setEditedTitle] = useState(canvasTitle);
 
-  const updateCanvasTitleInSider = useSiderStoreShallow((state) => state.updateCanvasTitle);
+  const updateCanvasTitleInStore = useSiderStoreShallow((state) => state.updateCanvasTitle);
   const inputRef = useRef<InputRef | null>(null);
 
   useEffect(() => {
@@ -72,12 +74,25 @@ export const CanvasRenameModal = memo(() => {
       const newTitle = await updateRemoteCanvasTitle(canvasId, editedTitle);
       if (newTitle) {
         setCanvasTitle(canvasId, newTitle);
-        updateCanvasTitleInSider(canvasId, newTitle);
+        updateCanvasTitleInStore(canvasId, newTitle);
+
+        // Trigger rename success event with updated canvas data
+        triggerRenameSuccess({
+          canvasId,
+          title: newTitle,
+        } as any);
 
         resetCanvasOperationState();
       }
     }
-  }, [canvasId, editedTitle, setCanvasTitle, updateCanvasTitleInSider, resetCanvasOperationState]);
+  }, [
+    canvasId,
+    editedTitle,
+    setCanvasTitle,
+    updateCanvasTitleInStore,
+    resetCanvasOperationState,
+    triggerRenameSuccess,
+  ]);
 
   const handleCancel = useCallback(() => {
     resetCanvasOperationState();

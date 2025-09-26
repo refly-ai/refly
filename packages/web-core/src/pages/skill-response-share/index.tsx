@@ -1,33 +1,19 @@
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useSiderStoreShallow } from '@refly/stores';
 import { Result } from 'antd';
 import { SimpleStepCard } from '@refly-packages/ai-workspace-common/components/slideshow/components/SimpleStepCard';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { PreviewChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/preview-chat-input';
 import { ActionStep } from '@refly/openapi-schema';
-import { useEffect, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import PoweredByRefly from '../../components/common/PoweredByRefly';
 
 const SkillResponseSharePage = () => {
   const { shareId = '' } = useParams();
   const { t } = useTranslation();
-  const { collapse, setCollapse } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
-    setCollapse: state.setCollapse,
-  }));
+
   const { data: skillResponseData, loading: isLoading } = useFetchShareData(shareId);
   const [showBranding, setShowBranding] = useState(true);
-
-  // Force collapse by default
-  useEffect(() => {
-    setCollapse(true);
-  }, [setCollapse]);
-
-  // Toggle sidebar
-  const toggleSidebar = useCallback(() => {
-    setCollapse(!collapse);
-  }, [collapse, setCollapse]);
 
   // Handle close button click
   const handleClose = useCallback(() => {
@@ -63,13 +49,9 @@ const SkillResponseSharePage = () => {
 
   return (
     <div className="flex h-full w-full grow relative">
-      {collapse && showBranding && <PoweredByRefly onClick={toggleSidebar} onClose={handleClose} />}
+      {showBranding && <PoweredByRefly onClose={handleClose} />}
 
-      <div
-        className={`absolute h-16 bottom-0 left-0 right-0 box-border flex justify-between items-center py-2 px-4 pr-0 bg-transparent ${
-          collapse ? 'w-[calc(100vw-12px)]' : 'w-[calc(100vw-260px)]'
-        }`}
-      >
+      <div className="absolute h-16 w-[calc(100vw-12px)] bottom-0 left-0 right-0 box-border flex justify-between items-center py-2 px-4 pr-0 bg-transparent">
         {/* Removed the collapse button since we now use PoweredByRefly for toggling */}
       </div>
 

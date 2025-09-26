@@ -19,7 +19,6 @@ import {
   FileTextOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { useSiderStoreShallow } from '@refly/stores';
 import { NodeRenderer } from './components/NodeRenderer';
 import { type NodeRelation } from './components/ArtifactRenderer';
 import './styles/preview-mode.css';
@@ -85,17 +84,6 @@ export function SlideshowEdit(props: PageEditProps) {
   // Empty content modal state
   const [emptyContentModalVisible, setEmptyContentModalVisible] = useState(false);
 
-  // Get sidebar state
-  const { collapse, setCollapse } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
-    setCollapse: state.setCollapse,
-  }));
-
-  // Force hide sidebar by default
-  useEffect(() => {
-    setCollapse(true);
-  }, [setCollapse]);
-
   // Use abstract UI state management hook
   const {
     uiState,
@@ -121,9 +109,6 @@ export function SlideshowEdit(props: PageEditProps) {
     isPreviewMode,
     handleUiInteraction,
   });
-
-  // UI interaction handling methods
-  const toggleSidebar = useCallback(() => setCollapse(!collapse), [collapse, setCollapse]);
 
   const toggleMinimap = useCallback(() => {
     setShowMinimap(!showMinimap);
@@ -707,15 +692,12 @@ export function SlideshowEdit(props: PageEditProps) {
 
   return (
     <PageLayout
-      source={source}
       showMinimap={showMinimap}
-      collapse={collapse}
       nodes={nodesList}
       activeNodeIndex={activeNodeIndex}
       onNodeSelect={handleNodeSelect}
       onReorderNodes={handleReorderNodes}
       toggleMinimap={toggleMinimap}
-      toggleSidebar={toggleSidebar}
       headerContent={
         <div className="flex justify-between items-center w-full">
           <div className="flex items-center flex-1 min-w-0">

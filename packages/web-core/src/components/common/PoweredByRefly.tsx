@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import Logo from '../../assets/logo.svg';
 
 interface PoweredByReflyProps {
-  onClick: () => void;
   onClose?: () => void;
   className?: string;
 }
@@ -12,7 +11,7 @@ interface PoweredByReflyProps {
  * PoweredByRefly component displayed in shared pages when sidebar is collapsed
  * Used to provide branding and a way to expand the sidebar
  */
-const PoweredByRefly = memo(({ onClick, onClose, className = '' }: PoweredByReflyProps) => {
+const PoweredByRefly = memo(({ onClose, className = '' }: PoweredByReflyProps) => {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -27,7 +26,6 @@ const PoweredByRefly = memo(({ onClick, onClose, className = '' }: PoweredByRefl
     <div
       className={`fixed bottom-4 right-4 flex items-center gap-2 rounded-lg bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm p-2 shadow-sm hover:shadow-lg z-10 cursor-pointer transition-all border border-gray-200/80 dark:border-gray-700/80 hover:bg-gray-100 dark:hover:bg-gray-700/80 ${className} border-solid`}
       style={{ borderWidth: '0.5px' }}
-      onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

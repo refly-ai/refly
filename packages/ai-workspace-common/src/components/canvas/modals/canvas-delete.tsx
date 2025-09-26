@@ -12,15 +12,15 @@ export const CanvasDeleteModal = memo(() => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleteFile, setIsDeleteFile] = useState(false);
-  const { canvasId, canvasTitle, modalVisible, modalType, reset } = useCanvasOperationStoreShallow(
-    (state) => ({
+  const { canvasId, canvasTitle, modalVisible, modalType, reset, triggerDeleteSuccess } =
+    useCanvasOperationStoreShallow((state) => ({
       canvasId: state.canvasId,
       canvasTitle: state.canvasTitle,
       modalVisible: state.modalVisible,
       modalType: state.modalType,
       reset: state.reset,
-    }),
-  );
+      triggerDeleteSuccess: state.triggerDeleteSuccess,
+    }));
   const { deleteCanvas } = useDeleteCanvas();
   const { refetchUsage } = useSubscriptionUsage();
   const { getSourceList } = useHandleSiderData();
@@ -36,6 +36,12 @@ export const CanvasDeleteModal = memo(() => {
     setIsLoading(false);
 
     if (success) {
+      // Trigger delete success event with canvas data
+      triggerDeleteSuccess({
+        canvasId,
+        title: canvasTitle,
+      } as any);
+
       reset();
       refetchUsage();
       if (isDeleteFile && projectId) {

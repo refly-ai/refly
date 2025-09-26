@@ -1,0 +1,9 @@
+.workflow-list {
+    .ant-table-header {
+        display: none!important;
+    }
+
+    .ant-table-cell-row-hover {
+        background-color: var(--refly-tertiary-hover)!important;
+    }
+}
