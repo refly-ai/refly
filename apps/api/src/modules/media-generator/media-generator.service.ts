@@ -432,6 +432,7 @@ export class MediaGeneratorService {
                   provider: provider,
                   providerItemId: request.providerItemId,
                 },
+                parentResultId,
               },
             },
           },

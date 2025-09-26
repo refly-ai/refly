@@ -43,6 +43,7 @@ interface VideoNodeMeta {
   resultId?: string;
   contextItems?: IContextItem[];
   modelInfo?: ModelInfo;
+  parentResultId?: string;
 }
 
 interface VideoNodeProps extends NodeProps {

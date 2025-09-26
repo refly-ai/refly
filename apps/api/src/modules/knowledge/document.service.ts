@@ -366,6 +366,7 @@ export class DocumentService {
             entityId: doc.docId,
             metadata: {
               status: 'finish',
+              parentResultId: param.resultId,
             },
             contentPreview: doc.contentPreview,
           },

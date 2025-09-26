@@ -6,7 +6,7 @@ import {
   CanvasData,
 } from '@refly/openapi-schema';
 import { genCanvasVersionId, genStartID, genNodeID, deepmerge } from '@refly/utils';
-import { deduplicateNodes, deduplicateEdges } from './utils';
+import { deduplicateNodes, deduplicateEdges, prepareAddNode } from './utils';
 import { MAX_STATE_TX_COUNT, MAX_VERSION_AGE } from './constants';
 
 export const initEmptyCanvasState = (): CanvasState => {
@@ -97,7 +97,21 @@ export const applyCanvasTransaction = (
     switch (nodeDiff.type) {
       case 'add':
         if (nodeDiff.to) {
-          newNodes.push(nodeDiff.to as CanvasNode);
+          const nodeToAdd = nodeDiff.to as CanvasNode;
+          // Check if node has parentResultId and auto-connect to parent
+          const parentResultId = nodeToAdd.data?.metadata?.parentResultId;
+          if (parentResultId && typeof parentResultId === 'string') {
+            const { newEdges: parentEdges } = prepareAddNode({
+              node: nodeToAdd,
+              nodes: newNodes,
+              edges: newEdges,
+              connectTo: [{ type: 'skillResponse', entityId: parentResultId }],
+              autoLayout: true,
+            });
+            console.log('parentEdges', parentEdges);
+            newEdges.push(...parentEdges);
+          }
+          newNodes.push(nodeToAdd);
         }
         break;
       case 'update':

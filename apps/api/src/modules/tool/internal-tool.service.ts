@@ -86,6 +86,7 @@ export class InternalToolService {
               entityId: document.docId,
               metadata: {
                 status: 'finish',
+                parentResultId: resultId,
               },
             },
           },
@@ -188,6 +189,7 @@ export class InternalToolService {
               entityId: codeArtifact.artifactId,
               metadata: {
                 status: 'generating',
+                parentResultId: resultId,
               },
             },
           },

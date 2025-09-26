@@ -420,6 +420,10 @@ export class CanvasSyncService {
       autoLayout: options?.autoLayout, // Pass autoLayout parameter
     });
 
+    this.logger.log(
+      `[addNodeToCanvas] new node: ${JSON.stringify(newNode)}, new edges: ${JSON.stringify(newEdges)}`,
+    );
+
     await this.syncState(
       user,
       {

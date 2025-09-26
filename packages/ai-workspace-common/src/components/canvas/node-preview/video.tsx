@@ -14,6 +14,7 @@ type VideoNodeMeta = {
   contextItems?: IContextItem[];
   resultId?: string;
   modelInfo?: ModelInfo;
+  parentResultId?: string;
 };
 
 interface VideoNodePreviewProps {

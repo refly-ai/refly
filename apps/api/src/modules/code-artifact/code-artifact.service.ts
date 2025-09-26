@@ -133,6 +133,7 @@ export class CodeArtifactService {
             entityId: codeArtifact.artifactId,
             metadata: {
               status: 'finish',
+              parentResultId: param.resultId,
             },
             // Use the first 10 lines of content for preview
             contentPreview: (content?.split(/\r?\n/) ?? []).slice(0, 10).join('\n'),

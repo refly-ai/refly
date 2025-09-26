@@ -56,6 +56,7 @@ export interface DocumentNodeMeta {
   style?: React.CSSProperties;
   originalWidth?: number;
   shareId?: string;
+  parentResultId?: string;
 }
 
 export interface ResourceNodeMeta {
@@ -82,6 +83,7 @@ export interface CodeArtifactNodeMeta {
   originalWidth?: number;
   activeTab?: 'code' | 'preview';
   code?: string; // @deprecated
+  parentResultId?: string;
 }
 
 export type SkillNodeMeta = {
@@ -170,6 +172,7 @@ export type ImageNodeMeta = {
   originalWidth?: number;
   contextItems?: IContextItem[];
   modelInfo?: ModelInfo;
+  parentResultId?: string;
 };
 
 // Website node metadata

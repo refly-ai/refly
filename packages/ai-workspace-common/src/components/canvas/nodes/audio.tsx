@@ -48,6 +48,7 @@ interface AudioNodeMeta {
   resultId?: string;
   contextItems?: IContextItem[];
   modelInfo?: ModelInfo;
+  parentResultId?: string;
 }
 
 interface AudioNodeProps extends NodeProps {
