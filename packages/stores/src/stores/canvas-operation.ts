@@ -6,7 +6,6 @@ import { Canvas } from '@refly/openapi-schema';
 // Event callback types
 type CanvasRenameSuccessCallback = (canvas: Canvas) => void;
 type CanvasDeleteSuccessCallback = (canvas: Canvas) => void;
-type CanvasDuplicateSuccessCallback = (canvas: Canvas) => void;
 
 interface CanvasOperationState {
   // state
@@ -19,7 +18,6 @@ interface CanvasOperationState {
   // event callbacks
   onRenameSuccess?: CanvasRenameSuccessCallback;
   onDeleteSuccess?: CanvasDeleteSuccessCallback;
-  onDuplicateSuccess?: CanvasDuplicateSuccessCallback;
 
   // method
   openRenameModal: (
@@ -32,16 +30,11 @@ interface CanvasOperationState {
     canvasTitle: string,
     onSuccess?: CanvasDeleteSuccessCallback,
   ) => void;
-  openDuplicateModal: (
-    canvasId: string,
-    canvasTitle: string,
-    onSuccess?: CanvasDuplicateSuccessCallback,
-  ) => void;
+  openDuplicateModal: (canvasId: string, canvasTitle: string, shareId?: string) => void;
 
   // event triggers
   triggerRenameSuccess: (canvas: Canvas) => void;
   triggerDeleteSuccess: (canvas: Canvas) => void;
-  triggerDuplicateSuccess: (canvas: Canvas) => void;
 
   reset: () => void;
 }
@@ -54,7 +47,6 @@ const defaultState = {
   modalType: 'rename' as const,
   onRenameSuccess: undefined,
   onDeleteSuccess: undefined,
-  onDuplicateSuccess: undefined,
 };
 
 export const useCanvasOperationStore = create<CanvasOperationState>()(
@@ -85,17 +77,13 @@ export const useCanvasOperationStore = create<CanvasOperationState>()(
         modalType: 'delete',
         onDeleteSuccess: onSuccess,
       }),
-    openDuplicateModal: (
-      canvasId: string,
-      canvasTitle: string,
-      onSuccess?: CanvasDuplicateSuccessCallback,
-    ) =>
+    openDuplicateModal: (canvasId: string, canvasTitle: string, shareId?: string) =>
       set({
         canvasId,
         canvasTitle,
         modalVisible: true,
         modalType: 'duplicate',
-        onDuplicateSuccess: onSuccess,
+        shareId,
       }),
 
     triggerRenameSuccess: (canvas: Canvas) => {
@@ -105,10 +93,6 @@ export const useCanvasOperationStore = create<CanvasOperationState>()(
     triggerDeleteSuccess: (canvas: Canvas) => {
       const { onDeleteSuccess } = get();
       onDeleteSuccess?.(canvas);
-    },
-    triggerDuplicateSuccess: (canvas: Canvas) => {
-      const { onDuplicateSuccess } = get();
-      onDuplicateSuccess?.(canvas);
     },
 
     reset: () => set({ ...defaultState }),

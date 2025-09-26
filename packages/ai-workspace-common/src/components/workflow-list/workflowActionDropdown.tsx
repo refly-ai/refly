@@ -11,11 +11,10 @@ interface WorkflowActionDropdown {
   children?: React.ReactNode;
   onRenameSuccess?: (workflow: Canvas) => void;
   onDeleteSuccess?: (workflow: Canvas) => void;
-  onDuplicateSuccess?: (workflow: Canvas) => void;
 }
 
 export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
-  const { workflow, children, onRenameSuccess, onDeleteSuccess, onDuplicateSuccess } = props;
+  const { workflow, children, onRenameSuccess, onDeleteSuccess } = props;
   const { t } = useTranslation();
   const [popupVisible, setPopupVisible] = useState(false);
 
@@ -50,7 +49,7 @@ export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
           className="flex items-center gap-1"
           onClick={(e) => {
             e.stopPropagation();
-            openDuplicateModal(workflow.canvasId, workflow.title, onDuplicateSuccess);
+            openDuplicateModal(workflow.canvasId, workflow.title);
             setPopupVisible(false);
           }}
         >
