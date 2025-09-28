@@ -592,6 +592,18 @@ export type Canvas = {
    */
   status?: CanvasStatus;
   /**
+   * Canvas owner
+   */
+  owner?: ShareUser;
+  /**
+   * Canvas share record
+   */
+  shareRecord?: ShareRecord;
+  /**
+   * Used toolsets in the canvas
+   */
+  usedToolsets?: Array<GenericToolset>;
+  /**
    * Minimap URL
    */
   minimapUrl?: string;

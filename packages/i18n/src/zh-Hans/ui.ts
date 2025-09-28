@@ -822,10 +822,23 @@ const translations = {
     ],
   },
   frontPage: {
-    welcome: {
-      part1: '全球首个开源',
-      part2: '人机协作 Agent',
-      part3: '平台',
+    guide: {
+      title: '5分钟上手',
+      description: '教程学会如何构建一个AI 驱动的工作流',
+      view: '去查看',
+    },
+    newWorkflow: {
+      title: '新建',
+      buttonText: '新建工作流',
+      buttonDescription: '从空白或模板新建工作流',
+    },
+    recentWorkflows: {
+      title: '近期工作流',
+      edit: '编辑',
+      more: '更多',
+    },
+    template: {
+      title: '社区模板',
     },
     agentInputPlaceholder: '输入任务描述，Agent 将生成可复用的工作流',
     chatInputPlaceholder: '输入一个任务，支持选择模型和工具',
@@ -1179,7 +1192,7 @@ const translations = {
       searchNodeDescription: '搜索画布中的节点，点击节点进行定位。',
       enablePointerMode: '启用框选模式',
       disablePointerMode: '关闭框选模式',
-      deleteCanvas: '删除画布',
+      deleteCanvas: '删除',
       importResource: '导入资源',
       importResourceDescription:
         '通过在线搜索、手动添加网页链接或文本的方式批量添加写作素材在画布中阅读或消费。',
@@ -1219,8 +1232,8 @@ const translations = {
       toggleLaunchpadTitle: '切换 AI 提问框展示状态',
       editTitle: '编辑画布标题',
       editTitlePlaceholder: '请输入画布标题',
-      rename: '编辑画布标题',
-      duplicate: '复制画布',
+      rename: '重命名',
+      duplicate: '复制',
       syncingChanges: '同步中',
       synced: '上次同步于{{time}}',
       mouse: '鼠标模式',
@@ -2017,6 +2030,9 @@ const translations = {
       },
     },
     siderMenu: {
+      home: '首页',
+      canvas: '工作流',
+      appManager: '发布管理',
       contactUs: '联系我们',
       addToChrome: '安装浏览器插件',
       canvasTitle: '画布',
@@ -2026,7 +2042,6 @@ const translations = {
       libraryDescription:
         '创建、编辑和查看知识库，包含所有导入的资源以及创建的文档，支持 AI 语义搜索和回答。',
       subscription: '订阅管理',
-      canvas: '画布',
       newCanvas: '新建画布',
       importCanvas: '导入画布',
       news: '新特性',
@@ -2049,7 +2064,6 @@ const translations = {
       viewTutorial: '查看文档',
       tour: '查看教程',
       template: '模板',
-      home: '首页',
       systemTheme: '外观',
     },
   },
@@ -3303,7 +3317,7 @@ const translations = {
     templateDescriptionPlaceholder: '请输入模板描述',
     createSuccess: '模板创建成功, 请在模板库中查看',
     preview: '预览',
-    use: '使用模板',
+    use: '制作同款',
     duplicateCanvas: 'Remix 工作流',
     canvasTitle: '工作流名称',
     duplicateCanvasTitlePlaceholder: '请输入新画布名称',
@@ -3736,6 +3750,15 @@ const translations = {
       loginFailed: '❌ 登录失败，请检查网络或服务器状态',
       loginError: '❌ 登录过程中发生错误',
     },
+  },
+  workflowList: {
+    title: '工作流',
+    createWorkflow: '创建工作流',
+    creatYourWorkflow: '创建你的工作流',
+    noWorkflows: '暂无工作流',
+    searchWorkflows: '搜索工作流',
+    shared: '共享',
+    personal: '个人',
   },
 };
 

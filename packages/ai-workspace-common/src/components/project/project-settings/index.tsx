@@ -11,12 +11,9 @@ import { ActionDropdown } from '@refly-packages/ai-workspace-common/components/w
 import { SlPicture } from 'react-icons/sl';
 import { DownOutlined } from '@ant-design/icons';
 import { useSiderStoreShallow } from '@refly/stores';
-import { SideLeft } from 'refly-icons';
 
 const { Paragraph, Text } = Typography;
 export const ProjectSettings = ({
-  source,
-  setCollapse,
   data,
   onUpdate,
 }: {
@@ -56,14 +53,6 @@ export const ProjectSettings = ({
             }}
             setEditProjectModalVisible={setCreateProjectModalVisible}
           />
-          {source === 'sider' && (
-            <Button
-              type="text"
-              size="small"
-              icon={<SideLeft className={cn(iconClassName, 'text-gray-500')} />}
-              onClick={() => setCollapse(true)}
-            />
-          )}
         </div>
       </div>
 

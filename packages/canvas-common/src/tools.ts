@@ -83,3 +83,27 @@ export const extractToolsetsWithNodes = (nodes: CanvasNode[]): ToolWithNodes[] =
 
   return Array.from(toolMap.values());
 };
+
+/**
+ * Check if two toolset arrays have changed by comparing their IDs
+ * @param currentToolsets - Current toolsets from database
+ * @param newToolsets - New toolsets extracted from canvas nodes
+ * @returns true if toolsets have changed, false otherwise
+ */
+export const haveToolsetsChanged = (
+  currentToolsets: GenericToolset[] = [],
+  newToolsets: GenericToolset[] = [],
+): boolean => {
+  const currentToolsetIds = new Set(
+    (currentToolsets ?? []).map((t) => t?.id).filter((id): id is string => Boolean(id)),
+  );
+  const newToolsetIds = new Set(
+    (newToolsets ?? []).map((t) => t?.id).filter((id): id is string => Boolean(id)),
+  );
+
+  return (
+    currentToolsetIds.size !== newToolsetIds.size ||
+    [...currentToolsetIds].some((id) => !newToolsetIds.has(id)) ||
+    [...newToolsetIds].some((id) => !currentToolsetIds.has(id))
+  );
+};

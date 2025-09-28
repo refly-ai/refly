@@ -1,31 +1,17 @@
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useSiderStoreShallow } from '@refly/stores';
 import { Result } from 'antd';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { useEffect, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import PoweredByRefly from '../../components/common/PoweredByRefly';
 
 const DocumentSharePage = () => {
   const { shareId = '' } = useParams();
   const { t } = useTranslation();
-  const { collapse, setCollapse } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
-    setCollapse: state.setCollapse,
-  }));
+
   const { data: documentData, loading: isLoading } = useFetchShareData(shareId);
   const [showBranding, setShowBranding] = useState(true);
-
-  // Force collapse by default
-  useEffect(() => {
-    setCollapse(true);
-  }, [setCollapse]);
-
-  // Toggle sidebar
-  const toggleSidebar = useCallback(() => {
-    setCollapse(!collapse);
-  }, [collapse, setCollapse]);
 
   // Handle close button click
   const handleClose = useCallback(() => {
@@ -61,7 +47,7 @@ const DocumentSharePage = () => {
 
   return (
     <div className="flex h-full w-full grow relative">
-      {collapse && showBranding && <PoweredByRefly onClick={toggleSidebar} onClose={handleClose} />}
+      {showBranding && <PoweredByRefly onClose={handleClose} />}
 
       {/* Main content */}
       <div className="flex h-full w-full grow bg-white dark:bg-black overflow-auto">

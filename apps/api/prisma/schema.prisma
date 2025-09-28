@@ -453,6 +453,8 @@ model Canvas {
   stateStorageKey   String?        @map("state_storage_key")
   /// Minimap storage key
   minimapStorageKey String?        @map("minimap_storage_key")
+  /// Used toolsets (JSON array of `GenericToolset`)
+  usedToolsets      String?        @map("used_toolsets")
   /// Whether this canvas is readonly
   readOnly          Boolean        @default(false) @map("read_only")
   /// Whether this canvas is public

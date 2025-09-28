@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractToolsetsWithNodes, purgeToolsets } from './tools';
+import { extractToolsetsWithNodes, purgeToolsets, haveToolsetsChanged } from './tools';
 import type { CanvasNode, GenericToolset } from '@refly/openapi-schema';
 
 // Helper to create a minimal CanvasNode
@@ -15,10 +15,15 @@ const createNode = (id: string, type = 'document', metadata: Record<string, any>
 });
 
 // Helper to create a minimal GenericToolset
-const createToolset = (id: string, name = `Toolset ${id}`) => ({
+const createToolset = (
+  id: string,
+  name = `Toolset ${id}`,
+  type: 'regular' | 'mcp' = 'regular',
+) => ({
   id,
   name,
-  tools: [],
+  type,
+  selectedTools: [],
 });
 
 // Helper to create a GenericToolset with sensitive data for testing
@@ -542,5 +547,74 @@ describe('purgeToolsets', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual(toolset);
+  });
+});
+
+describe('haveToolsetsChanged', () => {
+  it('should return false when toolsets are identical', () => {
+    const toolsets1: GenericToolset[] = [createToolset('tool1'), createToolset('tool2')];
+    const toolsets2: GenericToolset[] = [createToolset('tool1'), createToolset('tool2')];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(false);
+  });
+
+  it('should return false when both arrays are empty', () => {
+    expect(haveToolsetsChanged([], [])).toBe(false);
+  });
+
+  it('should return false when both arrays are undefined/null', () => {
+    expect(haveToolsetsChanged(undefined, undefined)).toBe(false);
+    expect(haveToolsetsChanged(undefined, undefined)).toBe(false);
+  });
+
+  it('should return true when toolsets have different IDs', () => {
+    const toolsets1: GenericToolset[] = [createToolset('tool1')];
+    const toolsets2: GenericToolset[] = [createToolset('tool2')];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(true);
+  });
+
+  it('should return true when first array has more toolsets', () => {
+    const toolsets1: GenericToolset[] = [createToolset('tool1'), createToolset('tool2')];
+    const toolsets2: GenericToolset[] = [createToolset('tool1')];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(true);
+  });
+
+  it('should return true when second array has more toolsets', () => {
+    const toolsets1: GenericToolset[] = [createToolset('tool1')];
+    const toolsets2: GenericToolset[] = [createToolset('tool1'), createToolset('tool2')];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(true);
+  });
+
+  it('should return false when toolsets are in different order', () => {
+    const toolsets1: GenericToolset[] = [createToolset('tool1'), createToolset('tool2')];
+    const toolsets2: GenericToolset[] = [createToolset('tool2'), createToolset('tool1')];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(false);
+  });
+
+  it('should return true when toolset has no ID', () => {
+    const toolsets1: GenericToolset[] = [
+      { name: 'No ID Toolset', type: 'regular', selectedTools: [] } as any as GenericToolset,
+    ];
+    const toolsets2: GenericToolset[] = [createToolset('tool1')];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(true);
+  });
+
+  it('should handle undefined/null toolsets in arrays', () => {
+    const toolsets1: GenericToolset[] = [createToolset('tool1')];
+    const toolsets2: GenericToolset[] = [createToolset('tool1')];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(false);
+  });
+
+  it('should return true when one array has valid toolsets and other has invalid ones', () => {
+    const toolsets1: GenericToolset[] = [createToolset('tool1')];
+    const toolsets2: GenericToolset[] = [{ id: 'invalid', name: 'Invalid', type: 'regular' }];
+
+    expect(haveToolsetsChanged(toolsets1, toolsets2)).toBe(true);
   });
 });

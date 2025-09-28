@@ -922,6 +922,22 @@ export const CanvasSchema = {
       description: 'Canvas status',
       $ref: '#/components/schemas/CanvasStatus',
     },
+    owner: {
+      description: 'Canvas owner',
+      $ref: '#/components/schemas/ShareUser',
+    },
+    shareRecord: {
+      description: 'Canvas share record',
+      $ref: '#/components/schemas/ShareRecord',
+    },
+    usedToolsets: {
+      type: 'array',
+      description: 'Used toolsets in the canvas',
+      items: {
+        type: 'object',
+        $ref: '#/components/schemas/GenericToolset',
+      },
+    },
     minimapUrl: {
       type: 'string',
       description: 'Minimap URL',

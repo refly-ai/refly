@@ -834,10 +834,23 @@ const translations = {
     ],
   },
   frontPage: {
-    welcome: {
-      part1: 'The World #1 Open Source',
-      part2: 'Human-AI Collaborative Agent',
-      part3: 'Platform',
+    guide: {
+      title: '5 minutes to get started',
+      description: 'Tutorial to learn how to build an AI-driven workflow',
+      view: 'Go to view',
+    },
+    newWorkflow: {
+      title: 'New',
+      buttonText: 'New Workflow',
+      buttonDescription: 'Create a new workflow from scratch or use a template',
+    },
+    recentWorkflows: {
+      title: 'Recent Workflows',
+      edit: 'Edit',
+      more: 'More',
+    },
+    template: {
+      title: 'Community Templates',
     },
     agentInputPlaceholder: 'Enter task description, Agent will generate reusable workflows',
     chatInputPlaceholder: 'Enter a task (choose model & tools)',
@@ -1197,7 +1210,7 @@ const translations = {
       searchNodeDescription: 'Search nodes in the canvas, click to locate.',
       enablePointerMode: 'Enable Pointer Mode',
       disablePointerMode: 'Disable Pointer Mode',
-      deleteCanvas: 'Delete Canvas',
+      deleteCanvas: 'Delete',
       importResource: 'Import Resource',
       importResourceDescription:
         'Import resources through online search, manual addition of web links or text to add writing materials for consumption in the canvas.',
@@ -1239,8 +1252,8 @@ const translations = {
       toggleLaunchpadTitle: 'Toggle Ask AI Display State',
       editTitle: 'Edit Canvas Title',
       editTitlePlaceholder: 'Please enter the title of the canvas',
-      rename: 'Edit Canvas Name',
-      duplicate: 'Duplicate Canvas',
+      rename: 'Rename',
+      duplicate: 'Duplicate',
       syncingChanges: 'Syncing Changes',
       synced: 'Last synced at {{time}}',
       mouse: 'Mouse Mode',
@@ -2049,6 +2062,9 @@ const translations = {
       },
     },
     siderMenu: {
+      home: 'Home',
+      canvas: 'Workflow',
+      appManager: 'App Manager',
       contactUs: 'Contact Us',
       addToChrome: 'Install Browser Extension',
       canvasTitle: 'Canvas',
@@ -2058,7 +2074,6 @@ const translations = {
       libraryDescription:
         'Create, edit, and view knowledge base, including all imported resources and created documents, supporting AI semantic search and answering.',
       subscription: 'Subscription',
-      canvas: 'Canvas',
       newCanvas: 'New Canvas',
       importCanvas: 'Import Canvas',
       news: "What's new?",
@@ -2082,7 +2097,6 @@ const translations = {
       viewTutorial: 'View Docs',
       tour: 'View Tutorial',
       template: 'Template',
-      home: 'Home',
       systemTheme: 'Appearance',
     },
   },
@@ -3561,7 +3575,7 @@ const translations = {
     templateDescriptionPlaceholder: 'Please enter template description',
     createSuccess: 'Template created successfully, please view in template library',
     preview: 'Preview',
-    use: 'Use Template',
+    use: 'Make the Same',
     duplicateCanvas: 'Remix Workflow',
     canvasTitle: 'Workflow Name',
     duplicateCanvasTitlePlaceholder: 'Please enter canvas name',
@@ -3701,6 +3715,15 @@ const translations = {
         subscription: 'Subscription',
       },
     },
+  },
+  workflowList: {
+    title: 'Workflow',
+    createWorkflow: 'Create Workflow',
+    creatYourWorkflow: 'Create your workflow',
+    noWorkflows: 'No workflows',
+    searchWorkflows: 'Search workflows',
+    shared: 'Shared',
+    personal: 'Personal',
   },
 };
 

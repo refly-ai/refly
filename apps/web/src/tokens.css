@@ -3,7 +3,7 @@
 :root {
   --refly-bg-content-z2: #ffffff;
   --refly-bg-body-z0: #ffffff;
-  --refly-bg-main-z1: #f0f0f0;
+  --refly-bg-main-z1: #ffffff;
   --refly-bg-float-z3: #ffffff;
   --refly-bg-glass-content: rgba(255, 255, 255, 0.9);
   /* Gradient tokens */
@@ -59,7 +59,7 @@
 .dark {
   --refly-bg-content-z2: #252525;
   --refly-bg-body-z0: #0e0e0e;
-  --refly-bg-main-z1: #2b2b2c;
+  --refly-bg-main-z1: #191919;
   --refly-bg-float-z3: #292929;
   --refly-bg-glass-content: rgba(30, 30, 30, 0.9);
   /* Gradient tokens */

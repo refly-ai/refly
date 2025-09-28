@@ -1,15 +1,13 @@
 import React, { ReactNode } from 'react';
 import { Layout, Button, Tooltip } from 'antd';
-import { UnorderedListOutlined, MenuUnfoldOutlined, LeftOutlined } from '@ant-design/icons';
+import { UnorderedListOutlined, LeftOutlined } from '@ant-design/icons';
 import { SidebarMinimap } from './SidebarMinimap';
 import { type NodeRelation } from './ArtifactRenderer';
 import { useTranslation } from 'react-i18next';
 
 interface PageLayoutProps {
-  source: 'slideshow' | 'page';
   children: ReactNode;
   showMinimap: boolean;
-  collapse: boolean;
   nodes: NodeRelation[];
   activeNodeIndex: number;
   headerContent?: ReactNode;
@@ -17,14 +15,11 @@ interface PageLayoutProps {
   onNodeSelect: (index: number) => void;
   onReorderNodes?: (newOrder: NodeRelation[]) => void;
   toggleMinimap: () => void;
-  toggleSidebar: () => void;
 }
 
 const PageLayout: React.FC<PageLayoutProps> = ({
-  source,
   children,
   showMinimap,
-  collapse,
   nodes,
   activeNodeIndex,
   headerContent,
@@ -32,7 +27,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   onNodeSelect,
   onReorderNodes,
   toggleMinimap,
-  toggleSidebar,
 }) => {
   const { t } = useTranslation();
 
@@ -87,16 +81,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
                 />
               </Tooltip>
             </div>
-          )}
-
-          {/* Button to expand global sidebar */}
-          {collapse && source === 'page' && (
-            <Button
-              type="text"
-              icon={<MenuUnfoldOutlined />}
-              onClick={toggleSidebar}
-              className="absolute top-4 right-4 z-10 bg-white dark:bg-gray-900 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 h-8 w-8 flex items-center justify-center p-0 rounded-md"
-            />
           )}
 
           <div className="mx-auto py-4 px-8 mb-16" style={{ maxWidth: '900px' }}>

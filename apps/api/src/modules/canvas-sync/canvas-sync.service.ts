@@ -12,6 +12,7 @@ import {
   CreateCanvasVersionResult,
   CanvasData,
   CanvasNode,
+  GenericToolset,
 } from '@refly/openapi-schema';
 import {
   getCanvasDataFromState,
@@ -25,6 +26,8 @@ import {
   shouldCreateNewVersion,
   CanvasNodeFilter,
   prepareAddNode,
+  extractToolsetsWithNodes,
+  haveToolsetsChanged,
 } from '@refly/canvas-common';
 import {
   CanvasNotFoundError,
@@ -37,7 +40,7 @@ import { PrismaService } from '../common/prisma.service';
 import { LockReleaseFn, RedisService } from '../common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { streamToBuffer, streamToString } from '../../utils';
-import { genCanvasVersionId, genTransactionId } from '@refly/utils';
+import { genCanvasVersionId, genTransactionId, safeParseJSON } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
 
 @Injectable()
@@ -96,6 +99,37 @@ export class CanvasSyncService {
     state.version ||= genCanvasVersionId();
     const stateStorageKey = `canvas-state/${canvasId}/${state.version}`;
     await this.oss.putObject(stateStorageKey, JSON.stringify(state));
+
+    // Extract toolsets from canvas nodes and update canvas usedToolsets if changed
+    const { nodes } = getCanvasDataFromState(state);
+    const toolsetsWithNodes = extractToolsetsWithNodes(nodes ?? []);
+    const newToolsets = toolsetsWithNodes.map((t) => t.toolset);
+
+    // Get current canvas to check existing usedToolsets
+    const canvas = await this.prisma.canvas.findUnique({
+      select: {
+        usedToolsets: true,
+      },
+      where: {
+        canvasId,
+      },
+    });
+
+    if (canvas) {
+      const currentToolsets: GenericToolset[] = safeParseJSON(canvas.usedToolsets) ?? [];
+      const hasChanged = haveToolsetsChanged(currentToolsets, newToolsets);
+
+      if (hasChanged) {
+        await this.prisma.canvas.update({
+          where: { canvasId },
+          data: {
+            usedToolsets: JSON.stringify(newToolsets),
+          },
+        });
+        this.logger.log(`Updated usedToolsets for canvas ${canvasId}`);
+      }
+    }
+
     return stateStorageKey;
   }
 
