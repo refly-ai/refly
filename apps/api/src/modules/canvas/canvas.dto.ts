@@ -1,6 +1,12 @@
-import { Canvas as CanvasModel } from '../../generated/client';
+import {
+  Canvas as CanvasModel,
+  ShareRecord as ShareRecordModel,
+  User as UserModel,
+} from '../../generated/client';
 import { Canvas, Entity, EntityType } from '@refly/openapi-schema';
 import { pick } from '../../utils';
+import { shareRecordPO2DTO } from '../share/share.dto';
+import { safeParseJSON } from '@refly/utils';
 
 export interface SyncCanvasEntityJobData {
   canvasId: string;
@@ -30,10 +36,19 @@ export interface CanvasContentItem {
   inputIds?: string[];
 }
 
-export function canvasPO2DTO(canvas: CanvasModel & { minimapUrl?: string }): Canvas {
+export interface CanvasDetailModel extends CanvasModel {
+  minimapUrl?: string;
+  owner?: Pick<UserModel, 'uid' | 'name' | 'nickname' | 'avatar'>;
+  shareRecord?: ShareRecordModel;
+}
+
+export function canvasPO2DTO(canvas: CanvasDetailModel): Canvas {
   return {
     ...pick(canvas, ['canvasId', 'title', 'minimapUrl', 'minimapStorageKey']),
     createdAt: canvas.createdAt.toJSON(),
     updatedAt: canvas.updatedAt.toJSON(),
+    usedToolsets: safeParseJSON(canvas.usedToolsets),
+    owner: canvas.owner ? pick(canvas.owner, ['uid', 'name', 'nickname', 'avatar']) : undefined,
+    shareRecord: canvas.shareRecord ? shareRecordPO2DTO(canvas.shareRecord) : undefined,
   };
 }

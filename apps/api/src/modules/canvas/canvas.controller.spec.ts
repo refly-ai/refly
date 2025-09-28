@@ -53,6 +53,7 @@ describe('CanvasController', () => {
         version: '1.0.0',
         stateStorageKey: 'test-state-key',
         minimapStorageKey: 'test-minimap-key',
+        usedToolsets: JSON.stringify([]),
         readOnly: false,
         isPublic: false,
         status: 'ready',
