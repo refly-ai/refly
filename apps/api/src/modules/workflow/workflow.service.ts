@@ -97,6 +97,7 @@ export class WorkflowService {
         canvasId: targetCanvasId,
         title: canvas?.title,
         variables: finalVariables,
+        visibility: false, // Workflow execution result canvas should not be visible
       });
       finalVariables = safeParseJSON(newCanvas.workflow)?.variables ?? [];
     } else {

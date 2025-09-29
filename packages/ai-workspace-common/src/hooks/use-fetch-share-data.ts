@@ -9,7 +9,7 @@ import { staticPublicEndpoint } from '@refly/ui-kit';
  */
 export const useFetchShareData = <T = any>(shareId?: string) => {
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
   // Function to fetch share data

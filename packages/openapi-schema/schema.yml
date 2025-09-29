@@ -6047,6 +6047,10 @@ components:
           description: Workflow variables
           items:
             $ref: '#/components/schemas/WorkflowVariable'
+        visibility:
+          type: boolean
+          description: Whether this canvas is visible in lists
+          default: true
     UpsertCanvasResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

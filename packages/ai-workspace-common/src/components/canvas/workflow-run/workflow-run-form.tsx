@@ -457,64 +457,67 @@ export const WorkflowRunForm = ({
 
   return (
     <div className={cn('w-full h-full gap-3 flex flex-col', className)}>
-      <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
-        {/* Workflow variables form */}
-        {workflowVariables.length > 0 ? (
-          <Form
-            form={form}
-            layout="vertical"
-            className="space-y-3 sm:space-y-4"
-            initialValues={variableValues}
-          >
-            {workflowVariables.map((variable) => renderFormField(variable))}
-          </Form>
-        ) : (
-          <EmptyContent />
-        )}
-      </div>
-
-      <div className="p-3 sm:p-4 border-t border-refly-Card-Border bg-refly-bg-control-z0 rounded-b-lg">
-        <div className="flex gap-2">
-          <Button
-            className={cn(
-              'flex-1 h-9 sm:h-10 text-sm sm:text-base',
-              (!isFormValid || isPolling) &&
-                'bg-refly-bg-control-z1 hover:!bg-refly-tertiary-hover !text-refly-text-3 font-semibold',
+      {
+        <>
+          <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
+            {/* Show loading state when loading */}
+            {workflowVariables.length > 0 ? (
+              <Form
+                form={form}
+                layout="vertical"
+                className="space-y-3 sm:space-y-4"
+                initialValues={variableValues}
+              >
+                {workflowVariables.map((variable) => renderFormField(variable))}
+              </Form>
+            ) : loading ? null : (
+              <EmptyContent />
             )}
-            type="primary"
-            icon={<Play size={14} className="sm:w-4 sm:h-4" />}
-            onClick={handleRun}
-            loading={loading || isRunning || isPolling}
-            disabled={loading || isRunning || isPolling}
-          >
-            {isPolling
-              ? t('canvas.workflow.run.executing') || 'Executing...'
-              : t('canvas.workflow.run.run') || 'Run'}
-          </Button>
+          </div>
+          <div className="p-3 sm:p-4 border-t border-refly-Card-Border bg-refly-bg-control-z0 rounded-b-lg">
+            <div className="flex gap-2">
+              <Button
+                className={cn(
+                  'flex-1 h-9 sm:h-10 text-sm sm:text-base',
+                  (!isFormValid || isPolling) &&
+                    'bg-refly-bg-control-z1 hover:!bg-refly-tertiary-hover !text-refly-text-3 font-semibold',
+                )}
+                type="primary"
+                icon={<Play size={14} className="sm:w-4 sm:h-4" />}
+                onClick={handleRun}
+                loading={loading || isRunning || isPolling}
+                disabled={loading || isRunning || isPolling}
+              >
+                {isPolling
+                  ? t('canvas.workflow.run.executing') || 'Executing...'
+                  : t('canvas.workflow.run.run') || 'Run'}
+              </Button>
 
-          {onCopyWorkflow && (
-            <Button
-              className="h-9 sm:h-10 text-sm sm:text-base"
-              type="default"
-              icon={<Copy size={14} className="sm:w-4 sm:h-4" />}
-              onClick={onCopyWorkflow}
-            >
-              {t('canvas.workflow.run.copyWorkflow') || 'Copy Workflow'}
-            </Button>
-          )}
+              {onCopyWorkflow && (
+                <Button
+                  className="h-9 sm:h-10 text-sm sm:text-base"
+                  type="default"
+                  icon={<Copy size={14} className="sm:w-4 sm:h-4" />}
+                  onClick={onCopyWorkflow}
+                >
+                  {t('canvas.workflow.run.copyWorkflow') || 'Copy Workflow'}
+                </Button>
+              )}
 
-          {onCopyShareLink && (
-            <Button
-              className="h-9 sm:h-10 text-sm sm:text-base"
-              type="default"
-              icon={<IconShare size={14} className="sm:w-4 sm:h-4" />}
-              onClick={onCopyShareLink}
-            >
-              {t('canvas.workflow.run.copyShareLink') || 'Copy Share Link'}
-            </Button>
-          )}
-        </div>
-      </div>
+              {onCopyShareLink && (
+                <Button
+                  className="h-9 sm:h-10 text-sm sm:text-base"
+                  type="default"
+                  icon={<IconShare size={14} className="sm:w-4 sm:h-4" />}
+                  onClick={onCopyShareLink}
+                >
+                  {t('canvas.workflow.run.copyShareLink') || 'Copy Share Link'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
+      }
     </div>
   );
 };

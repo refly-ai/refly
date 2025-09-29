@@ -77,6 +77,7 @@ export class CanvasService {
         uid: user.uid,
         deletedAt: null,
         projectId: projectId || null,
+        visibility: true,
       },
       orderBy: { updatedAt: 'desc' },
       skip: (page - 1) * pageSize,
@@ -361,6 +362,7 @@ export class CanvasService {
           projectId: param.projectId,
           version: state.version,
           workflow: JSON.stringify({ variables: param.variables }),
+          visibility: param.visibility ?? true,
         },
       }),
       this.prisma.canvasVersion.create({

@@ -204,6 +204,7 @@ export class PrismaFulltextSearchBackend implements FulltextSearchBackend {
       where: {
         uid: user.uid,
         deletedAt: null,
+        visibility: true,
         OR: [
           {
             title: {

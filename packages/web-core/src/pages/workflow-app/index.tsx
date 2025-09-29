@@ -1,6 +1,6 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { message, Segmented, notification } from 'antd';
+import { message, Segmented, notification, Skeleton } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CanvasNodeType, WorkflowNodeExecution, WorkflowVariable } from '@refly/openapi-schema';
@@ -25,7 +25,6 @@ const WorkflowAppPage: React.FC = () => {
   const shareId = routeShareId ?? '';
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('runLogs');
-  const [workflowVariables, setWorkflowVariables] = useState<WorkflowVariable[]>([]);
   const [finalNodeExecutions, setFinalNodeExecutions] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -46,10 +45,8 @@ const WorkflowAppPage: React.FC = () => {
   // Use shareId to directly access static JSON file
   const { data: workflowApp, loading: isLoading } = useFetchShareData(shareId);
 
-  useEffect(() => {
-    if (workflowApp?.variables) {
-      setWorkflowVariables(workflowApp?.variables ?? []);
-    }
+  const workflowVariables = useMemo(() => {
+    return workflowApp?.variables ?? [];
   }, [workflowApp]);
 
   const { data: workflowDetail } = useWorkflowExecutionPolling({
@@ -226,58 +223,68 @@ const WorkflowAppPage: React.FC = () => {
           </div>
 
           {/* Main Content */}
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-            {/* Hero Section */}
-            <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-refly-text-0">
-                {workflowApp?.title ?? ''}
-              </h1>
-              <p className="mt-3 sm:mt-4 text-base sm:text-lg text-refly-text-1 max-w-2xl mx-auto">
-                {workflowApp?.description ?? ''}
-              </p>
-            </div>
+          {
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+              {isLoading ? (
+                <LoadingContent />
+              ) : (
+                <>
+                  {/* Hero Section */}
+                  <div className="text-center mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-refly-text-0">
+                      {workflowApp?.title ?? ''}
+                    </h1>
+                    <p className="mt-3 sm:mt-4 text-base sm:text-lg text-refly-text-1 max-w-2xl mx-auto">
+                      {workflowApp?.description ?? ''}
+                    </p>
+                  </div>
 
-            {/* Workflow Form */}
-            <div className="mb-6 sm:mb-8">
-              <WorkflowRunForm
-                workflowVariables={workflowVariables}
-                onSubmitVariables={onSubmit}
-                loading={isLoading}
-                onCopyWorkflow={handleCopyWorkflow}
-                onCopyShareLink={handleCopyShareLink}
-                isRunning={isRunning}
-                onRunningChange={setIsRunning}
-                className="max-h-[500px] sm:max-h-[600px] bg-refly-bg-float-z3 rounded-lg border border-refly-Card-Border shadow-sm"
-              />
-            </div>
+                  {/* Workflow Form */}
+                  <div className="mb-6 sm:mb-8">
+                    {
+                      <WorkflowRunForm
+                        workflowVariables={workflowVariables}
+                        onSubmitVariables={onSubmit}
+                        loading={isLoading}
+                        onCopyWorkflow={handleCopyWorkflow}
+                        onCopyShareLink={handleCopyShareLink}
+                        isRunning={isRunning}
+                        onRunningChange={setIsRunning}
+                        className="max-h-[500px] sm:max-h-[600px] bg-refly-bg-float-z3 rounded-lg border border-refly-Card-Border shadow-sm"
+                      />
+                    }
+                  </div>
 
-            {/* Tools Dependency Form */}
-            {workflowApp?.canvasData && (
-              <div className="mb-6 sm:mb-8">
-                <ToolsDependencyChecker canvasData={workflowApp.canvasData} />
-              </div>
-            )}
+                  {/* Tools Dependency Form */}
+                  {workflowApp?.canvasData && (
+                    <div className="mb-6 sm:mb-8">
+                      <ToolsDependencyChecker canvasData={workflowApp.canvasData} />
+                    </div>
+                  )}
 
-            {/* Tabs */}
-            <div className="mb-4 sm:mb-6 flex justify-center">
-              <Segmented
-                className="max-w-sm sm:max-w-md mx-auto"
-                shape="round"
-                options={segmentedOptions}
-                value={activeTab}
-                onChange={(value) => setActiveTab(value)}
-              />
-            </div>
+                  {/* Tabs */}
+                  <div className="mb-4 sm:mb-6 flex justify-center">
+                    <Segmented
+                      className="max-w-sm sm:max-w-md mx-auto"
+                      shape="round"
+                      options={segmentedOptions}
+                      value={activeTab}
+                      onChange={(value) => setActiveTab(value)}
+                    />
+                  </div>
 
-            {/* Content Area */}
-            <div className="bg-refly-bg-float-z3 rounded-lg border border-refly-Card-Border shadow-sm min-h-[200px]">
-              {activeTab === 'products' ? (
-                <WorkflowAppProducts products={products || []} />
-              ) : activeTab === 'runLogs' ? (
-                <WorkflowAppRunLogs nodeExecutions={logs || []} />
-              ) : null}
+                  {/* Content Area */}
+                  <div className="bg-refly-bg-float-z3 rounded-lg border border-refly-Card-Border min-h-[200px]">
+                    {activeTab === 'products' ? (
+                      <WorkflowAppProducts products={products || []} />
+                    ) : activeTab === 'runLogs' ? (
+                      <WorkflowAppRunLogs nodeExecutions={logs || []} />
+                    ) : null}
+                  </div>
+                </>
+              )}
             </div>
-          </div>
+          }
         </div>
 
         {/* Settings Modal */}
@@ -288,3 +295,11 @@ const WorkflowAppPage: React.FC = () => {
 };
 
 export default memo(WorkflowAppPage);
+
+const LoadingContent = () => {
+  return (
+    <div className="p-4">
+      <Skeleton paragraph={{ rows: 8 }} active title={false} />
+    </div>
+  );
+};

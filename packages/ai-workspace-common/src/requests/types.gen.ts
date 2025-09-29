@@ -2530,6 +2530,10 @@ export type UpsertCanvasRequest = {
    * Workflow variables
    */
   variables?: Array<WorkflowVariable>;
+  /**
+   * Whether this canvas is visible in lists
+   */
+  visibility?: boolean;
 };
 
 export type UpsertCanvasResponse = BaseResponse & {

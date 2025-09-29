@@ -3370,6 +3370,11 @@ export const UpsertCanvasRequestSchema = {
         $ref: '#/components/schemas/WorkflowVariable',
       },
     },
+    visibility: {
+      type: 'boolean',
+      description: 'Whether this canvas is visible in lists',
+      default: true,
+    },
   },
 } as const;
 

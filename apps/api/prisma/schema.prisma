@@ -459,6 +459,8 @@ model Canvas {
   isPublic          Boolean        @default(false) @map("is_public")
   /// Canvas status
   status            String         @default("ready") @map("status")
+  /// Whether this canvas is visible in lists
+  visibility        Boolean        @default(true) @map("visibility")
   /// Create timestamp
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
@@ -476,6 +478,7 @@ model Canvas {
   workflow          String?        @map("workflow")
 
   @@index([uid, updatedAt])
+  @@index([uid, visibility, updatedAt])
   @@map("canvases")
 }
 

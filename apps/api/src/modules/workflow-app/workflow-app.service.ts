@@ -203,30 +203,29 @@ export class WorkflowAppService {
       return node;
     });
 
-    const tempCanvasId = genCanvasID();
+    const executionCanvasId = genCanvasID();
     const state = initEmptyCanvasState();
 
     await this.canvasService.createCanvasWithState(
       user,
       {
-        canvasId: tempCanvasId,
+        canvasId: executionCanvasId,
         title: `${canvasData.title} (Execution)`,
         variables: variables || canvasData.variables || [],
+        visibility: false,
       },
       state,
     );
 
     state.nodes = updatedNodes;
     state.edges = edges;
-    await this.canvasSyncService.saveState(tempCanvasId, state);
-
-    const newCanvasId = genCanvasID();
+    await this.canvasSyncService.saveState(executionCanvasId, state);
 
     try {
       const executionId = await this.workflowService.initializeWorkflowExecution(
         user,
-        tempCanvasId,
-        newCanvasId,
+        executionCanvasId,
+        executionCanvasId, // Use the same canvas ID to avoid creating a second canvas
         variables,
         { appId: workflowApp?.appId },
       );
@@ -234,28 +233,6 @@ export class WorkflowAppService {
       this.logger.log(`Started workflow execution: ${executionId} for shareId: ${shareId}`);
       return executionId;
     } finally {
-      this.cleanupTempCanvas(user, tempCanvasId).catch((error) => {
-        this.logger.warn(
-          `Failed to cleanup temporary canvas ${tempCanvasId}: ${error?.message || error}`,
-        );
-      });
-    }
-  }
-
-  /**
-   * Clean up temporary canvas created for workflow execution
-   */
-  private async cleanupTempCanvas(user: User, canvasId: string): Promise<void> {
-    try {
-      await this.prisma.canvas.update({
-        where: { canvasId, uid: user.uid },
-        data: { deletedAt: new Date() },
-      });
-      this.logger.log(`Cleaned up temporary canvas: ${canvasId}`);
-    } catch (error) {
-      this.logger.error(
-        `Error cleaning up temporary canvas ${canvasId}: ${error?.message || error}`,
-      );
     }
   }
 

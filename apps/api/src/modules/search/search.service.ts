@@ -342,7 +342,7 @@ export class SearchService {
         createdAt: true,
         updatedAt: true,
       },
-      where: { uid: user.uid, deletedAt: null },
+      where: { uid: user.uid, deletedAt: null, visibility: true },
       orderBy: { updatedAt: 'desc' },
       take: req.limit ?? 5,
     });

@@ -56,6 +56,7 @@ describe('CanvasController', () => {
         readOnly: false,
         isPublic: false,
         status: 'ready',
+        visibility: true,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
