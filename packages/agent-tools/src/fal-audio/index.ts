@@ -6,7 +6,7 @@ import {
 } from '@refly/openapi-schema';
 import { ToolParams } from '@langchain/core/tools';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor, ToolCallResult } from '../base';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {

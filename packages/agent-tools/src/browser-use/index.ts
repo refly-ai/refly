@@ -1,7 +1,8 @@
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { ToolParams } from '@langchain/core/tools';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor, ToolCallResult } from '../base';
 import { ToolsetDefinition } from '@refly/openapi-schema';
+import { BrowserUseClient } from 'browser-use-sdk';
 
 export const BrowserUseToolsetDefinition: ToolsetDefinition = {
   key: 'browser-use',
@@ -158,11 +159,10 @@ export class BrowserUseCreateTask extends AgentBaseTool<BrowserUseToolParams> {
   async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
     try {
       // Dynamic import to avoid issues if package is not available
-      const { BrowserUseClient } = await import('browser-use-sdk');
+      //const { BrowserUseClient } = await import('browser-use-sdk');
 
       const client = new BrowserUseClient({
         apiKey: this.params.apiKey,
-        baseUrl: this.params.baseUrl,
       });
 
       let sessionId = input.sessionId;

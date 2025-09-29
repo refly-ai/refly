@@ -26,6 +26,6 @@
     "langfuse": "^3.6.0",
     "langfuse-langchain": "^3.6.0",
     "uuid": "^9.0.0",
-    "zod": "^3.25.76"
+    "zod": "^4.0.0"
   }
 }
