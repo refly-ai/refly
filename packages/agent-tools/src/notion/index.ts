@@ -229,7 +229,7 @@ export class NotionCreatePage extends AgentBaseTool<NotionParams> {
     title: z.string().describe('Title of the new page'),
     content: z.string().optional().describe('Page content in Markdown format'),
     properties: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe(
         'Page properties as JSON object. For database pages, property keys must be the exact property IDs from the database schema (not property names). For regular pages, use property names. Example: {"abc123": {"select": {"name": "Done"}}, "def456": {"select": {"name": "High"}}} where "abc123" and "def456" are actual property IDs from your database.',
@@ -542,7 +542,7 @@ export class NotionUpdatePage extends AgentBaseTool<NotionParams> {
   schema = z.object({
     pageId: z.string().describe('The ID of the page to update'),
     title: z.string().optional().describe('New title for the page'),
-    properties: z.record(z.any()).optional().describe('Properties to update'),
+    properties: z.record(z.string(), z.any()).optional().describe('Properties to update'),
     archived: z.boolean().optional().describe('Whether to archive the page'),
   });
 
@@ -754,7 +754,7 @@ export class NotionCreateDatabase extends AgentBaseTool<NotionParams> {
   schema = z.object({
     parentId: z.string().describe('The ID of the parent page'),
     title: z.string().describe('Title of the new database'),
-    properties: z.record(z.any()).describe('Database properties schema as JSON object'),
+    properties: z.record(z.string(), z.any()).describe('Database properties schema as JSON object'),
   });
 
   description = 'Create a new database with specified schema and properties.';
@@ -820,7 +820,7 @@ export class NotionQueryDatabase extends AgentBaseTool<NotionParams> {
 
   schema = z.object({
     databaseId: z.string().describe('The ID of the database to query'),
-    filter: z.record(z.any()).optional().describe('Filter criteria as JSON object'),
+    filter: z.record(z.string(), z.any()).optional().describe('Filter criteria as JSON object'),
     sorts: z
       .array(
         z.object({
@@ -1906,7 +1906,7 @@ export class NotionUpdateDatabase extends AgentBaseTool<NotionParams> {
     databaseId: z.string().describe('The ID of the database to update'),
     title: z.string().optional().describe('New title for the database'),
     description: z.string().optional().describe('New description for the database'),
-    properties: z.record(z.any()).optional().describe('Properties schema to update'),
+    properties: z.record(z.string(), z.any()).optional().describe('Properties schema to update'),
   });
 
   description = 'Update database title, description, or properties schema.';
@@ -2177,7 +2177,7 @@ export class NotionCreatePageFromDatabase extends AgentBaseTool<NotionParams> {
   schema = z.object({
     parentDatabaseId: z.string().describe('The ID of the parent database'),
     title: z.string().optional().describe('Title of the new page'),
-    properties: z.record(z.any()).optional().describe('Page properties'),
+    properties: z.record(z.string(), z.any()).optional().describe('Page properties'),
     icon: z.string().optional().describe('Icon emoji for the page'),
     cover: z.string().optional().describe('Cover URL for the page'),
     content: z.string().optional().describe('Page content in Markdown format'),

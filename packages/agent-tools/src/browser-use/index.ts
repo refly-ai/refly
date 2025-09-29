@@ -103,11 +103,11 @@ export class BrowserUseCreateTask extends AgentBaseTool<BrowserUseToolParams> {
       .optional()
       .describe('Optional list of allowed domains for navigation restrictions'),
     secrets: z
-      .record(z.string())
+      .record(z.string(), z.string())
       .optional()
       .describe('Optional secrets for the task (domain-specific credentials)'),
     metadata: z
-      .record(z.string())
+      .record(z.string(), z.string())
       .optional()
       .describe('Optional metadata for the task (up to 10 key-value pairs)'),
     highlightElements: z

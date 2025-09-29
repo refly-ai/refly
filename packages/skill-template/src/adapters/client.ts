@@ -73,7 +73,7 @@ export function createStdioConnectionSchema() {
        * Environment variables to set when spawning the process.
        */
       env: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .describe('The environment to use when spawning the process')
         .optional(),
       /**
@@ -164,7 +164,7 @@ export function createStreamableHTTPConnectionSchema() {
       /**
        * Additional headers to send with the request, useful for authentication
        */
-      headers: z.record(z.string()).optional(),
+      headers: z.record(z.string(), z.string()).optional(),
       /**
        * Whether to use Node's EventSource for SSE connections (not applicable to streamable HTTP)
        *
@@ -204,7 +204,7 @@ export function createClientConfigSchema() {
        * A map of server names to their configuration
        */
       mcpServers: z
-        .record(createConnectionSchema())
+        .record(z.string(), createConnectionSchema())
         .describe('A map of server names to their configuration'),
       /**
        * Whether to throw an error if a tool fails to load
@@ -395,7 +395,7 @@ export class MultiServerMCPClient {
       parsedServerConfig = configSchema.parse(config);
     } else {
       // two step parse so parse errors are referencing the correct object paths
-      const parsedMcpServers = z.record(createConnectionSchema()).parse(config);
+      const parsedMcpServers = z.record(z.string(), createConnectionSchema()).parse(config);
 
       parsedServerConfig = configSchema.parse({ mcpServers: parsedMcpServers });
     }

@@ -1815,7 +1815,7 @@ export class GoogleDriveCreateFileFromTemplate extends AgentBaseTool<GoogleDrive
     name: z.string().describe('The name of the new file'),
     parentId: z.string().optional().describe('The ID of the parent folder'),
     replaceValues: z
-      .record(z.string())
+      .record(z.string(), z.string())
       .optional()
       .describe('Values to replace placeholders in the template'),
   });
@@ -2109,7 +2109,10 @@ export class GoogleDriveUpdateSharedDrive extends AgentBaseTool<GoogleDriveParam
     themeId: z.string().optional().describe('Theme ID for the shared drive'),
     backgroundImageLink: z.string().optional().describe('Background image link'),
     colorRgb: z.string().optional().describe('Color as RGB hex string'),
-    restrictions: z.record(z.any()).optional().describe('Restrictions for the shared drive'),
+    restrictions: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe('Restrictions for the shared drive'),
     useDomainAdminAccess: z
       .boolean()
       .optional()
