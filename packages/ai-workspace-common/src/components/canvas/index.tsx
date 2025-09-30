@@ -5,13 +5,12 @@ import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
   Background,
-  MiniMap,
   ReactFlowProvider,
   useReactFlow,
   Node,
   Edge,
   useStore,
-  useStoreApi,
+  SelectionMode,
 } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
@@ -49,7 +48,6 @@ import { useEdgeOperations } from '@refly-packages/ai-workspace-common/hooks/can
 import { MultiSelectionMenus } from './multi-selection-menu';
 import { CustomEdge } from './edges/custom-edge';
 import NotFoundOverlay from './NotFoundOverlay';
-import { NODE_MINI_MAP_COLORS } from './nodes/shared/colors';
 import { useDragToCreateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-create-node';
 import { useDragDropPaste } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-drop-paste';
 
@@ -115,65 +113,6 @@ interface ContextMenuState {
 
 // Add new memoized components
 const MemoizedBackground = memo(Background);
-const MemoizedMiniMap = memo(MiniMap);
-
-const MiniMapNode = (props: any) => {
-  const { x, y, width, height, style, className, id: nodeId } = props;
-  const nodes = useStoreApi().getState().nodes;
-  const node = nodes.find((n) => n.id === nodeId);
-
-  const getMiniMapNodeColor = useCallback((node: Node) => {
-    if (node.type === 'memo') {
-      const data = node.data as any;
-      return data?.metadata?.bgColor ?? '#FFFEE7';
-    }
-    if (node.type === 'group') {
-      return 'transparent';
-    }
-
-    return NODE_MINI_MAP_COLORS[node.type as CanvasNodeType] ?? '#6172F3';
-  }, []);
-
-  const getMiniMapNodeStrokeColor = useCallback((node: Node) => {
-    return node.type === 'group' ? '#363434' : 'transparent';
-  }, []);
-
-  if (!node || node.type !== 'image' || !(node.data as any)?.metadata?.imageUrl) {
-    return (
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        rx={12}
-        ry={12}
-        style={{
-          fill: node ? getMiniMapNodeColor(node) : '#6172F3',
-          stroke: node ? getMiniMapNodeStrokeColor(node) : 'transparent',
-          strokeWidth: 10,
-          opacity: 0.5,
-          strokeDasharray: node?.type === 'group' ? '10,10' : 'none',
-        }}
-      />
-    );
-  }
-
-  return (
-    <image
-      href={(node.data as any)?.metadata?.imageUrl}
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      className={`minimap-node-image ${className || ''}`}
-      style={{
-        ...style,
-        objectFit: 'cover',
-        borderRadius: '12px',
-      }}
-    />
-  );
-};
 
 const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const { t } = useTranslation();
@@ -353,6 +292,16 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState(0);
 
+  // Custom selection state
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
+  const [selectionBox, setSelectionBox] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
   const { onConnectEnd: temporaryEdgeOnConnectEnd, onConnectStart: temporaryEdgeOnConnectStart } =
     useDragToCreateNode();
 
@@ -368,6 +317,105 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
       return edges.filter((edge) => !isTemporaryNode(edge.source) && !isTemporaryNode(edge.target));
     });
   }, [reactFlowInstance]);
+
+  // Custom selection handlers
+  const handleSelectionStart = useCallback(
+    (event: React.MouseEvent | React.TouchEvent, isRightClick = false) => {
+      if (readonly) return;
+
+      // Check for right click or two-finger + Shift touch
+      const isRightButton = isRightClick || (event as React.MouseEvent).button === 2;
+      const isTwoFingerWithShift =
+        (event as React.TouchEvent).touches?.length === 2 && (event as React.TouchEvent).shiftKey;
+
+      if (!isRightButton && !isTwoFingerWithShift) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+      const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+
+      const flowPosition = reactFlowInstance.screenToFlowPosition({
+        x: clientX,
+        y: clientY,
+      });
+
+      setIsSelecting(true);
+      setSelectionStart(flowPosition);
+      setSelectionBox({
+        x: flowPosition.x,
+        y: flowPosition.y,
+        width: 0,
+        height: 0,
+      });
+    },
+    [readonly, reactFlowInstance],
+  );
+
+  const handleSelectionMove = useCallback(
+    (event: React.MouseEvent | React.TouchEvent) => {
+      if (!isSelecting || readonly) return;
+
+      event.preventDefault();
+
+      const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+      const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+
+      const flowPosition = reactFlowInstance.screenToFlowPosition({
+        x: clientX,
+        y: clientY,
+      });
+
+      if (selectionStart) {
+        setSelectionBox({
+          x: Math.min(selectionStart.x, flowPosition.x),
+          y: Math.min(selectionStart.y, flowPosition.y),
+          width: Math.abs(flowPosition.x - selectionStart.x),
+          height: Math.abs(flowPosition.y - selectionStart.y),
+        });
+      }
+    },
+    [isSelecting, readonly, selectionStart, reactFlowInstance],
+  );
+
+  const handleSelectionEnd = useCallback(() => {
+    if (!isSelecting || readonly) return;
+
+    setIsSelecting(false);
+
+    if (selectionBox && selectionBox.width > 5 && selectionBox.height > 5) {
+      // Get nodes within selection area
+      const nodes = reactFlowInstance.getNodes();
+      const selectedNodes = nodes.filter((node) => {
+        const nodeX = node.position.x;
+        const nodeY = node.position.y;
+        const nodeWidth = node.width || 200; // Default node width
+        const nodeHeight = node.height || 100; // Default node height
+
+        // Check if node intersects with selection box (supports partial selection)
+        return (
+          nodeX < selectionBox.x + selectionBox.width &&
+          nodeX + nodeWidth > selectionBox.x &&
+          nodeY < selectionBox.y + selectionBox.height &&
+          nodeY + nodeHeight > selectionBox.y
+        );
+      });
+
+      // Select nodes
+      if (selectedNodes.length > 0) {
+        reactFlowInstance.setNodes((nodes) =>
+          nodes.map((node) => ({
+            ...node,
+            selected: selectedNodes.some((selected) => selected.id === node.id),
+          })),
+        );
+      }
+    }
+
+    setSelectionStart(null);
+    setSelectionBox(null);
+  }, [isSelecting, readonly, selectionBox, reactFlowInstance]);
 
   const handlePanelClick = useCallback(
     (event: React.MouseEvent) => {
@@ -401,6 +449,58 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     },
     [lastClickTime, setOperatingNodeId, reactFlowInstance, selectedEdgeId, cleanupTemporaryEdges],
   );
+
+  // Add mouse and touch event listeners
+  useEffect(() => {
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button === 2) {
+        // Right click
+        handleSelectionStart(event as any, true);
+      }
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      handleSelectionMove(event as any);
+    };
+
+    const handleMouseUp = () => {
+      handleSelectionEnd();
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 2 && event.shiftKey) {
+        // Two-finger + Shift touch
+        handleSelectionStart(event as any);
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.touches.length === 2 && event.shiftKey) {
+        handleSelectionMove(event as any);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      handleSelectionEnd();
+    };
+
+    // Add event listeners
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleSelectionStart, handleSelectionMove, handleSelectionEnd]);
 
   // Add scroll position state and handler
   const [showLeftIndicator, setShowLeftIndicator] = useState(false);
@@ -647,7 +747,6 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         return;
       }
 
-      const { operatingNodeId } = useCanvasStore.getState();
       setContextMenu((prev) => ({ ...prev, open: false }));
 
       if (event.metaKey || event.shiftKey) {
@@ -699,30 +798,8 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
   const memoizedNodes = useMemo(() => nodes, [nodes]);
   const memoizedEdges = useMemo(() => edges, [edges]);
 
-  // Memoize MiniMap styles
-  const miniMapStyles = useMemo(
-    () => ({
-      border: '1px solid rgba(16, 24, 40, 0.0784)',
-      boxShadow: '0px 4px 6px 0px rgba(16, 24, 40, 0.03)',
-    }),
-    [],
-  );
-
-  // Memoize the Background and MiniMap components
+  // Memoize the Background component
   const memoizedBackground = useMemo(() => <MemoizedBackground />, []);
-  const memoizedMiniMap = useMemo(
-    () => (
-      <MemoizedMiniMap
-        position="bottom-left"
-        style={miniMapStyles}
-        className="bg-white/80 dark:bg-gray-900/80 w-[140px] h-[92px] !mb-2 !ml-2 rounded-lg shadow-refly-m p-2 [&>svg]:w-full [&>svg]:h-full"
-        zoomable={false}
-        pannable={false}
-        nodeComponent={MiniMapNode}
-      />
-    ),
-    [miniMapStyles],
-  );
 
   // Memoize the node types configuration
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
@@ -831,7 +908,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     [],
   );
 
-  // Update handleKeyDown to handle edge deletion
+  // Handle keyboard shortcuts for edge deletion and zoom
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // Skip all keyboard handling in readonly mode
@@ -862,6 +939,17 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
         }
       }
 
+      // Handle zoom shortcuts (Cmd/Ctrl + +/-)
+      if (isModKey && (e.key === '+' || e.key === '=')) {
+        e.preventDefault();
+        reactFlowInstance.zoomIn();
+      }
+
+      if (isModKey && e.key === '-') {
+        e.preventDefault();
+        reactFlowInstance.zoomOut();
+      }
+
       // Handle edge deletion
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEdgeId) {
         e.preventDefault();
@@ -873,7 +961,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     [selectedEdgeId, reactFlowInstance, undo, redo, readonly],
   );
 
-  // Add edge click handler for delete button
+  // Handle edge click for delete button
   const handleEdgeClick = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
       // Check if click is on delete button
@@ -894,7 +982,7 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     [reactFlowInstance],
   );
 
-  // Update useEffect for keyboard events
+  // Add keyboard event listener
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -1092,17 +1180,21 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
           <DropOverlay />
           <ReactFlow
             {...flowConfig}
+            selectionMode={SelectionMode.Partial}
             className="bg-refly-bg-canvas"
             snapToGrid={true}
             snapGrid={[GRID_SIZE, GRID_SIZE]}
             edgeTypes={edgeTypes}
-            panOnScroll={interactionMode === 'touchpad'}
-            panOnDrag={interactionMode === 'mouse'}
-            zoomOnScroll={interactionMode === 'mouse'}
-            zoomOnPinch={interactionMode === 'touchpad'}
+            // Unified mouse and touchpad gesture configuration
+            panOnScroll={true} // Enable scroll panning
+            panOnScrollSpeed={0.5} // Adjust scroll speed
+            panOnDrag={true} // Enable mouse left-click and touchpad single-finger drag
+            zoomOnScroll={true} // Enable scroll zooming
+            zoomOnPinch={true} // Enable touchpad two-finger pinch zoom
             zoomOnDoubleClick={false}
-            selectNodesOnDrag={!operatingNodeId && interactionMode === 'mouse' && !readonly}
-            selectionOnDrag={!operatingNodeId && interactionMode === 'touchpad' && !readonly}
+            // Disable default selection behavior, use custom implementation
+            selectNodesOnDrag={false}
+            selectionOnDrag={false}
             nodeTypes={memoizedNodeTypes}
             nodes={memoizedNodes}
             edges={memoizedEdges}
@@ -1136,8 +1228,20 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
             {nodes?.length === 0 && canvasInitialized && <EmptyGuide canvasId={canvasId} />}
 
             {memoizedBackground}
-            {memoizedMiniMap}
             <HelperLines horizontal={helperLineHorizontal} vertical={helperLineVertical} />
+
+            {/* Custom selection box */}
+            {isSelecting && selectionBox && (
+              <div
+                className="absolute pointer-events-none border-2 border-blue-500 bg-blue-100 bg-opacity-20 z-50"
+                style={{
+                  left: selectionBox.x,
+                  top: selectionBox.y,
+                  width: selectionBox.width,
+                  height: selectionBox.height,
+                }}
+              />
+            )}
           </ReactFlow>
         </div>
 

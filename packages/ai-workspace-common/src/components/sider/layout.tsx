@@ -43,6 +43,8 @@ import { GithubStar } from '@refly-packages/ai-workspace-common/components/commo
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { logEvent } from '@refly/telemetry-web';
 
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+
 const Sider = Layout.Sider;
 
 // Reusable section header component
@@ -173,7 +175,7 @@ const SettingItem = () => {
           >
             <Avatar
               size={36}
-              src={userProfile?.avatar}
+              src={userProfile?.avatar || defaultAvatar}
               icon={<Account />}
               className="flex-shrink-0"
             />

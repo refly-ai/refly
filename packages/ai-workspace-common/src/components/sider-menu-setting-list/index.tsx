@@ -24,6 +24,7 @@ import React from 'react';
 import { TFunction } from 'i18next';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { UserSettings } from '@refly/openapi-schema';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 
 // Reusable dropdown item component
 const DropdownItem = React.memo(
@@ -119,7 +120,7 @@ const UserInfo = React.memo(
     return (
       <div className="py-2 flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <Avatar icon={<Account />} src={userProfile?.avatar} size={36} />
+          <Avatar icon={<Account />} src={userProfile?.avatar || defaultAvatar} size={36} />
 
           <div>
             <div className="max-w-40 text-sm font-semibold text-refly-text-0 leading-5 truncate">
