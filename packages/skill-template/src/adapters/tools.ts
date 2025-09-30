@@ -19,7 +19,6 @@ import {
   MessageContentText,
 } from '@langchain/core/messages';
 import debug from 'debug';
-import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod';
 import { z } from 'zod';
 
 // Replace direct initialization with lazy initialization
@@ -158,6 +157,87 @@ async function _convertCallToolResult(
   return [mcpTextAndImageContent, artifacts];
 }
 
+// Minimal JSON Schema -> Zod converter to avoid external v3-only dependencies
+function jsonSchemaToZod(schema: any): z.ZodTypeAny {
+  if (!schema || typeof schema !== 'object') {
+    return z.any();
+  }
+
+  // Handle nullable
+  const wrapNullable = (inner: z.ZodTypeAny): z.ZodTypeAny => {
+    return schema.nullable ? z.union([inner, z.null()]) : inner;
+  };
+
+  // Handle enums
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+    const values = schema.enum as [string, ...string[]];
+    const base = z.enum(values as unknown as [string, ...string[]]);
+    return wrapNullable(schema.description ? base.describe(schema.description) : base);
+  }
+
+  // Handle anyOf/oneOf
+  const variants = (schema.anyOf || schema.oneOf) as any[] | undefined;
+  if (variants?.length) {
+    const unionType = z.union(
+      variants.map((s) => jsonSchemaToZod(s)) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]],
+    );
+    return wrapNullable(schema.description ? unionType.describe(schema.description) : unionType);
+  }
+
+  switch (schema.type) {
+    case 'object': {
+      const props = schema.properties ?? {};
+      const required: string[] = Array.isArray(schema.required) ? schema.required : [];
+      const shape: Record<string, z.ZodTypeAny> = {};
+      for (const key of Object.keys(props)) {
+        const propSchema = jsonSchemaToZod(props[key]);
+        const withDesc = props[key]?.description
+          ? propSchema.describe(props[key].description)
+          : propSchema;
+        shape[key] = required.includes(key) ? withDesc : withDesc.optional();
+      }
+
+      let obj = z.object(shape);
+      if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
+        obj = obj.catchall(jsonSchemaToZod(schema.additionalProperties));
+      } else if (schema.additionalProperties === false) {
+        obj = obj.strict();
+      }
+
+      const described = schema.description ? obj.describe(schema.description) : obj;
+      return wrapNullable(described);
+    }
+    case 'array': {
+      const itemSchema = jsonSchemaToZod(schema.items ?? {});
+      const arr = z.array(itemSchema);
+      return wrapNullable(schema.description ? arr.describe(schema.description) : arr);
+    }
+    case 'string': {
+      let s = z.string();
+      if (schema.format === 'uri' || schema.format === 'url') {
+        s = z.string().url();
+      }
+      return wrapNullable(schema.description ? s.describe(schema.description) : s);
+    }
+    case 'integer':
+    case 'number': {
+      const n = z.number();
+      return wrapNullable(schema.description ? n.describe(schema.description) : n);
+    }
+    case 'boolean': {
+      const b = z.boolean();
+      return wrapNullable(schema.description ? b.describe(schema.description) : b);
+    }
+    case 'null': {
+      return z.null();
+    }
+    default: {
+      const a = z.any();
+      return wrapNullable(schema.description ? a.describe(schema.description) : a);
+    }
+  }
+}
+
 /**
  * Call an MCP tool.
  *
@@ -265,7 +345,7 @@ export async function loadMcpTools(
         .filter((tool: MCPTool) => !!tool.name)
         .map(async (tool: MCPTool) => {
           try {
-            const ss = JSONSchemaToZod.convert(tool.inputSchema) as any;
+            const ss = jsonSchemaToZod(tool.inputSchema) as any;
 
             // Force all properties to be required for compatibility with providers enforcing full required lists
             const requiredSchema = makeAllObjectFieldsRequired(ss as z.ZodTypeAny) as any;
