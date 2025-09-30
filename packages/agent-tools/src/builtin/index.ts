@@ -1,4 +1,4 @@
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { AgentBaseTool, AgentBaseToolset } from '../base';
 
 import type { RunnableConfig } from '@langchain/core/runnables';

@@ -1,4 +1,4 @@
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { ToolParams } from '@langchain/core/tools';
 import { PerplexityClient, ChatCompletionMessage } from './client';
 import { AgentBaseTool, AgentBaseToolset, AgentToolConstructor, ToolCallResult } from '../base';

@@ -174,57 +174,59 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
     });
 
     return (
-      <div className="text-refly-text-0">
-        <div className="flex flex-col gap-1.5 p-2">
-          {sortedToolsets.map((toolset) => {
-            const description =
-              toolset?.type === 'mcp'
-                ? toolset.mcpServer.url
-                : toolset?.toolset?.definition?.descriptionDict?.[currentLanguage];
+      <div className="text-refly-text-0 flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-1.5 p-2">
+            {sortedToolsets.map((toolset) => {
+              const description =
+                toolset?.type === 'mcp'
+                  ? toolset.mcpServer.url
+                  : toolset?.toolset?.definition?.descriptionDict?.[currentLanguage];
 
-            const labelName =
-              toolset?.type === 'regular' && toolset?.id === 'builtin'
-                ? (toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string)
-                : toolset.name;
+              const labelName =
+                toolset?.type === 'regular' && toolset?.id === 'builtin'
+                  ? (toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string)
+                  : toolset.name;
 
-            const isBuiltin = toolset.id === 'builtin';
-            return (
-              <div
-                key={toolset.id}
-                className={cn(
-                  'flex items-center justify-between gap-2 px-2 py-1 rounded-lg hover:bg-refly-tertiary-hover',
-                  'cursor-pointer transition-all duration-200',
-                  selectedToolsetIds.has(toolset.id) ? 'bg-refly-tertiary-default' : '',
-                )}
-                onClick={() => handleToolSelect(toolset)}
-              >
-                <div className="flex-1 min-w-0 flex flex-col">
-                  <div className="flex items-center gap-3">
-                    <ToolsetIcon
-                      toolset={toolset}
-                      isBuiltin={isBuiltin}
-                      config={{ builtinClassName: '!w-6 !h-6' }}
-                    />
-                    <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="text-sm text-refly-text-0 font-semibold block truncate leading-5">
-                        {labelName || toolset.name}
-                      </div>
-                      <div className="text-xs text-refly-text-2 font-normal block truncate leading-4">
-                        {description as string}
+              const isBuiltin = toolset.id === 'builtin';
+              return (
+                <div
+                  key={toolset.id}
+                  className={cn(
+                    'flex items-center justify-between gap-2 px-2 py-1 rounded-lg hover:bg-refly-tertiary-hover',
+                    'cursor-pointer transition-all duration-200',
+                    selectedToolsetIds.has(toolset.id) ? 'bg-refly-tertiary-default' : '',
+                  )}
+                  onClick={() => handleToolSelect(toolset)}
+                >
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex items-center gap-3">
+                      <ToolsetIcon
+                        toolset={toolset}
+                        isBuiltin={isBuiltin}
+                        config={{ builtinClassName: '!w-6 !h-6' }}
+                      />
+                      <div className="flex-1 min-w-0 flex flex-col">
+                        <div className="text-sm text-refly-text-0 font-semibold block truncate leading-5">
+                          {labelName || toolset.name}
+                        </div>
+                        <div className="text-xs text-refly-text-2 font-normal block truncate leading-4">
+                          {description as string}
+                        </div>
                       </div>
                     </div>
                   </div>
+                  {selectedToolsetIds.has(toolset.id) && (
+                    <Checked size={14} color="var(--refly-primary-default)" />
+                  )}
                 </div>
-                {selectedToolsetIds.has(toolset.id) && (
-                  <Checked size={14} color="var(--refly-primary-default)" />
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
         <Divider className="!my-0 border-refly-Card-Border" />
         <div
-          className="p-3 flex items-center gap-2 hover:bg-refly-tertiary-hover cursor-pointer"
+          className="flex-shrink-0 p-3 flex items-center gap-2 hover:bg-refly-tertiary-hover cursor-pointer"
           onClick={handleOpenToolStore}
         >
           <Settings size={18} color="var(--refly-text-0)" />
@@ -287,7 +289,7 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
       arrow={false}
       styles={{ body: { padding: 0 } }}
       content={
-        <div className="w-[340px] max-h-[320px] overflow-y-auto border-[1px] border-solid border-refly-Card-Border rounded-lg bg-refly-bg-content-z2 shadow-[0_8px_40px_0px_rgba(0,0,0,0.08)]">
+        <div className="w-[340px] h-[320px] border-[1px] border-solid border-refly-Card-Border rounded-lg bg-refly-bg-content-z2 shadow-[0_8px_40px_0px_rgba(0,0,0,0.08)]">
           {renderContent()}
         </div>
       }

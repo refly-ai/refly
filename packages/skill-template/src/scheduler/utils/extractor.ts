@@ -276,7 +276,7 @@ export async function extractStructuredData<T extends z.ZodType>(
         return { data: validatedData };
       } catch (validationError) {
         if (validationError instanceof z.ZodError) {
-          const formattedErrors = validationError.errors
+          const formattedErrors = validationError.issues
             .map((err) => `- ${err.path.join('.')}: ${err.message}`)
             .join('\n');
           return {
@@ -343,7 +343,7 @@ export async function extractStructuredData<T extends z.ZodType>(
 
           // Try to get parsed result first
           if (result?.parsed) {
-            return result.parsed;
+            return await schema.parseAsync(result.parsed as unknown);
           }
 
           // Try different result formats
@@ -364,7 +364,7 @@ export async function extractStructuredData<T extends z.ZodType>(
               return await schema.parseAsync(rawMessage.tool_calls[0].args);
             } catch (validationError) {
               if (validationError instanceof z.ZodError) {
-                const formattedErrors = validationError.errors
+                const formattedErrors = validationError.issues
                   .map((err) => `- ${err.path.join('.')}: ${err.message}`)
                   .join('\n');
                 const errorWithContent = `Tool call schema validation failed: \n${formattedErrors}\n\nPartial content: ${JSON.stringify(

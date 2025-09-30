@@ -494,9 +494,10 @@ export class PilotEngine {
   private convertSubtasksToPilotSteps(subtasks: ProgressSubtask[]): PilotStepRawOutput[] {
     return subtasks.map((subtask) => ({
       name: subtask.name,
+      priority: 3,
       query: subtask.query,
-      contextItemIds: [], // Will be populated based on context
-      workflowStage: 'research', // Default stage, will be updated based on actual stage
+      contextItemIds: [],
+      workflowStage: 'research',
     }));
   }
 
@@ -732,28 +733,10 @@ ${this.locale ? `\n## LANGUAGE REQUIREMENT\nAll output should be in ${this.local
         this.logger.log(`Generated research plan: ${JSON.stringify(steps)}`);
 
         if (recommendedStage === 'creation') {
-          const creationSteps =
-            steps
-              .filter(
-                (step) =>
-                  step.skillName === 'generateDoc' ||
-                  step.skillName === 'codeArtifacts' ||
-                  step.skillName === 'generateMedia' ||
-                  step.skillName === 'commonQnA',
-              )
-              .slice(0, 1) || [];
-          return creationSteps?.length > 0
-            ? creationSteps
-            : steps?.length > 0
-              ? [{ ...steps?.[0], skillName: 'commonQnA' }]
-              : [];
+          const creationSteps = steps.slice(0, 1) || [];
+          return creationSteps?.length > 0 ? creationSteps : steps?.length > 0 ? [steps?.[0]] : [];
         } else {
-          return steps.filter(
-            (step) =>
-              step.skillName !== 'generateDoc' &&
-              step.skillName !== 'codeArtifacts' &&
-              step.skillName !== 'generateMedia',
-          );
+          return steps;
         }
       } catch (structuredError) {
         this.logger.warn(

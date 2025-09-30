@@ -1,4 +1,4 @@
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { AgentBaseTool, ToolCallResult, AgentBaseToolset, AgentToolConstructor } from '../base';
 import { ToolsetDefinition } from '@refly/openapi-schema';
 import { JinaClient } from './client';
