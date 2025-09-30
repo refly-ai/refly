@@ -273,10 +273,6 @@ export class SkillInvokerService {
       `invoke skill with input: ${JSON.stringify(input)}, resultId: ${resultId}, version: ${version}`,
     );
 
-    if (!result.modelInfo?.capabilities.vision) {
-      input.images = undefined;
-    }
-
     if (input.images?.length > 0) {
       input.images = await this.miscService.generateImageUrls(user, input.images);
     }
@@ -489,11 +485,6 @@ export class SkillInvokerService {
     try {
       // AI model provider network timeout (30 seconds)
       const aiModelNetworkTimeout = this.config.get<number>('skill.aiModelNetworkTimeout', 30000);
-      // Tool execution network timeout (5 minutes by default)
-      const toolExecutionNetworkTimeout = this.config.get<number>(
-        'skill.toolExecutionNetworkTimeout',
-        300000,
-      );
 
       // Validate aiModelNetworkTimeout to ensure it's a positive number
       if (aiModelNetworkTimeout <= 0) {
@@ -503,21 +494,9 @@ export class SkillInvokerService {
         throw new Error(`Invalid aiModelNetworkTimeout configuration: ${aiModelNetworkTimeout}`);
       }
 
-      if (toolExecutionNetworkTimeout <= 0) {
-        this.logger.error(
-          `Invalid toolExecutionNetworkTimeout: ${toolExecutionNetworkTimeout}. Must be a positive number.`,
-        );
-        throw new Error(
-          `Invalid toolExecutionNetworkTimeout configuration: ${toolExecutionNetworkTimeout}`,
-        );
-      }
-
       this.logger.log(
         `🌐 Starting AI model network request (model timeout: ${aiModelNetworkTimeout}ms) for action: ${resultId}`,
       );
-
-      // Active network timeout window (switches during tool execution)
-      let activeNetworkTimeoutMs = aiModelNetworkTimeout;
 
       // Create dedicated timeout for AI model network requests
       const createNetworkTimeout = () => {
@@ -533,23 +512,14 @@ export class SkillInvokerService {
           }
 
           this.logger.error(
-            `🚨 AI model network timeout (${activeNetworkTimeoutMs}ms) for action: ${resultId}`,
+            `🚨 AI model network timeout (${aiModelNetworkTimeout}ms) for action: ${resultId}`,
           );
           abortController.abort('AI model network timeout');
-        }, activeNetworkTimeoutMs);
+        }, aiModelNetworkTimeout);
       };
 
       // Reset network timeout on each network activity
       const resetNetworkTimeout = () => {
-        createNetworkTimeout();
-      };
-
-      // Switch current network timeout window and reset timer
-      const applyNetworkTimeout = (ms: number) => {
-        if (abortController.signal.aborted) {
-          return;
-        }
-        activeNetworkTimeoutMs = ms;
         createNetworkTimeout();
       };
 
@@ -558,8 +528,6 @@ export class SkillInvokerService {
 
       // Track whether a tool is currently executing to suppress duplicate streaming
       let isToolExecuting = false;
-      // Track nested tool execution depth to avoid premature revert
-      let toolExecutionDepth = 0;
 
       for await (const event of skill.streamEvents(input, {
         ...config,
@@ -591,19 +559,9 @@ export class SkillInvokerService {
             // Toggle tool execution flag
             if (event.event === 'on_tool_start') {
               isToolExecuting = true;
-              toolExecutionDepth += 1;
-              // Extend network timeout to accommodate long-running tools
-              applyNetworkTimeout(toolExecutionNetworkTimeout);
             }
             if (event.event === 'on_tool_end') {
-              if (toolExecutionDepth > 0) {
-                toolExecutionDepth -= 1;
-              }
-              if (toolExecutionDepth === 0) {
-                isToolExecuting = false;
-                // Revert network timeout to default after tools complete
-                applyNetworkTimeout(aiModelNetworkTimeout);
-              }
+              isToolExecuting = false;
             }
             // Extract tool_call_chunks from AIMessageChunk
             if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
