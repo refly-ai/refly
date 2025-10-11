@@ -19,7 +19,7 @@ const FeaturesSection: React.FC = () => {
   ];
 
   return (
-    <div className="w-full max-w-[1072px] mx-auto px-4 py-16">
+    <div className="w-full max-w-[1072px] mx-auto px-4 pt-16">
       {/* Title */}
       <h2
         className="text-center mb-6"
@@ -85,7 +85,6 @@ const FeatureContent: React.FC<FeatureContentProps> = ({ title, description, can
       className="w-full rounded-[20px] overflow-hidden align-middle"
       style={{
         minHeight: '400px',
-        height: 'clamp(400px, 50vw, 600px)',
       }}
     >
       <div className="flex flex-col lg:flex-row h-full">

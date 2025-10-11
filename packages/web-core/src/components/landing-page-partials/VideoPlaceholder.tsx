@@ -51,8 +51,9 @@ const VideoPlaceholder: React.FC = () => {
   const handleVideoLoad = useCallback(() => {
     setIsLoading(false);
     setLoadError(false);
+    setIsPlaying(true); // Set playing state when video is loaded
     // Auto play when video is loaded
-    if (videoRef.current && !videoRef.current.paused) {
+    if (videoRef.current) {
       videoRef.current.play().catch((error) => {
         console.warn('Auto-play failed:', error);
         // Fallback: user needs to manually click play

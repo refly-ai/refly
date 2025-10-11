@@ -7,6 +7,8 @@ import HeroTitle from '../../components/landing-page-partials/HeroTitle';
 import VideoPlaceholder from '../../components/landing-page-partials/VideoPlaceholder';
 import CTAButton from '../../components/landing-page-partials/CTAButton';
 import FeaturesSection from '../../components/landing-page-partials/FeaturesSection';
+import SubscribeSection from '../../components/landing-page-partials/SubscribeSection';
+import FooterSection from '../../components/landing-page-partials/FooterSection';
 
 const UnsignedFrontPage = memo(() => {
   const [searchParams] = useSearchParams();
@@ -60,6 +62,12 @@ const UnsignedFrontPage = memo(() => {
 
       {/* Features section following Figma design */}
       <FeaturesSection />
+
+      {/* Subscribe section following Figma design */}
+      <SubscribeSection />
+
+      {/* Footer section following Figma design */}
+      <FooterSection />
     </div>
   );
 });
