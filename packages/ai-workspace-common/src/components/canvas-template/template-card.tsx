@@ -2,7 +2,6 @@ import { useUserStoreShallow, useAuthStoreShallow } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import { useNavigate } from 'react-router-dom';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
-import { staticPublicEndpoint } from '@refly/ui-kit';
 import { CanvasTemplate } from '@refly/openapi-schema';
 import { IoPersonOutline } from 'react-icons/io5';
 import { Avatar, Button, Typography, Tag } from 'antd';
@@ -41,9 +40,9 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
       });
 
       e.stopPropagation();
-      if (template.shareId) {
+      if (template.appShareId) {
         setModalVisible(false);
-        navigate(`/app/${template.shareId}`);
+        navigate(`/app/${template.appShareId}`);
         return;
       }
     },
@@ -80,7 +79,7 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
       )}
       <div className="h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
         <img
-          src={`${staticPublicEndpoint}/share-cover/${template?.shareId}.png`}
+          src={`${template.coverUrl}`}
           alt={`${template?.title} cover`}
           className="w-full h-full object-cover"
         />

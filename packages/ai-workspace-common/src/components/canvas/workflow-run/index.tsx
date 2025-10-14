@@ -7,6 +7,7 @@ import { WorkflowRunForm } from './workflow-run-form';
 import './index.scss';
 import { FC, useCallback, useState } from 'react';
 import { InitializeWorkflowRequest, WorkflowVariable } from '@refly/openapi-schema';
+import { logEvent } from '@refly/telemetry-web';
 
 interface WorkflowRunProps {
   initializeWorkflow: (param: InitializeWorkflowRequest) => Promise<boolean>;
@@ -50,6 +51,10 @@ export const WorkflowRun: FC<WorkflowRunProps> = ({
         console.warn('Canvas ID is missing, cannot initialize workflow');
         return;
       }
+
+      logEvent('run_workflow', null, {
+        canvasId,
+      });
 
       try {
         const success = await initializeWorkflow({

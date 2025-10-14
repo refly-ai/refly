@@ -50,7 +50,58 @@ export class TemplateService {
       orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
     });
 
-    return templates;
+    // Get all appIds from templates to query WorkflowApp
+    const appIds = templates
+      .map((template) => template.appId)
+      .filter((appId): appId is string => appId !== null);
+
+    // Query WorkflowApp to get coverStorageKey
+    const workflowApps =
+      appIds.length > 0
+        ? await this.prisma.workflowApp.findMany({
+            where: { appId: { in: appIds }, deletedAt: null },
+            select: { appId: true, coverStorageKey: true, shareId: true },
+          })
+        : [];
+
+    // Create a map for quick lookup
+    const workflowAppMap = new Map(workflowApps.map((app) => [app.appId, app]));
+
+    // Convert cover storage keys to accessible image URLs
+    const templatesWithCoverUrls = await Promise.all(
+      templates.map(async (template) => {
+        let coverUrl: string | undefined = '';
+
+        // Get coverStorageKey from associated WorkflowApp
+        let appShareId: string | undefined;
+        if (template.appId) {
+          const workflowApp = workflowAppMap.get(template.appId);
+          appShareId = workflowApp?.shareId;
+
+          if (workflowApp?.coverStorageKey) {
+            try {
+              // Generate a public URL for the cover image using WorkflowApp's coverStorageKey
+              coverUrl = this.miscService.generateFileURL({
+                storageKey: workflowApp.coverStorageKey,
+                visibility: 'public',
+              });
+            } catch (error) {
+              this.logger.warn(
+                `Failed to generate cover URL for template ${template.templateId}: ${error.message}`,
+              );
+            }
+          }
+        }
+
+        return {
+          ...template,
+          coverUrl,
+          appShareId,
+        };
+      }),
+    );
+
+    return templatesWithCoverUrls;
   }
 
   async createCanvasTemplate(user: User, param: CreateCanvasTemplateRequest) {
@@ -91,7 +142,7 @@ export class TemplateService {
     });
 
     if (coverStorageKey) {
-      await this.miscService.duplicateFile({
+      await this.miscService.duplicateFile(user, {
         sourceFile: { storageKey: coverStorageKey, visibility: 'public' },
         targetFile: {
           storageKey: `share-cover/${shareRecord.shareId}.png`,

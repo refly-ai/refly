@@ -270,7 +270,11 @@ export class ResourceService {
   async createResource(
     user: User,
     param: UpsertResourceRequest,
-    options?: { checkStorageQuota?: boolean; syncStorageUsage?: boolean },
+    options?: {
+      checkStorageQuota?: boolean;
+      syncStorageUsage?: boolean;
+      skipCanvasCheck?: boolean;
+    },
   ) {
     if (options?.checkStorageQuota) {
       const usageResult = await this.subscriptionService.checkStorageUsage(user);
@@ -279,7 +283,7 @@ export class ResourceService {
       }
     }
 
-    if (param.canvasId) {
+    if (param.canvasId && !options?.skipCanvasCheck) {
       await this.checkCanvasExists(user, param.canvasId);
     }
 

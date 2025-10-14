@@ -21,9 +21,18 @@ import './index.scss';
 import { RESOURCE_TYPE } from './constants';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useListResources } from '@refly-packages/ai-workspace-common/queries/queries';
+import { logEvent } from '@refly/telemetry-web';
 
 export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.memo(
-  ({ visible, onCancel, defaultValue, variableType: initialVariableType, mode }) => {
+  ({
+    visible,
+    onCancel,
+    defaultValue,
+    variableType: initialVariableType,
+    mode,
+    disableChangeVariableType,
+    isFromResource,
+  }) => {
     const { t } = useTranslation();
     const [form] = Form.useForm<VariableFormData>();
     const [variableType, setVariableType] = useState<string>(
@@ -34,6 +43,17 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     const { workflowVariables, refetchWorkflowVariables } = workflow;
     const [isSaving, setIsSaving] = useState(false);
     const { handleVariableView } = useVariableView(canvasId);
+
+    const title = useMemo(() => {
+      if (disableChangeVariableType) {
+        return t(
+          `canvas.workflow.variables.${mode === 'create' ? 'addVariableTitle' : 'editVariableTitle'}`,
+          { type: t(`canvas.workflow.variables.variableTypeOptions.${variableType}`) },
+        );
+      }
+      return t(`canvas.workflow.variables.${mode === 'create' ? 'addTitle' : 'editTitle'}`);
+    }, [t, mode, disableChangeVariableType, variableType]);
+
     const { projectId } = useGetProjectCanvasId();
     const { refetch: refetchResources } = useListResources({
       query: {
@@ -289,8 +309,39 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       form.resetFields();
     }, [resetFormData, resetOptions, form]);
 
+    const logVariableCreationEvent = useCallback(
+      (variable: WorkflowVariable) => {
+        try {
+          if (mode !== 'create') return;
+          let eventName = '';
+          if (isFromResource) {
+            eventName = 'create_variable_from_resource';
+          } else {
+            switch (variable.variableType) {
+              case 'string':
+                eventName = 'create_text_variable';
+                break;
+              case 'resource':
+                eventName = 'create_resource_variable';
+                break;
+              case 'option':
+                eventName = 'create_select_variable';
+                break;
+            }
+          }
+          logEvent(eventName, Date.now(), {
+            variable,
+          });
+        } catch (error) {
+          console.error('Error logging variable creation event:', error);
+        }
+      },
+      [mode, isFromResource],
+    );
+
     const saveVariable = useCallback(
       async (variable: WorkflowVariable) => {
+        logVariableCreationEvent(variable);
         const existingIndex = workflowVariables.findIndex(
           (v) => v.variableId === variable.variableId,
         );
@@ -332,7 +383,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
         }
         return data?.success;
       },
-      [t, canvasId, workflowVariables, handleVariableView],
+      [t, canvasId, workflowVariables, handleVariableView, logVariableCreationEvent],
     );
 
     const handleSubmit = useCallback(async () => {
@@ -532,37 +583,30 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <div className="text-refly-text-0 text-lg font-semibold leading-6">
-              {t(
-                `canvas.workflow.variables.${mode === 'create' ? 'addTitle' : defaultValue ? 'editTitle' : 'addTitle'}`,
-              ) ||
-                (mode === 'create'
-                  ? 'Add Variable'
-                  : defaultValue
-                    ? 'Edit Variable'
-                    : 'Add Variable')}
-            </div>
+            <div className="text-refly-text-0 text-lg font-semibold leading-6">{title}</div>
             <Button type="text" icon={<Close size={24} />} onClick={handleModalClose} />
           </div>
 
           <div className="flex-grow min-h-0 overflow-y-auto">
-            <div className="flex items-center justify-between gap-2 mb-4">
-              {variableTypeOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className={cn(
-                    'flex-1 h-9 box-border px-2 py-1 text-sm leading-5 flex items-center justify-center gap-1 rounded-lg bg-refly-bg-control-z1 border-[1px] border-solid border-refly-Card-Border hover:!text-refly-primary-default hover:!border-refly-primary-default cursor-pointer',
-                    variableType === option.value
-                      ? 'text-refly-primary-default border-refly-primary-default font-semibold'
-                      : '',
-                  )}
-                  onClick={() => handleVariableTypeChange(option.value)}
-                >
-                  {option.icon}
-                  {option.label}
-                </div>
-              ))}
-            </div>
+            {!disableChangeVariableType && (
+              <div className="flex items-center justify-between gap-2 mb-4">
+                {variableTypeOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    className={cn(
+                      'flex-1 h-9 box-border px-2 py-1 text-sm leading-5 flex items-center justify-center gap-1 rounded-lg bg-refly-bg-control-z1 border-[1px] border-solid border-refly-Card-Border hover:!text-refly-primary-default hover:!border-refly-primary-default cursor-pointer',
+                      variableType === option.value
+                        ? 'text-refly-primary-default border-refly-primary-default font-semibold'
+                        : '',
+                    )}
+                    onClick={() => handleVariableTypeChange(option.value)}
+                  >
+                    {option.icon}
+                    {option.label}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <Form
               form={form}

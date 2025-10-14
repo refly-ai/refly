@@ -59,6 +59,7 @@ import { usePilotStoreShallow } from '@refly/stores';
 
 import { MultimodalContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/multimodal-content-preview';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
+import { logEvent } from '@refly/telemetry-web';
 
 const NODE_WIDTH = 320;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
@@ -495,6 +496,11 @@ export const SkillResponseNode = memo(
         return;
       }
 
+      logEvent('rerun_ask_ai', null, {
+        canvasId,
+        nodeId: id,
+      });
+
       // 判断是否为 pilot step
       if (currentPilotStep?.stepId && activeSessionId) {
         // 使用 pilot recovery 模式
@@ -511,6 +517,8 @@ export const SkillResponseNode = memo(
       activeSessionId,
       handlePilotRecovery,
       handleDirectRerun,
+      canvasId,
+      id,
     ]);
 
     const insertToDoc = useInsertToDocument(entityId);
@@ -524,13 +532,18 @@ export const SkillResponseNode = memo(
     const { deleteNode } = useDeleteNode();
 
     const handleDelete = useCallback(() => {
+      logEvent('delete_node_ask_ai', null, {
+        canvasId,
+        nodeId: id,
+      });
+
       deleteNode({
         id,
         type: 'skillResponse',
         data,
         position: { x: 0, y: 0 },
       } as CanvasNode);
-    }, [id, data, deleteNode]);
+    }, [id, data, deleteNode, canvasId]);
 
     const { debouncedCreateDocument } = useCreateDocument();
 
@@ -583,13 +596,19 @@ export const SkillResponseNode = memo(
     const { addToContext } = useAddToContext();
 
     const handleAddToContext = useCallback(() => {
+      logEvent('add_to_context_ask_ai', null, {
+        canvasId,
+        entityId,
+        nodeId: id,
+      });
+
       addToContext({
         type: 'skillResponse',
         title: title,
         entityId: entityId,
         metadata: data?.metadata,
       });
-    }, [data, entityId, title, addToContext]);
+    }, [data, entityId, title, addToContext, canvasId, id]);
 
     const { addNode } = useAddNode();
 
@@ -644,6 +663,10 @@ export const SkillResponseNode = memo(
           event?.dragCreateInfo,
         );
 
+        logEvent('append_ask_ai', null, {
+          canvasId,
+        });
+
         // Add a small delay to avoid race conditions with context items
         setTimeout(() => {
           addNode(
@@ -669,7 +692,7 @@ export const SkillResponseNode = memo(
           );
         }, 10);
       },
-      [data, addNode, getConnectionInfo],
+      [data, addNode, getConnectionInfo, canvasId],
     );
 
     const handleCloneAskAI = useCallback(async () => {
@@ -682,6 +705,12 @@ export const SkillResponseNode = memo(
         type: item.type as CanvasNodeType,
         entityId: item.entityId,
       }));
+
+      logEvent('clone_ask_ai', null, {
+        canvasId,
+        sourceEntityId: data.entityId,
+        sourceNodeId: id,
+      });
 
       // Create new skill node
       addNode(
@@ -705,7 +734,7 @@ export const SkillResponseNode = memo(
       );
 
       nodeActionEmitter.emit(createNodeEventName(id, 'cloneAskAI.completed'));
-    }, [id, data?.entityId, addNode, t]);
+    }, [id, data?.entityId, addNode, t, canvasId]);
 
     const onTitleChange = (newTitle: string) => {
       if (newTitle === query) {

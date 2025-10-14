@@ -239,6 +239,7 @@ const VariableTypeSection = ({
         onCancel={handleCloseModal}
         variableType={type}
         defaultValue={currentVariable}
+        mode={currentVariable ? 'edit' : 'create'}
         onViewCreatedVariable={handleEditVariable}
       />
     </div>

@@ -28,6 +28,7 @@ import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/event
 import { useCanvasStoreShallow } from '@refly/stores';
 import { useShallow } from 'zustand/react/shallow';
 import CommonColorPicker from './color-picker';
+import { logEvent } from '@refly/telemetry-web';
 
 type ActionButtonType = {
   key: string;
@@ -119,6 +120,13 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
 
     const handleCopy = useCallback(async () => {
       setCopyRunning(true);
+      if (nodeType === 'skillResponse') {
+        logEvent('copy_node_content_ask_ai', null, {
+          canvasId,
+          nodeId,
+        });
+      }
+
       try {
         const content = (await fetchNodeContent()) as string;
         copyToClipboard(content || '');
@@ -129,7 +137,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
       } finally {
         setCopyRunning(false);
       }
-    }, [fetchNodeContent, t]);
+    }, [fetchNodeContent, t, nodeType, canvasId, nodeId]);
 
     const handleDeleteFile = useCallback(
       (type: 'resource' | 'document') => {
@@ -187,6 +195,11 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
 
     const handleRunWorkflow = useCallback(() => {
       if (!canvasId || isRunningWorkflow) return;
+      logEvent('run_from_this_node', null, {
+        canvasId,
+        nodeId,
+      });
+
       workflowRun?.initialize?.([nodeId]);
     }, [canvasId, nodeId, isRunningWorkflow, workflowRun]);
 

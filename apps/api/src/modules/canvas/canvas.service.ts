@@ -398,8 +398,6 @@ export class CanvasService {
     const { canvasId } = param;
     const stateStorageKey = await this.canvasSyncService.saveState(canvasId, state);
 
-    param.variables = await this.processResourceVariables(user, canvasId, param.variables);
-
     const [canvas] = await this.prisma.$transaction([
       this.prisma.canvas.create({
         data: {
@@ -422,6 +420,13 @@ export class CanvasService {
       }),
     ]);
 
+    // Process resource variables after canvas is created
+    const processedVariables = await this.processResourceVariables(user, canvasId, param.variables);
+    const updatedCanvas = await this.prisma.canvas.update({
+      where: { pk: canvas.pk },
+      data: { workflow: JSON.stringify({ variables: processedVariables }) },
+    });
+
     await this.fts.upsertDocument(user, 'canvas', {
       id: canvas.canvasId,
       title: canvas.title,
@@ -431,7 +436,7 @@ export class CanvasService {
       projectId: canvas.projectId,
     });
 
-    return canvas;
+    return updatedCanvas;
   }
 
   async createCanvas(user: User, param: UpsertCanvasRequest) {
@@ -1091,12 +1096,16 @@ export class CanvasService {
 
     if (!resource.entityId) {
       // New upload - create new resource
-      const newResource = await this.resourceService.createResource(user, {
-        title: resource.name,
-        resourceType: resource.fileType as ResourceType,
-        canvasId,
-        storageKey,
-      });
+      const newResource = await this.resourceService.createResource(
+        user,
+        {
+          title: resource.name,
+          resourceType: resource.fileType as ResourceType,
+          canvasId,
+          storageKey,
+        },
+        { skipCanvasCheck: true },
+      );
 
       // Update static file with new entity information
       if (resourceFile) {

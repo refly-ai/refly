@@ -25,6 +25,7 @@ import {
   type NodeData,
 } from '@refly-packages/ai-workspace-common/utils/download-node-data';
 import { Share } from 'refly-icons';
+import { logEvent } from '@refly/telemetry-web';
 
 // Create a generic content container component to reduce code duplication
 const ContentContainer = ({
@@ -78,6 +79,7 @@ const NodeRenderer = memo(
     isModal = false,
     isMinimap = false,
     isFocused = false,
+    fromProducts = false,
     onDelete,
     onStartSlideshow,
     onWideMode,
@@ -87,6 +89,7 @@ const NodeRenderer = memo(
     isModal?: boolean;
     isMinimap?: boolean;
     isFocused?: boolean;
+    fromProducts?: boolean;
     onDelete?: (nodeId: string) => void;
     onStartSlideshow?: (nodeId: string) => void;
     onWideMode?: (nodeId: string) => void;
@@ -111,18 +114,39 @@ const NodeRenderer = memo(
 
     // Handle download for any node type
     const handleDownload = useCallback(async () => {
+      if (fromProducts) {
+        logEvent('download_template_result', null, {
+          nodeId: nodeData.nodeId,
+          nodeType: nodeData.nodeType,
+          title: nodeData.title,
+        });
+      }
       await downloadNodeData(nodeData, t);
-    }, [nodeData, t]);
+    }, [nodeData, t, fromProducts]);
 
     // Handle copy for any node type
     const handleCopy = useCallback(async () => {
+      if (fromProducts) {
+        logEvent('copy_template_result', null, {
+          nodeId: nodeData.nodeId,
+          nodeType: nodeData.nodeType,
+          title: nodeData.title,
+        });
+      }
       await copyNodeData(nodeData, t);
-    }, [nodeData, t]);
+    }, [nodeData, t, fromProducts]);
 
     // Handle share for any node type
     const handleShare = useCallback(async () => {
+      if (fromProducts) {
+        logEvent('share_template_result', null, {
+          nodeId: nodeData.nodeId,
+          nodeType: nodeData.nodeType,
+          title: nodeData.title,
+        });
+      }
       await shareNodeData(nodeData, t);
-    }, [nodeData, t]);
+    }, [nodeData, t, fromProducts]);
 
     // Generic node block header
     const renderNodeHeader =

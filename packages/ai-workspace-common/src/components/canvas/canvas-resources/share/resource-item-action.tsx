@@ -230,6 +230,8 @@ export const ResourceItemAction = ({
           onCancel={handleModalClose}
           defaultValue={getDefaultVariableData()}
           variableType="resource"
+          disableChangeVariableType
+          isFromResource
           onViewCreatedVariable={() => {
             // For resource variables, we can reopen the modal in edit mode
             handleModalClose(false);

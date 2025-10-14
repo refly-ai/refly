@@ -686,6 +686,14 @@ export type CanvasTemplate = {
    */
   appId?: string;
   /**
+   * Canvas template cover image URL
+   */
+  coverUrl?: string;
+  /**
+   * Associated workflow app share ID
+   */
+  appShareId?: string;
+  /**
    * Canvas template creation time
    */
   createdAt: string;
@@ -5916,6 +5924,10 @@ export type CreateWorkflowAppRequest = {
    * Workflow app variables
    */
   variables: Array<WorkflowVariable>;
+  /**
+   * Cover image storage key
+   */
+  coverStorageKey: string;
 };
 
 export type DeleteWorkflowAppRequest = {
@@ -5958,6 +5970,10 @@ export type WorkflowApp = {
    * Workflow app variables
    */
   variables: Array<WorkflowVariable>;
+  /**
+   * Cover image URL
+   */
+  coverUrl?: string;
   /**
    * Workflow app creation timestamp
    */

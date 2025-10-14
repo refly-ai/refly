@@ -22,6 +22,7 @@ import { TooltipButton } from './buttons';
 import { ToolsDependency } from '../tools-dependency';
 import cn from 'classnames';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
+import { logEvent } from '@refly/telemetry-web';
 
 const buttonClass = '!p-0 h-[30px] w-[30px] flex items-center justify-center ';
 
@@ -74,6 +75,10 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
   const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
 
   const handleDuplicate = () => {
+    logEvent('remix_workflow_share', Date.now(), {
+      canvasId,
+    });
+
     if (!isLogin) {
       setLoginModalOpen(true);
       return;
@@ -210,6 +215,10 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
                 type="primary"
                 icon={<IconLink className="flex items-center" />}
                 onClick={() => {
+                  logEvent('duplicate_workflow_share', Date.now(), {
+                    canvasId,
+                    shareUrl: window.location.href,
+                  });
                   navigator.clipboard.writeText(window.location.href);
                   message.success(t('shareContent.copyLinkSuccess'));
                 }}

@@ -4310,6 +4310,12 @@ components:
         appId:
           type: string
           description: Workflow app ID
+        coverUrl:
+          type: string
+          description: Canvas template cover image URL
+        appShareId:
+          type: string
+          description: Associated workflow app share ID
         createdAt:
           type: string
           format: date-time
@@ -9553,6 +9559,7 @@ components:
         - description
         - query
         - variables
+        - coverStorageKey
       properties:
         canvasId:
           type: string
@@ -9571,6 +9578,9 @@ components:
           description: Workflow app variables
           items:
             $ref: '#/components/schemas/WorkflowVariable'
+        coverStorageKey:
+          type: string
+          description: Cover image storage key
     DeleteWorkflowAppRequest:
       type: object
       required:
@@ -9612,6 +9622,9 @@ components:
           description: Workflow app variables
           items:
             $ref: '#/components/schemas/WorkflowVariable'
+        coverUrl:
+          type: string
+          description: Cover image URL
         createdAt:
           type: string
           format: date-time

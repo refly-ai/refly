@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { PriceContent } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal/priceContent';
 import Header from '../../components/landing-page-partials/Header';
 import { Helmet } from 'react-helmet';
@@ -5,12 +6,17 @@ import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly/stores';
 import Footer from '../../components/landing-page-partials/Footer';
 import FrequentlyAskedQuestions from '../../components/landing-page-partials/frequently-asked-questions';
+import { logEvent } from '@refly/telemetry-web';
 
 const PricingPage = () => {
   const { t } = useTranslation();
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
+
+  useEffect(() => {
+    logEvent('enter_pricing_page');
+  }, []);
 
   return (
     <div className="box-border h-[100vh] w-full overflow-y-auto bg-white dark:bg-gray-900 py-20">

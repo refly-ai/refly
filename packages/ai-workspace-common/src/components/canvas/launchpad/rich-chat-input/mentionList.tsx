@@ -19,6 +19,7 @@ import { Button, message } from 'antd';
 import { cn, genVariableID } from '@refly/utils';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { logEvent } from '@refly/telemetry-web';
 
 export interface MentionItem {
   name: string;
@@ -91,6 +92,10 @@ export const MentionList = ({
     };
 
     const newWorkflowVariables: WorkflowVariable[] = [...workflowVariables, newItem];
+
+    logEvent('create_variable_from_askai', Date.now(), {
+      variable: newItem,
+    });
 
     try {
       setIsAddingVariable(true);

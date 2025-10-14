@@ -5,6 +5,7 @@ import { logEvent } from '@refly/telemetry-web';
 import './index.scss';
 import { useSiderStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
 import { PriceContent } from './priceContent';
+import { useEffect } from 'react';
 
 export const SubscribeModal = () => {
   const { t } = useTranslation('ui');
@@ -23,6 +24,12 @@ export const SubscribeModal = () => {
   const { setShowSettingModal } = useSiderStoreShallow((state) => ({
     setShowSettingModal: state.setShowSettingModal,
   }));
+
+  useEffect(() => {
+    if (visible) {
+      logEvent('enter_pricing_page', 'settings');
+    }
+  }, [visible]);
 
   return (
     <Modal

@@ -39,6 +39,7 @@ import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/event
 import { useExtractVariables } from '@refly-packages/ai-workspace-common/queries';
 import type { ExtractVariablesRequest, VariableExtractionResult } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
+import { logEvent } from '@refly/telemetry-web';
 
 const NODE_WIDTH = 480;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto' };
@@ -259,6 +260,10 @@ export const SkillNode = memo(
         }
 
         setIsMediaGenerating(true);
+        logEvent('run_ask_ai', null, {
+          model: modelInfo?.name,
+          canvasId,
+        });
 
         // Handle media generation using existing media generation flow
         // Parse capabilities from modelInfo
@@ -292,6 +297,11 @@ export const SkillNode = memo(
       if (!canvasId || !originalQuery) {
         return;
       }
+
+      logEvent('run_ask_ai', null, {
+        model: modelInfo?.name,
+        canvasId,
+      });
 
       // Process query with workflow variables
       const variables = workflowVariables?.data ?? [];

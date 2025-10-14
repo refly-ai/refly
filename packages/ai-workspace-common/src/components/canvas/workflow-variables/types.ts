@@ -2,11 +2,13 @@ import type { WorkflowVariable, VariableValue, VariableResourceType } from '@ref
 
 export interface CreateVariablesModalProps {
   variableType?: 'string' | 'option' | 'resource';
+  disableChangeVariableType?: boolean;
+  isFromResource?: boolean;
   defaultValue?: WorkflowVariable;
   visible: boolean;
   onCancel: (val: boolean) => void;
   onSave?: (variable: WorkflowVariable) => void;
-  mode?: 'create' | 'edit';
+  mode: 'create' | 'edit';
   onViewCreatedVariable?: (variable: WorkflowVariable) => void;
 }
 

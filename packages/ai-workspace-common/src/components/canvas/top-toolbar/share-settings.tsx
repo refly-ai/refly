@@ -242,6 +242,15 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
 
   const handleAccessChange = useCallback(
     async (value: ShareAccess) => {
+      if (value === 'off') {
+        logEvent('canvas::canvas_share_private', Date.now(), {
+          canvas_id: canvasId,
+        });
+      } else {
+        logEvent('share_workflow', Date.now(), {
+          canvas_id: canvasId,
+        });
+      }
       const success = await updateCanvasPermission(value);
 
       if (success && value === 'anyone') {
@@ -250,7 +259,7 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
         }, 500);
       }
     },
-    [updateCanvasPermission, copyLink],
+    [updateCanvasPermission, copyLink, canvasId],
   );
 
   // Memoize content to prevent unnecessary re-renders
@@ -271,9 +280,6 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
               description={t('shareContent.accessOptions.offDescription')}
               isFirst={true}
               onClick={() => {
-                logEvent('canvas::canvas_share_private', Date.now(), {
-                  canvas_id: canvasId,
-                });
                 handleAccessChange('off');
               }}
             />

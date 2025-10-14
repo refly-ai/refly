@@ -6,7 +6,11 @@ import { CanvasTemplate, CanvasTemplateCategory } from '@refly/openapi-schema';
 import { pick } from '../../utils';
 
 export function canvasTemplatePO2DTO(
-  template: CanvasTemplateModel & { category?: CanvasTemplateCategoryModel },
+  template: CanvasTemplateModel & {
+    category?: CanvasTemplateCategoryModel;
+    coverUrl?: string;
+    appShareId?: string;
+  },
 ): CanvasTemplate {
   return {
     ...pick(template, [
@@ -27,6 +31,8 @@ export function canvasTemplatePO2DTO(
     shareUser: JSON.parse(template.shareUser || '{}'),
     category: template.category ? canvasTemplateCategoryPO2DTO(template.category) : undefined,
     featured: template.priority > 0 ? true : undefined,
+    coverUrl: template.coverUrl,
+    appShareId: template.appShareId,
   };
 }
 

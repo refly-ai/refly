@@ -111,6 +111,7 @@ export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecut
                 node={node}
                 key={node.relationId}
                 isFocused={true} // Allow interaction with the content
+                fromProducts={true}
                 onWideMode={handleWideMode}
               />
             </div>
@@ -148,6 +149,7 @@ export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecut
               isFullscreen={true}
               isModal={true}
               isFocused={true}
+              fromProducts={true}
               onWideMode={handleWideMode}
             />
           )}

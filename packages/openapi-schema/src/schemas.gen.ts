@@ -1034,6 +1034,14 @@ export const CanvasTemplateSchema = {
       type: 'string',
       description: 'Workflow app ID',
     },
+    coverUrl: {
+      type: 'string',
+      description: 'Canvas template cover image URL',
+    },
+    appShareId: {
+      type: 'string',
+      description: 'Associated workflow app share ID',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -8365,7 +8373,7 @@ export const GetWorkflowDetailResponseSchema = {
 
 export const CreateWorkflowAppRequestSchema = {
   type: 'object',
-  required: ['canvasId', 'title', 'description', 'query', 'variables'],
+  required: ['canvasId', 'title', 'description', 'query', 'variables', 'coverStorageKey'],
   properties: {
     canvasId: {
       type: 'string',
@@ -8389,6 +8397,10 @@ export const CreateWorkflowAppRequestSchema = {
       items: {
         $ref: '#/components/schemas/WorkflowVariable',
       },
+    },
+    coverStorageKey: {
+      type: 'string',
+      description: 'Cover image storage key',
     },
   },
 } as const;
@@ -8442,6 +8454,10 @@ export const WorkflowAppSchema = {
       items: {
         $ref: '#/components/schemas/WorkflowVariable',
       },
+    },
+    coverUrl: {
+      type: 'string',
+      description: 'Cover image URL',
     },
     createdAt: {
       type: 'string',

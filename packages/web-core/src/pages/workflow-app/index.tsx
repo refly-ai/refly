@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { message, Segmented, notification, Skeleton } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -17,6 +17,7 @@ import { useSiderStoreShallow, useCanvasOperationStoreShallow } from '@refly/sto
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
 import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
+import { logEvent } from '@refly/telemetry-web';
 
 const WorkflowAppPage: React.FC = () => {
   const { t } = useTranslation();
@@ -44,6 +45,13 @@ const WorkflowAppPage: React.FC = () => {
 
   // Use shareId to directly access static JSON file
   const { data: workflowApp, loading: isLoading } = useFetchShareData(shareId);
+
+  // Track enter_template_page event when page loads
+  useEffect(() => {
+    if (shareId) {
+      logEvent('enter_template_page', null, { shareId });
+    }
+  }, [shareId]);
 
   const workflowVariables = useMemo(() => {
     return workflowApp?.variables ?? [];
@@ -111,6 +119,9 @@ const WorkflowAppPage: React.FC = () => {
 
   const onSubmit = useCallback(
     async (variables: WorkflowVariable[]) => {
+      logEvent('run_workflow_publish', Date.now(), {
+        shareId,
+      });
       // Check if user is logged in before executing workflow
       if (!isLoggedRef.current) {
         message.warning('Please login to run this workflow');
@@ -159,6 +170,10 @@ const WorkflowAppPage: React.FC = () => {
   );
 
   const handleCopyWorkflow = useCallback(() => {
+    logEvent('remix_workflow_publish', Date.now(), {
+      shareId,
+    });
+
     // Check if user is logged in before copying workflow
     if (!isLoggedRef.current) {
       message.warning('Please login to copy this workflow');
@@ -185,6 +200,10 @@ const WorkflowAppPage: React.FC = () => {
   ]);
 
   const handleCopyShareLink = useCallback(async () => {
+    logEvent('duplicate_workflow_publish', Date.now(), {
+      shareId,
+      shareUrl: window.location.href,
+    });
     try {
       // Copy current browser URL to clipboard
       await navigator.clipboard.writeText(window.location.href);

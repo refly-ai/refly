@@ -609,7 +609,7 @@ export class ShareCreationService {
     });
 
     if (coverStorageKey) {
-      await this.miscService.duplicateFile({
+      await this.miscService.duplicateFile(user, {
         sourceFile: {
           storageKey: coverStorageKey,
           visibility: 'public',

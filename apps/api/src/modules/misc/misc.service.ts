@@ -818,34 +818,75 @@ export class MiscService implements OnModuleInit {
     }
   }
 
-  async duplicateFile(param: {
-    sourceFile: FileObject;
-    targetFile: FileObject;
-  }) {
-    const { sourceFile, targetFile } = param;
+  async duplicateFile(
+    user: User,
+    param: {
+      sourceFile: FileObject;
+      targetFile?: FileObject;
+      targetEntityId?: string;
+      targetEntityType?: EntityType;
+    },
+  ) {
+    const { sourceFile, targetFile, targetEntityId, targetEntityType } = param;
 
     if (!sourceFile) {
       throw new NotFoundException(`File with key ${sourceFile?.storageKey} not found`);
     }
 
-    if (!targetFile) {
-      throw new ParamsError('Target file information is required');
+    // Generate target file info if not provided
+    let finalTargetFile: FileObject;
+    if (targetFile) {
+      finalTargetFile = targetFile;
+    } else {
+      // Generate new storage key with UUID
+      const objectKey = randomUUID();
+      const extension = path.extname(sourceFile.storageKey) || '';
+      finalTargetFile = {
+        storageKey: `static/${objectKey}${extension}`,
+        visibility: sourceFile.visibility,
+      };
     }
+    finalTargetFile.visibility ??= 'private';
 
-    try {
-      // Use the appropriate Minio service based on visibility
-      const minioService = sourceFile.visibility === 'public' ? this.externalOss : this.internalOss;
+    // Check for related staticFile record for the source file
+    const sourceStaticFile = await this.prisma.staticFile.findFirst({
+      where: {
+        storageKey: sourceFile.storageKey,
+        deletedAt: null,
+      },
+    });
 
-      // Use the duplicateFile method from MinioService instead of copyObject
-      await minioService.duplicateFile(sourceFile.storageKey, targetFile.storageKey);
-
-      this.logger.log(
-        `Successfully duplicated file from ${sourceFile.storageKey} to ${targetFile.storageKey}`,
+    if (!sourceStaticFile) {
+      throw new NotFoundException(
+        `StaticFile record for source ${sourceFile.storageKey} not found`,
       );
-    } catch (error) {
-      this.logger.error(`Duplicate file failed: ${error?.stack}`);
-      throw error; // Re-throw the error to properly handle it upstream
     }
+
+    // Create new staticFile record for the target file
+    await this.prisma.staticFile.create({
+      data: {
+        uid: user.uid,
+        storageKey: finalTargetFile.storageKey,
+        storageSize: sourceStaticFile.storageSize,
+        contentType: sourceStaticFile.contentType,
+        entityId: targetEntityId,
+        entityType: targetEntityType,
+        visibility: sourceStaticFile.visibility,
+        processedImageKey: sourceStaticFile.processedImageKey,
+      },
+    });
+
+    // Use the appropriate Minio service based on visibility
+    const minioService = sourceFile.visibility === 'public' ? this.externalOss : this.internalOss;
+
+    // Use the duplicateFile method from MinioService instead of copyObject
+    await minioService.duplicateFile(sourceFile.storageKey, finalTargetFile.storageKey);
+
+    this.logger.log(
+      `Successfully duplicated file from ${sourceFile.storageKey} to ${finalTargetFile.storageKey}`,
+    );
+
+    return finalTargetFile;
   }
 
   /**
