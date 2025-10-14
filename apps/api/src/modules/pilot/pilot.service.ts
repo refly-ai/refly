@@ -35,6 +35,7 @@ import { buildSubtaskSkillInput } from './prompt/subtask';
 import { findBestMatch } from '../../utils/similarity';
 import { ToolService } from '../tool/tool.service';
 import { PilotEngineService } from './pilot-engine.service';
+import { DailyNewsWorkflowService } from '../workflow/daily-news-workflow.service';
 
 export const MAX_STEPS_PER_EPOCH = 10;
 export const MAX_SUMMARY_STEPS_PER_EPOCH = 1;
@@ -54,6 +55,7 @@ export class PilotService {
     private canvasSyncService: CanvasSyncService,
     private variableExtractionService: VariableExtractionService,
     private pilotEngineService: PilotEngineService,
+    private dailyNewsWorkflowService: DailyNewsWorkflowService,
     @InjectQueue(QUEUE_RUN_PILOT) private runPilotQueue: Queue<RunPilotJobData>,
   ) {}
 
@@ -560,6 +562,40 @@ export class PilotService {
       // Get common resources needed for execution
       const sessionInputObj = JSON.parse(pilotSession.input ?? '{}');
       const userQuestion = sessionInputObj?.query ?? '';
+
+      // *** NEW: Check for Daily AI News workflow trigger before running generic pilot ***
+      if (this.dailyNewsWorkflowService.shouldTriggerDailyNewsWorkflow(userQuestion)) {
+        this.logger.log(
+          `Daily AI News workflow detected for session ${sessionId}, creating full workflow Canvas`,
+        );
+
+        try {
+          // Create a complete Daily AI News workflow with all 4 steps
+          const workflowResult = await this.dailyNewsWorkflowService.createDailyNewsWorkflow(user);
+
+          // Update the pilot session to point to the new Canvas
+          await this.prisma.pilotSession.update({
+            where: { sessionId },
+            data: {
+              targetId: workflowResult.canvasId,
+              targetType: 'canvas',
+              status: 'finish',
+            },
+          });
+
+          this.logger.log(
+            `Daily AI News Canvas ${workflowResult.canvasId} created for session ${sessionId} with ${workflowResult.workflowSteps.length} steps`,
+          );
+          return;
+        } catch (error) {
+          this.logger.error(
+            `Failed to create Daily AI News workflow for session ${sessionId}:`,
+            error,
+          );
+          // Continue with generic pilot flow if workflow creation fails
+        }
+      }
+
       const canvasContentItems: CanvasContentItem[] =
         await this.canvasService.getCanvasContentItems(user, targetId, true);
       const toolsets = await this.toolService.listTools(user, { enabled: true });

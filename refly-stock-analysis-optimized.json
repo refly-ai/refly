@@ -1,0 +1,280 @@
+{
+  "title": "AI-Powered Fundamental Stock Analysis & Q&A System - Refly Optimized",
+  "version": "refly-stock-analysis-v2",
+  "variables": [
+    {
+      "variableId": "var-stock-symbol",
+      "name": "target_stock_symbol",
+      "variableType": "string",
+      "description": "Stock ticker symbol for analysis (e.g., AAPL, GOOGL, MSFT, TSLA)",
+      "required": true,
+      "defaultValue": "AAPL"
+    },
+    {
+      "variableId": "var-analysis-depth",
+      "name": "analysis_complexity",
+      "variableType": "string",
+      "description": "Analysis depth level: basic, intermediate, advanced, or comprehensive",
+      "required": false,
+      "defaultValue": "intermediate"
+    },
+    {
+      "variableId": "var-time-horizon",
+      "name": "investment_timeframe",
+      "variableType": "string",
+      "description": "Investment time horizon: short-term (1-6 months), medium-term (6-24 months), long-term (2+ years)",
+      "required": false,
+      "defaultValue": "medium-term"
+    },
+    {
+      "variableId": "var-report-format",
+      "name": "output_report_format",
+      "variableType": "string",
+      "description": "Final report format: comprehensive_pdf, executive_summary, interactive_qa, or all_formats",
+      "required": false,
+      "defaultValue": "comprehensive_pdf"
+    },
+    {
+      "variableId": "var-comparison-stocks",
+      "name": "peer_comparison_symbols",
+      "variableType": "string",
+      "description": "Comma-separated list of peer stocks for competitive analysis (optional)",
+      "required": false,
+      "defaultValue": ""
+    }
+  ],
+  "nodes": [
+    {
+      "id": "workflow-initializer",
+      "type": "start",
+      "position": { "x": 100, "y": 350 },
+      "data": {
+        "createdAt": "2025-09-22T14:00:00.000000",
+        "title": "Initialize Stock Analysis AI Crew",
+        "entityId": "stock-analysis-start",
+        "metadata": { "sizeMode": "compact", "status": "ready", "version": 0 }
+      }
+    },
+    {
+      "id": "financial-data-aggregator",
+      "type": "skillResponse",
+      "position": { "x": 450, "y": 350 },
+      "data": {
+        "createdAt": "2025-09-22T14:00:00.000000",
+        "title": "Financial Data Aggregator & Validator",
+        "entityId": "financial-data-collector",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Collect comprehensive financial data for stock @target_stock_symbol with @analysis_complexity level. Gather: 1) Latest financial statements (income statement, balance sheet, cash flow), 2) Key financial ratios and metrics, 3) Historical price data and trends, 4) Market capitalization and trading volumes, 5) Recent earnings reports and guidance, 6) Analyst estimates and consensus, 7) Industry and sector performance data, 8) Recent news and market sentiment. If @peer_comparison_symbols is provided, collect comparative data for peer analysis. Validate data accuracy and completeness before proceeding to analysis phase."
+          },
+          "selectedToolsets": [
+            {
+              "type": "regular",
+              "id": "builtin",
+              "name": "Builtin",
+              "toolset": { "toolsetId": "builtin", "name": "Builtin" }
+            }
+          ]
+        },
+        "content": "",
+        "modelConfig": { "model": "gpt-4o-mini", "temperature": 0.1, "maxTokens": 4000 }
+      }
+    },
+    {
+      "id": "fundamental-analyst-ai",
+      "type": "skillResponse",
+      "position": { "x": 800, "y": 350 },
+      "data": {
+        "createdAt": "2025-09-22T14:00:00.000000",
+        "title": "AI Fundamental Analyst",
+        "entityId": "fundamental-analysis-engine",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Conduct comprehensive fundamental analysis of @target_stock_symbol using collected financial data. Perform: 1) Financial Health Assessment (liquidity, solvency, efficiency ratios), 2) Profitability Analysis (margins, ROE, ROA, growth trends), 3) Valuation Analysis (P/E, P/B, PEG, DCF modeling), 4) Competitive Position Assessment (market share, moats, competitive advantages), 5) Risk Factor Identification (business, financial, market risks), 6) Growth Potential Evaluation (revenue growth, market expansion, innovation), 7) Management Quality Assessment, 8) ESG Considerations. Consider @investment_timeframe perspective and provide detailed analysis with supporting calculations and reasoning."
+          },
+          "selectedToolsets": []
+        },
+        "content": "",
+        "modelConfig": { "model": "gpt-4o-mini", "temperature": 0.2, "maxTokens": 6000 }
+      }
+    },
+    {
+      "id": "investment-strategist-ai",
+      "type": "skillResponse",
+      "position": { "x": 1150, "y": 350 },
+      "data": {
+        "createdAt": "2025-09-22T14:00:00.000000",
+        "title": "AI Investment Strategist & Recommender",
+        "entityId": "investment-strategy-advisor",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Generate strategic investment recommendations for @target_stock_symbol based on fundamental analysis results. Provide: 1) Investment Thesis (bull and bear cases), 2) Price Target Analysis (conservative, moderate, optimistic scenarios), 3) Risk-Adjusted Return Expectations, 4) Portfolio Allocation Suggestions, 5) Entry and Exit Strategies aligned with @investment_timeframe, 6) Risk Management Recommendations, 7) Catalysts and Key Events to Monitor, 8) Alternative Investment Considerations. If peer comparison data is available, include relative investment attractiveness analysis. Format recommendations with clear rationale and supporting evidence."
+          },
+          "selectedToolsets": []
+        },
+        "content": "",
+        "modelConfig": { "model": "gpt-4o-mini", "temperature": 0.3, "maxTokens": 5000 }
+      }
+    },
+    {
+      "id": "qa-knowledge-synthesizer",
+      "type": "skillResponse",
+      "position": { "x": 1500, "y": 350 },
+      "data": {
+        "createdAt": "2025-09-22T14:00:00.000000",
+        "title": "Q&A Knowledge Synthesizer",
+        "entityId": "qa-response-generator",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Synthesize all analysis results into a comprehensive Q&A knowledge base for @target_stock_symbol. Generate intelligent responses to common investor questions including: 1) 'What are the key financial strengths and weaknesses?', 2) 'Is this stock undervalued or overvalued?', 3) 'What are the main risks I should consider?', 4) 'How does this compare to competitors?', 5) 'What's the growth outlook?', 6) 'Should I buy, hold, or sell?', 7) 'What price should I pay?', 8) 'What could go wrong with this investment?', 9) 'How does this fit different investment strategies?', 10) 'What are the key metrics to monitor?'. Create detailed, evidence-based responses that investors can easily understand and act upon."
+          },
+          "selectedToolsets": []
+        },
+        "content": "",
+        "modelConfig": { "model": "gpt-4o-mini", "temperature": 0.4, "maxTokens": 5500 }
+      }
+    },
+    {
+      "id": "report-publisher-ai",
+      "type": "skillResponse",
+      "position": { "x": 1850, "y": 350 },
+      "data": {
+        "createdAt": "2025-09-22T14:00:00.000000",
+        "title": "AI Report Publisher & Document Generator",
+        "entityId": "report-generation-system",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Generate and publish comprehensive investment research report for @target_stock_symbol in @output_report_format. Create professional documents including: 1) Executive Summary with key findings and recommendations, 2) Detailed Fundamental Analysis section with charts and metrics, 3) Investment Strategy and Risk Assessment, 4) Comprehensive Q&A section for investor reference, 5) Appendices with supporting data and calculations. Use clear formatting, professional language, and actionable insights. Generate documents as artifacts for easy access and sharing. Include disclaimer and timestamp information."
+          },
+          "selectedToolsets": [
+            {
+              "type": "regular",
+              "id": "builtin",
+              "name": "Builtin",
+              "toolset": { "toolsetId": "builtin", "name": "Builtin" }
+            }
+          ]
+        },
+        "content": "",
+        "modelConfig": { "model": "gpt-4o-mini", "temperature": 0.2, "maxTokens": 4500 }
+      }
+    },
+    {
+      "id": "workflow-documentation",
+      "type": "memo",
+      "position": { "x": 450, "y": 600 },
+      "data": {
+        "createdAt": "2025-09-22T14:00:00.000000",
+        "title": "Refly Stock Analysis AI Crew Guide",
+        "entityId": "stock-workflow-guide",
+        "metadata": { "sizeMode": "compact", "status": "ready", "version": 0 },
+        "contentPreview": "## AI-Powered Stock Analysis Workflow - Refly Optimized\n\n**Architecture**: Multi-agent AI system for comprehensive stock analysis\n**Optimization**: Native Refly capabilities with enhanced AI reasoning\n**Processing**: Sequential analysis pipeline with context preservation\n\n### AI Agent Specializations\n\n#### 1. Financial Data Aggregator\n- **Role**: Chief Data Officer\n- **Responsibilities**: Collect, validate, and organize financial data\n- **Capabilities**: Web search, data validation, completeness checking\n- **Output**: Structured financial dataset ready for analysis\n\n#### 2. Fundamental Analyst AI\n- **Role**: Senior Research Analyst  \n- **Responsibilities**: Deep fundamental analysis and valuation\n- **Capabilities**: Financial modeling, ratio analysis, trend identification\n- **Output**: Comprehensive fundamental analysis report\n\n#### 3. Investment Strategist AI\n- **Role**: Chief Investment Officer\n- **Responsibilities**: Strategic recommendations and risk assessment\n- **Capabilities**: Strategy formulation, risk modeling, scenario analysis\n- **Output**: Investment thesis and strategic recommendations\n\n#### 4. Q&A Knowledge Synthesizer\n- **Role**: Investor Relations Specialist\n- **Responsibilities**: Transform analysis into investor-friendly Q&A format\n- **Capabilities**: Knowledge synthesis, question anticipation, clear communication\n- **Output**: Comprehensive Q&A knowledge base\n\n#### 5. Report Publisher AI\n- **Role**: Research Publications Manager\n- **Responsibilities**: Professional document generation and formatting\n- **Capabilities**: Document creation, formatting, artifact generation\n- **Output**: Professional investment research reports\n\n### Key Workflow Advantages\n\n#### Enhanced Analysis Quality\n- **Multi-perspective Analysis**: Each AI agent provides specialized expertise\n- **Context Preservation**: Analysis builds progressively through the pipeline\n- **Quality Assurance**: Multiple validation points ensure accuracy\n- **Comprehensive Coverage**: All aspects of fundamental analysis included\n\n#### Refly Platform Integration\n- **Native Toolsets**: Uses Refly's built-in capabilities for optimal performance\n- **Document Artifacts**: Generates reusable documents and reports\n- **Context-Aware Processing**: Each agent accesses previous analysis results\n- **Scalable Architecture**: Handles multiple stocks and analysis depths\n\n#### Investment-Grade Output\n- **Professional Standards**: Institutional-quality analysis and reporting\n- **Actionable Insights**: Clear recommendations with supporting evidence\n- **Risk Transparency**: Comprehensive risk assessment and disclosure\n- **Q&A Format**: Investor-friendly question-answer structure\n\n### Execution Scenarios\n\n#### Individual Stock Analysis\n- Input single stock symbol for comprehensive analysis\n- Customize analysis depth and time horizon\n- Generate targeted reports for specific investment decisions\n\n#### Comparative Analysis\n- Include peer comparison symbols for relative analysis\n- Evaluate competitive positioning and market dynamics\n- Generate sector-specific insights and recommendations\n\n#### Portfolio Integration\n- Analyze stocks within portfolio context\n- Consider correlation and diversification factors\n- Provide portfolio-level recommendations and insights\n\n### Quality Assurance Features\n- **Data Validation**: Multiple checkpoints ensure data accuracy\n- **Cross-Verification**: Analysis results verified across multiple agents\n- **Bias Detection**: Multiple perspectives reduce individual agent bias\n- **Transparency**: Clear methodology and assumption documentation",
+        "memoType": "workflow_documentation"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-init-data",
+      "source": "workflow-initializer",
+      "target": "financial-data-aggregator"
+    },
+    {
+      "id": "edge-data-analysis",
+      "source": "financial-data-aggregator",
+      "target": "fundamental-analyst-ai"
+    },
+    {
+      "id": "edge-analysis-strategy",
+      "source": "fundamental-analyst-ai",
+      "target": "investment-strategist-ai"
+    },
+    {
+      "id": "edge-strategy-qa",
+      "source": "investment-strategist-ai",
+      "target": "qa-knowledge-synthesizer"
+    },
+    {
+      "id": "edge-qa-report",
+      "source": "qa-knowledge-synthesizer",
+      "target": "report-publisher-ai"
+    },
+    { "id": "edge-docs", "source": "workflow-initializer", "target": "workflow-documentation" }
+  ],
+  "metadata": {
+    "description": "Refly-native AI crew system for comprehensive fundamental stock analysis with intelligent Q&A generation and professional reporting",
+    "version": "2.0.0",
+    "createdAt": "2025-09-22T14:00:00.000000",
+    "platform": "refly-canvas",
+    "architecture": "multi-agent-ai-crew",
+    "tags": [
+      "stock-analysis",
+      "fundamental-analysis",
+      "ai-crew",
+      "investment-research",
+      "financial-modeling",
+      "qa-system",
+      "refly-native",
+      "multi-agent"
+    ],
+    "ai_crew_features": [
+      "Specialized AI Agent Roles and Responsibilities",
+      "Sequential Analysis Pipeline with Context Preservation",
+      "Multi-perspective Financial Analysis and Validation",
+      "Investment-Grade Research and Recommendations",
+      "Intelligent Q&A Knowledge Base Generation",
+      "Professional Report Publishing and Documentation",
+      "Peer Comparison and Competitive Analysis",
+      "Risk Assessment and Scenario Modeling",
+      "Customizable Analysis Depth and Time Horizons",
+      "Native Refly Platform Integration"
+    ],
+    "refly_optimizations": [
+      "Eliminated external API dependencies where possible",
+      "Leveraged Refly's native web search and data capabilities",
+      "Optimized for Refly's context-aware data flow",
+      "Utilized built-in document generation for report artifacts",
+      "Designed for manual execution with batch processing support",
+      "Enhanced error handling through Refly's native systems",
+      "Streamlined variable management and configuration"
+    ],
+    "analysis_capabilities": [
+      "Comprehensive Financial Health Assessment",
+      "Advanced Valuation Modeling and Analysis",
+      "Competitive Positioning and Market Analysis",
+      "Risk Factor Identification and Quantification",
+      "Growth Potential and Opportunity Assessment",
+      "ESG Considerations and Impact Analysis",
+      "Investment Strategy Formulation and Optimization",
+      "Portfolio Integration and Allocation Guidance"
+    ],
+    "technical_improvements": [
+      "Reduced complexity while maintaining analysis depth",
+      "Enhanced AI agent specialization for better results",
+      "Improved data flow and context preservation",
+      "Native Refly toolset utilization for reliability",
+      "Professional-grade output formatting and presentation",
+      "Scalable architecture for multiple analysis scenarios"
+    ]
+  }
+}

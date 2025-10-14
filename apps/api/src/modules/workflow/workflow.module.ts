@@ -7,6 +7,7 @@ import { SkillModule } from '../skill/skill.module';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
 import { SyncWorkflowProcessor, RunWorkflowProcessor } from './workflow.processor';
+import { DailyNewsWorkflowService } from './daily-news-workflow.service';
 import { QUEUE_SYNC_WORKFLOW, QUEUE_RUN_WORKFLOW } from '../../utils/const';
 import { isDesktop } from '../../utils/runtime';
 
@@ -26,8 +27,9 @@ import { isDesktop } from '../../utils/runtime';
   controllers: [WorkflowController],
   providers: [
     WorkflowService,
+    DailyNewsWorkflowService,
     ...(isDesktop() ? [] : [SyncWorkflowProcessor, RunWorkflowProcessor]),
   ],
-  exports: [WorkflowService],
+  exports: [WorkflowService, DailyNewsWorkflowService],
 })
 export class WorkflowModule {}

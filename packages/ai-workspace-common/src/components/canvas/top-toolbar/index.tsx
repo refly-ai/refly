@@ -14,7 +14,7 @@ import ShareSettings from './share-settings';
 import { useUserStoreShallow } from '@refly/stores';
 import './index.scss';
 import { IconLink } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Undo, Redo, Copy, Play } from 'refly-icons';
+import { Undo, Redo, Copy, Play, Chat } from 'refly-icons';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { useAuthStoreShallow } from '@refly/stores';
 import { CanvasLayoutControls } from '@refly-packages/ai-workspace-common/components/canvas/layout-control/canvas-layout-controls';
@@ -49,10 +49,13 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
-  const { showWorkflowRun, setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
-    showWorkflowRun: state.showWorkflowRun,
-    setShowWorkflowRun: state.setShowWorkflowRun,
-  }));
+  const { showWorkflowRun, setShowWorkflowRun, showCopilot, setShowCopilot } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      showWorkflowRun: state.showWorkflowRun,
+      setShowWorkflowRun: state.setShowWorkflowRun,
+      showCopilot: state.showCopilot,
+      setShowCopilot: state.setShowCopilot,
+    }));
 
   const isShareCanvas = useMatch('/share/canvas/:canvasId');
   const isPreviewCanvas = useMatch('/preview/canvas/:shareId');
@@ -84,6 +87,14 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
       return;
     }
     setShowWorkflowRun(!showWorkflowRun);
+  };
+
+  const handleToggleCopilot = () => {
+    if (!isLogin) {
+      setLoginModalOpen(true);
+      return;
+    }
+    setShowCopilot(!showCopilot);
   };
 
   return (
@@ -154,16 +165,29 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, mode, changeMod
           <CanvasLayoutControls />
 
           {!readonly && !isPreviewCanvas && (
-            <TooltipButton
-              tooltip={t('canvas.toolbar.tooltip.initializeWorkflow') || 'Initialize Workflow'}
-              onClick={handleInitializeWorkflow}
-              className={cn(buttonClass, showWorkflowRun && '!bg-gradient-tools-open')}
-            >
-              <Play
-                size={16}
-                color={showWorkflowRun ? 'var(--refly-primary-default)' : 'var(--refly-text-0)'}
-              />
-            </TooltipButton>
+            <>
+              <TooltipButton
+                tooltip={t('canvas.toolbar.tooltip.initializeWorkflow') || 'Initialize Workflow'}
+                onClick={handleInitializeWorkflow}
+                className={cn(buttonClass, showWorkflowRun && '!bg-gradient-tools-open')}
+              >
+                <Play
+                  size={16}
+                  color={showWorkflowRun ? 'var(--refly-primary-default)' : 'var(--refly-text-0)'}
+                />
+              </TooltipButton>
+
+              <TooltipButton
+                tooltip="Daily AI News Copilot"
+                onClick={handleToggleCopilot}
+                className={cn(buttonClass, showCopilot && '!bg-gradient-tools-open')}
+              >
+                <Chat
+                  size={16}
+                  color={showCopilot ? 'var(--refly-primary-default)' : 'var(--refly-text-0)'}
+                />
+              </TooltipButton>
+            </>
           )}
 
           <ToolsDependency canvasId={canvasId} />

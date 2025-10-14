@@ -59,7 +59,7 @@ export class UserService implements OnModuleInit {
     });
 
     let subscription: Subscription | null = null;
-    if (userPo.subscriptionId) {
+    if (userPo?.subscriptionId) {
       subscription = await this.subscriptionService.getSubscription(userPo.subscriptionId);
     }
 
@@ -67,6 +67,20 @@ export class UserService implements OnModuleInit {
       user,
       userPo?.preferences,
     );
+
+    if (!userPo) {
+      // If user doesn't exist in database, return default settings
+      return {
+        uid: user.uid,
+        email: user.email,
+        name: '',
+        nickname: '',
+        avatar: '',
+        preferences: JSON.stringify(userPreferences),
+        subscription,
+      } as any;
+    }
+
     userPo.preferences = JSON.stringify(userPreferences);
 
     return {

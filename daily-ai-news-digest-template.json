@@ -1,0 +1,489 @@
+{
+  "title": "Daily AI News Digest with Perplexity and Gmail",
+  "version": "daily-ai-news-digest-v1",
+  "variables": [
+    {
+      "variableId": "var-website-url",
+      "name": "websiteUrl",
+      "variableType": "string",
+      "description": "Perplexity AI API endpoint or news source configuration URL",
+      "required": true,
+      "defaultValue": "https://api.perplexity.ai"
+    },
+    {
+      "variableId": "var-digest-email",
+      "name": "recipient_email",
+      "variableType": "string",
+      "description": "Target Gmail address to receive the AI news digest",
+      "required": false,
+      "defaultValue": ""
+    },
+    {
+      "variableId": "var-news-categories",
+      "name": "news_categories",
+      "variableType": "string",
+      "description": "AI news categories to focus on (e.g., 'AI research, machine learning, LLM, robotics')",
+      "required": false,
+      "defaultValue": "artificial intelligence, machine learning, LLM, AI research"
+    },
+    {
+      "variableId": "var-schedule-time",
+      "name": "schedule_time",
+      "variableType": "string",
+      "description": "Daily execution time (24-hour format, e.g., 09:00)",
+      "required": false,
+      "defaultValue": "09:00"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "daily-news-start",
+      "type": "dailyNewsStart",
+      "position": {
+        "x": 100,
+        "y": 350
+      },
+      "data": {
+        "createdAt": "2024-10-13T14:00:00.000000",
+        "title": "Daily AI News Digest Initializer",
+        "entityId": "daily-news-initializer",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "note": {
+            "type": "text",
+            "value": "Configure your Daily AI News Digest. Enter the Perplexity API endpoint, schedule time, and email preferences. The workflow will automatically fetch AI news, format it professionally, and deliver it to your inbox."
+          },
+          "fields": [
+            {
+              "id": "field-website-url",
+              "name": "Website URL",
+              "type": "text",
+              "placeholder": "https://api.perplexity.ai",
+              "bindTo": "@websiteUrl",
+              "required": true
+            },
+            {
+              "id": "field-recipient-email",
+              "name": "Recipient Gmail Address",
+              "type": "text",
+              "placeholder": "someone@gmail.com",
+              "bindTo": "@recipient_email",
+              "required": false
+            },
+            {
+              "id": "field-news-categories",
+              "name": "News Categories",
+              "type": "text",
+              "placeholder": "AI research, machine learning, LLM",
+              "bindTo": "@news_categories",
+              "required": false
+            },
+            {
+              "id": "field-schedule-time",
+              "name": "Daily Schedule Time",
+              "type": "text",
+              "placeholder": "09:00",
+              "bindTo": "@schedule_time",
+              "required": false
+            }
+          ],
+          "selectedToolsets": []
+        }
+      }
+    },
+    {
+      "id": "schedule-step",
+      "type": "skillResponse",
+      "position": {
+        "x": 360,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Schedule Daily Trigger",
+        "entityId": "schedule-daily-trigger",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 1 of 8. Schedule this workflow to run daily at @schedule_time local time. Confirm timezone, execution reliability, and handling of missed runs. Output scheduling configuration and next run timestamp."
+          },
+          "selectedToolsets": []
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.1,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "perplexity-fetch-step",
+      "type": "skillResponse",
+      "position": {
+        "x": 640,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Perplexity AI News Fetcher",
+        "entityId": "perplexity-news-fetcher",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 2 of 8. Use Perplexity at @websiteUrl to search for AI news headlines from the past 24 hours focusing on @news_categories. Return structured JSON with title, summary, url, publishTime, category. Limit to top 12 high-quality sources from reliable publishers."
+          },
+          "selectedToolsets": [
+            {
+              "type": "regular",
+              "id": "builtin",
+              "name": "Builtin",
+              "toolset": {
+                "toolsetId": "builtin",
+                "name": "Builtin"
+              }
+            }
+          ]
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.2,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "content-extractor-step",
+      "type": "skillResponse",
+      "position": {
+        "x": 920,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Structured News Extractor",
+        "entityId": "structured-news-extractor",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 3 of 8. Ingest the Perplexity fetch results and extract article bodies via read-only browsing if needed. Produce clean markdown content with sections per article, preserving citations and source URLs."
+          },
+          "selectedToolsets": [
+            {
+              "type": "regular",
+              "id": "builtin",
+              "name": "Builtin",
+              "toolset": {
+                "toolsetId": "builtin",
+                "name": "Builtin"
+              }
+            }
+          ]
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.2,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "news-quality-filter",
+      "type": "skillResponse",
+      "position": {
+        "x": 1060,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "News Quality Filter & Prioritizer",
+        "entityId": "news-quality-filter",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 4 of 8. Analyze and filter the extracted news content for quality and relevance. Apply filters: source credibility, content freshness, relevance to @news_categories, duplicate detection. Rank by importance and select top 8 articles for final digest."
+          },
+          "selectedToolsets": []
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.15,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "llm-format-step",
+      "type": "skillResponse",
+      "position": {
+        "x": 1340,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Digest Formatter LLM",
+        "entityId": "digest-formatter-llm",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 5 of 8. Transform the filtered content into a morning AI news digest email. Create sections: Headlines, Context & Analysis, What to Watch, Quick Links. Use concise, engaging tone with markdown formatting ready for email conversion."
+          },
+          "selectedToolsets": []
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.25,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "gmail-draft-step",
+      "type": "skillResponse",
+      "position": {
+        "x": 1620,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Gmail Draft Composer",
+        "entityId": "gmail-draft-composer",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 6 of 8. Draft a Gmail message addressed to @recipient_email with subject \"Daily AI News Digest - [Date]\". Convert markdown to HTML and embed as email body. Include professional intro, unsubscribe reminder, and footer with timestamp."
+          },
+          "selectedToolsets": [
+            {
+              "type": "regular",
+              "id": "builtin",
+              "name": "Builtin",
+              "toolset": {
+                "toolsetId": "builtin",
+                "name": "Builtin"
+              }
+            }
+          ]
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.15,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "approval-step",
+      "type": "skillResponse",
+      "position": {
+        "x": 1900,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Digest Approval & QA",
+        "entityId": "digest-approval-step",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 7 of 8. Present the Gmail draft summary to the user for approval. Highlight key news topics, detected issues, or missing data. Ask for any final edits before sending. Wait for manual confirmation to proceed with delivery."
+          },
+          "selectedToolsets": []
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.1,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "send-email-step",
+      "type": "skillResponse",
+      "position": {
+        "x": 2180,
+        "y": 120
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Gmail Delivery Agent",
+        "entityId": "gmail-delivery-agent",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0,
+          "contextItems": [],
+          "structuredData": {
+            "query": "Pilot Step Prompt: Step 8 of 8. After approval, send the Gmail digest using connected Gmail actions. Log message ID, delivery timestamp, and status. Provide delivery confirmation, analytics summary, and fallback instructions if send fails."
+          },
+          "selectedToolsets": [
+            {
+              "type": "regular",
+              "id": "builtin",
+              "name": "Builtin",
+              "toolset": {
+                "toolsetId": "builtin",
+                "name": "Builtin"
+              }
+            }
+          ]
+        },
+        "content": "",
+        "modelConfig": {
+          "model": "kimi-k2",
+          "temperature": 0.05,
+          "maxTokens": 4000
+        }
+      }
+    },
+    {
+      "id": "workflow-documentation",
+      "type": "memo",
+      "position": {
+        "x": 360,
+        "y": 360
+      },
+      "data": {
+        "createdAt": "2025-10-13T09:00:00.000000",
+        "title": "Daily AI News Digest Guide",
+        "entityId": "daily-news-guide",
+        "metadata": {
+          "sizeMode": "compact",
+          "status": "ready",
+          "version": 0
+        },
+        "contentPreview": "## Daily AI News Digest Workflow \n\n### How It Works\n1. **Schedule Daily Trigger** - Configure automated daily execution at specified time\n2. **Perplexity AI News Fetcher** - Gather latest AI news from multiple sources using @websiteUrl\n3. **Structured News Extractor** - Extract detailed content and preserve citations\n4. **News Quality Filter & Prioritizer** - Apply quality filters and relevance scoring\n5. **Digest Formatter LLM** - Transform content into professional email format\n6. **Gmail Draft Composer** - Create HTML email with proper formatting\n7. **Digest Approval & QA** - Manual review and approval checkpoint\n8. **Gmail Delivery Agent** - Send final digest with delivery confirmation\n\n### Step Status Indicators\n- ⭕ **Pending**: Step not yet started (gray circle)\n- ▶️ **Running**: Step currently executing (green arrow, animated)\n- ✅ **Completed**: Step finished successfully (green checkmark)\n\n### Key Features\n- **Quality Assurance**: Multi-stage filtering ensures high-quality content\n- **Customizable Categories**: Focus on specific AI news topics via @news_categories\n- **Professional Format**: Clean, responsive email design for all clients\n- **Manual Approval**: Review content before delivery\n- **Delivery Tracking**: Confirmation and analytics for each digest\n\n### Configuration Variables\n- **websiteUrl**: Perplexity API endpoint (required)\n- **recipient_email**: Gmail delivery address\n- **news_categories**: AI topics to focus on\n- **schedule_time**: Daily execution time (24-hour format)\n\n### Tips for Success\n- Ensure valid Perplexity API access at websiteUrl\n- Gmail API requires send permissions\n- Review approval step carefully before delivery\n- Monitor delivery confirmations for reliability\n",
+        "memoType": "workflow_documentation"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-start-schedule",
+      "source": "daily-news-start",
+      "target": "schedule-step"
+    },
+    {
+      "id": "edge-schedule-fetch",
+      "source": "schedule-step",
+      "target": "perplexity-fetch-step"
+    },
+    {
+      "id": "edge-fetch-extract",
+      "source": "perplexity-fetch-step",
+      "target": "content-extractor-step"
+    },
+    {
+      "id": "edge-extract-filter",
+      "source": "content-extractor-step",
+      "target": "news-quality-filter"
+    },
+    {
+      "id": "edge-filter-format",
+      "source": "news-quality-filter",
+      "target": "llm-format-step"
+    },
+    {
+      "id": "edge-format-draft",
+      "source": "llm-format-step",
+      "target": "gmail-draft-step"
+    },
+    {
+      "id": "edge-draft-approval",
+      "source": "gmail-draft-step",
+      "target": "approval-step"
+    },
+    {
+      "id": "edge-approval-send",
+      "source": "approval-step",
+      "target": "send-email-step"
+    },
+    {
+      "id": "edge-start-docs",
+      "source": "daily-news-start",
+      "target": "workflow-documentation"
+    }
+  ],
+  "metadata": {
+    "description": "Enhanced 8-step Daily AI News Digest workflow with Perplexity integration, quality filtering, and Gmail delivery automation",
+    "version": "2.0.0",
+    "createdAt": "2024-10-13T14:00:00.000000",
+    "platform": "refly-canvas",
+    "architecture": "multi-stage-agent-pilot-workflow",
+    "tags": [
+      "ai-news",
+      "daily-digest",
+      "perplexity",
+      "gmail",
+      "automation",
+      "pilot-steps",
+      "quality-assurance",
+      "8-step-workflow"
+    ],
+    "workflow_features": [
+      "8-step enhanced pipeline with quality control",
+      "Dynamic websiteUrl configuration via dailyNewsStart node",
+      "Multi-stage content filtering and prioritization",
+      "Professional email template generation",
+      "Manual approval checkpoint with detailed review",
+      "Comprehensive delivery tracking and analytics",
+      "Customizable news categories and scheduling",
+      "Context preservation across all pilot steps"
+    ],
+    "refly_optimizations": [
+      "Native integration with existing Agent and Copilot systems",
+      "Uses dailyNewsStart node type for enhanced UX",
+      "Pilot steps capture and forward context automatically",
+      "Status indicators compatible with existing step management",
+      "Minimal changes to core frontend components",
+      "Leverages kimi-k2 model for consistent AI responses"
+    ],
+    "step_capabilities": [
+      "Automated daily scheduling with timezone handling",
+      "Perplexity API integration for news gathering",
+      "Content extraction with citation preservation",
+      "Quality filtering by source credibility and relevance",
+      "Professional email formatting with HTML conversion",
+      "Gmail API integration with delivery confirmation",
+      "Manual QA checkpoint with approval workflow",
+      "Comprehensive logging and analytics reporting"
+    ],
+    "technical_improvements": [
+      "Enhanced 8-step pipeline for better content quality",
+      "Structured variable inputs with websiteUrl requirement",
+      "Multi-stage validation and quality assurance",
+      "Professional email template with responsive design",
+      "Comprehensive error handling and fallback mechanisms",
+      "Integrated workflow documentation in copilot panel"
+    ]
+  }
+}

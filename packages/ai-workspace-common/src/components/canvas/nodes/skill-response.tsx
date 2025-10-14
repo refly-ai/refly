@@ -48,6 +48,9 @@ import {
   useNodeExecutionStatus,
   useNodeExecutionFocus,
 } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { StepStatusIndicator } from '../../step/StepStatusIndicator';
+import { useStepNodeStatus } from '../../../hooks/useStepNodeStatus';
+import { useCopilotStore } from '@refly/stores';
 import { NodeExecutionStatus } from './shared/node-execution-status';
 import { NodeExecutionOverlay } from './shared/node-execution-overlay';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
@@ -252,6 +255,11 @@ export const SkillResponseNode = memo(
       isExecuting,
       canvasId: canvasId || '',
     });
+
+    // Get workflow mode and step status for Daily AI News workflow
+    const { mode: copilotMode } = useCopilotStore();
+    const isWorkflowMode = copilotMode === 'workflow';
+    const { status: stepStatus } = useStepNodeStatus(id);
 
     const nodeStyle = useMemo(
       () => (isPreview ? { width: NODE_WIDTH, height: 214 } : NODE_SIDE_CONFIG),
@@ -801,6 +809,13 @@ export const SkillResponseNode = memo(
 
         <NodeExecutionOverlay status={executionStatus} />
 
+        {/* Workflow Step Status Indicator - Top Right Corner */}
+        {isWorkflowMode && !isPreview && (
+          <div className="absolute top-2 right-2 z-10">
+            <StepStatusIndicator status={stepStatus} size="small" />
+          </div>
+        )}
+
         <div
           style={nodeStyle}
           className={cn(
@@ -811,7 +826,14 @@ export const SkillResponseNode = memo(
             status === 'failed'
               ? 'border border-[color:var(--func-danger---refly-func-danger-default,#F93920)] [background:var(--bg---refly-bg-content-z2,#FFF)] shadow-[0_2px_20px_4px_rgba(0,0,0,0.04)]'
               : 'border border-gray-200 [background:var(--bg---refly-bg-content-z2,#FFF)]',
+            // Add workflow mode styling
+            isWorkflowMode && 'border-2',
+            isWorkflowMode && stepStatus === 'running' && 'border-green-500 shadow-lg',
+            isWorkflowMode && stepStatus === 'completed' && 'border-green-400',
+            isWorkflowMode && stepStatus === 'pending' && 'border-gray-300',
           )}
+          data-step-status={stepStatus}
+          data-node-id={id}
         >
           {/* Node execution status badge */}
           <NodeExecutionStatus status={executionStatus} />

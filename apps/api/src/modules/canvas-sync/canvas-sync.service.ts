@@ -254,7 +254,7 @@ export class CanvasSyncService {
   async getTransactions(user: User, param: GetCanvasTransactionsData['query']) {
     const { canvasId, version, since } = param;
     const state = await this.getState(user, { canvasId, version });
-    const transactions = state.transactions.filter((tx) => tx.createdAt > since);
+    const transactions = (state.transactions || []).filter((tx) => tx.createdAt > since);
     return transactions;
   }
 

@@ -78,4 +78,5 @@ export {
   AutoEvictionStorageManager,
 } from './stores/utils/storage-manager';
 export type { CacheInfo } from './stores/utils/storage-manager';
+export { useWorkflowStepStore } from './workflow/workflowStepStore';
 export { type SiderData, type SourceObject, SettingsModalActiveTab } from './types/common';

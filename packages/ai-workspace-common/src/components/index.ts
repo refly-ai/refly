@@ -60,3 +60,14 @@ export * from './magicui/button';
 export * from './sider/layout';
 export * from './sider/sider-logged-out';
 export * from './sider/popover';
+
+// Step exports
+export * from './step/StepStatusIndicator';
+
+// Copilot exports
+export * from './copilot/DailyNewsWorkflowPanel';
+export * from './copilot/CopilotPanel';
+export * from './copilot/WorkflowStepsPanel';
+
+// Canvas node exports
+// export * from './canvas/DailyNewsStartNode';
