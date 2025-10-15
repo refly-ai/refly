@@ -4,7 +4,6 @@ import { StepNodeStatus } from '@refly/common-types';
 import { DAILY_AI_NEWS_WORKFLOW_STEPS, DAILY_AI_NEWS_CONFIG } from '@refly/ai-workspace-common';
 import { useWorkflowStepStore, useCopilotStore } from '@refly/stores';
 import { useAddNode } from '../../hooks/canvas/use-add-node';
-import { useSetNodeDataByEntity } from '../../hooks/canvas/use-set-node-data-by-entity';
 import { useUpdateWorkflowVariables } from '../../queries/queries';
 
 interface DailyNewsWorkflowPanelProps {
@@ -83,7 +82,6 @@ export const DailyNewsWorkflowPanel: React.FC<DailyNewsWorkflowPanelProps> = ({
   const { workflowSteps, setWorkflowSteps, workflowTitle } = useCopilotStore();
   const { addNode } = useAddNode();
   const { getNodes } = useReactFlow();
-  const _setNodeDataByEntity = useSetNodeDataByEntity();
 
   // Mutation for updating workflow variables
   const updateWorkflowVariablesMutation = useUpdateWorkflowVariables();
@@ -117,7 +115,7 @@ export const DailyNewsWorkflowPanel: React.FC<DailyNewsWorkflowPanelProps> = ({
 
   const progressPercent = (completedCount / DAILY_AI_NEWS_WORKFLOW_STEPS.length) * 100;
 
-  // 创建画布节点的函数 - 串联结构（仅创建8个步骤节点，复用现有开始节点）
+  // 创建画布节点的函数 - 串联结构，并为开始节点预设变量
   const createCanvasWorkflowNodes = () => {
     try {
       console.log('开始创建Daily AI News工作流节点...');
@@ -133,16 +131,60 @@ export const DailyNewsWorkflowPanel: React.FC<DailyNewsWorkflowPanelProps> = ({
 
       console.log('找到开始节点:', startNode.id, startNode.data?.entityId);
 
-      // 重要：不创建开始节点，只创建8个步骤节点
-      // 画布已有的开始节点将被复用（用户可以手动在其中添加变量）
+      // 首先通过API为开始节点预设Daily AI News工作流所需的变量
+      console.log('为开始节点预设工作流变量...');
 
-      // 创建8个工作流步骤节点 - 严格串联布局和连接
+      // 立即设置工作流变量，为用户预设好所需的参数
+      const setupWorkflowVariables = async () => {
+        try {
+          // 转换变量定义为API格式
+          const workflowVariables = DAILY_AI_NEWS_CONFIG.variables.map((variable) => ({
+            variableId: variable.name, // 添加必需的variableId字段
+            name: variable.name,
+            type: variable.type,
+            description: variable.description,
+            required: variable.required,
+            value: [
+              {
+                type: 'text' as const,
+                text:
+                  variable.name === 'scheduleTime'
+                    ? '09:00'
+                    : variable.name === 'newsCategories'
+                      ? 'AI research, machine learning, LLM, robotics, AI safety'
+                      : variable.name === 'websiteUrl'
+                        ? 'https://api.perplexity.ai'
+                        : variable.name === 'recipientEmail'
+                          ? 'your-email@gmail.com'
+                          : '',
+              },
+            ],
+          }));
+
+          // 调用API设置工作流变量
+          await updateWorkflowVariablesMutation.mutateAsync({
+            body: {
+              canvasId,
+              variables: workflowVariables,
+            },
+          });
+
+          console.log('工作流变量预设完成，用户可以修改这些默认值');
+        } catch (error) {
+          console.error('设置工作流变量失败:', error);
+        }
+      };
+
+      // 立即执行变量设置
+      setupWorkflowVariables();
+
+      // 创建8个工作流步骤节点 - 串联布局和连接
       DAILY_AI_NEWS_WORKFLOW_STEPS.forEach((step, index) => {
         const skillResponseNode = {
           id: step.nodeId,
           type: 'skillResponse',
           position: {
-            x: 150, // 统一x坐标，确保垂直对齐
+            x: 400, // 统一x坐标，确保垂直对齐
             y: 300 + index * 200, // 步骤间距200px，确保充足间隔
           },
           data: {
@@ -219,44 +261,6 @@ export const DailyNewsWorkflowPanel: React.FC<DailyNewsWorkflowPanelProps> = ({
           addNode(skillResponseNode, connectTo);
         }, index * 200); // 增加延迟间隔确保顺序创建和连接
       });
-
-      // 通过API设置工作流变量
-      setTimeout(
-        async () => {
-          console.log('正在通过API配置工作流变量...');
-
-          try {
-            // 转换变量定义为API格式
-            const workflowVariables = DAILY_AI_NEWS_CONFIG.variables.map((variable) => ({
-              name: variable.name,
-              type: variable.type,
-              description: variable.description,
-              required: variable.required,
-              value:
-                variable.name === 'scheduleTime'
-                  ? '09:00'
-                  : variable.name === 'newsCategories'
-                    ? 'AI research, machine learning, LLM'
-                    : variable.name === 'websiteUrl'
-                      ? 'https://api.perplexity.ai'
-                      : '',
-            }));
-
-            // 调用API设置工作流变量
-            await updateWorkflowVariablesMutation.mutateAsync({
-              body: {
-                canvasId,
-                variables: workflowVariables,
-              },
-            });
-
-            console.log('工作流变量配置完成');
-          } catch (error) {
-            console.error('设置工作流变量失败:', error);
-          }
-        },
-        DAILY_AI_NEWS_WORKFLOW_STEPS.length * 200 + 100,
-      ); // 在所有节点创建完成后再配置变量
 
       console.log('所有工作流节点创建完成，形成串联结构');
     } catch (error) {
