@@ -78,18 +78,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
     });
 
     stopPolling(resultId);
-
-    // Clear any pending throttled updates for this result
-    if (streamUpdateThrottleRef.current[resultId]?.timeout) {
-      clearTimeout(streamUpdateThrottleRef.current[resultId].timeout);
-      delete streamUpdateThrottleRef.current[resultId];
-    }
-
-    // Clear any pending token usage updates
-    if (tokenUsageUpdateTimeoutRef.current[resultId]) {
-      clearTimeout(tokenUsageUpdateTimeoutRef.current[resultId]);
-      delete tokenUsageUpdateTimeoutRef.current[resultId];
-    }
   };
 
   const onSkillLog = (skillEvent: SkillEvent) => {
@@ -107,16 +95,11 @@ export const useInvokeAction = (params?: { source?: string }) => {
       updatedStep.logs = [...(updatedStep.logs || []), log];
     }
 
-    const updatedResult = {
-      ...result,
-      status: 'executing' as const,
+    const payload = {
       steps: getUpdatedSteps(result.steps ?? [], updatedStep),
     };
-    onUpdateResult(resultId, updatedResult, skillEvent);
+    onUpdateResult(resultId, payload, skillEvent);
   };
-
-  // Optimize token usage updates by debouncing
-  const tokenUsageUpdateTimeoutRef = useRef<Record<string, number>>({});
 
   const onSkillTokenUsage = (skillEvent: SkillEvent) => {
     const { resultId, step, tokenUsage } = skillEvent;
@@ -127,35 +110,21 @@ export const useInvokeAction = (params?: { source?: string }) => {
       return;
     }
 
-    // Clear existing timeout for this result
-    if (tokenUsageUpdateTimeoutRef.current[resultId]) {
-      clearTimeout(tokenUsageUpdateTimeoutRef.current[resultId]);
+    const currentResult = useActionResultStore.getState().resultMap[resultId];
+    if (!currentResult) return;
+
+    const updatedStep: ActionStep = findOrCreateStep(currentResult.steps ?? [], step);
+    if (tokenUsage) {
+      updatedStep.tokenUsage = aggregateTokenUsage([...(updatedStep.tokenUsage ?? []), tokenUsage]);
     }
 
-    // Debounce token usage updates to 500ms
-    tokenUsageUpdateTimeoutRef.current[resultId] = window.setTimeout(() => {
-      const currentResult = useActionResultStore.getState().resultMap[resultId];
-      if (!currentResult) return;
-
-      const updatedStep: ActionStep = findOrCreateStep(currentResult.steps ?? [], step);
-      if (tokenUsage) {
-        updatedStep.tokenUsage = aggregateTokenUsage([
-          ...(updatedStep.tokenUsage ?? []),
-          tokenUsage,
-        ]);
-      }
-
-      onUpdateResult(
-        resultId,
-        {
-          ...currentResult,
-          steps: getUpdatedSteps(currentResult.steps ?? [], updatedStep),
-        },
-        skillEvent,
-      );
-
-      delete tokenUsageUpdateTimeoutRef.current[resultId];
-    }, 500);
+    onUpdateResult(
+      resultId,
+      {
+        steps: getUpdatedSteps(currentResult.steps ?? [], updatedStep),
+      },
+      skillEvent,
+    );
   };
 
   const findOrCreateStep = (steps: ActionStep[], stepMeta: ActionStepMeta) => {
@@ -204,147 +173,32 @@ export const useInvokeAction = (params?: { source?: string }) => {
     }
   };
 
-  // Optimize stream updates with debouncing
-  const streamUpdateThrottleRef = useRef<
-    Record<
-      string,
-      {
-        timeout: number | null;
-        lastUpdate: number;
-        pendingContent: string;
-        pendingReasoningContent: string;
-        pendingArtifact?: Artifact;
-        codeArtifactCreated?: boolean;
-      }
-    >
-  >({});
-
   const onSkillStream = (skillEvent: SkillEvent) => {
-    const { resultId, content, reasoningContent = '', step, artifact } = skillEvent;
+    const { resultId, content = '', reasoningContent = '', step, artifact } = skillEvent;
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
     if (!result || !step) {
       return;
     }
-
-    // Setup throttling state if not exists
-    if (!streamUpdateThrottleRef.current[resultId]) {
-      streamUpdateThrottleRef.current[resultId] = {
-        timeout: null,
-        lastUpdate: 0,
-        pendingContent: '',
-        pendingReasoningContent: '',
-      };
-    }
-
-    const throttleState = streamUpdateThrottleRef.current[resultId];
-    const now = performance.now();
-    const THROTTLE_INTERVAL = 250; // Increased from 100ms to 250ms for less frequent updates
-
-    // Accumulate content
-    throttleState.pendingContent += content;
-    throttleState.pendingReasoningContent += reasoningContent;
-    if (artifact) {
-      throttleState.pendingArtifact = artifact;
-    }
-
-    // Clear existing timeout
-    if (throttleState.timeout) {
-      clearTimeout(throttleState.timeout);
-      throttleState.timeout = null;
-    }
-
-    // If enough time has passed since last update or we have a lot of content, update immediately
-    if (
-      now - throttleState.lastUpdate > THROTTLE_INTERVAL ||
-      throttleState.pendingContent.length > 1000
-    ) {
-      // Use requestAnimationFrame to align with browser's render cycle
-      requestAnimationFrame(() => {
-        const updatedStep: ActionStep = findOrCreateStep(result.steps ?? [], step);
-        updatedStep.content += throttleState.pendingContent;
-
-        if (!updatedStep.reasoningContent) {
-          updatedStep.reasoningContent = throttleState.pendingReasoningContent;
-        } else {
-          updatedStep.reasoningContent += throttleState.pendingReasoningContent;
-        }
-
-        const updatedResult = {
-          ...result,
-          status: 'executing' as const,
-          steps: getUpdatedSteps(result.steps ?? [], updatedStep),
-        };
-
-        // Handle code artifact content if this is a code artifact stream
-        if (throttleState.pendingArtifact) {
-          onSkillStreamArtifact(resultId, throttleState.pendingArtifact, updatedStep.content ?? '');
-          throttleState.codeArtifactCreated = true;
-        }
-
-        onUpdateResult(resultId, updatedResult, {
-          ...skillEvent,
-          content: throttleState.pendingContent,
-          reasoningContent: throttleState.pendingReasoningContent,
-        });
-
-        // Reset accumulated content
-        throttleState.pendingContent = '';
-        throttleState.pendingReasoningContent = '';
-        throttleState.pendingArtifact = undefined;
-        throttleState.lastUpdate = now;
-      });
+    const updatedStep: ActionStep = findOrCreateStep(result.steps ?? [], step);
+    updatedStep.content = (updatedStep.content ?? '') + (content ?? '');
+    if (!updatedStep.reasoningContent) {
+      updatedStep.reasoningContent = reasoningContent ?? '';
     } else {
-      // Schedule update for later
-      throttleState.timeout = window.setTimeout(
-        () => {
-          requestAnimationFrame(() => {
-            const currentResult = useActionResultStore.getState().resultMap[resultId];
-            if (!currentResult) return;
-
-            const updatedStep: ActionStep = findOrCreateStep(currentResult.steps ?? [], step);
-            updatedStep.content += throttleState.pendingContent;
-
-            if (!updatedStep.reasoningContent) {
-              updatedStep.reasoningContent = throttleState.pendingReasoningContent;
-            } else {
-              updatedStep.reasoningContent += throttleState.pendingReasoningContent;
-            }
-
-            const updatedResult = {
-              ...currentResult,
-              status: 'executing' as const,
-              steps: getUpdatedSteps(currentResult.steps ?? [], updatedStep),
-            };
-
-            // Handle the artifact content processing if needed
-            if (throttleState.pendingArtifact) {
-              onSkillStreamArtifact(
-                resultId,
-                throttleState.pendingArtifact,
-                updatedStep.content ?? '',
-              );
-            }
-
-            onUpdateResult(resultId, updatedResult, {
-              ...skillEvent,
-              content: throttleState.pendingContent,
-              reasoningContent: throttleState.pendingReasoningContent,
-              artifact: throttleState.pendingArtifact,
-            });
-
-            // Reset state
-            throttleState.pendingContent = '';
-            throttleState.pendingReasoningContent = '';
-            throttleState.pendingArtifact = undefined;
-            throttleState.lastUpdate = performance.now();
-            throttleState.timeout = null;
-          });
-        },
-        THROTTLE_INTERVAL - (now - throttleState.lastUpdate),
-      );
+      updatedStep.reasoningContent =
+        (updatedStep.reasoningContent ?? '') + (reasoningContent ?? '');
     }
+
+    const payload = {
+      steps: getUpdatedSteps(result.steps ?? [], updatedStep),
+    };
+
+    if (artifact) {
+      onSkillStreamArtifact(resultId, artifact, updatedStep.content ?? '');
+    }
+
+    onUpdateResult(resultId, payload, skillEvent);
   };
 
   const onSkillStructedData = (skillEvent: SkillEvent) => {
@@ -387,12 +241,10 @@ export const useInvokeAction = (params?: { source?: string }) => {
       };
     }
 
-    const updatedResult = {
-      ...result,
-      status: 'executing' as const,
+    const payload = {
       steps: getUpdatedSteps(result.steps ?? [], updatedStep),
     };
-    onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
+    onUpdateResult(skillEvent.resultId, payload, skillEvent);
   };
 
   const onSkillArtifact = (skillEvent: SkillEvent) => {
@@ -417,13 +269,11 @@ export const useInvokeAction = (params?: { source?: string }) => {
         ? existingArtifacts.map((item, index) => (index === artifactIndex ? artifact : item))
         : [...existingArtifacts, artifact];
 
-    const updatedResult = {
-      ...result,
-      status: 'executing' as const,
+    const payload = {
       steps: getUpdatedSteps(result.steps ?? [], updatedStep),
     };
 
-    onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
+    onUpdateResult(skillEvent.resultId, payload, skillEvent);
   };
 
   const onSkillCreateNode = (_skillEvent: SkillEvent) => {
@@ -447,11 +297,10 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
     stopPolling(skillEvent.resultId);
 
-    const updatedResult = {
-      ...result,
+    const payload = {
       status: 'finish' as const,
     };
-    onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
+    onUpdateResult(skillEvent.resultId, payload, skillEvent);
 
     // Clear current resultId when conversation ends
     if (globalCurrentResultIdRef.current === skillEvent.resultId) {
@@ -526,12 +375,11 @@ export const useInvokeAction = (params?: { source?: string }) => {
       setTraceId(resultId, traceId);
     }
 
-    const updatedResult = {
-      ...result,
+    const payload = {
       status: 'failed' as const,
       errors: originError ? [originError] : [],
     };
-    onUpdateResult(skillEvent.resultId, updatedResult, skillEvent);
+    onUpdateResult(skillEvent.resultId, payload, skillEvent);
 
     if (runtime?.includes('extension')) {
       if (globalIsAbortedRef.current) {

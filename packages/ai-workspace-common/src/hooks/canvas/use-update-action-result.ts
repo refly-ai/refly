@@ -1,12 +1,15 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { ActionResult, ActionStep, SkillEvent } from '@refly/openapi-schema';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
-import { useActionResultStoreShallow } from '@refly/stores';
+import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
 import { CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
-import { aggregateTokenUsage } from '@refly/utils/models';
+import { aggregateTokenUsage, mergeActionResults } from '@refly/utils';
 import { useSetNodeDataByEntity } from './use-set-node-data-by-entity';
 import { processContentPreview } from '../../utils/content';
+
+const FLUSH_INTERVAL_MS = 150; // Debounce interval for heavy flush
+const MAX_WAIT_MS = 1500; // Hard cap to prevent starvation under continuous streams
 
 // Memoize token usage calculation to avoid recalculating on every update
 const memoizeTokenUsage = (() => {
@@ -23,7 +26,7 @@ const memoizeTokenUsage = (() => {
 })();
 
 const generateFullNodeDataUpdates = (
-  payload: ActionResult,
+  payload: Partial<ActionResult>,
 ): Partial<CanvasNodeData<ResponseNodeMeta>> => {
   return {
     title: payload.title,
@@ -48,74 +51,7 @@ const generateFullNodeDataUpdates = (
   };
 };
 
-const generatePartialNodeDataUpdates = (payload: ActionResult, event?: SkillEvent) => {
-  const { resultId, title, steps = [] } = payload ?? {};
-  const nodeData: Partial<CanvasNodeData<ResponseNodeMeta>> = {
-    title,
-    entityId: resultId,
-    metadata: {
-      status: payload?.status,
-      actionMeta: payload.actionMeta,
-      modelInfo: payload.modelInfo,
-      version: event?.version ?? payload.version,
-    },
-  };
-
-  const { event: eventType, log } = event ?? {};
-
-  // Optimize event-specific updates
-  switch (eventType) {
-    case 'stream':
-      nodeData.contentPreview = processContentPreview(steps.map((s) => s?.content || ''));
-      nodeData.metadata = {
-        ...nodeData.metadata,
-        reasoningContent: processContentPreview(steps.map((s) => s?.reasoningContent || '')),
-      };
-      break;
-
-    case 'artifact':
-      nodeData.metadata = {
-        ...nodeData.metadata,
-        status: payload?.status,
-        artifacts: steps.flatMap((s) => s.artifacts ?? []),
-      };
-      break;
-
-    case 'log':
-      nodeData.metadata = {
-        ...nodeData.metadata,
-        status: payload?.status,
-        currentLog: log,
-      };
-      break;
-
-    case 'structured_data':
-      nodeData.metadata = {
-        ...nodeData.metadata,
-        status: payload?.status,
-        structuredData: steps.reduce((acc, step) => Object.assign(acc, step.structuredData), {}),
-      };
-      break;
-
-    case 'token_usage':
-      nodeData.metadata = {
-        ...nodeData.metadata,
-        status: payload?.status,
-        tokenUsage: memoizeTokenUsage(steps),
-      };
-      break;
-
-    case 'error':
-      nodeData.metadata = {
-        ...nodeData.metadata,
-        status: payload?.status,
-        errors: payload.errors,
-      };
-      break;
-  }
-
-  return nodeData;
-};
+// Note: Partial per-event node updates were removed to avoid frequent heavy renders.
 
 // Optimized comparison that focuses on the most relevant properties
 const isNodeDataEqual = (
@@ -162,120 +98,179 @@ const isNodeDataEqual = (
 };
 
 export const useUpdateActionResult = () => {
-  const { queueActionResultUpdate, updateActionResult } = useActionResultStoreShallow((state) => ({
+  const { updateActionResult } = useActionResultStoreShallow((state) => ({
     updateActionResult: state.updateActionResult,
-    queueActionResultUpdate: state.queueActionResultUpdate,
   }));
   const { getNodes } = useReactFlow();
   const setNodeDataByEntity = useSetNodeDataByEntity();
 
-  // Use a ref to track throttling
-  const throttleRef = useRef({
-    lastUpdateTime: 0,
-    pendingUpdate: null as null | {
-      resultId: string;
-      data: Partial<CanvasNodeData<ResponseNodeMeta>>;
-    },
-    timeoutId: null as null | number,
-  });
+  // Accumulator for heavy updates per resultId
+  const accumRef = useRef<
+    Record<
+      string,
+      {
+        updates: Partial<ActionResult>[];
+        timeoutId: number | null;
+        lastScheduledAt: number;
+        firstPendingAt?: number;
+      }
+    >
+  >({});
 
-  // Throttled node update function
-  const throttledNodeUpdate = useCallback(
-    (resultId: string, nodeData: Partial<CanvasNodeData<ResponseNodeMeta>>) => {
-      const now = performance.now();
-      const throttleTime = 200; // Increased from 100ms to 200ms for better performance
+  const clearAccumulator = useCallback((resultId?: string) => {
+    if (!resultId) {
+      // Clear all
+      for (const key of Object.keys(accumRef.current)) {
+        const entry = accumRef.current[key];
+        if (entry?.timeoutId) {
+          window.clearTimeout(entry.timeoutId);
+        }
+      }
+      accumRef.current = {};
+      return;
+    }
+    const entry = accumRef.current[resultId];
+    if (entry?.timeoutId) {
+      window.clearTimeout(entry.timeoutId);
+    }
+    delete accumRef.current[resultId];
+  }, []);
 
-      // Clear any pending timeout
-      if (throttleRef.current.timeoutId) {
-        window.clearTimeout(throttleRef.current.timeoutId);
-        throttleRef.current.timeoutId = null;
+  const flushUpdates = useCallback(
+    (resultId: string) => {
+      const entry = accumRef.current[resultId];
+      if (!entry || !entry.updates?.length) return;
+
+      const storeState = useActionResultStore.getState();
+      const oldResult = storeState?.resultMap?.[resultId];
+
+      let merged: ActionResult | undefined = oldResult as ActionResult | undefined;
+      for (const u of entry.updates) {
+        merged = mergeActionResults(merged, u);
       }
 
-      // Store the latest pending update
-      throttleRef.current.pendingUpdate = { resultId, data: nodeData };
+      if (!merged) {
+        // Nothing to apply
+        clearAccumulator(resultId);
+        return;
+      }
 
-      // If enough time has passed since last update, apply immediately
-      if (now - throttleRef.current.lastUpdateTime > throttleTime) {
-        // Use requestAnimationFrame to align with browser's render cycle
-        requestAnimationFrame(() => {
-          setNodeDataByEntity({ type: 'skillResponse', entityId: resultId }, nodeData);
-          throttleRef.current.lastUpdateTime = now;
-          throttleRef.current.pendingUpdate = null;
-        });
-      } else {
-        // Otherwise schedule update for later
-        throttleRef.current.timeoutId = window.setTimeout(
-          () => {
+      // Apply to store in one heavy update
+      updateActionResult(resultId, merged);
+
+      // Update node data once with full payload
+      const nodes = getNodes();
+      const currentNode = nodes.find(
+        (n) => n.type === 'skillResponse' && n.data?.entityId === resultId,
+      );
+
+      if (currentNode) {
+        const nodeVersion = (currentNode?.data?.metadata as ResponseNodeMeta)?.version;
+        const resultVersion = merged?.version;
+        if (
+          !(nodeVersion !== undefined && resultVersion !== undefined && nodeVersion > resultVersion)
+        ) {
+          const nodeUpdates = JSON.parse(
+            JSON.stringify(generateFullNodeDataUpdates(merged as Partial<ActionResult>)),
+          );
+
+          if (
+            !currentNode?.data ||
+            !isNodeDataEqual(currentNode.data as CanvasNodeData<ResponseNodeMeta>, nodeUpdates)
+          ) {
             requestAnimationFrame(() => {
-              if (throttleRef.current.pendingUpdate) {
-                const { resultId, data } = throttleRef.current.pendingUpdate;
-                setNodeDataByEntity({ type: 'skillResponse', entityId: resultId }, data);
-                throttleRef.current.lastUpdateTime = performance.now();
-                throttleRef.current.pendingUpdate = null;
-                throttleRef.current.timeoutId = null;
-              }
+              setNodeDataByEntity({ type: 'skillResponse', entityId: resultId }, nodeUpdates);
             });
-          },
-          throttleTime - (now - throttleRef.current.lastUpdateTime),
-        );
+          }
+        }
       }
+
+      // Clear the accumulator for this resultId
+      clearAccumulator(resultId);
     },
-    [setNodeDataByEntity],
+    [clearAccumulator, getNodes, setNodeDataByEntity, updateActionResult],
   );
 
-  return useCallback(
-    (resultId: string, payload: ActionResult, event?: SkillEvent) => {
-      // Determine if this is a critical update that needs immediate processing
-      const isCriticalUpdate =
-        event?.event === 'error' ||
-        event?.event === 'end' ||
-        payload?.status === 'failed' ||
-        payload?.status === 'finish';
-
-      // Use different update strategies based on update type
-      if (isCriticalUpdate) {
-        // Critical updates go directly to the store
-        actionEmitter.emit('updateResult', { resultId, payload });
-        updateActionResult(resultId, payload);
-      } else {
-        // Non-critical updates use batched queue
-        actionEmitter.emit('updateResult', { resultId, payload });
-        queueActionResultUpdate(resultId, payload);
+  const scheduleFlush = useCallback(
+    (resultId: string, immediate?: boolean) => {
+      let entry = accumRef.current[resultId];
+      const now = performance.now();
+      if (!entry) {
+        entry = {
+          updates: [],
+          timeoutId: null,
+          lastScheduledAt: now,
+          firstPendingAt: now,
+        };
+        accumRef.current[resultId] = entry;
       }
 
-      // Update canvas node data when the target is canvas
-      if (payload.targetType === 'canvas') {
-        // Optimize node data generation for different event types
-        const nodeData =
-          event && event.event === 'stream'
-            ? {
-                // For stream events, just update content-related fields
-                contentPreview: processContentPreview(
-                  payload.steps?.map((s) => s?.content || '') || [],
-                ),
-                metadata: {
-                  status: payload?.status,
-                  version: event?.version ?? payload.version,
-                  reasoningContent: processContentPreview(
-                    payload.steps?.map((s) => s?.reasoningContent || '') || [],
-                  ),
-                },
-              }
-            : event
-              ? generatePartialNodeDataUpdates(payload, event)
-              : generateFullNodeDataUpdates(payload);
+      if (immediate) {
+        if (entry.timeoutId) {
+          window.clearTimeout(entry.timeoutId);
+          entry.timeoutId = null;
+        }
+        flushUpdates(resultId);
+        return;
+      }
 
-        // Only get current node data if we need to compare
+      // Initialize firstPendingAt if missing
+      if (!entry.firstPendingAt) {
+        entry.firstPendingAt = now;
+      }
+
+      // Clear and reschedule trailing timer (debounce)
+      if (entry.timeoutId) {
+        window.clearTimeout(entry.timeoutId);
+        entry.timeoutId = null;
+      }
+
+      // Starvation guard: if pending too long, force flush now
+      if (now - (entry.firstPendingAt ?? now) > MAX_WAIT_MS) {
+        flushUpdates(resultId);
+        return;
+      }
+
+      entry.lastScheduledAt = now;
+      entry.timeoutId = window.setTimeout(() => {
+        entry.timeoutId = null;
+        flushUpdates(resultId);
+      }, FLUSH_INTERVAL_MS);
+    },
+    [flushUpdates],
+  );
+
+  // Ensure pending updates are not lost when the hook unmounts
+  useEffect(() => {
+    return () => {
+      const keys = Object.keys(accumRef.current);
+      for (const k of keys) {
+        try {
+          flushUpdates(k);
+        } catch {
+          // Ignore errors on unmount flush
+        }
+      }
+    };
+  }, [flushUpdates]);
+
+  return useCallback(
+    (resultId: string, payload: Partial<ActionResult>, event?: SkillEvent) => {
+      actionEmitter.emit('updateResult', { resultId, payload });
+
+      // If event is empty, reset accumulation and perform initial update immediately
+      if (!event) {
+        clearAccumulator(resultId);
+        updateActionResult(resultId, { resultId, ...payload } as ActionResult);
+
         const nodes = getNodes();
         const currentNode = nodes.find(
           (n) => n.type === 'skillResponse' && n.data?.entityId === resultId,
         );
+        if (!currentNode) return;
 
-        // Check if node version matches ActionResult version to avoid canvas sync conflicts
         const nodeVersion = (currentNode?.data?.metadata as ResponseNodeMeta)?.version;
-        const resultVersion = payload.version;
-
-        // Skip update if node version is newer than result version (canvas sync already updated)
+        const resultVersion = payload?.version;
         if (
           nodeVersion !== undefined &&
           resultVersion !== undefined &&
@@ -284,15 +279,43 @@ export const useUpdateActionResult = () => {
           return;
         }
 
-        // Only update if the data has changed (avoids unnecessary rerenders)
+        const nodeUpdates = JSON.parse(
+          JSON.stringify(generateFullNodeDataUpdates(payload as Partial<ActionResult>)),
+        );
+
         if (
           !currentNode?.data ||
-          !isNodeDataEqual(currentNode.data as CanvasNodeData<ResponseNodeMeta>, nodeData)
+          !isNodeDataEqual(currentNode.data as CanvasNodeData<ResponseNodeMeta>, nodeUpdates)
         ) {
-          throttledNodeUpdate(resultId, nodeData);
+          requestAnimationFrame(() => {
+            setNodeDataByEntity({ type: 'skillResponse', entityId: resultId }, nodeUpdates);
+          });
         }
+        return;
+      }
+
+      // Accumulate updates for this resultId
+      let entry = accumRef.current[resultId];
+      if (!entry) {
+        entry = {
+          updates: [],
+          timeoutId: null,
+          lastScheduledAt: 0,
+        };
+        accumRef.current[resultId] = entry;
+      }
+      entry.updates.push({ resultId, ...payload });
+
+      // Determine if we should flush immediately
+      const isCriticalUpdate =
+        event?.event === 'end' || event?.event === 'error' || payload?.status === 'failed';
+
+      if (isCriticalUpdate) {
+        scheduleFlush(resultId, true);
+      } else {
+        scheduleFlush(resultId, false);
       }
     },
-    [updateActionResult, queueActionResultUpdate, getNodes, throttledNodeUpdate],
+    [clearAccumulator, getNodes, scheduleFlush, setNodeDataByEntity, updateActionResult],
   );
 };

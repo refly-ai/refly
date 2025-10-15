@@ -8,6 +8,7 @@ import {
 } from '@refly/canvas-common';
 import { IContextItem } from '@refly/common-types';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { deepmerge } from '@refly/utils';
 
 export const useSetNodeDataByEntity = () => {
   const { getNodes, setNodes } = useReactFlow<CanvasNode<any>>();
@@ -30,10 +31,7 @@ export const useSetNodeDataByEntity = () => {
       if (node) {
         const updatedNodes = currentNodes.map((n) => ({
           ...n,
-          data:
-            n.id === node.id
-              ? { ...n.data, ...nodeData, metadata: { ...n.data.metadata, ...nodeData.metadata } }
-              : n.data,
+          data: n.id === node.id ? deepmerge(n.data, nodeData) : n.data,
         }));
         setNodes(updatedNodes);
         syncCanvasData();

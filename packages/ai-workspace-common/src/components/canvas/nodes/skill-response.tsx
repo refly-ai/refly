@@ -1,6 +1,6 @@
 import { Position, useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
-import { Divider, Input, message } from 'antd';
+import { Input, message } from 'antd';
 import type { InputRef } from 'antd';
 import { CanvasNode, purgeToolsets } from '@refly/canvas-common';
 import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
@@ -12,11 +12,7 @@ import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/ca
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
-import {
-  IconError,
-  IconLoading,
-  IconToken,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconError, IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
@@ -158,13 +154,11 @@ const NodeFooter = memo(
   ({
     model,
     modelInfo,
-    tokenUsage,
     createdAt,
     language,
   }: {
     model: string;
     modelInfo: any;
-    tokenUsage: any;
     createdAt: string;
     language: string;
   }) => {
@@ -175,18 +169,6 @@ const NodeFooter = memo(
             <div className="flex items-center gap-1 overflow-hidden">
               <ModelIcon model={modelInfo?.name} size={16} type={'color'} />
               <span className="truncate">{model}</span>
-            </div>
-          )}
-          {model && tokenUsage ? <Divider type="vertical" className="mx-1" /> : null}
-          {tokenUsage?.reduce ? (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <IconToken className="w-3 h-3" />
-              {tokenUsage.reduce((acc, t) => acc + t.inputTokens + t.outputTokens, 0)}
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <IconToken className="w-3 h-3" />
-              {0}
             </div>
           )}
         </div>
@@ -203,8 +185,7 @@ const NodeFooter = memo(
       prevProps.model === nextProps.model &&
       prevProps.createdAt === nextProps.createdAt &&
       prevProps.language === nextProps.language &&
-      JSON.stringify(prevProps.modelInfo) === JSON.stringify(nextProps.modelInfo) &&
-      JSON.stringify(prevProps.tokenUsage) === JSON.stringify(nextProps.tokenUsage)
+      JSON.stringify(prevProps.modelInfo) === JSON.stringify(nextProps.modelInfo)
     );
   },
 );
@@ -296,7 +277,6 @@ export const SkillResponseNode = memo(
       structuredData,
       selectedSkill,
       actionMeta,
-      tokenUsage,
       version,
       shareId,
     } = metadata ?? {};
@@ -923,7 +903,6 @@ export const SkillResponseNode = memo(
           <NodeFooter
             model={model}
             modelInfo={modelInfo}
-            tokenUsage={tokenUsage}
             createdAt={createdAt}
             language={language}
           />
