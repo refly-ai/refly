@@ -15,6 +15,7 @@ import { IntentAnalysisService } from './intent-analysis.service';
 import { PilotEngineService } from './pilot-engine.service';
 import { QUEUE_RUN_PILOT } from '../../utils/const';
 import { ToolModule } from '../tool/tool.module';
+import { WorkflowModule } from '../workflow/workflow.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ToolModule } from '../tool/tool.module';
     KnowledgeModule,
     CodeArtifactModule,
     VariableExtractionModule,
+    WorkflowModule,
     BullModule.registerQueue({
       name: QUEUE_RUN_PILOT,
     }),

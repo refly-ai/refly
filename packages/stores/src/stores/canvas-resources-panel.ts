@@ -20,6 +20,7 @@ interface CanvasResourcesPanelState {
   activeNodes: Record<string, CanvasNode | null>;
   searchKeyword: string;
   showWorkflowRun: boolean;
+  showCopilot: boolean;
 
   // Methods
   setPanelWidth: (width: number) => void;
@@ -34,6 +35,7 @@ interface CanvasResourcesPanelState {
   getActiveNode: (canvasId: string) => CanvasNode | null;
   setSearchKeyword: (keyword: string) => void;
   setShowWorkflowRun: (show: boolean) => void;
+  setShowCopilot: (show: boolean) => void;
   resetState: () => void;
 }
 
@@ -47,6 +49,7 @@ const defaultState = {
   // Initialize activeNodes as empty object
   searchKeyword: '',
   showWorkflowRun: false,
+  showCopilot: false,
 };
 
 export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
@@ -80,9 +83,16 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
       setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
       setShowWorkflowRun: (show: boolean) => {
         if (show) {
-          set({ showWorkflowRun: show, sidePanelVisible: true });
+          set({ showWorkflowRun: show, showCopilot: false, sidePanelVisible: true });
         } else {
           set({ showWorkflowRun: show });
+        }
+      },
+      setShowCopilot: (show: boolean) => {
+        if (show) {
+          set({ showCopilot: show, showWorkflowRun: false, sidePanelVisible: true });
+        } else {
+          set({ showCopilot: show });
         }
       },
       resetState: () => set(defaultState),
@@ -98,6 +108,7 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
         sidePanelVisible: state.sidePanelVisible,
         wideScreenVisible: state.wideScreenVisible,
         showWorkflowRun: state.showWorkflowRun,
+        showCopilot: state.showCopilot,
       }),
     },
   ),

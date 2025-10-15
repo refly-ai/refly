@@ -13,6 +13,7 @@
     "./utils": "./src/utils/index.ts"
   },
   "scripts": {
+    "build": "tsc --build",
     "codegen": "openapi-rq -i ../openapi-schema/schema.yml -o src --noSchemas && node scripts/postprocess-codegen.cjs"
   },
   "dependencies": {

@@ -124,6 +124,7 @@ export const useNodeOperations = () => {
 
         // Process remaining deleted nodes
         for (const change of deletedNodes) {
+          if (change.type !== 'remove') continue;
           const nodeId = change.id;
 
           // Find the node that's being deleted to get its entityId

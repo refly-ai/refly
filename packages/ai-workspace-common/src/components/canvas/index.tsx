@@ -78,6 +78,7 @@ import { useMatch } from '@refly-packages/ai-workspace-common/utils/router';
 import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { UploadNotification } from '@refly-packages/ai-workspace-common/components/common/upload-notification';
+import { CopilotPanel } from '@refly-packages/ai-workspace-common/components/copilot/CopilotPanel';
 
 const GRID_SIZE = 10;
 
@@ -209,10 +210,13 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
     setContextMenuOpenedCanvasId: state.setContextMenuOpenedCanvasId,
   }));
 
-  const { showWorkflowRun, setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setShowWorkflowRun: state.setShowWorkflowRun,
-    showWorkflowRun: state.showWorkflowRun,
-  }));
+  const { showWorkflowRun, setShowWorkflowRun, showCopilot, setShowCopilot } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      setShowWorkflowRun: state.setShowWorkflowRun,
+      showWorkflowRun: state.showWorkflowRun,
+      setShowCopilot: state.setShowCopilot,
+      showCopilot: state.showCopilot,
+    }));
 
   const { handleNodePreview } = useNodePreviewControl({ canvasId });
 
@@ -551,6 +555,10 @@ const Flow = memo(({ canvasId }: { canvasId: string }) => {
 
     if (showWorkflowRun) {
       setShowWorkflowRun(false);
+    }
+
+    if (showCopilot) {
+      setShowCopilot(false);
     }
 
     const unsubscribe = locateToNodePreviewEmitter.on(
@@ -1266,6 +1274,7 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     showLeftOverview,
     setShowLeftOverview,
     showWorkflowRun,
+    showCopilot,
   } = useCanvasResourcesPanelStoreShallow((state) => ({
     sidePanelVisible: state.sidePanelVisible,
     resourcesPanelWidth: state.panelWidth,
@@ -1273,6 +1282,7 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     showLeftOverview: state.showLeftOverview,
     setShowLeftOverview: state.setShowLeftOverview,
     showWorkflowRun: state.showWorkflowRun,
+    showCopilot: state.showCopilot,
   }));
 
   useEffect(() => {
@@ -1394,6 +1404,8 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
                   isPolling={isPolling}
                   pollingError={pollingError}
                 />
+              ) : showCopilot && !readonly ? (
+                <CopilotPanel className="h-full" />
               ) : (
                 <Popover
                   classNames={{

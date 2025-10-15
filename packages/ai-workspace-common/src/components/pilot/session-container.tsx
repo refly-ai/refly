@@ -18,6 +18,8 @@ import { NoSession } from '@refly-packages/ai-workspace-common/components/pilot/
 import SessionHeader from '@refly-packages/ai-workspace-common/components/pilot/session-header';
 import { Send, Thinking } from 'refly-icons';
 import { contextEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/context';
+import { DailyNewsWorkflowPanel } from '../copilot/DailyNewsWorkflowPanel';
+import { shouldTriggerDailyNewsWorkflow } from '../../data/daily-news-workflow';
 
 // Define the active statuses that require polling
 const ACTIVE_STATUSES = ['executing', 'waiting'];
@@ -159,6 +161,11 @@ export const SessionContainer = memo(
       clearCanvasQuery: state.clearCanvasQuery,
     }));
 
+    // Check if this should show Daily News workflow
+    const isDailyNewsWorkflow = useMemo(() => {
+      return shouldTriggerDailyNewsWorkflow(query);
+    }, [query]);
+
     const handleSessionClick = useCallback(
       (sessionId: string) => {
         setActiveSessionId(canvasId, sessionId);
@@ -267,7 +274,12 @@ export const SessionContainer = memo(
     }, [handleAddToContext]);
 
     return (
-      <div className={containerClassName}>
+      <div
+        className={cn(
+          containerClassName,
+          'min-h-[400px] max-h-[calc(100vh-80px)] overflow-y-auto resize-y scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400',
+        )}
+      >
         <SessionHeader
           canvasId={canvasId}
           session={session}
@@ -277,7 +289,18 @@ export const SessionContainer = memo(
         />
 
         <AnimatePresence mode="wait">
-          {!activeSessionId ? (
+          {isDailyNewsWorkflow ? (
+            <motion.div
+              key="daily-news-workflow"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="h-full"
+            >
+              <DailyNewsWorkflowPanel canvasId={canvasId} />
+            </motion.div>
+          ) : !activeSessionId ? (
             <motion.div
               key="no-session"
               initial={{ opacity: 0, y: 20 }}
@@ -295,7 +318,7 @@ export const SessionContainer = memo(
             <div className="flex flex-col h-full">
               <motion.div
                 key="session-content"
-                className="px-2 pb-2 flex-1 h-full w-full max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400"
+                className="px-2 pb-2 flex-1 h-full w-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}

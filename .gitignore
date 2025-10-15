@@ -37,3 +37,6 @@ docs/.vitepress/cache/*
 
 # Profile
 .rspack-profile-*/
+# Claude Code files
+.claude/
+CLAUDE.md
