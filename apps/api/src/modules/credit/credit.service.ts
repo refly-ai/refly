@@ -30,7 +30,7 @@ export class CreditService {
 
   /**
    * Create daily gift credit recharge for a user
-   * This method creates a new daily gift credit recharge with proper expiration handling
+   * This method handles debt payment first, then creates a new credit recharge record
    */
   async createDailyGiftCreditRecharge(
     uid: string,
@@ -38,35 +38,86 @@ export class CreditService {
     description?: string,
     now: Date = new Date(),
   ): Promise<void> {
-    // Set created time to start of today (00:00:00)
-    const createdAt = new Date(now);
-    createdAt.setHours(0, 0, 0, 0);
-
-    // Set expires time to start of tomorrow (00:00:00)
-    const expiresAt = new Date(now);
-    expiresAt.setDate(expiresAt.getDate() + 1);
-    expiresAt.setHours(0, 0, 0, 0);
-
-    await this.prisma.creditRecharge.createMany({
-      data: [
-        {
-          rechargeId: genDailyCreditRechargeId(uid, now),
-          uid,
-          amount: creditAmount,
-          balance: creditAmount,
-          enabled: true,
-          source: 'gift',
-          description: description ?? 'Daily gift credit recharge',
-          createdAt: createdAt,
-          updatedAt: now,
-          expiresAt: expiresAt,
+    // Check for existing debts
+    const activeDebts = await this.prisma.creditDebt.findMany({
+      where: {
+        uid,
+        enabled: true,
+        balance: {
+          gt: 0,
         },
-      ],
-      skipDuplicates: true,
+      },
+      orderBy: {
+        createdAt: 'asc', // Pay off oldest debts first
+      },
     });
 
+    let remainingCredits = creditAmount;
+    const debtPaymentOperations = [];
+
+    // Pay off debts first
+    for (const debt of activeDebts) {
+      if (remainingCredits <= 0) break;
+
+      const paymentAmount = Math.min(debt.balance, remainingCredits);
+      const newDebtBalance = debt.balance - paymentAmount;
+
+      debtPaymentOperations.push(
+        this.prisma.creditDebt.update({
+          where: { pk: debt.pk },
+          data: {
+            balance: newDebtBalance,
+            enabled: newDebtBalance > 0, // Disable if fully paid
+            updatedAt: now,
+          },
+        }),
+      );
+
+      remainingCredits -= paymentAmount;
+    }
+
+    // Create recharge record only if there are remaining credits after debt payment
+    const operations = [...debtPaymentOperations];
+    let expiresAt: Date | undefined;
+
+    if (remainingCredits > 0) {
+      // Set created time to start of today (00:00:00)
+      const createdAt = new Date(now);
+      createdAt.setHours(0, 0, 0, 0);
+
+      // Set expires time to start of tomorrow (00:00:00)
+      expiresAt = new Date(now);
+      expiresAt.setDate(expiresAt.getDate() + 1);
+      expiresAt.setHours(0, 0, 0, 0);
+
+      operations.push(
+        this.prisma.creditRecharge.createMany({
+          data: [
+            {
+              rechargeId: genDailyCreditRechargeId(uid, now),
+              uid,
+              amount: remainingCredits,
+              balance: remainingCredits,
+              enabled: true,
+              source: 'gift',
+              description: description ?? 'Daily gift credit recharge',
+              createdAt: createdAt,
+              updatedAt: now,
+              expiresAt: expiresAt,
+            },
+          ],
+          skipDuplicates: true,
+        }),
+      );
+    }
+
+    // Execute all operations in a transaction
+    await this.prisma.$transaction(operations);
+
     this.logger.log(
-      `Created daily gift credit recharge for user ${uid}: ${creditAmount} credits, expires at ${expiresAt.toISOString()}`,
+      `Processed daily gift credit recharge for user ${uid}: ${creditAmount} credits total, ` +
+        `${creditAmount - remainingCredits} used for debt payment, ` +
+        `${remainingCredits} added as new balance, expires at ${expiresAt?.toISOString() ?? 'N/A'}`,
     );
   }
 
