@@ -799,6 +799,8 @@ model WorkflowApp {
   shareId         String?   @map("share_id")
   /// Cover image storage key
   coverStorageKey String?   @map("cover_storage_key")
+  /// Template content for app publishing
+  templateContent String?   @map("template_content")
   /// Create timestamp
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp

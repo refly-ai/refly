@@ -235,7 +235,6 @@ const WorkflowAppPage: React.FC = () => {
           <Helmet>
             <title>{workflowApp?.title ?? ''}</title>
           </Helmet>
-
           {/* Header */}
           <div className="bg-refly-bg-float-z3 border-b border-refly-Card-Border">
             <div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -247,7 +246,6 @@ const WorkflowAppPage: React.FC = () => {
               </div>
             </div>
           </div>
-
           {/* Main Content */}
           {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -275,6 +273,10 @@ const WorkflowAppPage: React.FC = () => {
                         onCopyWorkflow={handleCopyWorkflow}
                         onCopyShareLink={handleCopyShareLink}
                         isRunning={isRunning}
+                        templateContent={
+                          workflowApp?.templateContent ??
+                          '我会根据你选择的 {{day}}，并结合 {{主题}} 进行创意设计。首先，我会制作一个精美的宣传网页，其次生成一篇介绍 {{节日}} 历史与文化的文档，最后设计一张主题鲜明的宣传海报。在设计海报时，我会考虑 {{性别}} 特征的人物形象，并使用你提供的 {{头像}} 资源进行个性化呈现。'
+                        }
                         className="max-h-[500px] sm:max-h-[600px] bg-refly-bg-float-z3 rounded-lg border border-refly-Card-Border shadow-sm"
                       />
                     }
@@ -287,25 +289,29 @@ const WorkflowAppPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Tabs */}
-                  <div className="mb-4 sm:mb-6 flex justify-center">
-                    <Segmented
-                      className="max-w-sm sm:max-w-md mx-auto"
-                      shape="round"
-                      options={segmentedOptions}
-                      value={activeTab}
-                      onChange={(value) => setActiveTab(value)}
-                    />
-                  </div>
+                  {logs.length > 0 && (
+                    <>
+                      {/* Tabs */}
+                      <div className="mb-4 sm:mb-6 flex justify-center">
+                        <Segmented
+                          className="max-w-sm sm:max-w-md mx-auto"
+                          shape="round"
+                          options={segmentedOptions}
+                          value={activeTab}
+                          onChange={(value) => setActiveTab(value)}
+                        />
+                      </div>
 
-                  {/* Content Area */}
-                  <div className="bg-refly-bg-float-z3 rounded-lg border border-refly-Card-Border min-h-[200px]">
-                    {activeTab === 'products' ? (
-                      <WorkflowAppProducts products={products || []} />
-                    ) : activeTab === 'runLogs' ? (
-                      <WorkflowAppRunLogs nodeExecutions={logs || []} />
-                    ) : null}
-                  </div>
+                      {/* Content Area */}
+                      <div className="bg-refly-bg-float-z3 rounded-lg border border-refly-Card-Border min-h-[200px]">
+                        {activeTab === 'products' ? (
+                          <WorkflowAppProducts products={products || []} />
+                        ) : activeTab === 'runLogs' ? (
+                          <WorkflowAppRunLogs nodeExecutions={logs || []} />
+                        ) : null}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
