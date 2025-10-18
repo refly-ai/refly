@@ -206,7 +206,7 @@ export class DocumentService {
     });
   }
 
-  async createDocument(
+  private async doCreateDocument(
     user: User,
     param: UpsertDocumentRequest,
     options?: { checkStorageQuota?: boolean },
@@ -218,7 +218,7 @@ export class DocumentService {
       }
     }
 
-    param.docId = genDocumentID();
+    param.docId ||= genDocumentID();
     param.title ||= '';
     param.initialContent ||= '';
 
@@ -239,69 +239,6 @@ export class DocumentService {
       });
       if (!project) {
         throw new ProjectNotFoundError();
-      }
-    }
-
-    if (param.resultId) {
-      const result = await this.prisma.actionResult.findFirst({
-        where: { resultId: param.resultId, uid: user.uid },
-        orderBy: { version: 'desc' },
-      });
-      if (!result) {
-        throw new ActionResultNotFoundError(`Action result ${param.resultId} not found`);
-      }
-      if (result.targetType === 'canvas') {
-        param.canvasId = result.targetId;
-      }
-      if (result.projectId) {
-        param.projectId = result.projectId;
-      }
-
-      // Check if this document is created by a workflow node execution
-      // If so, use the same docId to replace the original document.
-      if (result.workflowNodeExecutionId) {
-        const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
-          where: {
-            nodeExecutionId: result.workflowNodeExecutionId,
-          },
-        });
-        const parsed = nodeExecution?.childNodeIds
-          ? safeParseJSON(nodeExecution.childNodeIds)
-          : undefined;
-        const childNodeIds = Array.isArray(parsed)
-          ? parsed.filter((id: unknown): id is string => typeof id === 'string')
-          : [];
-        if (childNodeIds.length > 0) {
-          const docNodeExecution = await this.prisma.workflowNodeExecution.findFirst({
-            where: {
-              nodeId: { in: childNodeIds },
-              // status: 'waiting',
-              nodeType: 'document',
-            },
-            orderBy: { createdAt: 'asc' },
-          });
-          if (docNodeExecution?.entityId) {
-            param.docId = docNodeExecution.entityId;
-            const nodeData: CanvasNode = safeParseJSON(docNodeExecution.nodeData);
-            await this.prisma.workflowNodeExecution.update({
-              where: {
-                nodeExecutionId: docNodeExecution.nodeExecutionId,
-              },
-              data: {
-                title: param.title,
-                entityId: param.docId,
-                nodeData: JSON.stringify({
-                  ...nodeData,
-                  data: {
-                    ...nodeData.data,
-                    title: param.title,
-                    entityId: param.docId,
-                  },
-                }),
-              },
-            });
-          }
-        }
       }
     }
 
@@ -402,6 +339,114 @@ export class DocumentService {
     });
 
     return doc;
+  }
+
+  async createDocument(
+    user: User,
+    param: UpsertDocumentRequest,
+    options?: { checkStorageQuota?: boolean },
+  ) {
+    // Store workflow node execution to update status at the end
+    let nodeExecutionToUpdate: { nodeExecutionId: string; nodeData: CanvasNode } | null = null;
+
+    // Check if this document is related to action result
+    if (param.resultId) {
+      const result = await this.prisma.actionResult.findFirst({
+        where: { resultId: param.resultId, uid: user.uid },
+        orderBy: { version: 'desc' },
+      });
+      if (!result) {
+        throw new ActionResultNotFoundError(`Action result ${param.resultId} not found`);
+      }
+      if (result.targetType === 'canvas') {
+        param.canvasId = result.targetId;
+      }
+      if (result.projectId) {
+        param.projectId = result.projectId;
+      }
+
+      // Check if this action result is created by a workflow node execution
+      if (result.workflowNodeExecutionId) {
+        const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
+          where: {
+            nodeExecutionId: result.workflowNodeExecutionId,
+          },
+        });
+        const parsed = nodeExecution?.childNodeIds
+          ? safeParseJSON(nodeExecution.childNodeIds)
+          : undefined;
+        const childNodeIds = Array.isArray(parsed)
+          ? parsed.filter((id: unknown): id is string => typeof id === 'string')
+          : [];
+        if (childNodeIds.length > 0) {
+          const docNodeExecution = await this.prisma.workflowNodeExecution.findFirst({
+            where: {
+              nodeId: { in: childNodeIds },
+              status: 'waiting',
+              nodeType: 'document',
+              executionId: nodeExecution.executionId,
+            },
+            orderBy: { createdAt: 'asc' },
+          });
+          if (docNodeExecution?.entityId) {
+            param.docId = docNodeExecution.entityId;
+
+            const nodeData: CanvasNode = safeParseJSON(docNodeExecution.nodeData);
+            nodeExecutionToUpdate = {
+              nodeExecutionId: docNodeExecution.nodeExecutionId,
+              nodeData,
+            };
+          }
+        }
+      }
+    }
+
+    try {
+      const doc = await this.doCreateDocument(user, param, options);
+
+      // Update workflow node execution status to finish if exists
+      if (nodeExecutionToUpdate) {
+        await this.prisma.workflowNodeExecution.update({
+          where: {
+            nodeExecutionId: nodeExecutionToUpdate.nodeExecutionId,
+          },
+          data: {
+            title: param.title,
+            entityId: param.docId,
+            status: 'finish',
+            nodeData: JSON.stringify({
+              ...nodeExecutionToUpdate.nodeData,
+              data: {
+                ...nodeExecutionToUpdate.nodeData.data,
+                title: param.title,
+                entityId: param.docId,
+              },
+            }),
+          },
+        });
+      }
+
+      return doc;
+    } catch (error) {
+      // Update workflow node execution status to failed if exists
+      if (nodeExecutionToUpdate) {
+        try {
+          await this.prisma.workflowNodeExecution.update({
+            where: {
+              nodeExecutionId: nodeExecutionToUpdate.nodeExecutionId,
+            },
+            data: {
+              status: 'failed',
+            },
+          });
+        } catch (updateError) {
+          this.logger.error(
+            `Failed to update workflow node execution status to failed: ${updateError.stack}`,
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   async batchUpdateDocument(user: User, param: UpsertDocumentRequest[]) {

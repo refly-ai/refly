@@ -170,8 +170,6 @@ export class SkillService implements OnModuleInit {
 
     const cutoffTime = new Date(Date.now() - stuckTimeoutThreshold);
 
-    this.logger.log(`Checking for stuck actions with cutoff time: ${cutoffTime.toISOString()}`);
-
     try {
       // Find all ActionResults that are stuck in executing status
       const stuckResults = await this.prisma.actionResult.findMany({
@@ -188,7 +186,6 @@ export class SkillService implements OnModuleInit {
       });
 
       if (stuckResults.length === 0) {
-        this.logger.log('No stuck actions found');
         return;
       }
 

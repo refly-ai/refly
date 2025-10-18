@@ -12,19 +12,19 @@ import { buildFinalRequestMessages, SkillPromptModule } from '../scheduler/utils
 // prompts
 import * as commonQnA from '../scheduler/module/commonQnA';
 import { buildSystemPrompt } from '../mcp/core/prompt';
-import { MCPTool, MCPToolInputSchema } from '../mcp/core/prompt';
+import { ITool, ToolInputSchema } from '../mcp/core/prompt';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { AIMessage } from '@langchain/core/messages';
+import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
-import { type StructuredToolInterface } from '@langchain/core/tools'; // For MCP Tools
+import { type StructuredToolInterface } from '@langchain/core/tools';
 
 /**
- * Converts LangChain StructuredToolInterface array to MCPTool array.
- * This is used to prepare tools for the system prompt, matching the MCPTool interface.
+ * Converts LangChain StructuredToolInterface array to ITool array.
+ * This is used to prepare tools for the system prompt, matching the ITool interface.
  */
-function convertToMCPTools(langchainTools: StructuredToolInterface[]): MCPTool[] {
+function convertToTools(langchainTools: StructuredToolInterface[]): ITool[] {
   return langchainTools.map((tool) => {
     // tool.schema is expected to be a Zod schema object
     const zodSchema = tool.schema;
@@ -36,7 +36,7 @@ function convertToMCPTools(langchainTools: StructuredToolInterface[]): MCPTool[]
     const properties = (jsonSchema?.properties ?? {}) as Record<string, object>;
     const propertyKeys = Object.keys(properties);
 
-    const inputSchema: MCPToolInputSchema = {
+    const inputSchema: ToolInputSchema = {
       type: jsonSchema.type || 'object',
       title: jsonSchema.title || tool.name,
       description: jsonSchema.description || tool.description || '',
@@ -67,7 +67,7 @@ type CompiledGraphApp = {
 interface AgentComponents {
   tools: StructuredToolInterface[];
   compiledLangGraphApp: CompiledGraphApp;
-  mcpAvailable: boolean;
+  toolsAvailable: boolean;
 }
 
 export class Agent extends BaseSkill {
@@ -127,6 +127,7 @@ export class Agent extends BaseSkill {
 
     this.engine.logger.log(`Initializing new agent components for user ${userId}`);
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
+    let availableToolsForNode: StructuredToolInterface[] = [];
 
     // LLM and LangGraph Setup
     const baseLlm = this.engine.chatModel({ temperature: 0.1 });
@@ -146,6 +147,7 @@ export class Agent extends BaseSkill {
         // This ensures proper tool_calls format generation
         llmForGraph = baseLlm.bindTools(validTools, { tool_choice: 'auto' });
         actualToolNodeInstance = new ToolNode(validTools);
+        availableToolsForNode = validTools;
       } else {
         this.engine.logger.warn('No valid tools found, using base LLM without tools');
         llmForGraph = baseLlm;
@@ -190,29 +192,87 @@ export class Agent extends BaseSkill {
     workflow = workflow.addEdge(START, 'llm');
 
     if (actualToolNodeInstance) {
-      // Enhanced tool node with better error handling and logging
+      // Enhanced tool node with strict sequential execution of tool calls
       const enhancedToolNode = async (toolState: typeof MessagesAnnotation.State) => {
         try {
-          this.engine.logger.log('Executing tool node with enhanced error handling');
+          this.engine.logger.log('Executing tool node with strict sequential tool calls');
 
-          const result = await actualToolNodeInstance.invoke(toolState);
+          const priorMessages = toolState.messages ?? [];
+          const lastMessage = priorMessages[priorMessages.length - 1] as AIMessage | undefined;
+          const toolCalls = lastMessage?.tool_calls ?? [];
 
-          // Check tool execution results
-          const lastToolMessage = result.messages[result.messages.length - 1];
-          if (lastToolMessage && typeof lastToolMessage.content === 'string') {
-            const toolResult = lastToolMessage.content;
+          if (!toolCalls || toolCalls.length === 0) {
+            this.engine.logger.log('No tool calls to execute');
+            return { messages: priorMessages };
+          }
 
-            // Log tool execution results
-            if (toolResult.includes('error') || toolResult.includes('failed')) {
-              this.engine.logger.warn('Tool execution failed:', toolResult);
-            } else {
-              this.engine.logger.log('Tool execution successful');
+          const toolResultMessages: BaseMessage[] = [];
+
+          // Execute each tool call strictly in sequence
+          for (const call of toolCalls) {
+            const toolName = call?.name ?? '';
+            const toolArgs = (call?.args as Record<string, unknown>) ?? {};
+
+            if (!toolName) {
+              this.engine.logger.warn('Encountered a tool call with empty name, skipping');
+              toolResultMessages.push(
+                new ToolMessage({
+                  content: 'Error: Tool name is missing',
+                  tool_call_id: call?.id ?? '',
+                  name: toolName || 'unknown_tool',
+                }),
+              );
+              continue;
+            }
+
+            const matchedTool = (availableToolsForNode || []).find((t) => t?.name === toolName);
+
+            if (!matchedTool) {
+              this.engine.logger.warn(`Requested tool not found: ${toolName}`);
+              toolResultMessages.push(
+                new ToolMessage({
+                  content: `Error: Tool '${toolName}' not available`,
+                  tool_call_id: call?.id ?? '',
+                  name: toolName,
+                }),
+              );
+              continue;
+            }
+
+            try {
+              // Each invocation awaited to ensure strict serial execution
+              const rawResult = await matchedTool.invoke(toolArgs);
+              const stringified =
+                typeof rawResult === 'string'
+                  ? rawResult
+                  : JSON.stringify(rawResult ?? {}, null, 2);
+
+              toolResultMessages.push(
+                new ToolMessage({
+                  content: stringified ?? 'null',
+                  tool_call_id: call?.id ?? '',
+                  name: matchedTool.name,
+                }),
+              );
+
+              this.engine.logger.log(`Tool '${toolName}' executed successfully`);
+            } catch (toolError) {
+              const errMsg =
+                (toolError as Error)?.message ?? String(toolError ?? 'Unknown tool error');
+              this.engine.logger.error(`Tool '${toolName}' execution failed: ${errMsg}`);
+              toolResultMessages.push(
+                new ToolMessage({
+                  content: `Error executing tool '${toolName}': ${errMsg}`,
+                  tool_call_id: call?.id ?? '',
+                  name: matchedTool.name,
+                }),
+              );
             }
           }
 
-          return result;
+          return { messages: [...priorMessages, ...toolResultMessages] };
         } catch (error) {
-          this.engine.logger.error('Tool execution failed:', error);
+          this.engine.logger.error('Tool node execution failed:', error);
           throw error;
         }
       };
@@ -253,7 +313,7 @@ export class Agent extends BaseSkill {
     const components: AgentComponents = {
       tools: selectedTools, // Store the successfully initialized tools
       compiledLangGraphApp: compiledGraph, // Store the compiled graph
-      mcpAvailable: selectedTools.length > 0,
+      toolsAvailable: selectedTools.length > 0,
     };
 
     this.engine.logger.log(`Agent components initialized and cached for user ${userId}`);
@@ -272,19 +332,15 @@ export class Agent extends BaseSkill {
       | undefined;
     const customInstructions = project?.projectId ? project?.customInstructions : undefined;
 
-    const {
-      compiledLangGraphApp,
-      mcpAvailable,
-      tools: mcpTools,
-    } = await this.initializeAgentComponents(user, config);
+    const { compiledLangGraphApp, toolsAvailable, tools } = await this.initializeAgentComponents(
+      user,
+      config,
+    );
 
     const module: SkillPromptModule = {
-      buildSystemPrompt: mcpAvailable
+      buildSystemPrompt: toolsAvailable
         ? () => {
-            return buildSystemPrompt(
-              convertToMCPTools(mcpTools), // Use the conversion function, mcpServerList removed
-              locale,
-            );
+            return buildSystemPrompt(convertToTools(tools), locale);
           }
         : commonQnA.buildCommonQnASystemPrompt,
       buildContextUserPrompt: commonQnA.buildCommonQnAContextUserPrompt,
@@ -311,8 +367,8 @@ export class Agent extends BaseSkill {
           metadata: {
             ...config.metadata,
             ...currentSkill,
-            mcpAvailable,
-            toolCount: mcpTools?.length || 0,
+            toolsAvailable,
+            toolCount: tools?.length || 0,
           },
         },
       );
@@ -321,8 +377,8 @@ export class Agent extends BaseSkill {
         messagesCount: result.messages?.length || 0,
         toolCallCount:
           result.messages?.filter((msg) => (msg as AIMessage).tool_calls?.length > 0).length || 0,
-        mcpAvailable,
-        toolCount: mcpTools?.length || 0,
+        toolsAvailable,
+        toolCount: tools?.length || 0,
       });
 
       return { messages: result.messages };

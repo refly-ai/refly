@@ -54,12 +54,6 @@ export class CollabService {
       onAuthenticate: (payload) => this.authenticate(payload),
       onLoadDocument: (payload) => this.loadDocument(payload),
       onStoreDocument: (payload) => this.storeDocument(payload),
-      afterUnloadDocument: async (payload) => {
-        this.logger.log(`afterUnloadDocument ${payload.documentName}`);
-      },
-      onDisconnect: async (payload) => {
-        this.logger.log(`onDisconnect ${payload.documentName}`);
-      },
       extensions,
     });
   }
@@ -126,8 +120,6 @@ export class CollabService {
     if (context.entity.uid !== user.uid) {
       throw new Error(`user not authorized: ${documentName}`);
     }
-
-    this.logger.log(`document connected: ${documentName}`);
 
     // Set contextual data to use it in other hooks
     return context;

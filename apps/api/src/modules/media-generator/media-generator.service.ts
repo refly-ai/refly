@@ -11,6 +11,7 @@ import {
 import { PrismaService } from '../common/prisma.service';
 import { MiscService } from '../misc/misc.service';
 import { ProviderService } from '../provider/provider.service';
+import { ActionResultNotFoundError } from '@refly/errors';
 import { genActionResultID, genMediaID, safeParseJSON } from '@refly/utils';
 import { fal } from '@fal-ai/client';
 import Replicate from 'replicate';
@@ -138,26 +139,17 @@ export class MediaGeneratorService {
     }
   }
 
-  /**
-   * Start asynchronous media generation task
-   * @param user User Information
-   * @param request Media Generation Request
-   * @returns Response containing resultId or completed result if wait is true
-   */
-  async generate(user: User, request: MediaGenerateRequest): Promise<MediaGenerateResponse> {
-    const { mediaType, model, prompt, providerItemId, wait, parentResultId } = request;
-    let { targetType, targetId } = request;
+  private async doGenerate(
+    user: User,
+    request: MediaGenerateRequest,
+    mediaId?: string,
+  ): Promise<MediaGenerateResponse> {
+    const { mediaType, model, prompt, providerItemId, wait, targetType, targetId, parentResultId } =
+      request;
 
     // If no model or providerItemId is specified, try to get user's default configuration
     let finalModel = model;
     let finalProviderItemId = providerItemId;
-
-    let parentResult: {
-      targetType: string;
-      targetId: string;
-      workflowExecutionId: string;
-      workflowNodeExecutionId: string;
-    } | null = null;
 
     if (!finalModel) {
       this.logger.log(
@@ -181,54 +173,6 @@ export class MediaGeneratorService {
       this.logger.log(
         `Using specified ${mediaType} model: ${finalModel} with providerItemId: ${finalProviderItemId}`,
       );
-    }
-
-    this.logger.log(`Validating ${mediaType} generation request for user ${user.uid}`);
-
-    let mediaNodeExecution = null;
-
-    // If parentResultId is provided, use the targetId and targetType from the parent result
-    if (parentResultId) {
-      parentResult = await this.prisma.actionResult.findFirst({
-        select: {
-          targetId: true,
-          targetType: true,
-          workflowNodeExecutionId: true,
-          workflowExecutionId: true,
-        },
-        where: { resultId: parentResultId },
-        orderBy: { version: 'desc' },
-      });
-
-      if (!parentResult) {
-        this.logger.warn(`Parent result ${parentResultId} not found`);
-      } else {
-        if (!targetId || !targetType) {
-          targetId = parentResult.targetId;
-          targetType = parentResult.targetType as EntityType;
-        }
-
-        if (parentResult.workflowExecutionId) {
-          const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
-            where: {
-              nodeExecutionId: parentResult.workflowNodeExecutionId,
-            },
-          });
-          if (nodeExecution?.childNodeIds) {
-            const childNodeIds = safeParseJSON(nodeExecution.childNodeIds) as string[];
-            mediaNodeExecution = await this.prisma.workflowNodeExecution.findFirst({
-              where: {
-                nodeId: { in: childNodeIds },
-                status: 'waiting',
-                nodeType: mediaType as CanvasNodeType,
-              },
-              orderBy: {
-                createdAt: 'asc',
-              },
-            });
-          }
-        }
-      }
     }
 
     const resultId = request.resultId || genActionResultID();
@@ -263,48 +207,17 @@ export class MediaGeneratorService {
     };
 
     // Start media generation asynchronously and capture promise for optional return
-    const mediaGeneratePromise = this.executeGenerate(
-      user,
-      result,
-      finalRequest,
-      mediaNodeExecution?.entityId,
-    ).catch((error) => {
-      this.logger.error(`Media generation failed for ${resultId}:`, error);
-      return null;
-    });
+    const mediaGeneratePromise = this.executeGenerate(user, result, finalRequest, mediaId).catch(
+      (error) => {
+        this.logger.error(`Media generation failed for ${resultId}:`, error);
+        return null;
+      },
+    );
 
     // If wait is true, execute synchronously and return result
     if (wait) {
       // Poll for completion
       const result = await this.pollActionResult(resultId, mediaType);
-
-      if (mediaNodeExecution) {
-        const nodeData: CanvasNode = safeParseJSON(mediaNodeExecution.nodeData);
-
-        await this.prisma.workflowNodeExecution.update({
-          where: {
-            nodeExecutionId: mediaNodeExecution.nodeExecutionId,
-          },
-          data: {
-            title: prompt,
-            entityId: mediaNodeExecution.entityId,
-            nodeData: JSON.stringify({
-              ...nodeData,
-              data: {
-                ...nodeData.data,
-                title: prompt,
-                entityId: mediaNodeExecution.entityId,
-                metadata: {
-                  ...nodeData.data.metadata,
-                  [`${mediaType}Url`]: result.outputUrl,
-                  [`${mediaType}StorageKey`]: result.storageKey,
-                },
-              },
-            }),
-          },
-        });
-      }
-
       const mediaGenerateResult = await mediaGeneratePromise;
 
       return {
@@ -320,6 +233,125 @@ export class MediaGeneratorService {
       success: true,
       resultId,
     };
+  }
+
+  /**
+   * Start asynchronous media generation task
+   * @param user User Information
+   * @param request Media Generation Request
+   * @returns Response containing resultId or completed result if wait is true
+   */
+  async generate(user: User, request: MediaGenerateRequest): Promise<MediaGenerateResponse> {
+    const { mediaType, prompt, parentResultId } = request;
+    let mediaId: string | undefined = undefined;
+
+    // Store workflow node execution to update status at the end
+    let nodeExecutionToUpdate: { nodeExecutionId: string; nodeData: CanvasNode } | null = null;
+
+    // Check if this media generation is part of a workflow node execution
+    if (parentResultId) {
+      const parentResult = await this.prisma.actionResult.findFirst({
+        select: {
+          targetId: true,
+          targetType: true,
+          workflowNodeExecutionId: true,
+        },
+        where: { resultId: parentResultId },
+        orderBy: { version: 'desc' },
+      });
+
+      if (!parentResult) {
+        throw new ActionResultNotFoundError(`Action result ${parentResultId} not found`);
+      }
+
+      if (!request.targetId || !request.targetType) {
+        request.targetId = parentResult.targetId;
+        request.targetType = parentResult.targetType as EntityType;
+      }
+
+      if (parentResult.workflowNodeExecutionId) {
+        const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
+          where: {
+            nodeExecutionId: parentResult.workflowNodeExecutionId,
+          },
+        });
+        if (nodeExecution?.childNodeIds) {
+          const childNodeIds = safeParseJSON(nodeExecution.childNodeIds) as string[];
+          const mediaNodeExecution = await this.prisma.workflowNodeExecution.findFirst({
+            where: {
+              nodeId: { in: childNodeIds },
+              status: 'waiting',
+              nodeType: mediaType as CanvasNodeType,
+              executionId: nodeExecution.executionId,
+            },
+            orderBy: {
+              createdAt: 'asc',
+            },
+          });
+          if (mediaNodeExecution?.entityId) {
+            mediaId = mediaNodeExecution.entityId;
+
+            const nodeData: CanvasNode = safeParseJSON(mediaNodeExecution.nodeData);
+            nodeExecutionToUpdate = {
+              nodeExecutionId: mediaNodeExecution.nodeExecutionId,
+              nodeData,
+            };
+          }
+        }
+      }
+    }
+
+    try {
+      const result = await this.doGenerate(user, request, mediaId);
+
+      // Update workflow node execution status to finish if exists
+      if (nodeExecutionToUpdate && result.success && result.outputUrl && result.storageKey) {
+        await this.prisma.workflowNodeExecution.update({
+          where: {
+            nodeExecutionId: nodeExecutionToUpdate.nodeExecutionId,
+          },
+          data: {
+            title: prompt,
+            entityId: nodeExecutionToUpdate.nodeData.data?.entityId || '',
+            status: 'finish',
+            nodeData: JSON.stringify({
+              ...nodeExecutionToUpdate.nodeData,
+              data: {
+                ...nodeExecutionToUpdate.nodeData.data,
+                title: prompt,
+                entityId: nodeExecutionToUpdate.nodeData.data?.entityId || '',
+                metadata: {
+                  ...nodeExecutionToUpdate.nodeData.data?.metadata,
+                  [`${mediaType}Url`]: result.outputUrl,
+                  [`${mediaType}StorageKey`]: result.storageKey,
+                },
+              },
+            }),
+          },
+        });
+      }
+
+      return result;
+    } catch (error) {
+      // Update workflow node execution status to failed if exists
+      if (nodeExecutionToUpdate) {
+        try {
+          await this.prisma.workflowNodeExecution.update({
+            where: {
+              nodeExecutionId: nodeExecutionToUpdate.nodeExecutionId,
+            },
+            data: {
+              status: 'failed',
+            },
+          });
+        } catch (updateError) {
+          this.logger.error(
+            `Failed to update workflow node execution status to failed: ${updateError.message}`,
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   /**

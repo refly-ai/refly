@@ -1,4 +1,4 @@
-export interface MCPToolInputSchema {
+export interface ToolInputSchema {
   type: string;
   title: string;
   description?: string;
@@ -6,24 +6,22 @@ export interface MCPToolInputSchema {
   properties: Record<string, object>;
 }
 
-export interface MCPTool {
+export interface ITool {
   id: string;
   serverId: string;
   serverName: string;
   name: string;
   description?: string;
-  inputSchema: MCPToolInputSchema;
+  inputSchema: ToolInputSchema;
 }
 
 export const SYSTEM_PROMPT = `You are an AI assistant with access to tools to help answer user questions.
 
 ## CRITICAL RULES - READ FIRST
 🚫 **NEVER** simulate, pretend, or generate fake tool calls
-🚫 **NEVER** generate text like "[Uses tool...]" or "[Executes tool...]"
-🚫 **NEVER** generate text like "[Execute tool...]" or "[Tool Result...]"
-🚫 **NEVER** generate text like "[The system executes...]" or "[Tool execution...]"
 ✅ **ALWAYS** wait for real tool execution results
 ✅ **ALWAYS** use tools when needed to complete tasks
+✅ **ALWAYS** execute tool calls strictly in sequence (one completes before the next starts)
 
 ## MANDATORY DEPENDENCY HANDLING
 🔥 **CRITICAL**: When encountering missing core information or missing dependencies, you MUST actively use tools to obtain the required information before proceeding. NEVER fail directly due to missing information!
@@ -439,7 +437,7 @@ Assistant: I'll help you create a website with real-time weather data for your c
 Remember: Always execute tools and wait for real results. Never simulate tool execution.
 `;
 
-export const AvailableTools = (tools: MCPTool[]) => {
+export const AvailableTools = (tools: ITool[]) => {
   const availableTools = tools
     .map((tool) => {
       return `
@@ -452,7 +450,7 @@ Input Schema: ${JSON.stringify(tool.inputSchema, null, 2)}
   return `You have access to the following tools:\n${availableTools}`;
 };
 
-export const buildSystemPrompt = (tools: MCPTool[], _locale: string): string => {
+export const buildSystemPrompt = (tools: ITool[], _locale: string): string => {
   if (tools && tools.length > 0) {
     const systemPrompt = SYSTEM_PROMPT.replace('{{ TOOL_USE_EXAMPLES }}', ToolUseExamples).replace(
       '{{ AVAILABLE_TOOLS }}',

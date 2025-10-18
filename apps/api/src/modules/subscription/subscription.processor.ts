@@ -63,9 +63,6 @@ export class CheckCanceledSubscriptionsProcessor extends WorkerHost {
   }
 
   async process() {
-    this.logger.log(
-      `[${QUEUE_CHECK_CANCELED_SUBSCRIPTIONS}] Starting check for canceled subscriptions`,
-    );
     try {
       await this.subscriptionService.checkCanceledSubscriptions();
     } catch (error) {

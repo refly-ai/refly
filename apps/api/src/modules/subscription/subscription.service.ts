@@ -468,8 +468,6 @@ export class SubscriptionService implements OnModuleInit {
   }
 
   async expireAndRechargeCredits() {
-    this.logger.log('Starting expire and recharge credits job');
-
     // Add distributed lock to prevent concurrent execution of the entire job
     const lockKey = 'expire_and_recharge_credits_job_lock';
     const releaseLock = await this.redis.acquireLock(lockKey);
@@ -495,8 +493,6 @@ export class SubscriptionService implements OnModuleInit {
           createdAt: 'desc',
         },
       });
-
-      this.logger.log(`Found ${activeRecharges.length} active credit recharge records`);
 
       // Step 2: Process subscription-based recharges only (gift recharges are now handled by lazy loading)
       const subscriptionRecharges = activeRecharges.filter((r) => r.source === 'subscription');
@@ -625,17 +621,14 @@ export class SubscriptionService implements OnModuleInit {
             }
           } catch (error) {
             this.logger.error(
-              `Error processing subscription recharge for user ${recharge.uid}:`,
-              error,
+              `Error processing subscription recharge for user ${recharge.uid}: ${error.stack}`,
             );
             // Continue processing other records even if one fails
           }
         }
       });
-
-      this.logger.log('Expire and recharge credits job completed successfully');
     } catch (error) {
-      this.logger.error('Error in expire and recharge credits job:', error);
+      this.logger.error(`Error in expire and recharge credits job: ${error.stack}`);
       throw error;
     } finally {
       // Always release the lock
@@ -695,7 +688,7 @@ export class SubscriptionService implements OnModuleInit {
             : meter.fileCountQuota - meter.fileCountUsed,
       };
     } catch (error) {
-      this.logger.error(`Error checking storage usage for user ${user.uid}: ${error.message}`);
+      this.logger.error(`Error checking storage usage for user ${user.uid}: ${error.stack}`);
       return { available: 0 };
     }
   }

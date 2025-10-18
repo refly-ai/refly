@@ -90,16 +90,16 @@ export class SkillEngineService implements OnModuleInit {
         return buildSuccessResponse({});
       },
       getDocumentDetail: async (user, param) => {
-        const canvas = await this.documentService.getDocumentDetail(user, param);
-        return buildSuccessResponse(documentPO2DTO(canvas));
+        const document = await this.documentService.getDocumentDetail(user, param);
+        return buildSuccessResponse(documentPO2DTO(document));
       },
       createDocument: async (user, req) => {
-        const canvas = await this.documentService.createDocument(user, req);
-        return documentPO2DTO(canvas);
+        const document = await this.documentService.createDocument(user, req);
+        return documentPO2DTO(document);
       },
       listDocuments: async (user, param) => {
-        const canvasList = await this.documentService.listDocuments(user, param);
-        return canvasList.map((canvas) => documentPO2DTO(canvas));
+        const documentList = await this.documentService.listDocuments(user, param);
+        return documentList.map((document) => documentPO2DTO(document));
       },
       deleteDocument: async (user, param) => {
         await this.documentService.deleteDocument(user, param);
