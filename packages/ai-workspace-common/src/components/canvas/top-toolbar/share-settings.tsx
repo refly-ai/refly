@@ -399,7 +399,7 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
             placement="top"
           >
             <Button
-              disabled={toolbarLoading || !skillResponseNodes?.length}
+              disabled={toolbarLoading}
               loading={toolbarLoading}
               type="primary"
               size="small"
