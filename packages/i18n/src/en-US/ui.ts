@@ -896,6 +896,7 @@ const translations = {
     publish: 'Publish',
     publishTemplateTooltip: 'Publish canvas as template',
     waitForAgentsToFinish: 'Please wait for all Agents to finish running before publishing',
+    noSkillResponseNodes: 'Please add Agent nodes to the canvas before publishing',
     latestPublishedApp: 'Latest Published App',
     linkShare: 'Link Share',
     updateCanvasPermissionSuccess: 'Update canvas permission successfully',

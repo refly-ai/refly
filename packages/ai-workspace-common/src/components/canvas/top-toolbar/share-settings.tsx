@@ -395,7 +395,13 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
             {t('shareContent.publishTemplate')}
           </div>
           <Tooltip
-            title={toolbarLoading ? t('shareContent.waitForAgentsToFinish') : undefined}
+            title={
+              toolbarLoading
+                ? t('shareContent.waitForAgentsToFinish')
+                : !skillResponseNodes?.length
+                  ? t('shareContent.noSkillResponseNodes')
+                  : undefined
+            }
             placement="top"
           >
             <Button

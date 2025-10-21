@@ -1,6 +1,6 @@
 import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, Form, Typography } from 'antd';
+import { Button, Input, Select, Form, Typography, message } from 'antd';
 import { Play, Copy } from 'refly-icons';
 import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -276,6 +276,29 @@ export const WorkflowRunForm = ({
     [refreshFile, variableValues, handleValueChange, form, workflowVariables],
   );
 
+  // Initialize template variables when templateContent changes
+  useEffect(() => {
+    if (templateContent) {
+      // Extract variables from template content
+      const variableRegex = /\{\{([^}]+)\}\}/g;
+      const templateVariableNames = new Set<string>();
+      let match: RegExpExecArray | null;
+
+      match = variableRegex.exec(templateContent);
+      while (match !== null) {
+        templateVariableNames.add(match[1].trim());
+        match = variableRegex.exec(templateContent);
+      }
+
+      // Filter workflowVariables to only include those mentioned in template
+      const relevantVariables = workflowVariables.filter((variable) =>
+        templateVariableNames.has(variable.name),
+      );
+
+      setTemplateVariables(relevantVariables);
+    }
+  }, [templateContent, workflowVariables]);
+
   // Update form values when workflowVariables change
   useEffect(() => {
     const newValues = convertVariableToFormValue();
@@ -297,12 +320,48 @@ export const WorkflowRunForm = ({
     }
 
     try {
-      // Validate form before running
-      await form.validateFields();
+      let newVariables: WorkflowVariable[] = [];
 
-      // If validation passes, proceed with running
-      const newVariables = convertFormValueToVariable();
-      console.log('newVariables', newVariables);
+      if (templateContent) {
+        // Validate templateVariables values
+        const hasInvalidValues = templateVariables.some((variable) => {
+          if (!variable.value || variable.value.length === 0) {
+            return true;
+          }
+
+          return variable.value.every((val) => {
+            if (variable.variableType === 'string') {
+              return !val.text || val.text.trim() === '';
+            }
+            if (variable.variableType === 'option') {
+              return !val.text || val.text.trim() === '';
+            }
+            if (variable.variableType === 'resource') {
+              return !val.resource || !val.resource.storageKey;
+            }
+            return true;
+          });
+        });
+
+        if (hasInvalidValues) {
+          // Show validation error message
+          message.warning(
+            t(
+              'canvas.workflow.run.validationError',
+              'Please fill in all required fields before running the workflow',
+            ),
+          );
+          return;
+        }
+
+        newVariables = templateVariables;
+      } else {
+        // Validate form before running
+        await form.validateFields();
+
+        // If validation passes, proceed with running
+        newVariables = convertFormValueToVariable();
+      }
 
       // Set running state - use external callback if provided, otherwise use internal state
       if (onRunningChange) {
@@ -475,7 +534,7 @@ export const WorkflowRunForm = ({
   }, []);
 
   return (
-    <div className={cn('w-full h-full gap-3 flex flex-col', className)}>
+    <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
       {
         <>
           {templateContent ? (
@@ -534,7 +593,7 @@ export const WorkflowRunForm = ({
                   : t('canvas.workflow.run.run') || 'Run'}
               </Button>
 
-              {onCopyWorkflow && (
+              {onCopyWorkflow && workflowApp?.remixEnabled && (
                 <Button
                   className="h-9 sm:h-10 text-sm sm:text-base"
                   type="default"
