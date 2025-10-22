@@ -22,5 +22,5 @@ export const Project = ({ projectId }: { projectId: string }) => {
     return <NoCanvas />;
   }
 
-  return <Canvas canvasId={canvasId} />;
+  return <Canvas canvasId={canvasId} key={canvasId} />;
 };
