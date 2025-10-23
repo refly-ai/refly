@@ -37,7 +37,7 @@ import {
   UpsertCodeArtifactRequest,
 } from '@refly/openapi-schema';
 import { Document as LangChainDocument } from '@langchain/core/documents';
-import { RunnableConfig } from '@langchain/core/dist/runnables/types';
+import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {
   createCanvas: (user: User, req: UpsertCanvasRequest) => Promise<CreateCanvasResponse>;

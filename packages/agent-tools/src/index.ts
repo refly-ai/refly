@@ -4,6 +4,7 @@ export * from './firecrawl';
 export * from './calculator';
 export * from './inventory';
 export * from './jina';
+export * from './e2b';
 export * from './code-interpreter';
 export * from './google-docs';
 export * from './google-drive';
@@ -15,5 +16,8 @@ export * from './fal-image';
 export * from './fal-video';
 export * from './perplexity';
 export * from './browser-use';
+export * from './scalebox';
+export * from './apify';
+export * from './novita-sandbox';
 
 export type { ReflyService } from './builtin/interface';
