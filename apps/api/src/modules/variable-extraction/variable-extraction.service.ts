@@ -1324,6 +1324,7 @@ export class VariableExtractionService {
           canvasComplexity: this.getComplexityLevel(context.analysis.complexity),
           workflowType: context.analysis.workflowType,
           templateVersion: 1,
+          skillResponses: context.skillResponses,
           workflowTitle: parsedTemplate.title,
           workflowDescription: parsedTemplate.description,
           estimatedExecutionTime: parsedTemplate.estimatedExecutionTime,

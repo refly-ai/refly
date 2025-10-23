@@ -113,7 +113,7 @@ export const CreateWorkflowAppModal = ({
   const [appData, setAppData] = useState<any>(null);
   const [loadingAppData, setLoadingAppData] = useState(false);
 
-  const { workflow } = useCanvasContext();
+  const { workflow, syncCanvasData } = useCanvasContext();
   const { workflowVariables } = workflow ?? {};
 
   // Load existing app data
@@ -305,6 +305,9 @@ export const CreateWorkflowAppModal = ({
     });
 
     try {
+      // Make sure the canvas data is synced to the remote
+      await syncCanvasData({ syncRemote: true });
+
       const values = await form.validateFields();
       await createWorkflowApp(values);
     } catch (error) {

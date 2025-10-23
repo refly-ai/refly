@@ -98,13 +98,13 @@ export class WorkflowAppService {
     });
 
     // Generate app template content
-    let templateContent: string | null = null;
+    let templateResult: any = null;
     try {
-      const templateResult = await this.variableExtractionService.generateAppPublishTemplate(
+      const templateRes = await this.variableExtractionService.generateAppPublishTemplate(
         user,
         canvasId,
       );
-      templateContent = templateResult.templateContent;
+      templateResult = templateRes;
       this.logger.log(`Generated template content for workflow app: ${appId}`);
     } catch (error) {
       this.logger.error(
@@ -123,7 +123,7 @@ export class WorkflowAppService {
           description,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          templateContent,
+          templateContent: templateResult.templateContent,
           remixEnabled,
           updatedAt: new Date(),
         },
@@ -140,7 +140,7 @@ export class WorkflowAppService {
           canvasId,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          templateContent,
+          templateContent: templateResult.templateContent,
           remixEnabled,
         },
       });
@@ -183,7 +183,14 @@ export class WorkflowAppService {
       where: { uid: user.uid },
     });
 
-    return { ...workflowApp, owner: userPo };
+    return {
+      ...workflowApp,
+      owner: userPo,
+      templateQueries: templateResult?.metadata?.skillResponses?.map((item) => ({
+        query: item.data.metadata.query,
+        structuredData: item.data.metadata.structuredData,
+      })),
+    };
   }
 
   async getWorkflowAppDetail(user: User, appId: string) {

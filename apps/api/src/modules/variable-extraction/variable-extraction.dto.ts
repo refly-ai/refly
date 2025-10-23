@@ -61,6 +61,7 @@ export interface AppTemplateResult {
     workflowDescription?: string; // Workflow description
     estimatedExecutionTime?: string; // Estimated execution time
     skillTags?: string[]; // Skill tags for categorization
+    skillResponses?: CanvasNode[];
   };
 }
 
