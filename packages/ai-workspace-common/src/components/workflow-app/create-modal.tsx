@@ -102,7 +102,7 @@ export const CreateWorkflowAppModal = ({
   // Cover image upload state
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
   const [coverUploading, setCoverUploading] = useState(false);
-  const [coverStorageKey, setCoverStorageKey] = useState<string>('');
+  const [coverStorageKey, setCoverStorageKey] = useState<string | undefined>(undefined);
 
   // Preview state
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -160,6 +160,11 @@ export const CreateWorkflowAppModal = ({
   // Handle cover upload change
   const handleCoverUploadChange: UploadProps['onChange'] = (info) => {
     setCoverFileList(info.fileList);
+
+    // Clear storage key when all files are removed
+    if (info.fileList.length === 0) {
+      setCoverStorageKey('');
+    }
   };
 
   // Custom upload request for cover image
@@ -327,7 +332,7 @@ export const CreateWorkflowAppModal = ({
           remixEnabled: false, // Default to false (remix disabled)
         });
         setCoverFileList([]);
-        setCoverStorageKey('');
+        setCoverStorageKey(undefined);
         setAppData(null);
       }
 
@@ -357,10 +362,10 @@ export const CreateWorkflowAppModal = ({
             url: appData.coverUrl,
           },
         ]);
-        setCoverStorageKey(appData.coverUrl);
+        setCoverStorageKey(appData?.coverStorageKey ?? undefined);
       } else {
         setCoverFileList([]);
-        setCoverStorageKey('');
+        setCoverStorageKey(undefined);
       }
     }
   }, [appData, visible, title, form]);
