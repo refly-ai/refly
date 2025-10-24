@@ -4751,6 +4751,10 @@ export const DuplicateShareRequestSchema = {
       type: 'string',
       description: 'Target canvas ID',
     },
+    title: {
+      type: 'string',
+      description: 'Custom title for the duplicated entity',
+    },
   },
 } as const;
 

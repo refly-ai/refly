@@ -3427,6 +3427,10 @@ export type DuplicateShareRequest = {
    * Target canvas ID
    */
   canvasId?: string;
+  /**
+   * Custom title for the duplicated entity
+   */
+  title?: string;
 };
 
 export type DuplicateShareResponse = BaseResponse & {

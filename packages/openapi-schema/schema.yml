@@ -7029,6 +7029,9 @@ components:
         canvasId:
           type: string
           description: Target canvas ID
+        title:
+          type: string
+          description: Custom title for the duplicated entity
     DuplicateShareResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

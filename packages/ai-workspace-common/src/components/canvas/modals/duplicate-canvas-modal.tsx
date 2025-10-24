@@ -53,6 +53,7 @@ export const DuplicateCanvasModal = memo(() => {
           body: {
             shareId,
             projectId,
+            title: values?.title,
           },
         });
         data = response.data;

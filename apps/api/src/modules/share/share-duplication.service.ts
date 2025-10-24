@@ -694,7 +694,7 @@ export class ShareDuplicationService {
     record: any,
     precomputedStorageQuota?: any,
   ): Promise<Entity> {
-    const { shareId, projectId } = param;
+    const { shareId, projectId, title } = param;
 
     // Extract canvas data (handles both canvas and workflow app formats)
     const { canvasData } = await this.extractCanvasData(record, shareId);
@@ -718,7 +718,7 @@ export class ShareDuplicationService {
       user,
       {
         canvasId: newCanvasId,
-        title: canvasData.title,
+        title: title ?? canvasData.title,
         projectId,
         variables: canvasData.variables,
       },
