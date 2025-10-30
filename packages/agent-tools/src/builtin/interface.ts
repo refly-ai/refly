@@ -35,9 +35,13 @@ import {
   SendEmailRequest,
   BaseResponse,
   UpsertCodeArtifactRequest,
+  UploadResponse,
+  FileVisibility,
+  EntityType,
+  CanvasNode,
 } from '@refly/openapi-schema';
 import { Document as LangChainDocument } from '@langchain/core/documents';
-import { RunnableConfig } from '@langchain/core/dist/runnables/types';
+import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {
   createCanvas: (user: User, req: UpsertCanvasRequest) => Promise<CreateCanvasResponse>;
@@ -105,6 +109,40 @@ export interface ReflyService {
   processURL: (url: string) => Promise<string>;
   batchProcessURL: (urls: string[]) => Promise<string[]>;
 
+  downloadFileFromUrl: (url: string) => Promise<Buffer>;
+  downloadFile: (storageKey: string) => Promise<Buffer>;
+  uploadFile: (
+    user: User,
+    param: {
+      file: {
+        buffer: Buffer;
+        mimetype?: string;
+        originalname: string;
+      };
+      entityId?: string;
+      entityType?: EntityType;
+      visibility?: FileVisibility;
+      storageKey?: string;
+    },
+  ) => Promise<UploadResponse['data']>;
+  uploadBase64: (
+    user: User,
+    param: {
+      base64: string;
+      filename?: string;
+      entityId?: string;
+      entityType?: EntityType;
+      visibility?: FileVisibility;
+      storageKey?: string;
+    },
+  ) => Promise<UploadResponse['data']>;
+  addNodeToCanvasWithoutCanvasId: (
+    user: User,
+    node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
+    connectTo?: any,
+    options?: { autoLayout?: boolean },
+  ) => Promise<void>;
+  genImageID: () => Promise<string>;
   // Generate JWT token for user (same as AuthService.login)
   generateJwtToken: (user: User) => Promise<string>;
 

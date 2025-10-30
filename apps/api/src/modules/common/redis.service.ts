@@ -223,7 +223,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    */
   async setJSON<T>(key: string, value: T, ttlSeconds = 180): Promise<void> {
     try {
-      await this.setex(key, ttlSeconds, JSON.stringify(value));
+      // Use custom replacer to handle BigInt serialization
+      const serialized = JSON.stringify(value, (_, v) =>
+        typeof v === 'bigint' ? v.toString() : v,
+      );
+      await this.setex(key, ttlSeconds, serialized);
     } catch (error) {
       this.logger.warn(
         `Failed to write JSON to Redis for key "${key}": ${error instanceof Error ? error.message : error}`,
@@ -243,6 +247,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
+      // Note: BigInt values are stored as strings and remain as strings after parsing
+      // This is generally safe as BigInt fields (like 'pk') are rarely used in business logic
+      // If BigInt restoration is needed, implement a custom reviver function
       return JSON.parse(serialized) as T;
     } catch (error) {
       this.logger.warn(`Failed to parse JSON from Redis for key "${key}"`, error);

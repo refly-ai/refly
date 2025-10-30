@@ -281,18 +281,7 @@ export const calculateCanvasStateDiff = (
         from: fromEdge,
       });
     } else if (fromEdge && toEdge) {
-      // Edge exists in both states, check if it was modified
-      if (!deepCompareExcludingId(fromEdge, toEdge)) {
-        const fieldDiff = calculateFieldDiff('edge', fromEdge, toEdge);
-        if (fieldDiff) {
-          edgeDiffs.push({
-            id: edgeId,
-            type: 'update',
-            from: fieldDiff.before,
-            to: fieldDiff.after,
-          });
-        }
-      }
+      // Ignore all edge updates
     }
   }
 

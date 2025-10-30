@@ -275,9 +275,9 @@ describe('prepareNodeExecutions', () => {
         nodeType: 'skillResponse',
         originalQuery: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
         parentNodeIds: ['B', 'A'],
-        processedQuery: 'Analyze test2.pdf please',
+        processedQuery: 'Analyze @test2.pdf please',
         status: 'waiting',
-        title: 'Analyze test2.pdf please',
+        title: 'Analyze @test2.pdf please',
         childNodeIds: [],
         entityId: 'entityC',
         connectTo: [
@@ -332,7 +332,7 @@ describe('prepareNodeExecutions', () => {
                 maxOutput: 1000,
               },
             },
-            title: 'Analyze test2.pdf please',
+            title: 'Analyze @test2.pdf please',
           },
           id: 'C',
           position: {
@@ -477,7 +477,7 @@ describe('prepareNodeExecutions', () => {
         nodeType: 'skillResponse',
         originalQuery: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
         parentNodeIds: ['N3', 'N2'],
-        processedQuery: 'Analyze test2.pdf please',
+        processedQuery: 'Analyze @test2.pdf please',
         resultHistory: [
           {
             title: 'Hello TypeScript world',
@@ -485,7 +485,7 @@ describe('prepareNodeExecutions', () => {
           },
         ],
         status: 'waiting',
-        title: 'Analyze test2.pdf please',
+        title: 'Analyze @test2.pdf please',
         childNodeIds: [],
         connectTo: [
           {
@@ -535,7 +535,7 @@ describe('prepareNodeExecutions', () => {
                 query: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
               },
             },
-            title: 'Analyze test2.pdf please',
+            title: 'Analyze @test2.pdf please',
           },
           id: 'N4',
           position: {
@@ -546,6 +546,156 @@ describe('prepareNodeExecutions', () => {
         },
       },
     ] as WorkflowNode[]);
+  });
+
+  it('marks skill nodes as finished regardless of subtree membership (isNewCanvas=false)', () => {
+    setMockSequences({
+      nodeIds: ['N1', 'N2', 'N3', 'N4'],
+      entityIds: ['E1', 'E2', 'E3', 'E4'],
+    });
+    const canvasWithSkill = {
+      nodes: [
+        {
+          id: 'S',
+          type: 'start',
+          position: { x: 0, y: 0 },
+          data: {
+            title: 'Start',
+            entityId: 'entityStart',
+            metadata: { contextItems: [] },
+          },
+        },
+        {
+          id: 'SKILL1',
+          type: 'skill' as CanvasNodeType,
+          position: { x: 0, y: 0 },
+          data: {
+            title: 'Translation Skill',
+            entityId: 'entitySkill1',
+            metadata: { contextItems: [] },
+          },
+        },
+        {
+          id: 'A',
+          type: 'skillResponse' as CanvasNodeType,
+          position: { x: 0, y: 0 },
+          data: {
+            title: 'Hello world',
+            entityId: 'entityA',
+            metadata: {
+              structuredData: { query: 'Hello world' },
+              contextItems: [],
+              modelInfo: {
+                name: 'openai/gpt-5',
+                providerItemId: 'pi-1',
+                label: 'GPT-5',
+                provider: 'openai',
+                contextLimit: 1000,
+                maxOutput: 1000,
+              },
+            } as ResponseNodeMeta,
+          },
+        },
+        {
+          id: 'SKILL2',
+          type: 'skill' as CanvasNodeType,
+          position: { x: 0, y: 0 },
+          data: {
+            title: 'Summary Skill',
+            entityId: 'entitySkill2',
+            metadata: { contextItems: [] },
+          },
+        },
+      ],
+      edges: [
+        { id: 'e0', source: 'S', target: 'SKILL1' },
+        { id: 'e1', source: 'SKILL1', target: 'A' },
+        { id: 'e2', source: 'A', target: 'SKILL2' },
+      ],
+    } as CanvasData;
+
+    const { nodeExecutions, startNodes } = prepareNodeExecutions({
+      executionId: 'exec-skill',
+      canvasData: canvasWithSkill,
+      variables,
+      isNewCanvas: false,
+    });
+
+    expect(startNodes).toEqual(['S']);
+
+    // Verify skill nodes get 'finish' status
+    const skill1Node = nodeExecutions.find((n) => n.nodeId === 'SKILL1');
+    const skill2Node = nodeExecutions.find((n) => n.nodeId === 'SKILL2');
+
+    expect(skill1Node?.status).toBe('finish');
+    expect(skill2Node?.status).toBe('finish');
+
+    // Verify other nodes get 'waiting' status (they're in the subtree)
+    const startNode = nodeExecutions.find((n) => n.nodeId === 'S');
+    const responseNode = nodeExecutions.find((n) => n.nodeId === 'A');
+
+    expect(startNode?.status).toBe('waiting');
+    expect(responseNode?.status).toBe('waiting');
+  });
+
+  it('marks skill nodes as finished in isNewCanvas=true mode', () => {
+    setMockSequences({
+      nodeIds: ['N1', 'N2', 'N3', 'N4'],
+      entityIds: ['E1', 'E2', 'E3', 'E4'],
+    });
+    const canvasWithSkill = {
+      nodes: [
+        {
+          id: 'SKILL1',
+          type: 'skill' as CanvasNodeType,
+          position: { x: 0, y: 0 },
+          data: {
+            title: 'Translation Skill',
+            entityId: 'entitySkill1',
+            metadata: { contextItems: [] },
+          },
+        },
+        {
+          id: 'A',
+          type: 'skillResponse' as CanvasNodeType,
+          position: { x: 0, y: 0 },
+          data: {
+            title: 'Hello world',
+            entityId: 'entityA',
+            metadata: {
+              structuredData: { query: 'Hello world' },
+              contextItems: [],
+              modelInfo: {
+                name: 'openai/gpt-5',
+                providerItemId: 'pi-1',
+                label: 'GPT-5',
+                provider: 'openai',
+                contextLimit: 1000,
+                maxOutput: 1000,
+              },
+            } as ResponseNodeMeta,
+          },
+        },
+      ],
+      edges: [{ id: 'e0', source: 'SKILL1', target: 'A' }],
+    } as CanvasData;
+
+    const { nodeExecutions, startNodes } = prepareNodeExecutions({
+      executionId: 'exec-skill-new-canvas',
+      canvasData: canvasWithSkill,
+      variables,
+      isNewCanvas: true,
+    });
+
+    expect(startNodes).toEqual(['N5']); // SKILL1 becomes N5
+
+    // Verify skill node gets 'finish' status even in new canvas mode
+    const skillNode = nodeExecutions.find((n) => n.nodeType === 'skill');
+    expect(skillNode?.status).toBe('finish');
+
+    // Verify other nodes in subtree get 'waiting' status
+    const responseNode = nodeExecutions.find((n) => n.nodeType === 'skillResponse');
+    expect(responseNode?.status).toBe('waiting');
   });
 });
 

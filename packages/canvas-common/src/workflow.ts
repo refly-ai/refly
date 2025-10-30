@@ -227,8 +227,8 @@ export const prepareNodeExecutions = (params: {
     const parents = parentMap.get(node.id) || [];
     const children = childMap.get(node.id) || [];
 
-    // Set status based on whether the node is in the subtree (computed with original ids)
-    const status = subtreeNodes.has(node.id) ? 'waiting' : 'finish';
+    // Set status based on whether the node is in the subtree (computed with original ids) and not a skill node
+    const status = subtreeNodes.has(node.id) && node.type !== 'skill' ? 'waiting' : 'finish';
 
     // Build connection filters based on parent entity IDs
     const connectTo: CanvasNodeFilter[] = parents
@@ -294,32 +294,6 @@ export const prepareNodeExecutions = (params: {
   }
 
   return { nodeExecutions, startNodes };
-};
-
-/**
- * Pick ready-to-run child nodes in a single pass using in-memory evaluation.
- */
-export const pickReadyChildNodes = (
-  childNodeIds: string[],
-  allNodes: Pick<WorkflowNode, 'nodeId' | 'parentNodeIds' | 'status'>[],
-): string[] => {
-  const nodeById = new Map(allNodes.map((n) => [n.nodeId, n]));
-  const ready: string[] = [];
-
-  for (const childId of childNodeIds) {
-    const node = nodeById.get(childId);
-    if (!node) continue;
-
-    const parents = node.parentNodeIds.filter(Boolean);
-    const allParentsFinished =
-      parents.length === 0 || parents.every((pid) => nodeById.get(pid)?.status === 'finish');
-
-    if (allParentsFinished && node.status === 'waiting') {
-      ready.push(childId);
-    }
-  }
-
-  return ready;
 };
 
 /**

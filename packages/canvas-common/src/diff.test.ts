@@ -94,17 +94,14 @@ describe('calculateCanvasStateDiff', () => {
     expect(diff?.edgeDiffs?.[0]).toMatchObject({ id: 'e1', type: 'delete' });
   });
 
-  it('should detect edge update', () => {
+  it('should not detect edge update', () => {
     const from: CanvasData = {
       nodes: [],
       edges: [createEdge('e1', '1', '2', { type: 'default' })],
     };
     const to: CanvasData = { nodes: [], edges: [createEdge('e1', '1', '2', { type: 'custom' })] };
     const diff = calculateCanvasStateDiff(from, to);
-    expect(diff?.edgeDiffs).toHaveLength(1);
-    expect(diff?.edgeDiffs?.[0]).toMatchObject({ id: 'e1', type: 'update' });
-    expect(diff?.edgeDiffs?.[0]?.from).toBeDefined();
-    expect(diff?.edgeDiffs?.[0]?.to).toBeDefined();
+    expect(diff).toBeNull();
   });
 
   it('should ignore ghost nodes and temp edges', () => {
@@ -123,8 +120,7 @@ describe('calculateCanvasStateDiff', () => {
     // Only the real node and edge should be diffed
     expect(diff?.nodeDiffs).toHaveLength(1);
     expect(diff?.nodeDiffs?.[0].id).toBe('1');
-    expect(diff?.edgeDiffs).toHaveLength(1);
-    expect(diff?.edgeDiffs?.[0].id).toBe('e1');
+    expect(diff?.edgeDiffs).toHaveLength(0);
   });
 
   it('should handle nested array diff', () => {

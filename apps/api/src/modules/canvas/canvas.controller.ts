@@ -36,6 +36,7 @@ import {
   GetCanvasDataResponse,
   ListOrder,
   ListCanvasResponse,
+  SyncCanvasStateResponse,
 } from '@refly/openapi-schema';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -199,9 +200,9 @@ export class CanvasController {
   async syncCanvasState(
     @LoginedUser() user: User,
     @Body() body: SyncCanvasStateRequest,
-  ): Promise<BaseResponse> {
-    await this.canvasSyncService.syncState(user, body);
-    return buildSuccessResponse({});
+  ): Promise<SyncCanvasStateResponse> {
+    const result = await this.canvasSyncService.syncState(user, body);
+    return buildSuccessResponse(result);
   }
 
   @UseGuards(JwtAuthGuard)

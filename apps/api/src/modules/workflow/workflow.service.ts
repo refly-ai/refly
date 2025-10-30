@@ -459,6 +459,7 @@ export class WorkflowService {
         nodeType: true,
         status: true,
         parentNodeIds: true,
+        childNodeIds: true,
       },
       where: { executionId },
     });
@@ -507,6 +508,42 @@ export class WorkflowService {
           `[pollWorkflow] Enqueued node ${n.nodeId} for execution ${executionId} as parents are finished`,
         );
       }
+    }
+
+    // For finished skillResponse nodes, mark their non-skillResponse children as finish if not already finished
+    const finishedSkillResponseNodes = allNodes.filter(
+      (n) => n.status === 'finish' && n.nodeType === 'skillResponse',
+    );
+
+    const nodesToUpdate: string[] = [];
+    for (const finishedNode of finishedSkillResponseNodes) {
+      const childNodeIds = (safeParseJSON(finishedNode.childNodeIds) ?? []) as string[];
+      for (const childId of childNodeIds) {
+        const childNode = allNodes.find((n) => n.nodeId === childId);
+        if (childNode && childNode.nodeType !== 'skillResponse' && childNode.status !== 'finish') {
+          nodesToUpdate.push(childId);
+        }
+      }
+    }
+
+    // Update the status of child nodes to finish
+    if (nodesToUpdate.length > 0) {
+      await this.prisma.workflowNodeExecution.updateMany({
+        where: {
+          executionId,
+          nodeId: { in: nodesToUpdate },
+          status: { not: 'finish' },
+          nodeType: { not: 'skillResponse' },
+        },
+        data: {
+          status: 'finish',
+          progress: 100,
+          endTime: new Date(),
+        },
+      });
+      this.logger.log(
+        `[pollWorkflow] Marked ${nodesToUpdate.length} child nodes as finished for execution ${executionId}`,
+      );
     }
 
     // Determine if we should continue polling for this execution

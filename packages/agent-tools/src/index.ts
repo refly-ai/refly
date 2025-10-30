@@ -15,5 +15,9 @@ export * from './fal-image';
 export * from './fal-video';
 export * from './perplexity';
 export * from './browser-use';
+export * from './scalebox';
+export * from './apify';
+export * from './novita-sandbox';
+export * from './apify-13f';
 
 export type { ReflyService } from './builtin/interface';

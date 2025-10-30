@@ -71,6 +71,9 @@ export class SeedreamGenerateImage extends AgentBaseTool<FalImageParams> {
     prompt: z.string().describe('The prompt to generate image, accept chinese and english.'),
     image_size: z
       .enum([
+        'auto',
+        'auto_2K',
+        'auto_4K',
         'square',
         'square_hd',
         'portrait_4_3',

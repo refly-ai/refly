@@ -610,7 +610,7 @@ export const SkillResponseNode = memo(
           selectedSkill,
           actionMeta,
           modelInfo,
-          contextItems: responseContextItems = [],
+          // contextItems: responseContextItems = [],
           tplConfig,
         } = metadata;
 
@@ -626,25 +626,25 @@ export const SkillResponseNode = memo(
               withHistory: true,
             },
           },
-          // Include the original context items from the response
-          ...responseContextItems.map((item) => ({
-            ...item,
-            metadata: {
-              ...item.metadata,
-              withHistory: undefined,
-            },
-          })),
+          // // Include the original context items from the response
+          // ...responseContextItems.map((item) => ({
+          //   ...item,
+          //   metadata: {
+          //     ...item.metadata,
+          //     withHistory: undefined,
+          //   },
+          // })),
         ];
 
         // Create node connect filters - include both the response and its context items
         const connectFilters = [
           { type: 'skillResponse' as CanvasNodeType, entityId: data.entityId },
-          ...responseContextItems
-            .filter((item) => item.type !== 'skillResponse')
-            .map((item) => ({
-              type: item.type as CanvasNodeType,
-              entityId: item.entityId,
-            })),
+          // ...responseContextItems
+          //   .filter((item) => item.type !== 'skillResponse')
+          //   .map((item) => ({
+          //     type: item.type as CanvasNodeType,
+          //     entityId: item.entityId,
+          //   })),
         ];
 
         const { position, connectTo } = getConnectionInfo(

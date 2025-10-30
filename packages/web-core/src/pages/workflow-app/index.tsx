@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { message, notification, Skeleton } from 'antd';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CanvasNodeType, WorkflowNodeExecution, WorkflowVariable } from '@refly/openapi-schema';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
@@ -48,7 +48,6 @@ const WorkflowAppPage: React.FC = () => {
   const { t } = useTranslation();
   const { shareId: routeShareId } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const shareId = routeShareId ?? '';
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('runLogs');
@@ -82,15 +81,6 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [shareId]);
 
-  const urlExecutionId = searchParams.get('executionId');
-  // Restore executionId from URL on page load
-  useEffect(() => {
-    if (urlExecutionId) {
-      setExecutionId(urlExecutionId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlExecutionId]);
-
   const workflowVariables = useMemo(() => {
     return workflowApp?.variables ?? [];
   }, [workflowApp]);
@@ -108,6 +98,7 @@ const WorkflowAppPage: React.FC = () => {
 
       // Clear executionId when workflow completes or fails
       setExecutionId(null);
+
       // Reset running state when workflow completes
       setIsRunning(false);
       // Clear executionId from URL
@@ -116,23 +107,26 @@ const WorkflowAppPage: React.FC = () => {
       refetchUsage();
 
       if (status === 'finish') {
+        notification.success({
+          message: t('workflowApp.run.completed'),
+        });
         // Auto switch to products tab when workflow completes successfully
         products.length > 0 && setActiveTab('products');
       } else if (status === 'failed') {
         notification.error({
-          message: t('workflowApp.run.failed') || 'App run failed',
+          message: t('workflowApp.run.failed'),
         });
       }
     },
     onError: (_error) => {
+      notification.error({
+        message: t('workflowApp.run.error'),
+      });
+
       // Clear executionId on error
       setExecutionId(null);
       // Reset running state on error
       setIsRunning(false);
-      // Clear executionId from URL
-      notification.error({
-        message: t('workflowApp.run.error') || 'Run error',
-      });
     },
   });
 
@@ -185,7 +179,7 @@ const WorkflowAppPage: React.FC = () => {
       });
       // Check if user is logged in before executing workflow
       if (!isLoggedRef.current) {
-        message.warning('Please login to run this workflow');
+        message.warning(t('workflowApp.run.loginRequired'));
         // Redirect to login with return URL
         const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
         navigate(`/?autoLogin=true&returnUrl=${returnUrl}`);
@@ -203,7 +197,7 @@ const WorkflowAppPage: React.FC = () => {
         });
 
         if (error) {
-          message.error(`executeWorkflowApp error: ${error}`);
+          message.error(t('workflowApp.run.executeError'));
           // Reset running state on error
           setIsRunning(false);
           return;
@@ -212,25 +206,24 @@ const WorkflowAppPage: React.FC = () => {
         const newExecutionId = data?.data?.executionId ?? null;
         if (newExecutionId) {
           setExecutionId(newExecutionId);
+          message.success(t('workflowApp.run.workflowStarted'));
           // Update URL with executionId to enable page refresh recovery
-          setSearchParams({ executionId: newExecutionId });
 
-          message.success('Workflow started');
           // Auto switch to runLogs tab when workflow starts
           setActiveTab('runLogs');
         } else {
-          message.error('Failed to get execution ID');
+          message.error(t('workflowApp.run.executionIdFailed'));
           // Reset running state on failure
           setIsRunning(false);
         }
       } catch (error) {
         console.error('Error executing workflow app:', error);
-        message.error('Failed to execute workflow');
+        message.error(t('workflowApp.run.executeFailed'));
         // Reset running state on error
         setIsRunning(false);
       }
     },
-    [shareId, isLoggedRef, navigate, setSearchParams],
+    [shareId, isLoggedRef, navigate],
   );
 
   const handleCopyWorkflow = useCallback(() => {
@@ -240,7 +233,7 @@ const WorkflowAppPage: React.FC = () => {
 
     // Check if user is logged in before copying workflow
     if (!isLoggedRef.current) {
-      message.warning('Please login to copy this workflow');
+      message.warning(t('workflowApp.run.loginRequiredCopy'));
       // Redirect to login with return URL
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/?autoLogin=true&returnUrl=${returnUrl}`);
@@ -275,7 +268,7 @@ const WorkflowAppPage: React.FC = () => {
       message.success(t('canvas.workflow.run.shareLinkCopied') || 'Share link copied to clipboard');
     } catch (error) {
       console.error('Failed to copy share link:', error);
-      message.error(t('canvas.workflow.run.shareLinkCopyFailed') || 'Failed to copy share link');
+      message.error(t('canvas.workflow.run.shareLinkCopyFailed'));
     }
   }, [t, shareId]);
 

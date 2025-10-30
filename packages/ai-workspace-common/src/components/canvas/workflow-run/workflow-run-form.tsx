@@ -21,13 +21,10 @@ const EmptyContent = () => {
     <div className="w-full h-full flex flex-col items-center justify-center">
       <img src={EmptyImage} alt="no variables" className="w-[120px] h-[120px] -mb-4" />
       <div className="text-sm text-refly-text-2 leading-5">
-        {t('canvas.workflow.run.emptyTitle', 'No variables defined')}
+        {t('canvas.workflow.run.emptyTitle')}
       </div>
       <div className="text-sm text-refly-text-2 leading-5">
-        {t(
-          'canvas.workflow.run.emptyDescription',
-          ' the workflow will be executed once if continued.',
-        )}
+        {t('canvas.workflow.run.emptyDescription')}
       </div>
     </div>
   );
@@ -77,7 +74,7 @@ export const WorkflowRunForm = ({
   workflowApp,
 }: WorkflowRunFormProps) => {
   const { t } = useTranslation();
-  const { isLoggedRef } = useIsLogin();
+  const { getLoginStatus } = useIsLogin();
   const navigate = useNavigate();
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
@@ -301,7 +298,7 @@ export const WorkflowRunForm = ({
     }
 
     // Check if user is logged in
-    if (!isLoggedRef.current) {
+    if (!getLoginStatus()) {
       // Redirect to login with return URL
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/?autoLogin=true&returnUrl=${returnUrl}`);
@@ -334,12 +331,7 @@ export const WorkflowRunForm = ({
 
         if (hasInvalidValues) {
           // Show validation error message
-          message.warning(
-            t(
-              'canvas.workflow.run.validationError',
-              'Please fill in all required fields before running the workflow',
-            ),
-          );
+          message.warning(t('canvas.workflow.run.validationError'));
           return;
         }
 
@@ -588,9 +580,7 @@ export const WorkflowRunForm = ({
                 loading={loading || isRunning || isPolling}
                 disabled={loading || isRunning || isPolling}
               >
-                {isPolling
-                  ? t('canvas.workflow.run.executing') || 'Executing...'
-                  : t('canvas.workflow.run.run') || 'Run'}
+                {isPolling ? t('canvas.workflow.run.executing') : t('canvas.workflow.run.run')}
               </Button>
 
               {onCopyWorkflow && workflowApp?.remixEnabled && (

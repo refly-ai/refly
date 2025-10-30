@@ -13,6 +13,7 @@ import {
   CanvasData,
   CanvasNode,
   GenericToolset,
+  SyncCanvasStateResult,
 } from '@refly/openapi-schema';
 import {
   getCanvasDataFromState,
@@ -349,7 +350,7 @@ export class CanvasSyncService {
     user: User,
     param: SyncCanvasStateRequest,
     options?: { releaseLock?: LockReleaseFn },
-  ) {
+  ): Promise<SyncCanvasStateResult> {
     const { canvasId, transactions, version } = param;
 
     const versionToSync =
@@ -380,9 +381,18 @@ export class CanvasSyncService {
 
     try {
       const state = await this.getState(user, { canvasId, version: versionToSync });
-      updateCanvasState(state, transactions);
+      // Ensure all incoming transactions are stamped with syncedAt before persisting
+      const stampedTransactions = (transactions ?? []).map((tx) => ({
+        ...tx,
+        syncedAt: tx?.syncedAt ?? Date.now(),
+      }));
+      updateCanvasState(state, stampedTransactions);
       state.updatedAt = Date.now();
       await this.saveState(canvasId, state);
+
+      return {
+        transactions: stampedTransactions,
+      };
     } catch (err) {
       this.logger.error(
         `[syncState] error syncing canvas state for canvas ${canvasId}: ${err?.stack}`,
@@ -533,6 +543,25 @@ export class CanvasSyncService {
       },
       { releaseLock },
     );
+  }
+
+  async addNodeToCanvasWithoutCanvasId(
+    user: User,
+    node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
+    connectTo?: CanvasNodeFilter[],
+    options?: { autoLayout?: boolean },
+  ) {
+    const parentResult = await this.prisma.actionResult.findFirst({
+      select: {
+        targetId: true,
+        targetType: true,
+        workflowNodeExecutionId: true,
+      },
+      where: { resultId: node.data?.metadata?.parentResultId },
+      orderBy: { version: 'desc' },
+    });
+
+    this.addNodeToCanvas(user, parentResult.targetId, node, connectTo, options);
   }
 
   async createCanvasVersion(

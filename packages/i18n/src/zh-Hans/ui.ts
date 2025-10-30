@@ -3423,7 +3423,13 @@ const translations = {
     run: {
       completed: 'App 运行成功',
       failed: 'App 运行失败',
-      error: '运行出错',
+      error: '运行失败',
+      loginRequired: '请登录以运行此工作流',
+      loginRequiredCopy: '请登录以复制此工作流',
+      workflowStarted: '工作流已启动',
+      executionIdFailed: '获取执行 ID 失败',
+      executeFailed: '执行工作流失败',
+      executeError: '执行工作流失败',
     },
   },
   project: {
