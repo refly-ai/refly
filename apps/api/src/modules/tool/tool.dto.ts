@@ -1,8 +1,8 @@
+import { toolsetInventory } from '@refly/agent-tools';
+import { GenericToolset, ToolsetAuthType, ToolsetInstance } from '@refly/openapi-schema';
 import { pick } from '@refly/utils';
 import { McpServer as McpServerPO, Toolset as ToolsetPO } from '../../generated/client';
-import { GenericToolset, ToolsetInstance, ToolsetAuthType } from '@refly/openapi-schema';
 import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
-import { toolsetInventory } from '@refly/agent-tools';
 
 export const toolsetPO2DTO = (toolset: ToolsetPO): ToolsetInstance => {
   const inventoryItem = toolsetInventory[toolset.key];
@@ -52,3 +52,12 @@ export const mcpServerPo2GenericToolset = (server: McpServerPO): GenericToolset 
   name: server.name,
   mcpServer: mcpServerPO2DTO(server),
 });
+
+export const toolsetPo2GenericOAuthToolset = (toolset: ToolsetPO): GenericToolset => {
+  return {
+    type: 'external_oauth',
+    id: toolset.toolsetId,
+    name: toolset.name,
+    toolset: toolsetPO2DTO(toolset),
+  };
+};

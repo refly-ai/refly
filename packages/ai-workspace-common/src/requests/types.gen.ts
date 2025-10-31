@@ -5750,7 +5750,50 @@ export type UpsertToolsetResponse = BaseResponse & {
   data?: ToolsetInstance;
 };
 
-export type GenericToolsetType = 'regular' | 'mcp';
+export type InitiateComposioConnectionResponse = {
+  /**
+   * OAuth redirect URL provided by Composio.
+   */
+  redirectUrl: string;
+  /**
+   * Connection request identifier from Composio.
+   */
+  connectionRequestId: string;
+  /**
+   * Composio app slug (e.g., gmail, slack).
+   */
+  app: string;
+};
+
+/**
+ * Current status of the Composio connection.
+ */
+export type ComposioConnectionStatus = 'active' | 'revoked';
+
+export type ComposioConnectionStatusResponse = {
+  status: ComposioConnectionStatus;
+  /**
+   * Connected account identifier returned by Composio, if available.
+   */
+  connectedAccountId?: string | null;
+  /**
+   * Composio integration identifier (app slug).
+   */
+  integrationId: string;
+};
+
+export type ComposioRevokeResponse = {
+  /**
+   * Whether the connection was revoked successfully.
+   */
+  success: boolean;
+  /**
+   * Human-readable message describing the outcome.
+   */
+  message: string;
+};
+
+export type GenericToolsetType = 'regular' | 'mcp' | 'external_oauth';
 
 export type GenericToolset = {
   /**
@@ -8110,6 +8153,45 @@ export type DeleteToolsetData = {
 export type DeleteToolsetResponse = BaseResponse;
 
 export type DeleteToolsetError = unknown;
+
+export type AuthorizeComposioConnectionData = {
+  path: {
+    /**
+     * Composio app slug (e.g., gmail, slack).
+     */
+    app: string;
+  };
+};
+
+export type AuthorizeComposioConnectionResponse = InitiateComposioConnectionResponse;
+
+export type AuthorizeComposioConnectionError = unknown;
+
+export type RevokeComposioConnectionData = {
+  path: {
+    /**
+     * Composio app slug (e.g., gmail, slack).
+     */
+    app: string;
+  };
+};
+
+export type RevokeComposioConnectionResponse = ComposioRevokeResponse;
+
+export type RevokeComposioConnectionError = unknown;
+
+export type GetComposioConnectionStatusData = {
+  path: {
+    /**
+     * Composio app slug (e.g., gmail, slack).
+     */
+    app: string;
+  };
+};
+
+export type GetComposioConnectionStatusResponse = ComposioConnectionStatusResponse;
+
+export type GetComposioConnectionStatusError = unknown;
 
 export type ScrapeData = {
   body: ScrapeWeblinkRequest;

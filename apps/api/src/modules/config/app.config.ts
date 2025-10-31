@@ -193,4 +193,7 @@ export default () => ({
     secretKey: process.env.LANGFUSE_SECRET_KEY,
     host: process.env.LANGFUSE_HOST,
   },
+  composio: {
+    apiKey: process.env.COMPOSIO_API_KEY,
+  },
 });

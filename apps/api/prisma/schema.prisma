@@ -1528,6 +1528,33 @@ model Toolset {
   @@map("toolsets")
 }
 
+model ComposioConnection {
+  /// Primary key
+  pk                 BigInt    @id @default(autoincrement())
+  /// User ID (Refly)
+  uid                String    @map("uid")
+  /// Integration ID (e.g., 'gmail', 'slack', 'github')
+  integrationId      String    @map("integration_id")
+  /// Connected Account ID (from Composio)
+  connectedAccountId String    @map("connected_account_id")
+  /// Connection status
+  status             String    @default("active") @map("status")
+  /// Integration metadata (JSON)
+  metadata           String?   @map("metadata")
+  /// Token expiration timestamp
+  expiresAt          DateTime? @map("expires_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@unique([uid, integrationId])
+  @@index([status])
+  @@map("composio_connections")
+}
+
 model ToolCallResult {
   /// Primary key
   pk        Int     @id @default(autoincrement())

@@ -8163,9 +8163,69 @@ export const UpsertToolsetResponseSchema = {
   ],
 } as const;
 
+export const InitiateComposioConnectionResponseSchema = {
+  type: 'object',
+  required: ['redirectUrl', 'connectionRequestId', 'app'],
+  properties: {
+    redirectUrl: {
+      type: 'string',
+      format: 'uri',
+      description: 'OAuth redirect URL provided by Composio.',
+    },
+    connectionRequestId: {
+      type: 'string',
+      description: 'Connection request identifier from Composio.',
+    },
+    app: {
+      type: 'string',
+      description: 'Composio app slug (e.g., gmail, slack).',
+    },
+  },
+} as const;
+
+export const ComposioConnectionStatusSchema = {
+  type: 'string',
+  description: 'Current status of the Composio connection.',
+  enum: ['active', 'revoked'],
+} as const;
+
+export const ComposioConnectionStatusResponseSchema = {
+  type: 'object',
+  required: ['status', 'integrationId'],
+  properties: {
+    status: {
+      $ref: '#/components/schemas/ComposioConnectionStatus',
+    },
+    connectedAccountId: {
+      type: 'string',
+      nullable: true,
+      description: 'Connected account identifier returned by Composio, if available.',
+    },
+    integrationId: {
+      type: 'string',
+      description: 'Composio integration identifier (app slug).',
+    },
+  },
+} as const;
+
+export const ComposioRevokeResponseSchema = {
+  type: 'object',
+  required: ['success', 'message'],
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the connection was revoked successfully.',
+    },
+    message: {
+      type: 'string',
+      description: 'Human-readable message describing the outcome.',
+    },
+  },
+} as const;
+
 export const GenericToolsetTypeSchema = {
   type: 'string',
-  enum: ['regular', 'mcp'],
+  enum: ['regular', 'mcp', 'external_oauth'],
 } as const;
 
 export const GenericToolsetSchema = {

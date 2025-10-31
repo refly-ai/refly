@@ -15,6 +15,7 @@ import {
   getCanvasTransactions,
   getCodeArtifactDetail,
   getCollabToken,
+  getComposioConnectionStatus,
   getCreditBalance,
   getCreditRecharge,
   getCreditUsage,
@@ -72,6 +73,7 @@ import {
   GetCanvasStateData,
   GetCanvasTransactionsData,
   GetCodeArtifactDetailData,
+  GetComposioConnectionStatusData,
   GetCreditRechargeData,
   GetCreditUsageByCanvasIdData,
   GetCreditUsageByExecutionIdData,
@@ -558,6 +560,15 @@ export const prefetchUseListToolsets = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListToolsetsKeyFn(clientOptions),
     queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetComposioConnectionStatus = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetComposioConnectionStatusData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetComposioConnectionStatusKeyFn(clientOptions),
+    queryFn: () =>
+      getComposioConnectionStatus({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseServeStatic = (
   queryClient: QueryClient,

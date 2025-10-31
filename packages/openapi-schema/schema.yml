@@ -3537,6 +3537,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /tool/composio/{app}/authorize:
+    post:
+      tags:
+        - v1/tool/composio
+      summary: Authorize Composio connection
+      description: Generate an OAuth authorization URL for a Composio integration.
+      operationId: authorizeComposioConnection
+      parameters:
+        - name: app
+          in: path
+          required: true
+          description: Composio app slug (e.g., gmail, slack).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitiateComposioConnectionResponse'
+  /tool/composio/{app}/revoke:
+    post:
+      tags:
+        - v1/tool/composio
+      summary: Revoke Composio connection
+      description: Revoke a user's Composio connection and reset OAuth state.
+      operationId: revokeComposioConnection
+      parameters:
+        - name: app
+          in: path
+          required: true
+          description: Composio app slug (e.g., gmail, slack).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposioRevokeResponse'
+        '404':
+          description: connection not found
+  /tool/composio/{app}/status:
+    get:
+      tags:
+        - v1/tool/composio
+      summary: Get Composio connection status
+      description: Query the current Composio connection status for a user by app slug.
+      operationId: getComposioConnectionStatus
+      parameters:
+        - name: app
+          in: path
+          required: true
+          description: Composio app slug (e.g., gmail, slack).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposioConnectionStatusResponse'
   /misc/scrape:
     post:
       tags:
@@ -9446,11 +9511,62 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/ToolsetInstance'
+    InitiateComposioConnectionResponse:
+      type: object
+      required:
+        - redirectUrl
+        - connectionRequestId
+        - app
+      properties:
+        redirectUrl:
+          type: string
+          format: uri
+          description: OAuth redirect URL provided by Composio.
+        connectionRequestId:
+          type: string
+          description: Connection request identifier from Composio.
+        app:
+          type: string
+          description: Composio app slug (e.g., gmail, slack).
+    ComposioConnectionStatus:
+      type: string
+      description: Current status of the Composio connection.
+      enum:
+        - active
+        - revoked
+    ComposioConnectionStatusResponse:
+      type: object
+      required:
+        - status
+        - integrationId
+      properties:
+        status:
+          $ref: '#/components/schemas/ComposioConnectionStatus'
+        connectedAccountId:
+          type: string
+          nullable: true
+          description: Connected account identifier returned by Composio, if available.
+        integrationId:
+          type: string
+          description: Composio integration identifier (app slug).
+    ComposioRevokeResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Whether the connection was revoked successfully.
+        message:
+          type: string
+          description: Human-readable message describing the outcome.
     GenericToolsetType:
       type: string
       enum:
         - regular
         - mcp
+        - external_oauth
     GenericToolset:
       type: object
       required:

@@ -5,6 +5,7 @@ import { UseQueryResult } from '@tanstack/react-query';
 import {
   abortAction,
   addNodesToCanvasPage,
+  authorizeComposioConnection,
   autoNameCanvas,
   batchCreateProviderItems,
   batchCreateResource,
@@ -71,6 +72,7 @@ import {
   getCanvasTransactions,
   getCodeArtifactDetail,
   getCollabToken,
+  getComposioConnectionStatus,
   getCreditBalance,
   getCreditRecharge,
   getCreditUsage,
@@ -125,6 +127,7 @@ import {
   refreshToken,
   reindexResource,
   resendVerification,
+  revokeComposioConnection,
   scrape,
   search,
   serveStatic,
@@ -770,6 +773,18 @@ export const UseListToolsetsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsetsKey, ...(queryKey ?? [clientOptions])];
+export type GetComposioConnectionStatusDefaultResponse = Awaited<
+  ReturnType<typeof getComposioConnectionStatus>
+>['data'];
+export type GetComposioConnectionStatusQueryResult<
+  TData = GetComposioConnectionStatusDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetComposioConnectionStatusKey = 'GetComposioConnectionStatus';
+export const UseGetComposioConnectionStatusKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetComposioConnectionStatusKey, ...(queryKey ?? [clientOptions])];
 export type ServeStaticDefaultResponse = Awaited<ReturnType<typeof serveStatic>>['data'];
 export type ServeStaticQueryResult<
   TData = ServeStaticDefaultResponse,
@@ -1316,6 +1331,22 @@ export type DeleteToolsetMutationResult = Awaited<ReturnType<typeof deleteToolse
 export const useDeleteToolsetKey = 'DeleteToolset';
 export const UseDeleteToolsetKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteToolsetKey,
+  ...(mutationKey ?? []),
+];
+export type AuthorizeComposioConnectionMutationResult = Awaited<
+  ReturnType<typeof authorizeComposioConnection>
+>;
+export const useAuthorizeComposioConnectionKey = 'AuthorizeComposioConnection';
+export const UseAuthorizeComposioConnectionKeyFn = (mutationKey?: Array<unknown>) => [
+  useAuthorizeComposioConnectionKey,
+  ...(mutationKey ?? []),
+];
+export type RevokeComposioConnectionMutationResult = Awaited<
+  ReturnType<typeof revokeComposioConnection>
+>;
+export const useRevokeComposioConnectionKey = 'RevokeComposioConnection';
+export const UseRevokeComposioConnectionKeyFn = (mutationKey?: Array<unknown>) => [
+  useRevokeComposioConnectionKey,
   ...(mutationKey ?? []),
 ];
 export type ScrapeMutationResult = Awaited<ReturnType<typeof scrape>>;

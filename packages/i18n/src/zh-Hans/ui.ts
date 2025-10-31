@@ -2462,6 +2462,11 @@ const translations = {
         required: '需要 OAuth 授权',
         authorizeWith: '使用 {{provider}} 授权',
         checkFailed: '检查 OAuth 状态失败',
+        revoke: '撤销授权',
+        revokeWith: '撤销 {{provider}} 授权',
+        revokeConfirm: '确定要撤销授权吗？',
+        revokeSuccess: '成功撤销授权',
+        revokeError: '撤销授权失败',
       },
     },
     appearance: {

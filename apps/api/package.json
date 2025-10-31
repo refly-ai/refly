@@ -32,6 +32,7 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org refly-ai --project reflyd ./dist && sentry-cli sourcemaps upload --org refly-ai --project reflyd ./dist"
   },
   "dependencies": {
+    "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
     "@agentic/searxng": "^7.6.4",
     "@elastic/elasticsearch": "7.17.14",
     "@fal-ai/client": "^1.6.2",

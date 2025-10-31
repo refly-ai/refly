@@ -2509,6 +2509,11 @@ const translations = {
         required: 'OAuth authorization required',
         authorizeWith: 'Authorize with {{provider}}',
         checkFailed: 'Failed to check OAuth status',
+        revoke: 'Revoke Authorization',
+        revokeWith: 'Revoke {{provider}} Authorization',
+        revokeConfirm: 'Are you sure you want to revoke authorization?',
+        revokeSuccess: 'Successfully revoked authorization',
+        revokeError: 'Failed to revoke authorization',
       },
     },
     appearance: {

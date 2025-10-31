@@ -72,7 +72,7 @@ export class SkillInvokerService {
     private readonly toolCallService: ToolCallService,
     private readonly skillEngineService: SkillEngineService,
     private readonly actionService: ActionService,
-    private readonly stepCacheService: StepService,
+    private readonly stepService: StepService,
     @Optional()
     @InjectQueue(QUEUE_SYNC_REQUEST_USAGE)
     private requestUsageQueue?: Queue<SyncRequestUsageJobData>,
@@ -393,7 +393,7 @@ export class SkillInvokerService {
       }
     };
 
-    const resultAggregator = new ResultAggregator(this.stepCacheService, resultId, version);
+    const resultAggregator = new ResultAggregator(this.stepService, resultId, version);
 
     // Initialize structuredData with original query if available
     const originalQuery = data.input?.originalQuery;
@@ -576,7 +576,13 @@ export class SkillInvokerService {
             }
             const stepName = runMeta?.step?.name;
             const toolsetId = toolsetKey;
-            const toolName = String(event.metadata?.name ?? '');
+            let toolName = String(event.metadata?.name ?? '');
+            // If name starts with toolsetId_, extract the part after the prefix and convert to lowercase
+            const nameParts = toolName.split('_');
+            if (nameParts.length >= 2 && nameParts[0].toLowerCase() === toolsetId.toLowerCase()) {
+              // Remove the first element (toolsetId) and join the rest
+              toolName = nameParts.slice(1).join('_').toLowerCase();
+            }
             const runId = event?.run_id ? String(event.run_id) : undefined;
             const toolCallId = this.toolCallService.getOrCreateToolCallId({
               resultId,

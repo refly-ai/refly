@@ -14,11 +14,13 @@ import { isDesktop } from '../../utils/runtime';
 import { SyncToolCreditUsageProcessor } from '../credit/credit.processor';
 import { BullModule } from '@nestjs/bullmq';
 import { CreditModule } from '../credit/credit.module';
+import { ComposioModule } from './composio/composio.module';
 
 @Module({
   imports: [
     CommonModule,
     McpServerModule,
+    ComposioModule,
     CodeArtifactModule,
     CollabModule,
     KnowledgeModule,
