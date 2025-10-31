@@ -1,4 +1,4 @@
-import { useMemo, useCallback, memo, useState, useEffect } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, message, Tooltip } from 'antd';
 import { ModelIcon } from '@lobehub/icons';
@@ -13,8 +13,6 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { FollowingActions } from '../sharedComponents/following-actions';
 import { IContextItem } from '@refly/common-types';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
-import { Subscription } from 'refly-icons';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 interface ActionContainerProps {
   step: ActionStep;
@@ -42,33 +40,9 @@ const ActionContainerComponent = ({
   const { title } = result ?? {};
   const isPending = result?.status === 'executing';
 
-  const [creditUsage, setCreditUsage] = useState<{ total?: number; usages?: any[] } | null>(null);
-
   // Check if we're in share mode by checking if resultId exists
   // This indicates a "proper" result vs a shared result that might be loaded from share data
   const isShareMode = !result.resultId;
-
-  // Fetch credit usage for the result
-  useEffect(() => {
-    const fetchCreditUsage = async () => {
-      if (result.resultId && !isShareMode) {
-        try {
-          const response = await getClient().getCreditUsageByResultId({
-            query: {
-              resultId: result.resultId,
-            },
-          });
-          if (response?.data?.data) {
-            setCreditUsage(response.data.data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch credit usage:', error);
-        }
-      }
-    };
-
-    fetchCreditUsage();
-  }, [result.resultId, isShareMode]);
 
   const sources = useMemo(
     () =>
@@ -192,16 +166,6 @@ const ActionContainerComponent = ({
       )}
 
       <div className="w-full flex gap-2 items-center p-3 rounded-b-xl">
-        {creditUsage?.total && (
-          <Tooltip
-            title={t('subscription.creditBilling.description.total', { total: creditUsage.total })}
-          >
-            <div className="flex items-center gap-0.5 text-xs text-refly-text-2">
-              <Subscription size={12} className="text-[#1C1F23] dark:text-white" />
-              {creditUsage.total}
-            </div>
-          </Tooltip>
-        )}
         {tokenUsage && (
           <div className="flex flex-1 items-center gap-1 min-w-0">
             <ModelIcon size={16} model={tokenUsage?.modelName} type="color" />

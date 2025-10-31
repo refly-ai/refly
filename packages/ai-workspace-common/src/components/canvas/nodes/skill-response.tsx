@@ -24,8 +24,6 @@ import type { InputRef } from 'antd';
 import { Input, message } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip } from 'antd';
-import { Subscription } from 'refly-icons';
 import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './shared/styles';
 import { SkillResponseNodeProps } from './shared/types';
@@ -146,7 +144,6 @@ const NodeFooter = memo(
     modelInfo,
     createdAt,
     language,
-    resultId,
   }: {
     model: string;
     modelInfo: any;
@@ -154,46 +151,9 @@ const NodeFooter = memo(
     language: string;
     resultId?: string;
   }) => {
-    const { t } = useTranslation();
-    const [creditUsage, setCreditUsage] = useState<{ total?: number; usages?: any[] } | null>(null);
-
-    // Fetch credit usage for the result
-    useEffect(() => {
-      const fetchCreditUsage = async () => {
-        if (resultId) {
-          try {
-            const response = await getClient().getCreditUsageByResultId({
-              query: {
-                resultId: resultId,
-              },
-            });
-            if (response?.data?.data) {
-              setCreditUsage(response.data.data);
-            }
-          } catch (error) {
-            console.error('Failed to fetch credit usage:', error);
-          }
-        }
-      };
-
-      fetchCreditUsage();
-    }, [resultId]);
-
     return (
       <div className="flex-shrink-0 mt-2 flex flex-wrap justify-between items-center text-[10px] text-gray-400 relative z-20 gap-1 dark:text-gray-500 w-full">
         <div className="flex flex-wrap items-center gap-1 max-w-[70%]">
-          {creditUsage?.total && (
-            <Tooltip
-              title={t('subscription.creditBilling.description.total', {
-                total: creditUsage.total,
-              })}
-            >
-              <div className="flex items-center gap-0.5 text-xs text-refly-text-2">
-                <Subscription size={12} className="text-[#1C1F23] dark:text-white" />
-                {creditUsage.total}
-              </div>
-            </Tooltip>
-          )}
           {model && (
             <div className="flex items-center gap-1 overflow-hidden">
               <ModelIcon model={modelInfo?.name} size={16} type={'color'} />

@@ -109,7 +109,9 @@ export const SelectedResultsGrid = memo(
           {/* Full rows */}
           {fullRowItems.length > 0 && (
             <div
-              className={`grid cursor-pointer ${itemsPerRow === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
+              className={`grid cursor-pointer ${itemsPerRow === 3 ? 'grid-cols-3' : 'grid-cols-2'} ${
+                !fillRow ? 'justify-items-start' : ''
+              }`}
               style={{
                 gap: bordered ? '10px' : '12px',
               }}
@@ -123,6 +125,7 @@ export const SelectedResultsGrid = memo(
                   } ${fillRow ? 'w-full' : ''}`}
                   style={{
                     minWidth: '128px',
+                    ...(fillRow ? {} : { width: '128px' }),
                     aspectRatio: '128 / 77',
                     maxHeight: '166px',
                     borderRadius: '8px',
@@ -164,6 +167,7 @@ export const SelectedResultsGrid = memo(
                   } ${bordered ? 'border' : ''}`}
                   style={{
                     minWidth: '128px',
+                    ...(fillRow ? {} : { width: '128px' }),
                     // Use measured height if there are full rows above and height is measured,
                     // otherwise use aspectRatio (for initial render or when no full rows exist)
                     height:
