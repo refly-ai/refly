@@ -336,7 +336,7 @@ const WorkflowAppPage: React.FC = () => {
               <title>{workflowApp?.title ?? ''}</title>
             </Helmet>
             {/* Header - Fixed at top with full transparency */}
-            <div className=" top-0 left-0 right-0 z-50 border-b border-white/20 dark:border-[var(--refly-semi-color-border)] h-[64px]">
+            <div className="fixed top-0 left-0 right-0 z-50 border-b border-white/20 dark:border-[var(--refly-semi-color-border)] h-[64px]">
               <div className="relative mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                   <div className="flex items-center gap-3">
