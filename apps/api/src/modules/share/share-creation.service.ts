@@ -14,6 +14,7 @@ import { actionResultPO2DTO } from '../action/action.dto';
 import { documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
 import pLimit from 'p-limit';
 import { CodeArtifactService } from '../code-artifact/code-artifact.service';
+import { CreditService } from '../credit/credit.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_CREATE_SHARE } from '../../utils/const';
@@ -43,6 +44,7 @@ export class ShareCreationService {
     private readonly resourceService: ResourceService,
     private readonly actionService: ActionService,
     private readonly codeArtifactService: CodeArtifactService,
+    private readonly creditService: CreditService,
     private readonly shareCommonService: ShareCommonService,
     private readonly shareRateLimitService: ShareRateLimitService,
     @Optional()
@@ -209,10 +211,17 @@ export class ShareCreationService {
               allowDuplication,
             });
 
+            // Query credit usage for this skill response
+            const creditCost = await this.creditService.countResultCreditUsage(
+              user,
+              node.data?.entityId,
+            );
+
             if (node.data) {
               node.data.metadata = {
                 ...node.data.metadata,
                 shareId: shareRecord?.shareId,
+                creditCost,
               };
             }
           } catch (error) {

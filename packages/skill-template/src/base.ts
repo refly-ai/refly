@@ -282,6 +282,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     user: User;
     context: SkillContext;
     resultId?: string;
+    version?: number;
     canvasId?: string;
     locale?: string;
     uiLocale?: string;

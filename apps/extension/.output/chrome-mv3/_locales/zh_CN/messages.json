@@ -1,0 +1,14 @@
+{
+  "name": {
+    "message": "Refly - 开源人机协作 Agent 平台",
+    "description": "Name of the extension."
+  },
+  "description": {
+    "message": "全球首个开源的人机协作 Agent 平台。通过可视化画布与多模态资源库的深度融合，它将人类判断力与 AI 执行力合二为一，帮助设计师、运营者和创作者高效处理复杂任务——打造更流畅、更透明的智能工作空间。",
+    "description": "Description of the extension."
+  },
+  "displayName": {
+    "message": "Refly - 开源人机协作 Agent 平台",
+    "description": "Display name of the extension."
+  }
+}

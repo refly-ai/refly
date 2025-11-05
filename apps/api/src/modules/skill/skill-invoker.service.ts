@@ -178,6 +178,7 @@ export class SkillInvokerService {
         tplConfig,
         runtimeConfig,
         resultId: data.result?.resultId,
+        version: data.result?.version,
       },
     };
 
@@ -1012,6 +1013,7 @@ export class SkillInvokerService {
       const batchTokenCreditUsage: SyncBatchTokenCreditUsageJobData = {
         uid: user.uid,
         resultId,
+        version,
         creditUsageSteps,
         timestamp: new Date(),
       };

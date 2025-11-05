@@ -14,6 +14,7 @@ export interface SyncMediaCreditUsageJobData {
 export interface SyncToolCreditUsageJobData {
   uid: string;
   resultId?: string;
+  version?: number;
   creditBilling?: CreditBilling;
   creditCost?: number;
   timestamp: Date;
@@ -41,6 +42,7 @@ export interface CreditUsageStep {
 export interface SyncBatchTokenCreditUsageJobData {
   uid: string;
   resultId?: string;
+  version?: number;
   creditUsageSteps: CreditUsageStep[];
   timestamp: Date;
 }

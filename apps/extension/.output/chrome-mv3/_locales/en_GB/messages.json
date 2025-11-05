@@ -1,0 +1,14 @@
+{
+  "name": {
+    "message": "Refly: The AI Native Creation Engine",
+    "description": "Name of the extension."
+  },
+  "description": {
+    "message": "An OpenSource AI-powered free-form canvas with multi-threaded dialogue, knowledge base, intelligent search, and WYSIWYG AI editor",
+    "description": "Description of the extension."
+  },
+  "displayName": {
+    "message": "Refly: The AI Native Creation Engine",
+    "description": "Display name of the extension."
+  }
+}

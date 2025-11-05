@@ -18,6 +18,7 @@ import { ShareDuplicationService } from './share-duplication.service';
 import { ShareRateLimitService } from './share-rate-limit.service';
 import { ToolModule } from '../tool/tool.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
+import { CreditModule } from '../credit/credit.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
     ActionModule,
     CodeArtifactModule,
     SubscriptionModule,
+    CreditModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_CREATE_SHARE })]),
   ],
   providers: [

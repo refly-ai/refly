@@ -914,6 +914,7 @@ export class ToolService {
                 const isGlobal = t?.isGlobal ?? false;
                 const creditCost = (result as any)?.creditCost ?? 0;
                 const resultId = (_config as any)?.metadata?.resultId as string;
+                const version = (_config as any)?.metadata?.version as number;
                 if (isGlobal && result?.status !== 'error' && creditCost > 0) {
                   const jobData: SyncToolCreditUsageJobData = {
                     uid: user.uid,
@@ -922,6 +923,7 @@ export class ToolService {
                     toolsetName: t?.name ?? (toolset.definition.labelDict?.en as string) ?? t?.key,
                     toolName: tool.name,
                     resultId,
+                    version,
                   };
                   await this.creditService.syncToolCreditUsage(jobData);
                 }

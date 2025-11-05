@@ -1272,6 +1272,8 @@ model CreditUsage {
   usageType         String   @default("model_call") @map("usage_type")
   /// Related action result ID (if applicable)
   actionResultId    String?  @map("action_result_id")
+  /// Action result version
+  version           Int?     @map("version")
   /// Related pilot session ID (if applicable)
   pilotSessionId    String?  @map("pilot_session_id")
   /// Usage description
