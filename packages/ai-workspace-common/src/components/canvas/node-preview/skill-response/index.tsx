@@ -28,6 +28,8 @@ import { ActionContainer } from './action-container';
 import { ActionStepCard } from './action-step';
 import { FailureNotice } from './failure-notice';
 import { PreviewChatInput } from './preview-chat-input';
+import CrazySpinner from '@refly-packages/ai-workspace-common/components/editor/components/ui/icons/crazy-spinner';
+import Magic from '@refly-packages/ai-workspace-common/components/editor/components/ui/icons/magic';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -74,6 +76,9 @@ const SkillResponseNodePreviewComponent = ({
 
   const [statusText, setStatusText] = useState('');
 
+  // Track if the last SSE event had content
+  const [lastEventHadContent, setLastEventHadContent] = useState(true);
+
   useEffect(() => {
     setSelectedToolsets(nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET]);
   }, [nodeSelectedToolsets]);
@@ -119,6 +124,30 @@ const SkillResponseNodePreviewComponent = ({
       actionEmitter.off('updateResult', scrollToBottom);
     };
   }, [scrollToBottom]);
+
+  // Track content from SSE events
+  useEffect(() => {
+    const handleUpdateResult = (event: { resultId: string; payload: ActionResult }) => {
+      if (event.resultId !== resultId) {
+        return;
+      }
+
+      // Check if the latest step has content
+      const latestSteps = event.payload?.steps || [];
+      const outputStep = latestSteps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
+
+      if (outputStep) {
+        // If we have an output step, check if it has meaningful content
+        const hasContent = !!outputStep.content && outputStep.content.trim().length > 0;
+        setLastEventHadContent(hasContent);
+      }
+    };
+
+    actionEmitter.on('updateResult', handleUpdateResult);
+    return () => {
+      actionEmitter.off('updateResult', handleUpdateResult);
+    };
+  }, [resultId]);
 
   const { data } = node;
 
@@ -330,12 +359,24 @@ const SkillResponseNodePreviewComponent = ({
               {outputStep && (
                 <>
                   <Divider dashed className="my-2" />
-                  <ActionStepCard
-                    result={result}
-                    step={outputStep}
-                    status={result?.status}
-                    query={currentQuery ?? title ?? ''}
-                  />
+                  {/* Show "AI is thinking" when last SSE event had no content and status is executing/waiting */}
+                  {!lastEventHadContent &&
+                  (result?.status === 'executing' || result?.status === 'waiting') ? (
+                    <div className="flex items-center px-4 py-3 text-sm font-medium text-primary-600">
+                      <Magic className="mr-2 w-4 h-4 shrink-0" />
+                      {t('canvas.skillResponse.aiThinking', { defaultValue: 'AI is thinking' })}
+                      <div className="mt-1 ml-2">
+                        <CrazySpinner />
+                      </div>
+                    </div>
+                  ) : (
+                    <ActionStepCard
+                      result={result}
+                      step={outputStep}
+                      status={result?.status}
+                      query={currentQuery ?? title ?? ''}
+                    />
+                  )}
                 </>
               )}
               {result?.status === 'failed' && !loading && (

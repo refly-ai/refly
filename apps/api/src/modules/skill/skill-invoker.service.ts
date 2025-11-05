@@ -39,6 +39,7 @@ import { genBaseRespDataFromError } from '../../utils/exception';
 import { extractChunkContent } from '../../utils/llm';
 import { writeSSEResponse } from '../../utils/response';
 import { ResultAggregator } from '../../utils/result';
+import { StreamBuffer } from '../../utils/stream-buffer';
 import { ActionService } from '../action/action.service';
 import { AutoNameCanvasJobData } from '../canvas/canvas.dto';
 import { PrismaService } from '../common/prisma.service';
@@ -498,6 +499,12 @@ export class SkillInvokerService {
     // Start the timeout check when we begin streaming
     startTimeoutCheck();
 
+    // Create stream buffer for optimizing LLM streaming output
+    const streamBuffer = new StreamBuffer(res, {
+      event: 'stream',
+      resultId,
+    });
+
     try {
       // AI model provider network timeout (30 seconds)
       const aiModelNetworkTimeout = this.config.get<number>('skill.aiModelNetworkTimeout', 30000);
@@ -542,9 +549,6 @@ export class SkillInvokerService {
       // Start initial network timeout
       createNetworkTimeout();
 
-      // tool callId, now we use first time returned run_id as tool call id
-      const startTs = Date.now();
-
       const toolCallIds: Set<string> = new Set();
       for await (const event of skill.streamEvents(input, {
         ...config,
@@ -581,12 +585,12 @@ export class SkillInvokerService {
             const stepName = runMeta?.step?.name;
             const toolsetId = toolsetKey;
             let toolName = String(event.metadata?.name ?? '');
-            // If name starts with toolsetId_, extract the part after the prefix and convert to lowercase
+            // Format tool name
             const nameParts = toolName.split('_');
             if (nameParts.length >= 2 && nameParts[0].toLowerCase() === toolsetId.toLowerCase()) {
-              // Remove the first element (toolsetId) and join the rest
               toolName = nameParts.slice(1).join('_').toLowerCase();
             }
+            // Get tool call id
             const runId = event?.run_id ? String(event.run_id) : undefined;
             const toolCallId = this.toolCallService.getOrCreateToolCallId({
               resultId,
@@ -595,7 +599,14 @@ export class SkillInvokerService {
               toolsetId,
               runId,
             });
-            const buildToolUseXML = (includeResult: boolean, errorMsg: string, updatedTs: number) =>
+
+            // tool use builder
+            const buildToolUseXML = (
+              includeResult: boolean,
+              errorMsg: string,
+              startTs?: number,
+              updatedTs?: number,
+            ) =>
               this.toolCallService.generateToolUseXML({
                 toolCallId,
                 includeResult,
@@ -618,13 +629,18 @@ export class SkillInvokerService {
                 input: string | undefined;
                 output: string | undefined;
                 errorMessage?: string;
+                timestamps: {
+                  // For upsert: createdAt only used if record doesn't exist (fallback), updatedAt always updates
+                  createdAt: number;
+                  // This will always update the updatedAt field
+                  updatedAt: number;
+                };
               },
             ) => {
               const input = data.input;
               const output = data.output;
               const errorMessage = String(data.errorMessage ?? '');
-              const createdAt = startTs;
-              const updatedAt = Date.now();
+              const { createdAt, updatedAt } = data.timestamps;
               await this.toolCallService.persistToolCallResult(
                 res,
                 user.uid,
@@ -645,45 +661,51 @@ export class SkillInvokerService {
             if (event.event === 'on_tool_start') {
               if (!toolCallIds.has(toolCallId)) {
                 toolCallIds.add(toolCallId);
+                const startTime = Date.now();
                 await persistToolCall(ToolCallStatus.EXECUTING, {
                   input: event.data?.input,
                   output: '',
+                  timestamps: {
+                    createdAt: startTime,
+                    updatedAt: startTime,
+                  },
                 });
-                // Send XML for executing state
-                const xmlContent = buildToolUseXML(false, '', Date.now());
-                if (xmlContent && res) {
+                const xmlContent = buildToolUseXML(false, '', startTime);
+                if (xmlContent) {
+                  // Store content in ResultAggregator BEFORE sending SSE to ensure consistency
                   resultAggregator.handleStreamContent(runMeta, xmlContent, '');
-                  this.toolCallService.emitToolUseStream(res, {
-                    resultId,
-                    step: runMeta?.step,
-                    xmlContent,
-                    toolCallId,
-                    toolName,
-                    event_name: 'stream',
-                  });
+
+                  // Then send SSE with the same content through StreamBuffer
+                  if (res) {
+                    streamBuffer.updateBaseEvent({ step: runMeta?.step });
+                    streamBuffer.push(xmlContent, '');
+                  }
                 }
                 break;
               }
             }
             if (event.event === 'on_tool_error') {
               const errorMsg = String((event.data as any)?.error ?? 'Tool execution failed');
+              const endTime = Date.now();
               await persistToolCall(ToolCallStatus.FAILED, {
                 input: undefined,
                 output: event.data?.output,
                 errorMessage: errorMsg,
+                timestamps: {
+                  createdAt: endTime,
+                  updatedAt: endTime,
+                },
               });
-              // Send XML for failed state
-              const xmlContent = buildToolUseXML(false, errorMsg, Date.now());
-              if (xmlContent && res) {
+              const xmlContent = buildToolUseXML(false, errorMsg, endTime);
+              if (xmlContent) {
+                // Store content in ResultAggregator BEFORE sending SSE to ensure consistency
                 resultAggregator.handleStreamContent(runMeta, xmlContent, '');
-                this.toolCallService.emitToolUseStream(res, {
-                  resultId,
-                  step: runMeta?.step,
-                  xmlContent,
-                  toolCallId,
-                  toolName,
-                  event_name: 'stream',
-                });
+
+                // Then send SSE with the same content through StreamBuffer
+                if (res) {
+                  streamBuffer.updateBaseEvent({ step: runMeta?.step });
+                  streamBuffer.push(xmlContent, '');
+                }
               }
               this.toolCallService.releaseToolCallId({
                 resultId,
@@ -696,9 +718,14 @@ export class SkillInvokerService {
               break;
             }
             if (event.event === 'on_tool_end') {
+              const endTime = Date.now();
               await persistToolCall(ToolCallStatus.COMPLETED, {
                 input: undefined,
                 output: event.data?.output,
+                timestamps: {
+                  createdAt: endTime,
+                  updatedAt: endTime,
+                },
               });
               // Extract tool_call_chunks from AIMessageChunk
               if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
@@ -708,17 +735,16 @@ export class SkillInvokerService {
                   break;
                 }
 
-                const xmlContent = buildToolUseXML(true, '', Date.now());
-                if (xmlContent && res) {
+                const xmlContent = buildToolUseXML(true, '', endTime);
+                if (xmlContent) {
+                  // Store content in ResultAggregator BEFORE sending SSE to ensure consistency
                   resultAggregator.handleStreamContent(runMeta, xmlContent, '');
-                  this.toolCallService.emitToolUseStream(res, {
-                    resultId,
-                    step: runMeta?.step,
-                    xmlContent,
-                    toolCallId,
-                    toolName,
-                    event_name: 'stream',
-                  });
+
+                  // Then send SSE with the same content through StreamBuffer
+                  if (res) {
+                    streamBuffer.updateBaseEvent({ step: runMeta?.step });
+                    streamBuffer.push(xmlContent, '');
+                  }
                 }
               }
               this.toolCallService.releaseToolCallId({
@@ -744,16 +770,14 @@ export class SkillInvokerService {
             const { content, reasoningContent } = extractChunkContent(chunk);
 
             if ((content || reasoningContent) && !runMeta?.suppressOutput) {
-              // Update result content and forward stream events to client
+              // Update result content
               resultAggregator.handleStreamContent(runMeta, content, reasoningContent);
+
+              // Use StreamBuffer to optimize streaming output
               if (res) {
-                writeSSEResponse(res, {
-                  event: 'stream',
-                  resultId,
-                  content,
-                  reasoningContent,
-                  step: runMeta?.step,
-                });
+                // Update step info before pushing content
+                streamBuffer.updateBaseEvent({ step: runMeta?.step });
+                streamBuffer.push(content, reasoningContent);
               }
             }
             break;
@@ -836,6 +860,9 @@ export class SkillInvokerService {
       }
       result.errors.push(errorInfo.userFriendlyMessage);
     } finally {
+      // Cleanup stream buffer - flush any remaining buffered content
+      streamBuffer.destroy();
+
       // Cleanup all timers and resources to prevent memory leaks
       // Note: consolidated abort signal listener handles cleanup for early abort scenarios
 
