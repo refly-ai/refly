@@ -1,32 +1,35 @@
-import { useMemo, memo, useEffect, useRef, useCallback } from 'react';
-import {
-  useCanvasResourcesPanelStoreShallow,
-  useImportResourceStoreShallow,
-  type CanvasResourcesParentType,
-} from '@refly/stores';
-import { Button, Input, Segmented } from 'antd';
-import { Add, Cancelled } from 'refly-icons';
+import { memo, useEffect, useRef, useCallback, useState } from 'react';
+import { useCanvasResourcesPanelStoreShallow, useImportResourceStoreShallow } from '@refly/stores';
+import { Button, Input, Tooltip } from 'antd';
+import { Add, SideRight } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
-import { StepList } from '../step-list';
-import { ResultList } from '../result-list';
 import { MyUploadList } from '../my-upload';
-import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
-import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { CanvasNode } from '@refly/canvas-common';
 
-export const ResourceOverview = memo(() => {
+interface ResourceOverviewProps {
+  currentResource: CanvasNode | null;
+  setCurrentResource: (resource: CanvasNode | null) => void;
+}
+export const ResourceOverview = memo((props: ResourceOverviewProps) => {
+  const { currentResource, setCurrentResource } = props;
   const { t } = useTranslation();
-  const { nodes } = useRealtimeCanvasData();
-  const { shareLoading, shareData } = useCanvasContext();
-  const { createSingleDocumentInCanvas, isCreating: isCreatingDocument } = useCreateDocument();
+  const { shareLoading, readonly } = useCanvasContext();
   const {
     data: resources,
     isLoading: isLoadingResources,
     refetch: refetchResources,
   } = useFetchResources();
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { setSidePanelVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
+    (state) => ({
+      setSidePanelVisible: state.setSidePanelVisible,
+      setWideScreenVisible: state.setWideScreenVisible,
+    }),
+  );
 
   const startPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
@@ -60,15 +63,7 @@ export const ResourceOverview = memo(() => {
       stopPolling();
     };
   }, [resources, startPolling, stopPolling]);
-
-  const { searchKeyword, setSearchKeyword, parentType, activeTab, setActiveTab } =
-    useCanvasResourcesPanelStoreShallow((state) => ({
-      activeTab: state.activeTab,
-      searchKeyword: state.searchKeyword,
-      setActiveTab: state.setActiveTab,
-      setSearchKeyword: state.setSearchKeyword,
-      parentType: state.parentType,
-    }));
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const { setImportResourceModalVisible } = useImportResourceStoreShallow((state) => ({
     setImportResourceModalVisible: state.setImportResourceModalVisible,
@@ -78,155 +73,66 @@ export const ResourceOverview = memo(() => {
     setImportResourceModalVisible(true);
   };
 
-  const handleNewDocument = () => {
-    createSingleDocumentInCanvas();
-  };
-
-  const segmentedOptions = useMemo(() => {
-    return [
-      {
-        label: t('canvas.resourceLibrary.stepsRecord'),
-        value: 'stepsRecord',
-      },
-      {
-        label: t('canvas.resourceLibrary.resultsRecord'),
-        value: 'resultsRecord',
-      },
-      {
-        label: t('canvas.resourceLibrary.myUpload'),
-        value: 'myUpload',
-      },
-    ];
-  }, [t]);
-
-  // Get tip text based on active tab
-  const getTipText = useMemo(() => {
-    switch (activeTab) {
-      case 'stepsRecord':
-        return t('canvas.resourceLibrary.tip.stepsRecord');
-      case 'resultsRecord':
-        return t('canvas.resourceLibrary.tip.resultsRecord');
-      case 'myUpload':
-        return t('canvas.resourceLibrary.tip.myUpload');
-      default:
-        return t('canvas.resourceLibrary.tip.resultsRecord');
-    }
-  }, [activeTab, t]);
-
-  const hasData = useMemo(() => {
-    if (isLoadingResources) {
-      return true;
-    }
-
-    // If shareData is present, check shared resources and nodes
-    if (shareData) {
-      return (
-        (shareData.nodes?.filter((node) =>
-          [
-            'skillResponse',
-            'document',
-            'resource',
-            'codeArtifact',
-            'image',
-            'video',
-            'audio',
-            'website',
-          ].includes(node.type),
-        ).length ?? 0) > 0 || (shareData.resources?.length ?? 0) > 0
-      );
-    }
-
-    // Otherwise check local data
-    return (
-      nodes.filter((node) =>
-        [
-          'skillResponse',
-          'document',
-          'resource',
-          'codeArtifact',
-          'image',
-          'video',
-          'audio',
-          'website',
-        ].includes(node.type),
-      ).length > 0 || resources.length > 0
-    );
-  }, [nodes, isLoadingResources, resources, shareData]);
-
-  useEffect(() => {
-    if (parentType) {
-      setActiveTab(parentType);
-    }
-  }, [parentType, setActiveTab]);
+  const handleClose = useCallback(() => {
+    setSidePanelVisible(false);
+    setWideScreenVisible(false);
+  }, [setSidePanelVisible, setWideScreenVisible]);
 
   return (
-    <div className="p-4 flex-grow flex flex-col gap-4 overflow-hidden">
-      {isLoadingResources || shareLoading ? (
-        <div className="h-full flex flex-col items-center justify-center gap-4">
-          <div className="text-refly-text-2 text-sm leading-5">{t('common.loading')}</div>
-        </div>
-      ) : !hasData ? (
-        <div className="h-full flex flex-col items-center justify-center gap-4">
-          <img src={EmptyImage} alt="empty" className="w-[200px] h-[200px]" />
-          <div className="text-refly-text-2 text-sm leading-5">
-            {t('canvas.resourceLibrary.empty')}
+    <div className="w-[400px] h-full flex flex-col">
+      <div className="h-[64px] px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
+        <div className="flex gap-2 items-center">
+          <Tooltip title={t('canvas.toolbar.closeResourcesPanel')} arrow={false}>
+            <Button type="text" icon={<SideRight size={22} />} onClick={handleClose} />
+          </Tooltip>
+          <div className="text-refly-text-0 text-base font-semibold leading-[26px] min-w-0 flex-1">
+            {t('canvas.resourceLibrary.title')}
           </div>
-          <div className="flex gap-2">
-            <Button
-              type="default"
-              onClick={handleNewDocument}
-              loading={isCreatingDocument}
-              disabled={isCreatingDocument}
-            >
-              {t('canvas.resourceLibrary.new.document')}
-            </Button>
-            <Button type="primary" icon={<Add size={16} />} onClick={handleNewResource}>
+        </div>
+
+        {!readonly && (
+          <Button size="small" type="text" icon={<Add size={16} />} onClick={handleNewResource} />
+        )}
+      </div>
+      <div className="p-4 flex-grow flex flex-col gap-4 overflow-hidden">
+        {isLoadingResources || shareLoading ? (
+          <div className="h-full flex flex-col items-center justify-center gap-4">
+            <div className="text-refly-text-2 text-sm leading-5">{t('common.loading')}</div>
+          </div>
+        ) : !resources.length ? (
+          <div className="h-full flex flex-col items-center justify-center">
+            <img src={EmptyImage} alt="empty" className="w-[180px] h-[180px]" />
+            <div className="text-refly-text-2 text-sm leading-5">
+              {t('canvas.resourceLibrary.empty')}
+            </div>
+            <Button type="primary" className="mt-5 w-[140px]" onClick={handleNewResource}>
               {t('canvas.resourceLibrary.new.resource')}
             </Button>
           </div>
-        </div>
-      ) : (
-        <>
-          <div className="w-full">
-            <Input
-              placeholder={t('canvas.resourceLibrary.searchPlaceholder')}
-              className="border border-refly-Card-Border"
-              variant="filled"
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-            />
-          </div>
-          <Segmented
-            className="w-full [&_.ant-segmented-item]:flex-1 [&_.ant-segmented-item]:text-center"
-            shape="round"
-            options={segmentedOptions}
-            value={activeTab}
-            onChange={(value) => setActiveTab(value as CanvasResourcesParentType)}
-          />
-
-          {/* Info tip module */}
-          <div className="flex items-center gap-2 w-full p-2 px-3 rounded-xl bg-gradient-to-br from-[rgba(31,201,150,0.10)] via-[rgba(31,201,150,0.08)] to-[rgba(69,190,255,0.06)] dark:from-[rgba(31,201,150,0.15)] dark:via-[rgba(31,201,150,0.12)] dark:to-[rgba(69,190,255,0.10)] border border-[rgba(31,201,150,0.15)] dark:border-[rgba(31,201,150,0.25)] bg-white dark:bg-[var(--bg-refly-bg-body-z0,#1a1a1a)]">
-            <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center">
-              <Cancelled
-                size={16}
-                color="var(--text-icon-refly-text-1,rgba(28,31,35,0.80))"
-                className="dark:text-[rgba(255,255,255,0.85)]"
+        ) : (
+          <>
+            <div className="w-full">
+              <Input
+                placeholder={t('canvas.resourceLibrary.searchPlaceholder')}
+                className="border border-refly-Card-Border"
+                variant="filled"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
               />
             </div>
 
-            <div className="text-[var(--text-refly-text-1,#1C1F23)] dark:text-[rgba(255,255,255,0.85)] text-xs leading-[1.83]">
-              {getTipText}
+            {/* block */}
+            <div className="flex-grow overflow-y-auto min-h-0">
+              <MyUploadList
+                resources={resources}
+                searchKeyword={searchKeyword}
+                currentResource={currentResource}
+                setCurrentResource={setCurrentResource}
+              />
             </div>
-          </div>
-
-          {/* block */}
-          <div className="flex-grow overflow-y-auto min-h-0">
-            {activeTab === 'stepsRecord' && <StepList />}
-            {activeTab === 'resultsRecord' && <ResultList />}
-            {activeTab === 'myUpload' && <MyUploadList resources={resources} />}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 });

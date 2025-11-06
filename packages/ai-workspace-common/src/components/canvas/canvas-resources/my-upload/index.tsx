@@ -1,25 +1,21 @@
 import { memo, useCallback, useMemo } from 'react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useActiveNode, useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { MyUploadItem } from './my-upload-item';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { Resource } from '@refly/openapi-schema';
+import { CanvasNode } from '@refly/canvas-common';
 
 interface MyUploadListProps {
   resources: Resource[];
+  searchKeyword: string;
+  currentResource: CanvasNode | null;
+  setCurrentResource: (resource: CanvasNode | null) => void;
 }
 
 export const MyUploadList = memo((props: MyUploadListProps) => {
-  const { resources } = props;
+  const { resources, searchKeyword, currentResource, setCurrentResource } = props;
 
   const { t } = useTranslation();
-  const { canvasId } = useCanvasContext();
-  const { setParentType, searchKeyword } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setParentType: state.setParentType,
-    searchKeyword: state.searchKeyword,
-  }));
-  const { activeNode, setActiveNode } = useActiveNode(canvasId);
 
   // Filter resources by search keyword
   const filteredResources = useMemo(() => {
@@ -49,8 +45,6 @@ export const MyUploadList = memo((props: MyUploadListProps) => {
         );
         return;
       }
-      setParentType('myUpload');
-      // Create a node-like object for setActiveNode
       const nodeLike = {
         id: resource.resourceId,
         type: 'resource' as const,
@@ -66,9 +60,9 @@ export const MyUploadList = memo((props: MyUploadListProps) => {
           },
         },
       };
-      setActiveNode(nodeLike);
+      setCurrentResource(nodeLike);
     },
-    [setParentType, setActiveNode, t],
+    [setCurrentResource, t],
   );
 
   if (!filteredResources?.length) {
@@ -76,7 +70,7 @@ export const MyUploadList = memo((props: MyUploadListProps) => {
       <div className="h-full w-full flex items-center justify-center text-refly-text-2 text-sm leading-5">
         {searchKeyword?.trim()
           ? t('canvas.resourceLibrary.noSearchResults')
-          : t('canvas.resourceLibrary.noMyUploads')}
+          : t('canvas.resourceLibrary.empty')}
       </div>
     );
   }
@@ -88,7 +82,7 @@ export const MyUploadList = memo((props: MyUploadListProps) => {
           <MyUploadItem
             key={resource.resourceId}
             resource={resource}
-            isActive={activeNode?.id === resource.resourceId}
+            isActive={currentResource?.data?.entityId === resource.resourceId}
             onSelect={handleResourceSelect}
           />
         ))}

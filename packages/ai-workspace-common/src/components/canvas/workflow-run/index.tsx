@@ -12,12 +12,10 @@ import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks
 
 export const WorkflowRun = () => {
   const { t } = useTranslation();
-  const { setShowWorkflowRun, setSidePanelVisible } = useCanvasResourcesPanelStoreShallow(
-    (state) => ({
-      setShowWorkflowRun: state.setShowWorkflowRun,
-      setSidePanelVisible: state.setSidePanelVisible,
-    }),
-  );
+  const { setShowWorkflowRun, showWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setShowWorkflowRun: state.setShowWorkflowRun,
+    showWorkflowRun: state.showWorkflowRun,
+  }));
 
   const { workflow, canvasId } = useCanvasContext();
   const { workflowVariables, workflowVariablesLoading, refetchWorkflowVariables } = workflow;
@@ -29,8 +27,7 @@ export const WorkflowRun = () => {
 
   const handleClose = useCallback(() => {
     setShowWorkflowRun(false);
-    setSidePanelVisible(false);
-  }, [setShowWorkflowRun, setSidePanelVisible]);
+  }, [setShowWorkflowRun]);
 
   const onSubmitVariables = useCallback(
     async (variables: WorkflowVariable[]) => {
@@ -67,8 +64,10 @@ export const WorkflowRun = () => {
     [canvasId, initializeWorkflow, refetchWorkflowVariables],
   );
 
+  if (!showWorkflowRun) return null;
+
   return (
-    <div className="flex flex-col w-full h-full bg-refly-bg-content-z2 border-solid border-l-[1px] border-y-0 border-r-0 border-refly-Card-Border shadow-refly-m">
+    <div className="z-30 absolute top-0 right-0 bottom-0 w-[400px] flex flex-col rounded-xl bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m">
       <div className="w-full h-[65px] flex gap-2 items-center justify-between p-3 border-solid border-refly-Card-Border border-[1px] border-x-0 border-t-0">
         <div className="flex items-center gap-1 min-w-0 flex-1">
           <Tooltip title={t('canvas.toolbar.closeResourcesPanel')} arrow={false}>

@@ -1,9 +1,5 @@
 import { Modal, Button, Segmented, message } from 'antd';
-import {
-  ImportResourceMenuItem,
-  useCanvasResourcesPanelStoreShallow,
-  useImportResourceStoreShallow,
-} from '@refly/stores';
+import { ImportResourceMenuItem, useImportResourceStoreShallow } from '@refly/stores';
 
 import { useTranslation } from 'react-i18next';
 
@@ -49,9 +45,7 @@ export const ImportResourceModal = memo(() => {
     clearWaitingList: state.clearWaitingList,
     setExtensionModalVisible: state.setExtensionModalVisible,
   }));
-  const { setActiveTab } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setActiveTab: state.setActiveTab,
-  }));
+
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   const [saveLoading, setSaveLoading] = useState(false);
@@ -142,7 +136,6 @@ export const ImportResourceModal = memo(() => {
 
       refetchUsage();
       refetchResources();
-      setActiveTab('myUpload');
 
       message.success(t('common.putSuccess'));
 

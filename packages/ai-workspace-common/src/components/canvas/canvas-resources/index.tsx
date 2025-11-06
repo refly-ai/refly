@@ -1,79 +1,59 @@
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect } from 'react';
 import { Modal } from 'antd';
-import { CanvasResourcesHeader } from './share/canvas-resources-header';
 import { ResourceOverview } from './share/resource-overview';
-import { useActiveNode, useCanvasResourcesPanelStoreShallow } from '@refly/stores';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { PreviewComponent } from '@refly-packages/ai-workspace-common/components/canvas/node-preview';
-import { CanvasNodeType } from '@refly/openapi-schema';
+import { CanvasResourcesHeader } from './share/canvas-resources-header';
+
 import './index.scss';
 import cn from 'classnames';
+import { useReactFlow } from '@xyflow/react';
 
 interface CanvasResourcesProps {
   className?: string;
-  forceHideLeftOverview?: boolean;
+  wideScreen?: boolean;
 }
 
-export const CanvasResources = memo(
-  ({ className, forceHideLeftOverview }: CanvasResourcesProps) => {
-    const { canvasId } = useCanvasContext();
-    const { showLeftOverview, resetState, setParentType } = useCanvasResourcesPanelStoreShallow(
-      (state) => ({
-        showLeftOverview: state.showLeftOverview,
-        resetState: state.resetState,
-        setParentType: state.setParentType,
-      }),
-    );
-    const { activeNode } = useActiveNode(canvasId);
+export const CanvasResources = memo(({ className, wideScreen }: CanvasResourcesProps) => {
+  const { getNodes } = useReactFlow();
+  const nodes = getNodes();
+  const { currentResource, setCurrentResource } = useCanvasResourcesPanelStoreShallow((state) => ({
+    currentResource: state.currentResource,
+    setCurrentResource: state.setCurrentResource,
+  }));
 
-    const prevCanvasIdRef = useRef<string | null>(canvasId);
+  useEffect(() => {
+    console.log('currentResource', currentResource);
+    console.log('nodes', nodes);
+  }, [currentResource]);
 
-    useEffect(() => {
-      if (canvasId && canvasId !== prevCanvasIdRef.current) {
-        prevCanvasIdRef.current = canvasId;
-        resetState();
-      }
-    }, [canvasId, resetState]);
-
-    useEffect(() => {
-      if (!activeNode) {
-        setParentType(null);
-        return;
-      }
-
-      if (activeNode.type === 'resource') {
-        setParentType('myUpload');
-      }
-      if (['skillResponse'].includes(activeNode.type)) {
-        setParentType('stepsRecord');
-      }
-      if (['document', 'codeArtifact', 'website'].includes(activeNode.type as CanvasNodeType)) {
-        setParentType('resultsRecord');
-      }
-      if (['image', 'audio', 'video'].includes(activeNode.type as CanvasNodeType)) {
-        // Check if media has resultId to determine if it's from results or my upload
-        const hasResultId = !!activeNode.data?.metadata?.resultId;
-        setParentType(hasResultId ? 'resultsRecord' : 'myUpload');
-      }
-      if (activeNode.type === 'start') {
-        setParentType(null);
-      }
-    }, [activeNode]);
-
-    return (
-      <div
-        className={cn(
-          'w-full h-full overflow-hidden flex flex-col bg-refly-bg-content-z2 border-solid border-l-[1px] border-y-0 border-r-0 border-refly-Card-Border shadow-refly-m',
-          { 'rounded-l-none': showLeftOverview && !forceHideLeftOverview },
-          className,
-        )}
-      >
-        <CanvasResourcesHeader />
-        {activeNode ? <PreviewComponent node={activeNode} /> : <ResourceOverview />}
-      </div>
-    );
-  },
-);
+  return (
+    <div
+      className={cn(
+        'h-full overflow-hidden flex flex-shrink-0 rounded-xl bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m',
+        className,
+      )}
+    >
+      <ResourceOverview currentResource={currentResource} setCurrentResource={setCurrentResource} />
+      {currentResource && (
+        <div
+          className={cn(
+            'h-full flex flex-col flex-1 min-w-0 border-solid border-l-[1px] border-y-0 border-r-0 border-refly-Card-Border',
+            !wideScreen ? 'w-[460px]' : '',
+          )}
+        >
+          <CanvasResourcesHeader
+            currentResource={currentResource}
+            setCurrentResource={setCurrentResource}
+          />
+          <div className="flex-grow overflow-hidden min-w-0">
+            <PreviewComponent node={currentResource} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
 
 export const CanvasResourcesWidescreenModal = memo(() => {
   const { wideScreenVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
@@ -82,12 +62,6 @@ export const CanvasResourcesWidescreenModal = memo(() => {
       setWideScreenVisible: state.setWideScreenVisible,
     }),
   );
-
-  const { canvasId } = useCanvasContext();
-  const { activeNode } = useActiveNode(canvasId);
-  const hideLeftOverview = useMemo(() => {
-    return activeNode?.type === 'start';
-  }, [activeNode?.type]);
 
   return (
     <Modal
@@ -99,10 +73,10 @@ export const CanvasResourcesWidescreenModal = memo(() => {
       title={null}
       closable={false}
       footer={null}
-      width={hideLeftOverview ? '70%' : '90%'}
+      width="90%"
       styles={{
         wrapper: {
-          transform: hideLeftOverview ? 'translateX(14.5%)' : 'translateX(4.5%)',
+          transform: 'translateX(4.5%)',
         },
         content: {
           padding: 0,
@@ -111,15 +85,8 @@ export const CanvasResourcesWidescreenModal = memo(() => {
       className="resources-widescreen-modal flex flex-col"
       destroyOnHidden
     >
-      <div className="flex w-full h-[calc(100vh-56px)]">
-        {!hideLeftOverview && (
-          <div className="w-[360px] flex h-full border-r border-refly-Card-Border">
-            <ResourceOverview />
-          </div>
-        )}
-        <div className="flex-1 h-full">
-          <CanvasResources forceHideLeftOverview={hideLeftOverview} />
-        </div>
+      <div className="flex w-full h-[calc(100vh-56px)] rounded-xl overflow-hidden">
+        <CanvasResources className="w-full" wideScreen />
       </div>
     </Modal>
   );

@@ -1,10 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import {
-  useCanvasResourcesPanelStoreShallow,
-  useActiveNode,
-  useCanvasStore,
-  useCanvasStoreShallow,
-} from '@refly/stores';
+import { useCanvasStore, useCanvasStoreShallow } from '@refly/stores';
 import { CanvasNode } from '@refly/canvas-common';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { useReactFlow } from '@xyflow/react';
@@ -39,13 +34,6 @@ export const useNodePreviewControl = ({
       nodePreviews: state.config[canvasId]?.nodePreviews || [],
       canvasInitialized: state.canvasInitialized[canvasId],
     }));
-  const { setActiveNode } = useActiveNode(canvasId);
-  const { setSidePanelVisible, setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow(
-    (state) => ({
-      setSidePanelVisible: state.setSidePanelVisible,
-      setShowWorkflowRun: state.setShowWorkflowRun,
-    }),
-  );
 
   // Cleanup non-existent node previews
   useEffect(() => {
@@ -70,10 +58,8 @@ export const useNodePreviewControl = ({
     (node: CanvasNode) => {
       addNodePreview(canvasId, node);
       setSelectedNode(node);
-      setActiveNode(node);
-      setSidePanelVisible(true);
     },
-    [canvasId, addNodePreview, setSelectedNode, setActiveNode, setSidePanelVisible],
+    [canvasId, addNodePreview, setSelectedNode],
   );
 
   const closeNodePreview = useCallback(
@@ -139,21 +125,12 @@ export const useNodePreviewControl = ({
   const handleNodePreview = useCallback(
     (node: CanvasNode) => {
       addNodePreview(canvasId, node);
-      setActiveNode(node);
-      setSidePanelVisible(true);
-      setShowWorkflowRun(false);
+
       setSelectedNode(node);
       locateToNodePreviewEmitter.emit('locateToNodePreview', { canvasId, id: node.id });
       return true;
     },
-    [
-      canvasId,
-      addNodePreview,
-      setSelectedNode,
-      setActiveNode,
-      setSidePanelVisible,
-      setShowWorkflowRun,
-    ],
+    [canvasId, addNodePreview, setSelectedNode],
   );
 
   return {
