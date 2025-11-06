@@ -1233,9 +1233,9 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
           <UploadNotification />
           <TopToolbar canvasId={canvasId} />
 
-          <div className="flex gap-1 w-full h-full">
+          <div className="flex gap-1 w-full h-full flex-grow overflow-hidden">
             <Splitter
-              className="canvas-splitter bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border flex-grow overflow-hidden"
+              className="canvas-splitter flex-1 bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border overflow-hidden"
               onResize={handleRightPanelResize}
             >
               <Splitter.Panel size={copilotWidth} min={400} max={maxPanelWidth}>
