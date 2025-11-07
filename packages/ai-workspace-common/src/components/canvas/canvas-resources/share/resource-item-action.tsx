@@ -21,6 +21,8 @@ export const ResourceItemAction = ({
 }) => {
   const { t } = useTranslation();
   const { readonly, canvasId, workflow } = useCanvasContext();
+  if (readonly) return null;
+
   const { deleteNode } = useDeleteNode();
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
   const { deleteResource } = useDeleteResource();
@@ -207,7 +209,7 @@ export const ResourceItemAction = ({
               <Button
                 type="text"
                 size="small"
-                icon={<Delete size={16} color="var(--refly-func-danger-default)" />}
+                icon={<Delete size={16} />}
                 onClick={(e) => e.stopPropagation()}
               />
             </Tooltip>

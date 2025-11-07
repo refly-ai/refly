@@ -18,14 +18,19 @@ export const Greeting = memo(({ onQueryClick }: GreetingProps) => {
   }, [t]);
 
   return (
-    <div className="w-full h-full px-4 flex flex-col gap-8 items-center justify-center">
+    <div className="w-full h-full px-4 flex flex-col items-center justify-end pb-[38px] min-h-[400px]">
       <div className="text-refly-text-0 text-lg font-semibold leading-7">
         {t('copilot.greeting.title')}
       </div>
-      <div className="w-full flex flex-col gap-2">
+      <div className="mt-1 text-refly-text-2 text-base leading-5">
+        {t('copilot.greeting.subtitle')}
+      </div>
+
+      <div className="w-full flex flex-col gap-3 mt-[100px]">
         <div className="text-refly-text-placeholder text-xs font-semibold leading-4">
           {t('copilot.greeting.youCanTry')}
         </div>
+
         {queries.map(({ icon, query }: { icon: string; query: string }, index: number) => (
           <div
             key={index}

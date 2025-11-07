@@ -79,7 +79,7 @@ export const ResourceOverview = memo((props: ResourceOverviewProps) => {
   }, [setSidePanelVisible, setWideScreenVisible]);
 
   return (
-    <div className="w-[400px] h-full flex flex-col">
+    <div className="w-[350px] h-full flex flex-col">
       <div className="h-[64px] px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
         <div className="flex gap-2 items-center">
           <Tooltip title={t('canvas.toolbar.closeResourcesPanel')} arrow={false}>
@@ -91,7 +91,15 @@ export const ResourceOverview = memo((props: ResourceOverviewProps) => {
         </div>
 
         {!readonly && (
-          <Button size="small" type="text" icon={<Add size={16} />} onClick={handleNewResource} />
+          <Button
+            size="small"
+            type="text"
+            className="text-refly-text-0 font-semibold"
+            icon={<Add size={16} />}
+            onClick={handleNewResource}
+          >
+            {t('canvas.resourceLibrary.new.resource')}
+          </Button>
         )}
       </div>
       <div className="p-4 flex-grow flex flex-col gap-4 overflow-hidden">
