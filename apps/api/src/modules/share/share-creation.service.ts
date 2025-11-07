@@ -27,6 +27,7 @@ import { SHARE_CODE_PREFIX } from './const';
 import { safeParseJSON } from '@refly/utils';
 import { generateCoverUrl } from '../workflow-app/workflow-app.dto';
 import { omit } from '../../utils';
+import { ConfigService } from '@nestjs/config';
 
 function genShareId(entityType: keyof typeof SHARE_CODE_PREFIX): string {
   return SHARE_CODE_PREFIX[entityType] + createId();
@@ -47,6 +48,7 @@ export class ShareCreationService {
     private readonly creditService: CreditService,
     private readonly shareCommonService: ShareCommonService,
     private readonly shareRateLimitService: ShareRateLimitService,
+    private readonly configService: ConfigService,
     @Optional()
     @InjectQueue(QUEUE_CREATE_SHARE)
     private readonly createShareQueue?: Queue<CreateShareJobData>,
@@ -1078,7 +1080,7 @@ export class ShareCreationService {
       query: workflowApp.query,
       variables: safeParseJSON(workflowApp.variables || '[]'),
       canvasData: canvasDataWithId, // Use the extended canvas data with canvasId
-      creditUsage,
+      creditUsage: Math.ceil(creditUsage * this.configService.get('credit.executionCreditMarkup')),
       createdAt: workflowApp.createdAt,
       updatedAt: workflowApp.updatedAt,
     };

@@ -19,6 +19,7 @@ import { ShareRateLimitService } from './share-rate-limit.service';
 import { ToolModule } from '../tool/tool.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { CreditModule } from '../credit/credit.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CreditModule } from '../credit/credit.module';
     CodeArtifactModule,
     SubscriptionModule,
     CreditModule,
+    ConfigModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_CREATE_SHARE })]),
   ],
   providers: [
