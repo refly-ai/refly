@@ -47,7 +47,7 @@ export const CanvasResources = memo(({ className, wideScreen }: CanvasResourcesP
             setCurrentResource={setCurrentResource}
           />
           <div className="flex-grow overflow-hidden min-w-0">
-            <PreviewComponent node={currentResource} />
+            <PreviewComponent node={currentResource} hideMeta />
           </div>
         </div>
       )}

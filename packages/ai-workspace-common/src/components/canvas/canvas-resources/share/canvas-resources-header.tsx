@@ -1,16 +1,17 @@
 import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Tooltip, Typography, Input, InputRef } from 'antd';
-import { ScreenFull, ScreenDefault } from 'refly-icons';
+import { Button, Tooltip, Typography, Input, InputRef, message } from 'antd';
+import { ScreenFull, ScreenDefault, Download } from 'refly-icons';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
-import { TopButtons } from './top-buttons';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { CanvasNode } from '@refly/canvas-common';
-
-import { AddFromKnowledgeBase } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/add-from-knowledgeBase';
+import {
+  getExtFromContentType,
+  buildSafeFileName,
+} from '@refly-packages/ai-workspace-common/utils/download-file';
 
 const { Text } = Typography;
 
@@ -21,11 +22,16 @@ interface CanvasResourcesHeaderProps {
 
 export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) => {
   const { currentResource, setCurrentResource } = props;
+
   const { t } = useTranslation();
   const { readonly } = useCanvasContext();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const titleInputRef = useRef<InputRef>(null);
+
+  const contentType = (currentResource?.data?.metadata?.contentType ?? '') as string;
+  const downloadURL = (currentResource?.data?.metadata?.downloadURL ?? '') as string;
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { wideScreenVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
     (state) => ({
@@ -35,7 +41,6 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
   );
 
   const updateNodeTitle = useUpdateNodeTitle();
-  const [addFromKnowledgeBaseVisible, setAddFromKnowledgeBaseVisible] = useState(false);
 
   // Update editing title when activeNode changes
   useEffect(() => {
@@ -105,15 +110,75 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
     [handleTitleSave, handleTitleCancel],
   );
 
+  const handleDownload = useCallback(async () => {
+    if (isDownloading) return;
+
+    if (!downloadURL) {
+      message.error(t('canvas.resourceLibrary.download.invalidUrl'));
+      return;
+    }
+
+    // Trigger download with custom filename
+    const triggerDownload = (href: string, fileName: string) => {
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    const baseTitle = currentResource?.data?.title ?? t('common.untitled');
+    const fileExt = getExtFromContentType(contentType);
+    const fileName = buildSafeFileName(baseTitle, fileExt);
+    setIsDownloading(true);
+
+    try {
+      // Add download=1 query parameter to the URL
+      const url = new URL(downloadURL);
+      url.searchParams.set('download', '1');
+
+      // Fetch the file with authentication
+      const response = await fetch(url.toString(), {
+        credentials: 'include',
+      });
+
+      if (!response?.ok) {
+        throw new Error(`Download failed: ${response?.status ?? 'unknown'}`);
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+
+      // Create a temporary object URL for download
+      const objectUrl = URL.createObjectURL(blob);
+
+      // Trigger download with custom filename
+      triggerDownload(objectUrl, fileName);
+      message.success(t('canvas.resourceLibrary.download.success'));
+
+      // Clean up the object URL
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback to direct download if fetch fails
+      triggerDownload(downloadURL, fileName);
+      message.error(t('canvas.resourceLibrary.download.error'));
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [downloadURL, contentType, currentResource?.data?.title, isDownloading, t, setIsDownloading]);
+
   return (
-    <div className="w-full h-[64px] flex-shrink-0 flex gap-2 items-center justify-between p-3 border-solid border-refly-Card-Border border-[1px] border-x-0 border-t-0">
-      <div className="min-w-0 flex-1 flex items-center gap-2">
+    <div className="w-full h-[64px] flex-shrink-0 flex gap-2 items-center justify-between px-3 py-4">
+      <div className="min-w-0 flex-1 flex items-center gap-1">
         <Button
           type="text"
           size="small"
           onClick={handleParentClick}
           className={cn(
-            'h-[30px] hover:!bg-refly-tertiary-hover',
+            'h-[30px] !text-refly-text-1 hover:!bg-refly-tertiary-hover',
             wideScreenVisible ? 'pointer-events-none' : '',
             'px-0.5',
           )}
@@ -147,7 +212,15 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
-        <TopButtons />
+        <Button
+          className="!h-5 !w-5 p-0"
+          size="small"
+          type="text"
+          icon={<Download size={16} />}
+          loading={isDownloading}
+          onClick={handleDownload}
+          disabled={isDownloading}
+        />
 
         {currentResource && (
           <Tooltip
@@ -166,10 +239,6 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
           </Tooltip>
         )}
       </div>
-      <AddFromKnowledgeBase
-        visible={addFromKnowledgeBaseVisible}
-        setVisible={setAddFromKnowledgeBaseVisible}
-      />
     </div>
   );
 });
