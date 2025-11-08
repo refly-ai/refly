@@ -16,6 +16,12 @@ interface NodeHeaderProps {
   updateTitle?: (title: string) => void;
 }
 
+// Background colors for different node types
+const NODE_TYPE_COLORS: Partial<Record<CanvasNodeType, string>> = {
+  skillResponse: '#D9FFFE',
+  start: '#FEF2CF',
+};
+
 export const NodeHeader = memo(
   ({
     fixedTitle,
@@ -53,8 +59,13 @@ export const NodeHeader = memo(
       [setEditTitle, updateTitle],
     );
 
+    const backgroundColor = type ? NODE_TYPE_COLORS[type] : undefined;
+    console.log('backgroundColor', type, backgroundColor);
     return (
-      <div className={cn('flex-shrink-0', { 'mb-3': source === 'node' })}>
+      <div
+        className={cn('flex-shrink-0', { 'mb-3': source === 'node' })}
+        style={{ backgroundColor }}
+      >
         <div className="flex items-center gap-2">
           <NodeIcon type={type} resourceType={resourceType} resourceMeta={resourceMeta} />
           {canEdit && isEditing ? (

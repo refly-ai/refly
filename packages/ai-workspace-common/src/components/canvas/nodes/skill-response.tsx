@@ -104,10 +104,11 @@ export const NodeHeader = memo(
     return (
       <div
         data-cy="skill-response-node-header"
-        className={`flex-shrink-0 w-full ${source === 'skillResponsePreview' ? 'mb-0' : 'mb-3'}`}
+        className={`flex items-center flex-shrink-0 w-full py-2 px-3 ${source === 'skillResponsePreview' ? 'mb-0' : 'mb-3'}`}
+        style={{ backgroundColor: '#D9FFFE', height: '40px' }}
       >
-        <div className="flex items-center gap-2">
-          {showIcon && <NodeIcon type="skillResponse" />}
+        <div className="flex items-center gap-2 w-full min-w-0">
+          {showIcon && <NodeIcon type="skillResponse" filled={false} iconColor="black" />}
           {isEditing ? (
             <Input
               ref={inputRef}
@@ -121,7 +122,7 @@ export const NodeHeader = memo(
             />
           ) : (
             <div
-              className={`flex-1 rounded-md h-6 px-0.5 box-border font-bold leading-6 truncate block hover:bg-refly-tertiary-hover ${
+              className={`flex-1 rounded-md h-6 px-0.5 box-border font-bold leading-6 truncate min-w-0 ${
                 source === 'skillResponsePreview' ? 'text-lg' : 'text-sm'
               }`}
               title={editTitle}
@@ -831,9 +832,9 @@ export const SkillResponseNode = memo(
         <div
           style={nodeStyle}
           className={cn(
-            'h-full flex flex-col relative z-1 p-4 box-border',
+            'h-full flex flex-col relative z-1 p-0 box-border',
             getNodeCommonStyles({ selected, isHovered }),
-            'flex max-h-60 flex-col items-start gap-2 self-stretch px-4 py-3 rounded-2xl border-solid',
+            'flex max-h-60 flex-col items-start gap-2 self-stretch rounded-2xl border-solid',
             // Apply error styles only when there's an error
             status === 'failed'
               ? 'border border-refly-func-danger-default bg-refly-bg-content-z2 shadow-[0_2px_20px_4px_rgba(0,0,0,0.04)]'

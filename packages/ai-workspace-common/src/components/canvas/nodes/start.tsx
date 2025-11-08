@@ -37,7 +37,10 @@ export const VARIABLE_TYPE_ICON_MAP = {
 const Header = memo(({ className }: { className?: string }) => {
   const { t } = useTranslation();
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div
+      className={cn('flex items-center gap-2', className)}
+      style={{ backgroundColor: '#FEF2CF' }}
+    >
       <NodeIcon type="start" filled={true} />
       <span className="text-sm font-semibold leading-6 text-refly-text-0">
         {t('canvas.nodeTypes.start')}
