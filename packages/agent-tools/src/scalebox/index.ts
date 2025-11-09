@@ -852,29 +852,46 @@ export class ScaleboxRunCode extends AgentBaseTool<ScaleboxToolParams> {
       const stderr = res?.logs?.stderr ?? '';
       const results = res?.results ?? [];
       const pngResults = Array.isArray(results) ? results.filter((r: any) => !!(r?.png ?? '')) : [];
-      const entityId = await this.params?.reflyService?.genImageID?.();
 
       // Upload generated images and return file information
       // The upper layer (skill-invoker) will handle adding nodes to canvas
+      // Track uploaded content hashes to prevent duplicates
+      const uploadedContentHashes = new Set<string>();
       const uploads = await Promise.all(
         pngResults.map(async (r: any, idx: number) => {
           const raw = r?.png ?? '';
+
+          // Create a simple hash to detect duplicate content
+          const contentHash = `${raw.slice(0, 100)}:${raw.length}`;
+
+          // Skip if this content has already been uploaded in this batch
+          if (uploadedContentHashes.has(contentHash)) {
+            console.log(`Skipping duplicate image: code-output-${idx + 1}.png (same content)`);
+            return null;
+          }
+
           const hasDataUrlPrefix = typeof raw === 'string' && raw.startsWith('data:');
           const base64 = hasDataUrlPrefix ? raw : `data:image/png;base64,${raw}`;
+
           try {
+            const entityId = await this.params?.reflyService?.genImageID?.();
             const uploaded = await this.params?.reflyService?.uploadBase64?.(this.params?.user, {
               base64,
               filename: `code-output-${idx + 1}.png`,
               entityId,
             });
-            return uploaded
-              ? {
-                  ...uploaded,
-                  title: `Code Output ${idx + 1}`,
-                  type: 'image' as const,
-                  entityId,
-                }
-              : null;
+
+            if (uploaded) {
+              // Mark this content as uploaded
+              uploadedContentHashes.add(contentHash);
+              return {
+                ...uploaded,
+                title: `Code Output ${idx + 1}`,
+                type: 'image' as const,
+                entityId,
+              };
+            }
+            return null;
           } catch {
             return null;
           }
