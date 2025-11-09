@@ -916,6 +916,7 @@ export class ToolService {
         reflyService: engine.service,
         user,
         isGlobalToolset: t?.isGlobal ?? false,
+        engine, // Pass SkillEngine instance for tools that need LLM access
       });
 
       return toolset.definition.tools

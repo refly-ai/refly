@@ -56,7 +56,7 @@ MODEL=gpt-4-turbo
 
 # Or use direct OpenAI
 # OPENAI_API_KEY=your_openai_api_key_here
-# MODEL=gpt-3.5-turbo
+# MODEL=gpt-4o
 
 # Optional: Customize settings
 TEMPERATURE=0.03
@@ -72,7 +72,7 @@ DEBUG=false
 | `OPENAI_API_KEY`    | OpenAI or LiteLLM API key (recommended)                   | -               |
 | `OPENAI_BASE_URL`   | Custom base URL for LiteLLM or OpenAI-compatible services | -               |
 | `ANTHROPIC_API_KEY` | Anthropic API key                                         | -               |
-| `MODEL`             | LLM model to use                                          | `gpt-3.5-turbo` |
+| `MODEL`             | LLM model to use                                          | `gpt-4o` |
 | `TEMPERATURE`       | LLM temperature                                           | `0.03`          |
 | `DEBUG`             | Enable debug mode                                         | `false`         |
 | `MAX_ITERATIONS`    | Maximum agent iterations                                  | `12`            |

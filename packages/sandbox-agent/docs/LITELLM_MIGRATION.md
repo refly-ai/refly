@@ -87,7 +87,7 @@ OPENAI_API_KEY=sk-P1YzjogTlu09MYlnWBDtog
 OPENAI_BASE_URL=https://litellm.powerformer.net/v1
 
 # LLM Settings
-MODEL=gpt-3.5-turbo
+MODEL=gpt-4o
 TEMPERATURE=0.03
 DETAILED_ERROR=true
 REQUEST_TIMEOUT=300
@@ -104,7 +104,7 @@ LiteLLM uses direct model names (no provider prefix):
 
 | Model Type | Model Name                                           |
 | ---------- | ---------------------------------------------------- |
-| OpenAI     | `gpt-4-turbo`, `gpt-3.5-turbo`, `gpt-4`              |
+| OpenAI     | `gpt-4-turbo`, `gpt-4o`, `gpt-4`              |
 | Anthropic  | `claude-3-opus`, `claude-3-sonnet`, `claude-3-haiku` |
 | Google     | `gemini-pro`, `gemini-pro-vision`                    |
 | Meta       | `llama-3-70b`, `llama-3-8b`                          |
@@ -184,7 +184,7 @@ If you want to use OpenAI directly without LiteLLM, simply remove the `OPENAI_BA
 ```bash
 OPENAI_API_KEY=sk-...
 # OPENAI_BASE_URL=  # Comment out or remove this line
-MODEL=gpt-3.5-turbo
+MODEL=gpt-4o
 ```
 
 ## Troubleshooting
@@ -245,7 +245,7 @@ If you need to rollback to OpenAI direct:
 # In .env
 OPENAI_API_KEY=sk-...
 # Remove or comment out OPENAI_BASE_URL
-MODEL=gpt-3.5-turbo
+MODEL=gpt-4o
 ```
 
 The code automatically detects whether to use custom base URL or standard OpenAI based on the presence of `OPENAI_BASE_URL`.

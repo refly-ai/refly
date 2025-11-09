@@ -4,7 +4,7 @@ import { AgentExecutor, createReactAgent } from 'langchain/agents';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { BufferMemory } from 'langchain/memory';
 import { ChatMessageHistory } from 'langchain/memory';
-import { StructuredTool, DynamicStructuredTool } from '@langchain/core/tools';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { z } from 'zod';
@@ -29,10 +29,39 @@ function handleDeprecatedKwargs(kwargs: Record<string, any>): void {
 }
 
 export interface CodeInterpreterSessionOptions {
+  /**
+   * Pre-configured LLM instance to use for code interpretation.
+   * When provided, this takes precedence over model configuration parameters.
+   * This is the recommended approach for integration with systems that need
+   * to track token usage and billing (e.g., Refly's SkillEngine).
+   */
   llm?: BaseChatModel;
-  additionalTools?: StructuredTool[];
+  additionalTools?: any[];
   callbacks?: any[];
   verbose?: boolean;
+  apiKey?: string;
+
+  // Model configuration - fallback when llm is not provided
+  openaiApiKey?: string;
+  openaiBaseUrl?: string;
+  azureOpenAIApiKey?: string;
+  azureApiBase?: string;
+  azureApiVersion?: string;
+  azureDeploymentName?: string;
+  anthropicApiKey?: string;
+
+  // LLM settings
+  model?: string;
+  temperature?: number;
+  detailedError?: boolean;
+  systemMessage?: string;
+  requestTimeout?: number;
+  maxIterations?: number;
+  maxRetry?: number;
+
+  // CodeBox settings
+  customPackages?: string[];
+
   [key: string]: any;
 }
 
@@ -42,22 +71,60 @@ export interface CodeInterpreterSessionOptions {
 export class CodeInterpreterSession {
   private codebox: CodeBox;
   private verbose: boolean;
-  private tools: StructuredTool[];
+  private tools: any[];
   private llm: BaseChatModel;
   private callbacks?: any[];
   private agentExecutor?: AgentExecutor;
   private inputFiles: File[] = [];
   private outputFiles: File[] = [];
   private codeLog: Array<[string, string]> = [];
+  private config: {
+    openaiApiKey?: string;
+    openaiBaseUrl?: string;
+    azureOpenAIApiKey?: string;
+    azureApiBase?: string;
+    azureApiVersion?: string;
+    azureDeploymentName?: string;
+    anthropicApiKey?: string;
+    model: string;
+    temperature: number;
+    detailedError: boolean;
+    systemMessage: string;
+    requestTimeout: number;
+    maxIterations: number;
+    maxRetry: number;
+    customPackages: string[];
+  };
 
   constructor(options: CodeInterpreterSessionOptions = {}) {
     handleDeprecatedKwargs(options);
+
+    // Merge options with default settings
+    this.config = {
+      openaiApiKey: options.openaiApiKey || settings.OPENAI_API_KEY,
+      openaiBaseUrl: options.openaiBaseUrl || settings.OPENAI_BASE_URL,
+      azureOpenAIApiKey: options.azureOpenAIApiKey || settings.AZURE_OPENAI_API_KEY,
+      azureApiBase: options.azureApiBase || settings.AZURE_API_BASE,
+      azureApiVersion: options.azureApiVersion || settings.AZURE_API_VERSION,
+      azureDeploymentName: options.azureDeploymentName || settings.AZURE_DEPLOYMENT_NAME,
+      anthropicApiKey: options.anthropicApiKey || settings.ANTHROPIC_API_KEY,
+      model: options.model || settings.MODEL,
+      temperature: options.temperature ?? settings.TEMPERATURE,
+      detailedError: options.detailedError ?? settings.DETAILED_ERROR,
+      systemMessage: options.systemMessage || settings.SYSTEM_MESSAGE,
+      requestTimeout: options.requestTimeout ?? settings.REQUEST_TIMEOUT,
+      maxIterations: options.maxIterations ?? settings.MAX_ITERATIONS,
+      maxRetry: options.maxRetry ?? settings.MAX_RETRY,
+      customPackages: options.customPackages || settings.CUSTOM_PACKAGES,
+    };
+
     this.codebox = new CodeBox({
-      requirements: settings.CUSTOM_PACKAGES,
-      apiKey: process.env.SCALEBOX_API_KEY,
+      requirements: this.config.customPackages,
+      apiKey: options.apiKey || process.env.SCALEBOX_API_KEY,
     });
     this.verbose = options.verbose ?? settings.DEBUG;
     this.tools = this.createTools(options.additionalTools || []);
+    // Use pre-configured LLM instance if provided, otherwise create one
     this.llm = options.llm || this.chooseLLM();
     this.callbacks = options.callbacks;
   }
@@ -71,7 +138,7 @@ export class CodeInterpreterSession {
   ): Promise<CodeInterpreterSession> {
     const session = new CodeInterpreterSession(options);
     session.codebox = await CodeBox.fromId(sessionId, {
-      apiKey: process.env.SCALEBOX_API_KEY,
+      apiKey: options.apiKey || process.env.SCALEBOX_API_KEY,
     });
     session.agentExecutor = await session.createAgentExecutor();
     return session;
@@ -92,8 +159,8 @@ export class CodeInterpreterSession {
     this.agentExecutor = await this.createAgentExecutor();
 
     // Install custom packages
-    if (settings.CUSTOM_PACKAGES.length > 0) {
-      await this.codebox.run(`!pip install -q ${settings.CUSTOM_PACKAGES.join(' ')}`);
+    if (this.config.customPackages.length > 0) {
+      await this.codebox.run(`!pip install -q ${this.config.customPackages.join(' ')}`);
     }
 
     return SessionStatus.fromCodeBoxStatus(status);
@@ -102,12 +169,12 @@ export class CodeInterpreterSession {
   /**
    * Create tools for the agent
    */
-  private createTools(additionalTools: StructuredTool[]): StructuredTool[] {
-    const pythonTool = new DynamicStructuredTool({
+  private createTools(additionalTools: any[]): any[] {
+    const pythonTool: any = new (DynamicStructuredTool as any)({
       name: 'python',
       description: `Input a string of code to a ipython interpreter. Write the entire code in a single string. This string can be really long, so you can use the \`;\" character to split lines. Start your code on the same line as the opening quote. Do not start your code with a line break. For example, do 'import numpy', not '\\nimport numpy'. Variables are preserved between runs. ${
-        settings.CUSTOM_PACKAGES.length > 0
-          ? `You can use all default python packages specifically also these: ${settings.CUSTOM_PACKAGES.join(', ')}`
+        this.config.customPackages.length > 0
+          ? `You can use all default python packages specifically also these: ${this.config.customPackages.join(', ')}`
           : ''
       }`,
       schema: z.object({
@@ -125,57 +192,57 @@ export class CodeInterpreterSession {
   private chooseLLM(): BaseChatModel {
     // Priority 1: Azure OpenAI
     if (
-      settings.AZURE_OPENAI_API_KEY &&
-      settings.AZURE_API_BASE &&
-      settings.AZURE_API_VERSION &&
-      settings.AZURE_DEPLOYMENT_NAME
+      this.config.azureOpenAIApiKey &&
+      this.config.azureApiBase &&
+      this.config.azureApiVersion &&
+      this.config.azureDeploymentName
     ) {
       this.log('Using Azure Chat OpenAI');
       return new ChatOpenAI({
-        temperature: settings.TEMPERATURE,
-        azureOpenAIApiKey: settings.AZURE_OPENAI_API_KEY,
-        azureOpenAIApiInstanceName: settings.AZURE_API_BASE,
-        azureOpenAIApiVersion: settings.AZURE_API_VERSION,
-        azureOpenAIApiDeploymentName: settings.AZURE_DEPLOYMENT_NAME,
-        maxRetries: settings.MAX_RETRY,
-        timeout: settings.REQUEST_TIMEOUT * 1000, // Convert seconds to milliseconds
-      });
+        temperature: this.config.temperature,
+        azureOpenAIApiKey: this.config.azureOpenAIApiKey,
+        azureOpenAIApiInstanceName: this.config.azureApiBase,
+        azureOpenAIApiVersion: this.config.azureApiVersion,
+        azureOpenAIApiDeploymentName: this.config.azureDeploymentName,
+        maxRetries: this.config.maxRetry,
+        timeout: this.config.requestTimeout * 1000, // Convert seconds to milliseconds
+      }) as any;
     }
 
     // Priority 2: OpenAI-compatible API (LiteLLM, OpenAI, etc.)
-    if (settings.OPENAI_API_KEY) {
-      const provider = settings.OPENAI_BASE_URL ? 'LiteLLM' : 'OpenAI';
+    if (this.config.openaiApiKey) {
+      const provider = this.config.openaiBaseUrl ? 'LiteLLM' : 'OpenAI';
       this.log(`Using ${provider}`);
 
       const config: any = {
-        modelName: settings.MODEL,
-        openAIApiKey: settings.OPENAI_API_KEY,
-        temperature: settings.TEMPERATURE,
-        maxRetries: settings.MAX_RETRY,
-        timeout: settings.REQUEST_TIMEOUT * 1000, // Convert seconds to milliseconds
+        modelName: this.config.model,
+        openAIApiKey: this.config.openaiApiKey,
+        temperature: this.config.temperature,
+        maxRetries: this.config.maxRetry,
+        timeout: this.config.requestTimeout * 1000, // Convert seconds to milliseconds
       };
 
       // Add custom base URL if provided (for LiteLLM or other OpenAI-compatible services)
-      if (settings.OPENAI_BASE_URL) {
+      if (this.config.openaiBaseUrl) {
         config.configuration = {
-          baseURL: settings.OPENAI_BASE_URL,
+          baseURL: this.config.openaiBaseUrl,
         };
       }
 
-      return new ChatOpenAI(config);
+      return new ChatOpenAI(config) as any;
     }
 
     // Priority 3: Anthropic
-    if (settings.ANTHROPIC_API_KEY) {
-      if (!settings.MODEL.includes('claude')) {
+    if (this.config.anthropicApiKey) {
+      if (!this.config.model.includes('claude')) {
         console.warn('Please set the claude model in the settings.');
       }
       this.log('Using Chat Anthropic');
       return new ChatAnthropic({
-        modelName: settings.MODEL,
-        temperature: settings.TEMPERATURE,
-        anthropicApiKey: settings.ANTHROPIC_API_KEY,
-      });
+        modelName: this.config.model,
+        temperature: this.config.temperature,
+        anthropicApiKey: this.config.anthropicApiKey,
+      }) as any;
     }
 
     throw new Error(
@@ -199,7 +266,7 @@ export class CodeInterpreterSession {
     // This uses the 'tools' parameter instead of deprecated 'functions'
     if (this.llm instanceof ChatOpenAI) {
       const prompt = ChatPromptTemplate.fromMessages([
-        ['system', settings.SYSTEM_MESSAGE],
+        ['system', this.config.systemMessage],
         new MessagesPlaceholder('chat_history'),
         ['human', '{input}'],
         new MessagesPlaceholder('agent_scratchpad'),
@@ -227,7 +294,7 @@ export class CodeInterpreterSession {
       return AgentExecutor.fromAgentAndTools({
         agent,
         tools: this.tools,
-        maxIterations: settings.MAX_ITERATIONS,
+        maxIterations: this.config.maxIterations,
         verbose: this.verbose,
         memory,
         callbacks: this.callbacks,
@@ -238,7 +305,7 @@ export class CodeInterpreterSession {
     const prompt = ChatPromptTemplate.fromMessages([
       [
         'system',
-        `${settings.SYSTEM_MESSAGE}\n\nYou have access to the following tools:\n\n{tools}\n\nUse the following format:\n\nQuestion: the input question you must answer\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question`,
+        `${this.config.systemMessage}\n\nYou have access to the following tools:\n\n{tools}\n\nUse the following format:\n\nQuestion: the input question you must answer\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question`,
       ],
       new MessagesPlaceholder('chat_history'),
       ['human', '{input}'],
@@ -254,7 +321,7 @@ export class CodeInterpreterSession {
     return AgentExecutor.fromAgentAndTools({
       agent,
       tools: this.tools,
-      maxIterations: settings.MAX_ITERATIONS,
+      maxIterations: this.config.maxIterations,
       verbose: this.verbose,
       memory,
       callbacks: this.callbacks,
@@ -407,7 +474,7 @@ export class CodeInterpreterSession {
       if (this.verbose) {
         console.error(e);
       }
-      if (settings.DETAILED_ERROR) {
+      if (this.config.detailedError) {
         return new CodeInterpreterResponse({
           content: `Error in CodeInterpreterSession: ${e.constructor.name} - ${e.message}`,
           files: [],

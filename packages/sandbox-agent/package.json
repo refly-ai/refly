@@ -2,8 +2,8 @@
   "name": "@refly/sandbox-agent",
   "version": "1.0.0",
   "description": "TypeScript implementation of code interpreter with LangChain",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
@@ -17,13 +17,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@langchain/anthropic": "^0.3.0",
-    "@langchain/core": "^0.3.0",
-    "@langchain/openai": "^0.3.0",
+    "@langchain/anthropic": "0.3.33",
+    "@langchain/core": "0.3.68",
+    "@langchain/openai": "0.6.7",
     "axios": "^1.7.0",
     "codeboxapi": "^0.1.0",
     "dotenv": "^16.4.0",
-    "langchain": "^0.3.0",
+    "langchain": "0.3.30",
     "uuid": "^10.0.0",
     "zod": "^3.23.0",
     "@scalebox/sdk": "^3.1.2"
