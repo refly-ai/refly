@@ -69,6 +69,7 @@ export const FollowingActions = ({
   const { invokeAction } = useInvokeAction();
   const { addNode } = useAddNode();
   const { getFinalProjectId } = useAskProject();
+  const showAddToContextButton = false;
 
   const { data: providerItemList } = useFetchProviderItems({
     category: 'llm',
@@ -236,11 +237,13 @@ export const FollowingActions = ({
             onClick={initializeFollowUpInput}
           />
 
-          <FollowingActionButton
-            text={t('canvas.nodeActions.addToContext')}
-            icon={<AddContext size={16} color="var(--refly-primary-default)" />}
-            onClick={handleAddToContext}
-          />
+          {showAddToContextButton && (
+            <FollowingActionButton
+              text={t('canvas.nodeActions.addToContext')}
+              icon={<AddContext size={16} color="var(--refly-primary-default)" />}
+              onClick={handleAddToContext}
+            />
+          )}
         </div>
       </div>
 

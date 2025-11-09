@@ -40,14 +40,20 @@ interface DragItem {
 }
 
 export const PreviewComponent = memo(
-  ({ node, purePreview = false }: { node: CanvasNode<any>; purePreview?: boolean }) => {
+  ({
+    node,
+    purePreview = false,
+    hideMeta = false,
+  }: { node: CanvasNode<any>; purePreview?: boolean; hideMeta?: boolean }) => {
     if (!node?.type) return null;
 
     // Use useMemo to create the appropriate preview component
     return useMemo(() => {
       switch (node.type) {
         case 'resource':
-          return <ResourceNodePreview node={node} resourceId={node.data?.entityId} />;
+          return (
+            <ResourceNodePreview node={node} resourceId={node.data?.entityId} hideMeta={hideMeta} />
+          );
         case 'document':
           return <DocumentNodePreview node={node} />;
         case 'skill':

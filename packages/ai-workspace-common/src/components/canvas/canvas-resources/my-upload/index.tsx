@@ -57,6 +57,8 @@ export const MyUploadList = memo((props: MyUploadListProps) => {
             shareId: resource.shareId,
             indexStatus: resource.indexStatus,
             resourceType: resource.resourceType,
+            downloadURL: resource.downloadURL,
+            contentType: resource.data?.contentType,
           },
         },
       };

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useEffect, useState, useRef, memo } from 'react';
-import { Modal, Result, message, Splitter } from 'antd';
+import { Modal, Result, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
@@ -65,9 +65,9 @@ import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
 import { ToggleCopilotPanel } from './top-toolbar/toggle-copilot-panel';
 import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
 import { UploadNotification } from '@refly-packages/ai-workspace-common/components/common/upload-notification';
-import { Copilot } from './copilot';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { PreviewBoxInCanvas } from './preview-box-in-canvas';
+import { CopilotContainer } from './copilot-container';
 
 const GRID_SIZE = 10;
 
@@ -115,10 +115,21 @@ interface FlowProps {
   canvasId: string;
   copilotWidth: number;
   setCopilotWidth: (width: number | null) => void;
+  maxPanelWidth: number;
 }
 
-const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
+const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: FlowProps) => {
   const { t } = useTranslation();
+
+  // Wrap setCopilotWidth to handle null values
+  const handleSetCopilotWidth = useCallback(
+    (width: number) => {
+      if (width !== null && width !== undefined) {
+        setCopilotWidth(width);
+      }
+    },
+    [setCopilotWidth],
+  );
 
   useHandleOrphanNode();
 
@@ -996,7 +1007,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
           extra={t('canvas.connectionTimeout.extra')}
         />
       </Modal>
-      <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm">
+      <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm rounded-xl border-solid border-[1px] border-refly-Card-Border">
         <div className="flex-grow relative">
           <style>{selectionStyles}</style>
           {readonly && (
@@ -1063,9 +1074,15 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
 
         {/* Display the not found overlay when shareNotFound is true */}
         {readonly && shareNotFound && <NotFoundOverlay />}
+
         <ToolbarButtons canvasId={canvasId} />
         <PreviewBoxInCanvas node={selectedNode} />
         <WorkflowRun />
+        <CopilotContainer
+          copilotWidth={copilotWidth}
+          setCopilotWidth={handleSetCopilotWidth}
+          maxPanelWidth={maxPanelWidth}
+        />
 
         <ToggleCopilotPanel copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
 
@@ -1115,43 +1132,6 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     [canvasId, setCanvasCopilotWidth, setCopilotWidth],
   );
 
-  /** 文件库拖动代码暂时先注释 */
-  // const [resourcesPanelWidth, setResourcesPanelWidth] = useState(0);
-  // const [resourcesPanelMaxWidth, setResourcesPanelMaxWidth] = useState(800);
-  // const [resourcesPanelMinWidth, setResourcesPanelMinWidth] = useState(400);
-  // const prevCurrentResourceRef = useRef(currentResource);
-
-  // useEffect(() => {
-  //   if (sidePanelVisible) {
-  //     const extraWidth = currentResource ? 400 : 0;
-  //     setResourcesPanelWidth(400 + extraWidth);
-  //   } else {
-  //     setResourcesPanelWidth(0);
-  //   }
-  // }, [sidePanelVisible]);
-
-  // useEffect(() => {
-  //   const prevResource = prevCurrentResourceRef.current;
-  //   const hasResource = !!currentResource;
-  //   const hadResource = !!prevResource;
-
-  //   // From no resource to having resource
-  //   if (!hadResource && hasResource) {
-  //     setResourcesPanelWidth((prev) => prev + 400);
-  //     setResourcesPanelMaxWidth(1200);
-  //     setResourcesPanelMinWidth(700);
-  //   }
-  //   // From having resource to no resource
-  //   else if (hadResource && !hasResource) {
-  //     setResourcesPanelWidth(400);
-  //     setResourcesPanelMaxWidth(800);
-  //     setResourcesPanelMinWidth(400);
-  //   }
-
-  //   // Update ref for next comparison
-  //   prevCurrentResourceRef.current = currentResource;
-  // }, [currentResource]);
-
   useEffect(() => {
     if (readonly || !isLogin) {
       handleSetCopilotWidth(0);
@@ -1182,28 +1162,14 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     };
   }, [canvasId, setCurrentCanvasId]);
 
-  // Handle panel resize
-  const handleRightPanelResize = useCallback(
-    (sizes: number[]) => {
-      if (sizes.length < 2) {
-        return;
-      }
-
-      if (sizes[0] !== 0) {
-        handleSetCopilotWidth(sizes[0]);
-      }
-    },
-    [handleSetCopilotWidth],
-  );
-
   // Calculate max width as 50% of parent container
   const [maxPanelWidth, setMaxPanelWidth] = useState(800);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updateMaxWidth = () => {
-      const canvasContainer = document.querySelector('.canvas-splitter');
-      if (canvasContainer) {
-        setMaxPanelWidth(Math.floor(canvasContainer.clientWidth * 0.5));
+      if (containerRef.current) {
+        setMaxPanelWidth(Math.floor(containerRef.current.clientWidth * 0.5));
       }
     };
 
@@ -1212,9 +1178,8 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
 
     // Listen for window resize events
     const resizeObserver = new ResizeObserver(updateMaxWidth);
-    const canvasContainer = document.querySelector('.canvas-splitter');
-    if (canvasContainer) {
-      resizeObserver.observe(canvasContainer);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
 
     return () => {
@@ -1233,31 +1198,16 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
           <UploadNotification />
           <TopToolbar canvasId={canvasId} />
 
-          <div className="flex gap-1 w-full h-full flex-grow overflow-hidden">
-            <Splitter
-              className="canvas-splitter flex-1 bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border overflow-hidden"
-              onResize={handleRightPanelResize}
-            >
-              <Splitter.Panel size={copilotWidth} min={400} max={maxPanelWidth}>
-                <Copilot copilotWidth={copilotWidth} setCopilotWidth={handleSetCopilotWidth} />
-              </Splitter.Panel>
-
-              <Splitter.Panel className="shadow-refly-m">
-                <Flow
-                  canvasId={canvasId}
-                  copilotWidth={copilotWidth}
-                  setCopilotWidth={handleSetCopilotWidth}
-                />
-              </Splitter.Panel>
-
-              {/* <Splitter.Panel
-                size={resourcesPanelWidth}
-                min={resourcesPanelMinWidth}
-                max={resourcesPanelMaxWidth}
-              >
-                <CanvasResources />
-              </Splitter.Panel> */}
-            </Splitter>
+          <div
+            ref={containerRef}
+            className="canvas-container flex gap-2 w-full h-full flex-grow overflow-hidden"
+          >
+            <Flow
+              canvasId={canvasId}
+              copilotWidth={copilotWidth}
+              setCopilotWidth={handleSetCopilotWidth}
+              maxPanelWidth={maxPanelWidth}
+            />
             {sidePanelVisible && <CanvasResources />}
           </div>
           <CanvasResourcesWidescreenModal />
