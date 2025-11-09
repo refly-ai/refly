@@ -11,8 +11,6 @@ import {
   EntityType,
   FileVisibility,
   UploadResponse,
-  CanvasNode,
-  CanvasNodeType,
 } from '@refly/openapi-schema';
 import { Sandbox, CodeInterpreter, type WriteInfo } from '@scalebox/sdk';
 import { ToolParams } from '@langchain/core/tools';
@@ -30,12 +28,6 @@ export interface ReflyService {
       storageKey?: string;
     },
   ) => Promise<UploadResponse['data']>;
-  addNodeToCanvasWithoutCanvasId: (
-    user: User,
-    node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
-    connectTo?: any,
-    options?: { autoLayout?: boolean },
-  ) => Promise<void>;
   genImageID: () => Promise<string>;
 }
 
@@ -846,7 +838,7 @@ export class ScaleboxRunCode extends AgentBaseTool<ScaleboxToolParams> {
   async _call(
     input: z.infer<typeof this.schema>,
     _?: any,
-    config?: RunnableConfig,
+    _config?: RunnableConfig,
   ): Promise<ToolCallResult> {
     ensureApiKey(this.params?.apiKey ?? '');
     try {
@@ -862,6 +854,8 @@ export class ScaleboxRunCode extends AgentBaseTool<ScaleboxToolParams> {
       const pngResults = Array.isArray(results) ? results.filter((r: any) => !!(r?.png ?? '')) : [];
       const entityId = await this.params?.reflyService?.genImageID?.();
 
+      // Upload generated images and return file information
+      // The upper layer (skill-invoker) will handle adding nodes to canvas
       const uploads = await Promise.all(
         pngResults.map(async (r: any, idx: number) => {
           const raw = r?.png ?? '';
@@ -873,55 +867,34 @@ export class ScaleboxRunCode extends AgentBaseTool<ScaleboxToolParams> {
               filename: `code-output-${idx + 1}.png`,
               entityId,
             });
-            return uploaded ?? null;
+            return uploaded
+              ? {
+                  ...uploaded,
+                  title: `Code Output ${idx + 1}`,
+                  type: 'image' as const,
+                  entityId,
+                }
+              : null;
           } catch {
             return null;
           }
         }),
       );
 
-      // Add uploaded images to canvas as image nodes when canvasId is available
-      const parentResultId = config?.configurable?.resultId ?? '';
-      if ((uploads?.length ?? 0) > 0) {
-        const connectTo = parentResultId
-          ? ([{ type: 'skillResponse' as CanvasNodeType, entityId: parentResultId }] as any[])
-          : undefined;
-        await Promise.all(
-          (uploads ?? []).map(async (u, idx) => {
-            const storageKey = u?.storageKey ?? '';
-            const url = u?.url ?? '';
-            if (!storageKey || !url) return;
-            const title = `Code Output ${idx + 1}`;
-            try {
-              await this.params?.reflyService?.addNodeToCanvasWithoutCanvasId?.(
-                this.params?.user,
-                {
-                  type: 'image',
-                  data: {
-                    title,
-                    entityId,
-                    metadata: {
-                      resultId: entityId,
-                      storageKey,
-                      imageUrl: url,
-                      parentResultId,
-                    },
-                  },
-                },
-                connectTo,
-                { autoLayout: true },
-              );
-            } catch {
-              // Swallow individual failures to avoid blocking others
-            }
-          }),
-        );
-      }
+      // Filter out failed uploads
+      const validUploads = uploads.filter((u) => u !== null);
 
       return {
         status: 'success',
-        data: { logs: { stdout, stderr }, uploads },
-        summary: 'Code executed',
+        data: {
+          logs: { stdout, stderr },
+          uploads: validUploads,
+          hasGeneratedFiles: validUploads.length > 0,
+        },
+        summary:
+          validUploads.length > 0
+            ? `Code executed with ${validUploads.length} generated file(s)`
+            : 'Code executed',
       };
     } catch (error) {
       return {
