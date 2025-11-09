@@ -1,0 +1,87 @@
+// Register custom properties for animation support
+@property --light-x {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --light-y {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+.executing-glow-effect {
+  position: relative;
+  overflow: visible;
+  // Green ring shadow (6px solid outline, no blur)
+  box-shadow: 0 0 0 6px #18FFBF;
+  // Smooth transition for box-shadow
+  transition: box-shadow 0.3s ease-in-out;
+
+  // Blue light traveling on the green ring
+  &::after {
+    content: '';
+    position: absolute;
+    // Position relative to parent, will be clipped by container
+    inset: -6px;
+    // Use same mask as green ring to create clipping area
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    padding: 6px;
+    pointer-events: none;
+    z-index: 2;
+    border-radius: 22px;
+    // Create the blue traveling light inside this clipped area
+    background:
+      radial-gradient(circle 27.5px at var(--light-x, 0%) var(--light-y, 0%),
+        #1EC2EA 0px,
+        #1EC2EA 27.5px,
+        transparent 27.5px);
+    filter: blur(15px);
+    animation: moveLightPosition 4s linear infinite;
+    // Smooth fade in/out for the blue light
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+  }
+}
+
+// Keyframe for updating CSS custom properties for light position
+// Light travels along the border edges continuously
+@keyframes moveLightPosition {
+
+  // Top edge (left to right)
+  0% {
+    --light-x: 0%;
+    --light-y: 0%;
+  }
+
+  25% {
+    --light-x: 100%;
+    --light-y: 0%;
+  }
+
+  // Right edge (top to bottom)
+  50% {
+    --light-x: 100%;
+    --light-y: 100%;
+  }
+
+  // Bottom edge (right to left)
+  75% {
+    --light-x: 0%;
+    --light-y: 100%;
+  }
+
+  // Left edge (bottom to top) - return to start
+  100% {
+    --light-x: 0%;
+    --light-y: 0%;
+  }
+}
