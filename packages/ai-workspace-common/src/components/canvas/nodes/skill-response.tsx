@@ -38,8 +38,6 @@ import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canv
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
-import { useSkillError } from '@refly-packages/ai-workspace-common/hooks/use-skill-error';
-import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import {
   processContentPreview,
@@ -51,10 +49,10 @@ import { NodeActionButtons } from './shared/node-action-buttons';
 import { NodeExecutionStatus } from './shared/node-execution-status';
 
 import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
-import { NodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-header';
+import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { logEvent } from '@refly/telemetry-web';
 import { removeToolUseTags } from '@refly-packages/ai-workspace-common/utils';
-import { More, Play, Subscription } from 'refly-icons';
+import { More, Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
 
@@ -147,8 +145,6 @@ export const SkillResponseNode = memo(
 
     const { setNodeData, setNodeStyle } = useNodeData();
     const { getEdges } = useReactFlow();
-    const updateNodeTitle = useUpdateNodeTitle();
-    // const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const { readonly, canvasId } = useCanvasContext();
 
     // Get current pilot session info
@@ -187,7 +183,6 @@ export const SkillResponseNode = memo(
     const { t } = useTranslation();
 
     const { title, editedTitle, contentPreview: content, metadata, entityId } = data ?? {};
-    const { errMsg } = useSkillError(metadata?.errors?.[0]);
 
     // Find current node's corresponding pilot step
     const currentPilotStep = useMemo(() => {
@@ -277,21 +272,6 @@ export const SkillResponseNode = memo(
       }
     }, [currentPilotStep?.status, data, id, setNodeData]);
 
-    // const logTitle = log
-    //   ? t(`${log.key}.title`, {
-    //     ...log.titleArgs,
-    //     ns: 'skillLog',
-    //     defaultValue: log.key,
-    //   })
-    //   : '';
-    // const logDescription = log
-    //   ? t(`${log.key}.description`, {
-    //     ...log.descriptionArgs,
-    //     ns: 'skillLog',
-    //     defaultValue: '',
-    //   })
-    //   : '';
-
     const skill = {
       name: currentSkill?.name || 'commonQnA',
       icon: currentSkill?.icon,
@@ -304,17 +284,6 @@ export const SkillResponseNode = memo(
     const edges = getEdges();
     const isTargetConnected = edges?.some((edge) => edge.target === id);
     const isSourceConnected = edges?.some((edge) => edge.source === id);
-
-    // Handle node hover events
-    // const handleMouseEnter = useCallback(() => {
-    //   setIsHovered(true);
-    //   onHoverStart();
-    // }, [onHoverStart]);
-
-    // const handleMouseLeave = useCallback(() => {
-    //   setIsHovered(false);
-    //   onHoverEnd();
-    // }, [onHoverEnd]);
 
     const { invokeAction } = useInvokeAction({ source: 'skill-response-node' });
 
@@ -660,12 +629,20 @@ export const SkillResponseNode = memo(
       nodeActionEmitter.emit(createNodeEventName(id, 'cloneAskAI.completed'));
     }, [id, data?.entityId, addNode, t, canvasId]);
 
-    const onTitleChange = (newTitle: string) => {
-      if (newTitle === query) {
-        return;
-      }
-      updateNodeTitle(newTitle, data.entityId, id, 'skillResponse');
-    };
+    const handleMoreClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        nodeOperationsEmitter.emit('openNodeContextMenu', {
+          nodeId: id,
+          nodeType: 'skillResponse',
+          x: e.clientX,
+          y: e.clientY,
+          originalEvent: e,
+        } as any);
+      },
+      [id],
+    );
 
     useEffect(() => {
       setNodeStyle(id, NODE_SIDE_CONFIG);
@@ -723,8 +700,6 @@ export const SkillResponseNode = memo(
     return (
       <>
         <div
-          // onMouseEnter={handleMouseEnter}
-          // onMouseLeave={handleMouseLeave}
           className={cn(
             'rounded-2xl relative',
             // Apply executing/waiting glow effect on outer container
@@ -780,75 +755,25 @@ export const SkillResponseNode = memo(
             {/* Node execution status badge */}
             <NodeExecutionStatus status={executionStatus} />
 
-            <NodeHeader
-              nodeType="skillResponse"
+            <SkillResponseNodeHeader
+              nodeId={id}
+              entityId={data.entityId}
               title={query}
-              canEdit={true}
-              disabled={readonly}
-              updateTitle={onTitleChange}
+              readonly={true}
+              source="node"
               actions={
-                <>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<Play size={12} />}
-                    onClick={() => nodeActionEmitter.emit(createNodeEventName(id, 'rerun'))}
-                    className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
-                  />
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<More size={12} />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      nodeOperationsEmitter.emit('openNodeContextMenu', {
-                        nodeId: id,
-                        nodeType: 'skillResponse',
-                        x: e.clientX,
-                        y: e.clientY,
-                        originalEvent: e,
-                      } as any);
-                    }}
-                    className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
-                  />
-                </>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<More size={12} />}
+                  onClick={handleMoreClick}
+                  className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+                />
               }
             />
 
             <div className={'relative flex-grow overflow-y-auto w-full'}>
               <div className="flex flex-col p-3">
-                {status === 'failed' && (
-                  <div
-                    className={cn(
-                      'flex items-center justify-center gap-1 hover:bg-gray-50 rounded-md p-2 dark:hover:bg-gray-900',
-                      readonly ? 'cursor-not-allowed' : 'cursor-pointer',
-                    )}
-                    onClick={() => handleRerun()}
-                  >
-                    <IconError className="h-4 w-4 text-red-500" />
-                    <span className="text-xs text-red-500 w-full truncate">
-                      {errMsg || t('canvas.skillResponse.executionFailed')}
-                    </span>
-                  </div>
-                )}
-
-                {/* {(status === 'waiting' || status === 'executing') && (
-                  <div className="flex items-center gap-2 bg-gray-100 rounded-md p-2 dark:bg-gray-800">
-                    <IconLoading className="h-3 w-3 animate-spin text-green-500" />
-                    <span className="text-xs text-gray-500 w-full truncate">
-                      {log ? (
-                        <>
-                          <span className="text-green-500 font-medium">{`${logTitle} `}</span>
-                          <span className="text-gray-500">{logDescription}</span>
-                        </>
-                      ) : (
-                        t('canvas.skillResponse.aiThinking')
-                      )}
-                    </span>
-                  </div>
-                )} */}
-
                 {/* Always show content preview, use prompt/query as fallback when content is empty */}
                 <SkillResponseContentPreview
                   nodeId={id}
@@ -859,14 +784,6 @@ export const SkillResponseNode = memo(
                 />
               </div>
             </div>
-
-            {/* <NodeFooter
-              model={model}
-              modelInfo={modelInfo}
-              createdAt={createdAt}
-              language={language}
-              resultId={entityId}
-            /> */}
           </div>
         </div>
 

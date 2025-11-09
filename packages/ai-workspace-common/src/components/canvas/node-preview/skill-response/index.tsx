@@ -28,6 +28,7 @@ import { ActionContainer } from './action-container';
 import { ActionStepCard } from './action-step';
 import { FailureNotice } from './failure-notice';
 import { PreviewChatInput } from './preview-chat-input';
+import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -260,6 +261,14 @@ const SkillResponseNodePreviewComponent = ({
         }
       }}
     >
+      <SkillResponseNodeHeader
+        nodeId={node.id}
+        entityId={data.entityId}
+        title={data.editedTitle ?? title}
+        readonly={readonly}
+        source="preview"
+        className="!h-14"
+      />
       {
         <div className="px-4 pt-4">
           <EditChatInput
