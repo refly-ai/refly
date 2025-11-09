@@ -13,9 +13,7 @@ import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/c
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 // import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { CanvasNode, purgeToolsets } from '@refly/canvas-common';
-import { LOCALE } from '@refly/common-types';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
 import { genSkillID } from '@refly/utils/id';
@@ -27,7 +25,6 @@ import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './shared/styles';
 import { SkillResponseNodeProps } from './shared/types';
 
-import { ModelIcon } from '@lobehub/icons';
 import {
   NodeDragCreateInfo,
   nodeOperationsEmitter,
@@ -57,54 +54,82 @@ import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common
 import { NodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-header';
 import { logEvent } from '@refly/telemetry-web';
 import { removeToolUseTags } from '@refly-packages/ai-workspace-common/utils';
-import { More, Play } from 'refly-icons';
+import { More, Play, Subscription } from 'refly-icons';
+import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
 
 const NODE_WIDTH = 320;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
 
-const NodeFooter = memo(
+// 状态栏组件，显示节点状态、token消费和运行耗时
+const NodeStatusBar = memo(
   ({
-    model,
-    modelInfo,
-    createdAt,
-    language,
+    status,
+    executionTime,
+    creditCost,
   }: {
-    model: string;
-    modelInfo: any;
-    createdAt: string;
-    language: string;
-    resultId?: string;
+    status: string;
+    executionTime?: number;
+    creditCost?: number;
   }) => {
+    // const { t } = useTranslation();
+
+    const getStatusIcon = () => {
+      switch (status) {
+        case 'finish':
+          return <IoCheckmarkCircle className="w-3 h-3 text-green-500" />;
+        case 'failed':
+          return <IconError className="w-3 h-3 text-red-500" />;
+        case 'executing':
+        case 'waiting':
+          return <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />;
+        default:
+          return null;
+      }
+    };
+
+    const getStatusText = () => {
+      switch (status) {
+        case 'finish':
+          return 'Success';
+        case 'failed':
+          return 'Failed';
+        case 'executing':
+          return 'Running';
+        case 'waiting':
+          return 'Waiting';
+        default:
+          return '';
+      }
+    };
+
     return (
-      <div className="flex-shrink-0 mt-2 flex flex-wrap justify-between items-center text-[10px] text-gray-400 relative z-20 gap-1 dark:text-gray-500 w-full">
-        <div className="flex flex-wrap items-center gap-1 max-w-[70%]">
-          {model && (
-            <div className="flex items-center gap-1 overflow-hidden">
-              <ModelIcon model={modelInfo?.name} size={16} type={'color'} />
-              <span className="truncate">{model}</span>
+      <div className="flex items-center justify-between px-2 py-1 mt-2 w-full border-[1px] border-solid border-refly-Card-Border rounded-[20px] bg-refly-bg-content-z2 h-6">
+        <div className="flex items-center gap-1">
+          {getStatusIcon()}
+          <span className="text-xs text-gray-600 dark:text-gray-400">{getStatusText()}</span>
+        </div>
+
+        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
+          {creditCost !== undefined && (
+            <div className="flex items-center gap-1">
+              <Subscription className="w-3 h-3" />
+              <span>{creditCost}</span>
             </div>
           )}
-        </div>
-        <div className="flex-shrink-0">
-          {time(createdAt, language as LOCALE)
-            ?.utc()
-            ?.fromNow()}
+
+          {executionTime !== undefined && (
+            <div className="flex items-center gap-1">
+              <span>{executionTime}s</span>
+            </div>
+          )}
         </div>
       </div>
     );
   },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.model === nextProps.model &&
-      prevProps.createdAt === nextProps.createdAt &&
-      prevProps.language === nextProps.language &&
-      JSON.stringify(prevProps.modelInfo) === JSON.stringify(nextProps.modelInfo)
-    );
-  },
 );
 
-NodeFooter.displayName = 'NodeFooter';
+NodeStatusBar.displayName = 'NodeStatusBar';
 
 export const SkillResponseNode = memo(
   ({
@@ -115,6 +140,8 @@ export const SkillResponseNode = memo(
     hideHandles = false,
     onNodeClick,
   }: SkillResponseNodeProps) => {
+    console.log('metadata', data);
+
     const [isHovered, _setIsHovered] = useState(false);
     useSelectedNodeZIndex(id, selected);
 
@@ -694,151 +721,164 @@ export const SkillResponseNode = memo(
     ]);
 
     return (
-      <div
-        // onMouseEnter={handleMouseEnter}
-        // onMouseLeave={handleMouseLeave}
-        className={cn(
-          'rounded-2xl relative',
-          // Apply executing/waiting glow effect on outer container
-          status === 'executing' || status === 'waiting' ? 'executing-glow-effect' : '',
-        )}
-        data-cy="skill-response-node"
-        onClick={onNodeClick}
-      >
-        {!isPreview && !readonly && (
-          <NodeActionButtons
-            nodeId={id}
-            nodeType="skillResponse"
-            isNodeHovered={isHovered}
-            isSelected={selected}
-          />
-        )}
-
-        {!isPreview && !hideHandles && (
-          <>
-            <CustomHandle
-              id={`${id}-target`}
-              nodeId={id}
-              type="target"
-              position={Position.Left}
-              isConnected={isTargetConnected}
-              isNodeHovered={isHovered}
-              nodeType="skillResponse"
-            />
-            <CustomHandle
-              id={`${id}-source`}
-              nodeId={id}
-              type="source"
-              position={Position.Right}
-              isConnected={isSourceConnected}
-              isNodeHovered={isHovered}
-              nodeType="skillResponse"
-            />
-          </>
-        )}
-
+      <>
         <div
-          style={nodeStyle}
+          // onMouseEnter={handleMouseEnter}
+          // onMouseLeave={handleMouseLeave}
           className={cn(
-            'h-full flex flex-col relative z-1 p-0 box-border',
-            getNodeCommonStyles({ selected, isHovered }),
-            'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid',
-            // Apply error styles only when there's an error
-            status === 'failed'
-              ? 'border border-refly-func-danger-default bg-refly-bg-content-z2'
-              : 'border border-gray-200 bg-refly-bg-content-z2',
+            'rounded-2xl relative',
+            // Apply executing/waiting glow effect on outer container
+            status === 'executing' || status === 'waiting' ? 'executing-glow-effect' : '',
           )}
+          data-cy="skill-response-node"
+          onClick={onNodeClick}
         >
-          {/* Node execution status badge */}
-          <NodeExecutionStatus status={executionStatus} />
+          {!isPreview && !readonly && (
+            <NodeActionButtons
+              nodeId={id}
+              nodeType="skillResponse"
+              isNodeHovered={isHovered}
+              isSelected={selected}
+            />
+          )}
 
-          <NodeHeader
-            nodeType="skillResponse"
-            title={query}
-            canEdit={true}
-            disabled={readonly}
-            updateTitle={onTitleChange}
-            actions={
-              <>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<Play size={12} />}
-                  onClick={() => nodeActionEmitter.emit(createNodeEventName(id, 'rerun'))}
-                  className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
-                />
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<More size={12} />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    nodeOperationsEmitter.emit('openNodeContextMenu', {
-                      nodeId: id,
-                      nodeType: 'skillResponse',
-                      x: e.clientX,
-                      y: e.clientY,
-                      originalEvent: e,
-                    } as any);
-                  }}
-                  className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
-                />
-              </>
-            }
-          />
-
-          <div className={'relative flex-grow overflow-y-auto w-full'}>
-            <div className="flex flex-col p-3">
-              {status === 'failed' && (
-                <div
-                  className={cn(
-                    'flex items-center justify-center gap-1 hover:bg-gray-50 rounded-md p-2 dark:hover:bg-gray-900',
-                    readonly ? 'cursor-not-allowed' : 'cursor-pointer',
-                  )}
-                  onClick={() => handleRerun()}
-                >
-                  <IconError className="h-4 w-4 text-red-500" />
-                  <span className="text-xs text-red-500 w-full truncate">
-                    {errMsg || t('canvas.skillResponse.executionFailed')}
-                  </span>
-                </div>
-              )}
-
-              {/* {(status === 'waiting' || status === 'executing') && (
-                <div className="flex items-center gap-2 bg-gray-100 rounded-md p-2 dark:bg-gray-800">
-                  <IconLoading className="h-3 w-3 animate-spin text-green-500" />
-                  <span className="text-xs text-gray-500 w-full truncate">
-                    {log ? (
-                      <>
-                        <span className="text-green-500 font-medium">{`${logTitle} `}</span>
-                        <span className="text-gray-500">{logDescription}</span>
-                      </>
-                    ) : (
-                      t('canvas.skillResponse.aiThinking')
-                    )}
-                  </span>
-                </div>
-              )} */}
-
-              {/* Always show content preview, use prompt/query as fallback when content is empty */}
-              <SkillResponseContentPreview
+          {!isPreview && !hideHandles && (
+            <>
+              <CustomHandle
+                id={`${id}-target`}
                 nodeId={id}
-                content={truncateContent(content || (structuredData?.query as any) || query || '')}
-                metadata={metadata as any}
+                type="target"
+                position={Position.Left}
+                isConnected={isTargetConnected}
+                isNodeHovered={isHovered}
+                nodeType="skillResponse"
               />
-            </div>
-          </div>
+              <CustomHandle
+                id={`${id}-source`}
+                nodeId={id}
+                type="source"
+                position={Position.Right}
+                isConnected={isSourceConnected}
+                isNodeHovered={isHovered}
+                nodeType="skillResponse"
+              />
+            </>
+          )}
 
-          {/* <NodeFooter
-            model={model}
-            modelInfo={modelInfo}
-            createdAt={createdAt}
-            language={language}
-            resultId={entityId}
-          /> */}
+          <div
+            style={nodeStyle}
+            className={cn(
+              'h-full flex flex-col relative z-1 p-0 box-border',
+              getNodeCommonStyles({ selected, isHovered }),
+              'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid',
+              // Apply error styles only when there's an error
+              status === 'failed'
+                ? 'border border-refly-func-danger-default bg-refly-bg-content-z2'
+                : 'border border-gray-200 bg-refly-bg-content-z2',
+            )}
+          >
+            {/* Node execution status badge */}
+            <NodeExecutionStatus status={executionStatus} />
+
+            <NodeHeader
+              nodeType="skillResponse"
+              title={query}
+              canEdit={true}
+              disabled={readonly}
+              updateTitle={onTitleChange}
+              actions={
+                <>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<Play size={12} />}
+                    onClick={() => nodeActionEmitter.emit(createNodeEventName(id, 'rerun'))}
+                    className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+                  />
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<More size={12} />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      nodeOperationsEmitter.emit('openNodeContextMenu', {
+                        nodeId: id,
+                        nodeType: 'skillResponse',
+                        x: e.clientX,
+                        y: e.clientY,
+                        originalEvent: e,
+                      } as any);
+                    }}
+                    className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+                  />
+                </>
+              }
+            />
+
+            <div className={'relative flex-grow overflow-y-auto w-full'}>
+              <div className="flex flex-col p-3">
+                {status === 'failed' && (
+                  <div
+                    className={cn(
+                      'flex items-center justify-center gap-1 hover:bg-gray-50 rounded-md p-2 dark:hover:bg-gray-900',
+                      readonly ? 'cursor-not-allowed' : 'cursor-pointer',
+                    )}
+                    onClick={() => handleRerun()}
+                  >
+                    <IconError className="h-4 w-4 text-red-500" />
+                    <span className="text-xs text-red-500 w-full truncate">
+                      {errMsg || t('canvas.skillResponse.executionFailed')}
+                    </span>
+                  </div>
+                )}
+
+                {/* {(status === 'waiting' || status === 'executing') && (
+                  <div className="flex items-center gap-2 bg-gray-100 rounded-md p-2 dark:bg-gray-800">
+                    <IconLoading className="h-3 w-3 animate-spin text-green-500" />
+                    <span className="text-xs text-gray-500 w-full truncate">
+                      {log ? (
+                        <>
+                          <span className="text-green-500 font-medium">{`${logTitle} `}</span>
+                          <span className="text-gray-500">{logDescription}</span>
+                        </>
+                      ) : (
+                        t('canvas.skillResponse.aiThinking')
+                      )}
+                    </span>
+                  </div>
+                )} */}
+
+                {/* Always show content preview, use prompt/query as fallback when content is empty */}
+                <SkillResponseContentPreview
+                  nodeId={id}
+                  content={truncateContent(
+                    content || (structuredData?.query as any) || query || '',
+                  )}
+                  metadata={metadata as any}
+                />
+              </div>
+            </div>
+
+            {/* <NodeFooter
+              model={model}
+              modelInfo={modelInfo}
+              createdAt={createdAt}
+              language={language}
+              resultId={entityId}
+            /> */}
+          </div>
         </div>
-      </div>
+
+        {/* 状态栏，显示节点状态、token消费和运行耗时 */}
+        {!isPreview && (
+          <NodeStatusBar
+            status={status || 'waiting'}
+            creditCost={metadata?.creditCost}
+            executionTime={metadata?.executionTime}
+          />
+        )}
+      </>
     );
   },
   (prevProps, nextProps) => {

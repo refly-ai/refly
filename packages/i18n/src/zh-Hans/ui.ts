@@ -1405,6 +1405,7 @@ const translations = {
         optionAdd: '选项',
         optionAddDescription: '如单选、多选项目',
       },
+      userInput: '用户输入',
       run: {
         title: '运行调试',
         run: '运行',
