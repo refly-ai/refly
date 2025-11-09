@@ -345,12 +345,27 @@ message: "Process customer_data.csv and generate: 1) cleaned_data.csv 2) analysi
       };
 
       // Upload generated files if any
+      // The upper layer (skill-invoker) will handle adding nodes to canvas
       const uploadedFiles = [];
+      // Track uploaded file content hashes to prevent duplicates within this response
+      const uploadedContentHashes = new Set<string>();
+
       if (sandboxResponse.files.length > 0) {
         for (const file of sandboxResponse.files) {
           try {
-            const entityId = await this.params.reflyService?.genImageID?.();
             const base64Content = file.content.toString('base64');
+
+            // Create a simple hash of the content to detect duplicates
+            // Use first 100 chars + length as a simple dedup key
+            const contentHash = `${file.name}:${base64Content.slice(0, 100)}:${base64Content.length}`;
+
+            // Skip if this file content has already been uploaded in this batch
+            if (uploadedContentHashes.has(contentHash)) {
+              console.log(`Skipping duplicate file: ${file.name} (same content already uploaded)`);
+              continue;
+            }
+
+            const entityId = await this.params.reflyService?.genImageID?.();
             const mimeType = this.getMimeType(file.name);
             const dataUrl = `data:${mimeType};base64,${base64Content}`;
 
@@ -361,11 +376,19 @@ message: "Process customer_data.csv and generate: 1) cleaned_data.csv 2) analysi
             });
 
             if (uploaded) {
+              // Determine file type based on MIME type
+              const fileType = this.getNodeTypeFromMimeType(mimeType);
               uploadedFiles.push({
                 name: file.name,
                 storageKey: uploaded.storageKey,
                 url: uploaded.url,
+                entityId,
+                type: fileType,
+                mimeType,
               });
+
+              // Mark this content as uploaded
+              uploadedContentHashes.add(contentHash);
             }
           } catch (uploadError) {
             console.error('Failed to upload file:', file.name, uploadError);
@@ -380,6 +403,7 @@ message: "Process customer_data.csv and generate: 1) cleaned_data.csv 2) analysi
           response: sandboxResponse,
           uploadedFiles,
           codeExecutions: sandboxResponse.codeLog.length,
+          hasGeneratedFiles: uploadedFiles.length > 0,
         },
         summary: `Generated response with ${sandboxResponse.codeLog.length} code executions and ${uploadedFiles.length} files`,
         creditCost: Math.max(1, sandboxResponse.codeLog.length),
@@ -402,13 +426,35 @@ message: "Process customer_data.csv and generate: 1) cleaned_data.csv 2) analysi
       jpeg: 'image/jpeg',
       gif: 'image/gif',
       svg: 'image/svg+xml',
+      webp: 'image/webp',
       pdf: 'application/pdf',
       csv: 'text/csv',
       txt: 'text/plain',
       json: 'application/json',
       html: 'text/html',
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      mp4: 'video/mp4',
+      avi: 'video/x-msvideo',
+      mov: 'video/quicktime',
     };
     return mimeTypes[ext || ''] || 'application/octet-stream';
+  }
+
+  /**
+   * Determine canvas node type based on MIME type
+   */
+  private getNodeTypeFromMimeType(mimeType: string): 'image' | 'audio' | 'video' | 'document' {
+    if (mimeType.startsWith('image/')) {
+      return 'image';
+    }
+    if (mimeType.startsWith('audio/')) {
+      return 'audio';
+    }
+    if (mimeType.startsWith('video/')) {
+      return 'video';
+    }
+    return 'document';
   }
 }
 
