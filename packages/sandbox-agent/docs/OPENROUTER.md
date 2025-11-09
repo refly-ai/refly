@@ -43,7 +43,7 @@ OpenRouter uses the format `provider/model-name`. Popular options include:
 **OpenAI Models:**
 - `openai/gpt-4-turbo` - Most capable GPT-4 model
 - `openai/gpt-4` - Standard GPT-4
-- `openai/gpt-3.5-turbo` - Fast and cost-effective
+- `openai/gpt-4o` - Fast and cost-effective
 
 **Anthropic Models:**
 - `anthropic/claude-3-opus` - Most capable Claude model
@@ -169,7 +169,7 @@ REQUEST_TIMEOUT=300
 
 **Solution 2: Use Faster Models**
 Some models respond faster than others. Try:
-- `openai/gpt-3.5-turbo` (fastest)
+- `openai/gpt-4o` (fastest)
 - `anthropic/claude-3-haiku` (fast)
 - `google/gemini-pro` (fast)
 
@@ -195,7 +195,7 @@ Monitor your usage at: [https://openrouter.ai/activity](https://openrouter.ai/ac
 
 ## Best Practices
 
-1. **Start with GPT-3.5-turbo**: Cost-effective for testing
+1. **Start with gpt-4o**: Cost-effective for testing
 2. **Use GPT-4 for Complex Tasks**: Better reasoning for complex code generation
 3. **Try Claude for Long Context**: Excellent for large codebases
 4. **Set Appropriate Timeouts**: Adjust `REQUEST_TIMEOUT` based on model speed

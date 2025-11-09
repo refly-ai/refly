@@ -130,7 +130,7 @@ REQUEST_TIMEOUT=300
 
 **Solution 2: Use Faster Models**
 Some models respond faster than others. Try:
-- `openai/gpt-3.5-turbo` (fastest)
+- `openai/gpt-4o` (fastest)
 - `anthropic/claude-3-haiku` (fast)
 - `google/gemini-pro` (fast)
 
@@ -158,7 +158,7 @@ To verify the fix:
 ```bash
 # Set up environment
 export OPENROUTER_API_KEY=sk-or-v1-your-key
-export MODEL=openai/gpt-3.5-turbo
+export MODEL=openai/gpt-4o
 export REQUEST_TIMEOUT=300
 export DEBUG=true
 

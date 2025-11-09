@@ -295,7 +295,7 @@ To verify the fix works:
 ```bash
 # Set environment
 export OPENROUTER_API_KEY=sk-or-v1-...
-export MODEL=openai/gpt-3.5-turbo
+export MODEL=openai/gpt-4o
 export DEBUG=true
 
 # Run example

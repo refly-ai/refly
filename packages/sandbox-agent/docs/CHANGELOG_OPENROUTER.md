@@ -81,7 +81,7 @@ if (settings.OPENROUTER_API_KEY) {
 # LLM Settings
 # For OpenRouter, use format: provider/model-name
 # Examples: openai/gpt-4-turbo, anthropic/claude-3-opus, google/gemini-pro
-MODEL=gpt-3.5-turbo
+MODEL=gpt-4o
 ```
 
 ### 4. Documentation

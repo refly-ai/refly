@@ -21,6 +21,7 @@ import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt'
 import { RedditToolsetDefinition } from './reddit';
 import { TwitterToolsetDefinition } from './twitter';
 import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
+import { SandboxToolset, SandboxToolsetDefinition } from './sandbox';
 
 export type AnyToolsetClass = new (...args: any[]) => AgentBaseToolset<any>;
 
@@ -40,6 +41,10 @@ export const toolsetInventory: Record<
   [FirecrawlToolsetDefinition.key]: {
     class: FirecrawlToolset,
     definition: FirecrawlToolsetDefinition,
+  },
+  [SandboxToolsetDefinition.key]: {
+    class: SandboxToolset,
+    definition: SandboxToolsetDefinition,
   },
   [CalculatorToolsetDefinition.key]: {
     class: CalculatorToolset,

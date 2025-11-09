@@ -30,7 +30,7 @@ The timeout was previously too short (180 seconds in config was interpreted as 1
 
 ```bash
 # Use GPT-3.5 Turbo (fastest)
-MODEL=openai/gpt-3.5-turbo
+MODEL=openai/gpt-4o
 
 # Or Claude Haiku (also fast)
 MODEL=anthropic/claude-3-haiku
@@ -56,7 +56,7 @@ This will show you detailed logs to help diagnose the issue.
 ```bash
 # .env
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
-MODEL=openai/gpt-3.5-turbo
+MODEL=openai/gpt-4o
 REQUEST_TIMEOUT=300
 MAX_RETRY=3
 DEBUG=true

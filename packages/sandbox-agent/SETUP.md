@@ -102,7 +102,7 @@ Edit the `.env` file and add your credentials:
 #### For OpenAI:
 ```env
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxx
-MODEL=gpt-3.5-turbo
+MODEL=gpt-4o
 ```
 
 #### For Anthropic:
@@ -117,7 +117,7 @@ AZURE_OPENAI_API_KEY=your_azure_key
 AZURE_API_BASE=https://your-resource.openai.azure.com
 AZURE_API_VERSION=2023-05-15
 AZURE_DEPLOYMENT_NAME=your_deployment_name
-MODEL=gpt-3.5-turbo
+MODEL=gpt-4o
 ```
 
 ### Step 3: Customize Settings (Optional)

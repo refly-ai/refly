@@ -42,7 +42,7 @@ plt.savefig('chart.png')
   if (process.env.OPENAI_API_KEY) {
     try {
       const llm = new ChatOpenAI({
-        modelName: 'gpt-3.5-turbo',
+        modelName: 'gpt-4o',
         temperature: 0,
       });
 
@@ -87,7 +87,7 @@ async function testRemoveLinkPrompt() {
   if (process.env.OPENAI_API_KEY) {
     try {
       const llm = new ChatOpenAI({
-        modelName: 'gpt-3.5-turbo',
+        modelName: 'gpt-4o',
         temperature: 0,
       });
 

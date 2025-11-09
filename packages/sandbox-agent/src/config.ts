@@ -54,7 +54,7 @@ export const settings: CodeInterpreterAPISettings = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 
   // LLM Settings
-  MODEL: process.env.MODEL || 'gpt-3.5-turbo',
+  MODEL: process.env.MODEL || 'gpt-4o',
   TEMPERATURE: Number.parseFloat(process.env.TEMPERATURE || '0.03'),
   DETAILED_ERROR: process.env.DETAILED_ERROR !== 'false',
   SYSTEM_MESSAGE: process.env.SYSTEM_MESSAGE || DEFAULT_SYSTEM_MESSAGE,
