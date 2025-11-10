@@ -179,10 +179,11 @@ const WorkflowAppPage: React.FC = () => {
     return nodeExecutions
       .filter(
         (nodeExecution: WorkflowNodeExecution) =>
-          ['document', 'codeArtifact', 'image', 'video', 'audio', 'skillResponse'].includes(
+          ['document', 'codeArtifact', 'image', 'video', 'audio'].includes(
             nodeExecution.nodeType as CanvasNodeType,
-          ) &&
-          (workflowApp?.resultNodeIds?.includes(nodeExecution.nodeId) ?? false),
+          ) ||
+          (['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType) &&
+            (workflowApp?.resultNodeIds?.includes(nodeExecution.nodeId) ?? false)),
       )
       .filter((nodeExecution: WorkflowNodeExecution) => nodeExecution.status === 'finish');
   }, [nodeExecutions, workflowApp?.resultNodeIds]);
