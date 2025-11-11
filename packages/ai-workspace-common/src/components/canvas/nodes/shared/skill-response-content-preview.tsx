@@ -177,5 +177,4 @@ export const SkillResponseContentPreview = memo(
   },
 );
 
-// Set display name for better debugging experience
 SkillResponseContentPreview.displayName = 'SkillResponseContentPreview';

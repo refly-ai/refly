@@ -65,12 +65,15 @@ const NodeStatusBar = memo(
     status,
     executionTime,
     creditCost,
+    errors,
   }: {
     status: string;
     executionTime?: number;
     creditCost?: number;
+    errors?: string[];
   }) => {
     // const { t } = useTranslation();
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const getStatusIcon = () => {
       switch (status) {
@@ -101,24 +104,73 @@ const NodeStatusBar = memo(
       }
     };
 
+    if (status === 'waiting' || status === 'executing') {
+      return null;
+    }
+
+    const hasErrors = status === 'failed' && errors && errors.length > 0;
+
     return (
-      <div className="flex items-center justify-between px-2 py-1 mt-2 w-full border-[1px] border-solid border-refly-Card-Border rounded-[20px] bg-refly-bg-content-z2 h-6">
-        <div className="flex items-center gap-1">
-          {getStatusIcon()}
-          <span className="text-xs text-gray-600 dark:text-gray-400">{getStatusText()}</span>
-        </div>
-
-        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
-          {creditCost !== undefined && (
-            <div className="flex items-center gap-1">
-              <Subscription className="w-3 h-3" />
-              <span>{creditCost}</span>
+      <div className="flex flex-col mt-2 w-full">
+        <div
+          className={`px-2 border-[1px] border-solid border-refly-Card-Border rounded-l bg-refly-bg-content-z2 min-h-6 ${hasErrors ? 'cursor-pointer' : 'h-6'}`}
+          onClick={() => hasErrors && setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              {getStatusIcon()}
+              <span className="text-xs text-gray-600 dark:text-gray-400">{getStatusText()}</span>
             </div>
-          )}
 
-          {executionTime !== undefined && (
-            <div className="flex items-center gap-1">
-              <span>{executionTime}s</span>
+            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500 flex-shrink-0">
+              {creditCost !== undefined && (
+                <div className="flex items-center gap-1">
+                  <Subscription className="w-3 h-3" />
+                  <span>{creditCost}</span>
+                </div>
+              )}
+
+              {executionTime !== undefined && (
+                <div className="flex items-center gap-1">
+                  <span>{executionTime}s</span>
+                </div>
+              )}
+
+              {hasErrors && (
+                <svg
+                  className={`w-3 h-3 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
+            </div>
+          </div>
+          {hasErrors && isExpanded && (
+            <div className="min-w-0">
+              {errors.map((error, index) => (
+                <div
+                  key={index}
+                  className="text-refly-func-danger-default truncate"
+                  style={{
+                    fontFamily: 'PingFang SC',
+                    fontWeight: 400,
+                    fontSize: '12px',
+                    lineHeight: '16px',
+                    letterSpacing: 0,
+                  }}
+                  title={error}
+                >
+                  {error}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -138,8 +190,6 @@ export const SkillResponseNode = memo(
     hideHandles = false,
     onNodeClick,
   }: SkillResponseNodeProps) => {
-    console.log('metadata', data);
-
     const [isHovered, _setIsHovered] = useState(false);
     useSelectedNodeZIndex(id, selected);
 
@@ -358,6 +408,7 @@ export const SkillResponseNode = memo(
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
+          modelInfo: data?.metadata?.modelInfo,
         },
         {
           entityType: 'canvas',
@@ -793,6 +844,7 @@ export const SkillResponseNode = memo(
             status={status || 'waiting'}
             creditCost={metadata?.creditCost}
             executionTime={metadata?.executionTime}
+            errors={result?.errors}
           />
         )}
       </>
