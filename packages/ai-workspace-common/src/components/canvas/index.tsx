@@ -615,9 +615,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
         case 'skill':
           menuNodeType = 'skill';
           break;
-        case 'memo':
-          menuNodeType = 'memo';
-          break;
         case 'group':
           menuNodeType = 'group';
           break;

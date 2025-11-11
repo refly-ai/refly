@@ -78,7 +78,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
         key: 'addAgent',
         icon: <AiChat size={16} />,
         onClick: handleAddAgent,
-        label: 'Agent',
+        label: t('canvas.toolbar.tooltip.addAgent'),
         active: false,
       },
       {
@@ -117,7 +117,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
               type="text"
               icon={action.icon}
               onClick={action.onClick}
-              className={`px-[10px] py-[5px] font-semibold ${action.active ? 'bg-refly-fill-hover' : ''}`}
+              className="px-[10px] py-[5px] font-semibold"
             >
               {action.label}
             </Button>
@@ -131,7 +131,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
           type="primary"
           icon={<Play size={16} />}
           onClick={handleShowWorkflowRun}
-          className={`px-[10px] py-[5px] font-semibold ${!showWorkflowRun ? 'opacity-50' : ''}`}
+          className="px-[10px] py-[5px] font-semibold ml-4"
         >
           {t('canvas.toolbar.tooltip.previewWorkflowRun')}
         </Button>
