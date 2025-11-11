@@ -8,7 +8,7 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "es2021",
-    "sourceMap": false,
+    "sourceMap": true,
     "inlineSourceMap": false,
     "rootDir": "./src",
     "outDir": "./dist",
