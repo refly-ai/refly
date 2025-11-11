@@ -8,9 +8,9 @@ export const ReflyAssistant = () => {
     <div className="flex items-center gap-1">
       <Logo
         logoProps={{ show: false }}
-        textProps={{ show: true, className: 'w-[44px] h-[24px] translate-y-[-1px]' }}
+        textProps={{ show: true, className: 'w-[44px] h-[24px] -translate-y-[0.5px]' }}
       />
-      <div className="text-refly-text-0 text-base font-bold leading-[24px]">
+      <div className="text-refly-text-0 text-sm font-bold leading-[24px]">
         {t('copilot.assistant')}
       </div>
     </div>

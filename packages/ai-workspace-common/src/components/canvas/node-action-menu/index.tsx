@@ -200,17 +200,6 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
       ];
 
       const nodeTypeItems: Record<string, MenuItem[]> = {
-        memo: [
-          {
-            key: 'insertToDoc',
-            icon: InputContext,
-            label: t('canvas.nodeActions.insertToDoc'),
-            loading: false,
-            onClick: handleInsertToDoc,
-            type: 'button' as const,
-            disabled: !activeDocumentId,
-          },
-        ],
         codeArtifact: [
           {
             key: 'insertToDoc',

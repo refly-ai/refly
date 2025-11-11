@@ -78,7 +78,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
         key: 'addAgent',
         icon: <AiChat size={16} />,
         onClick: handleAddAgent,
-        label: 'Agent',
+        label: t('canvas.toolbar.tooltip.addAgent'),
         active: false,
       },
       {
@@ -106,8 +106,8 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
   ]);
 
   return (
-    <div className="absolute bottom-6 left-0 right-0 z-20 p-2 flex items-center justify-center">
-      <div className="flex items-center gap-[5px] p-2 bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border shadow-refly-m">
+    <div className="absolute bottom-6 left-0 right-0 z-20 p-2 flex items-center justify-center pointer-events-none">
+      <div className="flex items-center gap-[5px] p-2 bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border shadow-refly-m pointer-events-auto">
         {actions.map((action) =>
           action.type === 'divider' ? (
             <Divider key={action.key} type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
@@ -117,7 +117,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
               type="text"
               icon={action.icon}
               onClick={action.onClick}
-              className={`px-[10px] py-[5px] font-semibold ${action.active ? 'bg-refly-fill-hover' : ''}`}
+              className="px-[10px] py-[5px] font-semibold"
             >
               {action.label}
             </Button>
@@ -131,7 +131,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
           type="primary"
           icon={<Play size={16} />}
           onClick={handleShowWorkflowRun}
-          className={`px-[10px] py-[5px] font-semibold ${!showWorkflowRun ? 'opacity-50' : ''}`}
+          className="px-[10px] py-[5px] font-semibold ml-4"
         >
           {t('canvas.toolbar.tooltip.previewWorkflowRun')}
         </Button>
