@@ -1,3 +1,4 @@
+import { safeParseJSON } from '@refly/utils';
 import {
   ProviderItem as ProviderItemModel,
   Provider as ProviderModel,
@@ -39,16 +40,18 @@ export const providerItemPO2DTO = (
     group: providerItem.groupName,
     category: providerItem.category as ProviderCategory,
     tier: providerItem.tier as ModelTier,
-    creditBilling: providerItem.creditBilling ? JSON.parse(providerItem.creditBilling) : undefined,
+    creditBilling: providerItem.creditBilling
+      ? safeParseJSON(providerItem.creditBilling)
+      : undefined,
     provider: providerPO2DTO(providerItem.provider),
-    config: JSON.parse(providerItem.config || '{}'),
+    config: safeParseJSON(providerItem.config || '{}'),
   };
 };
 
 export const providerItem2ModelInfo = (
   providerItem: ProviderItemModel & { provider?: ProviderModel },
 ): ModelInfo => {
-  const config: LLMModelConfig = JSON.parse(providerItem.config || '{}');
+  const config: LLMModelConfig = safeParseJSON(providerItem.config || '{}');
   return {
     name: config.modelId,
     label: providerItem.name,

@@ -261,6 +261,10 @@ export class NanoBananaGenerateImage extends AgentBaseTool<FalImageParams> {
 
   schema = z.object({
     prompt: z.string().describe('The prompt to generate image, accept only english.'),
+    aspect_ratio: z
+      .enum(['21:9', '1:1', '4:3', '3:2', '2:3', '5:4', '4:5', '3:4', '16:9'])
+      .default('1:1')
+      .describe('The aspect ratio of the generated image.'),
   });
 
   description = "Google's state-of-the-art image generation and editing model";

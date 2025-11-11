@@ -8,7 +8,6 @@ import './index.scss';
 import { useCallback, useState } from 'react';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
-import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
 
 export const WorkflowRun = () => {
   const { t } = useTranslation();
@@ -18,10 +17,17 @@ export const WorkflowRun = () => {
   }));
 
   const { workflow, canvasId } = useCanvasContext();
-  const { workflowVariables, workflowVariablesLoading, refetchWorkflowVariables } = workflow;
-
-  const { initializeWorkflow, loading, executionId, workflowStatus, isPolling, pollingError } =
-    useInitializeWorkflow(canvasId);
+  const {
+    workflowVariables,
+    workflowVariablesLoading,
+    refetchWorkflowVariables,
+    initializeWorkflow,
+    isInitializing: loading,
+    executionId,
+    workflowStatus,
+    isPolling,
+    pollingError,
+  } = workflow;
 
   const [isRunning, setIsRunning] = useState(false);
 

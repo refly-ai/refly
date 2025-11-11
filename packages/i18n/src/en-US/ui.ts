@@ -977,7 +977,7 @@ const translations = {
       failed: 'Failed to delete',
       deleteConfirmForDocument: 'Are you sure you want to delete this document?',
       deleteConfirmForCanvas:
-        'Canvas {{canvas}} will be permanently deleted. Do you want to continue?',
+        'Workflow {{canvas}} and all files within it will be permanently deleted. Do you want to continue?',
       deleteConfirmForProject: 'Are you sure you want to delete this project?',
       deleteConfirmForResource: 'Are you sure you want to delete this resource?',
       deleteConfirmForResourceProject: 'Are you sure to remove this resource from the project?',
@@ -1164,7 +1164,6 @@ const translations = {
       video: 'Video',
       audio: 'Audio',
       start: 'User Input',
-      startNode: 'Start Node',
       documentSelection: 'Document Selection',
       resourceSelection: 'Resource Selection',
       skillResponseSelection: 'Skill Response Selection',
@@ -1433,6 +1432,7 @@ const translations = {
         failed: 'Workflow execution failed',
         error: 'Error monitoring workflow execution',
         validationError: 'Please fill in all required fields before running the workflow',
+        toolsGuide: 'Click "Run" to experience, the green parts support editing input content',
         nodeStatus: {
           waiting: 'Waiting',
           executing: 'Running',
@@ -3057,6 +3057,10 @@ const translations = {
         copySourceCode: 'Copy source code',
         createArtifact: 'Create diagram artifact',
       },
+      workflow: {
+        generating: 'Generating workflow...',
+        invalidData: 'Invalid workflow data',
+      },
     },
   },
   copilot: {
@@ -3574,6 +3578,16 @@ const translations = {
         reranking: 'Reranking',
         other: 'Other',
         commission: 'Template usage',
+        commissionPrefix: 'Template usage: ',
+      },
+      rechargeType: {
+        purchase: 'Purchase',
+        gift: 'Gift',
+        promotion: 'Promotion',
+        refund: 'Refund',
+        subscription: 'Subscription',
+        commission: 'Template earnings',
+        commissionPrefix: 'Template earnings: ',
       },
       depleted: 'Depleted',
       expired: 'Expired',
@@ -3685,9 +3699,9 @@ const translations = {
     createSuccess: 'Template created successfully, please view in template library',
     preview: 'Try it',
     use: 'Remix',
-    duplicateCanvas: 'Remix Workflow',
-    canvasTitle: 'Workflow Name',
-    duplicateCanvasTitlePlaceholder: 'Please enter canvas name',
+    duplicateCanvas: 'Remix',
+    canvasTitle: 'Name',
+    duplicateCanvasTitlePlaceholder: 'Please enter name',
     moreTemplates: 'More Templates',
     searchPlaceholder: 'Please enter keyword to search template',
     noRelatedTemplates: 'No related templates',
@@ -3727,10 +3741,11 @@ const translations = {
     noResultsAvailable: 'No results available',
     noResultsSelected: 'No results selected',
     resultPreview: 'Result Preview',
+    notLoggedIn: 'Not Logged In',
     run: {
-      completed: 'App run successfully',
-      failed: 'App run failed',
-      error: 'Run failed',
+      completed: 'Template run successfully',
+      failed: 'Template run failed',
+      error: 'Template run failed',
       loginRequired: 'Please login to run this workflow',
       loginRequiredCopy: 'Please login to copy this workflow',
       workflowStarted: 'Workflow started',
@@ -3844,19 +3859,6 @@ const translations = {
     unknown: 'Unknown',
     refresh: 'Refresh Nodes',
   },
-  credit: {
-    recharge: {
-      source: {
-        purchase: 'Purchase',
-        gift: 'Gift',
-        promotion: 'Promotion',
-        refund: 'Refund',
-        subscription: 'Subscription',
-        commission: 'Template commission',
-        commissionPrefix: 'Template earnings: ',
-      },
-    },
-  },
   workflowList: {
     title: 'Workflow',
     createWorkflow: 'Create Workflow',
@@ -3924,6 +3926,10 @@ const translations = {
         description: '',
       },
     },
+  },
+  environmentBanner: {
+    test: 'TEST ENVIRONMENT. FEATURES MAY BE UNSTABLE.',
+    staging: 'STAGING ENVIRONMENT. PLEASE USE WITH CAUTION.',
   },
 };
 

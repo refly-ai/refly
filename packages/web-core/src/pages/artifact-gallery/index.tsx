@@ -28,7 +28,10 @@ function ArtifactGallary() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-hidden bg-[#FFFFFF]">
+    <div
+      className="flex flex-col overflow-hidden bg-[#FFFFFF]"
+      style={{ minHeight: 'var(--screen-height)' }}
+    >
       <Helmet>
         <title>{pageContent.metaTitle[currentLang]}</title>
         <meta name="description" content={pageContent.metaDescription[currentLang]} />

@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
@@ -30,7 +30,7 @@ jobs:
       - name: Build
         run: pnpm build:web
         env:
-          NODE_OPTIONS: '--max_old_space_size=8192'
+          NODE_OPTIONS: "--max_old_space_size=8192"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -45,6 +45,7 @@ jobs:
           VITE_STATIC_PUBLIC_ENDPOINT: https://static.refly.ai
           VITE_STATIC_PRIVATE_ENDPOINT: https://staging-api.refly.ai/v1/misc
           VITE_CANVAS_TEMPLATE_ENABLED: true
+          VITE_ENV_TAG: staging
 
       - name: Deploy web to Cloudflare Pages
         uses: cloudflare/pages-action@v1.5.0

@@ -23,7 +23,7 @@ export const Slideshow = memo(({ canvasId }: { canvasId: string }) => {
 
   const containerStyles = useMemo(
     () => ({
-      height: isMaximized ? '100vh' : 'calc(100vh - 92px)',
+      height: isMaximized ? 'var(--screen-height)' : 'calc(var(--screen-height) - 92px)',
       width: isMaximized ? 'calc(100vw)' : isWideMode ? '840px' : '420px',
       position: isMaximized ? ('fixed' as const) : ('relative' as const),
       top: isMaximized ? 0 : null,

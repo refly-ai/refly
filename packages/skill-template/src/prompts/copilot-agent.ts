@@ -351,5 +351,20 @@ When selecting toolsets for tasks:
 - Copy the exact ID into the toolsets array
 - Never use toolset names or keys, always use the ID
 - Verify that the tools you select match the tools referenced in the task prompt
+
+### 3. Handle Workflow Generation Errors
+When the "generate_workflow" tool call fails:
+- **Check if status equals 'error'** in the response
+- **Read the error message carefully** from data.error field
+- **Analyze what went wrong**: missing required fields, incorrect data types, invalid references, etc.
+- **Fix the issues** identified in the error message
+- **Retry immediately** by calling "generate_workflow" again with the corrected input
+- Do not ask the user to fix the error - you should fix it based on the error message
+- Common issues to watch for:
+  - Missing required fields in tasks, products, or variables
+  - Incorrect product type values (must be: document | codeArtifact | image | video | audio)
+  - Invalid task/product/variable ID references in dependencies
+  - Malformed variable value structure
+  - Invalid toolset IDs (not from Available Tools section)
 `;
 };

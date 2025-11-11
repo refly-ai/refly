@@ -44,15 +44,23 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
     [],
   );
 
+  const siderStyle = useMemo(
+    () => ({
+      height: source === 'sider' ? 'var(--screen-height)' : 'calc(var(--screen-height) - 16px)',
+    }),
+    [source],
+  );
+
   return (
     <Layout.Sider
       width={source === 'sider' ? (collapse ? 0 : 248) : 248}
       className={cn(
         'bg-transparent',
         source === 'sider'
-          ? 'h-[calc(100vh)]'
-          : 'h-[calc(100vh-16px)] rounded-lg border-r border-solid border-[1px] border-refly-Card-Border bg-refly-bg-Glass-content backdrop-blur-md shadow-[0_6px_60px_0px_rgba(0,0,0,0.08)]',
+          ? ''
+          : 'rounded-lg border-r border-solid border-[1px] border-refly-Card-Border bg-refly-bg-Glass-content backdrop-blur-md shadow-[0_6px_60px_0px_rgba(0,0,0,0.08)]',
       )}
+      style={siderStyle}
     >
       <div className="flex h-full flex-col overflow-y-auto">
         <div className="p-4 pt-6">

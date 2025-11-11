@@ -228,8 +228,6 @@ export class ShareDuplicationService {
     // Generate or use pre-generated resource ID
     const newResourceId = options?.targetId ?? genResourceID();
 
-    const newStorageKey = `resource/${newResourceId}.txt`;
-
     const resourceDetail: Resource | undefined = safeParseJSON(
       (
         await this.miscService.downloadFile({
@@ -247,6 +245,21 @@ export class ShareDuplicationService {
     const targetCanvasId = canvasId || resourceDetail.canvasId;
     const extraData: ShareExtraData = safeParseJSON(record.extraData);
 
+    let newStorageKey: string | undefined;
+    if (resourceDetail.storageKey) {
+      newStorageKey = `resource/${newResourceId}.txt`;
+    }
+
+    let finalRawFileKey: string | undefined;
+    if (resourceDetail.rawFileKey) {
+      const targetFile = await this.miscService.duplicateFile(user, {
+        sourceFile: { storageKey: resourceDetail.rawFileKey, visibility: 'private' },
+        targetEntityId: newResourceId,
+        targetEntityType: 'resource',
+      });
+      finalRawFileKey = targetFile.storageKey;
+    }
+
     const newResource = await this.prisma.resource.create({
       data: {
         ...pick(resourceDetail, [
@@ -255,27 +268,19 @@ export class ShareDuplicationService {
           'contentPreview',
           'indexStatus',
           'indexError',
-          'rawFileKey',
         ]),
         meta: JSON.stringify(resourceDetail.data),
         indexError: JSON.stringify(resourceDetail.indexError),
         resourceId: newResourceId,
         uid: user.uid,
         storageKey: newStorageKey,
+        rawFileKey: finalRawFileKey,
         projectId,
         canvasId: targetCanvasId,
       },
     });
 
     const jobs: Promise<any>[] = [
-      this.miscService.uploadBuffer(user, {
-        fpath: 'document.txt',
-        buf: Buffer.from(resourceDetail.content ?? ''),
-        entityId: newResourceId,
-        entityType: 'resource',
-        visibility: 'private',
-        storageKey: newStorageKey,
-      }),
       this.fts.upsertDocument(user, 'resource', {
         id: newResourceId,
         ...pick(newResource, ['title', 'uid']),
@@ -284,6 +289,19 @@ export class ShareDuplicationService {
         updatedAt: newResource.updatedAt.toJSON(),
       }),
     ];
+
+    if (newStorageKey) {
+      jobs.push(
+        this.miscService.uploadBuffer(user, {
+          fpath: 'document.txt',
+          buf: Buffer.from(resourceDetail.content ?? ''),
+          entityId: newResourceId,
+          entityType: 'resource',
+          visibility: 'private',
+          storageKey: newStorageKey,
+        }),
+      );
+    }
 
     if (extraData?.vectorStorageKey) {
       jobs.push(
@@ -664,14 +682,14 @@ export class ShareDuplicationService {
 
         // Replace the context with the new entity ID
         if (node.data.metadata.contextItems) {
-          node.data.metadata.contextItems = JSON.parse(
+          node.data.metadata.contextItems = safeParseJSON(
             batchReplaceRegex(JSON.stringify(node.data.metadata.contextItems), replaceEntityMap),
           );
         }
 
         // Replace the structuredData with the new entity ID
         if (node.data.metadata.structuredData) {
-          node.data.metadata.structuredData = JSON.parse(
+          node.data.metadata.structuredData = safeParseJSON(
             batchReplaceRegex(JSON.stringify(node.data.metadata.structuredData), replaceEntityMap),
           );
         }
@@ -751,6 +769,23 @@ export class ShareDuplicationService {
       newCanvasId,
     );
 
+    // Replace resource variables with new entity ids
+    const updatedVariables = canvasData.variables?.map((variable) => {
+      if (variable.variableType !== 'resource') {
+        return variable;
+      }
+      return {
+        ...variable,
+        value: (variable.value ?? []).map((value) => ({
+          ...value,
+          resource: {
+            ...value.resource,
+            entityId: replaceEntityMap[value.resource?.entityId ?? ''],
+          },
+        })),
+      };
+    });
+
     // Convert toolsets
     const { replaceToolsetMap } = await this.toolService.importToolsetsFromNodes(user, nodes);
     this.logger.log(`Replace toolsets map: ${JSON.stringify(replaceToolsetMap)}`);
@@ -787,6 +822,11 @@ export class ShareDuplicationService {
     // Parallelize canvas state update and duplicate record creation
     await Promise.all([
       this.canvasSyncService.saveState(newCanvasId, state),
+      updatedVariables &&
+        this.canvasService.updateWorkflowVariables(user, {
+          canvasId: newCanvasId,
+          variables: updatedVariables,
+        }),
       this.prisma.duplicateRecord.create({
         data: {
           sourceId: record.entityId,

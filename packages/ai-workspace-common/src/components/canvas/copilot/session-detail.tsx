@@ -13,7 +13,6 @@ import { Greeting } from './greeting';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { safeParseJSON } from '@refly/utils/parse';
 import { generateCanvasDataFromWorkflowPlan, WorkflowPlan } from '@refly/canvas-common';
-import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
 import { useReactFlow } from '@xyflow/react';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
@@ -101,7 +100,8 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     }
   }, [status, resultId, fetchActionResult]);
 
-  const { canvasId, forceSyncState } = useCanvasContext();
+  const { canvasId, forceSyncState, workflow } = useCanvasContext();
+  const { initializeWorkflow, isInitializing, isPolling } = workflow;
   const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
@@ -110,7 +110,6 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     return ['waiting', 'executing'].includes(status ?? '') && !content;
   }, [status, content]);
 
-  const { initializeWorkflow } = useInitializeWorkflow();
   const { deleteNodes } = useDeleteNode();
 
   const { data: tools } = useListTools({ query: { enabled: true } }, undefined, {
@@ -206,7 +205,12 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       )}
       {workflowPlan && status === 'finish' && (
         <div className="mt-1">
-          <Button type="primary" onClick={handleApproveAndRun} loading={isLoading}>
+          <Button
+            type="primary"
+            onClick={handleApproveAndRun}
+            loading={isLoading || isInitializing || isPolling}
+            disabled={isLoading || isInitializing || isPolling}
+          >
             {t('copilot.sessionDetail.approveAndRun')}
           </Button>
         </div>

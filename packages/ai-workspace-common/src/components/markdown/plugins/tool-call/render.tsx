@@ -96,11 +96,27 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   // Extract tool name from props
   const toolName = props['data-tool-name'] || 'unknown';
   const toolsetKey = props['data-tool-toolset-key'] || 'unknown';
+  const toolCallStatus =
+    parseToolCallStatus(props['data-tool-call-status']) ?? ToolCallStatus.EXECUTING;
 
   const isCopilotGenerateWorkflow = toolsetKey === 'copilot' && toolName === 'generate_workflow';
   if (isCopilotGenerateWorkflow) {
     const resultStr = props['data-tool-result'] || '{}';
     const structuredArgs = safeParseJSON(resultStr)?.data as WorkflowPlan;
+
+    // Handle case when structuredArgs is undefined
+    if (!structuredArgs) {
+      return (
+        <div className="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2">
+          <div className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
+            {toolCallStatus === ToolCallStatus.EXECUTING
+              ? t('components.markdown.workflow.generating')
+              : t('components.markdown.workflow.invalidData')}
+          </div>
+        </div>
+      );
+    }
+
     return <CopilotWorkflowPlan data={structuredArgs} />;
   }
 
@@ -121,8 +137,6 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   const resultContent = props['data-tool-error'] || props['data-tool-result'] || '';
   // Check if result exists
   const hasResult = !!resultContent || !!props['data-tool-error'];
-  const toolCallStatus =
-    parseToolCallStatus(props['data-tool-call-status']) ?? ToolCallStatus.EXECUTING;
 
   // Compute execution duration when timestamps are provided
   const durationText = useMemo(() => {

@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { BaseChatModel } from '@refly/providers';
-import { extractJsonFromMarkdown } from '@refly/utils';
+import { extractJsonFromMarkdown, safeParseJSON } from '@refly/utils';
 import { CanvasContentItem } from '../canvas/canvas.dto';
 import { GenericToolset } from '@refly/openapi-schema';
 import { multiStepSchema, PilotStepRawOutput } from './prompt/schema';
@@ -87,7 +87,7 @@ export class PilotEngine {
       // Try to get existing progress plan from session
       if (this.session.progress) {
         try {
-          const existingPlan = JSON.parse(this.session.progress) as ProgressPlan;
+          const existingPlan = safeParseJSON(this.session.progress) as ProgressPlan;
           this.logger.log('Retrieved existing progress plan from session');
           return existingPlan;
         } catch (_parseError) {
@@ -688,7 +688,7 @@ ${this.locale ? `\n## LANGUAGE REQUIREMENT\nAll output should be in ${this.local
     maxStepsPerEpoch = MAX_STEPS_PER_EPOCH,
     locale?: string,
   ): Promise<PilotStepRawOutput[]> {
-    const sessionInput = JSON.parse(this.session.input);
+    const sessionInput = safeParseJSON(this.session.input);
     const userQuestion = sessionInput?.query;
 
     try {

@@ -1,6 +1,6 @@
 .provider-store-modal {
     .ant-modal-content {
-        height: calc(100vh - 80px);
+        height: calc(var(--screen-height) - 80px);
         width: calc(100vw - 80px);
         overflow: hidden;
         padding: 0;

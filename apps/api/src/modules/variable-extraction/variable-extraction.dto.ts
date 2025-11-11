@@ -49,7 +49,11 @@ export interface VariableReuse {
 // APP template generation result
 export interface AppTemplateResult {
   templateContent: string; // Template with placeholders
+  templateContentPlaceholders: string[]; // Placeholders in the template
   variables: WorkflowVariable[]; // Related variable list
+  title?: string; // Workflow title for display
+  description?: string; // Workflow description
+  usageInstructions?: string; // Instructions on how to use the template
   metadata: {
     extractedAt: number; // Template generation timestamp (for version control)
     variableCount: number; // Total variable count (for frontend statistics display)
@@ -57,10 +61,6 @@ export interface AppTemplateResult {
     canvasComplexity?: string; // Canvas complexity (simple/medium/complex, affects template display)
     workflowType?: string; // Workflow type (for template classification and display)
     templateVersion?: number; // Template version number (supports template iteration)
-    workflowTitle?: string; // Workflow title for display
-    workflowDescription?: string; // Workflow description
-    estimatedExecutionTime?: string; // Estimated execution time
-    skillTags?: string[]; // Skill tags for categorization
   };
 }
 

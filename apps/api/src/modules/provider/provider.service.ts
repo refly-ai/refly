@@ -535,7 +535,7 @@ export class ProviderService implements OnModuleInit {
         // Fallback: find an enabled model that supports the requested mediaType
         const fallbackProviderItem = providerItems.find((item) => {
           try {
-            const config: MediaGenerationModelConfig = JSON.parse(item.config || '{}');
+            const config: MediaGenerationModelConfig = safeParseJSON(item.config || '{}');
 
             return config.capabilities?.[mediaType];
           } catch (error) {
@@ -555,7 +555,9 @@ export class ProviderService implements OnModuleInit {
       }
 
       // Parse the model configuration
-      const config: MediaGenerationModelConfig = JSON.parse(configuredProviderItem.config || '{}');
+      const config: MediaGenerationModelConfig = safeParseJSON(
+        configuredProviderItem.config || '{}',
+      );
 
       this.logger.log(
         `Using user configured ${mediaType} model: ${config.modelId} from provider: ${configuredProviderItem.provider?.providerKey}`,
@@ -626,7 +628,7 @@ export class ProviderService implements OnModuleInit {
     for (const globalItem of globalItems) {
       globalProviderIds.add(globalItem.providerId);
       try {
-        const config = JSON.parse(globalItem.config || '{}');
+        const config = safeParseJSON(globalItem.config || '{}');
         const key = `${globalItem.providerId}:${config.modelId}`;
         globalItemsMap.set(key, globalItem);
       } catch (error) {
@@ -711,7 +713,7 @@ export class ProviderService implements OnModuleInit {
 
     if (defaultModel.chat && !userPreferences.defaultModel?.chat) {
       const chatItem = items.find((item) => {
-        const config: LLMModelConfig = JSON.parse(item.config);
+        const config: LLMModelConfig = safeParseJSON(item.config);
         return config.modelId === defaultModel.chat;
       });
       if (chatItem) {
@@ -721,7 +723,7 @@ export class ProviderService implements OnModuleInit {
 
     if (defaultModel.agent && !userPreferences.defaultModel?.agent) {
       const agentItem = items.find((item) => {
-        const config: LLMModelConfig = JSON.parse(item.config);
+        const config: LLMModelConfig = safeParseJSON(item.config);
         return config.modelId === defaultModel.agent;
       });
       if (agentItem) {
@@ -731,7 +733,7 @@ export class ProviderService implements OnModuleInit {
 
     if (defaultModel.queryAnalysis && !userPreferences.defaultModel?.queryAnalysis) {
       const queryAnalysisItem = items.find((item) => {
-        const config: LLMModelConfig = JSON.parse(item.config);
+        const config: LLMModelConfig = safeParseJSON(item.config);
         return config.modelId === defaultModel.queryAnalysis;
       });
       if (queryAnalysisItem) {
@@ -741,7 +743,7 @@ export class ProviderService implements OnModuleInit {
 
     if (defaultModel.titleGeneration && !userPreferences.defaultModel?.titleGeneration) {
       const titleGenerationItem = items.find((item) => {
-        const config: LLMModelConfig = JSON.parse(item.config);
+        const config: LLMModelConfig = safeParseJSON(item.config);
         return config.modelId === defaultModel.titleGeneration;
       });
       if (titleGenerationItem) {
@@ -751,7 +753,7 @@ export class ProviderService implements OnModuleInit {
 
     if (defaultModel.image && !userPreferences.defaultModel?.image) {
       const imageItem = items.find((item) => {
-        const config: MediaGenerationModelConfig = JSON.parse(item.config);
+        const config: MediaGenerationModelConfig = safeParseJSON(item.config);
         return config.modelId === defaultModel.image;
       });
       if (imageItem) {
@@ -761,7 +763,7 @@ export class ProviderService implements OnModuleInit {
 
     if (defaultModel.video && !userPreferences.defaultModel?.video) {
       const videoItem = items.find((item) => {
-        const config: MediaGenerationModelConfig = JSON.parse(item.config);
+        const config: MediaGenerationModelConfig = safeParseJSON(item.config);
         return config.modelId === defaultModel.video;
       });
       if (videoItem) {
@@ -771,7 +773,7 @@ export class ProviderService implements OnModuleInit {
 
     if (defaultModel.audio && !userPreferences.defaultModel?.audio) {
       const audioItem = items.find((item) => {
-        const config: MediaGenerationModelConfig = JSON.parse(item.config);
+        const config: MediaGenerationModelConfig = safeParseJSON(item.config);
         return config.modelId === defaultModel.audio;
       });
       if (audioItem) {
@@ -841,7 +843,7 @@ export class ProviderService implements OnModuleInit {
 
     for (const item of items) {
       try {
-        const config: LLMModelConfig = JSON.parse(item.config);
+        const config: LLMModelConfig = safeParseJSON(item.config);
         if (config.modelId === modelId) {
           return item;
         }
@@ -862,7 +864,7 @@ export class ProviderService implements OnModuleInit {
 
     for (const item of items) {
       try {
-        const config: LLMModelConfig = JSON.parse(item.config);
+        const config: LLMModelConfig = safeParseJSON(item.config);
         if (config.modelId === modelId) {
           return item;
         }
@@ -881,7 +883,7 @@ export class ProviderService implements OnModuleInit {
     }
 
     const { provider, config } = item;
-    const chatConfig: LLMModelConfig = JSON.parse(config);
+    const chatConfig: LLMModelConfig = safeParseJSON(config);
 
     // Pass user context for monitoring
     return getChatModel(provider, chatConfig, undefined, { userId: user.uid });
@@ -900,7 +902,7 @@ export class ProviderService implements OnModuleInit {
 
     const providerItem = providerItems[0];
     const { provider, config } = providerItem;
-    const embeddingConfig: EmbeddingModelConfig = JSON.parse(config);
+    const embeddingConfig: EmbeddingModelConfig = safeParseJSON(config);
 
     // Pass user context for monitoring
     return getEmbeddings(provider, embeddingConfig, { userId: user.uid });
@@ -921,7 +923,7 @@ export class ProviderService implements OnModuleInit {
 
     const providerItem = providerItems[0];
     const { provider, config } = providerItem;
-    const rerankerConfig: RerankerModelConfig = JSON.parse(config);
+    const rerankerConfig: RerankerModelConfig = safeParseJSON(config);
 
     return getReranker(provider, rerankerConfig);
   }
@@ -1050,10 +1052,10 @@ export class ProviderService implements OnModuleInit {
       const availableItems = await this.findProviderItemsByCategory(user, category);
       const globalModelItem = availableItems.find((item) => {
         if (category === 'mediaGeneration') {
-          const config: MediaGenerationModelConfig = JSON.parse(item.config);
+          const config: MediaGenerationModelConfig = safeParseJSON(item.config);
           return config.modelId === globalModelId;
         } else {
-          const config: LLMModelConfig = JSON.parse(item.config);
+          const config: LLMModelConfig = safeParseJSON(item.config);
           return config.modelId === globalModelId;
         }
       });
@@ -1410,7 +1412,7 @@ export class ProviderService implements OnModuleInit {
           name: item.name,
           category: item.category as ProviderCategory,
           tier: item.tier as ModelTier,
-          config: JSON.parse(item.config || '{}'),
+          config: safeParseJSON(item.config || '{}'),
         }));
     }
 

@@ -99,7 +99,12 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
   }, [setPopupVisible]);
 
   const handleDuplicate = useCallback(() => {
-    duplicateCanvas({ canvasId, title: canvasName, isCopy: true, onSuccess: hideDropdown });
+    duplicateCanvas({
+      canvasId,
+      title: canvasName ?? t('common.untitled'),
+      isCopy: true,
+      onSuccess: hideDropdown,
+    });
   }, [canvasId, canvasName, hideDropdown]);
 
   // Update CSS custom property for resize control scaling

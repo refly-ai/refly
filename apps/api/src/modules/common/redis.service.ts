@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { isDesktop } from '../../utils/runtime';
+import { safeParseJSON } from '@refly/utils';
 
 interface InMemoryItem {
   value: string;
@@ -250,7 +251,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       // Note: BigInt values are stored as strings and remain as strings after parsing
       // This is generally safe as BigInt fields (like 'pk') are rarely used in business logic
       // If BigInt restoration is needed, implement a custom reviver function
-      return JSON.parse(serialized) as T;
+      return safeParseJSON(serialized) as T;
     } catch (error) {
       this.logger.warn(`Failed to parse JSON from Redis for key "${key}"`, error);
       return null;

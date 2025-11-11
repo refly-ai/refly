@@ -4,10 +4,11 @@ import { PrismaService } from '../common/prisma.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { ProviderService } from '../provider/provider.service';
-import { genVariableExtractionSessionID } from '@refly/utils';
+import { genVariableExtractionSessionID, safeParseJSON } from '@refly/utils';
 import { buildUnifiedPrompt } from './prompt';
 import { buildAppPublishPrompt } from './app-publish-prompt';
 import { genVariableID } from '@refly/utils';
+import { z } from 'zod';
 
 import {
   ExtractionContext,
@@ -59,6 +60,23 @@ interface LLMExtractionResponse {
   processedPrompt?: string;
   originalPrompt?: string;
 }
+
+/**
+ * Zod schema for APP template generation result
+ * Matches the JSON structure defined in app-publish-prompt.ts
+ */
+const AppTemplateResultSchema = z.object({
+  template: z.object({
+    title: z.string().describe('Clear, action-oriented workflow title'),
+    description: z.string().describe('Brief description of workflow purpose and benefits'),
+    content: z.string().describe('Natural language template with {{variable_name}} placeholders'),
+    usageInstructions: z
+      .string()
+      .optional()
+      .nullable()
+      .describe('How to use this template in 1-2 sentences'),
+  }),
+});
 
 @Injectable()
 export class VariableExtractionService {
@@ -526,8 +544,8 @@ export class VariableExtractionService {
         canvasId: record.canvasId,
         uid: record.uid,
         originalPrompt: record.originalPrompt,
-        extractedVariables: JSON.parse(record.extractedVariables) as WorkflowVariable[],
-        reusedVariables: JSON.parse(record.reusedVariables) as Array<{
+        extractedVariables: safeParseJSON(record.extractedVariables) as WorkflowVariable[],
+        reusedVariables: safeParseJSON(record.reusedVariables) as Array<{
           detectedText: string;
           reusedVariableName: string;
           confidence: number;
@@ -695,7 +713,7 @@ export class VariableExtractionService {
       const jsonText = jsonMatch[1] || jsonMatch[0];
       this.logger.debug(`Parsing JSON: ${jsonText.substring(0, 200)}...`);
 
-      const parsed = JSON.parse(jsonText) as LLMExtractionResponse;
+      const parsed = safeParseJSON(jsonText) as LLMExtractionResponse;
 
       // Validate response structure - support new analysis fields
       if (!parsed.variables || !Array.isArray(parsed.variables)) {
@@ -1010,7 +1028,7 @@ export class VariableExtractionService {
 
       for (const record of recentRecords) {
         try {
-          const variables = JSON.parse(record.extractedVariables) as WorkflowVariable[];
+          const variables = safeParseJSON(record.extractedVariables) as WorkflowVariable[];
           for (const variable of variables) {
             if (variable.description) {
               patterns.add(variable.description);
@@ -1316,7 +1334,12 @@ export class VariableExtractionService {
       // 6. Build final result
       const result: AppTemplateResult = {
         templateContent: parsedTemplate.content,
+        templateContentPlaceholders:
+          templateResult?.template?.content.match(/\{\{[^}]+\}\}/g) || [],
         variables: parsedTemplate.variables,
+        title: parsedTemplate.title,
+        description: parsedTemplate.description,
+        usageInstructions: parsedTemplate.usageInstructions,
         metadata: {
           extractedAt: Date.now(),
           variableCount: parsedTemplate.variables.length,
@@ -1324,16 +1347,8 @@ export class VariableExtractionService {
           canvasComplexity: this.getComplexityLevel(context.analysis.complexity),
           workflowType: context.analysis.workflowType,
           templateVersion: 1,
-          workflowTitle: parsedTemplate.title,
-          workflowDescription: parsedTemplate.description,
-          estimatedExecutionTime: parsedTemplate.estimatedExecutionTime,
-          skillTags: parsedTemplate.skillTags,
         },
       };
-
-      this.logger.log(
-        `Successfully generated APP template for canvas ${canvasId}: ${result.metadata.variableCount} variables, complexity: ${result.metadata.canvasComplexity}`,
-      );
 
       return result;
     } catch (error) {
@@ -1344,21 +1359,23 @@ export class VariableExtractionService {
 
   /**
    * Execute LLM template generation
+   * Returns structured output directly from withStructuredOutput
    */
   private async performLLMTemplateGeneration(
     prompt: string,
     _context: ExtractionContext,
     user: User,
-  ): Promise<string> {
+  ): Promise<z.infer<typeof AppTemplateResultSchema>> {
     try {
       const model = await this.prepareChatModel(user);
       this.logger.log('Executing LLM template generation');
 
-      const response = await model.invoke(prompt);
-      const responseText = response.content.toString();
+      const response = await model.withStructuredOutput(AppTemplateResultSchema).invoke(prompt);
 
-      this.logger.log(`LLM template generation completed, response length: ${responseText.length}`);
-      return responseText;
+      this.logger.log(
+        `LLM template generation completed, title: ${response.template?.title || 'N/A'}`,
+      );
+      return response;
     } catch (error) {
       this.logger.error(`LLM template generation failed: ${error.message}`);
       throw new Error(`LLM template generation failed: ${error.message}`);
@@ -1367,123 +1384,54 @@ export class VariableExtractionService {
 
   /**
    * Parse template generation result
+   * Updated to work with structured output from withStructuredOutput
    */
   private parseTemplateResult(
-    responseText: string,
+    structuredResult: z.infer<typeof AppTemplateResultSchema>,
     context: ExtractionContext,
   ): {
     content: string;
     title: string;
     description: string;
+    usageInstructions?: string;
     variables: WorkflowVariable[];
-    estimatedExecutionTime: string;
-    skillTags: string[];
   } {
     try {
       this.logger.log('Parsing template generation result');
 
-      // Try to extract JSON from response
-      const jsonMatch =
-        responseText.match(/```json\s*\n([\s\S]*?)\n\s*```/) ||
-        responseText.match(/```\s*\n([\s\S]*?)\n\s*```/) ||
-        responseText.match(/\{[\s\S]*\}/);
-
-      if (!jsonMatch) {
-        this.logger.warn('No JSON structure found in template response');
-        throw new Error('No JSON found in template response');
-      }
-
-      const jsonText = jsonMatch[1] || jsonMatch[0];
-      const parsed = JSON.parse(jsonText) as {
-        template?: {
-          content: string;
-          title?: string;
-          description?: string;
-        };
-        variables?: Array<{
-          variableId?: string;
-          name?: string;
-          value?: VariableValue[];
-          description?: string;
-          variableType?: string;
-        }>;
-        analysis?: {
-          estimatedExecutionTime?: string;
-        };
-        metadata?: {
-          skillTags?: string[];
-        };
-      };
-
       // Validate required fields
-      if (!parsed.template?.content) {
-        throw new Error('Missing template content in response');
+      if (!structuredResult?.template) {
+        throw new Error('Missing template object in response');
       }
 
-      if (!parsed.variables || !Array.isArray(parsed.variables)) {
-        throw new Error('Missing or invalid variables array in response');
-      }
-
-      // Process variables to ensure compatibility with new structure
-      const processedVariables = parsed.variables.map(
-        (v: {
-          variableId?: string;
-          name?: string;
-          value?: VariableValue[];
-          description?: string;
-          variableType?: string;
-        }) => {
-          // Convert to proper VariableValue structure
-          let value: VariableValue[];
-          if (v.value && Array.isArray(v.value)) {
-            if (v.value.length > 0 && typeof v.value[0] === 'object' && 'type' in v.value[0]) {
-              // Already in VariableValue format
-              value = v.value as VariableValue[];
-            } else {
-              // Convert from string array to VariableValue array
-              value = (v.value as unknown as string[]).map((text) => ({
-                type: 'text' as const,
-                text: text || '',
-              }));
-            }
-          } else {
-            value = [{ type: 'text' as const, text: '' }];
-          }
-
-          return {
-            variableId: genVariableID(),
-            name: v.name || `var_${Math.random().toString(36).substr(2, 9)}`,
-            value,
-            description: v.description || `Variable ${v.name}`,
-            variableType: (v.variableType as 'string' | 'resource' | 'option') || 'string',
-          };
-        },
-      );
+      // Use variables from context instead of parsing from response
+      // Variables are already filtered and validated in the context
+      const variables = context.variables.map((v) => ({
+        ...v,
+        value: v.value || [{ type: 'text' as const, text: '' }],
+      }));
 
       return {
-        content: parsed.template.content,
-        title: parsed.template.title || 'Workflow Template',
-        description: parsed.template.description || 'Generated workflow template',
-        variables: processedVariables,
-        estimatedExecutionTime: parsed.analysis?.estimatedExecutionTime || '5-10 minutes',
-        skillTags: parsed.metadata?.skillTags ||
-          context.analysis.primarySkills || ['Content Generation'],
+        content: structuredResult?.template?.content,
+        title: structuredResult?.template?.title || 'Workflow Template',
+        description: structuredResult?.template?.description || 'Generated workflow template',
+        usageInstructions: structuredResult?.template?.usageInstructions,
+        variables,
       };
     } catch (error) {
       this.logger.error(`Failed to parse template result: ${error.message}`);
-      this.logger.debug(`Raw response: ${responseText.substring(0, 500)}...`);
+      this.logger.debug(`Structured result: ${JSON.stringify(structuredResult)}`);
 
       // Return fallback template with proper VariableValue structure
       return {
-        content: 'I will help you with your workflow. Please provide the necessary information.',
-        title: 'Workflow Template',
-        description: 'Generated workflow template',
+        content: '',
+        title: '',
+        description: '',
+        usageInstructions: undefined,
         variables: context.variables.map((v) => ({
           ...v,
           value: v.value || [{ type: 'text' as const, text: '' }],
         })),
-        estimatedExecutionTime: '5-10 minutes',
-        skillTags: context.analysis.primarySkills || ['Content Generation'],
       };
     }
   }

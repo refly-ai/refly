@@ -5,10 +5,10 @@ on:
     branches:
       - stable
     paths:
-      - 'apps/web/**'
-      - 'packages/**'
-      - '!packages/skill-template/**'
-      - '!packages/wxt/**'
+      - "apps/web/**"
+      - "packages/**"
+      - "!packages/skill-template/**"
+      - "!packages/wxt/**"
   workflow_dispatch:
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
@@ -38,7 +38,7 @@ jobs:
       - name: Build
         run: pnpm build:web
         env:
-          NODE_OPTIONS: '--max_old_space_size=8192'
+          NODE_OPTIONS: "--max_old_space_size=8192"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -53,6 +53,7 @@ jobs:
           VITE_STATIC_PUBLIC_ENDPOINT: https://static.refly.ai
           VITE_STATIC_PRIVATE_ENDPOINT: https://api.refly.ai/v1/misc
           VITE_CANVAS_TEMPLATE_ENABLED: true
+          VITE_ENV_TAG: production
 
       - name: Create Sentry release
         uses: getsentry/action-release@v1.7.0

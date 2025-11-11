@@ -880,6 +880,11 @@ export const ShareUserSchema = {
       type: 'string',
       description: 'User nickname',
     },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'User creation time',
+    },
     avatar: {
       type: 'string',
       description: 'User avatar',

@@ -66,7 +66,7 @@ export class MediaGeneratorService {
 
       // Check if the provider item supports the requested media type
       try {
-        const config: any = JSON.parse(providerItem.config || '{}');
+        const config: any = safeParseJSON(providerItem.config || '{}');
         const capabilities = config.capabilities || {};
 
         if (!capabilities[mediaType]) {
@@ -725,7 +725,7 @@ export class MediaGeneratorService {
 
       // Check if failed
       if (actionResult.status === 'failed') {
-        const errors = actionResult.errors ? JSON.parse(actionResult.errors) : [];
+        const errors = actionResult.errors ? safeParseJSON(actionResult.errors) : [];
         const errorMessage = Array.isArray(errors) ? errors.join(', ') : String(errors);
         throw new Error(`Media generation failed: ${errorMessage}`);
       }

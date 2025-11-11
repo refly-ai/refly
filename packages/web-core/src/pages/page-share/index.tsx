@@ -181,7 +181,7 @@ const SharePage = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-[var(--screen-height)]">
         <Spin size="large" tip={t('common.loading')} />
       </div>
     );
@@ -336,7 +336,7 @@ const SharePage = () => {
           style={{ top: 20 }}
           styles={{
             body: {
-              maxHeight: 'calc(100vh - 100px)',
+              maxHeight: 'calc(var(--screen-height) - 100px)',
               padding: 0,
               overflow: 'hidden',
             },
@@ -351,7 +351,7 @@ const SharePage = () => {
             {/* Wide mode content */}
             <div className="flex-1 overflow-auto">
               {wideMode.nodeId && nodes.find((n) => n.nodeId === wideMode.nodeId) ? (
-                <div className="h-[calc(100vh-160px)]">
+                <div className="h-[calc(var(--screen-height)-160px)]">
                   <NodeRenderer
                     node={nodes.find((n) => n.nodeId === wideMode.nodeId)!}
                     isFullscreen={false}

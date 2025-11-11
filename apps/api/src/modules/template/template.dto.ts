@@ -4,6 +4,7 @@ import {
 } from '../../generated/client';
 import { CanvasTemplate, CanvasTemplateCategory } from '@refly/openapi-schema';
 import { pick } from '../../utils';
+import { safeParseJSON } from '@refly/utils';
 
 export function canvasTemplatePO2DTO(
   template: CanvasTemplateModel & {
@@ -28,7 +29,7 @@ export function canvasTemplatePO2DTO(
     ]),
     createdAt: template.createdAt.toJSON(),
     updatedAt: template.updatedAt.toJSON(),
-    shareUser: JSON.parse(template.shareUser || '{}'),
+    shareUser: safeParseJSON(template.shareUser || '{}'),
     category: template.category ? canvasTemplateCategoryPO2DTO(template.category) : undefined,
     featured: template.priority > 0 ? true : undefined,
     coverUrl: template.coverUrl,
@@ -41,7 +42,7 @@ export function canvasTemplateCategoryPO2DTO(
 ): CanvasTemplateCategory {
   return {
     ...pick(category, ['categoryId', 'name', 'labelDict', 'descriptionDict']),
-    labelDict: JSON.parse(category.labelDict || '{}'),
-    descriptionDict: JSON.parse(category.descriptionDict || '{}'),
+    labelDict: safeParseJSON(category.labelDict || '{}'),
+    descriptionDict: safeParseJSON(category.descriptionDict || '{}'),
   };
 }

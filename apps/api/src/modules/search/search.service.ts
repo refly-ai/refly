@@ -20,7 +20,7 @@ import {
 import { RAGService } from '../rag/rag.service';
 import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';
 import { ParamsError } from '@refly/errors';
-import { detectLanguage, TimeTracker } from '@refly/utils';
+import { detectLanguage, safeParseJSON, TimeTracker } from '@refly/utils';
 import { searchResultsToSources, sourcesToSearchResults } from '@refly/utils';
 import { SerperWebSearcher } from '../../utils/web-search/serper';
 import { ProviderService } from '../provider/provider.service';
@@ -221,7 +221,10 @@ export class SearchService {
       },
     });
     const resourceMap = new Map(
-      resources.map((resource) => [resource.resourceId, JSON.parse(resource.meta) as ResourceMeta]),
+      resources.map((resource) => [
+        resource.resourceId,
+        safeParseJSON(resource.meta) as ResourceMeta,
+      ]),
     );
 
     return nodes.map((node) => ({

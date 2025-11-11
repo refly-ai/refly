@@ -158,7 +158,7 @@ const findToolsetById = (toolsets: GenericToolset[], id: string) => {
 
 export const CopilotWorkflowPlan = memo(({ data }: CopilotWorkflowPlanProps) => {
   const { t } = useTranslation();
-  const { tasks = [], variables = [] } = data;
+  const { tasks = [], variables = [] } = data ?? {};
   const { data: toolsData } = useListTools({ query: { enabled: true } });
 
   return (
@@ -167,7 +167,7 @@ export const CopilotWorkflowPlan = memo(({ data }: CopilotWorkflowPlanProps) => 
         <div className="flex items-center gap-1.5">
           <NodeIcon type="start" small />
           <div className="text-refly-text-caption font-medium leading-5 flex-1 truncate text-sm">
-            {t('canvas.nodeTypes.startNode')}
+            {t('canvas.nodeTypes.start')}
           </div>
         </div>
 

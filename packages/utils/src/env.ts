@@ -53,6 +53,7 @@ declare global {
       SUBSCRIPTION_ENABLED?: boolean;
       CANVAS_TEMPLATE_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
+      ENV_TAG?: string;
     };
 
     ipcRenderer?: {

@@ -3,6 +3,7 @@ import {
   PageNodeRelation as PageNodeRelationModel,
 } from '../../generated/client';
 import { Page, PageDetail, PageNodeRelation } from '@refly/openapi-schema';
+import { safeParseJSON } from '@refly/utils';
 import { pick } from 'lodash';
 
 // User resolution response type
@@ -53,7 +54,7 @@ export function pagePO2DTO(page: PageModel): Page {
 export function pageNodeRelationPO2DTO(relation: PageNodeRelationModel): PageNodeRelation {
   return {
     ...pick(relation, ['relationId', 'pageId', 'nodeId', 'nodeType', 'entityId', 'orderIndex']),
-    nodeData: relation.nodeData ? JSON.parse(relation.nodeData) : {},
+    nodeData: relation.nodeData ? safeParseJSON(relation.nodeData) : {},
   };
 }
 

@@ -559,6 +559,10 @@ export type ShareUser = {
    */
   nickname?: string;
   /**
+   * User creation time
+   */
+  createdAt?: string;
+  /**
    * User avatar
    */
   avatar?: string;

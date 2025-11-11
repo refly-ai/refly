@@ -133,7 +133,10 @@ function Header() {
   }, [searchParams, setLoginModalOpen, navigate]);
 
   return (
-    <div className="fixed top-0 z-20 flex w-full justify-between items-center backdrop-blur-lg px-5 py-3">
+    <div
+      className="fixed z-20 flex w-full justify-between items-center backdrop-blur-lg px-5 py-3"
+      style={{ top: 'var(--banner-height)' }}
+    >
       <div className="mr-4 flex shrink-0 flex-row items-center" style={{ height: 45 }}>
         <Logo onClick={() => navigate('/')} className="mr-2" />
         <GithubStar />

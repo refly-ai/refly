@@ -86,11 +86,4 @@ export const ResourceMeta = memo(
       </div>
     );
   },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.resourceDetail?.resourceId === nextProps.resourceDetail?.resourceId &&
-      prevProps.resourceDetail?.indexStatus === nextProps.resourceDetail?.indexStatus &&
-      prevProps.isReindexing === nextProps.isReindexing
-    );
-  },
 );

@@ -461,7 +461,7 @@
   position: sticky;
   top: 16px;
   padding: 0.75rem 1rem;
-  height: calc(100vh - 32px);
+  height: calc(var(--screen-height) - 32px);
   border-left: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;

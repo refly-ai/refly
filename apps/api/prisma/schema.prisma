@@ -1287,6 +1287,8 @@ model CreditUsage {
   uid               String   @map("uid")
   /// Used credits amount
   amount            Int      @map("amount")
+  /// Expected used credits amount
+  dueAmount         Int      @default(0) @map("due_amount")
   /// Provider item ID that consumed the credits
   providerItemId    String?  @map("provider_item_id")
   /// Model name used

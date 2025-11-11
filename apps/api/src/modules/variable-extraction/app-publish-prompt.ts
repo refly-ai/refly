@@ -47,7 +47,7 @@ export function buildAppPublishPrompt(
   const nodesText = buildNodesText(canvasData.skillResponses);
 
   // Filter variables to only include those actually used in canvas nodes
-  const usedVariables = filterUsedVariables(canvasData.variables, canvasData.skillResponses);
+  const usedVariables = canvasData?.variables || [];
   const variablesText = buildVariablesText(usedVariables);
 
   const canvasContextText = buildCanvasContextText(canvasContext);
@@ -56,12 +56,6 @@ export function buildAppPublishPrompt(
   return `# AI Workflow APP Template Generation Expert
 
 You are a professional workflow analysis expert responsible for generating user-friendly natural language templates for APP publishing. Your goal is to create intuitive, clear templates that help users understand and use the workflow effectively.
-
-## Core Tasks
-1. **Template Generation**: Create natural language templates based on all original prompts and variables
-2. **User Experience**: Make templates intuitive and easy to understand
-3. **Variable Integration**: Properly integrate all workflow variables into the template
-4. **Context Preservation**: Maintain the original workflow intent and functionality
 
 ## Input Context
 
@@ -72,7 +66,7 @@ ${canvasData.description ? `- Description: ${canvasData.description}` : ''}
 ### Canvas Nodes and Prompts
 ${nodesText}
 
-### Existing Variables counts:  ${usedVariables.length}
+### Existing Variables (${usedVariables?.length || 0} total):
 ${variablesText}
 
 ### Workflow Context
@@ -80,176 +74,244 @@ ${canvasContextText}
 
 ${historicalContext ? `### Historical Learning Context\n${historicalContext}` : ''}
 
-## Template Generation Guidelines
+## Core Requirements
 
 ### 1. Language Consistency (CRITICAL)
-- **MUST maintain the same language as used in Canvas Nodes and Prompts**
-- If Canvas Nodes contain Chinese text, generate templates in Chinese
-- If Canvas Nodes contain English text, generate templates in English
-- If Canvas Nodes contain mixed languages, follow the primary language pattern
-- **Language Detection**: Analyze the Canvas Nodes content to determine the user's preferred language
-- **Consistency Requirement**: All template fields (title, description, content) must use the same language as the Canvas Nodes
 
-### 2. Natural Language Conversion
-- Convert technical workflow descriptions into user-friendly language
-- Use clear, actionable language that explains what the workflow does
-- Focus on user benefits and outcomes
-- **Maintain language consistency with Canvas Nodes**
+**Language Determination Rule (CRITICAL)**:
+The output language MUST be determined based on the following sections in priority order:
+1. **Workflow Information** (Title and Description) - PRIMARY source
+2. **Canvas Nodes and Prompts** - PRIMARY source
+3. **Workflow Context** - SECONDARY source
 
-### 3. Variable Integration (CRITICAL RULES)
-- **ABSOLUTE RULE #1**: If variablesText is empty or shows "No existing variables", template.content MUST NOT contain ANY {{variable_name}} placeholders
-- **ABSOLUTE RULE #2**: The number of {{variable_name}} placeholders in template.content MUST exactly match the number of variables provided
-- **ABSOLUTE RULE #3**: Only include variables that are actually used in Canvas Nodes and Prompts
-- **ABSOLUTE RULE #4**: Only when variables exist and are actually used in Canvas Nodes should {{variable_name}} placeholders be included in template.content
-- **Variable Count Validation**: If 3 variables exist, template.content must contain exactly 3 {{variable_name}} placeholders
-- **No Variables Case**: If 0 variables exist, template.content must contain 0 {{variable_name}} placeholders
-- Replace specific values with {{variable_name}} placeholders ONLY when variables are present
-- Ensure all variables are properly represented in the template ONLY when they exist
-- Maintain semantic meaning while making it parameterizable
-- **Variable Usage Validation**: Only variables that appear in {{variable_name}} format within the Canvas Nodes should be included in the template
+**IMPORTANT**: Variables section language should be IGNORED when determining output language. Variable names and descriptions may be in different languages, but this does NOT affect the template language.
 
-### 4. Template Structure
-- Start with a clear description of what the workflow accomplishes
-- Explain what inputs are needed (variables) ONLY if variables exist
-- Describe the expected output or result
-- Use conversational, helpful tone
-- **Maintain language consistency with Canvas Nodes**
-- **CRITICAL**: If no variables exist, do not mention "inputs" or "variables" in the template
+**Language Mapping Rules**:
+- If Workflow Information, Canvas Nodes, or Workflow Context are in Chinese → Generate Chinese template
+- If Workflow Information, Canvas Nodes, or Workflow Context are in English → Generate English template
+- If mixed languages exist → Follow the primary language (the language used in most of the content)
+- **DO NOT** use Variables section language as a reference for template language
 
-### 5. Variable Type Handling
-- **ONLY APPLY WHEN VARIABLES EXIST**: These rules only apply when variables are present
-- **string**: Use descriptive placeholders like "{{topic}}" or "{{style}}"
-- **resource**: Use file-related placeholders like "{{upload_file}}" or "{{document}}"
-- **option**: Use selection-related placeholders like "{{format}}" or "{{mode}}"
-- **NO VARIABLES CASE**: If no variables exist, do not use any placeholders in template.content
+**Examples**:
+- ✅ Correct: Workflow Info in Chinese, Variables in English → Generate Chinese template
+- ✅ Correct: Canvas Nodes in English, Variables in Chinese → Generate English template
+- ❌ Wrong: Using Variables language to determine template language
 
-### 6. Quality Standards
-- Templates should be self-explanatory
-- Variables should have clear, descriptive names ONLY when variables exist
-- Maintain workflow functionality while improving usability
-- Ensure consistency with existing variable names ONLY when variables exist
-- **Language consistency is mandatory - all output must match Canvas Nodes language**
-- **CRITICAL**: Template.content must be variable-free when no variables exist
-- **VARIABLE COUNT VALIDATION**: The number of {{variable_name}} placeholders in template.content must exactly match the number of variables provided
-- **ZERO VARIABLES RULE**: If variablesText shows "No existing variables", template.content must contain ZERO {{variable_name}} placeholders
+### 2. Variable Integration (CRITICAL)
 
-## Output Format Requirements
+**MANDATORY VARIABLE INCLUSION RULE (CRITICAL)**:
+- **ALL provided variables MUST appear in the output template.content as {{variable_name}} placeholders. NO EXCEPTIONS.**
+- **EVERY variable in the list above MUST be included, even if it seems unrelated to the workflow.**
+- **NO variables can be omitted under any circumstances.**
 
-**Must** return standard JSON format:
+**Strict Rule**: The number of {{variable_name}} placeholders in template.content MUST exactly match the variables count above.
+
+**ONE-TO-ONE MAPPING RULE (CRITICAL)**: Each variable must correspond to exactly ONE placeholder, and each placeholder must use a UNIQUE variable name. NO DUPLICATES allowed.
+
+${usedVariables?.length ? `**Required**: Your template.content must contain exactly ${usedVariables.length} {{variable_name}} placeholder(s), each using a DIFFERENT variable name from the list above. **EVERY variable in the list MUST be included, even if it seems unrelated to the workflow.**` : '**Required**: Your template.content must contain ZERO {{variable_name}} placeholders.'}
+
+**Mapping Rules**:
+- ✅ Correct: ${usedVariables?.length || 0} variables = ${usedVariables?.length || 0} UNIQUE placeholders (one-to-one mapping)
+- ❌ Wrong: ${usedVariables?.length || 0} variables ≠ any other number of placeholders
+- ❌ Wrong: Repeating the same variable name multiple times (e.g., {{topic}} and {{topic}} again)
+- ❌ Wrong: Using variable names that don't exist in the variables list above
+
+**Example of Correct One-to-One Mapping**:
+If variables are: [topic, style, format]
+✅ Correct: "Create {{topic}} content in {{style}} with {{format}} format"
+❌ Wrong: "Create {{topic}} content in {{topic}} style" (duplicate variable)
+❌ Wrong: "Create {{topic}} content" (missing variables)
+
+### 3. Natural Language Conversion (CRITICAL)
+Transform technical descriptions into conversational, user-friendly language:
+- Start with "I'll help you..." or "I'll create..."
+- Explain benefits, not just features
+- Use simple, everyday language
+- Avoid technical jargon
+
+**Variable Context Integration (CRITICAL)**:
+- **Variable names carry important meaning** - treat them as descriptive information, not just placeholders
+- When referencing variables, provide clear context about their role
+- Example: Instead of "generate {{mecha}}" → use "generate {{mecha}}-style" or "generate content with {{mecha}} theme"
+- Make it crystal clear what each variable represents in the workflow
+- Help users understand what value they should provide for each variable
+
+**Natural Flow Requirements**:
+- **NEVER use stiff transitional phrases** that create awkward interruptions
+  * Chinese: Avoid "虽然...但是...", "即使...", "尽管..."
+  * English: Avoid "Although...", "Even though...", "Despite..."
+- **MANDATORY**: Seamlessly integrate ALL variables into a natural, flowing narrative
+- **CRITICAL RULE**: If a variable seems unrelated to the main workflow, you MUST find a natural way to connect it through language
+  * Use creative language bridges to connect seemingly unrelated variables
+  * Examples of language bridges:
+    - Chinese: "结合您提供的{{weather}}信息，我将为您生成{{topic}}相关内容"
+    - Chinese: "基于您的{{preference}}和{{weather}}条件，创建{{style}}风格的内容"
+    - English: "Incorporating your {{weather}} context, I'll create {{topic}} content with {{style}} approach"
+    - English: "Considering your {{preference}} and {{weather}} conditions, I'll generate {{topic}} content"
+- The template should sound like a native speaker explaining the workflow naturally
+- **NEVER omit variables** - every variable must appear in the template
+- **NEVER** explain that variables are irrelevant or won't be used
+  * ❌ Wrong: "Although you provided {{weather}}, it won't be used..."
+  * ✅ Correct: "I'll create {{topic}} content, considering the {{weather}} context you provided"
+
+**Clean Output Requirements (CRITICAL)**:
+- **NEVER include unnecessary punctuation** like Chinese quotation marks (""), English quotes (""), or other decorative symbols
+- Keep the text clean and professional
+- Use natural language without artificial formatting symbols
+- Examples:
+  * ❌ BAD (Chinese): "最终生成一个"机甲"的图片" (has decorative quotes)
+  * ✅ GOOD (Chinese): "最终生成一个机甲风格的图片" (clean, clear)
+  * ❌ BAD (English): Create a "special" {{style}} image (has decorative quotes)
+  * ✅ GOOD (English): Create a {{style}}-style image (clean, clear)
+
+**BAD Examples (NEVER do this)**:
+❌ Chinese: "我将为您生成一个以{{topic}}为主题的内容。虽然我知道你填写了{{weather}}，但本次生成与天气无关。"
+   (Problem: Mentions irrelevant variable with stiff transition, explains it won't be used)
+❌ English: "I'll create {{content}} for you. Even though you provided {{unrelated_var}}, it won't be used in this workflow."
+   (Problem: Highlights irrelevance instead of connecting it naturally)
+❌ Chinese: "我将为您生成一个以{{topic}}为主题的{{style}}风格内容。"
+   (Problem: Missing {{weather}} variable - ALL variables must be included)
+❌ English: "I'll create {{topic}} content in {{style}} style."
+   (Problem: Missing {{weather}} variable - ALL variables must be included)
+
+**GOOD Examples (Natural flow with ALL variables connected through language)**:
+✅ Chinese: "我将为您生成一个以{{topic}}为主题的{{style}}风格内容，并按照{{format}}格式输出。"
+   (All variables integrated naturally with clear context)
+✅ English: "I'll help you create {{content_type}} content focused on {{topic}} with your preferred {{style}} approach."
+   (Conversational tone with variable context)
+✅ Chinese: "结合您提供的{{weather}}信息，我将为您生成一个以{{topic}}为主题的{{style}}风格内容，并按照{{format}}格式输出。"
+   (All variables included, seemingly unrelated {{weather}} connected naturally through language bridge)
+✅ English: "I'll create {{topic}} content in {{style}} style, incorporating the {{weather}} context you provided, and output it in {{format}} format."
+   (All variables included, {{weather}} connected naturally without forced transitions)
+✅ Chinese: "基于您的{{preference}}偏好和{{weather}}条件，我将为您生成{{topic}}相关的{{style}}风格内容。"
+   (Creative language bridge connects all variables naturally)
+✅ English: "I'll generate {{topic}} content with {{style}} approach, considering your {{preference}} and the {{weather}} conditions you specified."
+   (All variables seamlessly integrated with natural language connections)
+
+### 4. Variable Types (when variables exist)
+- **string**: {{topic}}, {{style}}, {{preference}}
+- **resource**: {{upload_file}}, {{document}}, {{image}}
+- **option**: {{format}}, {{mode}}, {{language}}
+
+## Output Format
+
+Return valid JSON only:
 
 \`\`\`json
 {
-  "analysis": {
-    "userIntent": "Clear description of what this workflow accomplishes",
-    "workflowComplexity": "simple|medium|complex",
-    "estimatedExecutionTime": "Estimated time for workflow completion",
-    "primarySkills": ["Skill1", "Skill2"],
-    "targetAudience": "Who this workflow is designed for"
-  },
   "template": {
-    "title": "User-friendly workflow title",
-    "description": "Clear description of what the workflow does",
-    "content": "Natural language template with {{variable_name}} placeholders",
-    "usageInstructions": "Brief instructions on how to use the template",
-    "exampleInputs": {
-      "variable_name": "Example value or description"
-    }
-  },
-  "variables": [
-    {
-      "name": "variable_name",
-      "description": "Clear description of what this variable represents",
-      "variableType": "string|resource|option",
-      "required": true,
-      "defaultValue": "Default value if applicable",
-      "uiHint": "Suggested UI component type"
-    }
-  ],
-  "metadata": {
-    "templateVersion": 1,
-    "generatedAt": "2024-01-01T00:00:00Z",
-    "workflowType": "Type of workflow",
-    "skillTags": ["tag1", "tag2"]
+    "title": "Clear, action-oriented workflow title",
+    "description": "Brief description of workflow purpose and benefits",
+    "content": "Natural language template ${usedVariables?.length ? `with exactly ${usedVariables.length} {{variable_name}} placeholder(s)` : 'without any {{variable_name}} placeholders'}",
+    "usageInstructions": "How to use this template in 1-2 sentences"
   }
 }
 \`\`\`
 
-## Key Principles
-1. **Language Consistency**: **CRITICAL** - All template fields must use the same language as Canvas Nodes
-2. **Clarity**: Users should immediately understand what the workflow does
-3. **Simplicity**: Avoid technical jargon, use everyday language
-4. **Completeness**: Include all necessary variables and context
-5. **Actionability**: Users should know exactly what to provide and expect
-6. **Professionalism**: Maintain a helpful, trustworthy tone
-7. **Variable Usage Validation**: Only include variables that are actually referenced in Canvas Nodes with {{variable_name}} format
+## Examples
 
-## Critical Focus: Workflow Publishing Template String
+### Example 1: With Variables (4 variables)
+**Input**: Resume optimization workflow with 4 variables
+**Output template.content**: "I'll help you create a professional resume optimized for your target job. Please provide your {{original_resume}} and the {{target_job_description}}, and I'll rewrite it in {{preferred_language}} with {{output_format}} formatting to ensure it passes ATS screening."
+✅ Correct: 4 variables = 4 placeholders
 
-The **"content"** field in the template object is the most important output - this is the **workflow publishing template string** that will be used by users. It must:
+### Example 2: Without Variables (0 variables)
+**Input**: Travel planning workflow with 0 variables
+**Output template.content**: "I'll help you create a comprehensive travel itinerary based on your preferences and requirements. I'll analyze your destination, dates, and specific needs to provide a detailed plan with accommodations, dining options, and daily activities."
+✅ Correct: 0 variables = 0 placeholders
 
-- **Language Consistency**: **CRITICAL** - Must use the same language as Canvas Nodes
-- **Be Natural and Conversational**: Sound like a helpful assistant explaining what they'll do
-- **Include Only Used Variables**: Only variables that are actually referenced in Canvas Nodes with {{variable_name}} format should be included
-- **Maintain Original Intent**: Preserve the user's original goal and requirements
-- **Be Self-Contained**: Users should understand the complete workflow from this single template
-- **Use Proper Variable Format**: All placeholders must use {{variable_name}} format exactly
-- **ABSOLUTE RULE**: If Canvas Nodes don't contain any {{variable_name}} references OR if variablesText shows "No existing variables", the template.content MUST NOT include any variable placeholders
-- **CRITICAL CONSTRAINT**: template.content can ONLY contain {{variable_name}} placeholders when variables actually exist and are used
-- **VARIABLE COUNT MATCH**: The number of {{variable_name}} placeholders in template.content must exactly equal the number of variables provided
-- **ZERO VARIABLES ENFORCEMENT**: If variablesText shows "No existing variables", template.content must contain ZERO {{variable_name}} placeholders
+### Example 3: ERROR Case - Missing Placeholders (AVOID)
+**Input**: 3 variables provided (topic, style, weather)
+**Output template.content**: "I'll create {{topic}} content in {{style}} style."
+❌ Wrong: 3 variables but only 2 placeholders - missing {{weather}} variable
+✅ Correct: "I'll create {{topic}} content in {{style}} style, considering the {{weather}} context you provided."
+   (All 3 variables included, {{weather}} connected naturally through language bridge)
 
-### Template String Examples:
+### Example 4: ERROR Case - Duplicate Variables (AVOID)
+**Input**: 3 variables provided (topic, style, format)
+**Output template.content**: "I'll create {{topic}} content in {{topic}} style with {{format}} format."
+❌ Wrong: Variable "topic" appears twice - violates one-to-one mapping rule
+✅ Correct: "I'll create {{topic}} content in {{style}} style with {{format}} format."
 
-**Before (Technical)**: "Analyze resume with target job description, rewrite content, optimize format for ATS"
-
-**After (User-friendly)**: "I'll help you create a professional resume optimized for your target job. Please provide your {{original_resume}} and the {{target_job_description}}, and I'll rewrite it in {{preferred_language}} with {{output_format}} formatting to ensure it passes ATS screening."
-
-**Before (Technical)**: "Generate travel itinerary based on destination, dates, and preferences"
-
-**After (User-friendly)**: "I'll create a personalized travel plan for your trip to {{destination}} from {{departure_city}} during {{dates}}. I'll arrange {{accommodation}} accommodations and {{food}} dining options, maintaining a {{pace}} pace with {{daily_routes}} for your {{goal}}."
-
-**Example with No Variables Used**: If Canvas Nodes contain no {{variable_name}} references, the template should be:
-"I'll help you create a comprehensive travel itinerary based on your preferences and requirements. I'll analyze your destination, dates, and specific needs to provide a detailed plan with accommodations, dining options, and daily activities."
+### Example 5: Correct Case - Connecting Unrelated Variables (FOLLOW THIS)
+**Input**: 3 variables provided (topic, style, weather) - weather seems unrelated to content generation
+**Output template.content**: "I'll create {{topic}} content in {{style}} style, incorporating the {{weather}} context you provided."
+✅ Correct: All 3 variables included, seemingly unrelated {{weather}} connected naturally through language bridge
 
 ${APP_PUBLISH_EXAMPLES}
 
-## Key Learning Points from Examples
+## Validation Checklist
 
-1. **Template String Structure**: 
-   - Start with "I'll help you..." or "I'll create..." to establish the assistant role
-   - Use natural language that flows conversationally
-   - Include all variables with {{variable_name}} placeholders
-   - End with clear expectations of what will be delivered
+Before returning your response, verify:
+- [ ] **LANGUAGE DETERMINATION**: Language matches Workflow Information, Canvas Nodes, or Workflow Context (NOT Variables)
+  * Language determined from: Workflow Info → Canvas Nodes → Workflow Context (in priority order)
+  * Variables section language is IGNORED for language determination
+  * Chinese content in primary sources → Chinese output
+  * English content in primary sources → English output
+- [ ] **MANDATORY VARIABLE INCLUSION**: template.content placeholder count = variables count (${usedVariables?.length || 0})
+  * **CRITICAL**: ALL ${usedVariables?.length || 0} variables MUST appear in template.content
+  * NO variables can be omitted, even if they seem unrelated
+- [ ] **ONE-TO-ONE MAPPING**: Each variable appears exactly ONCE in template.content (no duplicates)
+- [ ] **UNIQUE VARIABLES**: All placeholders use DIFFERENT variable names (no repeated variable names)
+- [ ] All variable names in placeholders match existing variable names exactly
+- [ ] **VARIABLE CONTEXT**: Each variable is referenced with clear context about its role
+  * Good: "{{mecha}}-style image" or "{{topic}}-focused content"
+  * Bad: just "{{mecha}} image" or "{{topic}} content"
+- [ ] **LANGUAGE BRIDGES**: All variables, including seemingly unrelated ones, are connected through natural language
+  * Use creative language bridges: "结合{{weather}}信息", "incorporating {{weather}} context", etc.
+  * Never omit variables or explain they're irrelevant
+- [ ] **CLEAN OUTPUT**: No unnecessary punctuation marks like "" or "" around variables or regular text
+- [ ] Template is conversational and user-friendly (sounds like natural speech)
+- [ ] **NATURAL FLOW**: No stiff transitional phrases
+  * Chinese: No "虽然...但是...", "即使...", "尽管..."
+  * English: No "Although...", "Even though...", "Despite..."
+- [ ] **NO IRRELEVANCE EXPLANATIONS**: Never mention that certain variables are irrelevant or won't be used
+- [ ] **ALL VARIABLES INTEGRATED**: All ${usedVariables?.length || 0} variables are seamlessly integrated into a natural, flowing narrative through language bridges
+- [ ] JSON is valid and complete
 
-2. **Variable Integration**:
-   - **CRITICAL**: Only include variables that are actually referenced in Canvas Nodes with {{variable_name}} format
-   - **ABSOLUTE RULE**: If variablesText shows "No existing variables" or is empty, template.content MUST NOT contain any {{variable_name}} placeholders
-   - **VARIABLE COUNT VALIDATION**: The number of {{variable_name}} placeholders in template.content must exactly match the number of variables provided
-   - **ZERO VARIABLES ENFORCEMENT**: If 0 variables exist, template.content must contain 0 {{variable_name}} placeholders
-   - Replace specific values with descriptive placeholders ONLY when variables exist
-   - Maintain the original semantic meaning
-   - Ensure all used variables are represented ONLY when they exist
-   - Use consistent naming conventions ONLY when variables exist
-   - **No Variables Case**: If no variables are used in Canvas Nodes, create a template without any {{variable_name}} placeholders
-   - **CRITICAL CONSTRAINT**: template.content can ONLY contain {{variable_name}} placeholders when variables actually exist and are used
+## Critical Reminder
 
-3. **User Experience Focus**:
-   - Templates should be immediately understandable
-   - Avoid technical jargon
-   - Focus on benefits and outcomes
-   - Provide clear guidance on what users need to provide
+**The template.content field is the MOST IMPORTANT output.** It must satisfy ALL of the following requirements:
 
-4. **Quality Assurance**:
-   - Every template string must be complete and self-contained
-   - Only variables that are actually used in Canvas Nodes should be included
-   - Templates should maintain the original workflow intent
-   - Language should be professional yet approachable
-   - **Language Consistency**: **CRITICAL** - All template fields must match the language used in Canvas Nodes
-   - **Variable Usage Validation**: Verify that all {{variable_name}} placeholders in the template correspond to variables actually referenced in Canvas Nodes
-   - **ABSOLUTE RULE**: If no variables exist (variablesText is empty or shows "No existing variables"), template.content MUST NOT contain any {{variable_name}} placeholders
-   - **CRITICAL CONSTRAINT**: template.content can ONLY contain {{variable_name}} placeholders when variables actually exist and are used
-   - **VARIABLE COUNT ENFORCEMENT**: The number of {{variable_name}} placeholders in template.content must exactly match the number of variables provided
-   - **ZERO VARIABLES RULE**: If variablesText shows "No existing variables", template.content must contain ZERO {{variable_name}} placeholders`;
+### Mandatory Requirements (Must ALL be met):
+1. **Language Consistency**: Match the language from Workflow Information, Canvas Nodes, or Workflow Context
+   - Determine language from: Workflow Info → Canvas Nodes → Workflow Context (priority order)
+   - **CRITICAL**: IGNORE Variables section language when determining output language
+   - Variables may be in different languages, but template language follows primary sources only
+2. **MANDATORY Variable Inclusion**: Contain exactly ${usedVariables?.length || 0} {{variable_name}} placeholder(s)
+   - **CRITICAL**: ALL ${usedVariables?.length || 0} variables MUST appear in template.content
+   - NO variables can be omitted, even if they seem unrelated
+   - Every variable in the provided list must be included
+3. **ONE-TO-ONE MAPPING**: Each variable appears exactly ONCE - NO DUPLICATES
+4. **UNIQUE VARIABLES**: All ${usedVariables?.length || 0} placeholders use DIFFERENT variable names
+5. **Variable Context**: Provide clear context for each variable
+   - Good: "{{mecha}}-style image", "{{topic}}-focused content"
+   - Bad: "{{mecha}} image", "{{topic}} content"
+6. **Clean Output**: NEVER use unnecessary punctuation
+   - No Chinese quotation marks: "" or ""
+   - No decorative English quotes: "" (only use for actual quotations if needed)
+   - No other decorative symbols
+7. **Natural Flow with Language Bridges**: Sound natural and conversational
+   - NO stiff transitions (no "虽然...但是...", "Although...", etc.)
+   - NO irrelevance explanations (never mention unused variables)
+   - **CRITICAL**: If a variable seems unrelated, use creative language bridges to connect it naturally
+     * Examples: "结合{{weather}}信息", "incorporating {{weather}} context", "considering {{preference}}"
+8. **Seamless Integration**: ALL variables flow naturally in the narrative through language bridges
+   - Even seemingly unrelated variables must be connected through natural language
+9. **Self-Contained**: The template should be clear and complete on its own
+
+### Quality Guidelines:
+- **Native Speaker Test**: Template should sound like a native speaker naturally explaining the workflow, not like a forced enumeration of variables
+- **Meaningful Names**: Variable names carry semantic meaning - use them to help users understand what information they need to provide
+- **Professional Tone**: Maintain a helpful, friendly, yet professional tone
+- **User-Centric**: Focus on what the user will get, not just what the workflow does
+
+### Output Format:
+- Return ONLY valid JSON
+- No additional text before or after the JSON
+- Ensure all JSON syntax is correct
+
+Generate your response now.`;
 }
 
 /**
@@ -301,7 +363,7 @@ function buildNodesText(skillResponses: CanvasNode[]): string {
 /**
  * Filter variables to only include those actually used in canvas nodes
  */
-function filterUsedVariables(
+export function filterUsedVariables(
   variables: WorkflowVariable[],
   skillResponses: CanvasNode[],
 ): WorkflowVariable[] {
@@ -372,7 +434,8 @@ function buildVariablesText(variables: WorkflowVariable[]): string {
 
       return `- ${v.name} (${v.variableType}): ${v.description || 'No description'} [Current values: ${valueText}]`;
     })
-    .join('\n');
+    .join(`
+      `);
 }
 
 /**

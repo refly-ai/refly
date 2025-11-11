@@ -915,7 +915,7 @@ export class WorkflowAgent {
       if (step.parentIds && step.parentIds.length > 0) {
         // Convert string of parentIds to array if needed
         const parentIdsArray = typeof step.parentIds === 'string' 
-          ? JSON.parse(step.parentIds) 
+          ? safeParseJSON(step.parentIds) 
           : step.parentIds;
           
         for (const parentId of parentIdsArray) {
@@ -1085,7 +1085,7 @@ export class TodoMdService {
                          [null, response];
       
       const jsonString = jsonMatch[1].trim();
-      const parsedResponse = JSON.parse(jsonString);
+      const parsedResponse = safeParseJSON(jsonString);
       
       // Validate the parsed response
       return parsedResponse.map(item => ({

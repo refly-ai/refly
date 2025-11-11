@@ -4,6 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, InternalOAuthError } from 'passport-oauth2';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
+import { safeParseJSON } from '@refly/utils';
 
 @Injectable()
 export class NotionOauthStrategy extends PassportStrategy(Strategy, 'notion') {
@@ -86,7 +87,7 @@ export class NotionOauthStrategy extends PassportStrategy(Strategy, 'notion') {
     const state = req?.query?.state as string;
     if (state) {
       try {
-        const stateObj = JSON.parse(state);
+        const stateObj = safeParseJSON(state);
         uid = stateObj.uid;
       } catch {
         // Ignore parsing errors

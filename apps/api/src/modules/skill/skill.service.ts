@@ -47,7 +47,7 @@ import {
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
 import { InvokeSkillJobData } from './skill.dto';
-import { documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
+import { DocumentDetail, documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
 import { CreditService } from '../credit/credit.service';
 import {
   ModelUsageQuotaExceeded,
@@ -473,7 +473,7 @@ export class SkillService implements OnModuleInit {
     }
 
     const creditBilling: CreditBilling = providerItem?.creditBilling
-      ? JSON.parse(providerItem?.creditBilling)
+      ? safeParseJSON(providerItem?.creditBilling)
       : undefined;
 
     if (creditBilling) {
@@ -493,18 +493,18 @@ export class SkillService implements OnModuleInit {
     }
 
     const modelConfigMap = {
-      chat: JSON.parse(modelProviderMap.chat.config) as LLMModelConfig,
-      agent: JSON.parse(modelProviderMap.agent.config) as LLMModelConfig,
-      titleGeneration: JSON.parse(modelProviderMap.titleGeneration.config) as LLMModelConfig,
-      queryAnalysis: JSON.parse(modelProviderMap.queryAnalysis.config) as LLMModelConfig,
+      chat: safeParseJSON(modelProviderMap.chat.config) as LLMModelConfig,
+      agent: safeParseJSON(modelProviderMap.agent.config) as LLMModelConfig,
+      titleGeneration: safeParseJSON(modelProviderMap.titleGeneration.config) as LLMModelConfig,
+      queryAnalysis: safeParseJSON(modelProviderMap.queryAnalysis.config) as LLMModelConfig,
       image: modelProviderMap.image
-        ? (JSON.parse(modelProviderMap.image.config) as MediaGenerationModelConfig)
+        ? (safeParseJSON(modelProviderMap.image.config) as MediaGenerationModelConfig)
         : undefined,
       video: modelProviderMap.video
-        ? (JSON.parse(modelProviderMap.video.config) as MediaGenerationModelConfig)
+        ? (safeParseJSON(modelProviderMap.video.config) as MediaGenerationModelConfig)
         : undefined,
       audio: modelProviderMap.audio
-        ? (JSON.parse(modelProviderMap.audio.config) as MediaGenerationModelConfig)
+        ? (safeParseJSON(modelProviderMap.audio.config) as MediaGenerationModelConfig)
         : undefined,
     };
 
@@ -905,16 +905,28 @@ export class SkillService implements OnModuleInit {
         ...new Set(context.resources.map((item) => item.resourceId).filter((id) => id)),
       ];
       const limit = pLimit(5);
-      const resources = await Promise.all(
-        resourceIds.map((id) =>
-          limit(() =>
-            this.resourceService.getResourceDetail(user, { resourceId: id, genPublicUrl: true }),
+      const resources = (
+        await Promise.all(
+          resourceIds.map((id) =>
+            limit(() =>
+              this.resourceService
+                .getResourceDetail(user, { resourceId: id, genPublicUrl: true })
+                .catch((error) => {
+                  this.logger.error(
+                    `Failed to get resource detail for resourceId ${id}: ${error?.message}`,
+                  );
+                  return null;
+                }),
+            ),
           ),
-        ),
-      );
+        )
+      )?.filter(Boolean);
+
       const resourceMap = new Map<string, Resource>();
       for (const r of resources) {
-        resourceMap.set(r.resourceId, resourcePO2DTO(r));
+        if (r) {
+          resourceMap.set(r.resourceId, resourcePO2DTO(r));
+        }
       }
 
       for (const item of context.resources) {
@@ -926,11 +938,21 @@ export class SkillService implements OnModuleInit {
     if (context.documents?.length > 0) {
       const docIds = [...new Set(context.documents.map((item) => item.docId).filter((id) => id))];
       const limit = pLimit(5);
-      const docs = await Promise.all(
-        docIds.map((id) =>
-          limit(() => this.documentService.getDocumentDetail(user, { docId: id })),
-        ),
-      );
+      const docs: DocumentDetail[] = (
+        await Promise.all(
+          docIds.map((id) =>
+            limit(() =>
+              this.documentService.getDocumentDetail(user, { docId: id }).catch((error) => {
+                this.logger.error(
+                  `Failed to get document detail for docId ${id}: ${error?.message}`,
+                );
+                return null;
+              }),
+            ),
+          ),
+        )
+      )?.filter(Boolean) as DocumentDetail[];
+
       const docMap = new Map<string, Document>();
       for (const d of docs) {
         docMap.set(d.docId, documentPO2DTO(d));
@@ -947,11 +969,21 @@ export class SkillService implements OnModuleInit {
         ...new Set(context.codeArtifacts.map((item) => item.artifactId).filter((id) => id)),
       ];
       const limit = pLimit(5);
-      const artifacts = await Promise.all(
-        artifactIds.map((id) =>
-          limit(() => this.codeArtifactService.getCodeArtifactDetail(user, id)),
-        ),
-      );
+      const artifacts = (
+        await Promise.all(
+          artifactIds.map((id) =>
+            limit(() =>
+              this.codeArtifactService.getCodeArtifactDetail(user, id).catch((error) => {
+                this.logger.error(
+                  `Failed to get code artifact detail for artifactId ${id}: ${error?.message}`,
+                );
+                return null;
+              }),
+            ),
+          ),
+        )
+      )?.filter(Boolean);
+
       const artifactMap = new Map<string, CodeArtifact>();
       for (const a of artifacts) {
         artifactMap.set(a.artifactId, codeArtifactPO2DTO(a));

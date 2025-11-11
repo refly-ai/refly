@@ -121,67 +121,6 @@ export class ToolService {
     return toolsets.map(toolsetPo2GenericToolset);
   }
 
-  async listExternalOAuthToolsets(user: User): Promise<GenericToolset[]> {
-    const externalToolset: GenericToolset = {
-      type: 'external_oauth',
-      id: 'external',
-      name: 'External OAuth',
-      builtin: false,
-      toolset: {
-        toolsetId: 'external',
-        key: 'external',
-        name: 'External',
-        definition: {
-          key: 'Authorize OAuth to start',
-          labelDict: {
-            en: 'External',
-          },
-          descriptionDict: {
-            en: 'Need to authorize OAuth in Tool Config',
-          },
-          tools: [],
-        },
-      },
-    };
-
-    const activeConnections =
-      (await this.prisma.composioConnection.findMany({
-        where: {
-          uid: user.uid,
-          status: 'active',
-          deletedAt: null,
-        },
-        select: {
-          integrationId: true,
-        },
-      })) ?? [];
-
-    const integrationIds = activeConnections
-      .map((conn) => conn.integrationId)
-      .filter((integrationId): integrationId is string => Boolean(integrationId));
-
-    if (integrationIds.length === 0) {
-      return [externalToolset];
-    }
-
-    const integrationKeys = integrationIds.map((integrationId) => `composio_${integrationId}`);
-
-    const oauthTools = await this.prisma.toolset.findMany({
-      where: {
-        uid: user.uid,
-        key: { in: integrationKeys },
-        authType: 'oauth',
-        enabled: true,
-        uninstalled: false,
-        deletedAt: null,
-      },
-    });
-
-    const oauthToolsets = oauthTools.map(toolsetPo2GenericOAuthToolset);
-
-    return [externalToolset, ...oauthToolsets];
-  }
-
   async listMcpTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
     const { isGlobal, enabled } = param ?? {};
     const servers = await this.mcpServerService.listMcpServers(user, {
@@ -634,6 +573,10 @@ export class ToolService {
     const replaceToolsetMap: Record<string, GenericToolset> = {};
 
     for (const toolset of toolsets) {
+      if (toolset.builtin) {
+        continue;
+      }
+
       let importedToolset: GenericToolset | null = null;
 
       if (toolset.type === 'regular') {
@@ -680,6 +623,11 @@ export class ToolService {
   ): Promise<GenericToolset | null> {
     const { name, toolset: toolsetInstance, builtin } = toolset;
 
+    if (!toolsetInstance) {
+      this.logger.warn(`Regular toolset missing toolset instance, skipping: ${name}`);
+      return null;
+    }
+
     // For regular toolsets, we search by key (not ID since ID is user-specific)
     const key = toolsetInstance?.key || toolset.id;
 
@@ -693,6 +641,11 @@ export class ToolService {
       return null;
     }
 
+    // Global toolsets are not imported
+    if (toolsetInstance?.isGlobal) {
+      return null;
+    }
+
     // Check if toolset key exists in inventory
     const toolsetDefinition = this.toolsetInventory[key];
     if (!toolsetDefinition) {
@@ -701,7 +654,7 @@ export class ToolService {
     }
 
     // Search for existing toolset with same key for this user
-    const existingToolset = await this.prisma.toolset.findFirst({
+    const existingToolsets = await this.prisma.toolset.findMany({
       where: {
         key,
         OR: [{ uid: user.uid }, { isGlobal: true }],
@@ -709,11 +662,27 @@ export class ToolService {
       },
     });
 
-    if (existingToolset) {
-      this.logger.debug(
-        `Found existing regular toolset for key ${key}: ${existingToolset.toolsetId}`,
+    if (existingToolsets?.length && existingToolsets.length > 0) {
+      const validUserToolset = existingToolsets.find(
+        (t) => t.uid === user.uid && !t.isGlobal && t.enabled && !t.uninstalled,
       );
-      return toolsetPo2GenericToolset(existingToolset);
+      if (validUserToolset) {
+        this.logger.debug(
+          `Found existing regular user-specific toolset for key ${key}, toolset id: ${validUserToolset.toolsetId}`,
+        );
+        return toolsetPo2GenericToolset(validUserToolset);
+      }
+
+      const validGlobalToolset = existingToolsets.find((t) => t.isGlobal && t.enabled);
+      if (validGlobalToolset) {
+        this.logger.debug(
+          `Found existing regular global toolset for key ${key}, toolset id: ${validGlobalToolset.toolsetId}`,
+        );
+        return toolsetPo2GenericToolset(validGlobalToolset);
+      }
+
+      // Return the first existing toolset if no valid user or global toolset is found
+      return toolsetPo2GenericToolset(existingToolsets[0]);
     }
 
     // Create uninstalled toolset with pre-generated ID

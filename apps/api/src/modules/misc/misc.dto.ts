@@ -3,7 +3,7 @@ import {
   ModelInfo as ModelInfoPO,
   SubscriptionPlan as SubscriptionPlanPO,
 } from '../../generated/client';
-import { pick } from '@refly/utils';
+import { pick, safeParseJSON } from '@refly/utils';
 
 export interface FileObject {
   storageKey: string;
@@ -14,7 +14,7 @@ export function modelInfoPO2DTO(modelInfo: ModelInfoPO): ModelInfo {
   return {
     ...pick(modelInfo, ['name', 'label', 'provider', 'contextLimit', 'maxOutput', 'isDefault']),
     tier: modelInfo.tier as ModelTier,
-    capabilities: JSON.parse(modelInfo.capabilities),
+    capabilities: safeParseJSON(modelInfo.capabilities),
   };
 }
 

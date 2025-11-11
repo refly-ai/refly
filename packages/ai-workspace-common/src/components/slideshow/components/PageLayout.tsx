@@ -31,7 +31,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   const { t } = useTranslation();
 
   return (
-    <Layout className="h-screen overflow-hidden bg-[#f7f9fc]">
+    <Layout className="overflow-hidden bg-[#f7f9fc] h-[var(--screen-height)]">
       {/* Top navigation bar */}
       {headerContent && (
         <div className="flex justify-between items-center px-4 py-2.5 bg-white border-b border-gray-200 z-20 shadow-sm dark:bg-gray-900 dark:border-gray-700">

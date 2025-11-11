@@ -332,24 +332,31 @@ const ToolsDependencyContent = React.memo(
     );
 
     return (
-      <div className="flex flex-col gap-4 w-[480px] p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <div className="text-lg font-semibold">{t('canvas.toolsDepencency.title')}</div>
+      <div className="flex flex-col gap-3 md:gap-4 w-[calc(100vw-32px)] max-w-[480px] p-4 md:p-6">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <div className="text-base md:text-lg font-semibold truncate">
+              {t('canvas.toolsDepencency.title')}
+            </div>
             {uninstalledCount > 0 && isLogin && (
-              <div className="max-w-[200px] truncate bg-refly-Colorful-red-light text-refly-func-danger-default rounded-[99px] px-2 text-xs leading-[18px]">
+              <div className="max-w-[120px] md:max-w-[200px] truncate bg-refly-Colorful-red-light text-refly-func-danger-default rounded-[99px] px-2 text-xs leading-[18px] flex-shrink-0">
                 {t('canvas.toolsDepencency.uninstalledToolsCount', {
                   count: uninstalledCount,
                 })}
               </div>
             )}
           </div>
-          <Button type="text" icon={<Close size={20} />} onClick={handleClose} />
+          <Button
+            type="text"
+            icon={<Close size={20} />}
+            onClick={handleClose}
+            className="flex-shrink-0"
+          />
         </div>
 
         {isLoading ? null : totalCount > 0 ? (
           <>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 md:gap-3">
               <Input
                 placeholder={t('canvas.toolsDepencency.searchPlaceholder')}
                 value={searchTerm}
@@ -369,7 +376,7 @@ const ToolsDependencyContent = React.memo(
             </div>
 
             {/* Tools List */}
-            <div className="max-h-[400px] overflow-y-auto space-y-3">
+            <div className="max-h-[400px] overflow-y-auto space-y-2 md:space-y-3">
               {currentTools.length === 0 ? (
                 <EmptyContent searchTerm={searchTerm} />
               ) : (
@@ -383,15 +390,20 @@ const ToolsDependencyContent = React.memo(
                   return (
                     <div
                       key={toolset.id}
-                      className="border-solid border-[1px] border-refly-Card-Border rounded-xl p-3"
+                      className="border-solid border-[1px] border-refly-Card-Border rounded-xl p-2 md:p-3"
                     >
                       {/* Tool Header */}
-                      <div className="py-1 px-2 flex items-center justify-between gap-3">
-                        <ToolsetIcon toolset={toolset} config={{ builtinClassName: '!w-6 !h-6' }} />
+                      <div className="py-1 px-1 md:px-2 flex items-center justify-between gap-2 md:gap-3">
+                        <div className="flex-shrink-0">
+                          <ToolsetIcon
+                            toolset={toolset}
+                            config={{ builtinClassName: '!w-5 !h-5 md:!w-6 md:!h-6' }}
+                          />
+                        </div>
 
                         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1">
-                            <div className="min-w-0 max-w-full text-refly-text-0 text-sm font-semibold leading-5 truncate">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className="min-w-0 max-w-full text-refly-text-0 text-xs md:text-sm font-semibold leading-5 truncate">
                               {toolset.type === 'regular' && toolset.builtin
                                 ? (toolset?.toolset?.definition?.labelDict?.[
                                     currentLanguage
@@ -421,7 +433,9 @@ const ToolsDependencyContent = React.memo(
 
                         {!isInstalled && isLogin && (
                           <Button
-                            className="text-refly-primary-default hover:!text-refly-primary-hover"
+                            type="text"
+                            size="small"
+                            className="text-refly-primary-default hover:!text-refly-primary-hover flex-shrink-0 text-xs md:text-sm"
                             onClick={() => handleInstallTool(toolset)}
                           >
                             {t('canvas.toolsDepencency.goToInstall')}

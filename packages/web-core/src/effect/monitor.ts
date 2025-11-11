@@ -1,4 +1,3 @@
-import { getEnv } from '@refly/utils';
 import React from 'react';
 import {
   useLocation,
@@ -6,6 +5,8 @@ import {
   createRoutesFromChildren,
   matchRoutes,
 } from 'react-router-dom';
+import { envTag } from '@refly/ui-kit';
+import { getEnv } from '@refly/utils';
 
 export const setupSentry = async () => {
   const sentryDsn = process.env.VITE_SENTRY_DSN;
@@ -14,7 +15,7 @@ export const setupSentry = async () => {
     const Sentry = await import('@sentry/react');
     Sentry.init({
       dsn: sentryDsn,
-      environment: getEnv(),
+      environment: envTag || getEnv(),
       integrations: [
         Sentry.browserTracingIntegration(),
         Sentry.replayIntegration(),

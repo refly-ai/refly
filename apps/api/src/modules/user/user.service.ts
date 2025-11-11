@@ -8,7 +8,7 @@ import {
   User,
 } from '@refly/openapi-schema';
 import { Subscription } from '../../generated/client';
-import { pick } from '@refly/utils';
+import { pick, safeParseJSON } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';
 import { OperationTooFrequent, ParamsError } from '@refly/errors';
@@ -108,9 +108,11 @@ export class UserService implements OnModuleInit {
 
       // Parse existing data with fallbacks
       const existingPreferences = currentUser?.preferences
-        ? JSON.parse(currentUser.preferences)
+        ? safeParseJSON(currentUser.preferences)
         : {};
-      const existingOnboarding = currentUser?.onboarding ? JSON.parse(currentUser.onboarding) : {};
+      const existingOnboarding = currentUser?.onboarding
+        ? safeParseJSON(currentUser.onboarding)
+        : {};
 
       // Merge data
       const mergedPreferences = {

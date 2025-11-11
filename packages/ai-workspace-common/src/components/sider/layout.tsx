@@ -428,9 +428,12 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
       className={cn(
         'bg-transparent',
         source === 'sider'
-          ? 'h-[100vh]'
-          : 'h-[calc(100vh-16px)] rounded-lg border-r border-solid border-[1px] border-refly-Card-Border bg-refly-bg-Glass-content backdrop-blur-md shadow-[0_6px_60px_0px_rgba(0,0,0,0.08)]',
+          ? ''
+          : 'rounded-lg border-r border-solid border-[1px] border-refly-Card-Border bg-refly-bg-Glass-content backdrop-blur-md shadow-[0_6px_60px_0px_rgba(0,0,0,0.08)]',
       )}
+      style={{
+        height: source === 'sider' ? 'var(--screen-height)' : 'calc(var(--screen-height) - 16px)',
+      }}
     >
       <div className="flex h-full flex-col gap-3 overflow-hidden p-4 pr-2 pt-6">
         <div className="flex flex-col gap-2 flex-1 overflow-hidden">
