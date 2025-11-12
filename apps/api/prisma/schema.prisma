@@ -1541,7 +1541,7 @@ model Toolset {
   /// Toolset key
   key           String    @map("key")
   /// Toolset auth type (credentials, oauth)
-  authType      String?   @map("auth_type")
+  authType      String?   @default("credentials") @map("auth_type")
   /// Toolset auth data
   authData      String?   @map("auth_data")
   /// Toolset config

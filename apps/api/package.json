@@ -14,8 +14,8 @@
   "scripts": {
     "copy-env": "ncp .env.example .env",
     "copy-env:develop": "ncp .env.development .env",
-    "build": "prisma generate && node scripts/build.js --verbose && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated",
-    "build:fast": "prisma generate && node scripts/build.js --fast && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated",
+    "build": "prisma generate && node scripts/build.js --verbose && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated && ncp src/modules/tool/media/audio/fish-audio.cjs dist/modules/tool/media/audio/fish-audio.cjs",
+    "build:fast": "prisma generate && node scripts/build.js --fast && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated && ncp src/modules/tool/media/audio/fish-audio.cjs dist/modules/tool/media/audio/fish-audio.cjs",
     "build:electron": "pnpm prisma:generate:sqlite && tsc --build --verbose && ncp src/generated dist/generated",
     "prisma:generate": "prisma format && prisma generate",
     "prisma:generate:sqlite": "prisma format --schema=prisma/sqlite-schema.prisma && prisma generate --schema=prisma/sqlite-schema.prisma",
@@ -32,8 +32,9 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org refly-ai --project reflyd ./dist && sentry-cli sourcemaps upload --org refly-ai --project reflyd ./dist"
   },
   "dependencies": {
-    "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
+    "axios": "^1.11.0",
     "@agentic/searxng": "^7.6.4",
+    "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
     "@elastic/elasticsearch": "7.17.14",
     "@fal-ai/client": "^1.6.2",
     "@golevelup/nestjs-stripe": "~0.8.2",
@@ -89,6 +90,8 @@
     "cookie-parser": "~1.4.6",
     "express": "~4.19.2",
     "express-session": "^1.18.2",
+    "fish-audio": "^0.0.2",
+    "get-audio-duration": "^4.0.1",
     "get-port": "^5.1.1",
     "handlebars": "^4.7.8",
     "helmet": "^7.1.0",
