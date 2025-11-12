@@ -1,15 +1,15 @@
 import { EditChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/edit-chat-input';
+import { ChatComposerRef } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
 import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
-import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import {
   CanvasNode,
   convertResultContextToItems,
@@ -17,18 +17,19 @@ import {
   ResponseNodeMeta,
 } from '@refly/canvas-common';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
+import { IContextItem } from '@refly/common-types';
 import { useActionResultStoreShallow, useKnowledgeBaseStoreShallow } from '@refly/stores';
-import { cn } from '@refly/utils/cn';
 import { sortSteps } from '@refly/utils/step';
-import { Button, Divider, Result, Skeleton } from 'antd';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Divider, Result, Segmented, Skeleton } from 'antd';
+import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
+import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Thinking } from 'refly-icons';
 import { ActionContainer } from './action-container';
 import { ActionStepCard } from './action-step';
 import { FailureNotice } from './failure-notice';
-import { PreviewChatInput } from './preview-chat-input';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
+import { ConfigInfoDisplay } from './config-info-display';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -62,12 +63,17 @@ const SkillResponseNodePreviewComponent = ({
   const { resetFailedState } = useActionPolling();
 
   const { t } = useTranslation();
-  const [editMode, setEditMode] = useState(false);
 
   const nodeSelectedToolsets = node?.data?.metadata?.selectedToolsets;
   const [selectedToolsets, setSelectedToolsets] = useState<GenericToolset[]>(
     nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET],
   );
+
+  const [editContextItems, setEditContextItems] = useState<IContextItem[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [, setDragCounter] = useState(0);
+  const { handleUploadImage } = useUploadImage();
+  const chatComposerRef = useRef<ChatComposerRef>(null);
 
   const shareId = node.data?.metadata?.shareId;
   const { data: shareData, loading: shareDataLoading } = useFetchShareData(shareId);
@@ -122,16 +128,31 @@ const SkillResponseNodePreviewComponent = ({
   }, [scrollToBottom]);
 
   const { data } = node;
-
+  const { modelInfo, runtimeConfig } = data.metadata;
   const title = result?.title ?? data?.title;
   const actionMeta = result?.actionMeta ?? data?.metadata?.actionMeta;
   const version = result?.version ?? data?.metadata?.version ?? 0;
-  const modelInfo = result?.modelInfo ?? data?.metadata?.modelInfo;
-  const runtimeConfig = result?.runtimeConfig ?? data?.metadata?.runtimeConfig;
+  // const modelInfo = result?.modelInfo ?? data?.metadata?.modelInfo;
+  // const runtimeConfig = result?.runtimeConfig ?? data?.metadata?.runtimeConfig;
   const structuredData = data?.metadata?.structuredData;
 
   const [currentQuery, setCurrentQuery] = useState<string | null>(
     (structuredData?.query as string) ?? (result?.input?.query as string) ?? title,
+  );
+  const [activeTab, setActiveTab] = useState('configure');
+
+  // Handle model selection
+  const setModelInfo = useCallback(
+    (modelInfo: any | null) => {
+      const nextVersion = (node.data?.metadata?.version || 0) + 1;
+      setNodeData(node.id, {
+        metadata: {
+          modelInfo: { ...modelInfo },
+          version: nextVersion,
+        },
+      });
+    },
+    [node.data?.metadata?.version, setNodeData, node.id],
   );
 
   // Update currentQuery when node data changes, ensuring it's specific to this node
@@ -151,6 +172,79 @@ const SkillResponseNodePreviewComponent = ({
     // Fallback to contextItems from context (could be legacy nodes)
     return convertResultContextToItems(context ?? {}, history);
   }, [data?.metadata?.contextItems, context, history]);
+
+  // Sync editContextItems with contextItems
+  useEffect(() => {
+    setEditContextItems(contextItems);
+  }, [contextItems]);
+
+  // Handle file drop
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      setDragCounter(0);
+
+      const files = Array.from(e.dataTransfer.files);
+      for (const file of files) {
+        const resource = await handleUploadImage(file, canvasId);
+        if (resource) {
+          const newContextItem: IContextItem = {
+            type: 'resource',
+            entityId: resource.resourceId,
+            title: resource.title,
+            metadata: {
+              resourceType: resource.resourceType,
+              resourceMeta: resource.data,
+              storageKey: resource.storageKey,
+              rawFileKey: resource.rawFileKey,
+              downloadURL: resource.downloadURL,
+            },
+          };
+          setEditContextItems((prev) => [...prev, newContextItem]);
+        }
+      }
+    },
+    [handleUploadImage, canvasId],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragCounter((prev) => {
+      const next = prev + 1;
+      if (next === 1) {
+        setIsDragging(true);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragCounter((prev) => {
+      const next = prev - 1;
+      if (next === 0) {
+        setIsDragging(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleRemoveFile = useCallback((file: IContextItem) => {
+    setEditContextItems((prev) => prev.filter((item) => item.entityId !== file.entityId));
+  }, []);
+
+  const handleAddToolsAndContext = useCallback(() => {
+    chatComposerRef.current?.insertAtSymbol?.();
+  }, []);
 
   useEffect(() => {
     const skillName = actionMeta?.name || 'commonQnA';
@@ -217,23 +311,9 @@ const SkillResponseNodePreviewComponent = ({
     );
   }, [resultId, title, canvasId, invokeAction, resetFailedState, setNodeData, node.id, node.data]);
 
-  useEffect(() => {
-    const handleLocateToPreview = (event: { id: string; type?: 'editResponse' }) => {
-      if (event.id === node.id && event.type === 'editResponse') {
-        setEditMode(true);
-      }
-    };
-
-    locateToNodePreviewEmitter.on('locateToNodePreview', handleLocateToPreview);
-
-    return () => {
-      locateToNodePreviewEmitter.off('locateToNodePreview', handleLocateToPreview);
-    };
-  }, [node.id]);
-
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
 
-  const { data: resources } = useFetchResources();
+  // const { data: resources } = useFetchResources();
 
   return purePreview ? (
     !result && !loading ? (
@@ -253,14 +333,7 @@ const SkillResponseNodePreviewComponent = ({
       />
     )
   ) : (
-    <div
-      className="flex flex-col gap-4 h-full w-full max-w-[1024px] mx-auto overflow-hidden"
-      onClick={() => {
-        if (editMode) {
-          setEditMode(false);
-        }
-      }}
-    >
+    <div className="h-full w-full max-w-[1024px] mx-auto flex flex-col overflow-hidden">
       <SkillResponseNodeHeader
         nodeId={node.id}
         entityId={data.entityId}
@@ -269,102 +342,178 @@ const SkillResponseNodePreviewComponent = ({
         source="preview"
         className="!h-14"
       />
-      {
-        <div className="px-4 pt-4">
-          <EditChatInput
-            enabled={editMode}
-            resultId={resultId}
-            version={version}
-            contextItems={contextItems}
-            query={currentQuery}
-            actionMeta={actionMeta}
-            modelInfo={
-              modelInfo ?? {
-                name: '',
-                label: '',
-                provider: '',
-                contextLimit: 0,
-                maxOutput: 0,
-              }
-            }
-            setEditMode={setEditMode}
-            runtimeConfig={runtimeConfig}
-            onQueryChange={setCurrentQuery}
-            selectedToolsets={selectedToolsets}
-            setSelectedToolsets={setSelectedToolsets}
-          />
-          <PreviewChatInput
-            enabled={!editMode}
-            readonly={readonly}
-            contextItems={contextItems}
-            query={currentQuery}
-            actionMeta={actionMeta}
-            setEditMode={setEditMode}
-            resources={resources}
+
+      <div className="flex-1 flex flex-col min-h-0 px-4">
+        <div className="py-3">
+          <Segmented
+            options={[
+              { label: 'Configure', value: 'configure' },
+              { label: 'Last run', value: 'lastRun' },
+            ]}
+            value={activeTab}
+            onChange={(value) => setActiveTab(value)}
+            block
+            shape="round"
           />
         </div>
-      }
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4">
-        {!result && !loading ? (
-          <div className="h-full w-full flex items-center justify-center">
-            <Result
-              status="404"
-              subTitle={t('canvas.skillResponse.resultNotFound')}
-              extra={<Button onClick={handleDelete}>{t('canvas.nodeActions.delete')}</Button>}
-            />
-          </div>
-        ) : (
-          <div className="h-full w-full flex flex-col">
-            <div
-              className={cn(
-                'h-full overflow-auto preview-container transition-opacity duration-500',
-                { 'opacity-30': editMode },
-              )}
-            >
-              {loading && !isStreaming && (
-                <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
-              )}
-              {(result?.status === 'executing' || result?.status === 'waiting') &&
-                !outputStep &&
-                statusText && (
-                  <div className="flex flex-col gap-2 animate-pulse">
-                    <Divider dashed className="my-2" />
-                    <div className="m-2 flex items-center gap-1 text-gray-500">
-                      <Thinking size={16} />
-                      <span className="text-sm">{statusText}</span>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {activeTab === 'configure' && (
+            <div className="h-full flex flex-col gap-4">
+              <div>
+                <div
+                  className="text-xs font-semibold leading-4 mb-2"
+                  style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
+                >
+                  Model
+                </div>
+                <ModelSelector
+                  model={modelInfo ?? null}
+                  setModel={setModelInfo}
+                  size="medium"
+                  briefMode={false}
+                  variant="filled"
+                  trigger={['click']}
+                  contextItems={contextItems}
+                />
+              </div>
+
+              <div>
+                <div
+                  className="text-xs font-semibold leading-4 mb-2 flex items-center justify-between"
+                  style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
+                >
+                  <span>指令</span>
+                  <Button
+                    type="text"
+                    size="small"
+                    className="text-xs h-auto px-2 py-1 text-refly-text-1 hover:text-refly-text-0"
+                    onClick={handleAddToolsAndContext}
+                  >
+                    @ Add tools and context
+                  </Button>
+                </div>
+                <div
+                  className="rounded-lg pt-2 pb-3 px-3 relative"
+                  style={{ backgroundColor: '#F6F6F6' }}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                >
+                  {/* Drag overlay */}
+                  {isDragging && (
+                    <div
+                      className="absolute inset-0 bg-refly-primary-default/10 border-2 border-refly-Card-Border rounded-lg flex items-center justify-center z-10"
+                      style={{ backdropFilter: 'blur(20px)' }}
+                    >
+                      <div
+                        className="text-sm font-semibold text-refly-primary-default text-center"
+                        style={{
+                          fontFamily: 'PingFang SC',
+                          fontSize: '14px',
+                          lineHeight: '20px',
+                          letterSpacing: 0,
+                        }}
+                      >
+                        在此处拖放文件
+                      </div>
                     </div>
-                  </div>
-                )}
-              {outputStep && (
-                <>
-                  <Divider dashed className="my-2" />
-                  <ActionStepCard
-                    result={result}
-                    step={outputStep}
-                    status={result?.status}
-                    query={currentQuery ?? title ?? ''}
+                  )}
+                  <EditChatInput
+                    ref={chatComposerRef}
+                    enabled={true}
+                    resultId={resultId}
+                    version={version}
+                    contextItems={editContextItems}
+                    query={currentQuery}
+                    actionMeta={actionMeta}
+                    modelInfo={
+                      modelInfo ?? {
+                        name: '',
+                        label: '',
+                        provider: '',
+                        contextLimit: 0,
+                        maxOutput: 0,
+                      }
+                    }
+                    setEditMode={() => {}}
+                    runtimeConfig={runtimeConfig}
+                    onQueryChange={setCurrentQuery}
+                    selectedToolsets={selectedToolsets}
+                    setSelectedToolsets={setSelectedToolsets}
                   />
-                </>
-              )}
-              {result?.status === 'failed' && !loading && (
-                <FailureNotice result={result} handleRetry={handleRetry} />
+
+                  <ConfigInfoDisplay
+                    nodeId={node.id}
+                    selectedToolsets={selectedToolsets}
+                    contextItems={editContextItems}
+                    onRemoveFile={handleRemoveFile}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'lastRun' && (
+            <div className="h-full w-full flex flex-col">
+              {!result && !loading ? (
+                <div className="h-full w-full flex items-center justify-center">
+                  <Result
+                    status="404"
+                    subTitle={t('canvas.skillResponse.resultNotFound')}
+                    extra={<Button onClick={handleDelete}>{t('canvas.nodeActions.delete')}</Button>}
+                  />
+                </div>
+              ) : (
+                <div className="h-full w-full flex flex-col">
+                  <div className="flex-1 overflow-auto preview-container transition-opacity duration-500">
+                    {loading && !isStreaming && (
+                      <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
+                    )}
+                    {(result?.status === 'executing' || result?.status === 'waiting') &&
+                      !outputStep &&
+                      statusText && (
+                        <div className="flex flex-col gap-2 animate-pulse">
+                          <Divider dashed className="my-2" />
+                          <div className="m-2 flex items-center gap-1 text-gray-500">
+                            <Thinking size={16} />
+                            <span className="text-sm">{statusText}</span>
+                          </div>
+                        </div>
+                      )}
+                    {outputStep && (
+                      <>
+                        <Divider dashed className="my-2" />
+                        <ActionStepCard
+                          result={result}
+                          step={outputStep}
+                          status={result?.status}
+                          query={currentQuery ?? title ?? ''}
+                        />
+                      </>
+                    )}
+                    {result?.status === 'failed' && !loading && (
+                      <FailureNotice result={result} handleRetry={handleRetry} />
+                    )}
+                  </div>
+
+                  {outputStep && result?.status === 'finish' && (
+                    <ActionContainer
+                      result={result}
+                      step={outputStep}
+                      nodeId={node.id}
+                      initSelectedToolsets={
+                        nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET]
+                      }
+                    />
+                  )}
+                </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-
-      {outputStep && result?.status === 'finish' && (
-        <ActionContainer
-          result={result}
-          step={outputStep}
-          nodeId={node.id}
-          initSelectedToolsets={
-            nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET]
-          }
-        />
-      )}
 
       {knowledgeBaseStore?.sourceListDrawerVisible ? (
         <SourceListModal classNames="source-list-modal" />

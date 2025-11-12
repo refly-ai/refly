@@ -1322,7 +1322,7 @@ const translations = {
     },
     workflow: {
       variables: {
-        title: '用户输入',
+        title: 'Text 类型',
         tooltip: '用户输入',
         addTitle: '新建输入项',
         editTitle: '编辑输入项',

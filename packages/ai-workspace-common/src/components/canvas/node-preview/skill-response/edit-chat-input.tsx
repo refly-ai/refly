@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { IContextItem } from '@refly/common-types';
-import { useMemo, memo, useState, useCallback, useEffect, useRef } from 'react';
-import { ChatComposer } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
+import { useMemo, memo, useState, useCallback, useEffect, useRef, forwardRef } from 'react';
+import {
+  ChatComposer,
+  ChatComposerRef,
+} from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
 import { CustomAction } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
 import {
   ModelInfo,
@@ -42,7 +45,7 @@ interface EditChatInputProps {
   setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
 }
 
-const EditChatInputComponent = (props: EditChatInputProps) => {
+const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((props, ref) => {
   const {
     enabled,
     resultId,
@@ -120,14 +123,6 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
   const { invokeAction } = useInvokeAction({ source: 'edit-chat-input' });
 
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
-
-  const textareaRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (enabled && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [enabled, textareaRef.current]);
 
   useEffect(() => {
     contextItemsRef.current = editContextItems;
@@ -362,14 +357,14 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
 
   return (
     <div
-      className="px-4 py-3 border-[1px] border-solid border-refly-primary-default rounded-[16px]"
+      className="min-h-10"
       onClick={(e) => {
         e.stopPropagation();
       }}
       ref={editAreaRef}
     >
       <ChatComposer
-        ref={textareaRef}
+        ref={ref}
         query={editQuery}
         setQuery={setEditQuery}
         handleSendMessage={handleSendMessage}
@@ -385,10 +380,11 @@ const EditChatInputComponent = (props: EditChatInputProps) => {
         enableRichInput={true}
         customActions={customActions}
         nodeId={nodeId}
+        showActions={false}
       />
     </div>
   );
-};
+});
 
 const arePropsEqual = (prevProps: EditChatInputProps, nextProps: EditChatInputProps) => {
   return (

@@ -1,6 +1,6 @@
 import { memo, useEffect, useState, useCallback, useMemo } from 'react';
 import { NodeProps, Position, useReactFlow } from '@xyflow/react';
-import { NodeHeader } from './shared/node-header';
+import { StartNodeHeader } from './shared/start-node-header';
 import { BiText } from 'react-icons/bi';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { getNodeCommonStyles } from './shared/styles';
@@ -94,7 +94,6 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
   const { workflowVariables } = workflow;
   const { addNode } = useAddNode();
   const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
-  const { t } = useTranslation();
 
   // Check if node has any connections
   const isSourceConnected = edges?.some((edge) => edge.source === id);
@@ -260,12 +259,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
         )}
       >
         {/* Header section */}
-        <NodeHeader
-          nodeType="start"
-          fixedTitle={t('canvas.workflow.userInput')}
-          title=""
-          iconFilled={true}
-        />
+        <StartNodeHeader source="node" />
 
         {/* Input parameters section */}
         {workflowVariables.length > 0 ? (
