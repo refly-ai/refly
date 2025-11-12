@@ -77,7 +77,7 @@
     }
   },
   "dependencies": {
-    "@composio/core": "^0.2.2",
+    "@composio/core": "^0.2.4",
     "browser-use-sdk": "^2.0.4"
   }
 }

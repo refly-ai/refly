@@ -96,7 +96,11 @@ const WorkflowAppPage: React.FC = () => {
     return workflowApp?.variables ?? [];
   }, [workflowApp]);
 
-  const { data: workflowDetail, status } = useWorkflowExecutionPolling({
+  const {
+    data: workflowDetail,
+    status,
+    stopPolling,
+  } = useWorkflowExecutionPolling({
     executionId,
     enabled: true,
     interval: 1000,
@@ -174,6 +178,14 @@ const WorkflowAppPage: React.FC = () => {
       setIsRunning(false);
     }
   }, [executionId, status]);
+
+  useEffect(() => {
+    if (shareId) {
+      setFinalNodeExecutions([]);
+      stopPolling();
+      setIsRunning(false);
+    }
+  }, [shareId]);
 
   const nodeExecutions = useMemo(() => {
     // Use current workflowDetail if available, otherwise use final cached results
