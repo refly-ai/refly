@@ -6,7 +6,7 @@
  */
 
 import type { ISkillEngine } from '@refly/common-types';
-import { User } from '@refly/openapi-schema';
+import { User, SkillContext } from '@refly/openapi-schema';
 
 /**
  * File representation for sandbox operations
@@ -83,6 +83,13 @@ export interface SandboxToolParams {
    * @see {@link ISkillEngine} for the interface definition
    */
   engine?: ISkillEngine;
+
+  /**
+   * Skill context containing documents, resources, code artifacts, and media files.
+   * When provided, these will be automatically downloaded and uploaded to the sandbox
+   * as files, allowing the sandbox agent to process them without polluting the LLM context.
+   */
+  context?: SkillContext;
 
   // Model configuration - only used when engine is not available (fallback)
   openaiApiKey?: string;

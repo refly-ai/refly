@@ -158,6 +158,11 @@ export class CodeInterpreterSession {
     const status = await this.codebox.start();
     this.agentExecutor = await this.createAgentExecutor();
 
+    // Set working directory to /workspace
+    await this.codebox.run(
+      'import os; os.chdir("/workspace"); print(f"Working directory: {os.getcwd()}")',
+    );
+
     // Install custom packages
     if (this.config.customPackages.length > 0) {
       await this.codebox.run(`!pip install -q ${this.config.customPackages.join(' ')}`);
@@ -200,10 +205,13 @@ export class CodeInterpreterSession {
       this.log('Using Azure Chat OpenAI');
       return new ChatOpenAI({
         temperature: this.config.temperature,
-        azureOpenAIApiKey: this.config.azureOpenAIApiKey,
-        azureOpenAIApiInstanceName: this.config.azureApiBase,
-        azureOpenAIApiVersion: this.config.azureApiVersion,
-        azureOpenAIApiDeploymentName: this.config.azureDeploymentName,
+        configuration: {
+          apiKey: this.config.azureOpenAIApiKey,
+          baseURL: this.config.azureApiBase,
+          defaultQuery: { 'api-version': this.config.azureApiVersion },
+          defaultHeaders: { 'api-key': this.config.azureOpenAIApiKey },
+        },
+        modelName: this.config.azureDeploymentName,
         maxRetries: this.config.maxRetry,
         timeout: this.config.requestTimeout * 1000, // Convert seconds to milliseconds
       }) as any;
@@ -388,8 +396,16 @@ export class CodeInterpreterSession {
         if (this.inputFiles.some((f) => f.name === filename)) {
           continue;
         }
-        const fileBuffer = await this.codebox.download(filename);
+        // Try to download from /workspace directory
+        let fileBuffer = await this.codebox.download(filename);
+
+        // If not found, try with /workspace/ prefix
+        if (!fileBuffer.content && !filename.startsWith('/workspace/')) {
+          fileBuffer = await this.codebox.download(`/workspace/${filename}`);
+        }
+
         if (!fileBuffer.content) {
+          console.warn(`[CodeBox] Failed to download file: ${filename}`);
           continue;
         }
         this.outputFiles.push(new File(filename, Buffer.from(fileBuffer.content)));
@@ -411,13 +427,19 @@ export class CodeInterpreterSession {
       request.content = 'I uploaded, just text me back and confirm that you got the file(s).';
     }
 
+    // Ensure we're working in /workspace directory
+    await this.codebox.run('import os; os.chdir("/workspace")');
+
     request.content += '\n**The user uploaded the following files: **\n';
     for (const file of request.files) {
       this.inputFiles.push(file);
-      request.content += `[Attachment: ${file.name}]\n`;
-      await this.codebox.upload(file.name, file.content);
+      const uploadedPath = await this.codebox.upload(file.name, file.content);
+      request.content += `[Attachment: ${file.name}] (available at: ${uploadedPath})\n`;
     }
-    request.content += '**File(s) are now available in the cwd. **\n';
+    request.content +=
+      '**File(s) are now available in the current working directory (/workspace). **\n';
+    request.content +=
+      '**You can access them directly by filename (e.g., "image.png") or with full path ("/workspace/image.png"). **\n';
   }
 
   /**

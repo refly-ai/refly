@@ -16,7 +16,7 @@ import { Sandbox, CodeInterpreter, type WriteInfo } from '@scalebox/sdk';
 import { ToolParams } from '@langchain/core/tools';
 import { RunnableConfig } from '@langchain/core/runnables';
 export interface ReflyService {
-  downloadFile: (storageKey: string) => Promise<Buffer>;
+  downloadFile: (params: { storageKey: string; visibility?: FileVisibility }) => Promise<Buffer>;
   uploadBase64: (
     user: User,
     param: {
@@ -541,7 +541,10 @@ export class ScaleboxFilesWrite extends AgentBaseTool<ScaleboxToolParams> {
 
       // If URL is provided, fetch content from URL
       if (input?.storageKey) {
-        const buffer = await this.params.reflyService?.downloadFile(input.storageKey);
+        const buffer = await this.params.reflyService?.downloadFile({
+          storageKey: input.storageKey,
+          visibility: 'private',
+        });
         content = buffer.buffer.slice(
           buffer.byteOffset,
           buffer.byteOffset + buffer.byteLength,

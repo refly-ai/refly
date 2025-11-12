@@ -207,7 +207,9 @@ export class SkillInvokerService {
     }
 
     if (toolsets?.length > 0) {
-      const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine);
+      const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
+        context,
+      });
       config.configurable.selectedTools = tools;
     }
 
