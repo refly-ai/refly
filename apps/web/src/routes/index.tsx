@@ -23,6 +23,7 @@ import {
 import type { RouteObject } from 'react-router-dom';
 
 export const RoutesList: RouteObject[] = [
+  // TODO: deprecated and navigate to framer page
   {
     path: '/',
     element: <HomeRedirect defaultNode={<UnsignedFrontPage />} />,
@@ -48,41 +49,42 @@ export const RoutesList: RouteObject[] = [
     element: <DocumentSharePage />,
   },
 
-  // TODO: deprecated to offline
+  // TODO: deprecated and navigate to /workspace
   {
     path: '/share/pages/:shareId',
     element: <SharePagePage />,
   },
-  // TODO: deprecated to offline
+  // TODO: deprecated and navigate to /workspace
   {
     path: '/artifact-gallery',
     element: <ArtifactGalleryPage />,
   },
-  // TODO: deprecated to offline
+  // TODO: deprecated and navigate to /workspace
   {
     path: '/use-cases-gallery',
     element: <UseCasesGalleryPage />,
   },
-  // TODO: deprecated to offline
+  // TODO: deprecated and navigate to /workspace
   {
     path: '/preview/canvas/:shareId',
     element: <TemplatePreviewPage />,
   },
-  // TODO: deprecated to offline
+  // TODO: deprecated and navigate to /workspace
   {
     path: '/canvas/',
     element: <Navigate to="/canvas/empty" replace />,
   },
-  // TODO: deprecated to offline
+  // TODO: deprecated and navigate to /workflow/:workflowId'
   {
     path: '/canvas/:canvasId',
     element: <CanvasPage />,
   },
-  // TODO: deprecated to offline
+  // TODO: deprecated and navigate to /workspace
   {
     path: '/project/:projectId',
     element: <ProjectPage />,
   },
+  // TODO: deprecated to migrate to SSR project
   {
     path: '/app/:shareId',
     element: <WorkflowAppPage />,
