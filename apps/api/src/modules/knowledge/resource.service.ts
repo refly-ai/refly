@@ -35,7 +35,7 @@ import {
   pick,
   streamToBuffer,
 } from '../../utils';
-import { genResourceID, cleanMarkdownForIngest } from '@refly/utils';
+import { genResourceID, cleanMarkdownForIngest, safeParseJSON } from '@refly/utils';
 import { ResourcePrepareResult, FinalizeResourceParam } from './knowledge.dto';
 import { SimpleEventData } from '../event/event.dto';
 import { SubscriptionService } from '../subscription/subscription.service';
@@ -291,7 +291,17 @@ export class ResourceService {
       await this.checkProjectExists(user, param.projectId);
     }
 
-    param.resourceId = genResourceID();
+    if (param.resourceId) {
+      const existingResource = await this.prisma.resource.findFirst({
+        where: { resourceId: param.resourceId },
+      });
+      if (existingResource) {
+        throw new ParamsError(`Resource ${param.resourceId} already exists`);
+      }
+    } else {
+      param.resourceId = genResourceID();
+    }
+
     if (param.content) {
       param.content = param.content.replace(/x00/g, '');
     }
@@ -306,18 +316,8 @@ export class ResourceService {
       metadata,
     } = await this.prepareResource(user, param);
 
-    const existingResource = await this.prisma.resource.findFirst({
-      where: {
-        uid: user.uid,
-        identifier,
-        deletedAt: null,
-      },
-    });
-    param.resourceId = existingResource ? existingResource.resourceId : genResourceID();
-
-    const resource = await this.prisma.resource.upsert({
-      where: { resourceId: param.resourceId },
-      create: {
+    const resource = await this.prisma.resource.create({
+      data: {
         resourceId: param.resourceId,
         identifier,
         resourceType: param.resourceType,
@@ -329,17 +329,6 @@ export class ResourceService {
         projectId: param.projectId,
         canvasId: param.canvasId,
         uid: user.uid,
-        title: param.title || '',
-        indexStatus,
-      },
-      update: {
-        meta: JSON.stringify({ ...param.data, ...metadata }),
-        contentPreview,
-        storageKey,
-        storageSize,
-        rawFileKey: staticFile?.storageKey,
-        projectId: param.projectId,
-        canvasId: param.canvasId,
         title: param.title || '',
         indexStatus,
       },
@@ -555,7 +544,7 @@ export class ResourceService {
     }
 
     const { resourceId, resourceType, rawFileKey, meta } = resource;
-    const { url, contentType } = JSON.parse(meta) as ResourceMeta;
+    const { url, contentType } = safeParseJSON(meta) as ResourceMeta;
 
     const parserFactory = new ParserFactory(this.config, this.providerService);
     const parserOptions: ParserOptions = { resourceId };
@@ -665,7 +654,7 @@ export class ResourceService {
     }
 
     const { resourceType, resourceId, meta, storageKey } = resource;
-    const { url, title } = JSON.parse(meta) as ResourceMeta;
+    const { url, title } = safeParseJSON(meta) as ResourceMeta;
     const updates: Prisma.ResourceUpdateInput = {
       indexStatus: 'finish',
     };
@@ -801,7 +790,7 @@ export class ResourceService {
 
     // Merge metadata with existing data if provided
     if (metadata || param.data) {
-      const existingMeta = JSON.parse(resource.meta || '{}');
+      const existingMeta = safeParseJSON(resource.meta || '{}');
       updates.meta = JSON.stringify({ ...existingMeta, ...metadata, ...param.data });
     }
 
@@ -1014,7 +1003,11 @@ export class ResourceService {
 
     // Create a new resource ID
     const newResourceId = genResourceID();
-    const newStorageKey = `resources/${newResourceId}.txt`;
+
+    let newStorageKey: string | undefined;
+    if (sourceResource.storageKey) {
+      newStorageKey = `resources/${newResourceId}.txt`;
+    }
 
     // Create the new resource
     const newResource = await this.prisma.resource.create({

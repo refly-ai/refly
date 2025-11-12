@@ -483,6 +483,7 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
                 arrow={false}
                 open={dropdownOpen}
                 onOpenChange={setDropdownOpen}
+                getPopupContainer={() => targetRef.current}
               >
                 <Button
                   type="text"

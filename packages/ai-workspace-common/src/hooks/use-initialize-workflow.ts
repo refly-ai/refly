@@ -8,9 +8,11 @@ import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/us
 import { useWorkflowExecutionPolling } from './use-workflow-execution-polling';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { InitializeWorkflowRequest } from '@refly/openapi-schema';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
-export const useInitializeWorkflow = (canvasId?: string) => {
+export const useInitializeWorkflow = (
+  canvasId: string,
+  forceSyncState: ({ syncRemote }: { syncRemote?: boolean }) => Promise<void>,
+) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -18,11 +20,9 @@ export const useInitializeWorkflow = (canvasId?: string) => {
   const { getCanvasList } = useHandleSiderData();
 
   const { executionId, setCanvasExecutionId } = useCanvasStoreShallow((state) => ({
-    executionId: canvasId ? state.canvasExecutionId[canvasId] || null : null,
+    executionId: state.canvasExecutionId[canvasId],
     setCanvasExecutionId: state.setCanvasExecutionId,
   }));
-
-  const { forceSyncState } = useCanvasContext();
 
   // Memoize callbacks to avoid recreating them on every render
   const handleComplete = useMemo(
@@ -145,7 +145,7 @@ export const useInitializeWorkflow = (canvasId?: string) => {
   return {
     initializeWorkflow,
     initializeWorkflowInNewCanvas,
-    loading,
+    isInitializing: loading,
     newModeLoading,
     // Workflow execution polling state
     executionId,

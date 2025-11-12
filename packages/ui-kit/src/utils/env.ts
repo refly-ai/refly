@@ -10,6 +10,7 @@ declare global {
       SUBSCRIPTION_ENABLED?: boolean;
       CANVAS_TEMPLATE_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
+      ENV_TAG?: string;
     };
 
     ipcRenderer?: {
@@ -79,6 +80,9 @@ export const canvasTemplateEnabled =
 export const sentryEnabled =
   getBrowserValue(() => Boolean(window.ENV?.SENTRY_ENABLED), false) ||
   Boolean(process.env.VITE_SENTRY_ENABLED);
+
+export const envTag = getBrowserValue(() => window.ENV?.ENV_TAG, '') || process.env.VITE_ENV_TAG;
+console.log('envTag', envTag);
 
 export const runtime = process.env.VITE_RUNTIME as IRuntime;
 

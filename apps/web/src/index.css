@@ -2,6 +2,11 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+:root {
+  --banner-height: 0px;
+  --screen-height: 100vh;
+}
+
 html {
   font-size: 16px;
 }

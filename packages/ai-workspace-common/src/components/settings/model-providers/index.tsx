@@ -400,7 +400,7 @@ export const ModelProviders = ({ visible }: ModelProvidersProps) => {
       <Modal
         className="provider-store-modal"
         width="calc(100vw - 80px)"
-        height="calc(100vh - 80px)"
+        style={{ height: 'calc(var(--screen-height) - 80px)' }}
         centered
         open={isProviderStoreOpen}
         closable={false}

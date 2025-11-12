@@ -173,7 +173,7 @@ export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecut
         wrapClassName="fullscreen-modal-wrap"
         styles={{
           body: {
-            height: '100vh',
+            height: 'var(--screen-height)',
             padding: 0,
             overflow: 'hidden',
           },
@@ -206,7 +206,7 @@ export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecut
           className="wide-mode-modal top-5"
           styles={{
             body: {
-              maxHeight: 'calc(100vh - 100px)',
+              maxHeight: 'calc(var(--screen-height) - 100px)',
               padding: 0,
               overflow: 'hidden',
             },
@@ -220,7 +220,7 @@ export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecut
             {/* Wide mode content */}
             <div className="flex-1 overflow-auto">
               {wideMode.nodeId && transformedNodes.find((n) => n.nodeId === wideMode.nodeId) ? (
-                <div className="h-[calc(100vh-160px)]">
+                <div style={{ height: 'calc(var(--screen-height) - 160px)' }}>
                   <NodeRenderer
                     node={transformedNodes.find((n) => n.nodeId === wideMode.nodeId)!}
                     isFullscreen={false}

@@ -42,13 +42,26 @@ const builtinToolsetIconMap = {
  * QueryClientProvider context such as TipTap NodeViews).
  */
 export const ToolsetIcon: React.FC<{
-  toolset: GenericToolset;
+  toolsetKey?: string;
+  toolset?: GenericToolset;
   config?: ToolsetIconConfig;
   disableInventoryLookup?: boolean;
-}> = React.memo(({ toolset, config, disableInventoryLookup }) => {
-  if (!toolset) return null;
+}> = React.memo(({ toolsetKey, toolset, config, disableInventoryLookup }) => {
+  if (!toolset && !toolsetKey) {
+    return null;
+  }
 
   const { size = 24, className, builtinClassName } = config ?? {};
+
+  // If only toolsetKey is provided without toolset, use inventory lookup
+  if (!toolset && toolsetKey && !disableInventoryLookup) {
+    return <ToolsetIconWithInventory toolsetKey={toolsetKey} size={size} className={className} />;
+  }
+
+  // If toolset is not provided, return null
+  if (!toolset) {
+    return null;
+  }
 
   // MCP icons do not require inventory lookup
   if (toolset.type === 'mcp') {
@@ -107,7 +120,8 @@ export const ToolsetIcon: React.FC<{
 });
 
 interface ToolsetIconWithInventoryProps {
-  toolset: GenericToolset;
+  toolset?: GenericToolset;
+  toolsetKey?: string;
   size: number;
   className?: string;
 }
@@ -117,21 +131,48 @@ interface ToolsetIconWithInventoryProps {
  * This component must only be rendered under QueryClientProvider.
  */
 const ToolsetIconWithInventory: React.FC<ToolsetIconWithInventoryProps> = React.memo(
-  ({ toolset, size, className }) => {
+  ({ toolset, toolsetKey, size, className }) => {
     const { data } = useListToolsetInventory({}, null, {
-      enabled: toolset.type === 'regular',
+      enabled: true,
     });
-    const toolsetDefinition = data?.data?.find((t) => t.key === toolset.toolset?.key);
+
+    // If toolsetKey is provided, use it to match (assuming toolsetKey is the key)
+    // Otherwise, use toolset.toolset?.key
+    const matchKey = toolsetKey ?? toolset?.toolset?.key;
+    const toolsetDefinition = matchKey ? data?.data?.find((t) => t.key === matchKey) : null;
+
+    // Check if it's a builtin toolset and render builtin icon if available
+    if (matchKey && builtinToolsetIconMap[matchKey as keyof typeof builtinToolsetIconMap]) {
+      const builtinToolsetIcon =
+        builtinToolsetIconMap[matchKey as keyof typeof builtinToolsetIconMap];
+      const IconComponent = builtinToolsetIcon?.icon ?? null;
+
+      if (IconComponent) {
+        return (
+          <div
+            className={cn('flex items-center justify-center overflow-hidden', className)}
+            aria-label={`Toolset icon for ${toolsetDefinition?.domain ?? 'unknown domain'}`}
+          >
+            <IconComponent
+              size={size}
+              style={{ background: builtinToolsetIcon.backgroundColor }}
+              className="rounded-md text-black"
+            />
+          </div>
+        );
+      }
+    }
+
     const finalUrl =
       toolsetDefinition?.domain ??
-      toolset.toolset?.definition?.domain ??
-      toolset.mcpServer?.url ??
+      toolset?.toolset?.definition?.domain ??
+      toolset?.mcpServer?.url ??
       '';
 
     return (
       <div
         className={cn('flex items-center justify-center overflow-hidden', className)}
-        aria-label={`Toolset icon for ${toolset.toolset?.definition?.domain ?? 'unknown domain'}`}
+        aria-label={`Toolset icon for ${toolsetDefinition?.domain ?? toolset?.toolset?.definition?.domain ?? 'unknown domain'}`}
       >
         <Favicon url={finalUrl} size={size} />
       </div>

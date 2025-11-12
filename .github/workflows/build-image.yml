@@ -10,7 +10,7 @@ jobs:
     if: github.repository == 'refly-ai/refly'
     strategy:
       matrix:
-        app: ['api', 'web']
+        app: ["api", "web"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
         if: matrix.app == 'web'
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         if: matrix.app == 'web'
@@ -35,7 +35,7 @@ jobs:
         run: pnpm build:web
         if: matrix.app == 'web'
         env:
-          NODE_OPTIONS: '--max_old_space_size=8192'
+          NODE_OPTIONS: "--max_old_space_size=8192"
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           VITE_RUNTIME: web
@@ -66,9 +66,8 @@ jobs:
         with:
           context: .
           file: ./apps/${{ matrix.app }}/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.docker_tags.outputs.tags }}
-          # use cache from GitHub Actions
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

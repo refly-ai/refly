@@ -1,6 +1,6 @@
 import { UserSettings } from '@refly/openapi-schema';
 import { User as UserModel, Subscription as SubscriptionModel } from '../../generated/client';
-import { pick } from '@refly/utils';
+import { pick, safeParseJSON } from '@refly/utils';
 import { subscriptionPO2DTO } from '../subscription/subscription.dto';
 
 export const userPO2Settings = (
@@ -18,8 +18,8 @@ export const userPO2Settings = (
       'customerId',
       'hasBetaAccess',
     ]),
-    preferences: JSON.parse(user.preferences ?? '{}'),
-    onboarding: JSON.parse(user.onboarding ?? '{}'),
+    preferences: safeParseJSON(user.preferences ?? '{}'),
+    onboarding: safeParseJSON(user.onboarding ?? '{}'),
     subscription: user.subscription ? subscriptionPO2DTO(user.subscription) : null,
   };
 };

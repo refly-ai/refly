@@ -4,6 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-github2';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
+import { safeParseJSON } from '@refly/utils';
 
 @Injectable()
 export class GithubOauthStrategy extends PassportStrategy(Strategy, 'github') {
@@ -29,7 +30,7 @@ export class GithubOauthStrategy extends PassportStrategy(Strategy, 'github') {
     const state = req?.query?.state as string;
     if (state) {
       try {
-        const stateObj = JSON.parse(state);
+        const stateObj = safeParseJSON(state);
         uid = stateObj.uid;
       } catch {
         // Ignore parsing errors

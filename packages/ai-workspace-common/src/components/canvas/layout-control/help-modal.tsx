@@ -75,7 +75,7 @@ export const HelpModal = memo(({ visible, onClose }: HelpModalProps) => {
         <div
           className="relative"
           style={{
-            height: isFullscreen ? 'calc(100vh - 140px)' : '450px',
+            height: isFullscreen ? 'calc(var(--screen-height) - 140px)' : '450px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

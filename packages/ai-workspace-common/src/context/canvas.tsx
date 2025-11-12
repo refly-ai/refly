@@ -20,8 +20,11 @@ import {
   VersionConflict,
   WorkflowVariable,
   SharedCanvasData,
+  InitializeWorkflowRequest,
+  WorkflowExecutionStatus,
 } from '@refly/openapi-schema';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
+import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import {
   getCanvasDataFromState,
@@ -69,6 +72,12 @@ interface CanvasContextType {
     workflowVariables: WorkflowVariable[];
     workflowVariablesLoading: boolean;
     refetchWorkflowVariables: () => void;
+    initializeWorkflow: (param: InitializeWorkflowRequest) => Promise<boolean>;
+    isInitializing: boolean;
+    executionId?: string;
+    workflowStatus?: WorkflowExecutionStatus;
+    isPolling: boolean;
+    pollingError: any;
   };
 
   forceSyncState: (options?: { syncRemote?: boolean }) => Promise<void>;
@@ -774,6 +783,15 @@ export const CanvasProvider = ({
     [canvasId, syncLocalNow, syncWithRemote, syncCanvasDataDebounced],
   );
 
+  const {
+    initializeWorkflow,
+    isInitializing,
+    executionId,
+    workflowStatus,
+    isPolling,
+    pollingError,
+  } = useInitializeWorkflow(canvasId, forceSyncState);
+
   return (
     <CanvasContext.Provider
       value={{
@@ -792,6 +810,12 @@ export const CanvasProvider = ({
           workflowVariables: finalVariables,
           workflowVariablesLoading,
           refetchWorkflowVariables,
+          initializeWorkflow,
+          isInitializing,
+          executionId,
+          workflowStatus,
+          isPolling,
+          pollingError,
         },
       }}
     >

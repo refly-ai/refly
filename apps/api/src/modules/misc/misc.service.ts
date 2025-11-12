@@ -476,6 +476,7 @@ export class MiscService implements OnModuleInit {
       existingFile = await this.prisma.staticFile.findFirst({
         where: {
           storageKey: param.storageKey,
+          uid: user.uid,
           deletedAt: null,
         },
       });
@@ -522,7 +523,6 @@ export class MiscService implements OnModuleInit {
     await this.minioClient(visibility).putObject(storageKey, file.buffer, {
       'Content-Type': contentType,
     });
-
     // Resize and convert to webp if it's an image
     if (contentType.startsWith('image/')) {
       await this.imageQueue?.add('resizeAndConvert', { storageKey, visibility });
@@ -741,14 +741,10 @@ export class MiscService implements OnModuleInit {
   ): Promise<{ data: Buffer; contentType: string }> {
     const file = await this.prisma.staticFile.findFirst({
       select: { uid: true, visibility: true, entityId: true, entityType: true, contentType: true },
-      where: { storageKey, deletedAt: null },
+      where: { storageKey, uid: user.uid, deletedAt: null },
     });
 
     if (!file) {
-      throw new NotFoundException();
-    }
-
-    if (!isDesktop() && file.uid !== user.uid) {
       throw new NotFoundException();
     }
 
@@ -813,6 +809,7 @@ export class MiscService implements OnModuleInit {
       where: {
         uid: user.uid,
         storageKey: { in: storageKeys },
+        deletedAt: null,
       },
     });
 
@@ -1241,8 +1238,8 @@ export class MiscService implements OnModuleInit {
       this.logger.log(`Successfully fetched and cached favicon for domain: ${domain}`);
       return { data: buffer, contentType };
     } catch (error) {
-      this.logger.error(`Failed to get favicon for domain ${domain}: ${error.stack}`);
-      throw new Error(`Unable to retrieve favicon for domain: ${domain}`);
+      this.logger.warn(`Failed to get favicon for domain ${domain}: ${error?.stack}`);
+      throw new NotFoundException(`Unable to retrieve favicon for domain: ${domain}`);
     }
   }
 }

@@ -2,7 +2,7 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Document, DocumentInterface } from '@langchain/core/documents';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
-import { cleanMarkdownForIngest } from '@refly/utils';
+import { cleanMarkdownForIngest, safeParseJSON } from '@refly/utils';
 import * as avro from 'avsc';
 import { SearchResult, User } from '@refly/openapi-schema';
 import { HybridSearchParam, ContentPayload, DocumentPayload } from './rag.dto';
@@ -523,7 +523,7 @@ export class RAGService {
 
       // Prepare points for saving to Qdrant with new IDs and tenant
       const pointsToUpsert = deserializedPoints.map((point, index) => {
-        const payload = JSON.parse(point.payload);
+        const payload = safeParseJSON(point.payload);
 
         // Generate a new ID for the point
         const id = genResourceUuid(`${targetEntityId}-${index}`);

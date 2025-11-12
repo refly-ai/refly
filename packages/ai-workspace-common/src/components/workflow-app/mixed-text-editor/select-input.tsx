@@ -123,7 +123,7 @@ const SelectInput: React.FC<SelectInputProps> = memo(
       );
 
       // Convert to approximate pixel width (16px font size)
-      const estimatedWidth = Math.max(maxLength * 10, 60); // Minimum 60px
+      const estimatedWidth = Math.max(maxLength * 10, 30); // Minimum 30px
       return `${estimatedWidth}px`;
     }, [getDisplayText, placeholder, t, options]);
 
@@ -142,12 +142,12 @@ const SelectInput: React.FC<SelectInputProps> = memo(
               text-refly-primary-default
             `}
           style={{
+            margin: '0 8px',
             borderWidth: '0 0 1.5px 0',
             borderStyle: 'dashed',
             borderColor: 'var(--refly-primary-default)',
             backgroundColor: 'transparent',
             borderRadius: '0',
-            padding: '4px 8px',
             height: '26px',
             fontFamily: 'PingFang SC',
             fontSize: '16px',

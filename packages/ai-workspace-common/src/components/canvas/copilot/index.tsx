@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 
 import { ChatBox } from './chat-box';
 import { Greeting } from './greeting';
@@ -16,9 +16,19 @@ interface CopilotProps {
 export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) => {
   const { canvasId } = useCanvasContext();
   const [query, setQuery] = useState('');
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const { currentSessionId: sessionId } = useCopilotStoreShallow((state) => ({
     currentSessionId: state.currentSessionId[canvasId] ?? null,
   }));
+
+  const [isUserScrollingUp, setIsUserScrollingUp] = useState(false);
+  const handleScrollBottom = useCallback(() => {
+    setIsUserScrollingUp(false);
+    scrollContainerRef.current?.scrollTo({
+      top: scrollContainerRef.current?.scrollHeight,
+      behavior: 'instant',
+    });
+  }, [setIsUserScrollingUp, scrollContainerRef]);
 
   const handleQueryClick = useCallback((query: string) => {
     setQuery(query);
@@ -33,16 +43,27 @@ export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) =>
         setCopilotWidth={setCopilotWidth}
       />
 
-      <div className="flex-grow overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-grow overflow-y-auto">
         {sessionId ? (
-          <SessionDetail sessionId={sessionId} setQuery={setQuery} />
+          <SessionDetail
+            sessionId={sessionId}
+            setQuery={setQuery}
+            scrollContainerRef={scrollContainerRef}
+            isUserScrollingUp={isUserScrollingUp}
+            setIsUserScrollingUp={setIsUserScrollingUp}
+          />
         ) : (
           <Greeting onQueryClick={handleQueryClick} />
         )}
       </div>
 
       <div className="w-full p-3 pt-2">
-        <ChatBox canvasId={canvasId} query={query} setQuery={setQuery} />
+        <ChatBox
+          canvasId={canvasId}
+          query={query}
+          setQuery={setQuery}
+          onSendMessage={handleScrollBottom}
+        />
       </div>
     </div>
   );

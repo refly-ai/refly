@@ -27,6 +27,7 @@ import { SHARE_CODE_PREFIX } from './const';
 import { safeParseJSON } from '@refly/utils';
 import { generateCoverUrl } from '../workflow-app/workflow-app.dto';
 import { omit } from '../../utils';
+import { ConfigService } from '@nestjs/config';
 
 function genShareId(entityType: keyof typeof SHARE_CODE_PREFIX): string {
   return SHARE_CODE_PREFIX[entityType] + createId();
@@ -47,6 +48,7 @@ export class ShareCreationService {
     private readonly creditService: CreditService,
     private readonly shareCommonService: ShareCommonService,
     private readonly shareRateLimitService: ShareRateLimitService,
+    private readonly configService: ConfigService,
     @Optional()
     @InjectQueue(QUEUE_CREATE_SHARE)
     private readonly createShareQueue?: Queue<CreateShareJobData>,
@@ -475,6 +477,10 @@ export class ShareCreationService {
     resource.shareId = shareId;
     resource.content = await this.miscService.processContentImages(resource.content ?? '');
     resource.contentPreview = resource.content.slice(0, 500);
+
+    if (resource.rawFileKey) {
+      resource.publicURL = await this.miscService.publishFile(resource.rawFileKey);
+    }
 
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'resource.json',
@@ -942,7 +948,7 @@ export class ShareCreationService {
         const shareId = relationShareMap.get(relation.relationId);
         const nodeData = relation.nodeData
           ? typeof relation.nodeData === 'string'
-            ? JSON.parse(relation.nodeData)
+            ? safeParseJSON(relation.nodeData)
             : relation.nodeData
           : {};
 
@@ -1076,9 +1082,9 @@ export class ShareCreationService {
       templateContent: workflowApp.templateContent,
       resultNodeIds: workflowApp.resultNodeIds,
       query: workflowApp.query,
-      variables: JSON.parse(workflowApp.variables || '[]'),
+      variables: safeParseJSON(workflowApp.variables || '[]'),
       canvasData: canvasDataWithId, // Use the extended canvas data with canvasId
-      creditUsage,
+      creditUsage: Math.ceil(creditUsage * this.configService.get('credit.executionCreditMarkup')),
       createdAt: workflowApp.createdAt,
       updatedAt: workflowApp.updatedAt,
     };

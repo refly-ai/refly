@@ -21,7 +21,7 @@
 
   &.fullscreen {
     .ant-modal-content {
-      min-height: 100vh;
+      min-height: var(--screen-height);
       border-radius: 0;
       display: flex;
       flex-direction: column;

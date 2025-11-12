@@ -20,6 +20,7 @@ import {
   omit,
   pick,
   REFRESH_TOKEN_COOKIE,
+  safeParseJSON,
   UID_COOKIE,
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
@@ -242,7 +243,7 @@ export class AuthService {
     const defaultRedirect = this.configService.get('auth.redirectUrl');
     let parsedState: { uid?: string; redirect?: string } | null = null;
     try {
-      parsedState = state ? JSON.parse(state) : null;
+      parsedState = state ? safeParseJSON(state) : null;
     } catch {
       this.logger.warn('Invalid state JSON received in Google OAuth callback');
     }
@@ -309,7 +310,7 @@ export class AuthService {
 
       try {
         // Merge existing scopes with new scopes to avoid overwriting
-        const existingScopes = account.scope ? JSON.parse(account.scope) : [];
+        const existingScopes = account.scope ? safeParseJSON(account.scope) : [];
         const mergedScopes = [...new Set([...existingScopes, ...scopes])];
 
         // Prepare update data
@@ -768,7 +769,7 @@ export class AuthService {
         return false;
       }
 
-      const existingScope = JSON.parse(account.scope);
+      const existingScope = safeParseJSON(account.scope);
       const hasRequiredScope = requiredScope.every((scope) => existingScope.includes(scope));
 
       return hasRequiredScope;

@@ -45,7 +45,7 @@ const SharePagePage = () => {
 
   if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center">
+      <div className="w-full flex items-center justify-center h-[var(--screen-height)]">
         <Spin size="large" />
       </div>
     );

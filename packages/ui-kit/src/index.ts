@@ -16,6 +16,7 @@ export {
   subscriptionEnabled,
   canvasTemplateEnabled,
   sentryEnabled,
+  envTag,
   runtime,
   isDesktop,
 } from './utils/env';

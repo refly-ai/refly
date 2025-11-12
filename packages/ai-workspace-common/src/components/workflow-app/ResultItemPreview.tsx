@@ -376,7 +376,7 @@ export const ResultItemPreview = memo(
           style={{ top: 20 }}
           styles={{
             body: {
-              maxHeight: 'calc(100vh - 100px)',
+              maxHeight: 'calc(var(--screen-height) - 100px)',
               padding: 0,
               overflow: 'hidden',
             },
@@ -390,7 +390,7 @@ export const ResultItemPreview = memo(
           <div className="bg-white h-full w-full flex flex-col rounded-lg overflow-hidden dark:bg-gray-900">
             <div className="flex-1 overflow-auto">
               {/* 只使用主 node 的结构，避免 CanvasNodeData 非法属性 */}
-              <div className="h-[calc(100vh-160px)]">
+              <div style={{ height: 'calc(var(--screen-height) - 160px)' }}>
                 <NodeRenderer
                   node={{
                     relationId: node.id || 'unknown',

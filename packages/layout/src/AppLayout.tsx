@@ -17,7 +17,7 @@ function Layout({ PreviewPanel, Header, children }: LayoutProps) {
   const layoutSettings = getLayoutSettings();
 
   return (
-    <div className="flex flex-col w-screen h-screen">
+    <div className="flex flex-col w-screen h-[var(--screen-height)]">
       {Header}
 
       <div className="relative pl-2 pr-3 pb-3 pt-0 flex w-full flex-1 min-h-0">

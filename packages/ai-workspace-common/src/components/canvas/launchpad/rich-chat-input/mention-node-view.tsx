@@ -43,8 +43,8 @@ function renderNodeIcon(source: string, variableType: string, nodeAttrs: any) {
   if (source === 'toolsets' || source === 'tools') {
     return (
       <ToolsetIcon
+        toolsetKey={nodeAttrs?.id}
         toolset={nodeAttrs?.toolset}
-        disableInventoryLookup
         config={TOOLSET_ICON_CONFIG}
       />
     );

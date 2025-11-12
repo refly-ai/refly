@@ -28,7 +28,10 @@ function UseCasesGalleryPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-hidden bg-white/95 dark:bg-gray-900/95">
+    <div
+      className="flex flex-col overflow-hidden bg-white/95 dark:bg-gray-900/95"
+      style={{ minHeight: 'var(--screen-height)' }}
+    >
       <Helmet>
         <title>{pageContent.metaTitle[currentLang]}</title>
         <meta name="description" content={pageContent.metaDescription[currentLang]} />

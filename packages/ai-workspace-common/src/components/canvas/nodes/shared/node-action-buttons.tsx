@@ -14,7 +14,6 @@ import cn from 'classnames';
 import { useReactFlow } from '@xyflow/react';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { useGetNodeContent } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-content';
-import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useActionResultStoreShallow, useCanvasStoreShallow } from '@refly/stores';
 import CommonColorPicker from './color-picker';
@@ -47,8 +46,7 @@ type NodeActionButtonsProps = {
 export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
   ({ nodeId, nodeType, isNodeHovered, bgColor, onChangeBackground, isExtracting }) => {
     const { t } = useTranslation();
-    const { readonly, canvasId } = useCanvasContext();
-    const workflowRun = useInitializeWorkflow(canvasId);
+    const { readonly, canvasId, workflow: workflowRun } = useCanvasContext();
     const { getNode } = useReactFlow();
     const node = useMemo(() => getNode(nodeId), [nodeId, getNode]);
     const { fetchNodeContent } = useGetNodeContent(node);
@@ -56,7 +54,7 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
     const buttonContainerRef = useRef<HTMLDivElement>(null);
 
     // Shared workflow state from CanvasProvider
-    const initializing = workflowRun.loading;
+    const initializing = workflowRun.isInitializing;
     const isPolling = workflowRun.isPolling;
 
     const showMoreButton = useMemo(() => {

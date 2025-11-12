@@ -57,7 +57,7 @@ const UnsignedFrontPage = memo(() => {
 
   return (
     <div
-      className="relative h-full overflow-hidden"
+      className="relative overflow-hidden h-[var(--screen-height)]"
       style={{
         background:
           'linear-gradient(124deg,rgba(31,201,150,0.1) 0%,rgba(69,190,255,0.06) 24.85%),var(--refly-bg-body-z0)',

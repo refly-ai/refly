@@ -5,7 +5,7 @@
   }
   &__content {
     overflow: auto;
-    height: calc(100vh - 48px - 66px - 16px);
+    height: calc(var(--screen-height) - 48px - 66px - 16px);
     box-sizing: border-box;
   }
 }

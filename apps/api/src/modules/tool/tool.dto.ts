@@ -1,6 +1,6 @@
 import { toolsetInventory } from '@refly/agent-tools';
 import { GenericToolset, ToolsetAuthType, ToolsetInstance } from '@refly/openapi-schema';
-import { pick } from '@refly/utils';
+import { pick, safeParseJSON } from '@refly/utils';
 import { McpServer as McpServerPO, Toolset as ToolsetPO } from '../../generated/client';
 import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
 
@@ -9,7 +9,7 @@ export const toolsetPO2DTO = (toolset: ToolsetPO): ToolsetInstance => {
   return {
     ...pick(toolset, ['toolsetId', 'name', 'key', 'isGlobal', 'enabled']),
     authType: toolset.authType as ToolsetAuthType,
-    config: JSON.parse(toolset.config),
+    config: safeParseJSON(toolset.config),
     definition: inventoryItem?.definition,
     createdAt: toolset.createdAt.toJSON(),
     updatedAt: toolset.updatedAt.toJSON(),

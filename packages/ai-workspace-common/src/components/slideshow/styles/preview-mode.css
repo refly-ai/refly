@@ -3,20 +3,20 @@
   background: none;
   box-shadow: none;
   padding: 0;
-  height: 100vh;
+  height: var(--screen-height);
 }
 
 .preview-modal-wrap .ant-modal {
   padding: 0;
   max-width: 100vw;
-  height: 100vh;
+  height: var(--screen-height);
 }
 
 .preview-slide {
   opacity: 0;
   transform: scale(1);
   width: 100%;
-  height: 100vh; /* Changed to full screen height */
+  height: var(--screen-height); /* Changed to full screen height */
 }
 
 /* Preview mode minimap */
@@ -319,7 +319,7 @@
 
   /* Ensure full screen content on small screens */
   .preview-slide {
-    height: 100vh;
+    height: var(--screen-height);
   }
 
   /* Minimap style adjustments for small screens */
@@ -595,7 +595,7 @@
 .preview-content-container {
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: var(--screen-height);
   overflow: hidden; /* Ensure overflow content is clipped */
   background-color: #000;
 }
@@ -623,7 +623,7 @@
 /* Slideshow content area - full screen display */
 .preview-content {
   width: 100%;
-  height: 100vh;
+  height: var(--screen-height);
   display: flex;
   justify-content: center;
   align-items: center;

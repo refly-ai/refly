@@ -4,6 +4,7 @@ import { PrismaService } from '../common/prisma.service';
 import { SkillContext } from '@refly/openapi-schema';
 import { SkillService } from '../skill/skill.service';
 import { SkillTrigger } from '../../generated/client';
+import { safeParseJSON } from '@refly/utils';
 
 @Injectable()
 export class EventService {
@@ -53,12 +54,12 @@ export class EventService {
           const trigger = skillToTriggerMap.get(skill.skillId);
 
           return this.skillService.sendInvokeSkillTask(user, {
-            input: JSON.parse(trigger.input ?? '{}'),
+            input: safeParseJSON(trigger.input ?? '{}'),
             target: {},
             skillId: skill.skillId,
             context: skillContext,
             triggerId: trigger.triggerId,
-            tplConfig: JSON.parse(trigger.tplConfig || '{}'),
+            tplConfig: safeParseJSON(trigger.tplConfig || '{}'),
           });
         }),
       );

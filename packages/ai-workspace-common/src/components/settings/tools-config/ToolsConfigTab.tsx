@@ -128,7 +128,7 @@ export const ToolsConfigTab = ({ visible }: { visible: boolean }) => {
         footer={null}
         className="provider-store-modal"
         width="calc(100vw - 80px)"
-        height="calc(100vh - 80px)"
+        style={{ height: 'calc(var(--screen-height) - 80px)' }}
         centered
         closable={false}
       >

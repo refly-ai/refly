@@ -1,5 +1,5 @@
-import { Tooltip, Button, Skeleton } from 'antd';
-import { SideRight } from 'refly-icons';
+import { Button, Skeleton } from 'antd';
+import { Close } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -8,7 +8,6 @@ import './index.scss';
 import { useCallback, useState } from 'react';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
-import { useInitializeWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-initialize-workflow';
 
 export const WorkflowRun = () => {
   const { t } = useTranslation();
@@ -18,10 +17,17 @@ export const WorkflowRun = () => {
   }));
 
   const { workflow, canvasId } = useCanvasContext();
-  const { workflowVariables, workflowVariablesLoading, refetchWorkflowVariables } = workflow;
-
-  const { initializeWorkflow, loading, executionId, workflowStatus, isPolling, pollingError } =
-    useInitializeWorkflow(canvasId);
+  const {
+    workflowVariables,
+    workflowVariablesLoading,
+    refetchWorkflowVariables,
+    initializeWorkflow,
+    isInitializing: loading,
+    executionId,
+    workflowStatus,
+    isPolling,
+    pollingError,
+  } = workflow;
 
   const [isRunning, setIsRunning] = useState(false);
 
@@ -69,14 +75,11 @@ export const WorkflowRun = () => {
   return (
     <div className="z-[30] absolute -top-[1px] -right-[1px] -bottom-[1px] w-[400px] flex flex-col rounded-xl bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m overflow-hidden">
       <div className="w-full h-[65px] flex gap-2 items-center justify-between p-3 border-solid border-refly-Card-Border border-[1px] border-x-0 border-t-0">
-        <div className="flex items-center gap-1 min-w-0 flex-1">
-          <Tooltip title={t('canvas.toolbar.closeResourcesPanel')} arrow={false}>
-            <Button type="text" icon={<SideRight size={18} />} onClick={handleClose} />
-          </Tooltip>
-          <div className="text-refly-text-0 text-base font-semibold leading-[26px] min-w-0 flex-1">
-            {t('canvas.workflow.run.title')}
-          </div>
+        <div className="text-refly-text-0 text-base font-semibold leading-[26px] min-w-0 flex-1">
+          {t('canvas.workflow.run.title')}
         </div>
+
+        <Button type="text" icon={<Close size={24} />} onClick={handleClose} />
       </div>
 
       <div className="flex-1 w-full overflow-y-auto">

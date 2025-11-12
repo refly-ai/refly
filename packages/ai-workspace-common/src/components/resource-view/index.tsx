@@ -50,11 +50,6 @@ export const ResourceView = memo(
       refetch: refetchResourceDetail,
       isLoading,
     } = useGetResourceDetail({ query: { resourceId } }, undefined, {
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
-      staleTime: 60 * 1000,
-      gcTime: 5 * 60 * 1000,
       enabled: !shareId,
     });
     const { data: shareData } = useFetchShareData<Resource>(shareId);

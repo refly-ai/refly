@@ -77,7 +77,7 @@ const FileInput: React.FC<FileInputProps> = memo(
             borderColor: 'var(--refly-primary-default)',
             backgroundColor: 'transparent',
             borderRadius: '0',
-            padding: '4px 8px',
+            margin: '0 8px',
             height: '26px',
             fontFamily: 'PingFang SC',
             fontSize: '16px',
@@ -94,9 +94,10 @@ const FileInput: React.FC<FileInputProps> = memo(
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          title={fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
         >
           <Attachment size={16} color="var(--refly-primary-default)" />
-          <span className="flex-1 ml-1">
+          <span className="flex-1 ml-1 truncate max-w-[200px] min-w-0">
             {fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
           </span>
         </div>

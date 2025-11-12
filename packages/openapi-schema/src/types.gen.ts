@@ -559,6 +559,10 @@ export type ShareUser = {
    */
   nickname?: string;
   /**
+   * User creation time
+   */
+  createdAt?: string;
+  /**
    * User avatar
    */
   avatar?: string;
@@ -2380,6 +2384,39 @@ export type BaseResponse = {
   stack?: string;
 };
 
+export type ErrorDetail = {
+  /**
+   * Error code identifier
+   */
+  code: string;
+  /**
+   * Human-readable error message
+   */
+  message: string;
+};
+
+export type BaseResponseV2 = {
+  /**
+   * Response status
+   */
+  status: 'success' | 'failed';
+  /**
+   * Response data (generic object, present when status is success)
+   */
+  data?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Array of error objects (present when status is error)
+   */
+  errors?: Array<ErrorDetail>;
+};
+
+/**
+ * Response status
+ */
+export type status2 = 'success' | 'failed';
+
 export type ListCanvasResponse = BaseResponse & {
   /**
    * Canvas list
@@ -3259,7 +3296,7 @@ export type ToolCallResult = {
 /**
  * Tool call status
  */
-export type status2 = 'executing' | 'completed' | 'failed';
+export type status3 = 'executing' | 'completed' | 'failed';
 
 export type ShareRecord = {
   /**
@@ -4151,6 +4188,313 @@ export type MediaGenerateResponse = BaseResponse & {
     [key: string]: unknown;
   };
 };
+
+export type FishAudioTextToSpeechRequest = MediaGenerateRequest & {
+  /**
+   * Text to convert to speech
+   */
+  text: string;
+  /**
+   * Voice model reference ID (optional, uses default if not specified)
+   */
+  referenceId?: string;
+  /**
+   * Reference audio files for voice cloning (alternative to referenceId). Provide uploaded audio files with optional transcripts.
+   */
+  references?: Array<{
+    /**
+     * Entity ID of the uploaded audio file from file upload
+     */
+    entityId: string;
+    /**
+     * Optional transcript text of the audio. If not provided, will be automatically transcribed using speech-to-text.
+     */
+    text?: string;
+  }>;
+  /**
+   * Output audio format
+   */
+  format?: 'mp3' | 'wav' | 'opus' | 'pcm';
+  /**
+   * MP3 bitrate (only for mp3 format)
+   */
+  mp3Bitrate?: 64 | 128 | 192;
+  /**
+   * Sample rate in Hz
+   */
+  sampleRate?: number;
+  /**
+   * Controls randomness (0-1)
+   */
+  temperature?: number;
+  /**
+   * Nucleus sampling diversity control (0-1)
+   */
+  topP?: number;
+  /**
+   * Whether to normalize audio
+   */
+  normalize?: boolean;
+  /**
+   * Chunk length for processing
+   */
+  chunkLength?: number;
+  wait?: boolean;
+};
+
+/**
+ * Output audio format
+ */
+export type format = 'mp3' | 'wav' | 'opus' | 'pcm';
+
+/**
+ * MP3 bitrate (only for mp3 format)
+ */
+export type mp3Bitrate = 64 | 128 | 192;
+
+export type FishAudioTextToSpeechResponse = BaseResponseV2 & {
+  /**
+   * TTS response data (present when status is success)
+   */
+  data?: {
+    /**
+     * Public URL of the generated audio
+     */
+    audioUrl?: string;
+    /**
+     * Entity ID of the generated audio file
+     */
+    entityId?: string;
+    /**
+     * Audio duration in seconds
+     */
+    duration?: number;
+    /**
+     * Audio format
+     */
+    format?: string;
+    /**
+     * File size in bytes
+     */
+    size?: number;
+    /**
+     * Audio generation result ID
+     */
+    resultId?: string;
+    /**
+     * Storage key for the generated audio (only available when wait is true)
+     */
+    storageKey?: string;
+  };
+};
+
+export type FishAudioSpeechToTextRequest = {
+  /**
+   * Entity ID of the uploaded audio file to transcribe
+   */
+  entityId: string;
+  /**
+   * Language code for speech recognition (e.g., "zh", "en")
+   */
+  language?: string;
+  /**
+   * Whether to ignore timestamps (increases latency for audio shorter than 30s)
+   */
+  ignoreTimestamps?: boolean;
+};
+
+export type FishAudioSpeechToTextResponse = BaseResponseV2 & {
+  /**
+   * STT response data (present when status is success)
+   */
+  data?: {
+    /**
+     * Transcribed text
+     */
+    text?: string;
+    /**
+     * Audio duration in seconds
+     */
+    duration?: number;
+    /**
+     * Text segments with timestamps
+     */
+    segments?: Array<{
+      /**
+       * Segment text
+       */
+      text?: string;
+      /**
+       * Start time in seconds
+       */
+      start?: number;
+      /**
+       * End time in seconds
+       */
+      end?: number;
+    }>;
+  };
+};
+
+export type HeyGenGenerateVideoRequest = {
+  /**
+   * Video scenes (1-50 items)
+   */
+  scenes: Array<{
+    character?: {
+      /**
+       * Character type
+       */
+      type?: 'avatar' | 'talking_photo';
+      /**
+       * Avatar ID from HeyGen
+       */
+      avatarId: string;
+      /**
+       * Avatar display style
+       */
+      avatarStyle?: 'normal' | 'circle' | 'closeUp';
+      /**
+       * Avatar scale
+       */
+      scale?: number;
+      /**
+       * Avatar position offset
+       */
+      offset?: {
+        x?: number;
+        y?: number;
+      };
+    };
+    voice: {
+      /**
+       * Voice type
+       */
+      type: 'text' | 'audio' | 'silence';
+      /**
+       * Voice ID (for text type)
+       */
+      voiceId?: string;
+      /**
+       * Text to speak (for text type)
+       */
+      inputText?: string;
+      /**
+       * Audio URL (for audio type, lowest priority)
+       */
+      audioUrl?: string;
+      /**
+       * Storage key of the audio file (format "static/{uuid}", for audio type, takes priority over audioUrl)
+       */
+      storageKey?: string;
+      /**
+       * Speech speed
+       */
+      speed?: number;
+      /**
+       * Voice pitch
+       */
+      pitch?: number;
+      /**
+       * Voice emotion
+       */
+      emotion?: string;
+    };
+    /**
+     * Scene background
+     */
+    background?: {
+      /**
+       * Background type
+       */
+      type?: 'color' | 'image' | 'video';
+      /**
+       * Background image/video URL (lowest priority)
+       */
+      url?: string;
+      /**
+       * Storage key of the background file (format "static/{uuid}", takes priority over url)
+       */
+      storageKey?: string;
+      /**
+       * Background color (hex)
+       */
+      color?: string;
+      /**
+       * Video playback mode (only for type "video")
+       */
+      playStyle?: 'freeze' | 'loop' | 'fit_to_scene' | 'once';
+    };
+  }>;
+  /**
+   * Video dimensions
+   */
+  dimension?: {
+    width?: number;
+    height?: number;
+  };
+  /**
+   * Video aspect ratio
+   */
+  aspectRatio?: string;
+  /**
+   * Test mode (adds watermark)
+   */
+  test?: boolean;
+  /**
+   * Video title
+   */
+  title?: string;
+  /**
+   * Custom callback identifier
+   */
+  callbackId?: string;
+  /**
+   * Add captions
+   */
+  caption?: boolean;
+  /**
+   * Parent action result ID for context inheritance
+   */
+  parentResultId?: string;
+};
+
+export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
+  data?: {
+    /**
+     * Generated video ID
+     */
+    videoId?: string;
+    /**
+     * Video generation status
+     */
+    status?: 'pending' | 'processing' | 'completed' | 'failed';
+    /**
+     * Video URL (when completed)
+     */
+    videoUrl?: string;
+    /**
+     * Thumbnail URL
+     */
+    thumbnailUrl?: string;
+    /**
+     * Video duration in seconds
+     */
+    duration?: number;
+    /**
+     * Error details (when failed)
+     */
+    error?: {
+      code?: string;
+      message?: string;
+    };
+  };
+};
+
+/**
+ * Video generation status
+ */
+export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type PilotStepStatus = 'init' | 'executing' | 'finish' | 'failed';
 
@@ -5367,6 +5711,22 @@ export type CreditRecharge = {
    */
   description?: string;
   /**
+   * Related app ID (if applicable)
+   */
+  appId?: string;
+  /**
+   * Extra data for this recharge (JSON)
+   */
+  extraData?: CreditRechargeExtraData;
+  /**
+   * Related share ID (if applicable)
+   */
+  shareId?: string;
+  /**
+   * Related share title (if applicable)
+   */
+  title?: string;
+  /**
    * Expiration timestamp (30 days from creation)
    */
   expiresAt: string;
@@ -5430,6 +5790,22 @@ export type CreditUsage = {
    */
   modelUsageDetails?: string;
   /**
+   * Related app ID (if applicable)
+   */
+  appId?: string;
+  /**
+   * Extra data for this usage (JSON)
+   */
+  extraData?: CreditUsageExtraData;
+  /**
+   * Related share ID (if applicable)
+   */
+  shareId?: string;
+  /**
+   * Related share title (if applicable)
+   */
+  title?: string;
+  /**
    * Usage record creation timestamp
    */
   createdAt: string;
@@ -5445,6 +5821,74 @@ export type usageType =
   | 'reranking'
   | 'commission'
   | 'other';
+
+/**
+ * Extra data for credit recharge
+ */
+export type CreditRechargeExtraData = {
+  /**
+   * Related app ID
+   */
+  appId?: string;
+  /**
+   * Related execution ID
+   */
+  executionId?: string;
+  /**
+   * Related share ID
+   */
+  shareId?: string;
+  /**
+   * Related share title
+   */
+  title?: string;
+  /**
+   * Commission rate
+   */
+  commissionRate?: number;
+};
+
+/**
+ * Extra data for credit usage
+ */
+export type CreditUsageExtraData = {
+  /**
+   * Related app ID (if applicable)
+   */
+  appId?: string;
+  /**
+   * Related execution ID
+   */
+  executionId?: string;
+  /**
+   * Related share ID
+   */
+  shareId?: string;
+  /**
+   * Related share title
+   */
+  title?: string;
+  /**
+   * Commission rate
+   */
+  commissionRate?: number;
+  /**
+   * Related toolset key
+   */
+  toolsetKey?: string;
+  /**
+   * Related toolset name
+   */
+  toolsetName?: string;
+  /**
+   * Related tool key
+   */
+  toolKey?: string;
+  /**
+   * Related tool name
+   */
+  toolName?: string;
+};
 
 export type ListProvidersResponse = BaseResponse & {
   data?: Array<Provider>;
@@ -5547,7 +5991,7 @@ export type ProviderTestResult = {
 /**
  * Test result status
  */
-export type status3 = 'success' | 'failed' | 'unknown';
+export type status5 = 'success' | 'failed' | 'unknown';
 
 export type TestProviderConnectionResponse = BaseResponse & {
   data?: ProviderTestResult;

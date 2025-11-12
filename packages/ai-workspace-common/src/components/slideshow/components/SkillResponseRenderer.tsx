@@ -61,7 +61,8 @@ export const SkillResponseRenderer = memo(({ node, isMinimap = false }: SkillRes
     <div className={`flex h-full w-full grow relative ${isMinimap ? 'overflow-hidden' : ''}`}>
       {/* Main content */}
       <div
-        className={`flex h-full w-full grow bg-white overflow-auto dark:bg-gray-900 rounded-lg ${isMinimap ? 'h-[calc(100vh-100px)]' : ''}`}
+        className={'flex h-full w-full grow bg-white overflow-auto dark:bg-gray-900 rounded-lg'}
+        style={isMinimap ? { height: 'calc(var(--screen-height) - 100px)' } : undefined}
       >
         <div
           className={`flex flex-col space-y-4 p-4 h-full ${isMinimap ? 'w-full max-w-none' : 'max-w-[1024px] mx-auto w-full'}`}

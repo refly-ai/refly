@@ -13,6 +13,7 @@ import {
   EntityType,
 } from '@refly/openapi-schema';
 import {} from '@refly/openapi-schema';
+import { safeParseJSON } from '@refly/utils';
 
 /**
  * Convert PilotSession PO to DTO
@@ -29,7 +30,7 @@ export const pilotSessionPO2DTO = (session: PilotSessionPO): PilotSession => {
       'currentEpoch',
       'maxEpoch',
     ]),
-    input: JSON.parse(session.input),
+    input: safeParseJSON(session.input),
     targetType: session.targetType as EntityType,
     status: session.status as PilotSessionStatus,
     createdAt: session.createdAt.toJSON(),

@@ -3,7 +3,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 
 export const LightLoading = () => {
   return (
-    <div className="h-screen w-screen flex flex-col justify-center items-center">
+    <div className="w-screen flex flex-col justify-center items-center h-[var(--screen-height)]">
       <div className="flex justify-center items-center mb-5">
         <img src={Logo} alt="Refly" className="w-12 h-12 mr-3" />
         <span className="text-3xl font-bold">Refly </span>

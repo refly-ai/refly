@@ -4350,6 +4350,10 @@ components:
         nickname:
           type: string
           description: User nickname
+        createdAt:
+          type: string
+          format: date-time
+          description: User creation time
         avatar:
           type: string
           description: User avatar
@@ -6109,6 +6113,42 @@ components:
         stack:
           type: string
           description: Error stack (only returned in development environment)
+
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code identifier
+          example: "TTS_FAILED"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Failed to generate speech after 3 attempts"
+
+    BaseResponseV2:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: Response status
+          enum: [success, failed]
+          example: success
+        data:
+          description: Response data (generic object, present when status is success)
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          description: Array of error objects (present when status is error)
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+
     ListCanvasResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -7932,6 +7972,346 @@ components:
               type: object
               description: Media generation original result from provider
 
+
+    FishAudioTextToSpeechRequest:
+      allOf:
+        - $ref: '#/components/schemas/MediaGenerateRequest'
+        - type: object
+          required:
+            - text
+          properties:
+            text:
+              type: string
+              description: Text to convert to speech
+              example: "Hello, welcome to Refly"
+              minLength: 1
+              maxLength: 5000
+            referenceId:
+              type: string
+              description: Voice model reference ID (optional, uses default if not specified)
+              example: "7f92f8afb8ec43bf81429cc1c9199cb1"
+            references:
+              type: array
+              description: Reference audio files for voice cloning (alternative to referenceId). Provide uploaded audio files with optional transcripts.
+              items:
+                type: object
+                required:
+                  - entityId
+                properties:
+                  entityId:
+                    type: string
+                    description: Entity ID of the uploaded audio file from file upload
+                    example: "r-vkwhup837t2jzicp87v8i6q5"
+                  text:
+                    type: string
+                    description: Optional transcript text of the audio. If not provided, will be automatically transcribed using speech-to-text.
+                    example: "Hello, this is a sample voice recording"
+            format:
+              type: string
+              description: Output audio format
+              enum: [mp3, wav, opus, pcm]
+              default: mp3
+              example: mp3
+            mp3Bitrate:
+              type: integer
+              description: MP3 bitrate (only for mp3 format)
+              enum: [64, 128, 192]
+              default: 128
+              example: 128
+            sampleRate:
+              type: integer
+              description: Sample rate in Hz
+              example: 44100
+            temperature:
+              type: number
+              description: Controls randomness (0-1)
+              minimum: 0
+              maximum: 1
+              default: 0.9
+              example: 0.9
+            topP:
+              type: number
+              description: Nucleus sampling diversity control (0-1)
+              minimum: 0
+              maximum: 1
+              default: 0.9
+              example: 0.9
+            normalize:
+              type: boolean
+              description: Whether to normalize audio
+              default: true
+            chunkLength:
+              type: integer
+              description: Chunk length for processing
+              minimum: 100
+              maximum: 300
+              default: 200
+            wait:
+              type: boolean
+          description: Whether to wait for the generation to complete
+          default: false
+
+    FishAudioTextToSpeechResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponseV2'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: TTS response data (present when status is success)
+              properties:
+                audioUrl:
+                  type: string
+                  format: uri
+                  description: Public URL of the generated audio
+                  example: "https://cdn.refly.ai/static/abc123.mp3"
+                entityId:
+                  type: string
+                  description: Entity ID of the generated audio file
+                  example: "r-vkwhup837t2jzicp87v8i6q5"
+                duration:
+                  type: number
+                  description: Audio duration in seconds
+                  example: 5.2
+                format:
+                  type: string
+                  description: Audio format
+                  example: mp3
+                size:
+                  type: integer
+                  description: File size in bytes
+                  example: 102400
+                resultId:
+                  type: string
+                  description: Audio generation result ID
+                  example: ar-g30e1b80b5g1itbemc0g5jj3
+                storageKey:
+                  type: string
+                  description: Storage key for the generated audio (only available when wait is true)
+
+    FishAudioSpeechToTextRequest:
+      type: object
+      required:
+        - entityId
+      properties:
+        entityId:
+          type: string
+          description: Entity ID of the uploaded audio file to transcribe
+          example: "r-vkwhup837t2jzicp87v8i6q5"
+        language:
+          type: string
+          description: Language code for speech recognition (e.g., "zh", "en")
+          example: "en"
+        ignoreTimestamps:
+          type: boolean
+          description: Whether to ignore timestamps (increases latency for audio shorter than 30s)
+          default: true
+
+    FishAudioSpeechToTextResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponseV2'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: STT response data (present when status is success)
+              properties:
+                text:
+                  type: string
+                  description: Transcribed text
+                  example: "Hello, welcome to Refly"
+                duration:
+                  type: number
+                  description: Audio duration in seconds
+                  example: 5.2
+                segments:
+                  type: array
+                  description: Text segments with timestamps
+                  items:
+                    type: object
+                    properties:
+                      text:
+                        type: string
+                        description: Segment text
+                      start:
+                        type: number
+                        description: Start time in seconds
+                      end:
+                        type: number
+                        description: End time in seconds
+
+    HeyGenGenerateVideoRequest:
+      type: object
+      required:
+        - scenes
+      properties:
+        scenes:
+          type: array
+          description: Video scenes (1-50 items)
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            required:
+              - voice
+            properties:
+              character:
+                type: object
+                required:
+                  - avatarId
+                properties:
+                  type:
+                    type: string
+                    enum: [avatar, talking_photo]
+                    default: avatar
+                    description: Character type
+                  avatarId:
+                    type: string
+                    description: Avatar ID from HeyGen
+                    example: "avatar_123"
+                  avatarStyle:
+                    type: string
+                    enum: [normal, circle, closeUp]
+                    default: normal
+                    description: Avatar display style
+                  scale:
+                    type: number
+                    minimum: 0
+                    maximum: 5.0
+                    description: Avatar scale
+                  offset:
+                    type: object
+                    description: Avatar position offset
+                    properties:
+                      x:
+                        type: number
+                      y:
+                        type: number
+              voice:
+                type: object
+                required:
+                  - type
+                properties:
+                  type:
+                    type: string
+                    enum: [text, audio, silence]
+                    description: Voice type
+                  voiceId:
+                    type: string
+                    description: Voice ID (for text type)
+                  inputText:
+                    type: string
+                    description: Text to speak (for text type)
+                  audioUrl:
+                    type: string
+                    description: Audio URL (for audio type, lowest priority)
+                  storageKey:
+                    type: string
+                    description: Storage key of the audio file (format "static/{uuid}", for audio type, takes priority over audioUrl)
+                  speed:
+                    type: number
+                    minimum: 0.5
+                    maximum: 1.5
+                    description: Speech speed
+                  pitch:
+                    type: number
+                    minimum: -50
+                    maximum: 50
+                    description: Voice pitch
+                  emotion:
+                    type: string
+                    description: Voice emotion
+              background:
+                type: object
+                description: Scene background
+                properties:
+                  type:
+                    type: string
+                    enum: [color, image, video]
+                    description: Background type
+                  url:
+                    type: string
+                    description: Background image/video URL (lowest priority)
+                  storageKey:
+                    type: string
+                    description: Storage key of the background file (format "static/{uuid}", takes priority over url)
+                  color:
+                    type: string
+                    description: Background color (hex)
+                    example: "#f6f6fc"
+                  playStyle:
+                    type: string
+                    enum: [freeze, loop, fit_to_scene, once]
+                    default: fit_to_scene
+                    description: Video playback mode (only for type "video")
+        dimension:
+          type: object
+          description: Video dimensions
+          properties:
+            width:
+              type: integer
+              example: 1280
+            height:
+              type: integer
+              example: 720
+        aspectRatio:
+          type: string
+          description: Video aspect ratio
+          example: "16:9"
+        test:
+          type: boolean
+          description: Test mode (adds watermark)
+          default: false
+        title:
+          type: string
+          description: Video title
+        callbackId:
+          type: string
+          description: Custom callback identifier
+        caption:
+          type: boolean
+          description: Add captions
+          default: false
+        parentResultId:
+          type: string
+          description: Parent action result ID for context inheritance
+
+    HeyGenGenerateVideoResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponseV2'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                videoId:
+                  type: string
+                  description: Generated video ID
+                  example: "video_abc123"
+                status:
+                  type: string
+                  enum: [pending, processing, completed, failed]
+                  description: Video generation status
+                videoUrl:
+                  type: string
+                  format: uri
+                  description: Video URL (when completed)
+                thumbnailUrl:
+                  type: string
+                  format: uri
+                  description: Thumbnail URL
+                duration:
+                  type: number
+                  description: Video duration in seconds
+                error:
+                  type: object
+                  description: Error details (when failed)
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+
     PilotStepStatus:
       type: string
       enum:
@@ -9169,6 +9549,19 @@ components:
         description:
           type: string
           description: Optional description for this recharge
+        appId:
+          type: string
+          description: Related app ID (if applicable)
+        extraData:
+          type: string
+          description: Extra data for this recharge (JSON)
+          $ref: '#/components/schemas/CreditRechargeExtraData'
+        shareId:
+          type: string
+          description: Related share ID (if applicable)
+        title:
+          type: string
+          description: Related share title (if applicable)
         expiresAt:
           type: string
           format: date-time
@@ -9231,10 +9624,73 @@ components:
         modelUsageDetails:
           type: string
           description: Model usage details for skill execution (JSON array of model usage)
+        appId:
+          type: string
+          description: Related app ID (if applicable)
+        extraData:
+          type: string
+          description: Extra data for this usage (JSON)
+          $ref: '#/components/schemas/CreditUsageExtraData'
+        shareId:
+          type: string
+          description: Related share ID (if applicable)
+        title:
+          type: string
+          description: Related share title (if applicable)
         createdAt:
           type: string
           format: date-time
           description: Usage record creation timestamp
+    CreditRechargeExtraData:
+      type: object
+      description: Extra data for credit recharge
+      properties:
+        appId:
+          type: string
+          description: Related app ID
+        executionId:
+          type: string
+          description: Related execution ID
+        shareId:
+          type: string
+          description: Related share ID
+        title:
+          type: string
+          description: Related share title
+        commissionRate:
+          type: number
+          description: Commission rate
+    CreditUsageExtraData:
+      type: object
+      description: Extra data for credit usage
+      properties:
+        appId:
+          type: string
+          description: Related app ID (if applicable)
+        executionId:
+          type: string
+          description: Related execution ID
+        shareId:
+          type: string
+          description: Related share ID
+        title:
+          type: string
+          description: Related share title
+        commissionRate:
+          type: number
+          description: Commission rate
+        toolsetKey:
+          type: string
+          description: Related toolset key
+        toolsetName:
+          type: string
+          description: Related toolset name
+        toolKey:
+          type: string
+          description: Related tool key
+        toolName:
+          type: string
+          description: Related tool name
     ListProvidersResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

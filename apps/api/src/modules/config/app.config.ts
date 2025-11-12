@@ -201,4 +201,16 @@ export default () => ({
     canvasCreditCommissionRate: Number(process.env.CREDIT_CANVAS_CREDIT_COMMISSION_RATE) || 0.2,
     commissionCreditExpiresIn: Number(process.env.CREDIT_COMMISSION_CREDIT_EXPIRES_IN) || 6,
   },
+
+  audio: {
+    fish: {
+      apiKey: process.env.FISH_AUDIO_API_KEY,
+    },
+  },
+
+  video: {
+    heygen: {
+      apiKey: process.env.HEYGEN_API_KEY,
+    },
+  },
 });

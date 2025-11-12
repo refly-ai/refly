@@ -34,8 +34,8 @@ export const SubscribeModal = () => {
   return (
     <Modal
       width={'100vw'}
-      height={'100vh'}
       style={{
+        height: 'var(--screen-height)',
         top: 0,
         paddingBottom: 0,
         maxWidth: '100vw',

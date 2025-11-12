@@ -247,7 +247,7 @@ export class CanvasSyncService {
     try {
       const cached = await this.redis.get(cacheKey);
       if (cached) {
-        return JSON.parse(cached);
+        return safeParseJSON(cached);
       }
     } catch (err) {
       // Cache read failure should not block fallback path
@@ -264,7 +264,7 @@ export class CanvasSyncService {
           throw new Error('Canvas state not found');
         }
         const stateStr = await streamToString(stream);
-        const parsed: CanvasState = JSON.parse(stateStr);
+        const parsed: CanvasState = safeParseJSON(stateStr);
         // Populate cache best-effort
         try {
           await this.redis.setex(sfKey, this.STATE_CACHE_TTL_SECONDS, stateStr);

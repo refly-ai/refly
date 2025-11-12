@@ -24,7 +24,7 @@ const VariableInput: React.FC<VariableInputProps> = memo(
           if (hiddenRef.current) {
             const text = e.target.value || placeholder || '';
             hiddenRef.current.textContent = text;
-            const width = Math.max(hiddenRef.current.offsetWidth + 30, 30);
+            const width = Math.max(hiddenRef.current.offsetWidth + 16, 30);
             setInputWidth(Math.min(width, window.innerWidth * 1));
           }
         });
@@ -48,7 +48,7 @@ const VariableInput: React.FC<VariableInputProps> = memo(
           if (hiddenRef.current) {
             const text = target.value || placeholder || '';
             hiddenRef.current.textContent = text;
-            const width = Math.max(hiddenRef.current.offsetWidth + 30, 30);
+            const width = Math.max(hiddenRef.current.offsetWidth + 16, 30);
             setInputWidth(Math.min(width, window.innerWidth * 1));
           }
         });
@@ -61,7 +61,7 @@ const VariableInput: React.FC<VariableInputProps> = memo(
       if (hiddenRef.current) {
         const text = value || placeholder || '';
         hiddenRef.current.textContent = text;
-        const width = Math.max(hiddenRef.current.offsetWidth + 30, 30); // Add padding
+        const width = Math.max(hiddenRef.current.offsetWidth + 16, 30); // Add padding
         setInputWidth(Math.min(width, window.innerWidth * 1)); // Max 80% of viewport
       }
     }, [value, placeholder]);
@@ -93,7 +93,7 @@ const VariableInput: React.FC<VariableInputProps> = memo(
           disabled={disabled}
           className={`
         inline-block
-        px-2
+        px-0
         py-1
         text-base
         leading-6
@@ -115,10 +115,9 @@ const VariableInput: React.FC<VariableInputProps> = memo(
             borderWidth: '0 0 1.5px 0',
             borderStyle: 'dashed',
             borderColor: 'var(--refly-primary-default)',
-
+            margin: '0 8px',
             backgroundColor: 'transparent',
             borderRadius: '0',
-            padding: '4px 8px',
             height: '26px',
             width: `${inputWidth}px`,
             minWidth: '30px',

@@ -6,6 +6,7 @@ import { InternalMcpService } from '../internal-mcp.service';
 import { User as UserModel } from '../../../generated/client';
 import { ProviderService } from '../../provider/provider.service';
 import { MediaGenerationModelConfig } from '@refly/openapi-schema';
+import { safeParseJSON } from '@refly/utils';
 
 @Injectable()
 export class ProviderQueryTools {
@@ -70,7 +71,7 @@ export class ProviderQueryTools {
             description: '',
           };
           try {
-            config = JSON.parse(item.config || '{}');
+            config = safeParseJSON(item.config || '{}');
           } catch (error) {
             this.logger.warn(`Failed to parse config for item ${item.itemId}: ${error?.message}`);
             return null;

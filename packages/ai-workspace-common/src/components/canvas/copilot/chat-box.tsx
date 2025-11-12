@@ -12,9 +12,10 @@ interface ChatBoxProps {
   canvasId: string;
   query: string;
   setQuery: (query: string) => void;
+  onSendMessage?: () => void;
 }
 
-export const ChatBox = memo(({ canvasId, query, setQuery }: ChatBoxProps) => {
+export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatBoxProps) => {
   const { t } = useTranslation();
   const { refetch: refetchHistorySessions } = useListCopilotSessions(
     {
@@ -75,6 +76,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery }: ChatBoxProps) => {
     if (!sessionId) {
       sessionId = genCopilotSessionID();
     }
+    onSendMessage?.();
 
     invokeAction(
       {

@@ -208,7 +208,7 @@ export const DraggableNodePreview = memo(
 
     const previewStyles = useMemo(
       () => ({
-        height: isMaximized ? '100vh' : 'calc(100vh - 92px)',
+        height: isMaximized ? 'var(--screen-height)' : 'calc(var(--screen-height) - 92px)',
         width: isMaximized ? 'calc(100vw)' : isWideMode ? '840px' : '420px',
         top: isMaximized ? 0 : undefined,
         right: isMaximized ? 0 : undefined,
@@ -486,7 +486,7 @@ export const NodePreview = memo(
 
     const previewStyles = useMemo(
       () => ({
-        height: isMaximized ? '100vh' : 'calc(100vh - 72px)',
+        height: isMaximized ? 'var(--screen-height)' : 'calc(var(--screen-height) - 72px)',
         width: isMaximized ? 'calc(100vw)' : isWideMode ? '840px' : '420px',
         top: isMaximized ? 0 : undefined,
         right: isMaximized ? 0 : undefined,

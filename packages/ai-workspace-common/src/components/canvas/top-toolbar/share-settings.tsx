@@ -6,19 +6,16 @@ import { Share, Checked } from 'refly-icons';
 
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { CreateWorkflowAppModal } from '@refly-packages/ai-workspace-common/components/workflow-app/create-modal';
 import { useListShares, useListWorkflowApps } from '@refly-packages/ai-workspace-common/queries';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import { logEvent } from '@refly/telemetry-web';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useCanvasStoreShallow } from '@refly/stores';
-import { useSkillResponseLoadingStatus } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-loading-status';
 
 type ShareAccess = 'off' | 'anyone';
 
 interface ShareSettingsProps {
   canvasId: string;
-  canvasTitle: string;
+  canvasTitle?: string;
 }
 
 // Access option item component
@@ -73,11 +70,10 @@ const AccessOptionItem = React.memo(
 AccessOptionItem.displayName = 'AccessOptionItem';
 
 // Memoized ShareSettings component for better performance
-const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps) => {
+const ShareSettings = React.memo(({ canvasId }: ShareSettingsProps) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { forceSyncState } = useCanvasContext();
-  const [createTemplateModalVisible, setCreateTemplateModalVisible] = useState(false);
   const [access, setAccess] = useState<ShareAccess>('off');
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateShareLoading, setUpdateShareLoading] = useState(false);
@@ -92,7 +88,7 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
   });
 
   // Get latest workflow app for this canvas
-  const { data: workflowAppsData, refetch: refetchWorkflowApps } = useListWorkflowApps(
+  const { data: workflowAppsData } = useListWorkflowApps(
     { query: { canvasId } },
     ['workflow-apps', canvasId],
     {
@@ -178,19 +174,6 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
     }
   }, [workflowAppLink, t]);
 
-  const handlePublishToCommunity = useCallback(async () => {
-    // Make sure the canvas data is synced to the remote
-    await forceSyncState({ syncRemote: true });
-
-    setCreateTemplateModalVisible(true);
-    setOpen(false);
-  }, [forceSyncState]);
-
-  const handlePublishSuccess = useCallback(async () => {
-    // Refresh workflow apps data after successful publish
-    await refetchWorkflowApps();
-  }, [refetchWorkflowApps]);
-
   useEffect(() => {
     setAccess(shareRecord ? 'anyone' : 'off');
   }, [shareRecord]);
@@ -269,26 +252,6 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
     },
     [updateCanvasPermission, copyLink, canvasId],
   );
-
-  const { nodeExecutions } = useCanvasStoreShallow((state) => ({
-    nodeExecutions: state.canvasNodeExecutions[canvasId] ?? [],
-  }));
-
-  const executionStats = useMemo(() => {
-    const total = nodeExecutions.length;
-    const executing = nodeExecutions.filter((n) => n.status === 'executing').length;
-    const finished = nodeExecutions.filter((n) => n.status === 'finish').length;
-    const failed = nodeExecutions.filter((n) => n.status === 'failed').length;
-    const waiting = nodeExecutions.filter((n) => n.status === 'waiting').length;
-
-    return { total, executing, finished, failed, waiting };
-  }, [nodeExecutions]);
-
-  const { isLoading: skillResponseLoading, skillResponseNodes } =
-    useSkillResponseLoadingStatus(canvasId);
-
-  const toolbarLoading =
-    executionStats.executing > 0 || executionStats.waiting > 0 || skillResponseLoading;
 
   // Memoize content to prevent unnecessary re-renders
   const content = useMemo(
@@ -390,39 +353,6 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
             </div>
           </div>
         )}
-
-        {/* Publish to Community Section */}
-        <div className="mt-2 pl-4 pr-2 py-2 border-[1px] border-solid border-refly-Card-Border bg-refly-bg-content-z1 rounded-[12px] flex items-center justify-between">
-          <div className="text-sm text-refly-text-0 leading-5 font-semibold flex-1 truncate">
-            {t('shareContent.publishTemplate')}
-          </div>
-          <Tooltip
-            title={
-              toolbarLoading
-                ? t('shareContent.waitForAgentsToFinish')
-                : !skillResponseNodes?.length
-                  ? t('shareContent.noSkillResponseNodes')
-                  : undefined
-            }
-            placement="top"
-          >
-            <Button
-              disabled={toolbarLoading || !skillResponseNodes?.length}
-              loading={toolbarLoading}
-              type="primary"
-              size="small"
-              className="w-[104px] h-[32px]"
-              onClick={() => {
-                logEvent('canvas::canvas_publish_template', Date.now(), {
-                  canvas_id: canvasId,
-                });
-                handlePublishToCommunity();
-              }}
-            >
-              {t('shareContent.publish')}
-            </Button>
-          </Tooltip>
-        </div>
       </div>
     ),
     [
@@ -436,41 +366,31 @@ const ShareSettings = React.memo(({ canvasId, canvasTitle }: ShareSettingsProps)
       handleAccessChange,
       updateShare,
       copyLink,
-      handlePublishToCommunity,
-      handlePublishSuccess,
       latestWorkflowApp,
       workflowAppLink,
       copyWorkflowAppLink,
-      toolbarLoading,
-      skillResponseNodes?.length,
     ],
   );
 
   return (
-    <div>
-      <CreateWorkflowAppModal
-        canvasId={canvasId}
-        title={canvasTitle}
-        visible={createTemplateModalVisible}
-        setVisible={setCreateTemplateModalVisible}
-        onPublishSuccess={handlePublishSuccess}
-        appId={latestWorkflowApp?.appId}
-      />
-      <Popover
-        className="canvas-share-setting-popover"
-        open={open}
-        onOpenChange={setOpen}
-        trigger="click"
-        placement="bottomLeft"
-        styles={{ body: { padding: 0, borderRadius: '12px', background: 'transparent' } }}
-        content={content}
-        arrow={false}
+    <Popover
+      className="canvas-share-setting-popover"
+      open={open}
+      onOpenChange={setOpen}
+      trigger="click"
+      placement="bottomLeft"
+      styles={{ body: { padding: 0, borderRadius: '12px', background: 'transparent' } }}
+      content={content}
+      arrow={false}
+    >
+      <Button
+        type="text"
+        className="!border-[1px] !border-solid !border-refly-primary-default !text-refly-primary-default font-semibold bg-transparent hover:!text-refly-primary-default"
+        icon={<Share size={16} color="var(--refly-primary-default)" />}
       >
-        <Button type="primary" icon={<Share size={16} />}>
-          {t('common.share')}
-        </Button>
-      </Popover>
-    </div>
+        {t('common.share')}
+      </Button>
+    </Popover>
   );
 });
 

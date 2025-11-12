@@ -127,7 +127,7 @@
     padding: 0;
     border-radius: 12px 0 0 12px;
     box-shadow: -4px 0px 8px 0px rgba(0, 0, 0, 0.08);
-    height: calc(100vh - 56px);
+    height: calc(var(--screen-height) - 56px);
     border: solid 1px var(--refly-Card-Border);
     border-right: none;
     .ant-popover-inner-content {

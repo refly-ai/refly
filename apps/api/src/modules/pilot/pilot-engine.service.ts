@@ -18,6 +18,7 @@ interface SubtaskExecutionStatus {
 import { IntentAnalysisService } from './intent-analysis.service';
 
 import { PilotStep, ActionResult } from '../../generated/client';
+import { safeParseJSON } from '@refly/utils';
 
 @Injectable()
 export class PilotEngineService {
@@ -124,7 +125,7 @@ export class PilotEngineService {
 
       if (session?.progress) {
         try {
-          const existingPlan = JSON.parse(session.progress) as ProgressPlan;
+          const existingPlan = safeParseJSON(session.progress) as ProgressPlan;
           this.logger.log(`Retrieved existing progress plan for session ${sessionId}`);
           return existingPlan;
         } catch (_parseError) {
@@ -738,7 +739,7 @@ export class PilotEngineService {
       });
 
       if (session?.progress) {
-        return JSON.parse(session.progress) as ProgressPlan;
+        return safeParseJSON(session.progress) as ProgressPlan;
       }
 
       return null;

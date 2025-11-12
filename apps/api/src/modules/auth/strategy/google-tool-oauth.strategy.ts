@@ -4,6 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-google-oauth20';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
+import { safeParseJSON } from '@refly/utils';
 
 @Injectable()
 export class GoogleToolOauthStrategy extends PassportStrategy(Strategy, 'google') {
@@ -40,7 +41,7 @@ export class GoogleToolOauthStrategy extends PassportStrategy(Strategy, 'google'
     const state = req?.query?.state as string;
     if (state) {
       try {
-        const stateObj = JSON.parse(state);
+        const stateObj = safeParseJSON(state);
         uid = stateObj.uid;
       } catch {
         // Ignore parsing errors

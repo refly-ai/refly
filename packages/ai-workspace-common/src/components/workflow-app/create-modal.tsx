@@ -128,6 +128,8 @@ export const CreateWorkflowAppModal = ({
 
   const skillResponseNodes = nodes.filter((node) => node.type === 'skillResponse');
 
+  const { forceSyncState } = useCanvasContext();
+
   // Fetch credit usage data when modal is visible
   const { data: creditUsageData } = useGetCreditUsageByCanvasId(
     {
@@ -376,6 +378,9 @@ export const CreateWorkflowAppModal = ({
     });
 
     try {
+      // Make sure the canvas data is synced to the remote
+      await forceSyncState({ syncRemote: true });
+
       const values = await form.validateFields();
       await createWorkflowApp(values);
     } catch (error) {

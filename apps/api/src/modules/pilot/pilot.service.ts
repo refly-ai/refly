@@ -20,6 +20,7 @@ import {
   genPilotSessionID,
   genPilotStepID,
   genTransactionId,
+  safeParseJSON,
 } from '@refly/utils';
 import { CanvasContentItem } from '../canvas/canvas.dto';
 import { ProviderService } from '../provider/provider.service';
@@ -558,7 +559,7 @@ export class PilotService {
       this.logger.log(`Epoch (${currentEpoch}/${maxEpoch}) for session ${sessionId} started`);
 
       // Get common resources needed for execution
-      const sessionInputObj = JSON.parse(pilotSession.input ?? '{}');
+      const sessionInputObj = safeParseJSON(pilotSession.input ?? '{}');
       const userQuestion = sessionInputObj?.query ?? '';
       const canvasContentItems: CanvasContentItem[] =
         await this.canvasService.getCanvasContentItems(user, targetId, true);
@@ -590,7 +591,7 @@ export class PilotService {
           `provider item ${pilotSession.providerItemId} not valid`,
         );
       }
-      const chatModelId = JSON.parse(chatPi.config).modelId;
+      const chatModelId = safeParseJSON(chatPi.config).modelId;
 
       // Use PilotEngineService to handle all planning and execution logic
       const progressPlan = await this.pilotEngineService.runPilot(
@@ -845,7 +846,7 @@ export class PilotService {
 
       // Get necessary context for step execution
       const { targetId, targetType } = session;
-      const sessionInputObj = JSON.parse(session.input ?? '{}');
+      const sessionInputObj = safeParseJSON(session.input ?? '{}');
       const canvasContentItems: CanvasContentItem[] =
         await this.canvasService.getCanvasContentItems(user, targetId, true);
       const toolsets = await this.toolService.listTools(user, { enabled: true });
@@ -865,7 +866,7 @@ export class PilotService {
       if (!chatPi || chatPi.category !== 'llm' || !chatPi.enabled) {
         throw new ProviderItemNotFoundError('provider item not valid for chat');
       }
-      const chatModelId = JSON.parse(chatPi.config).modelId;
+      const chatModelId = safeParseJSON(chatPi.config).modelId;
 
       // Update session status to executing only if recovering all failed steps
       // If only recovering specific steps, keep session status as failed until all steps are recovered
@@ -909,7 +910,7 @@ export class PilotService {
           downstreamEntityIds,
         );
 
-        const originalRawStep = JSON.parse(failedStep.rawOutput);
+        const originalRawStep = safeParseJSON(failedStep.rawOutput);
 
         // Use existing ActionResult ID but create new version for retry
         const existingResultId = failedStep.entityId;

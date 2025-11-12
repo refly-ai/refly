@@ -4,11 +4,12 @@ import {
   LabelInstance as LabelInstanceModel,
 } from '../../generated/client';
 import { LabelClass, LabelInstance } from '@refly/openapi-schema';
+import { safeParseJSON } from '@refly/utils';
 
 export const labelClassPO2DTO = (lc: LabelClassModel): LabelClass => {
   return {
     ...pick(lc, ['labelClassId', 'name', 'displayName', 'icon', 'prompt']),
-    icon: JSON.parse(lc.icon),
+    icon: safeParseJSON(lc.icon),
     createdAt: lc.createdAt.toJSON(),
     updatedAt: lc.updatedAt.toJSON(),
   };

@@ -21,6 +21,7 @@ import { ToolService } from '../tool/tool.service';
 import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { CreditService } from '../credit/credit.service';
+import { AppTemplateResult } from '../variable-extraction/variable-extraction.dto';
 
 /**
  * Structure of shared workflow app data
@@ -96,19 +97,33 @@ export class WorkflowAppService {
     });
 
     // Generate app template content
-    // let templateContent: string | null = null;
-    // try {
-    //   const templateResult = await this.variableExtractionService.generateAppPublishTemplate(
-    //     user,
-    //     canvasId,
-    //   );
-    //   templateContent = templateResult.templateContent;
-    //   this.logger.log(`Generated template content for workflow app: ${appId}`);
-    // } catch (error) {
-    //   this.logger.error(
-    //     `Failed to generate template content for workflow app ${appId}: ${error.stack}`,
-    //   );
-    // }
+    let templateResult: AppTemplateResult | null = null;
+    try {
+      const _templateResult = await this.variableExtractionService.generateAppPublishTemplate(
+        user,
+        canvasId,
+      );
+
+      this.logger.log(
+        `generateAppPublishTemplate result for workflow app: ${JSON.stringify(_templateResult)}`,
+      );
+
+      if (
+        _templateResult?.templateContent &&
+        _templateResult?.templateContentPlaceholders?.length === variables?.length &&
+        variables?.every((variable) =>
+          _templateResult?.templateContentPlaceholders?.includes(`{{${variable.name}}}`),
+        )
+      ) {
+        templateResult = _templateResult;
+      }
+
+      this.logger.log(`Generated template content for workflow app: ${appId}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate template content for workflow app ${appId}: ${error.stack}`,
+      );
+    }
 
     if (existingWorkflowApp) {
       await this.prisma.workflowApp.update({
@@ -120,7 +135,7 @@ export class WorkflowAppService {
           description,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          templateContent: null,
+          templateContent: templateResult?.templateContent,
           remixEnabled,
           resultNodeIds,
           updatedAt: new Date(),
@@ -244,7 +259,14 @@ export class WorkflowAppService {
 
     const { nodes = [], edges = [] } = canvasData;
 
-    const { replaceToolsetMap } = await this.toolService.importToolsetsFromNodes(user, nodes);
+    let replaceToolsetMap: Record<string, GenericToolset> = {};
+
+    // Only import toolsets for shared workflow apps that are not owned by the user
+    if (shareRecord.uid !== user.uid) {
+      const { replaceToolsetMap: newReplaceToolsetMap } =
+        await this.toolService.importToolsetsFromNodes(user, nodes);
+      replaceToolsetMap = newReplaceToolsetMap;
+    }
 
     // variables with old resource entity ids (need to be replaced)
     const oldVariables = variables || canvasData.variables || [];
