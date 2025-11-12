@@ -5,7 +5,7 @@ import type { ResourceType, ResourceMeta } from '@refly/openapi-schema';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useListTools } from '@refly-packages/ai-workspace-common/queries/queries';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
 
 export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const { t, i18n } = useTranslation();
@@ -13,7 +13,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
 
   const { nodes } = useCanvasData();
   const { workflow } = useCanvasContext();
-  const { data: resources } = useFetchResources();
+  const { data: resources } = useFetchDriveFiles();
 
   // Fetch tools
   const { data: toolsData } = useListTools({ query: { enabled: true } }, [], {

@@ -11,7 +11,7 @@ import { ReloadOutlined } from '@ant-design/icons';
 import { IContextItem } from '@refly/common-types';
 import { useContextPanelStoreShallow } from '@refly/stores';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
 import { CONTEXT_FILTER_NODE_TYPES } from '@refly/canvas-common';
 
 import './index.scss';
@@ -74,7 +74,7 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
   }, [onClickOutside]);
 
   const { nodes } = useCanvasData();
-  const { data: resources } = useFetchResources();
+  const { data: resources } = useFetchDriveFiles();
   const targetNodes = nodes.filter((node) => !CONTEXT_FILTER_NODE_TYPES.includes(node?.type));
 
   const handleClear = () => {

@@ -5,23 +5,19 @@ import { ScreenFull, ScreenDefault, Download } from 'refly-icons';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
-import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
-import { CanvasNodeType } from '@refly/openapi-schema';
-import { CanvasNode } from '@refly/canvas-common';
 import {
   getExtFromContentType,
   buildSafeFileName,
 } from '@refly-packages/ai-workspace-common/utils/download-file';
+import { serverOrigin } from '@refly/ui-kit';
 
 const { Text } = Typography;
 
-interface CanvasResourcesHeaderProps {
-  currentResource: CanvasNode | null;
-  setCurrentResource: (resource: CanvasNode | null) => void;
-}
-
-export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) => {
-  const { currentResource, setCurrentResource } = props;
+export const FileItemHeader = memo(() => {
+  const { currentFile, setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
+    currentFile: state.currentFile,
+    setCurrentFile: state.setCurrentFile,
+  }));
 
   const { t } = useTranslation();
   const { readonly } = useCanvasContext();
@@ -29,8 +25,7 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
   const [editingTitle, setEditingTitle] = useState('');
   const titleInputRef = useRef<InputRef>(null);
 
-  const contentType = (currentResource?.data?.metadata?.contentType ?? '') as string;
-  const downloadURL = (currentResource?.data?.metadata?.downloadURL ?? '') as string;
+  const contentType = (currentFile?.type ?? '') as string;
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { wideScreenVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
@@ -40,18 +35,16 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
     }),
   );
 
-  const updateNodeTitle = useUpdateNodeTitle();
-
-  // Update editing title when activeNode changes
+  // Update editing title when active file changes
   useEffect(() => {
-    if (currentResource?.data?.title) {
-      setEditingTitle(currentResource.data.title);
+    if (currentFile?.name) {
+      setEditingTitle(currentFile.name);
     }
-  }, [currentResource?.data?.title]);
+  }, [currentFile?.name]);
 
   const handleParentClick = useCallback(() => {
-    setCurrentResource(undefined);
-  }, [setCurrentResource]);
+    setCurrentFile(null);
+  }, [setCurrentFile]);
 
   const handleWideScreen = useCallback(() => {
     setWideScreenVisible(true);
@@ -63,40 +56,30 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
 
   // Handle title click to start editing
   const handleTitleClick = useCallback(() => {
-    if (!currentResource?.data?.entityId || !currentResource?.type) return;
+    if (!currentFile?.fileId || !currentFile?.type) return;
 
     setIsEditingTitle(true);
-    setEditingTitle(currentResource.data.title || '');
+    setEditingTitle(currentFile.name || '');
 
     // Focus the input after a short delay to ensure DOM is ready
     setTimeout(() => {
       titleInputRef.current?.focus();
       titleInputRef.current?.select();
     }, 100);
-  }, [currentResource?.data?.entityId, currentResource?.type, currentResource?.data?.title]);
+  }, [currentFile?.fileId, currentFile?.type, currentFile?.name]);
 
   // Handle title save
   const handleTitleSave = useCallback(() => {
-    if (!currentResource?.data?.entityId || !currentResource?.type) return;
-
-    const newTitle = editingTitle.trim();
-    if (newTitle && newTitle !== currentResource.data.title) {
-      updateNodeTitle(
-        newTitle,
-        currentResource.data.entityId,
-        currentResource.id,
-        currentResource.type as CanvasNodeType,
-      );
-    }
+    if (!currentFile?.fileId || !currentFile?.type) return;
 
     setIsEditingTitle(false);
-  }, [currentResource, editingTitle, updateNodeTitle]);
+  }, [currentFile, editingTitle]);
 
   // Handle title cancel
   const handleTitleCancel = useCallback(() => {
     setIsEditingTitle(false);
-    setEditingTitle(currentResource?.data?.title || '');
-  }, [currentResource?.data?.title]);
+    setEditingTitle(currentFile?.name || '');
+  }, [currentFile?.name]);
 
   // Handle key press in title input
   const handleTitleKeyPress = useCallback(
@@ -113,7 +96,7 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
   const handleDownload = useCallback(async () => {
     if (isDownloading) return;
 
-    if (!downloadURL) {
+    if (!currentFile?.fileId) {
       message.error(t('canvas.resourceLibrary.download.invalidUrl'));
       return;
     }
@@ -129,14 +112,14 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
       document.body.removeChild(link);
     };
 
-    const baseTitle = currentResource?.data?.title ?? t('common.untitled');
+    const baseTitle = currentFile?.name ?? t('common.untitled');
     const fileExt = getExtFromContentType(contentType);
     const fileName = buildSafeFileName(baseTitle, fileExt);
     setIsDownloading(true);
 
     try {
       // Add download=1 query parameter to the URL
-      const url = new URL(downloadURL);
+      const url = new URL(`${serverOrigin}/v1/drive/file/content/${currentFile?.fileId}`);
       url.searchParams.set('download', '1');
 
       // Fetch the file with authentication
@@ -162,13 +145,11 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error('Download failed:', error);
-      // Fallback to direct download if fetch fails
-      triggerDownload(downloadURL, fileName);
       message.error(t('canvas.resourceLibrary.download.error'));
     } finally {
       setIsDownloading(false);
     }
-  }, [downloadURL, contentType, currentResource?.data?.title, isDownloading, t, setIsDownloading]);
+  }, [currentFile, contentType, isDownloading, t, setIsDownloading]);
 
   return (
     <div className="w-full h-[64px] flex-shrink-0 flex gap-2 items-center justify-between px-3 py-4">
@@ -206,7 +187,7 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
             )}
             onClick={!readonly ? handleTitleClick : undefined}
           >
-            {currentResource?.data?.title || t('common.untitled')}
+            {currentFile?.name || t('common.untitled')}
           </Text>
         )}
       </div>
@@ -222,7 +203,7 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
           disabled={isDownloading}
         />
 
-        {currentResource && (
+        {currentFile && (
           <Tooltip
             title={t(
               `canvas.resourceLibrary.${wideScreenVisible ? 'exitWideScreen' : 'wideScreen'}`,
@@ -243,4 +224,4 @@ export const CanvasResourcesHeader = memo((props: CanvasResourcesHeaderProps) =>
   );
 });
 
-CanvasResourcesHeader.displayName = 'CanvasResourcesHeader';
+FileItemHeader.displayName = 'FileItemHeader';

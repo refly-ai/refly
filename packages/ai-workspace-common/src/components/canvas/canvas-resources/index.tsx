@@ -1,31 +1,29 @@
 import { memo, useEffect } from 'react';
 import { Modal } from 'antd';
-import { ResourceOverview } from './share/resource-overview';
+import cn from 'classnames';
+import { FileOverview } from './share/file-overview';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
-import { PreviewComponent } from '@refly-packages/ai-workspace-common/components/canvas/node-preview';
-import { CanvasResourcesHeader } from './share/canvas-resources-header';
+import { FileItemHeader } from './share/file-item-header';
+import { FilePreview } from './file-preview';
 
 import './index.scss';
-import cn from 'classnames';
 
-interface CanvasResourcesProps {
+interface CanvasDriveProps {
   className?: string;
   wideScreen?: boolean;
 }
 
-export const CanvasResources = memo(({ className, wideScreen }: CanvasResourcesProps) => {
-  const { currentResource, setCurrentResource, setSidePanelVisible } =
-    useCanvasResourcesPanelStoreShallow((state) => ({
-      currentResource: state.currentResource,
-      setCurrentResource: state.setCurrentResource,
-      setSidePanelVisible: state.setSidePanelVisible,
-    }));
+export const CanvasDrive = memo(({ className, wideScreen }: CanvasDriveProps) => {
+  const { currentFile, setSidePanelVisible } = useCanvasResourcesPanelStoreShallow((state) => ({
+    currentFile: state.currentFile,
+    setSidePanelVisible: state.setSidePanelVisible,
+  }));
 
   useEffect(() => {
-    if (currentResource) {
+    if (currentFile) {
       setSidePanelVisible(true);
     }
-  }, [currentResource]);
+  }, [currentFile, setSidePanelVisible]);
 
   return (
     <div
@@ -34,20 +32,17 @@ export const CanvasResources = memo(({ className, wideScreen }: CanvasResourcesP
         className,
       )}
     >
-      <ResourceOverview currentResource={currentResource} setCurrentResource={setCurrentResource} />
-      {currentResource && (
+      <FileOverview />
+      {currentFile && (
         <div
           className={cn(
             'h-full flex flex-col flex-1 min-w-0 border-solid border-l-[1px] border-y-0 border-r-0 border-refly-Card-Border',
             !wideScreen ? 'w-[460px]' : '',
           )}
         >
-          <CanvasResourcesHeader
-            currentResource={currentResource}
-            setCurrentResource={setCurrentResource}
-          />
+          <FileItemHeader />
           <div className="flex-grow overflow-hidden min-w-0">
-            <PreviewComponent node={currentResource} hideMeta />
+            <FilePreview file={currentFile} />
           </div>
         </div>
       )}
@@ -86,7 +81,7 @@ export const CanvasResourcesWidescreenModal = memo(() => {
       destroyOnHidden
     >
       <div className="flex w-full h-[calc(100vh-56px)] rounded-xl overflow-hidden">
-        <CanvasResources className="w-full" wideScreen />
+        <CanvasDrive className="w-full" wideScreen />
       </div>
     </Modal>
   );

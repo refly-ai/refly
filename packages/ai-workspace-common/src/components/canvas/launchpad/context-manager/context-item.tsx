@@ -16,7 +16,7 @@ import { Close } from 'refly-icons';
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
 
 export const ContextItem = ({
   item,
@@ -39,7 +39,7 @@ export const ContextItem = ({
   const { setNodeCenter } = useNodePosition();
   const { canvasId } = useGetProjectCanvasId();
   const { handleNodePreview } = useNodePreviewControl({ canvasId });
-  const { data: resourcesData } = useFetchResources();
+  const { data: resourcesData } = useFetchDriveFiles();
 
   const node = useMemo(() => {
     const nodes = getNodes();
