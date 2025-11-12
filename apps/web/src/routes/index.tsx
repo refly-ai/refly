@@ -47,30 +47,38 @@ export const RoutesList: RouteObject[] = [
     path: '/share/doc/:shareId',
     element: <DocumentSharePage />,
   },
+
+  // TODO: deprecated to offline
   {
     path: '/share/pages/:shareId',
     element: <SharePagePage />,
   },
+  // TODO: deprecated to offline
   {
     path: '/artifact-gallery',
     element: <ArtifactGalleryPage />,
   },
+  // TODO: deprecated to offline
   {
     path: '/use-cases-gallery',
     element: <UseCasesGalleryPage />,
   },
+  // TODO: deprecated to offline
   {
     path: '/preview/canvas/:shareId',
     element: <TemplatePreviewPage />,
   },
+  // TODO: deprecated to offline
   {
     path: '/canvas/',
     element: <Navigate to="/canvas/empty" replace />,
   },
+  // TODO: deprecated to offline
   {
     path: '/canvas/:canvasId',
     element: <CanvasPage />,
   },
+  // TODO: deprecated to offline
   {
     path: '/project/:projectId',
     element: <ProjectPage />,
