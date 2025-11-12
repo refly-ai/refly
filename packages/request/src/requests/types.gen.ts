@@ -2520,8 +2520,13 @@ export type GetCanvasDataResponse = BaseResponse & {
 export type SharedCanvasData = RawCanvasData & {
   /**
    * Resources in the canvas
+   * @deprecated
    */
   resources?: Array<Resource>;
+  /**
+   * Drive files in the canvas
+   */
+  files?: Array<DriveFile>;
 };
 
 export type ExportCanvasResponse = BaseResponse & {
@@ -4380,13 +4385,13 @@ export type HeyGenGenerateVideoRequest = {
        */
       inputText?: string;
       /**
-       * Audio URL (for audio type)
+       * Audio URL (for audio type, lowest priority)
        */
       audioUrl?: string;
       /**
-       * Audio file entityId (for audio type, takes priority over audioUrl)
+       * Storage key of the audio file (format "static/{uuid}", for audio type, takes priority over audioUrl)
        */
-      audioEntityId?: string;
+      storageKey?: string;
       /**
        * Speech speed
        */
@@ -4409,13 +4414,13 @@ export type HeyGenGenerateVideoRequest = {
        */
       type?: 'color' | 'image' | 'video';
       /**
-       * Background image/video URL
+       * Background image/video URL (lowest priority)
        */
       url?: string;
       /**
-       * Background image/video entityId (takes priority over url)
+       * Storage key of the background file (format "static/{uuid}", takes priority over url)
        */
-      entityId?: string;
+      storageKey?: string;
       /**
        * Background color (hex)
        */
@@ -6861,6 +6866,94 @@ export type UpdateWorkflowVariablesResponse = BaseResponse & {
   data?: Array<WorkflowVariable>;
 };
 
+export type DriveFile = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Drive file ID
+   */
+  fileId: string;
+  /**
+   * Drive file name
+   */
+  name: string;
+  /**
+   * Drive file type
+   */
+  type: string;
+  /**
+   * Drive file size
+   */
+  size: number;
+  /**
+   * Drive file summary
+   */
+  summary: string;
+  /**
+   * Action result ID
+   */
+  resultId: string;
+  /**
+   * Action result version
+   */
+  resultVersion: number;
+  /**
+   * Drive file creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Drive file update timestamp
+   */
+  updatedAt?: string;
+};
+
+export type ListDriveFilesResponse = BaseResponse & {
+  /**
+   * List of drive files
+   */
+  data?: Array<DriveFile>;
+};
+
+export type UpsertDriveFileRequest = {
+  /**
+   * File ID (required for update)
+   */
+  fileId?: string;
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Drive file name
+   */
+  name: string;
+  /**
+   * Drive file type (MIME type)
+   */
+  type: string;
+  /**
+   * Drive file content
+   */
+  content?: string;
+  /**
+   * External URL to download from
+   */
+  externalUrl?: string;
+};
+
+export type UpsertDriveFileResponse = BaseResponse & {
+  data?: DriveFile;
+};
+
+export type DeleteDriveFileRequest = {
+  /**
+   * Drive file ID
+   */
+  fileId: string;
+};
+
 export type SendEmailRequest = {
   /**
    * Email subject
@@ -7422,6 +7515,55 @@ export type UpdateWorkflowVariablesData = {
 export type UpdateWorkflowVariablesResponse2 = UpdateWorkflowVariablesResponse;
 
 export type UpdateWorkflowVariablesError = unknown;
+
+export type ListDriveFilesData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+    /**
+     * Order
+     */
+    order?: ListOrder;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+  };
+};
+
+export type ListDriveFilesResponse2 = ListDriveFilesResponse;
+
+export type ListDriveFilesError = unknown;
+
+export type CreateDriveFileData = {
+  body: UpsertDriveFileRequest;
+};
+
+export type CreateDriveFileResponse = UpsertDriveFileResponse;
+
+export type CreateDriveFileError = unknown;
+
+export type UpdateDriveFileData = {
+  body: UpsertDriveFileRequest;
+};
+
+export type UpdateDriveFileResponse = UpsertDriveFileResponse;
+
+export type UpdateDriveFileError = unknown;
+
+export type DeleteDriveFileData = {
+  body: DeleteDriveFileRequest;
+};
+
+export type DeleteDriveFileResponse = BaseResponse;
+
+export type DeleteDriveFileError = unknown;
 
 export type ListCanvasTemplatesData = {
   query?: {

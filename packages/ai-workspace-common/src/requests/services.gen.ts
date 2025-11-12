@@ -132,6 +132,18 @@ import type {
   UpdateWorkflowVariablesData,
   UpdateWorkflowVariablesError,
   UpdateWorkflowVariablesResponse2,
+  ListDriveFilesData,
+  ListDriveFilesError,
+  ListDriveFilesResponse2,
+  CreateDriveFileData,
+  CreateDriveFileError,
+  CreateDriveFileResponse,
+  UpdateDriveFileData,
+  UpdateDriveFileError,
+  UpdateDriveFileResponse,
+  DeleteDriveFileData,
+  DeleteDriveFileError,
+  DeleteDriveFileResponse,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
   ListCanvasTemplatesResponse,
@@ -1137,6 +1149,74 @@ export const updateWorkflowVariables = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/canvas/workflow/variables',
+  });
+};
+
+/**
+ * List drive files
+ * List all drive files
+ */
+export const listDriveFiles = <ThrowOnError extends boolean = false>(
+  options: Options<ListDriveFilesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListDriveFilesResponse2,
+    ListDriveFilesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/list',
+  });
+};
+
+/**
+ * Create drive file
+ * Create a new drive file
+ */
+export const createDriveFile = <ThrowOnError extends boolean = false>(
+  options: Options<CreateDriveFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateDriveFileResponse,
+    CreateDriveFileError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/create',
+  });
+};
+
+/**
+ * Update drive file
+ * Update an existing drive file
+ */
+export const updateDriveFile = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateDriveFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateDriveFileResponse,
+    UpdateDriveFileError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/update',
+  });
+};
+
+/**
+ * Delete drive file
+ * Delete an existing drive file
+ */
+export const deleteDriveFile = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteDriveFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DeleteDriveFileResponse,
+    DeleteDriveFileError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/delete',
   });
 };
 

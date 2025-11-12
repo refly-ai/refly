@@ -14,6 +14,7 @@ export enum IDPrefix {
   RESOURCE = 'r-',
   CANVAS = 'c-',
   CANVAS_TEMPLATE = 'ct-',
+  DRIVE_FILE = 'df-',
   REFERENCE = 'rf-',
   TOKEN_USAGE_METER = 'tum-',
   STORAGE_USAGE_METER = 'sum-',
@@ -71,6 +72,10 @@ export function genPilotSessionID(): string {
 
 export function genPilotStepID(): string {
   return IDPrefix.PILOT_STEP + createId();
+}
+
+export function genDriveFileID(): string {
+  return IDPrefix.DRIVE_FILE + createId();
 }
 
 export function genCopilotSessionID(): string {

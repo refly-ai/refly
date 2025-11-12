@@ -9,6 +9,7 @@ import {
   listCanvasTemplates,
   listCodeArtifacts,
   listDocuments,
+  listDriveFiles,
   listLabelClasses,
   listLabelInstances,
   listPages,
@@ -32,6 +33,8 @@ import {
   ListCodeArtifactsError,
   ListDocumentsData,
   ListDocumentsError,
+  ListDriveFilesData,
+  ListDriveFilesError,
   ListLabelClassesData,
   ListLabelClassesError,
   ListLabelInstancesData,
@@ -90,6 +93,31 @@ export const useListCanvasesInfinite = <
     queryKey: Common.UseListCanvasesKeyFn(clientOptions, queryKey),
     queryFn: ({ pageParam }) =>
       listCanvases({
+        ...clientOptions,
+        query: { ...clientOptions.query, page: pageParam as number },
+      }).then((response) => response.data as TData) as TData,
+    initialPageParam: '1',
+    getNextPageParam: (response) =>
+      (
+        response as {
+          nextPage: number;
+        }
+      ).nextPage,
+    ...options,
+  });
+export const useListDriveFilesInfinite = <
+  TData = InfiniteData<Common.ListDriveFilesDefaultResponse>,
+  TError = ListDriveFilesError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListDriveFilesData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useInfiniteQuery({
+    queryKey: Common.UseListDriveFilesKeyFn(clientOptions, queryKey),
+    queryFn: ({ pageParam }) =>
+      listDriveFiles({
         ...clientOptions,
         query: { ...clientOptions.query, page: pageParam as number },
       }).then((response) => response.data as TData) as TData,
