@@ -16,6 +16,8 @@ import {
   WorkflowAppPage,
   WorkflowListPage,
   AppManager,
+  WorkflowPage,
+  WorkspacePage,
 } from '@refly/web-core';
 
 import type { RouteObject } from 'react-router-dom';
@@ -84,5 +86,14 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/app-manager',
     element: <AppManager />,
+  },
+  // New SEO-optimized routes
+  {
+    path: '/workspace',
+    element: <WorkspacePage />,
+  },
+  {
+    path: '/workflow/:workflowId',
+    element: <WorkflowPage />,
   },
 ];
