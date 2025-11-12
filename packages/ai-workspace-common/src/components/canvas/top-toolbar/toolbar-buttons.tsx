@@ -51,8 +51,8 @@ export const ToolbarButtons = memo(
     }, [copilotWidth, setCopilotWidth]);
 
     return (
-      <div className="absolute top-0 left-0 right-0 z-20 p-2 flex items-center justify-center">
-        <div className="flex items-center gap-2 p-2 bg-refly-bg-content-z2 rounded-2xl border-solid border-[1px] border-refly-Card-Border">
+      <div className="absolute top-0 left-0 right-0 z-20 p-2 flex items-center justify-center pointer-events-none">
+        <div className="flex items-center gap-2 p-2 bg-refly-bg-content-z2 rounded-2xl border-solid border-[1px] border-refly-Card-Border pointer-events-auto">
           {isLogin && !readonly && (
             <>
               <Button

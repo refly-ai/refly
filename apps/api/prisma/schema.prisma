@@ -1239,6 +1239,10 @@ model CreditRecharge {
   source      String   @default("purchase") @map("source")
   /// Recharge description
   description String?  @map("description")
+  /// App Id
+  appId       String?  @map("app_id")
+  /// Extra data (JSON)
+  extraData   String?  @map("extra_data")
   /// Expiration timestamp (30 days from creation)
   expiresAt   DateTime @map("expires_at") @db.Timestamptz()
   /// Create timestamp
@@ -1303,6 +1307,10 @@ model CreditUsage {
   pilotSessionId    String?  @map("pilot_session_id")
   /// Usage description
   description       String?  @map("description")
+  /// App Id
+  appId             String?  @map("app_id")
+  /// Extra data (JSON)
+  extraData         String?  @map("extra_data")
   /// Model usage details for skill execution (JSON array of model usage)
   modelUsageDetails String?  @map("model_usage_details")
   /// Create timestamp
@@ -1533,7 +1541,7 @@ model Toolset {
   /// Toolset key
   key           String    @map("key")
   /// Toolset auth type (credentials, oauth)
-  authType      String?   @map("auth_type")
+  authType      String?   @default("credentials") @map("auth_type")
   /// Toolset auth data
   authData      String?   @map("auth_data")
   /// Toolset config

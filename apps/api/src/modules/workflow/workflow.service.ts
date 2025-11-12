@@ -586,10 +586,6 @@ export class WorkflowService {
 
         if (workflowExecution?.appId) {
           const workflowApp = await this.prisma.workflowApp.findUnique({
-            select: {
-              appId: true,
-              uid: true,
-            },
             where: { appId: workflowExecution.appId },
           });
 
@@ -605,6 +601,8 @@ export class WorkflowService {
               executionId,
               commissionCredit,
               workflowExecution.appId,
+              workflowApp.title,
+              workflowApp.shareId,
             );
           }
         }
