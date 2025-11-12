@@ -1,7 +1,6 @@
 import { FC, memo, useCallback, useState } from 'react';
 import { useMatch } from 'react-router-dom';
 import { Button, Divider, message } from 'antd';
-import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
 import { LOCALE } from '@refly/common-types';
 import { useCanvasStoreShallow } from '@refly/stores';
@@ -9,13 +8,13 @@ import { Helmet } from 'react-helmet';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CanvasTitle, ReadonlyCanvasTitle, type CanvasTitleMode } from './canvas-title';
 import ShareSettings from './share-settings';
+import PublishTemplateButton from './publish-template-button';
 import { useUserStoreShallow } from '@refly/stores';
 import './index.scss';
 import { IconLink } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Copy, Play } from 'refly-icons';
+import { Copy } from 'refly-icons';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { useAuthStoreShallow } from '@refly/stores';
-import cn from 'classnames';
 import { logEvent } from '@refly/telemetry-web';
 import { ActionsInCanvasDropdown } from '@refly-packages/ai-workspace-common/components/canvas/top-toolbar/actions-in-canvas-dropdown';
 
@@ -32,13 +31,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
-  const { showWorkflowRun, setShowWorkflowRun, setSidePanelVisible } =
-    useCanvasResourcesPanelStoreShallow((state) => ({
-      showWorkflowRun: state.showWorkflowRun,
-      setShowWorkflowRun: state.setShowWorkflowRun,
-      setSidePanelVisible: state.setSidePanelVisible,
-      sidePanelVisible: state.sidePanelVisible,
-    }));
+
   const [canvasTitleMode, setCanvasTitleMode] = useState<CanvasTitleMode>('view');
 
   const isShareCanvas = useMatch('/share/canvas/:canvasId');
@@ -67,17 +60,6 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
       return;
     }
     duplicateCanvas({ shareId: canvasId });
-  };
-
-  const handleInitializeWorkflow = () => {
-    if (!isLogin) {
-      setLoginModalOpen(true);
-      return;
-    }
-    setShowWorkflowRun(!showWorkflowRun);
-    if (showWorkflowRun) {
-      setSidePanelVisible(false);
-    }
   };
 
   const handleRename = useCallback(() => {
@@ -123,24 +105,6 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          {!readonly && !isPreviewCanvas && (
-            <Button
-              type="text"
-              onClick={handleInitializeWorkflow}
-              className={cn(
-                showWorkflowRun && '!bg-gradient-tools-open !text-refly-primary-default',
-              )}
-              icon={
-                <Play
-                  size={16}
-                  color={showWorkflowRun ? 'var(--refly-primary-default)' : 'var(--refly-text-0)'}
-                />
-              }
-            >
-              {t('canvas.toolbar.tooltip.initializeWorkflow')}
-            </Button>
-          )}
-
           {isPreviewCanvas ? (
             <Button
               loading={duplicating}
@@ -173,6 +137,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
           ) : (
             <>
               <ShareSettings canvasId={canvasId} canvasTitle={canvasTitle} />
+              <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
             </>
           )}
         </div>

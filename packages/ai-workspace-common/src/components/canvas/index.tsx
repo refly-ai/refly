@@ -68,6 +68,7 @@ import { UploadNotification } from '@refly-packages/ai-workspace-common/componen
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { PreviewBoxInCanvas } from './preview-box-in-canvas';
 import { CopilotContainer } from './copilot-container';
+import { cn } from '@refly/utils/cn';
 
 const GRID_SIZE = 10;
 
@@ -1197,7 +1198,10 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
 
           <div
             ref={containerRef}
-            className="canvas-container flex gap-2 w-full h-full flex-grow overflow-hidden"
+            className={cn(
+              'canvas-container flex w-full h-full flex-grow overflow-hidden',
+              !sidePanelVisible ? 'gap-0' : 'gap-2',
+            )}
           >
             <Flow
               canvasId={canvasId}
@@ -1205,7 +1209,7 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
               setCopilotWidth={handleSetCopilotWidth}
               maxPanelWidth={maxPanelWidth}
             />
-            {sidePanelVisible && <CanvasResources />}
+            <CanvasResources className={!sidePanelVisible ? 'hidden' : ''} />
           </div>
           <CanvasResourcesWidescreenModal />
         </CanvasProvider>
