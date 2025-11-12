@@ -110,7 +110,7 @@ export interface ReflyService {
   batchProcessURL: (urls: string[]) => Promise<string[]>;
 
   downloadFileFromUrl: (url: string) => Promise<Buffer>;
-  downloadFile: (storageKey: string) => Promise<Buffer>;
+  downloadFile: (params: { storageKey: string; visibility?: FileVisibility }) => Promise<Buffer>;
   uploadFile: (
     user: User,
     param: {

@@ -20,6 +20,7 @@ import {
   ToolsetDefinition,
   UpsertToolsetRequest,
   User,
+  SkillContext,
 } from '@refly/openapi-schema';
 import {
   convertMcpServersToClientConfig,
@@ -812,6 +813,9 @@ export class ToolService {
     user: User,
     toolsets: GenericToolset[],
     engine: SkillEngine,
+    options?: {
+      context?: SkillContext;
+    },
   ): Promise<StructuredToolInterface[]> {
     let builtinTools: DynamicStructuredTool[] = [];
     if (toolsets.find((t) => t.type === 'regular' && t.id === 'builtin')) {
@@ -822,7 +826,7 @@ export class ToolService {
     const mcpServers = toolsets.filter((t) => t.type === 'mcp');
 
     const [regularTools, mcpTools, oauthToolsets] = await Promise.all([
-      this.instantiateRegularToolsets(user, regularToolsets, engine),
+      this.instantiateRegularToolsets(user, regularToolsets, engine, options),
       this.instantiateMcpServers(user, mcpServers),
       this.instantiateOAuthToolsets(user, toolsets),
     ]);
@@ -869,6 +873,9 @@ export class ToolService {
     user: User,
     toolsets: GenericToolset[],
     engine: SkillEngine,
+    options?: {
+      context?: SkillContext;
+    },
   ): Promise<DynamicStructuredTool[]> {
     if (!toolsets?.length) {
       return [];
@@ -908,6 +915,7 @@ export class ToolService {
         user,
         isGlobalToolset: t?.isGlobal ?? false,
         engine, // Pass SkillEngine instance for tools that need LLM access
+        context: options?.context, // Pass context for tools that need access to skill context
       });
 
       return toolset.definition.tools

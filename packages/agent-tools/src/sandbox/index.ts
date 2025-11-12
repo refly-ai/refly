@@ -29,6 +29,8 @@ export interface ReflyService {
     },
   ) => Promise<UploadResponse['data']>;
   genImageID: () => Promise<string>;
+  downloadFile: (params: { storageKey: string; visibility?: FileVisibility }) => Promise<Buffer>;
+  downloadFileFromUrl: (url: string) => Promise<Buffer>;
 }
 
 /**
@@ -249,6 +251,173 @@ message: "Process customer_data.csv and generate: 1) cleaned_data.csv 2) analysi
     this.params = params;
   }
 
+  /**
+   * Process context files and convert them to File objects for sandbox upload
+   */
+  private async processContextFiles(): Promise<File[]> {
+    const contextFiles: File[] = [];
+    const context = this.params.context;
+
+    if (!context || !this.params.reflyService) {
+      return contextFiles;
+    }
+
+    try {
+      // Process resources (documents like PDF, Word, etc.)
+      if (context.resources && context.resources.length > 0) {
+        for (const item of context.resources) {
+          const resource = item?.resource;
+          if (!resource?.storageKey) continue;
+
+          try {
+            const buffer = await this.params.reflyService?.downloadFile({
+              storageKey: resource.storageKey,
+              visibility: 'private',
+            });
+            if (!buffer) continue;
+
+            const fileName = resource.title || resource.storageKey.split('/').pop() || 'resource';
+            contextFiles.push(new File(fileName, buffer));
+          } catch (error) {
+            console.error(
+              `Failed to download resource ${resource.resourceId ?? 'unknown'}:`,
+              error,
+            );
+          }
+        }
+      }
+
+      // Process documents (Refly documents)
+      if (context.documents && context.documents.length > 0) {
+        for (const item of context.documents) {
+          const doc = item?.document;
+          if (!doc?.docId) continue;
+
+          try {
+            // Save document content as markdown file
+            const content = doc.content || '';
+            const fileName = `${doc.title || doc.docId}.md`;
+            const buffer = Buffer.from(content, 'utf-8');
+            contextFiles.push(new File(fileName, buffer));
+          } catch (error) {
+            console.error(`Failed to process document ${doc.docId}:`, error);
+          }
+        }
+      }
+
+      // Process code artifacts
+      if (context.codeArtifacts && context.codeArtifacts.length > 0) {
+        for (const item of context.codeArtifacts) {
+          const artifact = item?.codeArtifact;
+          if (!artifact?.artifactId) continue;
+
+          try {
+            const content = artifact.content || '';
+            // Use appropriate file extension based on artifact type
+            const ext = this.getCodeFileExtension(artifact.type);
+            const fileName = `${artifact.title || artifact.artifactId}.${ext}`;
+            const buffer = Buffer.from(content, 'utf-8');
+            contextFiles.push(new File(fileName, buffer));
+          } catch (error) {
+            console.error(`Failed to process code artifact ${artifact.artifactId}:`, error);
+          }
+        }
+      }
+
+      // Process media files (images, audio, video)
+      if (context.mediaList && context.mediaList.length > 0) {
+        for (const media of context.mediaList) {
+          if (!media?.storageKey && !media?.url) continue;
+
+          try {
+            let buffer: Buffer | undefined;
+            if (media.storageKey) {
+              buffer = await this.params.reflyService?.downloadFile({
+                storageKey: media.storageKey,
+                visibility: 'private',
+              });
+            } else if (media.url) {
+              buffer = await this.params.reflyService?.downloadFileFromUrl(media.url);
+            }
+
+            if (!buffer) continue;
+
+            const fileName = media.title || media.entityId || 'media';
+            contextFiles.push(new File(fileName, buffer));
+          } catch (error) {
+            console.error(`Failed to download media ${media.entityId ?? 'unknown'}:`, error);
+          }
+        }
+      }
+
+      // Process content list (plain text content)
+      if (context.contentList && context.contentList.length > 0) {
+        for (let i = 0; i < context.contentList.length; i++) {
+          const item = context.contentList[i];
+          if (!item?.content) continue;
+
+          try {
+            const fileName = `content_${i + 1}.txt`;
+            const buffer = Buffer.from(item.content, 'utf-8');
+            contextFiles.push(new File(fileName, buffer));
+          } catch (error) {
+            console.error(`Failed to process content item ${i}:`, error);
+          }
+        }
+      }
+
+      // Process URLs (save URL list as text file)
+      if (context.urls && context.urls.length > 0) {
+        try {
+          const urlContent = context.urls
+            .map((item) => item?.url)
+            .filter(Boolean)
+            .join('\n');
+          const buffer = Buffer.from(urlContent, 'utf-8');
+          contextFiles.push(new File('urls.txt', buffer));
+        } catch (error) {
+          console.error('Failed to process URL list:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing context files:', error);
+    }
+
+    return contextFiles;
+  }
+
+  /**
+   * Get appropriate file extension for code artifact type
+   */
+  private getCodeFileExtension(type?: string): string {
+    const extensionMap: Record<string, string> = {
+      html: 'html',
+      react: 'tsx',
+      vue: 'vue',
+      mermaid: 'mmd',
+      svg: 'svg',
+      javascript: 'js',
+      typescript: 'ts',
+      python: 'py',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      go: 'go',
+      rust: 'rs',
+      ruby: 'rb',
+      php: 'php',
+      shell: 'sh',
+      sql: 'sql',
+      json: 'json',
+      yaml: 'yaml',
+      xml: 'xml',
+      css: 'css',
+      markdown: 'md',
+    };
+
+    return extensionMap[type?.toLowerCase() || ''] || 'txt';
+  }
+
   async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
     // Ensure API key is set in environment variable for underlying SDKs
     ensureApiKey(this.params.apiKey);
@@ -322,17 +491,32 @@ message: "Process customer_data.csv and generate: 1) cleaned_data.csv 2) analysi
         }
       }
 
-      // Prepare files if provided
-      const files: File[] = [];
+      // Prepare files from input
+      const inputFiles: File[] = [];
       if (input.files && input.files.length > 0) {
         for (const file of input.files) {
           const buffer = Buffer.from(file.content, 'base64');
-          files.push(new File(file.name, buffer));
+          inputFiles.push(new File(file.name, buffer));
         }
       }
 
-      // Generate response
-      const response = await session.generateResponse(input.message, files);
+      // Process context files and merge with input files
+      const contextFiles = await this.processContextFiles();
+      const allFiles = [...contextFiles, ...inputFiles];
+
+      // Build enhanced message with context file information
+      let enhancedMessage = input.message;
+      if (contextFiles.length > 0) {
+        enhancedMessage += '\n\n**Context Files Available:**\n';
+        for (const file of contextFiles) {
+          enhancedMessage += `- ${file.name}\n`;
+        }
+        enhancedMessage +=
+          '\nThese files have been uploaded to your workspace and are ready to use.';
+      }
+
+      // Generate response with all files
+      const response = await session.generateResponse(enhancedMessage, allFiles);
 
       // Convert response to our format
       const sandboxResponse: SandboxCodeInterpreterResponse = {

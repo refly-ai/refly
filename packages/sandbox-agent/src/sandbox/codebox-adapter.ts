@@ -1,4 +1,4 @@
-import { Sandbox } from '@scalebox/sdk';
+import { Sandbox, type WriteInfo } from '@scalebox/sdk';
 import { ExecutionResult } from './types';
 
 /**
@@ -188,17 +188,37 @@ export class CodeBox {
 
   /**
    * Upload a file to the sandbox
+   * @returns The full path of the uploaded file in the sandbox
    */
-  async upload(filename: string, content: Buffer | string): Promise<void> {
+  async upload(filename: string, content: Buffer | string): Promise<string> {
     if (!this.sandbox) {
       throw new Error('Sandbox not initialized. Call start() first.');
     }
 
     try {
-      // Convert Buffer to string or use string directly
-      const fileContent = Buffer.isBuffer(content) ? content.toString('utf-8') : content;
+      // Use /workspace as the working directory
+      const filePath = `/workspace/${filename}`;
+      let writeInfo: WriteInfo | undefined;
 
-      await this.sandbox.files.write(`/workspace/${filename}`, fileContent);
+      // For binary files (Buffer), convert to ArrayBuffer
+      // For text files (string), use directly
+      if (Buffer.isBuffer(content)) {
+        // Convert Buffer to ArrayBuffer for binary files (like images)
+        // Create a new ArrayBuffer to ensure it's not a SharedArrayBuffer
+        const arrayBuffer = new ArrayBuffer(content.length);
+        const view = new Uint8Array(arrayBuffer);
+        for (let i = 0; i < content.length; i++) {
+          view[i] = content[i];
+        }
+        writeInfo = await this.sandbox.files.write(`/workspace/${filename}`, arrayBuffer);
+      } else {
+        // String content for text files
+        writeInfo = await this.sandbox.files.write(`/workspace/${filename}`, content);
+      }
+
+      console.log(`[CodeBox] File uploaded: ${writeInfo.path} (name: ${writeInfo.name})`);
+
+      return filePath;
     } catch (error) {
       throw new Error(
         `Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -208,17 +228,30 @@ export class CodeBox {
 
   /**
    * Download a file from the sandbox
+   *
+   * @param filename - Name of the file to download
+   * @param options - Download options
+   * @param options.format - Format of the file content: 'text' (default), 'bytes', 'blob', or 'stream'
+   * @returns Object containing the file content or null if download fails
    */
-  async download(filename: string): Promise<{ content: string | null }> {
+  async download(
+    filename: string,
+    options?: { format?: 'text' | 'bytes' | 'blob' | 'stream' },
+  ): Promise<{ content: string | null }> {
     if (!this.sandbox) {
       throw new Error('Sandbox not initialized. Call start() first.');
     }
 
     try {
-      const content = await this.sandbox.files.read(`/workspace/${filename}`);
+      // Normalize the path - if it doesn't start with /, assume it's in /workspace
+      const filePath = filename.startsWith('/') ? filename : `/workspace/${filename}`;
+
+      const format = options?.format || 'text';
+      const content = await this.sandbox.files.read(`/workspace/${filename}`, { format });
+      console.log(`[CodeBox] File downloaded: ${filePath}`);
       return { content: content as string };
     } catch (error) {
-      console.error(`Failed to download file ${filename}:`, error);
+      console.error(`[CodeBox] Failed to download file ${filename}:`, error);
       return { content: null };
     }
   }
