@@ -7616,6 +7616,23 @@ export const CreditRechargeSchema = {
       type: 'string',
       description: 'Optional description for this recharge',
     },
+    appId: {
+      type: 'string',
+      description: 'Related app ID (if applicable)',
+    },
+    extraData: {
+      type: 'string',
+      description: 'Extra data for this recharge (JSON)',
+      $ref: '#/components/schemas/CreditRechargeExtraData',
+    },
+    shareId: {
+      type: 'string',
+      description: 'Related share ID (if applicable)',
+    },
+    title: {
+      type: 'string',
+      description: 'Related share title (if applicable)',
+    },
     expiresAt: {
       type: 'string',
       format: 'date-time',
@@ -7682,10 +7699,97 @@ export const CreditUsageSchema = {
       type: 'string',
       description: 'Model usage details for skill execution (JSON array of model usage)',
     },
+    appId: {
+      type: 'string',
+      description: 'Related app ID (if applicable)',
+    },
+    extraData: {
+      type: 'string',
+      description: 'Extra data for this usage (JSON)',
+      $ref: '#/components/schemas/CreditUsageExtraData',
+    },
+    shareId: {
+      type: 'string',
+      description: 'Related share ID (if applicable)',
+    },
+    title: {
+      type: 'string',
+      description: 'Related share title (if applicable)',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
       description: 'Usage record creation timestamp',
+    },
+  },
+} as const;
+
+export const CreditRechargeExtraDataSchema = {
+  type: 'object',
+  description: 'Extra data for credit recharge',
+  properties: {
+    appId: {
+      type: 'string',
+      description: 'Related app ID',
+    },
+    executionId: {
+      type: 'string',
+      description: 'Related execution ID',
+    },
+    shareId: {
+      type: 'string',
+      description: 'Related share ID',
+    },
+    title: {
+      type: 'string',
+      description: 'Related share title',
+    },
+    commissionRate: {
+      type: 'number',
+      description: 'Commission rate',
+    },
+  },
+} as const;
+
+export const CreditUsageExtraDataSchema = {
+  type: 'object',
+  description: 'Extra data for credit usage',
+  properties: {
+    appId: {
+      type: 'string',
+      description: 'Related app ID (if applicable)',
+    },
+    executionId: {
+      type: 'string',
+      description: 'Related execution ID',
+    },
+    shareId: {
+      type: 'string',
+      description: 'Related share ID',
+    },
+    title: {
+      type: 'string',
+      description: 'Related share title',
+    },
+    commissionRate: {
+      type: 'number',
+      description: 'Commission rate',
+    },
+    toolsetKey: {
+      type: 'string',
+      description: 'Related toolset key',
+    },
+    toolsetName: {
+      type: 'string',
+      description: 'Related toolset name',
+    },
+    toolKey: {
+      type: 'string',
+      description: 'Related tool key',
+    },
+    toolName: {
+      type: 'string',
+      description: 'Related tool name',
     },
   },
 } as const;

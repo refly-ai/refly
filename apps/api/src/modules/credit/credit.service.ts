@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
-import { User } from '@refly/openapi-schema';
+import { CreditRechargeExtraData, CreditUsageExtraData, User } from '@refly/openapi-schema';
 import { CreditBilling, CreditRecharge, CreditUsage, RawCanvasData } from '@refly/openapi-schema';
 import {
   CheckRequestCreditUsageResult,
@@ -22,7 +22,7 @@ import {
 import { CreditBalance } from './credit.dto';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { ConfigService } from '@nestjs/config';
-
+import { WorkflowAppNotFoundError } from '@refly/errors';
 @Injectable()
 export class CreditService {
   private readonly logger = new Logger(CreditService.name);
@@ -49,6 +49,8 @@ export class CreditService {
       expiresAt: Date;
     },
     now: Date = new Date(),
+    extraData?: CreditRechargeExtraData,
+    appId?: string,
   ): Promise<void> {
     // Check for existing debts
     const activeDebts = await this.prisma.creditDebt.findMany({
@@ -106,6 +108,8 @@ export class CreditService {
               createdAt: rechargeData.createdAt,
               updatedAt: now,
               expiresAt: rechargeData.expiresAt,
+              appId,
+              extraData: JSON.stringify(extraData),
             },
           ],
           skipDuplicates: true,
@@ -187,6 +191,8 @@ export class CreditService {
     executionId: string,
     creditUsage: number,
     appId?: string,
+    title?: string,
+    shareId?: string,
   ): Promise<void> {
     const creditUsageId = genCommissionCreditUsageId(executionId);
     const creditRechargeId = genCommissionCreditRechargeId(executionId);
@@ -198,19 +204,118 @@ export class CreditService {
       expiresAt.getMonth() + this.configService.get('credit.commissionCreditExpiresIn'),
     );
 
-    await this.processCreditRecharge(shareUserId, creditUsage, {
-      rechargeId: creditRechargeId,
-      source: 'commission',
-      description: `Commission credit for sharing execution ${executionId} from app ${appId}`,
-      createdAt: now,
-      expiresAt,
+    await this.processCreditRecharge(
+      shareUserId,
+      creditUsage,
+      {
+        rechargeId: creditRechargeId,
+        source: 'commission',
+        description: `Commission credit for sharing execution ${executionId} from app ${appId}`,
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+      {
+        executionId,
+        shareId,
+        title,
+        appId,
+        commissionRate: this.configService.get('credit.canvasCreditCommissionRate'),
+      },
+      appId,
+    );
+    await this.deductCreditsAndCreateUsage(
+      uid,
+      creditUsage,
+      {
+        usageId: creditUsageId,
+        usageType: 'commission',
+        createdAt: now,
+        description: `Commission credit for sharing execution ${executionId} from app ${appId}`,
+        appId,
+      },
+      creditUsage,
+      {
+        executionId,
+        shareId,
+        title,
+        appId,
+        commissionRate: this.configService.get('credit.canvasCreditCommissionRate'),
+      },
+    );
+  }
+
+  /**
+   * Extract workflow app data from description
+   * Returns title and shareId if description contains appId pattern
+   */
+  private async extractWorkflowAppData(
+    description?: string,
+  ): Promise<{ title?: string; shareId?: string }> {
+    if (!description) {
+      return {};
+    }
+
+    // Extract appId from description if it matches the pattern
+    const appIdMatch = description.match(/from app ([\w-]+)$/);
+    if (!appIdMatch) {
+      return {};
+    }
+
+    const appId = appIdMatch[1];
+    try {
+      const workflowData = await this.getWorkflowTitleAndShareId(appId);
+      return {
+        title: workflowData.title,
+        shareId: workflowData.shareId,
+      };
+    } catch (error) {
+      // If workflow app not found or any other error, just return empty object
+      this.logger.warn(`Failed to get workflow data for appId ${appId}: ${error.message}`);
+      return {};
+    }
+  }
+
+  async getWorkflowTitleAndShareId(appId: string) {
+    const workflowApp = await this.prisma.workflowApp.findFirst({
+      where: { appId },
     });
-    await this.deductCreditsAndCreateUsage(uid, creditUsage, {
-      usageId: creditUsageId,
-      usageType: 'commission',
-      createdAt: now,
-      description: `Commission credit for sharing execution ${executionId} from app ${appId}`,
+    if (!workflowApp) {
+      throw new WorkflowAppNotFoundError();
+    }
+
+    // If the workflow app is deleted, don't return shareId
+    const shareId = workflowApp.deletedAt ? undefined : workflowApp.shareId;
+
+    return { title: workflowApp.title, shareId };
+  }
+
+  /**
+   * Batch get workflow data for multiple appIds
+   */
+  private async batchGetWorkflowData(
+    appIds: string[],
+  ): Promise<Record<string, { title: string; shareId?: string }>> {
+    if (appIds.length === 0) {
+      return {};
+    }
+
+    const workflowApps = await this.prisma.workflowApp.findMany({
+      where: {
+        appId: {
+          in: appIds,
+        },
+      },
     });
+
+    const result: Record<string, { title: string; shareId?: string }> = {};
+    for (const workflowApp of workflowApps) {
+      // If the workflow app is deleted, don't return shareId
+      const shareId = workflowApp.deletedAt ? undefined : workflowApp.shareId;
+      result[workflowApp.appId] = { title: workflowApp.title, shareId };
+    }
+
+    return result;
   }
 
   /**
@@ -412,8 +517,10 @@ export class CreditService {
       modelUsageDetails?: string;
       createdAt: Date;
       description?: string;
+      appId?: string;
     },
     dueAmount?: number,
+    extraData?: CreditUsageExtraData,
   ): Promise<void> {
     // Lazy load daily gift recharge
     await this.lazyLoadDailyGiftCredits(uid);
@@ -473,6 +580,8 @@ export class CreditService {
           dueAmount: dueAmount,
           createdAt: usageData.createdAt,
           description: usageData.description,
+          appId: usageData.appId,
+          extraData: JSON.stringify(extraData),
         },
       }),
       // Execute all deduction operations
@@ -711,6 +820,7 @@ export class CreditService {
         enabled: true,
         source: true,
         description: true,
+        extraData: true,
         expiresAt: true,
         createdAt: true,
         updatedAt: true,
@@ -722,15 +832,59 @@ export class CreditService {
       take: pageSize,
     });
 
-    const data = records.map((record) => ({
-      ...record,
-      amount: Number(record.amount), // Convert BigInt to number
-      balance: Number(record.balance), // Convert BigInt to number
-      source: record.source as 'purchase' | 'gift' | 'promotion' | 'refund',
-      expiresAt: record.expiresAt.toISOString(),
-      createdAt: record.createdAt.toISOString(),
-      updatedAt: record.updatedAt.toISOString(),
-    }));
+    // Collect appIds that need to be queried for workflow data
+    const appIdsToQuery: string[] = [];
+    const recordAppIdMap: Record<string, string> = {};
+
+    for (const record of records) {
+      const extraData = record.extraData ? safeParseJSON(record.extraData) : null;
+
+      // If extraData doesn't have title and shareId, extract appId from description
+      if (!extraData?.title || !extraData?.shareId) {
+        const appIdMatch = record.description?.match(/from app ([\w-]+)$/);
+        if (appIdMatch) {
+          const appId = appIdMatch[1];
+          appIdsToQuery.push(appId);
+          recordAppIdMap[record.rechargeId] = appId;
+        }
+      }
+    }
+
+    // Batch query workflow data
+    const workflowDataMap = await this.batchGetWorkflowData(appIdsToQuery);
+
+    const data = records.map((record) => {
+      const extraData = record.extraData ? safeParseJSON(record.extraData) : null;
+      let workflowData: { title?: string; shareId?: string } = {};
+
+      // Use title and shareId from extraData if available
+      if (extraData?.title && extraData?.shareId) {
+        workflowData = {
+          title: extraData.title,
+          shareId: extraData.shareId,
+        };
+      } else {
+        // Otherwise, use data from batch query
+        const appId = recordAppIdMap[record.rechargeId];
+        if (appId && workflowDataMap[appId]) {
+          workflowData = workflowDataMap[appId];
+        }
+      }
+
+      // Exclude extraData from the returned object as it's not part of the CreditRecharge type
+      const { extraData: _, ...recordWithoutExtraData } = record;
+
+      return {
+        ...recordWithoutExtraData,
+        amount: Number(record.amount), // Convert BigInt to number
+        balance: Number(record.balance), // Convert BigInt to number
+        source: record.source as 'purchase' | 'gift' | 'promotion' | 'refund',
+        expiresAt: record.expiresAt.toISOString(),
+        createdAt: record.createdAt.toISOString(),
+        updatedAt: record.updatedAt.toISOString(),
+        ...workflowData,
+      };
+    });
 
     return {
       data,
@@ -769,6 +923,7 @@ export class CreditService {
         actionResultId: true,
         pilotSessionId: true,
         description: true,
+        extraData: true,
         createdAt: true,
       },
       orderBy: {
@@ -778,17 +933,61 @@ export class CreditService {
       take: pageSize,
     });
 
-    const data = records.map((record) => ({
-      ...record,
-      amount: Number(record.amount), // Convert BigInt to number
-      usageType: record.usageType as
-        | 'model_call'
-        | 'media_generation'
-        | 'embedding'
-        | 'reranking'
-        | 'other',
-      createdAt: record.createdAt.toISOString(),
-    }));
+    // Collect appIds that need to be queried for workflow data
+    const appIdsToQuery: string[] = [];
+    const recordAppIdMap: Record<string, string> = {};
+
+    for (const record of records) {
+      const extraData = record.extraData ? safeParseJSON(record.extraData) : null;
+
+      // If extraData doesn't have title and shareId, extract appId from description
+      if (!extraData?.title || !extraData?.shareId) {
+        const appIdMatch = record.description?.match(/from app ([\w-]+)$/);
+        if (appIdMatch) {
+          const appId = appIdMatch[1];
+          appIdsToQuery.push(appId);
+          recordAppIdMap[record.usageId] = appId;
+        }
+      }
+    }
+
+    // Batch query workflow data
+    const workflowDataMap = await this.batchGetWorkflowData(appIdsToQuery);
+
+    const data = records.map((record) => {
+      const extraData = record.extraData ? safeParseJSON(record.extraData) : null;
+      let workflowData: { title?: string; shareId?: string } = {};
+
+      // Use title and shareId from extraData if available
+      if (extraData?.title && extraData?.shareId) {
+        workflowData = {
+          title: extraData.title,
+          shareId: extraData.shareId,
+        };
+      } else {
+        // Otherwise, use data from batch query
+        const appId = recordAppIdMap[record.usageId];
+        if (appId && workflowDataMap[appId]) {
+          workflowData = workflowDataMap[appId];
+        }
+      }
+
+      // Exclude extraData from the returned object as it's not part of the CreditUsage type
+      const { extraData: _, ...recordWithoutExtraData } = record;
+
+      return {
+        ...recordWithoutExtraData,
+        amount: Number(record.amount), // Convert BigInt to number
+        usageType: record.usageType as
+          | 'model_call'
+          | 'media_generation'
+          | 'embedding'
+          | 'reranking'
+          | 'other',
+        createdAt: record.createdAt.toISOString(),
+        ...workflowData,
+      };
+    });
 
     return {
       data,
