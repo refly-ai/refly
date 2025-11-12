@@ -15,6 +15,8 @@ import { SyncToolCreditUsageProcessor } from '../credit/credit.processor';
 import { BullModule } from '@nestjs/bullmq';
 import { CreditModule } from '../credit/credit.module';
 import { ComposioModule } from './composio/composio.module';
+import { FishAudioModule } from './media/audio/fish-audio.module';
+import { HeyGenModule } from './media/video/heygen.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { ComposioModule } from './composio/composio.module';
     CanvasSyncModule,
     ProviderModule,
     CreditModule,
+    FishAudioModule,
+    HeyGenModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
   ],
   controllers: [ToolController],

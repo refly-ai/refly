@@ -523,7 +523,6 @@ export class MiscService implements OnModuleInit {
     await this.minioClient(visibility).putObject(storageKey, file.buffer, {
       'Content-Type': contentType,
     });
-
     // Resize and convert to webp if it's an image
     if (contentType.startsWith('image/')) {
       await this.imageQueue?.add('resizeAndConvert', { storageKey, visibility });

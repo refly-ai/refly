@@ -31,6 +31,8 @@ import { isDesktop } from '../../utils/runtime';
 import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
 import { ToolCallModule } from '../tool-call/tool-call.module';
+import { FishAudioModule } from '../tool/media/audio/fish-audio.module';
+import { HeyGenModule } from '../tool/media/video/heygen.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { ToolCallModule } from '../tool-call/tool-call.module';
     ToolCallModule,
     McpServerModule,
     MediaGeneratorModule,
+    FishAudioModule,
+    HeyGenModule,
     ...(isDesktop()
       ? []
       : [
