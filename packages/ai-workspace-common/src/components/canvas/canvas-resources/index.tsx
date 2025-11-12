@@ -7,7 +7,6 @@ import { CanvasResourcesHeader } from './share/canvas-resources-header';
 
 import './index.scss';
 import cn from 'classnames';
-import { useReactFlow } from '@xyflow/react';
 
 interface CanvasResourcesProps {
   className?: string;
@@ -15,16 +14,17 @@ interface CanvasResourcesProps {
 }
 
 export const CanvasResources = memo(({ className, wideScreen }: CanvasResourcesProps) => {
-  const { getNodes } = useReactFlow();
-  const nodes = getNodes();
-  const { currentResource, setCurrentResource } = useCanvasResourcesPanelStoreShallow((state) => ({
-    currentResource: state.currentResource,
-    setCurrentResource: state.setCurrentResource,
-  }));
+  const { currentResource, setCurrentResource, setSidePanelVisible } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      currentResource: state.currentResource,
+      setCurrentResource: state.setCurrentResource,
+      setSidePanelVisible: state.setSidePanelVisible,
+    }));
 
   useEffect(() => {
-    console.log('currentResource', currentResource);
-    console.log('nodes', nodes);
+    if (currentResource) {
+      setSidePanelVisible(true);
+    }
   }, [currentResource]);
 
   return (
