@@ -7,6 +7,9 @@ import {
   UseGuards,
   DefaultValuePipe,
   ParseIntPipe,
+  Param,
+  Res,
+  Req,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { DriveService } from './drive.service';
@@ -19,9 +22,12 @@ import {
   UpsertDriveFileResponse,
   BaseResponse,
   ListOrder,
+  BatchCreateDriveFilesRequest,
+  BatchCreateDriveFilesResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import { driveFilePO2DTO } from './drive.dto';
+import { Response, Request } from 'express';
 
 @Controller('v1/drive')
 @UseGuards(JwtAuthGuard)
@@ -54,6 +60,15 @@ export class DriveController {
     return buildSuccessResponse(driveFilePO2DTO(driveFile));
   }
 
+  @Post('file/batchCreate')
+  async batchCreateDriveFiles(
+    @LoginedUser() user: User,
+    @Body() request: BatchCreateDriveFilesRequest,
+  ): Promise<BatchCreateDriveFilesResponse> {
+    const driveFiles = await this.driveService.batchCreateDriveFiles(user, request);
+    return buildSuccessResponse(driveFiles.map(driveFilePO2DTO));
+  }
+
   @Post('file/update')
   async updateDriveFile(
     @LoginedUser() user: User,
@@ -70,5 +85,32 @@ export class DriveController {
   ): Promise<BaseResponse> {
     await this.driveService.deleteDriveFile(user, request);
     return buildSuccessResponse();
+  }
+
+  @Get('file/content/:fileId')
+  async serveDriveFile(
+    @LoginedUser() user: User,
+    @Param('fileId') fileId: string,
+    @Query('download') download: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    const { data, contentType, filename } = await this.driveService.getDriveFileStream(
+      user,
+      fileId,
+    );
+
+    const origin = req.headers.origin;
+
+    res.set({
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'Content-Length': String(data.length),
+      ...(download ? { 'Content-Disposition': `attachment; filename="${filename}"` } : {}),
+    });
+
+    res.end(data);
   }
 }

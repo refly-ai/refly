@@ -6932,15 +6932,33 @@ export type UpsertDriveFileRequest = {
   /**
    * Drive file type (MIME type)
    */
-  type: string;
+  type?: string;
   /**
-   * Drive file content
+   * File content (for plain text files)
    */
   content?: string;
+  /**
+   * File storage key (for uploaded files)
+   */
+  storageKey?: string;
   /**
    * External URL to download from
    */
   externalUrl?: string;
+};
+
+export type BatchCreateDriveFilesRequest = {
+  /**
+   * List of drive files
+   */
+  files: Array<UpsertDriveFileRequest>;
+};
+
+export type BatchCreateDriveFilesResponse = BaseResponse & {
+  /**
+   * List of drive files
+   */
+  data?: Array<DriveFile>;
 };
 
 export type UpsertDriveFileResponse = BaseResponse & {
@@ -7548,6 +7566,14 @@ export type CreateDriveFileData = {
 export type CreateDriveFileResponse = UpsertDriveFileResponse;
 
 export type CreateDriveFileError = unknown;
+
+export type BatchCreateDriveFilesData = {
+  body: BatchCreateDriveFilesRequest;
+};
+
+export type BatchCreateDriveFilesResponse2 = BatchCreateDriveFilesResponse;
+
+export type BatchCreateDriveFilesError = unknown;
 
 export type UpdateDriveFileData = {
   body: UpsertDriveFileRequest;

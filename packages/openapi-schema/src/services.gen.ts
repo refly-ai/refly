@@ -138,6 +138,9 @@ import type {
   CreateDriveFileData,
   CreateDriveFileError,
   CreateDriveFileResponse,
+  BatchCreateDriveFilesData,
+  BatchCreateDriveFilesError,
+  BatchCreateDriveFilesResponse2,
   UpdateDriveFileData,
   UpdateDriveFileError,
   UpdateDriveFileResponse,
@@ -1183,6 +1186,23 @@ export const createDriveFile = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/drive/file/create',
+  });
+};
+
+/**
+ * Batch create drive files
+ * Batch create drive files
+ */
+export const batchCreateDriveFiles = <ThrowOnError extends boolean = false>(
+  options: Options<BatchCreateDriveFilesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    BatchCreateDriveFilesResponse2,
+    BatchCreateDriveFilesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/batchCreate',
   });
 };
 

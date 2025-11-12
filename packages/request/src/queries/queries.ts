@@ -7,6 +7,7 @@ import {
   addNodesToCanvasPage,
   authorizeComposioConnection,
   autoNameCanvas,
+  batchCreateDriveFiles,
   batchCreateProviderItems,
   batchCreateResource,
   batchUpdateDocument,
@@ -174,6 +175,8 @@ import {
   AuthorizeComposioConnectionError,
   AutoNameCanvasData,
   AutoNameCanvasError,
+  BatchCreateDriveFilesData,
+  BatchCreateDriveFilesError,
   BatchCreateProviderItemsData,
   BatchCreateProviderItemsError,
   BatchCreateResourceData,
@@ -1863,6 +1866,24 @@ export const useCreateDriveFile = <
   useMutation<TData, TError, Options<CreateDriveFileData, true>, TContext>({
     mutationKey: Common.UseCreateDriveFileKeyFn(mutationKey),
     mutationFn: (clientOptions) => createDriveFile(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useBatchCreateDriveFiles = <
+  TData = Common.BatchCreateDriveFilesMutationResult,
+  TError = BatchCreateDriveFilesError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<BatchCreateDriveFilesData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<BatchCreateDriveFilesData, true>, TContext>({
+    mutationKey: Common.UseBatchCreateDriveFilesKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      batchCreateDriveFiles(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useUpdateDriveFile = <

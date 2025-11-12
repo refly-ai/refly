@@ -1116,6 +1116,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpsertDriveFileResponse'
+  /drive/file/batchCreate:
+    post:
+      tags:
+        - drive
+      summary: Batch create drive files
+      description: Batch create drive files
+      operationId: batchCreateDriveFiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreateDriveFilesRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCreateDriveFilesResponse'
   /drive/file/update:
     post:
       tags:
@@ -10894,7 +10914,6 @@ components:
       required:
         - canvasId
         - name
-        - type
       properties:
         fileId:
           type: string
@@ -10910,10 +10929,33 @@ components:
           description: Drive file type (MIME type)
         content:
           type: string
-          description: Drive file content
+          description: File content (for plain text files)
+        storageKey:
+          type: string
+          description: File storage key (for uploaded files)
         externalUrl:
           type: string
           description: External URL to download from
+    BatchCreateDriveFilesRequest:
+      type: object
+      required:
+        - files
+      properties:
+        files:
+          type: array
+          description: List of drive files
+          items:
+            $ref: '#/components/schemas/UpsertDriveFileRequest'
+    BatchCreateDriveFilesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of drive files
+              items:
+                $ref: '#/components/schemas/DriveFile'
     UpsertDriveFileResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

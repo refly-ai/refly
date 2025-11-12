@@ -783,11 +783,11 @@ model DriveFile {
   /// Drive file size
   size          BigInt    @default(0) @map("size")
   /// Drive file summary
-  summary       String    @map("summary")
+  summary       String?   @map("summary")
   /// Action result id
-  resultId      String    @map("result_id")
+  resultId      String?   @map("result_id")
   /// Action result version
-  resultVersion Int       @default(0) @map("result_version")
+  resultVersion Int?      @map("result_version")
   /// Drive file create timestamp
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp

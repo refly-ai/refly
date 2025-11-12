@@ -7,6 +7,7 @@ import {
   addNodesToCanvasPage,
   authorizeComposioConnection,
   autoNameCanvas,
+  batchCreateDriveFiles,
   batchCreateProviderItems,
   batchCreateResource,
   batchUpdateDocument,
@@ -991,6 +992,12 @@ export type CreateDriveFileMutationResult = Awaited<ReturnType<typeof createDriv
 export const useCreateDriveFileKey = 'CreateDriveFile';
 export const UseCreateDriveFileKeyFn = (mutationKey?: Array<unknown>) => [
   useCreateDriveFileKey,
+  ...(mutationKey ?? []),
+];
+export type BatchCreateDriveFilesMutationResult = Awaited<ReturnType<typeof batchCreateDriveFiles>>;
+export const useBatchCreateDriveFilesKey = 'BatchCreateDriveFiles';
+export const UseBatchCreateDriveFilesKeyFn = (mutationKey?: Array<unknown>) => [
+  useBatchCreateDriveFilesKey,
   ...(mutationKey ?? []),
 ];
 export type UpdateDriveFileMutationResult = Awaited<ReturnType<typeof updateDriveFile>>;

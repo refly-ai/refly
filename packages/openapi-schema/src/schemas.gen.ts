@@ -9827,7 +9827,7 @@ export const ListDriveFilesResponseSchema = {
 
 export const UpsertDriveFileRequestSchema = {
   type: 'object',
-  required: ['canvasId', 'name', 'type'],
+  required: ['canvasId', 'name'],
   properties: {
     fileId: {
       type: 'string',
@@ -9847,13 +9847,51 @@ export const UpsertDriveFileRequestSchema = {
     },
     content: {
       type: 'string',
-      description: 'Drive file content',
+      description: 'File content (for plain text files)',
+    },
+    storageKey: {
+      type: 'string',
+      description: 'File storage key (for uploaded files)',
     },
     externalUrl: {
       type: 'string',
       description: 'External URL to download from',
     },
   },
+} as const;
+
+export const BatchCreateDriveFilesRequestSchema = {
+  type: 'object',
+  required: ['files'],
+  properties: {
+    files: {
+      type: 'array',
+      description: 'List of drive files',
+      items: {
+        $ref: '#/components/schemas/UpsertDriveFileRequest',
+      },
+    },
+  },
+} as const;
+
+export const BatchCreateDriveFilesResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'List of drive files',
+          items: {
+            $ref: '#/components/schemas/DriveFile',
+          },
+        },
+      },
+    },
+  ],
 } as const;
 
 export const UpsertDriveFileResponseSchema = {
