@@ -30,8 +30,6 @@ export const useSkillResponseActions = ({
     return nodeIsExecuting || workflowIsRunning;
   }, [status, workflowRun.isInitializing, workflowRun.isPolling]);
 
-  console.log('status', isRunning, status);
-
   // Rerun only this node
   const handleRerunSingle = useCallback(() => {
     nodeActionEmitter.emit(createNodeEventName(nodeId, 'rerun'));
