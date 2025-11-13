@@ -133,6 +133,18 @@ export interface ReflyService {
       storageKey?: string;
     },
   ) => Promise<UploadResponse['data']>;
+  genImageID: () => Promise<string>;
+  uploadBase64: (
+    user: User,
+    param: {
+      base64: string;
+      filename?: string;
+      entityId?: string;
+      entityType?: EntityType;
+      visibility?: FileVisibility;
+      storageKey?: string;
+    },
+  ) => Promise<UploadResponse['data']>;
 }
 
 interface Apify13FToolParams extends ToolParams {
@@ -223,34 +235,79 @@ export class ApifyRun13FActor extends AgentBaseTool<Apify13FToolParams> {
         return lines.join('\n');
       };
 
+      // Upload generated CSV file and include file metadata in response
+      // Instead of creating canvas nodes directly, we put file info in the response
+      // so downstream tools (like sandbox) can discover and consume the files
       let storageKey: string | undefined;
+      let fileUrl: string | undefined;
+      let filename: string | undefined;
+
       try {
         const csv = toCsv(items);
         const buffer = Buffer.from(csv ?? '', 'utf8');
         const ts = new Date().toISOString().replace(/[:.]/g, '-');
-        const originalname = `13f-${input.manager_name.replace(/\s+/g, '-').toLowerCase()}-${input.quarter_year.replace(/\s+/g, '-').toLowerCase()}-${ts}.csv`;
+        filename = `13f-${input.manager_name.replace(/\s+/g, '-').toLowerCase()}-${input.quarter_year.replace(/\s+/g, '-').toLowerCase()}-${ts}.csv`;
+
+        // Generate unique entity ID for the file
+        const entityId = await this.params?.reflyService?.genImageID?.();
+
         const uploadRes = await this.params?.reflyService?.uploadFile?.(this.params?.user, {
-          file: { buffer, mimetype: 'text/csv', originalname },
+          file: { buffer, mimetype: 'text/csv', originalname: filename },
+          entityId,
         });
-        storageKey = uploadRes?.storageKey ?? undefined;
-      } catch {
-        // Ignore upload errors; continue returning the dataset items
+
+        if (uploadRes) {
+          storageKey = uploadRes.storageKey;
+          fileUrl = uploadRes.url;
+        }
+      } catch (error) {
+        // Log upload errors but continue returning the dataset items
+        console.error('Failed to upload CSV file:', error);
         storageKey = undefined;
+        fileUrl = undefined;
       }
 
       // Calculate credit cost for PRICE_PER_DATASET_ITEM pricing ($2.00 / 1,000 reports)
       const creditCost = calculate13FCreditCost(run, items.length);
 
+      // Prepare file metadata for downstream consumption
+      const fileMetadata = storageKey
+        ? {
+            filename,
+            storageKey,
+            url: fileUrl,
+            mimeType: 'text/csv',
+            description: `13F quarterly report data for ${input.manager_name} (${input.quarter_year})`,
+            recordCount: items.length,
+          }
+        : undefined;
+
+      // Build a descriptive summary that includes file information
+      // This allows AI and downstream tools to discover and use the file
+      const summaryText = fileMetadata
+        ? `Successfully retrieved ${items.length} 13F holdings reports for "${input.manager_name}" (${input.quarter_year}).
+
+**Generated File:**
+- Filename: ${fileMetadata.filename}
+- Storage Key: ${fileMetadata.storageKey}
+- URL: ${fileMetadata.url}
+- Format: CSV
+- Records: ${fileMetadata.recordCount}
+
+The CSV file contains detailed holdings information including security names, values, shares, and position changes. You can use the storage key to download and process this file in downstream tools.`
+        : `Successfully retrieved ${items.length} 13F holdings reports for "${input.manager_name}" (${input.quarter_year}), but file upload failed.`;
+
       return {
         status: 'success',
         data: {
           run,
-          storageKey,
           manager_name: input.manager_name,
           quarter_year: input.quarter_year,
+          file: fileMetadata,
+          itemCount: items.length,
         },
         creditCost,
-        summary: `Successfully ran 13F Actor for "${input.manager_name}" (${input.quarter_year}) and retrieved ${items.length} reports`,
+        summary: summaryText,
       };
     } catch (error) {
       return {

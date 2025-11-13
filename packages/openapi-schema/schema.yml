@@ -5371,6 +5371,9 @@ components:
         - application/refly.artifacts.code
         - text/html
         - application/refly.artifacts.mindmap
+        - text/csv
+        - application/json
+        - text/plain
     CodeArtifact:
       type: object
       description: Code artifact
