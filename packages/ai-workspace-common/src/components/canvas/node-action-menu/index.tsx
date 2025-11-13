@@ -214,7 +214,7 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
       handleUngroup,
       handleDuplicate,
       isMultiSelection,
-      // workflow,
+      workflow,
       t,
     ],
   );
