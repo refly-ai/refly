@@ -13,7 +13,11 @@ import {
   UploadResponse,
 } from '@refly/openapi-schema';
 // @ts-ignore - Package import will be resolved at runtime
-import { CodeInterpreterSession, File } from '@refly/sandbox-agent';
+import {
+  CodeInterpreterSession,
+  File,
+  CODE_INTERPRETER_SYSTEM_MESSAGE,
+} from '@refly/sandbox-agent';
 import { SandboxToolParams, SandboxCodeInterpreterResponse } from './types';
 
 export interface ReflyService {
@@ -476,7 +480,8 @@ message: "Process customer_data.csv and generate: 1) cleaned_data.csv 2) analysi
           // Pass API key to session - it will use it if environment variable is not set
           apiKey: this.params.apiKey ?? process.env.SCALEBOX_API_KEY,
           detailedError: this.params.detailedError,
-          systemMessage: this.params.systemMessage,
+          // Use optimized system message if not provided
+          systemMessage: this.params.systemMessage || CODE_INTERPRETER_SYSTEM_MESSAGE,
           requestTimeout: this.params.requestTimeout,
           maxIterations: this.params.maxIterations,
           maxRetry: this.params.maxRetry,

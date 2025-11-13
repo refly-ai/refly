@@ -7,11 +7,44 @@ import { ExecutionResult, CodeContext } from './types';
 export type CodeBoxOutputType = 'text' | 'image/png' | 'error';
 
 /**
+ * File metadata for generated files
+ */
+interface FileMetadata {
+  /**
+   * Semantic filename (e.g., 'sales_chart.png', 'temperature_trend.png')
+   * Extracted from code comments or savefig() calls
+   */
+  filename?: string;
+
+  /**
+   * File path in the sandbox
+   */
+  path?: string;
+
+  /**
+   * File type/format
+   */
+  format?: string;
+
+  /**
+   * Description of the file content (optional)
+   */
+  description?: string;
+}
+
+/**
  * CodeBox output interface
  */
 export interface CodeBoxOutput {
   type: CodeBoxOutputType;
   content: string;
+  stdout?: string;
+
+  /**
+   * Metadata for generated files
+   * Populated when code creates/saves files
+   */
+  files?: FileMetadata[];
 }
 
 /**
@@ -239,6 +272,88 @@ export class CodeBox {
   }
 
   /**
+   * Extract file metadata from Python code
+   * Looks for savefig(), to_csv(), etc. calls to determine generated filenames
+   */
+  private extractFileMetadata(code: string): FileMetadata[] {
+    const files: FileMetadata[] = [];
+
+    // Match plt.savefig('filename.png') or plt.savefig("filename.png")
+    const savefigMatches = code.matchAll(
+      /(?:plt\.|pyplot\.)savefig\s*\(\s*['"]([\w\-_./]+\.(?:png|jpg|jpeg|svg|pdf))['"]/gi,
+    );
+    for (const match of savefigMatches) {
+      files.push({
+        filename: match[1].split('/').pop() || match[1],
+        path: `/workspace/${match[1]}`,
+        format: match[1].split('.').pop()?.toLowerCase(),
+        description: this.inferDescriptionFromFilename(match[1]),
+      });
+    }
+
+    // Match df.to_csv('filename.csv') or to_csv("filename.csv")
+    const toCsvMatches = code.matchAll(/\.to_csv\s*\(\s*['"]([\w\-_./]+\.csv)['"]/gi);
+    for (const match of toCsvMatches) {
+      files.push({
+        filename: match[1].split('/').pop() || match[1],
+        path: `/workspace/${match[1]}`,
+        format: 'csv',
+        description: this.inferDescriptionFromFilename(match[1]),
+      });
+    }
+
+    // Match df.to_json('filename.json')
+    const toJsonMatches = code.matchAll(/\.to_json\s*\(\s*['"]([\w\-_./]+\.json)['"]/gi);
+    for (const match of toJsonMatches) {
+      files.push({
+        filename: match[1].split('/').pop() || match[1],
+        path: `/workspace/${match[1]}`,
+        format: 'json',
+        description: this.inferDescriptionFromFilename(match[1]),
+      });
+    }
+
+    // Match df.to_excel('filename.xlsx')
+    const toExcelMatches = code.matchAll(/\.to_excel\s*\(\s*['"]([\w\-_./]+\.xlsx?)['"]/gi);
+    for (const match of toExcelMatches) {
+      files.push({
+        filename: match[1].split('/').pop() || match[1],
+        path: `/workspace/${match[1]}`,
+        format: match[1].endsWith('.xlsx') ? 'xlsx' : 'xls',
+        description: this.inferDescriptionFromFilename(match[1]),
+      });
+    }
+
+    // Match Image.save('filename.png')
+    const imageSaveMatches = code.matchAll(
+      /\.save\s*\(\s*['"]([\w\-_./]+\.(?:png|jpg|jpeg|gif|webp))['"]/gi,
+    );
+    for (const match of imageSaveMatches) {
+      files.push({
+        filename: match[1].split('/').pop() || match[1],
+        path: `/workspace/${match[1]}`,
+        format: match[1].split('.').pop()?.toLowerCase(),
+        description: this.inferDescriptionFromFilename(match[1]),
+      });
+    }
+
+    return files;
+  }
+
+  /**
+   * Infer description from filename
+   */
+  private inferDescriptionFromFilename(filename: string): string {
+    const basename =
+      filename
+        .split('/')
+        .pop()
+        ?.replace(/\.[^.]+$/, '') || filename;
+    // Convert snake_case or kebab-case to readable text
+    return basename.replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  /**
    * Execute code in the sandbox
    * @param code - Python code to execute
    * @param context - Optional context to maintain state across executions
@@ -249,6 +364,9 @@ export class CodeBox {
     }
 
     try {
+      // Extract file metadata from code BEFORE execution
+      const extractedFiles = this.extractFileMetadata(code);
+
       // Use provided context, or default context if available
       const executionContext = context || this._defaultContext;
 
@@ -282,6 +400,8 @@ export class CodeBox {
         return {
           type: 'error',
           content: result.error.traceback || result.error.message || result.stderr,
+          files: extractedFiles.length > 0 ? extractedFiles : undefined,
+          stdout: result.stdout,
         };
       }
 
@@ -290,6 +410,8 @@ export class CodeBox {
         return {
           type: 'image/png',
           content: result.png, // Base64 encoded
+          files: extractedFiles.length > 0 ? extractedFiles : undefined,
+          stdout: result.stdout,
         };
       }
 
@@ -300,6 +422,8 @@ export class CodeBox {
           return {
             type: 'image/png',
             content: pngResult.png,
+            stdout: result.stdout,
+            files: extractedFiles.length > 0 ? extractedFiles : undefined,
           };
         }
       }
@@ -308,6 +432,8 @@ export class CodeBox {
       return {
         type: 'text',
         content: result.stdout || result.text || '',
+        files: extractedFiles.length > 0 ? extractedFiles : undefined,
+        stdout: result.stdout,
       };
     } catch (error) {
       return {
@@ -377,9 +503,25 @@ export class CodeBox {
       // Normalize the path - if it doesn't start with /, assume it's in /workspace
       const filePath = filename.startsWith('/') ? filename : `/workspace/${filename}`;
 
+      // Check if file exists first by listing the directory
+      try {
+        const dirPath = '/workspace';
+        const files = await this.sandbox.files.list(dirPath);
+        const fileExists = files.some((f) => f.name === filename || f.path === filePath);
+
+        if (!fileExists) {
+          console.warn(`[CodeBox] File not found in /workspace: ${filename}`);
+          console.warn('[CodeBox] Available files:', files.map((f) => f.name).join(', '));
+          return { content: null };
+        }
+      } catch (listError) {
+        console.warn('[CodeBox] Could not list directory to verify file existence:', listError);
+        // Continue to try reading anyway
+      }
+
       const format = options?.format || 'text';
-      const content = await this.sandbox.files.read(`/workspace/${filename}`, { format });
-      console.log(`[CodeBox] File downloaded: ${filePath}`);
+      const content = await this.sandbox.files.read(filePath, { format });
+      console.log(`[CodeBox] File downloaded successfully: ${filePath}`);
       return { content: content as string };
     } catch (error) {
       console.error(`[CodeBox] Failed to download file ${filename}:`, error);
@@ -447,4 +589,4 @@ export class CodeBox {
   }
 }
 
-export type { CodeBoxOptions as CodeBoxConfig };
+export type { CodeBoxOptions as CodeBoxConfig, FileMetadata };
