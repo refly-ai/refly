@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { FC, useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { CanvasNode } from '@refly/canvas-common';
-import { Edit, AddContext, InputContext, Delete, AiChat } from 'refly-icons';
+import { AddContext, InputContext, Delete, AiChat, Copy } from 'refly-icons';
 import { Ungroup, ChevronDown } from 'lucide-react';
-import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import {
   nodeActionEmitter,
   createNodeEventName,
@@ -15,7 +14,6 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useUngroupNodes } from '@refly-packages/ai-workspace-common/hooks/canvas/use-batch-nodes-selection/use-ungroup-nodes';
 import { useNodeCluster } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-cluster';
-import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useGetNodeContent } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-content';
 
 import './index.scss';
@@ -53,23 +51,14 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
 }) => {
   const { t } = useTranslation();
   const { getNode } = useReactFlow();
-  const { canvasId } = useCanvasContext();
-  const { previewNode } = useNodePreviewControl({ canvasId });
+  const { workflow } = useCanvasContext();
 
   const { activeDocumentId } = useDocumentStoreShallow((state) => ({
     activeDocumentId: state.activeDocumentId,
   }));
 
   const node = useMemo(() => getNode(nodeId) as CanvasNode, [nodeId, getNode]);
-  const nodeData = useMemo(() => node?.data, [node]);
   const { fetchNodeContent } = useGetNodeContent(node);
-  const [localSizeMode, setLocalSizeMode] = useState(
-    () => nodeData?.metadata?.sizeMode || 'adaptive',
-  );
-
-  useEffect(() => {
-    setLocalSizeMode(nodeData?.metadata?.sizeMode || 'adaptive');
-  }, [nodeData?.metadata?.sizeMode]);
 
   const { ungroupNodes } = useUngroupNodes();
 
@@ -95,15 +84,6 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     });
     onClose?.();
   }, [nodeId, fetchNodeContent, onClose]);
-
-  const handlePreview = useCallback(() => {
-    previewNode(node);
-    locateToNodePreviewEmitter.emit('locateToNodePreview', {
-      id: nodeId,
-      canvasId,
-    });
-    onClose?.();
-  }, [node, nodeId, canvasId, onClose, previewNode]);
 
   const handleUngroup = useCallback(() => {
     ungroupNodes(nodeId);
@@ -139,22 +119,16 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
     onClose?.();
   }, [nodeId, nodeType, layoutNodeCluster, onClose]);
 
-  const handleEditQuery = useCallback(() => {
-    previewNode(node);
-
-    setTimeout(() => {
-      locateToNodePreviewEmitter.emit('locateToNodePreview', {
-        id: nodeId,
-        canvasId,
-        type: 'editResponse',
-      });
-    }, 100);
-
+  const handleDuplicate = useCallback(() => {
+    nodeActionEmitter.emit(createNodeEventName(nodeId, 'duplicate'));
     onClose?.();
-  }, [nodeId, canvasId, node, previewNode, onClose]);
+  }, [nodeId, onClose]);
 
   const getMenuItems = useCallback(
     (activeDocumentId: string): MenuItem[] => {
+      // Check if workflow is running
+      const isWorkflowRunning = workflow?.isPolling || workflow?.workflowStatus === 'executing';
+
       if (isMultiSelection) {
         return [
           {
@@ -185,20 +159,6 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         ];
       }
 
-      const commonItems: MenuItem[] = [
-        ...(nodeType === 'skillResponse'
-          ? [
-              {
-                key: 'editQuery',
-                icon: Edit,
-                label: t('canvas.nodeActions.editQuery'),
-                onClick: handleEditQuery,
-                type: 'button' as const,
-              },
-            ]
-          : []),
-      ];
-
       const nodeTypeItems: Record<string, MenuItem[]> = {
         codeArtifact: [
           {
@@ -222,38 +182,40 @@ export const NodeActionMenu: FC<NodeActionMenuProps> = ({
         ],
         skillResponse: [
           {
-            key: 'insertToDoc',
-            icon: InputContext,
-            label: t('canvas.nodeActions.insertToDoc'),
-            loading: false,
-            onClick: handleInsertToDoc,
+            key: 'delete',
+            icon: Delete,
+            label: t('canvas.nodeActions.delete'),
+            onClick: handleDelete,
             type: 'button' as const,
-            disabled: !activeDocumentId,
+            disabled: isWorkflowRunning,
+          },
+          {
+            key: 'duplicate',
+            icon: Copy,
+            label: t('canvas.nodeActions.duplicate'),
+            onClick: handleDuplicate,
+            type: 'button' as const,
+            disabled: isWorkflowRunning,
           },
         ].filter(Boolean),
       };
 
-      return [
-        ...(nodeType !== 'skill' ? commonItems : []),
-        ...(nodeTypeItems[nodeType] || []),
-      ].filter(Boolean);
+      return [...(nodeTypeItems[nodeType] || [])].filter(Boolean);
     },
     [
       nodeType,
-      nodeData?.contentPreview,
       handleDelete,
       handleAddToContext,
-      handlePreview,
-      t,
-      localSizeMode,
       handleAskAI,
       handleGroupCluster,
       handleLayoutCluster,
-      handleEditQuery,
       handleInsertToDoc,
       handleSelectCluster,
       handleUngroup,
+      handleDuplicate,
       isMultiSelection,
+      // workflow,
+      t,
     ],
   );
 

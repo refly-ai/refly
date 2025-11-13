@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { GenericToolset } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { X } from 'refly-icons';
-import { LuInfo } from 'react-icons/lu';
 import { useListMentionItems } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/hooks/use-list-mention-items';
 import { MentionItem } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/mentionList';
+import { Question } from 'refly-icons';
 
 interface ConfigInfoDisplayProps {
   nodeId: string;
@@ -24,7 +24,7 @@ const SectionTitle = memo(
       <span>{children}</span>
       {tooltip && (
         <Tooltip title={tooltip} placement="top">
-          <LuInfo className="w-3 h-3 text-refly-text-2 cursor-help" />
+          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
         </Tooltip>
       )}
     </div>
@@ -65,7 +65,7 @@ export const ConfigInfoDisplay = memo(
     return (
       <div className="flex flex-col gap-4 mt-4">
         {/* Variables (输入项) */}
-        {variables.length > 0 && (
+        {
           <div>
             <SectionTitle tooltip="添加你需要填写的信息（如关键词、数量），workflow会基于这些信息生成内容">
               输入项
@@ -82,10 +82,10 @@ export const ConfigInfoDisplay = memo(
               ))}
             </div>
           </div>
-        )}
+        }
 
         {/* Tools (工具) */}
-        {toolsets.length > 0 && (
+        {
           <div>
             <SectionTitle tooltip="调用外部服务（如搜索全网信息、生成图片），让workflow具备更多能力">
               工具
@@ -117,10 +117,10 @@ export const ConfigInfoDisplay = memo(
               })}
             </div>
           </div>
-        )}
+        }
 
         {/* Files (文件) */}
-        {files.length > 0 && (
+        {
           <div>
             <SectionTitle tooltip='可拖入添加文档、图片、视频等，添加后会自动保存至"文件"，可通过@调用，为workflow提供参考资料'>
               文件
@@ -138,10 +138,10 @@ export const ConfigInfoDisplay = memo(
               ))}
             </div>
           </div>
-        )}
+        }
 
         {/* Node References (智能体) */}
-        {nodeReferences.length > 0 && (
+        {
           <div>
             <SectionTitle tooltip="添加智能助手，与当前节点协作完成复杂任务（如先分析数据，再生成报告）">
               智能体
@@ -157,7 +157,7 @@ export const ConfigInfoDisplay = memo(
               ))}
             </div>
           </div>
-        )}
+        }
       </div>
     );
   },
