@@ -60,7 +60,6 @@ const SkillResponseActionsComponent = ({
   if (isRunning) {
     icon = isHovered ? <Stop size={12} /> : <Running1 size={12} />;
   }
-  console.log('isRunning', isRunning);
 
   // When running, just show a button; when not running, show dropdown
   if (isRunning) {
