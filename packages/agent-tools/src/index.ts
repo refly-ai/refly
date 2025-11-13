@@ -20,5 +20,6 @@ export * from './notion';
 export * from './perplexity';
 export * from './reddit';
 export * from './sandbox';
+export * from './apify-13f';
 
 export type { ReflyService } from './builtin/interface';
