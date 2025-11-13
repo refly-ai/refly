@@ -26,6 +26,7 @@ import { MiscService } from '../misc/misc.service';
 import { genImageID } from '@refly/utils';
 import { FishAudioService } from '../tool/media/audio/fish-audio.service';
 import { HeyGenService } from '../tool/media/video/heygen.service';
+import { SandboxService } from '../tool/sandbox/sandbox.service';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
@@ -48,6 +49,7 @@ export class SkillEngineService implements OnModuleInit {
   private canvasSyncService: CanvasSyncService;
   private fishAudioService: FishAudioService;
   private heygenService: HeyGenService;
+  private sandboxService: SandboxService;
   constructor(
     private moduleRef: ModuleRef,
     private config: ConfigService,
@@ -70,6 +72,7 @@ export class SkillEngineService implements OnModuleInit {
     this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
     this.fishAudioService = this.moduleRef.get(FishAudioService, { strict: false });
     this.heygenService = this.moduleRef.get(HeyGenService, { strict: false });
+    this.sandboxService = this.moduleRef.get(SandboxService, { strict: false });
   }
 
   /**
@@ -245,6 +248,9 @@ export class SkillEngineService implements OnModuleInit {
       },
       generateVideo: async (user, req) => {
         return await this.heygenService.generateVideo(user, req);
+      },
+      execute: async (user, req) => {
+        return await this.sandboxService.execute(user, req);
       },
     };
   };
