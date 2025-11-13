@@ -55,9 +55,24 @@ export class Execute extends AgentBaseTool<SandboxParams> {
     timeout: z.number().optional().default(30).describe('Execution timeout in seconds'),
   });
 
-  description = `Execute code in a secure sandbox environment.
+  description = `
+Execute code in a secure sandbox environment.
 Supports multiple programming languages including Python, JavaScript, and more.
-Returns execution output, errors, and execution time.`;
+Returns execution output, errors, and execution time.
+
+[IMPORTANT]
+- If not specified, always use relative path for file operations.
+
+[MATPLOTLIB NOTE]
+- For single image output, you don't need to call \`plt.show()\` or \`plt.savefig()\`, just use like this:
+
+  \`\`\`python
+  import matplotlib.pyplot as plt
+  from pathlib import Path
+  
+  plt.plot([1, 2, 3], [4, 5, 6])
+  \`\`\`
+`;
 
   protected params: SandboxParams;
 
