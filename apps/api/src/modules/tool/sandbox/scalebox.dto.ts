@@ -1,3 +1,5 @@
+import type { ExecutionResult } from '@scalebox/sdk';
+
 /**
  * Scalebox internal type definitions
  * These types are only used within the scalebox module
@@ -19,7 +21,7 @@ export interface ScaleboxExecutionJobData {
  * Scalebox execution result (internal use)
  */
 export interface ScaleboxExecutionResult {
-  output: string;
+  originResult?: ExecutionResult;
   error: string;
   exitCode: number;
   executionTime: number;
