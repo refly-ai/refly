@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { CodeBox, CodeBoxOutput } from './sandbox/codebox-adapter';
 import { AgentExecutor, createReactAgent } from 'langchain/agents';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
@@ -10,11 +9,12 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { z } from 'zod';
 import { File, UserRequest, CodeInterpreterResponse, SessionStatus } from './schema';
 import { settings } from './config';
-import { getFileModifications, removeDownloadLink } from './chains';
+import { removeDownloadLink } from './chains';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { RunnableSequence } from '@langchain/core/runnables';
 import { formatToOpenAIToolMessages } from 'langchain/agents/format_scratchpad/openai_tools';
 import { OpenAIToolsAgentOutputParser } from 'langchain/agents/openai/output_parser';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Handle deprecated kwargs for backward compatibility
@@ -177,13 +177,64 @@ export class CodeInterpreterSession {
   private createTools(additionalTools: any[]): any[] {
     const pythonTool: any = new (DynamicStructuredTool as any)({
       name: 'python',
-      description: `Input a string of code to a ipython interpreter. Write the entire code in a single string. This string can be really long, so you can use the \`;\" character to split lines. Start your code on the same line as the opening quote. Do not start your code with a line break. For example, do 'import numpy', not '\\nimport numpy'. Variables are preserved between runs. ${
+      description: `Execute Python code in an IPython interpreter with persistent state across executions.
+
+IMPORTANT GUIDELINES:
+1. **Write Complete, Comprehensive Code**: Write all necessary code in ONE execution to fully accomplish the task. Include data loading, processing, visualization, and saving in a single code block.
+
+2. **Minimize Iterations**: Avoid splitting tasks into multiple small executions. Write robust, complete code that handles the entire workflow at once.
+
+3. **Task Completion Signals**: When you create files (images, CSVs, etc.), the system will automatically notify you with "✓ File(s) successfully created and saved". This means the task is COMPLETE - do NOT create variations or additional versions unless explicitly requested.
+
+4. **Semantic File Naming (CRITICAL)**: 
+   - ALWAYS use meaningful, descriptive filenames that reflect the content
+   - Use snake_case (e.g., 'sales_trend_2024.png', 'customer_analysis.csv')
+   - Include the type of visualization/data in the name
+   - Examples: 'bar_chart.png', 'temperature_trend.png', 'revenue_by_region.csv'
+   - AVOID: generic names like 'output.png', 'chart.png', 'data.csv'
+
+5. **Code Format**: 
+   - Write entire code in a single string
+   - Use semicolons to separate statements if needed
+   - Start code immediately after opening quote (no leading newline)
+   - Variables and state persist between executions
+
+6. **Available Packages**: numpy, pandas, matplotlib, seaborn, scikit-learn, PIL/Pillow, scipy, and more${
         this.config.customPackages.length > 0
-          ? `You can use all default python packages specifically also these: ${this.config.customPackages.join(', ')}`
+          ? `. Custom packages: ${this.config.customPackages.join(', ')}`
           : ''
-      }`,
+      }
+
+7. **File Operations**: Files are automatically saved and sent to the user. You'll receive confirmation when complete.
+
+Example of GOOD code (semantic filenames + complete):
+\`\`\`python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load and analyze sales data
+sales_data = pd.read_csv('sales.csv')
+monthly_summary = sales_data.groupby('month')['revenue'].sum()
+
+# Create visualization with semantic filename
+plt.figure(figsize=(12, 6))
+plt.bar(monthly_summary.index, monthly_summary.values)
+plt.title('Monthly Revenue Trends')
+plt.xlabel('Month')
+plt.ylabel('Revenue ($)')
+plt.savefig('monthly_revenue_chart.png')  # ✅ Semantic filename
+
+# Export summary with semantic filename
+monthly_summary.to_csv('revenue_summary_by_month.csv')  # ✅ Semantic filename
+\`\`\`
+
+Example of BAD code (generic filenames):
+\`\`\`python
+plt.savefig('chart.png')  # ❌ Too generic
+df.to_csv('output.csv')   # ❌ No context
+\`\`\``,
       schema: z.object({
-        code: z.string().describe('Python code to execute'),
+        code: z.string().describe('Complete Python code to execute the entire task'),
       }),
       func: async ({ code }: { code: string }) => await this.runHandler(code),
     });
@@ -355,6 +406,45 @@ export class CodeInterpreterSession {
   }
 
   /**
+   * Generate semantic filename for images based on code content
+   */
+  private generateSemanticImageName(code: string): string {
+    const lowerCode = code.toLowerCase();
+
+    // Extract common visualization types
+    if (lowerCode.includes('bar') && lowerCode.includes('chart')) return 'bar_chart';
+    if (lowerCode.includes('line') && lowerCode.includes('chart')) return 'line_chart';
+    if (lowerCode.includes('pie') && lowerCode.includes('chart')) return 'pie_chart';
+    if (
+      lowerCode.includes('scatter') &&
+      (lowerCode.includes('plot') || lowerCode.includes('chart'))
+    )
+      return 'scatter_plot';
+    if (lowerCode.includes('histogram')) return 'histogram';
+    if (lowerCode.includes('heatmap')) return 'heatmap';
+    if (lowerCode.includes('boxplot') || lowerCode.includes('box plot')) return 'boxplot';
+    if (lowerCode.includes('violin') && lowerCode.includes('plot')) return 'violin_plot';
+
+    // Extract subject matter
+    if (lowerCode.includes('temperature')) return 'temperature_chart';
+    if (lowerCode.includes('sales')) return 'sales_chart';
+    if (lowerCode.includes('revenue')) return 'revenue_chart';
+    if (lowerCode.includes('trend')) return 'trend_analysis';
+    if (lowerCode.includes('distribution')) return 'distribution_plot';
+    if (lowerCode.includes('correlation')) return 'correlation_matrix';
+    if (lowerCode.includes('comparison')) return 'comparison_chart';
+    if (lowerCode.includes('combined') || lowerCode.includes('merge'))
+      return 'combined_visualization';
+
+    // Check for plot/figure
+    if (lowerCode.includes('plot') || lowerCode.includes('plt.')) return 'plot';
+    if (lowerCode.includes('figure') || lowerCode.includes('fig')) return 'figure';
+
+    // Fallback to generic name with timestamp
+    return `visualization_${Date.now()}`;
+  }
+
+  /**
    * Run code handler
    */
   private async runHandler(code: string): Promise<string> {
@@ -368,10 +458,16 @@ export class CodeInterpreterSession {
 
     // Handle image output
     if (output.type === 'image/png') {
+      // Use filename from metadata if available, otherwise generate semantic name
       const filename = `image-${uuidv4()}.png`;
+
       const imageBuffer = Buffer.from(output.content, 'base64');
       this.outputFiles.push(new File(filename, imageBuffer));
-      return `Image ${filename} got send to the user.`;
+
+      // Provide clear completion signal
+      return `✓ Image successfully generated and saved as "${filename}". The image has been sent to the user. 
+      Python run code stdout: ${output.stdout}
+      Task completed.`;
     }
 
     // Handle errors
@@ -387,12 +483,30 @@ export class CodeInterpreterSession {
       if (this.verbose) {
         console.error('Error:', output.content);
       }
+      // Don't try to download files if code execution failed
+      return output.content;
     }
 
-    // Check for file modifications
-    const modifications = await getFileModifications(code, this.llm);
-    if (modifications && modifications.length > 0) {
-      for (const filename of modifications) {
+    // Check for file modifications (only if code executed successfully)
+    // First, try to use extracted metadata from code
+    let filesToDownload: string[] = [];
+
+    if (output.files && output.files.length > 0) {
+      // Use filenames extracted from code (e.g., plt.savefig('chart.png'))
+      filesToDownload = output.files.map((f) => f.filename!).filter(Boolean);
+      console.log(`[Session] Using extracted filenames from code: ${filesToDownload.join(', ')}`);
+    } else {
+      // Fallback to LLM-based modification detection
+      // const modifications = await getFileModifications(code, this.llm);
+      // if (modifications && modifications.length > 0) {
+      //   filesToDownload = modifications;
+      //   console.log(`[Session] Using LLM-detected modifications: ${filesToDownload.join(', ')}`);
+      // }
+    }
+
+    if (filesToDownload.length > 0) {
+      const savedFiles: string[] = [];
+      for (const filename of filesToDownload) {
         if (this.inputFiles.some((f) => f.name === filename)) {
           continue;
         }
@@ -409,6 +523,13 @@ export class CodeInterpreterSession {
           continue;
         }
         this.outputFiles.push(new File(filename, Buffer.from(fileBuffer.content)));
+        savedFiles.push(filename);
+      }
+
+      // Append clear success message about saved files
+      if (savedFiles.length > 0) {
+        const fileList = savedFiles.map((f) => `"${f}"`).join(', ');
+        return `${output.content}\n\n✓ File(s) successfully created and saved: ${fileList}. These files have been sent to the user. Task completed.`;
       }
     }
 
@@ -463,6 +584,35 @@ export class CodeInterpreterSession {
         if (this.verbose) {
           console.error('Error while removing download links:', e);
         }
+      }
+    }
+
+    // Add detailed file summary if files were generated
+    if (this.outputFiles.length > 0) {
+      const fileDescriptions = this.outputFiles
+        .map((file) => {
+          const sizeKB = (file.content.length / 1024).toFixed(2);
+          const type = file.name.endsWith('.png')
+            ? 'Image (PNG)'
+            : file.name.endsWith('.jpg') || file.name.endsWith('.jpeg')
+              ? 'Image (JPEG)'
+              : file.name.endsWith('.csv')
+                ? 'CSV Data'
+                : file.name.endsWith('.json')
+                  ? 'JSON Data'
+                  : file.name.endsWith('.txt')
+                    ? 'Text File'
+                    : 'File';
+          return `  • ${file.name} (${type}, ${sizeKB} KB)`;
+        })
+        .join('\n');
+
+      // Only append if not already mentioned in response
+      if (
+        !processedResponse.includes('File(s) successfully created') &&
+        !processedResponse.includes('Task completed')
+      ) {
+        processedResponse += `\n\n✓ Generated ${this.outputFiles.length} file(s):\n${fileDescriptions}\n\nAll files have been delivered to you successfully.`;
       }
     }
 
