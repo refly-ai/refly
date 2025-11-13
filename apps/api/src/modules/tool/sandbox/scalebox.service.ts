@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Sandbox } from '@scalebox/sdk';
 import { User, SandboxExecuteRequest, SandboxExecuteResponse } from '@refly/openapi-schema';
+import { Queue, QueueEvents } from 'bullmq';
 
 import { buildResponse } from '../../../utils';
 import { MEDIA_TYPES } from '../common/constant/media-types';
@@ -10,19 +12,90 @@ import {
   type ToolExecutionResult,
   ToolExecutionSyncInterceptor,
 } from '../common/interceptors/tool-execution-sync.interceptor';
+import {
+  SCALEBOX_EXECUTION_QUEUE,
+  SCALEBOX_DEFAULT_TIMEOUT,
+  SCALEBOX_DEFAULT_MAX_QUEUE_SIZE,
+} from './scalebox.constants';
+import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
 
 /**
  * Scalebox Service
  * Execute code in a secure sandbox environment using Scalebox provider
  */
 @Injectable()
-export class ScaleboxService {
+export class ScaleboxService implements OnModuleDestroy {
   private readonly logger = new Logger(ScaleboxService.name);
+  private queueEvents?: QueueEvents;
 
   constructor(
     private readonly config: ConfigService,
     private readonly toolExecutionSync: ToolExecutionSyncInterceptor,
-  ) {}
+    @Optional()
+    @InjectQueue(SCALEBOX_EXECUTION_QUEUE)
+    private readonly executionQueue?: Queue<ScaleboxExecutionJobData, ScaleboxExecutionResult>,
+  ) {
+    // Create QueueEvents for job result listening if queue is available
+    if (this.executionQueue) {
+      this.queueEvents = new QueueEvents(SCALEBOX_EXECUTION_QUEUE, {
+        connection: this.executionQueue.opts.connection,
+      });
+    }
+  }
+
+  /**
+   * Cleanup on module destroy
+   */
+  async onModuleDestroy() {
+    if (this.queueEvents) {
+      await this.queueEvents.close();
+    }
+  }
+
+  /**
+   * Core sandbox code execution logic (static method for reuse)
+   * This method contains the actual Scalebox SDK integration logic
+   */
+  static async executeCode(params: {
+    code: string;
+    language?: string;
+    apiKey: string;
+  }): Promise<ScaleboxExecutionResult> {
+    const startTime = Date.now();
+
+    try {
+      // Create sandbox with API key
+      const sandbox = await Sandbox.create('code-interpreter', {
+        apiKey: params.apiKey,
+      });
+
+      // Execute code
+      const result = await sandbox.runCode(params.code, {
+        language: (params.language || 'python') as any,
+      });
+
+      // Kill sandbox
+      await sandbox.kill();
+
+      const executionTime = Date.now() - startTime;
+
+      return {
+        output: result.text || '',
+        error: '',
+        exitCode: 0,
+        executionTime,
+      };
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+
+      return {
+        output: '',
+        error: (error as Error).message || 'Unknown error occurred',
+        exitCode: 1,
+        executionTime,
+      };
+    }
+  }
 
   /**
    * Public API method that returns SandboxExecuteResponse for backward compatibility
@@ -72,76 +145,118 @@ export class ScaleboxService {
     user: User,
     request: SandboxExecuteRequest,
   ): Promise<ToolExecutionResult> {
-    const startTime = Date.now();
+    this.logger.log(
+      `Executing sandbox code for user ${user.uid}, canvasId: ${request.canvasId || 'N/A'}, language: ${request.language || 'python'}`,
+    );
+
+    // Get API key from config
+    const apiKey = this.config.get<string>('sandbox.scalebox.apiKey');
+
+    if (!apiKey) {
+      return {
+        status: 'error',
+        errors: [
+          {
+            code: 'SCALEBOX_NOT_CONFIGURED',
+            message: 'Scalebox API key is not configured. Please contact administrator.',
+          },
+        ],
+      };
+    }
+
+    // If queue is not available (desktop mode), return error
+    if (!this.executionQueue) {
+      this.logger.error('Execution queue not available');
+      return {
+        status: 'error',
+        errors: [
+          {
+            code: 'QUEUE_NOT_AVAILABLE',
+            message: 'Sandbox execution queue is not available. Please check Redis connection.',
+          },
+        ],
+      };
+    }
 
     try {
-      // Get API key from config
-      const apiKey = this.config.get<string>('sandbox.scalebox.apiKey');
+      // Check queue size before adding new job
+      const waitingCount = await this.executionQueue.getWaitingCount();
+      const maxQueueSizeConfig = this.config.get<string>('sandbox.scalebox.maxQueueSize');
+      const maxQueueSize =
+        Number.parseInt(maxQueueSizeConfig, 10) || SCALEBOX_DEFAULT_MAX_QUEUE_SIZE;
 
-      if (!apiKey) {
+      if (waitingCount >= maxQueueSize) {
+        this.logger.warn(
+          `Queue overloaded: ${waitingCount} tasks waiting, max: ${maxQueueSize}. Rejecting new request from user ${user.uid}`,
+        );
         return {
           status: 'error',
           errors: [
             {
-              code: 'SCALEBOX_NOT_CONFIGURED',
-              message: 'Scalebox API key is not configured. Please contact administrator.',
+              code: 'QUEUE_OVERLOADED',
+              message: `System is busy (${waitingCount} tasks in queue). Please try again later.`,
             },
           ],
         };
       }
 
-      this.logger.log(
-        `Executing sandbox code for user ${user.uid}, canvasId: ${request.canvasId || 'N/A'}, language: ${request.language || 'python'}`,
-      );
-
-      // Create sandbox with API key
-      const sandbox = await Sandbox.create('code-interpreter', {
-        apiKey,
-      });
-
-      // Execute code - runCode expects two separate parameters
-      const result = await sandbox.runCode(request.code, {
-        language: (request.language || 'python') as any,
-      });
-
-      // Kill sandbox
-      await sandbox.kill();
-
-      const executionTime = Date.now() - startTime;
-
-      this.logger.log(
-        `Sandbox execution completed for user ${user.uid}, execution time: ${executionTime}ms`,
-      );
-
-      return {
-        status: 'success',
-        data: {
-          output: result.text || '',
-          error: '',
-          exitCode: 0,
-          executionTime,
+      // Add job to queue with aggressive cleanup options
+      const job = await this.executionQueue.add(
+        'execute',
+        {
+          uid: user.uid,
+          code: request.code,
+          language: request.language,
+          timeout: request.timeout,
+          canvasId: request.canvasId,
+          apiKey,
         },
-      };
-    } catch (error) {
-      const executionTime = Date.now() - startTime;
+        {
+          removeOnComplete: true, // Remove job immediately after completion
+          removeOnFail: true, // Remove job immediately after failure
+        },
+      );
 
+      this.logger.log(`Sandbox job queued: ${job.id}, current queue size: ${waitingCount + 1}`);
+
+      // Wait for job to complete and return result
+      const timeoutConfig = this.config.get<string>('sandbox.scalebox.timeout');
+      const waitTimeout = Number.parseInt(timeoutConfig, 10) || SCALEBOX_DEFAULT_TIMEOUT;
+      const result = await job.waitUntilFinished(this.queueEvents, waitTimeout);
+
+      this.logger.log(`Sandbox execution completed: ${job.id}`);
+
+      // Convert ScaleboxExecutionResult to ToolExecutionResult
+      if (result.exitCode === 0) {
+        return {
+          status: 'success',
+          data: result,
+        };
+      } else {
+        return {
+          status: 'error',
+          data: result,
+          errors: [
+            {
+              code: 'SANDBOX_EXECUTION_FAILED',
+              message: result.error || 'Failed to execute code',
+            },
+          ],
+        };
+      }
+    } catch (error) {
       this.logger.error(
-        `Failed to execute sandbox code: ${(error as Error).message} for user ${user.uid}`,
+        `Queue execution failed: ${(error as Error).message}`,
         (error as Error).stack,
       );
 
+      // Return error instead of fallback
       return {
         status: 'error',
-        data: {
-          output: '',
-          error: (error as Error).message || 'Unknown error occurred',
-          exitCode: 1,
-          executionTime,
-        },
         errors: [
           {
-            code: 'SANDBOX_EXECUTION_FAILED',
-            message: (error as Error).message || 'Failed to execute code',
+            code: 'QUEUE_EXECUTION_FAILED',
+            message: (error as Error).message || 'Failed to execute code in queue',
           },
         ],
       };
