@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { CommonModule } from '../../common/common.module';
+import { MiscModule } from '../../misc/misc.module';
 import { CanvasSyncModule } from '../../canvas-sync/canvas-sync.module';
 import { isDesktop } from '../../../utils/runtime';
 import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execution-sync.interceptor';
@@ -15,6 +16,7 @@ import { ScaleboxService } from './scalebox.service';
 @Module({
   imports: [
     CommonModule,
+    MiscModule,
     CanvasSyncModule,
     // Only register queue in non-desktop mode
     ...(isDesktop()

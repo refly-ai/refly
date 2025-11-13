@@ -51,7 +51,6 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
       // Return error as result instead of throwing
       // This prevents the job from being retried and ensures the caller receives the error
       return {
-        output: '',
         error: (error as Error).message || 'Unexpected error occurred during code execution',
         exitCode: 1,
         executionTime,

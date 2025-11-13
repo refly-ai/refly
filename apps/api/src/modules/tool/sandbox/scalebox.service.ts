@@ -2,7 +2,6 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Sandbox } from '@scalebox/sdk';
-import fs from 'node:fs';
 import { User, SandboxExecuteRequest, SandboxExecuteResponse } from '@refly/openapi-schema';
 import { Queue, QueueEvents } from 'bullmq';
 
@@ -19,6 +18,7 @@ import {
   SCALEBOX_DEFAULT_MAX_QUEUE_SIZE,
 } from './scalebox.constants';
 import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
+import { MiscService } from '../../misc/misc.service';
 
 /**
  * Scalebox Service
@@ -31,6 +31,7 @@ export class ScaleboxService implements OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService,
+    private readonly miscService: MiscService,
     private readonly toolExecutionSync: ToolExecutionSyncInterceptor,
     @Optional()
     @InjectQueue(SCALEBOX_EXECUTION_QUEUE)
@@ -87,11 +88,6 @@ export class ScaleboxService implements OnModuleDestroy {
         cwd,
       });
 
-      const filename = `output-${Date.now()}.png`;
-
-      result.png &&
-        fs.writeFileSync(`/Users/zqxy123/Downloads/static/${filename}`, result.png, 'base64');
-
       logger.log('Code execution completed, killing sandbox');
       await sandbox.kill();
 
@@ -99,7 +95,7 @@ export class ScaleboxService implements OnModuleDestroy {
       logger.log(`Sandbox execution finished, total time: ${executionTime}ms`);
 
       return {
-        output: `<img src="http://localhost:3000/${filename}" />`,
+        originResult: result,
         error: '',
         exitCode: 0,
         executionTime,
@@ -109,7 +105,6 @@ export class ScaleboxService implements OnModuleDestroy {
       logger.error(`Sandbox execution failed: ${(error as Error).message}`, (error as Error).stack);
 
       return {
-        output: '',
         error: (error as Error).message || 'Unknown error occurred',
         exitCode: 1,
         executionTime,
@@ -126,9 +121,26 @@ export class ScaleboxService implements OnModuleDestroy {
 
     // Convert ToolExecutionResult to SandboxExecuteResponse
     if (result.status === 'success') {
+      const png = result.data?.originResult?.png;
+      if (png) {
+        const uploadResult = await this.miscService.uploadBase64(user, {
+          base64: png,
+          filename: `output-${Date.now()}.png`,
+        });
+
+        return buildResponse<SandboxExecuteResponse>(true, {
+          data: {
+            output: `<img src="${uploadResult.url}" />`,
+            error: result.data?.error || '',
+            exitCode: result.data?.exitCode || 0,
+            executionTime: result.data?.executionTime || 0,
+          },
+        });
+      }
+
       return buildResponse<SandboxExecuteResponse>(true, {
         data: {
-          output: result.data?.output || '',
+          output: result.data?.originResult?.text || '',
           error: result.data?.error || '',
           exitCode: result.data?.exitCode || 0,
           executionTime: result.data?.executionTime || 0,
