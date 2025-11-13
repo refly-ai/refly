@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { User, BaseResponseV2 } from '@refly/openapi-schema';
+import { ConfigService } from '@nestjs/config';
+import { Sandbox } from '@scalebox/sdk';
+import { User, SandboxExecuteRequest, SandboxExecuteResponse } from '@refly/openapi-schema';
+
 import { buildResponse } from '../../../utils';
-import { PrismaService } from '../../common/prisma.service';
 import { MEDIA_TYPES } from '../common/constant/media-types';
 import { ToolExecutionSync } from '../common/decorators/tool-execution-sync.decorator';
 import {
@@ -9,37 +11,16 @@ import {
   ToolExecutionSyncInterceptor,
 } from '../common/interceptors/tool-execution-sync.interceptor';
 
-// Temporary type definitions (should be moved to openapi-schema later)
-export interface SandboxExecuteRequest {
-  code: string;
-  language?: string;
-  timeout?: number;
-  parentResultId?: string;
-  targetId?: string;
-  targetType?: string;
-  model?: string;
-  providerItemId?: string;
-}
-
-export interface SandboxExecuteResponse extends BaseResponseV2 {
-  data?: {
-    output?: string;
-    error?: string;
-    exitCode?: number;
-    executionTime?: number;
-  };
-}
-
 /**
- * Sandbox Service
- * Execute code in a secure sandbox environment
+ * Scalebox Service
+ * Execute code in a secure sandbox environment using Scalebox provider
  */
 @Injectable()
-export class SandboxService {
-  private readonly logger = new Logger(SandboxService.name);
+export class ScaleboxService {
+  private readonly logger = new Logger(ScaleboxService.name);
 
   constructor(
-    private readonly prismaService: PrismaService,
+    private readonly config: ConfigService,
     private readonly toolExecutionSync: ToolExecutionSyncInterceptor,
   ) {}
 
@@ -91,26 +72,59 @@ export class SandboxService {
     user: User,
     request: SandboxExecuteRequest,
   ): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+
     try {
+      // Get API key from config
+      const apiKey = this.config.get<string>('sandbox.scalebox.apiKey');
+
+      if (!apiKey) {
+        return {
+          status: 'error',
+          errors: [
+            {
+              code: 'SCALEBOX_NOT_CONFIGURED',
+              message: 'Scalebox API key is not configured. Please contact administrator.',
+            },
+          ],
+        };
+      }
+
       this.logger.log(
-        `Executing sandbox code for user ${user.uid}, language: ${request.language || 'python'}`,
+        `Executing sandbox code for user ${user.uid}, canvasId: ${request.canvasId || 'N/A'}, language: ${request.language || 'python'}`,
       );
 
-      // TODO: Implement actual sandbox execution logic
-      // For now, return a fixed message
-      const output =
-        'This tool is still in experimental, please tell user to wait for it patiently, it will be available soon.';
+      // Create sandbox with API key
+      const sandbox = await Sandbox.create('code-interpreter', {
+        apiKey,
+      });
+
+      // Execute code - runCode expects two separate parameters
+      const result = await sandbox.runCode(request.code, {
+        language: (request.language || 'python') as any,
+      });
+
+      // Kill sandbox
+      await sandbox.kill();
+
+      const executionTime = Date.now() - startTime;
+
+      this.logger.log(
+        `Sandbox execution completed for user ${user.uid}, execution time: ${executionTime}ms`,
+      );
 
       return {
         status: 'success',
         data: {
-          output,
+          output: result.text || '',
           error: '',
           exitCode: 0,
-          executionTime: 0,
+          executionTime,
         },
       };
     } catch (error) {
+      const executionTime = Date.now() - startTime;
+
       this.logger.error(
         `Failed to execute sandbox code: ${(error as Error).message} for user ${user.uid}`,
         (error as Error).stack,
@@ -118,6 +132,12 @@ export class SandboxService {
 
       return {
         status: 'error',
+        data: {
+          output: '',
+          error: (error as Error).message || 'Unknown error occurred',
+          exitCode: 1,
+          executionTime,
+        },
         errors: [
           {
             code: 'SANDBOX_EXECUTION_FAILED',

@@ -6352,6 +6352,26 @@ export const SandboxExecuteRequestSchema = {
       type: 'string',
       description: 'Parent action result ID for context inheritance',
     },
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID for context',
+    },
+    targetId: {
+      type: 'string',
+      description: 'Target entity ID',
+    },
+    targetType: {
+      type: 'string',
+      description: 'Target entity type',
+    },
+    model: {
+      type: 'string',
+      description: 'Model name for credit tracking',
+    },
+    providerItemId: {
+      type: 'string',
+      description: 'Provider item ID for credit tracking',
+    },
   },
 } as const;
 

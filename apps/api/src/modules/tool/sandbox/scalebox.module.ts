@@ -2,15 +2,15 @@ import { Module } from '@nestjs/common';
 import { CommonModule } from '../../common/common.module';
 import { CanvasSyncModule } from '../../canvas-sync/canvas-sync.module';
 import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execution-sync.interceptor';
-import { SandboxService } from './sandbox.service';
+import { ScaleboxService } from './scalebox.service';
 
 /**
- * Sandbox Module
- * Provides code execution capabilities in a secure sandbox environment
+ * Scalebox Module
+ * Provides code execution capabilities using Scalebox sandbox provider
  */
 @Module({
   imports: [CommonModule, CanvasSyncModule],
-  providers: [SandboxService, ToolExecutionSyncInterceptor],
-  exports: [SandboxService],
+  providers: [ScaleboxService, ToolExecutionSyncInterceptor],
+  exports: [ScaleboxService],
 })
-export class SandboxModule {}
+export class ScaleboxModule {}

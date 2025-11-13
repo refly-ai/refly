@@ -87,6 +87,7 @@ Returns execution output, errors, and execution time.`;
         language: input.language || 'python',
         timeout: input.timeout,
         parentResultId: config.configurable?.resultId,
+        canvasId: config.configurable?.canvasId,
       };
 
       const result = await reflyService.execute(user, request);
