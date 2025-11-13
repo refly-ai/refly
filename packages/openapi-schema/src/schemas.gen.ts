@@ -6328,6 +6328,67 @@ export const HeyGenGenerateVideoResponseSchema = {
   ],
 } as const;
 
+export const SandboxExecuteRequestSchema = {
+  type: 'object',
+  required: ['code'],
+  properties: {
+    code: {
+      type: 'string',
+      description: 'Code to execute in the sandbox',
+    },
+    language: {
+      type: 'string',
+      description: 'Programming language (e.g., python, javascript, bash)',
+      example: 'python',
+    },
+    timeout: {
+      type: 'integer',
+      description: 'Execution timeout in milliseconds',
+      minimum: 1000,
+      maximum: 300000,
+      default: 30000,
+    },
+    parentResultId: {
+      type: 'string',
+      description: 'Parent action result ID for context inheritance',
+    },
+  },
+} as const;
+
+export const SandboxExecuteResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponseV2',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            output: {
+              type: 'string',
+              description: 'Standard output from code execution',
+            },
+            error: {
+              type: 'string',
+              description: 'Standard error from code execution',
+            },
+            exitCode: {
+              type: 'integer',
+              description: 'Exit code of the execution',
+            },
+            executionTime: {
+              type: 'number',
+              description: 'Execution time in milliseconds',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const PilotStepStatusSchema = {
   type: 'string',
   enum: ['init', 'executing', 'finish', 'failed'],

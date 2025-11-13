@@ -4496,6 +4496,46 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
  */
 export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
 
+export type SandboxExecuteRequest = {
+  /**
+   * Code to execute in the sandbox
+   */
+  code: string;
+  /**
+   * Programming language (e.g., python, javascript, bash)
+   */
+  language?: string;
+  /**
+   * Execution timeout in milliseconds
+   */
+  timeout?: number;
+  /**
+   * Parent action result ID for context inheritance
+   */
+  parentResultId?: string;
+};
+
+export type SandboxExecuteResponse = BaseResponseV2 & {
+  data?: {
+    /**
+     * Standard output from code execution
+     */
+    output?: string;
+    /**
+     * Standard error from code execution
+     */
+    error?: string;
+    /**
+     * Exit code of the execution
+     */
+    exitCode?: number;
+    /**
+     * Execution time in milliseconds
+     */
+    executionTime?: number;
+  };
+};
+
 export type PilotStepStatus = 'init' | 'executing' | 'finish' | 'failed';
 
 export type PilotStep = {
