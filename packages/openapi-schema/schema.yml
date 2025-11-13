@@ -7683,6 +7683,7 @@ components:
         images:
           type: array
           description: Image list (storage keys)
+          deprecated: true
           items:
             type: string
     SkillContextResourceItem:
@@ -7786,6 +7787,28 @@ components:
         metadata:
           type: object
           description: Media context metadata
+    SkillContextFileItem:
+      type: object
+      description: Skill context file item
+      required:
+        - fileId
+      properties:
+        fileId:
+          type: string
+          description: File ID
+        file:
+          description: File object
+          $ref: '#/components/schemas/DriveFile'
+    SkillContextResultItem:
+      type: object
+      description: Skill context result item
+      properties:
+        resultId:
+          type: string
+          description: Result ID
+        result:
+          description: Result
+          $ref: '#/components/schemas/ActionResult'
     SkillContext:
       type: object
       description: Skill invocation context
@@ -7821,6 +7844,16 @@ components:
           description: List of media
           items:
             $ref: '#/components/schemas/SkillContextMediaItem'
+        files:
+          type: array
+          description: List of files
+          items:
+            $ref: '#/components/schemas/SkillContextFileItem'
+        results:
+          type: array
+          description: List of results
+          items:
+            $ref: '#/components/schemas/SkillContextResultItem'
     SelectionKey:
       type: string
       enum:
@@ -7856,6 +7889,7 @@ components:
           description: Skill result history
           items:
             $ref: '#/components/schemas/ActionResult'
+          deprecated: true
         runtimeConfig:
           description: Skill runtime config
           $ref: '#/components/schemas/SkillRuntimeConfig'
@@ -10855,6 +10889,13 @@ components:
               description: Updated list of workflow variables
               items:
                 $ref: '#/components/schemas/WorkflowVariable'
+    DriveFileCategory:
+      type: string
+      enum:
+        - document
+        - image
+        - video
+        - audio
     DriveFile:
       type: object
       required:
@@ -10879,6 +10920,9 @@ components:
         type:
           type: string
           description: Drive file type
+        category:
+          $ref: '#/components/schemas/DriveFileCategory'
+          description: Drive file category
         size:
           type: number
           description: Drive file size
@@ -10891,6 +10935,9 @@ components:
         resultVersion:
           type: number
           description: Action result version
+        content:
+          type: string
+          description: Drive file content (only used for model input)
         createdAt:
           type: string
           format: date-time

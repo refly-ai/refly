@@ -3749,6 +3749,7 @@ export type SkillInput = {
   originalQuery?: string;
   /**
    * Image list (storage keys)
+   * @deprecated
    */
   images?: Array<string>;
 };
@@ -3890,6 +3891,34 @@ export type SkillContextMediaItem = {
 };
 
 /**
+ * Skill context file item
+ */
+export type SkillContextFileItem = {
+  /**
+   * File ID
+   */
+  fileId: string;
+  /**
+   * File object
+   */
+  file?: DriveFile;
+};
+
+/**
+ * Skill context result item
+ */
+export type SkillContextResultItem = {
+  /**
+   * Result ID
+   */
+  resultId?: string;
+  /**
+   * Result
+   */
+  result?: ActionResult;
+};
+
+/**
  * Skill invocation context
  */
 export type SkillContext = {
@@ -3918,6 +3947,14 @@ export type SkillContext = {
    * List of media
    */
   mediaList?: Array<SkillContextMediaItem>;
+  /**
+   * List of files
+   */
+  files?: Array<SkillContextFileItem>;
+  /**
+   * List of results
+   */
+  results?: Array<SkillContextResultItem>;
 };
 
 export type SelectionKey =
@@ -3944,6 +3981,7 @@ export type InvokeSkillRequest = {
   context?: SkillContext;
   /**
    * Skill result history
+   * @deprecated
    */
   resultHistory?: Array<ActionResult>;
   /**
@@ -6866,6 +6904,8 @@ export type UpdateWorkflowVariablesResponse = BaseResponse & {
   data?: Array<WorkflowVariable>;
 };
 
+export type DriveFileCategory = 'document' | 'image' | 'video' | 'audio';
+
 export type DriveFile = {
   /**
    * Canvas ID
@@ -6884,6 +6924,10 @@ export type DriveFile = {
    */
   type: string;
   /**
+   * Drive file category
+   */
+  category?: DriveFileCategory;
+  /**
    * Drive file size
    */
   size: number;
@@ -6899,6 +6943,10 @@ export type DriveFile = {
    * Action result version
    */
   resultVersion: number;
+  /**
+   * Drive file content (only used for model input)
+   */
+  content?: string;
   /**
    * Drive file creation timestamp
    */

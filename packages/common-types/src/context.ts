@@ -10,7 +10,7 @@ export interface Selection {
 // Context items used in canvas nodes
 export interface IContextItem {
   entityId: string;
-  type: CanvasNodeType | SelectionKey;
+  type: CanvasNodeType | SelectionKey | 'file';
   title?: string; // deprecated, always lookup node title instead
   selection?: Selection;
   metadata?: Record<string, any>;

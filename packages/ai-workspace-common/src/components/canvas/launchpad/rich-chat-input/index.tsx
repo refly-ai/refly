@@ -239,18 +239,17 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           // For resource type variables, find the corresponding resource data and add to context
           if (item.variableValue?.length && item.variableValue[0]?.resource) {
             const resourceValue = item.variableValue[0].resource;
-            const resource = resources.find((r) => r.resourceId === resourceValue.entityId);
+            const resource = resources.find((r) => r.fileId === resourceValue.entityId);
 
             const contextItem: IContextItem = {
               entityId: resourceValue.entityId,
-              title: resource?.title ?? resourceValue.name,
+              title: resource?.name ?? resourceValue.name,
               type: 'resource' as CanvasNodeType,
               metadata: {
                 source: 'myUpload',
                 storageKey: resourceValue.storageKey,
                 resourceType: resourceValue.fileType,
-                resourceMeta: resource?.data,
-                [`${resourceValue.fileType}Url`]: resource?.downloadURL,
+                resourceMeta: resource,
               },
             };
 
@@ -261,7 +260,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
               variableType: 'resource',
               url: resourceValue.storageKey,
               resourceType: resourceValue.fileType,
-              resourceMeta: resource?.data,
+              resourceMeta: resource,
               entityId: resourceValue.entityId,
             });
 

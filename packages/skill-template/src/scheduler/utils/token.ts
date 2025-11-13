@@ -50,7 +50,9 @@ export const checkHasContext = (context: SkillContext) => {
     context?.contentList?.length > 0 ||
     context?.resources?.length > 0 ||
     context?.documents?.length > 0 ||
-    context?.mediaList?.length > 0
+    context?.mediaList?.length > 0 ||
+    context?.files?.length > 0 ||
+    context?.results?.length > 0
   );
 };
 

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import mime from 'mime';
 import { PrismaService } from '../common/prisma.service';
+import { ConfigService } from '@nestjs/config';
 import {
   UpsertDriveFileRequest,
   DeleteDriveFileRequest,
@@ -8,12 +9,14 @@ import {
   ListDriveFilesData,
   ListOrder,
   BatchCreateDriveFilesRequest,
+  DriveFile,
 } from '@refly/openapi-schema';
 import { Prisma, DriveFile as DriveFileModel } from '../../generated/client';
-import { genDriveFileID } from '@refly/utils';
+import { genDriveFileID, getFileCategory } from '@refly/utils';
 import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
+import { driveFilePO2DTO } from './drive.dto';
 
 interface FileProcessedResult {
   contentType: string;
@@ -25,9 +28,15 @@ export class DriveService {
   private logger = new Logger(DriveService.name);
 
   constructor(
+    private config: ConfigService,
     private prisma: PrismaService,
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
   ) {}
+
+  private generateStorageKey(user: User, file: { canvasId: string; name: string }): string {
+    const prefix = this.config.get<string>('drive.storageKeyPrefix').replace(/\/$/, '');
+    return `${prefix}/${user.uid}/${file.canvasId}/${file.name}`;
+  }
 
   /**
    * Download file from URL and return buffer
@@ -74,7 +83,7 @@ export class DriveService {
     const { content, storageKey, externalUrl } = input;
 
     // Generate drive storage path
-    const driveStorageKey = `drive/${user.uid}/${canvasId}/${filename}`;
+    const driveStorageKey = this.generateStorageKey(user, { canvasId, name: filename });
 
     let buffer: Buffer;
     let size: bigint;
@@ -147,6 +156,112 @@ export class DriveService {
     return driveFiles;
   }
 
+  async getDriveFileDetail(user: User, fileId: string): Promise<DriveFile> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      where: { fileId, uid: user.uid, deletedAt: null },
+    });
+    if (!driveFile) {
+      throw new DriveFileNotFoundError(`Drive file not found: ${fileId}`);
+    }
+
+    let content = driveFile.summary;
+
+    // If file type is text/plain, retrieve actual content from minio storage
+    if (driveFile.type === 'text/plain') {
+      try {
+        // Generate drive storage path
+        const driveStorageKey = this.generateStorageKey(user, driveFile);
+
+        const readable = await this.internalOss.getObject(driveStorageKey);
+        if (readable) {
+          const buffer = await streamToBuffer(readable);
+          content = buffer.toString('utf8');
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to retrieve text content for file ${fileId}:`, error);
+        // Fall back to summary if content retrieval fails
+        content = driveFile.summary;
+      }
+    }
+
+    return {
+      ...driveFilePO2DTO(driveFile),
+      content,
+    };
+  }
+
+  /**
+   * Generates drive file URLs based on configured payload mode
+   * @param user - The user requesting the URLs
+   * @param files - Array of drive files to generate URLs for
+   * @returns Array of URLs (either base64 data URLs or signed URLs depending on config)
+   */
+  async generateDriveFileUrls(user: User, files: DriveFile[]): Promise<string[]> {
+    if (!Array.isArray(files) || files.length === 0) {
+      return [];
+    }
+
+    let fileMode = this.config.get('drive.payloadMode');
+    if (fileMode === 'url' && !this.config.get('static.private.endpoint')) {
+      this.logger.warn('Private static endpoint is not configured, fallback to base64 mode');
+      fileMode = 'base64';
+    }
+
+    this.logger.log(`Generating drive file URLs in ${fileMode} mode for ${files.length} files`);
+
+    try {
+      if (fileMode === 'base64') {
+        const urls = await Promise.all(
+          files.map(async (file) => {
+            const driveStorageKey = this.generateStorageKey(user, file);
+
+            try {
+              const data = await this.internalOss.getObject(driveStorageKey);
+              const chunks: Buffer[] = [];
+
+              for await (const chunk of data) {
+                chunks.push(chunk);
+              }
+
+              const buffer = Buffer.concat(chunks);
+              const base64 = buffer.toString('base64');
+              const contentType = file.type ?? 'application/octet-stream';
+
+              return `data:${contentType};base64,${base64}`;
+            } catch (error) {
+              this.logger.error(
+                `Failed to generate base64 for drive file ${file.fileId}: ${error.stack}`,
+              );
+              return '';
+            }
+          }),
+        );
+        return urls.filter(Boolean);
+      }
+
+      // URL mode - generate signed URLs for private drive files
+      return await Promise.all(
+        files.map(async (file) => {
+          const driveStorageKey = this.generateStorageKey(user, file);
+
+          try {
+            const expiry = Number(this.config.get<number>('drive.presignExpiry') ?? 300);
+            const signedUrl = await this.internalOss.presignedGetObject(driveStorageKey, expiry);
+            return signedUrl;
+          } catch (error) {
+            this.logger.error(
+              `Failed to generate signed URL for drive file ${file.fileId}: ${error.stack}`,
+            );
+            return '';
+          }
+        }),
+      );
+    } catch (error) {
+      this.logger.error('Error generating drive file URLs:', error);
+      return [];
+    }
+  }
+
   /**
    * Batch create drive files
    */
@@ -186,6 +301,7 @@ export class DriveService {
         canvasId,
         name,
         type,
+        category: getFileCategory(processedResult?.contentType ?? 'text/plain'),
       };
 
       if (processedResult) {
@@ -252,6 +368,7 @@ export class DriveService {
         canvasId,
         name,
         type,
+        category: getFileCategory(processedResult?.contentType ?? 'text/plain'),
         summary,
       };
 
@@ -313,7 +430,7 @@ export class DriveService {
     }
 
     // Generate drive storage path
-    const driveStorageKey = `drive/${user.uid}/${driveFile.canvasId}/${driveFile.name}`;
+    const driveStorageKey = this.generateStorageKey(user, driveFile);
 
     const readable = await this.internalOss.getObject(driveStorageKey);
     if (!readable) {

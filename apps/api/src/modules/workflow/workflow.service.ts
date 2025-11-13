@@ -245,7 +245,7 @@ export class WorkflowService {
     }
 
     const { modelInfo, selectedToolsets, contextItems = [] } = metadata;
-    const { context, images } = convertContextItemsToInvokeParams(contextItems, () => []);
+    const context = convertContextItemsToInvokeParams(contextItems);
 
     // Prepare the invoke skill request
     const invokeRequest: InvokeSkillRequest = {
@@ -253,7 +253,6 @@ export class WorkflowService {
       input: {
         query: processedQuery, // Use processed query for skill execution
         originalQuery, // Pass original query separately
-        images,
       },
       target: {
         entityType: 'canvas' as const,

@@ -780,6 +780,8 @@ model DriveFile {
   name          String    @map("name")
   /// Drive file type (MIME type)
   type          String    @map("type")
+  /// Drive file category
+  category      String    @map("category")
   /// Drive file size
   size          BigInt    @default(0) @map("size")
   /// Drive file summary
