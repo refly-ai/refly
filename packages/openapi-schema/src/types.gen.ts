@@ -4513,6 +4513,26 @@ export type SandboxExecuteRequest = {
    * Parent action result ID for context inheritance
    */
   parentResultId?: string;
+  /**
+   * Canvas ID for context
+   */
+  canvasId?: string;
+  /**
+   * Target entity ID
+   */
+  targetId?: string;
+  /**
+   * Target entity type
+   */
+  targetType?: string;
+  /**
+   * Model name for credit tracking
+   */
+  model?: string;
+  /**
+   * Provider item ID for credit tracking
+   */
+  providerItemId?: string;
 };
 
 export type SandboxExecuteResponse = BaseResponseV2 & {

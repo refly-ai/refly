@@ -213,4 +213,10 @@ export default () => ({
       apiKey: process.env.HEYGEN_API_KEY,
     },
   },
+
+  sandbox: {
+    scalebox: {
+      apiKey: process.env.SCALEBOX_API_KEY,
+    },
+  },
 });

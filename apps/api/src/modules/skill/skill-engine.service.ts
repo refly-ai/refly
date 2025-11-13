@@ -26,7 +26,7 @@ import { MiscService } from '../misc/misc.service';
 import { genImageID } from '@refly/utils';
 import { FishAudioService } from '../tool/media/audio/fish-audio.service';
 import { HeyGenService } from '../tool/media/video/heygen.service';
-import { SandboxService } from '../tool/sandbox/sandbox.service';
+import { ScaleboxService } from '../tool/sandbox/scalebox.service';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
@@ -49,7 +49,7 @@ export class SkillEngineService implements OnModuleInit {
   private canvasSyncService: CanvasSyncService;
   private fishAudioService: FishAudioService;
   private heygenService: HeyGenService;
-  private sandboxService: SandboxService;
+  private scaleboxService: ScaleboxService;
   constructor(
     private moduleRef: ModuleRef,
     private config: ConfigService,
@@ -72,7 +72,7 @@ export class SkillEngineService implements OnModuleInit {
     this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
     this.fishAudioService = this.moduleRef.get(FishAudioService, { strict: false });
     this.heygenService = this.moduleRef.get(HeyGenService, { strict: false });
-    this.sandboxService = this.moduleRef.get(SandboxService, { strict: false });
+    this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
   }
 
   /**
@@ -250,7 +250,7 @@ export class SkillEngineService implements OnModuleInit {
         return await this.heygenService.generateVideo(user, req);
       },
       execute: async (user, req) => {
-        return await this.sandboxService.execute(user, req);
+        return await this.scaleboxService.execute(user, req);
       },
     };
   };
