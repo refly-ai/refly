@@ -3754,6 +3754,10 @@ const translations = {
       earningsHint: 'Each run can earn <num>{{creditEarningsPerRun}}</num> credits',
       howToEarn: 'How to earn',
     },
+    publishToCommunity: {
+      label: 'Publish to Community',
+      help: 'After publishing to the community, other users can discover and use your workflow app',
+    },
   },
   project: {
     create: 'Create Project',

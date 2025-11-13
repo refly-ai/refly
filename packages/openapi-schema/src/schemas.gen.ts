@@ -9391,6 +9391,10 @@ export const CreateWorkflowAppRequestSchema = {
       type: 'boolean',
       description: 'Whether remix is enabled for this app',
     },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
+    },
   },
 } as const;
 
