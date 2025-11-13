@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, memo } from 'react';
+import { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
 import { Button, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ModelIcon } from '@lobehub/icons';
@@ -29,6 +29,7 @@ const { Paragraph } = Typography;
 interface ModelSelectorProps {
   model: ModelInfo | null;
   size?: 'small' | 'medium';
+  variant?: 'default' | 'filled';
   setModel: (model: ModelInfo | null) => void;
   briefMode?: boolean;
   placement?: DropdownProps['placement'];
@@ -42,14 +43,18 @@ const SelectedModelDisplay = memo(
     open,
     model,
     size = 'medium',
+    variant = 'default',
     handleOpenSettingModal,
   }: {
     open: boolean;
     model: ModelInfo | null;
     size?: 'small' | 'medium';
+    variant?: 'default' | 'filled';
     handleOpenSettingModal: () => void;
   }) => {
     const { t } = useTranslation();
+
+    const isFilled = variant === 'filled';
 
     if (!model) {
       return (
@@ -57,8 +62,11 @@ const SelectedModelDisplay = memo(
           type="text"
           size="small"
           className={cn(
-            'h-7 text-xs gap-1.5 p-1 hover:bg-refly-tertiary-hover',
-            open && 'bg-refly-fill-active',
+            'text-xs gap-1.5 hover:bg-refly-tertiary-hover',
+            isFilled
+              ? 'h-8 w-full px-2 py-1.5 border-none bg-[var(--refly-bg-control-z0)]'
+              : 'h-7 p-1',
+            open && !isFilled && 'bg-refly-fill-active',
           )}
           style={{ color: '#f59e0b' }}
           icon={<LuInfo className="flex items-center" />}
@@ -74,20 +82,25 @@ const SelectedModelDisplay = memo(
         type="text"
         size="small"
         className={cn(
-          'h-7 text-sm gap-1.5 p-1 hover:bg-refly-tertiary-hover min-w-0 flex items-center',
-          open && 'bg-refly-fill-active',
+          'text-sm hover:bg-refly-tertiary-hover min-w-0 flex items-center',
+          isFilled
+            ? 'h-8 w-full px-2 py-1.5 border-none bg-[var(--refly-bg-control-z0)] justify-between gap-2'
+            : 'h-7 p-1 gap-1.5',
+          open && !isFilled && 'bg-refly-fill-active',
         )}
       >
-        <ModelIcon model={model.name} type={'color'} size={18} />
-        <Paragraph
-          className={cn(
-            'truncate leading-5 !mb-0',
-            size === 'small' ? 'text-xs max-w-28' : 'text-sm max-w-48',
-          )}
-          ellipsis={{ rows: 1, tooltip: true }}
-        >
-          {model.label}
-        </Paragraph>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <ModelIcon model={model.name} type={'color'} size={18} />
+          <Paragraph
+            className={cn(
+              'truncate leading-5 !mb-0',
+              size === 'small' ? 'text-xs max-w-28' : 'text-sm max-w-48',
+            )}
+            ellipsis={{ rows: 1, tooltip: true }}
+          >
+            {model.label}
+          </Paragraph>
+        </div>
         <ArrowDown size={12} color="var(--refly-text-0)" className="flex-shrink-0" />
       </Button>
     );
@@ -165,12 +178,15 @@ export const ModelSelector = memo(
     trigger = ['click'],
     briefMode = false,
     size = 'medium',
+    variant = 'default',
     model,
     setModel,
     contextItems,
   }: ModelSelectorProps) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<'llm'>('llm');
+    const [triggerWidth, setTriggerWidth] = useState<number>(260);
+    const triggerRef = useRef<HTMLDivElement>(null);
     const { t } = useTranslation();
 
     const { userProfile } = useUserStoreShallow((state) => ({
@@ -203,6 +219,14 @@ export const ModelSelector = memo(
     useEffect(() => {
       refetchModelList();
     }, [providerMode, refetchModelList]);
+
+    // Update trigger width for dropdown
+    useEffect(() => {
+      if (triggerRef.current && variant === 'filled') {
+        const width = triggerRef.current.offsetWidth;
+        setTriggerWidth(width);
+      }
+    }, [dropdownOpen, variant]);
 
     // Auto-select category based on current model
     useEffect(() => {
@@ -336,7 +360,10 @@ export const ModelSelector = memo(
     // Custom dropdown overlay component
     const dropdownOverlay = useMemo(
       () => (
-        <div className="w-[260px] bg-refly-bg-content-z2 rounded-lg border-[1px] border-solid border-refly-Card-Border shadow-refly-m">
+        <div
+          className="bg-refly-bg-content-z2 rounded-lg border-[1px] border-solid border-refly-Card-Border shadow-refly-m"
+          style={{ width: variant === 'filled' ? triggerWidth : 260 }}
+        >
           {/* Category Switch */}
           {/*<div className="p-2 pb-0">
             <Segmented
@@ -390,6 +417,8 @@ export const ModelSelector = memo(
         setDropdownOpen,
         selectedCategory,
         modelList,
+        triggerWidth,
+        variant,
       ],
     );
 
@@ -431,11 +460,18 @@ export const ModelSelector = memo(
         autoAdjustOverflow={true}
       >
         {!briefMode ? (
-          <div className="text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-300">
+          <div
+            ref={triggerRef}
+            className={cn(
+              'text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-300',
+              variant === 'filled' && 'w-full',
+            )}
+          >
             <SelectedModelDisplay
               open={dropdownOpen}
               model={model}
               size={size}
+              variant={variant}
               handleOpenSettingModal={handleOpenSettingModal}
             />
 
@@ -457,6 +493,7 @@ export const ModelSelector = memo(
       prevProps.briefMode === nextProps.briefMode &&
       prevProps.model === nextProps.model &&
       prevProps.size === nextProps.size &&
+      prevProps.variant === nextProps.variant &&
       prevProps.contextItems === nextProps.contextItems &&
       JSON.stringify(prevProps.trigger) === JSON.stringify(nextProps.trigger)
     );

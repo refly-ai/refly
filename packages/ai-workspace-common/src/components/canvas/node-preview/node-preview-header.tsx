@@ -32,8 +32,8 @@ import { useDeleteResource } from '@refly-packages/ai-workspace-common/hooks/can
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/use-download-file';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
-import { NodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/skill-response';
-import { NodeHeader as CommonNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-header';
+import { NodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-header';
+import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { useExportDocument } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
 import { useDebouncedCallback } from 'use-debounce';
 import { useCanvasStoreShallow } from '@refly/stores';
@@ -397,23 +397,33 @@ export const NodePreviewHeader: FC<NodePreviewHeaderProps> = memo(
         <div className="flex items-center gap-2 flex-grow overflow-hidden">
           <div className="flex-grow overflow-hidden">
             {currentNode.type === 'skillResponse' ? (
-              <NodeHeader
+              <SkillResponseNodeHeader
+                nodeId={currentNode.id}
+                entityId={currentNode.data?.entityId}
+                title={
+                  currentNode.data?.editedTitle ||
+                  currentNode.data?.title ||
+                  getNodeTitle(currentNode, t)
+                }
+                readonly={readonly}
+                source="preview"
                 className="!mb-0"
-                source="skillResponsePreview"
-                query={currentNode.data?.editedTitle || currentNode.data?.title || ''}
-                disabled={readonly}
-                showIcon
-                updateTitle={handleTitleUpdate}
               />
             ) : (
-              <CommonNodeHeader
-                source="preview"
-                title={getNodeTitle(currentNode, t)}
+              <NodeHeader
+                nodeType={currentNode.type as CanvasNodeType}
+                title={
+                  currentNode.data?.editedTitle ||
+                  currentNode.data?.title ||
+                  getNodeTitle(currentNode, t)
+                }
                 fixedTitle={getNodeFixedTitle(currentNode, t)}
-                type={currentNode.type as CanvasNodeType}
                 resourceType={currentNode.data?.metadata?.resourceType}
                 resourceMeta={currentNode.data?.metadata?.resourceMeta}
+                source="preview"
+                className="!mb-0"
                 canEdit={currentNode.type !== 'document' && !readonly}
+                disabled={readonly}
                 updateTitle={handleTitleUpdate}
               />
             )}

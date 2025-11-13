@@ -89,6 +89,7 @@ export const PreviewComponent = memo(
       node.data?.contentPreview,
       node.data?.title,
       node.data?.metadata?.status,
+      node.data?.metadata?.modelInfo,
       node.data?.metadata?.activeTab,
       node.data?.metadata?.url,
       node.data?.metadata?.viewMode,
@@ -117,6 +118,9 @@ export const PreviewComponent = memo(
     const contextItemsEqual =
       prevProps.node?.data?.metadata?.contextItems === nextProps.node?.data?.metadata?.contextItems;
 
+    const modelInfoEqual =
+      prevProps.node?.data?.metadata?.modelInfo === nextProps.node?.data?.metadata?.modelInfo;
+
     // Check node-specific metadata
     let nodeSpecificEqual = true;
     if (prevProps.node?.type === 'codeArtifact') {
@@ -133,6 +137,7 @@ export const PreviewComponent = memo(
       contentEqual &&
       titleEqual &&
       statusEqual &&
+      modelInfoEqual &&
       nodeSpecificEqual &&
       contextItemsEqual
     );
@@ -581,6 +586,9 @@ export const NodePreview = memo(
     const statusEqual =
       prevProps.node?.data?.metadata?.status === nextProps.node?.data?.metadata?.status;
 
+    const modelInfoEqual =
+      prevProps.node?.data?.metadata?.modelInfo === nextProps.node?.data?.metadata?.modelInfo;
+
     // Check node-specific metadata
     let nodeSpecificEqual = true;
     if (prevProps.node?.type === 'codeArtifact') {
@@ -592,6 +600,13 @@ export const NodePreview = memo(
         prevProps.node?.data?.metadata?.viewMode === nextProps.node?.data?.metadata?.viewMode;
     }
 
-    return basicPropsEqual && contentEqual && titleEqual && statusEqual && nodeSpecificEqual;
+    return (
+      basicPropsEqual &&
+      contentEqual &&
+      titleEqual &&
+      statusEqual &&
+      modelInfoEqual &&
+      nodeSpecificEqual
+    );
   },
 );

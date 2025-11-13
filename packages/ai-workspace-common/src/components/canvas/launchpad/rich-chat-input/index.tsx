@@ -64,6 +64,7 @@ interface RichChatInputProps {
 
 export interface RichChatInputRef {
   focus: () => void;
+  insertAtSymbol?: () => void;
 }
 
 const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
@@ -375,7 +376,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       [placeholder],
     );
 
-    // Expose focus method through ref
+    // Expose focus and insertAtSymbol methods through ref
     useImperativeHandle(
       ref,
       () => ({
@@ -384,8 +385,27 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             editor.commands.focus();
           }
         },
+        insertAtSymbol: () => {
+          if (editor && !readonly) {
+            hasUserInteractedRef.current = true;
+            // If editor wasn't focused, move cursor to the end
+            const wasFocused = editor.isFocused;
+            if (!wasFocused) {
+              editor.commands.focus('end');
+            } else {
+              editor.commands.focus();
+            }
+            editor.commands.insertContent('@');
+            // Try to show mention popup after a short delay
+            setTimeout(() => {
+              if (popupInstanceRef.current) {
+                popupInstanceRef.current.show();
+              }
+            }, 50);
+          }
+        },
       }),
-      [editor, readonly],
+      [editor, readonly, hasUserInteractedRef, popupInstanceRef],
     );
 
     // Enhanced handleSendMessage that converts mentions to Handlebars
@@ -560,24 +580,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           if (isMentionListVisible) {
             return;
           }
-
-          // Ctrl/Meta + Enter should always send the message
-          if ((e.ctrlKey || e.metaKey) && (query?.trim() || !isLogin)) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.nativeEvent?.stopImmediatePropagation?.();
-            handleSendMessageWithMentions();
-            return;
-          }
-
-          // For regular Enter key, send message if not in mention suggestion
-          if (!e.shiftKey && (query?.trim() || !isLogin)) {
-            // for long prompt friendly enter
-            e.preventDefault();
-            e.stopPropagation();
-            e.nativeEvent?.stopImmediatePropagation?.();
-            handleSendMessageWithMentions();
-          }
         }
       },
       [
@@ -646,7 +648,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             'w-full h-full flex flex-col flex-grow overflow-y-auto overflow-x-hidden relative',
             isDragging && 'ring-2 ring-green-500 ring-opacity-50 rounded-lg',
             readonly && 'opacity-70 cursor-not-allowed',
-            isFocused ? 'nodrag nopan nowheel cursor-text' : '!cursor-pointer',
+            isFocused ? 'nodrag nopan nowheel cursor-text' : '!cursor-text',
           )}
           onDragOver={(e) => {
             e.preventDefault();
@@ -689,7 +691,11 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             </div>
           )}
 
-          <div className="flex-1 min-h-0" onKeyDownCapture={handleKeyDown} onPaste={handlePaste}>
+          <div
+            className="flex-1 min-h-[271px]"
+            onKeyDownCapture={handleKeyDown}
+            onPaste={handlePaste}
+          >
             {editor ? (
               <EditorContent
                 editor={editor}

@@ -1,4 +1,4 @@
-import { IconError, IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import {
   cleanupNodeEvents,
@@ -11,25 +11,24 @@ import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/can
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
-import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
+// import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { CanvasNode, purgeToolsets } from '@refly/canvas-common';
-import { LOCALE } from '@refly/common-types';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
 import { genSkillID } from '@refly/utils/id';
 import { Position, useReactFlow } from '@xyflow/react';
-import type { InputRef } from 'antd';
-import { Input, message } from 'antd';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, message } from 'antd';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './shared/styles';
 import { SkillResponseNodeProps } from './shared/types';
 
-import { ModelIcon } from '@lobehub/icons';
-import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import {
+  NodeDragCreateInfo,
+  nodeOperationsEmitter,
+} from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import {
   useNodeData,
   useNodeExecutionFocus,
@@ -39,8 +38,6 @@ import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canv
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
-import { useSkillError } from '@refly-packages/ai-workspace-common/hooks/use-skill-error';
-import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import {
   processContentPreview,
@@ -51,85 +48,129 @@ import cn from 'classnames';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { NodeExecutionStatus } from './shared/node-execution-status';
 
-import { MultimodalContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/multimodal-content-preview';
-import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
+import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
+import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { logEvent } from '@refly/telemetry-web';
 import { removeToolUseTags } from '@refly-packages/ai-workspace-common/utils';
+import { More, Subscription } from 'refly-icons';
+import { IoCheckmarkCircle } from 'react-icons/io5';
+import './shared/executing-glow-effect.scss';
 
 const NODE_WIDTH = 320;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
 
-export const NodeHeader = memo(
+// 状态栏组件，显示节点状态、token消费和运行耗时
+const NodeStatusBar = memo(
   ({
-    query,
-    disabled,
-    showIcon,
-    updateTitle,
-    source,
+    status,
+    executionTime,
+    creditCost,
+    errors,
   }: {
-    query: string;
-    disabled: boolean;
-    showIcon?: boolean;
-    updateTitle: (title: string) => void;
-    className?: string;
-    source?: string;
+    status: string;
+    executionTime?: number;
+    creditCost?: number;
+    errors?: string[];
   }) => {
-    const { t } = useTranslation();
-    const [editTitle, setEditTitle] = useState(query);
-    const inputRef = useRef<InputRef>(null);
-    const [isEditing, setIsEditing] = useState(false);
+    // const { t } = useTranslation();
+    const [isExpanded, setIsExpanded] = useState(false);
 
-    useEffect(() => {
-      setEditTitle(query);
-    }, [query]);
-
-    useEffect(() => {
-      if (isEditing && inputRef.current) {
-        inputRef.current.focus();
+    const getStatusIcon = () => {
+      switch (status) {
+        case 'finish':
+          return <IoCheckmarkCircle className="w-3 h-3 text-green-500" />;
+        case 'failed':
+          return <IconError className="w-3 h-3 text-red-500" />;
+        case 'executing':
+        case 'waiting':
+          return <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />;
+        default:
+          return null;
       }
-    }, [isEditing]);
-
-    const handleBlur = () => {
-      setIsEditing(false);
     };
 
-    const handleChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEditTitle(e.target.value);
-        updateTitle(e.target.value);
-      },
-      [setEditTitle, updateTitle],
-    );
+    const getStatusText = () => {
+      switch (status) {
+        case 'finish':
+          return 'Success';
+        case 'failed':
+          return 'Failed';
+        case 'executing':
+          return 'Running';
+        case 'waiting':
+          return 'Waiting';
+        default:
+          return '';
+      }
+    };
+
+    if (status === 'waiting' || status === 'executing') {
+      return null;
+    }
+
+    const hasErrors = status === 'failed' && errors && errors.length > 0;
 
     return (
-      <div
-        data-cy="skill-response-node-header"
-        className={`flex-shrink-0 w-full ${source === 'skillResponsePreview' ? 'mb-0' : 'mb-3'}`}
-      >
-        <div className="flex items-center gap-2">
-          {showIcon && <NodeIcon type="skillResponse" />}
-          {isEditing ? (
-            <Input
-              ref={inputRef}
-              className={`${
-                source === 'skillResponsePreview' ? 'text-lg' : ''
-              } !border-transparent rounded-md font-bold focus:!bg-refly-tertiary-hover px-0.5 py-0 !bg-refly-tertiary-hover !text-refly-text-0`}
-              value={editTitle}
-              data-cy="skill-response-node-header-input"
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          ) : (
-            <div
-              className={`flex-1 rounded-md h-6 px-0.5 box-border font-bold leading-6 truncate block hover:bg-refly-tertiary-hover ${
-                source === 'skillResponsePreview' ? 'text-lg' : 'text-sm'
-              }`}
-              title={editTitle}
-              onClick={() => {
-                !disabled && setIsEditing(true);
-              }}
-            >
-              {editTitle || t('common.untitled')}
+      <div className="flex flex-col mt-2 w-full">
+        <div
+          className={`px-2 border-[1px] border-solid border-refly-Card-Border rounded-l bg-refly-bg-content-z2 min-h-6 ${hasErrors ? 'cursor-pointer' : 'h-6'}`}
+          onClick={() => hasErrors && setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              {getStatusIcon()}
+              <span className="text-xs text-gray-600 dark:text-gray-400">{getStatusText()}</span>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500 flex-shrink-0">
+              {creditCost !== undefined && (
+                <div className="flex items-center gap-1">
+                  <Subscription className="w-3 h-3" />
+                  <span>{creditCost}</span>
+                </div>
+              )}
+
+              {executionTime !== undefined && (
+                <div className="flex items-center gap-1">
+                  <span>{executionTime}s</span>
+                </div>
+              )}
+
+              {hasErrors && (
+                <svg
+                  className={`w-3 h-3 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
+            </div>
+          </div>
+          {hasErrors && isExpanded && (
+            <div className="min-w-0">
+              {errors.map((error, index) => (
+                <div
+                  key={index}
+                  className="text-refly-func-danger-default truncate"
+                  style={{
+                    fontFamily: 'PingFang SC',
+                    fontWeight: 400,
+                    fontSize: '12px',
+                    lineHeight: '16px',
+                    letterSpacing: 0,
+                  }}
+                  title={error}
+                >
+                  {error}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -138,48 +179,7 @@ export const NodeHeader = memo(
   },
 );
 
-const NodeFooter = memo(
-  ({
-    model,
-    modelInfo,
-    createdAt,
-    language,
-  }: {
-    model: string;
-    modelInfo: any;
-    createdAt: string;
-    language: string;
-    resultId?: string;
-  }) => {
-    return (
-      <div className="flex-shrink-0 mt-2 flex flex-wrap justify-between items-center text-[10px] text-gray-400 relative z-20 gap-1 dark:text-gray-500 w-full">
-        <div className="flex flex-wrap items-center gap-1 max-w-[70%]">
-          {model && (
-            <div className="flex items-center gap-1 overflow-hidden">
-              <ModelIcon model={modelInfo?.name} size={16} type={'color'} />
-              <span className="truncate">{model}</span>
-            </div>
-          )}
-        </div>
-        <div className="flex-shrink-0">
-          {time(createdAt, language as LOCALE)
-            ?.utc()
-            ?.fromNow()}
-        </div>
-      </div>
-    );
-  },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.model === nextProps.model &&
-      prevProps.createdAt === nextProps.createdAt &&
-      prevProps.language === nextProps.language &&
-      JSON.stringify(prevProps.modelInfo) === JSON.stringify(nextProps.modelInfo)
-    );
-  },
-);
-
-NodeFooter.displayName = 'NodeFooter';
+NodeStatusBar.displayName = 'NodeStatusBar';
 
 export const SkillResponseNode = memo(
   ({
@@ -190,13 +190,11 @@ export const SkillResponseNode = memo(
     hideHandles = false,
     onNodeClick,
   }: SkillResponseNodeProps) => {
-    const [isHovered, setIsHovered] = useState(false);
+    const [isHovered, _setIsHovered] = useState(false);
     useSelectedNodeZIndex(id, selected);
 
     const { setNodeData, setNodeStyle } = useNodeData();
     const { getEdges } = useReactFlow();
-    const updateNodeTitle = useUpdateNodeTitle();
-    const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const { readonly, canvasId } = useCanvasContext();
 
     // Get current pilot session info
@@ -232,18 +230,9 @@ export const SkillResponseNode = memo(
       [isPreview],
     );
 
-    const { t, i18n } = useTranslation();
-    const language = i18n.languages?.[0];
+    const { t } = useTranslation();
 
-    const {
-      title,
-      editedTitle,
-      contentPreview: content,
-      metadata,
-      createdAt,
-      entityId,
-    } = data ?? {};
-    const { errMsg } = useSkillError(metadata?.errors?.[0]);
+    const { title, editedTitle, contentPreview: content, metadata, entityId } = data ?? {};
 
     // Find current node's corresponding pilot step
     const currentPilotStep = useMemo(() => {
@@ -254,16 +243,7 @@ export const SkillResponseNode = memo(
 
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
-    const {
-      status,
-      currentLog: log,
-      modelInfo,
-      structuredData,
-      selectedSkill,
-      actionMeta,
-      version,
-      shareId,
-    } = metadata ?? {};
+    const { status, structuredData, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
@@ -342,28 +322,10 @@ export const SkillResponseNode = memo(
       }
     }, [currentPilotStep?.status, data, id, setNodeData]);
 
-    const sources = Array.isArray(structuredData?.sources) ? structuredData?.sources : [];
-
-    const logTitle = log
-      ? t(`${log.key}.title`, {
-          ...log.titleArgs,
-          ns: 'skillLog',
-          defaultValue: log.key,
-        })
-      : '';
-    const logDescription = log
-      ? t(`${log.key}.description`, {
-          ...log.descriptionArgs,
-          ns: 'skillLog',
-          defaultValue: '',
-        })
-      : '';
-
     const skill = {
       name: currentSkill?.name || 'commonQnA',
       icon: currentSkill?.icon,
     };
-    const model = modelInfo?.label;
 
     // Get query and response content from result
     const query = editedTitle || title;
@@ -372,17 +334,6 @@ export const SkillResponseNode = memo(
     const edges = getEdges();
     const isTargetConnected = edges?.some((edge) => edge.target === id);
     const isSourceConnected = edges?.some((edge) => edge.source === id);
-
-    // Handle node hover events
-    const handleMouseEnter = useCallback(() => {
-      setIsHovered(true);
-      onHoverStart();
-    }, [onHoverStart]);
-
-    const handleMouseLeave = useCallback(() => {
-      setIsHovered(false);
-      onHoverEnd();
-    }, [onHoverEnd]);
 
     const { invokeAction } = useInvokeAction({ source: 'skill-response-node' });
 
@@ -457,6 +408,7 @@ export const SkillResponseNode = memo(
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
+          modelInfo: data?.metadata?.modelInfo,
         },
         {
           entityType: 'canvas',
@@ -728,12 +680,20 @@ export const SkillResponseNode = memo(
       nodeActionEmitter.emit(createNodeEventName(id, 'cloneAskAI.completed'));
     }, [id, data?.entityId, addNode, t, canvasId]);
 
-    const onTitleChange = (newTitle: string) => {
-      if (newTitle === query) {
-        return;
-      }
-      updateNodeTitle(newTitle, data.entityId, id, 'skillResponse');
-    };
+    const handleMoreClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        nodeOperationsEmitter.emit('openNodeContextMenu', {
+          nodeId: id,
+          nodeType: 'skillResponse',
+          x: e.clientX,
+          y: e.clientY,
+          originalEvent: e,
+        } as any);
+      },
+      [id],
+    );
 
     useEffect(() => {
       setNodeStyle(id, NODE_SIDE_CONFIG);
@@ -789,115 +749,105 @@ export const SkillResponseNode = memo(
     ]);
 
     return (
-      <div
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className="rounded-2xl relative"
-        data-cy="skill-response-node"
-        onClick={onNodeClick}
-      >
-        {!isPreview && !readonly && (
-          <NodeActionButtons
-            nodeId={id}
-            nodeType="skillResponse"
-            isNodeHovered={isHovered}
-            isSelected={selected}
-          />
-        )}
-
-        {!isPreview && !hideHandles && (
-          <>
-            <CustomHandle
-              id={`${id}-target`}
-              nodeId={id}
-              type="target"
-              position={Position.Left}
-              isConnected={isTargetConnected}
-              isNodeHovered={isHovered}
-              nodeType="skillResponse"
-            />
-            <CustomHandle
-              id={`${id}-source`}
-              nodeId={id}
-              type="source"
-              position={Position.Right}
-              isConnected={isSourceConnected}
-              isNodeHovered={isHovered}
-              nodeType="skillResponse"
-            />
-          </>
-        )}
-
+      <>
         <div
-          style={nodeStyle}
           className={cn(
-            'h-full flex flex-col relative z-1 p-4 box-border',
-            getNodeCommonStyles({ selected, isHovered }),
-            'flex max-h-60 flex-col items-start gap-2 self-stretch px-4 py-3 rounded-2xl border-solid',
-            // Apply error styles only when there's an error
-            status === 'failed'
-              ? 'border border-refly-func-danger-default bg-refly-bg-content-z2 shadow-[0_2px_20px_4px_rgba(0,0,0,0.04)]'
-              : 'border border-gray-200 bg-refly-bg-content-z2',
+            'rounded-2xl relative',
+            // Apply executing/waiting glow effect on outer container
+            status === 'executing' || status === 'waiting' ? 'executing-glow-effect' : '',
           )}
+          data-cy="skill-response-node"
+          onClick={onNodeClick}
         >
-          {/* Node execution status badge */}
-          <NodeExecutionStatus status={executionStatus} />
+          {!isPreview && !readonly && (
+            <NodeActionButtons
+              nodeId={id}
+              nodeType="skillResponse"
+              isNodeHovered={isHovered}
+              isSelected={selected}
+            />
+          )}
 
-          <NodeHeader showIcon disabled={readonly} query={query} updateTitle={onTitleChange} />
+          {!isPreview && !hideHandles && (
+            <>
+              <CustomHandle
+                id={`${id}-target`}
+                nodeId={id}
+                type="target"
+                position={Position.Left}
+                isConnected={isTargetConnected}
+                isNodeHovered={isHovered}
+                nodeType="skillResponse"
+              />
+              <CustomHandle
+                id={`${id}-source`}
+                nodeId={id}
+                type="source"
+                position={Position.Right}
+                isConnected={isSourceConnected}
+                isNodeHovered={isHovered}
+                nodeType="skillResponse"
+              />
+            </>
+          )}
 
-          <div className={'relative flex-grow overflow-y-auto pr-2 -mr-2 w-full'}>
-            <div className="flex flex-col gap-3">
-              {status === 'failed' && (
-                <div
-                  className={cn(
-                    'flex items-center justify-center gap-1 hover:bg-gray-50 rounded-md p-2 dark:hover:bg-gray-900',
-                    readonly ? 'cursor-not-allowed' : 'cursor-pointer',
+          <div
+            style={nodeStyle}
+            className={cn(
+              'h-full flex flex-col relative z-1 p-0 box-border',
+              getNodeCommonStyles({ selected, isHovered }),
+              'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid',
+              // Apply error styles only when there's an error
+              status === 'failed'
+                ? 'border border-refly-func-danger-default bg-refly-bg-content-z2'
+                : 'border border-gray-200 bg-refly-bg-content-z2',
+            )}
+          >
+            {/* Node execution status badge */}
+            <NodeExecutionStatus status={executionStatus} />
+
+            <SkillResponseNodeHeader
+              nodeId={id}
+              entityId={data.entityId}
+              title={query}
+              readonly={true}
+              source="node"
+              actions={
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<More size={12} />}
+                  onClick={handleMoreClick}
+                  className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+                />
+              }
+            />
+
+            <div className={'relative flex-grow overflow-y-auto w-full'}>
+              <div className="flex flex-col p-3">
+                {/* Always show content preview, use prompt/query as fallback when content is empty */}
+                <SkillResponseContentPreview
+                  nodeId={id}
+                  content={truncateContent(
+                    content || (structuredData?.query as any) || query || '',
                   )}
-                  onClick={() => handleRerun()}
-                >
-                  <IconError className="h-4 w-4 text-red-500" />
-                  <span className="text-xs text-red-500 w-full truncate">
-                    {errMsg || t('canvas.skillResponse.executionFailed')}
-                  </span>
-                </div>
-              )}
-
-              {(status === 'waiting' || status === 'executing') && (
-                <div className="flex items-center gap-2 bg-gray-100 rounded-md p-2 dark:bg-gray-800">
-                  <IconLoading className="h-3 w-3 animate-spin text-green-500" />
-                  <span className="text-xs text-gray-500 w-full truncate">
-                    {log ? (
-                      <>
-                        <span className="text-green-500 font-medium">{`${logTitle} `}</span>
-                        <span className="text-gray-500">{logDescription}</span>
-                      </>
-                    ) : (
-                      t('canvas.skillResponse.aiThinking')
-                    )}
-                  </span>
-                </div>
-              )}
-
-              {status !== 'failed' && content && (
-                <MultimodalContentPreview
-                  resultId={entityId}
-                  content={truncateContent(content)}
-                  sources={sources}
                   metadata={metadata as any}
                 />
-              )}
+              </div>
             </div>
           </div>
-
-          <NodeFooter
-            model={model}
-            modelInfo={modelInfo}
-            createdAt={createdAt}
-            language={language}
-            resultId={entityId}
-          />
         </div>
-      </div>
+
+        {/* 状态栏，显示节点状态、token消费和运行耗时 */}
+        {!isPreview && (
+          <NodeStatusBar
+            status={status || 'waiting'}
+            creditCost={metadata?.creditCost}
+            executionTime={metadata?.executionTime}
+            errors={result?.errors}
+          />
+        )}
+      </>
     );
   },
   (prevProps, nextProps) => {

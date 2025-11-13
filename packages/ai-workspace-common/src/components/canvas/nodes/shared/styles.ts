@@ -11,6 +11,6 @@ export const getNodeCommonStyles = ({
   border-[1px]
   border-solid
   overflow-hidden
-  ${selected ? 'border-refly-primary-default' : 'border-refly-Card-Border'}
+  ${selected ? 'border-refly-bg-dark' : 'border-refly-Card-Border'}
   ${isHovered || selected ? 'shadow-refly-m' : ''}
 `;

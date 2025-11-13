@@ -1,7 +1,7 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import { Divider, Button, Popconfirm, message } from 'antd';
-import { Add, Edit, Delete, Image, Doc2, Video, Audio, Close } from 'refly-icons';
+import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { CreateVariablesModal } from '../workflow-variables';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { locateToVariableEmitter } from '@refly-packages/ai-workspace-common/events/locateToVariable';
 import { useReactFlow } from '@xyflow/react';
+import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
 import { BiText } from 'react-icons/bi';
 import { VARIABLE_TYPE_ICON_MAP } from '../nodes/start';
 
@@ -264,7 +265,7 @@ export const StartNodePreview = () => {
   const { workflow, canvasId, readonly } = useCanvasContext();
   const { workflowVariables, workflowVariablesLoading, refetchWorkflowVariables } = workflow;
   const [highlightedVariableId, setHighlightedVariableId] = useState<string | undefined>();
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
   const { setNodes } = useReactFlow();
 
   // Listen for variable highlight events
@@ -345,12 +346,13 @@ export const StartNodePreview = () => {
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
-      <div className="h-[64px] px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
+      <StartNodeHeader source="preview" onClose={handleClose} className="!h-14" />
+      {/* <div className="h-[64px] px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
         <div className="text-refly-text-0 text-base font-semibold leading-[26px] min-w-0 flex-1">
           {t('canvas.nodeTypes.start')}
         </div>
         <Button type="text" icon={<Close size={24} />} onClick={handleClose} />
-      </div>
+      </div> */}
       <div className="space-y-5 flex-1 overflow-y-auto p-4">
         <VariableTypeSection
           canvasId={canvasId}

@@ -1332,6 +1332,8 @@ const translations = {
     },
     workflow: {
       variables: {
+        title: 'Text 类型',
+        tooltip: '用户输入',
         addTitle: '新建输入项',
         editTitle: '编辑输入项',
         addVariableTitle: '新建{{type}}输入项',
@@ -1413,6 +1415,7 @@ const translations = {
         optionAdd: '选项',
         optionAddDescription: '如单选、多选项目',
       },
+      userInput: '用户输入',
       run: {
         title: '运行调试',
         run: '运行',

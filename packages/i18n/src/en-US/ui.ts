@@ -1416,6 +1416,7 @@ const translations = {
         optionAdd: 'Option',
         optionAddDescription: 'e.g., single select, multiple select',
       },
+      userInput: 'User Input',
       run: {
         title: 'Run Workflow',
         run: 'Run',
