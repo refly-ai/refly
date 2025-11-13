@@ -2,6 +2,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Sandbox } from '@scalebox/sdk';
+import fs from 'node:fs';
 import { User, SandboxExecuteRequest, SandboxExecuteResponse } from '@refly/openapi-schema';
 import { Queue, QueueEvents } from 'bullmq';
 
@@ -60,33 +61,52 @@ export class ScaleboxService implements OnModuleDestroy {
     code: string;
     language?: string;
     apiKey: string;
+    canvasId?: string;
   }): Promise<ScaleboxExecutionResult> {
+    const logger = new Logger(ScaleboxService.name);
     const startTime = Date.now();
 
     try {
-      // Create sandbox with API key
+      logger.log(
+        `Creating sandbox, language: ${params.language || 'python'}, canvasId: ${params.canvasId || 'N/A'}`,
+      );
       const sandbox = await Sandbox.create('code-interpreter', {
         apiKey: params.apiKey,
       });
 
-      // Execute code
+      const cwd = params.canvasId ? `/tmp/canvas/${params.canvasId}` : undefined;
+
+      if (cwd) {
+        logger.log(`Creating working directory: ${cwd}`);
+        await sandbox.files.makeDir(cwd);
+      }
+
+      logger.log('Executing code in sandbox');
       const result = await sandbox.runCode(params.code, {
         language: (params.language || 'python') as any,
+        cwd,
       });
 
-      // Kill sandbox
+      const filename = `output-${Date.now()}.png`;
+
+      result.png &&
+        fs.writeFileSync(`/Users/zqxy123/Downloads/static/${filename}`, result.png, 'base64');
+
+      logger.log('Code execution completed, killing sandbox');
       await sandbox.kill();
 
       const executionTime = Date.now() - startTime;
+      logger.log(`Sandbox execution finished, total time: ${executionTime}ms`);
 
       return {
-        output: result.text || '',
+        output: `<img src="http://localhost:3000/${filename}" />`,
         error: '',
         exitCode: 0,
         executionTime,
       };
     } catch (error) {
       const executionTime = Date.now() - startTime;
+      logger.error(`Sandbox execution failed: ${(error as Error).message}`, (error as Error).stack);
 
       return {
         output: '',

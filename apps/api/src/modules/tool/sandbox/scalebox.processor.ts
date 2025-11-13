@@ -29,6 +29,7 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
         code,
         language,
         apiKey,
+        canvasId,
       });
 
       this.logger.log(
