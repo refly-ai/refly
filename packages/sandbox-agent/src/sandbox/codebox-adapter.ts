@@ -1,5 +1,5 @@
-import { Sandbox, type WriteInfo } from '@scalebox/sdk';
-import { ExecutionResult } from './types';
+import { Sandbox, type WriteInfo, CodeInterpreter } from '@scalebox/sdk';
+import { ExecutionResult, CodeContext } from './types';
 
 /**
  * CodeBox output types
@@ -51,16 +51,19 @@ export interface CodeBoxOptions {
 }
 
 /**
- * CodeBox - Simplified adapter for Scalebox SDK
+ * CodeBox - Simplified adapter for Scalebox SDK with context persistence
  *
  * This adapter provides a clean interface compatible with the codeboxapi
- * while using Scalebox SDK under the hood.
+ * while using Scalebox SDK under the hood. It supports code execution context
+ * management for maintaining state across multiple executions.
  */
 export class CodeBox {
   private sandbox?: Sandbox;
+  private codeInterpreter?: CodeInterpreter;
   private _sessionId?: string;
   private requirements: string[];
   private options: CodeBoxOptions;
+  private _defaultContext?: CodeContext;
 
   constructor(options: CodeBoxOptions = {}) {
     this.requirements = options.requirements || [];
@@ -75,6 +78,13 @@ export class CodeBox {
   }
 
   /**
+   * Get the default context
+   */
+  get defaultContext(): CodeContext | undefined {
+    return this._defaultContext;
+  }
+
+  /**
    * Create a CodeBox from an existing session ID
    */
   static async fromId(sessionId: string, options: CodeBoxOptions = {}): Promise<CodeBox> {
@@ -85,6 +95,20 @@ export class CodeBox {
     codebox.sandbox = await Sandbox.connect(sessionId, {
       apiKey: options.apiKey || process.env.SCALEBOX_API_KEY || '',
     });
+
+    // Create CodeInterpreter using the same Sandbox instance
+    try {
+      const sandboxInternal = codebox.sandbox as any;
+      const connectionConfig = sandboxInternal.connectionConfig;
+      const api = sandboxInternal.api;
+
+      if (connectionConfig && api) {
+        codebox.codeInterpreter = new CodeInterpreter(codebox.sandbox, connectionConfig, api);
+        console.log('[CodeBox] CodeInterpreter created for existing session');
+      }
+    } catch (error) {
+      console.warn('[CodeBox] Failed to create CodeInterpreter for existing session:', error);
+    }
 
     return codebox;
   }
@@ -103,6 +127,35 @@ export class CodeBox {
 
       const info = await this.sandbox.getInfo();
       this._sessionId = info.sandboxId;
+
+      // Create CodeInterpreter using the SAME Sandbox instance
+      // This ensures files uploaded via sandbox.files.write() are accessible during code execution
+      try {
+        // Access Sandbox's internal connectionConfig and api to create CodeInterpreter
+        const sandboxInternal = this.sandbox as any;
+        const connectionConfig = sandboxInternal.connectionConfig;
+        const api = sandboxInternal.api;
+
+        if (connectionConfig && api) {
+          // Create CodeInterpreter with the same Sandbox instance
+          this.codeInterpreter = new CodeInterpreter(this.sandbox, connectionConfig, api);
+          console.log('[CodeBox] CodeInterpreter created with shared Sandbox instance');
+
+          // Create default context for state persistence
+          this._defaultContext = await this.codeInterpreter.createCodeContext({
+            language: 'python',
+            cwd: '/workspace',
+          });
+          console.log('[CodeBox] Default context created:', this._defaultContext.id);
+        } else {
+          console.warn(
+            '[CodeBox] Could not access Sandbox internals, using session-level persistence',
+          );
+        }
+      } catch (error) {
+        console.warn('[CodeBox] Failed to create CodeInterpreter:', error);
+        console.log('[CodeBox] Falling back to Sandbox session-level persistence');
+      }
 
       // Install requirements if any
       if (this.requirements.length > 0) {
@@ -134,17 +187,95 @@ export class CodeBox {
   }
 
   /**
-   * Execute code in the sandbox
+   * Create a code execution context
+   * @param options - Context creation options
+   * @returns Created context or null if CodeInterpreter is not available
    */
-  async run(code: string): Promise<CodeBoxOutput> {
+  async createCodeContext(options?: {
+    language?: string;
+    cwd?: string;
+    envVars?: Record<string, string>;
+  }): Promise<CodeContext | null> {
+    if (!this.codeInterpreter) {
+      console.warn('[CodeBox] CodeInterpreter not available, cannot create context');
+      return null;
+    }
+
+    try {
+      const context = await this.codeInterpreter.createCodeContext({
+        language: (options?.language || 'python') as any,
+        cwd: options?.cwd || '/workspace',
+      });
+      console.log(`[CodeBox] Context created: ${context.id}`);
+      return context;
+    } catch (error) {
+      console.warn(
+        `[CodeBox] Failed to create code context: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Destroy a code execution context
+   * @param context - Context to destroy (can be CodeContext object or context ID string)
+   */
+  async destroyContext(context: CodeContext | string): Promise<void> {
+    if (!this.codeInterpreter) {
+      console.warn('[CodeBox] CodeInterpreter not available, cannot destroy context');
+      return;
+    }
+
+    try {
+      await this.codeInterpreter.destroyContext(context);
+      const contextId = typeof context === 'string' ? context : context.id;
+      console.log(`[CodeBox] Context destroyed: ${contextId}`);
+    } catch (error) {
+      const contextId = typeof context === 'string' ? context : context.id;
+      console.warn(
+        `[CodeBox] Failed to destroy context ${contextId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Execute code in the sandbox
+   * @param code - Python code to execute
+   * @param context - Optional context to maintain state across executions
+   */
+  async run(code: string, context?: CodeContext): Promise<CodeBoxOutput> {
     if (!this.sandbox) {
       throw new Error('Sandbox not initialized. Call start() first.');
     }
 
     try {
-      const result: ExecutionResult = await this.sandbox.runCode(code, {
-        language: 'python',
-      });
+      // Use provided context, or default context if available
+      const executionContext = context || this._defaultContext;
+
+      let result: ExecutionResult;
+
+      // If we have CodeInterpreter and a context, use it for execution
+      if (this.codeInterpreter && executionContext) {
+        try {
+          result = await this.codeInterpreter.execute({
+            language: 'python',
+            code,
+            contextId: executionContext.id,
+          });
+          console.log(`[CodeBox] Code executed in context: ${executionContext.id}`);
+        } catch (error) {
+          console.warn('[CodeBox] Failed to execute with context, falling back to sandbox:', error);
+          // Fallback to sandbox.runCode if context execution fails
+          result = await this.sandbox.runCode(code, {
+            language: 'python',
+          });
+        }
+      } else {
+        // Fallback to sandbox.runCode without context
+        result = await this.sandbox.runCode(code, {
+          language: 'python',
+        });
+      }
 
       // Check for errors
       if (result.error) {
@@ -282,6 +413,23 @@ export class CodeBox {
     }
 
     try {
+      // Clean up default context if exists
+      if (this._defaultContext) {
+        await this.destroyContext(this._defaultContext);
+        this._defaultContext = undefined;
+      }
+
+      // Close CodeInterpreter if it exists
+      if (this.codeInterpreter) {
+        try {
+          await (this.codeInterpreter as any).close?.();
+          console.log('[CodeBox] CodeInterpreter closed');
+        } catch (error) {
+          console.warn('[CodeBox] Failed to close CodeInterpreter:', error);
+        }
+        this.codeInterpreter = undefined;
+      }
+
       await this.sandbox.kill();
       return 'stopped';
     } catch (error) {

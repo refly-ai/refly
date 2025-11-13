@@ -684,8 +684,8 @@ importers:
         specifier: workspace:*
         version: link:../sandbox-agent
       '@scalebox/sdk':
-        specifier: ^3.1.2
-        version: 3.1.2
+        specifier: 3.4.0
+        version: 3.4.0
       apify-client:
         specifier: ^2.19.0
         version: 2.19.0(debug@4.4.1)
@@ -5871,6 +5871,10 @@ packages:
 
   '@scalebox/sdk@3.1.2':
     resolution: {integrity: sha512-TUipHiqEz+XRaYNaDhkkBAk6GoiOWMmcD6pNOcADFz2mHysCdOUYnQ6+RM9RLAe1fa6H9a+3yiZUgqAj93k6TQ==}
+    engines: {node: '>=18'}
+
+  '@scalebox/sdk@3.4.0':
+    resolution: {integrity: sha512-9T1fQDEHuTdyh8VhI5hM1TcWEymGzlCM7gIUJbRxEOFWWIPOR0DBPcIWRV/o3U/hVqvDUQZPBTJf5n948vRQZw==}
     engines: {node: '>=18'}
 
   '@scarf/scarf@1.4.0':
@@ -21166,6 +21170,17 @@ snapshots:
       react-refresh: 0.17.0
 
   '@scalebox/sdk@3.1.2':
+    dependencies:
+      '@bufbuild/protobuf': 2.10.0
+      '@connectrpc/connect': 2.1.0(@bufbuild/protobuf@2.10.0)
+      '@connectrpc/connect-node': 2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))
+      '@connectrpc/connect-web': 2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))
+      '@grpc/grpc-js': 1.14.0
+      '@grpc/proto-loader': 0.8.0
+      openapi-fetch: 0.9.8
+      platform: 1.3.6
+
+  '@scalebox/sdk@3.4.0':
     dependencies:
       '@bufbuild/protobuf': 2.10.0
       '@connectrpc/connect': 2.1.0(@bufbuild/protobuf@2.10.0)

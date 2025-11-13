@@ -19,7 +19,7 @@
     "@refly/common-types": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/sandbox-agent": "workspace:*",
-    "@scalebox/sdk": "^3.1.2",
+    "@scalebox/sdk": "3.4.0",
     "apify-client": "^2.19.0",
     "googleapis": "^159.0.0",
     "gpt-tokenizer": "^2.9.0",
