@@ -213,4 +213,12 @@ export default () => ({
       apiKey: process.env.HEYGEN_API_KEY,
     },
   },
+
+  sandbox: {
+    scalebox: {
+      apiKey: process.env.SCALEBOX_API_KEY,
+      timeout: process.env.SCALEBOX_TIMEOUT,
+      maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+    },
+  },
 });

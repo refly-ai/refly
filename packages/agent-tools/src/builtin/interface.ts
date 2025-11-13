@@ -45,6 +45,8 @@ import {
   FishAudioSpeechToTextResponse,
   HeyGenGenerateVideoRequest,
   HeyGenGenerateVideoResponse,
+  SandboxExecuteRequest,
+  SandboxExecuteResponse,
 } from '@refly/openapi-schema';
 import { Document as LangChainDocument } from '@langchain/core/documents';
 import { RunnableConfig } from '@langchain/core/runnables';
@@ -180,4 +182,7 @@ export interface ReflyService {
     user: User,
     request: HeyGenGenerateVideoRequest,
   ) => Promise<HeyGenGenerateVideoResponse>;
+
+  // Sandbox code execution
+  execute: (user: User, request: SandboxExecuteRequest) => Promise<SandboxExecuteResponse>;
 }

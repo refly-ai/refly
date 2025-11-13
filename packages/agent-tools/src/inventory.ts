@@ -34,6 +34,7 @@ import { NotionToolset, NotionToolsetDefinition } from './notion';
 import { PerplexityToolset, PerplexityToolsetDefinition } from './perplexity';
 import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt';
 import { RedditToolsetDefinition } from './reddit';
+import { SandboxToolset, SandboxToolsetDefinition } from './sandbox';
 import { TwitterToolsetDefinition } from './twitter';
 import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
 
@@ -167,5 +168,9 @@ export const toolsetInventory: Record<
   [RedditToolsetDefinition.key]: {
     class: undefined,
     definition: RedditToolsetDefinition,
+  },
+  [SandboxToolsetDefinition.key]: {
+    class: SandboxToolset,
+    definition: SandboxToolsetDefinition,
   },
 };

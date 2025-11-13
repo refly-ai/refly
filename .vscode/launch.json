@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "Launch API (debug)",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "api", "dev"],
+      "runtimeArgs": ["-F", "api", "dev:debug"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "env": {
@@ -27,6 +27,17 @@
       "restart": false,
       "localRoot": "${workspaceFolder}",
       "remoteRoot": "${workspaceFolder}",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug API with fnm",
+      "runtimeExecutable": "fnm",
+      "runtimeArgs": ["exec", "--using", "20", "pnpm", "-F", "api", "dev:debug"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
       "skipFiles": ["<node_internals>/**"]
     }
   ]

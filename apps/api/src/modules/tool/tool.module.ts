@@ -17,6 +17,7 @@ import { CreditModule } from '../credit/credit.module';
 import { ComposioModule } from './composio/composio.module';
 import { FishAudioModule } from './media/audio/fish-audio.module';
 import { HeyGenModule } from './media/video/heygen.module';
+import { ScaleboxModule } from './sandbox/scalebox.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { HeyGenModule } from './media/video/heygen.module';
     CreditModule,
     FishAudioModule,
     HeyGenModule,
+    ScaleboxModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
   ],
   controllers: [ToolController],
