@@ -2208,8 +2208,7 @@ export const CodeArtifactTypeSchema = {
     'application/refly.artifacts.mindmap',
     'text/csv',
     'application/json',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
   ],
 } as const;
 

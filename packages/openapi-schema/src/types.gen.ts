@@ -1689,8 +1689,7 @@ export type CodeArtifactType =
   | 'application/refly.artifacts.mindmap'
   | 'text/csv'
   | 'application/json'
-  | 'application/vnd.ms-excel'
-  | 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  | 'text/plain';
 
 /**
  * Code artifact
