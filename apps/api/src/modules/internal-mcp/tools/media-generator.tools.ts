@@ -104,7 +104,7 @@ export class MediaGeneratorTools {
       // Start media generation
       const generateResponse = await this.mediaGeneratorService.generate(user, mediaRequest);
 
-      if (!generateResponse.success || !generateResponse.resultId) {
+      if (!generateResponse.resultId) {
         return this.internalMcpService.formatErrorResponse(
           new Error('Failed to start media generation'),
         );

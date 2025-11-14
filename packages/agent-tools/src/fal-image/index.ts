@@ -1,7 +1,7 @@
 import {
   User,
   MediaGenerateRequest,
-  MediaGenerateResponse,
+  MediaGenerationResult,
   ToolsetDefinition,
 } from '@refly/openapi-schema';
 import { ToolParams } from '@langchain/core/tools';
@@ -10,7 +10,7 @@ import { z } from 'zod/v3';
 import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {
-  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerateResponse>;
+  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerationResult>;
   processURL: (url: string) => Promise<string>;
   batchProcessURL: (urls: string[]) => Promise<string[]>;
 }
@@ -101,7 +101,7 @@ export class SeedreamGenerateImage extends AgentBaseTool<FalImageParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedream/v4/text-to-image',
@@ -111,10 +111,14 @@ export class SeedreamGenerateImage extends AgentBaseTool<FalImageParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated failed, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated image with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated image with file ID: ${file.fileId}`,
         creditCost: 5,
       };
     } catch (error) {
@@ -169,7 +173,7 @@ export class SeedreamEditImage extends AgentBaseTool<FalImageParams> {
     try {
       const { reflyService, user } = this.params;
       const image_urls = await reflyService.batchProcessURL(input.image_urls);
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedream/v4/edit',
@@ -182,10 +186,14 @@ export class SeedreamEditImage extends AgentBaseTool<FalImageParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated image with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated image with file ID: ${file.fileId}`,
         creditCost: 5,
       };
     } catch (error) {
@@ -225,7 +233,7 @@ export class NanoBananaEditImage extends AgentBaseTool<FalImageParams> {
     try {
       const { reflyService, user } = this.params;
       const image_urls = await reflyService.batchProcessURL(input.image_urls);
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
         prompt: input.prompt,
         model: 'fal-ai/nano-banana/edit',
@@ -238,10 +246,14 @@ export class NanoBananaEditImage extends AgentBaseTool<FalImageParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully edited image with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully edited image with file ID: ${file.fileId}`,
         creditCost: 6,
       };
     } catch (error) {
@@ -283,7 +295,7 @@ export class NanoBananaGenerateImage extends AgentBaseTool<FalImageParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
         prompt: input.prompt,
         model: 'fal-ai/nano-banana',
@@ -293,10 +305,14 @@ export class NanoBananaGenerateImage extends AgentBaseTool<FalImageParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated image with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated image with file ID: ${file.fileId}`,
         creditCost: 6,
       };
     } catch (error) {

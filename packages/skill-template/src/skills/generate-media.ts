@@ -197,7 +197,7 @@ export class GenerateMedia extends BaseSkill {
         },
       );
 
-      if (!generateResponse?.success || !generateResponse?.resultId) {
+      if (!generateResponse?.resultId) {
         throw new Error('Failed to start media generation');
       }
 
@@ -477,7 +477,7 @@ The ${mediaType} has been generated and is ready for use.`,
       // Start media generation
       const generateResponse = await this.engine.service?.generateMedia?.(user, params);
 
-      if (!generateResponse.success || !generateResponse.resultId) {
+      if (!generateResponse.resultId) {
         throw new Error(
           generateResponse ? String(generateResponse.resultId) : 'Failed to start media generation',
         );

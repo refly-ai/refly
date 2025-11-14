@@ -29,7 +29,7 @@ import {
   DeleteCanvasRequest,
   DeleteDocumentRequest,
   MediaGenerateRequest,
-  MediaGenerateResponse,
+  MediaGenerationResult,
   GetActionResultData,
   CodeArtifactType,
   SendEmailRequest,
@@ -45,6 +45,8 @@ import {
   FishAudioSpeechToTextResponse,
   HeyGenGenerateVideoRequest,
   HeyGenGenerateVideoResponse,
+  DriveFile,
+  UpsertDriveFileRequest,
 } from '@refly/openapi-schema';
 import { Document as LangChainDocument } from '@langchain/core/documents';
 import { RunnableConfig } from '@langchain/core/runnables';
@@ -86,6 +88,8 @@ export interface ReflyService {
     results: SearchResult[],
     options?: { topN?: number; relevanceThreshold?: number },
   ) => Promise<RerankResponse>;
+  readFile: (user: User, fileId: string) => Promise<DriveFile>;
+  writeFile: (user: User, param: UpsertDriveFileRequest) => Promise<DriveFile>;
   generateDoc: (user: User, title: string, config: RunnableConfig) => Promise<{ docId: string }>;
   generateCodeArtifact: (
     user: User,
@@ -152,7 +156,7 @@ export interface ReflyService {
   // Generate JWT token for user (same as AuthService.login)
   generateJwtToken: (user: User) => Promise<string>;
 
-  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerateResponse>;
+  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerationResult>;
   getActionResult(user: User, param: GetActionResultData['query']): Promise<any>;
 
   getUserMediaConfig(

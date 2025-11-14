@@ -120,7 +120,7 @@ export class DriveService {
       size = BigInt(buffer.length);
 
       // Determine content type based on file extension or default to binary
-      const contentType = mime.getType(filename) ?? 'application/octet-stream';
+      contentType = mime.getType(filename) ?? 'application/octet-stream';
       await this.internalOss.putObject(driveStorageKey, buffer, {
         'Content-Type': contentType,
       });
@@ -324,7 +324,17 @@ export class DriveService {
    * Create or update a drive file
    */
   async upsertDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
-    const { fileId, canvasId, name, type, content, storageKey, externalUrl } = request;
+    const {
+      fileId,
+      canvasId,
+      name,
+      type,
+      content,
+      storageKey,
+      externalUrl,
+      resultId,
+      resultVersion,
+    } = request;
 
     // Process file content and store in object storage
     let processedResult: FileProcessedResult | undefined;
@@ -337,7 +347,7 @@ export class DriveService {
     }
 
     // Generate summary (simplified - in real implementation this would use AI)
-    const summary = content?.slice(0, 200) ?? 'No content';
+    const summary = content?.slice(0, 200);
 
     let driveFile: DriveFileModel;
 
@@ -348,6 +358,8 @@ export class DriveService {
         name,
         type,
         summary,
+        resultId,
+        resultVersion,
       };
 
       if (processedResult) {
@@ -370,6 +382,8 @@ export class DriveService {
         type,
         category: getFileCategory(processedResult?.contentType ?? 'text/plain'),
         summary,
+        resultId,
+        resultVersion,
       };
 
       if (processedResult) {

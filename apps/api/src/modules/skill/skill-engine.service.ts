@@ -26,6 +26,8 @@ import { MiscService } from '../misc/misc.service';
 import { genImageID } from '@refly/utils';
 import { FishAudioService } from '../tool/media/audio/fish-audio.service';
 import { HeyGenService } from '../tool/media/video/heygen.service';
+import { DriveService } from '../drive/drive.service';
+import { driveFilePO2DTO } from '../drive/drive.dto';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
@@ -40,6 +42,7 @@ export class SkillEngineService implements OnModuleInit {
   private authService: AuthService;
   private mediaGeneratorService: MediaGeneratorService;
   private actionService: ActionService;
+  private driveService: DriveService;
   private internalToolService: InternalToolService;
   private notificationService: NotificationService;
   private codeArtifactService: CodeArtifactService;
@@ -63,6 +66,7 @@ export class SkillEngineService implements OnModuleInit {
     this.authService = this.moduleRef.get(AuthService, { strict: false });
     this.mediaGeneratorService = this.moduleRef.get(MediaGeneratorService, { strict: false });
     this.actionService = this.moduleRef.get(ActionService, { strict: false });
+    this.driveService = this.moduleRef.get(DriveService, { strict: false });
     this.internalToolService = this.moduleRef.get(InternalToolService, { strict: false });
     this.notificationService = this.moduleRef.get(NotificationService, { strict: false });
     this.codeArtifactService = this.moduleRef.get(CodeArtifactService, { strict: false });
@@ -233,6 +237,14 @@ export class SkillEngineService implements OnModuleInit {
       },
       addNodeToCanvasWithoutCanvasId: async (user, node, connectTo, options) => {
         await this.canvasSyncService.addNodeToCanvasWithoutCanvasId(user, node, connectTo, options);
+      },
+      readFile: async (user, fileId) => {
+        const result = await this.driveService.getDriveFileDetail(user, fileId);
+        return result;
+      },
+      writeFile: async (user, param) => {
+        const file = await this.driveService.upsertDriveFile(user, param);
+        return driveFilePO2DTO(file);
       },
       genImageID: async () => {
         return genImageID();
