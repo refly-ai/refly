@@ -139,6 +139,7 @@ export class WorkflowAppService {
           templateContent: templateResult?.templateContent,
           remixEnabled,
           publishToCommunity,
+          publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
           resultNodeIds,
           updatedAt: new Date(),
         },
@@ -158,6 +159,7 @@ export class WorkflowAppService {
           templateContent: null,
           remixEnabled,
           publishToCommunity,
+          publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
           resultNodeIds,
         },
       });
