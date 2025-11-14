@@ -6645,6 +6645,10 @@ export type CreateWorkflowAppRequest = {
    * Whether remix is enabled for this app
    */
   remixEnabled?: boolean;
+  /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
 };
 
 export type DeleteWorkflowAppRequest = {

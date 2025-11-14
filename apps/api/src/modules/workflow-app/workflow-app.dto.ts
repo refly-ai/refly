@@ -32,6 +32,7 @@ export function workflowAppPO2DTO(
       ? generateCoverUrl((app as any).coverStorageKey)
       : undefined,
     remixEnabled: app.remixEnabled ?? false,
+    publishToCommunity: (app as any).publishToCommunity ?? false,
     templateContent: app.templateContent ?? undefined,
     createdAt: app.createdAt?.toISOString(),
     updatedAt: app.updatedAt?.toISOString(),

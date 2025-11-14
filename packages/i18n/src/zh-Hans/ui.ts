@@ -3488,6 +3488,10 @@ const translations = {
       earningsHint: '预计模板每次运行可获得 <num>{{creditEarningsPerRun}}</num> 积分',
       howToEarn: '如何获得收益',
     },
+    publishToCommunity: {
+      label: '发布到社区',
+      help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
+    },
   },
   project: {
     create: '创建知识库',
