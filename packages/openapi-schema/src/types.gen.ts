@@ -1686,7 +1686,10 @@ export type CodeArtifactType =
   | 'text/markdown'
   | 'application/refly.artifacts.code'
   | 'text/html'
-  | 'application/refly.artifacts.mindmap';
+  | 'application/refly.artifacts.mindmap'
+  | 'text/csv'
+  | 'application/json'
+  | 'text/plain';
 
 /**
  * Code artifact

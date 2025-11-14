@@ -2206,6 +2206,9 @@ export const CodeArtifactTypeSchema = {
     'application/refly.artifacts.code',
     'text/html',
     'application/refly.artifacts.mindmap',
+    'text/csv',
+    'application/json',
+    'text/plain',
   ],
 } as const;
 

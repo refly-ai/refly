@@ -215,8 +215,8 @@ export class SkillEngineService implements OnModuleInit {
         const result = await this.notificationService.batchProcessURL(urls);
         return result;
       },
-      downloadFile: async (storageKey) => {
-        const result = await this.miscService.downloadFile({ storageKey, visibility: 'private' });
+      downloadFile: async (params) => {
+        const result = await this.miscService.downloadFile(params);
         return result;
       },
       downloadFileFromUrl: async (url) => {

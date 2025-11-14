@@ -33,6 +33,7 @@ import { ToolModule } from '../tool/tool.module';
 import { ToolCallModule } from '../tool-call/tool-call.module';
 import { FishAudioModule } from '../tool/media/audio/fish-audio.module';
 import { HeyGenModule } from '../tool/media/video/heygen.module';
+import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { HeyGenModule } from '../tool/media/video/heygen.module';
     MediaGeneratorModule,
     FishAudioModule,
     HeyGenModule,
+    CanvasSyncModule,
     ...(isDesktop()
       ? []
       : [

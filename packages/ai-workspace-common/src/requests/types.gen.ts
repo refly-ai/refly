@@ -1686,7 +1686,10 @@ export type CodeArtifactType =
   | 'text/markdown'
   | 'application/refly.artifacts.code'
   | 'text/html'
-  | 'application/refly.artifacts.mindmap';
+  | 'application/refly.artifacts.mindmap'
+  | 'text/csv'
+  | 'application/json'
+  | 'text/plain';
 
 /**
  * Code artifact
@@ -4380,13 +4383,13 @@ export type HeyGenGenerateVideoRequest = {
        */
       inputText?: string;
       /**
-       * Audio URL (for audio type)
+       * Audio URL (for audio type, lowest priority)
        */
       audioUrl?: string;
       /**
-       * Audio file entityId (for audio type, takes priority over audioUrl)
+       * Storage key of the audio file (format "static/{uuid}", for audio type, takes priority over audioUrl)
        */
-      audioEntityId?: string;
+      storageKey?: string;
       /**
        * Speech speed
        */
@@ -4409,13 +4412,13 @@ export type HeyGenGenerateVideoRequest = {
        */
       type?: 'color' | 'image' | 'video';
       /**
-       * Background image/video URL
+       * Background image/video URL (lowest priority)
        */
       url?: string;
       /**
-       * Background image/video entityId (takes priority over url)
+       * Storage key of the background file (format "static/{uuid}", takes priority over url)
        */
-      entityId?: string;
+      storageKey?: string;
       /**
        * Background color (hex)
        */
