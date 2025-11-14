@@ -277,64 +277,103 @@ export class CodeBox {
    */
   private extractFileMetadata(code: string): FileMetadata[] {
     const files: FileMetadata[] = [];
+    const seenFiles = new Set<string>();
 
     // Match plt.savefig('filename.png') or plt.savefig("filename.png")
+    // Support both single and double quotes, with or without f-string
     const savefigMatches = code.matchAll(
-      /(?:plt\.|pyplot\.)savefig\s*\(\s*['"]([\w\-_./]+\.(?:png|jpg|jpeg|svg|pdf))['"]/gi,
+      /(?:plt\.|pyplot\.|fig\.)savefig\s*\(\s*['"]([\w\-_./]+\.(?:png|jpg|jpeg|svg|pdf))['"]/gi,
     );
     for (const match of savefigMatches) {
-      files.push({
-        filename: match[1].split('/').pop() || match[1],
-        path: `/workspace/${match[1]}`,
-        format: match[1].split('.').pop()?.toLowerCase(),
-        description: this.inferDescriptionFromFilename(match[1]),
-      });
+      const filename = match[1].split('/').pop() || match[1];
+      if (!seenFiles.has(filename)) {
+        seenFiles.add(filename);
+        files.push({
+          filename,
+          path: `/workspace/${match[1]}`,
+          format: match[1].split('.').pop()?.toLowerCase(),
+          description: this.inferDescriptionFromFilename(match[1]),
+        });
+      }
     }
 
     // Match df.to_csv('filename.csv') or to_csv("filename.csv")
     const toCsvMatches = code.matchAll(/\.to_csv\s*\(\s*['"]([\w\-_./]+\.csv)['"]/gi);
     for (const match of toCsvMatches) {
-      files.push({
-        filename: match[1].split('/').pop() || match[1],
-        path: `/workspace/${match[1]}`,
-        format: 'csv',
-        description: this.inferDescriptionFromFilename(match[1]),
-      });
+      const filename = match[1].split('/').pop() || match[1];
+      if (!seenFiles.has(filename)) {
+        seenFiles.add(filename);
+        files.push({
+          filename,
+          path: `/workspace/${match[1]}`,
+          format: 'csv',
+          description: this.inferDescriptionFromFilename(match[1]),
+        });
+      }
     }
 
     // Match df.to_json('filename.json')
     const toJsonMatches = code.matchAll(/\.to_json\s*\(\s*['"]([\w\-_./]+\.json)['"]/gi);
     for (const match of toJsonMatches) {
-      files.push({
-        filename: match[1].split('/').pop() || match[1],
-        path: `/workspace/${match[1]}`,
-        format: 'json',
-        description: this.inferDescriptionFromFilename(match[1]),
-      });
+      const filename = match[1].split('/').pop() || match[1];
+      if (!seenFiles.has(filename)) {
+        seenFiles.add(filename);
+        files.push({
+          filename,
+          path: `/workspace/${match[1]}`,
+          format: 'json',
+          description: this.inferDescriptionFromFilename(match[1]),
+        });
+      }
     }
 
     // Match df.to_excel('filename.xlsx')
     const toExcelMatches = code.matchAll(/\.to_excel\s*\(\s*['"]([\w\-_./]+\.xlsx?)['"]/gi);
     for (const match of toExcelMatches) {
-      files.push({
-        filename: match[1].split('/').pop() || match[1],
-        path: `/workspace/${match[1]}`,
-        format: match[1].endsWith('.xlsx') ? 'xlsx' : 'xls',
-        description: this.inferDescriptionFromFilename(match[1]),
-      });
+      const filename = match[1].split('/').pop() || match[1];
+      if (!seenFiles.has(filename)) {
+        seenFiles.add(filename);
+        files.push({
+          filename,
+          path: `/workspace/${match[1]}`,
+          format: match[1].endsWith('.xlsx') ? 'xlsx' : 'xls',
+          description: this.inferDescriptionFromFilename(match[1]),
+        });
+      }
     }
 
-    // Match Image.save('filename.png')
+    // Match Image.save('filename.png') or img.save('filename.png')
     const imageSaveMatches = code.matchAll(
-      /\.save\s*\(\s*['"]([\w\-_./]+\.(?:png|jpg|jpeg|gif|webp))['"]/gi,
+      /(?:Image|img|image)\s*\.save\s*\(\s*['"]([\w\-_./]+\.(?:png|jpg|jpeg|gif|webp))['"]/gi,
     );
     for (const match of imageSaveMatches) {
-      files.push({
-        filename: match[1].split('/').pop() || match[1],
-        path: `/workspace/${match[1]}`,
-        format: match[1].split('.').pop()?.toLowerCase(),
-        description: this.inferDescriptionFromFilename(match[1]),
-      });
+      const filename = match[1].split('/').pop() || match[1];
+      if (!seenFiles.has(filename)) {
+        seenFiles.add(filename);
+        files.push({
+          filename,
+          path: `/workspace/${match[1]}`,
+          format: match[1].split('.').pop()?.toLowerCase(),
+          description: this.inferDescriptionFromFilename(match[1]),
+        });
+      }
+    }
+
+    // Match generic file write operations: with open('filename', 'w') or open('filename', 'wb')
+    const fileWriteMatches = code.matchAll(
+      /(?:with\s+)?open\s*\(\s*['"]([\w\-_./]+\.\w+)['"],\s*['"][wb]['"][)]?/gi,
+    );
+    for (const match of fileWriteMatches) {
+      const filename = match[1].split('/').pop() || match[1];
+      if (!seenFiles.has(filename)) {
+        seenFiles.add(filename);
+        files.push({
+          filename,
+          path: `/workspace/${match[1]}`,
+          format: match[1].split('.').pop()?.toLowerCase(),
+          description: this.inferDescriptionFromFilename(match[1]),
+        });
+      }
     }
 
     return files;
