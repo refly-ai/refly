@@ -664,6 +664,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: CanvasNode<any>) => {
+      console.log('node', node);
       if (!node) return;
 
       if (node.id.startsWith('ghost-')) {
@@ -1069,10 +1070,8 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
             <HelperLines horizontal={helperLineHorizontal} vertical={helperLineVertical} />
           </ReactFlow>
         </div>
-
         {/* Display the not found overlay when shareNotFound is true */}
         {readonly && shareNotFound && <NotFoundOverlay />}
-
         <ToolbarButtons canvasId={canvasId} />
         <PreviewBoxInCanvas node={selectedNode} />
         <WorkflowRun />
@@ -1081,9 +1080,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
           setCopilotWidth={handleSetCopilotWidth}
           maxPanelWidth={maxPanelWidth}
         />
-
         <ToggleCopilotPanel copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
-
         <UnifiedContextMenu
           open={contextMenu.open}
           position={contextMenu.position}

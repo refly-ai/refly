@@ -152,7 +152,7 @@ export const FileItemHeader = memo(() => {
   }, [currentFile, contentType, isDownloading, t, setIsDownloading]);
 
   return (
-    <div className="w-full h-[64px] flex-shrink-0 flex gap-2 items-center justify-between px-3 py-4">
+    <div className="w-full h-14 flex-shrink-0 flex gap-2 items-center justify-between px-3 py-4">
       <div className="min-w-0 flex-1 flex items-center gap-1">
         <Button
           type="text"

@@ -74,7 +74,7 @@ export const WorkflowRun = () => {
 
   return (
     <div className="z-[30] absolute -top-[1px] -right-[1px] -bottom-[1px] w-[400px] flex flex-col rounded-xl bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m overflow-hidden">
-      <div className="w-full h-[65px] flex gap-2 items-center justify-between p-3 border-solid border-refly-Card-Border border-[1px] border-x-0 border-t-0">
+      <div className="w-full h-14 flex gap-2 items-center justify-between p-3 border-solid border-refly-Card-Border border-[1px] border-x-0 border-t-0">
         <div className="text-refly-text-0 text-base font-semibold leading-[26px] min-w-0 flex-1">
           {t('canvas.workflow.run.title')}
         </div>

@@ -13,6 +13,7 @@ import type {
 } from '@refly/openapi-schema';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 
 export const FileItemAction = ({
   file,
@@ -30,6 +31,9 @@ export const FileItemAction = ({
 
   // Safely extract workflowVariables with fallback to prevent runtime crashes
   const workflowVariables = workflow?.workflowVariables ?? [];
+  const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setCurrentFile: state.setCurrentFile,
+  }));
 
   // Add state for modal visibility
   const [isCreateVariableModalVisible, setIsCreateVariableModalVisible] = useState(false);
@@ -47,12 +51,14 @@ export const FileItemAction = ({
         await getClient().deleteDriveFile({ body: { fileId: file.fileId } });
         setIsDeleting(false);
         message.success(t('common.deleteSuccess'));
+
         refetchFiles();
+        setCurrentFile(null);
       } finally {
         setIsDeleting(false);
       }
     },
-    [refetchFiles],
+    [refetchFiles, setCurrentFile],
   );
 
   // Create default variable data for the current resource

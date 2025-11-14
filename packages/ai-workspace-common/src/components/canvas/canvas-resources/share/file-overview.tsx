@@ -37,7 +37,7 @@ export const FileOverview = memo(() => {
 
   return (
     <div className="w-[350px] h-full flex flex-col">
-      <div className="h-[64px] px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
+      <div className="h-14 px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
         <div className="flex gap-2 items-center">
           <Tooltip title={t('canvas.toolbar.closeResourcesPanel')} arrow={false}>
             <Button type="text" icon={<SideRight size={22} />} onClick={handleClose} />
