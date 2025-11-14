@@ -422,6 +422,11 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
 
     const isSyncedExternalQuery = useRef(false);
 
+    // Reset sync flag when query changes externally
+    useEffect(() => {
+      isSyncedExternalQuery.current = false;
+    }, [query]);
+
     // Update editor content when query changes externally
     useEffect(() => {
       if (!editor || isSyncedExternalQuery.current) return;
@@ -457,7 +462,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         }
       }
       isSyncedExternalQuery.current = true;
-    }, [query, editor, workflowVariables, allItems, isSyncedExternalQuery]);
+    }, [query, editor, workflowVariables, allItems]);
 
     // Additional effect to re-render content when canvas data becomes available
     useEffect(() => {
