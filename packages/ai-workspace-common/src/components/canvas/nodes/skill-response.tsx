@@ -38,10 +38,7 @@ import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspac
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
-import {
-  processContentPreview,
-  truncateContent,
-} from '@refly-packages/ai-workspace-common/utils/content';
+import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
 import { usePilotStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 import { NodeExecutionStatus } from './shared/node-execution-status';
@@ -54,6 +51,7 @@ import { SkillResponseActions } from '@refly-packages/ai-workspace-common/compon
 import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
+import { processQueryWithMentions } from '@refly/utils';
 
 const NODE_WIDTH = 320;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
@@ -809,7 +807,7 @@ export const SkillResponseNode = memo(
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
-              title={query}
+              title={query || t('canvas.nodeTypes.agent')}
               readonly={true}
               source="node"
               actions={
@@ -823,16 +821,16 @@ export const SkillResponseNode = memo(
             />
 
             <div className={'relative flex-grow overflow-y-auto w-full'}>
-              <div className="flex flex-col p-3">
-                {/* Always show content preview, use prompt/query as fallback when content is empty */}
-                <SkillResponseContentPreview
-                  nodeId={id}
-                  content={truncateContent(
-                    content || (structuredData?.query as any) || query || '',
-                  )}
-                  metadata={metadata as any}
-                />
-              </div>
+              {/* Always show content preview, use prompt/query as fallback when content is empty */}
+              <SkillResponseContentPreview
+                nodeId={id}
+                className="p-3"
+                content={
+                  processQueryWithMentions((structuredData?.query as any) || query || '')
+                    ?.processedQuery || ''
+                }
+                metadata={metadata as any}
+              />
             </div>
           </div>
         </div>

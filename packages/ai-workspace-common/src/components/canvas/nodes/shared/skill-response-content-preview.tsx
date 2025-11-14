@@ -1,15 +1,15 @@
 import { memo, useMemo } from 'react';
-import { Tag, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ModelIcon } from '@lobehub/icons';
 import { ResponseNodeMeta } from '@refly/canvas-common';
-import { IContextItem } from '@refly/common-types';
 import { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { X } from 'refly-icons';
 import { useListMentionItems } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/hooks/use-list-mention-items';
 import { MentionItem } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/mentionList';
+import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 
 interface SkillResponseContentPreviewProps {
   // Preview content to display (will be truncated if overflow)
@@ -53,15 +53,10 @@ ModelLabel.displayName = 'ModelLabel';
  */
 export const SkillResponseContentPreview = memo(
   ({ nodeId, content, metadata, className = '' }: SkillResponseContentPreviewProps) => {
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
     const allItems = useListMentionItems(nodeId);
 
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
-
-    // Check if context includes image
-    const isContextIncludeImage = useMemo(() => {
-      return metadata?.contextItems?.some((item: IContextItem) => item.type === 'image') ?? false;
-    }, [metadata?.contextItems]);
 
     // Extract model info
     const modelInfo = useMemo(() => {
@@ -90,89 +85,50 @@ export const SkillResponseContentPreview = memo(
     }, [allItems]);
 
     return (
-      <div className={`flex flex-col ${className}`} style={{ gap: '8px' }}>
-        {/* Content preview - first line with ellipsis if overflow */}
-        {content && (
-          <div className="text-xs text-gray-700 truncate w-full" title={content}>
-            {content}
-          </div>
-        )}
+      <div className={`flex flex-col gap-2 ${className}`}>
+        <div className="text-xs truncate w-full mb-1" title={content}>
+          {content || t('canvas.nodeActions.selectToEdit')}
+        </div>
 
-        {/* Model information - second line */}
         {modelInfo && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 flex-shrink-0">Model:</span>
-            <Tag className="text-xs m-0 flex items-center gap-1">
-              <ModelIcon model={modelInfo.name} size={16} type={'color'} />
-              <ModelLabel model={modelInfo} isContextIncludeImage={isContextIncludeImage} />
-            </Tag>
-          </div>
+          <LabelDisplay
+            title={t('canvas.skillResponse.config.model')}
+            labels={[
+              {
+                icon: <ModelIcon model={modelInfo.name} size={12} type={'color'} />,
+                labeltext: modelInfo.label,
+              },
+            ]}
+            labelClassnames="bg-refly-node-contrl-1"
+            showMore={false}
+          />
         )}
 
-        {/* Tools used - third line */}
-        {toolsets.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 flex-shrink-0">Tool:</span>
-            <div className="flex flex-wrap gap-1">
-              {toolsets.map((toolset, index) => {
-                // Get localized label for builtin toolsets, otherwise use name
-                const labelName = toolset?.builtin
-                  ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
-                    toolset.name)
-                  : toolset.name;
+        <LabelDisplay
+          title={t('canvas.skillResponse.config.tool')}
+          labels={toolsets.map((toolset) => ({
+            icon: (
+              <ToolsetIcon toolset={toolset} config={{ size: 16, className: 'flex-shrink-0' }} />
+            ),
+            labeltext: toolset?.builtin
+              ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
+                toolset.name)
+              : toolset.name,
+          }))}
+          labelClassnames="bg-refly-node-contrl-2"
+          showMore={false}
+        />
 
-                return (
-                  <Tag
-                    key={`${toolset.id || toolset.name}-${index}`}
-                    className="text-xs m-0 flex items-center gap-1"
-                  >
-                    <ToolsetIcon
-                      toolset={toolset}
-                      config={{
-                        size: 16,
-                        className: 'flex-shrink-0',
-                        builtinClassName: '!w-4 !h-4',
-                      }}
-                    />
-                    <span>{labelName}</span>
-                  </Tag>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Input variables - fourth line */}
-        {inputVariables.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 flex-shrink-0">Input:</span>
-            <div className="flex flex-wrap gap-1">
-              {inputVariables.map((varName, index) => (
-                <Tag
-                  key={`${varName}-${index}`}
-                  className="text-xs m-0 flex items-center gap-1 bg-[#FEF2CF]"
-                >
-                  <X className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
-                  {varName}
-                </Tag>
-              ))}
-            </div>
-          </div>
-        )}
+        <LabelDisplay
+          title={t('canvas.skillResponse.config.input')}
+          labels={inputVariables.map((varName) => ({
+            labeltext: varName,
+            icon: <X size={12} className="flex-shrink-0" />,
+          }))}
+          labelClassnames="bg-refly-node-contrl-2"
+          showMore={false}
+        />
       </div>
-    );
-  },
-  // Memoization comparison function to prevent unnecessary re-renders
-  (prevProps, nextProps) => {
-    return (
-      prevProps.content === nextProps.content &&
-      prevProps.className === nextProps.className &&
-      JSON.stringify(prevProps.metadata?.modelInfo) ===
-        JSON.stringify(nextProps.metadata?.modelInfo) &&
-      JSON.stringify(prevProps.metadata?.selectedToolsets) ===
-        JSON.stringify(nextProps.metadata?.selectedToolsets) &&
-      JSON.stringify(prevProps.metadata?.contextItems) ===
-        JSON.stringify(nextProps.metadata?.contextItems)
     );
   },
 );

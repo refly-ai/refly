@@ -1170,6 +1170,7 @@ const translations = {
       video: '视频',
       audio: '音频',
       start: '输入项',
+      agent: '智能体',
       documentSelection: '文档选中内容',
       resourceSelection: '资源选中内容',
       skillResponseSelection: '技能响应选中内容',
@@ -1515,6 +1516,13 @@ const translations = {
         retryButton: '重试该节点',
         checkButton: '检查该节点',
       },
+      config: {
+        input: '输入项: ',
+        model: '模型: ',
+        tool: '工具: ',
+        file: '文件: ',
+        agent: ' 智能体: ',
+      },
     },
     chatHistory: {
       alreadyAdded: '已添加到对话历史',
@@ -1627,6 +1635,7 @@ const translations = {
       downloadDescription: '下载节点内容到本地文件',
       runWorkflow: '从当前节点开始运行工作流',
       existWorkflowRunning: '工作流正在运行中',
+      selectToEdit: '点击进入编辑器编辑',
     },
     download: {
       error: {

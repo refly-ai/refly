@@ -40,8 +40,8 @@ interface NodeHeaderProps {
 
 // Background color classes for different node types
 const NODE_TYPE_BG_CLASSES: Partial<Record<CanvasNodeType, string>> = {
-  skillResponse: 'bg-[#D9FFFE]',
-  start: 'bg-[#FEF2CF]',
+  skillResponse: 'bg-refly-node-fill-1',
+  start: 'bg-refly-node-fill-2',
 };
 
 /**

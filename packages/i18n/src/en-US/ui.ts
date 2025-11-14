@@ -1164,6 +1164,7 @@ const translations = {
       video: 'Video',
       audio: 'Audio',
       start: 'User Input',
+      agent: 'Agent',
       documentSelection: 'Document Selection',
       resourceSelection: 'Resource Selection',
       skillResponseSelection: 'Skill Response Selection',
@@ -1520,6 +1521,13 @@ const translations = {
         retryButton: 'Retry Node',
         checkButton: 'Check Node',
       },
+      config: {
+        input: 'Input: ',
+        model: 'Model: ',
+        tool: 'Tool: ',
+        file: 'File: ',
+        agent: 'Agent: ',
+      },
     },
     chatHistory: {
       alreadyAdded: 'Already added to chat history',
@@ -1642,6 +1650,7 @@ const translations = {
       downloadDescription: 'Download node content to local file',
       runWorkflow: 'Run Workflow from Current Node',
       existWorkflowRunning: 'Workflow is running',
+      selectToEdit: 'Select to edit in editor',
     },
     download: {
       error: {

@@ -53,4 +53,11 @@ export const reflyColors = {
   'refly-text-caption': 'var(--refly-text-caption)',
   'refly-text-StaticWhite': 'var(--refly-text-StaticWhite)',
   'refly-text-placeholder': 'var(--refly-text-placeholder)',
+  'refly-node-input-control': 'var(--refly-node-input-control)',
+  'refly-node-contrl-1': 'var(--refly-node-contrl-1)',
+  'refly-node-contrl-2': 'var(--refly-node-contrl-2)',
+  'refly-node-input-fill': 'var(--refly-node-input-fill)',
+  'refly-node-run': 'var(--refly-node-run)',
+  'refly-node-fill-1': 'var(--refly-node-fill-1)',
+  'refly-node-fill-2': 'var(--refly-node-fill-2)',
 } as const;

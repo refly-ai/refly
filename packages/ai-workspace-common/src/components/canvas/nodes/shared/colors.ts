@@ -42,7 +42,7 @@ export const NODE_COLORS: Record<
   codeArtifact: 'var(--refly-Colorful-Blue)',
   website: 'var(--refly-Colorful-Blue)',
 
-  start: 'var(--refly-text-0)',
+  start: 'black',
   resource: 'var(--refly-primary-default)',
   resourceSelection: 'var(--refly-primary-default)',
 
