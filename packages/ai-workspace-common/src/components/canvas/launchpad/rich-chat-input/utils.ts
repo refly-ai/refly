@@ -38,12 +38,12 @@ export const createContextItemFromMentionItem = (item: MentionItem): IContextIte
         if (validCanvasNodeTypes.includes(item.variableType as CanvasNodeType)) {
           return item.variableType as CanvasNodeType;
         }
-        return 'resource' as CanvasNodeType;
+        return 'file';
       } else if (item.source === 'myUpload') {
-        return 'resource' as CanvasNodeType;
+        return 'file';
       }
 
-      return 'resource' as CanvasNodeType;
+      return 'file';
     })(),
 
     metadata: {

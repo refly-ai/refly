@@ -3,6 +3,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useDebouncedCallback } from 'use-debounce';
 import { useSubscriptionUsage } from '../use-subscription-usage';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+
 export const useDeleteResource = () => {
   const [isRemoving, setIsRemoving] = useState(false);
 

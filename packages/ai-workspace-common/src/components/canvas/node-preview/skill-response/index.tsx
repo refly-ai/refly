@@ -325,8 +325,6 @@ const SkillResponseNodePreviewComponent = ({
 
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
 
-  // const { data: resources } = useFetchResources();
-
   return purePreview ? (
     !result && !loading ? (
       <div className="h-full w-full flex items-center justify-center">

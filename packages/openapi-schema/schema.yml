@@ -30,6 +30,8 @@ tags:
     description: Pilot management endpoints
   - name: copilot
     description: Copilot management endpoints
+  - name: drive
+    description: Drive management endpoints
   - name: codeArtifact
     description: Code artifact management endpoints
   - name: user
@@ -1056,6 +1058,124 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateWorkflowVariablesResponse'
+  /drive/file/list:
+    get:
+      tags:
+        - drive
+      summary: List drive files
+      description: List all drive files
+      operationId: listDriveFiles
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          schema:
+            type: number
+            default: 10
+        - name: order
+          in: query
+          description: Order
+          schema:
+            $ref: '#/components/schemas/ListOrder'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDriveFilesResponse'
+  /drive/file/create:
+    post:
+      tags:
+        - drive
+      summary: Create drive file
+      description: Create a new drive file
+      operationId: createDriveFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDriveFileRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertDriveFileResponse'
+  /drive/file/batchCreate:
+    post:
+      tags:
+        - drive
+      summary: Batch create drive files
+      description: Batch create drive files
+      operationId: batchCreateDriveFiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreateDriveFilesRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCreateDriveFilesResponse'
+  /drive/file/update:
+    post:
+      tags:
+        - drive
+      summary: Update drive file
+      description: Update an existing drive file
+      operationId: updateDriveFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDriveFileRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertDriveFileResponse'
+  /drive/file/delete:
+    post:
+      tags:
+        - drive
+      summary: Delete drive file
+      description: Delete an existing drive file
+      operationId: deleteDriveFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteDriveFileRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /template/list:
     get:
       tags:
@@ -6268,8 +6388,14 @@ components:
             resources:
               type: array
               description: Resources in the canvas
+              deprecated: true
               items:
                 $ref: '#/components/schemas/Resource'
+            files:
+              type: array
+              description: Drive files in the canvas
+              items:
+                $ref: '#/components/schemas/DriveFile'
     ExportCanvasResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -7557,6 +7683,7 @@ components:
         images:
           type: array
           description: Image list (storage keys)
+          deprecated: true
           items:
             type: string
     SkillContextResourceItem:
@@ -7660,6 +7787,28 @@ components:
         metadata:
           type: object
           description: Media context metadata
+    SkillContextFileItem:
+      type: object
+      description: Skill context file item
+      required:
+        - fileId
+      properties:
+        fileId:
+          type: string
+          description: File ID
+        file:
+          description: File object
+          $ref: '#/components/schemas/DriveFile'
+    SkillContextResultItem:
+      type: object
+      description: Skill context result item
+      properties:
+        resultId:
+          type: string
+          description: Result ID
+        result:
+          description: Result
+          $ref: '#/components/schemas/ActionResult'
     SkillContext:
       type: object
       description: Skill invocation context
@@ -7695,6 +7844,16 @@ components:
           description: List of media
           items:
             $ref: '#/components/schemas/SkillContextMediaItem'
+        files:
+          type: array
+          description: List of files
+          items:
+            $ref: '#/components/schemas/SkillContextFileItem'
+        results:
+          type: array
+          description: List of results
+          items:
+            $ref: '#/components/schemas/SkillContextResultItem'
     SelectionKey:
       type: string
       enum:
@@ -7730,6 +7889,7 @@ components:
           description: Skill result history
           items:
             $ref: '#/components/schemas/ActionResult'
+          deprecated: true
         runtimeConfig:
           description: Skill runtime config
           $ref: '#/components/schemas/SkillRuntimeConfig'
@@ -10729,6 +10889,135 @@ components:
               description: Updated list of workflow variables
               items:
                 $ref: '#/components/schemas/WorkflowVariable'
+    DriveFileCategory:
+      type: string
+      enum:
+        - document
+        - image
+        - video
+        - audio
+    DriveFile:
+      type: object
+      required:
+        - canvasId
+        - fileId
+        - name
+        - type
+        - size
+        - summary
+        - resultId
+        - resultVersion
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID
+        fileId:
+          type: string
+          description: Drive file ID
+        name:
+          type: string
+          description: Drive file name
+        type:
+          type: string
+          description: Drive file type
+        category:
+          $ref: '#/components/schemas/DriveFileCategory'
+          description: Drive file category
+        size:
+          type: number
+          description: Drive file size
+        summary:
+          type: string
+          description: Drive file summary
+        resultId:
+          type: string
+          description: Action result ID
+        resultVersion:
+          type: number
+          description: Action result version
+        content:
+          type: string
+          description: Drive file content (only used for model input)
+        createdAt:
+          type: string
+          format: date-time
+          description: Drive file creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Drive file update timestamp
+    ListDriveFilesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of drive files
+              items:
+                $ref: '#/components/schemas/DriveFile'
+    UpsertDriveFileRequest:
+      type: object
+      required:
+        - canvasId
+        - name
+      properties:
+        fileId:
+          type: string
+          description: File ID (required for update)
+        canvasId:
+          type: string
+          description: Canvas ID
+        name:
+          type: string
+          description: Drive file name
+        type:
+          type: string
+          description: Drive file type (MIME type)
+        content:
+          type: string
+          description: File content (for plain text files)
+        storageKey:
+          type: string
+          description: File storage key (for uploaded files)
+        externalUrl:
+          type: string
+          description: External URL to download from
+    BatchCreateDriveFilesRequest:
+      type: object
+      required:
+        - files
+      properties:
+        files:
+          type: array
+          description: List of drive files
+          items:
+            $ref: '#/components/schemas/UpsertDriveFileRequest'
+    BatchCreateDriveFilesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of drive files
+              items:
+                $ref: '#/components/schemas/DriveFile'
+    UpsertDriveFileResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriveFile'
+    DeleteDriveFileRequest:
+      type: object
+      required:
+        - fileId
+      properties:
+        fileId:
+          type: string
+          description: Drive file ID
     SendEmailRequest:
       type: object
       required:

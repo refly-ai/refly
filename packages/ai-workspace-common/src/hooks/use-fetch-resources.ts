@@ -1,22 +1,22 @@
 import { useUserStoreShallow } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useListResources } from '@refly-packages/ai-workspace-common/queries/queries';
+import { useListDriveFiles } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useGetProjectCanvasId } from './use-get-project-canvasId';
 
 // later optimize to support page scroll
 const DEFAULT_PAGE_SIZE = 100;
 
-export const useFetchResources = () => {
+export const useFetchDriveFiles = () => {
   const { canvasId, shareData, shareLoading } = useCanvasContext();
   const { projectId } = useGetProjectCanvasId();
   const isLogin = useUserStoreShallow((state) => state.isLogin);
 
   const fetchRemoteEnabled = isLogin && !shareData;
   const {
-    data: resourcesData,
-    isLoading: isLoadingResources,
+    data: filesData,
+    isLoading: isLoadingFiles,
     refetch,
-  } = useListResources(
+  } = useListDriveFiles(
     {
       query: {
         canvasId,
@@ -29,8 +29,8 @@ export const useFetchResources = () => {
   );
 
   return {
-    data: shareData?.resources ?? resourcesData?.data ?? [],
+    data: shareData?.files ?? filesData?.data ?? [],
     refetch: fetchRemoteEnabled ? refetch : () => {},
-    isLoading: shareLoading || isLoadingResources,
+    isLoading: shareLoading || isLoadingFiles,
   };
 };

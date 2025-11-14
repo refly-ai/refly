@@ -3351,8 +3351,16 @@ export const SharedCanvasDataSchema = {
         resources: {
           type: 'array',
           description: 'Resources in the canvas',
+          deprecated: true,
           items: {
             $ref: '#/components/schemas/Resource',
+          },
+        },
+        files: {
+          type: 'array',
+          description: 'Drive files in the canvas',
+          items: {
+            $ref: '#/components/schemas/DriveFile',
           },
         },
       },
@@ -5286,6 +5294,7 @@ export const SkillInputSchema = {
     images: {
       type: 'array',
       description: 'Image list (storage keys)',
+      deprecated: true,
       items: {
         type: 'string',
       },
@@ -5427,6 +5436,37 @@ export const SkillContextMediaItemSchema = {
   },
 } as const;
 
+export const SkillContextFileItemSchema = {
+  type: 'object',
+  description: 'Skill context file item',
+  required: ['fileId'],
+  properties: {
+    fileId: {
+      type: 'string',
+      description: 'File ID',
+    },
+    file: {
+      description: 'File object',
+      $ref: '#/components/schemas/DriveFile',
+    },
+  },
+} as const;
+
+export const SkillContextResultItemSchema = {
+  type: 'object',
+  description: 'Skill context result item',
+  properties: {
+    resultId: {
+      type: 'string',
+      description: 'Result ID',
+    },
+    result: {
+      description: 'Result',
+      $ref: '#/components/schemas/ActionResult',
+    },
+  },
+} as const;
+
 export const SkillContextSchema = {
   type: 'object',
   description: 'Skill invocation context',
@@ -5474,6 +5514,20 @@ export const SkillContextSchema = {
         $ref: '#/components/schemas/SkillContextMediaItem',
       },
     },
+    files: {
+      type: 'array',
+      description: 'List of files',
+      items: {
+        $ref: '#/components/schemas/SkillContextFileItem',
+      },
+    },
+    results: {
+      type: 'array',
+      description: 'List of results',
+      items: {
+        $ref: '#/components/schemas/SkillContextResultItem',
+      },
+    },
   },
 } as const;
 
@@ -5517,6 +5571,7 @@ export const InvokeSkillRequestSchema = {
       items: {
         $ref: '#/components/schemas/ActionResult',
       },
+      deprecated: true,
     },
     runtimeConfig: {
       description: 'Skill runtime config',
@@ -9746,6 +9801,184 @@ export const UpdateWorkflowVariablesResponseSchema = {
       },
     },
   ],
+} as const;
+
+export const DriveFileCategorySchema = {
+  type: 'string',
+  enum: ['document', 'image', 'video', 'audio'],
+} as const;
+
+export const DriveFileSchema = {
+  type: 'object',
+  required: ['canvasId', 'fileId', 'name', 'type', 'size', 'summary', 'resultId', 'resultVersion'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    fileId: {
+      type: 'string',
+      description: 'Drive file ID',
+    },
+    name: {
+      type: 'string',
+      description: 'Drive file name',
+    },
+    type: {
+      type: 'string',
+      description: 'Drive file type',
+    },
+    category: {
+      $ref: '#/components/schemas/DriveFileCategory',
+      description: 'Drive file category',
+    },
+    size: {
+      type: 'number',
+      description: 'Drive file size',
+    },
+    summary: {
+      type: 'string',
+      description: 'Drive file summary',
+    },
+    resultId: {
+      type: 'string',
+      description: 'Action result ID',
+    },
+    resultVersion: {
+      type: 'number',
+      description: 'Action result version',
+    },
+    content: {
+      type: 'string',
+      description: 'Drive file content (only used for model input)',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Drive file creation timestamp',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Drive file update timestamp',
+    },
+  },
+} as const;
+
+export const ListDriveFilesResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'List of drive files',
+          items: {
+            $ref: '#/components/schemas/DriveFile',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpsertDriveFileRequestSchema = {
+  type: 'object',
+  required: ['canvasId', 'name'],
+  properties: {
+    fileId: {
+      type: 'string',
+      description: 'File ID (required for update)',
+    },
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    name: {
+      type: 'string',
+      description: 'Drive file name',
+    },
+    type: {
+      type: 'string',
+      description: 'Drive file type (MIME type)',
+    },
+    content: {
+      type: 'string',
+      description: 'File content (for plain text files)',
+    },
+    storageKey: {
+      type: 'string',
+      description: 'File storage key (for uploaded files)',
+    },
+    externalUrl: {
+      type: 'string',
+      description: 'External URL to download from',
+    },
+  },
+} as const;
+
+export const BatchCreateDriveFilesRequestSchema = {
+  type: 'object',
+  required: ['files'],
+  properties: {
+    files: {
+      type: 'array',
+      description: 'List of drive files',
+      items: {
+        $ref: '#/components/schemas/UpsertDriveFileRequest',
+      },
+    },
+  },
+} as const;
+
+export const BatchCreateDriveFilesResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'List of drive files',
+          items: {
+            $ref: '#/components/schemas/DriveFile',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpsertDriveFileResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/DriveFile',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const DeleteDriveFileRequestSchema = {
+  type: 'object',
+  required: ['fileId'],
+  properties: {
+    fileId: {
+      type: 'string',
+      description: 'Drive file ID',
+    },
+  },
 } as const;
 
 export const SendEmailRequestSchema = {

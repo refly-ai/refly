@@ -2520,8 +2520,13 @@ export type GetCanvasDataResponse = BaseResponse & {
 export type SharedCanvasData = RawCanvasData & {
   /**
    * Resources in the canvas
+   * @deprecated
    */
   resources?: Array<Resource>;
+  /**
+   * Drive files in the canvas
+   */
+  files?: Array<DriveFile>;
 };
 
 export type ExportCanvasResponse = BaseResponse & {
@@ -3744,6 +3749,7 @@ export type SkillInput = {
   originalQuery?: string;
   /**
    * Image list (storage keys)
+   * @deprecated
    */
   images?: Array<string>;
 };
@@ -3885,6 +3891,34 @@ export type SkillContextMediaItem = {
 };
 
 /**
+ * Skill context file item
+ */
+export type SkillContextFileItem = {
+  /**
+   * File ID
+   */
+  fileId: string;
+  /**
+   * File object
+   */
+  file?: DriveFile;
+};
+
+/**
+ * Skill context result item
+ */
+export type SkillContextResultItem = {
+  /**
+   * Result ID
+   */
+  resultId?: string;
+  /**
+   * Result
+   */
+  result?: ActionResult;
+};
+
+/**
  * Skill invocation context
  */
 export type SkillContext = {
@@ -3913,6 +3947,14 @@ export type SkillContext = {
    * List of media
    */
   mediaList?: Array<SkillContextMediaItem>;
+  /**
+   * List of files
+   */
+  files?: Array<SkillContextFileItem>;
+  /**
+   * List of results
+   */
+  results?: Array<SkillContextResultItem>;
 };
 
 export type SelectionKey =
@@ -3939,6 +3981,7 @@ export type InvokeSkillRequest = {
   context?: SkillContext;
   /**
    * Skill result history
+   * @deprecated
    */
   resultHistory?: Array<ActionResult>;
   /**
@@ -6861,6 +6904,122 @@ export type UpdateWorkflowVariablesResponse = BaseResponse & {
   data?: Array<WorkflowVariable>;
 };
 
+export type DriveFileCategory = 'document' | 'image' | 'video' | 'audio';
+
+export type DriveFile = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Drive file ID
+   */
+  fileId: string;
+  /**
+   * Drive file name
+   */
+  name: string;
+  /**
+   * Drive file type
+   */
+  type: string;
+  /**
+   * Drive file category
+   */
+  category?: DriveFileCategory;
+  /**
+   * Drive file size
+   */
+  size: number;
+  /**
+   * Drive file summary
+   */
+  summary: string;
+  /**
+   * Action result ID
+   */
+  resultId: string;
+  /**
+   * Action result version
+   */
+  resultVersion: number;
+  /**
+   * Drive file content (only used for model input)
+   */
+  content?: string;
+  /**
+   * Drive file creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Drive file update timestamp
+   */
+  updatedAt?: string;
+};
+
+export type ListDriveFilesResponse = BaseResponse & {
+  /**
+   * List of drive files
+   */
+  data?: Array<DriveFile>;
+};
+
+export type UpsertDriveFileRequest = {
+  /**
+   * File ID (required for update)
+   */
+  fileId?: string;
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Drive file name
+   */
+  name: string;
+  /**
+   * Drive file type (MIME type)
+   */
+  type?: string;
+  /**
+   * File content (for plain text files)
+   */
+  content?: string;
+  /**
+   * File storage key (for uploaded files)
+   */
+  storageKey?: string;
+  /**
+   * External URL to download from
+   */
+  externalUrl?: string;
+};
+
+export type BatchCreateDriveFilesRequest = {
+  /**
+   * List of drive files
+   */
+  files: Array<UpsertDriveFileRequest>;
+};
+
+export type BatchCreateDriveFilesResponse = BaseResponse & {
+  /**
+   * List of drive files
+   */
+  data?: Array<DriveFile>;
+};
+
+export type UpsertDriveFileResponse = BaseResponse & {
+  data?: DriveFile;
+};
+
+export type DeleteDriveFileRequest = {
+  /**
+   * Drive file ID
+   */
+  fileId: string;
+};
+
 export type SendEmailRequest = {
   /**
    * Email subject
@@ -7422,6 +7581,63 @@ export type UpdateWorkflowVariablesData = {
 export type UpdateWorkflowVariablesResponse2 = UpdateWorkflowVariablesResponse;
 
 export type UpdateWorkflowVariablesError = unknown;
+
+export type ListDriveFilesData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+    /**
+     * Order
+     */
+    order?: ListOrder;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+  };
+};
+
+export type ListDriveFilesResponse2 = ListDriveFilesResponse;
+
+export type ListDriveFilesError = unknown;
+
+export type CreateDriveFileData = {
+  body: UpsertDriveFileRequest;
+};
+
+export type CreateDriveFileResponse = UpsertDriveFileResponse;
+
+export type CreateDriveFileError = unknown;
+
+export type BatchCreateDriveFilesData = {
+  body: BatchCreateDriveFilesRequest;
+};
+
+export type BatchCreateDriveFilesResponse2 = BatchCreateDriveFilesResponse;
+
+export type BatchCreateDriveFilesError = unknown;
+
+export type UpdateDriveFileData = {
+  body: UpsertDriveFileRequest;
+};
+
+export type UpdateDriveFileResponse = UpsertDriveFileResponse;
+
+export type UpdateDriveFileError = unknown;
+
+export type DeleteDriveFileData = {
+  body: DeleteDriveFileRequest;
+};
+
+export type DeleteDriveFileResponse = BaseResponse;
+
+export type DeleteDriveFileError = unknown;
 
 export type ListCanvasTemplatesData = {
   query?: {

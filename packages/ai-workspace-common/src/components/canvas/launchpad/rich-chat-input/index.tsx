@@ -27,7 +27,7 @@ import {
   createNodeEventName,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
 import { type MentionItem } from './mentionList';
 import { createMentionExtension } from './mention-extension';
 import AtomicInlineKeymap from './atomic-inline-keymap';
@@ -92,7 +92,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const isLogin = useUserStoreShallow((state) => state.isLogin);
     const { canvasId, workflow } = useCanvasContext();
-    const { data: resources } = useFetchResources();
+    const { data: resources } = useFetchDriveFiles();
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
     }));
@@ -239,18 +239,17 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           // For resource type variables, find the corresponding resource data and add to context
           if (item.variableValue?.length && item.variableValue[0]?.resource) {
             const resourceValue = item.variableValue[0].resource;
-            const resource = resources.find((r) => r.resourceId === resourceValue.entityId);
+            const resource = resources.find((r) => r.fileId === resourceValue.entityId);
 
             const contextItem: IContextItem = {
               entityId: resourceValue.entityId,
-              title: resource?.title ?? resourceValue.name,
+              title: resource?.name ?? resourceValue.name,
               type: 'resource' as CanvasNodeType,
               metadata: {
                 source: 'myUpload',
                 storageKey: resourceValue.storageKey,
                 resourceType: resourceValue.fileType,
-                resourceMeta: resource?.data,
-                [`${resourceValue.fileType}Url`]: resource?.downloadURL,
+                resourceMeta: resource,
               },
             };
 
@@ -261,7 +260,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
               variableType: 'resource',
               url: resourceValue.storageKey,
               resourceType: resourceValue.fileType,
-              resourceMeta: resource?.data,
+              resourceMeta: resource,
               entityId: resourceValue.entityId,
             });
 

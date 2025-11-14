@@ -5,7 +5,7 @@ import type { ResourceType, ResourceMeta } from '@refly/openapi-schema';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useListTools } from '@refly-packages/ai-workspace-common/queries/queries';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
 
 export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const { t, i18n } = useTranslation();
@@ -13,7 +13,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
 
   const { nodes } = useCanvasData();
   const { workflow } = useCanvasContext();
-  const { data: resources } = useFetchResources();
+  const { data: files } = useFetchDriveFiles();
 
   // Fetch tools
   const { data: toolsData } = useListTools({ query: { enabled: true } }, [], {
@@ -67,22 +67,24 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
           },
         })) ?? [];
 
-    // Get my upload items from API resources data
+    // Get my upload items from drive files data
     const myUploadItems: MentionItem[] =
-      resources?.map((resource) => ({
-        name: resource.title ?? t('canvas.richChatInput.untitledUpload'),
+      files?.map((file) => ({
+        name: file.name ?? t('canvas.richChatInput.untitledUpload'),
         description: t('canvas.richChatInput.myUpload'),
         source: 'myUpload' as const,
-        variableType: resource.resourceType || 'resource',
-        entityId: resource.resourceId,
-        nodeId: resource.resourceId,
+        entityId: file.fileId,
+        nodeId: file.fileId,
         metadata: {
-          imageUrl: resource.data?.url as string | undefined,
-          resourceType: resource.resourceType as ResourceType | undefined,
-          resourceMeta: resource.data as ResourceMeta | undefined,
-          storageKey: resource.storageKey,
-          rawFileKey: resource.rawFileKey,
-          [`${resource.resourceType}Url`]: resource.downloadURL,
+          imageUrl: undefined, // DriveFile doesn't have direct imageUrl
+          resourceType: 'file' as ResourceType,
+          resourceMeta: {
+            url: `/api/drive/file/download/${file.fileId}`,
+            size: file.size,
+            type: file.type,
+            summary: file.summary,
+          } as ResourceMeta | undefined,
+          fileUrl: `/api/drive/file/download/${file.fileId}`,
         },
       })) ?? [];
 
@@ -115,7 +117,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
       ...toolsetItems,
       ...toolItems,
     ];
-  }, [workflowVariables, nodes, resources, toolsets, t, currentLanguage, filterNodeId]);
+  }, [workflowVariables, nodes, files, toolsets, t, currentLanguage, filterNodeId]);
 
   return allItems;
 };
