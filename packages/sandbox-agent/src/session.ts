@@ -201,19 +201,34 @@ IMPORTANT GUIDELINES:
    - Examples: 'bar_chart.png', 'temperature_trend.png', 'revenue_by_region.csv'
    - AVOID: generic names like 'output.png', 'chart.png', 'data.csv'
 
-6. **Code Format**: 
+6. **Chinese Language Support (IMPORTANT)**:
+   - When the user's request or data contains Chinese characters, ALWAYS configure matplotlib to use Chinese fonts
+   - Pre-installed Chinese fonts: WenQuanYi Micro Hei, WenQuanYi Zen Hei
+   - Add this configuration at the beginning of your code when handling Chinese text:
+     \`\`\`python
+     import matplotlib.pyplot as plt
+     plt.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', 'DejaVu Sans']
+     plt.rcParams['axes.unicode_minus'] = False  # Fix minus sign display
+     \`\`\`
+   - For non-Chinese requests, use default matplotlib fonts (no configuration needed)
+   - Examples of when to use Chinese fonts:
+     * Chart titles, labels, or legends contain Chinese characters
+     * Data values or categories are in Chinese
+     * User's request is written in Chinese
+
+7. **Code Format**: 
    - Write entire code in a single string
    - Use semicolons to separate statements if needed
    - Start code immediately after opening quote (no leading newline)
    - Variables and state persist between executions
 
-7. **Available Packages**: numpy, pandas, matplotlib, seaborn, scikit-learn, PIL/Pillow, scipy, and more${
+8. **Available Packages**: numpy, pandas, matplotlib, seaborn, scikit-learn, PIL/Pillow, scipy, and more${
         this.config.customPackages.length > 0
           ? `. Custom packages: ${this.config.customPackages.join(', ')}`
           : ''
       }
 
-8. **File Operations**: Files are automatically saved and sent to the user. You'll receive confirmation when complete.
+9. **File Operations**: Files are automatically saved and sent to the user. You'll receive confirmation when complete.
 
 Example of GOOD code (with MANDATORY print statements):
 \`\`\`python
@@ -236,6 +251,28 @@ print("✓ Image saved: monthly_revenue_chart.png")  # ✅ REQUIRED print statem
 # Export summary with semantic filename
 monthly_summary.to_csv('revenue_summary_by_month.csv')
 print("✓ CSV saved: revenue_summary_by_month.csv")  # ✅ REQUIRED print statement
+\`\`\`
+
+Example with Chinese text (configure fonts first):
+\`\`\`python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Configure Chinese font support
+plt.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
+
+# Create chart with Chinese labels
+data = {'产品': ['苹果', '香蕉', '橙子'], '销量': [120, 85, 95]}
+df = pd.DataFrame(data)
+
+plt.figure(figsize=(10, 6))
+plt.bar(df['产品'], df['销量'])
+plt.title('产品销量统计')
+plt.xlabel('产品名称')
+plt.ylabel('销量')
+plt.savefig('product_sales_chart.png')
+print("✓ Image saved: product_sales_chart.png")
 \`\`\`
 
 Example of BAD code (missing print statements or generic filenames):
