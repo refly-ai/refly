@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Modal, Form, Input, Checkbox, message } from 'antd';
 import { Attachment, Close, List, Text1 } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { cn, genVariableID } from '@refly/utils';
@@ -42,6 +43,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     const { workflowVariables, refetchWorkflowVariables } = workflow;
     const [isSaving, setIsSaving] = useState(false);
     const { handleVariableView } = useVariableView(canvasId);
+    const queryClient = useQueryClient();
 
     const title = useMemo(() => {
       if (disableChangeVariableType) {
@@ -344,36 +346,76 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           newWorkflowVariables = [...workflowVariables, variable];
         }
 
-        const { data } = await getClient().updateWorkflowVariables({
-          body: {
-            canvasId: canvasId,
-            variables: newWorkflowVariables,
+        // Optimistic update: immediately update local cache
+        queryClient.setQueryData(
+          ['GetWorkflowVariables', { query: { canvasId } }],
+          (oldData: any) => {
+            if (!oldData) return oldData;
+            return {
+              ...oldData,
+              data: newWorkflowVariables,
+            };
           },
-        });
+        );
 
-        if (data?.success) {
-          message.success(
-            <div className="flex items-center gap-2">
-              <span>
-                {t('canvas.workflow.variables.saveSuccess') || 'Variable created successfully'}
-              </span>
-              <Button
-                type="link"
-                size="small"
-                className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
-                onClick={() => handleVariableView(variable)}
-              >
-                {t('canvas.workflow.variables.viewAndEdit') || 'View'}
-              </Button>
-            </div>,
-            5, // Show for 5 seconds
+        try {
+          const { data } = await getClient().updateWorkflowVariables({
+            body: {
+              canvasId: canvasId,
+              variables: newWorkflowVariables,
+            },
+          });
+
+          if (data?.success) {
+            message.success(
+              <div className="flex items-center gap-2">
+                <span>
+                  {t('canvas.workflow.variables.saveSuccess') || 'Variable created successfully'}
+                </span>
+                <Button
+                  type="link"
+                  size="small"
+                  className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
+                  onClick={() => handleVariableView(variable)}
+                >
+                  {t('canvas.workflow.variables.viewAndEdit') || 'View'}
+                </Button>
+              </div>,
+              5, // Show for 5 seconds
+            );
+            return true;
+          } else {
+            // Rollback optimistic update on failure
+            queryClient.setQueryData(
+              ['GetWorkflowVariables', { query: { canvasId } }],
+              (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                  ...oldData,
+                  data: workflowVariables,
+                };
+              },
+            );
+            message.error(t('canvas.workflow.variables.saveError') || 'Failed to save variable');
+            return false;
+          }
+        } catch {
+          // Rollback optimistic update on error
+          queryClient.setQueryData(
+            ['GetWorkflowVariables', { query: { canvasId } }],
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                data: workflowVariables,
+              };
+            },
           );
-        } else {
           message.error(t('canvas.workflow.variables.saveError') || 'Failed to save variable');
+          return false;
         }
-        return data?.success;
       },
-      [t, canvasId, workflowVariables, handleVariableView, logVariableCreationEvent],
+      [queryClient, t, canvasId, workflowVariables, handleVariableView, logVariableCreationEvent],
     );
 
     const handleSubmit = useCallback(async () => {

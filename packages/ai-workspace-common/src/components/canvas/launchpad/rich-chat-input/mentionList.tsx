@@ -3,6 +3,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useMemo, useState, useRef } from 'react';
 import { useEffect } from 'react';
 import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CanvasNodeType,
   ResourceMeta,
@@ -69,15 +70,13 @@ export const MentionList = ({
   const [firstLevelHeight, setFirstLevelHeight] = useState<number>(0);
   const [secondLevelHeight, setSecondLevelHeight] = useState<number>(0);
   const { workflow, canvasId } = useCanvasContext();
-  const {
-    workflowVariablesLoading: isLoadingVariables,
-    refetchWorkflowVariables,
-    workflowVariables,
-  } = workflow || {};
+  const { workflowVariablesLoading: isLoadingVariables, workflowVariables } = workflow || {};
 
   const [isAddingVariable, setIsAddingVariable] = useState(false);
 
   const { handleVariableView } = useVariableView(canvasId);
+
+  const queryClient = useQueryClient();
 
   const handleAddVariable = useCallback(async () => {
     const isDuplicate = workflowVariables.some((variable) => variable.name === query);
@@ -102,6 +101,19 @@ export const MentionList = ({
     logEvent('create_variable_from_askai', Date.now(), {
       variable: newItem,
     });
+
+    // Optimistic update: immediately update local cache
+    queryClient.setQueryData(['GetWorkflowVariables', { query: { canvasId } }], (oldData: any) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        data: newWorkflowVariables,
+      };
+    });
+
+    // Immediately update UI
+    const newMentionItem: MentionItem = { ...newItem, source: 'variables' } as MentionItem;
+    command(newMentionItem);
 
     try {
       setIsAddingVariable(true);
@@ -129,25 +141,45 @@ export const MentionList = ({
           </div>,
           5, // Show for 5 seconds
         );
-        refetchWorkflowVariables();
-        const newMentionItem: MentionItem = { ...newItem, source: 'variables' } as MentionItem;
-        command(newMentionItem);
       } else {
+        // Rollback optimistic update on failure
+        queryClient.setQueryData(
+          ['GetWorkflowVariables', { query: { canvasId } }],
+          (oldData: any) => {
+            if (!oldData) return oldData;
+            return {
+              ...oldData,
+              data: workflowVariables,
+            };
+          },
+        );
         message.error(t('canvas.workflow.variables.saveError'));
       }
     } catch {
+      // Rollback optimistic update on error
+      queryClient.setQueryData(
+        ['GetWorkflowVariables', { query: { canvasId } }],
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: workflowVariables,
+          };
+        },
+      );
       message.error(t('canvas.workflow.variables.saveError'));
     } finally {
       setIsAddingVariable(false);
     }
   }, [
-    refetchWorkflowVariables,
+    queryClient,
     query,
     canvasId,
     workflowVariables,
     command,
     t,
     setIsAddingVariable,
+    handleVariableView,
   ]);
 
   // Refs for measuring panel heights

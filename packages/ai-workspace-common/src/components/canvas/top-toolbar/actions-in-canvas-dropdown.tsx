@@ -11,6 +11,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { useOnViewportChange, useReactFlow } from '@xyflow/react';
 import { reflyEnv } from '@refly/utils/env';
+import { useCanvasOperationStoreShallow } from '@refly/stores';
 import { Home } from 'refly-icons';
 
 interface MenuItemLabelProps {
@@ -56,16 +57,21 @@ interface ActionsInCanvasDropdownProps {
   canvasId: string;
   canvasName: string;
   onRename: () => void;
+  onDeleteSuccess?: () => void;
   offset?: [number, number];
 }
 
 export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps) => {
-  const { canvasId, canvasName, offset, onRename } = props;
+  const { canvasId, canvasName, offset, onRename, onDeleteSuccess } = props;
   const [popupVisible, setPopupVisible] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   const { duplicateCanvas, loading: duplicateLoading } = useDuplicateCanvas();
+
+  const { openDeleteModal } = useCanvasOperationStoreShallow((state) => ({
+    openDeleteModal: state.openDeleteModal,
+  }));
 
   const { undo, redo } = useCanvasContext();
 
@@ -271,6 +277,24 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
           />
         ),
       },
+      {
+        type: 'divider' as const,
+      },
+      {
+        label: (
+          <div
+            className="flex items-center text-refly-func-danger-default gap-1 w-32"
+            onClick={(e) => {
+              e.stopPropagation();
+              openDeleteModal(canvasId, canvasName, onDeleteSuccess);
+              setPopupVisible(false);
+            }}
+          >
+            {t('canvas.toolbar.deleteCanvas')}
+          </div>
+        ),
+        key: 'delete',
+      },
     ],
     [
       handleBackDashboard,
@@ -286,6 +310,10 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
       canZoomIn,
       canZoomOut,
       t,
+      openDeleteModal,
+      canvasId,
+      canvasName,
+      onDeleteSuccess,
     ],
   );
 

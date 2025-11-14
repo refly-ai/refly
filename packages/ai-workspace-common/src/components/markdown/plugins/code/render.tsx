@@ -15,9 +15,7 @@ import {
 import { cn } from '@refly/utils';
 import MermaidComponent from '../mermaid/render';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
-import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { MarkdownMode } from '../../types';
-import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 
 // Language mapping for Monaco editor
 const mapToMonacoLanguage = (lang: string): string => {
@@ -66,8 +64,6 @@ const PreCode = React.memo(
   }: PreCodeProps) => {
     const { t } = useTranslation();
 
-    const isInteractive = mode === 'interactive';
-
     // Get code content from props (injected by rehypePlugin)
     const codeContent = useMemo(() => dataCodeContent || '', [dataCodeContent]);
 
@@ -113,30 +109,6 @@ const PreCode = React.memo(
       message.success(t('components.markdown.copySuccess'));
     }, [codeContent, t]);
 
-    const createCodeArtifact = useCreateCodeArtifact();
-
-    // Handle creating a code artifact node
-    const handleCreateCodeArtifact = useCallback(() => {
-      if (!isInteractive) {
-        return;
-      }
-
-      // Determine if this is mermaid content and set appropriate defaults
-      const isMermaidDiagram =
-        isMermaid || codeType === 'application/refly.artifacts.mermaid' || language === 'mermaid';
-      const artifactType = isMermaidDiagram ? 'application/refly.artifacts.mermaid' : codeType;
-      const artifactLanguage = isMermaidDiagram ? 'mermaid' : language;
-      const title = isMermaidDiagram ? 'Mermaid Diagram' : `Code (${language})`;
-
-      createCodeArtifact({
-        codeContent,
-        language: artifactLanguage,
-        type: artifactType,
-        title,
-        connectTo: [{ type: 'skillResponse', entityId: id }],
-      });
-    }, [language, codeType, id, t, codeContent, isInteractive, isMermaid]);
-
     // Toggle between code and preview mode
     const toggleViewMode = useCallback(() => {
       setViewMode((prev) => (prev === 'code' ? 'preview' : 'code'));
@@ -180,19 +152,6 @@ const PreCode = React.memo(
                   onClick={toggleViewMode}
                 />
               </Tooltip>
-              {isInteractive ? (
-                <Tooltip
-                  title={t('components.markdown.createCodeArtifact', 'Create code artifact')}
-                >
-                  <Button
-                    type="default"
-                    size="small"
-                    className="flex items-center justify-center bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
-                    icon={<IconCodeArtifact />}
-                    onClick={handleCreateCodeArtifact}
-                  />
-                </Tooltip>
-              ) : null}
             </Space>
           </div>
           <Renderer
@@ -252,23 +211,6 @@ const PreCode = React.memo(
                   />
                 </Tooltip>
               )}
-              {isInteractive ? (
-                <Tooltip
-                  title={t('components.markdown.createCodeArtifact', 'Create code artifact')}
-                >
-                  <Button
-                    type="text"
-                    size="small"
-                    className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    icon={<IconCodeArtifact />}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleCreateCodeArtifact();
-                    }}
-                  />
-                </Tooltip>
-              ) : null}
             </Space>
           </div>
           <code className="block p-4 text-gray-800 dark:text-gray-200 !bg-gray-100 dark:!bg-gray-800 overflow-x-auto max-h-24 overflow-y-auto">
@@ -324,21 +266,6 @@ const PreCode = React.memo(
                 />
               </Tooltip>
             )}
-            {isInteractive ? (
-              <Tooltip title={t('components.markdown.createCodeArtifact', 'Create code artifact')}>
-                <Button
-                  type="text"
-                  size="small"
-                  className="flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  icon={<IconCodeArtifact />}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleCreateCodeArtifact();
-                  }}
-                />
-              </Tooltip>
-            ) : null}
           </Space>
         </div>
         <code className="block p-4 text-gray-800 dark:text-gray-200 !bg-gray-100 dark:!bg-gray-800 overflow-x-auto max-h-96 overflow-y-auto">

@@ -18,7 +18,6 @@ import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/ca
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { genSkillID } from '@refly/utils/id';
 import { NodeHeader } from './shared/node-header';
-import { ContentPreview } from './shared/content-preview';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-document';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -51,7 +50,7 @@ export const DocumentNode = memo(
     const { readonly, canvasId } = useCanvasContext();
     const [isHovered, setIsHovered] = useState(false);
     const { edges } = useCanvasData();
-    const { i18n, t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const language = i18n.languages?.[0];
     const updateNodeTitle = useUpdateNodeTitle();
     const { setNodeStyle } = useNodeData();
@@ -301,14 +300,6 @@ export const DocumentNode = memo(
             canEdit={!readonly}
             updateTitle={updateTitle}
           />
-
-          <div className="flex-grow overflow-y-auto pr-2 -mr-2">
-            <ContentPreview
-              content={data.contentPreview || t('canvas.nodePreview.document.noContentPreview')}
-              className="min-h-8"
-            />
-          </div>
-
           <div className="flex justify-end items-center flex-shrink-0 mt-1 text-[10px] text-gray-400 z-20">
             {time(data.createdAt, language as LOCALE)
               ?.utc()

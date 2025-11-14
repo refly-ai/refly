@@ -5,7 +5,7 @@ import { LOCALE } from '@refly/common-types';
 import { WiTime3 } from 'react-icons/wi';
 import { HoverCard } from './hover-card';
 import { useNavigate } from 'react-router-dom';
-import { SiderData } from '@refly/stores';
+import { SiderData, useSiderStoreShallow } from '@refly/stores';
 import { Avatar } from 'antd';
 import { UsedToolsets } from '@refly-packages/ai-workspace-common/components/workflow-list/used-toolsets';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
@@ -15,11 +15,16 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
   const language = i18n.languages?.[0];
   const navigate = useNavigate();
 
+  const { setIsManualCollapse } = useSiderStoreShallow((state) => ({
+    setIsManualCollapse: state.setIsManualCollapse,
+  }));
+
   const handleEditCanvas = useCallback(
     (canvasId: string) => {
+      setIsManualCollapse(false);
       navigate(`/canvas/${canvasId}`);
     },
-    [navigate],
+    [navigate, setIsManualCollapse],
   );
 
   return (

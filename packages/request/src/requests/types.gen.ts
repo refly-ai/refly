@@ -604,6 +604,10 @@ export type Canvas = {
    */
   shareRecord?: ShareRecord;
   /**
+   * Canvas workflow app
+   */
+  workflowApp?: WorkflowApp;
+  /**
    * Used toolsets in the canvas
    */
   usedToolsets?: Array<GenericToolset>;

@@ -935,6 +935,10 @@ export const CanvasSchema = {
       description: 'Canvas share record',
       $ref: '#/components/schemas/ShareRecord',
     },
+    workflowApp: {
+      description: 'Canvas workflow app',
+      $ref: '#/components/schemas/WorkflowApp',
+    },
     usedToolsets: {
       type: 'array',
       description: 'Used toolsets in the canvas',

@@ -4,18 +4,24 @@ import { useSiderStoreShallow } from '@refly/stores';
 
 /**
  * Custom hook to handle sidebar collapse state based on route changes
- * Sets collapse to false for specific routes, true for all others
+ * Sets collapseState to 'expanded' for specific routes, 'hidden' for all others
  */
 export const useRouteCollapse = () => {
   const location = useLocation();
-  const { setCollapse } = useSiderStoreShallow((state) => ({
-    setCollapse: state.setCollapse,
+  const { collapseState, isManualCollapse, setCollapseState } = useSiderStoreShallow((state) => ({
+    collapseState: state.collapseState,
+    isManualCollapse: state.isManualCollapse,
+    setCollapseState: state.setCollapseState,
   }));
 
   useEffect(() => {
+    if (isManualCollapse) {
+      return;
+    }
+
     const currentPath = location.pathname;
 
-    // Routes that should have sidebar expanded (collapse = false)
+    // Routes that should have sidebar expanded
     const expandedRoutes = ['/app-manager', '/workflow-list', '/canvas/empty', '/home', '/project'];
 
     // Check if current route matches any of the expanded routes
@@ -33,8 +39,11 @@ export const useRouteCollapse = () => {
     });
 
     // Set collapse state based on route
-    // If shouldExpand is true, set collapse to false (expanded)
-    // If shouldExpand is false, set collapse to true (collapsed)
-    setCollapse(!shouldExpand);
-  }, [location.pathname, setCollapse]);
+    // If shouldExpand is true, set collapseState to 'expanded'
+    // If shouldExpand is false, set collapseState to 'hidden'
+    const nextState = shouldExpand ? 'expanded' : 'hidden';
+    if (collapseState !== nextState) {
+      setCollapseState(nextState);
+    }
+  }, [collapseState, isManualCollapse, location.pathname, setCollapseState]);
 };

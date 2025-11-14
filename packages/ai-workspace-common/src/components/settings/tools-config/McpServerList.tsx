@@ -9,7 +9,6 @@ import {
   Empty,
   Dropdown,
   DropdownProps,
-  Popconfirm,
   MenuProps,
   Skeleton,
 } from 'antd';
@@ -47,6 +46,18 @@ const ActionDropdown = React.memo(
   }) => {
     const { t } = useTranslation();
     const [visible, setVisible] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteConfirm = async () => {
+      setIsDeleting(true);
+      try {
+        await handleDelete(server);
+        setModalVisible(false);
+      } finally {
+        setIsDeleting(false);
+      }
+    };
 
     const items: MenuProps['items'] = [
       {
@@ -64,24 +75,16 @@ const ActionDropdown = React.memo(
       },
       {
         label: (
-          <Popconfirm
-            placement="bottomLeft"
-            title={t('settings.mcpServer.deleteConfirmTitle')}
-            description={t('settings.mcpServer.deleteConfirmMessage', { name: server.name })}
-            onConfirm={() => handleDelete(server)}
-            onCancel={() => setVisible(false)}
-            okText={t('common.delete')}
-            cancelText={t('common.cancel')}
-            overlayStyle={{ maxWidth: '300px' }}
+          <div
+            className="flex items-center text-red-600 flex-grow cursor-pointer"
+            onClick={() => {
+              setVisible(false);
+              setModalVisible(true);
+            }}
           >
-            <div
-              className="flex items-center text-red-600 flex-grow"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Delete size={18} className="mr-2" />
-              {t('common.delete')}
-            </div>
-          </Popconfirm>
+            <Delete size={18} className="mr-2" />
+            {t('common.delete')}
+          </div>
         ),
         key: 'delete',
       },
@@ -97,9 +100,36 @@ const ActionDropdown = React.memo(
     );
 
     return (
-      <Dropdown trigger={['click']} open={visible} onOpenChange={handleOpenChange} menu={{ items }}>
-        <Button type="text" icon={<More size={18} />} size="small" />
-      </Dropdown>
+      <>
+        <Dropdown
+          trigger={['click']}
+          open={visible}
+          onOpenChange={handleOpenChange}
+          menu={{ items }}
+        >
+          <Button type="text" icon={<More size={18} />} size="small" />
+        </Dropdown>
+        <Modal
+          title={t('common.deleteConfirmMessage')}
+          centered
+          width={416}
+          open={modalVisible}
+          onOk={handleDeleteConfirm}
+          onCancel={() => setModalVisible(false)}
+          okText={t('common.confirm')}
+          cancelText={t('common.cancel')}
+          okButtonProps={{ loading: isDeleting }}
+          destroyOnHidden
+          closeIcon={null}
+          confirmLoading={isDeleting}
+        >
+          <div>
+            <div className="mb-2">
+              {t('settings.mcpServer.deleteConfirmMessage', { name: server.name })}
+            </div>
+          </div>
+        </Modal>
+      </>
     );
   },
 );

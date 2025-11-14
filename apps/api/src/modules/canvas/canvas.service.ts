@@ -153,10 +153,26 @@ export class CanvasService {
       }
     }
 
+    const workflowApps = await this.prisma.workflowApp.findMany({
+      where: {
+        canvasId: { in: canvasIds },
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const workflowAppMap = new Map<string, (typeof workflowApps)[0] & { owner: typeof owner }>();
+    for (const app of workflowApps) {
+      if (!workflowAppMap.has(app.canvasId)) {
+        workflowAppMap.set(app.canvasId, { ...app, owner });
+      }
+    }
+
     return canvases.map((canvas) => ({
       ...canvas,
       owner,
       shareRecord: shareRecordMap.get(canvas.canvasId) || null,
+      workflowApp: workflowAppMap.get(canvas.canvasId) || null,
       minimapUrl: canvas.minimapStorageKey
         ? this.miscService.generateFileURL({ storageKey: canvas.minimapStorageKey })
         : undefined,

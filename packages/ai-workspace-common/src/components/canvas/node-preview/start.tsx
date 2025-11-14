@@ -1,6 +1,7 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
-import { Divider, Button, Popconfirm, message } from 'antd';
+import { Divider, Button, Modal, message } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
 import { BiText } from 'react-icons/bi';
 import type { WorkflowVariable } from '@refly/openapi-schema';
@@ -46,11 +47,28 @@ const VariableItem = memo(
   }) => {
     const { name, variableType, required, isSingle } = variable;
     const { t } = useTranslation();
-    const [isPopconfirmOpen, setIsPopconfirmOpen] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const queryClient = useQueryClient();
+
+    // Keep refetchWorkflowVariables in scope to avoid lint error
+    void refetchWorkflowVariables;
 
     const handleDeleteVariable = async (variable: WorkflowVariable) => {
       const newVariables = totalVariables.filter((v) => v.variableId !== variable.variableId);
+
+      // Optimistic update: immediately update local cache
+      queryClient.setQueryData(
+        ['GetWorkflowVariables', { query: { canvasId } }],
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: newVariables,
+          };
+        },
+      );
+
       try {
         setIsDeleting(true);
         const { data } = await getClient().updateWorkflowVariables({
@@ -63,80 +81,119 @@ const VariableItem = memo(
           message.success(
             t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
           );
-          refetchWorkflowVariables();
+          setModalVisible(false);
+        } else {
+          // Rollback optimistic update on failure
+          queryClient.setQueryData(
+            ['GetWorkflowVariables', { query: { canvasId } }],
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                data: totalVariables,
+              };
+            },
+          );
+          message.error(t('canvas.workflow.variables.deleteError') || 'Failed to delete variable');
         }
       } catch (error) {
+        // Rollback optimistic update on error
+        queryClient.setQueryData(
+          ['GetWorkflowVariables', { query: { canvasId } }],
+          (oldData: any) => {
+            if (!oldData) return oldData;
+            return {
+              ...oldData,
+              data: totalVariables,
+            };
+          },
+        );
         console.error('Failed to delete variable:', error);
+        message.error(t('canvas.workflow.variables.deleteError') || 'Failed to delete variable');
       } finally {
         setIsDeleting(false);
       }
     };
 
     return (
-      <div
-        data-variable-id={variable.variableId}
-        className={`group flex h-9 box-border gap-2 items-center justify-between py-1.5  px-3 rounded-xl border-[1px] border-solid border-refly-Card-Border cursor-pointer transition-all duration-300 ${
-          isHighlighted ? 'bg-refly-Colorful-orange-light' : 'bg-refly-bg-body-z0'
-        } ${isPopconfirmOpen ? 'bg-refly-tertiary-hover' : 'hover:bg-refly-tertiary-hover'}`}
-      >
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <img src={SVGX} alt="x" className="w-[10px] h-[10px] flex-shrink-0" />
-          <Divider type="vertical" className="bg-refly-Card-Border mx-2 my-0 flex-shrink-0" />
-          <div className="text-sm font-medium text-refly-text-1 truncate max-w-full">{name}</div>
-          {required && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t('canvas.workflow.variables.required')}
-            </div>
-          )}
-          {['option'].includes(variableType) && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t(`canvas.workflow.variables.${isSingle ? 'singleSelect' : 'multipleSelect'}`)}
-            </div>
-          )}
-        </div>
-
-        {variableType === 'resource' && (
-          <div className="flex items-center gap-1">
-            {variable.resourceTypes?.map((type) => {
-              const Icon = RESOURCE_TYPE_ICON_MAP[type];
-              if (!Icon) {
-                return null;
-              }
-              return <Icon size={16} key={type} color="var(--refly-text-3)" />;
-            })}
+      <>
+        <div
+          data-variable-id={variable.variableId}
+          className={`group flex h-9 box-border gap-2 items-center justify-between py-1.5  px-3 rounded-xl border-[1px] border-solid border-refly-Card-Border cursor-pointer transition-all duration-300 ${
+            isHighlighted ? 'bg-refly-Colorful-orange-light' : 'bg-refly-bg-body-z0'
+          } ${modalVisible ? 'bg-refly-tertiary-hover' : 'hover:bg-refly-tertiary-hover'}`}
+        >
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <img src={SVGX} alt="x" className="w-[10px] h-[10px] flex-shrink-0" />
+            <Divider type="vertical" className="bg-refly-Card-Border mx-2 my-0 flex-shrink-0" />
+            <div className="text-sm font-medium text-refly-text-1 truncate max-w-full">{name}</div>
+            {required && (
+              <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
+                {t('canvas.workflow.variables.required')}
+              </div>
+            )}
+            {['option'].includes(variableType) && (
+              <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
+                {t(`canvas.workflow.variables.${isSingle ? 'singleSelect' : 'multipleSelect'}`)}
+              </div>
+            )}
           </div>
-        )}
 
-        {!readonly && (
-          <div
-            className={`items-center gap-1 flex-shrik-0 ${
-              isPopconfirmOpen ? 'flex' : 'hidden group-hover:flex'
-            }`}
-          >
-            <Button
-              type="text"
-              size="small"
-              icon={<Edit size={16} />}
-              onClick={() => onEdit?.(variable)}
-            />
-            <Popconfirm
-              title={t('canvas.workflow.variables.deleteConfirm') || 'Delete this variable?'}
-              onConfirm={() => handleDeleteVariable(variable)}
-              okText={t('common.confirm')}
-              cancelText={t('common.cancel')}
-              onOpenChange={setIsPopconfirmOpen}
-              okButtonProps={{ loading: isDeleting }}
+          {variableType === 'resource' && (
+            <div className="flex items-center gap-1">
+              {variable.resourceTypes?.map((type) => {
+                const Icon = RESOURCE_TYPE_ICON_MAP[type];
+                if (!Icon) {
+                  return null;
+                }
+                return <Icon size={16} key={type} color="var(--refly-text-3)" />;
+              })}
+            </div>
+          )}
+
+          {!readonly && (
+            <div
+              className={`items-center gap-1 flex-shrik-0 ${
+                modalVisible ? 'flex' : 'hidden group-hover:flex'
+              }`}
             >
               <Button
                 type="text"
                 size="small"
-                icon={<Delete size={16} />}
-                className={isPopconfirmOpen ? 'bg-refly-tertiary-hover' : ''}
+                icon={<Edit size={16} />}
+                onClick={() => onEdit?.(variable)}
               />
-            </Popconfirm>
+              <Button
+                type="text"
+                size="small"
+                icon={<Delete size={16} />}
+                className={modalVisible ? 'bg-refly-tertiary-hover' : ''}
+                onClick={() => setModalVisible(true)}
+              />
+            </div>
+          )}
+        </div>
+        <Modal
+          title={t('common.deleteConfirmMessage')}
+          centered
+          width={416}
+          open={modalVisible}
+          onOk={() => handleDeleteVariable(variable)}
+          onCancel={() => setModalVisible(false)}
+          okText={t('common.confirm')}
+          cancelText={t('common.cancel')}
+          okButtonProps={{ loading: isDeleting }}
+          destroyOnHidden
+          closeIcon={null}
+          confirmLoading={isDeleting}
+        >
+          <div>
+            <div className="mb-2">
+              {t('canvas.workflow.variables.deleteConfirm') || 'Delete this variable?'}
+            </div>
           </div>
-        )}
-      </div>
+        </Modal>
+      </>
     );
   },
 );

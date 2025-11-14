@@ -44,8 +44,9 @@ export const FrontPage = memo(() => {
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
 
-  const { canvasList } = useSiderStoreShallow((state) => ({
+  const { canvasList, setIsManualCollapse } = useSiderStoreShallow((state) => ({
     canvasList: state.canvasList,
+    setIsManualCollapse: state.setIsManualCollapse,
   }));
   const canvases = canvasList?.slice(0, 4);
 
@@ -64,8 +65,9 @@ export const FrontPage = memo(() => {
   const [templateCategoryId, setTemplateCategoryId] = useState('');
 
   const handleNewWorkflow = useCallback(() => {
+    setIsManualCollapse(false);
     debouncedCreateCanvas();
-  }, [debouncedCreateCanvas]);
+  }, [debouncedCreateCanvas, setIsManualCollapse]);
 
   const handleTemplateCategoryClick = useCallback(
     (categoryId: string) => {
