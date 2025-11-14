@@ -3,7 +3,10 @@ import { ChatComposerRef } from '@refly-packages/ai-workspace-common/components/
 import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
-import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import {
+  useNodeData,
+  useSetNodeDataByEntity,
+} from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
@@ -69,7 +72,6 @@ const SkillResponseNodePreviewComponent = ({
     nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET],
   );
 
-  const [editContextItems, setEditContextItems] = useState<IContextItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [, setDragCounter] = useState(0);
   const { handleUploadImage } = useUploadImage();
@@ -173,10 +175,17 @@ const SkillResponseNodePreviewComponent = ({
     return convertResultContextToItems(context ?? {}, history);
   }, [data?.metadata?.contextItems, context, history]);
 
-  // Sync editContextItems with contextItems
-  useEffect(() => {
-    setEditContextItems(contextItems);
-  }, [contextItems]);
+  const setNodeDataByEntity = useSetNodeDataByEntity();
+
+  const setContextItems = useCallback(
+    (items: IContextItem[]) => {
+      setNodeDataByEntity(
+        { entityId: data.entityId, type: 'skillResponse' },
+        { metadata: { contextItems: items } },
+      );
+    },
+    [data.entityId, setNodeDataByEntity],
+  );
 
   // Handle file drop
   const handleDrop = useCallback(
@@ -202,11 +211,11 @@ const SkillResponseNodePreviewComponent = ({
               downloadURL: resource.downloadURL,
             },
           };
-          setEditContextItems((prev) => [...prev, newContextItem]);
+          setContextItems([...contextItems, newContextItem]);
         }
       }
     },
-    [handleUploadImage, canvasId],
+    [handleUploadImage, canvasId, contextItems],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -238,9 +247,12 @@ const SkillResponseNodePreviewComponent = ({
     });
   }, []);
 
-  const handleRemoveFile = useCallback((file: IContextItem) => {
-    setEditContextItems((prev) => prev.filter((item) => item.entityId !== file.entityId));
-  }, []);
+  const handleRemoveFile = useCallback(
+    (file: IContextItem) => {
+      setContextItems(contextItems.filter((item) => item.entityId !== file.entityId));
+    },
+    [contextItems],
+  );
 
   const handleAddToolsAndContext = useCallback(() => {
     chatComposerRef.current?.insertAtSymbol?.();
@@ -425,7 +437,7 @@ const SkillResponseNodePreviewComponent = ({
                     enabled={true}
                     resultId={resultId}
                     version={version}
-                    contextItems={editContextItems}
+                    contextItems={contextItems}
                     query={currentQuery}
                     actionMeta={actionMeta}
                     modelInfo={
@@ -447,7 +459,7 @@ const SkillResponseNodePreviewComponent = ({
                   <ConfigInfoDisplay
                     nodeId={node.id}
                     selectedToolsets={selectedToolsets}
-                    contextItems={editContextItems}
+                    contextItems={contextItems}
                     onRemoveFile={handleRemoveFile}
                   />
                 </div>

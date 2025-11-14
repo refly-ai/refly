@@ -1,4 +1,4 @@
-import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { Cancelled } from 'refly-icons';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import {
   cleanupNodeEvents,
@@ -9,6 +9,8 @@ import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
+import { useDuplicateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-duplicate-node';
+import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 // import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
@@ -18,17 +20,14 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
 import { genSkillID } from '@refly/utils/id';
 import { Position, useReactFlow } from '@xyflow/react';
-import { Button, message } from 'antd';
+import { message } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CustomHandle } from './shared/custom-handle';
 import { getNodeCommonStyles } from './shared/styles';
 import { SkillResponseNodeProps } from './shared/types';
 
-import {
-  NodeDragCreateInfo,
-  nodeOperationsEmitter,
-} from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import {
   useNodeData,
   useNodeExecutionFocus,
@@ -45,14 +44,14 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/content';
 import { usePilotStoreShallow } from '@refly/stores';
 import cn from 'classnames';
-import { NodeActionButtons } from './shared/node-action-buttons';
 import { NodeExecutionStatus } from './shared/node-execution-status';
 
 import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { logEvent } from '@refly/telemetry-web';
 import { removeToolUseTags } from '@refly-packages/ai-workspace-common/utils';
-import { More, Subscription } from 'refly-icons';
+import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
+import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
 
@@ -80,7 +79,7 @@ const NodeStatusBar = memo(
         case 'finish':
           return <IoCheckmarkCircle className="w-3 h-3 text-green-500" />;
         case 'failed':
-          return <IconError className="w-3 h-3 text-red-500" />;
+          return <Cancelled color="red" className="w-3 h-3" />;
         case 'executing':
         case 'waiting':
           return <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />;
@@ -252,6 +251,14 @@ export const SkillResponseNode = memo(
       isStreaming: !!state.streamResults[entityId],
       removeStreamResult: state.removeStreamResult,
     }));
+    // Get skill response actions
+    const { isRunning, handleRerunSingle, handleRerunFromHere, handleStop } =
+      useSkillResponseActions({
+        nodeId: id,
+        entityId: data.entityId,
+        status,
+        canvasId,
+      });
 
     // Sync node status with action result status
     useEffect(() => {
@@ -473,6 +480,7 @@ export const SkillResponseNode = memo(
     );
 
     const { deleteNode } = useDeleteNode();
+    const { duplicateNode } = useDuplicateNode();
 
     const handleDelete = useCallback(() => {
       logEvent('delete_node_ask_ai', null, {
@@ -487,6 +495,18 @@ export const SkillResponseNode = memo(
         position: { x: 0, y: 0 },
       } as CanvasNode);
     }, [id, data, deleteNode, canvasId]);
+
+    const handleDuplicate = useCallback(() => {
+      duplicateNode(
+        {
+          id,
+          type: 'skillResponse',
+          data,
+          position: { x: 0, y: 0 },
+        } as CanvasNode,
+        canvasId,
+      );
+    }, [id, data, canvasId, duplicateNode]);
 
     const { debouncedCreateDocument } = useCreateDocument();
 
@@ -680,21 +700,6 @@ export const SkillResponseNode = memo(
       nodeActionEmitter.emit(createNodeEventName(id, 'cloneAskAI.completed'));
     }, [id, data?.entityId, addNode, t, canvasId]);
 
-    const handleMoreClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-        nodeOperationsEmitter.emit('openNodeContextMenu', {
-          nodeId: id,
-          nodeType: 'skillResponse',
-          x: e.clientX,
-          y: e.clientY,
-          originalEvent: e,
-        } as any);
-      },
-      [id],
-    );
-
     useEffect(() => {
       setNodeStyle(id, NODE_SIDE_CONFIG);
     }, [id, setNodeStyle]);
@@ -710,6 +715,7 @@ export const SkillResponseNode = memo(
         dragCreateInfo?: NodeDragCreateInfo;
       }) => handleCreateDocument(event);
       const handleNodeDelete = () => handleDelete();
+      const handleNodeDuplicate = () => handleDuplicate();
       const handleNodeAskAI = (event?: {
         dragCreateInfo?: NodeDragCreateInfo;
       }) => handleAskAI(event);
@@ -723,6 +729,7 @@ export const SkillResponseNode = memo(
       nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
       nodeActionEmitter.on(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
+      nodeActionEmitter.on(createNodeEventName(id, 'duplicate'), handleNodeDuplicate);
 
       return () => {
         // Cleanup events when component unmounts
@@ -733,6 +740,7 @@ export const SkillResponseNode = memo(
         nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
         nodeActionEmitter.off(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
+        nodeActionEmitter.off(createNodeEventName(id, 'duplicate'), handleNodeDuplicate);
 
         // Clean up all node events
         cleanupNodeEvents(id);
@@ -744,6 +752,7 @@ export const SkillResponseNode = memo(
       handleInsertToDoc,
       handleCreateDocument,
       handleDelete,
+      handleDuplicate,
       handleAskAI,
       handleCloneAskAI,
     ]);
@@ -759,15 +768,6 @@ export const SkillResponseNode = memo(
           data-cy="skill-response-node"
           onClick={onNodeClick}
         >
-          {!isPreview && !readonly && (
-            <NodeActionButtons
-              nodeId={id}
-              nodeType="skillResponse"
-              isNodeHovered={isHovered}
-              isSelected={selected}
-            />
-          )}
-
           {!isPreview && !hideHandles && (
             <>
               <CustomHandle
@@ -813,12 +813,11 @@ export const SkillResponseNode = memo(
               readonly={true}
               source="node"
               actions={
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<More size={12} />}
-                  onClick={handleMoreClick}
-                  className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+                <SkillResponseActions
+                  isRunning={isRunning}
+                  onRerunSingle={handleRerunSingle}
+                  onRerunFromHere={handleRerunFromHere}
+                  onStop={handleStop}
                 />
               }
             />
