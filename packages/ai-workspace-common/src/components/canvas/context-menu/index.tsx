@@ -46,7 +46,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     addNode(
       {
         type: 'skillResponse',
-        data: { title: '', entityId: skillResponseId },
+        data: { title: '', entityId: skillResponseId, metadata: { status: 'init' } },
         position: position,
       },
       [],

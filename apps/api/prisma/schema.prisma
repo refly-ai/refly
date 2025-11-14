@@ -382,14 +382,8 @@ model WorkflowNodeExecution {
   @@map("workflow_node_executions")
 }
 
-enum WorkflowNodeStatus {
-  waiting
-  executing
-  finish
-  failed
-}
-
 enum ActionStatus {
+  init
   waiting
   executing
   finish

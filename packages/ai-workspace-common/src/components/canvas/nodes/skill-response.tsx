@@ -57,7 +57,6 @@ const { Paragraph } = Typography;
 const NODE_WIDTH = 320;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
 
-// 状态栏组件，显示节点状态、token消费和运行耗时
 const NodeStatusBar = memo(
   ({
     status,
@@ -809,10 +808,9 @@ export const SkillResponseNode = memo(
           </div>
         </div>
 
-        {/* 状态栏，显示节点状态、token消费和运行耗时 */}
-        {!isPreview && (
+        {!isPreview && status !== 'init' && (
           <NodeStatusBar
-            status={status || 'waiting'}
+            status={status}
             creditCost={metadata?.creditCost}
             executionTime={metadata?.executionTime}
             errors={result?.errors}

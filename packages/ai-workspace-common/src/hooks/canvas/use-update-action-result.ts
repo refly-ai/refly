@@ -107,6 +107,9 @@ export const useUpdateActionResult = () => {
 
   const buildNodeUpdates = useCallback(
     (resultId: string, payload: Partial<ActionResult>) => {
+      if (!payload) {
+        return {};
+      }
       const updates = generateFullNodeDataUpdates(payload);
       const nextPreview = updates.contentPreview ?? '';
       const normalizedPreview = nextPreview.trim();

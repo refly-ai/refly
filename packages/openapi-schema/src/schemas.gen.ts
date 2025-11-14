@@ -2049,7 +2049,7 @@ export const TokenUsageItemSchema = {
 export const ActionStatusSchema = {
   type: 'string',
   description: 'Action status',
-  enum: ['waiting', 'executing', 'finish', 'failed'],
+  enum: ['init', 'waiting', 'executing', 'finish', 'failed'],
 } as const;
 
 export const ArtifactTypeSchema = {
