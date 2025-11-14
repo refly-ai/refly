@@ -1552,7 +1552,7 @@ export type TokenUsageItem = {
 /**
  * Action status
  */
-export type ActionStatus = 'waiting' | 'executing' | 'finish' | 'failed';
+export type ActionStatus = 'init' | 'waiting' | 'executing' | 'finish' | 'failed';
 
 /**
  * Artifact type

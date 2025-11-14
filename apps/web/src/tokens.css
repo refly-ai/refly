@@ -58,8 +58,8 @@
   --refly-text-placeholder: #8f959e;
   --refly-node-input-fill: #f4f5f6;
   --refly-node-input-control: #f4f5f6;
-  --refly-node-contrl-1: rgba(217, 255, 254, 0.50);
-  --refly-node-contrl-2: rgba(254, 242, 207, 0.50);
+  --refly-node-contrl-1: rgba(217, 255, 254, 0.5);
+  --refly-node-contrl-2: rgba(254, 242, 207, 0.5);
   --refly-node-fill-1: #d9fffe;
   --refly-node-fill-2: #fef2cf;
   --refly-node-run: #7effdb;
@@ -129,5 +129,5 @@
   --refly-node-contrl-2: rgba(133, 110, 36, 0.5);
   --refly-node-fill-1: #2c5c5a;
   --refly-node-fill-2: #856e24;
-  --refly-node-run: rgba(126,255, 219, 0.6);
+  --refly-node-run: rgba(126, 255, 219, 0.6);
 }

@@ -5405,6 +5405,7 @@ components:
       type: string
       description: Action status
       enum:
+        - init
         - waiting
         - executing
         - finish
