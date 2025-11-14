@@ -184,30 +184,38 @@ IMPORTANT GUIDELINES:
 
 2. **Minimize Iterations**: Avoid splitting tasks into multiple small executions. Write robust, complete code that handles the entire workflow at once.
 
-3. **Task Completion Signals**: When you create files (images, CSVs, etc.), the system will automatically notify you with "✓ File(s) successfully created and saved". This means the task is COMPLETE - do NOT create variations or additional versions unless explicitly requested.
+3. **MANDATORY Output Confirmation (CRITICAL)**: 
+   - ALWAYS print confirmation messages IMMEDIATELY after saving any files
+   - After plt.savefig(), add: print(f"✓ Image saved: {filename}")
+   - After df.to_csv(), add: print(f"✓ CSV saved: {filename}")
+   - After any file save, add: print(f"✓ File saved: {filename}")
+   - These print statements are REQUIRED for file detection and confirmation
+   - The system uses these prints to verify successful file creation
 
-4. **Semantic File Naming (CRITICAL)**: 
+4. **Task Completion Signals**: When you create files (images, CSVs, etc.), the system will automatically notify you with "✓ File(s) successfully created and saved". This means the task is COMPLETE - do NOT create variations or additional versions unless explicitly requested.
+
+5. **Semantic File Naming (CRITICAL)**: 
    - ALWAYS use meaningful, descriptive filenames that reflect the content
    - Use snake_case (e.g., 'sales_trend_2024.png', 'customer_analysis.csv')
    - Include the type of visualization/data in the name
    - Examples: 'bar_chart.png', 'temperature_trend.png', 'revenue_by_region.csv'
    - AVOID: generic names like 'output.png', 'chart.png', 'data.csv'
 
-5. **Code Format**: 
+6. **Code Format**: 
    - Write entire code in a single string
    - Use semicolons to separate statements if needed
    - Start code immediately after opening quote (no leading newline)
    - Variables and state persist between executions
 
-6. **Available Packages**: numpy, pandas, matplotlib, seaborn, scikit-learn, PIL/Pillow, scipy, and more${
+7. **Available Packages**: numpy, pandas, matplotlib, seaborn, scikit-learn, PIL/Pillow, scipy, and more${
         this.config.customPackages.length > 0
           ? `. Custom packages: ${this.config.customPackages.join(', ')}`
           : ''
       }
 
-7. **File Operations**: Files are automatically saved and sent to the user. You'll receive confirmation when complete.
+8. **File Operations**: Files are automatically saved and sent to the user. You'll receive confirmation when complete.
 
-Example of GOOD code (semantic filenames + complete):
+Example of GOOD code (with MANDATORY print statements):
 \`\`\`python
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -222,16 +230,25 @@ plt.bar(monthly_summary.index, monthly_summary.values)
 plt.title('Monthly Revenue Trends')
 plt.xlabel('Month')
 plt.ylabel('Revenue ($)')
-plt.savefig('monthly_revenue_chart.png')  # ✅ Semantic filename
+plt.savefig('monthly_revenue_chart.png')
+print("✓ Image saved: monthly_revenue_chart.png")  # ✅ REQUIRED print statement
 
 # Export summary with semantic filename
-monthly_summary.to_csv('revenue_summary_by_month.csv')  # ✅ Semantic filename
+monthly_summary.to_csv('revenue_summary_by_month.csv')
+print("✓ CSV saved: revenue_summary_by_month.csv")  # ✅ REQUIRED print statement
 \`\`\`
 
-Example of BAD code (generic filenames):
+Example of BAD code (missing print statements or generic filenames):
 \`\`\`python
-plt.savefig('chart.png')  # ❌ Too generic
-df.to_csv('output.csv')   # ❌ No context
+plt.savefig('chart.png')  # ❌ Too generic + missing print
+df.to_csv('output.csv')   # ❌ No context + missing print
+
+# Should be:
+plt.savefig('monthly_sales_chart.png')
+print("✓ Image saved: monthly_sales_chart.png")
+
+df.to_csv('sales_data_export.csv')
+print("✓ CSV saved: sales_data_export.csv")
 \`\`\``,
       schema: z.object({
         code: z.string().describe('Complete Python code to execute the entire task'),
@@ -487,51 +504,54 @@ df.to_csv('output.csv')   # ❌ No context
       return output.content;
     }
 
-    // Check for file modifications (only if code executed successfully)
-    // First, try to use extracted metadata from code
-    let filesToDownload: string[] = [];
+    // // Check for file modifications (only if code executed successfully)
+    // // First, try to use extracted metadata from code
+    // let filesToDownload: string[] = [];
 
-    if (output.files && output.files.length > 0) {
-      // Use filenames extracted from code (e.g., plt.savefig('chart.png'))
-      filesToDownload = output.files.map((f) => f.filename!).filter(Boolean);
-      console.log(`[Session] Using extracted filenames from code: ${filesToDownload.join(', ')}`);
-    } else {
-      // Fallback to LLM-based modification detection
-      // const modifications = await getFileModifications(code, this.llm);
-      // if (modifications && modifications.length > 0) {
-      //   filesToDownload = modifications;
-      //   console.log(`[Session] Using LLM-detected modifications: ${filesToDownload.join(', ')}`);
-      // }
-    }
+    // if (output.files && output.files.length > 0) {
+    //   // Use filenames extracted from code (e.g., plt.savefig('chart.png'))
+    //   filesToDownload = output.files.map((f) => f.filename!).filter(Boolean);
+    //   console.log(`[Session] Using extracted filenames from code: ${filesToDownload.join(', ')}`);
+    // } else {
+    //   // Fallback to LLM-based modification detection
+    //   // const modifications = await getFileModifications(code, this.llm);
+    //   // if (modifications && modifications.length > 0) {
+    //   //   filesToDownload = modifications;
+    //   //   console.log(`[Session] Using LLM-detected modifications: ${filesToDownload.join(', ')}`);
+    //   // }
+    // }
 
-    if (filesToDownload.length > 0) {
-      const savedFiles: string[] = [];
-      for (const filename of filesToDownload) {
-        if (this.inputFiles.some((f) => f.name === filename)) {
-          continue;
-        }
-        // Try to download from /workspace directory
-        let fileBuffer = await this.codebox.download(filename);
+    // if (filesToDownload.length > 0) {
+    //   const savedFiles: string[] = [];
+    //   for (const filename of filesToDownload) {
+    //     if (this.inputFiles.some((f) => f.name === filename)) {
+    //       continue;
+    //     }
+    //     // Try to download from /workspace directory
+    //     let fileBuffer = await this.codebox.download(filename);
 
-        // If not found, try with /workspace/ prefix
-        if (!fileBuffer.content && !filename.startsWith('/workspace/')) {
-          fileBuffer = await this.codebox.download(`/workspace/${filename}`);
-        }
+    //     // If not found, try with /workspace/ prefix
+    //     if (!fileBuffer.content && !filename.startsWith('/workspace/')) {
+    //       fileBuffer = await this.codebox.download(`/workspace/${filename}`);
+    //     }
 
-        if (!fileBuffer.content) {
-          console.warn(`[CodeBox] Failed to download file: ${filename}`);
-          continue;
-        }
-        this.outputFiles.push(new File(filename, Buffer.from(fileBuffer.content)));
-        savedFiles.push(filename);
-      }
+    //     if (!fileBuffer.content) {
+    //       console.warn(`[CodeBox] Failed to download file: ${filename}`);
+    //       continue;
+    //     }
+    //     this.outputFiles.push(new File(filename, Buffer.from(fileBuffer.content)));
+    //     savedFiles.push(filename);
+    //   }
 
-      // Append clear success message about saved files
-      if (savedFiles.length > 0) {
-        const fileList = savedFiles.map((f) => `"${f}"`).join(', ');
-        return `${output.content}\n\n✓ File(s) successfully created and saved: ${fileList}. These files have been sent to the user. Task completed.`;
-      }
-    }
+    //   // Append clear success message about saved files
+    //   if (savedFiles.length > 0) {
+    //     const fileList = savedFiles.map((f) => `"${f}"`).join(', ');
+    //     return `${output.content}\n\n✓ File(s) successfully created and saved: ${fileList}. These files have been sent to the user.
+    //     Python run code stdout: ${output?.stdout}
+
+    //     Task completed.`;
+    //   }
+    // }
 
     return output.content;
   }
