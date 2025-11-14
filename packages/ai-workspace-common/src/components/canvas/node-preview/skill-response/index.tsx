@@ -23,11 +23,11 @@ import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
 import { useActionResultStoreShallow, useKnowledgeBaseStoreShallow } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
-import { Button, Divider, Result, Segmented, Skeleton } from 'antd';
+import { Button, Divider, Result, Segmented, Skeleton, Tooltip } from 'antd';
 import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Thinking } from 'refly-icons';
+import { Question, Thinking } from 'refly-icons';
 import { ActionContainer } from './action-container';
 import { ActionStepCard } from './action-step';
 import { FailureNotice } from './failure-notice';
@@ -357,8 +357,8 @@ const SkillResponseNodePreviewComponent = ({
         <div className="py-3">
           <Segmented
             options={[
-              { label: 'Configure', value: 'configure' },
-              { label: 'Last run', value: 'lastRun' },
+              { label: t('agent.configure'), value: 'configure' },
+              { label: t('agent.lastRun'), value: 'lastRun' },
             ]}
             value={activeTab}
             onChange={(value) => setActiveTab(value)}
@@ -372,10 +372,13 @@ const SkillResponseNodePreviewComponent = ({
             <div className="h-full flex flex-col gap-4">
               <div>
                 <div
-                  className="text-xs font-semibold leading-4 mb-2"
+                  className="text-xs font-semibold leading-4 mb-2 flex items-center gap-1"
                   style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
                 >
-                  Model
+                  <span>{t('agent.config.model')}</span>
+                  <Tooltip title={t('agent.config.modelDescription')}>
+                    <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+                  </Tooltip>
                 </div>
                 <ModelSelector
                   model={modelInfo ?? null}
@@ -393,14 +396,19 @@ const SkillResponseNodePreviewComponent = ({
                   className="text-xs font-semibold leading-4 mb-2 flex items-center justify-between"
                   style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
                 >
-                  <span>指令</span>
+                  <div className="flex items-center gap-1">
+                    <span>{t('agent.config.prompt')}</span>
+                    <Tooltip title={t('agent.config.promptDescription')}>
+                      <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+                    </Tooltip>
+                  </div>
                   <Button
                     type="text"
                     size="small"
                     className="text-xs h-auto px-2 py-1 text-refly-text-1 hover:text-refly-text-0"
                     onClick={handleAddToolsAndContext}
                   >
-                    @ Add tools and context
+                    @ {t('agent.config.addToolsAndContext')}
                   </Button>
                 </div>
                 <div
@@ -426,7 +434,7 @@ const SkillResponseNodePreviewComponent = ({
                           letterSpacing: 0,
                         }}
                       >
-                        在此处拖放文件
+                        {t('common.dragAndDropFiles')}
                       </div>
                     </div>
                   )}

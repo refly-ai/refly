@@ -35,7 +35,7 @@ SectionTitle.displayName = 'SectionTitle';
 
 export const ConfigInfoDisplay = memo(
   ({ nodeId, selectedToolsets, contextItems = [], onRemoveFile }: ConfigInfoDisplayProps) => {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const allItems = useListMentionItems(nodeId);
 
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
@@ -64,11 +64,10 @@ export const ConfigInfoDisplay = memo(
 
     return (
       <div className="flex flex-col gap-4 mt-4">
-        {/* Variables (输入项) */}
         {
           <div>
-            <SectionTitle tooltip="添加你需要填写的信息（如关键词、数量），workflow会基于这些信息生成内容">
-              输入项
+            <SectionTitle tooltip={t('agent.config.inputsDescription')}>
+              {t('agent.config.inputs')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
               {variables.map((variable: MentionItem, index) => (
@@ -84,11 +83,10 @@ export const ConfigInfoDisplay = memo(
           </div>
         }
 
-        {/* Tools (工具) */}
         {
           <div>
-            <SectionTitle tooltip="调用外部服务（如搜索全网信息、生成图片），让workflow具备更多能力">
-              工具
+            <SectionTitle tooltip={t('agent.config.toolsDescription')}>
+              {t('agent.config.tools')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
               {toolsets.map((toolset, index) => {
@@ -119,11 +117,10 @@ export const ConfigInfoDisplay = memo(
           </div>
         }
 
-        {/* Files (文件) */}
         {
           <div>
-            <SectionTitle tooltip='可拖入添加文档、图片、视频等，添加后会自动保存至"文件"，可通过@调用，为workflow提供参考资料'>
-              文件
+            <SectionTitle tooltip={t('agent.config.filesDescription')}>
+              {t('agent.config.files')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
               {files.map((file: any, index) => (
@@ -140,11 +137,10 @@ export const ConfigInfoDisplay = memo(
           </div>
         }
 
-        {/* Node References (智能体) */}
         {
           <div>
-            <SectionTitle tooltip="添加智能助手，与当前节点协作完成复杂任务（如先分析数据，再生成报告）">
-              智能体
+            <SectionTitle tooltip={t('agent.config.agentsDescription')}>
+              {t('agent.config.agents')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
               {nodeReferences.map((node: MentionItem, index) => (

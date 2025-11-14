@@ -75,6 +75,7 @@ const translations = {
     login: 'Sign In',
     signup: 'Sign Up',
     share: 'Share',
+    dragAndDropFiles: 'Drag and drop files here',
     uploadImage: 'Upload Image',
     uploadSuccess: 'Upload successful',
     uploadFailed: 'Upload failed',
@@ -2095,6 +2096,30 @@ const translations = {
       share: 'Share code artifact',
     },
     defaultTitle: 'Code Artifact',
+  },
+  agent: {
+    configure: 'Configure',
+    lastRun: 'Last Run',
+    config: {
+      model: 'Model',
+      modelDescription:
+        'Select the AI model used when this agent runs. Different models vary in their abilities for understanding, generation, and tool usage.',
+      prompt: 'Prompt',
+      promptDescription:
+        'Tell the agent what task to perform. You can reference inputs and other content using @ in the Prompt.',
+      inputs: 'Inputs',
+      inputsDescription:
+        'User-provided information available to this agent. These typically come from the form fields filled in when running the workflow.',
+      tools: 'Tools',
+      toolsDescription:
+        'External capabilities the agent can call, such as Gmail, Notion, and others.',
+      files: 'Files',
+      filesDescription:
+        'Files the agent can read, such as images, documents, or other uploaded resources.',
+      agents: 'Agents',
+      agentsDescription: 'Use the output of other agents to help complete the task at this node.',
+      addToolsAndContext: 'Add tools and context',
+    },
   },
   loggedHomePage: {
     searchEverything: 'Search',

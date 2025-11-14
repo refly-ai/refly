@@ -261,6 +261,7 @@ const translations = {
     login: '登录',
     signup: '注册',
     share: '分享',
+    dragAndDropFiles: '在此处拖放文件',
     uploadImage: '上传图片',
     uploadSuccess: '上传成功',
     uploadFailed: '上传失败',
@@ -2079,6 +2080,27 @@ const translations = {
       share: '分享小组件',
     },
     defaultTitle: '代码组件',
+  },
+  agent: {
+    configure: '配置',
+    lastRun: '最近运行',
+    config: {
+      model: '模型',
+      modelDescription:
+        '选择智能体运行时使用的 AI 模型。不同模型在理解、生成和工具调用上能力不同。',
+      prompt: '提示词',
+      promptDescription:
+        '告诉智能体要执行什么任务。您可以在提示词中引用输入项和其他内容，使用 @ 符号。',
+      inputs: '输入项',
+      inputsDescription: '智能体可用的用户提供的信息。这些通常来自运行工作流时填写的表单字段。',
+      tools: '工具',
+      toolsDescription: '智能体可调用的外部服务，如 Gmail、Notion 等。',
+      files: '文件',
+      filesDescription: '智能体可读取的文件，如图片、文档或其他上传的资源。',
+      agents: '智能体',
+      agentsDescription: '使用其他智能体产出的结果，完成当前节点的任务。',
+      addToolsAndContext: '添加工具和上下文',
+    },
   },
   loggedHomePage: {
     searchEverything: '搜索任何内容',
