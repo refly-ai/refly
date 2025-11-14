@@ -1,4 +1,4 @@
-import { Cancelled } from 'refly-icons';
+import { ArrowDown, Cancelled } from 'refly-icons';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import {
   cleanupNodeEvents,
@@ -20,7 +20,7 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
 import { genSkillID } from '@refly/utils/id';
 import { Position, useReactFlow } from '@xyflow/react';
-import { message } from 'antd';
+import { message, Typography } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CustomHandle } from './shared/custom-handle';
@@ -52,6 +52,7 @@ import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
 import { processQueryWithMentions } from '@refly/utils';
+const { Paragraph } = Typography;
 
 const NODE_WIDTH = 320;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
@@ -69,7 +70,7 @@ const NodeStatusBar = memo(
     creditCost?: number;
     errors?: string[];
   }) => {
-    // const { t } = useTranslation();
+    const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
 
     const getStatusIcon = () => {
@@ -86,20 +87,9 @@ const NodeStatusBar = memo(
       }
     };
 
-    const getStatusText = () => {
-      switch (status) {
-        case 'finish':
-          return 'Success';
-        case 'failed':
-          return 'Failed';
-        case 'executing':
-          return 'Running';
-        case 'waiting':
-          return 'Waiting';
-        default:
-          return '';
-      }
-    };
+    const statusText = useMemo<string>(() => {
+      return t(`canvas.skillResponse.status.${status}`);
+    }, [status, t]);
 
     if (status === 'waiting' || status === 'executing') {
       return null;
@@ -110,13 +100,13 @@ const NodeStatusBar = memo(
     return (
       <div className="flex flex-col mt-2 w-full">
         <div
-          className={`px-2 border-[1px] border-solid border-refly-Card-Border rounded-l bg-refly-bg-content-z2 min-h-6 ${hasErrors ? 'cursor-pointer' : 'h-6'}`}
+          className={`px-2 py-1 border-[0.5px] border-solid border-refly-Card-Border rounded-2xl bg-refly-bg-body-z0 ${hasErrors ? 'cursor-pointer' : ''}`}
           onClick={() => hasErrors && setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 flex-1 min-w-0">
               {getStatusIcon()}
-              <span className="text-xs text-gray-600 dark:text-gray-400">{getStatusText()}</span>
+              <span className="text-xs text-refly-text-1 leading-4">{statusText}</span>
             </div>
 
             <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500 flex-shrink-0">
@@ -134,39 +124,23 @@ const NodeStatusBar = memo(
               )}
 
               {hasErrors && (
-                <svg
-                  className={`w-3 h-3 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                <ArrowDown
+                  size={12}
+                  className={cn('transition-transform', isExpanded ? 'rotate-180' : '')}
+                />
               )}
             </div>
           </div>
           {hasErrors && isExpanded && (
-            <div className="min-w-0">
+            <div className="min-w-0 mt-[10px] mb-1">
               {errors.map((error, index) => (
-                <div
+                <Paragraph
                   key={index}
-                  className="text-refly-func-danger-default truncate"
-                  style={{
-                    fontFamily: 'PingFang SC',
-                    fontWeight: 400,
-                    fontSize: '12px',
-                    lineHeight: '16px',
-                    letterSpacing: 0,
-                  }}
-                  title={error}
+                  className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
+                  ellipsis={{ rows: 8, tooltip: true }}
                 >
                   {error}
-                </div>
+                </Paragraph>
               ))}
             </div>
           )}

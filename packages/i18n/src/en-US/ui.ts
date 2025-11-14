@@ -1528,6 +1528,12 @@ const translations = {
         file: 'File: ',
         agent: 'Agent: ',
       },
+      status: {
+        waiting: 'Waiting',
+        executing: 'Running',
+        finish: 'Success',
+        failed: 'Failed',
+      },
     },
     chatHistory: {
       alreadyAdded: 'Already added to chat history',

@@ -1523,6 +1523,12 @@ const translations = {
         file: '文件: ',
         agent: ' 智能体: ',
       },
+      status: {
+        waiting: '等待中',
+        executing: '运行中',
+        finish: '成功',
+        failed: '失败',
+      },
     },
     chatHistory: {
       alreadyAdded: '已添加到对话历史',
