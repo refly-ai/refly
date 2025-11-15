@@ -1487,6 +1487,13 @@ const translations = {
       generating: 'Generating content...',
       shareSuccess: 'Skill response shared successfully! Link copied to clipboard.',
       shareError: 'Failed to share skill response',
+      confirmStop: {
+        title: 'Stop Workflow Execution',
+        content:
+          'The workflow execution is not yet complete. Stopping now will not refund the credits already consumed. Are you sure you want to stop the workflow execution?',
+        confirm: 'Stop Execution',
+        cancel: 'Cancel',
+      },
       error: {
         defaultTitle: 'Skill execution failed',
         description: '[{{errCode}}] {{errMsg}} Original error: {{rawError}}',

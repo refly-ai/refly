@@ -246,6 +246,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
         isConnected={isSourceConnected}
         isNodeHovered={isHovered}
         nodeType="start"
+        className={selected || isSourceConnected ? 'visible' : 'invisible'}
       />
 
       <div

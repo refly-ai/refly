@@ -339,7 +339,6 @@ export const SkillResponseNode = memo(
 
     // Check if node has any connections
     const edges = getEdges();
-    const isTargetConnected = edges?.some((edge) => edge.target === id);
     const isSourceConnected = edges?.some((edge) => edge.source === id);
 
     const { invokeAction } = useInvokeAction({ source: 'skill-response-node' });
@@ -768,28 +767,19 @@ export const SkillResponseNode = memo(
           data-cy="skill-response-node"
           onClick={onNodeClick}
         >
-          {!isPreview && !hideHandles && (
-            <>
-              <CustomHandle
-                id={`${id}-target`}
-                nodeId={id}
-                type="target"
-                position={Position.Left}
-                isConnected={isTargetConnected}
-                isNodeHovered={isHovered}
-                nodeType="skillResponse"
-              />
-              <CustomHandle
-                id={`${id}-source`}
-                nodeId={id}
-                type="source"
-                position={Position.Right}
-                isConnected={isSourceConnected}
-                isNodeHovered={isHovered}
-                nodeType="skillResponse"
-              />
-            </>
-          )}
+          {/* Only show source handle on the right when selected */}
+          <CustomHandle
+            id={`${id}-source`}
+            nodeId={id}
+            type="source"
+            position={Position.Right}
+            isConnected={isSourceConnected}
+            isNodeHovered={isHovered}
+            nodeType="skillResponse"
+            className={
+              !isPreview && !hideHandles && (selected || isSourceConnected) ? '' : 'invisible'
+            }
+          />
 
           <div
             style={nodeStyle}
@@ -835,6 +825,17 @@ export const SkillResponseNode = memo(
               </div>
             </div>
           </div>
+
+          {/* Invisible full-area target handle when connection is in progress */}
+          <CustomHandle
+            id={`${id}-overlay-target`}
+            nodeId={id}
+            type="target"
+            position={Position.Left}
+            variant="overlay"
+            isPreview={isPreview}
+            hideHandles={hideHandles}
+          />
         </div>
 
         {/* 状态栏，显示节点状态、token消费和运行耗时 */}

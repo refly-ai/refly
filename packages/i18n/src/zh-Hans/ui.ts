@@ -1483,6 +1483,12 @@ const translations = {
       generating: '正在生成内容...',
       shareSuccess: '技能响应已成功分享！链接已复制到剪贴板。',
       shareError: '技能响应分享失败',
+      confirmStop: {
+        title: '终止工作流运行',
+        content: '工作流运行还未完成，此时终止，已消耗的积分将不会返还。确认终止工作流运行吗？',
+        confirm: '确定终止',
+        cancel: '取消',
+      },
       error: {
         defaultTitle: '技能执行失败',
         description: '[{{errCode}}] {{errMsg}} 原始错误: {{rawError}}',

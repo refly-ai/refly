@@ -1,4 +1,6 @@
 import { useCallback, useMemo } from 'react';
+import { Modal } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useAbortAction } from './use-abort-action';
 import {
   createNodeEventName,
@@ -20,6 +22,7 @@ export const useSkillResponseActions = ({
   status,
   canvasId,
 }: UseSkillResponseActionsProps) => {
+  const { t } = useTranslation();
   const { abortAction } = useAbortAction();
   const { workflow: workflowRun } = useCanvasContext();
 
@@ -67,9 +70,24 @@ export const useSkillResponseActions = ({
   // Stop the running node
   const handleStop = useCallback(() => {
     if (entityId) {
-      abortAction(entityId);
+      Modal.confirm({
+        title: t('canvas.skillResponse.confirmStop.title'),
+        content: t('canvas.skillResponse.confirmStop.content'),
+        okText: t('canvas.skillResponse.confirmStop.confirm'),
+        cancelText: t('canvas.skillResponse.confirmStop.cancel'),
+        icon: null,
+        width: 480,
+        okType: 'primary',
+        okButtonProps: {
+          className:
+            '!bg-refly-primary-default hover:!bg-refly-primary-default/90 !border-refly-primary-default',
+        },
+        onOk: () => {
+          abortAction(entityId);
+        },
+      });
     }
-  }, [entityId, abortAction]);
+  }, [entityId, abortAction, t]);
 
   return {
     isRunning,
