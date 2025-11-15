@@ -50,6 +50,7 @@ import { SkillResponseActions } from '@refly-packages/ai-workspace-common/compon
 import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
+import { useSyncAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-agent-connections';
 
 const { Paragraph } = Typography;
 
@@ -194,6 +195,8 @@ export const SkillResponseNode = memo(
       canvasId: canvasId || '',
     });
 
+    useSyncAgentConnections(id, data);
+
     const nodeStyle = useMemo(
       () => (isPreview ? { width: NODE_WIDTH, height: 214 } : NODE_SIDE_CONFIG),
       [isPreview],
@@ -252,6 +255,15 @@ export const SkillResponseNode = memo(
         });
       }
     }, [result, data, id, setNodeData]);
+
+    useEffect(() => {
+      if (data?.editedTitle) {
+        setNodeData(id, {
+          title: data?.editedTitle,
+          editedTitle: null,
+        });
+      }
+    }, [id, data?.editedTitle]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
@@ -761,7 +773,7 @@ export const SkillResponseNode = memo(
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
-              title={data.editedTitle ?? data.title ?? t('canvas.nodeTypes.agent')}
+              title={data.title ?? t('canvas.nodeTypes.agent')}
               readonly={true}
               source="node"
               actions={

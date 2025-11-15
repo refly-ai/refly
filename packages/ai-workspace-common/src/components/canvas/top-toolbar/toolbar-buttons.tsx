@@ -118,7 +118,12 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
         data: {
           title: '',
           entityId: genNodeEntityId('skillResponse'),
-          metadata: { status: 'init' },
+          metadata: {
+            status: 'init',
+            ...(connectTo?.length > 0 && {
+              contextItems: [{ type: 'skillResponse', entityId: connectTo[0].entityId }],
+            }),
+          },
         },
       },
       connectTo,
