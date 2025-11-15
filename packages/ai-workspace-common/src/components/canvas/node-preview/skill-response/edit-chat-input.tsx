@@ -6,22 +6,16 @@ import {
   ChatComposerRef,
 } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
 import { CustomAction } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
-import {
-  ModelInfo,
-  SkillRuntimeConfig,
-} from '@refly-packages/ai-workspace-common/requests/types.gen';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { convertContextItemsToEdges } from '@refly/canvas-common';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useReactFlow } from '@xyflow/react';
 import { processQueryWithMentions } from '@refly/utils';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
-import { useUpdateNodeQuery } from '@refly-packages/ai-workspace-common/hooks/use-update-node-query';
 import { useActionResultStoreShallow, useActiveNode } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Undo } from 'refly-icons';
-import { GenericToolset } from '@refly/openapi-schema';
-import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
@@ -30,19 +24,16 @@ interface EditChatInputProps {
   enabled: boolean;
   resultId: string;
   version?: number;
-  contextItems: IContextItem[];
   query: string;
+  setQuery: (query: string) => void;
+  contextItems: IContextItem[];
+  setContextItems: (contextItems: IContextItem[]) => void;
   modelInfo: ModelInfo;
-  actionMeta?: {
-    icon?: any;
-    name?: string;
-  };
-  setEditMode: (mode: boolean) => void;
-  readonly?: boolean;
-  runtimeConfig?: SkillRuntimeConfig;
-  onQueryChange?: (newQuery: string) => void;
+  setModelInfo: (modelInfo: ModelInfo) => void;
   selectedToolsets?: GenericToolset[];
   setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
+  setEditMode: (mode: boolean) => void;
+  readonly?: boolean;
 }
 
 const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((props, ref) => {
@@ -54,39 +45,21 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     query,
     modelInfo,
     setEditMode,
-    runtimeConfig,
-    onQueryChange,
+    setQuery,
+    setContextItems,
+    setModelInfo,
     selectedToolsets,
     setSelectedToolsets,
   } = props;
 
   const { getEdges, getNodes, deleteElements, addEdges } = useReactFlow();
-  const [editQuery, setEditQueryState] = useState<string>(query);
   const [nodeId, setNodeId] = useState<string>('');
 
   const editAreaRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    setEditQueryState(query ?? '');
-  }, [query]);
-
-  const setEditQuery = useCallback(
-    (newQuery: string) => {
-      setEditQueryState(newQuery);
-      onQueryChange?.(newQuery);
-    },
-    [onQueryChange],
-  );
-  const [editContextItems, setEditContextItems] = useState<IContextItem[]>(contextItems);
-  const [editModelInfo, setEditModelInfo] = useState<ModelInfo>(modelInfo);
-  const [editRuntimeConfig, setEditRuntimeConfig] = useState<SkillRuntimeConfig>(runtimeConfig);
-  const contextItemsRef = useRef(editContextItems);
-  const setNodeDataByEntity = useSetNodeDataByEntity();
-
   const { t } = useTranslation();
 
   const { getFinalProjectId } = useAskProject();
-  const updateNodeQuery = useUpdateNodeQuery();
 
   // Get action result from store to access original input.query
   const { resultMap } = useActionResultStoreShallow((state) => ({
@@ -124,10 +97,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
 
-  useEffect(() => {
-    contextItemsRef.current = editContextItems;
-  }, [editContextItems]);
-
   // Real-time query update to canvas and parent component
   useEffect(() => {
     // Find current node to get nodeId
@@ -135,21 +104,8 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     const currentNode = nodes.find((node) => node.data?.entityId === resultId);
     if (currentNode) {
       setNodeId(currentNode.id);
-      updateNodeQuery(editQuery, resultId, currentNode.id, 'skillResponse');
     }
-  }, [resultId, editQuery, getNodes, updateNodeQuery]);
-
-  useEffect(() => {
-    setEditContextItems(contextItems);
-  }, [contextItems]);
-
-  useEffect(() => {
-    setEditModelInfo(modelInfo);
-  }, [modelInfo]);
-
-  useEffect(() => {
-    setEditRuntimeConfig(runtimeConfig);
-  }, [runtimeConfig]);
+  }, [resultId, query, getNodes]);
 
   // Close edit mode on any outside interaction when editMode is enabled
   useEffect(() => {
@@ -200,7 +156,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     let currentNode = nodes.find((node) => node.data?.entityId === resultId);
 
     // Check if this is a media generation model
-    const isMediaGeneration = editModelInfo?.category === 'mediaGeneration';
+    const isMediaGeneration = modelInfo?.category === 'mediaGeneration';
 
     // If not found by entityId and is media generation, try to find by metadata.resultId
     if (!currentNode && isMediaGeneration) {
@@ -214,7 +170,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     if (isMediaGeneration) {
       // Handle media generation using existing media generation flow
       // Parse capabilities from modelInfo
-      const capabilities = editModelInfo?.capabilities as any;
+      const capabilities = modelInfo?.capabilities as any;
       const mediaType = capabilities?.image
         ? 'image'
         : capabilities?.video
@@ -225,14 +181,14 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
       // Emit media generation event
       nodeOperationsEmitter.emit('generateMedia', {
-        providerItemId: editModelInfo?.providerItemId ?? '',
+        providerItemId: modelInfo?.providerItemId ?? '',
         targetType: 'canvas',
         targetId: canvasId ?? '',
         mediaType,
-        query: editQuery,
-        modelInfo: editModelInfo,
+        query,
+        modelInfo,
         nodeId: currentNode.id,
-        contextItems: editContextItems,
+        contextItems,
       });
 
       setEditMode(false);
@@ -242,7 +198,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     const edges = getEdges();
     const { edgesToAdd, edgesToDelete } = convertContextItemsToEdges(
       resultId,
-      editContextItems,
+      contextItems,
       nodes,
       edges,
     );
@@ -251,7 +207,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
     // Process query with workflow variables
     const variables = workflowVariables;
-    const { processedQuery } = processQueryWithMentions(editQuery, {
+    const { processedQuery } = processQueryWithMentions(query, {
       replaceVars: true,
       variables,
     });
@@ -261,29 +217,14 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
         resultId,
         version: (version ?? 0) + 1,
         query: processedQuery, // Use processed query for skill execution
-        contextItems: editContextItems,
-        modelInfo: editModelInfo,
+        contextItems,
+        modelInfo,
         projectId: finalProjectId,
         selectedToolsets,
       },
       {
         entityId: canvasId,
         entityType: 'canvas',
-      },
-    );
-
-    // Update node data with processed query for title and original query in structuredData
-    setNodeDataByEntity(
-      { entityId: resultId, type: 'skillResponse' },
-      {
-        title: processedQuery, // Use processed query for title
-        metadata: {
-          selectedToolsets,
-          structuredData: {
-            query: editQuery, // Store original query in structuredData
-          },
-          contextItems: editContextItems,
-        },
       },
     );
 
@@ -294,11 +235,9 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
           ...activeNode.data,
           metadata: {
             ...activeNode.data?.metadata,
+            query,
             selectedToolsets,
-            structuredData: {
-              query: editQuery,
-            },
-            contextItems: editContextItems,
+            contextItems,
           },
         },
       });
@@ -307,9 +246,9 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     setEditMode(false);
   }, [
     resultId,
-    editQuery,
-    editModelInfo,
-    editContextItems,
+    query,
+    modelInfo,
+    contextItems,
     version,
     canvasId,
     getNodes,
@@ -320,9 +259,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     setEditMode,
     getFinalProjectId,
     selectedToolsets,
-    setNodeDataByEntity,
     addNode,
-    editContextItems,
     activeNode,
     setActiveNode,
   ]);
@@ -337,15 +274,23 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
           // Get original query from action result
           const originalQuery = await getOriginalQuery();
-          setEditQuery(originalQuery);
+          setQuery(originalQuery);
 
-          setEditContextItems(contextItems);
-          setEditModelInfo(modelInfo);
-          setEditRuntimeConfig(runtimeConfig);
+          setContextItems(contextItems);
+          setModelInfo(modelInfo);
         },
       },
     ],
-    [t, setEditMode, contextItems, modelInfo, runtimeConfig, getOriginalQuery],
+    [
+      t,
+      setEditMode,
+      contextItems,
+      modelInfo,
+      getOriginalQuery,
+      setQuery,
+      setContextItems,
+      setModelInfo,
+    ],
   );
 
   // Fetch workflow variables for mentions (startNode/resourceLibrary)
@@ -365,16 +310,14 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     >
       <ChatComposer
         ref={ref}
-        query={editQuery}
-        setQuery={setEditQuery}
+        query={query}
+        setQuery={setQuery}
         handleSendMessage={handleSendMessage}
-        contextItems={editContextItems}
-        setContextItems={setEditContextItems}
+        contextItems={contextItems}
+        setContextItems={setContextItems}
         resultId={resultId}
-        modelInfo={editModelInfo}
-        setModelInfo={setEditModelInfo}
-        runtimeConfig={editRuntimeConfig}
-        setRuntimeConfig={setEditRuntimeConfig}
+        modelInfo={modelInfo}
+        setModelInfo={setModelInfo}
         selectedToolsets={selectedToolsets}
         onSelectedToolsetsChange={setSelectedToolsets}
         enableRichInput={true}
@@ -386,19 +329,4 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
   );
 });
 
-const arePropsEqual = (prevProps: EditChatInputProps, nextProps: EditChatInputProps) => {
-  return (
-    prevProps.enabled === nextProps.enabled &&
-    prevProps.resultId === nextProps.resultId &&
-    prevProps.query === nextProps.query &&
-    prevProps.modelInfo === nextProps.modelInfo &&
-    prevProps.readonly === nextProps.readonly &&
-    prevProps.contextItems === nextProps.contextItems &&
-    prevProps.actionMeta?.name === nextProps.actionMeta?.name &&
-    prevProps.onQueryChange === nextProps.onQueryChange &&
-    prevProps.selectedToolsets === nextProps.selectedToolsets &&
-    prevProps.setSelectedToolsets === nextProps.setSelectedToolsets
-  );
-};
-
-export const EditChatInput = memo(EditChatInputComponent, arePropsEqual);
+export const EditChatInput = memo(EditChatInputComponent);

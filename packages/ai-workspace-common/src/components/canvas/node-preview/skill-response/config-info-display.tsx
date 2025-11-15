@@ -3,15 +3,15 @@ import { Tag, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { GenericToolset } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
-import { X } from 'refly-icons';
-import { useListMentionItems } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/hooks/use-list-mention-items';
-import { MentionItem } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/mentionList';
+import { X, AiChat } from 'refly-icons';
 import { Question } from 'refly-icons';
+import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
+import { IContextItem } from '@refly/common-types';
 
 interface ConfigInfoDisplayProps {
-  nodeId: string;
-  selectedToolsets?: GenericToolset[];
-  contextItems?: any[];
+  prompt: string;
+  selectedToolsets: GenericToolset[];
+  contextItems?: IContextItem[];
   onRemoveFile?: (file: any) => void;
 }
 
@@ -34,9 +34,8 @@ const SectionTitle = memo(
 SectionTitle.displayName = 'SectionTitle';
 
 export const ConfigInfoDisplay = memo(
-  ({ nodeId, selectedToolsets, contextItems = [], onRemoveFile }: ConfigInfoDisplayProps) => {
+  ({ prompt, selectedToolsets, contextItems = [], onRemoveFile }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
-    const allItems = useListMentionItems(nodeId);
 
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
 
@@ -47,20 +46,21 @@ export const ConfigInfoDisplay = memo(
 
     // Extract variables
     const variables = useMemo(() => {
-      return allItems.filter((item) => item.source === 'variables');
-    }, [allItems]);
+      if (!prompt) {
+        return [];
+      }
+      const mentions = parseMentionsFromQuery(prompt);
+      return mentions.filter((item) => item.type === 'var');
+    }, [prompt]);
 
-    // Extract files from contextItems (resource type)
+    // Extract files from contextItems
     const files = useMemo(() => {
-      return contextItems.filter((item) => item.type === 'resource');
+      return contextItems.filter((item) => item.type === 'file');
     }, [contextItems]);
 
-    // Extract node references (stepRecord and resultRecord)
-    const nodeReferences = useMemo(() => {
-      return allItems.filter(
-        (item) => item.source === 'stepRecord' || item.source === 'resultRecord',
-      );
-    }, [allItems]);
+    const agents = useMemo(() => {
+      return contextItems.filter((item) => item.type === 'skillResponse');
+    }, [contextItems]);
 
     return (
       <div className="flex flex-col gap-4 mt-4">
@@ -70,9 +70,9 @@ export const ConfigInfoDisplay = memo(
               {t('agent.config.inputs')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
-              {variables.map((variable: MentionItem, index) => (
+              {variables.map((variable: MentionCommonData, index) => (
                 <Tag
-                  key={`${variable.variableId || variable.name}-${index}`}
+                  key={`${variable.id}-${index}`}
                   className="text-xs m-0 flex items-center gap-1 bg-[#FEF2CF] px-2 py-1"
                 >
                   <X className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
@@ -143,12 +143,13 @@ export const ConfigInfoDisplay = memo(
               {t('agent.config.agents')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
-              {nodeReferences.map((node: MentionItem, index) => (
+              {agents.map((item: IContextItem, index) => (
                 <Tag
-                  key={`${node.nodeId || node.name}-${index}`}
+                  key={`${item.entityId}-${index}`}
                   className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
                 >
-                  <span className="truncate">{node.name}</span>
+                  <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
+                  <span className="truncate">{item.title}</span>
                 </Tag>
               ))}
             </div>
@@ -159,7 +160,7 @@ export const ConfigInfoDisplay = memo(
   },
   (prevProps, nextProps) => {
     return (
-      prevProps.nodeId === nextProps.nodeId &&
+      prevProps.prompt === nextProps.prompt &&
       JSON.stringify(prevProps.selectedToolsets) === JSON.stringify(nextProps.selectedToolsets) &&
       JSON.stringify(prevProps.contextItems) === JSON.stringify(nextProps.contextItems)
     );

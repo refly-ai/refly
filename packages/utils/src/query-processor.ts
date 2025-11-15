@@ -10,6 +10,51 @@ export interface MentionParseResult {
   variables: WorkflowVariable[];
 }
 
+// input query: this is a test @{type=var,id=var-1,name=cv_folder_url}, with resource @{type=resource,id=resource-1,name=resource_1}
+// output: [{ type: 'var', id: 'var-1', name: 'cv_folder_url' }, { type: 'resource', id: 'resource-1', name: 'resource_1' }]
+export function parseMentionsFromQuery(query: string): MentionCommonData[] {
+  const mentionRegex = /@\{([^}]+)\}/g;
+  const matches = query.match(mentionRegex);
+  if (!matches) {
+    return [];
+  }
+
+  return matches
+    .map((match) => {
+      // Extract the content inside the braces
+      const paramsStr = match.match(/@\{([^}]+)\}/)?.[1];
+      if (!paramsStr) return null;
+
+      // Skip malformed mentions that contain nested braces
+      if (paramsStr.includes('@{') || paramsStr.includes('}')) {
+        return null;
+      }
+
+      const params: Record<string, string> = {};
+      for (const param of paramsStr.split(',')) {
+        const [key, value] = param.split('=');
+        if (key && value) {
+          params[key.trim()] = value.trim();
+        }
+      }
+
+      const { type, id, name } = params;
+
+      // Validate required fields
+      if (!type || !id || !name) {
+        return null;
+      }
+
+      // Validate type is one of the allowed types
+      if (!['var', 'resource'].includes(type)) {
+        return null;
+      }
+
+      return { type: type as 'var' | 'resource', id, name };
+    })
+    .filter((mention): mention is MentionCommonData => mention !== null);
+}
+
 /**
  * Process query with workflow variables and mentions using regex replacement
  * Supports mention types: var, resource, step, toolset, and tool

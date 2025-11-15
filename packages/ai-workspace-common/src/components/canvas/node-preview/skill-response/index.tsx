@@ -3,10 +3,7 @@ import { ChatComposerRef } from '@refly-packages/ai-workspace-common/components/
 import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
-import {
-  useNodeData,
-  useSetNodeDataByEntity,
-} from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
@@ -25,7 +22,7 @@ import { useActionResultStoreShallow, useKnowledgeBaseStoreShallow } from '@refl
 import { sortSteps } from '@refly/utils/step';
 import { Button, Divider, Result, Segmented, Skeleton, Tooltip } from 'antd';
 import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
-import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { memo, useCallback, useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Question, Thinking } from 'refly-icons';
 import { ActionContainer } from './action-container';
@@ -67,10 +64,7 @@ const SkillResponseNodePreviewComponent = ({
 
   const { t } = useTranslation();
 
-  const nodeSelectedToolsets = node?.data?.metadata?.selectedToolsets;
-  const [selectedToolsets, setSelectedToolsets] = useState<GenericToolset[]>(
-    nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET],
-  );
+  const [activeTab, setActiveTab] = useState('configure');
 
   const [isDragging, setIsDragging] = useState(false);
   const [, setDragCounter] = useState(0);
@@ -82,10 +76,6 @@ const SkillResponseNodePreviewComponent = ({
   const loading = fetchActionResultLoading || shareDataLoading;
 
   const [statusText, setStatusText] = useState('');
-
-  useEffect(() => {
-    setSelectedToolsets(nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET]);
-  }, [nodeSelectedToolsets]);
 
   useEffect(() => {
     if (shareData && !result && shareData?.resultId === resultId) {
@@ -130,62 +120,54 @@ const SkillResponseNodePreviewComponent = ({
   }, [scrollToBottom]);
 
   const { data } = node;
-  const { modelInfo, runtimeConfig } = data.metadata;
-  const title = result?.title ?? data?.title;
+
   const actionMeta = result?.actionMeta ?? data?.metadata?.actionMeta;
   const version = result?.version ?? data?.metadata?.version ?? 0;
-  // const modelInfo = result?.modelInfo ?? data?.metadata?.modelInfo;
-  // const runtimeConfig = result?.runtimeConfig ?? data?.metadata?.runtimeConfig;
-  const structuredData = data?.metadata?.structuredData;
 
-  const [currentQuery, setCurrentQuery] = useState<string | null>(
-    (structuredData?.query as string) ?? (result?.input?.query as string) ?? title,
-  );
-  const [activeTab, setActiveTab] = useState('configure');
+  const title = data?.title ?? result?.title;
+  const query = data?.metadata?.query ?? result?.input?.query;
+  const modelInfo = data?.metadata?.modelInfo ?? result?.modelInfo;
+  const contextItems =
+    data?.metadata?.contextItems ?? convertResultContextToItems(result?.context, result?.history);
+  const selectedToolsets = data?.metadata?.selectedToolsets ?? result?.toolsets;
 
-  // Handle model selection
-  const setModelInfo = useCallback(
-    (modelInfo: any | null) => {
-      const nextVersion = (node.data?.metadata?.version || 0) + 1;
+  const setQuery = useCallback(
+    (query: string) => {
       setNodeData(node.id, {
-        metadata: {
-          modelInfo: { ...modelInfo },
-          version: nextVersion,
-        },
+        metadata: { query },
       });
     },
-    [node.data?.metadata?.version, setNodeData, node.id],
+    [setNodeData, node.id],
   );
 
-  // Update currentQuery when node data changes, ensuring it's specific to this node
-  useEffect(() => {
-    const nodeSpecificQuery =
-      (structuredData?.query as string) ?? (result?.input?.query as string) ?? title;
-    setCurrentQuery(nodeSpecificQuery);
-  }, [node.id, structuredData?.query, result?.input?.query, title]);
+  const setModelInfo = useCallback(
+    (modelInfo: any | null) => {
+      setNodeData(node.id, {
+        metadata: { modelInfo },
+      });
+    },
+    [setNodeData, node.id],
+  );
 
-  const { steps = [], context, history = [] } = result ?? {};
-  const contextItems = useMemo(() => {
-    // Prefer contextItems from node metadata
-    if (data?.metadata?.contextItems) {
-      return purgeContextItems(data?.metadata?.contextItems);
-    }
-
-    // Fallback to contextItems from context (could be legacy nodes)
-    return convertResultContextToItems(context ?? {}, history);
-  }, [data?.metadata?.contextItems, context, history]);
-
-  const setNodeDataByEntity = useSetNodeDataByEntity();
+  const setSelectedToolsets = useCallback(
+    (toolsets: GenericToolset[]) => {
+      setNodeData(node.id, {
+        metadata: { selectedToolsets: toolsets },
+      });
+    },
+    [setNodeData, node.id],
+  );
 
   const setContextItems = useCallback(
-    (items: IContextItem[]) => {
-      setNodeDataByEntity(
-        { entityId: data.entityId, type: 'skillResponse' },
-        { metadata: { contextItems: items } },
-      );
+    (contextItems: IContextItem[]) => {
+      setNodeData(node.id, {
+        metadata: { contextItems: purgeContextItems(contextItems) },
+      });
     },
-    [data.entityId, setNodeDataByEntity],
+    [setNodeData, node.id],
   );
+
+  const { steps = [] } = result ?? {};
 
   // Handle file drop
   const handleDrop = useCallback(
@@ -313,7 +295,7 @@ const SkillResponseNodePreviewComponent = ({
           name: actionMeta?.name || 'commonQnA',
         },
         contextItems,
-        selectedToolsets: nodeSelectedToolsets,
+        selectedToolsets,
         version: nextVersion,
       },
       {
@@ -339,7 +321,7 @@ const SkillResponseNodePreviewComponent = ({
         result={result}
         step={outputStep}
         status={result?.status}
-        query={currentQuery ?? title ?? ''}
+        query={query ?? title ?? ''}
       />
     )
   ) : (
@@ -425,15 +407,7 @@ const SkillResponseNodePreviewComponent = ({
                       className="absolute inset-0 bg-refly-primary-default/10 border-2 border-refly-Card-Border rounded-lg flex items-center justify-center z-10"
                       style={{ backdropFilter: 'blur(20px)' }}
                     >
-                      <div
-                        className="text-sm font-semibold text-refly-primary-default text-center"
-                        style={{
-                          fontFamily: 'PingFang SC',
-                          fontSize: '14px',
-                          lineHeight: '20px',
-                          letterSpacing: 0,
-                        }}
-                      >
+                      <div className="text-sm font-semibold text-refly-primary-default text-center">
                         {t('common.dragAndDropFiles')}
                       </div>
                     </div>
@@ -444,26 +418,18 @@ const SkillResponseNodePreviewComponent = ({
                     resultId={resultId}
                     version={version}
                     contextItems={contextItems}
-                    query={currentQuery}
-                    actionMeta={actionMeta}
-                    modelInfo={
-                      modelInfo ?? {
-                        name: '',
-                        label: '',
-                        provider: '',
-                        contextLimit: 0,
-                        maxOutput: 0,
-                      }
-                    }
+                    query={query}
+                    setContextItems={setContextItems}
+                    modelInfo={modelInfo}
+                    setModelInfo={setModelInfo}
                     setEditMode={() => {}}
-                    runtimeConfig={runtimeConfig}
-                    onQueryChange={setCurrentQuery}
+                    setQuery={setQuery}
                     selectedToolsets={selectedToolsets}
                     setSelectedToolsets={setSelectedToolsets}
                   />
 
                   <ConfigInfoDisplay
-                    nodeId={node.id}
+                    prompt={query}
                     selectedToolsets={selectedToolsets}
                     contextItems={contextItems}
                     onRemoveFile={handleRemoveFile}
@@ -507,7 +473,7 @@ const SkillResponseNodePreviewComponent = ({
                           result={result}
                           step={outputStep}
                           status={result?.status}
-                          query={currentQuery ?? title ?? ''}
+                          query={query ?? title ?? ''}
                         />
                       </>
                     )}
@@ -522,7 +488,7 @@ const SkillResponseNodePreviewComponent = ({
                       step={outputStep}
                       nodeId={node.id}
                       initSelectedToolsets={
-                        nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET]
+                        selectedToolsets?.length > 0 ? selectedToolsets : [EMPTY_TOOLSET]
                       }
                     />
                   )}

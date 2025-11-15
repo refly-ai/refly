@@ -13,7 +13,6 @@ import { useDuplicateNode } from '@refly-packages/ai-workspace-common/hooks/canv
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
-// import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { CanvasNode, purgeToolsets } from '@refly/canvas-common';
 import { CanvasNodeType } from '@refly/openapi-schema';
@@ -51,7 +50,7 @@ import { SkillResponseActions } from '@refly-packages/ai-workspace-common/compon
 import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
-import { processQueryWithMentions } from '@refly/utils';
+
 const { Paragraph } = Typography;
 
 const NODE_WIDTH = 320;
@@ -202,7 +201,7 @@ export const SkillResponseNode = memo(
 
     const { t } = useTranslation();
 
-    const { title, editedTitle, contentPreview: content, metadata, entityId } = data ?? {};
+    const { title, contentPreview: content, metadata, entityId } = data ?? {};
 
     // Find current node's corresponding pilot step
     const currentPilotStep = useMemo(() => {
@@ -213,7 +212,7 @@ export const SkillResponseNode = memo(
 
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
-    const { status, structuredData, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
+    const { status, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
@@ -305,9 +304,6 @@ export const SkillResponseNode = memo(
       icon: currentSkill?.icon,
     };
 
-    // Get query and response content from result
-    const query = editedTitle || title;
-
     // Check if node has any connections
     const edges = getEdges();
     const isTargetConnected = edges?.some((edge) => edge.target === id);
@@ -381,7 +377,7 @@ export const SkillResponseNode = memo(
       invokeAction(
         {
           resultId: entityId,
-          query: title,
+          query: data?.metadata?.query ?? '',
           selectedSkill: skill,
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
@@ -398,7 +394,6 @@ export const SkillResponseNode = memo(
       entityId,
       canvasId,
       id,
-      title,
       invokeAction,
       setNodeData,
       resetFailedState,
@@ -572,25 +567,11 @@ export const SkillResponseNode = memo(
               withHistory: true,
             },
           },
-          // // Include the original context items from the response
-          // ...responseContextItems.map((item) => ({
-          //   ...item,
-          //   metadata: {
-          //     ...item.metadata,
-          //     withHistory: undefined,
-          //   },
-          // })),
         ];
 
         // Create node connect filters - include both the response and its context items
         const connectFilters = [
           { type: 'skillResponse' as CanvasNodeType, entityId: data.entityId },
-          // ...responseContextItems
-          //   .filter((item) => item.type !== 'skillResponse')
-          //   .map((item) => ({
-          //     type: item.type as CanvasNodeType,
-          //     entityId: item.entityId,
-          //   })),
         ];
 
         const { position, connectTo } = getConnectionInfo(
@@ -780,7 +761,7 @@ export const SkillResponseNode = memo(
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
-              title={query || t('canvas.nodeTypes.agent')}
+              title={data.editedTitle ?? data.title ?? t('canvas.nodeTypes.agent')}
               readonly={true}
               source="node"
               actions={
@@ -795,15 +776,7 @@ export const SkillResponseNode = memo(
 
             <div className={'relative flex-grow overflow-y-auto w-full'}>
               {/* Always show content preview, use prompt/query as fallback when content is empty */}
-              <SkillResponseContentPreview
-                nodeId={id}
-                className="p-3"
-                content={
-                  processQueryWithMentions((structuredData?.query as any) || query || '')
-                    ?.processedQuery || ''
-                }
-                metadata={metadata as any}
-              />
+              <SkillResponseContentPreview className="p-3" metadata={metadata} />
             </div>
           </div>
         </div>

@@ -138,9 +138,17 @@ export type ToolNodeMeta = {
   originalWidth?: number;
 };
 
+export type AgentConfig = {
+  query?: string;
+  modelInfo?: ModelInfo;
+  selectedToolsets?: GenericToolset[];
+  contextItems?: IContextItem[];
+};
+
 export type ResponseNodeMeta = {
   status?: ActionStatus;
   version?: number;
+  query?: string;
   modelInfo?: ModelInfo | null;
   tokenUsage?: TokenUsageItem[];
   actionMeta?: ActionMeta;

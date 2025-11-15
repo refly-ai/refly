@@ -60,7 +60,7 @@ export const useDuplicateNode = () => {
             title: title,
             entityId: newSkillId,
             metadata: {
-              structuredData: { query: String(query) },
+              query,
               contextItems,
               selectedToolsets,
               modelInfo,

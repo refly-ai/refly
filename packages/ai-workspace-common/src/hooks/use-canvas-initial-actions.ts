@@ -194,15 +194,13 @@ export const useCanvasInitialActions = (canvasId: string) => {
             title: query,
             entityId: resultId,
             metadata: {
+              query,
               status: 'executing',
               selectedSkill,
               selectedToolsets,
               modelInfo,
               runtimeConfig,
               tplConfig,
-              structuredData: {
-                query,
-              },
             },
           },
         });

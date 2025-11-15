@@ -1,21 +1,16 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ModelIcon } from '@lobehub/icons';
 import { ResponseNodeMeta } from '@refly/canvas-common';
-import { GenericToolset, ModelInfo } from '@refly/openapi-schema';
+import { ModelInfo } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { X } from 'refly-icons';
-import { useListMentionItems } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/hooks/use-list-mention-items';
-import { MentionItem } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/mentionList';
 import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
+import { parseMentionsFromQuery, processQueryWithMentions } from '@refly/utils/query-processor';
 
 interface SkillResponseContentPreviewProps {
-  // Preview content to display (will be truncated if overflow)
-  nodeId: string;
-
-  content: string;
   // Metadata containing model info, tools, and input variables
   metadata?: ResponseNodeMeta;
   // Additional CSS classes
@@ -52,37 +47,19 @@ ModelLabel.displayName = 'ModelLabel';
  * 4. Input variables as tag array
  */
 export const SkillResponseContentPreview = memo(
-  ({ nodeId, content, metadata, className = '' }: SkillResponseContentPreviewProps) => {
+  ({ metadata, className = '' }: SkillResponseContentPreviewProps) => {
     const { i18n, t } = useTranslation();
-    const allItems = useListMentionItems(nodeId);
 
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
 
-    // Extract model info
-    const modelInfo = useMemo(() => {
-      return metadata?.modelInfo || null;
-    }, [metadata?.modelInfo]);
+    const query = metadata?.query ?? (metadata?.structuredData?.query as string) ?? '';
+    const modelInfo = metadata?.modelInfo;
+    const toolsets = metadata?.selectedToolsets ?? [];
 
-    // Extract toolsets with full object info for icon and localized labels
-    const toolsets = useMemo(() => {
-      const tools: GenericToolset[] = [];
-
-      // Add additional toolsets if available
-      const selectedToolsets = metadata?.selectedToolsets || [];
-      for (const toolset of selectedToolsets) {
-        if (toolset) {
-          tools.push(toolset);
-        }
-      }
-
-      return tools;
-    }, [metadata?.selectedToolsets]);
+    const content = processQueryWithMentions(query)?.processedQuery || '';
 
     // Extract input variable names from contextItems
-    const inputVariables = useMemo(() => {
-      const variableItems = allItems.filter((item) => item.source === 'variables');
-      return variableItems.map((item: MentionItem) => item?.name || item?.entityId).filter(Boolean);
-    }, [allItems]);
+    const variableMentions = parseMentionsFromQuery(query)?.filter((item) => item.type === 'var');
 
     return (
       <div className={`flex flex-col gap-2 ${className}`}>
@@ -121,8 +98,8 @@ export const SkillResponseContentPreview = memo(
 
         <LabelDisplay
           title={t('canvas.skillResponse.config.input')}
-          labels={inputVariables.map((varName) => ({
-            labeltext: varName,
+          labels={variableMentions.map((varName) => ({
+            labeltext: varName.name,
             icon: <X size={12} className="flex-shrink-0" />,
           }))}
           labelClassnames="bg-refly-node-contrl-2"
