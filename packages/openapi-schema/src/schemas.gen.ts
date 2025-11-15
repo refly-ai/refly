@@ -2276,6 +2276,7 @@ export const ActionResultSchema = {
     title: {
       type: 'string',
       description: 'Action result title',
+      deprecated: true,
     },
     input: {
       description: 'Action input',
@@ -9147,6 +9148,7 @@ export const CanvasNodeDataSchema = {
     editedTitle: {
       type: 'string',
       description: 'Node edited title',
+      deprecated: true,
     },
     entityId: {
       type: 'string',

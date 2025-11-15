@@ -25,6 +25,9 @@ import { IContextItem } from '@refly/common-types';
 
 export type CanvasNodeData<T = Record<string, unknown>> = {
   title: string;
+  /**
+   * @deprecated Use `title` instead.
+   */
   editedTitle?: string; // manually edited title
   entityId: string;
   createdAt?: string;

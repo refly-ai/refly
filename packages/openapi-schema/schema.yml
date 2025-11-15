@@ -5595,6 +5595,7 @@ components:
         title:
           type: string
           description: Action result title
+          deprecated: true
         input:
           description: Action input
           $ref: '#/components/schemas/SkillInput'
@@ -10405,6 +10406,7 @@ components:
         editedTitle:
           type: string
           description: Node edited title
+          deprecated: true
         entityId:
           type: string
           description: Node entity ID

@@ -1742,6 +1742,7 @@ export type ActionResult = {
   version?: number;
   /**
    * Action result title
+   * @deprecated
    */
   title?: string;
   /**
@@ -6453,6 +6454,7 @@ export type CanvasNodeData = {
   title: string;
   /**
    * Node edited title
+   * @deprecated
    */
   editedTitle?: string;
   /**

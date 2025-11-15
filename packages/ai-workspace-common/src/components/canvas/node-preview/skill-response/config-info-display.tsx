@@ -7,6 +7,8 @@ import { X, AiChat } from 'refly-icons';
 import { Question } from 'refly-icons';
 import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
+import { CanvasNode } from '@refly/canvas-common';
+import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
 
 interface ConfigInfoDisplayProps {
   prompt: string;
@@ -61,6 +63,17 @@ export const ConfigInfoDisplay = memo(
     const agents = useMemo(() => {
       return contextItems.filter((item) => item.type === 'skillResponse');
     }, [contextItems]);
+
+    const { nodes } = useRealtimeCanvasData();
+    const agentNodeMap = useMemo(() => {
+      const m = new Map<string, CanvasNode>();
+      for (const node of nodes) {
+        if (node.type === 'skillResponse') {
+          m.set(node.data?.entityId, node);
+        }
+      }
+      return m;
+    }, [nodes]);
 
     return (
       <div className="flex flex-col gap-4 mt-4">
@@ -143,15 +156,19 @@ export const ConfigInfoDisplay = memo(
               {t('agent.config.agents')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
-              {agents.map((item: IContextItem, index) => (
-                <Tag
-                  key={`${item.entityId}-${index}`}
-                  className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
-                >
-                  <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
-                  <span className="truncate">{item.title}</span>
-                </Tag>
-              ))}
+              {agents.map((item: IContextItem, index) => {
+                const node = agentNodeMap.get(item.entityId);
+                const title = node?.data?.title ?? item.title;
+                return (
+                  <Tag
+                    key={`${item.entityId}-${index}`}
+                    className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
+                  >
+                    <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
+                    <span className="truncate">{title}</span>
+                  </Tag>
+                );
+              })}
             </div>
           </div>
         }

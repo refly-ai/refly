@@ -17,7 +17,6 @@ export const convertResultContextToItems = (
     items.push({
       type: 'skillResponse',
       entityId: item.resultId,
-      title: item.title ?? '',
     });
   }
 

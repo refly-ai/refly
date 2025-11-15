@@ -37,7 +37,7 @@ export const useDuplicateNode = () => {
 
       // Extract metadata for duplication
       const { contextItems, selectedToolsets, modelInfo, runtimeConfig } = data?.metadata || {};
-      const title = String(data?.editedTitle || data?.title || '');
+      const title = String(data?.title || '');
       const query = data?.metadata?.structuredData?.query;
 
       if (!query) {

@@ -329,7 +329,7 @@ const SkillResponseNodePreviewComponent = ({
       <SkillResponseNodeHeader
         nodeId={node.id}
         entityId={data.entityId}
-        title={data.editedTitle ?? title}
+        title={title}
         readonly={readonly}
         source="preview"
         className="!h-14"
