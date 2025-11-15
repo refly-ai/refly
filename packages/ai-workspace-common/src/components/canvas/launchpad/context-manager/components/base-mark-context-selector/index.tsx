@@ -74,7 +74,7 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
   }, [onClickOutside]);
 
   const { nodes } = useCanvasData();
-  const { data: resources } = useFetchDriveFiles();
+  const { data: files } = useFetchDriveFiles();
   const targetNodes = nodes.filter((node) => !CONTEXT_FILTER_NODE_TYPES.includes(node?.type));
 
   const handleClear = () => {
@@ -108,21 +108,15 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
 
     // Process unselected resources
     const unselectedResources =
-      resources
-        ?.filter(
-          (resource) =>
-            !selectedItems.some((selected) => selected.entityId === resource.resourceId),
-        )
-        .map((resource) => ({
-          title: resource.title,
-          entityId: resource.resourceId,
-          type: 'resource',
+      files
+        ?.filter((file) => !selectedItems.some((selected) => selected.entityId === file.fileId))
+        .map((file) => ({
+          title: file.name,
+          entityId: file.fileId,
+          type: 'file',
           metadata: {
-            resourceType: resource.resourceType,
-            resourceMeta: resource.data,
-            storageKey: resource.storageKey,
-            rawFileKey: resource.rawFileKey,
-            downloadURL: resource.downloadURL,
+            type: file.type,
+            category: file.category,
           },
         })) ?? [];
 
@@ -138,7 +132,7 @@ export const BaseMarkContextSelector = (props: BaseMarkContextSelectorProps) => 
 
     // Return selected items first, followed by filtered unselected items
     return [...(selectedItems ?? []), ...filteredUnselectedItems];
-  }, [targetNodes, resources, searchValue, selectedItems]);
+  }, [targetNodes, files, searchValue, selectedItems]);
 
   // Memoize the render data transformation
   const sortedRenderData = useMemo(() => {

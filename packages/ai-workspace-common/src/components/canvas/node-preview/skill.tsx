@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, memo, useRef } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import { ModelInfo, SkillRuntimeConfig } from '@refly/openapi-schema';
+import { ModelInfo } from '@refly/openapi-schema';
 import { CanvasNode, CanvasNodeData, SkillNodeMeta } from '@refly/canvas-common';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
@@ -31,7 +31,6 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
     query,
     modelInfo,
     contextItems = [],
-    runtimeConfig,
     selectedToolsets: metadataSelectedToolsets = [],
   } = metadata;
 
@@ -89,13 +88,6 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
   const setContextItems = useCallback(
     (items: IContextItem[]) => {
       setNodeDataByEntity({ entityId, type: 'skill' }, { metadata: { contextItems: items } });
-    },
-    [entityId, setNodeDataByEntity],
-  );
-
-  const setRuntimeConfig = useCallback(
-    (runtimeConfig: SkillRuntimeConfig) => {
-      setNodeDataByEntity({ entityId, type: 'skill' }, { metadata: { runtimeConfig } });
     },
     [entityId, setNodeDataByEntity],
   );
@@ -208,8 +200,6 @@ export const SkillNodePreview = memo(({ node }: SkillNodePreviewProps) => {
         handleAbort={abortAction}
         onUploadImage={handleImageUpload}
         contextItems={contextItems}
-        runtimeConfig={runtimeConfig ?? {}}
-        setRuntimeConfig={setRuntimeConfig}
         selectedToolsets={selectedToolsets}
         setSelectedToolsets={setSelectedToolsets}
       />

@@ -6430,6 +6430,7 @@ export type CanvasNodeType =
   | 'website'
   | 'resource'
   | 'skill'
+  | 'file'
   | 'tool'
   | 'skillResponse'
   | 'toolResponse'

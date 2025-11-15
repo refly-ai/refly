@@ -39,7 +39,7 @@ export const ContextItem = ({
   const { setNodeCenter } = useNodePosition();
   const { canvasId } = useGetProjectCanvasId();
   const { handleNodePreview } = useNodePreviewControl({ canvasId });
-  const { data: resourcesData } = useFetchDriveFiles();
+  const { data: files } = useFetchDriveFiles();
 
   const node = useMemo(() => {
     const nodes = getNodes();
@@ -47,14 +47,14 @@ export const ContextItem = ({
   }, [getNodes, entityId]);
 
   const finalTitle = useMemo(() => {
-    if (type === 'resource') {
-      const resource = resourcesData?.find((resource) => resource.resourceId === entityId);
-      return resource?.title || title || t('common.untitled');
+    if (type === 'file') {
+      const file = files?.find((file) => file.fileId === entityId);
+      return file?.name || title || t('common.untitled');
     }
     const nodeTitle = getNode(node?.id)?.data?.title;
     const stringifiedNodeTitle = nodeTitle != null ? String(nodeTitle) : null;
     return stringifiedNodeTitle || title || t(`canvas.nodeTypes.${type}`);
-  }, [node?.id, getNode, title, type, t, resourcesData, entityId]);
+  }, [node?.id, getNode, title, type, t, files, entityId]);
 
   const handleItemClick = useCallback(() => {
     const nodes = getNodes();

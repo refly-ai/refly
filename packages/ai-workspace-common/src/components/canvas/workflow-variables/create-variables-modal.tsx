@@ -53,7 +53,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       return t(`canvas.workflow.variables.${mode === 'create' ? 'addTitle' : 'editTitle'}`);
     }, [t, mode, disableChangeVariableType, variableType]);
 
-    const { refetch: refetchResources } = useFetchDriveFiles();
+    const { refetch: refetchFiles } = useFetchDriveFiles();
 
     const variableTypeOptions = useMemo(() => {
       return [
@@ -468,7 +468,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           onCancel(false);
 
           if (variableType === 'resource') {
-            refetchResources();
+            refetchFiles();
           }
         }
       } catch (error) {

@@ -9120,6 +9120,7 @@ export const CanvasNodeTypeSchema = {
     'website',
     'resource',
     'skill',
+    'file',
     'tool',
     'skillResponse',
     'toolResponse',

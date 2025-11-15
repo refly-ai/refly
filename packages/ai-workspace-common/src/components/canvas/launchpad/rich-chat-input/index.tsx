@@ -92,7 +92,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const isLogin = useUserStoreShallow((state) => state.isLogin);
     const { canvasId, workflow } = useCanvasContext();
-    const { data: resources } = useFetchDriveFiles();
+    const { data: files } = useFetchDriveFiles();
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
     }));
@@ -239,7 +239,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           // For resource type variables, find the corresponding resource data and add to context
           if (item.variableValue?.length && item.variableValue[0]?.resource) {
             const resourceValue = item.variableValue[0].resource;
-            const resource = resources.find((r) => r.fileId === resourceValue.entityId);
+            const resource = files.find((r) => r.fileId === resourceValue.entityId);
 
             const contextItem: IContextItem = {
               entityId: resourceValue.entityId,
@@ -283,7 +283,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           });
         }
       },
-      [addToContextItems, addToSelectedToolsets, insertMention, resources],
+      [addToContextItems, addToSelectedToolsets, insertMention, files],
     );
 
     // Create mention extension with custom suggestion

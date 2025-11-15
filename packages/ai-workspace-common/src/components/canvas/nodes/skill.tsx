@@ -5,7 +5,7 @@ import { CustomHandle } from './shared/custom-handle';
 import { useState, useCallback, useEffect, useMemo, memo, useRef } from 'react';
 
 import { getNodeCommonStyles } from './shared/styles';
-import { ModelCapabilities, ModelInfo, SkillRuntimeConfig } from '@refly/openapi-schema';
+import { ModelCapabilities, ModelInfo } from '@refly/openapi-schema';
 
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -175,13 +175,6 @@ export const SkillNode = memo(
         }, 10);
       },
       [id, setNodeData, setEdges, getNodes, getEdges, edgeStyles.hover],
-    );
-
-    const setRuntimeConfig = useCallback(
-      (runtimeConfig: SkillRuntimeConfig) => {
-        setNodeData(id, { metadata: { runtimeConfig } });
-      },
-      [id, setNodeData],
     );
 
     const setSelectedToolsets = useCallback(
@@ -522,8 +515,6 @@ export const SkillNode = memo(
             setContextItems={setContextItems}
             modelInfo={modelInfo}
             setModelInfo={setModelInfo}
-            runtimeConfig={runtimeConfig || {}}
-            setRuntimeConfig={setRuntimeConfig}
             placeholder={t('canvas.launchpad.commonChatInputPlaceholder')}
             inputClassName="px-1 py-0"
             maxRows={6}

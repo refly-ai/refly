@@ -664,7 +664,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: CanvasNode<any>) => {
-      console.log('node', node);
       if (!node) return;
 
       if (node.id.startsWith('ghost-')) {
