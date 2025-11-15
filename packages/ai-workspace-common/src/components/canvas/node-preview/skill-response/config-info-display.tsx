@@ -15,6 +15,7 @@ interface ConfigInfoDisplayProps {
   selectedToolsets: GenericToolset[];
   contextItems?: IContextItem[];
   onRemoveFile?: (file: any) => void;
+  onRemoveContextItem?: (item: IContextItem) => void;
 }
 
 const SectionTitle = memo(
@@ -36,7 +37,13 @@ const SectionTitle = memo(
 SectionTitle.displayName = 'SectionTitle';
 
 export const ConfigInfoDisplay = memo(
-  ({ prompt, selectedToolsets, contextItems = [], onRemoveFile }: ConfigInfoDisplayProps) => {
+  ({
+    prompt,
+    selectedToolsets,
+    contextItems = [],
+    onRemoveFile,
+    onRemoveContextItem,
+  }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
 
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
@@ -162,6 +169,8 @@ export const ConfigInfoDisplay = memo(
                 return (
                   <Tag
                     key={`${item.entityId}-${index}`}
+                    closable
+                    onClose={() => onRemoveContextItem?.(item)}
                     className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
                   >
                     <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />

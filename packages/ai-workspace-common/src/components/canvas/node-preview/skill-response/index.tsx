@@ -229,11 +229,26 @@ const SkillResponseNodePreviewComponent = ({
     });
   }, []);
 
+  const handleRemoveContextItem = useCallback(
+    (item: IContextItem) => {
+      if (!item?.entityId) {
+        return;
+      }
+
+      const currentItems = contextItems ?? [];
+      const nextItems = currentItems.filter(
+        (contextItem) => contextItem.entityId !== item.entityId,
+      );
+      setContextItems(nextItems);
+    },
+    [contextItems, setContextItems],
+  );
+
   const handleRemoveFile = useCallback(
     (file: IContextItem) => {
-      setContextItems(contextItems.filter((item) => item.entityId !== file.entityId));
+      handleRemoveContextItem(file);
     },
-    [contextItems],
+    [handleRemoveContextItem],
   );
 
   const handleAddToolsAndContext = useCallback(() => {
@@ -433,6 +448,7 @@ const SkillResponseNodePreviewComponent = ({
                     selectedToolsets={selectedToolsets}
                     contextItems={contextItems}
                     onRemoveFile={handleRemoveFile}
+                    onRemoveContextItem={handleRemoveContextItem}
                   />
                 </div>
               </div>
