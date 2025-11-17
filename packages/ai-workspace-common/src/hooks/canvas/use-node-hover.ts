@@ -59,30 +59,30 @@ export const useNodeHoverEffect = (nodeId: string) => {
         });
       });
 
-      setEdges((eds) => {
-        return eds.map((edge) => {
-          // Handle edges connected to the node
-          if (edge.source === nodeId || edge.target === nodeId) {
-            return {
-              ...edge,
-              data: { ...edge.data, hover: isHovered },
-            };
-          }
+      // setEdges((eds) => {
+      //   return eds.map((edge) => {
+      //     // Handle edges connected to the node
+      //     if (edge.source === nodeId || edge.target === nodeId) {
+      //       return {
+      //         ...edge,
+      //         data: { ...edge.data, hover: isHovered },
+      //       };
+      //     }
 
-          // Handle edges between nodes in the same group when group is selected
-          if (isGroupNode && selected) {
-            const sourceNode = getNodes().find((node) => node.id === edge.source);
-            const targetNode = getNodes().find((node) => node.id === edge.target);
+      //     // Handle edges between nodes in the same group when group is selected
+      //     if (isGroupNode && selected) {
+      //       const sourceNode = getNodes().find((node) => node.id === edge.source);
+      //       const targetNode = getNodes().find((node) => node.id === edge.target);
 
-            if (sourceNode?.parentId === nodeId && targetNode?.parentId === nodeId) {
-              return { ...edge, zIndex: ZINDEX_ON_GROUP };
-            }
-          }
+      //       if (sourceNode?.parentId === nodeId && targetNode?.parentId === nodeId) {
+      //         return { ...edge, zIndex: ZINDEX_ON_GROUP };
+      //       }
+      //     }
 
-          // Reset edge hover state for other edges
-          return { ...edge, data: { ...edge.data, hover: false } };
-        });
-      });
+      //     // Reset edge hover state for other edges
+      //     return { ...edge, data: { ...edge.data, hover: false } };
+      //   });
+      // });
     },
     [nodeId, setEdges, setNodes, getNodes],
   );

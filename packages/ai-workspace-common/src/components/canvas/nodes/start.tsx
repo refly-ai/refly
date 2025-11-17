@@ -129,6 +129,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
             title: '',
             entityId: genNodeEntityId('skillResponse'),
             metadata: {
+              status: 'init',
               contextItems: workflowVariables.map((variable) => ({
                 name: variable.name,
                 value: variable.value,

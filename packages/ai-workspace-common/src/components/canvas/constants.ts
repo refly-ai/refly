@@ -13,30 +13,31 @@ export const useEdgeStyles = () => {
   return useMemo(
     () => ({
       default: {
-        stroke: showEdges || readonly ? (isDarkMode ? '#4b5563' : '#D0D5DD') : 'transparent',
-        strokeWidth: 1,
+        stroke: showEdges || readonly ? 'var(--refly-line)' : 'transparent',
+        strokeWidth: 1.5,
+        strokeDasharray: '6 6',
         transition: 'stroke 0.2s, stroke-width 0.2s',
       },
       hover: {
-        stroke: '#0E9F77',
-        strokeWidth: 2,
+        stroke: 'var(--refly-primary-default)',
+        strokeWidth: 1.5,
         transition: 'stroke 0.2s, stroke-width 0.2s',
       },
       selected: {
-        stroke: '#0E9F77',
-        strokeWidth: 2,
+        stroke: 'var(--refly-primary-default)',
+        strokeWidth: 1.5,
         transition: 'stroke 0.2s, stroke-width 0.2s',
       },
     }),
-    [showEdges],
+    [showEdges, readonly, isDarkMode],
   );
 };
 
-export const getEdgeStyles = (showEdges: boolean, isDarkMode?: boolean) => {
+export const getEdgeStyles = (showEdges: boolean) => {
   return {
     default: {
-      stroke: showEdges ? (isDarkMode ? '#4b5563' : '#D0D5DD') : 'transparent',
-      strokeWidth: 1,
+      stroke: showEdges ? 'var(--refly-line)' : 'transparent',
+      strokeWidth: 1.5,
       transition: 'stroke 0.2s, stroke-width 0.2s',
     },
   };

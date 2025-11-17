@@ -6,7 +6,6 @@ import { CanvasNode, CanvasNodeData } from '@refly/canvas-common';
 import { IContextItem } from '@refly/common-types';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
-import { useThemeStore } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
 
@@ -248,8 +247,7 @@ export const useEdgeOperations = () => {
   const updateAllEdgesStyle = useCallback(
     (showEdges: boolean) => {
       const { edges } = getState();
-      const { isDarkMode } = useThemeStore.getState();
-      const edgeStyles = getEdgeStyles(showEdges, isDarkMode);
+      const edgeStyles = getEdgeStyles(showEdges);
       const safeEdges = edges ?? [];
       const updatedEdges = safeEdges.map((edge) => ({
         ...edge,

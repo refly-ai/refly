@@ -51,6 +51,7 @@ import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
 import { useSyncAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-agent-connections';
+import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 
 const { Paragraph } = Typography;
 
@@ -160,12 +161,26 @@ export const SkillResponseNode = memo(
     hideHandles = false,
     onNodeClick,
   }: SkillResponseNodeProps) => {
-    const [isHovered, _setIsHovered] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
     useSelectedNodeZIndex(id, selected);
 
     const { setNodeData, setNodeStyle } = useNodeData();
     const { getEdges } = useReactFlow();
     const { readonly, canvasId } = useCanvasContext();
+
+    const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
+
+    // Handle node hover events
+    const handleMouseEnter = useCallback(() => {
+      setIsHovered(true);
+      onHoverStart();
+    }, [onHoverStart]);
+
+    const handleMouseLeave = useCallback(() => {
+      setIsHovered(false);
+      onHoverEnd();
+    }, [onHoverEnd]);
 
     // Get current pilot session info
     const activeSessionId = usePilotStoreShallow(
@@ -725,12 +740,14 @@ export const SkillResponseNode = memo(
       <>
         <div
           className={cn(
-            'rounded-2xl relative',
+            'rounded-2xl relative hover:shadow-refly-m',
             // Apply executing/waiting glow effect on outer container
             status === 'executing' || status === 'waiting' ? 'executing-glow-effect' : '',
           )}
           data-cy="skill-response-node"
           onClick={onNodeClick}
+          onMouseEnter={!isPreview ? handleMouseEnter : undefined}
+          onMouseLeave={!isPreview ? handleMouseLeave : undefined}
         >
           {!isPreview && !hideHandles && (
             <>

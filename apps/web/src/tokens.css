@@ -15,7 +15,7 @@
   --refly-Card-Border: rgba(0, 0, 0, 0.1);
   --refly-semi-color-border: rgba(28, 31, 35, 0.08);
   --refly-semi-color-bg-0: #ffffff;
-  --refly-line: #1c232229;
+  --refly-line:  #b9c1c1;
   --refly-text-0: #1c1f23;
   --refly-text-1: #1c1f23cc;
   --refly-text-2: #1c1f2399;
@@ -63,6 +63,7 @@
   --refly-node-fill-1: #d9fffe;
   --refly-node-fill-2: #fef2cf;
   --refly-node-run: #7effdb;
+  --refly-bg-dark: #2d2d2d;
 }
 
 /* Dark Theme */
@@ -82,7 +83,7 @@
   --refly-Card-Border: rgba(216, 216, 216, 0.1);
   --refly-semi-color-border: rgba(255, 255, 255 0.08);
   --refly-semi-color-bg-0: rgba(22, 22, 26, 1);
-  --refly-line: #1c23221a;
+  --refly-line: #383b3b;
   --refly-text-0: #f9f9f9;
   --refly-text-1: #f9f9f9cc;
   --refly-text-2: #f9f9f999;
@@ -130,4 +131,5 @@
   --refly-node-fill-1: #2c5c5a;
   --refly-node-fill-2: #856e24;
   --refly-node-run: rgba(126, 255, 219, 0.6);
+  --refly-bg-dark: #ececec;
 }
