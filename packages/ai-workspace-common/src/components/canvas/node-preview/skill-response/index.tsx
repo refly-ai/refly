@@ -55,6 +55,7 @@ const SkillResponseNodePreviewComponent = ({
   const [activeTab, setActiveTab] = useState('configure');
 
   const shareId = node.data?.metadata?.shareId;
+  const nodeStatus = node.data?.metadata?.status;
   const { data: shareData, loading: shareDataLoading } = useFetchShareData(shareId);
   const loading = fetchActionResultLoading || shareDataLoading;
 
@@ -68,14 +69,14 @@ const SkillResponseNodePreviewComponent = ({
 
   useEffect(() => {
     // Do not fetch action result if streaming
-    if (isStreaming) {
+    if (isStreaming || nodeStatus === 'init') {
       return;
     }
     if (!!resultId && shareData?.resultId !== resultId) {
       // Always refresh in background to keep store up-to-date
       fetchActionResult(resultId, { silent: !!result, nodeToUpdate: node });
     }
-  }, [resultId, shareId, isStreaming, shareData, node?.data?.metadata?.status]);
+  }, [resultId, shareId, isStreaming, shareData, nodeStatus]);
 
   const scrollToBottom = useCallback(
     (event: { resultId: string; payload: ActionResult }) => {
