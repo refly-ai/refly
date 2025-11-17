@@ -82,6 +82,7 @@ type StartNodeProps = NodeProps & {
 };
 
 export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodeProps) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [previousWidth, setPreviousWidth] = useState<string | number>('fit-content');
   const { edges } = useCanvasData();
@@ -281,8 +282,8 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
             </div>
           </div>
         ) : (
-          <div className="flex flex-col p-3">
-            <div>Select to edit in editor</div>
+          <div className="flex flex-col p-3 text-xs text-refly-text-2">
+            {t('canvas.nodeActions.selectToEdit')}
           </div>
         )}
       </div>

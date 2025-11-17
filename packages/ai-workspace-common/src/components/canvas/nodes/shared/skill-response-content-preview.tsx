@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@refly/utils/cn';
 import { ModelIcon } from '@lobehub/icons';
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { ModelInfo } from '@refly/openapi-schema';
@@ -63,7 +64,10 @@ export const SkillResponseContentPreview = memo(
 
     return (
       <div className={`flex flex-col gap-2 ${className}`}>
-        <div className="text-xs truncate w-full mb-1" title={content}>
+        <div
+          className={cn('text-xs truncate w-full mb-1', { 'text-refly-text-2': !content })}
+          title={content}
+        >
           {content || t('canvas.nodeActions.selectToEdit')}
         </div>
 
