@@ -2084,6 +2084,7 @@ const translations = {
   agent: {
     configure: '配置',
     lastRun: '最近运行',
+    noResult: '运行后才有记录哦',
     config: {
       model: '模型',
       modelDescription:

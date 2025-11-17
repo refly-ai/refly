@@ -1,11 +1,12 @@
 import { memo, useMemo } from 'react';
-import { Button, Divider, Result, Skeleton } from 'antd';
+import { Divider, Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Thinking } from 'refly-icons';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { ActionContainer } from './action-container';
 import { ActionStepCard } from './action-step';
 import { FailureNotice } from './failure-notice';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 
 interface LastRunTabProps {
   loading: boolean;
@@ -17,7 +18,6 @@ interface LastRunTabProps {
   title?: string;
   nodeId: string;
   selectedToolsets: GenericToolset[];
-  handleDelete: () => void;
   handleRetry: () => void;
 }
 
@@ -31,7 +31,6 @@ const LastRunTabComponent = ({
   title,
   nodeId,
   selectedToolsets,
-  handleDelete,
   handleRetry,
 }: LastRunTabProps) => {
   const { t } = useTranslation();
@@ -44,12 +43,9 @@ const LastRunTabComponent = ({
 
   if (!result && !loading) {
     return (
-      <div className="h-full w-full flex items-center justify-center">
-        <Result
-          status="404"
-          subTitle={t('canvas.skillResponse.resultNotFound')}
-          extra={<Button onClick={handleDelete}>{t('canvas.nodeActions.delete')}</Button>}
-        />
+      <div className="h-full w-full flex flex-col items-center justify-center">
+        <img src={EmptyImage} alt="no content" className="w-[180px] h-[180px] -mb-4" />
+        <div className="text-sm text-refly-text-2 leading-5">{t('agent.noResult')}</div>
       </div>
     );
   }

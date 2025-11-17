@@ -2,7 +2,6 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
-import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
@@ -16,9 +15,10 @@ import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
 import { useActionResultStoreShallow } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
-import { Button, Result, Segmented } from 'antd';
+import { Segmented } from 'antd';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';
@@ -44,7 +44,6 @@ const SkillResponseNodePreviewComponent = ({
   }));
 
   const { setNodeData } = useNodeData();
-  const { deleteNode } = useDeleteNode();
   const { fetchActionResult, loading: fetchActionResultLoading } = useFetchActionResult();
 
   const { canvasId, readonly } = useCanvasContext();
@@ -191,15 +190,6 @@ const SkillResponseNodePreviewComponent = ({
     );
   }, [result?.status, steps, t]);
 
-  const handleDelete = useCallback(() => {
-    deleteNode({
-      id: node.id,
-      type: 'skillResponse',
-      data: node.data,
-      position: node.position || { x: 0, y: 0 },
-    });
-  }, [node, deleteNode]);
-
   const handleRetry = useCallback(() => {
     // Reset failed state before retrying
     resetFailedState(resultId);
@@ -238,11 +228,7 @@ const SkillResponseNodePreviewComponent = ({
   return purePreview ? (
     !result && !loading ? (
       <div className="h-full w-full flex items-center justify-center">
-        <Result
-          status="404"
-          subTitle={t('canvas.skillResponse.resultNotFound')}
-          extra={<Button onClick={handleDelete}>{t('canvas.nodeActions.delete')}</Button>}
-        />
+        <img src={EmptyImage} alt="no content" className="w-[120px] h-[120px] -mb-4" />
       </div>
     ) : (
       <ActionStepCard
@@ -306,7 +292,6 @@ const SkillResponseNodePreviewComponent = ({
               title={title}
               nodeId={node.id}
               selectedToolsets={selectedToolsets}
-              handleDelete={handleDelete}
               handleRetry={handleRetry}
             />
           )}

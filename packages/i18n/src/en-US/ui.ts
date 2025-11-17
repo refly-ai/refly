@@ -2100,6 +2100,7 @@ const translations = {
   agent: {
     configure: 'Configure',
     lastRun: 'Last Run',
+    noResult: 'Run to get results',
     config: {
       model: 'Model',
       modelDescription:
