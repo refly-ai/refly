@@ -37,11 +37,7 @@ export const PreviewComponent = memo(
       node.data?.entityId,
       node.data?.contentPreview,
       node.data?.title,
-      node.data?.metadata?.status,
-      node.data?.metadata?.activeTab,
-      node.data?.metadata?.url,
-      node.data?.metadata?.viewMode,
-      node.data?.metadata?.contextItems,
+      node.data?.metadata,
     ]);
   },
   (prevProps, nextProps) => {
