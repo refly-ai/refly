@@ -6929,13 +6929,13 @@ export type DriveFileCategory = 'document' | 'image' | 'video' | 'audio';
 
 export type DriveFile = {
   /**
-   * Canvas ID
-   */
-  canvasId: string;
-  /**
    * Drive file ID
    */
   fileId: string;
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
   /**
    * Drive file name
    */
@@ -6951,19 +6951,19 @@ export type DriveFile = {
   /**
    * Drive file size
    */
-  size: number;
+  size?: number;
   /**
    * Drive file summary
    */
-  summary: string;
+  summary?: string;
   /**
    * Action result ID
    */
-  resultId: string;
+  resultId?: string;
   /**
    * Action result version
    */
-  resultVersion: number;
+  resultVersion?: number;
   /**
    * Drive file content (only used for model input)
    */

@@ -10921,21 +10921,17 @@ components:
     DriveFile:
       type: object
       required:
-        - canvasId
         - fileId
+        - canvasId
         - name
         - type
-        - size
-        - summary
-        - resultId
-        - resultVersion
       properties:
-        canvasId:
-          type: string
-          description: Canvas ID
         fileId:
           type: string
           description: Drive file ID
+        canvasId:
+          type: string
+          description: Canvas ID
         name:
           type: string
           description: Drive file name

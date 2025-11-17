@@ -9840,15 +9840,15 @@ export const DriveFileCategorySchema = {
 
 export const DriveFileSchema = {
   type: 'object',
-  required: ['canvasId', 'fileId', 'name', 'type', 'size', 'summary', 'resultId', 'resultVersion'],
+  required: ['fileId', 'canvasId', 'name', 'type'],
   properties: {
-    canvasId: {
-      type: 'string',
-      description: 'Canvas ID',
-    },
     fileId: {
       type: 'string',
       description: 'Drive file ID',
+    },
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
     },
     name: {
       type: 'string',
