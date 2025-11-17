@@ -1,7 +1,9 @@
 import { CanvasNode } from '@refly/canvas-common';
 import { SkillNodePreview } from './skill';
+import { DocumentNodePreview } from './document';
 import { StartNodePreview } from './start';
 import { useMemo, memo } from 'react';
+import { CodeArtifactNodePreview } from './code-artifact';
 import { SkillResponseNodePreview } from './skill-response';
 
 export const PreviewComponent = memo(
@@ -11,6 +13,8 @@ export const PreviewComponent = memo(
     // Use useMemo to create the appropriate preview component
     return useMemo(() => {
       switch (node.type) {
+        case 'document':
+          return <DocumentNodePreview node={node} />;
         case 'skill':
           return <SkillNodePreview node={node} />;
         case 'skillResponse':
@@ -21,6 +25,8 @@ export const PreviewComponent = memo(
               resultId={node.data?.entityId}
             />
           );
+        case 'codeArtifact':
+          return <CodeArtifactNodePreview nodeId={node.id} purePreview={purePreview} />;
         case 'start':
           return <StartNodePreview />;
         default:
@@ -32,7 +38,6 @@ export const PreviewComponent = memo(
       node.data?.contentPreview,
       node.data?.title,
       node.data?.metadata?.status,
-      node.data?.metadata?.modelInfo,
       node.data?.metadata?.activeTab,
       node.data?.metadata?.url,
       node.data?.metadata?.viewMode,
