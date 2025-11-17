@@ -3,10 +3,12 @@ import { Button } from 'antd';
 import { DriveFile } from '@refly/openapi-schema';
 import { serverOrigin } from '@refly/ui-kit';
 import { Download, File } from 'refly-icons';
+import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 
 interface FilePreviewProps {
   file: DriveFile;
+  markdownClassName?: string;
 }
 
 interface FileContent {
@@ -15,7 +17,7 @@ interface FileContent {
   url: string;
 }
 
-export const FilePreview = memo(({ file }: FilePreviewProps) => {
+export const FilePreview = memo(({ file, markdownClassName = '' }: FilePreviewProps) => {
   const [fileContent, setFileContent] = useState<FileContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,21 +110,23 @@ export const FilePreview = memo(({ file }: FilePreviewProps) => {
     if (contentType.startsWith('image/')) {
       return (
         <div className="h-full flex items-center justify-center max-w-[1024px] mx-auto overflow-hidden relative">
-          <img
-            src={url}
-            alt={file.name}
-            className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
-            loading="lazy"
-            onClick={() => setIsPreviewModalVisible(true)}
-          />
-
-          {/* Image Preview Modal */}
-          <div className="absolute inset-0 pointer-events-none">
-            <ImagePreview
-              isPreviewModalVisible={isPreviewModalVisible}
-              setIsPreviewModalVisible={setIsPreviewModalVisible}
-              imageUrl={url}
+          <div className="flex items-center p-3">
+            <img
+              src={url}
+              alt={file.name}
+              className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
+              loading="lazy"
+              onClick={() => setIsPreviewModalVisible(true)}
             />
+
+            {/* Image Preview Modal */}
+            <div className="absolute inset-0 pointer-events-none">
+              <ImagePreview
+                isPreviewModalVisible={isPreviewModalVisible}
+                setIsPreviewModalVisible={setIsPreviewModalVisible}
+                imageUrl={url}
+              />
+            </div>
           </div>
         </div>
       );
@@ -132,8 +136,8 @@ export const FilePreview = memo(({ file }: FilePreviewProps) => {
     if (contentType.startsWith('text/')) {
       const textContent = new TextDecoder().decode(fileContent.data);
       return (
-        <div className="h-full overflow-auto p-4">
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">{textContent}</div>
+        <div className="h-full overflow-auto p-3">
+          <Markdown content={textContent} className={markdownClassName} />
         </div>
       );
     }
@@ -151,11 +155,11 @@ export const FilePreview = memo(({ file }: FilePreviewProps) => {
     if (contentType.startsWith('video/')) {
       return (
         <div className="h-full flex flex-col">
-          <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex-1 flex items-center justify-center p-3">
             <video
               src={url}
               controls
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-full object-contain rounded-lg"
               preload="metadata"
             >
               <track kind="captions" />
@@ -170,7 +174,7 @@ export const FilePreview = memo(({ file }: FilePreviewProps) => {
     if (contentType.startsWith('audio/')) {
       return (
         <div className="h-full flex flex-col">
-          <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex-1 flex items-center justify-center p-3">
             <audio src={url} controls className="w-full max-w-md" preload="metadata">
               <track kind="captions" />
               Your browser does not support the audio element.

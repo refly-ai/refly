@@ -57,7 +57,6 @@ export const useSyncAgentConnections = (
       const filteredEdges = prevEdges.filter((edge) => !removeIds.has(edge.id));
       const updatedEdges = [...filteredEdges, ...edgesToAdd];
 
-      console.log('useSyncAgentConnections updated edges', updatedEdges);
       return updatedEdges;
     });
   }, [contextItems, getNodes, setEdges, nodeId]);
