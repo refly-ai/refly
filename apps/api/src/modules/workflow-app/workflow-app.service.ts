@@ -217,10 +217,14 @@ export class WorkflowAppService {
         const templateLink = `${origin}/app/${shareId}`;
         const templateName = canvasData.title || 'Untitled Template';
         const emailHTML = generateWorkflowAppReviewEmailHTML(templateName, templateLink);
+        const subject = WORKFLOW_APP_REVIEW_EMAIL_TEMPLATE.subject.replace(
+          '{{template_name}}',
+          templateName,
+        );
 
         await this.notificationService.sendEmail(
           {
-            subject: WORKFLOW_APP_REVIEW_EMAIL_TEMPLATE.subject,
+            subject,
             html: emailHTML,
           },
           user,
