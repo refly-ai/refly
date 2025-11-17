@@ -2,7 +2,6 @@ import { memo, useCallback, useMemo, type CSSProperties } from 'react';
 import { BaseEdge, EdgeProps, getBezierPath, useReactFlow, Position } from '@xyflow/react';
 import { useEdgeStyles } from '../constants';
 import { Delete } from 'refly-icons';
-import { useStore } from '@xyflow/react';
 
 type DeleteButtonProps = {
   handleDelete: (event: React.MouseEvent) => void;
@@ -23,11 +22,11 @@ DeleteButton.displayName = 'DeleteButton';
 
 export const CustomEdge = memo(
   ({ sourceX, sourceY, targetX, targetY, selected, data, id, source, target }: EdgeProps) => {
+    const highlight = data?.highlight;
     const edgeStyles = useEdgeStyles();
-    const { setEdges } = useReactFlow();
-    const nodes = useStore((state) => state.nodes);
-    const sourceNode = nodes.find((n) => n.id === source);
-    const targetNode = nodes.find((n) => n.id === target);
+    const { setEdges, getNode } = useReactFlow();
+    const sourceNode = getNode(source);
+    const targetNode = getNode(target);
 
     const isConnectedToStartNode = sourceNode?.type === 'start' || targetNode?.type === 'start';
 
@@ -67,9 +66,6 @@ export const CustomEdge = memo(
       };
 
       const isTempEdge = id?.startsWith?.('temp-edge-') ?? false;
-      const isSourceSelected = sourceNode?.selected ?? false;
-      const isTargetSelected = targetNode?.selected ?? false;
-      const isAnyNodeSelected = isSourceSelected || isTargetSelected;
 
       const targetNodeType = targetNode?.type;
       const targetMetadata = (targetNode?.data as { metadata?: { status?: string } } | undefined)
@@ -94,7 +90,7 @@ export const CustomEdge = memo(
       }
 
       // Edge color when connected nodes are selected (keep dash or solid)
-      if (isAnyNodeSelected) {
+      if (highlight) {
         style.stroke = 'var(--refly-bg-dark)';
         style.strokeWidth = style.strokeWidth ?? 2;
       }

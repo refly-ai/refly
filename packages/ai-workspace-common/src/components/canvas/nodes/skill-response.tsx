@@ -166,7 +166,7 @@ export const SkillResponseNode = memo(
     useSelectedNodeZIndex(id, selected);
 
     const { setNodeData, setNodeStyle } = useNodeData();
-    const { getEdges } = useReactFlow();
+    const { getEdges, setEdges } = useReactFlow();
     const { readonly, canvasId } = useCanvasContext();
 
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
@@ -279,6 +279,17 @@ export const SkillResponseNode = memo(
         });
       }
     }, [id, data?.editedTitle]);
+
+    useEffect(() => {
+      setEdges((edges) =>
+        edges.map((edge) => {
+          if (edge.source === id || edge.target === id) {
+            return { ...edge, data: { ...edge.data, highlight: selected } };
+          }
+          return edge;
+        }),
+      );
+    }, [selected, id, setEdges]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
