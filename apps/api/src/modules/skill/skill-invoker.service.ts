@@ -11,6 +11,7 @@ import {
   ActionStep,
   Artifact,
   CreditBilling,
+  DriveFile,
   ProviderItem,
   SkillEvent,
   TokenUsageItem,
@@ -55,6 +56,7 @@ import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service'
 import { ToolService } from '../tool/tool.service';
 import { InvokeSkillJobData } from './skill.dto';
 import { ToolCallResult } from '../../generated/client';
+import { DriveService } from '../drive/drive.service';
 
 @Injectable()
 export class SkillInvokerService {
@@ -68,6 +70,7 @@ export class SkillInvokerService {
     private readonly config: ConfigService,
     private readonly miscService: MiscService,
     private readonly providerService: ProviderService,
+    private readonly driveService: DriveService,
     private readonly toolService: ToolService,
     private readonly toolCallService: ToolCallService,
     private readonly skillEngineService: SkillEngineService,
@@ -150,10 +153,8 @@ export class SkillInvokerService {
       context,
       tplConfig,
       runtimeConfig,
-      providerItem,
       modelConfigMap,
       provider,
-      resultHistory,
       projectId,
       eventListener,
       toolsets,
@@ -180,6 +181,7 @@ export class SkillInvokerService {
         mode: data.mode,
         resultId: data.result?.resultId,
         version: data.result?.version,
+        canvasId: data.target?.entityType === 'canvas' ? data.target?.entityId : undefined,
       },
     };
 
@@ -192,12 +194,6 @@ export class SkillInvokerService {
         throw new ProjectNotFoundError(`project ${projectId} not found`);
       }
       config.configurable.project = projectPO2DTO(project);
-    }
-
-    if (resultHistory?.length > 0) {
-      config.configurable.chatHistory = await Promise.all(
-        resultHistory.map((r) => this.buildLangchainMessages(user, providerItem, r, r.steps)),
-      ).then((messages) => messages.flat());
     }
 
     if (toolsets?.length > 0) {
@@ -281,14 +277,18 @@ export class SkillInvokerService {
   }
 
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
-    const { input, result } = data;
+    const { input, result, context } = data;
     const { resultId, version, actionMeta, tier } = result;
     this.logger.log(
       `invoke skill with input: ${JSON.stringify(input)}, resultId: ${resultId}, version: ${version}`,
     );
 
-    if (input.images?.length > 0 && (data.providerItem?.config as any)?.capabilities?.vision) {
-      input.images = await this.miscService.generateImageUrls(user, input.images);
+    const imageFiles: DriveFile[] = context?.files
+      ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
+      ?.map((item) => item.file);
+
+    if (imageFiles.length > 0 && (data.providerItem?.config as any)?.capabilities?.vision) {
+      input.images = await this.driveService.generateDriveFileUrls(user, imageFiles);
     } else {
       input.images = [];
     }

@@ -261,6 +261,7 @@ const translations = {
     login: '登录',
     signup: '注册',
     share: '分享',
+    dragAndDropFiles: '在此处拖放文件',
     uploadImage: '上传图片',
     uploadSuccess: '上传成功',
     uploadFailed: '上传失败',
@@ -1170,6 +1171,7 @@ const translations = {
       video: '视频',
       audio: '音频',
       start: '输入项',
+      agent: '智能体',
       documentSelection: '文档选中内容',
       resourceSelection: '资源选中内容',
       skillResponseSelection: '技能响应选中内容',
@@ -1521,6 +1523,19 @@ const translations = {
         retryButton: '重试该节点',
         checkButton: '检查该节点',
       },
+      config: {
+        input: '输入项: ',
+        model: '模型: ',
+        tool: '工具: ',
+        file: '文件: ',
+        agent: ' 智能体: ',
+      },
+      status: {
+        waiting: '等待中',
+        executing: '运行中',
+        finish: '成功',
+        failed: '失败',
+      },
     },
     chatHistory: {
       alreadyAdded: '已添加到对话历史',
@@ -1633,6 +1648,7 @@ const translations = {
       downloadDescription: '下载节点内容到本地文件',
       runWorkflow: '从当前节点开始运行工作流',
       existWorkflowRunning: '工作流正在运行中',
+      selectToEdit: '点击进入编辑器编辑',
     },
     download: {
       error: {
@@ -2070,6 +2086,28 @@ const translations = {
       share: '分享小组件',
     },
     defaultTitle: '代码组件',
+  },
+  agent: {
+    configure: '配置',
+    lastRun: '最近运行',
+    noResult: '运行后才有记录哦',
+    config: {
+      model: '模型',
+      modelDescription:
+        '选择智能体运行时使用的 AI 模型。不同模型在理解、生成和工具调用上能力不同。',
+      prompt: '提示词',
+      promptDescription:
+        '告诉智能体要执行什么任务。您可以在提示词中引用输入项和其他内容，使用 @ 符号。',
+      inputs: '输入项',
+      inputsDescription: '智能体可用的用户提供的信息。这些通常来自运行工作流时填写的表单字段。',
+      tools: '工具',
+      toolsDescription: '智能体可调用的外部服务，如 Gmail、Notion 等。',
+      files: '文件',
+      filesDescription: '智能体可读取的文件，如图片、文档或其他上传的资源。',
+      agents: '智能体',
+      agentsDescription: '使用其他智能体产出的结果，完成当前节点的任务。',
+      addToolsAndContext: '添加工具和上下文',
+    },
   },
   loggedHomePage: {
     searchEverything: '搜索任何内容',

@@ -75,6 +75,7 @@ const translations = {
     login: 'Sign In',
     signup: 'Sign Up',
     share: 'Share',
+    dragAndDropFiles: 'Drag and drop files here',
     uploadImage: 'Upload Image',
     uploadSuccess: 'Upload successful',
     uploadFailed: 'Upload failed',
@@ -1164,6 +1165,7 @@ const translations = {
       video: 'Video',
       audio: 'Audio',
       start: 'User Input',
+      agent: 'Agent',
       documentSelection: 'Document Selection',
       resourceSelection: 'Resource Selection',
       skillResponseSelection: 'Skill Response Selection',
@@ -1527,6 +1529,19 @@ const translations = {
         retryButton: 'Retry Node',
         checkButton: 'Check Node',
       },
+      config: {
+        input: 'Input: ',
+        model: 'Model: ',
+        tool: 'Tool: ',
+        file: 'File: ',
+        agent: 'Agent: ',
+      },
+      status: {
+        waiting: 'Waiting',
+        executing: 'Running',
+        finish: 'Success',
+        failed: 'Failed',
+      },
     },
     chatHistory: {
       alreadyAdded: 'Already added to chat history',
@@ -1649,6 +1664,7 @@ const translations = {
       downloadDescription: 'Download node content to local file',
       runWorkflow: 'Run Workflow from Current Node',
       existWorkflowRunning: 'Workflow is running',
+      selectToEdit: 'Select to edit in editor',
     },
     download: {
       error: {
@@ -2087,6 +2103,31 @@ const translations = {
       share: 'Share code artifact',
     },
     defaultTitle: 'Code Artifact',
+  },
+  agent: {
+    configure: 'Configure',
+    lastRun: 'Last Run',
+    noResult: 'Run to get results',
+    config: {
+      model: 'Model',
+      modelDescription:
+        'Select the AI model used when this agent runs. Different models vary in their abilities for understanding, generation, and tool usage.',
+      prompt: 'Prompt',
+      promptDescription:
+        'Tell the agent what task to perform. You can reference inputs and other content using @ in the Prompt.',
+      inputs: 'Inputs',
+      inputsDescription:
+        'User-provided information available to this agent. These typically come from the form fields filled in when running the workflow.',
+      tools: 'Tools',
+      toolsDescription:
+        'External capabilities the agent can call, such as Gmail, Notion, and others.',
+      files: 'Files',
+      filesDescription:
+        'Files the agent can read, such as images, documents, or other uploaded resources.',
+      agents: 'Agents',
+      agentsDescription: 'Use the output of other agents to help complete the task at this node.',
+      addToolsAndContext: 'Add tools and context',
+    },
   },
   loggedHomePage: {
     searchEverything: 'Search',

@@ -6,7 +6,7 @@ import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-s
 import { CanvasNodeType, SearchDomain } from '@refly/openapi-schema';
 import { ContextItem } from '@refly-packages/ai-workspace-common/types/context';
 import { IconAskAI, IconMemo } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { genMemoID, genSkillID } from '@refly/utils/id';
+import { genMemoID, genNodeEntityId } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { cn } from '@refly/utils/cn';
 import { logEvent } from '@refly/telemetry-web';
@@ -41,12 +41,12 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const { addNode } = useAddNode();
 
-  // Creation utility functions
-  const createSkillNode = (position: { x: number; y: number }) => {
+  const createSkillResponseNode = (position: { x: number; y: number }) => {
+    const skillResponseId = genNodeEntityId('skillResponse');
     addNode(
       {
-        type: 'skill',
-        data: { title: 'Skill', entityId: genSkillID() },
+        type: 'skillResponse',
+        data: { title: '', entityId: skillResponseId, metadata: { status: 'init' } },
         position: position,
       },
       [],
@@ -144,7 +144,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     // Creation actions
     switch (key) {
       case 'askAI':
-        createSkillNode(position);
+        createSkillResponseNode(position);
         setOpen(false);
         break;
       case 'createMemo':

@@ -145,13 +145,11 @@ export const FollowingActions = ({
           title: processedQuery,
           entityId: resultId,
           metadata: {
+            query: followUpQuery,
             status: 'executing',
             selectedToolsets,
             modelInfo,
             contextItems: followUpContextItems,
-            structuredData: {
-              query: followUpQuery,
-            },
             projectId: finalProjectId,
           },
         },

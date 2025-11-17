@@ -1,7 +1,7 @@
 import {
   User,
   MediaGenerateRequest,
-  MediaGenerateResponse,
+  MediaGenerationResult,
   ToolsetDefinition,
 } from '@refly/openapi-schema';
 import { ToolParams } from '@langchain/core/tools';
@@ -10,7 +10,7 @@ import { z } from 'zod/v3';
 import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {
-  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerateResponse>;
+  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerationResult>;
 }
 
 export interface FalAudioParams extends ToolParams {
@@ -119,6 +119,11 @@ export class VibeVoiceGenerateAudio extends AgentBaseTool<FalAudioParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      const { file } = result;
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       // Calculate dynamic credit cost based on duration
       let creditCost = 140; // fallback to default unit cost
       if (
@@ -143,8 +148,8 @@ export class VibeVoiceGenerateAudio extends AgentBaseTool<FalAudioParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated audio with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated audio with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -229,6 +234,11 @@ export class ElevenLabsDialogueGenerateAudio extends AgentBaseTool<FalAudioParam
         parentResultId: config.configurable?.resultId,
       });
 
+      const { file } = result;
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       // Calculate dynamic credit cost based on character count
       let creditCost = 70; // fallback to default unit cost
       if (input?.inputs && Array.isArray(input.inputs)) {
@@ -243,8 +253,8 @@ export class ElevenLabsDialogueGenerateAudio extends AgentBaseTool<FalAudioParam
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated audio with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated audio with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -370,6 +380,11 @@ export class MinimaxSpeechGenerateAudio extends AgentBaseTool<FalAudioParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      const { file } = result;
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       // Calculate dynamic credit cost based on character count
       let creditCost = 35; // fallback to default unit cost
       if (input?.text) {
@@ -382,8 +397,8 @@ export class MinimaxSpeechGenerateAudio extends AgentBaseTool<FalAudioParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated audio with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated audio with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {

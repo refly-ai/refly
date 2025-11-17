@@ -3,6 +3,8 @@ import { MediaGeneratorService } from './media-generator.service';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { User, MediaGenerateRequest, MediaGenerateResponse } from '@refly/openapi-schema';
+import { buildSuccessResponse } from '../../utils';
+
 @Controller('v1/media')
 export class MediaGeneratorController {
   constructor(private readonly mediaGeneratorService: MediaGeneratorService) {}
@@ -13,6 +15,7 @@ export class MediaGeneratorController {
     @LoginedUser() user: User,
     @Body() request: MediaGenerateRequest,
   ): Promise<MediaGenerateResponse> {
-    return this.mediaGeneratorService.generate(user, request);
+    const result = await this.mediaGeneratorService.generate(user, request);
+    return buildSuccessResponse(result);
   }
 }

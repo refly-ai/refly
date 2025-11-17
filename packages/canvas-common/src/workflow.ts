@@ -252,7 +252,7 @@ export const prepareNodeExecutions = (params: {
       nodeType: node.type,
       node,
       entityId: node.data?.entityId ?? '',
-      title: node.data?.editedTitle ?? node.data?.title ?? '',
+      title: node.data?.title ?? '',
       status,
       connectTo,
       parentNodeIds: [...new Set(parents)], // Remove duplicates

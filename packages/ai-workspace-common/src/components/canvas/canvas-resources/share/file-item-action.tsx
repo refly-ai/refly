@@ -1,85 +1,76 @@
-import { Button, Tooltip, Popconfirm } from 'antd';
+import { Button, Tooltip, Popconfirm, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { XBorder, Delete } from 'refly-icons';
-import { CanvasNode } from '@refly/canvas-common';
 import cn from 'classnames';
 import { useCallback, useState } from 'react';
-import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
-import { useActiveNode } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CreateVariablesModal } from '../../workflow-variables/create-variables-modal';
-import type { WorkflowVariable, VariableValue, VariableResourceType } from '@refly/openapi-schema';
-import { useDeleteResource } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-resource';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import type {
+  WorkflowVariable,
+  VariableValue,
+  VariableResourceType,
+  DriveFile,
+} from '@refly/openapi-schema';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 
-export const ResourceItemAction = ({
-  node,
+export const FileItemAction = ({
+  file,
   className,
 }: {
-  node: CanvasNode;
+  file: DriveFile;
   className?: string;
 }) => {
   const { t } = useTranslation();
-  const { readonly, canvasId, workflow } = useCanvasContext();
+  const { readonly, workflow } = useCanvasContext();
   if (readonly) return null;
 
-  const { deleteNode } = useDeleteNode();
-  const { activeNode, setActiveNode } = useActiveNode(canvasId);
-  const { deleteResource } = useDeleteResource();
-  const { refetch: refetchResources } = useFetchResources();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { refetch: refetchFiles } = useFetchDriveFiles();
 
   // Safely extract workflowVariables with fallback to prevent runtime crashes
   const workflowVariables = workflow?.workflowVariables ?? [];
+  const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setCurrentFile: state.setCurrentFile,
+  }));
 
   // Add state for modal visibility
   const [isCreateVariableModalVisible, setIsCreateVariableModalVisible] = useState(false);
 
-  const handleCreateVariable = useCallback((node: CanvasNode) => {
-    if (node?.type === 'group') {
-      return;
-    }
-
+  const handleCreateVariable = useCallback((_file: DriveFile) => {
     // Open the create variable modal
     setIsCreateVariableModalVisible(true);
   }, []);
 
-  const handleDeleteNode = useCallback(
-    async (node: CanvasNode) => {
-      if (!node?.id) {
-        return;
-      }
-      deleteNode({
-        id: node.id,
-        type: node.type,
-        data: node.data,
-        position: node.position ?? { x: 0, y: 0 },
-      } as CanvasNode);
-      if (activeNode?.id === node.id) {
-        setActiveNode(null);
-      }
+  const handleDeleteFile = useCallback(
+    async (file: DriveFile) => {
+      if (isDeleting) return;
+      setIsDeleting(true);
+      try {
+        await getClient().deleteDriveFile({ body: { fileId: file.fileId } });
+        setIsDeleting(false);
+        message.success(t('common.deleteSuccess'));
 
-      if (node.type === 'resource' && node.data.entityId) {
-        await deleteResource(node.data.entityId);
-        refetchResources();
+        refetchFiles();
+        setCurrentFile(null);
+      } finally {
+        setIsDeleting(false);
       }
     },
-    [activeNode?.id, deleteNode, setActiveNode, deleteResource],
+    [refetchFiles, setCurrentFile],
   );
 
   // Create default variable data for the current resource
   const getDefaultVariableData = useCallback((): WorkflowVariable | undefined => {
-    if (!node?.data?.entityId) return undefined;
-
-    // Extract resource information from node data
-    const resourceData = node.data as any; // Type assertion for resource data
-    const currentStorageKey = resourceData.storageKey || resourceData.entityId;
+    if (!file?.fileId) return undefined;
 
     // Check if resource is already used in workflow variables
     const existingVariable = workflowVariables.find((variable) => {
       if (variable?.variableType !== 'resource') return false;
 
       return variable.value?.some((value) => {
-        if (value?.type === 'resource' && value.resource?.storageKey === currentStorageKey) {
+        if (value?.type === 'resource' && value.resource?.storageKey === file.fileId) {
           return true;
         }
         return false;
@@ -92,7 +83,7 @@ export const ResourceItemAction = ({
     }
 
     // Get file extension and determine file type for new variable
-    const fileName = resourceData?.title || resourceData?.name || resourceData.entityId;
+    const fileName = file.name;
     const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
 
     // Determine resource type based on file extension
@@ -111,9 +102,9 @@ export const ResourceItemAction = ({
         type: 'resource',
         resource: {
           name: fileName,
-          storageKey: node.data.metadata.storageKey as string,
-          fileType: fileExtension || 'file',
-          entityId: node.data.entityId,
+          storageKey: file.name || '',
+          fileType: resourceType,
+          entityId: file.fileId,
         },
       },
     ];
@@ -132,7 +123,7 @@ export const ResourceItemAction = ({
       isSingle: true,
       options: [],
     };
-  }, [node, workflowVariables]);
+  }, [file, workflowVariables]);
 
   const handleModalClose = useCallback((visible: boolean) => {
     setIsCreateVariableModalVisible(visible);
@@ -140,9 +131,7 @@ export const ResourceItemAction = ({
 
   // Check if current resource is already used in workflow variables
   const isResourceAlreadyUsed = useCallback(() => {
-    if (!workflowVariables.length || !node?.data?.entityId) return false;
-
-    const resourceData = node.data;
+    if (!workflowVariables.length || !file?.fileId) return false;
 
     // Check all resource type variables for matching storageKey
     return (
@@ -155,13 +144,13 @@ export const ResourceItemAction = ({
           }
           const resourceVal = value.resource;
           if (resourceVal.entityId) {
-            return resourceVal.entityId === resourceData.entityId;
+            return resourceVal.entityId === file.fileId;
           }
-          return resourceVal.storageKey === resourceData.metadata?.storageKey;
+          return resourceVal.storageKey === file.name;
         });
       }) || false
     );
-  }, [workflowVariables, node]);
+  }, [workflowVariables, file]);
 
   // Get tooltip text based on resource usage status
   const getTooltipText = useCallback(() => {
@@ -186,18 +175,18 @@ export const ResourceItemAction = ({
             icon={<XBorder size={16} />}
             onClick={(e) => {
               e.stopPropagation();
-              handleCreateVariable(node);
+              handleCreateVariable(file);
             }}
           />
         </Tooltip>
         {!readonly && (
           <Popconfirm
             title={t('canvas.nodeActions.resourceDeleteConfirm', {
-              title: node?.data?.title || t('common.untitled'),
+              title: file?.name || t('common.untitled'),
             })}
             onConfirm={async (e) => {
               e?.stopPropagation();
-              await handleDeleteNode(node);
+              await handleDeleteFile(file);
             }}
             onCancel={(e) => {
               e?.stopPropagation();

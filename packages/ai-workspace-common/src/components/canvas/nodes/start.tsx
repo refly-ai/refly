@@ -18,7 +18,7 @@ import {
   cleanupNodeEvents,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genSkillID } from '@refly/utils/id';
+import { genNodeEntityId } from '@refly/utils/id';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { CanvasNode } from '@refly/openapi-schema';
@@ -124,12 +124,15 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
 
       addNode(
         {
-          type: 'skill',
+          type: 'skillResponse',
           data: {
-            title: 'Skill',
-            entityId: genSkillID(),
+            title: '',
+            entityId: genNodeEntityId('skillResponse'),
             metadata: {
-              contextItems: [],
+              contextItems: workflowVariables.map((variable) => ({
+                name: variable.name,
+                value: variable.value,
+              })),
             },
           },
           position,

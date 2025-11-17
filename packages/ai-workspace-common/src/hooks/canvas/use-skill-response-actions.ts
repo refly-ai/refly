@@ -8,11 +8,12 @@ import {
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { logEvent } from '@refly/telemetry-web';
+import { ActionStatus } from '@refly/openapi-schema';
 
 interface UseSkillResponseActionsProps {
   nodeId: string;
   entityId: string;
-  status?: 'waiting' | 'executing' | 'finish' | 'failed' | null;
+  status?: ActionStatus;
   canvasId?: string;
 }
 

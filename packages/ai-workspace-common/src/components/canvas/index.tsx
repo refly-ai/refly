@@ -60,7 +60,7 @@ import {
 } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { WorkflowRun } from './workflow-run';
 import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
-import { CanvasResources, CanvasResourcesWidescreenModal } from './canvas-resources';
+import { CanvasDrive, CanvasResourcesWidescreenModal } from './canvas-resources';
 import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
 import { ToggleCopilotPanel } from './top-toolbar/toggle-copilot-panel';
 import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
@@ -1069,10 +1069,8 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
             <HelperLines horizontal={helperLineHorizontal} vertical={helperLineVertical} />
           </ReactFlow>
         </div>
-
         {/* Display the not found overlay when shareNotFound is true */}
         {readonly && shareNotFound && <NotFoundOverlay />}
-
         <ToolbarButtons canvasId={canvasId} />
         <PreviewBoxInCanvas node={selectedNode} />
         <WorkflowRun />
@@ -1081,9 +1079,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
           setCopilotWidth={handleSetCopilotWidth}
           maxPanelWidth={maxPanelWidth}
         />
-
         <ToggleCopilotPanel copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
-
         <UnifiedContextMenu
           open={contextMenu.open}
           position={contextMenu.position}
@@ -1209,7 +1205,7 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
               setCopilotWidth={handleSetCopilotWidth}
               maxPanelWidth={maxPanelWidth}
             />
-            <CanvasResources className={!sidePanelVisible ? 'hidden' : ''} />
+            <CanvasDrive className={!sidePanelVisible ? 'hidden' : ''} />
           </div>
           <CanvasResourcesWidescreenModal />
         </CanvasProvider>

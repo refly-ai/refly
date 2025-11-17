@@ -1,6 +1,6 @@
 import { forwardRef, memo, useMemo, useCallback, useRef, useImperativeHandle } from 'react';
 import type { IContextItem } from '@refly/common-types';
-import type { GenericToolset, ModelInfo, SkillRuntimeConfig } from '@refly/openapi-schema';
+import type { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import {
   RichChatInput,
@@ -28,11 +28,8 @@ export interface ChatComposerProps {
     items: IContextItem[] | ((prevItems: IContextItem[]) => IContextItem[]),
   ) => void;
 
-  // Model and runtime config
   modelInfo: ModelInfo | null;
   setModelInfo: (model: ModelInfo | null) => void;
-  runtimeConfig?: SkillRuntimeConfig;
-  setRuntimeConfig?: (config: SkillRuntimeConfig) => void;
 
   // Optional UI behaviors
   placeholder?: string;
@@ -88,8 +85,6 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
     setContextItems,
     modelInfo,
     setModelInfo,
-    runtimeConfig,
-    setRuntimeConfig,
     placeholder,
     inputClassName = 'px-1 py-0',
     maxRows = 6,
@@ -264,8 +259,6 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
           handleAbort={handleAbort ?? (() => {})}
           onUploadImage={handleImageUpload as (file: File) => Promise<void>}
           contextItems={contextItems}
-          runtimeConfig={runtimeConfig}
-          setRuntimeConfig={setRuntimeConfig}
           selectedToolsets={selectedToolsets}
           setSelectedToolsets={onSelectedToolsetsChange}
           isExecuting={isExecuting}

@@ -131,8 +131,6 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
         handleSendMessage={handleSendMessage}
         onUploadImage={() => Promise.resolve()}
         contextItems={[]}
-        runtimeConfig={undefined}
-        setRuntimeConfig={() => {}}
         selectedToolsets={[]}
         setSelectedToolsets={() => {}}
         customActions={[]}

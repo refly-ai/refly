@@ -309,8 +309,8 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
         label: (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-1">
-              <Edit size={18} />
-              <span className="text-base">{t('knowledgeBase.context.panelColor')}</span>
+              <Edit size={16} />
+              <span className="text-sm">{t('knowledgeBase.context.panelColor')}</span>
             </div>
             <div className="flex items-center gap-2">
               {panelColors.map((color) => (
@@ -320,7 +320,6 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpdateBgColor(color);
-                    setDropdownOpen(false);
                   }}
                 >
                   <div
@@ -342,8 +341,8 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
         key: 'delete',
         label: (
           <div className="flex items-center gap-2">
-            <Delete size={18} />
-            <span className="text-base">{t('common.delete')}</span>
+            <Delete size={16} />
+            <span className="text-sm">{t('common.delete')}</span>
           </div>
         ),
         onClick: () => {

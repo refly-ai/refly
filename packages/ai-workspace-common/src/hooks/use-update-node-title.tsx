@@ -25,7 +25,6 @@ export const useUpdateNodeTitle = () => {
         },
         {
           title: newTitle,
-          editedTitle: newTitle,
         },
       );
 

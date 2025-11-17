@@ -34,6 +34,7 @@ import {
   CodeArtifact,
   MediaGenerationModelConfig,
   CreditBilling,
+  DriveFile,
 } from '@refly/openapi-schema';
 import { BaseSkill } from '@refly/skill-template';
 import { purgeContextForActionResult, purgeToolsets } from '@refly/canvas-common';
@@ -67,6 +68,7 @@ import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
 import { DocumentService } from '../knowledge/document.service';
 import { ResourceService } from '../knowledge/resource.service';
+import { DriveService } from '../drive/drive.service';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -95,6 +97,7 @@ export class SkillService implements OnModuleInit {
     private readonly codeArtifactService: CodeArtifactService,
     private readonly providerService: ProviderService,
     private readonly toolService: ToolService,
+    private readonly driveService: DriveService,
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
     @Optional()
@@ -510,19 +513,6 @@ export class SkillService implements OnModuleInit {
 
     if (param.context) {
       param.context = await this.populateSkillContext(user, param.context);
-
-      // Populate input.images with storage keys from image resources
-      if (param.context.resources?.length > 0) {
-        const imageResources = param.context.resources
-          .filter((item) => item.resource?.resourceType === 'image')
-          .map((item) => item.resource?.rawFileKey) // NOTE: for media resources, rawFileKey is the actual place where the media file is stored
-          .filter(Boolean);
-
-        if (imageResources.length > 0) {
-          param.input.images ??= [];
-          param.input.images.push(...imageResources);
-        }
-      }
     }
     if (param.resultHistory) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
@@ -1031,6 +1021,64 @@ export class SkillService implements OnModuleInit {
         });
 
       context.contentList.push(...codeArtifactContentList);
+    }
+
+    if (context.files?.length > 0) {
+      const fileIds = [...new Set(context.files.map((item) => item.fileId).filter((id) => id))];
+      const limit = pLimit(5);
+      const files = (
+        await Promise.all(
+          fileIds.map((id) =>
+            limit(() =>
+              this.driveService.getDriveFileDetail(user, id).catch((error) => {
+                this.logger.error(
+                  `Failed to get drive file detail for fileId ${id}: ${error?.message}`,
+                );
+                return null;
+              }),
+            ),
+          ),
+        )
+      )?.filter(Boolean);
+
+      const fileMap = new Map<string, DriveFile>();
+      for (const f of files) {
+        fileMap.set(f.fileId, f);
+      }
+
+      for (const item of context.files) {
+        item.file = fileMap.get(item.fileId);
+      }
+    }
+
+    if (context.results?.length > 0) {
+      const resultIds = [
+        ...new Set(context.results.map((item) => item.resultId).filter((id) => id)),
+      ];
+      const limit = pLimit(5);
+      const results = (
+        await Promise.all(
+          resultIds.map((id) =>
+            limit(() =>
+              this.actionService.getActionResult(user, { resultId: id }).catch((error) => {
+                this.logger.error(
+                  `Failed to get action result detail for resultId ${id}: ${error?.message}`,
+                );
+                return null;
+              }),
+            ),
+          ),
+        )
+      )?.filter(Boolean);
+
+      const resultMap = new Map<string, ActionResult>();
+      for (const r of results) {
+        resultMap.set(r.resultId, actionResultPO2DTO(r));
+      }
+
+      for (const item of context.results) {
+        item.result = resultMap.get(item.resultId);
+      }
     }
 
     return context;

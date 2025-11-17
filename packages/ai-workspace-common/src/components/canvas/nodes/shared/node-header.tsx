@@ -40,8 +40,8 @@ interface NodeHeaderProps {
 
 // Background color classes for different node types
 const NODE_TYPE_BG_CLASSES: Partial<Record<CanvasNodeType, string>> = {
-  skillResponse: 'bg-[#D9FFFE]',
-  start: 'bg-[#FEF2CF]',
+  skillResponse: 'bg-refly-node-fill-1',
+  start: 'bg-refly-node-fill-2',
 };
 
 /**
@@ -145,7 +145,7 @@ export const NodeHeader = memo(
           ) : (
             <div
               className={cn(
-                'flex-1 rounded-md h-6 px-0.5 box-border font-semibold leading-6 truncate min-w-0 font-[PingFang_SC]',
+                'flex-1 rounded-md h-6 px-0.5 box-border font-semibold leading-6 truncate min-w-0',
                 {
                   'text-lg': source === 'skillResponsePreview',
                   'text-sm': source !== 'skillResponsePreview',

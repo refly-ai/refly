@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { CanvasNode, CanvasNodeData } from '@refly/canvas-common';
 import { CSSProperties } from 'react';
 import { useReactFlow } from '@xyflow/react';
+import { deepmerge } from '@refly/utils';
 
 export const useNodeData = () => {
   const { setNodes } = useReactFlow<CanvasNode<any>>();
@@ -11,10 +12,7 @@ export const useNodeData = () => {
       setNodes((nodes) =>
         nodes.map((n) => ({
           ...n,
-          data:
-            n.id === nodeId
-              ? { ...n.data, ...nodeData, metadata: { ...n.data?.metadata, ...nodeData?.metadata } }
-              : n.data,
+          data: n.id === nodeId ? deepmerge(n.data, nodeData) : n.data,
         })),
       );
     },

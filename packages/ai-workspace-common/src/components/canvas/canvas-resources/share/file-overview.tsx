@@ -1,28 +1,17 @@
-import { memo, useEffect, useRef, useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useCanvasResourcesPanelStoreShallow, useImportResourceStoreShallow } from '@refly/stores';
 import { Button, Input, Tooltip } from 'antd';
 import { Add, SideRight } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
-import { MyUploadList } from '../my-upload';
+import { FileList } from '../file-list';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
-import { CanvasNode } from '@refly/canvas-common';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
 
-interface ResourceOverviewProps {
-  currentResource: CanvasNode | null;
-  setCurrentResource: (resource: CanvasNode | null) => void;
-}
-export const ResourceOverview = memo((props: ResourceOverviewProps) => {
-  const { currentResource, setCurrentResource } = props;
+export const FileOverview = memo(() => {
   const { t } = useTranslation();
   const { shareLoading, readonly } = useCanvasContext();
-  const {
-    data: resources,
-    isLoading: isLoadingResources,
-    refetch: refetchResources,
-  } = useFetchResources();
-  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { data: files, isLoading: isLoadingFiles } = useFetchDriveFiles();
 
   const { setSidePanelVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
     (state) => ({
@@ -31,38 +20,6 @@ export const ResourceOverview = memo((props: ResourceOverviewProps) => {
     }),
   );
 
-  const startPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-    pollingIntervalRef.current = setInterval(() => {
-      refetchResources();
-    }, 2000);
-  }, [refetchResources]);
-
-  const stopPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    const shouldPoll = resources.some(
-      (resource) => resource.indexStatus === 'wait_parse' || resource.indexStatus === 'wait_index',
-    );
-
-    if (shouldPoll && !pollingIntervalRef.current) {
-      startPolling();
-    } else if (!shouldPoll && pollingIntervalRef.current) {
-      stopPolling();
-    }
-
-    // Cleanup on unmount
-    return () => {
-      stopPolling();
-    };
-  }, [resources, startPolling, stopPolling]);
   const [searchKeyword, setSearchKeyword] = useState('');
 
   const { setImportResourceModalVisible } = useImportResourceStoreShallow((state) => ({
@@ -80,7 +37,7 @@ export const ResourceOverview = memo((props: ResourceOverviewProps) => {
 
   return (
     <div className="w-[350px] h-full flex flex-col">
-      <div className="h-[64px] px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
+      <div className="h-14 px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
         <div className="flex gap-2 items-center">
           <Tooltip title={t('canvas.toolbar.closeResourcesPanel')} arrow={false}>
             <Button type="text" icon={<SideRight size={22} />} onClick={handleClose} />
@@ -103,11 +60,11 @@ export const ResourceOverview = memo((props: ResourceOverviewProps) => {
         )}
       </div>
       <div className="p-4 flex-grow flex flex-col gap-4 overflow-hidden">
-        {isLoadingResources || shareLoading ? (
+        {isLoadingFiles || shareLoading ? (
           <div className="h-full flex flex-col items-center justify-center gap-4">
             <div className="text-refly-text-2 text-sm leading-5">{t('common.loading')}</div>
           </div>
-        ) : !resources.length ? (
+        ) : !files.length ? (
           <div className="h-full flex flex-col items-center justify-center">
             <img src={EmptyImage} alt="empty" className="w-[180px] h-[180px]" />
             <div className="text-refly-text-2 text-sm leading-5">
@@ -131,12 +88,7 @@ export const ResourceOverview = memo((props: ResourceOverviewProps) => {
 
             {/* block */}
             <div className="flex-grow overflow-y-auto min-h-0">
-              <MyUploadList
-                resources={resources}
-                searchKeyword={searchKeyword}
-                currentResource={currentResource}
-                setCurrentResource={setCurrentResource}
-              />
+              <FileList files={files} searchKeyword={searchKeyword} />
             </div>
           </>
         )}
@@ -145,4 +97,4 @@ export const ResourceOverview = memo((props: ResourceOverviewProps) => {
   );
 });
 
-ResourceOverview.displayName = 'ResourceOverview';
+FileOverview.displayName = 'FileOverview';

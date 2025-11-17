@@ -1,4 +1,4 @@
-import { Cancelled } from 'refly-icons';
+import { ArrowDown, Cancelled } from 'refly-icons';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import {
   cleanupNodeEvents,
@@ -13,14 +13,13 @@ import { useDuplicateNode } from '@refly-packages/ai-workspace-common/hooks/canv
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
-// import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { CanvasNode, purgeToolsets } from '@refly/canvas-common';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
 import { genSkillID } from '@refly/utils/id';
 import { Position, useReactFlow } from '@xyflow/react';
-import { message } from 'antd';
+import { message, Typography } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CustomHandle } from './shared/custom-handle';
@@ -38,10 +37,7 @@ import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspac
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
-import {
-  processContentPreview,
-  truncateContent,
-} from '@refly-packages/ai-workspace-common/utils/content';
+import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
 import { usePilotStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 import { NodeExecutionStatus } from './shared/node-execution-status';
@@ -54,11 +50,13 @@ import { SkillResponseActions } from '@refly-packages/ai-workspace-common/compon
 import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
+import { useSyncAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-agent-connections';
+
+const { Paragraph } = Typography;
 
 const NODE_WIDTH = 320;
 const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
 
-// 状态栏组件，显示节点状态、token消费和运行耗时
 const NodeStatusBar = memo(
   ({
     status,
@@ -71,7 +69,7 @@ const NodeStatusBar = memo(
     creditCost?: number;
     errors?: string[];
   }) => {
-    // const { t } = useTranslation();
+    const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
 
     const getStatusIcon = () => {
@@ -88,20 +86,9 @@ const NodeStatusBar = memo(
       }
     };
 
-    const getStatusText = () => {
-      switch (status) {
-        case 'finish':
-          return 'Success';
-        case 'failed':
-          return 'Failed';
-        case 'executing':
-          return 'Running';
-        case 'waiting':
-          return 'Waiting';
-        default:
-          return '';
-      }
-    };
+    const statusText = useMemo<string>(() => {
+      return t(`canvas.skillResponse.status.${status}`);
+    }, [status, t]);
 
     if (status === 'waiting' || status === 'executing') {
       return null;
@@ -112,13 +99,13 @@ const NodeStatusBar = memo(
     return (
       <div className="flex flex-col mt-2 w-full">
         <div
-          className={`px-2 border-[1px] border-solid border-refly-Card-Border rounded-l bg-refly-bg-content-z2 min-h-6 ${hasErrors ? 'cursor-pointer' : 'h-6'}`}
+          className={`px-2 py-1 border-[0.5px] border-solid border-refly-Card-Border rounded-2xl bg-refly-bg-body-z0 ${hasErrors ? 'cursor-pointer' : ''}`}
           onClick={() => hasErrors && setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 flex-1 min-w-0">
               {getStatusIcon()}
-              <span className="text-xs text-gray-600 dark:text-gray-400">{getStatusText()}</span>
+              <span className="text-xs text-refly-text-1 leading-4">{statusText}</span>
             </div>
 
             <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500 flex-shrink-0">
@@ -136,39 +123,23 @@ const NodeStatusBar = memo(
               )}
 
               {hasErrors && (
-                <svg
-                  className={`w-3 h-3 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                <ArrowDown
+                  size={12}
+                  className={cn('transition-transform', isExpanded ? 'rotate-180' : '')}
+                />
               )}
             </div>
           </div>
           {hasErrors && isExpanded && (
-            <div className="min-w-0">
+            <div className="min-w-0 mt-[10px] mb-1">
               {errors.map((error, index) => (
-                <div
+                <Paragraph
                   key={index}
-                  className="text-refly-func-danger-default truncate"
-                  style={{
-                    fontFamily: 'PingFang SC',
-                    fontWeight: 400,
-                    fontSize: '12px',
-                    lineHeight: '16px',
-                    letterSpacing: 0,
-                  }}
-                  title={error}
+                  className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
+                  ellipsis={{ rows: 8, tooltip: true }}
                 >
                   {error}
-                </div>
+                </Paragraph>
               ))}
             </div>
           )}
@@ -224,6 +195,8 @@ export const SkillResponseNode = memo(
       canvasId: canvasId || '',
     });
 
+    useSyncAgentConnections(id, data);
+
     const nodeStyle = useMemo(
       () => (isPreview ? { width: NODE_WIDTH, height: 214 } : NODE_SIDE_CONFIG),
       [isPreview],
@@ -231,7 +204,7 @@ export const SkillResponseNode = memo(
 
     const { t } = useTranslation();
 
-    const { title, editedTitle, contentPreview: content, metadata, entityId } = data ?? {};
+    const { title, contentPreview: content, metadata, entityId } = data ?? {};
 
     // Find current node's corresponding pilot step
     const currentPilotStep = useMemo(() => {
@@ -242,7 +215,7 @@ export const SkillResponseNode = memo(
 
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
-    const { status, structuredData, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
+    const { status, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
@@ -282,6 +255,15 @@ export const SkillResponseNode = memo(
         });
       }
     }, [result, data, id, setNodeData]);
+
+    useEffect(() => {
+      if (data?.editedTitle) {
+        setNodeData(id, {
+          title: data?.editedTitle,
+          editedTitle: null,
+        });
+      }
+    }, [id, data?.editedTitle]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
@@ -333,9 +315,6 @@ export const SkillResponseNode = memo(
       name: currentSkill?.name || 'commonQnA',
       icon: currentSkill?.icon,
     };
-
-    // Get query and response content from result
-    const query = editedTitle || title;
 
     // Check if node has any connections
     const edges = getEdges();
@@ -409,7 +388,7 @@ export const SkillResponseNode = memo(
       invokeAction(
         {
           resultId: entityId,
-          query: title,
+          query: data?.metadata?.query ?? '',
           selectedSkill: skill,
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
@@ -426,7 +405,6 @@ export const SkillResponseNode = memo(
       entityId,
       canvasId,
       id,
-      title,
       invokeAction,
       setNodeData,
       resetFailedState,
@@ -600,25 +578,11 @@ export const SkillResponseNode = memo(
               withHistory: true,
             },
           },
-          // // Include the original context items from the response
-          // ...responseContextItems.map((item) => ({
-          //   ...item,
-          //   metadata: {
-          //     ...item.metadata,
-          //     withHistory: undefined,
-          //   },
-          // })),
         ];
 
         // Create node connect filters - include both the response and its context items
         const connectFilters = [
           { type: 'skillResponse' as CanvasNodeType, entityId: data.entityId },
-          // ...responseContextItems
-          //   .filter((item) => item.type !== 'skillResponse')
-          //   .map((item) => ({
-          //     type: item.type as CanvasNodeType,
-          //     entityId: item.entityId,
-          //   })),
         ];
 
         const { position, connectTo } = getConnectionInfo(
@@ -799,7 +763,7 @@ export const SkillResponseNode = memo(
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
-              title={query}
+              title={data.title ?? t('canvas.nodeTypes.agent')}
               readonly={true}
               source="node"
               actions={
@@ -813,16 +777,8 @@ export const SkillResponseNode = memo(
             />
 
             <div className={'relative flex-grow overflow-y-auto w-full'}>
-              <div className="flex flex-col p-3">
-                {/* Always show content preview, use prompt/query as fallback when content is empty */}
-                <SkillResponseContentPreview
-                  nodeId={id}
-                  content={truncateContent(
-                    content || (structuredData?.query as any) || query || '',
-                  )}
-                  metadata={metadata as any}
-                />
-              </div>
+              {/* Always show content preview, use prompt/query as fallback when content is empty */}
+              <SkillResponseContentPreview className="p-3" metadata={metadata} />
             </div>
           </div>
 
@@ -838,10 +794,9 @@ export const SkillResponseNode = memo(
           />
         </div>
 
-        {/* 状态栏，显示节点状态、token消费和运行耗时 */}
-        {!isPreview && (
+        {!isPreview && status !== 'init' && (
           <NodeStatusBar
-            status={status || 'waiting'}
+            status={status}
             creditCost={metadata?.creditCost}
             executionTime={metadata?.executionTime}
             errors={result?.errors}

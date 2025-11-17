@@ -1,22 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import mime from 'mime';
 import {
   User,
   MediaGenerateRequest,
-  MediaGenerateResponse,
   EntityType,
   CanvasNodeType,
   CanvasNode,
+  MediaGenerationResult,
 } from '@refly/openapi-schema';
 
 import { PrismaService } from '../common/prisma.service';
-import { MiscService } from '../misc/misc.service';
 import { ProviderService } from '../provider/provider.service';
 import { ActionResultNotFoundError } from '@refly/errors';
-import { genActionResultID, genMediaID, safeParseJSON } from '@refly/utils';
+import { genActionResultID, safeParseJSON } from '@refly/utils';
 import { fal } from '@fal-ai/client';
 import Replicate from 'replicate';
-import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { ActionResult } from '../../generated/client';
+import { DriveService } from '../drive/drive.service';
+import { driveFilePO2DTO } from '../drive/drive.dto';
 
 @Injectable()
 export class MediaGeneratorService {
@@ -34,9 +35,8 @@ export class MediaGeneratorService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly miscService: MiscService,
+    private readonly driveService: DriveService,
     private readonly providerService: ProviderService,
-    private readonly canvasSyncService: CanvasSyncService,
   ) {}
 
   /**
@@ -142,8 +142,7 @@ export class MediaGeneratorService {
   private async doGenerate(
     user: User,
     request: MediaGenerateRequest,
-    mediaId?: string,
-  ): Promise<MediaGenerateResponse> {
+  ): Promise<MediaGenerationResult> {
     const { mediaType, model, prompt, providerItemId, wait, targetType, targetId, parentResultId } =
       request;
 
@@ -163,11 +162,9 @@ export class MediaGeneratorService {
           `Using default ${mediaType} model: ${finalModel} with providerItemId: ${finalProviderItemId}`,
         );
       } else {
-        this.logger.warn(`No default ${mediaType} model configured for user ${user.uid}`);
-        return {
-          success: false,
-          errMsg: `No media generation model configured for ${mediaType}. Please configure a model first using the settings.`,
-        };
+        throw new Error(
+          `No media generation model configured for ${mediaType}. Please configure a model first using the settings.`,
+        );
       }
     } else {
       this.logger.log(
@@ -207,30 +204,21 @@ export class MediaGeneratorService {
     };
 
     // Start media generation asynchronously and capture promise for optional return
-    const mediaGeneratePromise = this.executeGenerate(user, result, finalRequest, mediaId).catch(
-      (error) => {
-        this.logger.error(`Media generation failed for ${resultId}:`, error);
-        return null;
-      },
-    );
+    const mediaGeneratePromise = this.executeGenerate(user, result, finalRequest).catch((error) => {
+      this.logger.error(`Media generation failed for ${resultId}:`, error);
+      return null;
+    });
 
     // If wait is true, execute synchronously and return result
     if (wait) {
       // Poll for completion
-      const result = await this.pollActionResult(resultId, mediaType);
+      await this.pollActionResult(resultId, mediaType);
       const mediaGenerateResult = await mediaGeneratePromise;
 
-      return {
-        success: true,
-        resultId,
-        outputUrl: result.outputUrl,
-        storageKey: result.storageKey,
-        originalResult: mediaGenerateResult?.originalResult,
-      };
+      return mediaGenerateResult;
     }
 
     return {
-      success: true,
       resultId,
     };
   }
@@ -241,9 +229,8 @@ export class MediaGeneratorService {
    * @param request Media Generation Request
    * @returns Response containing resultId or completed result if wait is true
    */
-  async generate(user: User, request: MediaGenerateRequest): Promise<MediaGenerateResponse> {
+  async generate(user: User, request: MediaGenerateRequest): Promise<MediaGenerationResult> {
     const { mediaType, prompt, parentResultId } = request;
-    let mediaId: string | undefined = undefined;
 
     // Store workflow node execution to update status at the end
     let nodeExecutionToUpdate: { nodeExecutionId: string; nodeData: CanvasNode } | null = null;
@@ -289,8 +276,6 @@ export class MediaGeneratorService {
             },
           });
           if (mediaNodeExecution?.entityId) {
-            mediaId = mediaNodeExecution.entityId;
-
             const nodeData: CanvasNode = safeParseJSON(mediaNodeExecution.nodeData);
             nodeExecutionToUpdate = {
               nodeExecutionId: mediaNodeExecution.nodeExecutionId,
@@ -302,10 +287,10 @@ export class MediaGeneratorService {
     }
 
     try {
-      const result = await this.doGenerate(user, request, mediaId);
+      const result = await this.doGenerate(user, request);
 
       // Update workflow node execution status to finish if exists
-      if (nodeExecutionToUpdate && result.success && result.outputUrl && result.storageKey) {
+      if (nodeExecutionToUpdate && result.outputUrl && result.storageKey) {
         await this.prisma.workflowNodeExecution.update({
           where: {
             nodeExecutionId: nodeExecutionToUpdate.nodeExecutionId,
@@ -364,10 +349,9 @@ export class MediaGeneratorService {
     user: User,
     result: ActionResult,
     request: MediaGenerateRequest,
-    mediaId?: string,
-  ): Promise<MediaGenerateResponse> {
+  ): Promise<MediaGenerationResult> {
     const { mediaType, provider } = request;
-    const { pk, resultId, parentResultId, title, targetType, targetId } = result;
+    const { pk, resultId, targetId } = result;
     try {
       // Update status to executing
       await this.prisma.actionResult.update({
@@ -428,11 +412,14 @@ export class MediaGeneratorService {
         throw new Error(`Unsupported provider: ${providerKey}`);
       }
 
-      const uploadResult = await this.miscService.dumpFileFromURL(user, {
-        url: url,
-        entityId: resultId,
-        entityType: 'mediaResult',
-        visibility: 'private',
+      // Infer filename and content type from URL
+      const { filename, contentType } = this.inferFileInfoFromUrl(url, mediaType);
+
+      const file = await this.driveService.upsertDriveFile(user, {
+        name: filename,
+        type: contentType,
+        externalUrl: url,
+        canvasId: targetId,
       });
 
       // Update status to completed, saving the storage information inside the system
@@ -440,46 +427,13 @@ export class MediaGeneratorService {
         where: { pk },
         data: {
           status: 'finish',
-          outputUrl: uploadResult.url, // Using system internal URL
-          storageKey: uploadResult.storageKey, // Save storage key
         },
       });
 
-      if (parentResultId && targetType === 'canvas' && targetId) {
-        const entityId = mediaId || genMediaID(mediaType);
-        await this.canvasSyncService.addNodeToCanvas(
-          user,
-          targetId,
-          {
-            type: mediaType,
-            data: {
-              title,
-              entityId,
-              metadata: {
-                resultId,
-                storageKey: uploadResult.storageKey,
-                [`${mediaType}Url`]: uploadResult.url,
-                modelInfo: {
-                  name: request.model,
-                  label: request.model,
-                  provider: provider,
-                  providerItemId: request.providerItemId,
-                },
-                parentResultId,
-              },
-            },
-          },
-          [{ type: 'skillResponse', entityId: parentResultId }],
-          { autoLayout: true },
-        );
-      }
-
       return {
-        success: true,
+        file: driveFilePO2DTO(file),
         resultId,
-        outputUrl: uploadResult.url,
-        storageKey: uploadResult.storageKey,
-        originalResult: originalResult,
+        originalResult,
       };
     } catch (error) {
       this.logger.error(`Media generation failed for ${resultId}: ${error.stack}`);
@@ -674,6 +628,53 @@ export class MediaGeneratorService {
   }
 
   /**
+   * Infer filename and content type from URL
+   * @param url The URL to parse
+   * @param fallbackMediaType Fallback media type if URL parsing fails
+   * @returns Object containing filename and contentType
+   */
+  private inferFileInfoFromUrl(
+    url: string,
+    fallbackMediaType: string,
+  ): { filename: string; contentType: string } {
+    if (!url) {
+      return {
+        filename: `media_${Date.now()}.${fallbackMediaType}`,
+        contentType: fallbackMediaType,
+      };
+    }
+
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+
+      // Extract filename from URL path
+      const urlFilename = pathname.split('/').pop() || '';
+
+      // Extract extension from filename
+      const extensionMatch = urlFilename.match(/\.([a-zA-Z0-9]+)(?:\?.*)?$/);
+      const extension = extensionMatch ? extensionMatch[1].toLowerCase() : '';
+
+      // Map extension to content type
+      const contentType = mime.getType(extension) || fallbackMediaType;
+
+      // Generate a meaningful filename
+      const baseFilename = urlFilename || `media_${Date.now()}`;
+      const filename = baseFilename.includes('.')
+        ? baseFilename
+        : `${baseFilename}.${extension || fallbackMediaType}`;
+
+      return { filename, contentType };
+    } catch (error) {
+      this.logger.warn(`Failed to parse URL for file info: ${url}`, error);
+      return {
+        filename: `media_${Date.now()}.${fallbackMediaType}`,
+        contentType: fallbackMediaType,
+      };
+    }
+  }
+
+  /**
    * Helper method to sleep for a given duration
    */
   private sleep(ms: number): Promise<void> {
@@ -712,10 +713,6 @@ export class MediaGeneratorService {
 
       // Check if completed
       if (actionResult.status === 'finish') {
-        if (!actionResult.outputUrl || !actionResult.storageKey) {
-          throw new Error('Media generation completed but output data is missing');
-        }
-
         this.logger.log(`Media generation completed for ${resultId}`);
         return {
           outputUrl: actionResult.outputUrl,

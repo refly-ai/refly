@@ -25,6 +25,9 @@ import { IContextItem } from '@refly/common-types';
 
 export type CanvasNodeData<T = Record<string, unknown>> = {
   title: string;
+  /**
+   * @deprecated Use `title` instead.
+   */
   editedTitle?: string; // manually edited title
   entityId: string;
   createdAt?: string;
@@ -138,9 +141,17 @@ export type ToolNodeMeta = {
   originalWidth?: number;
 };
 
+export type AgentConfig = {
+  query?: string;
+  modelInfo?: ModelInfo;
+  selectedToolsets?: GenericToolset[];
+  contextItems?: IContextItem[];
+};
+
 export type ResponseNodeMeta = {
   status?: ActionStatus;
   version?: number;
+  query?: string;
   modelInfo?: ModelInfo | null;
   tokenUsage?: TokenUsageItem[];
   actionMeta?: ActionMeta;

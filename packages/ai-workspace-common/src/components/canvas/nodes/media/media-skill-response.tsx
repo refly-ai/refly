@@ -261,7 +261,7 @@ const MediaSkillResponseNode = memo(
           },
         });
 
-        if (responseData?.success && responseData?.resultId) {
+        if (responseData?.success && responseData?.data?.resultId) {
           // Update node metadata with new resultId and set status to waiting
           setNodeDataByEntity(
             {
@@ -271,7 +271,7 @@ const MediaSkillResponseNode = memo(
             {
               metadata: {
                 ...data?.metadata,
-                resultId: responseData?.resultId,
+                resultId: responseData?.data?.resultId,
                 status: 'waiting',
               },
             },

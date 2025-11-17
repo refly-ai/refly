@@ -382,14 +382,8 @@ model WorkflowNodeExecution {
   @@map("workflow_node_executions")
 }
 
-enum WorkflowNodeStatus {
-  waiting
-  executing
-  finish
-  failed
-}
-
 enum ActionStatus {
+  init
   waiting
   executing
   finish
@@ -765,6 +759,40 @@ model CodeArtifact {
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@map("code_artifacts")
+}
+
+model DriveFile {
+  /// Primary key
+  pk            BigInt    @id @default(autoincrement())
+  /// Drive file id
+  fileId        String    @unique @map("file_id")
+  /// UID
+  uid           String    @map("uid")
+  /// Canvas id
+  canvasId      String    @map("canvas_id")
+  /// Drive file name
+  name          String    @map("name")
+  /// Drive file type (MIME type)
+  type          String    @map("type")
+  /// Drive file category
+  category      String    @map("category")
+  /// Drive file size
+  size          BigInt    @default(0) @map("size")
+  /// Drive file summary
+  summary       String?   @map("summary")
+  /// Action result id
+  resultId      String?   @map("result_id")
+  /// Action result version
+  resultVersion Int?      @map("result_version")
+  /// Drive file create timestamp
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([canvasId, deletedAt, updatedAt])
+  @@map("drive_files")
 }
 
 model Project {
