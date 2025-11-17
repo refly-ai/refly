@@ -13,7 +13,7 @@ import {
 } from '@refly/canvas-common';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
-import { useActionResultStoreShallow } from '@refly/stores';
+import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
 import { Segmented } from 'antd';
 import { memo, useCallback, useEffect, useState } from 'react';
@@ -37,10 +37,18 @@ const SkillResponseNodePreviewComponent = ({
   resultId,
   purePreview,
 }: SkillResponseNodePreviewProps) => {
-  const { result, isStreaming, updateActionResult } = useActionResultStoreShallow((state) => ({
+  const {
+    result,
+    activeTab = 'configure',
+    isStreaming,
+    updateActionResult,
+    setResultActiveTab,
+  } = useActionResultStoreShallow((state) => ({
     result: state.resultMap[resultId],
+    activeTab: state.resultActiveTabMap[resultId],
     isStreaming: !!state.streamResults[resultId],
     updateActionResult: state.updateActionResult,
+    setResultActiveTab: state.setResultActiveTab,
   }));
 
   const { setNodeData } = useNodeData();
@@ -51,8 +59,6 @@ const SkillResponseNodePreviewComponent = ({
   const { resetFailedState } = useActionPolling();
 
   const { t } = useTranslation();
-
-  const [activeTab, setActiveTab] = useState('configure');
 
   const shareId = node.data?.metadata?.shareId;
   const nodeStatus = node.data?.metadata?.status;
@@ -198,9 +204,7 @@ const SkillResponseNodePreviewComponent = ({
     // Update node status immediately to show "waiting" state
     const nextVersion = (node.data?.metadata?.version || 0) + 1;
     setNodeData(node.id, {
-      ...node.data,
       metadata: {
-        ...node.data?.metadata,
         status: 'waiting',
         version: nextVersion,
       },
@@ -258,7 +262,7 @@ const SkillResponseNodePreviewComponent = ({
               { label: t('agent.lastRun'), value: 'lastRun' },
             ]}
             value={activeTab}
-            onChange={(value) => setActiveTab(value)}
+            onChange={(value) => setResultActiveTab(resultId, value as ResultActiveTab)}
             block
             shape="round"
           />

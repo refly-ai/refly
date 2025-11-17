@@ -1,6 +1,5 @@
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
-import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
 import { SkillNodeMeta, convertContextItemsToInvokeParams } from '@refly/canvas-common';
 import {
@@ -39,7 +38,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const { source } = params || {};
 
-  const setNodeDataByEntity = useSetNodeDataByEntity();
   const { abortAction } = useAbortAction(params);
 
   const deletedNodeIdsRef = useRef<Set<string>>(new Set());
@@ -342,42 +340,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
       globalCurrentResultIdRef.current = '';
     }
 
-    const artifacts = result.steps?.flatMap((s) => s.artifacts ?? []);
-    if (artifacts?.length) {
-      for (const artifact of artifacts) {
-        if (deletedNodeIdsRef.current.has(artifact.entityId)) {
-          continue;
-        }
-
-        if (artifact.type === 'codeArtifact') {
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
-                activeTab: 'preview', // Set to preview when skill finishes
-              },
-            },
-          );
-        } else {
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
-              },
-            },
-          );
-        }
-      }
-    }
-
     refetchUsage();
   };
 
@@ -547,6 +509,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
       onUpdateResult(resultId, initialResult);
       useActionResultStore.getState().addStreamResult(resultId, initialResult);
+      useActionResultStore.getState().setResultActiveTab(resultId, 'lastRun');
 
       // Create timeout handler for this action
       const { resetTimeout, cleanup: timeoutCleanup } = createTimeoutHandler(resultId, version);
@@ -583,7 +546,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         timeoutCleanup();
       };
     },
-    [setNodeDataByEntity, onUpdateResult, createTimeoutHandler],
+    [onUpdateResult, createTimeoutHandler],
   );
 
   return { invokeAction, abortAction };

@@ -403,10 +403,8 @@ export const SkillResponseNode = memo(
       const nextVersion = (data?.metadata?.version || 0) + 1;
 
       setNodeData(id, {
-        ...data,
         contentPreview: '',
         metadata: {
-          ...data?.metadata,
           status: 'waiting',
           version: nextVersion,
         },

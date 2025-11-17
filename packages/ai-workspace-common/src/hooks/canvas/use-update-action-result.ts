@@ -29,7 +29,6 @@ const generateFullNodeDataUpdates = (
   payload: Partial<ActionResult>,
 ): Partial<CanvasNodeData<ResponseNodeMeta>> => {
   return {
-    title: payload.title,
     entityId: payload.resultId,
     contentPreview: processContentPreview((payload?.steps || []).map((s) => s?.content || '')),
     metadata: {
