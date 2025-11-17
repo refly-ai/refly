@@ -14,7 +14,6 @@ interface ConfigInfoDisplayProps {
   prompt: string;
   selectedToolsets: GenericToolset[];
   contextItems?: IContextItem[];
-  onRemoveFile?: (file: any) => void;
   onRemoveContextItem?: (item: IContextItem) => void;
 }
 
@@ -41,7 +40,6 @@ export const ConfigInfoDisplay = memo(
     prompt,
     selectedToolsets,
     contextItems = [],
-    onRemoveFile,
     onRemoveContextItem,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
@@ -147,7 +145,7 @@ export const ConfigInfoDisplay = memo(
                 <Tag
                   key={`${file.entityId}-${index}`}
                   closable
-                  onClose={() => onRemoveFile?.(file)}
+                  onClose={() => onRemoveContextItem?.(file)}
                   className="text-xs m-0 flex items-center gap-1 px-2 py-1"
                 >
                   {file.title}

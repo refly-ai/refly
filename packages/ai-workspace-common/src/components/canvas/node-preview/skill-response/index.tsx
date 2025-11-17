@@ -1,6 +1,3 @@
-import { EditChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/edit-chat-input';
-import { ChatComposerRef } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
-import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
@@ -9,7 +6,6 @@ import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import {
   CanvasNode,
   convertResultContextToItems,
@@ -18,18 +14,15 @@ import {
 } from '@refly/canvas-common';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
-import { useActionResultStoreShallow, useKnowledgeBaseStoreShallow } from '@refly/stores';
+import { useActionResultStoreShallow } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
-import { Button, Divider, Result, Segmented, Skeleton, Tooltip } from 'antd';
-import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
-import { memo, useCallback, useEffect, useState, useRef } from 'react';
+import { Button, Result, Segmented } from 'antd';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Question, Thinking } from 'refly-icons';
-import { ActionContainer } from './action-container';
-import { ActionStepCard } from './action-step';
-import { FailureNotice } from './failure-notice';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
-import { ConfigInfoDisplay } from './config-info-display';
+import { ConfigureTab } from './configure-tab';
+import { LastRunTab } from './last-run-tab';
+import { ActionStepCard } from './action-step';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -38,7 +31,6 @@ interface SkillResponseNodePreviewProps {
 }
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
-const EMPTY_TOOLSET: GenericToolset = { id: 'empty', type: 'regular', name: 'empty' };
 
 const SkillResponseNodePreviewComponent = ({
   node,
@@ -49,9 +41,6 @@ const SkillResponseNodePreviewComponent = ({
     result: state.resultMap[resultId],
     isStreaming: !!state.streamResults[resultId],
     updateActionResult: state.updateActionResult,
-  }));
-  const knowledgeBaseStore = useKnowledgeBaseStoreShallow((state) => ({
-    sourceListDrawerVisible: state.sourceListDrawer.visible,
   }));
 
   const { setNodeData } = useNodeData();
@@ -65,11 +54,6 @@ const SkillResponseNodePreviewComponent = ({
   const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState('configure');
-
-  const [isDragging, setIsDragging] = useState(false);
-  const [, setDragCounter] = useState(0);
-  const { handleUploadImage } = useUploadImage();
-  const chatComposerRef = useRef<ChatComposerRef>(null);
 
   const shareId = node.data?.metadata?.shareId;
   const { data: shareData, loading: shareDataLoading } = useFetchShareData(shareId);
@@ -169,66 +153,6 @@ const SkillResponseNodePreviewComponent = ({
 
   const { steps = [] } = result ?? {};
 
-  // Handle file drop
-  const handleDrop = useCallback(
-    async (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-      setDragCounter(0);
-
-      const files = Array.from(e.dataTransfer.files);
-      for (const file of files) {
-        const resource = await handleUploadImage(file, canvasId);
-        if (resource) {
-          const newContextItem: IContextItem = {
-            type: 'resource',
-            entityId: resource.resourceId,
-            title: resource.title,
-            metadata: {
-              resourceType: resource.resourceType,
-              resourceMeta: resource.data,
-              storageKey: resource.storageKey,
-              rawFileKey: resource.rawFileKey,
-              downloadURL: resource.downloadURL,
-            },
-          };
-          setContextItems([...contextItems, newContextItem]);
-        }
-      }
-    },
-    [handleUploadImage, canvasId, contextItems],
-  );
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragCounter((prev) => {
-      const next = prev + 1;
-      if (next === 1) {
-        setIsDragging(true);
-      }
-      return next;
-    });
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragCounter((prev) => {
-      const next = prev - 1;
-      if (next === 0) {
-        setIsDragging(false);
-      }
-      return next;
-    });
-  }, []);
-
   const handleRemoveContextItem = useCallback(
     (item: IContextItem) => {
       if (!item?.entityId) {
@@ -243,17 +167,6 @@ const SkillResponseNodePreviewComponent = ({
     },
     [contextItems, setContextItems],
   );
-
-  const handleRemoveFile = useCallback(
-    (file: IContextItem) => {
-      handleRemoveContextItem(file);
-    },
-    [handleRemoveContextItem],
-  );
-
-  const handleAddToolsAndContext = useCallback(() => {
-    chatComposerRef.current?.insertAtSymbol?.();
-  }, []);
 
   useEffect(() => {
     const skillName = actionMeta?.name || 'commonQnA';
@@ -366,158 +279,39 @@ const SkillResponseNodePreviewComponent = ({
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {activeTab === 'configure' && (
-            <div className="h-full flex flex-col gap-4">
-              <div>
-                <div
-                  className="text-xs font-semibold leading-4 mb-2 flex items-center gap-1"
-                  style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
-                >
-                  <span>{t('agent.config.model')}</span>
-                  <Tooltip title={t('agent.config.modelDescription')}>
-                    <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
-                  </Tooltip>
-                </div>
-                <ModelSelector
-                  model={modelInfo ?? null}
-                  setModel={setModelInfo}
-                  size="medium"
-                  briefMode={false}
-                  variant="filled"
-                  trigger={['click']}
-                  contextItems={contextItems}
-                />
-              </div>
-
-              <div>
-                <div
-                  className="text-xs font-semibold leading-4 mb-2 flex items-center justify-between"
-                  style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
-                >
-                  <div className="flex items-center gap-1">
-                    <span>{t('agent.config.prompt')}</span>
-                    <Tooltip title={t('agent.config.promptDescription')}>
-                      <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
-                    </Tooltip>
-                  </div>
-                  <Button
-                    type="text"
-                    size="small"
-                    className="text-xs h-auto px-2 py-1 text-refly-text-1 hover:text-refly-text-0"
-                    onClick={handleAddToolsAndContext}
-                  >
-                    @ {t('agent.config.addToolsAndContext')}
-                  </Button>
-                </div>
-                <div
-                  className="rounded-lg pt-2 pb-3 px-3 relative"
-                  style={{ backgroundColor: '#F6F6F6' }}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                >
-                  {/* Drag overlay */}
-                  {isDragging && (
-                    <div
-                      className="absolute inset-0 bg-refly-primary-default/10 border-2 border-refly-Card-Border rounded-lg flex items-center justify-center z-10"
-                      style={{ backdropFilter: 'blur(20px)' }}
-                    >
-                      <div className="text-sm font-semibold text-refly-primary-default text-center">
-                        {t('common.dragAndDropFiles')}
-                      </div>
-                    </div>
-                  )}
-                  <EditChatInput
-                    ref={chatComposerRef}
-                    enabled={true}
-                    resultId={resultId}
-                    version={version}
-                    contextItems={contextItems}
-                    query={query}
-                    setContextItems={setContextItems}
-                    modelInfo={modelInfo}
-                    setModelInfo={setModelInfo}
-                    setEditMode={() => {}}
-                    setQuery={setQuery}
-                    selectedToolsets={selectedToolsets}
-                    setSelectedToolsets={setSelectedToolsets}
-                  />
-
-                  <ConfigInfoDisplay
-                    prompt={query}
-                    selectedToolsets={selectedToolsets}
-                    contextItems={contextItems}
-                    onRemoveFile={handleRemoveFile}
-                    onRemoveContextItem={handleRemoveContextItem}
-                  />
-                </div>
-              </div>
-            </div>
+            <ConfigureTab
+              query={query}
+              version={version}
+              resultId={resultId}
+              modelInfo={modelInfo}
+              selectedToolsets={selectedToolsets}
+              contextItems={contextItems}
+              canvasId={canvasId}
+              setModelInfo={setModelInfo}
+              setSelectedToolsets={setSelectedToolsets}
+              setContextItems={setContextItems}
+              setQuery={setQuery}
+              onRemoveContextItem={handleRemoveContextItem}
+            />
           )}
 
           {activeTab === 'lastRun' && (
-            <div className="h-full w-full flex flex-col">
-              {!result && !loading ? (
-                <div className="h-full w-full flex items-center justify-center">
-                  <Result
-                    status="404"
-                    subTitle={t('canvas.skillResponse.resultNotFound')}
-                    extra={<Button onClick={handleDelete}>{t('canvas.nodeActions.delete')}</Button>}
-                  />
-                </div>
-              ) : (
-                <div className="h-full w-full flex flex-col">
-                  <div className="flex-1 overflow-auto preview-container transition-opacity duration-500">
-                    {loading && !isStreaming && (
-                      <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
-                    )}
-                    {(result?.status === 'executing' || result?.status === 'waiting') &&
-                      !outputStep &&
-                      statusText && (
-                        <div className="flex flex-col gap-2 animate-pulse">
-                          <Divider dashed className="my-2" />
-                          <div className="m-2 flex items-center gap-1 text-gray-500">
-                            <Thinking size={16} />
-                            <span className="text-sm">{statusText}</span>
-                          </div>
-                        </div>
-                      )}
-                    {outputStep && (
-                      <>
-                        <Divider dashed className="my-2" />
-                        <ActionStepCard
-                          result={result}
-                          step={outputStep}
-                          status={result?.status}
-                          query={query ?? title ?? ''}
-                        />
-                      </>
-                    )}
-                    {result?.status === 'failed' && !loading && (
-                      <FailureNotice result={result} handleRetry={handleRetry} />
-                    )}
-                  </div>
-
-                  {outputStep && result?.status === 'finish' && (
-                    <ActionContainer
-                      result={result}
-                      step={outputStep}
-                      nodeId={node.id}
-                      initSelectedToolsets={
-                        selectedToolsets?.length > 0 ? selectedToolsets : [EMPTY_TOOLSET]
-                      }
-                    />
-                  )}
-                </div>
-              )}
-            </div>
+            <LastRunTab
+              loading={loading}
+              isStreaming={isStreaming}
+              result={result}
+              outputStep={outputStep}
+              statusText={statusText}
+              query={query}
+              title={title}
+              nodeId={node.id}
+              selectedToolsets={selectedToolsets}
+              handleDelete={handleDelete}
+              handleRetry={handleRetry}
+            />
           )}
         </div>
       </div>
-
-      {knowledgeBaseStore?.sourceListDrawerVisible ? (
-        <SourceListModal classNames="source-list-modal" />
-      ) : null}
     </div>
   );
 };
