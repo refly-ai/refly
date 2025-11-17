@@ -855,6 +855,8 @@ model WorkflowApp {
   storageKey          String?             @map("storage_key")
   /// Share id for public access
   shareId             String?             @map("share_id")
+  /// Template share id for community publishing (independent from shareId)
+  templateShareId     String?             @map("template_share_id")
   /// Cover image storage key
   coverStorageKey     String?             @map("cover_storage_key")
   /// Template content for app publishing
@@ -878,6 +880,7 @@ model WorkflowApp {
 
   @@index([canvasId, deletedAt])
   @@index([shareId])
+  @@index([templateShareId])
   @@map("workflow_apps")
 }
 

@@ -175,27 +175,36 @@ export class WorkflowAppService {
 
     // Create share for workflow app
     let shareId: string | null = null;
+    let templateShareId: string | null = null;
     try {
-      const { shareRecord } = await this.shareCreationService.createShareForWorkflowApp(user, {
-        entityId: appId,
-        entityType: 'workflowApp',
-        title: canvasData.title,
-        parentShareId: null,
-        allowDuplication: true,
-        creditUsage,
-      });
+      const { shareRecord, templateShareRecord } =
+        await this.shareCreationService.createShareForWorkflowApp(user, {
+          entityId: appId,
+          entityType: 'workflowApp',
+          title: canvasData.title,
+          parentShareId: null,
+          allowDuplication: true,
+          creditUsage,
+        });
 
       shareId = shareRecord.shareId;
+      templateShareId = templateShareRecord?.shareId ?? null;
 
-      // Update WorkflowApp record with shareId
+      // Update WorkflowApp record with shareId and templateShareId
       await this.prisma.workflowApp.update({
         where: { appId },
         data: {
           shareId: shareRecord.shareId,
+          templateShareId,
         },
       });
 
       this.logger.log(`Created share for workflow app: ${appId}, shareId: ${shareRecord.shareId}`);
+      if (templateShareId) {
+        this.logger.log(
+          `Created template share for workflow app: ${appId}, templateShareId: ${templateShareId}`,
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to create share for workflow app ${appId}: ${error.stack}`);
       // Don't throw error, just log it - workflow app creation should still succeed
