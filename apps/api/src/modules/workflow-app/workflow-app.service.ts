@@ -22,6 +22,12 @@ import { VariableExtractionService } from '../variable-extraction/variable-extra
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { CreditService } from '../credit/credit.service';
 import { AppTemplateResult } from '../variable-extraction/variable-extraction.dto';
+import { NotificationService } from '../notification/notification.service';
+import { ConfigService } from '@nestjs/config';
+import {
+  generateWorkflowAppReviewEmailHTML,
+  WORKFLOW_APP_REVIEW_EMAIL_TEMPLATE,
+} from './email-templates';
 
 /**
  * Structure of shared workflow app data
@@ -51,6 +57,8 @@ export class WorkflowAppService {
     private readonly toolService: ToolService,
     private readonly variableExtractionService: VariableExtractionService,
     private readonly creditService: CreditService,
+    private readonly notificationService: NotificationService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createWorkflowApp(user: User, body: CreateWorkflowAppRequest) {
@@ -166,6 +174,7 @@ export class WorkflowAppService {
     }
 
     // Create share for workflow app
+    let shareId: string | null = null;
     try {
       const { shareRecord } = await this.shareCreationService.createShareForWorkflowApp(user, {
         entityId: appId,
@@ -175,6 +184,8 @@ export class WorkflowAppService {
         allowDuplication: true,
         creditUsage,
       });
+
+      shareId = shareRecord.shareId;
 
       // Update WorkflowApp record with shareId
       await this.prisma.workflowApp.update({
@@ -188,6 +199,33 @@ export class WorkflowAppService {
     } catch (error) {
       this.logger.error(`Failed to create share for workflow app ${appId}: ${error.stack}`);
       // Don't throw error, just log it - workflow app creation should still succeed
+    }
+
+    // Send email notification if template is submitted for review
+    if (publishToCommunity && shareId) {
+      try {
+        const origin = this.configService.get<string>('origin')?.split(',')[0] || '';
+        const templateLink = `${origin}/app/${shareId}`;
+        const templateName = canvasData.title || 'Untitled Template';
+        const emailHTML = generateWorkflowAppReviewEmailHTML(templateName, templateLink);
+
+        await this.notificationService.sendEmail(
+          {
+            subject: WORKFLOW_APP_REVIEW_EMAIL_TEMPLATE.subject,
+            html: emailHTML,
+          },
+          user,
+        );
+
+        this.logger.log(
+          `Sent review notification email for workflow app: ${appId} to user: ${user.uid}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send review notification email for workflow app ${appId}: ${error.stack}`,
+        );
+        // Don't throw error, just log it - workflow app creation should still succeed
+      }
     }
 
     const workflowApp = await this.prisma.workflowApp.findUnique({
