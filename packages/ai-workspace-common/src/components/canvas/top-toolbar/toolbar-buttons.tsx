@@ -137,7 +137,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
   }, [handleAddSkillResponse]);
 
   const handleAddMemo = useCallback(() => {
-    createMemo({ x: 0, y: 0 });
+    createMemo(null);
   }, []);
 
   const internalActions = useMemo(() => {
@@ -184,7 +184,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
 
   return (
     <div className="absolute bottom-6 left-0 right-0 z-20 p-2 flex items-center justify-center pointer-events-none">
-      <div className="flex items-center gap-2 p-2 bg-refly-bg-content-z2 rounded-2xl border-solid border-[1px] border-refly-Card-Border pointer-events-auto">
+      <div className="flex items-center gap-2 p-2 bg-refly-bg-content-z2 rounded-2xl border-solid border-[1px] border-refly-Card-Border pointer-events-auto shadow-refly-m">
         {actions.map((action) =>
           action.type === 'divider' ? (
             <Divider key={action.key} type="vertical" className="m-0 h-5 bg-refly-Card-Border" />

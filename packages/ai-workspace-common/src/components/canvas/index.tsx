@@ -62,6 +62,7 @@ import { WorkflowRun } from './workflow-run';
 import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
 import { CanvasDrive, CanvasResourcesWidescreenModal } from './canvas-resources';
 import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
+import { CanvasControlButtons } from './top-toolbar/canvas-control-buttons';
 import { ToggleCopilotPanel } from './top-toolbar/toggle-copilot-panel';
 import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
 import { UploadNotification } from '@refly-packages/ai-workspace-common/components/common/upload-notification';
@@ -183,10 +184,12 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
     setContextMenuOpenedCanvasId: state.setContextMenuOpenedCanvasId,
   }));
 
-  const { showWorkflowRun, setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setShowWorkflowRun: state.setShowWorkflowRun,
-    showWorkflowRun: state.showWorkflowRun,
-  }));
+  const { showWorkflowRun, setShowWorkflowRun, sidePanelVisible } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      setShowWorkflowRun: state.setShowWorkflowRun,
+      showWorkflowRun: state.showWorkflowRun,
+      sidePanelVisible: state.sidePanelVisible,
+    }));
 
   const { handleNodePreview } = useNodePreviewControl({ canvasId });
 
@@ -1071,6 +1074,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
         </div>
         {/* Display the not found overlay when shareNotFound is true */}
         {readonly && shareNotFound && <NotFoundOverlay />}
+        {!sidePanelVisible && <CanvasControlButtons />}
         <ToolbarButtons canvasId={canvasId} />
         <PreviewBoxInCanvas node={selectedNode} />
         <WorkflowRun />
