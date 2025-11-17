@@ -172,7 +172,9 @@ export const ConfigInfoDisplay = memo(
                     className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
                   >
                     <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
-                    <span className="truncate">{title}</span>
+                    <span className="truncate">
+                      {title || t('canvas.richChatInput.untitledAgent')}
+                    </span>
                   </Tag>
                 );
               })}

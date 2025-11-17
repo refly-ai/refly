@@ -33,38 +33,17 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     }));
 
     // Get skillResponse nodes for step records
-    const stepRecordItems: MentionItem[] =
+    const agentItems: MentionItem[] =
       nodes
         ?.filter(
           (node) => node.type === 'skillResponse' && (!filterNodeId || node.id !== filterNodeId),
         )
         ?.map((node) => ({
-          name: node.data?.title ?? t('canvas.richChatInput.untitledStep'),
-          description: t('canvas.richChatInput.stepRecord'),
+          name: node.data?.title || t('canvas.richChatInput.untitledAgent'),
+          description: t('canvas.richChatInput.agents'),
           source: 'stepRecord' as const,
           entityId: node.data?.entityId || '',
           nodeId: node.id,
-        })) ?? [];
-
-    // Get result record nodes - same logic as ResultList component
-    const resultRecordItems: MentionItem[] =
-      nodes
-        ?.filter(
-          (node) =>
-            ['document', 'codeArtifact', 'website', 'video', 'audio'].includes(node.type) ||
-            (node.type === 'image' && !!node.data?.metadata?.resultId),
-        )
-        ?.map((node) => ({
-          name: node.data?.title ?? t('canvas.richChatInput.untitledResult'),
-          description: t('canvas.richChatInput.resultRecord'),
-          source: 'resultRecord' as const,
-          entityId: node.data?.entityId,
-          nodeId: node.id,
-          metadata: {
-            imageUrl: node.data?.metadata?.imageUrl,
-            resourceType: node.data?.metadata?.resourceType as ResourceType | undefined,
-            resourceMeta: node.data?.metadata?.resourceMeta as ResourceMeta | undefined,
-          },
         })) ?? [];
 
     // Get my upload items from drive files data
@@ -109,14 +88,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
         })) ?? [],
     );
 
-    return [
-      ...variableItems,
-      ...stepRecordItems,
-      ...resultRecordItems,
-      ...myUploadItems,
-      ...toolsetItems,
-      ...toolItems,
-    ];
+    return [...variableItems, ...agentItems, ...myUploadItems, ...toolsetItems, ...toolItems];
   }, [workflowVariables, nodes, files, toolsets, t, currentLanguage, filterNodeId]);
 
   return allItems;

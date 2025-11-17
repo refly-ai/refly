@@ -14,6 +14,7 @@ interface NodeHeaderProps {
   fixedTitle?: string;
   title: string;
   type?: CanvasNodeType; // alias for nodeType for backward compatibility
+  placeholder?: string; // Placeholder to display when it is empty
 
   // Resource props (for resource nodes)
   resourceType?: ResourceType;
@@ -53,6 +54,7 @@ export const NodeHeader = memo(
     nodeType,
     fixedTitle,
     title,
+    placeholder,
     type, // backward compatibility
     resourceType,
     resourceMeta,
@@ -139,6 +141,7 @@ export const NodeHeader = memo(
               )}
               value={editTitle}
               data-cy={actualNodeType ? `${actualNodeType}-node-header-input` : 'node-header-input'}
+              placeholder={placeholder}
               onBlur={handleBlur}
               onChange={handleChange}
             />

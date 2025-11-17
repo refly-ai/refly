@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
 import { NodeHeader } from './node-header';
+import { useTranslation } from 'react-i18next';
 
 interface SkillResponseNodeHeaderProps {
   nodeId: string;
@@ -29,6 +30,7 @@ export const SkillResponseNodeHeader = memo(
     className,
     actions,
   }: SkillResponseNodeHeaderProps) => {
+    const { t } = useTranslation();
     const updateNodeTitle = useUpdateNodeTitle();
 
     const onTitleChange = useCallback(
@@ -45,6 +47,8 @@ export const SkillResponseNodeHeader = memo(
       <NodeHeader
         nodeType="skillResponse"
         title={title}
+        fixedTitle={t('canvas.nodeTypes.agent')}
+        placeholder={t('agent.editTitlePlaceholder')}
         canEdit={true}
         disabled={readonly}
         updateTitle={onTitleChange}
