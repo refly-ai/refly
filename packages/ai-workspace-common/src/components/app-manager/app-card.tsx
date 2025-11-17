@@ -1,37 +1,15 @@
 import { WorkflowApp } from '@refly/openapi-schema';
 import { HoverCardContainer } from '@refly-packages/ai-workspace-common/components/common/hover-card';
-import { Avatar, Button, message, Popconfirm } from 'antd';
+import { Avatar, Button } from 'antd';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useTranslation } from 'react-i18next';
 import { WiTime3 } from 'react-icons/wi';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useState } from 'react';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 
-export const AppCard = ({ data, onDelete }: { data: WorkflowApp; onDelete?: () => void }) => {
+export const AppCard = ({ data }: { data: WorkflowApp; onDelete?: () => void }) => {
   const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleUnpublish = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isDeleting) return;
-    setIsDeleting(true);
-    try {
-      const response = await getClient().deleteWorkflowApp({ body: { appId: data.appId } });
-      if (response?.data?.success) {
-        message.success(t('appManager.unpublishSuccess', { title: data.title }));
-        onDelete?.();
-      } else {
-        message.error(t('appManager.unpublishFailed', { title: data.title }));
-      }
-    } catch {
-      message.error(t('appManager.unpublishFailed', { title: data.title }));
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   const handleView = () => {
     window.open(`/app/${data.shareId}`, '_blank');
@@ -47,30 +25,6 @@ export const AppCard = ({ data, onDelete }: { data: WorkflowApp; onDelete?: () =
       <Button type="primary" onClick={(e) => handleViewButtonClick(e)} className="flex-1">
         {t('appManager.view')}
       </Button>
-      <Popconfirm
-        title={
-          <div className="max-w-[300px] max-h-[200px] overflow-y-auto text-sm">
-            {t('appManager.deleteConfirm', { title: data.title })}
-          </div>
-        }
-        onConfirm={(e) => handleUnpublish(e)}
-        okText={t('common.confirm')}
-        cancelText={t('common.cancel')}
-        okButtonProps={{ loading: isDeleting }}
-        onPopupClick={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <Button
-          type="default"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          className="flex-1"
-        >
-          {t('appManager.unpublish')}
-        </Button>
-      </Popconfirm>
     </>
   );
 
