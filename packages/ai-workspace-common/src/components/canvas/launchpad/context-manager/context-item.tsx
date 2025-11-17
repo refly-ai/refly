@@ -16,7 +16,7 @@ import { Close } from 'refly-icons';
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 
 export const ContextItem = ({
   item,

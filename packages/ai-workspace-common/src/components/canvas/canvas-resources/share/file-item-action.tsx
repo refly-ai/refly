@@ -11,7 +11,7 @@ import type {
   VariableResourceType,
   DriveFile,
 } from '@refly/openapi-schema';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 

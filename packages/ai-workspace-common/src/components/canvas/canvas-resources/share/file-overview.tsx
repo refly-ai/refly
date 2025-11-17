@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { FileList } from '../file-list';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 
 export const FileOverview = memo(() => {
   const { t } = useTranslation();

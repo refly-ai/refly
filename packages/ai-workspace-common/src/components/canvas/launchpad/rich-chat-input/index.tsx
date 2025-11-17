@@ -27,7 +27,7 @@ import {
   createNodeEventName,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import { type MentionItem } from './mentionList';
 import { createMentionExtension } from './mention-extension';
 import AtomicInlineKeymap from './atomic-inline-keymap';
