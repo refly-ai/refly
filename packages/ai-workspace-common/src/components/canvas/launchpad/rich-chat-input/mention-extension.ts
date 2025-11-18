@@ -215,6 +215,11 @@ export const createMentionExtension = ({
               interactive: true,
               trigger: 'manual',
               placement: mentionPosition,
+              popperOptions: {
+                modifiers: [
+                  { name: 'flip', enabled: false }, // 禁止自动翻转
+                ],
+              },
               theme: 'custom',
               arrow: false,
               offset: [0, 8],

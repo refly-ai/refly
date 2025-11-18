@@ -190,7 +190,7 @@ const ConfigureTabComponent = ({
             setQuery={setQuery}
             selectedToolsets={configuredToolsets}
             setSelectedToolsets={setSelectedToolsets}
-            mentionPosition="bottom"
+            mentionPosition="bottom-start"
           />
 
           <ConfigInfoDisplay

@@ -204,7 +204,7 @@ export const MentionList = ({
 
   const secondLevelClasses = useMemo(() => {
     const baseClasses =
-      'w-60 p-2 max-h-60 flex box-border overflow-y-auto bg-refly-bg-body-z0 border-[1px] border-solid border-refly-Card-Border';
+      'w-[180px] p-2 max-h-60 flex box-border overflow-y-auto bg-refly-bg-body-z0 border-[1px] border-solid border-refly-Card-Border';
 
     if (placement === 'top') {
       if (isSecondLevelTaller) {
