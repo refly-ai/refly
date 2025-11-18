@@ -13,8 +13,11 @@ interface PollingState {
   lastEventTime: number | null;
 }
 
+export type ResultActiveTab = 'configure' | 'lastRun';
+
 interface ActionResultState {
   resultMap: Record<string, ActionResult & CacheInfo>;
+  resultActiveTabMap: Record<string, ResultActiveTab>;
   pollingStateMap: Record<string, PollingState & CacheInfo>;
   streamResults: Record<string, ActionResult>;
   traceIdMap: Record<string, string>; // key: resultId, value: traceId
@@ -31,6 +34,7 @@ interface ActionResultState {
   // Individual update actions
   updateActionResult: (resultId: string, result: ActionResult) => void;
   removeActionResult: (resultId: string) => void;
+  setResultActiveTab: (resultId: string, tab: ResultActiveTab) => void;
   startPolling: (resultId: string, version: number) => void;
   stopPolling: (resultId: string) => void;
   removePollingState: (resultId: string) => void;
@@ -52,6 +56,7 @@ interface ActionResultState {
 
 export const defaultState = {
   resultMap: {},
+  resultActiveTabMap: {},
   pollingStateMap: {},
   isBatchUpdateScheduled: false,
   streamResults: {},
@@ -154,6 +159,13 @@ export const useActionResultStore = create<ActionResultState>()(
             resultMap: newResultMap,
           };
         });
+      },
+
+      setResultActiveTab: (resultId: string, tab: ResultActiveTab) => {
+        set((state) => ({
+          ...state,
+          resultActiveTabMap: { ...state.resultActiveTabMap, [resultId]: tab },
+        }));
       },
 
       startPolling: (resultId: string, version: number) => {

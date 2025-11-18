@@ -112,7 +112,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
   ]);
 
   return (
-    <div className="w-full px-4 py-3 rounded-xl overflow-hidden border-[1px] border-solid border-refly-primary-default ">
+    <div className="w-full p-3 rounded-xl overflow-hidden border-[1px] border-solid border-refly-primary-default ">
       <ChatInput
         readonly={false}
         query={query}
@@ -131,8 +131,6 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
         handleSendMessage={handleSendMessage}
         onUploadImage={() => Promise.resolve()}
         contextItems={[]}
-        runtimeConfig={undefined}
-        setRuntimeConfig={() => {}}
         selectedToolsets={[]}
         setSelectedToolsets={() => {}}
         customActions={[]}

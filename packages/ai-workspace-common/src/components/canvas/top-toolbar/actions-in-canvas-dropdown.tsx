@@ -1,4 +1,4 @@
-import { useState, memo, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, memo, useCallback, useMemo, useEffect } from 'react';
 import { Dropdown, DropdownProps, MenuProps } from 'antd';
 import { ArrowDown } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/us
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
-import { useOnViewportChange, useReactFlow } from '@xyflow/react';
+import { ReactFlowState, useReactFlow, useStore } from '@xyflow/react';
 import { reflyEnv } from '@refly/utils/env';
 import { Home } from 'refly-icons';
 
@@ -69,10 +69,9 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
 
   const { undo, redo } = useCanvasContext();
 
-  const [currentZoom, setCurrentZoom] = useState(1);
+  const currentZoom = useStore((state: ReactFlowState) => state.transform?.[2] ?? 1);
   const reactFlowInstance = useReactFlow();
   const { onLayout } = useCanvasLayout();
-  const timeoutRef = useRef<NodeJS.Timeout>();
 
   const minZoom = 0.25;
   const maxZoom = 2;
@@ -118,33 +117,6 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
       document.documentElement.style.removeProperty('--current-zoom');
     };
   }, [currentZoom]);
-
-  // Handle viewport changes to update zoom percentage
-  useOnViewportChange({
-    onChange: useCallback(
-      ({ zoom }: { zoom: number }) => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-
-        timeoutRef.current = setTimeout(() => {
-          if (Math.abs(zoom - currentZoom) > 0.01) {
-            setCurrentZoom(zoom);
-          }
-        }, 15);
-      },
-      [currentZoom],
-    ),
-  });
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleZoomIn = useCallback(() => {
     if (currentZoom < maxZoom) {

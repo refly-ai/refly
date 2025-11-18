@@ -13,7 +13,7 @@ import { ModelInfo } from '@refly/openapi-schema';
 import { cn } from '@refly/utils/index';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { IContextItem } from '@refly/common-types';
-import { SkillRuntimeConfig, GenericToolset } from '@refly/openapi-schema';
+import { GenericToolset } from '@refly/openapi-schema';
 import { ToolSelectorPopover } from '../tool-selector-panel';
 import { logEvent } from '@refly/telemetry-web';
 import { ChatModeSelector } from '@refly-packages/ai-workspace-common/components/canvas/front-page/chat-mode-selector';
@@ -28,8 +28,6 @@ interface ChatActionsProps {
   query: string;
   model: ModelInfo | null;
   setModel: (model: ModelInfo | null) => void;
-  runtimeConfig?: SkillRuntimeConfig;
-  setRuntimeConfig?: (runtimeConfig: SkillRuntimeConfig) => void;
   resultId?: string;
   className?: string;
   form?: FormInstance;

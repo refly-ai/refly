@@ -164,7 +164,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
     const getMenuItems = useCallback((): MenuItem[] => {
       switch (nodeType) {
         case 'skillResponse':
-          return [askAI, createDocumentItem, createMemoItem];
+          return [askAI, createMemoItem];
 
         case 'skill':
         case 'mediaSkill':

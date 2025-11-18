@@ -1,10 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, Button, Divider, Popover } from 'antd';
+import { Tooltip, Divider, Popover } from 'antd';
 import { History, SideLeft, NewConversation } from 'refly-icons';
 import { useListCopilotSessions } from '@refly-packages/ai-workspace-common/queries';
 import cn from 'classnames';
 import { useCopilotStoreShallow } from '@refly/stores';
+import { ReflyAssistant } from './refly-assistant';
 
 interface CopilotHeaderProps {
   canvasId: string;
@@ -89,9 +90,7 @@ export const CopilotHeader = memo(
 
     return (
       <div className="h-[46px] px-4 py-3 flex items-center gap-3 justify-between">
-        <div className="text-refly-text-0 text-base font-semibold leading-[26px]">
-          {t('copilot.title')}
-        </div>
+        <ReflyAssistant />
 
         <div className="flex items-center gap-3">
           {sessionHistory.length > 0 && (
@@ -104,14 +103,12 @@ export const CopilotHeader = memo(
                 arrow={false}
                 content={content}
               >
-                <Button
+                <History
+                  size={20}
                   className={cn(
-                    'flex items-center justify-center',
+                    'text-refly-text-0 hover:bg-refly-tertiary-hover cursor-pointer rounded-md',
                     isHistoryOpen ? 'bg-refly-tertiary-hover' : '',
                   )}
-                  size="small"
-                  type="text"
-                  icon={<History size={18} />}
                 />
               </Popover>
             </Tooltip>
@@ -119,24 +116,22 @@ export const CopilotHeader = memo(
 
           {sessionId && (
             <Tooltip title={t('copilot.header.newConversation')}>
-              <Button
-                className="flex items-center justify-center"
-                size="small"
-                type="text"
-                icon={<NewConversation size={18} />}
+              <NewConversation
+                size={20}
+                className="text-refly-text-0 hover:bg-refly-tertiary-hover cursor-pointer rounded-md"
                 onClick={() => setCurrentSessionId(canvasId, null)}
               />
             </Tooltip>
           )}
 
-          {showDivider && <Divider type="vertical" className="m-0 h-4 bg-refly-Card-Border" />}
+          {showDivider && (
+            <Divider type="vertical" className="m-0 h-4 bg-refly-Card-Border translate-y-[1px]" />
+          )}
 
           <Tooltip title={t('copilot.header.close')}>
-            <Button
-              className="flex items-center justify-center"
-              size="small"
-              type="text"
-              icon={<SideLeft size={18} />}
+            <SideLeft
+              size={20}
+              className="text-refly-text-0 hover:bg-refly-tertiary-hover cursor-pointer rounded-md"
               onClick={handleClose}
             />
           </Tooltip>

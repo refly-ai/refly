@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
+import { DriveFile } from '@refly/openapi-schema';
 
 export type CanvasResourcesPanelMode = 'wide' | 'normal' | 'hidden';
 
@@ -10,24 +11,20 @@ export type CanvasResourcesParentType = 'stepsRecord' | 'resultsRecord' | 'myUpl
 
 interface CanvasResourcesPanelState {
   // Panel width in pixels
-  panelWidth: number;
+  currentResource: CanvasNode | null;
+  currentFile: DriveFile | null;
   sidePanelVisible: boolean;
   wideScreenVisible: boolean;
-  showLeftOverview: boolean;
-  parentType: CanvasResourcesParentType | null;
-  activeTab: CanvasResourcesParentType;
   // Change from single activeNode to map of canvasId to activeNode
   activeNodes: Record<string, CanvasNode | null>;
   searchKeyword: string;
   showWorkflowRun: boolean;
 
   // Methods
-  setPanelWidth: (width: number) => void;
+  setCurrentResource: (resource: CanvasNode | null) => void;
+  setCurrentFile: (file: DriveFile | null) => void;
   setSidePanelVisible: (visible: boolean) => void;
   setWideScreenVisible: (visible: boolean) => void;
-  setShowLeftOverview: (show: boolean) => void;
-  setParentType: (type: CanvasResourcesParentType | null) => void;
-  setActiveTab: (tab: CanvasResourcesParentType) => void;
   // Update setActiveNode to accept canvasId parameter
   setActiveNode: (canvasId: string, node: CanvasNode | null) => void;
   // Add helper method to get activeNode for a specific canvas
@@ -37,14 +34,11 @@ interface CanvasResourcesPanelState {
   resetState: () => void;
 }
 
-const DEFAULT_PANEL_WIDTH = 480;
 const defaultState = {
-  sidePanelVisible: true,
+  currentResource: null,
+  currentFile: null,
+  sidePanelVisible: false,
   wideScreenVisible: false,
-  showLeftOverview: false,
-  parentType: null,
-  activeTab: 'stepsRecord' as const,
-  // Initialize activeNodes as empty object
   searchKeyword: '',
   showWorkflowRun: false,
 };
@@ -53,17 +47,14 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
   persist(
     (set, get) => ({
       // Default state
-      panelWidth: DEFAULT_PANEL_WIDTH,
       activeNodes: {},
       ...defaultState,
 
       // Methods
-      setPanelWidth: (width: number) => set({ panelWidth: width }),
+      setCurrentResource: (resource: CanvasNode | null) => set({ currentResource: resource }),
+      setCurrentFile: (file: DriveFile | null) => set({ currentFile: file }),
       setSidePanelVisible: (visible: boolean) => set({ sidePanelVisible: visible }),
       setWideScreenVisible: (visible: boolean) => set({ wideScreenVisible: visible }),
-      setShowLeftOverview: (show: boolean) => set({ showLeftOverview: show }),
-      setParentType: (type: CanvasResourcesParentType | null) => set({ parentType: type }),
-      setActiveTab: (tab: CanvasResourcesParentType) => set({ activeTab: tab }),
       // Update setActiveNode to handle canvasId
       setActiveNode: (canvasId: string, node: CanvasNode | null) =>
         set((state) => ({
@@ -79,23 +70,14 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
       },
       setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
       setShowWorkflowRun: (show: boolean) => {
-        if (show) {
-          set({ showWorkflowRun: show, sidePanelVisible: true });
-        } else {
-          set({ showWorkflowRun: show });
-        }
+        set({ showWorkflowRun: show });
       },
       resetState: () => set(defaultState),
     }),
     {
       name: 'canvas-resources-panel-storage',
       partialize: (state) => ({
-        activeTab: state.activeTab,
-        // Persist activeNodes for all canvases
         activeNodes: state.activeNodes,
-        parentType: state.parentType,
-        panelWidth: state.panelWidth,
-        sidePanelVisible: state.sidePanelVisible,
         wideScreenVisible: state.wideScreenVisible,
         showWorkflowRun: state.showWorkflowRun,
       }),

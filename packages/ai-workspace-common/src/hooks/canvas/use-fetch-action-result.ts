@@ -42,7 +42,6 @@ export const useFetchActionResult = () => {
 
       if (node?.id && remoteResult) {
         setNodeData(node.id, {
-          title: remoteResult.title,
           contentPreview: processContentPreview(remoteResult.steps?.map((s) => s?.content || '')),
           metadata: {
             status: remoteResult?.status,

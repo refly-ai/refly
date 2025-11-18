@@ -1,8 +1,7 @@
-import { Position, useReactFlow, NodeResizer } from '@xyflow/react';
+import { useReactFlow, NodeResizer } from '@xyflow/react';
 import { CanvasNode } from '@refly/canvas-common';
 import { MemoNodeProps } from '../shared/types';
-import { CustomHandle } from '../shared/custom-handle';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { getNodeCommonStyles } from '../shared/styles';
@@ -10,8 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 
-import { time } from '@refly-packages/ai-workspace-common/utils/time';
-import { LOCALE } from '@refly/common-types';
 import classNames from 'classnames';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { Markdown } from 'tiptap-markdown';
@@ -39,39 +36,29 @@ import { IContextItem } from '@refly/common-types';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
-import { NodeActionButtons } from '../shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
+import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
+import { Button, Dropdown, type MenuProps } from 'antd';
+import { More, Delete, Edit } from 'refly-icons';
+import { cn } from '@refly/utils/cn';
 
-export const MemoNode = ({
-  data,
-  selected,
-  id,
-  isPreview = false,
-  hideHandles = false,
-  onNodeClick,
-}: MemoNodeProps) => {
+export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }: MemoNodeProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const setNodeDataByEntity = useSetNodeDataByEntity();
-  const { i18n, t } = useTranslation();
-  const language = i18n.languages?.[0];
+  const { t } = useTranslation();
   const { addNode } = useAddNode();
   useSelectedNodeZIndex(id, selected);
 
-  const { getNode, getEdges } = useReactFlow();
+  const { getNode } = useReactFlow();
   const node = getNode(id);
   const targetRef = useRef<HTMLDivElement>(null);
   const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
   const [isFocused, setIsFocused] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
-
-  // Check if node has any connections
-  const edges = getEdges();
-  const isTargetConnected = edges?.some((edge) => edge.target === id);
-  const isSourceConnected = edges?.some((edge) => edge.source === id);
 
   const { readonly } = useCanvasContext();
 
@@ -86,10 +73,10 @@ export const MemoNode = ({
     sizeMode: 'adaptive',
     readonly,
     isOperating: false,
-    minWidth: 100,
+    minWidth: 150,
     maxWidth: 800,
-    minHeight: 80,
-    defaultWidth: 320,
+    minHeight: 150,
+    defaultWidth: 230,
     defaultHeight: 200,
   });
 
@@ -291,7 +278,10 @@ export const MemoNode = ({
     );
   }, 200);
 
-  const [bgColor, setBgColor] = useState((data?.metadata?.bgColor ?? '#FFFEE7') as string);
+  // Panel color tokens
+  const panelColors = useMemo(() => ['#FEF2CF', '#F4EEFF', '#EAF4FF', '#FFEFED', '#F6F6F6'], []);
+
+  const [bgColor, setBgColor] = useState((data?.metadata?.bgColor ?? panelColors[0]) as string);
   const onUpdateBgColor = useCallback(
     (color: string) => {
       setBgColor(color);
@@ -309,6 +299,58 @@ export const MemoNode = ({
       );
     },
     [data?.entityId, data?.metadata, setNodeDataByEntity],
+  );
+
+  // Dropdown menu items
+  const dropdownItems: MenuProps['items'] = useMemo(
+    () => [
+      {
+        key: 'panel-color',
+        label: (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1">
+              <Edit size={16} />
+              <span className="text-sm">{t('knowledgeBase.context.panelColor')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {panelColors.map((color) => (
+                <div
+                  key={color}
+                  className="flex items-center justify-center rounded-full w-5 h-5 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdateBgColor(color);
+                  }}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full border-solid border-[2px] box-border hover:border-refly-text-2 ${
+                      bgColor === color ? 'border-refly-text-2' : 'border-refly-Card-Border'
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ),
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'delete',
+        label: (
+          <div className="flex items-center gap-2">
+            <Delete size={16} />
+            <span className="text-sm">{t('common.delete')}</span>
+          </div>
+        ),
+        onClick: () => {
+          handleDelete();
+        },
+      },
+    ],
+    [bgColor, panelColors, t, onUpdateBgColor, handleDelete],
   );
 
   const handleDuplicate = useCallback(
@@ -385,7 +427,7 @@ export const MemoNode = ({
         ref={targetRef}
         onMouseEnter={!isPreview ? handleMouseEnter : undefined}
         onMouseLeave={!isPreview ? handleMouseLeave : undefined}
-        className={classNames('w-full h-full rounded-2xl relative', {
+        className={classNames('w-full h-full rounded-lg relative', {
           nowheel: isFocused && isHovered,
         })}
         onClick={onNodeClick}
@@ -398,40 +440,6 @@ export const MemoNode = ({
             : null
         }
       >
-        {!isPreview && (selected || isHovered) && !readonly && !isResizing && (
-          <NodeActionButtons
-            nodeId={id}
-            nodeType="memo"
-            isNodeHovered={selected || isHovered}
-            isSelected={selected}
-            bgColor={bgColor}
-            onChangeBackground={onUpdateBgColor}
-          />
-        )}
-
-        {!isPreview && !hideHandles && (
-          <>
-            <CustomHandle
-              id={`${id}-target`}
-              nodeId={id}
-              type="target"
-              position={Position.Left}
-              isConnected={isTargetConnected}
-              isNodeHovered={isHovered}
-              nodeType="memo"
-            />
-            <CustomHandle
-              id={`${id}-source`}
-              nodeId={id}
-              type="source"
-              position={Position.Right}
-              isConnected={isSourceConnected}
-              isNodeHovered={isHovered}
-              nodeType="memo"
-            />
-          </>
-        )}
-
         <div
           style={{ backgroundColor: bgColor }}
           onClick={() => {
@@ -443,12 +451,15 @@ export const MemoNode = ({
             relative
             z-1
             flex flex-col h-full box-border
+            px-[10px]
+            pt-3
+            pb-1
             ${getNodeCommonStyles({ selected: !isPreview && selected, isHovered })}
           `}
         >
-          <div className="relative flex-grow overflow-y-auto p-3">
+          <div className="relative flex-grow overflow-y-auto">
             <div
-              className="editor-wrapper h-full"
+              className="editor-wrapper"
               style={{ userSelect: 'text', cursor: isPreview || readonly ? 'default' : 'text' }}
             >
               <EditorContent
@@ -457,26 +468,43 @@ export const MemoNode = ({
               />
             </div>
           </div>
-          <div className="flex justify-end items-center flex-shrink-0 p-3 text-[10px] text-gray-400 z-20">
-            {time(data.createdAt, language as LOCALE)
-              ?.utc()
-              ?.fromNow()}
+          <div className="flex items-center justify-between h-6 p-1 pr-0">
+            <Logo
+              textProps={{ show: true, className: 'w-[27px]', fillColor: '#1C1F23', opacity: 0.3 }}
+              logoProps={{ show: false }}
+            />
+
+            {!readonly && (
+              <Dropdown
+                menu={{ items: dropdownItems }}
+                trigger={['click']}
+                placement="bottomLeft"
+                arrow={false}
+                open={dropdownOpen}
+                onOpenChange={setDropdownOpen}
+                getPopupContainer={() => targetRef.current}
+              >
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<More size={14} color="#1C1F23" />}
+                  className={cn(
+                    '!h-[18px] !w-[18px] flex items-center justify-center hover:!bg-[#00000014]',
+                    dropdownOpen && '!bg-[#00000014]',
+                  )}
+                />
+              </Dropdown>
+            )}
           </div>
         </div>
       </div>
       {!isPreview && selected && !readonly && (
         <NodeResizer
-          minWidth={100}
+          minWidth={150}
           maxWidth={800}
-          minHeight={80}
+          minHeight={150}
           maxHeight={1200}
           onResize={handleResize}
-          onResizeStart={() => {
-            setIsResizing(true);
-          }}
-          onResizeEnd={() => {
-            setIsResizing(false);
-          }}
         />
       )}
     </div>

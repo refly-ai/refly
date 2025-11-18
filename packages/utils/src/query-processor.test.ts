@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { WorkflowVariable } from '@refly/openapi-schema';
-import { processQueryWithMentions, replaceResourceMentionsInQuery } from './query-processor';
+import {
+  processQueryWithMentions,
+  replaceResourceMentionsInQuery,
+  parseMentionsFromQuery,
+} from './query-processor';
 
 describe('processQueryWithMentions', () => {
   // Test data
@@ -412,6 +416,270 @@ describe('processQueryWithMentions', () => {
   });
 });
 
+describe('parseMentionsFromQuery', () => {
+  describe('basic functionality', () => {
+    it('should return empty array for query with no mentions', () => {
+      const result = parseMentionsFromQuery('This is a regular query with no mentions');
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array for empty query', () => {
+      const result = parseMentionsFromQuery('');
+      expect(result).toEqual([]);
+    });
+
+    it('should parse a single var mention correctly', () => {
+      const query = 'this is a test @{type=var,id=var-1,name=cv_folder_url}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'cv_folder_url',
+        },
+      ]);
+    });
+
+    it('should parse a single resource mention correctly', () => {
+      const query = 'with resource @{type=resource,id=resource-1,name=resource_1}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'resource',
+          id: 'resource-1',
+          name: 'resource_1',
+        },
+      ]);
+    });
+
+    it('should parse multiple mentions correctly', () => {
+      const query =
+        'this is a test @{type=var,id=var-1,name=cv_folder_url}, with resource @{type=resource,id=resource-1,name=resource_1}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'cv_folder_url',
+        },
+        {
+          type: 'resource',
+          id: 'resource-1',
+          name: 'resource_1',
+        },
+      ]);
+    });
+  });
+
+  describe('validation and error handling', () => {
+    it('should filter out mentions with missing type', () => {
+      const query = '@{id=var-1,name=testVar} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with missing id', () => {
+      const query = '@{type=var,name=testVar} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with missing name', () => {
+      const query = '@{type=var,id=var-1} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with invalid type', () => {
+      const query =
+        '@{type=invalid,id=test-1,name=testName} @{type=var,id=var-1,name=testVar} @{type=resource,id=resource-1,name=testResource}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+        {
+          type: 'resource',
+          id: 'resource-1',
+          name: 'testResource',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with step type', () => {
+      const query = '@{type=step,id=step-1,name=testStep} @{type=var,id=var-1,name=testVar}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with toolset type', () => {
+      const query =
+        '@{type=toolset,id=toolset-1,name=testToolset} @{type=var,id=var-1,name=testVar}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with tool type', () => {
+      const query = '@{type=tool,id=tool-1,name=testTool} @{type=var,id=var-1,name=testVar}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle mentions with extra spaces in parameters', () => {
+      const query = '@{ type=var, id=var-1, name=testVar }';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+
+    it('should handle mentions with special characters in names', () => {
+      const query = '@{type=var,id=var-1,name=Test with spaces & symbols @#$%}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'Test with spaces & symbols @#$%',
+        },
+      ]);
+    });
+
+    it('should handle malformed mention syntax gracefully', () => {
+      const query =
+        '@{type=var,id=var-1,name=testVar @{type=resource,id=res-1,name=res} @{incomplete} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should handle mentions with empty parameter values', () => {
+      const query =
+        '@{type=,id=var-1,name=testVar} @{type=var,id=,name=testVar} @{type=var,id=var-2,name=} @{type=var,id=var-3,name=testVar3}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-3',
+          name: 'testVar3',
+        },
+      ]);
+    });
+
+    it('should handle mentions at the beginning and end of query', () => {
+      const query =
+        '@{type=var,id=var-1,name=startVar} some text @{type=resource,id=res-1,name=endResource}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'startVar',
+        },
+        {
+          type: 'resource',
+          id: 'res-1',
+          name: 'endResource',
+        },
+      ]);
+    });
+
+    it('should handle multiple mentions of the same type', () => {
+      const query =
+        '@{type=var,id=var-1,name=var1} @{type=var,id=var-2,name=var2} @{type=resource,id=res-1,name=res1} @{type=resource,id=res-2,name=res2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'var1',
+        },
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'var2',
+        },
+        {
+          type: 'resource',
+          id: 'res-1',
+          name: 'res1',
+        },
+        {
+          type: 'resource',
+          id: 'res-2',
+          name: 'res2',
+        },
+      ]);
+    });
+
+    it('should handle mentions with parameters in different order', () => {
+      const query = '@{name=testName,type=var,id=var-1} @{id=res-1,type=resource,name=resName}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testName',
+        },
+        {
+          type: 'resource',
+          id: 'res-1',
+          name: 'resName',
+        },
+      ]);
+    });
+  });
+});
+
 describe('replaceResourceMentionsInQuery', () => {
   // Test data
   const mockResourceVariable: WorkflowVariable = {
@@ -625,6 +893,270 @@ describe('replaceResourceMentionsInQuery', () => {
       const entityIdMap = { 'entity-123': 'mapped-entity-id' };
       const result = replaceResourceMentionsInQuery(query, [mockResourceVariable], entityIdMap);
       expect(result).toBe('@{type=resource,id=mapped-entity-id,name=newResourceName}');
+    });
+  });
+});
+
+describe('parseMentionsFromQuery', () => {
+  describe('basic functionality', () => {
+    it('should return empty array for query with no mentions', () => {
+      const result = parseMentionsFromQuery('This is a regular query with no mentions');
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array for empty query', () => {
+      const result = parseMentionsFromQuery('');
+      expect(result).toEqual([]);
+    });
+
+    it('should parse a single var mention correctly', () => {
+      const query = 'this is a test @{type=var,id=var-1,name=cv_folder_url}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'cv_folder_url',
+        },
+      ]);
+    });
+
+    it('should parse a single resource mention correctly', () => {
+      const query = 'with resource @{type=resource,id=resource-1,name=resource_1}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'resource',
+          id: 'resource-1',
+          name: 'resource_1',
+        },
+      ]);
+    });
+
+    it('should parse multiple mentions correctly', () => {
+      const query =
+        'this is a test @{type=var,id=var-1,name=cv_folder_url}, with resource @{type=resource,id=resource-1,name=resource_1}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'cv_folder_url',
+        },
+        {
+          type: 'resource',
+          id: 'resource-1',
+          name: 'resource_1',
+        },
+      ]);
+    });
+  });
+
+  describe('validation and error handling', () => {
+    it('should filter out mentions with missing type', () => {
+      const query = '@{id=var-1,name=testVar} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with missing id', () => {
+      const query = '@{type=var,name=testVar} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with missing name', () => {
+      const query = '@{type=var,id=var-1} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with invalid type', () => {
+      const query =
+        '@{type=invalid,id=test-1,name=testName} @{type=var,id=var-1,name=testVar} @{type=resource,id=resource-1,name=testResource}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+        {
+          type: 'resource',
+          id: 'resource-1',
+          name: 'testResource',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with step type', () => {
+      const query = '@{type=step,id=step-1,name=testStep} @{type=var,id=var-1,name=testVar}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with toolset type', () => {
+      const query =
+        '@{type=toolset,id=toolset-1,name=testToolset} @{type=var,id=var-1,name=testVar}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+
+    it('should filter out mentions with tool type', () => {
+      const query = '@{type=tool,id=tool-1,name=testTool} @{type=var,id=var-1,name=testVar}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle mentions with extra spaces in parameters', () => {
+      const query = '@{ type=var, id=var-1, name=testVar }';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testVar',
+        },
+      ]);
+    });
+
+    it('should handle mentions with special characters in names', () => {
+      const query = '@{type=var,id=var-1,name=Test with spaces & symbols @#$%}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'Test with spaces & symbols @#$%',
+        },
+      ]);
+    });
+
+    it('should handle malformed mention syntax gracefully', () => {
+      const query =
+        '@{type=var,id=var-1,name=testVar @{type=resource,id=res-1,name=res} @{incomplete} @{type=var,id=var-2,name=testVar2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'testVar2',
+        },
+      ]);
+    });
+
+    it('should handle mentions with empty parameter values', () => {
+      const query =
+        '@{type=,id=var-1,name=testVar} @{type=var,id=,name=testVar} @{type=var,id=var-2,name=} @{type=var,id=var-3,name=testVar3}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-3',
+          name: 'testVar3',
+        },
+      ]);
+    });
+
+    it('should handle mentions at the beginning and end of query', () => {
+      const query =
+        '@{type=var,id=var-1,name=startVar} some text @{type=resource,id=res-1,name=endResource}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'startVar',
+        },
+        {
+          type: 'resource',
+          id: 'res-1',
+          name: 'endResource',
+        },
+      ]);
+    });
+
+    it('should handle multiple mentions of the same type', () => {
+      const query =
+        '@{type=var,id=var-1,name=var1} @{type=var,id=var-2,name=var2} @{type=resource,id=res-1,name=res1} @{type=resource,id=res-2,name=res2}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'var1',
+        },
+        {
+          type: 'var',
+          id: 'var-2',
+          name: 'var2',
+        },
+        {
+          type: 'resource',
+          id: 'res-1',
+          name: 'res1',
+        },
+        {
+          type: 'resource',
+          id: 'res-2',
+          name: 'res2',
+        },
+      ]);
+    });
+
+    it('should handle mentions with parameters in different order', () => {
+      const query = '@{name=testName,type=var,id=var-1} @{id=res-1,type=resource,name=resName}';
+      const result = parseMentionsFromQuery(query);
+      expect(result).toEqual([
+        {
+          type: 'var',
+          id: 'var-1',
+          name: 'testName',
+        },
+        {
+          type: 'resource',
+          id: 'res-1',
+          name: 'resName',
+        },
+      ]);
     });
   });
 });

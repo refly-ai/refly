@@ -50,7 +50,8 @@ const PreviewChatInputComponent = (props: PreviewChatInputProps) => {
     >
       {contextItems?.length > 0 && <PreviewContextManager contextItems={contextItems} />}
       <Paragraph
-        className="text-base break-all text-refly-text-0 font-semibold leading-[26px] !mb-0"
+        className="text-sm break-all text-refly-text-0 font-normal leading-5 !mb-0"
+        style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
         ellipsis={{ rows: 4 }}
       >
         {renderQueryWithVariables}

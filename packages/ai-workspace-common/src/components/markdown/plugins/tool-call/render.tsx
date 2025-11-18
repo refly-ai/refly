@@ -1,11 +1,14 @@
-import { ToolOutlined } from '@ant-design/icons';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { DriveFile } from '@refly/openapi-schema';
+
 import { MarkdownMode } from '../../types';
 import { ToolCallStatus, parseToolCallStatus } from './types';
-import { CopilotWorkflowPlan } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/copilot-workflow-plan';
+import { CopilotWorkflowPlan } from './copilot-workflow-plan';
 import { WorkflowPlan } from '@refly/canvas-common';
 import { safeParseJSON } from '@refly/utils/parse';
+import { ProductCard } from './product-card';
+import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 
 // SVG icons for the component
 const ExecutingIcon = () => (
@@ -94,47 +97,26 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   // Extract tool name from props
-  const toolName = props['data-tool-name'] || 'unknown';
-  const toolsetKey = props['data-tool-toolset-key'] || 'unknown';
+  const toolName = props['data-tool-name'] ?? 'unknown';
+  const toolsetKey = props['data-tool-toolset-key'] ?? 'unknown';
   const toolCallStatus =
     parseToolCallStatus(props['data-tool-call-status']) ?? ToolCallStatus.EXECUTING;
-
-  const isCopilotGenerateWorkflow = toolsetKey === 'copilot' && toolName === 'generate_workflow';
-  if (isCopilotGenerateWorkflow) {
-    const resultStr = props['data-tool-result'] || '{}';
-    const structuredArgs = safeParseJSON(resultStr)?.data as WorkflowPlan;
-
-    // Handle case when structuredArgs is undefined
-    if (!structuredArgs) {
-      return (
-        <div className="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2">
-          <div className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
-            {toolCallStatus === ToolCallStatus.EXECUTING
-              ? t('components.markdown.workflow.generating')
-              : t('components.markdown.workflow.invalidData')}
-          </div>
-        </div>
-      );
-    }
-
-    return <CopilotWorkflowPlan data={structuredArgs} />;
-  }
 
   // Format the content for parameters
   const parametersContent = () => {
     try {
-      const argsStr = props['data-tool-arguments'] || '{}';
+      const argsStr = props['data-tool-arguments'] ?? '{}';
       const args = JSON.parse(argsStr);
       return Object.keys(args).length
         ? JSON.stringify(args, null, 2)
         : t('components.markdown.noParameters', 'No parameters');
     } catch (_e) {
-      return props['data-tool-arguments'] || t('components.markdown.noParameters', 'No parameters');
+      return props['data-tool-arguments'] ?? t('components.markdown.noParameters', 'No parameters');
     }
   };
 
   // Format the content for result
-  const resultContent = props['data-tool-error'] || props['data-tool-result'] || '';
+  const resultContent = props['data-tool-error'] ?? props['data-tool-result'] ?? '';
   // Check if result exists
   const hasResult = !!resultContent || !!props['data-tool-error'];
 
@@ -165,30 +147,53 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     return `${minutes}m ${remainSec}s`;
   }, [props['data-tool-created-at'], props['data-tool-updated-at']]);
 
+  const isCopilotGenerateWorkflow = toolsetKey === 'copilot' && toolName === 'generate_workflow';
+  if (isCopilotGenerateWorkflow) {
+    const resultStr = props['data-tool-result'] ?? '{}';
+    const structuredArgs = safeParseJSON(resultStr)?.data as WorkflowPlan;
+
+    // Handle case when structuredArgs is undefined
+    if (!structuredArgs) {
+      return (
+        <div className="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2">
+          <div className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
+            {toolCallStatus === ToolCallStatus.EXECUTING
+              ? t('components.markdown.workflow.generating')
+              : t('components.markdown.workflow.invalidData')}
+          </div>
+        </div>
+      );
+    }
+
+    return <CopilotWorkflowPlan data={structuredArgs} />;
+  }
+
+  const resultData = safeParseJSON(resultContent)?.data as Record<string, unknown> | undefined;
+  const filePreviewDriveFile = useMemo<DriveFile | null>(() => {
+    if (!resultData?.fileId) return null;
+    return {
+      fileId: String(resultData.fileId),
+      canvasId: String(resultData.canvasId ?? ''),
+      name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
+      type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
+    };
+  }, [resultData]);
+  const shouldRenderFilePreview = Boolean(filePreviewDriveFile?.fileId);
+
   return (
     <>
-      <div className="my-3 rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 text-black dark:text-gray-100 font-mono shadow-refly-m">
+      <div className="my-3 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 text-black dark:text-gray-100 shadow-refly-m">
         {/* Header bar */}
         <div
-          className="flex items-center px-4 py-2 cursor-pointer select-none bg-gray-50 dark:bg-gray-700 min-h-[44px]"
+          className="flex items-center px-4 py-2 gap-2 cursor-pointer select-none min-h-[44px]"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          style={{
-            fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-          }}
         >
-          {/* ToolOutlined now serves as the toggle icon with rotation */}
-          <ToolOutlined
-            className="text-gray-500 dark:text-gray-400"
-            style={{
-              fontSize: '16px',
-              marginRight: '12px', // Adjusted margin for spacing
-              transition: 'transform 0.2s ease-in-out',
-              transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-            }}
+          <ToolsetIcon
+            toolsetKey={toolsetKey}
+            config={{ size: 16, className: 'flex-shrink-0', builtinClassName: '!w-4 !h-4' }}
           />
-          {/* Tool name displayed as the main text in the header */}
-          <div className="flex-1 text-[15px] font-medium tracking-tight text-gray-900 dark:text-gray-100">
-            {`${toolsetKey} | ${toolName}`}
+          <div className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {`${toolName}`}
           </div>
           {/* Status indicator */}
           {toolCallStatus === ToolCallStatus.EXECUTING && (
@@ -241,6 +246,8 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
           </div>
         )}
       </div>
+
+      {shouldRenderFilePreview && <ProductCard file={filePreviewDriveFile} />}
     </>
   );
 };

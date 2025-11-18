@@ -1,7 +1,6 @@
 import { forwardRef, memo, useMemo, useCallback, useRef, useImperativeHandle } from 'react';
 import type { IContextItem } from '@refly/common-types';
-import type { GenericToolset, ModelInfo, SkillRuntimeConfig } from '@refly/openapi-schema';
-import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
+import type { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import {
   RichChatInput,
@@ -29,11 +28,8 @@ export interface ChatComposerProps {
     items: IContextItem[] | ((prevItems: IContextItem[]) => IContextItem[]),
   ) => void;
 
-  // Model and runtime config
   modelInfo: ModelInfo | null;
   setModelInfo: (model: ModelInfo | null) => void;
-  runtimeConfig?: SkillRuntimeConfig;
-  setRuntimeConfig?: (config: SkillRuntimeConfig) => void;
 
   // Optional UI behaviors
   placeholder?: string;
@@ -65,10 +61,14 @@ export interface ChatComposerProps {
   customActions?: CustomAction[];
 
   nodeId?: string;
+
+  // Show/hide ChatActions
+  showActions?: boolean;
 }
 
 export interface ChatComposerRef {
   focus: () => void;
+  insertAtSymbol?: () => void;
 }
 
 /**
@@ -85,15 +85,12 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
     setContextItems,
     modelInfo,
     setModelInfo,
-    runtimeConfig,
-    setRuntimeConfig,
     placeholder,
     inputClassName = 'px-1 py-0',
     maxRows = 6,
     onFocus,
     resultId,
     className = '',
-    contextClassName = '',
     actionsClassName = '',
     enableRichInput = false,
     mentionPosition = 'bottom-start',
@@ -103,6 +100,7 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
     enableChatModeSelector = false,
     customActions,
     nodeId,
+    showActions = true,
   } = props;
 
   const { handleUploadImage, handleUploadMultipleImages } = useUploadImage();
@@ -112,12 +110,15 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
   // Ref for the input component
   const inputRef = useRef<RichChatInputRef>(null);
 
-  // Expose focus method through ref
+  // Expose focus and insertAtSymbol methods through ref
   useImperativeHandle(
     ref,
     () => ({
       focus: () => {
         inputRef.current?.focus();
+      },
+      insertAtSymbol: () => {
+        inputRef.current?.insertAtSymbol?.();
       },
     }),
     [],
@@ -206,13 +207,7 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
   }, [resultId, handleSendMessage]);
 
   return (
-    <div className={`flex flex-col gap-3 h-full box-border ${className}`}>
-      <ContextManager
-        className={contextClassName}
-        contextItems={contextItems}
-        setContextItems={setContextItems}
-      />
-
+    <div className={`flex flex-col gap-3 h-full ${className}`}>
       {enableRichInput ? (
         <RichChatInput
           readonly={readonly}
@@ -253,24 +248,24 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
         />
       )}
 
-      <ChatActions
-        className={actionsClassName}
-        query={query}
-        model={modelInfo}
-        setModel={setModelInfo}
-        resultId={resultId}
-        handleSendMessage={handleSendMessageInternal}
-        handleAbort={handleAbort ?? (() => {})}
-        onUploadImage={handleImageUpload as (file: File) => Promise<void>}
-        contextItems={contextItems}
-        runtimeConfig={runtimeConfig}
-        setRuntimeConfig={setRuntimeConfig}
-        selectedToolsets={selectedToolsets}
-        setSelectedToolsets={onSelectedToolsetsChange}
-        isExecuting={isExecuting}
-        enableChatModeSelector={enableChatModeSelector}
-        customActions={customActions}
-      />
+      {showActions && (
+        <ChatActions
+          className={actionsClassName}
+          query={query}
+          model={modelInfo}
+          setModel={setModelInfo}
+          resultId={resultId}
+          handleSendMessage={handleSendMessageInternal}
+          handleAbort={handleAbort ?? (() => {})}
+          onUploadImage={handleImageUpload as (file: File) => Promise<void>}
+          contextItems={contextItems}
+          selectedToolsets={selectedToolsets}
+          setSelectedToolsets={onSelectedToolsetsChange}
+          isExecuting={isExecuting}
+          enableChatModeSelector={enableChatModeSelector}
+          customActions={customActions}
+        />
+      )}
     </div>
   );
 });

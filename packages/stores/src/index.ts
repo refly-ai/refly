@@ -1,5 +1,9 @@
 // Re-export all store hooks and types - use named exports to avoid conflicts
-export { useActionResultStore, useActionResultStoreShallow } from './stores/action-result';
+export {
+  useActionResultStore,
+  useActionResultStoreShallow,
+  type ResultActiveTab,
+} from './stores/action-result';
 export { useAppStore, useAppStoreShallow } from './stores/app';
 export { useAuthStore, useAuthStoreShallow } from './stores/auth';
 export { useCanvasNodesStore, useCanvasNodesStoreShallow } from './stores/canvas-nodes';

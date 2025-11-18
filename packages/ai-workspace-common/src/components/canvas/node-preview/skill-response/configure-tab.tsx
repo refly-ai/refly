@@ -1,0 +1,210 @@
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button, Tooltip } from 'antd';
+import { Question } from 'refly-icons';
+import { GenericToolset } from '@refly/openapi-schema';
+import { IContextItem } from '@refly/common-types';
+import { EditChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/edit-chat-input';
+import { ChatComposerRef } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
+import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
+import { ConfigInfoDisplay } from './config-info-display';
+import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
+
+interface ConfigureTabProps {
+  query?: string | null;
+  version: number;
+  resultId: string;
+  modelInfo: any;
+  selectedToolsets?: GenericToolset[];
+  contextItems?: IContextItem[];
+  canvasId: string;
+  setModelInfo: (modelInfo: any | null) => void;
+  setSelectedToolsets: (toolsets: GenericToolset[]) => void;
+  setContextItems: (items: IContextItem[]) => void;
+  setQuery: (query: string) => void;
+  onRemoveContextItem: (item: IContextItem) => void;
+}
+
+const ConfigureTabComponent = ({
+  query,
+  version,
+  resultId,
+  modelInfo,
+  selectedToolsets,
+  contextItems,
+  canvasId,
+  setModelInfo,
+  setSelectedToolsets,
+  setContextItems,
+  setQuery,
+  onRemoveContextItem,
+}: ConfigureTabProps) => {
+  const { t } = useTranslation();
+  const contextItemsList = useMemo(() => contextItems ?? [], [contextItems]);
+  const configuredToolsets = useMemo(() => selectedToolsets ?? [], [selectedToolsets]);
+  const { handleUploadImage } = useUploadImage();
+  const [dragging, setDragging] = useState(false);
+  const dragCounterRef = useRef(0);
+  const chatComposerRef = useRef<ChatComposerRef>(null);
+  const handleAddToolsAndContext = useCallback(() => {
+    chatComposerRef.current?.insertAtSymbol?.();
+  }, []);
+
+  const handleDrop = useCallback(
+    async (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragging(false);
+      dragCounterRef.current = 0;
+
+      const files = Array.from(event.dataTransfer?.files ?? []);
+      if (files.length === 0) {
+        return;
+      }
+
+      const newContextItems: IContextItem[] = [];
+      for (const file of files) {
+        const resource = await handleUploadImage(file, canvasId ?? '');
+        const entityId = resource?.resourceId ?? '';
+        if (!entityId) {
+          continue;
+        }
+
+        newContextItems.push({
+          type: 'resource',
+          entityId,
+          title: resource?.title ?? '',
+          metadata: {
+            resourceType: resource?.resourceType ?? '',
+            resourceMeta: resource?.data,
+            storageKey: resource?.storageKey ?? '',
+            rawFileKey: resource?.rawFileKey ?? '',
+            downloadURL: resource?.downloadURL ?? '',
+          },
+        });
+      }
+
+      if (newContextItems.length > 0) {
+        setContextItems([...contextItemsList, ...newContextItems]);
+      }
+    },
+    [canvasId, contextItemsList, handleUploadImage, setContextItems],
+  );
+
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const handleDragEnter = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) {
+      setDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) {
+      setDragging(false);
+    }
+  }, []);
+
+  return (
+    <div className="h-full flex flex-col gap-4">
+      <div>
+        <div
+          className="text-xs font-semibold leading-4 mb-2 flex items-center gap-1"
+          style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
+        >
+          <span>{t('agent.config.model')}</span>
+          <Tooltip title={t('agent.config.modelDescription')}>
+            <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+          </Tooltip>
+        </div>
+
+        <ModelSelector
+          model={modelInfo ?? null}
+          setModel={setModelInfo}
+          size="medium"
+          briefMode={false}
+          variant="filled"
+          trigger={['click']}
+          contextItems={contextItemsList}
+        />
+      </div>
+
+      <div>
+        <div
+          className="text-xs font-semibold leading-4 mb-2 flex items-center justify-between"
+          style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
+        >
+          <div className="flex items-center gap-1">
+            <span>{t('agent.config.prompt')}</span>
+            <Tooltip title={t('agent.config.promptDescription')}>
+              <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+            </Tooltip>
+          </div>
+          <Button
+            type="text"
+            size="small"
+            className="text-xs h-auto px-2 py-1 text-refly-text-1 hover:text-refly-text-0"
+            onClick={handleAddToolsAndContext}
+          >
+            @ {t('agent.config.addToolsAndContext')}
+          </Button>
+        </div>
+
+        <div
+          className="rounded-lg pt-2 pb-3 px-3 relative"
+          style={{ backgroundColor: '#F6F6F6' }}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+        >
+          {dragging && (
+            <div
+              className="absolute inset-0 bg-refly-primary-default/10 border-2 border-refly-Card-Border rounded-lg flex items-center justify-center z-10"
+              style={{ backdropFilter: 'blur(20px)' }}
+            >
+              <div className="text-sm font-semibold text-refly-primary-default text-center">
+                {t('common.dragAndDropFiles')}
+              </div>
+            </div>
+          )}
+
+          <EditChatInput
+            ref={chatComposerRef}
+            enabled
+            resultId={resultId}
+            version={version}
+            contextItems={contextItemsList}
+            query={query ?? ''}
+            setContextItems={setContextItems}
+            modelInfo={modelInfo}
+            setModelInfo={setModelInfo}
+            setEditMode={() => {}}
+            setQuery={setQuery}
+            selectedToolsets={configuredToolsets}
+            setSelectedToolsets={setSelectedToolsets}
+          />
+
+          <ConfigInfoDisplay
+            prompt={query ?? ''}
+            selectedToolsets={configuredToolsets}
+            contextItems={contextItemsList}
+            onRemoveContextItem={onRemoveContextItem}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const ConfigureTab = memo(ConfigureTabComponent);
+ConfigureTab.displayName = 'ConfigureTab';

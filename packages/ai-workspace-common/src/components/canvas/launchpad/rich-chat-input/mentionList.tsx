@@ -228,26 +228,10 @@ export const MentionList = ({
   const firstLevels = useMemo(
     () => [
       {
-        key: 'variables',
-        name: t('canvas.richChatInput.variables'),
+        key: 'userInput',
+        name: t('canvas.richChatInput.userInput'),
         source: 'variables' as const,
         onMouseEnter: () => setHoveredCategory('variables'),
-      },
-      {
-        key: 'resourceLibrary',
-        name: t('canvas.richChatInput.resourceLibrary'),
-        source: 'resourceLibrary' as const,
-        onMouseEnter: () => {
-          setHoveredCategory('resourceLibrary');
-        },
-      },
-      {
-        key: 'runningRecord',
-        name: t('canvas.richChatInput.runningRecord'),
-        source: 'runningRecord' as const,
-        onMouseEnter: () => {
-          setHoveredCategory('runningRecord');
-        },
       },
       {
         key: 'tools',
@@ -255,6 +239,22 @@ export const MentionList = ({
         source: 'tools' as const,
         onMouseEnter: () => {
           setHoveredCategory('tools');
+        },
+      },
+      {
+        key: 'files',
+        name: t('canvas.richChatInput.files'),
+        source: 'resourceLibrary' as const,
+        onMouseEnter: () => {
+          setHoveredCategory('resourceLibrary');
+        },
+      },
+      {
+        key: 'agents',
+        name: t('canvas.richChatInput.agents'),
+        source: 'runningRecord' as const,
+        onMouseEnter: () => {
+          setHoveredCategory('runningRecord');
         },
       },
     ],
@@ -504,7 +504,7 @@ export const MentionList = ({
   const categoryConfigs = useMemo(
     () => ({
       variables: {
-        emptyStateKey: 'noVariables',
+        emptyStateKey: 'noUserInput',
       },
       resourceLibrary: {
         nodeIconProps: (item: MentionItem) => ({
@@ -514,7 +514,7 @@ export const MentionList = ({
           resourceType: item.metadata?.resourceType,
           resourceMeta: item.metadata?.resourceMeta,
         }),
-        emptyStateKey: 'noUploadFiles',
+        emptyStateKey: 'noFiles',
       },
       runningRecord: {
         nodeIconProps: (item: MentionItem) => {
@@ -533,7 +533,7 @@ export const MentionList = ({
             };
           }
         },
-        emptyStateKey: 'noRunningRecords',
+        emptyStateKey: 'noAgents',
       },
       tools: {
         emptyStateKey: 'noTools',
@@ -889,7 +889,7 @@ export const MentionList = ({
                   </div>
                 ) : (
                   <div className="px-4 py-8 text-center text-refly-text-2 text-sm">
-                    {t('canvas.richChatInput.noVariables')}
+                    {t('canvas.richChatInput.noUserInput')}
                   </div>
                 )}
               </div>

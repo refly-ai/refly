@@ -374,6 +374,41 @@ export async function prepareContext(
     pushSection('URLs', items);
   }
 
+  if (context?.files?.length > 0) {
+    const items = (context?.files ?? [])
+      .map((item) => {
+        const file = item?.file;
+        const fileId = file?.fileId ?? 'unknown';
+        const title = file?.name ?? 'Untitled File';
+        const type = file?.type;
+
+        const prefix = `### ${title}\n\n**File ID:** ${fileId}\n**Type:** ${type}\n\n`;
+        const body = file?.content ?? 'Empty';
+        const suffix = '';
+
+        return { section: 'Files', prefix, body, suffix } as Block;
+      })
+      .filter(Boolean);
+
+    pushSection('Files', items);
+  }
+
+  if (context?.results?.length > 0) {
+    const items = (context?.results ?? []).map((item) => {
+      const result = item?.result;
+      const resultId = result?.resultId ?? 'unknown';
+      const title = result?.title ?? 'Untitled Result';
+
+      const prefix = `### ${title}\n\n**Result ID:** ${resultId}\n\n`;
+      const body = result?.steps?.map((step) => step.content).join('\n\n') ?? 'Empty';
+      const suffix = ''; // TODO: add products of this action result
+
+      return { section: 'Previous Agent Results', prefix, body, suffix } as Block;
+    });
+
+    pushSection('Previous Agent Results', items);
+  }
+
   const contextStr = sections.length > 0 ? `# Context\n\n${sections.join('\n\n')}` : '';
 
   if (maxTokens <= 0) {

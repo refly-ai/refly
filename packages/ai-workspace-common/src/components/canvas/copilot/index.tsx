@@ -35,7 +35,7 @@ export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) =>
   }, []);
 
   return (
-    <div className="w-full h-full overflow-hidden flex flex-col bg-refly-bg-content-z2 border-solid border-r-[1px] border-y-0 border-l-0 border-refly-Card-Border shadow-lg">
+    <div className="w-full h-full overflow-hidden flex flex-col bg-refly-bg-body">
       <CopilotHeader
         canvasId={canvasId}
         sessionId={sessionId}

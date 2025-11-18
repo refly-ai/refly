@@ -1,6 +1,7 @@
 // Basic node operations
 export * from './use-add-node';
 export * from './use-delete-node';
+export * from './use-duplicate-node';
 export * from './use-node-data';
 export * from './use-node-size';
 export * from './use-node-position';
@@ -22,7 +23,6 @@ export * from './use-action-polling';
 
 // Context operations
 export * from './use-add-to-context';
-export * from './use-sync-selected-nodes-to-context';
 export * from './use-debounced-context-update';
 
 // Canvas operations

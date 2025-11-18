@@ -1,7 +1,7 @@
 import {
   User,
   MediaGenerateRequest,
-  MediaGenerateResponse,
+  MediaGenerationResult,
   ToolsetDefinition,
 } from '@refly/openapi-schema';
 import { ToolParams } from '@langchain/core/tools';
@@ -10,7 +10,7 @@ import { z } from 'zod/v3';
 import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {
-  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerateResponse>;
+  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerationResult>;
   processURL: (url: string) => Promise<string>;
   batchProcessURL: (urls: string[]) => Promise<string[]>;
 }
@@ -154,7 +154,7 @@ export class SeedanceGenerateVideo extends AgentBaseTool<FalVideoParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedance/v1/pro/text-to-video',
@@ -163,6 +163,10 @@ export class SeedanceGenerateVideo extends AgentBaseTool<FalVideoParams> {
         wait: true,
         parentResultId: config.configurable?.resultId,
       });
+
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on resolution and duration
       let creditCost = 62; // fallback to default unit cost
@@ -199,8 +203,8 @@ export class SeedanceGenerateVideo extends AgentBaseTool<FalVideoParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -258,7 +262,7 @@ export class SeedanceRefrenceVideo extends AgentBaseTool<FalVideoParams> {
     try {
       const { reflyService, user } = this.params;
       const image_url = await reflyService.processURL(input.image_url);
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedance/v1/pro/image-to-video',
@@ -270,6 +274,10 @@ export class SeedanceRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         wait: true,
         parentResultId: config.configurable?.resultId,
       });
+
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on resolution and duration
       let creditCost = 62; // fallback to default unit cost
@@ -306,8 +314,8 @@ export class SeedanceRefrenceVideo extends AgentBaseTool<FalVideoParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -379,7 +387,7 @@ export class Veo3GenerateVideo extends AgentBaseTool<FalVideoParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/veo3',
@@ -389,10 +397,14 @@ export class Veo3GenerateVideo extends AgentBaseTool<FalVideoParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost: 840,
       };
     } catch (error) {
@@ -464,7 +476,7 @@ export class Veo3FastGenerateVideo extends AgentBaseTool<FalVideoParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/veo3/fast',
@@ -474,10 +486,14 @@ export class Veo3FastGenerateVideo extends AgentBaseTool<FalVideoParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost: 448,
       };
     } catch (error) {
@@ -533,7 +549,7 @@ export class Veo3RefrenceVideo extends AgentBaseTool<FalVideoParams> {
     try {
       const { reflyService, user } = this.params;
       const image_url = await reflyService.processURL(input.image_url);
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/veo3/image-to-video',
@@ -546,10 +562,14 @@ export class Veo3RefrenceVideo extends AgentBaseTool<FalVideoParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost: 840,
       };
     } catch (error) {
@@ -590,7 +610,7 @@ export class Veo3FastRefrenceVideo extends AgentBaseTool<FalVideoParams> {
     try {
       const { reflyService, user } = this.params;
       const image_url = await reflyService.processURL(input.image_url);
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/veo3/fast/image-to-video',
@@ -603,10 +623,14 @@ export class Veo3FastRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost: 448,
       };
     } catch (error) {
@@ -666,7 +690,7 @@ export class KlingGenerateVideo extends AgentBaseTool<FalVideoParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/kling-video/v2.1/master/text-to-video',
@@ -675,6 +699,10 @@ export class KlingGenerateVideo extends AgentBaseTool<FalVideoParams> {
         wait: true,
         parentResultId: config.configurable?.resultId,
       });
+
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on duration
       let creditCost = 140; // fallback to default unit cost
@@ -690,8 +718,8 @@ export class KlingGenerateVideo extends AgentBaseTool<FalVideoParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -747,7 +775,7 @@ export class KlingRefrenceVideo extends AgentBaseTool<FalVideoParams> {
     try {
       const { reflyService, user } = this.params;
       const image_url = await reflyService.processURL(input.image_url);
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/kling-video/v2.1/master/image-to-video',
@@ -759,6 +787,10 @@ export class KlingRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         wait: true,
         parentResultId: config.configurable?.resultId,
       });
+
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on duration
       let creditCost = 140; // fallback to default unit cost
@@ -774,8 +806,8 @@ export class KlingRefrenceVideo extends AgentBaseTool<FalVideoParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -827,7 +859,7 @@ export class WanGenerateVideo extends AgentBaseTool<FalVideoParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/wan/v2.2-a14b/text-to-video',
@@ -836,6 +868,10 @@ export class WanGenerateVideo extends AgentBaseTool<FalVideoParams> {
         wait: true,
         parentResultId: config.configurable?.resultId,
       });
+
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on resolution
       let creditCost = 40; // fallback to default unit cost
@@ -856,8 +892,8 @@ export class WanGenerateVideo extends AgentBaseTool<FalVideoParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -919,7 +955,7 @@ export class WanRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         inputObject.end_image_url = await reflyService.processURL(input.end_image_url);
       }
 
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/wan/v2.2-a14b/image-to-video',
@@ -928,6 +964,10 @@ export class WanRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         wait: true,
         parentResultId: config.configurable?.resultId,
       });
+
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on resolution
       let creditCost = 40; // fallback to default unit cost
@@ -948,8 +988,8 @@ export class WanRefrenceVideo extends AgentBaseTool<FalVideoParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -990,7 +1030,7 @@ export class WanEditVideo extends AgentBaseTool<FalVideoParams> {
     try {
       const { reflyService, user } = this.params;
       input.video_url = await reflyService.processURL(input.video_url);
-      const result = await reflyService.generateMedia(user, {
+      const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
         prompt: input.prompt,
         model: 'fal-ai/wan/v2.2-a14b/video-to-video',
@@ -1000,10 +1040,14 @@ export class WanEditVideo extends AgentBaseTool<FalVideoParams> {
         parentResultId: config.configurable?.resultId,
       });
 
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
+
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated video with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated video with file ID: ${file.fileId}`,
         creditCost: 40,
       };
     } catch (error) {

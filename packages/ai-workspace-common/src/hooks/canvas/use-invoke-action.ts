@@ -1,10 +1,5 @@
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
-import { useFindImages } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-images';
-import { useFindMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-memo';
-import { useFindThreadHistory } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-thread-history';
-import { useFindWebsite } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-website';
-import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
 import { SkillNodeMeta, convertContextItemsToInvokeParams } from '@refly/canvas-common';
 import {
@@ -43,7 +38,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const { source } = params || {};
 
-  const setNodeDataByEntity = useSetNodeDataByEntity();
   const { abortAction } = useAbortAction(params);
 
   const deletedNodeIdsRef = useRef<Set<string>>(new Set());
@@ -346,42 +340,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
       globalCurrentResultIdRef.current = '';
     }
 
-    const artifacts = result.steps?.flatMap((s) => s.artifacts ?? []);
-    if (artifacts?.length) {
-      for (const artifact of artifacts) {
-        if (deletedNodeIdsRef.current.has(artifact.entityId)) {
-          continue;
-        }
-
-        if (artifact.type === 'codeArtifact') {
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
-                activeTab: 'preview', // Set to preview when skill finishes
-              },
-            },
-          );
-        } else {
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
-              },
-            },
-          );
-        }
-      }
-    }
-
     refetchUsage();
   };
 
@@ -474,10 +432,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onCompleted = () => {};
   const onStart = () => {};
-  const findThreadHistory = useFindThreadHistory();
-  const findMemo = useFindMemo();
-  const findWebsite = useFindWebsite();
-  const findImages = useFindImages();
 
   const invokeAction = useCallback(
     async (payload: SkillNodeMeta, target: Entity) => {
@@ -514,51 +468,18 @@ export const useInvokeAction = (params?: { source?: string }) => {
       globalAbortControllerRef.current = new AbortController();
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
 
-      const { context, resultHistory, images } = convertContextItemsToInvokeParams(
-        contextItems ?? [],
-        (item) =>
-          findThreadHistory({ resultId: item.entityId }).map((node) => ({
-            title: node.data?.title,
-            resultId: node.data?.entityId,
-          })),
-        (item) => {
-          if (item.type === 'memo') {
-            return findMemo({ resultId: item.entityId }).map((node) => ({
-              content: node.data?.contentPreview ?? '',
-              title: node.data?.title ?? 'Memo',
-            }));
-          }
-          return [];
-        },
-        (item) => {
-          if (item.type === 'image') {
-            return findImages({ resultId: item.entityId });
-          }
-          return [];
-        },
-        (item) => {
-          if (item.type === 'website') {
-            return findWebsite({ resultId: item.entityId }).map((node) => ({
-              url: node.data?.metadata?.url ?? '',
-              title: node.data?.title ?? 'Website',
-            }));
-          }
-          return [];
-        },
-      );
+      const context = convertContextItemsToInvokeParams(contextItems ?? []);
 
       const param: InvokeSkillRequest = {
         resultId,
         input: {
           query,
           originalQuery,
-          images,
         },
         target,
         modelName: modelInfo?.name,
         modelItemId: modelInfo?.providerItemId,
         context,
-        resultHistory,
         skillName: selectedSkill?.name,
         toolsets: selectedToolsets,
         tplConfig,
@@ -579,7 +500,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
         targetId: target?.entityId,
         targetType: target?.entityType,
         context,
-        history: resultHistory,
         tplConfig,
         runtimeConfig,
         status: 'waiting' as ActionStatus,
@@ -589,6 +509,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
       onUpdateResult(resultId, initialResult);
       useActionResultStore.getState().addStreamResult(resultId, initialResult);
+      useActionResultStore.getState().setResultActiveTab(resultId, 'lastRun');
 
       // Create timeout handler for this action
       const { resetTimeout, cleanup: timeoutCleanup } = createTimeoutHandler(resultId, version);
@@ -625,7 +546,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         timeoutCleanup();
       };
     },
-    [setNodeDataByEntity, onUpdateResult, createTimeoutHandler],
+    [onUpdateResult, createTimeoutHandler],
   );
 
   return { invokeAction, abortAction };

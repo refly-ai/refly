@@ -12,31 +12,9 @@ import { useLaunchpadStoreShallow } from '@refly/stores';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { genActionResultID, processQueryWithMentions } from '@refly/utils';
 import { ChatComposer } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
-import { AddContext, AiChat } from 'refly-icons';
-import {
-  createNodeEventName,
-  nodeActionEmitter,
-} from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { convertContextItemsToNodeFilters } from '@refly/canvas-common';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
-
-interface FollowingActionButtonProps {
-  text: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}
-const FollowingActionButton = ({ text, icon, onClick }: FollowingActionButtonProps) => {
-  return (
-    <div
-      className="h-6 bg-refly-primary-light border-[1px] border-solid border-refly-Card-Border hover:bg-[#CDFFF1] hover:border-refly-Card-Border px-2 py-1 rounded-lg flex items-center justify-center gap-0.5 cursor-pointer text-refly-primary-default text-xs font-semibold hover:shadow-refly-s"
-      onClick={onClick}
-    >
-      {icon}
-      <span>{text}</span>
-    </div>
-  );
-};
 
 interface FollowingActionsProps {
   initContextItems: IContextItem[];
@@ -48,7 +26,6 @@ export const FollowingActions = ({
   initContextItems,
   initModelInfo,
   initSelectedToolsets,
-  nodeId,
 }: FollowingActionsProps) => {
   const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
@@ -168,13 +145,11 @@ export const FollowingActions = ({
           title: processedQuery,
           entityId: resultId,
           metadata: {
+            query: followUpQuery,
             status: 'executing',
             selectedToolsets,
             modelInfo,
             contextItems: followUpContextItems,
-            structuredData: {
-              query: followUpQuery,
-            },
             projectId: finalProjectId,
           },
         },
@@ -202,12 +177,6 @@ export const FollowingActions = ({
     workflowVariables,
   ]);
 
-  const initializeFollowUpInput = useCallback(() => {
-    setFollowUpContextItems(initContextItems);
-    setFollowUpModelInfo(initModelInfo || defaultModelInfo);
-    setShowFollowUpInput(!showFollowUpInput);
-  }, [initContextItems, initModelInfo, showFollowUpInput, defaultModelInfo]);
-
   useEffect(() => {
     setFollowUpContextItems(initContextItems);
   }, [initContextItems]);
@@ -220,30 +189,8 @@ export const FollowingActions = ({
     setSelectedToolsets(initSelectedToolsets ?? selectedToolsetsFromStore ?? []);
   }, [initSelectedToolsets]);
 
-  const handleAddToContext = useCallback(() => {
-    nodeActionEmitter.emit(createNodeEventName(nodeId, 'addToContext'));
-  }, [nodeActionEmitter, nodeId]);
-
   return (
     <div className="px-3">
-      <div className="flex flex-row items-center gap-4 bg-refly-tertiary-default px-4 py-2 rounded-xl">
-        <span className="font-semibold">{t('canvas.nodeActions.nextStepSuggestions')}</span>
-
-        <div className="flex flex-row items-center gap-2">
-          <FollowingActionButton
-            text={t('canvas.nodeActions.followUpQuestion')}
-            icon={<AiChat size={16} color="var(--refly-primary-default)" />}
-            onClick={initializeFollowUpInput}
-          />
-
-          <FollowingActionButton
-            text={t('canvas.nodeActions.addToContext')}
-            icon={<AddContext size={16} color="var(--refly-primary-default)" />}
-            onClick={handleAddToContext}
-          />
-        </div>
-      </div>
-
       <AnimatePresence>
         {showFollowUpInput && (
           <motion.div

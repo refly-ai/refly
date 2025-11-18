@@ -136,33 +136,11 @@
   }
 }
 
-.canvas-splitter {
-  .ant-splitter-bar-dragger {
-    &::before {
-      background: transparent!important;
-    }
-    &::after {
-      display: none;
-    }
-    &:hover {
-      &::before {
-        background: var(--refly-primary-default)!important;
-      }
-    }
-  }
-
-  .ant-splitter-bar-dragger-active {
-      &::before {
-        background: var(--refly-primary-default) !important;
-      }
-  }
-
-  .ant-spin-nested-loading {
+// Make Spin component fill parent container
+.canvas-container {
+  .ant-spin-nested-loading,
+  .ant-spin-container {
     height: 100%;
     width: 100%;
-    .ant-spin-container{
-      height: 100%;
-      width: 100%;
-    }
   }
 }

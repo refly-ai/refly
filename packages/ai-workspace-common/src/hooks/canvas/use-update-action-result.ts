@@ -29,7 +29,6 @@ const generateFullNodeDataUpdates = (
   payload: Partial<ActionResult>,
 ): Partial<CanvasNodeData<ResponseNodeMeta>> => {
   return {
-    title: payload.title,
     entityId: payload.resultId,
     contentPreview: processContentPreview((payload?.steps || []).map((s) => s?.content || '')),
     metadata: {
@@ -107,6 +106,9 @@ export const useUpdateActionResult = () => {
 
   const buildNodeUpdates = useCallback(
     (resultId: string, payload: Partial<ActionResult>) => {
+      if (!payload) {
+        return {};
+      }
       const updates = generateFullNodeDataUpdates(payload);
       const nextPreview = updates.contentPreview ?? '';
       const normalizedPreview = nextPreview.trim();

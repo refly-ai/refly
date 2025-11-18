@@ -27,7 +27,7 @@ import {
   createNodeEventName,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import { type MentionItem } from './mentionList';
 import { createMentionExtension } from './mention-extension';
 import AtomicInlineKeymap from './atomic-inline-keymap';
@@ -64,6 +64,7 @@ interface RichChatInputProps {
 
 export interface RichChatInputRef {
   focus: () => void;
+  insertAtSymbol?: () => void;
 }
 
 const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
@@ -91,7 +92,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const isLogin = useUserStoreShallow((state) => state.isLogin);
     const { canvasId, workflow } = useCanvasContext();
-    const { data: resources } = useFetchResources();
+    const { data: files } = useFetchDriveFiles();
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
     }));
@@ -238,18 +239,17 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           // For resource type variables, find the corresponding resource data and add to context
           if (item.variableValue?.length && item.variableValue[0]?.resource) {
             const resourceValue = item.variableValue[0].resource;
-            const resource = resources.find((r) => r.resourceId === resourceValue.entityId);
+            const resource = files.find((r) => r.fileId === resourceValue.entityId);
 
             const contextItem: IContextItem = {
               entityId: resourceValue.entityId,
-              title: resource?.title ?? resourceValue.name,
+              title: resource?.name ?? resourceValue.name,
               type: 'resource' as CanvasNodeType,
               metadata: {
                 source: 'myUpload',
                 storageKey: resourceValue.storageKey,
                 resourceType: resourceValue.fileType,
-                resourceMeta: resource?.data,
-                [`${resourceValue.fileType}Url`]: resource?.downloadURL,
+                resourceMeta: resource,
               },
             };
 
@@ -260,7 +260,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
               variableType: 'resource',
               url: resourceValue.storageKey,
               resourceType: resourceValue.fileType,
-              resourceMeta: resource?.data,
+              resourceMeta: resource,
               entityId: resourceValue.entityId,
             });
 
@@ -283,7 +283,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           });
         }
       },
-      [addToContextItems, addToSelectedToolsets, insertMention, resources],
+      [addToContextItems, addToSelectedToolsets, insertMention, files],
     );
 
     // Create mention extension with custom suggestion
@@ -375,7 +375,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       [placeholder],
     );
 
-    // Expose focus method through ref
+    // Expose focus and insertAtSymbol methods through ref
     useImperativeHandle(
       ref,
       () => ({
@@ -384,8 +384,27 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             editor.commands.focus();
           }
         },
+        insertAtSymbol: () => {
+          if (editor && !readonly) {
+            hasUserInteractedRef.current = true;
+            // If editor wasn't focused, move cursor to the end
+            const wasFocused = editor.isFocused;
+            if (!wasFocused) {
+              editor.commands.focus('end');
+            } else {
+              editor.commands.focus();
+            }
+            editor.commands.insertContent('@');
+            // Try to show mention popup after a short delay
+            setTimeout(() => {
+              if (popupInstanceRef.current) {
+                popupInstanceRef.current.show();
+              }
+            }, 50);
+          }
+        },
       }),
-      [editor, readonly],
+      [editor, readonly, hasUserInteractedRef, popupInstanceRef],
     );
 
     // Enhanced handleSendMessage that converts mentions to Handlebars
@@ -402,6 +421,11 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     }, [editor, setQuery, handleSendMessage, serializeDocToTokens]);
 
     const isSyncedExternalQuery = useRef(false);
+
+    // Reset sync flag when query changes externally
+    useEffect(() => {
+      isSyncedExternalQuery.current = false;
+    }, [query]);
 
     // Update editor content when query changes externally
     useEffect(() => {
@@ -438,7 +462,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         }
       }
       isSyncedExternalQuery.current = true;
-    }, [query, editor, workflowVariables, allItems, isSyncedExternalQuery]);
+    }, [query, editor, workflowVariables, allItems]);
 
     // Additional effect to re-render content when canvas data becomes available
     useEffect(() => {
@@ -560,24 +584,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           if (isMentionListVisible) {
             return;
           }
-
-          // Ctrl/Meta + Enter should always send the message
-          if ((e.ctrlKey || e.metaKey) && (query?.trim() || !isLogin)) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.nativeEvent?.stopImmediatePropagation?.();
-            handleSendMessageWithMentions();
-            return;
-          }
-
-          // For regular Enter key, send message if not in mention suggestion
-          if (!e.shiftKey && (query?.trim() || !isLogin)) {
-            // for long prompt friendly enter
-            e.preventDefault();
-            e.stopPropagation();
-            e.nativeEvent?.stopImmediatePropagation?.();
-            handleSendMessageWithMentions();
-          }
         }
       },
       [
@@ -646,7 +652,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             'w-full h-full flex flex-col flex-grow overflow-y-auto overflow-x-hidden relative',
             isDragging && 'ring-2 ring-green-500 ring-opacity-50 rounded-lg',
             readonly && 'opacity-70 cursor-not-allowed',
-            isFocused ? 'nodrag nopan nowheel cursor-text' : '!cursor-pointer',
+            isFocused ? 'nodrag nopan nowheel cursor-text' : '!cursor-text',
           )}
           onDragOver={(e) => {
             e.preventDefault();
@@ -689,7 +695,11 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             </div>
           )}
 
-          <div className="flex-1 min-h-0" onKeyDownCapture={handleKeyDown} onPaste={handlePaste}>
+          <div
+            className="flex-1 min-h-[271px]"
+            onKeyDownCapture={handleKeyDown}
+            onPaste={handlePaste}
+          >
             {editor ? (
               <EditorContent
                 editor={editor}

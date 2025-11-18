@@ -19,12 +19,12 @@ export const useCreateCanvas = ({
   const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
-  const { setSidePanelVisible, setShowLeftOverview, setWideScreenVisible } =
-    useCanvasResourcesPanelStoreShallow((state) => ({
+  const { setSidePanelVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
+    (state) => ({
       setSidePanelVisible: state.setSidePanelVisible,
-      setShowLeftOverview: state.setShowLeftOverview,
       setWideScreenVisible: state.setWideScreenVisible,
-    }));
+    }),
+  );
 
   const createCanvas = async (canvasTitle: string) => {
     setIsCreating(true);
@@ -45,9 +45,8 @@ export const useCreateCanvas = ({
 
   const handleCloseResourcesPanel = useCallback(() => {
     setSidePanelVisible(false);
-    setShowLeftOverview(false);
     setWideScreenVisible(false);
-  }, [setSidePanelVisible, setShowLeftOverview, setWideScreenVisible]);
+  }, [setSidePanelVisible, setWideScreenVisible]);
 
   const debouncedCreateCanvas = useDebouncedCallback(
     async (source?: string, options?: CreateCanvasOptions) => {

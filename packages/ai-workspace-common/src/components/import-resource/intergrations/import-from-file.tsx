@@ -67,7 +67,7 @@ export const ImportFromFile = ({ canvasId }: ImportFromFileProps) => {
   const props: UploadProps = {
     name: 'file',
     multiple: true,
-    accept: ACCEPT_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(','),
+    // accept: ACCEPT_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(','),
     fileList: [],
     beforeUpload: async (file: File) => {
       if (uploadLimit > 0 && file.size > maxFileSizeBytes) {
