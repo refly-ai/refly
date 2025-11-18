@@ -25,6 +25,7 @@ import {
   SCALEBOX_DEFAULT_MAX_QUEUE_SIZE,
   ERROR_MESSAGE_MAX_LENGTH,
 } from './scalebox.constants';
+import stripAnsi from 'strip-ansi';
 import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
 import { formatError, buildSuccessResponse } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
@@ -132,10 +133,13 @@ export class ScaleboxService implements OnModuleDestroy {
   }
 
   private truncateErrorMessage(message: string): string {
-    if (message.length <= ERROR_MESSAGE_MAX_LENGTH) {
-      return message;
+    // Strip ANSI escape codes for better readability in JSON responses
+    const cleanMessage = stripAnsi(message);
+
+    if (cleanMessage.length <= ERROR_MESSAGE_MAX_LENGTH) {
+      return cleanMessage;
     }
-    return `${message.slice(0, ERROR_MESSAGE_MAX_LENGTH)}[... more info]`;
+    return `${cleanMessage.slice(0, ERROR_MESSAGE_MAX_LENGTH)}[... more info]`;
   }
 
   private extractErrorMessage(result: ExecutionResult): string {
