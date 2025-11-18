@@ -8,7 +8,7 @@ export const getNodeCommonStyles = ({
   box-border
   transition-all
   duration-200
-  border-[1px]
+  border-[1.5px]
   border-solid
   overflow-hidden
   ${selected ? 'border-refly-bg-dark' : 'border-refly-Card-Border'}

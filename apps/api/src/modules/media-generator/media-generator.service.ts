@@ -350,7 +350,7 @@ export class MediaGeneratorService {
     result: ActionResult,
     request: MediaGenerateRequest,
   ): Promise<MediaGenerationResult> {
-    const { mediaType, provider } = request;
+    const { title, mediaType, provider, parentResultId, parentResultVersion } = request;
     const { pk, resultId, targetId } = result;
     try {
       // Update status to executing
@@ -413,13 +413,16 @@ export class MediaGeneratorService {
       }
 
       // Infer filename and content type from URL
-      const { filename, contentType } = this.inferFileInfoFromUrl(url, mediaType);
+      const { filename, contentType } = this.inferFileInfoFromUrl(url, title, mediaType);
 
-      const file = await this.driveService.upsertDriveFile(user, {
+      const file = await this.driveService.createDriveFile(user, {
         name: filename,
         type: contentType,
         externalUrl: url,
         canvasId: targetId,
+        source: 'agent',
+        resultId: parentResultId,
+        resultVersion: parentResultVersion,
       });
 
       // Update status to completed, saving the storage information inside the system
@@ -630,16 +633,22 @@ export class MediaGeneratorService {
   /**
    * Infer filename and content type from URL
    * @param url The URL to parse
+   * @param title Title to use as base filename if provided
    * @param fallbackMediaType Fallback media type if URL parsing fails
    * @returns Object containing filename and contentType
    */
   private inferFileInfoFromUrl(
     url: string,
+    title: string,
     fallbackMediaType: string,
   ): { filename: string; contentType: string } {
     if (!url) {
+      const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `media_${Date.now()}`;
       return {
-        filename: `media_${Date.now()}.${fallbackMediaType}`,
+        filename: `${baseName}.${extension}`,
         contentType: fallbackMediaType,
       };
     }
@@ -658,17 +667,33 @@ export class MediaGeneratorService {
       // Map extension to content type
       const contentType = mime.getType(extension) || fallbackMediaType;
 
-      // Generate a meaningful filename
-      const baseFilename = urlFilename || `media_${Date.now()}`;
-      const filename = baseFilename.includes('.')
-        ? baseFilename
-        : `${baseFilename}.${extension || fallbackMediaType}`;
+      // Generate filename: use title if provided, otherwise use URL filename or fallback
+      let baseFilename: string;
+      if (title) {
+        // Strip possible file extension from title
+        const cleanTitle = title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '');
+        // Use title and infer proper extension from content type
+        const inferredExtension = mime.getExtension(contentType) || extension || fallbackMediaType;
+        baseFilename = `${cleanTitle}.${inferredExtension}`;
+      } else {
+        // Fallback to URL-based filename generation
+        baseFilename = urlFilename || `media_${Date.now()}`;
+        if (!baseFilename.includes('.')) {
+          const inferredExtension =
+            mime.getExtension(contentType) || extension || fallbackMediaType;
+          baseFilename = `${baseFilename}.${inferredExtension}`;
+        }
+      }
 
-      return { filename, contentType };
+      return { filename: baseFilename, contentType };
     } catch (error) {
       this.logger.warn(`Failed to parse URL for file info: ${url}`, error);
+      const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `media_${Date.now()}`;
       return {
-        filename: `media_${Date.now()}.${fallbackMediaType}`,
+        filename: `${baseName}.${extension}`,
         contentType: fallbackMediaType,
       };
     }

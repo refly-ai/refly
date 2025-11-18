@@ -1,8 +1,7 @@
 import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message } from 'antd';
-import { Play, Copy } from 'refly-icons';
-import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { Play } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
@@ -47,8 +46,8 @@ const FormItemLabel = ({ name, required }: { name: string; required: boolean }) 
   return (
     <div className="flex items-center gap-2 min-w-0">
       <Typography.Paragraph
-        ellipsis={{ rows: 1, tooltip: true }}
-        className="!m-0 text-xs font-semibold text-refly-text-0 leading-4"
+        ellipsis={{ rows: 1, tooltip: <div className="max-h-[200px] overflow-y-auto">{name}</div> }}
+        className="!m-0 text-xs font-semibold text-refly-text-0 leading-4 max-w-[100px]"
       >
         {name}
       </Typography.Paragraph>
@@ -61,8 +60,6 @@ const FormItemLabel = ({ name, required }: { name: string; required: boolean }) 
 interface WorkflowRunFormProps {
   workflowVariables: WorkflowVariable[];
   onSubmitVariables: (variables: WorkflowVariable[]) => Promise<void>;
-  onCopyWorkflow?: () => void;
-  onCopyShareLink?: () => void;
   loading: boolean;
   executionId?: string | null;
   workflowStatus?: WorkflowExecutionStatus | null;
@@ -73,13 +70,12 @@ interface WorkflowRunFormProps {
   className?: string;
   templateContent?: string;
   workflowApp?: any;
+  creditUsage?: number | null;
 }
 
 export const WorkflowRunForm = ({
   workflowVariables,
   onSubmitVariables,
-  onCopyWorkflow,
-  onCopyShareLink,
   loading,
   isPolling,
   isRunning: externalIsRunning,
@@ -87,6 +83,7 @@ export const WorkflowRunForm = ({
   className,
   templateContent,
   workflowApp,
+  creditUsage,
 }: WorkflowRunFormProps) => {
   const { t } = useTranslation();
   const { isLoggedRef } = useIsLogin();
@@ -586,47 +583,24 @@ export const WorkflowRunForm = ({
             </div>
           )}
 
-          <div className="p-3 sm:p-4 border-t border-refly-Card-Border bg-refly-bg-control-z0 rounded-b-lg">
-            <div className="flex gap-2">
-              <Button
-                className={cn(
-                  'flex-1 h-9 sm:h-10 text-sm sm:text-base',
-                  (!isFormValid || isPolling) &&
-                    'bg-refly-bg-control-z1 hover:!bg-refly-tertiary-hover !text-refly-text-3 font-semibold',
-                )}
-                type="primary"
-                icon={<Play size={14} className="sm:w-4 sm:h-4" />}
-                onClick={handleRun}
-                loading={loading || isRunning || isPolling}
-                disabled={loading || isRunning || isPolling}
-              >
-                {isPolling
-                  ? t('canvas.workflow.run.executing') || 'Executing...'
-                  : t('canvas.workflow.run.run') || 'Run'}
-              </Button>
-
-              {onCopyWorkflow && workflowApp?.remixEnabled && (
-                <Button
-                  className="h-9 sm:h-10 text-sm sm:text-base"
-                  type="default"
-                  icon={<Copy size={14} className="sm:w-4 sm:h-4" />}
-                  onClick={onCopyWorkflow}
-                >
-                  {t('canvas.workflow.run.copyWorkflow') || 'Copy Workflow'}
-                </Button>
-              )}
-
-              {onCopyShareLink && (
-                <Button
-                  className="h-9 sm:h-10 text-sm sm:text-base"
-                  type="default"
-                  icon={<IconShare size={14} className="sm:w-4 sm:h-4" />}
-                  onClick={onCopyShareLink}
-                >
-                  {t('canvas.workflow.run.copyShareLink') || 'Copy Share Link'}
-                </Button>
-              )}
-            </div>
+          <div className="p-3 border-t-[1px] border-x-0 border-b-0 border-solid border-refly-Card-Border bg-refly-bg-body-z0 rounded-b-lg flex flex-col gap-2">
+            {creditUsage !== null && creditUsage !== undefined && (
+              <div className="text-xs leading-4 text-refly-primary-default text-center">
+                {t('canvas.workflow.run.creditUsage', { count: creditUsage })}
+              </div>
+            )}
+            <Button
+              className="w-full h-8 text-sm"
+              type="primary"
+              icon={<Play size={16} />}
+              onClick={handleRun}
+              loading={loading || isRunning || isPolling}
+              disabled={loading || isRunning || isPolling || !isFormValid}
+            >
+              {isPolling
+                ? t('canvas.workflow.run.executing') || 'Executing...'
+                : t('canvas.workflow.run.run') || 'Run'}
+            </Button>
           </div>
         </>
       }

@@ -370,6 +370,7 @@ Use cases:
           thumbnailUrl: result.data?.thumbnailUrl,
           duration: result.data?.duration,
           parentResultId: config.configurable?.resultId,
+          parentResultVersion: config.configurable?.version,
         },
         summary,
         creditCost,

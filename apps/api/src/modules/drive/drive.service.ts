@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import mime from 'mime';
+import pLimit from 'p-limit';
 import { PrismaService } from '../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -11,6 +12,7 @@ import {
   BatchCreateDriveFilesRequest,
   DriveFile,
   DriveFileCategory,
+  DriveFileSource,
 } from '@refly/openapi-schema';
 import { Prisma, DriveFile as DriveFileModel } from '../../generated/client';
 import { genDriveFileID, getFileCategory, pick } from '@refly/utils';
@@ -35,8 +37,20 @@ export class DriveService {
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
   ) {}
 
-  private generateStorageKey(user: User, file: { canvasId: string; name: string }): string {
+  private generateStorageKey(
+    user: User,
+    file: { canvasId: string; name: string; scope?: string; source?: string },
+  ): string {
     const prefix = this.config.get<string>('drive.storageKeyPrefix').replace(/\/$/, '');
+
+    if (file.scope === 'archive') {
+      if (file.source === 'variable') {
+        return `${prefix}/${user.uid}/${file.canvasId}-archive/${file.name}.archive.${Date.now()}`;
+      } else if (file.source === 'agent') {
+        return `${prefix}/${user.uid}/${file.canvasId}-archive/${file.name}.archive.${Date.now()}`;
+      }
+    }
+
     return `${prefix}/${user.uid}/${file.canvasId}/${file.name}`;
   }
 
@@ -64,6 +78,87 @@ export class DriveService {
     }
   }
 
+  private async archiveFiles(
+    user: User,
+    canvasId: string,
+    conditions: {
+      source?: DriveFileSource;
+      variableId?: string;
+      resultId?: string;
+    },
+  ): Promise<void> {
+    this.logger.log(`Archiving files using conditions: ${JSON.stringify(conditions)}`);
+
+    const files = await this.prisma.driveFile.findMany({
+      select: { canvasId: true, fileId: true, name: true, storageKey: true },
+      where: { canvasId, scope: 'present', uid: user.uid, ...conditions },
+    });
+
+    if (!files.length) {
+      this.logger.log('No files found to archive');
+      return;
+    }
+
+    // Get concurrency limit from config or use default
+    const concurrencyLimit = this.config.get<number>('drive.archiveConcurrencyLimit') ?? 10;
+
+    this.logger.log(
+      `Starting concurrent archiving of ${files.length} files with concurrency limit: ${concurrencyLimit}`,
+    );
+
+    // Create a limit function to control concurrency
+    const limit = pLimit(concurrencyLimit);
+
+    // Process all files concurrently with limited concurrency
+    const archivePromises = files.map((file) =>
+      limit(async () => {
+        try {
+          const originalStorageKey = file.storageKey ?? this.generateStorageKey(user, file);
+          const archiveStorageKey = this.generateStorageKey(user, {
+            canvasId,
+            name: file.name,
+            scope: 'archive',
+            source: conditions.source === 'variable' ? 'variable' : 'agent',
+          });
+
+          // Update database record
+          await this.prisma.driveFile.update({
+            where: { fileId: file.fileId },
+            data: {
+              scope: 'archive',
+              storageKey: archiveStorageKey,
+            },
+          });
+
+          // Move object in storage
+          await this.internalOss.moveObject(originalStorageKey, archiveStorageKey);
+
+          this.logger.debug(`Successfully archived file ${file.fileId} to ${archiveStorageKey}`);
+          return { success: true, fileId: file.fileId };
+        } catch (error) {
+          this.logger.error(`Failed to archive file ${file.fileId}: ${error}`);
+          return { success: false, fileId: file.fileId, error: error.message };
+        }
+      }),
+    );
+
+    // Wait for all files to complete
+    const results = await Promise.allSettled(archivePromises);
+
+    // Count successful and failed operations
+    const totalProcessed = results.filter(
+      (result) => result.status === 'fulfilled' && result.value.success,
+    ).length;
+    const totalErrors = results.filter(
+      (result) =>
+        result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success),
+    ).length;
+
+    this.logger.log(
+      `Archive operation completed: ${totalProcessed} files archived, ${totalErrors} errors`,
+    );
+  }
+
   /**
    * Process drive file content and store it in object storage
    * @param user - User information
@@ -73,20 +168,35 @@ export class DriveService {
   private async batchProcessDriveFileRequests(
     user: User,
     requests: UpsertDriveFileRequest[],
+    options?: {
+      archiveFiles?: boolean;
+    },
   ): Promise<ProcessedUpsertDriveFileResult[]> {
     const results: ProcessedUpsertDriveFileResult[] = [];
 
     // Process each request in the batch
     for (const request of requests) {
-      const { canvasId, name, content, source = 'manual', storageKey, externalUrl } = request;
+      const { canvasId, name, content, storageKey, externalUrl } = request;
 
       // Skip requests that don't have content to process
       if (content === undefined && !storageKey && !externalUrl) {
         continue;
       }
 
+      let source = request.source;
+      if (request.variableId) {
+        source = 'variable';
+      } else if (request.resultId) {
+        source = 'agent';
+      }
+
       // Generate drive storage path
-      const driveStorageKey = this.generateStorageKey(user, { canvasId, name });
+      const driveStorageKey = this.generateStorageKey(user, {
+        canvasId,
+        name,
+        source,
+        scope: 'present',
+      });
 
       let buffer: Buffer;
       let size: bigint;
@@ -97,19 +207,21 @@ export class DriveService {
         size = BigInt(buffer.length);
         request.type = 'text/plain';
       } else if (storageKey) {
-        const staticFile = await this.prisma.staticFile.findFirst({
-          select: { contentType: true },
-          where: { storageKey },
-        });
         // Case 2: Transfer from existing storage key
-        const stream = await this.internalOss.getObject(storageKey);
-        if (!stream) {
+        let objectInfo = await this.internalOss.statObject(storageKey);
+        if (!objectInfo) {
           throw new ParamsError(`Source file not found: ${storageKey}`);
         }
 
-        buffer = await streamToBuffer(stream);
-        size = BigInt(buffer.length);
-        request.type = staticFile?.contentType ?? 'application/octet-stream';
+        if (storageKey !== driveStorageKey) {
+          objectInfo = await this.internalOss.duplicateFile(storageKey, driveStorageKey);
+        }
+
+        size = BigInt(objectInfo?.size ?? 0);
+        request.type =
+          objectInfo?.metaData?.['Content-Type'] ??
+          mime.getType(name) ??
+          'application/octet-stream';
       } else if (externalUrl) {
         // Case 3: Download from external URL
         buffer = await this.downloadFileFromUrl(externalUrl);
@@ -119,9 +231,25 @@ export class DriveService {
         request.type = mime.getType(name) ?? 'application/octet-stream';
       }
 
-      await this.internalOss.putObject(driveStorageKey, buffer, {
-        'Content-Type': request.type,
-      });
+      if (options?.archiveFiles) {
+        if (request.variableId) {
+          await this.archiveFiles(user, canvasId, {
+            source: 'variable',
+            variableId: request.variableId,
+          });
+        } else if (request.resultId) {
+          await this.archiveFiles(user, canvasId, {
+            source: 'agent',
+            resultId: request.resultId,
+          });
+        }
+      }
+
+      if (buffer) {
+        await this.internalOss.putObject(driveStorageKey, buffer, {
+          'Content-Type': request.type,
+        });
+      }
 
       results.push({
         ...request,
@@ -281,7 +409,9 @@ export class DriveService {
       return [];
     }
 
-    const processedRequests = await this.batchProcessDriveFileRequests(user, files);
+    const processedRequests = await this.batchProcessDriveFileRequests(user, files, {
+      archiveFiles: true,
+    });
 
     // Process each file to prepare data for bulk creation
     const driveFilesData: Prisma.DriveFileCreateManyInput[] = processedRequests.map((req) => {
@@ -303,50 +433,76 @@ export class DriveService {
   }
 
   /**
-   * Create or update a drive file
+   * Create a new drive file
    */
-  async upsertDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
-    const { fileId } = request;
-
-    // Process file content and store in object storage
-    const processedResults = await this.batchProcessDriveFileRequests(user, [request]);
+  async createDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
+    const processedResults = await this.batchProcessDriveFileRequests(user, [request], {
+      archiveFiles: true,
+    });
     const processedReq = processedResults[0];
 
     if (!processedReq) {
       throw new ParamsError('No file content to process');
     }
 
-    let driveFile: DriveFileModel;
+    const newFileId = genDriveFileID();
+    const createData: Prisma.DriveFileCreateInput = {
+      fileId: newFileId,
+      uid: user.uid,
+      ...pick(processedReq, [
+        'canvasId',
+        'name',
+        'size',
+        'source',
+        'summary',
+        'resultId',
+        'resultVersion',
+      ]),
+      scope: 'present',
+      category: processedReq.category,
+      type: processedReq.type,
+      storageKey: processedReq.driveStorageKey,
+    };
 
-    if (fileId) {
-      // Update existing file
-      const updateData: Prisma.DriveFileUpdateInput = {
-        ...pick(processedReq, ['canvasId', 'name', 'type', 'summary', 'resultId', 'resultVersion']),
-      };
+    return this.prisma.driveFile.create({
+      data: createData,
+    });
+  }
 
-      driveFile = await this.prisma.driveFile.update({
-        where: { fileId, uid: user.uid },
-        data: updateData,
-      });
-    } else {
-      // Create new file
-      const newFileId = genDriveFileID();
-      const createData: Prisma.DriveFileCreateInput = {
-        fileId: newFileId,
-        uid: user.uid,
-        ...pick(processedReq, ['canvasId', 'name', 'size', 'summary', 'resultId', 'resultVersion']),
-        scope: 'present',
-        category: processedReq.category,
-        type: processedReq.type,
-        storageKey: processedReq.driveStorageKey,
-      };
-
-      driveFile = await this.prisma.driveFile.create({
-        data: createData,
-      });
+  /**
+   * Update an existing drive file
+   */
+  async updateDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
+    const { fileId } = request;
+    if (!fileId) {
+      throw new ParamsError('File ID is required for update operation');
     }
 
-    return driveFile;
+    const processedResults = await this.batchProcessDriveFileRequests(user, [request]);
+    const processedReq = processedResults[0];
+
+    const updateData: Prisma.DriveFileUpdateInput = {
+      ...pick(request, [
+        'name',
+        'type',
+        'summary',
+        'variableId',
+        'resultId',
+        'resultVersion',
+        'source',
+      ]),
+      ...(processedReq
+        ? {
+            ...pick(processedReq, ['type', 'size', 'category']),
+            storageKey: processedReq.driveStorageKey,
+          }
+        : {}),
+    };
+
+    return this.prisma.driveFile.update({
+      where: { fileId, uid: user.uid },
+      data: updateData,
+    });
   }
 
   /**

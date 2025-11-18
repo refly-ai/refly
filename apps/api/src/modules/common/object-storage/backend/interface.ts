@@ -71,4 +71,12 @@ export interface ObjectStorageBackend {
    * @returns the target object info or null if source doesn't exist
    */
   duplicateFile(sourceKey: string, targetKey: string): Promise<ObjectInfo | null>;
+
+  /**
+   * Move an object from one storage key to another
+   * @param sourceKey The source storage key
+   * @param targetKey The target storage key
+   * @returns the target object info or null if source doesn't exist
+   */
+  moveObject(sourceKey: string, targetKey: string): Promise<ObjectInfo | null>;
 }

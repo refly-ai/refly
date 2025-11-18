@@ -858,7 +858,7 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
                 className="flex items-center"
               />
             }
-            className="p-2 flex items-center justify-center font-semibold ml-2.5"
+            className="p-2 flex items-center justify-center font-semibold"
           />
         </Badge>
       </div>

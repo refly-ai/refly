@@ -5849,7 +5849,12 @@ export const MediaGenerateRequestSchema = {
       type: 'string',
       description: 'Model name for content generation',
     },
+    title: {
+      type: 'string',
+      description: 'Title of the generated media',
+    },
     targetType: {
+      description: 'Target type',
       $ref: '#/components/schemas/EntityType',
     },
     targetId: {
@@ -5881,6 +5886,11 @@ export const MediaGenerateRequestSchema = {
     parentResultId: {
       type: 'string',
       description: 'Parent result ID for the media generation (usually the actor agent result ID)',
+    },
+    parentResultVersion: {
+      type: 'number',
+      description:
+        'Parent result version for the media generation (usually the actor agent result version)',
     },
     apiKey: {
       type: 'string',
@@ -10058,6 +10068,10 @@ export const UpsertDriveFileRequestSchema = {
     source: {
       $ref: '#/components/schemas/DriveFileSource',
       description: 'File source',
+    },
+    variableId: {
+      type: 'string',
+      description: 'Related variable ID',
     },
     resultId: {
       type: 'string',

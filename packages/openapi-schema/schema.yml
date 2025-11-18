@@ -8089,7 +8089,11 @@ components:
           model:
             type: string
             description: Model name for content generation
+          title:
+            type: string
+            description: Title of the generated media
           targetType:
+            description: Target type
             $ref: '#/components/schemas/EntityType'
           targetId:
             type: string
@@ -8114,6 +8118,9 @@ components:
           parentResultId:
             type: string
             description: Parent result ID for the media generation (usually the actor agent result ID)
+          parentResultVersion:
+            type: number
+            description: Parent result version for the media generation (usually the actor agent result version)
           apiKey:
             type: string
             description: API key for the provider
@@ -11107,6 +11114,9 @@ components:
         source:
           $ref: '#/components/schemas/DriveFileSource'
           description: File source
+        variableId:
+          type: string
+          description: Related variable ID
         resultId:
           type: string
           description: Related agent result ID

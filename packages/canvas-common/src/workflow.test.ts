@@ -219,6 +219,7 @@ describe('prepareNodeExecutions', () => {
             entityId: 'entityA',
             metadata: {
               contextItems: [],
+              query: 'Hello @{type=var,id=v-topic,name=topic} world',
               structuredData: {
                 query: 'Hello @{type=var,id=v-topic,name=topic} world',
               },
@@ -302,6 +303,7 @@ describe('prepareNodeExecutions', () => {
           data: {
             entityId: 'entityC',
             metadata: {
+              query: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
               structuredData: {
                 query: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
               },
@@ -368,16 +370,16 @@ describe('prepareNodeExecutions', () => {
       nodeBehavior: 'create',
     });
 
-    // startNodes should be auto-detected (node A has no parents), mapped to new id N1
-    expect(startNodes).toEqual(['N1']);
+    // startNodes should be auto-detected (node S has no parents)
+    expect(startNodes).toEqual(['S']);
     expect(nodeExecutions).toEqual([
       {
-        nodeId: 'N1',
+        nodeId: 'S',
         nodeType: 'start',
         title: 'Start',
         parentNodeIds: [],
         status: 'finish',
-        childNodeIds: ['N2'],
+        childNodeIds: ['A'],
         connectTo: [],
         entityId: 'E1',
         node: {
@@ -389,7 +391,7 @@ describe('prepareNodeExecutions', () => {
             },
             title: 'Start',
           },
-          id: 'N1',
+          id: 'S',
           position: {
             x: 0,
             y: 0,
@@ -398,15 +400,15 @@ describe('prepareNodeExecutions', () => {
         },
       },
       {
-        nodeId: 'N2',
+        nodeId: 'A',
         nodeType: 'skillResponse',
         title: 'Hello TypeScript world',
         originalQuery: 'Hello @{type=var,id=v-topic,name=topic} world',
-        parentNodeIds: ['N1'],
+        parentNodeIds: ['S'],
         processedQuery: 'Hello TypeScript world',
         resultHistory: [],
         status: 'waiting',
-        childNodeIds: ['N3', 'N4'],
+        childNodeIds: ['B', 'C'],
         entityId: 'E2',
         connectTo: [
           {
@@ -429,13 +431,14 @@ describe('prepareNodeExecutions', () => {
                 provider: 'openai',
                 providerItemId: 'pi-1',
               },
+              query: 'Hello @{type=var,id=v-topic,name=topic} world',
               structuredData: {
                 query: 'Hello @{type=var,id=v-topic,name=topic} world',
               },
             },
             title: 'Hello TypeScript world',
           },
-          id: 'N2',
+          id: 'A',
           position: {
             x: 0,
             y: 0,
@@ -444,12 +447,12 @@ describe('prepareNodeExecutions', () => {
         },
       },
       {
-        nodeId: 'N3',
+        nodeId: 'B',
         nodeType: 'document',
-        parentNodeIds: ['N2'],
+        parentNodeIds: ['A'],
         status: 'waiting',
         title: 'Test Document',
-        childNodeIds: ['N4'],
+        childNodeIds: ['C'],
         connectTo: [
           {
             entityId: 'E2',
@@ -464,7 +467,7 @@ describe('prepareNodeExecutions', () => {
             title: 'Test Document',
             contentPreview: '',
           },
-          id: 'N3',
+          id: 'B',
           position: {
             x: 0,
             y: 0,
@@ -473,10 +476,10 @@ describe('prepareNodeExecutions', () => {
         },
       },
       {
-        nodeId: 'N4',
+        nodeId: 'C',
         nodeType: 'skillResponse',
         originalQuery: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
-        parentNodeIds: ['N3', 'N2'],
+        parentNodeIds: ['B', 'A'],
         processedQuery: 'Analyze @test2.pdf please',
         resultHistory: [
           {
@@ -531,13 +534,14 @@ describe('prepareNodeExecutions', () => {
                 provider: 'openai',
                 providerItemId: 'pi-2',
               },
+              query: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
               structuredData: {
                 query: 'Analyze @{type=resource,id=resource1,name=test2.pdf} please',
               },
             },
             title: 'Analyze @test2.pdf please',
           },
-          id: 'N4',
+          id: 'C',
           position: {
             x: 0,
             y: 0,
@@ -687,7 +691,7 @@ describe('prepareNodeExecutions', () => {
       nodeBehavior: 'create',
     });
 
-    expect(startNodes).toEqual(['N5']); // SKILL1 becomes N5
+    expect(startNodes).toEqual(['SKILL1']); // SKILL1 remains SKILL1
 
     // Verify skill node gets 'finish' status even in new canvas mode
     const skillNode = nodeExecutions.find((n) => n.nodeType === 'skill');

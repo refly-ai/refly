@@ -15,6 +15,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useActionResultStore, useChatStoreShallow } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
 import { message } from 'antd';
+import { type MentionPosition } from '../rich-chat-input/mention-extension';
 
 export interface ChatComposerProps {
   query: string;
@@ -43,7 +44,7 @@ export interface ChatComposerProps {
   // Action result ID
   resultId?: string;
 
-  mentionPosition?: 'top-start' | 'bottom-start';
+  mentionPosition?: MentionPosition;
 
   // Rich input
   enableRichInput?: boolean;

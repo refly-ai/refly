@@ -68,6 +68,7 @@ export class SeedreamGenerateImage extends AgentBaseTool<FalImageParams> {
   toolsetKey = FalImageToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the image. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate image, accept chinese and english.'),
     image_size: z
       .enum([
@@ -81,7 +82,9 @@ export class SeedreamGenerateImage extends AgentBaseTool<FalImageParams> {
         'landscape_4_3',
         'landscape_16_9',
       ])
-      .describe('The size of the generated image. Width and height must be between 1024 and 4096.'),
+      .describe('The size of the generated image. Width and height must be between 1024 and 4096.')
+      .optional()
+      .default('auto'),
   });
 
   description =
@@ -103,12 +106,14 @@ export class SeedreamGenerateImage extends AgentBaseTool<FalImageParams> {
       const { reflyService, user } = this.params;
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedream/v4/text-to-image',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -137,6 +142,7 @@ export class SeedreamEditImage extends AgentBaseTool<FalImageParams> {
   toolsetKey = FalImageToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the image. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate image, accept chinese and english.'),
     image_size: z
       .enum([
@@ -147,7 +153,9 @@ export class SeedreamEditImage extends AgentBaseTool<FalImageParams> {
         'landscape_4_3',
         'landscape_16_9',
       ])
-      .describe('The size of the generated image. Width and height must be between 1024 and 4096.'),
+      .describe('The size of the generated image. Width and height must be between 1024 and 4096.')
+      .optional()
+      .default('square'),
     image_urls: z
       .array(z.string())
       .describe(
@@ -175,6 +183,7 @@ export class SeedreamEditImage extends AgentBaseTool<FalImageParams> {
       const image_urls = await reflyService.batchProcessURL(input.image_urls);
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedream/v4/edit',
         provider: 'fal',
@@ -184,6 +193,7 @@ export class SeedreamEditImage extends AgentBaseTool<FalImageParams> {
         },
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -212,6 +222,7 @@ export class NanoBananaEditImage extends AgentBaseTool<FalImageParams> {
   toolsetKey = FalImageToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the image. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to edit image, accept only english.'),
     image_urls: z.array(z.string()).describe('List of URLs of input images for editing.'),
   });
@@ -235,6 +246,7 @@ export class NanoBananaEditImage extends AgentBaseTool<FalImageParams> {
       const image_urls = await reflyService.batchProcessURL(input.image_urls);
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/nano-banana/edit',
         provider: 'fal',
@@ -244,6 +256,7 @@ export class NanoBananaEditImage extends AgentBaseTool<FalImageParams> {
         },
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -272,9 +285,11 @@ export class NanoBananaGenerateImage extends AgentBaseTool<FalImageParams> {
   toolsetKey = FalImageToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the image. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate image, accept only english.'),
     aspect_ratio: z
       .enum(['21:9', '1:1', '4:3', '3:2', '2:3', '5:4', '4:5', '3:4', '16:9'])
+      .optional()
       .default('1:1')
       .describe('The aspect ratio of the generated image.'),
   });
@@ -297,12 +312,14 @@ export class NanoBananaGenerateImage extends AgentBaseTool<FalImageParams> {
       const { reflyService, user } = this.params;
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'image',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/nano-banana',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {

@@ -246,7 +246,7 @@ export class SkillEngineService implements OnModuleInit {
         return result;
       },
       writeFile: async (user, param) => {
-        const file = await this.driveService.upsertDriveFile(user, param);
+        const file = await this.driveService.createDriveFile(user, param);
         return driveFilePO2DTO(file);
       },
       genImageID: async () => {

@@ -4167,6 +4167,13 @@ export type MediaGenerateRequest = {
    * Model name for content generation
    */
   model?: string;
+  /**
+   * Title of the generated media
+   */
+  title?: string;
+  /**
+   * Target type
+   */
   targetType?: EntityType;
   /**
    * Target ID
@@ -4196,6 +4203,10 @@ export type MediaGenerateRequest = {
    * Parent result ID for the media generation (usually the actor agent result ID)
    */
   parentResultId?: string;
+  /**
+   * Parent result version for the media generation (usually the actor agent result version)
+   */
+  parentResultVersion?: number;
   /**
    * API key for the provider
    */
@@ -7121,6 +7132,10 @@ export type UpsertDriveFileRequest = {
    * File source
    */
   source?: DriveFileSource;
+  /**
+   * Related variable ID
+   */
+  variableId?: string;
   /**
    * Related agent result ID
    */

@@ -71,7 +71,7 @@ const SkillResponseActionsComponent = ({
         onClick={handleRunClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+        className="!h-6 !w-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
       />
     );
   }
@@ -92,7 +92,7 @@ const SkillResponseActionsComponent = ({
         onClick={handleRunClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="h-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+        className="!h-6 !w-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
       />
     </Dropdown>
   );

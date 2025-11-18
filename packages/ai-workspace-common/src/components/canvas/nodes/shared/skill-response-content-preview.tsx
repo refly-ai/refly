@@ -89,7 +89,14 @@ export const SkillResponseContentPreview = memo(
           title={t('canvas.skillResponse.config.tool')}
           labels={toolsets.map((toolset) => ({
             icon: (
-              <ToolsetIcon toolset={toolset} config={{ size: 16, className: 'flex-shrink-0' }} />
+              <ToolsetIcon
+                toolset={toolset}
+                config={{
+                  size: 12,
+                  className: 'flex-shrink-0',
+                  builtinClassName: '!rounded-[2.5px]',
+                }}
+              />
             ),
             labeltext: toolset?.builtin
               ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??

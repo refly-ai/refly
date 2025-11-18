@@ -22,7 +22,6 @@ interface ConfigureTabProps {
   setSelectedToolsets: (toolsets: GenericToolset[]) => void;
   setContextItems: (items: IContextItem[]) => void;
   setQuery: (query: string) => void;
-  onRemoveContextItem: (item: IContextItem) => void;
 }
 
 const ConfigureTabComponent = ({
@@ -37,7 +36,6 @@ const ConfigureTabComponent = ({
   setSelectedToolsets,
   setContextItems,
   setQuery,
-  onRemoveContextItem,
 }: ConfigureTabProps) => {
   const { t } = useTranslation();
   const contextItemsList = useMemo(() => contextItems ?? [], [contextItems]);
@@ -192,13 +190,15 @@ const ConfigureTabComponent = ({
             setQuery={setQuery}
             selectedToolsets={configuredToolsets}
             setSelectedToolsets={setSelectedToolsets}
+            mentionPosition="bottom-start"
           />
 
           <ConfigInfoDisplay
             prompt={query ?? ''}
             selectedToolsets={configuredToolsets}
             contextItems={contextItemsList}
-            onRemoveContextItem={onRemoveContextItem}
+            setContextItems={setContextItems}
+            setSelectedToolsets={setSelectedToolsets}
           />
         </div>
       </div>

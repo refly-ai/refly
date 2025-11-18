@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Readable } from 'node:stream';
-import { Client } from 'minio';
+import { Client, CopyConditions } from 'minio';
 import { ObjectInfo, ObjectStorageBackend } from './interface';
 
 export interface MinioConfig {
@@ -81,7 +81,7 @@ export class MinioStorageBackend implements ObjectStorageBackend {
     try {
       return await this.client.presignedGetObject(this.config.bucket, key, expiresIn);
     } catch (error) {
-      this.logger.error(`Failed to get presigned URL for object with key ${key}`, error);
+      this.logger.error(`Failed to get presigned URL for object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
@@ -101,7 +101,7 @@ export class MinioStorageBackend implements ObjectStorageBackend {
         metaData: stat.metaData,
       };
     } catch (error) {
-      this.logger.error(`Failed to put object with key ${key}`, error);
+      this.logger.error(`Failed to put object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
@@ -128,7 +128,7 @@ export class MinioStorageBackend implements ObjectStorageBackend {
       await this.client.removeObject(this.config.bucket, key);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to remove object with key ${key}`, error);
+      this.logger.error(`Failed to remove object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
@@ -145,7 +145,7 @@ export class MinioStorageBackend implements ObjectStorageBackend {
       await this.client.removeObjects(this.config.bucket, keys);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to remove objects with keys ${keys}`, error);
+      this.logger.error(`Failed to remove objects with keys ${keys}: ${error.stack}`);
       throw error;
     }
   }
@@ -158,37 +158,22 @@ export class MinioStorageBackend implements ObjectStorageBackend {
         return null;
       }
 
-      this.logger.error(`Failed to stat object with key ${key}`, error);
+      this.logger.error(`Failed to stat object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
 
   async duplicateFile(sourceKey: string, targetKey: string): Promise<ObjectInfo | null> {
     try {
-      const sourceStream = await this.client.getObject(this.config.bucket, sourceKey);
+      const sourceObject = `/${this.config.bucket}/${sourceKey}`;
 
-      // Check if we got an empty stream from a non-existent object
-      if (sourceStream instanceof Readable) {
-        // Convert to buffer to check if it's empty
-        const chunks: Buffer[] = [];
-        for await (const chunk of sourceStream) {
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-        }
-
-        const buffer = Buffer.concat(chunks);
-        if (buffer.length === 0) {
-          this.logger.warn(
-            `Source object ${sourceKey} is empty or doesn't exist, skipping duplication`,
-          );
-          return null;
-        }
-
-        // If we have content, create a new stream from the buffer and upload it
-        await this.client.putObject(this.config.bucket, targetKey, Readable.from(buffer));
-      } else {
-        // Normal case - put the stream directly
-        await this.client.putObject(this.config.bucket, targetKey, sourceStream);
-      }
+      // Copy the object to the new location
+      await this.client.copyObject(
+        this.config.bucket,
+        targetKey,
+        sourceObject,
+        new CopyConditions(),
+      );
 
       // Get the new object's info
       const stat = await this.client.statObject(this.config.bucket, targetKey);
@@ -198,7 +183,39 @@ export class MinioStorageBackend implements ObjectStorageBackend {
         etag: stat.etag,
       };
     } catch (error) {
-      this.logger.error(`Failed to duplicate file from ${sourceKey} to ${targetKey}`, error);
+      this.logger.error(
+        `Failed to duplicate file from ${sourceKey} to ${targetKey}: ${error.stack}`,
+      );
+      throw error;
+    }
+  }
+
+  async moveObject(sourceKey: string, targetKey: string): Promise<ObjectInfo | null> {
+    try {
+      const sourceObject = `/${this.config.bucket}/${sourceKey}`;
+
+      // Copy the object to the new location
+      await this.client.copyObject(
+        this.config.bucket,
+        targetKey,
+        sourceObject,
+        new CopyConditions(),
+      );
+
+      // Remove the original object
+      await this.client.removeObject(this.config.bucket, sourceKey);
+
+      // Get the new object's info
+      const stat = await this.client.statObject(this.config.bucket, targetKey);
+      return {
+        size: stat.size,
+        lastModified: stat.lastModified,
+        etag: stat.etag,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to move object from ${sourceKey} to ${targetKey}: ${JSON.stringify(error)}`,
+      );
       throw error;
     }
   }

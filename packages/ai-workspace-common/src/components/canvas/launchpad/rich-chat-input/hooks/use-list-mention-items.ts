@@ -23,10 +23,10 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const { workflowVariables = [] } = workflow || {};
 
   const allItems: MentionItem[] = useMemo(() => {
-    const variableItems = workflowVariables.map((variable) => ({
+    const variableItems: MentionItem[] = workflowVariables.map((variable) => ({
       name: variable.name,
       description: variable.description || '',
-      source: 'variables' as const,
+      source: 'variables',
       variableType: variable.variableType || 'string',
       variableId: variable.variableId || '',
       variableValue: variable.value,
@@ -41,17 +41,17 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
         ?.map((node) => ({
           name: node.data?.title || t('canvas.richChatInput.untitledAgent'),
           description: t('canvas.richChatInput.agents'),
-          source: 'stepRecord' as const,
+          source: 'agents',
           entityId: node.data?.entityId || '',
           nodeId: node.id,
         })) ?? [];
 
     // Get my upload items from drive files data
-    const myUploadItems: MentionItem[] =
+    const fileItems: MentionItem[] =
       files?.map((file) => ({
-        name: file.name ?? t('canvas.richChatInput.untitledUpload'),
-        description: t('canvas.richChatInput.myUpload'),
-        source: 'myUpload' as const,
+        name: file.name ?? t('canvas.richChatInput.untitledFile'),
+        description: t('canvas.richChatInput.files'),
+        source: 'files',
         entityId: file.fileId,
         nodeId: file.fileId,
         metadata: {
@@ -71,7 +71,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     const toolsetItems: MentionItem[] = toolsets.map((toolset) => ({
       name: toolset.name,
       description: toolset.toolset?.name || toolset.mcpServer?.name || toolset.name,
-      source: 'toolsets' as const,
+      source: 'toolsets',
       toolset,
       toolsetId: toolset.id,
     }));
@@ -82,13 +82,13 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
         toolset.toolset?.definition?.tools?.map((tool) => ({
           name: tool.name,
           description: (tool.descriptionDict?.[currentLanguage] as string) || toolset.name,
-          source: 'tools' as const,
+          source: 'tools',
           toolset,
           toolsetId: toolset.id,
         })) ?? [],
     );
 
-    return [...variableItems, ...agentItems, ...myUploadItems, ...toolsetItems, ...toolItems];
+    return [...variableItems, ...agentItems, ...fileItems, ...toolsetItems, ...toolItems];
   }, [workflowVariables, nodes, files, toolsets, t, currentLanguage, filterNodeId]);
 
   return allItems;

@@ -1442,6 +1442,7 @@ const translations = {
           finish: 'Completed',
           failed: 'Failed',
         },
+        creditUsage: 'Estimated usage {{count}} credits',
       },
     },
     connectionTimeout: {

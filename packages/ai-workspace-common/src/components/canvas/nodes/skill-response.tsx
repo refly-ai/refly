@@ -53,6 +53,8 @@ import './shared/executing-glow-effect.scss';
 import { useSyncAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-agent-connections';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useConnection } from '@xyflow/react';
+import { processQueryWithMentions } from '@refly/utils/query-processor';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 const { Paragraph } = Typography;
 
@@ -237,6 +239,7 @@ export const SkillResponseNode = memo(
     }, [sessionData, entityId]);
 
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
+    const { data: variables } = useVariablesManagement(canvasId);
 
     const { status, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
@@ -430,10 +433,16 @@ export const SkillResponseNode = memo(
         },
       });
 
+      const query = data?.metadata?.query ?? '';
+      const { processedQuery } = processQueryWithMentions(query, {
+        replaceVars: true,
+        variables,
+      });
+
       invokeAction(
         {
           resultId: entityId,
-          query: data?.metadata?.query ?? '',
+          query: processedQuery,
           selectedSkill: skill,
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
@@ -455,6 +464,7 @@ export const SkillResponseNode = memo(
       resetFailedState,
       setNodeStyle,
       skill,
+      variables,
       t,
     ]);
 

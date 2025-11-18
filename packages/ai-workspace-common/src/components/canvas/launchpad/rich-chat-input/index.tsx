@@ -29,7 +29,7 @@ import {
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import { type MentionItem } from './mentionList';
-import { createMentionExtension } from './mention-extension';
+import { createMentionExtension, type MentionPosition } from './mention-extension';
 import AtomicInlineKeymap from './atomic-inline-keymap';
 import {
   serializeDocToTokens,
@@ -49,7 +49,7 @@ interface RichChatInputProps {
   handleSendMessage: () => void;
   contextItems?: IContextItem[];
 
-  mentionPosition?: 'top-start' | 'bottom-start';
+  mentionPosition?: MentionPosition;
 
   setContextItems?: (items: IContextItem[]) => void;
 
@@ -192,11 +192,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         const item = props;
 
         // For step and result records, add to context instead of inserting text
-        if (
-          item.source === 'stepRecord' ||
-          item.source === 'resultRecord' ||
-          item.source === 'myUpload'
-        ) {
+        if (item.source === 'agents' || item.source === 'files') {
           const mediaUrl =
             item.metadata?.imageUrl || item.metadata?.videoUrl || item.metadata?.audioUrl;
 
@@ -216,7 +212,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
               const contextItem = createContextItemFromMentionItem(item);
               addToContextItems(contextItem);
             }
-          }, 1000);
+          }, 100);
         } else if (item.source === 'toolsets' || item.source === 'tools') {
           // Insert a tool mention with toolset metadata stored in node attrs
           insertMention(editor, range, {
@@ -234,7 +230,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             if (setSelectedToolsets && item.toolsetId && item.toolset) {
               addToSelectedToolsets(item.toolset);
             }
-          }, 1000);
+          }, 100);
         } else if (item.variableType === 'resource') {
           // For resource type variables, find the corresponding resource data and add to context
           if (item.variableValue?.length && item.variableValue[0]?.resource) {
@@ -266,7 +262,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
 
             setTimeout(() => {
               addToContextItems(contextItem);
-            }, 1000);
+            }, 100);
           }
         } else {
           // For regular variables (startNode and resourceLibrary), insert as normal mention

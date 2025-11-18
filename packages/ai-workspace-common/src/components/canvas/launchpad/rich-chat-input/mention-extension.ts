@@ -121,11 +121,19 @@ const CustomMention = Mention.extend({
   },
 });
 
+export type MentionPosition =
+  | 'top-start'
+  | 'bottom-start'
+  | 'bottom'
+  | 'top'
+  | 'top-end'
+  | 'bottom-end';
+
 interface MentionExtensionOptions {
   handleCommand: (params: { editor: any; range: any; props: any }) => void;
   hasUserInteractedRef: React.MutableRefObject<boolean>;
   allItemsRef: React.MutableRefObject<MentionItem[]>;
-  mentionPosition: 'top-start' | 'bottom-start';
+  mentionPosition: MentionPosition;
   setIsMentionListVisible: (visible: boolean) => void;
 }
 
@@ -207,6 +215,11 @@ export const createMentionExtension = ({
               interactive: true,
               trigger: 'manual',
               placement: mentionPosition,
+              popperOptions: {
+                modifiers: [
+                  { name: 'flip', enabled: false }, // 禁止自动翻转
+                ],
+              },
               theme: 'custom',
               arrow: false,
               offset: [0, 8],

@@ -1440,6 +1440,7 @@ const translations = {
           finish: '完成',
           failed: '运行失败',
         },
+        creditUsage: '预计使用 {{count}} 积分',
       },
     },
     connectionTimeout: {
@@ -1845,8 +1846,8 @@ const translations = {
     },
     richChatInput: {
       actions: '操作',
-      userInput: '用户输入',
-      noUserInput: '暂无用户输入',
+      userInput: '输入项',
+      noUserInput: '暂无输入项',
       tools: '工具',
       noTools: '暂无工具',
       untitledTool: '未命名工具',
@@ -1860,7 +1861,7 @@ const translations = {
       loadingEditor: '加载编辑器中...',
       loadingUserInput: '加载用户输入中...',
       defaultPlaceholder: '描述你想要生成的内容...',
-      createUserInput: '创建用户输入 “{{userInputName}}”',
+      createUserInput: '创建输入项 “{{userInputName}}”',
     },
     toolsDepencency: {
       title: '工具依赖',
