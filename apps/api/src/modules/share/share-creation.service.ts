@@ -1064,7 +1064,8 @@ export class ShareCreationService {
       query: workflowApp.query,
       variables: safeParseJSON(workflowApp.variables || '[]'),
       canvasData: canvasDataWithId,
-      creditUsage: Math.ceil(creditUsage * this.configService.get('credit.executionCreditMarkup')),
+      // creditUsage already has markup applied (from database or calculated above)
+      creditUsage: creditUsage,
       createdAt: workflowApp.createdAt,
       updatedAt: workflowApp.updatedAt,
     };
@@ -1121,10 +1122,48 @@ export class ShareCreationService {
     // Get workflow app data
     const workflowApp = await this.prisma.workflowApp.findUnique({
       where: { appId, uid: user.uid, deletedAt: null },
+      select: {
+        appId: true,
+        uid: true,
+        title: true,
+        description: true,
+        query: true,
+        variables: true,
+        canvasId: true,
+        storageKey: true,
+        shareId: true,
+        templateShareId: true,
+        coverStorageKey: true,
+        templateContent: true,
+        remixEnabled: true,
+        publishToCommunity: true,
+        publishReviewStatus: true,
+        remarks: true,
+        resultNodeIds: true,
+        creditUsage: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      },
     });
 
     if (!workflowApp) {
       throw new ShareNotFoundError();
+    }
+
+    // Use creditUsage from database if available (already has markup applied),
+    // otherwise calculate from param (apply markup if needed)
+    let finalCreditUsage: number;
+    if (workflowApp.creditUsage !== null && workflowApp.creditUsage !== undefined) {
+      // Database value already has markup applied
+      finalCreditUsage = workflowApp.creditUsage;
+    } else if (creditUsage !== null && creditUsage !== undefined) {
+      // Apply markup to param value to match database format
+      finalCreditUsage = Math.ceil(
+        creditUsage * this.configService.get('credit.executionCreditMarkup'),
+      );
+    } else {
+      finalCreditUsage = 0;
     }
 
     // Check if regular shareRecord already exists
@@ -1155,7 +1194,7 @@ export class ShareCreationService {
       workflowApp,
       shareId,
       canvasData,
-      creditUsage,
+      finalCreditUsage,
       title,
       parentShareId,
       allowDuplication,
@@ -1191,7 +1230,7 @@ export class ShareCreationService {
         workflowApp,
         templateShareId,
         independentCanvasData,
-        creditUsage,
+        finalCreditUsage,
         title,
         null, // Template share has no parent
         allowDuplication,

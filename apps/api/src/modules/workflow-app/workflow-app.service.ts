@@ -84,7 +84,13 @@ export class WorkflowAppService {
 
     const canvasData = await this.canvasService.getCanvasRawData(user, canvasId);
 
-    const creditUsage = await this.creditService.countCanvasCreditUsage(user, canvasData);
+    // Calculate raw credit usage from canvas
+    const rawCreditUsage = await this.creditService.countCanvasCreditUsage(user, canvasData);
+
+    // Apply markup coefficient to get final credit usage (same as what's saved in JSON)
+    const creditUsage = Math.ceil(
+      rawCreditUsage * this.configService.get('credit.executionCreditMarkup'),
+    );
 
     if (title) {
       canvasData.title = title;
@@ -149,6 +155,7 @@ export class WorkflowAppService {
           publishToCommunity,
           publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
           resultNodeIds,
+          creditUsage,
           updatedAt: new Date(),
         },
       });
@@ -169,6 +176,7 @@ export class WorkflowAppService {
           publishToCommunity,
           publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
           resultNodeIds,
+          creditUsage,
         },
       });
     }
