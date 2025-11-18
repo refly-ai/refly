@@ -31,9 +31,9 @@ export const CustomEdge = memo(
     const isConnectedToStartNode = sourceNode?.type === 'start' || targetNode?.type === 'start';
 
     const [edgePath, labelX, labelY] = getBezierPath({
-      sourceX,
+      sourceX: sourceX - 30,
       sourceY,
-      targetX,
+      targetX: targetX + 30,
       targetY,
       sourcePosition: Position.Right,
       targetPosition: Position.Left,

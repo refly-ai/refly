@@ -46,53 +46,31 @@ export const CustomHandle = React.memo(
     // Only show plus icon on right handle when node is hovered
     const shouldShowPlusIcon = isNodeHovered && position === Position.Right && type === 'source';
 
-    // Dynamic handle style based on the current state
-    const handleStyle: CSSProperties = shouldShowPlusIcon
-      ? {
-          // Plus icon style
-          width: '60px',
-          height: '40px',
-          right: '-30px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          border: 'none',
-          backgroundColor: 'transparent',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '10px',
-          boxShadow: 'none',
-          opacity: 1,
-          cursor: 'crosshair',
-          zIndex: 11,
-          transition: 'all 0.2s ease',
-        }
-      : {
-          // Normal handle style
-          width: '14px',
-          height: '14px',
-          background: '#fff',
-          border: '1.5px solid var(--refly-bg-dark)',
-          minWidth: '14px',
-          minHeight: '14px',
-          borderRadius: '50%',
-          opacity: 0,
-          cursor: 'crosshair',
-          position: 'absolute' as const,
-          [position === Position.Left
-            ? 'left'
-            : position === Position.Right
-              ? 'right'
-              : position === Position.Top
-                ? 'top'
-                : 'bottom']: '-6px',
-          transform:
-            position === Position.Left || position === Position.Right
-              ? 'translateY(-50%)'
-              : 'translateX(-50%)',
-          zIndex: 11,
-          transition: 'all 0.2s ease',
-        };
+    const baseStyle: CSSProperties = {
+      width: '60px',
+      height: '40px',
+      right: position === Position.Right ? '-30px' : 'none',
+      left: position === Position.Left ? '-30px' : 'none',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      border: 'none',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: '10px',
+      boxShadow: 'none',
+      opacity: 0,
+      zIndex: 11,
+      transition: 'all 0.2s ease',
+      cursor: 'default',
+    };
+
+    const showPlusIconStyle: CSSProperties = {
+      ...baseStyle,
+      opacity: 1,
+      cursor: 'crosshair',
+    };
 
     return (
       <div
@@ -120,7 +98,7 @@ export const CustomHandle = React.memo(
                 id={id}
                 type={type}
                 position={position}
-                style={handleStyle}
+                style={showPlusIconStyle}
                 isConnectable={true}
                 onClick={handlePlusClick}
               >
@@ -131,14 +109,7 @@ export const CustomHandle = React.memo(
             </Tooltip>
           </div>
         ) : (
-          <Handle
-            id={id}
-            type={type}
-            position={position}
-            style={handleStyle}
-            isConnectable={true}
-            className="opacity-0"
-          />
+          <Handle id={id} type={type} position={position} style={baseStyle} isConnectable={true} />
         )}
       </div>
     );

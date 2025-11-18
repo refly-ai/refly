@@ -301,7 +301,7 @@ export const SkillResponseNode = memo(
       }, delay);
 
       return () => clearTimeout(timer);
-    }, [selected, id, setEdges, setEdgesWithHighlight]);
+    }, [selected, id, setEdges, setEdgesWithHighlight, status]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
