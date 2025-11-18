@@ -18,6 +18,7 @@ interface CustomHandleProps {
 export const CustomHandle = React.memo(
   ({ id, type, position, isNodeHovered, nodeType, nodeId }: CustomHandleProps) => {
     const { t } = useTranslation();
+    const isTarget = type === 'target';
 
     const handlePlusClick = useCallback(
       (e: React.MouseEvent) => {
@@ -109,7 +110,14 @@ export const CustomHandle = React.memo(
             </Tooltip>
           </div>
         ) : (
-          <Handle id={id} type={type} position={position} style={baseStyle} isConnectable={true} />
+          <Handle
+            id={id}
+            type={type}
+            position={position}
+            style={baseStyle}
+            isConnectable={true}
+            isConnectableStart={!isTarget}
+          />
         )}
       </div>
     );

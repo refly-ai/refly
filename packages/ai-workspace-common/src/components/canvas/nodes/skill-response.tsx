@@ -52,6 +52,7 @@ import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
 import { useSyncAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-agent-connections';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
+import { useConnection } from '@xyflow/react';
 
 const { Paragraph } = Typography;
 
@@ -162,7 +163,14 @@ export const SkillResponseNode = memo(
     onNodeClick,
   }: SkillResponseNodeProps) => {
     const [isHovered, setIsHovered] = useState(false);
-
+    const connection = useConnection();
+    const isConnectingTarget = useMemo(
+      () =>
+        connection?.inProgress &&
+        connection?.fromNode?.id !== id &&
+        (connection?.toNode?.id === id || isHovered),
+      [connection, id, isHovered],
+    );
     useSelectedNodeZIndex(id, selected);
 
     const { setNodeData, setNodeStyle } = useNodeData();
@@ -755,9 +763,10 @@ export const SkillResponseNode = memo(
       <>
         <div
           className={cn(
-            'rounded-2xl relative hover:shadow-refly-m',
+            'rounded-2xl relative',
             // Apply executing/waiting glow effect on outer container
             status === 'executing' || status === 'waiting' ? 'executing-glow-effect' : '',
+            isConnectingTarget ? 'connecting-target-glow-effect' : '',
           )}
           data-cy="skill-response-node"
           onClick={onNodeClick}
@@ -792,11 +801,9 @@ export const SkillResponseNode = memo(
             className={cn(
               'h-full flex flex-col relative z-1 p-0 box-border',
               getNodeCommonStyles({ selected, isHovered }),
-              'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid',
+              'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid bg-refly-bg-content-z2',
               // Apply error styles only when there's an error
-              status === 'failed'
-                ? 'border border-refly-func-danger-default bg-refly-bg-content-z2'
-                : 'border border-gray-200 bg-refly-bg-content-z2',
+              status === 'failed' ? 'border-refly-func-danger-default' : 'border-refly-Card-Border',
             )}
           >
             {/* Node execution status badge */}

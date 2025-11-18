@@ -17,6 +17,13 @@
   initial-value: #0dcbff;
 }
 
+.connecting-target-glow-effect {
+  position: relative;
+  overflow: visible;
+  box-shadow: 0 0 0 6px #75BBBB;
+  transition: box-shadow 0.3s ease-in-out;
+}
+
 .executing-glow-effect {
   position: relative;
   overflow: visible;

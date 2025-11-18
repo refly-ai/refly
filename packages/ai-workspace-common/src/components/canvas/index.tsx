@@ -340,7 +340,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   }, []);
 
   const { onConnectEnd: temporaryEdgeOnConnectEnd, onConnectStart: temporaryEdgeOnConnectStart } =
-    useDragToCreateNode();
+    useDragToCreateNode(onConnect);
 
   const cleanupTemporaryEdges = useCallback(() => {
     const rfInstance = reactFlowInstance;

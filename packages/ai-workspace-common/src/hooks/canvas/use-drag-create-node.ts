@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { useReactFlow, addEdge, Edge } from '@xyflow/react';
+import { useReactFlow, addEdge, Edge, Connection } from '@xyflow/react';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { genUniqueId } from '@refly/utils/id';
 
@@ -7,8 +7,8 @@ import { genUniqueId } from '@refly/utils/id';
  * Hook to manage temporary edge connections in the canvas
  * Used when a user drags an edge from a node but doesn't connect it to another node yet
  */
-export function useDragToCreateNode() {
-  const { screenToFlowPosition, setNodes, setEdges } = useReactFlow();
+export function useDragToCreateNode(onConnect?: (params: Connection) => void) {
+  const { screenToFlowPosition, setNodes, setEdges, getNodes, getEdges } = useReactFlow();
 
   // Track if we're actually dragging or just clicking
   const isDraggingRef = useRef(false);
@@ -81,6 +81,72 @@ export function useDragToCreateNode() {
       // Get the position where the user dropped the connection
       const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
 
+      // Check if mouse is over a node area (not just the handle)
+      const elementAtPoint = document.elementFromPoint(clientX, clientY);
+      const nodeElement = elementAtPoint?.closest('.react-flow__node');
+      const targetNodeIdFromElement = nodeElement?.getAttribute('data-id');
+
+      // If mouse is over a node area, try to connect directly
+      if (targetNodeIdFromElement && targetNodeIdFromElement !== fromNode?.id) {
+        const nodes = getNodes();
+        const targetNode = nodes.find((node) => node.id === targetNodeIdFromElement);
+
+        if (targetNode && onConnect) {
+          // Check if we can connect based on handle type
+          if (handleType === 'source') {
+            // Dragging from source handle, need to connect to target node
+            // Find the target handle ID
+            const targetHandleId = `${targetNodeIdFromElement}-target`;
+
+            // Check if connection already exists
+            const edges = getEdges();
+            const connectionExists = edges?.some(
+              (edge) => edge.source === sourceNodeId && edge.target === targetNodeIdFromElement,
+            );
+
+            if (!connectionExists) {
+              // Try to create connection
+              const connection = {
+                source: sourceNodeId,
+                sourceHandle: fromHandle?.id,
+                target: targetNodeIdFromElement,
+                targetHandle: targetHandleId,
+              };
+
+              // Use a small delay to ensure React Flow has processed the connection end event
+              setTimeout(() => {
+                onConnect(connection);
+              }, 0);
+            }
+            return;
+          } else if (handleType === 'target') {
+            // Dragging from target handle, need to connect to source node
+            // Find the source handle ID
+            const sourceHandleId = `${targetNodeIdFromElement}-source`;
+
+            // Check if connection already exists
+            const edges = getEdges();
+            const connectionExists = edges?.some(
+              (edge) => edge.source === targetNodeIdFromElement && edge.target === targetNodeId,
+            );
+
+            if (!connectionExists) {
+              const connection = {
+                source: targetNodeIdFromElement,
+                sourceHandle: sourceHandleId,
+                target: targetNodeId,
+                targetHandle: fromHandle?.id,
+              };
+
+              setTimeout(() => {
+                onConnect(connection);
+              }, 0);
+            }
+            return;
+          }
+        }
+      }
+
       // Create ghost node at drop position
       const ghostNodeId = `ghost-${genUniqueId()}`;
       const flowPosition = screenToFlowPosition({
@@ -127,7 +193,7 @@ export function useDragToCreateNode() {
         },
       });
     },
-    [screenToFlowPosition, setNodes, setEdges],
+    [screenToFlowPosition, setNodes, setEdges, getNodes, getEdges, onConnect],
   );
 
   return {
