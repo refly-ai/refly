@@ -207,19 +207,21 @@ export class DriveService {
         size = BigInt(buffer.length);
         request.type = 'text/plain';
       } else if (storageKey) {
-        const staticFile = await this.prisma.staticFile.findFirst({
-          select: { contentType: true },
-          where: { storageKey },
-        });
         // Case 2: Transfer from existing storage key
-        const stream = await this.internalOss.getObject(storageKey);
-        if (!stream) {
+        let objectInfo = await this.internalOss.statObject(storageKey);
+        if (!objectInfo) {
           throw new ParamsError(`Source file not found: ${storageKey}`);
         }
 
-        buffer = await streamToBuffer(stream);
-        size = BigInt(buffer.length);
-        request.type = staticFile?.contentType ?? 'application/octet-stream';
+        if (storageKey !== driveStorageKey) {
+          objectInfo = await this.internalOss.duplicateFile(storageKey, driveStorageKey);
+        }
+
+        size = BigInt(objectInfo?.size ?? 0);
+        request.type =
+          objectInfo?.metaData?.['Content-Type'] ??
+          mime.getType(name) ??
+          'application/octet-stream';
       } else if (externalUrl) {
         // Case 3: Download from external URL
         buffer = await this.downloadFileFromUrl(externalUrl);
@@ -243,9 +245,11 @@ export class DriveService {
         }
       }
 
-      await this.internalOss.putObject(driveStorageKey, buffer, {
-        'Content-Type': request.type,
-      });
+      if (buffer) {
+        await this.internalOss.putObject(driveStorageKey, buffer, {
+          'Content-Type': request.type,
+        });
+      }
 
       results.push({
         ...request,
