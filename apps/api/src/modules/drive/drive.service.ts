@@ -10,16 +10,18 @@ import {
   ListOrder,
   BatchCreateDriveFilesRequest,
   DriveFile,
+  DriveFileCategory,
 } from '@refly/openapi-schema';
 import { Prisma, DriveFile as DriveFileModel } from '../../generated/client';
-import { genDriveFileID, getFileCategory } from '@refly/utils';
+import { genDriveFileID, getFileCategory, pick } from '@refly/utils';
 import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 
-interface FileProcessedResult {
-  contentType: string;
+interface ProcessedUpsertDriveFileResult extends UpsertDriveFileRequest {
+  driveStorageKey: string;
+  category: DriveFileCategory;
   size: bigint;
 }
 
@@ -65,77 +67,79 @@ export class DriveService {
   /**
    * Process drive file content and store it in object storage
    * @param user - User information
-   * @param canvasId - Canvas ID
-   * @param filename - File name
-   * @param input - File input data
-   * @returns File processed result
+   * @param requests - Array of drive file requests to process
+   * @returns Array of file processed results
    */
-  private async processDriveFileContent(
+  private async batchProcessDriveFileRequests(
     user: User,
-    canvasId: string,
-    filename: string,
-    input: {
-      content?: string;
-      storageKey?: string;
-      externalUrl?: string;
-    },
-  ): Promise<FileProcessedResult> {
-    const { content, storageKey, externalUrl } = input;
+    requests: UpsertDriveFileRequest[],
+  ): Promise<ProcessedUpsertDriveFileResult[]> {
+    const results: ProcessedUpsertDriveFileResult[] = [];
 
-    // Generate drive storage path
-    const driveStorageKey = this.generateStorageKey(user, { canvasId, name: filename });
+    // Process each request in the batch
+    for (const request of requests) {
+      const { canvasId, name, content, source = 'manual', storageKey, externalUrl } = request;
 
-    let buffer: Buffer;
-    let size: bigint;
-    let contentType: string;
-
-    if (content !== undefined) {
-      // Case 1: Direct content upload
-      buffer = Buffer.from(content, 'utf8');
-      size = BigInt(buffer.length);
-      contentType = 'text/plain';
-
-      await this.internalOss.putObject(driveStorageKey, buffer);
-    } else if (storageKey) {
-      const staticFile = await this.prisma.staticFile.findFirst({
-        select: { contentType: true },
-        where: { storageKey },
-      });
-      // Case 2: Transfer from existing storage key
-      const stream = await this.internalOss.getObject(storageKey);
-      if (!stream) {
-        throw new ParamsError(`Source file not found: ${storageKey}`);
+      // Skip requests that don't have content to process
+      if (content === undefined && !storageKey && !externalUrl) {
+        continue;
       }
 
-      buffer = await streamToBuffer(stream);
-      size = BigInt(buffer.length);
-      contentType = staticFile.contentType ?? 'application/octet-stream';
+      // Generate drive storage path
+      const driveStorageKey = this.generateStorageKey(user, { canvasId, name });
+
+      let buffer: Buffer;
+      let size: bigint;
+
+      if (content !== undefined) {
+        // Case 1: Direct content upload
+        buffer = Buffer.from(content, 'utf8');
+        size = BigInt(buffer.length);
+        request.type = 'text/plain';
+      } else if (storageKey) {
+        const staticFile = await this.prisma.staticFile.findFirst({
+          select: { contentType: true },
+          where: { storageKey },
+        });
+        // Case 2: Transfer from existing storage key
+        const stream = await this.internalOss.getObject(storageKey);
+        if (!stream) {
+          throw new ParamsError(`Source file not found: ${storageKey}`);
+        }
+
+        buffer = await streamToBuffer(stream);
+        size = BigInt(buffer.length);
+        request.type = staticFile?.contentType ?? 'application/octet-stream';
+      } else if (externalUrl) {
+        // Case 3: Download from external URL
+        buffer = await this.downloadFileFromUrl(externalUrl);
+        size = BigInt(buffer.length);
+
+        // Determine content type based on file extension or default to binary
+        request.type = mime.getType(name) ?? 'application/octet-stream';
+      }
 
       await this.internalOss.putObject(driveStorageKey, buffer, {
-        'Content-Type': contentType,
+        'Content-Type': request.type,
       });
-    } else if (externalUrl) {
-      // Case 3: Download from external URL
-      buffer = await this.downloadFileFromUrl(externalUrl);
-      size = BigInt(buffer.length);
 
-      // Determine content type based on file extension or default to binary
-      contentType = mime.getType(filename) ?? 'application/octet-stream';
-      await this.internalOss.putObject(driveStorageKey, buffer, {
-        'Content-Type': contentType,
+      results.push({
+        ...request,
+        driveStorageKey,
+        size,
+        source,
+        category: getFileCategory(request.type),
       });
-    } else {
-      throw new ParamsError('Either content, storageKey, or externalUrl must be provided');
     }
 
-    return { contentType, size };
+    return results;
   }
 
   /**
    * List drive files with pagination and filtering
    */
   async listDriveFiles(user: User, params: ListDriveFilesData['query']): Promise<DriveFileModel[]> {
-    const { canvasId, order, page, pageSize } = params;
+    const { canvasId, source, scope, order, page, pageSize } = params;
     if (!canvasId) {
       throw new ParamsError('Canvas ID is required');
     }
@@ -144,6 +148,8 @@ export class DriveService {
       uid: user.uid,
       deletedAt: null,
       canvasId,
+      source,
+      scope,
     };
 
     const driveFiles = await this.prisma.driveFile.findMany({
@@ -275,44 +281,20 @@ export class DriveService {
       return [];
     }
 
+    const processedRequests = await this.batchProcessDriveFileRequests(user, files);
+
     // Process each file to prepare data for bulk creation
-    const driveFilesData: Prisma.DriveFileCreateManyInput[] = [];
-
-    // Process files sequentially to handle async operations
-    for (const fileRequest of files) {
-      const { canvasId, name, type, content, storageKey, externalUrl } = fileRequest;
-
-      // Process file content and store in object storage
-      let processedResult: FileProcessedResult | undefined;
-      if (content !== undefined || storageKey || externalUrl) {
-        processedResult = await this.processDriveFileContent(user, canvasId, name, {
-          content,
-          storageKey,
-          externalUrl,
-        });
-      }
-
-      // Generate fileId
-      const fileId = genDriveFileID();
-
-      const createData: Prisma.DriveFileCreateManyInput = {
-        fileId,
+    const driveFilesData: Prisma.DriveFileCreateManyInput[] = processedRequests.map((req) => {
+      return {
+        ...pick(req, ['canvasId', 'name', 'source', 'size']),
+        fileId: genDriveFileID(),
         uid: user.uid,
-        canvasId,
-        name,
-        type,
-        category: getFileCategory(processedResult?.contentType ?? 'text/plain'),
+        scope: 'present',
+        category: req.category,
+        type: req.type,
+        storageKey: req.driveStorageKey,
       };
-
-      if (processedResult) {
-        createData.size = processedResult.size;
-        createData.type = processedResult.contentType;
-      } else {
-        createData.size = 0n;
-      }
-
-      driveFilesData.push(createData);
-    }
+    });
 
     // Bulk create all drive files
     return this.prisma.driveFile.createManyAndReturn({
@@ -324,48 +306,23 @@ export class DriveService {
    * Create or update a drive file
    */
   async upsertDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
-    const {
-      fileId,
-      canvasId,
-      name,
-      type,
-      content,
-      storageKey,
-      externalUrl,
-      resultId,
-      resultVersion,
-    } = request;
+    const { fileId } = request;
 
     // Process file content and store in object storage
-    let processedResult: FileProcessedResult | undefined;
-    if (content !== undefined || storageKey || externalUrl) {
-      processedResult = await this.processDriveFileContent(user, canvasId, name, {
-        content,
-        storageKey,
-        externalUrl,
-      });
-    }
+    const processedResults = await this.batchProcessDriveFileRequests(user, [request]);
+    const processedReq = processedResults[0];
 
-    // Generate summary (simplified - in real implementation this would use AI)
-    const summary = content?.slice(0, 200);
+    if (!processedReq) {
+      throw new ParamsError('No file content to process');
+    }
 
     let driveFile: DriveFileModel;
 
     if (fileId) {
       // Update existing file
       const updateData: Prisma.DriveFileUpdateInput = {
-        canvasId,
-        name,
-        type,
-        summary,
-        resultId,
-        resultVersion,
+        ...pick(processedReq, ['canvasId', 'name', 'type', 'summary', 'resultId', 'resultVersion']),
       };
-
-      if (processedResult) {
-        updateData.size = processedResult.size;
-        updateData.type = processedResult.contentType;
-      }
 
       driveFile = await this.prisma.driveFile.update({
         where: { fileId, uid: user.uid },
@@ -377,19 +334,12 @@ export class DriveService {
       const createData: Prisma.DriveFileCreateInput = {
         fileId: newFileId,
         uid: user.uid,
-        canvasId,
-        name,
-        type,
-        category: getFileCategory(processedResult?.contentType ?? 'text/plain'),
-        summary,
-        resultId,
-        resultVersion,
+        ...pick(processedReq, ['canvasId', 'name', 'size', 'summary', 'resultId', 'resultVersion']),
+        scope: 'present',
+        category: processedReq.category,
+        type: processedReq.type,
+        storageKey: processedReq.driveStorageKey,
       };
-
-      if (processedResult) {
-        createData.size = processedResult.size;
-        createData.type = processedResult.contentType;
-      }
 
       driveFile = await this.prisma.driveFile.create({
         data: createData,
@@ -435,7 +385,7 @@ export class DriveService {
     fileId: string,
   ): Promise<{ data: Buffer; contentType: string; filename: string }> {
     const driveFile = await this.prisma.driveFile.findFirst({
-      select: { uid: true, canvasId: true, name: true, type: true },
+      select: { uid: true, canvasId: true, name: true, type: true, storageKey: true },
       where: { fileId, uid: user.uid, deletedAt: null },
     });
 
@@ -444,7 +394,7 @@ export class DriveService {
     }
 
     // Generate drive storage path
-    const driveStorageKey = this.generateStorageKey(user, driveFile);
+    const driveStorageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
 
     const readable = await this.internalOss.getObject(driveStorageKey);
     if (!readable) {

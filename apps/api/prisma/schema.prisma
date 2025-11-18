@@ -778,11 +778,19 @@ model DriveFile {
   category      String    @map("category")
   /// Drive file size
   size          BigInt    @default(0) @map("size")
+  /// Drive file source
+  source        String    @default("manual") @map("source")
+  /// Drive file scope
+  scope         String    @default("present") @map("scope")
+  /// Storage key for this file
+  storageKey    String?   @map("storage_key")
   /// Drive file summary
   summary       String?   @map("summary")
-  /// Action result id
+  /// Related variable id (when source is 'variable')
+  variableId    String?   @map("variable_id")
+  /// Action result id (when source is 'agent')
   resultId      String?   @map("result_id")
-  /// Action result version
+  /// Action result version (when source is 'agent')
   resultVersion Int?      @map("result_version")
   /// Drive file create timestamp
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()

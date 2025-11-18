@@ -9835,7 +9835,17 @@ export const UpdateWorkflowVariablesResponseSchema = {
 
 export const DriveFileCategorySchema = {
   type: 'string',
-  enum: ['document', 'image', 'video', 'audio'],
+  enum: ['document', 'image', 'video', 'audio', 'others'],
+} as const;
+
+export const DriveFileSourceSchema = {
+  type: 'string',
+  enum: ['manual', 'variable', 'agent'],
+} as const;
+
+export const DriveFileScopeSchema = {
+  type: 'string',
+  enum: ['present', 'archive'],
 } as const;
 
 export const DriveFileSchema = {
@@ -9862,6 +9872,14 @@ export const DriveFileSchema = {
       $ref: '#/components/schemas/DriveFileCategory',
       description: 'Drive file category',
     },
+    source: {
+      $ref: '#/components/schemas/DriveFileSource',
+      description: 'Drive file source',
+    },
+    scope: {
+      $ref: '#/components/schemas/DriveFileScope',
+      description: 'Drive file scope',
+    },
     size: {
       type: 'number',
       description: 'Drive file size',
@@ -9869,6 +9887,10 @@ export const DriveFileSchema = {
     summary: {
       type: 'string',
       description: 'Drive file summary',
+    },
+    variableId: {
+      type: 'string',
+      description: 'Related variable ID',
     },
     resultId: {
       type: 'string',
@@ -9935,6 +9957,10 @@ export const UpsertDriveFileRequestSchema = {
       type: 'string',
       description: 'Drive file type (MIME type)',
     },
+    summary: {
+      type: 'string',
+      description: 'Brief summary for this file',
+    },
     content: {
       type: 'string',
       description: 'File content (for plain text files)',
@@ -9946,6 +9972,10 @@ export const UpsertDriveFileRequestSchema = {
     externalUrl: {
       type: 'string',
       description: 'External URL to download from',
+    },
+    source: {
+      $ref: '#/components/schemas/DriveFileSource',
+      description: 'File source',
     },
     resultId: {
       type: 'string',

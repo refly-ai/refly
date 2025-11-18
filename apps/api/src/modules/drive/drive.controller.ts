@@ -24,6 +24,8 @@ import {
   ListOrder,
   BatchCreateDriveFilesRequest,
   BatchCreateDriveFilesResponse,
+  DriveFileSource,
+  DriveFileScope,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import { driveFilePO2DTO } from './drive.dto';
@@ -38,12 +40,16 @@ export class DriveController {
   async listDriveFiles(
     @LoginedUser() user: User,
     @Query('canvasId') canvasId: string,
+    @Query('source') source: DriveFileSource,
+    @Query('scope') scope: DriveFileScope,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
     @Query('order', new DefaultValuePipe('creationDesc')) order: ListOrder,
   ): Promise<ListDriveFilesResponse> {
     const driveFiles = await this.driveService.listDriveFiles(user, {
       canvasId,
+      source,
+      scope,
       page,
       pageSize,
       order,

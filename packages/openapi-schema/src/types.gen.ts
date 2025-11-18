@@ -6925,7 +6925,11 @@ export type UpdateWorkflowVariablesResponse = BaseResponse & {
   data?: Array<WorkflowVariable>;
 };
 
-export type DriveFileCategory = 'document' | 'image' | 'video' | 'audio';
+export type DriveFileCategory = 'document' | 'image' | 'video' | 'audio' | 'others';
+
+export type DriveFileSource = 'manual' | 'variable' | 'agent';
+
+export type DriveFileScope = 'present' | 'archive';
 
 export type DriveFile = {
   /**
@@ -6949,6 +6953,14 @@ export type DriveFile = {
    */
   category?: DriveFileCategory;
   /**
+   * Drive file source
+   */
+  source?: DriveFileSource;
+  /**
+   * Drive file scope
+   */
+  scope?: DriveFileScope;
+  /**
    * Drive file size
    */
   size?: number;
@@ -6956,6 +6968,10 @@ export type DriveFile = {
    * Drive file summary
    */
   summary?: string;
+  /**
+   * Related variable ID
+   */
+  variableId?: string;
   /**
    * Action result ID
    */
@@ -7003,6 +7019,10 @@ export type UpsertDriveFileRequest = {
    */
   type?: string;
   /**
+   * Brief summary for this file
+   */
+  summary?: string;
+  /**
    * File content (for plain text files)
    */
   content?: string;
@@ -7014,6 +7034,10 @@ export type UpsertDriveFileRequest = {
    * External URL to download from
    */
   externalUrl?: string;
+  /**
+   * File source
+   */
+  source?: DriveFileSource;
   /**
    * Related agent result ID
    */
@@ -7629,6 +7653,14 @@ export type ListDriveFilesData = {
      * Page size
      */
     pageSize?: number;
+    /**
+     * Drive file scope
+     */
+    scope?: DriveFileScope;
+    /**
+     * Drive file source
+     */
+    source?: DriveFileSource;
   };
 };
 

@@ -1,5 +1,10 @@
 import { DriveFile as DriveFileModel } from '../../generated/client';
-import { DriveFile } from '@refly/openapi-schema';
+import type {
+  DriveFile,
+  DriveFileSource,
+  DriveFileCategory,
+  DriveFileScope,
+} from '@refly/openapi-schema';
 import { pick } from '../../utils';
 
 /**
@@ -12,10 +17,15 @@ export function driveFilePO2DTO(driveFile: DriveFileModel): DriveFile {
       'fileId',
       'name',
       'type',
+      'scope',
       'summary',
+      'variableId',
       'resultId',
       'resultVersion',
     ]),
+    source: driveFile.source as DriveFileSource,
+    scope: driveFile.scope as DriveFileScope,
+    category: driveFile.category as DriveFileCategory,
     size: Number(driveFile.size),
     createdAt: driveFile.createdAt.toJSON(),
     updatedAt: driveFile.updatedAt.toJSON(),

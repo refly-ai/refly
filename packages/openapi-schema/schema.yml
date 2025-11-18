@@ -1072,6 +1072,16 @@ paths:
           required: true
           schema:
             type: string
+        - name: source
+          in: query
+          description: Drive file source
+          schema:
+            $ref: '#/components/schemas/DriveFileSource'
+        - name: scope
+          in: query
+          description: Drive file scope
+          schema:
+            $ref: '#/components/schemas/DriveFileScope'
         - name: page
           in: query
           description: Page number
@@ -10918,6 +10928,18 @@ components:
         - image
         - video
         - audio
+        - others
+    DriveFileSource:
+      type: string
+      enum:
+        - manual
+        - variable
+        - agent
+    DriveFileScope:
+      type: string
+      enum:
+        - present
+        - archive
     DriveFile:
       type: object
       required:
@@ -10941,12 +10963,21 @@ components:
         category:
           $ref: '#/components/schemas/DriveFileCategory'
           description: Drive file category
+        source:
+          $ref: '#/components/schemas/DriveFileSource'
+          description: Drive file source
+        scope:
+          $ref: '#/components/schemas/DriveFileScope'
+          description: Drive file scope
         size:
           type: number
           description: Drive file size
         summary:
           type: string
           description: Drive file summary
+        variableId:
+          type: string
+          description: Related variable ID
         resultId:
           type: string
           description: Action result ID
@@ -10992,6 +11023,9 @@ components:
         type:
           type: string
           description: Drive file type (MIME type)
+        summary:
+          type: string
+          description: Brief summary for this file
         content:
           type: string
           description: File content (for plain text files)
@@ -11001,6 +11035,9 @@ components:
         externalUrl:
           type: string
           description: External URL to download from
+        source:
+          $ref: '#/components/schemas/DriveFileSource'
+          description: File source
         resultId:
           type: string
           description: Related agent result ID
