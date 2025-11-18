@@ -62,7 +62,7 @@ export class DriveController {
     @LoginedUser() user: User,
     @Body() request: UpsertDriveFileRequest,
   ): Promise<UpsertDriveFileResponse> {
-    const driveFile = await this.driveService.upsertDriveFile(user, request);
+    const driveFile = await this.driveService.createDriveFile(user, request);
     return buildSuccessResponse(driveFilePO2DTO(driveFile));
   }
 
@@ -80,7 +80,7 @@ export class DriveController {
     @LoginedUser() user: User,
     @Body() request: UpsertDriveFileRequest,
   ): Promise<UpsertDriveFileResponse> {
-    const driveFile = await this.driveService.upsertDriveFile(user, request);
+    const driveFile = await this.driveService.updateDriveFile(user, request);
     return buildSuccessResponse(driveFilePO2DTO(driveFile));
   }
 

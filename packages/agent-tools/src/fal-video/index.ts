@@ -117,6 +117,7 @@ export class SeedanceGenerateVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video.accept chinese and english.'),
     aspect_ratio: z
       .enum(['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'])
@@ -156,12 +157,14 @@ export class SeedanceGenerateVideo extends AgentBaseTool<FalVideoParams> {
       const { reflyService, user } = this.params;
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedance/v1/pro/text-to-video',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -223,6 +226,7 @@ export class SeedanceRefrenceVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video.accept chinese and english.'),
     image_url: z.string().describe('The URL of the input image.'),
     aspect_ratio: z
@@ -264,6 +268,7 @@ export class SeedanceRefrenceVideo extends AgentBaseTool<FalVideoParams> {
       const image_url = await reflyService.processURL(input.image_url);
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/bytedance/seedance/v1/pro/image-to-video',
         provider: 'fal',
@@ -273,6 +278,7 @@ export class SeedanceRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         },
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -334,6 +340,7 @@ export class Veo3GenerateVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept only english.'),
     negative_prompt: z
       .string()
@@ -389,12 +396,14 @@ export class Veo3GenerateVideo extends AgentBaseTool<FalVideoParams> {
       const { reflyService, user } = this.params;
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/veo3',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -423,6 +432,7 @@ export class Veo3FastGenerateVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept only english.'),
     negative_prompt: z
       .string()
@@ -478,12 +488,14 @@ export class Veo3FastGenerateVideo extends AgentBaseTool<FalVideoParams> {
       const { reflyService, user } = this.params;
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/veo3/fast',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -512,6 +524,7 @@ export class Veo3RefrenceVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept only english.'),
     image_url: z.string().describe('The URL of the input image.'),
     aspect_ratio: z
@@ -551,6 +564,7 @@ export class Veo3RefrenceVideo extends AgentBaseTool<FalVideoParams> {
       const image_url = await reflyService.processURL(input.image_url);
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/veo3/image-to-video',
         provider: 'fal',
@@ -560,6 +574,7 @@ export class Veo3RefrenceVideo extends AgentBaseTool<FalVideoParams> {
         },
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -588,6 +603,7 @@ export class Veo3FastRefrenceVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept only english.'),
     image_url: z.string().describe('The URL of the input image.'),
   });
@@ -612,6 +628,7 @@ export class Veo3FastRefrenceVideo extends AgentBaseTool<FalVideoParams> {
       const image_url = await reflyService.processURL(input.image_url);
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/veo3/fast/image-to-video',
         provider: 'fal',
@@ -621,6 +638,7 @@ export class Veo3FastRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         },
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -649,6 +667,7 @@ export class KlingGenerateVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept chinese and english.'),
     duration: z
       .enum(['5', '10'])
@@ -692,12 +711,14 @@ export class KlingGenerateVideo extends AgentBaseTool<FalVideoParams> {
       const { reflyService, user } = this.params;
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/kling-video/v2.1/master/text-to-video',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -738,6 +759,7 @@ export class KlingRefrenceVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept chinese and english.'),
     image_url: z.string().describe('The URL of the input image.'),
     duration: z
@@ -777,6 +799,7 @@ export class KlingRefrenceVideo extends AgentBaseTool<FalVideoParams> {
       const image_url = await reflyService.processURL(input.image_url);
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/kling-video/v2.1/master/image-to-video',
         provider: 'fal',
@@ -786,6 +809,7 @@ export class KlingRefrenceVideo extends AgentBaseTool<FalVideoParams> {
         },
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -826,6 +850,7 @@ export class WanGenerateVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept chinese and english.'),
     negative_prompt: z
       .string()
@@ -861,12 +886,14 @@ export class WanGenerateVideo extends AgentBaseTool<FalVideoParams> {
       const { reflyService, user } = this.params;
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/wan/v2.2-a14b/text-to-video',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -912,6 +939,7 @@ export class WanRefrenceVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept chinese and english.'),
     image_url: z.string().describe('The URL of the input image.'),
     end_image_url: z.string().optional().describe('The URL of the end image.'),
@@ -957,12 +985,14 @@ export class WanRefrenceVideo extends AgentBaseTool<FalVideoParams> {
 
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/wan/v2.2-a14b/image-to-video',
         provider: 'fal',
         input: inputObject,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
@@ -1008,6 +1038,7 @@ export class WanEditVideo extends AgentBaseTool<FalVideoParams> {
   toolsetKey = FalVideoToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the video. Should be concise and descriptive.'),
     prompt: z.string().describe('The prompt to generate video, accept chinese and english.'),
     video_url: z.string().describe('The URL of the input video.'),
   });
@@ -1032,12 +1063,14 @@ export class WanEditVideo extends AgentBaseTool<FalVideoParams> {
       input.video_url = await reflyService.processURL(input.video_url);
       const { file } = await reflyService.generateMedia(user, {
         mediaType: 'video',
+        title: input.title,
         prompt: input.prompt,
         model: 'fal-ai/wan/v2.2-a14b/video-to-video',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
 
       if (!file) {
