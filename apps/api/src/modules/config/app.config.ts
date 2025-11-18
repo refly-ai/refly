@@ -219,6 +219,18 @@ export default () => ({
       apiKey: process.env.SCALEBOX_API_KEY,
       timeout: process.env.SCALEBOX_TIMEOUT,
       maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+      maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
+      minRemainingMs: process.env.SCALEBOX_MIN_REMAINING_MS,
+      extendTimeoutMs: process.env.SCALEBOX_EXTEND_TIMEOUT_MS,
+      s3: {
+        endpoint: process.env.SANDBOX_S3_ENDPOINT,
+        port: process.env.SANDBOX_S3_PORT,
+        useSSL: process.env.SANDBOX_S3_USE_SSL,
+        accessKey: process.env.SANDBOX_S3_ACCESS_KEY,
+        secretKey: process.env.SANDBOX_S3_SECRET_KEY,
+        bucket: process.env.SANDBOX_S3_BUCKET,
+        region: process.env.SANDBOX_S3_REGION,
+      },
     },
   },
 });

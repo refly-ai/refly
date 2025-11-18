@@ -6330,7 +6330,7 @@ export const HeyGenGenerateVideoResponseSchema = {
 
 export const SandboxExecuteRequestSchema = {
   type: 'object',
-  required: ['code'],
+  required: ['code', 'language'],
   properties: {
     code: {
       type: 'string',
@@ -6338,7 +6338,8 @@ export const SandboxExecuteRequestSchema = {
     },
     language: {
       type: 'string',
-      description: 'Programming language (e.g., python, javascript, bash)',
+      description: 'Programming language for code execution',
+      enum: ['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'],
       example: 'python',
     },
     timeout: {

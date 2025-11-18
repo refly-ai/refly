@@ -48,29 +48,23 @@ export class Execute extends AgentBaseTool<SandboxParams> {
   schema = z.object({
     code: z.string().describe('The code to execute'),
     language: z
-      .string()
-      .optional()
-      .default('python')
-      .describe('Programming language (python, javascript, etc.)'),
+      .enum(['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'])
+      .describe('Programming language for code execution'),
     timeout: z.number().optional().default(30).describe('Execution timeout in seconds'),
   });
 
   description = `
-Execute code in a secure sandbox environment.
-Supports multiple programming languages including Python, JavaScript, and more.
-Returns execution output, errors, and execution time.
+Execute code in a secure sandbox environment. Each execution is independent - always include all necessary imports.
 
-[IMPORTANT]
-- If not specified, always use relative path for file operations.
+** File Persistence **
+Files persist across executions in the same canvas. Use relative paths to access them.
 
-[MATPLOTLIB NOTE]
-- For single image output, you don't need to call \`plt.show()\` or \`plt.savefig()\`, just use like this:
-
+** Best Practices **
+- Always include all necessary imports.
+- Filter warnings only once to avoid duplicate warnings.
   \`\`\`python
-  import matplotlib.pyplot as plt
-  from pathlib import Path
-  
-  plt.plot([1, 2, 3], [4, 5, 6])
+  import warnings
+  warnings.filterwarnings('once', category=UserWarning)
   \`\`\`
 `;
 
@@ -99,7 +93,7 @@ Returns execution output, errors, and execution time.
 
       const request: SandboxExecuteRequest = {
         code: input.code,
-        language: input.language || 'python',
+        language: input.language,
         timeout: input.timeout,
         parentResultId: config.configurable?.resultId,
         canvasId: config.configurable?.canvasId,
@@ -108,18 +102,22 @@ Returns execution output, errors, and execution time.
       const result = await reflyService.execute(user, request);
 
       if (result.status === 'success') {
+        const output = result.data?.output || 'No output';
+        const executionTime = result.data?.executionTime || 0;
+        const exitCode = result.data?.exitCode || 0;
+
         const summary = `**Result:**
-📄 Output: ${result?.data?.output || 'No output'}
-⏱️ Execution Time: ${result?.data?.executionTime || 0}ms
-✅ Exit Code: ${result?.data?.exitCode || 0}`;
+📄 Output: ${output}
+⏱️ Execution Time: ${executionTime}ms
+✅ Exit Code: ${exitCode}`;
 
         return {
           status: 'success',
           data: {
-            output: result?.data?.output,
-            error: result?.data?.error,
-            exitCode: result?.data?.exitCode,
-            executionTime: result?.data?.executionTime,
+            output,
+            error: result.data?.error,
+            exitCode,
+            executionTime,
             parentResultId: config.configurable?.resultId,
           },
           summary,
@@ -127,22 +125,31 @@ Returns execution output, errors, and execution time.
         };
       }
 
-      const errorMessage =
-        result.errors?.map((err) => `[${err.code}] ${err.message}`).join('; ') ||
-        'Code execution failed';
+      // Handle error response
+      let errorMessage = 'Code execution failed';
+      let errorDetails = '';
+
+      if (result.errors && result.errors.length > 0) {
+        errorMessage = result.errors.map((err) => `[${err.code}] ${err.message}`).join('; ');
+        errorDetails = errorMessage;
+      } else if (result.data?.error) {
+        errorDetails = result.data.error;
+        errorMessage = `Execution error: ${errorDetails}`;
+      }
 
       return {
         status: 'error',
         error: errorMessage,
-        summary: `❌ **Error:**\n${errorMessage}`,
+        summary: `❌ **Error:**\n${errorDetails || errorMessage}`,
       };
     } catch (error) {
       const errorMsg =
         error instanceof Error ? error.message : 'Unknown error occurred while executing code';
+      const errorStack = error instanceof Error && error.stack ? `\n\nStack:\n${error.stack}` : '';
       return {
         status: 'error',
-        error: 'Error executing code',
-        summary: `❌ **Error:**\n${errorMsg}`,
+        error: errorMsg,
+        summary: `❌ **Error:**\n${errorMsg}${errorStack}`,
       };
     }
   }

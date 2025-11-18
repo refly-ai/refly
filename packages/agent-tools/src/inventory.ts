@@ -37,6 +37,7 @@ import { RedditToolsetDefinition } from './reddit';
 import { SandboxToolset, SandboxToolsetDefinition } from './sandbox';
 import { TwitterToolsetDefinition } from './twitter';
 import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
+import { Apify13FToolset, Apify13FToolsetDefinition } from './apify-13f';
 
 export type AnyToolsetClass = new (...args: any[]) => AgentBaseToolset<any>;
 
@@ -172,5 +173,9 @@ export const toolsetInventory: Record<
   [SandboxToolsetDefinition.key]: {
     class: SandboxToolset,
     definition: SandboxToolsetDefinition,
+  },
+  [Apify13FToolsetDefinition.key]: {
+    class: Apify13FToolset,
+    definition: Apify13FToolsetDefinition,
   },
 };
