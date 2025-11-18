@@ -216,7 +216,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
               const contextItem = createContextItemFromMentionItem(item);
               addToContextItems(contextItem);
             }
-          }, 1000);
+          }, 100);
         } else if (item.source === 'toolsets' || item.source === 'tools') {
           // Insert a tool mention with toolset metadata stored in node attrs
           insertMention(editor, range, {
@@ -234,7 +234,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             if (setSelectedToolsets && item.toolsetId && item.toolset) {
               addToSelectedToolsets(item.toolset);
             }
-          }, 1000);
+          }, 100);
         } else if (item.variableType === 'resource') {
           // For resource type variables, find the corresponding resource data and add to context
           if (item.variableValue?.length && item.variableValue[0]?.resource) {
@@ -266,7 +266,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
 
             setTimeout(() => {
               addToContextItems(contextItem);
-            }, 1000);
+            }, 100);
           }
         } else {
           // For regular variables (startNode and resourceLibrary), insert as normal mention

@@ -294,13 +294,13 @@ export const MentionList = ({
     if (groupedItems.variables.length > 0) {
       items.push({
         type: 'header',
-        label: t('canvas.richChatInput.variables'),
+        label: t('canvas.richChatInput.userInput'),
         source: 'variables' as const,
       });
       items.push(
         ...groupedItems.variables.map((item) => ({
           ...item,
-          categoryLabel: t('canvas.richChatInput.variables'),
+          categoryLabel: t('canvas.richChatInput.userInput'),
           type: 'item' as const,
         })),
       );
@@ -372,7 +372,7 @@ export const MentionList = ({
         source: 'variables' as const,
         variableType: 'string',
         variableId: 'create-variable',
-        categoryLabel: t('canvas.richChatInput.createVariable', { variableName: query }),
+        categoryLabel: t('canvas.richChatInput.createUserInput', { userInputName: query }),
       });
     }
 

@@ -47,10 +47,10 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
         })) ?? [];
 
     // Get my upload items from drive files data
-    const myUploadItems: MentionItem[] =
+    const fileItems: MentionItem[] =
       files?.map((file) => ({
         name: file.name ?? t('canvas.richChatInput.untitledUpload'),
-        description: t('canvas.richChatInput.myUpload'),
+        description: t('canvas.richChatInput.files'),
         source: 'myUpload' as const,
         entityId: file.fileId,
         nodeId: file.fileId,
@@ -88,7 +88,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
         })) ?? [],
     );
 
-    return [...variableItems, ...agentItems, ...myUploadItems, ...toolsetItems, ...toolItems];
+    return [...variableItems, ...agentItems, ...fileItems, ...toolsetItems, ...toolItems];
   }, [workflowVariables, nodes, files, toolsets, t, currentLanguage, filterNodeId]);
 
   return allItems;
