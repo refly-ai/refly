@@ -7,7 +7,7 @@ import { Config } from '../../config/config.decorator';
 import { RedisService } from '../../common/redis.service';
 
 import { QueueOverloadedException } from './scalebox.exception';
-import { poll } from './scalebox.utils';
+import { poll, buildS3Path } from './scalebox.utils';
 import { SandboxWrapper, SandboxMetadata, SandboxContext, S3Config } from './scalebox.wrapper';
 import {
   SCALEBOX_DEFAULT_MAX_SANDBOXES,
@@ -35,8 +35,11 @@ export class SandboxPool {
   @Config.integer('sandbox.scalebox.extendTimeoutMs', SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS)
   private extendTimeoutMs: number;
 
-  @Config.object('sandbox.scalebox.s3', S3_DEFAULT_CONFIG)
+  @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
   private s3ConfigRaw: S3Config;
+
+  @Config.string('drive.storageKeyPrefix', 'drive')
+  private driveStorageKeyPrefix: string;
 
   private getS3Config(): S3Config {
     guard
@@ -50,17 +53,22 @@ export class SandboxPool {
     return this.s3ConfigRaw;
   }
 
-  async acquire(canvasId: string, apiKey: string, maxWaitMs = 30000): Promise<SandboxWrapper> {
-    const wrapper = await this.tryAcquire(canvasId, apiKey);
+  async acquire(
+    uid: string,
+    canvasId: string,
+    apiKey: string,
+    maxWaitMs = 30000,
+  ): Promise<SandboxWrapper> {
+    const wrapper = await this.tryAcquire(uid, canvasId, apiKey);
     if (wrapper) return wrapper;
 
     const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
     if (active.length < this.maxSandboxes) {
-      return this.createNew(canvasId, apiKey);
+      return this.createNew(uid, canvasId, apiKey);
     }
 
     return poll(
-      () => this.tryAcquireOrCreate(canvasId, apiKey),
+      () => this.tryAcquireOrCreate(uid, canvasId, apiKey),
       async () => {
         const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
         throw new QueueOverloadedException(active.length, this.maxSandboxes);
@@ -70,33 +78,39 @@ export class SandboxPool {
   }
 
   private async tryAcquireOrCreate(
+    uid: string,
     canvasId: string,
     apiKey: string,
   ): Promise<SandboxWrapper | null> {
-    const wrapper = await this.tryAcquire(canvasId, apiKey);
+    const wrapper = await this.tryAcquire(uid, canvasId, apiKey);
     if (wrapper) return wrapper;
 
     const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
     if (active.length < this.maxSandboxes) {
-      return this.createNew(canvasId, apiKey);
+      return this.createNew(uid, canvasId, apiKey);
     }
 
     return null;
   }
 
-  private async tryAcquire(canvasId: string, apiKey: string): Promise<SandboxWrapper | null> {
+  private async tryAcquire(
+    uid: string,
+    canvasId: string,
+    apiKey: string,
+  ): Promise<SandboxWrapper | null> {
     const lockKey = `scalebox:pool:acquire:${canvasId}`;
     const releaseLock = await this.redis.acquireLock(lockKey);
 
     if (!releaseLock) return null;
 
     return guard.defer(
-      () => this.acquireFromIdlePool(canvasId, apiKey),
+      () => this.acquireFromIdlePool(uid, canvasId, apiKey),
       () => void releaseLock(),
     );
   }
 
   private async acquireFromIdlePool(
+    uid: string,
     canvasId: string,
     apiKey: string,
   ): Promise<SandboxWrapper | null> {
@@ -117,9 +131,11 @@ export class SandboxPool {
 
     const context: SandboxContext = {
       logger: this.logger,
+      uid,
       canvasId,
       apiKey,
       s3Config: this.getS3Config(),
+      s3Path: buildS3Path(this.driveStorageKeyPrefix, uid, canvasId),
     };
 
     const wrapper = await SandboxWrapper.reconnect(context, metadata);
@@ -202,24 +218,28 @@ export class SandboxPool {
     );
   }
 
-  private async createNew(canvasId: string, apiKey: string): Promise<SandboxWrapper> {
+  private async createNew(uid: string, canvasId: string, apiKey: string): Promise<SandboxWrapper> {
     const lockKey = `scalebox:pool:create:${canvasId}`;
     const releaseLock = await this.redis.acquireLock(lockKey);
 
     if (!releaseLock) {
       // Retry acquire after short delay
       await new Promise((resolve) => setTimeout(resolve, 100));
-      return this.acquire(canvasId, apiKey);
+      return this.acquire(uid, canvasId, apiKey);
     }
 
     return guard.defer(
-      () => this.createNewSandbox(canvasId, apiKey),
+      () => this.createNewSandbox(uid, canvasId, apiKey),
       () => void releaseLock(),
     );
   }
 
-  private async createNewSandbox(canvasId: string, apiKey: string): Promise<SandboxWrapper> {
-    const existing = await this.tryAcquire(canvasId, apiKey);
+  private async createNewSandbox(
+    uid: string,
+    canvasId: string,
+    apiKey: string,
+  ): Promise<SandboxWrapper> {
+    const existing = await this.tryAcquire(uid, canvasId, apiKey);
     if (existing) return existing;
 
     const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
@@ -229,9 +249,11 @@ export class SandboxPool {
 
     const context: SandboxContext = {
       logger: this.logger,
+      uid,
       canvasId,
       apiKey,
       s3Config: this.getS3Config(),
+      s3Path: buildS3Path(this.driveStorageKeyPrefix, uid, canvasId),
     };
 
     const wrapper = await SandboxWrapper.create(context, this.extendTimeoutMs);
@@ -243,6 +265,7 @@ export class SandboxPool {
     this.logger.info(
       {
         sandboxId: wrapper.sandboxId,
+        uid,
         canvasId,
         active: activeCount,
         max: this.maxSandboxes,

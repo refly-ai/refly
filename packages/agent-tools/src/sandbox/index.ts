@@ -119,6 +119,7 @@ Files persist across executions in the same canvas. Use relative paths to access
             exitCode,
             executionTime,
             parentResultId: config.configurable?.resultId,
+            files: result.data?.files,
           },
           summary,
           creditCost: 1, // Placeholder credit cost

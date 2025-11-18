@@ -37,6 +37,7 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
 
     const result = await performance(() =>
       this.scaleboxService.executeCode({
+        uid,
         code,
         language,
         apiKey,

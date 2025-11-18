@@ -169,16 +169,33 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   }
 
   const resultData = safeParseJSON(resultContent)?.data as Record<string, unknown> | undefined;
-  const filePreviewDriveFile = useMemo<DriveFile | null>(() => {
-    if (!resultData?.fileId) return null;
-    return {
-      fileId: String(resultData.fileId),
-      canvasId: String(resultData.canvasId ?? ''),
-      name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
-      type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
-    };
+  const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
+    if (resultData?.fileId) {
+      return [
+        {
+          fileId: String(resultData.fileId),
+          canvasId: String(resultData.canvasId ?? ''),
+          name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
+          type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
+        },
+      ];
+    }
+
+    if (Array.isArray(resultData?.files)) {
+      return resultData.files.map((file) => ({
+        fileId: String(file.fileId),
+        canvasId: String(file.canvasId ?? ''),
+        name: String(file.name ?? file.fileName ?? 'Drive file'),
+        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+      }));
+    }
+
+    return [];
   }, [resultData]);
-  const shouldRenderFilePreview = Boolean(filePreviewDriveFile?.fileId);
+
+  const shouldRenderFilePreview = useMemo(() => {
+    return filePreviewDriveFile.length > 0;
+  }, [filePreviewDriveFile]);
 
   return (
     <>
@@ -247,7 +264,8 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
         )}
       </div>
 
-      {shouldRenderFilePreview && <ProductCard file={filePreviewDriveFile} />}
+      {shouldRenderFilePreview &&
+        filePreviewDriveFile.map((file) => <ProductCard key={file.fileId} file={file} />)}
     </>
   );
 };

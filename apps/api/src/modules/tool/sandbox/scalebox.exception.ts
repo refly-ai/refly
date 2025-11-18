@@ -94,7 +94,7 @@ export class SandboxCreationException extends SandboxException {
 
 export class SandboxExecutionFailedException extends SandboxException {
   constructor(
-    message: string,
+    message: unknown,
     public readonly exitCode?: number,
   ) {
     super(message, 'SANDBOX_EXECUTION_FAILED', { exitCode });

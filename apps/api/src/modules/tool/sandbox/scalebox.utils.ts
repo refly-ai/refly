@@ -1,9 +1,8 @@
-import { SandboxExecuteResponse } from '@refly/openapi-schema';
+import { DriveFile, SandboxExecuteResponse } from '@refly/openapi-schema';
 
 import { buildResponse } from '../../../utils';
 import { SandboxException } from './scalebox.exception';
 import { ScaleboxExecutionResult } from './scalebox.dto';
-import { S3_DEFAULT_CONFIG, S3_DEV_PATH_PREFIX } from './scalebox.constants';
 
 export interface PerformanceResult<T> {
   success: boolean;
@@ -46,23 +45,17 @@ export async function performance<T>(task: () => Promise<T>): Promise<Performanc
   }
 }
 
+// TODO: use a singleton function with drive service to build the s3 path
+export function buildS3Path(prefix: string, uid: string, canvasId: string, name = ''): string {
+  return [prefix, uid, canvasId, name].filter(Boolean).join('/');
+}
+
 /**
  * Sleep helper function
  * @param ms - Milliseconds to sleep
  */
 export async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Build S3 URI for canvas storage
- * This is the unified resource management convention for the system
- *
- * @param canvasId - Canvas identifier
- * @returns S3 URI (e.g., s3://bucket/tmp/perish/canvas/{canvasId}/)
- */
-export function buildCanvasS3Uri(canvasId: string): string {
-  return `s3://${S3_DEFAULT_CONFIG.bucket}/${S3_DEV_PATH_PREFIX}/canvas/${canvasId}/`;
 }
 
 /**
@@ -84,6 +77,7 @@ export function formatError(error: unknown): { code: string; message: string } {
  */
 export function buildSuccessResponse(
   output: string,
+  processedFiles: DriveFile[],
   result: ScaleboxExecutionResult,
 ): SandboxExecuteResponse {
   return buildResponse<SandboxExecuteResponse>(true, {
@@ -92,6 +86,7 @@ export function buildSuccessResponse(
       error: result.error || '',
       exitCode: result.exitCode || 0,
       executionTime: result.executionTime || 0,
+      files: processedFiles,
     },
   });
 }

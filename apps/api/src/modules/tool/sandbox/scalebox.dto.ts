@@ -25,6 +25,7 @@ export interface ScaleboxExecutionResult {
   error: string;
   exitCode: number;
   executionTime: number;
+  files?: string[];
 }
 
 /**

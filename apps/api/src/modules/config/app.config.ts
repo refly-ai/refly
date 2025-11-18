@@ -51,6 +51,7 @@ export default () => ({
         accessKey: process.env.MINIO_INTERNAL_ACCESS_KEY || 'minioadmin',
         secretKey: process.env.MINIO_INTERNAL_SECRET_KEY || 'minioadmin',
         bucket: process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
+        region: process.env.MINIO_INTERNAL_REGION || 'us-east-1',
       },
       external: {
         endPoint: process.env.MINIO_EXTERNAL_ENDPOINT || 'localhost',
@@ -59,6 +60,7 @@ export default () => ({
         accessKey: process.env.MINIO_EXTERNAL_ACCESS_KEY || 'minioadmin',
         secretKey: process.env.MINIO_EXTERNAL_SECRET_KEY || 'minioadmin',
         bucket: process.env.MINIO_EXTERNAL_BUCKET || 'refly-weblink',
+        region: process.env.MINIO_EXTERNAL_REGION || 'us-east-1',
       },
     },
   },
@@ -228,15 +230,6 @@ export default () => ({
       maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
       minRemainingMs: process.env.SCALEBOX_MIN_REMAINING_MS,
       extendTimeoutMs: process.env.SCALEBOX_EXTEND_TIMEOUT_MS,
-      s3: {
-        endpoint: process.env.SANDBOX_S3_ENDPOINT,
-        port: process.env.SANDBOX_S3_PORT,
-        useSSL: process.env.SANDBOX_S3_USE_SSL,
-        accessKey: process.env.SANDBOX_S3_ACCESS_KEY,
-        secretKey: process.env.SANDBOX_S3_SECRET_KEY,
-        bucket: process.env.SANDBOX_S3_BUCKET,
-        region: process.env.SANDBOX_S3_REGION,
-      },
     },
   },
 });

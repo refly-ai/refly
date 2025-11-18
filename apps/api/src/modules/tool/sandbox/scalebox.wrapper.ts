@@ -6,11 +6,7 @@ import {
   SandboxMountException,
   CodeExecutionException,
 } from './scalebox.exception';
-import {
-  S3_DEV_PATH_PREFIX,
-  SANDBOX_MOUNT_POINT,
-  SANDBOX_MOUNT_WAIT_MS,
-} from './scalebox.constants';
+import { SANDBOX_MOUNT_POINT, SANDBOX_MOUNT_WAIT_MS } from './scalebox.constants';
 import { sleep } from './scalebox.utils';
 
 export interface S3Config {
@@ -26,6 +22,7 @@ export interface S3Config {
 export interface SandboxMetadata {
   sandboxId: string;
   canvasId: string;
+  uid: string;
   cwd: string;
   createdAt: number;
   timeoutAt: number;
@@ -34,8 +31,10 @@ export interface SandboxMetadata {
 export interface SandboxContext {
   logger: PinoLogger;
   canvasId: string;
+  uid: string;
   apiKey: string;
   s3Config: S3Config;
+  s3Path: string;
 }
 
 /**
@@ -62,6 +61,7 @@ s3fs ${s3Config.bucket}:/${path} ${mountPoint} \
 export class SandboxWrapper {
   private constructor(
     private readonly sandbox: Sandbox,
+    public readonly uid: string,
     public readonly sandboxId: string,
     public readonly canvasId: string,
     public readonly cwd: string,
@@ -83,6 +83,7 @@ export class SandboxWrapper {
 
     const wrapper = new SandboxWrapper(
       sandbox,
+      context.uid,
       sandbox.sandboxId,
       context.canvasId,
       SANDBOX_MOUNT_POINT,
@@ -90,7 +91,7 @@ export class SandboxWrapper {
       info.timeoutAt.getTime(),
     );
 
-    await wrapper.mountS3(context.logger, context.s3Config);
+    await wrapper.mountS3(context);
 
     context.logger.info(
       { sandboxId: wrapper.sandboxId, canvasId: context.canvasId },
@@ -123,6 +124,7 @@ export class SandboxWrapper {
 
     const wrapper = new SandboxWrapper(
       sandbox,
+      metadata.uid,
       metadata.sandboxId,
       metadata.canvasId,
       metadata.cwd,
@@ -140,13 +142,14 @@ export class SandboxWrapper {
     return wrapper;
   }
 
-  private async mountS3(logger: PinoLogger, s3Config: S3Config): Promise<void> {
+  private async mountS3(context: SandboxContext): Promise<void> {
+    const { logger, s3Config, s3Path } = context;
+
     const sandbox = guard
       .notEmpty(this.sandbox)
       .orThrow(() => new Error('Sandbox not initialized'));
 
     const mountPoint = SANDBOX_MOUNT_POINT;
-    const path = `${S3_DEV_PATH_PREFIX}/canvas/${this.canvasId}`;
 
     logger.info({ canvasId: this.canvasId, mountPoint }, 'Mounting S3 storage');
 
@@ -157,7 +160,7 @@ export class SandboxWrapper {
     if (mkdirResult.exitCode !== 0)
       throw new SandboxMountException(mkdirResult.stderr, this.canvasId);
 
-    const mountCmd = buildS3MountCommand(s3Config, path, mountPoint);
+    const mountCmd = buildS3MountCommand(s3Config, s3Path, mountPoint);
 
     const mountResult = await guard(() => sandbox.commands.run(mountCmd)).orThrow(
       (e) => new SandboxMountException(e, this.canvasId),
@@ -211,8 +214,13 @@ export class SandboxWrapper {
     ).orThrow((e) => new CodeExecutionException(e));
   }
 
+  async listCwdFiles(): Promise<string[]> {
+    return this.sandbox.files.list(this.cwd).then((files) => files.map((file) => file.name));
+  }
+
   toMetadata(): SandboxMetadata {
     return {
+      uid: this.uid,
       sandboxId: this.sandboxId,
       canvasId: this.canvasId,
       cwd: this.cwd,

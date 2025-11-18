@@ -2,13 +2,19 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
-import { User, SandboxExecuteRequest, SandboxExecuteResponse } from '@refly/openapi-schema';
+import {
+  User,
+  SandboxExecuteRequest,
+  SandboxExecuteResponse,
+  DriveFileCategory,
+} from '@refly/openapi-schema';
 import { Queue, QueueEvents } from 'bullmq';
 import type { Language, ExecutionResult } from '@scalebox/sdk';
 
 import { buildResponse } from '../../../utils';
 import { guard } from '../../../utils/guard';
 import { Config } from '../../config/config.decorator';
+import { DriveService } from '../../drive/drive.service';
 import {
   MissingApiKeyException,
   MissingCanvasIdException,
@@ -27,7 +33,7 @@ import {
 } from './scalebox.constants';
 import stripAnsi from 'strip-ansi';
 import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
-import { formatError, buildSuccessResponse } from './scalebox.utils';
+import { formatError, buildSuccessResponse, buildS3Path } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { SandboxWrapper } from './scalebox.wrapper';
 
@@ -41,6 +47,7 @@ export class ScaleboxService implements OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService, // Used by @Config decorators
+    private readonly driveService: DriveService,
     private readonly sandboxPool: SandboxPool,
     private readonly toolExecutionSync: ToolExecutionSyncInterceptor,
     private readonly logger: PinoLogger,
@@ -67,6 +74,9 @@ export class ScaleboxService implements OnModuleDestroy {
   @Config.integer('sandbox.scalebox.timeout', SCALEBOX_DEFAULT_TIMEOUT)
   private timeout: number;
 
+  @Config.string('drive.storageKeyPrefix', 'drive')
+  private driveStorageKeyPrefix: string;
+
   async onModuleDestroy() {
     if (this.queueEvents) {
       await this.queueEvents.close();
@@ -78,9 +88,10 @@ export class ScaleboxService implements OnModuleDestroy {
     language: Language;
     apiKey: string;
     canvasId: string;
+    uid: string;
   }): Promise<ScaleboxExecutionResult> {
     const canvasId = guard.notEmpty(params.canvasId).orThrow(() => new MissingCanvasIdException());
-    const wrapper = await this.sandboxPool.acquire(canvasId, params.apiKey);
+    const wrapper = await this.sandboxPool.acquire(params.uid, canvasId, params.apiKey);
 
     return await guard.defer(
       () => this.runCodeInSandbox(wrapper, params),
@@ -102,26 +113,35 @@ export class ScaleboxService implements OnModuleDestroy {
     );
 
     const startTime = Date.now();
-    const executionResult = await wrapper.executeCode(params.code, params.language);
+
+    const previousFiles = await wrapper.listCwdFiles();
+    const result = await wrapper.executeCode(params.code, params.language);
+    const currentFiles = await wrapper.listCwdFiles();
+    const files = currentFiles
+      .filter((file) => !previousFiles.includes(file))
+      .map((p) => p.replace(wrapper.cwd, ''));
+
     const executionTime = Date.now() - startTime;
 
-    const errorMessage = this.extractErrorMessage(executionResult);
+    const errorMessage = this.extractErrorMessage(result);
 
     this.logger.info(
       {
         executionTime,
-        exitCode: executionResult.exitCode,
+        exitCode: result.exitCode,
         hasError: !!errorMessage,
-        hasStderr: !!executionResult.stderr,
+        hasStderr: !!result.stderr,
+        files,
       },
       'Code execution completed',
     );
 
     return {
-      originResult: executionResult,
+      originResult: result,
       error: errorMessage,
-      exitCode: executionResult.exitCode,
+      exitCode: result.exitCode,
       executionTime,
+      files,
     };
   }
 
@@ -221,13 +241,34 @@ export class ScaleboxService implements OnModuleDestroy {
 
       this.logger.info({ jobId: job.id }, 'Sandbox execution completed');
 
-      const { exitCode, error, originResult } = executionResult;
+      const { exitCode, error, originResult, files } = executionResult;
+
+      const prefix = this.driveStorageKeyPrefix;
+
+      const processedFiles = await guard(() =>
+        this.driveService.batchCreateDriveFiles(user, {
+          files: files.map((name) => ({
+            canvasId,
+            name,
+            source: 'agent',
+            storageKey: buildS3Path(prefix, user.uid, canvasId, name),
+          })),
+        }),
+      ).orThrow((error) => new SandboxExecutionFailedException(error, exitCode));
+
+      const formattedFiles = processedFiles.map((file) => ({
+        fileId: file.fileId,
+        canvasId: file.canvasId,
+        name: file.name,
+        type: file.type,
+        category: file.category as DriveFileCategory,
+      }));
 
       guard
         .ensure(exitCode === 0)
         .orThrow(() => new SandboxExecutionFailedException(error, exitCode));
 
-      return buildSuccessResponse(originResult?.text || '', executionResult);
+      return buildSuccessResponse(originResult?.text || '', formattedFiles, executionResult);
     } catch (error) {
       this.logger.error(error, 'Sandbox execution failed');
       return buildResponse<SandboxExecuteResponse>(false, { data: null }, formatError(error));
