@@ -204,8 +204,8 @@ importers:
         specifier: ^1.5.2
         version: 1.6.2(@modelcontextprotocol/sdk@1.20.2)(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.3.10)(express@4.19.2)(reflect-metadata@0.1.14)(zod-to-json-schema@3.24.6(zod@3.25.76))(zod@3.25.76)
       '@scalebox/sdk':
-        specifier: ^3.4.0
-        version: 3.4.0
+        specifier: ^3.5.0
+        version: 3.5.0
       '@sentry/cli':
         specifier: ^2.31.2
         version: 2.47.1(encoding@0.1.13)
@@ -3462,7 +3462,6 @@ packages:
   '@lancedb/lancedb@0.19.1':
     resolution: {integrity: sha512-EsEP5eGpVzmpryNS/V9IPZvtBmImsE8rAWjhLQuhD9bbF3upcICTovQBK7A3lhy81D2g1RWaJaSSAmLtGPPOyA==}
     engines: {node: '>= 18'}
-    cpu: [x64, arm64]
     os: [darwin, linux, win32]
     peerDependencies:
       apache-arrow: '>=15.0.0 <=18.1.0'
@@ -5646,8 +5645,8 @@ packages:
     resolution: {integrity: sha512-TUipHiqEz+XRaYNaDhkkBAk6GoiOWMmcD6pNOcADFz2mHysCdOUYnQ6+RM9RLAe1fa6H9a+3yiZUgqAj93k6TQ==}
     engines: {node: '>=18'}
 
-  '@scalebox/sdk@3.4.0':
-    resolution: {integrity: sha512-9T1fQDEHuTdyh8VhI5hM1TcWEymGzlCM7gIUJbRxEOFWWIPOR0DBPcIWRV/o3U/hVqvDUQZPBTJf5n948vRQZw==}
+  '@scalebox/sdk@3.5.0':
+    resolution: {integrity: sha512-wv5/avGNqQlFjpCZJo0vurvkB3X+yYSok1229mgOu70p6nLMvKb/Odx1lj0icr6Jpo+LRYaOfAS4X2LgMn6eeA==}
     engines: {node: '>=18'}
 
   '@scarf/scarf@1.4.0':
@@ -20683,7 +20682,7 @@ snapshots:
       openapi-fetch: 0.9.8
       platform: 1.3.6
 
-  '@scalebox/sdk@3.4.0':
+  '@scalebox/sdk@3.5.0':
     dependencies:
       '@bufbuild/protobuf': 2.10.0
       '@connectrpc/connect': 2.1.0(@bufbuild/protobuf@2.10.0)
@@ -22505,6 +22504,14 @@ snapshots:
       magic-string: 0.30.17
     optionalDependencies:
       vite: 5.4.19(@types/node@20.19.0)(less@4.3.0)(sass-embedded@1.89.2)(sass@1.71.1)(terser@5.43.1)
+
+  '@vitest/mocker@2.1.9(vite@5.4.19(@types/node@24.3.0)(less@4.3.0)(sass-embedded@1.89.2)(sass@1.71.1)(terser@5.43.1))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.17
+    optionalDependencies:
+      vite: 5.4.19(@types/node@24.3.0)(less@4.3.0)(sass-embedded@1.89.2)(sass@1.71.1)(terser@5.43.1)
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
@@ -32900,7 +32907,7 @@ snapshots:
   vitest@2.1.9(@types/node@24.3.0)(happy-dom@15.11.7)(jsdom@24.1.3)(less@4.3.0)(sass-embedded@1.89.2)(sass@1.71.1)(terser@5.43.1):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.19(@types/node@20.19.0)(less@4.3.0)(sass-embedded@1.89.2)(sass@1.71.1)(terser@5.43.1))
+      '@vitest/mocker': 2.1.9(vite@5.4.19(@types/node@24.3.0)(less@4.3.0)(sass-embedded@1.89.2)(sass@1.71.1)(terser@5.43.1))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

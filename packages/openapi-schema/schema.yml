@@ -8316,13 +8316,24 @@ components:
       type: object
       required:
         - code
+        - language
       properties:
         code:
           type: string
           description: Code to execute in the sandbox
         language:
           type: string
-          description: Programming language (e.g., python, javascript, bash)
+          description: Programming language for code execution
+          enum:
+            - python
+            - javascript
+            - typescript
+            - r
+            - java
+            - bash
+            - node
+            - nodejs
+            - deno
           example: "python"
         timeout:
           type: integer

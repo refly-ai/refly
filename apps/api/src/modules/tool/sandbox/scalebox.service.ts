@@ -1,24 +1,34 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Sandbox } from '@scalebox/sdk';
+import { PinoLogger } from 'nestjs-pino';
 import { User, SandboxExecuteRequest, SandboxExecuteResponse } from '@refly/openapi-schema';
 import { Queue, QueueEvents } from 'bullmq';
+import type { Language, ExecutionResult } from '@scalebox/sdk';
 
 import { buildResponse } from '../../../utils';
+import { guard } from '../../../utils/guard';
+import { Config } from '../../config/config.decorator';
+import {
+  MissingApiKeyException,
+  MissingCanvasIdException,
+  QueueUnavailableException,
+  QueueOverloadedException,
+  SandboxExecutionFailedException,
+} from './scalebox.exception';
 import { MEDIA_TYPES } from '../common/constant/media-types';
 import { ToolExecutionSync } from '../common/decorators/tool-execution-sync.decorator';
-import {
-  type ToolExecutionResult,
-  ToolExecutionSyncInterceptor,
-} from '../common/interceptors/tool-execution-sync.interceptor';
+import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execution-sync.interceptor';
 import {
   SCALEBOX_EXECUTION_QUEUE,
   SCALEBOX_DEFAULT_TIMEOUT,
   SCALEBOX_DEFAULT_MAX_QUEUE_SIZE,
+  ERROR_MESSAGE_MAX_LENGTH,
 } from './scalebox.constants';
 import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
-import { MiscService } from '../../misc/misc.service';
+import { formatError, buildSuccessResponse } from './scalebox.utils';
+import { SandboxPool } from './scalebox.pool';
+import { SandboxWrapper } from './scalebox.wrapper';
 
 /**
  * Scalebox Service
@@ -26,17 +36,19 @@ import { MiscService } from '../../misc/misc.service';
  */
 @Injectable()
 export class ScaleboxService implements OnModuleDestroy {
-  private readonly logger = new Logger(ScaleboxService.name);
   private queueEvents?: QueueEvents;
 
   constructor(
-    private readonly config: ConfigService,
-    private readonly miscService: MiscService,
+    private readonly config: ConfigService, // Used by @Config decorators
+    private readonly sandboxPool: SandboxPool,
     private readonly toolExecutionSync: ToolExecutionSyncInterceptor,
+    private readonly logger: PinoLogger,
     @Optional()
     @InjectQueue(SCALEBOX_EXECUTION_QUEUE)
     private readonly executionQueue?: Queue<ScaleboxExecutionJobData, ScaleboxExecutionResult>,
   ) {
+    this.logger.setContext(ScaleboxService.name);
+
     // Create QueueEvents for job result listening if queue is available
     if (this.executionQueue) {
       this.queueEvents = new QueueEvents(SCALEBOX_EXECUTION_QUEUE, {
@@ -45,194 +57,138 @@ export class ScaleboxService implements OnModuleDestroy {
     }
   }
 
-  /**
-   * Cleanup on module destroy
-   */
+  @Config.string('sandbox.scalebox.apiKey', '')
+  private scaleboxApiKey: string;
+
+  @Config.integer('sandbox.scalebox.maxQueueSize', SCALEBOX_DEFAULT_MAX_QUEUE_SIZE)
+  private maxQueueSize: number;
+
+  @Config.integer('sandbox.scalebox.timeout', SCALEBOX_DEFAULT_TIMEOUT)
+  private timeout: number;
+
   async onModuleDestroy() {
     if (this.queueEvents) {
       await this.queueEvents.close();
     }
   }
 
-  /**
-   * Core sandbox code execution logic (static method for reuse)
-   * This method contains the actual Scalebox SDK integration logic
-   */
-  static async executeCode(params: {
+  async executeCode(params: {
     code: string;
-    language?: string;
+    language: Language;
     apiKey: string;
-    canvasId?: string;
+    canvasId: string;
   }): Promise<ScaleboxExecutionResult> {
-    const logger = new Logger(ScaleboxService.name);
+    const canvasId = guard.notEmpty(params.canvasId).orThrow(() => new MissingCanvasIdException());
+    const wrapper = await this.sandboxPool.acquire(canvasId, params.apiKey);
+
+    return await guard.defer(
+      () => this.runCodeInSandbox(wrapper, params),
+      () => this.releaseSandbox(wrapper),
+    );
+  }
+
+  private async runCodeInSandbox(
+    wrapper: SandboxWrapper,
+    params: { code: string; language: Language },
+  ): Promise<ScaleboxExecutionResult> {
+    this.logger.info(
+      {
+        sandboxId: wrapper.sandboxId,
+        canvasId: wrapper.canvasId,
+        language: params.language,
+      },
+      'Executing code in sandbox',
+    );
+
     const startTime = Date.now();
+    const executionResult = await wrapper.executeCode(params.code, params.language);
+    const executionTime = Date.now() - startTime;
 
-    try {
-      logger.log(
-        `Creating sandbox, language: ${params.language || 'python'}, canvasId: ${params.canvasId || 'N/A'}`,
-      );
-      const sandbox = await Sandbox.create('code-interpreter', {
-        apiKey: params.apiKey,
-      });
+    const errorMessage = this.extractErrorMessage(executionResult);
 
-      const cwd = params.canvasId ? `/tmp/canvas/${params.canvasId}` : undefined;
-
-      if (cwd) {
-        logger.log(`Creating working directory: ${cwd}`);
-        await sandbox.files.makeDir(cwd);
-      }
-
-      logger.log('Executing code in sandbox');
-      const result = await sandbox.runCode(params.code, {
-        language: (params.language || 'python') as any,
-        cwd,
-      });
-
-      logger.log('Code execution completed, killing sandbox');
-      await sandbox.kill();
-
-      const executionTime = Date.now() - startTime;
-      logger.log(`Sandbox execution finished, total time: ${executionTime}ms`);
-
-      return {
-        originResult: result,
-        error: '',
-        exitCode: 0,
+    this.logger.info(
+      {
         executionTime,
-      };
-    } catch (error) {
-      const executionTime = Date.now() - startTime;
-      logger.error(`Sandbox execution failed: ${(error as Error).message}`, (error as Error).stack);
+        exitCode: executionResult.exitCode,
+        hasError: !!errorMessage,
+        hasStderr: !!executionResult.stderr,
+      },
+      'Code execution completed',
+    );
 
-      return {
-        error: (error as Error).message || 'Unknown error occurred',
-        exitCode: 1,
-        executionTime,
-      };
-    }
+    return {
+      originResult: executionResult,
+      error: errorMessage,
+      exitCode: executionResult.exitCode,
+      executionTime,
+    };
   }
 
-  /**
-   * Public API method that returns SandboxExecuteResponse for backward compatibility
-   */
-  async execute(user: User, request: SandboxExecuteRequest): Promise<SandboxExecuteResponse> {
-    // Call the decorated method which returns ToolExecutionResult
-    const result = await this.executeInternal(user, request);
-
-    // Convert ToolExecutionResult to SandboxExecuteResponse
-    if (result.status === 'success') {
-      const png = result.data?.originResult?.png;
-      if (png) {
-        const uploadResult = await this.miscService.uploadBase64(user, {
-          base64: png,
-          filename: `output-${Date.now()}.png`,
-        });
-
-        return buildResponse<SandboxExecuteResponse>(true, {
-          data: {
-            output: `<img src="${uploadResult.url}" />`,
-            error: result.data?.error || '',
-            exitCode: result.data?.exitCode || 0,
-            executionTime: result.data?.executionTime || 0,
-          },
-        });
-      }
-
-      return buildResponse<SandboxExecuteResponse>(true, {
-        data: {
-          output: result.data?.originResult?.text || '',
-          error: result.data?.error || '',
-          exitCode: result.data?.exitCode || 0,
-          executionTime: result.data?.executionTime || 0,
-        },
-      });
-    } else {
-      return buildResponse<SandboxExecuteResponse>(false, null, result.errors?.[0]);
-    }
+  private async releaseSandbox(wrapper: SandboxWrapper): Promise<void> {
+    await guard.bestEffort(
+      () => this.sandboxPool.release(wrapper),
+      (error) => this.logger.warn(error, 'Failed to release sandbox after execution'),
+    );
   }
 
-  /**
-   * Internal execute implementation with @ToolExecutionSync decorator
-   * Uses @ToolExecutionSync decorator to handle all boilerplate logic:
-   * - ActionResult creation and status management
-   * - Workflow node execution tracking
-   * - Canvas node creation and connection
-   * - Parent-child relationship handling
-   */
+  private truncateErrorMessage(message: string): string {
+    if (message.length <= ERROR_MESSAGE_MAX_LENGTH) {
+      return message;
+    }
+    return `${message.slice(0, ERROR_MESSAGE_MAX_LENGTH)}[... more info]`;
+  }
+
+  private extractErrorMessage(result: ExecutionResult): string {
+    if (result.error?.traceback) return this.truncateErrorMessage(result.error.traceback);
+    if (result.error?.message) return this.truncateErrorMessage(result.error.message);
+    if (result.stderr) return this.truncateErrorMessage(result.stderr);
+    if (result.exitCode !== 0 && result.stdout) return this.truncateErrorMessage(result.stdout);
+    return '';
+  }
+
   @ToolExecutionSync({
     resultType: MEDIA_TYPES.DOC,
     getParentResultId: (req) => req.parentResultId,
-    getTitle: (req) => `sandbox-execute-${req.language || 'python'}`,
+    getTitle: (req) => `sandbox-execute-${req.language}`,
     getModel: (req) => req.model,
     getProviderItemId: (req) => req.providerItemId,
     createCanvasNode: true,
     updateWorkflowNode: true,
     getMetadata: (_req, result) => ({
-      output: result.data?.output,
-      exitCode: result.data?.exitCode,
-      executionTime: result.data?.executionTime,
+      output: result?.data?.output,
+      exitCode: result?.data?.exitCode,
+      executionTime: result?.data?.executionTime,
     }),
   })
-  private async executeInternal(
-    user: User,
-    request: SandboxExecuteRequest,
-  ): Promise<ToolExecutionResult> {
-    this.logger.log(
-      `Executing sandbox code for user ${user.uid}, canvasId: ${request.canvasId || 'N/A'}, language: ${request.language || 'python'}`,
-    );
-
-    // Get API key from config
-    const apiKey = this.config.get<string>('sandbox.scalebox.apiKey');
-
-    if (!apiKey) {
-      return {
-        status: 'error',
-        errors: [
-          {
-            code: 'SCALEBOX_NOT_CONFIGURED',
-            message: 'Scalebox API key is not configured. Please contact administrator.',
-          },
-        ],
-      };
-    }
-
-    // If queue is not available (desktop mode), return error
-    if (!this.executionQueue) {
-      this.logger.error('Execution queue not available');
-      return {
-        status: 'error',
-        errors: [
-          {
-            code: 'QUEUE_NOT_AVAILABLE',
-            message: 'Sandbox execution queue is not available. Please check Redis connection.',
-          },
-        ],
-      };
-    }
-
+  async execute(user: User, request: SandboxExecuteRequest): Promise<SandboxExecuteResponse> {
     try {
-      // Check queue size before adding new job
+      const canvasId = guard
+        .notEmpty(request.canvasId)
+        .orThrow(() => new MissingCanvasIdException());
+
+      const apiKey = guard
+        .notEmpty(this.scaleboxApiKey)
+        .orThrow(() => new MissingApiKeyException());
+
+      const maxQueueSize = this.maxQueueSize;
+      const timeout = this.timeout;
+
+      this.logger.info(
+        {
+          userId: user.uid,
+          canvasId,
+          language: request.language,
+        },
+        'Executing sandbox code',
+      );
+
+      guard.ensure(!!this.executionQueue).orThrow(() => new QueueUnavailableException());
       const waitingCount = await this.executionQueue.getWaitingCount();
-      const maxQueueSizeConfig = this.config.get<string>('sandbox.scalebox.maxQueueSize');
-      const maxQueueSize =
-        Number.parseInt(maxQueueSizeConfig, 10) || SCALEBOX_DEFAULT_MAX_QUEUE_SIZE;
 
-      if (waitingCount >= maxQueueSize) {
-        this.logger.warn(
-          `Queue overloaded: ${waitingCount} tasks waiting, max: ${maxQueueSize}. Rejecting new request from user ${user.uid}`,
-        );
-        return {
-          status: 'error',
-          errors: [
-            {
-              code: 'QUEUE_OVERLOADED',
-              message: `System is busy (${waitingCount} tasks in queue). Please try again later.`,
-            },
-          ],
-        };
-      }
+      guard
+        .ensure(waitingCount < maxQueueSize)
+        .orThrow(() => new QueueOverloadedException(waitingCount, maxQueueSize));
 
-      // Add job to queue with aggressive cleanup options
       const job = await this.executionQueue.add(
         'execute',
         {
@@ -240,58 +196,37 @@ export class ScaleboxService implements OnModuleDestroy {
           code: request.code,
           language: request.language,
           timeout: request.timeout,
-          canvasId: request.canvasId,
+          canvasId,
           apiKey,
         },
         {
-          removeOnComplete: true, // Remove job immediately after completion
-          removeOnFail: true, // Remove job immediately after failure
+          removeOnComplete: true,
+          removeOnFail: true,
         },
       );
 
-      this.logger.log(`Sandbox job queued: ${job.id}, current queue size: ${waitingCount + 1}`);
-
-      // Wait for job to complete and return result
-      const timeoutConfig = this.config.get<string>('sandbox.scalebox.timeout');
-      const waitTimeout = Number.parseInt(timeoutConfig, 10) || SCALEBOX_DEFAULT_TIMEOUT;
-      const result = await job.waitUntilFinished(this.queueEvents, waitTimeout);
-
-      this.logger.log(`Sandbox execution completed: ${job.id}`);
-
-      // Convert ScaleboxExecutionResult to ToolExecutionResult
-      if (result.exitCode === 0) {
-        return {
-          status: 'success',
-          data: result,
-        };
-      } else {
-        return {
-          status: 'error',
-          data: result,
-          errors: [
-            {
-              code: 'SANDBOX_EXECUTION_FAILED',
-              message: result.error || 'Failed to execute code',
-            },
-          ],
-        };
-      }
-    } catch (error) {
-      this.logger.error(
-        `Queue execution failed: ${(error as Error).message}`,
-        (error as Error).stack,
+      this.logger.info(
+        {
+          jobId: job.id,
+          queueSize: waitingCount + 1,
+        },
+        'Sandbox job queued',
       );
 
-      // Return error instead of fallback
-      return {
-        status: 'error',
-        errors: [
-          {
-            code: 'QUEUE_EXECUTION_FAILED',
-            message: (error as Error).message || 'Failed to execute code in queue',
-          },
-        ],
-      };
+      const executionResult = await job.waitUntilFinished(this.queueEvents, timeout);
+
+      this.logger.info({ jobId: job.id }, 'Sandbox execution completed');
+
+      const { exitCode, error, originResult } = executionResult;
+
+      guard
+        .ensure(exitCode === 0)
+        .orThrow(() => new SandboxExecutionFailedException(error, exitCode));
+
+      return buildSuccessResponse(originResult?.text || '', executionResult);
+    } catch (error) {
+      this.logger.error(error, 'Sandbox execution failed');
+      return buildResponse<SandboxExecuteResponse>(false, { data: null }, formatError(error));
     }
   }
 }

@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { ConfigModule } from '@nestjs/config';
 import { CommonModule } from '../../common/common.module';
-import { MiscModule } from '../../misc/misc.module';
 import { CanvasSyncModule } from '../../canvas-sync/canvas-sync.module';
 import { isDesktop } from '../../../utils/runtime';
 import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execution-sync.interceptor';
 import { SCALEBOX_EXECUTION_QUEUE } from './scalebox.constants';
 import { ScaleboxExecutionProcessor } from './scalebox.processor';
 import { ScaleboxService } from './scalebox.service';
+import { SandboxPool } from './scalebox.pool';
 
 /**
  * Scalebox Module
@@ -15,8 +16,8 @@ import { ScaleboxService } from './scalebox.service';
  */
 @Module({
   imports: [
+    ConfigModule,
     CommonModule,
-    MiscModule,
     CanvasSyncModule,
     // Only register queue in non-desktop mode
     ...(isDesktop()
@@ -27,7 +28,12 @@ import { ScaleboxService } from './scalebox.service';
           }),
         ]),
   ],
-  providers: [ScaleboxService, ScaleboxExecutionProcessor, ToolExecutionSyncInterceptor],
+  providers: [
+    ScaleboxService,
+    ScaleboxExecutionProcessor,
+    SandboxPool,
+    ToolExecutionSyncInterceptor,
+  ],
   exports: [ScaleboxService],
 })
 export class ScaleboxModule {}

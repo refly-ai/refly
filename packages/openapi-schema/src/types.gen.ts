@@ -4502,9 +4502,18 @@ export type SandboxExecuteRequest = {
    */
   code: string;
   /**
-   * Programming language (e.g., python, javascript, bash)
+   * Programming language for code execution
    */
-  language?: string;
+  language:
+    | 'python'
+    | 'javascript'
+    | 'typescript'
+    | 'r'
+    | 'java'
+    | 'bash'
+    | 'node'
+    | 'nodejs'
+    | 'deno';
   /**
    * Execution timeout in milliseconds
    */
@@ -4534,6 +4543,20 @@ export type SandboxExecuteRequest = {
    */
   providerItemId?: string;
 };
+
+/**
+ * Programming language for code execution
+ */
+export type language =
+  | 'python'
+  | 'javascript'
+  | 'typescript'
+  | 'r'
+  | 'java'
+  | 'bash'
+  | 'node'
+  | 'nodejs'
+  | 'deno';
 
 export type SandboxExecuteResponse = BaseResponseV2 & {
   data?: {
