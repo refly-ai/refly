@@ -17,7 +17,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { CanvasNode, purgeToolsets } from '@refly/canvas-common';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
-import { genSkillID } from '@refly/utils/id';
+import { genNodeEntityId, genSkillID } from '@refly/utils/id';
 import { Position, useReactFlow } from '@xyflow/react';
 import { message, Typography } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -280,16 +280,28 @@ export const SkillResponseNode = memo(
       }
     }, [id, data?.editedTitle]);
 
+    const setEdgesWithHighlight = useCallback(
+      (highlight: boolean) => {
+        setEdges((edges) =>
+          edges.map((edge) => {
+            if (edge.source === id || edge.target === id) {
+              return { ...edge, data: { ...edge.data, highlight: highlight } };
+            }
+            return edge;
+          }),
+        );
+      },
+      [id, setEdges],
+    );
+
     useEffect(() => {
-      setEdges((edges) =>
-        edges.map((edge) => {
-          if (edge.source === id || edge.target === id) {
-            return { ...edge, data: { ...edge.data, highlight: selected } };
-          }
-          return edge;
-        }),
-      );
-    }, [selected, id, setEdges]);
+      const delay = selected ? 100 : 0;
+      const timer = setTimeout(() => {
+        setEdgesWithHighlight(selected);
+      }, delay);
+
+      return () => clearTimeout(timer);
+    }, [selected, id, setEdges, setEdgesWithHighlight]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
@@ -583,13 +595,7 @@ export const SkillResponseNode = memo(
         dragCreateInfo?: NodeDragCreateInfo;
       }) => {
         const { metadata } = data;
-        const {
-          selectedSkill,
-          actionMeta,
-          modelInfo,
-          // contextItems: responseContextItems = [],
-          tplConfig,
-        } = metadata;
+        const { selectedSkill, actionMeta, modelInfo } = metadata;
 
         const currentSkill = actionMeta || selectedSkill;
 
@@ -623,17 +629,17 @@ export const SkillResponseNode = memo(
         setTimeout(() => {
           addNode(
             {
-              type: 'skill',
+              type: 'skillResponse',
               data: {
-                title: 'Skill',
-                entityId: genSkillID(),
+                title: '',
+                entityId: genNodeEntityId('skillResponse') as string,
                 metadata: {
                   ...metadata,
                   query: '',
                   contextItems: mergedContextItems,
                   selectedSkill: currentSkill,
                   modelInfo,
-                  tplConfig,
+                  status: 'init',
                 },
               },
               position,
@@ -775,7 +781,7 @@ export const SkillResponseNode = memo(
                 type="source"
                 position={Position.Right}
                 isConnected={isSourceConnected}
-                isNodeHovered={isHovered}
+                isNodeHovered={isHovered || selected}
                 nodeType="skillResponse"
               />
             </>

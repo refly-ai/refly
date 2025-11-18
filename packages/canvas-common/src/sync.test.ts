@@ -67,12 +67,15 @@ describe('initEmptyCanvasState', () => {
         dragging: false,
       },
       {
-        type: 'skill',
+        type: 'skillResponse',
         id: expect.any(String),
         position: { x: 400, y: 0 },
         data: {
-          title: 'Skill',
+          title: 'skillResponse',
           entityId: expect.any(String),
+          metadata: {
+            status: 'init',
+          },
         },
         selected: false,
         dragging: false,

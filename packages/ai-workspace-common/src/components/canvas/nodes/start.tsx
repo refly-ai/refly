@@ -87,7 +87,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
   const [previousWidth, setPreviousWidth] = useState<string | number>('fit-content');
   const { edges } = useCanvasData();
   const { setNodeStyle, setNodePosition } = useNodeData();
-  const { getNode } = useReactFlow();
+  const { getNode, setEdges } = useReactFlow();
   useSelectedNodeZIndex(id, selected);
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
   const { workflow } = useCanvasContext();
@@ -240,6 +240,29 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
       cleanupNodeEvents(id);
     };
   }, [id, handleAskAI]);
+
+  const setEdgesWithHighlight = useCallback(
+    (highlight: boolean) => {
+      setEdges((edges) =>
+        edges.map((edge) => {
+          if (edge.source === id || edge.target === id) {
+            return { ...edge, data: { ...edge.data, highlight: highlight } };
+          }
+          return edge;
+        }),
+      );
+    },
+    [id, setEdges],
+  );
+
+  useEffect(() => {
+    const delay = selected ? 100 : 0;
+    const timer = setTimeout(() => {
+      setEdgesWithHighlight(selected);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [selected, id, setEdges, setEdgesWithHighlight]);
 
   return (
     <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onClick={onNodeClick}>

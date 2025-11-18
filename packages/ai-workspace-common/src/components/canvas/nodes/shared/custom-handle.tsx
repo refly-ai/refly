@@ -1,7 +1,6 @@
 import { Handle, Position, HandleType } from '@xyflow/react';
 import React, { CSSProperties, useCallback } from 'react';
 import { Tooltip } from 'antd';
-import { AiChat } from 'refly-icons';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +16,7 @@ interface CustomHandleProps {
 }
 
 export const CustomHandle = React.memo(
-  ({ id, type, position, isConnected, isNodeHovered, nodeType, nodeId }: CustomHandleProps) => {
+  ({ id, type, position, isNodeHovered, nodeType, nodeId }: CustomHandleProps) => {
     const { t } = useTranslation();
 
     const handlePlusClick = useCallback(
@@ -51,18 +50,18 @@ export const CustomHandle = React.memo(
     const handleStyle: CSSProperties = shouldShowPlusIcon
       ? {
           // Plus icon style
-          width: '28px',
-          height: '24px',
-          right: '-14px',
+          width: '60px',
+          height: '40px',
+          right: '-30px',
           top: '50%',
           transform: 'translateY(-50%)',
-          backgroundColor: '#0E9F77',
-          border: '2px solid #0E9F77',
+          border: 'none',
+          backgroundColor: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+          borderRadius: '10px',
+          boxShadow: 'none',
           opacity: 1,
           cursor: 'crosshair',
           zIndex: 11,
@@ -73,11 +72,11 @@ export const CustomHandle = React.memo(
           width: '14px',
           height: '14px',
           background: '#fff',
-          border: `2px solid ${isNodeHovered ? '#0E9F77' : '#D0D5DD'}`,
+          border: '1.5px solid var(--refly-bg-dark)',
           minWidth: '14px',
           minHeight: '14px',
           borderRadius: '50%',
-          opacity: isNodeHovered ? 1 : isConnected ? 0.8 : 0.4,
+          opacity: 0,
           cursor: 'crosshair',
           position: 'absolute' as const,
           [position === Position.Left
@@ -123,10 +122,11 @@ export const CustomHandle = React.memo(
                 position={position}
                 style={handleStyle}
                 isConnectable={true}
-                className="hover:scale-110"
                 onClick={handlePlusClick}
               >
-                <AiChat color="#FFFFFF" size={16} className="pointer-events-none" />
+                <div className="flex items-center justify-center w-[14px] h-[14px] bg-refly-bg-body-z0 border-solid border-[1.5px] border-refly-bg-dark rounded-full pointer-events-none">
+                  <div className="w-[5px] h-[5px] bg-refly-bg-dark rounded-full pointer-events-none" />
+                </div>
               </Handle>
             </Tooltip>
           </div>
@@ -137,7 +137,7 @@ export const CustomHandle = React.memo(
             position={position}
             style={handleStyle}
             isConnectable={true}
-            className="hover:opacity-100 hover:border-[#0E9F77] hover:scale-110 transition-all"
+            className="opacity-0"
           />
         )}
       </div>

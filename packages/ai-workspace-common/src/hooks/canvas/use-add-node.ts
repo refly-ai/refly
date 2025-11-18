@@ -3,7 +3,12 @@ import { useReactFlow, useStoreApi, XYPosition } from '@xyflow/react';
 import { CanvasNode as SchemaCanvasNode } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { CanvasNode, CanvasNodeFilter, prepareAddNode } from '@refly/canvas-common';
+import {
+  CanvasNode,
+  CanvasNodeFilter,
+  prepareAddNode,
+  deduplicateEdges,
+} from '@refly/canvas-common';
 import { useEdgeStyles } from '../../components/canvas/constants';
 import { useNodeSelection } from './use-node-selection';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -28,14 +33,6 @@ const deduplicateNodes = (nodes: any[]) => {
     uniqueNodesMap.set(node.id, node);
   }
   return Array.from(uniqueNodesMap.values());
-};
-
-const deduplicateEdges = (edges: any[]) => {
-  const uniqueEdgesMap = new Map();
-  for (const edge of edges) {
-    uniqueEdgesMap.set(edge.id, edge);
-  }
-  return Array.from(uniqueEdgesMap.values());
 };
 
 export const useAddNode = () => {
