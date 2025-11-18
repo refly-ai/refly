@@ -1,14 +1,16 @@
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { genUniqueId } from '@refly/utils';
 import { useMemo } from 'react';
 import { useImageUploadStore, type UploadProgress } from '@refly/stores';
-import { UpsertResourceRequest } from '@refly/openapi-schema';
+import { UpsertDriveFileRequest } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 
 export const useUploadImage = () => {
   const { t } = useTranslation();
   const { startUpload, updateProgress, setUploadSuccess, setUploadError } = useImageUploadStore();
+  const { refetch: refetchFiles } = useFetchDriveFiles();
 
   const uploadImage = async (image: File, canvasId: string, uploadId?: string) => {
     const response = await getClient().upload({
@@ -27,7 +29,7 @@ export const useUploadImage = () => {
     return response?.data;
   };
 
-  const handleUploadImage = async (imageFile: File, canvasId: string, projectId?: string) => {
+  const handleUploadImage = async (imageFile: File, canvasId: string) => {
     const uploadFile: UploadProgress = {
       id: genUniqueId(),
       fileName: imageFile.name,
@@ -42,22 +44,20 @@ export const useUploadImage = () => {
       const { data, success } = result ?? {};
 
       if (success && data) {
-        const batchCreateResourceData: UpsertResourceRequest[] = [
+        const batchCreateDriveFilesData: UpsertDriveFileRequest[] = [
           {
-            projectId,
-            resourceType: 'image',
-            title: imageFile.name,
+            name: imageFile.name,
             canvasId,
             storageKey: data.storageKey,
-            data: {
-              url: data.url,
-              title: imageFile.name,
-            },
+            type: imageFile.type || 'image/jpeg',
           },
         ];
 
-        const { data: createResult } = await getClient().batchCreateResource({
-          body: batchCreateResourceData,
+        const { data: createResult } = await getClient().batchCreateDriveFiles({
+          body: {
+            canvasId,
+            files: batchCreateDriveFilesData,
+          },
         });
 
         if (!createResult?.success) {
@@ -73,7 +73,7 @@ export const useUploadImage = () => {
           setUploadSuccess(uploadId);
         }
 
-        message.success(t('common.putSuccess'));
+        await refetchFiles();
         return createResult.data?.[0] || null;
       } else {
         // Mark upload as failed - uploadImage returned success: false or no data
@@ -95,7 +95,6 @@ export const useUploadImage = () => {
   const handleUploadMultipleImages = async (
     imageFiles: File[],
     canvasId: string,
-    projectId?: string,
   ): Promise<any[]> => {
     // Start upload tracking for all files
     const uploadFiles: UploadProgress[] = imageFiles.map((file) => ({
@@ -107,7 +106,7 @@ export const useUploadImage = () => {
     startUpload(uploadFiles);
 
     const uploadResults = [];
-    const batchCreateResourceData: UpsertResourceRequest[] = [];
+    const batchCreateDriveFilesData: UpsertDriveFileRequest[] = [];
 
     // First, upload all images
     for (let i = 0; i < imageFiles.length; i++) {
@@ -120,16 +119,11 @@ export const useUploadImage = () => {
 
         if (success && data) {
           uploadResults.push({ file: imageFile, uploadData: data, uploadId });
-          batchCreateResourceData.push({
-            projectId,
-            resourceType: 'image',
-            title: imageFile.name,
+          batchCreateDriveFilesData.push({
+            name: imageFile.name,
             canvasId,
             storageKey: data.storageKey,
-            data: {
-              url: data.url,
-              title: imageFile.name,
-            },
+            type: imageFile.type || 'image/jpeg',
           });
         } else {
           // Mark upload as failed - uploadImage returned success: false or no data
@@ -145,11 +139,14 @@ export const useUploadImage = () => {
       }
     }
 
-    // If we have successful uploads, create resources in batch
-    if (batchCreateResourceData.length > 0) {
+    // If we have successful uploads, create drive files in batch
+    if (batchCreateDriveFilesData.length > 0) {
       try {
-        const { data: createResult } = await getClient().batchCreateResource({
-          body: batchCreateResourceData,
+        const { data: createResult } = await getClient().batchCreateDriveFiles({
+          body: {
+            canvasId,
+            files: batchCreateDriveFilesData,
+          },
         });
 
         if (createResult?.success && createResult.data) {
@@ -159,7 +156,7 @@ export const useUploadImage = () => {
               setUploadSuccess(uploadId);
             }
           }
-          message.success(t('common.putSuccess'));
+          await refetchFiles();
           return createResult.data;
         } else {
           // Mark all uploads as failed since resource creation failed
@@ -175,7 +172,7 @@ export const useUploadImage = () => {
         // Mark all uploads as failed
         for (const { uploadId } of uploadResults) {
           if (uploadId) {
-            setUploadError(uploadId, 'Failed to create resources');
+            setUploadError(uploadId, 'Failed to create drive files');
           }
         }
         message.error(t('common.saveFailed'));

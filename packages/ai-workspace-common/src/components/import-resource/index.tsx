@@ -103,6 +103,7 @@ export const ImportResourceModal = memo(() => {
 
       const { data } = await getClient().batchCreateDriveFiles({
         body: {
+          canvasId,
           files: batchCreateFilesData,
         },
       });

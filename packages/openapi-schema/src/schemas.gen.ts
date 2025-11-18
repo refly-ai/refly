@@ -10004,8 +10004,12 @@ export const UpsertDriveFileRequestSchema = {
 
 export const BatchCreateDriveFilesRequestSchema = {
   type: 'object',
-  required: ['files'],
+  required: ['canvasId', 'files'],
   properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
     files: {
       type: 'array',
       description: 'List of drive files',
