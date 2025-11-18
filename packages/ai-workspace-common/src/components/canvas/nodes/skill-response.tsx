@@ -40,7 +40,6 @@ import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/qu
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
 import { usePilotStoreShallow } from '@refly/stores';
 import cn from 'classnames';
-import { NodeExecutionStatus } from './shared/node-execution-status';
 
 import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
@@ -312,7 +311,7 @@ export const SkillResponseNode = memo(
       }, delay);
 
       return () => clearTimeout(timer);
-    }, [selected, id, setEdges, setEdgesWithHighlight, status]);
+    }, [selected, id, setEdges, setEdgesWithHighlight, status, executionStatus]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
@@ -443,7 +442,6 @@ export const SkillResponseNode = memo(
         {
           resultId: entityId,
           query: processedQuery,
-          selectedSkill: skill,
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
@@ -816,9 +814,6 @@ export const SkillResponseNode = memo(
               status === 'failed' ? 'border-refly-func-danger-default' : 'border-refly-Card-Border',
             )}
           >
-            {/* Node execution status badge */}
-            <NodeExecutionStatus status={executionStatus} />
-
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
@@ -827,7 +822,7 @@ export const SkillResponseNode = memo(
               source="node"
               actions={
                 <SkillResponseActions
-                  isRunning={isRunning}
+                  isRunning={isRunning || isExecuting}
                   onRerunSingle={handleRerunSingle}
                   onRerunFromHere={handleRerunFromHere}
                   onStop={handleStop}

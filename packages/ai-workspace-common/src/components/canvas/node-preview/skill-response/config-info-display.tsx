@@ -1,14 +1,15 @@
 import { memo, useMemo, useCallback } from 'react';
-import { Tag, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { GenericToolset } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
-import { X, AiChat } from 'refly-icons';
+import { X, AiChat, File } from 'refly-icons';
 import { Question } from 'refly-icons';
 import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
 import { CanvasNode } from '@refly/canvas-common';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
+import { LabelItem } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 
 interface ConfigInfoDisplayProps {
   prompt: string;
@@ -121,13 +122,12 @@ export const ConfigInfoDisplay = memo(
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
               {variables.map((variable: MentionCommonData, index) => (
-                <Tag
+                <LabelItem
                   key={`${variable.id}-${index}`}
-                  className="text-xs m-0 flex items-center gap-1 bg-[#FEF2CF] px-2 py-1"
-                >
-                  <X className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
-                  {variable.name}
-                </Tag>
+                  icon={<X size={12} className="flex-shrink-0" />}
+                  labeltext={variable.name}
+                  classnames="bg-refly-node-contrl-2"
+                />
               ))}
             </div>
           </div>
@@ -147,22 +147,22 @@ export const ConfigInfoDisplay = memo(
                   : toolset.name;
 
                 return (
-                  <Tag
+                  <LabelItem
                     key={`${toolset.id || toolset.name}-${index}`}
-                    closable
+                    icon={
+                      <ToolsetIcon
+                        toolset={toolset}
+                        config={{
+                          size: 12,
+                          className: 'flex-shrink-0',
+                          builtinClassName: '!rounded-[2.5px]',
+                        }}
+                      />
+                    }
+                    labeltext={labelName}
+                    classnames="bg-refly-node-contrl-1"
                     onClose={() => handleRemoveToolset(toolset)}
-                    className="text-xs m-0 flex items-center gap-1 px-2 py-1"
-                  >
-                    <ToolsetIcon
-                      toolset={toolset}
-                      config={{
-                        size: 16,
-                        className: 'flex-shrink-0',
-                        builtinClassName: '!w-4 !h-4',
-                      }}
-                    />
-                    <span>{labelName}</span>
-                  </Tag>
+                  />
                 );
               })}
             </div>
@@ -176,14 +176,13 @@ export const ConfigInfoDisplay = memo(
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
               {files.map((file: any, index) => (
-                <Tag
+                <LabelItem
                   key={`${file.entityId}-${index}`}
-                  closable
+                  icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
+                  labeltext={file.title}
+                  classnames="bg-gray-100 dark:bg-gray-700"
                   onClose={() => handleRemoveContextItem(file)}
-                  className="text-xs m-0 flex items-center gap-1 px-2 py-1"
-                >
-                  {file.title}
-                </Tag>
+                />
               ))}
             </div>
           </div>
@@ -199,17 +198,13 @@ export const ConfigInfoDisplay = memo(
                 const node = agentNodeMap.get(item.entityId);
                 const title = node?.data?.title ?? item.title;
                 return (
-                  <Tag
+                  <LabelItem
                     key={`${item.entityId}-${index}`}
-                    closable
+                    icon={<AiChat size={14} className="flex-shrink-0" />}
+                    labeltext={title || t('canvas.richChatInput.untitledAgent')}
+                    classnames="bg-refly-node-contrl-2"
                     onClose={() => handleRemoveContextItem(item)}
-                    className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
-                  >
-                    <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
-                    <span className="truncate">
-                      {title || t('canvas.richChatInput.untitledAgent')}
-                    </span>
-                  </Tag>
+                  />
                 );
               })}
             </div>

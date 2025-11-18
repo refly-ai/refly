@@ -86,6 +86,16 @@ export const SkillResponseContentPreview = memo(
         )}
 
         <LabelDisplay
+          title={t('canvas.skillResponse.config.input')}
+          labels={variableMentions.map((varName) => ({
+            labeltext: varName.name,
+            icon: <X size={12} className="flex-shrink-0" />,
+          }))}
+          labelClassnames="bg-refly-node-contrl-2"
+          showMore={false}
+        />
+
+        <LabelDisplay
           title={t('canvas.skillResponse.config.tool')}
           labels={toolsets.map((toolset) => ({
             icon: (
@@ -103,17 +113,7 @@ export const SkillResponseContentPreview = memo(
                 toolset.name)
               : toolset.name,
           }))}
-          labelClassnames="bg-refly-node-contrl-2"
-          showMore={false}
-        />
-
-        <LabelDisplay
-          title={t('canvas.skillResponse.config.input')}
-          labels={variableMentions.map((varName) => ({
-            labeltext: varName.name,
-            icon: <X size={12} className="flex-shrink-0" />,
-          }))}
-          labelClassnames="bg-refly-node-contrl-2"
+          labelClassnames="bg-refly-node-contrl-1"
           showMore={false}
         />
       </div>

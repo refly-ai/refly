@@ -16,15 +16,17 @@ import { IContextItem } from '@refly/common-types';
 import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
 import { Segmented, Button } from 'antd';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';
 import { ActionStepCard } from './action-step';
-import { Close } from 'refly-icons';
+import { Close, Play } from 'refly-icons';
 import { useReactFlow } from '@xyflow/react';
+import { processQueryWithMentions } from '@refly/utils/query-processor';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -62,6 +64,7 @@ const SkillResponseNodePreviewComponent = ({
   const { resetFailedState } = useActionPolling();
 
   const { t } = useTranslation();
+  const { data: variables } = useVariablesManagement(canvasId);
 
   const shareId = node.data?.metadata?.shareId;
   const nodeStatus = node.data?.metadata?.status;
@@ -188,6 +191,10 @@ const SkillResponseNodePreviewComponent = ({
   const handleRetry = useCallback(() => {
     // Reset failed state before retrying
     resetFailedState(resultId);
+    const { processedQuery } = processQueryWithMentions(query, {
+      replaceVars: true,
+      variables,
+    });
 
     // Update node status immediately to show "waiting" state
     const nextVersion = (node.data?.metadata?.version || 0) + 1;
@@ -201,10 +208,8 @@ const SkillResponseNodePreviewComponent = ({
     invokeAction(
       {
         resultId,
-        query: title,
-        selectedSkill: {
-          name: actionMeta?.name || 'commonQnA',
-        },
+        query: processedQuery,
+        modelInfo,
         contextItems,
         selectedToolsets,
         version: nextVersion,
@@ -214,7 +219,19 @@ const SkillResponseNodePreviewComponent = ({
         entityType: 'canvas',
       },
     );
-  }, [resultId, title, canvasId, invokeAction, resetFailedState, setNodeData, node.id, node.data]);
+  }, [
+    resultId,
+    query,
+    modelInfo,
+    contextItems,
+    selectedToolsets,
+    canvasId,
+    invokeAction,
+    resetFailedState,
+    setNodeData,
+    node.id,
+    node.data,
+  ]);
 
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
 
@@ -226,6 +243,15 @@ const SkillResponseNodePreviewComponent = ({
       })),
     );
   };
+
+  const TitleActions = useMemo(() => {
+    return (
+      <>
+        <Button type="text" icon={<Play size={20} />} onClick={handleRetry} />
+        <Button type="text" icon={<Close size={24} />} onClick={handleClose} />
+      </>
+    );
+  }, [handleClose, handleRetry]);
 
   return purePreview ? (
     !result && !loading ? (
@@ -249,7 +275,7 @@ const SkillResponseNodePreviewComponent = ({
         readonly={readonly}
         source="preview"
         className="!h-14"
-        actions={<Button type="text" icon={<Close size={20} />} onClick={handleClose} />}
+        actions={TitleActions}
       />
 
       <div className="flex-1 flex flex-col min-h-0 px-4">

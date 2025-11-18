@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Tooltip } from 'antd';
+import { Button, Divider, Tooltip } from 'antd';
 import { Question } from 'refly-icons';
 import { GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
@@ -136,7 +136,7 @@ const ConfigureTabComponent = ({
         />
       </div>
 
-      <div>
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col pb-4">
         <div
           className="text-xs font-semibold leading-4 mb-2 flex items-center justify-between"
           style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
@@ -148,9 +148,9 @@ const ConfigureTabComponent = ({
             </Tooltip>
           </div>
           <Button
-            type="text"
+            type="default"
             size="small"
-            className="text-xs h-auto px-2 py-1 text-refly-text-1 hover:text-refly-text-0"
+            className="text-xs !h-5 px-1 py-0.5 text-refly-text-1"
             onClick={handleAddToolsAndContext}
           >
             @ {t('agent.config.addToolsAndContext')}
@@ -158,8 +158,7 @@ const ConfigureTabComponent = ({
         </div>
 
         <div
-          className="rounded-lg pt-2 pb-3 px-3 relative"
-          style={{ backgroundColor: '#F6F6F6' }}
+          className="rounded-lg pt-2 pb-3 px-3 relative bg-refly-bg-control-z0 flex-1 overflow-y-auto"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnter}
@@ -192,6 +191,8 @@ const ConfigureTabComponent = ({
             setSelectedToolsets={setSelectedToolsets}
             mentionPosition="bottom-start"
           />
+
+          <Divider className="my-4" />
 
           <ConfigInfoDisplay
             prompt={query ?? ''}

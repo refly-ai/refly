@@ -82,7 +82,7 @@ const SelectedModelDisplay = memo(
         type="text"
         size="small"
         className={cn(
-          'text-sm hover:bg-refly-tertiary-hover min-w-0 flex items-center',
+          'text-sm hover:bg-refly-tertiary-hover min-w-0 flex items-center rounded-lg',
           isFilled
             ? 'h-8 w-full px-2 py-1.5 border-none bg-[var(--refly-bg-control-z0)] justify-between gap-2'
             : 'h-7 p-1 gap-1.5',
