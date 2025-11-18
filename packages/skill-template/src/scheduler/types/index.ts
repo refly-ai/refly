@@ -55,7 +55,6 @@ export interface QueryProcessorResult {
   hasContext: boolean;
   remainingTokens: number;
   mentionedContext: any;
-  rewrittenQueries: string[];
 }
 
 export interface IContext {
