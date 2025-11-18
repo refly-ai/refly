@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { Tag, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { GenericToolset } from '@refly/openapi-schema';
@@ -13,8 +13,9 @@ import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks
 interface ConfigInfoDisplayProps {
   prompt: string;
   selectedToolsets: GenericToolset[];
-  contextItems?: IContextItem[];
-  onRemoveContextItem?: (item: IContextItem) => void;
+  contextItems: IContextItem[];
+  setContextItems: (items: IContextItem[]) => void;
+  setSelectedToolsets: (toolsets: GenericToolset[]) => void;
 }
 
 const SectionTitle = memo(
@@ -40,7 +41,8 @@ export const ConfigInfoDisplay = memo(
     prompt,
     selectedToolsets,
     contextItems = [],
-    onRemoveContextItem,
+    setContextItems,
+    setSelectedToolsets,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
 
@@ -80,6 +82,36 @@ export const ConfigInfoDisplay = memo(
       return m;
     }, [nodes]);
 
+    const handleRemoveContextItem = useCallback(
+      (item: IContextItem) => {
+        if (!item?.entityId) {
+          return;
+        }
+
+        const currentItems = contextItems ?? [];
+        const nextItems = currentItems.filter(
+          (contextItem) => contextItem.entityId !== item.entityId,
+        );
+        setContextItems(nextItems);
+      },
+      [contextItems, setContextItems],
+    );
+
+    const handleRemoveToolset = useCallback(
+      (toolset: GenericToolset) => {
+        if (!toolset?.id) {
+          return;
+        }
+
+        const currentToolsets = selectedToolsets ?? [];
+        const nextToolsets = currentToolsets.filter(
+          (selectedToolset) => selectedToolset.id !== toolset.id,
+        );
+        setSelectedToolsets(nextToolsets);
+      },
+      [selectedToolsets, setSelectedToolsets],
+    );
+
     return (
       <div className="flex flex-col gap-4 mt-4">
         {
@@ -117,6 +149,8 @@ export const ConfigInfoDisplay = memo(
                 return (
                   <Tag
                     key={`${toolset.id || toolset.name}-${index}`}
+                    closable
+                    onClose={() => handleRemoveToolset(toolset)}
                     className="text-xs m-0 flex items-center gap-1 px-2 py-1"
                   >
                     <ToolsetIcon
@@ -145,7 +179,7 @@ export const ConfigInfoDisplay = memo(
                 <Tag
                   key={`${file.entityId}-${index}`}
                   closable
-                  onClose={() => onRemoveContextItem?.(file)}
+                  onClose={() => handleRemoveContextItem(file)}
                   className="text-xs m-0 flex items-center gap-1 px-2 py-1"
                 >
                   {file.title}
@@ -168,7 +202,7 @@ export const ConfigInfoDisplay = memo(
                   <Tag
                     key={`${item.entityId}-${index}`}
                     closable
-                    onClose={() => onRemoveContextItem?.(item)}
+                    onClose={() => handleRemoveContextItem(item)}
                     className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
                   >
                     <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
@@ -182,13 +216,6 @@ export const ConfigInfoDisplay = memo(
           </div>
         }
       </div>
-    );
-  },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.prompt === nextProps.prompt &&
-      JSON.stringify(prevProps.selectedToolsets) === JSON.stringify(nextProps.selectedToolsets) &&
-      JSON.stringify(prevProps.contextItems) === JSON.stringify(nextProps.contextItems)
     );
   },
 );

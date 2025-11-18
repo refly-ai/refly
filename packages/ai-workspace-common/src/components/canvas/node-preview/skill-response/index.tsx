@@ -159,21 +159,6 @@ const SkillResponseNodePreviewComponent = ({
 
   const { steps = [] } = result ?? {};
 
-  const handleRemoveContextItem = useCallback(
-    (item: IContextItem) => {
-      if (!item?.entityId) {
-        return;
-      }
-
-      const currentItems = contextItems ?? [];
-      const nextItems = currentItems.filter(
-        (contextItem) => contextItem.entityId !== item.entityId,
-      );
-      setContextItems(nextItems);
-    },
-    [contextItems, setContextItems],
-  );
-
   useEffect(() => {
     const skillName = actionMeta?.name || 'commonQnA';
     if (result?.status !== 'executing' && result?.status !== 'waiting') return;
@@ -282,7 +267,6 @@ const SkillResponseNodePreviewComponent = ({
               setSelectedToolsets={setSelectedToolsets}
               setContextItems={setContextItems}
               setQuery={setQuery}
-              onRemoveContextItem={handleRemoveContextItem}
             />
           )}
 
