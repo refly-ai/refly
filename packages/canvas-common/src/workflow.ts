@@ -151,10 +151,9 @@ export const prepareNodeExecutions = (params: {
         node.data.contentPreview = '';
 
         if (node.type === 'skillResponse') {
+          const metadata = node.data?.metadata as ResponseNodeMeta;
           const originalQuery = String(
-            (node.data?.metadata as ResponseNodeMeta)?.structuredData?.query ??
-              node.data?.title ??
-              '',
+            metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
           );
           const { processedQuery, updatedQuery } = processQueryWithMentions(originalQuery, {
             replaceVars: true,
@@ -162,9 +161,7 @@ export const prepareNodeExecutions = (params: {
           });
           node.data.title = processedQuery;
           node.data.metadata = deepmerge(node.data.metadata, {
-            structuredData: {
-              query: updatedQuery,
-            },
+            query: updatedQuery,
           });
         }
 
@@ -178,10 +175,9 @@ export const prepareNodeExecutions = (params: {
     // Process skillResponse nodes with variables
     newNodes = nodes.map((node) => {
       if (node.type === 'skillResponse') {
+        const metadata = node.data?.metadata as ResponseNodeMeta;
         const originalQuery = String(
-          (node.data?.metadata as ResponseNodeMeta)?.structuredData?.query ??
-            node.data?.title ??
-            '',
+          metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
         );
         const { processedQuery, updatedQuery } = processQueryWithMentions(originalQuery, {
           replaceVars: true,
@@ -189,9 +185,7 @@ export const prepareNodeExecutions = (params: {
         });
         node.data.title = processedQuery;
         node.data.metadata = deepmerge(node.data.metadata, {
-          structuredData: {
-            query: updatedQuery,
-          },
+          query: updatedQuery,
         });
       }
       return node;
@@ -260,13 +254,12 @@ export const prepareNodeExecutions = (params: {
     };
 
     if (node.type === 'skillResponse') {
-      const metadata = node.data?.metadata ?? {};
+      const metadata = node.data?.metadata as ResponseNodeMeta;
       const { contextItems = [] } = metadata as ResponseNodeMeta;
 
-      const originalQuery =
-        String((node.data?.metadata as ResponseNodeMeta)?.structuredData?.query ?? '') ??
-        node.data?.title ??
-        '';
+      const originalQuery = String(
+        metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
+      );
 
       // Add resource variables referenced in query to context items
       const enhancedContextItems = updateContextItemsFromVariables(contextItems, variables);
