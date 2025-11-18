@@ -210,7 +210,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
             type="primary"
             icon={<Play size={16} />}
             onClick={handleShowWorkflowRun}
-            className="px-[10px] py-[5px] font-semibold ml-4"
+            className="px-[10px] py-[5px] font-semibold ml-2 mr-[2px]"
           >
             {t('canvas.toolbar.tooltip.previewWorkflowRun')}
           </Button>

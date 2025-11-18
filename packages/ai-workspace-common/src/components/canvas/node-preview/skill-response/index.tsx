@@ -15,7 +15,7 @@ import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
 import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
-import { Segmented } from 'antd';
+import { Segmented, Button } from 'antd';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
@@ -23,6 +23,8 @@ import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/com
 import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';
 import { ActionStepCard } from './action-step';
+import { Close } from 'refly-icons';
+import { useReactFlow } from '@xyflow/react';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -50,6 +52,7 @@ const SkillResponseNodePreviewComponent = ({
     updateActionResult: state.updateActionResult,
     setResultActiveTab: state.setResultActiveTab,
   }));
+  const { setNodes } = useReactFlow();
 
   const { setNodeData } = useNodeData();
   const { fetchActionResult, loading: fetchActionResultLoading } = useFetchActionResult();
@@ -215,6 +218,15 @@ const SkillResponseNodePreviewComponent = ({
 
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
 
+  const handleClose = () => {
+    setNodes((nodes) =>
+      nodes.map((n) => ({
+        ...n,
+        selected: false,
+      })),
+    );
+  };
+
   return purePreview ? (
     !result && !loading ? (
       <div className="h-full w-full flex items-center justify-center">
@@ -237,6 +249,7 @@ const SkillResponseNodePreviewComponent = ({
         readonly={readonly}
         source="preview"
         className="!h-14"
+        actions={<Button type="text" icon={<Close size={20} />} onClick={handleClose} />}
       />
 
       <div className="flex-1 flex flex-col min-h-0 px-4">

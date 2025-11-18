@@ -1440,6 +1440,7 @@ const translations = {
           finish: '完成',
           failed: '运行失败',
         },
+        creditUsage: '预计使用 {{count}} 积分',
       },
     },
     connectionTimeout: {

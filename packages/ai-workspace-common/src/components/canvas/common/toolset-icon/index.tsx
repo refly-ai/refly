@@ -89,7 +89,7 @@ export const ToolsetIcon: React.FC<{
           <IconComponent
             size={size}
             style={{ background: builtinToolsetIcon.backgroundColor }}
-            className="rounded-md text-black"
+            className={cn('rounded-md text-black', builtinClassName)}
           />
         ) : (
           <Logo

@@ -8,6 +8,7 @@ import './index.scss';
 import { useCallback, useState } from 'react';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
+import { useGetCreditUsageByCanvasId } from '@refly-packages/ai-workspace-common/queries/queries';
 
 export const WorkflowRun = () => {
   const { t } = useTranslation();
@@ -28,6 +29,16 @@ export const WorkflowRun = () => {
     isPolling,
     pollingError,
   } = workflow;
+
+  const { data: creditUsageData, isLoading: isCreditUsageLoading } = useGetCreditUsageByCanvasId(
+    {
+      query: { canvasId },
+    },
+    undefined,
+    {
+      enabled: showWorkflowRun && !!canvasId,
+    },
+  );
 
   const [isRunning, setIsRunning] = useState(false);
 
@@ -98,6 +109,7 @@ export const WorkflowRun = () => {
             pollingError={pollingError}
             isRunning={isRunning}
             onRunningChange={setIsRunning}
+            creditUsage={isCreditUsageLoading ? null : (creditUsageData?.data?.total ?? 0)}
           />
         )}
       </div>
