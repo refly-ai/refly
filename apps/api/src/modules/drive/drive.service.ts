@@ -3,6 +3,7 @@ import mime from 'mime';
 import pLimit from 'p-limit';
 import { PrismaService } from '../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '../common/redis.service';
 import {
   UpsertDriveFileRequest,
   DeleteDriveFileRequest,
@@ -35,6 +36,7 @@ export class DriveService {
     private config: ConfigService,
     private prisma: PrismaService,
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
+    private redis: RedisService,
   ) {}
 
   private generateStorageKey(
@@ -52,6 +54,48 @@ export class DriveService {
     }
 
     return `${prefix}/${user.uid}/${file.canvasId}/${file.name}`;
+  }
+
+  /**
+   * Generate a unique filename by adding a random suffix if the name conflicts with existing files
+   * @param baseName - Original filename
+   * @param existingNames - Set of existing filenames
+   * @returns Unique filename
+   */
+  private generateUniqueFileName(baseName: string, existingNames: Set<string>): string {
+    if (!existingNames.has(baseName)) {
+      return baseName;
+    }
+
+    // Extract name and extension
+    const lastDotIndex = baseName.lastIndexOf('.');
+    let nameWithoutExt: string;
+    let extension: string;
+
+    if (lastDotIndex > 0) {
+      nameWithoutExt = baseName.substring(0, lastDotIndex);
+      extension = baseName.substring(lastDotIndex); // includes the dot
+    } else {
+      nameWithoutExt = baseName;
+      extension = '';
+    }
+
+    // Generate random suffix until we find a unique name
+    let attempts = 0;
+    while (attempts < 100) {
+      // Prevent infinite loop
+      const randomSuffix = Math.random().toString(36).substring(2, 7); // 5-character random string
+      const newName = `${nameWithoutExt}-${randomSuffix}${extension}`;
+
+      if (!existingNames.has(newName)) {
+        return newName;
+      }
+      attempts++;
+    }
+
+    // Fallback: use timestamp if random generation fails
+    const timestamp = Date.now();
+    return `${nameWithoutExt}-${timestamp}${extension}`;
   }
 
   /**
@@ -167,100 +211,123 @@ export class DriveService {
    */
   private async batchProcessDriveFileRequests(
     user: User,
+    canvasId: string,
     requests: UpsertDriveFileRequest[],
     options?: {
       archiveFiles?: boolean;
     },
   ): Promise<ProcessedUpsertDriveFileResult[]> {
-    const results: ProcessedUpsertDriveFileResult[] = [];
+    // Acquire lock to prevent concurrent file processing for the same canvas
+    const lockKey = `drive:canvas:${canvasId}`;
+    const releaseLock = await this.redis.waitLock(lockKey);
 
-    // Process each request in the batch
-    for (const request of requests) {
-      const { canvasId, name, content, storageKey, externalUrl } = request;
-
-      // Skip requests that don't have content to process
-      if (content === undefined && !storageKey && !externalUrl) {
-        continue;
-      }
-
-      let source = request.source;
-      if (request.variableId) {
-        source = 'variable';
-      } else if (request.resultId) {
-        source = 'agent';
-      }
-
-      // Generate drive storage path
-      const driveStorageKey = this.generateStorageKey(user, {
-        canvasId,
-        name,
-        source,
-        scope: 'present',
+    try {
+      const presentFiles = await this.prisma.driveFile.findMany({
+        select: { name: true },
+        where: { canvasId, scope: 'present', deletedAt: null },
       });
 
-      let buffer: Buffer;
-      let size: bigint;
+      // Create a set of existing filenames for quick lookup
+      const existingFileNames = new Set(presentFiles.map((file) => file.name));
 
-      if (content !== undefined) {
-        // Case 1: Direct content upload
-        buffer = Buffer.from(content, 'utf8');
-        size = BigInt(buffer.length);
-        request.type = 'text/plain';
-      } else if (storageKey) {
-        // Case 2: Transfer from existing storage key
-        let objectInfo = await this.internalOss.statObject(storageKey);
-        if (!objectInfo) {
-          throw new ParamsError(`Source file not found: ${storageKey}`);
+      const results: ProcessedUpsertDriveFileResult[] = [];
+
+      // Process each request in the batch
+      for (const request of requests) {
+        const { canvasId, name, content, storageKey, externalUrl } = request;
+
+        // Generate unique filename to avoid conflicts
+        const uniqueName = this.generateUniqueFileName(name, existingFileNames);
+        existingFileNames.add(uniqueName); // Add to set to prevent future conflicts in this batch
+
+        // Skip requests that don't have content to process
+        if (content === undefined && !storageKey && !externalUrl) {
+          continue;
         }
 
-        if (storageKey !== driveStorageKey) {
-          objectInfo = await this.internalOss.duplicateFile(storageKey, driveStorageKey);
-        }
-
-        size = BigInt(objectInfo?.size ?? 0);
-        request.type =
-          objectInfo?.metaData?.['Content-Type'] ??
-          mime.getType(name) ??
-          'application/octet-stream';
-      } else if (externalUrl) {
-        // Case 3: Download from external URL
-        buffer = await this.downloadFileFromUrl(externalUrl);
-        size = BigInt(buffer.length);
-
-        // Determine content type based on file extension or default to binary
-        request.type = mime.getType(name) ?? 'application/octet-stream';
-      }
-
-      if (options?.archiveFiles) {
+        let source = request.source;
         if (request.variableId) {
-          await this.archiveFiles(user, canvasId, {
-            source: 'variable',
-            variableId: request.variableId,
-          });
+          source = 'variable';
         } else if (request.resultId) {
-          await this.archiveFiles(user, canvasId, {
-            source: 'agent',
-            resultId: request.resultId,
+          source = 'agent';
+        }
+
+        // Generate drive storage path
+        const driveStorageKey = this.generateStorageKey(user, {
+          canvasId,
+          name: uniqueName,
+          source,
+          scope: 'present',
+        });
+
+        let buffer: Buffer;
+        let size: bigint;
+
+        if (content !== undefined) {
+          // Case 1: Direct content upload
+          buffer = Buffer.from(content, 'utf8');
+          size = BigInt(buffer.length);
+          request.type = 'text/plain';
+        } else if (storageKey) {
+          // Case 2: Transfer from existing storage key
+          let objectInfo = await this.internalOss.statObject(storageKey);
+          if (!objectInfo) {
+            throw new ParamsError(`Source file not found: ${storageKey}`);
+          }
+
+          if (storageKey !== driveStorageKey) {
+            objectInfo = await this.internalOss.duplicateFile(storageKey, driveStorageKey);
+          }
+
+          size = BigInt(objectInfo?.size ?? 0);
+          request.type =
+            objectInfo?.metaData?.['Content-Type'] ??
+            mime.getType(name) ??
+            'application/octet-stream';
+        } else if (externalUrl) {
+          // Case 3: Download from external URL
+          buffer = await this.downloadFileFromUrl(externalUrl);
+          size = BigInt(buffer.length);
+
+          // Determine content type based on file extension or default to binary
+          request.type = mime.getType(name) ?? 'application/octet-stream';
+        }
+
+        if (options?.archiveFiles) {
+          if (request.variableId) {
+            await this.archiveFiles(user, canvasId, {
+              source: 'variable',
+              variableId: request.variableId,
+            });
+          } else if (request.resultId) {
+            await this.archiveFiles(user, canvasId, {
+              source: 'agent',
+              resultId: request.resultId,
+            });
+          }
+        }
+
+        if (buffer) {
+          await this.internalOss.putObject(driveStorageKey, buffer, {
+            'Content-Type': request.type,
           });
         }
-      }
 
-      if (buffer) {
-        await this.internalOss.putObject(driveStorageKey, buffer, {
-          'Content-Type': request.type,
+        results.push({
+          ...request,
+          name: uniqueName,
+          driveStorageKey,
+          size,
+          source,
+          category: getFileCategory(request.type),
         });
       }
 
-      results.push({
-        ...request,
-        driveStorageKey,
-        size,
-        source,
-        category: getFileCategory(request.type),
-      });
+      return results;
+    } finally {
+      // Always release the lock
+      await releaseLock();
     }
-
-    return results;
   }
 
   /**
@@ -403,13 +470,13 @@ export class DriveService {
     user: User,
     request: BatchCreateDriveFilesRequest,
   ): Promise<DriveFileModel[]> {
-    const { files } = request;
+    const { canvasId, files } = request;
 
     if (!files?.length) {
       return [];
     }
 
-    const processedRequests = await this.batchProcessDriveFileRequests(user, files, {
+    const processedRequests = await this.batchProcessDriveFileRequests(user, canvasId, files, {
       archiveFiles: true,
     });
 
@@ -436,7 +503,12 @@ export class DriveService {
    * Create a new drive file
    */
   async createDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
-    const processedResults = await this.batchProcessDriveFileRequests(user, [request], {
+    const { canvasId } = request;
+    if (!canvasId) {
+      throw new ParamsError('Canvas ID is required for create operation');
+    }
+
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request], {
       archiveFiles: true,
     });
     const processedReq = processedResults[0];
@@ -473,12 +545,12 @@ export class DriveService {
    * Update an existing drive file
    */
   async updateDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
-    const { fileId } = request;
-    if (!fileId) {
-      throw new ParamsError('File ID is required for update operation');
+    const { canvasId, fileId } = request;
+    if (!canvasId || !fileId) {
+      throw new ParamsError('Canvas ID and file ID are required for update operation');
     }
 
-    const processedResults = await this.batchProcessDriveFileRequests(user, [request]);
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request]);
     const processedReq = processedResults[0];
 
     const updateData: Prisma.DriveFileUpdateInput = {
@@ -531,6 +603,7 @@ export class DriveService {
         deletedAt: new Date(),
       },
     });
+    await this.internalOss.removeObject(driveFile.storageKey, true);
   }
 
   /**

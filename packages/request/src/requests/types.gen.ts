@@ -7065,6 +7065,10 @@ export type UpsertDriveFileRequest = {
 
 export type BatchCreateDriveFilesRequest = {
   /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
    * List of drive files
    */
   files: Array<UpsertDriveFileRequest>;

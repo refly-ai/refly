@@ -30,12 +30,7 @@ import {
   extractToolsetsWithNodes,
   haveToolsetsChanged,
 } from '@refly/canvas-common';
-import {
-  CanvasNotFoundError,
-  CanvasVersionNotFoundError,
-  OperationTooFrequent,
-  ParamsError,
-} from '@refly/errors';
+import { CanvasNotFoundError, CanvasVersionNotFoundError, ParamsError } from '@refly/errors';
 import { Canvas as CanvasModel } from '../../generated/client';
 import { PrismaService } from '../common/prisma.service';
 import { LockReleaseFn, RedisService } from '../common/redis.service';
@@ -320,24 +315,8 @@ export class CanvasSyncService {
    * @returns A function to release the lock
    * @throws OperationTooFrequent if lock cannot be acquired after retries
    */
-  async lockState(canvasId: string, options?: { maxRetries?: number; initialDelay?: number }) {
-    const { maxRetries = 3, initialDelay = 100 } = options ?? {};
-    const lockKey = `canvas-sync:${canvasId}`;
-    let retries = 0;
-    let delay = initialDelay;
-    while (true) {
-      const releaseLock = await this.redis.acquireLock(lockKey);
-      if (releaseLock) {
-        return releaseLock;
-      }
-      if (retries >= maxRetries) {
-        throw new OperationTooFrequent('Failed to get lock for canvas');
-      }
-      // Exponential backoff before next retry
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      delay *= 2;
-      retries += 1;
-    }
+  async lockState(canvasId: string) {
+    return this.redis.waitLock(`canvas-sync:${canvasId}`);
   }
 
   /**

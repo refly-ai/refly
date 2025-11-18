@@ -55,6 +55,7 @@ export const useUploadImage = () => {
 
         const { data: createResult } = await getClient().batchCreateDriveFiles({
           body: {
+            canvasId,
             files: batchCreateDriveFilesData,
           },
         });
@@ -143,6 +144,7 @@ export const useUploadImage = () => {
       try {
         const { data: createResult } = await getClient().batchCreateDriveFiles({
           body: {
+            canvasId,
             files: batchCreateDriveFilesData,
           },
         });
