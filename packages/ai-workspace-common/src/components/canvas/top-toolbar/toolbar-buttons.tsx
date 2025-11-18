@@ -200,10 +200,9 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
             </Button>
           ),
         )}
-        <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
+        {!readonly && <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />}
 
         <ToolsDependency canvasId={canvasId} />
-        {readonly && <div />}
 
         {!readonly && (
           <Button

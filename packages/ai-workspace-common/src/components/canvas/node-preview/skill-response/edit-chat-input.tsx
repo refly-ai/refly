@@ -19,6 +19,7 @@ import { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { type MentionPosition } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/mention-extension';
 
 interface EditChatInputProps {
   enabled: boolean;
@@ -34,6 +35,7 @@ interface EditChatInputProps {
   setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
   setEditMode: (mode: boolean) => void;
   readonly?: boolean;
+  mentionPosition?: MentionPosition;
 }
 
 const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((props, ref) => {
@@ -50,6 +52,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     setModelInfo,
     selectedToolsets,
     setSelectedToolsets,
+    mentionPosition,
   } = props;
 
   const { getEdges, getNodes, deleteElements, addEdges } = useReactFlow();
@@ -315,6 +318,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
         handleSendMessage={handleSendMessage}
         contextItems={contextItems}
         setContextItems={setContextItems}
+        mentionPosition={mentionPosition}
         resultId={resultId}
         modelInfo={modelInfo}
         setModelInfo={setModelInfo}

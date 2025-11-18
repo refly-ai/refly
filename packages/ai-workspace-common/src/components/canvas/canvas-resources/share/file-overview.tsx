@@ -70,9 +70,11 @@ export const FileOverview = memo(() => {
             <div className="text-refly-text-2 text-sm leading-5">
               {t('canvas.resourceLibrary.empty')}
             </div>
-            <Button type="primary" className="mt-5 w-[140px]" onClick={handleNewResource}>
-              {t('canvas.resourceLibrary.new.resource')}
-            </Button>
+            {!readonly && (
+              <Button type="primary" className="mt-5 w-[140px]" onClick={handleNewResource}>
+                {t('canvas.resourceLibrary.new.resource')}
+              </Button>
+            )}
           </div>
         ) : (
           <>

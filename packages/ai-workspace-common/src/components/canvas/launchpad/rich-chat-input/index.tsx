@@ -29,7 +29,7 @@ import {
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import { type MentionItem } from './mentionList';
-import { createMentionExtension } from './mention-extension';
+import { createMentionExtension, type MentionPosition } from './mention-extension';
 import AtomicInlineKeymap from './atomic-inline-keymap';
 import {
   serializeDocToTokens,
@@ -49,7 +49,7 @@ interface RichChatInputProps {
   handleSendMessage: () => void;
   contextItems?: IContextItem[];
 
-  mentionPosition?: 'top-start' | 'bottom-start';
+  mentionPosition?: MentionPosition;
 
   setContextItems?: (items: IContextItem[]) => void;
 
