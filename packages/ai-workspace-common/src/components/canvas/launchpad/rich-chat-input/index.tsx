@@ -192,11 +192,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         const item = props;
 
         // For step and result records, add to context instead of inserting text
-        if (
-          item.source === 'stepRecord' ||
-          item.source === 'resultRecord' ||
-          item.source === 'myUpload'
-        ) {
+        if (item.source === 'agents' || item.source === 'files') {
           const mediaUrl =
             item.metadata?.imageUrl || item.metadata?.videoUrl || item.metadata?.audioUrl;
 
