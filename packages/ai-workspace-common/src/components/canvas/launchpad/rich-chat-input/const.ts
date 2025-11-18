@@ -1,9 +1,8 @@
 export type MentionItemSource =
   | 'variables'
-  | 'stepRecord'
-  | 'resourceLibrary'
-  | 'resultRecord'
-  | 'myUpload'
+  | 'agents'
+  | 'files'
+  | 'products'
   | 'toolsets'
   | 'tools';
 
@@ -11,10 +10,9 @@ export type MentionItemType = 'var' | 'step' | 'resource' | 'toolset' | 'tool';
 
 export const mentionItemSourceToType: Record<MentionItemSource, MentionItemType> = {
   variables: 'var',
-  stepRecord: 'step',
-  resourceLibrary: 'resource',
-  resultRecord: 'resource',
-  myUpload: 'resource',
+  agents: 'step',
+  files: 'resource',
+  products: 'resource',
   toolsets: 'toolset',
   tools: 'tool',
 };
