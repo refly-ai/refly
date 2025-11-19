@@ -1,7 +1,7 @@
 import { genUniqueId } from '@refly/utils';
 import { useMemo } from 'react';
 import { useImageUploadStore, type UploadProgress } from '@refly/stores';
-import { UpsertDriveFileRequest } from '@refly/openapi-schema';
+import { DriveFile, UpsertDriveFileRequest } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -95,7 +95,7 @@ export const useUploadImage = () => {
   const handleUploadMultipleImages = async (
     imageFiles: File[],
     canvasId: string,
-  ): Promise<any[]> => {
+  ): Promise<DriveFile[] | null> => {
     // Start upload tracking for all files
     const uploadFiles: UploadProgress[] = imageFiles.map((file) => ({
       id: genUniqueId(),
