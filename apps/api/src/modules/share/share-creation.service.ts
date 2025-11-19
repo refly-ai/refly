@@ -1029,7 +1029,7 @@ export class ShareCreationService {
    */
   private async createOrUpdateWorkflowAppShare(
     user: User,
-    workflowApp: WorkflowApp,
+    workflowApp: Omit<WorkflowApp, 'pk'>,
     shareId: string,
     canvasData: SharedCanvasData,
     creditUsage: number,

@@ -538,43 +538,47 @@ model CanvasVersion {
 
 model CanvasTemplate {
   /// Primary key
-  pk             BigInt                           @id @default(autoincrement())
+  pk              BigInt                           @id @default(autoincrement())
   /// Canvas template id
-  templateId     String                           @unique @map("template_id")
+  templateId      String                           @unique @map("template_id")
   /// Origin canvas id (deprecated)
-  originCanvasId String                           @default("") @map("origin_canvas_id")
+  originCanvasId  String                           @default("") @map("origin_canvas_id")
   /// Category id (deprecated, use categories relation instead)
-  categoryId     String?                          @map("category_id")
+  categoryId      String?                          @map("category_id")
   /// Workflow app id
-  appId          String?                          @map("app_id")
+  appId           String?                          @map("app_id")
   /// Share id
-  shareId        String                           @default("") @map("share_id")
+  shareId         String                           @default("") @map("share_id")
+  /// Credit usage for running this workflow app
+  creditUsage     Int?                             @map("credit_usage")
+  /// Cover image storage key
+  coverStorageKey String?                          @map("cover_storage_key")
   /// Version
-  version        Int                              @default(0) @map("version")
+  version         Int                              @default(0) @map("version")
   /// UID
-  uid            String                           @map("uid")
+  uid             String                           @map("uid")
   /// Share user (JSON of `ShareUser`)
-  shareUser      String                           @map("share_user")
+  shareUser       String                           @map("share_user")
   /// Canvas template title
-  title          String                           @map("title")
+  title           String                           @map("title")
   /// Canvas template description
-  description    String                           @map("description")
+  description     String                           @map("description")
   /// Whether this canvas template is public
-  isPublic       Boolean                          @default(false) @map("is_public")
+  isPublic        Boolean                          @default(false) @map("is_public")
   /// Priority
-  priority       Int                              @default(0) @map("priority")
+  priority        Int                              @default(0) @map("priority")
   /// Language code
-  language       String                           @map("language")
+  language        String                           @map("language")
   /// Create timestamp
-  createdAt      DateTime                         @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt       DateTime                         @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime                         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime                         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt      DateTime?                        @map("deleted_at") @db.Timestamptz()
+  deletedAt       DateTime?                        @map("deleted_at") @db.Timestamptz()
   /// Category (deprecated, use categories relation instead)
-  category       CanvasTemplateCategory?          @relation("CanvasTemplateCategory", fields: [categoryId], references: [categoryId])
+  category        CanvasTemplateCategory?          @relation("CanvasTemplateCategory", fields: [categoryId], references: [categoryId])
   /// Categories (many-to-many relation)
-  categories     CanvasTemplateCategoryRelation[]
+  categories      CanvasTemplateCategoryRelation[]
 
   @@index([uid, updatedAt])
   @@index([isPublic, priority])
