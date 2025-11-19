@@ -54,18 +54,41 @@ export class Execute extends AgentBaseTool<SandboxParams> {
   });
 
   description = `
-Execute code in a secure sandbox environment. Each execution is independent - always include all necessary imports.
+Execute code in a secure sandbox environment with isolated input/output file systems.
 
-** File Persistence **
-Files persist across executions in the same canvas. Use relative paths to access them.
+** File System Structure **
+- Input: /mnt/refly/input (read-only, contains user uploaded files and previous results)
+- Output: /mnt/refly/output (read-write, for generated files in current execution)
+
+** Path Helper Functions (Python) **
+Use these helper functions to construct file paths correctly:
+- input_path(filename): Returns /mnt/refly/input/<filename>
+- output_path(filename): Returns /mnt/refly/output/<filename>
+
+Example:
+\`\`\`python
+# Read user data from input
+import pandas as pd
+df = pd.read_csv(input_path('data.csv'))
+
+# Generate output file
+df.to_csv(output_path('result.csv'), index=False)
+\`\`\`
 
 ** Best Practices **
-- Always include all necessary imports.
-- Filter warnings only once to avoid duplicate warnings.
+- Read user files from /mnt/refly/input using input_path()
+- Write generated files to /mnt/refly/output using output_path()
+- Always include all necessary imports
+- Filter warnings only once to avoid duplicates
   \`\`\`python
   import warnings
   warnings.filterwarnings('once', category=UserWarning)
   \`\`\`
+
+** Important Notes **
+- Files generated in /mnt/refly/output will be automatically saved to user's drive
+- Each execution gets a fresh /mnt/refly/output directory
+- Input directory is read-only - attempting to write will fail
 `;
 
   protected params: SandboxParams;
@@ -91,10 +114,21 @@ Files persist across executions in the same canvas. Use relative paths to access
         };
       }
 
+      const version = config.configurable?.version;
+      if (!version) {
+        return {
+          status: 'error',
+          error: 'Version is required for sandbox execution',
+          summary:
+            'Version configuration is missing. Please ensure the execution context includes a version identifier.',
+        };
+      }
+
       const request: SandboxExecuteRequest = {
         code: input.code,
         language: input.language,
         timeout: input.timeout,
+        version,
         parentResultId: config.configurable?.resultId,
         canvasId: config.configurable?.canvasId,
       };

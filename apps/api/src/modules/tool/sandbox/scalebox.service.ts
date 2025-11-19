@@ -30,6 +30,7 @@ import {
   SCALEBOX_DEFAULT_TIMEOUT,
   SCALEBOX_DEFAULT_MAX_QUEUE_SIZE,
   ERROR_MESSAGE_MAX_LENGTH,
+  S3_SANDBOX_PATH_PREFIX,
 } from './scalebox.constants';
 import stripAnsi from 'strip-ansi';
 import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
@@ -89,33 +90,52 @@ export class ScaleboxService implements OnModuleDestroy {
     apiKey: string;
     canvasId: string;
     uid: string;
+    version: string;
   }): Promise<ScaleboxExecutionResult> {
     const canvasId = guard.notEmpty(params.canvasId).orThrow(() => new MissingCanvasIdException());
+    guard.notEmpty(params.version).orThrow(() => new Error('Version is required'));
+
     const wrapper = await this.sandboxPool.acquire(params.uid, canvasId, params.apiKey);
 
     return await guard.defer(
-      () => this.runCodeInSandbox(wrapper, params),
+      () =>
+        this.runCodeInSandbox(wrapper, {
+          code: params.code,
+          language: params.language,
+          version: params.version,
+          uid: params.uid,
+          canvasId: params.canvasId,
+        }),
       () => this.releaseSandbox(wrapper),
     );
   }
 
   private async runCodeInSandbox(
     wrapper: SandboxWrapper,
-    params: { code: string; language: Language },
+    params: { code: string; language: Language; version: string; uid: string; canvasId: string },
   ): Promise<ScaleboxExecutionResult> {
     this.logger.info(
       {
         sandboxId: wrapper.sandboxId,
         canvasId: wrapper.canvasId,
         language: params.language,
+        version: params.version,
       },
       'Executing code in sandbox',
     );
 
     const startTime = Date.now();
 
+    // Build complete output path for this execution
+    const outputPath = buildS3Path.output(
+      S3_SANDBOX_PATH_PREFIX,
+      params.uid,
+      params.canvasId,
+      params.version,
+    );
+
     const previousFiles = await wrapper.listCwdFiles();
-    const result = await wrapper.executeCode(params.code, params.language);
+    const result = await wrapper.executeCode(params.code, params.language, outputPath, this.logger);
     const currentFiles = await wrapper.listCwdFiles();
     const files = currentFiles
       .filter((file) => !previousFiles.includes(file))
@@ -213,6 +233,10 @@ export class ScaleboxService implements OnModuleDestroy {
         .ensure(waitingCount < maxQueueSize)
         .orThrow(() => new QueueOverloadedException(waitingCount, maxQueueSize));
 
+      const version = guard
+        .notEmpty(request.version)
+        .orThrow(() => new Error('Version is required in SandboxExecuteRequest'));
+
       const job = await this.executionQueue.add(
         'execute',
         {
@@ -222,6 +246,7 @@ export class ScaleboxService implements OnModuleDestroy {
           timeout: request.timeout,
           canvasId,
           apiKey,
+          version,
         },
         {
           removeOnComplete: true,
@@ -243,15 +268,19 @@ export class ScaleboxService implements OnModuleDestroy {
 
       const { exitCode, error, originResult, files } = executionResult;
 
-      const prefix = this.driveStorageKeyPrefix;
-
       const processedFiles = await guard(() =>
         this.driveService.batchCreateDriveFiles(user, {
           files: files.map((name) => ({
             canvasId,
             name,
             source: 'agent',
-            storageKey: buildS3Path(prefix, user.uid, canvasId, name),
+            storageKey: buildS3Path.output(
+              S3_SANDBOX_PATH_PREFIX,
+              user.uid,
+              canvasId,
+              version,
+              name,
+            ),
           })),
         }),
       ).orThrow((error) => new SandboxExecutionFailedException(error, exitCode));

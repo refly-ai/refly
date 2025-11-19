@@ -23,7 +23,7 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
   }
 
   async process(job: Job<ScaleboxExecutionJobData>): Promise<ScaleboxExecutionResult> {
-    const { uid, code, language, canvasId, apiKey } = job.data;
+    const { uid, code, language, canvasId, apiKey, version } = job.data;
 
     this.logger.info(
       {
@@ -31,6 +31,7 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
         uid,
         canvasId,
         language,
+        version,
       },
       'Processing job',
     );
@@ -42,6 +43,7 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
         language,
         apiKey,
         canvasId,
+        version,
       }),
     );
 

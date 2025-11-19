@@ -42,10 +42,22 @@ export const S3_DEFAULT_CONFIG = {
 } as const;
 
 /**
- * Fixed mount point inside sandbox
- * Canvas and sandbox have 1:1 mapping, no need to include canvasId in path
+ * Input mount point inside sandbox (read-only)
+ * Contains user uploaded files and previous execution results
  */
-export const SANDBOX_MOUNT_POINT = '/mnt/refly/canvas';
+export const SANDBOX_INPUT_MOUNT_POINT = '/mnt/refly/input';
+
+/**
+ * Output mount point inside sandbox (read-write)
+ * Contains current execution generated files
+ */
+export const SANDBOX_OUTPUT_MOUNT_POINT = '/mnt/refly/output';
+
+/**
+ * S3 path prefix for sandbox execution outputs
+ * Format: sandbox/{uid}/{canvasId}/{version}/
+ */
+export const S3_SANDBOX_PATH_PREFIX = 'sandbox';
 
 /**
  * Temporary S3 path prefix for development testing

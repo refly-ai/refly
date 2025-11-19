@@ -4588,6 +4588,10 @@ export type SandboxExecuteRequest = {
    */
   timeout?: number;
   /**
+   * Version identifier for output isolation (e.g., result version or execution ID)
+   */
+  version: string;
+  /**
    * Parent action result ID for context inheritance
    */
   parentResultId?: string;

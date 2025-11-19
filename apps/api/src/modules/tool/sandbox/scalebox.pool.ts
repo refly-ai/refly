@@ -135,7 +135,7 @@ export class SandboxPool {
       canvasId,
       apiKey,
       s3Config: this.getS3Config(),
-      s3Path: buildS3Path(this.driveStorageKeyPrefix, uid, canvasId),
+      s3InputPath: buildS3Path.input(this.driveStorageKeyPrefix, uid, canvasId),
     };
 
     const wrapper = await SandboxWrapper.reconnect(context, metadata);
@@ -253,7 +253,7 @@ export class SandboxPool {
       canvasId,
       apiKey,
       s3Config: this.getS3Config(),
-      s3Path: buildS3Path(this.driveStorageKeyPrefix, uid, canvasId),
+      s3InputPath: buildS3Path.input(this.driveStorageKeyPrefix, uid, canvasId),
     };
 
     const wrapper = await SandboxWrapper.create(context, this.extendTimeoutMs);
