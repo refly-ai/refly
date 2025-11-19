@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@refly/utils/cn';
@@ -7,7 +7,7 @@ import { ResponseNodeMeta } from '@refly/canvas-common';
 import { ModelInfo } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { X } from 'refly-icons';
+import { X, File, AiChat } from 'refly-icons';
 import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 import { parseMentionsFromQuery, processQueryWithMentions } from '@refly/utils/query-processor';
 
@@ -56,6 +56,15 @@ export const SkillResponseContentPreview = memo(
     const query = metadata?.query ?? (metadata?.structuredData?.query as string) ?? '';
     const modelInfo = metadata?.modelInfo;
     const toolsets = metadata?.selectedToolsets ?? [];
+    const contextItems = metadata?.contextItems ?? [];
+
+    const files = useMemo(() => {
+      return contextItems?.filter((item) => item.type === 'file');
+    }, [contextItems]);
+
+    const agents = useMemo(() => {
+      return contextItems?.filter((item) => item.type === 'skillResponse');
+    }, [contextItems]);
 
     const content = processQueryWithMentions(query)?.processedQuery || '';
 
@@ -112,6 +121,26 @@ export const SkillResponseContentPreview = memo(
               ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
                 toolset.name)
               : toolset.name,
+          }))}
+          labelClassnames="bg-refly-node-contrl-1"
+          showMore={false}
+        />
+
+        <LabelDisplay
+          title={t('canvas.skillResponse.config.file')}
+          labels={files.map((file) => ({
+            labeltext: file.title || t('canvas.richChatInput.untitledFile'),
+            icon: <File size={12} className="flex-shrink-0" />,
+          }))}
+          labelClassnames="bg-refly-node-input-control"
+          showMore={false}
+        />
+
+        <LabelDisplay
+          title={t('canvas.skillResponse.config.agent')}
+          labels={agents.map((agent) => ({
+            labeltext: agent.title || t('canvas.richChatInput.untitledAgent'),
+            icon: <AiChat size={12} className="flex-shrink-0" />,
           }))}
           labelClassnames="bg-refly-node-contrl-1"
           showMore={false}

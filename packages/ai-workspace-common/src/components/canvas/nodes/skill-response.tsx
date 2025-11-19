@@ -58,7 +58,7 @@ import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hook
 const { Paragraph } = Typography;
 
 const NODE_WIDTH = 320;
-const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 214 };
+const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 300 };
 
 const NodeStatusBar = memo(
   ({
