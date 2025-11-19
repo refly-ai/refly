@@ -223,35 +223,24 @@ export class ApifyRun13FActor extends AgentBaseTool<Apify13FToolParams> {
         return lines.join('\n');
       };
 
-      let driveFile: DriveFile | undefined;
-      try {
-        const csv = toCsv(items);
-        const ts = new Date().toISOString().replace(/[:.]/g, '-');
-        const fileName = `13f-${input.manager_name.replace(/\s+/g, '-').toLowerCase()}-${input.quarter_year.replace(/\s+/g, '-').toLowerCase()}-${ts}.csv`;
-        driveFile = await this.params?.reflyService?.writeFile?.(this.params?.user, {
-          name: fileName,
-          content: csv,
-          type: 'text/csv',
-          canvasId: config.configurable?.canvasId,
-          resultId: config.configurable?.resultId,
-          resultVersion: config.configurable?.version,
-        });
-      } catch {
-        // Ignore upload errors; continue returning the dataset items
-        driveFile = undefined;
-      }
+      const csv = toCsv(items);
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `13f-${input.manager_name.replace(/\s+/g, '-').toLowerCase()}-${input.quarter_year.replace(/\s+/g, '-').toLowerCase()}-${ts}.csv`;
+      const driveFile = await this.params?.reflyService?.writeFile?.(this.params?.user, {
+        name: fileName,
+        content: csv,
+        type: 'text/csv',
+        canvasId: config.configurable?.canvasId,
+        resultId: config.configurable?.resultId,
+        resultVersion: config.configurable?.version,
+      });
 
       // Calculate credit cost for PRICE_PER_DATASET_ITEM pricing ($2.00 / 1,000 reports)
       const creditCost = calculate13FCreditCost(run, items.length);
 
       return {
         status: 'success',
-        data: {
-          run,
-          file: driveFile,
-          manager_name: input.manager_name,
-          quarter_year: input.quarter_year,
-        },
+        data: driveFile,
         creditCost,
         summary: `Successfully ran 13F Actor for "${input.manager_name}" (${input.quarter_year}) and retrieved ${items.length} reports${driveFile ? ` with file ID: ${driveFile.fileId}` : ''}`,
       };

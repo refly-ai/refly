@@ -184,7 +184,7 @@ const ActionContainerComponent = ({
 
   return (
     <div
-      className="border-[1px] border-solid border-b-0 border-x-0 border-refly-Card-Border pt-3"
+      className="border-[1px] border-solid border-b-0 border-x-0 border-refly-Card-Border"
       onClick={(e) => {
         e.stopPropagation();
       }}

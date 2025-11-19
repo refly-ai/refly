@@ -28,7 +28,6 @@ import {
   DriveFileScope,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
-import { driveFilePO2DTO } from './drive.dto';
 import { Response, Request } from 'express';
 
 @Controller('v1/drive')
@@ -54,7 +53,7 @@ export class DriveController {
       pageSize,
       order,
     });
-    return buildSuccessResponse(driveFiles.map(driveFilePO2DTO));
+    return buildSuccessResponse(driveFiles);
   }
 
   @Post('file/create')
@@ -63,7 +62,7 @@ export class DriveController {
     @Body() request: UpsertDriveFileRequest,
   ): Promise<UpsertDriveFileResponse> {
     const driveFile = await this.driveService.createDriveFile(user, request);
-    return buildSuccessResponse(driveFilePO2DTO(driveFile));
+    return buildSuccessResponse(driveFile);
   }
 
   @Post('file/batchCreate')
@@ -72,7 +71,7 @@ export class DriveController {
     @Body() request: BatchCreateDriveFilesRequest,
   ): Promise<BatchCreateDriveFilesResponse> {
     const driveFiles = await this.driveService.batchCreateDriveFiles(user, request);
-    return buildSuccessResponse(driveFiles.map(driveFilePO2DTO));
+    return buildSuccessResponse(driveFiles);
   }
 
   @Post('file/update')
@@ -81,7 +80,7 @@ export class DriveController {
     @Body() request: UpsertDriveFileRequest,
   ): Promise<UpsertDriveFileResponse> {
     const driveFile = await this.driveService.updateDriveFile(user, request);
-    return buildSuccessResponse(driveFilePO2DTO(driveFile));
+    return buildSuccessResponse(driveFile);
   }
 
   @Post('file/delete')

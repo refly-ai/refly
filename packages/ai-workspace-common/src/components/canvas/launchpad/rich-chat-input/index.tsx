@@ -37,24 +37,16 @@ import {
   createContextItemFromMentionItem,
 } from './utils';
 import { useListMentionItems } from './hooks/use-list-mention-items';
+import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 
 interface RichChatInputProps {
   readonly: boolean;
-  query: string;
-  setQuery: (text: string) => void;
   placeholder?: string;
   inputClassName?: string;
   maxRows?: number;
   minRows?: number;
   handleSendMessage: () => void;
-  contextItems?: IContextItem[];
-
   mentionPosition?: MentionPosition;
-
-  setContextItems?: (items: IContextItem[]) => void;
-
-  selectedToolsets?: GenericToolset[];
-  setSelectedToolsets?: (items: GenericToolset[]) => void;
 
   onUploadImage?: (file: File) => Promise<void>;
   onUploadMultipleImages?: (files: File[]) => Promise<void>;
@@ -71,16 +63,10 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
   (
     {
       readonly,
-      query,
-      setQuery,
       handleSendMessage,
       onUploadImage,
       onUploadMultipleImages,
       onFocus,
-      contextItems = [],
-      setContextItems,
-      selectedToolsets = [],
-      setSelectedToolsets,
       placeholder,
       mentionPosition = 'bottom-start',
       nodeId,
@@ -96,6 +82,8 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
     }));
+    const { query, setQuery, setContextItems, setSelectedToolsets, setUpstreamResultIds } =
+      useAgentNodeManagement(nodeId);
 
     const [isMentionListVisible, setIsMentionListVisible] = useState(false);
 
@@ -116,38 +104,21 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       allItemsRef.current = allItems;
     }, [allItems]);
 
-    // Use ref to store latest contextItems to avoid performance issues
-    const contextItemsRef = useRef(contextItems);
-
-    // Update ref when contextItems changes
-    useEffect(() => {
-      contextItemsRef.current = contextItems;
-    }, [contextItems]);
-
-    // Use ref to store latest selectedToolsets to avoid performance issues
-    const selectedToolsetsRef = useRef(selectedToolsets);
-
-    // Update ref when selectedToolsets changes
-    useEffect(() => {
-      selectedToolsetsRef.current = selectedToolsets;
-    }, [selectedToolsets]);
-
     // Use ref to track previous canvas data to avoid infinite loops
     const prevCanvasDataRef = useRef({ canvasId: '', allItemsLength: 0 });
 
     // Helper function to add item to context items
     const addToContextItems = useCallback(
       (contextItem: IContextItem) => {
-        if (!setContextItems) return;
-
-        const currentContextItems = contextItemsRef.current || [];
-        const isAlreadyInContext = currentContextItems.some(
-          (ctxItem) => ctxItem.entityId === contextItem.entityId,
-        );
-
-        if (!isAlreadyInContext) {
-          setContextItems([...currentContextItems, contextItem]);
-        }
+        setContextItems((prevContextItems) => {
+          const isAlreadyInContext = (prevContextItems ?? []).some(
+            (ctxItem) => ctxItem.entityId === contextItem.entityId,
+          );
+          if (isAlreadyInContext) {
+            return prevContextItems ?? [];
+          }
+          return [...(prevContextItems ?? []), contextItem];
+        });
       },
       [setContextItems],
     );
@@ -155,18 +126,30 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     // Helper function to add toolset to selected toolsets
     const addToSelectedToolsets = useCallback(
       (toolsetItem: GenericToolset) => {
-        if (!setSelectedToolsets) return;
-
-        const currentSelectedToolsets = selectedToolsetsRef.current || [];
-        const isAlreadySelected = currentSelectedToolsets.some(
-          (selectedItem) => selectedItem.id === toolsetItem.id,
-        );
-
-        if (!isAlreadySelected) {
-          setSelectedToolsets([...currentSelectedToolsets, toolsetItem]);
-        }
+        setSelectedToolsets((prevToolsets) => {
+          const isAlreadySelected = (prevToolsets ?? []).some(
+            (selectedItem) => selectedItem.id === toolsetItem.id,
+          );
+          if (isAlreadySelected) {
+            return prevToolsets ?? [];
+          }
+          return [...(prevToolsets ?? []), toolsetItem];
+        });
       },
       [setSelectedToolsets],
+    );
+
+    const addToUpstreamResultIds = useCallback(
+      (resultId: string) => {
+        setUpstreamResultIds((prevResultIds) => {
+          const isAlreadyIncluded = (prevResultIds ?? []).includes(resultId);
+          if (isAlreadyIncluded) {
+            return prevResultIds ?? [];
+          }
+          return [...(prevResultIds ?? []), resultId];
+        });
+      },
+      [setUpstreamResultIds],
     );
 
     // Helper function to insert mention into editor
@@ -208,9 +191,11 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           });
 
           setTimeout(() => {
-            if (setContextItems && (item.entityId || item.nodeId)) {
+            if (item.source === 'files') {
               const contextItem = createContextItemFromMentionItem(item);
               addToContextItems(contextItem);
+            } else if (item.source === 'agents') {
+              addToUpstreamResultIds(item.entityId);
             }
           }, 100);
         } else if (item.source === 'toolsets' || item.source === 'tools') {
@@ -691,13 +676,10 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             </div>
           )}
 
-          <div
-            className="flex-1 min-h-[271px]"
-            onKeyDownCapture={handleKeyDown}
-            onPaste={handlePaste}
-          >
+          <div className="flex-1" onKeyDownCapture={handleKeyDown} onPaste={handlePaste}>
             {editor ? (
               <EditorContent
+                className="h-full"
                 editor={editor}
                 data-cy="rich-chat-input"
                 data-placeholder={placeholder || t('canvas.richChatInput.defaultPlaceholder')}

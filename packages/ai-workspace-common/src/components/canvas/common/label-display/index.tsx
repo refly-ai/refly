@@ -1,11 +1,15 @@
 import { memo, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
-import { Dropdown } from 'antd';
+import { Button, Dropdown, Typography } from 'antd';
+import { Close } from 'refly-icons';
+
+const { Paragraph } = Typography;
 
 export interface LabelConfig {
   icon?: ReactNode;
   labeltext: string;
   classnames?: string;
   key?: string;
+  onClose?: () => void;
 }
 
 interface LabelDisplayProps {
@@ -16,13 +20,29 @@ interface LabelDisplayProps {
 }
 
 // Single label item component
-const LabelItem = memo(({ icon, labeltext, classnames }: LabelConfig) => {
+export const LabelItem = memo(({ icon, labeltext, classnames, onClose }: LabelConfig) => {
   return (
     <div
       className={`flex items-center gap-1 h-5 px-1 rounded-[4px] border-[0.5px] border-solid border-refly-Card-Border ${classnames ?? ''}`}
     >
       {icon && icon}
-      <div className="text-xs text-refly-text-0 max-w-[100px] truncate leading-4">{labeltext}</div>
+      <Paragraph
+        className="text-xs text-refly-text-0 max-w-[150px] leading-4 !m-0"
+        ellipsis={{
+          rows: 1,
+          tooltip: <div className="max-h-[200px] overflow-y-auto">{labeltext}</div>,
+        }}
+      >
+        {labeltext}
+      </Paragraph>
+      {onClose && (
+        <Button
+          type="text"
+          className="!w-[14px] !h-[14px] !p-0 !rounded-[2px]"
+          icon={<Close size={14} />}
+          onClick={onClose}
+        />
+      )}
     </div>
   );
 });

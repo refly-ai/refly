@@ -58,6 +58,7 @@ export const useAddNode = () => {
       shouldPreview = true,
       needSetCenter = false,
       retryCount = 0,
+      skipPurgeToolsets = false,
     ): XYPosition | undefined => {
       const { canvasInitialized } = useCanvasStore.getState();
 
@@ -74,7 +75,7 @@ export const useAddNode = () => {
         const delay = Math.min(INITIAL_RETRY_DELAY * 2 ** retryCount, MAX_RETRY_DELAY);
 
         setTimeout(() => {
-          addNode(node, connectTo, shouldPreview, needSetCenter, retryCount + 1);
+          addNode(node, connectTo, shouldPreview, needSetCenter, retryCount + 1, skipPurgeToolsets);
         }, delay);
         return undefined;
       }
@@ -133,6 +134,7 @@ export const useAddNode = () => {
         connectTo,
         nodes,
         edges,
+        skipPurgeToolsets,
       });
 
       const updatedNodes = deduplicateNodes([...nodes, newNode]);

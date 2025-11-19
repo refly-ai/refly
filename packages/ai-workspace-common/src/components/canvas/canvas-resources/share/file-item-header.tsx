@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Tooltip, Typography, Input, InputRef, message } from 'antd';
 import { ScreenFull, ScreenDefault, Download } from 'refly-icons';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+// import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
 import {
   getExtFromContentType,
@@ -20,7 +20,8 @@ export const FileItemHeader = memo(() => {
   }));
 
   const { t } = useTranslation();
-  const { readonly } = useCanvasContext();
+  // const { readonly } = useCanvasContext();
+  const readonly = true;
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const titleInputRef = useRef<InputRef>(null);

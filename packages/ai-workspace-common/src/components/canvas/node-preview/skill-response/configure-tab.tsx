@@ -1,45 +1,31 @@
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Tooltip } from 'antd';
+import { Button, Divider, Tooltip } from 'antd';
 import { Question } from 'refly-icons';
-import { GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
 import { EditChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/edit-chat-input';
 import { ChatComposerRef } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-composer';
 import { ModelSelector } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
 import { ConfigInfoDisplay } from './config-info-display';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
+import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 
 interface ConfigureTabProps {
   query?: string | null;
   version: number;
   resultId: string;
-  modelInfo: any;
-  selectedToolsets?: GenericToolset[];
-  contextItems?: IContextItem[];
+  nodeId: string;
   canvasId: string;
-  setModelInfo: (modelInfo: any | null) => void;
-  setSelectedToolsets: (toolsets: GenericToolset[]) => void;
-  setContextItems: (items: IContextItem[]) => void;
-  setQuery: (query: string) => void;
 }
 
 const ConfigureTabComponent = ({
   query,
   version,
   resultId,
-  modelInfo,
-  selectedToolsets,
-  contextItems,
+  nodeId,
   canvasId,
-  setModelInfo,
-  setSelectedToolsets,
-  setContextItems,
-  setQuery,
 }: ConfigureTabProps) => {
   const { t } = useTranslation();
-  const contextItemsList = useMemo(() => contextItems ?? [], [contextItems]);
-  const configuredToolsets = useMemo(() => selectedToolsets ?? [], [selectedToolsets]);
   const { handleUploadImage } = useUploadImage();
   const [dragging, setDragging] = useState(false);
   const dragCounterRef = useRef(0);
@@ -47,6 +33,17 @@ const ConfigureTabComponent = ({
   const handleAddToolsAndContext = useCallback(() => {
     chatComposerRef.current?.insertAtSymbol?.();
   }, []);
+
+  const {
+    modelInfo,
+    contextItems,
+    selectedToolsets,
+    upstreamResultIds,
+    setModelInfo,
+    setContextItems,
+    setSelectedToolsets,
+    setUpstreamResultIds,
+  } = useAgentNodeManagement(nodeId);
 
   const handleDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>) => {
@@ -62,31 +59,24 @@ const ConfigureTabComponent = ({
 
       const newContextItems: IContextItem[] = [];
       for (const file of files) {
-        const resource = await handleUploadImage(file, canvasId ?? '');
-        const entityId = resource?.resourceId ?? '';
+        const driveFile = await handleUploadImage(file, canvasId ?? '');
+        const entityId = driveFile?.fileId ?? '';
         if (!entityId) {
           continue;
         }
 
         newContextItems.push({
-          type: 'resource',
+          type: 'file',
           entityId,
-          title: resource?.title ?? '',
-          metadata: {
-            resourceType: resource?.resourceType ?? '',
-            resourceMeta: resource?.data,
-            storageKey: resource?.storageKey ?? '',
-            rawFileKey: resource?.rawFileKey ?? '',
-            downloadURL: resource?.downloadURL ?? '',
-          },
+          title: driveFile?.name ?? '',
         });
       }
 
       if (newContextItems.length > 0) {
-        setContextItems([...contextItemsList, ...newContextItems]);
+        setContextItems((prevContextItems) => [...prevContextItems, ...newContextItems]);
       }
     },
-    [canvasId, contextItemsList, handleUploadImage, setContextItems],
+    [canvasId, handleUploadImage, setContextItems],
   );
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -132,11 +122,11 @@ const ConfigureTabComponent = ({
           briefMode={false}
           variant="filled"
           trigger={['click']}
-          contextItems={contextItemsList}
+          contextItems={contextItems}
         />
       </div>
 
-      <div>
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col pb-4">
         <div
           className="text-xs font-semibold leading-4 mb-2 flex items-center justify-between"
           style={{ fontFamily: 'PingFang SC', letterSpacing: 0 }}
@@ -148,9 +138,9 @@ const ConfigureTabComponent = ({
             </Tooltip>
           </div>
           <Button
-            type="text"
+            type="default"
             size="small"
-            className="text-xs h-auto px-2 py-1 text-refly-text-1 hover:text-refly-text-0"
+            className="text-xs !h-5 px-1 py-0.5 text-refly-text-1"
             onClick={handleAddToolsAndContext}
           >
             @ {t('agent.config.addToolsAndContext')}
@@ -158,8 +148,7 @@ const ConfigureTabComponent = ({
         </div>
 
         <div
-          className="rounded-lg pt-2 pb-3 px-3 relative"
-          style={{ backgroundColor: '#F6F6F6' }}
+          className="rounded-lg pt-2 pb-3 px-3 relative bg-refly-bg-control-z0 flex-1 min-h-0 overflow-hidden flex flex-col"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnter}
@@ -176,30 +165,31 @@ const ConfigureTabComponent = ({
             </div>
           )}
 
-          <EditChatInput
-            ref={chatComposerRef}
-            enabled
-            resultId={resultId}
-            version={version}
-            contextItems={contextItemsList}
-            query={query ?? ''}
-            setContextItems={setContextItems}
-            modelInfo={modelInfo}
-            setModelInfo={setModelInfo}
-            setEditMode={() => {}}
-            setQuery={setQuery}
-            selectedToolsets={configuredToolsets}
-            setSelectedToolsets={setSelectedToolsets}
-            mentionPosition="bottom-start"
-          />
+          <div className="flex-none h-[50%] min-h-[100px] max-h-[270px] overflow-hidden">
+            <EditChatInput
+              ref={chatComposerRef}
+              enabled
+              resultId={resultId}
+              nodeId={nodeId}
+              version={version}
+              setEditMode={() => {}}
+              mentionPosition="bottom-start"
+            />
+          </div>
 
-          <ConfigInfoDisplay
-            prompt={query ?? ''}
-            selectedToolsets={configuredToolsets}
-            contextItems={contextItemsList}
-            setContextItems={setContextItems}
-            setSelectedToolsets={setSelectedToolsets}
-          />
+          <Divider className="my-4 flex-none" />
+
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ConfigInfoDisplay
+              prompt={query ?? ''}
+              selectedToolsets={selectedToolsets}
+              contextItems={contextItems}
+              setContextItems={setContextItems}
+              setSelectedToolsets={setSelectedToolsets}
+              upstreamResultIds={upstreamResultIds}
+              setUpstreamResultIds={setUpstreamResultIds}
+            />
+          </div>
         </div>
       </div>
     </div>

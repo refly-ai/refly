@@ -5549,6 +5549,9 @@ components:
         - application/refly.artifacts.code
         - text/html
         - application/refly.artifacts.mindmap
+        - text/csv
+        - application/json
+        - text/plain
     CodeArtifact:
       type: object
       description: Code artifact
@@ -11134,8 +11137,12 @@ components:
     BatchCreateDriveFilesRequest:
       type: object
       required:
+        - canvasId
         - files
       properties:
+        canvasId:
+          type: string
+          description: Canvas ID
         files:
           type: array
           description: List of drive files

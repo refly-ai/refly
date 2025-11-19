@@ -31,7 +31,6 @@ import {
   MediaGenerateRequest,
   MediaGenerationResult,
   GetActionResultData,
-  CodeArtifactType,
   SendEmailRequest,
   BaseResponse,
   UpsertCodeArtifactRequest,
@@ -51,7 +50,6 @@ import {
   UpsertDriveFileRequest,
 } from '@refly/openapi-schema';
 import { Document as LangChainDocument } from '@langchain/core/documents';
-import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {
   createCanvas: (user: User, req: UpsertCanvasRequest) => Promise<CreateCanvasResponse>;
@@ -92,13 +90,6 @@ export interface ReflyService {
   ) => Promise<RerankResponse>;
   readFile: (user: User, fileId: string) => Promise<DriveFile>;
   writeFile: (user: User, param: UpsertDriveFileRequest) => Promise<DriveFile>;
-  generateDoc: (user: User, title: string, config: RunnableConfig) => Promise<{ docId: string }>;
-  generateCodeArtifact: (
-    user: User,
-    title: string,
-    type: CodeArtifactType,
-    config: RunnableConfig,
-  ) => Promise<{ artifactId: string }>;
   inMemorySearchWithIndexing: (
     user: User,
     options: {
@@ -122,7 +113,7 @@ export interface ReflyService {
   batchProcessURL: (urls: string[]) => Promise<string[]>;
 
   downloadFileFromUrl: (url: string) => Promise<Buffer>;
-  downloadFile: (storageKey: string) => Promise<Buffer>;
+  downloadFile: (params: { storageKey: string; visibility?: FileVisibility }) => Promise<Buffer>;
   uploadFile: (
     user: User,
     param: {

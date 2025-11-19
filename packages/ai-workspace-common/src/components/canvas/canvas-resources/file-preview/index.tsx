@@ -110,23 +110,21 @@ export const FilePreview = memo(({ file, markdownClassName = '' }: FilePreviewPr
     if (contentType.startsWith('image/')) {
       return (
         <div className="h-full flex items-center justify-center max-w-[1024px] mx-auto overflow-hidden relative">
-          <div className="flex items-center p-3">
-            <img
-              src={url}
-              alt={file.name}
-              className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
-              loading="lazy"
-              onClick={() => setIsPreviewModalVisible(true)}
-            />
+          <img
+            src={url}
+            alt={file.name}
+            className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
+            loading="lazy"
+            onClick={() => setIsPreviewModalVisible(true)}
+          />
 
-            {/* Image Preview Modal */}
-            <div className="absolute inset-0 pointer-events-none">
-              <ImagePreview
-                isPreviewModalVisible={isPreviewModalVisible}
-                setIsPreviewModalVisible={setIsPreviewModalVisible}
-                imageUrl={url}
-              />
-            </div>
+          {/* Image Preview Modal */}
+          <div className="absolute inset-0 pointer-events-none">
+            <ImagePreview
+              isPreviewModalVisible={isPreviewModalVisible}
+              setIsPreviewModalVisible={setIsPreviewModalVisible}
+              imageUrl={url}
+            />
           </div>
         </div>
       );
@@ -136,7 +134,7 @@ export const FilePreview = memo(({ file, markdownClassName = '' }: FilePreviewPr
     if (contentType.startsWith('text/')) {
       const textContent = new TextDecoder().decode(fileContent.data);
       return (
-        <div className="h-full overflow-auto p-3">
+        <div className="h-full overflow-y-auto">
           <Markdown content={textContent} className={markdownClassName} />
         </div>
       );
@@ -155,7 +153,7 @@ export const FilePreview = memo(({ file, markdownClassName = '' }: FilePreviewPr
     if (contentType.startsWith('video/')) {
       return (
         <div className="h-full flex flex-col">
-          <div className="flex-1 flex items-center justify-center p-3">
+          <div className="flex-1 flex items-center justify-center">
             <video
               src={url}
               controls
@@ -174,7 +172,7 @@ export const FilePreview = memo(({ file, markdownClassName = '' }: FilePreviewPr
     if (contentType.startsWith('audio/')) {
       return (
         <div className="h-full flex flex-col">
-          <div className="flex-1 flex items-center justify-center p-3">
+          <div className="flex-1 flex items-center justify-center">
             <audio src={url} controls className="w-full max-w-md" preload="metadata">
               <track kind="captions" />
               Your browser does not support the audio element.
@@ -200,5 +198,5 @@ export const FilePreview = memo(({ file, markdownClassName = '' }: FilePreviewPr
     );
   };
 
-  return <div className="h-full overflow-hidden bg-white">{renderFilePreview()}</div>;
+  return <div className="h-full overflow-hidden">{renderFilePreview()}</div>;
 });

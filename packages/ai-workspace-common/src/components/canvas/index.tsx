@@ -18,6 +18,7 @@ import { TopToolbar } from './top-toolbar';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
+import { useCopyPasteSkillResponseNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-copy-paste-skill-response-node';
 import {
   CanvasProvider,
   useCanvasContext,
@@ -169,6 +170,9 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   const { pendingNode, clearPendingNode } = useCanvasNodesStore();
   const { loading, readonly, shareNotFound, shareLoading, undo, redo } = useCanvasContext();
   const { onLayout } = useCanvasLayout();
+
+  // Use copy paste hook for skillResponse nodes
+  useCopyPasteSkillResponseNode({ canvasId, readonly });
 
   const {
     canvasInitialized,

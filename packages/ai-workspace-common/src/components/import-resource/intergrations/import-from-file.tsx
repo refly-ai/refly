@@ -7,7 +7,6 @@ import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/
 import type { RcFile } from 'antd/es/upload/interface';
 import { genResourceID } from '@refly/utils/id';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
-import { ACCEPT_FILE_EXTENSIONS } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/constants';
 
 const { Dragger } = Upload;
 
@@ -67,7 +66,6 @@ export const ImportFromFile = ({ canvasId }: ImportFromFileProps) => {
   const props: UploadProps = {
     name: 'file',
     multiple: true,
-    // accept: ACCEPT_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(','),
     fileList: [],
     beforeUpload: async (file: File) => {
       if (uploadLimit > 0 && file.size > maxFileSizeBytes) {
@@ -172,16 +170,6 @@ export const ImportFromFile = ({ canvasId }: ImportFromFileProps) => {
     },
   };
 
-  const genUploadHint = () => {
-    let hint = t('resource.import.supportedFiles', {
-      formats: ACCEPT_FILE_EXTENSIONS.map((ext) => ext.toUpperCase()).join(', '),
-    });
-    if (uploadLimit > 0) {
-      hint += `. ${t('resource.import.fileUploadLimit', { size: maxFileSize })}`;
-    }
-    return hint;
-  };
-
   useEffect(() => {
     setStorageFileList(fileList);
   }, [fileList, setStorageFileList]);
@@ -196,7 +184,6 @@ export const ImportFromFile = ({ canvasId }: ImportFromFileProps) => {
           <div className="text-refly-primary-default text-sm font-medium leading-5">
             {t('resource.import.dragOrClick')}
           </div>
-          <div className="text-refly-text-1 text-sm leading-4">{genUploadHint()}</div>
           {fileParsingUsage?.pagesLimit && fileParsingUsage?.pagesLimit >= 0 && (
             <div className="text-refly-text-1 text-sm leading-4">
               {t('resource.import.fileParsingUsage', {

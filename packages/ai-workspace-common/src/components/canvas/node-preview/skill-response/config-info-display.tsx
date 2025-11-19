@@ -1,21 +1,24 @@
 import { memo, useMemo, useCallback } from 'react';
-import { Tag, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { GenericToolset } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
-import { X, AiChat } from 'refly-icons';
+import { X, AiChat, File } from 'refly-icons';
 import { Question } from 'refly-icons';
 import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
 import { CanvasNode } from '@refly/canvas-common';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
+import { LabelItem } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 
 interface ConfigInfoDisplayProps {
   prompt: string;
   selectedToolsets: GenericToolset[];
   contextItems: IContextItem[];
+  upstreamResultIds: string[];
   setContextItems: (items: IContextItem[]) => void;
   setSelectedToolsets: (toolsets: GenericToolset[]) => void;
+  setUpstreamResultIds: (resultIds: string[]) => void;
 }
 
 const SectionTitle = memo(
@@ -41,8 +44,10 @@ export const ConfigInfoDisplay = memo(
     prompt,
     selectedToolsets,
     contextItems = [],
+    upstreamResultIds = [],
     setContextItems,
     setSelectedToolsets,
+    setUpstreamResultIds,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
 
@@ -62,15 +67,6 @@ export const ConfigInfoDisplay = memo(
       return mentions.filter((item) => item.type === 'var');
     }, [prompt]);
 
-    // Extract files from contextItems
-    const files = useMemo(() => {
-      return contextItems.filter((item) => item.type === 'file');
-    }, [contextItems]);
-
-    const agents = useMemo(() => {
-      return contextItems.filter((item) => item.type === 'skillResponse');
-    }, [contextItems]);
-
     const { nodes } = useRealtimeCanvasData();
     const agentNodeMap = useMemo(() => {
       const m = new Map<string, CanvasNode>();
@@ -81,6 +77,17 @@ export const ConfigInfoDisplay = memo(
       }
       return m;
     }, [nodes]);
+
+    // Extract files from contextItems
+    const files = useMemo(() => {
+      return contextItems.filter((item) => item.type === 'file');
+    }, [contextItems]);
+
+    const agents = useMemo(() => {
+      return upstreamResultIds
+        .map((resultId) => agentNodeMap.get(resultId))
+        .filter((node): node is CanvasNode => node !== undefined);
+    }, [upstreamResultIds, agentNodeMap]);
 
     const handleRemoveContextItem = useCallback(
       (item: IContextItem) => {
@@ -95,6 +102,19 @@ export const ConfigInfoDisplay = memo(
         setContextItems(nextItems);
       },
       [contextItems, setContextItems],
+    );
+
+    const handleRemoveUpstreamResult = useCallback(
+      (resultId: string) => {
+        if (!resultId) {
+          return;
+        }
+
+        const currentResultIds = upstreamResultIds ?? [];
+        const nextResultIds = currentResultIds.filter((id) => id !== resultId);
+        setUpstreamResultIds(nextResultIds);
+      },
+      [upstreamResultIds, setUpstreamResultIds],
     );
 
     const handleRemoveToolset = useCallback(
@@ -113,108 +133,93 @@ export const ConfigInfoDisplay = memo(
     );
 
     return (
-      <div className="flex flex-col gap-4 mt-4">
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.inputsDescription')}>
-              {t('agent.config.inputs')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {variables.map((variable: MentionCommonData, index) => (
-                <Tag
-                  key={`${variable.id}-${index}`}
-                  className="text-xs m-0 flex items-center gap-1 bg-[#FEF2CF] px-2 py-1"
-                >
-                  <X className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
-                  {variable.name}
-                </Tag>
-              ))}
-            </div>
+      <div className="flex flex-col gap-4 pt-4 h-full overflow-y-auto">
+        <div>
+          <SectionTitle tooltip={t('agent.config.inputsDescription')}>
+            {t('agent.config.inputs')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {variables.map((variable: MentionCommonData, index) => (
+              <LabelItem
+                key={`${variable.id}-${index}`}
+                icon={<X size={12} className="flex-shrink-0" />}
+                labeltext={variable.name}
+                classnames="bg-refly-node-contrl-2"
+              />
+            ))}
           </div>
-        }
+        </div>
 
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.toolsDescription')}>
-              {t('agent.config.tools')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {toolsets.map((toolset, index) => {
-                // Get localized label for builtin toolsets, otherwise use name
-                const labelName = toolset?.builtin
-                  ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
-                    toolset.name)
-                  : toolset.name;
+        <div>
+          <SectionTitle tooltip={t('agent.config.toolsDescription')}>
+            {t('agent.config.tools')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {toolsets.map((toolset, index) => {
+              // Get localized label for builtin toolsets, otherwise use name
+              const labelName = toolset?.builtin
+                ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
+                  toolset.name)
+                : toolset.name;
 
-                return (
-                  <Tag
-                    key={`${toolset.id || toolset.name}-${index}`}
-                    closable
-                    onClose={() => handleRemoveToolset(toolset)}
-                    className="text-xs m-0 flex items-center gap-1 px-2 py-1"
-                  >
+              return (
+                <LabelItem
+                  key={`${toolset.id || toolset.name}-${index}`}
+                  icon={
                     <ToolsetIcon
                       toolset={toolset}
                       config={{
-                        size: 16,
+                        size: 12,
                         className: 'flex-shrink-0',
-                        builtinClassName: '!w-4 !h-4',
+                        builtinClassName: '!rounded-[2.5px] !w-3 !h-3',
                       }}
                     />
-                    <span>{labelName}</span>
-                  </Tag>
-                );
-              })}
-            </div>
+                  }
+                  labeltext={labelName}
+                  classnames="bg-refly-node-contrl-1"
+                  onClose={() => handleRemoveToolset(toolset)}
+                />
+              );
+            })}
           </div>
-        }
+        </div>
 
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.filesDescription')}>
-              {t('agent.config.files')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {files.map((file: any, index) => (
-                <Tag
-                  key={`${file.entityId}-${index}`}
-                  closable
-                  onClose={() => handleRemoveContextItem(file)}
-                  className="text-xs m-0 flex items-center gap-1 px-2 py-1"
-                >
-                  {file.title}
-                </Tag>
-              ))}
-            </div>
+        <div>
+          <SectionTitle tooltip={t('agent.config.filesDescription')}>
+            {t('agent.config.files')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {files.map((file: any, index) => (
+              <LabelItem
+                key={`${file.entityId}-${index}`}
+                icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
+                labeltext={file.title}
+                classnames="bg-gray-100 dark:bg-gray-700"
+                onClose={() => handleRemoveContextItem(file)}
+              />
+            ))}
           </div>
-        }
+        </div>
 
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.agentsDescription')}>
-              {t('agent.config.agents')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {agents.map((item: IContextItem, index) => {
-                const node = agentNodeMap.get(item.entityId);
-                const title = node?.data?.title ?? item.title;
-                return (
-                  <Tag
-                    key={`${item.entityId}-${index}`}
-                    closable
-                    onClose={() => handleRemoveContextItem(item)}
-                    className="text-xs m-0 flex items-center gap-1 px-2 py-1 max-w-[200px]"
-                  >
-                    <AiChat className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
-                    <span className="truncate">
-                      {title || t('canvas.richChatInput.untitledAgent')}
-                    </span>
-                  </Tag>
-                );
-              })}
-            </div>
+        <div>
+          <SectionTitle tooltip={t('agent.config.agentsDescription')}>
+            {t('agent.config.agents')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {agents.map((node, index) => {
+              const title = node?.data?.title;
+              return (
+                <LabelItem
+                  key={`${node.id}-${index}`}
+                  icon={<AiChat size={14} className="flex-shrink-0" />}
+                  labeltext={title || t('canvas.richChatInput.untitledAgent')}
+                  classnames="bg-refly-node-contrl-2"
+                  onClose={() => handleRemoveUpstreamResult(node.data?.entityId)}
+                />
+              );
+            })}
           </div>
-        }
+        </div>
       </div>
     );
   },

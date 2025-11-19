@@ -88,7 +88,6 @@ const PublishTemplateButton = React.memo(
         >
           <Button
             disabled={toolbarLoading || !skillResponseNodes?.length}
-            loading={toolbarLoading}
             type="primary"
             icon={<ArrowRight size={16} />}
             onClick={() => {

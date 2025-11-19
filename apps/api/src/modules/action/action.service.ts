@@ -10,6 +10,11 @@ import { providerItem2ModelInfo } from '../provider/provider.dto';
 import { ProviderService } from '../provider/provider.service';
 import { StepService } from '../step/step.service';
 import { ToolCallService } from '../tool-call/tool-call.service';
+import { DriveService } from '../drive/drive.service';
+
+type GetActionResultParams = GetActionResultData['query'] & {
+  includeFiles?: boolean;
+};
 
 @Injectable()
 export class ActionService {
@@ -26,10 +31,11 @@ export class ActionService {
     private readonly providerService: ProviderService,
     private readonly toolCallService: ToolCallService,
     private readonly stepService: StepService,
+    private readonly driveService: DriveService,
   ) {}
 
-  async getActionResult(user: User, param: GetActionResultData['query']): Promise<ActionDetail> {
-    const { resultId, version } = param;
+  async getActionResult(user: User, param: GetActionResultParams): Promise<ActionDetail> {
+    const { resultId, version, includeFiles = false } = param;
 
     const result = await this.prisma.actionResult.findFirst({
       where: {
@@ -43,7 +49,19 @@ export class ActionService {
       throw new ActionResultNotFoundError();
     }
 
-    return this.enrichActionResultWithDetails(user, result);
+    const enrichedResult = await this.enrichActionResultWithDetails(user, result);
+
+    if (includeFiles) {
+      enrichedResult.files = await this.driveService.listDriveFiles(user, {
+        canvasId: result.targetId,
+        source: 'agent',
+        resultId,
+        resultVersion: version,
+        includeContent: true,
+      });
+    }
+
+    return enrichedResult;
   }
 
   private async enrichActionResultWithDetails(

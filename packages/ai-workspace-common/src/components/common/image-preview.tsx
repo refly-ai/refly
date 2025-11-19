@@ -107,7 +107,7 @@ export const ImagePreview = ({
               icon={
                 <LuZoomOut
                   className={ICON_CLASS}
-                  style={{ color: scale === 1 ? 'rgba(255,255,255,0.3)' : '' }}
+                  style={{ color: scale === 1 ? 'var(--refly-text-3)' : '' }}
                 />
               }
               onClick={onZoomOut}

@@ -86,6 +86,14 @@ export const toolsetInventory: Record<
     class: FirecrawlToolset,
     definition: FirecrawlToolsetDefinition,
   },
+  [SandboxToolsetDefinition.key]: {
+    class: SandboxToolset,
+    definition: SandboxToolsetDefinition,
+  },
+  [Apify13FToolsetDefinition.key]: {
+    class: Apify13FToolset,
+    definition: Apify13FToolsetDefinition,
+  },
   [CalculatorToolsetDefinition.key]: {
     class: CalculatorToolset,
     definition: CalculatorToolsetDefinition,

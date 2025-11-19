@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { CommonModule } from '../common/common.module';
 import { ToolController } from './tool.controller';
 import { ToolService } from './tool.service';
-import { InternalToolService } from './internal-tool.service';
 import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
@@ -36,7 +35,7 @@ import { ScaleboxModule } from './sandbox/scalebox.module';
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
   ],
   controllers: [ToolController],
-  providers: [ToolService, InternalToolService, SyncToolCreditUsageProcessor],
-  exports: [ToolService, InternalToolService],
+  providers: [ToolService, SyncToolCreditUsageProcessor],
+  exports: [ToolService],
 })
 export class ToolModule {}

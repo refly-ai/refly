@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { IContextItem } from '@refly/common-types';
-import { useMemo, memo, useState, useCallback, useEffect, useRef, forwardRef } from 'react';
+import { useMemo, memo, useCallback, useEffect, useRef, forwardRef } from 'react';
 import {
   ChatComposer,
   ChatComposerRef,
@@ -15,48 +14,26 @@ import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { useActionResultStoreShallow, useActiveNode } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Undo } from 'refly-icons';
-import { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { type MentionPosition } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/mention-extension';
+import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 
 interface EditChatInputProps {
   enabled: boolean;
   resultId: string;
+  nodeId: string;
   version?: number;
-  query: string;
-  setQuery: (query: string) => void;
-  contextItems: IContextItem[];
-  setContextItems: (contextItems: IContextItem[]) => void;
-  modelInfo: ModelInfo;
-  setModelInfo: (modelInfo: ModelInfo) => void;
-  selectedToolsets?: GenericToolset[];
-  setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
   setEditMode: (mode: boolean) => void;
   readonly?: boolean;
   mentionPosition?: MentionPosition;
 }
 
 const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((props, ref) => {
-  const {
-    enabled,
-    resultId,
-    version,
-    contextItems,
-    query,
-    modelInfo,
-    setEditMode,
-    setQuery,
-    setContextItems,
-    setModelInfo,
-    selectedToolsets,
-    setSelectedToolsets,
-    mentionPosition,
-  } = props;
+  const { enabled, resultId, nodeId, version, setEditMode, mentionPosition } = props;
 
   const { getEdges, getNodes, deleteElements, addEdges } = useReactFlow();
-  const [nodeId, setNodeId] = useState<string>('');
 
   const editAreaRef = useRef<HTMLDivElement | null>(null);
 
@@ -69,6 +46,17 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     resultMap: state.resultMap,
   }));
   const { addNode } = useAddNode();
+
+  const {
+    query,
+    modelInfo,
+    contextItems,
+    selectedToolsets,
+    upstreamResultIds,
+    setQuery,
+    setContextItems,
+    setModelInfo,
+  } = useAgentNodeManagement(nodeId);
 
   // Function to get original query from action result
   const getOriginalQuery = useCallback(async (): Promise<string> => {
@@ -99,16 +87,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
   const { invokeAction } = useInvokeAction({ source: 'edit-chat-input' });
 
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
-
-  // Real-time query update to canvas and parent component
-  useEffect(() => {
-    // Find current node to get nodeId
-    const nodes = getNodes();
-    const currentNode = nodes.find((node) => node.data?.entityId === resultId);
-    if (currentNode) {
-      setNodeId(currentNode.id);
-    }
-  }, [resultId, query, getNodes]);
 
   // Close edit mode on any outside interaction when editMode is enabled
   useEffect(() => {
@@ -210,7 +188,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
     // Process query with workflow variables
     const variables = workflowVariables;
-    const { processedQuery } = processQueryWithMentions(query, {
+    const { llmInputQuery } = processQueryWithMentions(query, {
       replaceVars: true,
       variables,
     });
@@ -219,11 +197,12 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
       {
         resultId,
         version: (version ?? 0) + 1,
-        query: processedQuery, // Use processed query for skill execution
+        query: llmInputQuery,
         contextItems,
         modelInfo,
         projectId: finalProjectId,
         selectedToolsets,
+        upstreamResultIds,
       },
       {
         entityId: canvasId,
@@ -254,6 +233,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     contextItems,
     version,
     canvasId,
+    upstreamResultIds,
     getNodes,
     getEdges,
     addEdges,
@@ -305,7 +285,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
   return (
     <div
-      className="min-h-10"
+      className="h-full overflow-hidden"
       onClick={(e) => {
         e.stopPropagation();
       }}
@@ -313,21 +293,14 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     >
       <ChatComposer
         ref={ref}
-        query={query}
-        setQuery={setQuery}
+        nodeId={nodeId}
         handleSendMessage={handleSendMessage}
-        contextItems={contextItems}
-        setContextItems={setContextItems}
         mentionPosition={mentionPosition}
         resultId={resultId}
-        modelInfo={modelInfo}
-        setModelInfo={setModelInfo}
-        selectedToolsets={selectedToolsets}
-        onSelectedToolsetsChange={setSelectedToolsets}
         enableRichInput={true}
         customActions={customActions}
-        nodeId={nodeId}
         showActions={false}
+        className="overflow-hidden"
       />
     </div>
   );

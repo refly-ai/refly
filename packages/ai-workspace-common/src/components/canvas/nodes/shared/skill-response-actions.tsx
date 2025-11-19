@@ -56,9 +56,13 @@ const SkillResponseActionsComponent = ({
   );
 
   // Determine which icon to show
-  let icon = <Play size={12} />;
+  let icon = <Play size={12} className="translate-y-[-1px]" />;
   if (isRunning) {
-    icon = isHovered ? <Stop size={12} /> : <Running1 size={12} />;
+    icon = isHovered ? (
+      <Stop size={12} className="translate-y-[-1px]" />
+    ) : (
+      <Running1 size={12} className="translate-y-[-1px]" />
+    );
   }
 
   // When running, just show a button; when not running, show dropdown
@@ -68,6 +72,7 @@ const SkillResponseActionsComponent = ({
         type="text"
         size="small"
         icon={icon}
+        disabled={isRunning}
         onClick={handleRunClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -98,14 +103,6 @@ const SkillResponseActionsComponent = ({
   );
 };
 
-export const SkillResponseActions = memo(SkillResponseActionsComponent, (prevProps, nextProps) => {
-  // Only re-render if these specific props change
-  return (
-    prevProps.isRunning === nextProps.isRunning &&
-    prevProps.onRerunSingle === nextProps.onRerunSingle &&
-    prevProps.onRerunFromHere === nextProps.onRerunFromHere &&
-    prevProps.onStop === nextProps.onStop
-  );
-});
+export const SkillResponseActions = memo(SkillResponseActionsComponent);
 
 SkillResponseActions.displayName = 'SkillResponseActions';

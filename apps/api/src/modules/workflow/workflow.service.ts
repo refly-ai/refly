@@ -244,8 +244,8 @@ export class WorkflowService {
       return;
     }
 
-    const { modelInfo, selectedToolsets, contextItems = [] } = metadata;
-    const context = convertContextItemsToInvokeParams(contextItems);
+    const { modelInfo, selectedToolsets, contextItems = [], upstreamResultIds } = metadata;
+    const context = convertContextItemsToInvokeParams(contextItems, upstreamResultIds ?? []);
 
     // Prepare the invoke skill request
     const invokeRequest: InvokeSkillRequest = {

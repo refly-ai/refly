@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { type ActionResult } from '@refly/openapi-schema';
+import { type ActionResult, type DriveFile } from '@refly/openapi-schema';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { type CacheInfo, createAutoEvictionStorage } from '../stores/utils/storage-manager';
 
@@ -21,6 +21,7 @@ interface ActionResultState {
   pollingStateMap: Record<string, PollingState & CacheInfo>;
   streamResults: Record<string, ActionResult>;
   traceIdMap: Record<string, string>; // key: resultId, value: traceId
+  currentFile: DriveFile | null;
 
   // Stream result actions
   addStreamResult: (resultId: string, result: ActionResult) => void;
@@ -52,6 +53,9 @@ interface ActionResultState {
   // Storage management
   updateLastUsedTimestamp: (resultId: string) => void;
   cleanupOldResults: () => void;
+
+  // Current file management
+  setCurrentFile: (file: DriveFile | null) => void;
 }
 
 export const defaultState = {
@@ -61,6 +65,7 @@ export const defaultState = {
   isBatchUpdateScheduled: false,
   streamResults: {},
   traceIdMap: {},
+  currentFile: null,
 };
 
 const POLLING_STATE_INITIAL: PollingState = {
@@ -425,6 +430,14 @@ export const useActionResultStore = create<ActionResultState>()(
             traceIdMap: newTraceIdMap,
           };
         });
+      },
+
+      // Current file management methods
+      setCurrentFile: (file: DriveFile | null) => {
+        set((state) => ({
+          ...state,
+          currentFile: file,
+        }));
       },
     }),
     {

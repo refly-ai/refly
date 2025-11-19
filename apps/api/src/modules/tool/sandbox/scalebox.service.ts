@@ -349,6 +349,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
 
       const processedFiles = await guard(() =>
         this.driveService.batchCreateDriveFiles(user, {
+          canvasId,
           files: files.map((name) => ({
             canvasId,
             name,

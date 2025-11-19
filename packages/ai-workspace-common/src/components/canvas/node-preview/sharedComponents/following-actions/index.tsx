@@ -22,10 +22,12 @@ interface FollowingActionsProps {
   nodeId: string;
   initSelectedToolsets?: GenericToolset[];
 }
+
 export const FollowingActions = ({
   initContextItems,
   initModelInfo,
   initSelectedToolsets,
+  nodeId,
 }: FollowingActionsProps) => {
   const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
@@ -115,7 +117,7 @@ export const FollowingActions = ({
 
     // Process query with workflow variables
     const variables = workflowVariables;
-    const { processedQuery } = processQueryWithMentions(followUpQuery, {
+    const { llmInputQuery } = processQueryWithMentions(followUpQuery, {
       replaceVars: true,
       variables,
     });
@@ -123,7 +125,7 @@ export const FollowingActions = ({
     // Invoke the action
     invokeAction(
       {
-        query: processedQuery,
+        query: llmInputQuery,
         resultId,
         selectedToolsets,
         modelInfo,
@@ -229,6 +231,7 @@ export const FollowingActions = ({
               >
                 <ChatComposer
                   ref={textareaRef}
+                  nodeId={nodeId}
                   query={followUpQuery}
                   setQuery={setFollowUpQuery}
                   handleSendMessage={handleFollowUpSend}

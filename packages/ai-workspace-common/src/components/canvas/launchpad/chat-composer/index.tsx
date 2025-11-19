@@ -1,6 +1,5 @@
 import { forwardRef, memo, useMemo, useCallback, useRef, useImperativeHandle } from 'react';
 import type { IContextItem } from '@refly/common-types';
-import type { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import {
   RichChatInput,
@@ -16,21 +15,11 @@ import { useActionResultStore, useChatStoreShallow } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
 import { message } from 'antd';
 import { type MentionPosition } from '../rich-chat-input/mention-extension';
+import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 
 export interface ChatComposerProps {
-  query: string;
-  setQuery: (text: string) => void;
   handleSendMessage: () => void;
   handleAbort?: () => void;
-
-  // Context items
-  contextItems: IContextItem[];
-  setContextItems: (
-    items: IContextItem[] | ((prevItems: IContextItem[]) => IContextItem[]),
-  ) => void;
-
-  modelInfo: ModelInfo | null;
-  setModelInfo: (model: ModelInfo | null) => void;
 
   // Optional UI behaviors
   placeholder?: string;
@@ -49,10 +38,6 @@ export interface ChatComposerProps {
   // Rich input
   enableRichInput?: boolean;
 
-  // Toolsets
-  selectedToolsets?: GenericToolset[];
-  onSelectedToolsetsChange?: (toolsets: GenericToolset[]) => void;
-
   // Execution state
   isExecuting?: boolean;
 
@@ -61,7 +46,7 @@ export interface ChatComposerProps {
   // Custom actions
   customActions?: CustomAction[];
 
-  nodeId?: string;
+  nodeId: string;
 
   // Show/hide ChatActions
   showActions?: boolean;
@@ -78,14 +63,8 @@ export interface ChatComposerRef {
  */
 const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((props, ref) => {
   const {
-    query,
-    setQuery,
     handleSendMessage,
     handleAbort,
-    contextItems,
-    setContextItems,
-    modelInfo,
-    setModelInfo,
     placeholder,
     inputClassName = 'px-1 py-0',
     maxRows = 6,
@@ -95,8 +74,6 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
     actionsClassName = '',
     enableRichInput = false,
     mentionPosition = 'bottom-start',
-    selectedToolsets,
-    onSelectedToolsetsChange,
     isExecuting = false,
     enableChatModeSelector = false,
     customActions,
@@ -107,6 +84,7 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
   const { handleUploadImage, handleUploadMultipleImages } = useUploadImage();
   const { canvasId, readonly } = useCanvasContext();
   const { t } = useTranslation();
+  const { query, setQuery, setContextItems } = useAgentNodeManagement(nodeId);
 
   // Ref for the input component
   const inputRef = useRef<RichChatInputRef>(null);
@@ -142,23 +120,16 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
 
   const handleImageUpload = useCallback(
     async (file: File) => {
-      const resource = await handleUploadImage(file, canvasId);
-      if (resource) {
+      const driveFile = await handleUploadImage(file, canvasId);
+      if (driveFile) {
         setTimeout(() => {
           // Use functional update to avoid state race conditions
           setContextItems((prevContextItems) => [
             ...(prevContextItems || []),
             {
-              type: 'resource',
-              entityId: resource.resourceId,
-              title: resource.title,
-              metadata: {
-                resourceType: resource.resourceType,
-                resourceMeta: resource.data,
-                storageKey: resource.storageKey,
-                rawFileKey: resource.rawFileKey,
-                downloadURL: resource.downloadURL,
-              },
+              type: 'file',
+              entityId: driveFile.fileId,
+              title: driveFile.name,
             },
           ]);
         }, 10);
@@ -169,20 +140,13 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
 
   const handleMultipleImagesUpload = useCallback(
     async (files: File[]) => {
-      const resources = await handleUploadMultipleImages(files, canvasId);
-      if (resources?.length) {
+      const driveFiles = await handleUploadMultipleImages(files, canvasId);
+      if (driveFiles?.length) {
         setTimeout(() => {
-          const newContextItems: IContextItem[] = resources.map((resource) => ({
-            type: 'resource' as const,
-            entityId: resource.resourceId,
-            title: resource.title,
-            metadata: {
-              resourceType: resource.resourceType,
-              resourceMeta: resource.data,
-              storageKey: resource.storageKey,
-              rawFileKey: resource.rawFileKey,
-              downloadURL: resource.downloadURL,
-            },
+          const newContextItems: IContextItem[] = driveFiles.map((driveFile) => ({
+            type: 'file',
+            entityId: driveFile.fileId,
+            title: driveFile.name,
           }));
 
           // Use functional update to avoid state race conditions
@@ -213,22 +177,14 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
         <RichChatInput
           readonly={readonly}
           ref={inputRef}
-          query={query}
-          setQuery={(value) => {
-            setQuery(value);
-          }}
           inputClassName={inputClassName}
           maxRows={maxRows}
           handleSendMessage={handleSendMessageInternal}
           onUploadImage={handleImageUpload as (file: File) => Promise<void>}
           onUploadMultipleImages={handleMultipleImagesUpload as (files: File[]) => Promise<void>}
           onFocus={onFocus}
-          contextItems={contextItems}
-          setContextItems={setContextItems}
           placeholder={defaultPlaceholder}
           mentionPosition={mentionPosition}
-          selectedToolsets={selectedToolsets}
-          setSelectedToolsets={onSelectedToolsetsChange}
           nodeId={nodeId}
         />
       ) : (
@@ -251,17 +207,12 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
 
       {showActions && (
         <ChatActions
+          nodeId={nodeId}
           className={actionsClassName}
-          query={query}
-          model={modelInfo}
-          setModel={setModelInfo}
           resultId={resultId}
           handleSendMessage={handleSendMessageInternal}
           handleAbort={handleAbort ?? (() => {})}
           onUploadImage={handleImageUpload as (file: File) => Promise<void>}
-          contextItems={contextItems}
-          selectedToolsets={selectedToolsets}
-          setSelectedToolsets={onSelectedToolsetsChange}
           isExecuting={isExecuting}
           enableChatModeSelector={enableChatModeSelector}
           customActions={customActions}

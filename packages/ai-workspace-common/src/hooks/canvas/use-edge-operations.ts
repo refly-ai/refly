@@ -3,30 +3,19 @@ import { Connection, Edge, EdgeChange, applyEdgeChanges, useStoreApi } from '@xy
 import { genUniqueId } from '@refly/utils/id';
 import { useEdgeStyles, getEdgeStyles } from '../../components/canvas/constants';
 import { CanvasNode, CanvasNodeData } from '@refly/canvas-common';
-import { IContextItem } from '@refly/common-types';
-import { CanvasNodeType } from '@refly/openapi-schema';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
 
-const areContextItemsEqual = (source: IContextItem[], target: IContextItem[]) => {
+const isStringArrayEqual = (source: string[], target: string[]) => {
   if (source.length !== target.length) {
     return false;
   }
-
-  for (let index = 0; index < source.length; index += 1) {
-    const sourceItem = source[index];
-    const targetItem = target[index];
-
-    if (
-      (sourceItem?.entityId ?? '') !== (targetItem?.entityId ?? '') ||
-      (sourceItem?.type ?? '') !== (targetItem?.type ?? '')
-    ) {
-      return false;
-    }
-  }
-
-  return true;
+  const sourceSet = new Set(source);
+  const targetSet = new Set(target);
+  return (
+    sourceSet.size === targetSet.size && Array.from(sourceSet).every((item) => targetSet.has(item))
+  );
 };
 
 const createNodeMap = (nodes: CanvasNode<any>[]) => {
@@ -41,13 +30,13 @@ const createNodeMap = (nodes: CanvasNode<any>[]) => {
   return map;
 };
 
-const buildContextItemsForTarget = (
+const buildUpstreamResultIdsForTarget = (
   targetNodeId: string,
   edges: Edge[],
   nodeMap: Map<string, CanvasNode<any>>,
 ) => {
-  const contextItems: IContextItem[] = [];
-  const seenEntityIds = new Set<string>();
+  const resultIds: string[] = [];
+  const seenResultIds = new Set<string>();
 
   for (const edge of edges ?? []) {
     if ((edge?.target ?? '') !== targetNodeId) {
@@ -64,21 +53,16 @@ const buildContextItemsForTarget = (
       continue;
     }
 
-    const entityId = sourceNode?.data?.entityId ?? '';
-    if (!entityId || seenEntityIds.has(entityId)) {
+    const resultId = sourceNode?.data?.entityId ?? '';
+    if (!resultId || seenResultIds.has(resultId)) {
       continue;
     }
 
-    seenEntityIds.add(entityId);
-    contextItems.push({
-      entityId,
-      title: sourceNode?.data?.title ?? '',
-      metadata: sourceNode?.data?.metadata,
-      type: sourceNode?.type as CanvasNodeType,
-    });
+    seenResultIds.add(resultId);
+    resultIds.push(resultId);
   }
 
-  return contextItems;
+  return resultIds;
 };
 
 const collectTargetEdgeIds = (edges: Edge[]) => {
@@ -136,7 +120,7 @@ const getTargetNodeIdsToSync = (prevEdges: Edge[], nextEdges: Edge[]) => {
   return changedTargetIds;
 };
 
-const syncContextItemsForTargets = (
+const syncAgentConnectionsForTargets = (
   targetNodeIds: Set<string>,
   nodes: CanvasNode<any>[],
   edges: Edge[],
@@ -158,16 +142,16 @@ const syncContextItemsForTargets = (
       continue;
     }
 
-    const desiredContextItems = buildContextItemsForTarget(targetNodeId, edges ?? [], nodeMap);
-    const currentContextItems = targetNode?.data?.metadata?.contextItems ?? [];
+    const desiredResultIds = buildUpstreamResultIdsForTarget(targetNodeId, edges ?? [], nodeMap);
+    const currentResultIds = targetNode?.data?.metadata?.upstreamResultIds ?? [];
 
-    if (areContextItemsEqual(currentContextItems, desiredContextItems)) {
+    if (isStringArrayEqual(currentResultIds, desiredResultIds)) {
       continue;
     }
 
     setNodeData(targetNodeId, {
       metadata: {
-        contextItems: desiredContextItems,
+        upstreamResultIds: desiredResultIds,
       },
     });
   }
@@ -195,7 +179,7 @@ export const useEdgeOperations = () => {
 
       updateEdgesWithSync(updatedEdges);
       const targetNodeIds = getTargetNodeIdsToSync(safePrevEdges, updatedEdges);
-      syncContextItemsForTargets(targetNodeIds, nodes ?? [], updatedEdges, setNodeData);
+      syncAgentConnectionsForTargets(targetNodeIds, nodes ?? [], updatedEdges, setNodeData);
     },
     [getState, setNodeData, updateEdgesWithSync],
   );
@@ -230,7 +214,7 @@ export const useEdgeOperations = () => {
       const updatedEdges = [...safeEdges, newEdge];
 
       updateEdgesWithSync(updatedEdges);
-      syncContextItemsForTargets(
+      syncAgentConnectionsForTargets(
         new Set<string>([params.target]),
         nodes ?? [],
         updatedEdges,

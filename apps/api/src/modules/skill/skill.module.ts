@@ -34,6 +34,7 @@ import { ToolCallModule } from '../tool-call/tool-call.module';
 import { FishAudioModule } from '../tool/media/audio/fish-audio.module';
 import { HeyGenModule } from '../tool/media/video/heygen.module';
 import { DriveModule } from '../drive/drive.module';
+import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { DriveModule } from '../drive/drive.module';
     MediaGeneratorModule,
     FishAudioModule,
     HeyGenModule,
+    CanvasSyncModule,
     ...(isDesktop()
       ? []
       : [
