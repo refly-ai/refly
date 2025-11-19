@@ -31,6 +31,11 @@ interface ProcessedUpsertDriveFileResult extends ExtendedUpsertDriveFileRequest 
   size: bigint;
 }
 
+type ListDriveFilesParams = ListDriveFilesData['query'] &
+  Prisma.DriveFileWhereInput & {
+    includeContent?: boolean;
+  };
+
 @Injectable()
 export class DriveService {
   private logger = new Logger(DriveService.name);
@@ -340,18 +345,13 @@ export class DriveService {
   /**
    * List drive files with pagination and filtering
    */
-  async listDriveFiles(user: User, params: ListDriveFilesData['query']): Promise<DriveFileModel[]> {
-    const { canvasId, source, scope, order, page, pageSize } = params;
-    if (!canvasId) {
-      throw new ParamsError('Canvas ID is required');
-    }
+  async listDriveFiles(user: User, params: ListDriveFilesParams): Promise<DriveFile[]> {
+    const { order, page, pageSize, includeContent } = params;
 
     const where: Prisma.DriveFileWhereInput = {
       uid: user.uid,
       deletedAt: null,
-      canvasId,
-      source,
-      scope,
+      ...pick(params, ['canvasId', 'source', 'scope', 'resultId', 'resultVersion', 'variableId']),
     };
 
     const driveFiles = await this.prisma.driveFile.findMany({
@@ -361,13 +361,20 @@ export class DriveService {
       take: pageSize,
     });
 
-    return driveFiles;
+    if (includeContent) {
+      return Promise.all(
+        driveFiles.map((file) => this.getDriveFileDetail(user, file.fileId, file)),
+      );
+    }
+    return driveFiles.map(driveFilePO2DTO);
   }
 
-  async getDriveFileDetail(user: User, fileId: string): Promise<DriveFile> {
-    const driveFile = await this.prisma.driveFile.findFirst({
-      where: { fileId, uid: user.uid, deletedAt: null },
-    });
+  async getDriveFileDetail(user: User, fileId: string, file?: DriveFileModel): Promise<DriveFile> {
+    const driveFile =
+      file ??
+      (await this.prisma.driveFile.findFirst({
+        where: { fileId, uid: user.uid, deletedAt: null },
+      }));
     if (!driveFile) {
       throw new DriveFileNotFoundError(`Drive file not found: ${fileId}`);
     }
@@ -377,9 +384,7 @@ export class DriveService {
     // If file type is text/plain, retrieve actual content from minio storage
     if (driveFile.type === 'text/plain') {
       try {
-        // Generate drive storage path
-        const driveStorageKey = this.generateStorageKey(user, driveFile);
-
+        const driveStorageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
         const readable = await this.internalOss.getObject(driveStorageKey);
         if (readable) {
           const buffer = await streamToBuffer(readable);
@@ -479,7 +484,7 @@ export class DriveService {
       canvasId: string;
       files: ExtendedUpsertDriveFileRequest[];
     },
-  ): Promise<DriveFileModel[]> {
+  ): Promise<DriveFile[]> {
     const { canvasId, files } = request;
 
     if (!files?.length) {
@@ -504,18 +509,16 @@ export class DriveService {
     });
 
     // Bulk create all drive files
-    return this.prisma.driveFile.createManyAndReturn({
+    const createdFiles = await this.prisma.driveFile.createManyAndReturn({
       data: driveFilesData,
     });
+    return createdFiles.map(driveFilePO2DTO);
   }
 
   /**
    * Create a new drive file
    */
-  async createDriveFile(
-    user: User,
-    request: ExtendedUpsertDriveFileRequest,
-  ): Promise<DriveFileModel> {
+  async createDriveFile(user: User, request: ExtendedUpsertDriveFileRequest): Promise<DriveFile> {
     const { canvasId } = request;
     if (!canvasId) {
       throw new ParamsError('Canvas ID is required for create operation');
@@ -549,18 +552,16 @@ export class DriveService {
       storageKey: processedReq.driveStorageKey,
     };
 
-    return this.prisma.driveFile.create({
+    const createdFile = await this.prisma.driveFile.create({
       data: createData,
     });
+    return driveFilePO2DTO(createdFile);
   }
 
   /**
    * Update an existing drive file
    */
-  async updateDriveFile(
-    user: User,
-    request: ExtendedUpsertDriveFileRequest,
-  ): Promise<DriveFileModel> {
+  async updateDriveFile(user: User, request: ExtendedUpsertDriveFileRequest): Promise<DriveFile> {
     const { canvasId, fileId } = request;
     if (!canvasId || !fileId) {
       throw new ParamsError('Canvas ID and file ID are required for update operation');
@@ -587,10 +588,11 @@ export class DriveService {
         : {}),
     };
 
-    return this.prisma.driveFile.update({
+    const updatedFile = await this.prisma.driveFile.update({
       where: { fileId, uid: user.uid },
       data: updateData,
     });
+    return driveFilePO2DTO(updatedFile);
   }
 
   /**

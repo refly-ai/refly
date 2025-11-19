@@ -162,6 +162,7 @@ export type ResponseNodeMeta = {
   selectedSkill?: Skill;
   selectedToolsets?: GenericToolset[];
   contextItems?: IContextItem[];
+  upstreamResultIds?: string[];
   tplConfig?: SkillTemplateConfig;
   runtimeConfig?: SkillRuntimeConfig;
   sizeMode?: 'compact' | 'adaptive';

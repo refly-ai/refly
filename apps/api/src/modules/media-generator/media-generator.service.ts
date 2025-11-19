@@ -17,7 +17,6 @@ import { fal } from '@fal-ai/client';
 import Replicate from 'replicate';
 import { ActionResult } from '../../generated/client';
 import { DriveService } from '../drive/drive.service';
-import { driveFilePO2DTO } from '../drive/drive.dto';
 
 @Injectable()
 export class MediaGeneratorService {
@@ -434,7 +433,7 @@ export class MediaGeneratorService {
       });
 
       return {
-        file: driveFilePO2DTO(file),
+        file,
         resultId,
         originalResult,
       };

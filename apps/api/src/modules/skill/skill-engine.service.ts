@@ -26,7 +26,6 @@ import { genImageID } from '@refly/utils';
 import { FishAudioService } from '../tool/media/audio/fish-audio.service';
 import { HeyGenService } from '../tool/media/video/heygen.service';
 import { DriveService } from '../drive/drive.service';
-import { driveFilePO2DTO } from '../drive/drive.dto';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
@@ -223,8 +222,7 @@ export class SkillEngineService implements OnModuleInit {
         return result;
       },
       writeFile: async (user, param) => {
-        const file = await this.driveService.createDriveFile(user, param);
-        return driveFilePO2DTO(file);
+        return await this.driveService.createDriveFile(user, param);
       },
       genImageID: async () => {
         return genImageID();

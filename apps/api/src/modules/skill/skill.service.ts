@@ -18,7 +18,6 @@ import {
   ListSkillInstancesData,
   ListSkillTriggersData,
   PinSkillInstanceRequest,
-  Resource,
   SkillContext,
   Skill,
   SkillTriggerCreateParam,
@@ -28,10 +27,8 @@ import {
   UpdateSkillInstanceRequest,
   UpdateSkillTriggerRequest,
   User,
-  Document,
   ActionResult,
   LLMModelConfig,
-  CodeArtifact,
   MediaGenerationModelConfig,
   CreditBilling,
   DriveFile,
@@ -48,7 +45,6 @@ import {
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
 import { InvokeSkillJobData } from './skill.dto';
-import { DocumentDetail, documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
 import { CreditService } from '../credit/credit.service';
 import {
   ModelUsageQuotaExceeded,
@@ -58,16 +54,12 @@ import {
   SkillNotFoundError,
 } from '@refly/errors';
 import { actionResultPO2DTO } from '../action/action.dto';
-import { CodeArtifactService } from '../code-artifact/code-artifact.service';
 import { ProviderService } from '../provider/provider.service';
 import { providerPO2DTO, providerItemPO2DTO } from '../provider/provider.dto';
-import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
 import { SkillInvokerService } from './skill-invoker.service';
 import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
-import { DocumentService } from '../knowledge/document.service';
-import { ResourceService } from '../knowledge/resource.service';
 import { DriveService } from '../drive/drive.service';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
@@ -91,10 +83,7 @@ export class SkillService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly resourceService: ResourceService,
-    private readonly documentService: DocumentService,
     private readonly credit: CreditService,
-    private readonly codeArtifactService: CodeArtifactService,
     private readonly providerService: ProviderService,
     private readonly toolService: ToolService,
     private readonly driveService: DriveService,
@@ -889,140 +878,6 @@ export class SkillService implements OnModuleInit {
    * These data can be used in skill invocation.
    */
   async populateSkillContext(user: User, context: SkillContext): Promise<SkillContext> {
-    // Populate resources
-    if (context.resources?.length > 0) {
-      const resourceIds = [
-        ...new Set(context.resources.map((item) => item.resourceId).filter((id) => id)),
-      ];
-      const limit = pLimit(5);
-      const resources = (
-        await Promise.all(
-          resourceIds.map((id) =>
-            limit(() =>
-              this.resourceService
-                .getResourceDetail(user, { resourceId: id, genPublicUrl: true })
-                .catch((error) => {
-                  this.logger.error(
-                    `Failed to get resource detail for resourceId ${id}: ${error?.message}`,
-                  );
-                  return null;
-                }),
-            ),
-          ),
-        )
-      )?.filter(Boolean);
-
-      const resourceMap = new Map<string, Resource>();
-      for (const r of resources) {
-        if (r) {
-          resourceMap.set(r.resourceId, resourcePO2DTO(r));
-        }
-      }
-
-      for (const item of context.resources) {
-        item.resource = resourceMap.get(item.resourceId);
-      }
-    }
-
-    // Populate documents
-    if (context.documents?.length > 0) {
-      const docIds = [...new Set(context.documents.map((item) => item.docId).filter((id) => id))];
-      const limit = pLimit(5);
-      const docs: DocumentDetail[] = (
-        await Promise.all(
-          docIds.map((id) =>
-            limit(() =>
-              this.documentService.getDocumentDetail(user, { docId: id }).catch((error) => {
-                this.logger.error(
-                  `Failed to get document detail for docId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
-            ),
-          ),
-        )
-      )?.filter(Boolean) as DocumentDetail[];
-
-      const docMap = new Map<string, Document>();
-      for (const d of docs) {
-        docMap.set(d.docId, documentPO2DTO(d));
-      }
-
-      for (const item of context.documents) {
-        item.document = docMap.get(item.docId);
-      }
-    }
-
-    // Populate code artifacts
-    if (context.codeArtifacts?.length > 0) {
-      const artifactIds = [
-        ...new Set(context.codeArtifacts.map((item) => item.artifactId).filter((id) => id)),
-      ];
-      const limit = pLimit(5);
-      const artifacts = (
-        await Promise.all(
-          artifactIds.map((id) =>
-            limit(() =>
-              this.codeArtifactService.getCodeArtifactDetail(user, id).catch((error) => {
-                this.logger.error(
-                  `Failed to get code artifact detail for artifactId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
-            ),
-          ),
-        )
-      )?.filter(Boolean);
-
-      const artifactMap = new Map<string, CodeArtifact>();
-      for (const a of artifacts) {
-        artifactMap.set(a.artifactId, codeArtifactPO2DTO(a));
-      }
-
-      for (const item of context.codeArtifacts) {
-        item.codeArtifact = artifactMap.get(item.artifactId);
-      }
-
-      // Process code artifacts and add them to contentList
-      if (!context.contentList) {
-        context.contentList = [];
-      }
-
-      const codeArtifactContentList = context.codeArtifacts
-        .filter((item) => item.codeArtifact?.content)
-        .map((item) => {
-          const codeArtifact = item.codeArtifact;
-          // For long code content, preserve beginning and end
-          const MAX_CONTENT_LENGTH = 10000;
-          const PRESERVED_SECTION_LENGTH = 2000;
-
-          let processedContent = codeArtifact.content;
-
-          if (codeArtifact.content.length > MAX_CONTENT_LENGTH) {
-            const startContent = codeArtifact.content.substring(0, PRESERVED_SECTION_LENGTH);
-            const endContent = codeArtifact.content.substring(
-              codeArtifact.content.length - PRESERVED_SECTION_LENGTH,
-              codeArtifact.content.length,
-            );
-            processedContent = `${startContent}\n\n... (content truncated) ...\n\n${endContent}`;
-          }
-
-          return {
-            title: codeArtifact.title ?? 'Code',
-            content: processedContent,
-            metadata: {
-              domain: 'codeArtifact',
-              entityId: item.artifactId,
-              title: codeArtifact.title ?? 'Code',
-              language: codeArtifact.language,
-              artifactType: codeArtifact.type,
-            },
-          };
-        });
-
-      context.contentList.push(...codeArtifactContentList);
-    }
-
     if (context.files?.length > 0) {
       const fileIds = [...new Set(context.files.map((item) => item.fileId).filter((id) => id))];
       const limit = pLimit(5);

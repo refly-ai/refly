@@ -6,6 +6,7 @@ import { SkillModule } from '../skill/skill.module';
 import { ToolCallModule } from '../tool-call/tool-call.module';
 import { ActionController } from './action.controller';
 import { ActionService } from './action.service';
+import { DriveModule } from '../drive/drive.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { ActionService } from './action.service';
     StepModule,
     ProviderModule,
     ToolCallModule,
+    DriveModule,
     forwardRef(() => SkillModule),
   ],
   controllers: [ActionController],

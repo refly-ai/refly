@@ -72,6 +72,7 @@ Users may provide context in ContextBlock format, which includes:
 - Handle tool errors gracefully by adjusting parameters or trying alternative tools
 - Leverage generated files (via fileId) in subsequent tool calls
 - Answer directly without tools only when you have all necessary information
+- Tools typically return files with ID and name only. If full content is required for further processing, fetch the file content using the builtin_read_file tool
 
 Now begin!
 `;
