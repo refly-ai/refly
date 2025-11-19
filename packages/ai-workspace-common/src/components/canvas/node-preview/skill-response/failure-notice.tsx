@@ -78,7 +78,6 @@ export const FailureNotice = ({ result, handleRetry }: FailureNoticeProps) => {
         errorType={errorNoticeType}
         onRetryClick={handleRetry}
         trackingContext="skill_invoke"
-        className="mt-2"
       />
     );
   }

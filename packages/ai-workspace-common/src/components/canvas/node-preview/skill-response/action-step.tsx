@@ -4,7 +4,6 @@ import { Steps, Button } from 'antd';
 import { ActionResult, ActionStatus, ActionStep, Source } from '@refly/openapi-schema';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { CheckCircleOutlined } from '@ant-design/icons';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@refly/utils/cn';
 import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { genUniqueId } from '@refly/utils/id';
@@ -17,7 +16,7 @@ import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canv
 import { IContextItem } from '@refly/common-types';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { getParsedReasoningContent } from '@refly/utils/content-parser';
-import { IconThinking } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { Thinking, ArrowDown, ArrowUp } from 'refly-icons';
 
 const parseStructuredData = (structuredData: Record<string, unknown>, field: string) => {
   return typeof structuredData[field] === 'string'
@@ -62,7 +61,7 @@ const LogBox = memo(
               <CheckCircleOutlined /> {t('canvas.skillResponse.stepCompleted')}
             </div>
             <div className="flex items-center">
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+              <ArrowDown size={16} />
             </div>
           </div>
         ) : (
@@ -89,7 +88,7 @@ const LogBox = memo(
             />
             <Button
               type="text"
-              icon={<ChevronUp className="w-4 h-4 text-gray-500" />}
+              icon={<ArrowUp size={16} />}
               onClick={(e) => {
                 e.stopPropagation();
                 onCollapse(true);
@@ -141,62 +140,43 @@ const ReasoningContent = memo(
     if (!reasoningContent) return null;
 
     return (
-      <div>
+      <div className="p-3 bg-refly-bg-control-z0 rounded-lg transition-all">
         <div
-          className={cn(
-            'p-3 bg-gray-50 rounded-lg border border-gray-200 transition-all dark:bg-gray-900 dark:border-gray-700',
-            {
-              'cursor-pointer hover:bg-gray-100 dark:hover-gray-800': collapsed,
-            },
-          )}
+          className="flex items-center justify-between cursor-pointer select-none"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCollapsed(!collapsed);
+          }}
         >
-          {collapsed ? (
-            <div
-              className="flex items-center justify-between text-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setCollapsed(false);
-              }}
-            >
-              <div className="flex items-center gap-1">
-                <IconThinking className="w-4 h-4" />
-                {t('canvas.skillResponse.reasoningContent')}
-              </div>
-              <ChevronDown className="w-4 h-4" />
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1 text-sm font-medium">
-                  <IconThinking className="w-4 h-4" />
-                  {t('canvas.skillResponse.reasoningContent')}
-                </div>
-                <Button
-                  type="text"
-                  icon={<ChevronUp className="w-4 h-4" />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCollapsed(true);
-                  }}
-                  size="small"
-                  className="flex items-center justify-center h-6 w-6 min-w-0 p-0"
-                />
-              </div>
-              <div className={`skill-response-reasoning-${resultId}-${step.name}`}>
-                <Markdown
-                  content={getParsedReasoningContent(reasoningContent)}
-                  sources={sources}
-                  resultId={resultId}
-                />
-                <SelectionContext
-                  containerClass={`skill-response-reasoning-${resultId}-${step.name}`}
-                  getContextItem={buildContextItem}
-                  getSourceNode={getSourceNode}
-                />
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm font-semibold leading-5">
+            <Thinking size={16} />
+            {t('canvas.skillResponse.reasoningContent')}
+          </div>
+          <Button
+            type="text"
+            size="small"
+            icon={collapsed ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+            onClick={(e) => {
+              e.stopPropagation();
+              setCollapsed(!collapsed);
+            }}
+          />
         </div>
+
+        {!collapsed && (
+          <div className={`mt-3 skill-response-reasoning-${resultId}-${step.name}`}>
+            <Markdown
+              content={getParsedReasoningContent(reasoningContent)}
+              sources={sources}
+              resultId={resultId}
+            />
+            <SelectionContext
+              containerClass={`skill-response-reasoning-${resultId}-${step.name}`}
+              getContextItem={buildContextItem}
+              getSourceNode={getSourceNode}
+            />
+          </div>
+        )}
       </div>
     );
   },
@@ -227,7 +207,7 @@ const ActualContent = memo(
     if (!content) return null;
 
     return (
-      <div className="my-3 text-gray-600 dark:text-gray-300 text-base">
+      <div className="my-3 text-base">
         <div className={`skill-response-content-${resultId}-${step.name}`}>
           <Markdown content={content} sources={sources} resultId={resultId} />
           {!readonly && (
@@ -364,7 +344,7 @@ export const ActionStepCard = memo(
     if (!step) return null;
 
     return (
-      <div className="flex flex-col gap-1 mx-1">
+      <div className="flex flex-col">
         {logs && logs.length > 0 && (
           <LogBox
             logs={logs ?? []}

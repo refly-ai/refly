@@ -9,43 +9,10 @@ import { WorkflowPlan } from '@refly/canvas-common';
 import { safeParseJSON } from '@refly/utils/parse';
 import { ProductCard } from './product-card';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
+import { Button } from 'antd';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
-// SVG icons for the component
-const ExecutingIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="w-[18px] h-[18px] text-gray-500 dark:text-gray-400 animate-spin"
-    style={{ animationDuration: '1.1s' }}
-  >
-    <circle cx="12" cy="12" r="10" className="opacity-30" />
-    <path d="M12 2a10 10 0 0 1 10 10" />
-  </svg>
-);
-
-const CompletedIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="w-[18px] h-[18px] text-green-500 dark:text-green-400"
-  >
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
+import { ArrowDown, ArrowUp, Checked } from 'refly-icons';
 
 const FailedIcon = () => (
   <svg
@@ -182,32 +149,26 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
   return (
     <>
-      <div className="my-3 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 text-black dark:text-gray-100 shadow-refly-m">
+      <div className="rounded-lg overflow-hidden bg-refly-bg-control-z0 text-refly-text-0">
         {/* Header bar */}
         <div
-          className="flex items-center px-4 py-2 gap-2 cursor-pointer select-none min-h-[44px]"
+          className="flex items-center p-3 gap-2 cursor-pointer select-none min-h-[44px]"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
           <ToolsetIcon
             toolsetKey={toolsetKey}
             config={{ size: 16, className: 'flex-shrink-0', builtinClassName: '!w-4 !h-4' }}
           />
-          <div className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
-            {`${toolName}`}
-          </div>
+          <div className="flex-1 text-sm font-semibold">{`${toolName}`}</div>
           {/* Status indicator */}
           {toolCallStatus === ToolCallStatus.EXECUTING && (
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-              <ExecutingIcon />
-            </span>
+            <Spin size="small" className="text-refly-text-2" />
           )}
           {toolCallStatus === ToolCallStatus.COMPLETED && (
-            <span className="ml-2 flex items-center">
-              <CompletedIcon />
+            <span className="flex items-center">
+              <Checked size={14} color="var(--refly-primary-default)" />
               {durationText && (
-                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                  {durationText}
-                </span>
+                <span className="ml-2 text-xs text-refly-text-2">{durationText}</span>
               )}
             </span>
           )}
@@ -216,29 +177,34 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
               <FailedIcon />
             </span>
           )}
+
+          <Button
+            type="text"
+            size="small"
+            icon={isCollapsed ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          />
         </div>
 
         {/* Content section */}
         {!isCollapsed && (
-          <div className="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2">
+          <div className="py-2">
             {/* Parameters section always shown */}
-            <div>
-              <div className="px-5 py-1 text-gray-600 dark:text-gray-400 text-[13px] border-b border-gray-300 dark:border-gray-600 font-normal">
-                {t('components.markdown.parameters', 'Parameters:')}
-              </div>
-              {/* Parameter content block with background, rounded corners, margin and padding */}
-              <div className="mx-4 my-2 rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
-                {parametersContent()}
-              </div>
+            <div className="px-5 py-1 text-refly-text-2 text-[13px]">
+              {t('components.markdown.parameters', 'Parameters:')}
+            </div>
+            {/* Parameter content block with background, rounded corners, margin and padding */}
+            <div className="mx-4 my-2 rounded-lg bg-refly-tertiary-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
+              {parametersContent()}
             </div>
             {/* Result section only if hasResult */}
             {hasResult && (
               <div>
-                <div className="px-5 py-1 text-gray-600 dark:text-gray-400 text-[13px] border-b border-gray-300 dark:border-gray-600 font-normal">
+                <div className="px-5 py-1 text-refly-text-2 text-[13px]">
                   {t('components.markdown.result', 'Result:')}
                 </div>
                 {/* Result content block with background, rounded corners, margin and padding */}
-                <div className="mx-4 my-2 rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
+                <div className="mx-4 my-2 rounded-lg bg-refly-tertiary-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
                   {resultContent}
                 </div>
               </div>
@@ -247,7 +213,9 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
         )}
       </div>
 
-      {shouldRenderFilePreview && <ProductCard file={filePreviewDriveFile} />}
+      {shouldRenderFilePreview && (
+        <ProductCard file={filePreviewDriveFile} source="card" classNames="mt-3" />
+      )}
     </>
   );
 };

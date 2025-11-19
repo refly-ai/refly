@@ -25,6 +25,7 @@ import { Close, Play } from 'refly-icons';
 import { useReactFlow } from '@xyflow/react';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -45,12 +46,16 @@ const SkillResponseNodePreviewComponent = ({
     isStreaming,
     updateActionResult,
     setResultActiveTab,
+    setCurrentFile,
+    currentFile,
   } = useActionResultStoreShallow((state) => ({
     result: state.resultMap[resultId],
     activeTab: state.resultActiveTabMap[resultId],
     isStreaming: !!state.streamResults[resultId],
     updateActionResult: state.updateActionResult,
     setResultActiveTab: state.setResultActiveTab,
+    setCurrentFile: state.setCurrentFile,
+    currentFile: state.currentFile,
   }));
   const { setNodes } = useReactFlow();
 
@@ -218,6 +223,16 @@ const SkillResponseNodePreviewComponent = ({
     [isExecuting, result?.status],
   );
 
+  useEffect(() => {
+    setCurrentFile(null);
+  }, [resultId]);
+
+  useEffect(() => {
+    if (result?.status === 'waiting') {
+      setCurrentFile(null);
+    }
+  }, [result?.status]);
+
   const TitleActions = useMemo(() => {
     return (
       <>
@@ -252,48 +267,56 @@ const SkillResponseNodePreviewComponent = ({
         actions={TitleActions}
       />
 
-      <div className="flex-1 flex flex-col min-h-0 px-4">
-        <div className="py-3">
-          <Segmented
-            options={[
-              { label: t('agent.configure'), value: 'configure' },
-              { label: t('agent.lastRun'), value: 'lastRun' },
-            ]}
-            value={activeTab}
-            onChange={(value) => setResultActiveTab(resultId, value as ResultActiveTab)}
-            block
-            size="small"
-            shape="round"
-          />
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {activeTab === 'configure' && (
-            <ConfigureTab
-              query={query}
-              version={version}
-              resultId={resultId}
-              nodeId={node.id}
-              canvasId={canvasId}
+      {currentFile ? (
+        <ProductCard
+          file={currentFile}
+          classNames="w-full flex-1 overflow-y-auto"
+          source="preview"
+        />
+      ) : (
+        <div className="flex-1 flex flex-col min-h-0 px-4">
+          <div className="py-3">
+            <Segmented
+              options={[
+                { label: t('agent.configure'), value: 'configure' },
+                { label: t('agent.lastRun'), value: 'lastRun' },
+              ]}
+              value={activeTab}
+              onChange={(value) => setResultActiveTab(resultId, value as ResultActiveTab)}
+              block
+              size="small"
+              shape="round"
             />
-          )}
+          </div>
 
-          {activeTab === 'lastRun' && (
-            <LastRunTab
-              loading={loading}
-              isStreaming={isStreaming}
-              result={result}
-              outputStep={outputStep}
-              statusText={statusText}
-              query={query}
-              title={title}
-              nodeId={node.id}
-              selectedToolsets={selectedToolsets}
-              handleRetry={handleRetry}
-            />
-          )}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {activeTab === 'configure' && (
+              <ConfigureTab
+                query={query}
+                version={version}
+                resultId={resultId}
+                nodeId={node.id}
+                canvasId={canvasId}
+              />
+            )}
+
+            {activeTab === 'lastRun' && (
+              <LastRunTab
+                loading={loading}
+                isStreaming={isStreaming}
+                result={result}
+                outputStep={outputStep}
+                statusText={statusText}
+                query={query}
+                title={title}
+                nodeId={node.id}
+                selectedToolsets={selectedToolsets}
+                handleRetry={handleRetry}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

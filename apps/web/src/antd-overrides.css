@@ -130,3 +130,7 @@
   font-weight: 600;
   border-radius: 16px;
 }
+
+.ant-image-preview-operations {
+  background-color: var(--refly-bg-content-z2) !important;
+}

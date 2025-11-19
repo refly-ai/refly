@@ -679,7 +679,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           <div className="flex-1" onKeyDownCapture={handleKeyDown} onPaste={handlePaste}>
             {editor ? (
               <EditorContent
-                className="h-[270px]"
+                className="h-full"
                 editor={editor}
                 data-cy="rich-chat-input"
                 data-placeholder={placeholder || t('canvas.richChatInput.defaultPlaceholder')}

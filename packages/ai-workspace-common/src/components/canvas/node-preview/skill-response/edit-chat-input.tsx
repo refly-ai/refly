@@ -284,7 +284,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
   return (
     <div
-      className="min-h-10"
+      className="h-full overflow-hidden"
       onClick={(e) => {
         e.stopPropagation();
       }}
@@ -299,6 +299,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
         enableRichInput={true}
         customActions={customActions}
         showActions={false}
+        className="overflow-hidden"
       />
     </div>
   );

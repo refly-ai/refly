@@ -66,15 +66,12 @@ const LastRunTabComponent = ({
             </div>
           )}
         {outputStep && (
-          <>
-            <Divider dashed className="my-2" />
-            <ActionStepCard
-              result={result}
-              step={outputStep}
-              status={result?.status}
-              query={displayQuery}
-            />
-          </>
+          <ActionStepCard
+            result={result}
+            step={outputStep}
+            status={result?.status}
+            query={displayQuery}
+          />
         )}
         {result?.status === 'failed' && !loading && (
           <FailureNotice result={result} handleRetry={handleRetry} />

@@ -148,7 +148,7 @@ const ConfigureTabComponent = ({
         </div>
 
         <div
-          className="rounded-lg pt-2 pb-3 px-3 relative bg-refly-bg-control-z0 flex-1 overflow-y-auto"
+          className="rounded-lg pt-2 pb-3 px-3 relative bg-refly-bg-control-z0 flex-1 min-h-0 overflow-hidden flex flex-col"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnter}
@@ -165,27 +165,31 @@ const ConfigureTabComponent = ({
             </div>
           )}
 
-          <EditChatInput
-            ref={chatComposerRef}
-            enabled
-            resultId={resultId}
-            nodeId={nodeId}
-            version={version}
-            setEditMode={() => {}}
-            mentionPosition="bottom-start"
-          />
+          <div className="flex-none h-[50%] min-h-[100px] max-h-[270px] overflow-hidden">
+            <EditChatInput
+              ref={chatComposerRef}
+              enabled
+              resultId={resultId}
+              nodeId={nodeId}
+              version={version}
+              setEditMode={() => {}}
+              mentionPosition="bottom-start"
+            />
+          </div>
 
-          <Divider className="my-4" />
+          <Divider className="my-4 flex-none" />
 
-          <ConfigInfoDisplay
-            prompt={query ?? ''}
-            selectedToolsets={selectedToolsets}
-            contextItems={contextItems}
-            setContextItems={setContextItems}
-            setSelectedToolsets={setSelectedToolsets}
-            upstreamResultIds={upstreamResultIds}
-            setUpstreamResultIds={setUpstreamResultIds}
-          />
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ConfigInfoDisplay
+              prompt={query ?? ''}
+              selectedToolsets={selectedToolsets}
+              contextItems={contextItems}
+              setContextItems={setContextItems}
+              setSelectedToolsets={setSelectedToolsets}
+              upstreamResultIds={upstreamResultIds}
+              setUpstreamResultIds={setUpstreamResultIds}
+            />
+          </div>
         </div>
       </div>
     </div>

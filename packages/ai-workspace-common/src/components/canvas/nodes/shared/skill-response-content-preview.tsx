@@ -113,7 +113,7 @@ export const SkillResponseContentPreview = memo(
                 config={{
                   size: 12,
                   className: 'flex-shrink-0',
-                  builtinClassName: '!rounded-[2.5px]',
+                  builtinClassName: '!rounded-[2.5px] !w-3 !h-3',
                 }}
               />
             ),
@@ -142,7 +142,7 @@ export const SkillResponseContentPreview = memo(
             labeltext: agent.title || t('canvas.richChatInput.untitledAgent'),
             icon: <AiChat size={12} className="flex-shrink-0" />,
           }))}
-          labelClassnames="bg-refly-node-contrl-1"
+          labelClassnames="bg-refly-node-contrl-2"
           showMore={false}
         />
       </div>

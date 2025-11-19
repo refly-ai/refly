@@ -133,101 +133,93 @@ export const ConfigInfoDisplay = memo(
     );
 
     return (
-      <div className="flex flex-col gap-4 mt-4">
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.inputsDescription')}>
-              {t('agent.config.inputs')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {variables.map((variable: MentionCommonData, index) => (
+      <div className="flex flex-col gap-4 pt-4 h-full overflow-y-auto">
+        <div>
+          <SectionTitle tooltip={t('agent.config.inputsDescription')}>
+            {t('agent.config.inputs')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {variables.map((variable: MentionCommonData, index) => (
+              <LabelItem
+                key={`${variable.id}-${index}`}
+                icon={<X size={12} className="flex-shrink-0" />}
+                labeltext={variable.name}
+                classnames="bg-refly-node-contrl-2"
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <SectionTitle tooltip={t('agent.config.toolsDescription')}>
+            {t('agent.config.tools')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {toolsets.map((toolset, index) => {
+              // Get localized label for builtin toolsets, otherwise use name
+              const labelName = toolset?.builtin
+                ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
+                  toolset.name)
+                : toolset.name;
+
+              return (
                 <LabelItem
-                  key={`${variable.id}-${index}`}
-                  icon={<X size={12} className="flex-shrink-0" />}
-                  labeltext={variable.name}
+                  key={`${toolset.id || toolset.name}-${index}`}
+                  icon={
+                    <ToolsetIcon
+                      toolset={toolset}
+                      config={{
+                        size: 12,
+                        className: 'flex-shrink-0',
+                        builtinClassName: '!rounded-[2.5px] !w-3 !h-3',
+                      }}
+                    />
+                  }
+                  labeltext={labelName}
+                  classnames="bg-refly-node-contrl-1"
+                  onClose={() => handleRemoveToolset(toolset)}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <SectionTitle tooltip={t('agent.config.filesDescription')}>
+            {t('agent.config.files')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {files.map((file: any, index) => (
+              <LabelItem
+                key={`${file.entityId}-${index}`}
+                icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
+                labeltext={file.title}
+                classnames="bg-gray-100 dark:bg-gray-700"
+                onClose={() => handleRemoveContextItem(file)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <SectionTitle tooltip={t('agent.config.agentsDescription')}>
+            {t('agent.config.agents')}
+          </SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {agents.map((node, index) => {
+              const title = node?.data?.title;
+              return (
+                <LabelItem
+                  key={`${node.id}-${index}`}
+                  icon={<AiChat size={14} className="flex-shrink-0" />}
+                  labeltext={title || t('canvas.richChatInput.untitledAgent')}
                   classnames="bg-refly-node-contrl-2"
+                  onClose={() => handleRemoveUpstreamResult(node.data?.entityId)}
                 />
-              ))}
-            </div>
+              );
+            })}
           </div>
-        }
-
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.toolsDescription')}>
-              {t('agent.config.tools')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {toolsets.map((toolset, index) => {
-                // Get localized label for builtin toolsets, otherwise use name
-                const labelName = toolset?.builtin
-                  ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
-                    toolset.name)
-                  : toolset.name;
-
-                return (
-                  <LabelItem
-                    key={`${toolset.id || toolset.name}-${index}`}
-                    icon={
-                      <ToolsetIcon
-                        toolset={toolset}
-                        config={{
-                          size: 12,
-                          className: 'flex-shrink-0',
-                          builtinClassName: '!rounded-[2.5px]',
-                        }}
-                      />
-                    }
-                    labeltext={labelName}
-                    classnames="bg-refly-node-contrl-1"
-                    onClose={() => handleRemoveToolset(toolset)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        }
-
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.filesDescription')}>
-              {t('agent.config.files')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {files.map((file: any, index) => (
-                <LabelItem
-                  key={`${file.entityId}-${index}`}
-                  icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
-                  labeltext={file.title}
-                  classnames="bg-gray-100 dark:bg-gray-700"
-                  onClose={() => handleRemoveContextItem(file)}
-                />
-              ))}
-            </div>
-          </div>
-        }
-
-        {
-          <div>
-            <SectionTitle tooltip={t('agent.config.agentsDescription')}>
-              {t('agent.config.agents')}
-            </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              {agents.map((node, index) => {
-                const title = node?.data?.title;
-                return (
-                  <LabelItem
-                    key={`${node.id}-${index}`}
-                    icon={<AiChat size={14} className="flex-shrink-0" />}
-                    labeltext={title || t('canvas.richChatInput.untitledAgent')}
-                    classnames="bg-refly-node-contrl-2"
-                    onClose={() => handleRemoveUpstreamResult(node.data?.entityId)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        }
+        </div>
       </div>
     );
   },

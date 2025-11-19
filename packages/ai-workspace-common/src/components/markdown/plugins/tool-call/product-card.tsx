@@ -4,6 +4,9 @@ import { View, Share, Download } from 'refly-icons';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
 import { DriveFile, ResourceType } from '@refly/openapi-schema';
+import cn from 'classnames';
+import { useActionResultStoreShallow } from '@refly/stores';
+import { TbArrowBackUp } from 'react-icons/tb';
 
 const { Text } = Typography;
 
@@ -33,12 +36,23 @@ const ActionButton = memo<ActionButtonProps>(({ label, icon, onClick }) => (
 
 ActionButton.displayName = 'ActionButton';
 
-export const ProductCard = memo(({ file }: { file: DriveFile }) => {
+interface ProductCardProps {
+  file: DriveFile;
+  classNames?: string;
+  source?: 'preview' | 'card';
+}
+
+export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductCardProps) => {
+  const { setCurrentFile } = useActionResultStoreShallow((state) => ({
+    setCurrentFile: state.setCurrentFile,
+  }));
+
   const title = file?.name ?? 'Untitled file';
 
   const handlePreview = useCallback(() => {
     console.info('Preview requested for drive file', file?.fileId ?? '');
-  }, [file?.fileId]);
+    setCurrentFile(file);
+  }, [file, setCurrentFile]);
 
   const handleDownload = useCallback(() => {
     console.info('Download requested for drive file', file?.fileId ?? '');
@@ -50,18 +64,45 @@ export const ProductCard = memo(({ file }: { file: DriveFile }) => {
 
   const actions = useMemo<ActionButtonProps[]>(
     () => [
-      { label: 'Preview', icon: <View size={16} />, onClick: handlePreview },
+      source === 'card' && { label: 'Preview', icon: <View size={16} />, onClick: handlePreview },
       { label: 'Download', icon: <Download size={16} />, onClick: handleDownload },
       { label: 'Share', icon: <Share size={16} />, onClick: handleShare },
     ],
     [handleDownload, handlePreview, handleShare],
   );
 
+  const isMediaFile = useMemo(() => {
+    return (
+      getResourceType(file.type) === 'image' ||
+      getResourceType(file.type) === 'video' ||
+      getResourceType(file.type) === 'audio'
+    );
+  }, [file.type]);
+
+  const handleClosePreview = useCallback(() => {
+    setCurrentFile(null);
+  }, [setCurrentFile]);
+
   return (
-    <div className="overflow-hidden rounded-lg border border-solid border-refly-Card-Border">
-      <div className="flex flex-col justify-between px-3 py-2">
+    <div
+      className={cn(
+        classNames,
+        source === 'card'
+          ? 'rounded-lg border-[1px] border-solid border-refly-Card-Border overflow-hidden'
+          : '',
+      )}
+    >
+      <div className="flex flex-col justify-between px-3 py-4">
         <div className="flex justify-between">
           <div className="flex items-center gap-2">
+            {source === 'preview' && (
+              <Button
+                type="text"
+                size="small"
+                icon={<TbArrowBackUp className="text-refly-text-0 w-5 h-5" />}
+                onClick={handleClosePreview}
+              />
+            )}
             <NodeIcon
               type="resource"
               resourceType={getResourceType(file.type)}
@@ -84,7 +125,11 @@ export const ProductCard = memo(({ file }: { file: DriveFile }) => {
           </div>
         </div>
       </div>
-      <div className="relative max-h-[240px] w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
+      <div
+        className={cn('relative w-full px-3 pb-3 overflow-y-auto', {
+          'max-h-[240px]': !isMediaFile && source === 'card',
+        })}
+      >
         <FilePreview file={file} markdownClassName="text-sm" />
       </div>
     </div>
