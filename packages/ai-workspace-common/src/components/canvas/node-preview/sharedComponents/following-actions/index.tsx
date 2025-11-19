@@ -117,7 +117,7 @@ export const FollowingActions = ({
 
     // Process query with workflow variables
     const variables = workflowVariables;
-    const { processedQuery } = processQueryWithMentions(followUpQuery, {
+    const { llmInputQuery } = processQueryWithMentions(followUpQuery, {
       replaceVars: true,
       variables,
     });
@@ -125,7 +125,7 @@ export const FollowingActions = ({
     // Invoke the action
     invokeAction(
       {
-        query: processedQuery,
+        query: llmInputQuery,
         resultId,
         selectedToolsets,
         modelInfo,

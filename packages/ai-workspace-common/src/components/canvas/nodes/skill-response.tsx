@@ -446,6 +446,7 @@ export const SkillResponseNode = memo(
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
           modelInfo: data?.metadata?.modelInfo,
+          upstreamResultIds: data?.metadata?.upstreamResultIds,
         },
         {
           entityType: 'canvas',
@@ -453,7 +454,7 @@ export const SkillResponseNode = memo(
         },
       );
     }, [
-      data,
+      data?.metadata,
       entityId,
       canvasId,
       id,

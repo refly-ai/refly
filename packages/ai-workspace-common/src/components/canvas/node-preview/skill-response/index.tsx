@@ -129,6 +129,7 @@ const SkillResponseNodePreviewComponent = ({
   const contextItems =
     data?.metadata?.contextItems ?? convertResultContextToItems(result?.context, result?.history);
   const selectedToolsets = data?.metadata?.selectedToolsets ?? result?.toolsets;
+  const upstreamResultIds = data?.metadata?.upstreamResultIds;
 
   const { steps = [] } = result ?? {};
 
@@ -158,7 +159,7 @@ const SkillResponseNodePreviewComponent = ({
   const handleRetry = useCallback(() => {
     // Reset failed state before retrying
     resetFailedState(resultId);
-    const { processedQuery } = processQueryWithMentions(query, {
+    const { llmInputQuery } = processQueryWithMentions(query, {
       replaceVars: true,
       variables,
     });
@@ -175,10 +176,11 @@ const SkillResponseNodePreviewComponent = ({
     invokeAction(
       {
         resultId,
-        query: processedQuery,
+        query: llmInputQuery,
         modelInfo,
         contextItems,
         selectedToolsets,
+        upstreamResultIds,
         version: nextVersion,
       },
       {
@@ -192,6 +194,7 @@ const SkillResponseNodePreviewComponent = ({
     modelInfo,
     contextItems,
     selectedToolsets,
+    upstreamResultIds,
     canvasId,
     invokeAction,
     resetFailedState,

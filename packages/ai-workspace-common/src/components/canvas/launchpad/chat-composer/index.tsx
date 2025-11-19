@@ -140,20 +140,13 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
 
   const handleMultipleImagesUpload = useCallback(
     async (files: File[]) => {
-      const resources = await handleUploadMultipleImages(files, canvasId);
-      if (resources?.length) {
+      const driveFiles = await handleUploadMultipleImages(files, canvasId);
+      if (driveFiles?.length) {
         setTimeout(() => {
-          const newContextItems: IContextItem[] = resources.map((resource) => ({
+          const newContextItems: IContextItem[] = driveFiles.map((driveFile) => ({
             type: 'file',
-            entityId: resource.resourceId,
-            title: resource.title,
-            metadata: {
-              resourceType: resource.resourceType,
-              resourceMeta: resource.data,
-              storageKey: resource.storageKey,
-              rawFileKey: resource.rawFileKey,
-              downloadURL: resource.downloadURL,
-            },
+            entityId: driveFile.fileId,
+            title: driveFile.name,
           }));
 
           // Use functional update to avoid state race conditions

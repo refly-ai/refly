@@ -52,6 +52,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     modelInfo,
     contextItems,
     selectedToolsets,
+    upstreamResultIds,
     setQuery,
     setContextItems,
     setModelInfo,
@@ -189,7 +190,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
     // Process query with workflow variables
     const variables = workflowVariables;
-    const { processedQuery } = processQueryWithMentions(query, {
+    const { llmInputQuery } = processQueryWithMentions(query, {
       replaceVars: true,
       variables,
     });
@@ -198,11 +199,12 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
       {
         resultId,
         version: (version ?? 0) + 1,
-        query: processedQuery, // Use processed query for skill execution
+        query: llmInputQuery,
         contextItems,
         modelInfo,
         projectId: finalProjectId,
         selectedToolsets,
+        upstreamResultIds,
       },
       {
         entityId: canvasId,
@@ -233,6 +235,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     contextItems,
     version,
     canvasId,
+    upstreamResultIds,
     getNodes,
     getEdges,
     addEdges,

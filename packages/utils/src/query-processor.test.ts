@@ -112,13 +112,13 @@ describe('processQueryWithMentions', () => {
     });
 
     it('should handle resource type mentions', () => {
-      const query = '@{type=resource,id=resource-1,name=resourceVar}';
+      const query = '@{type=file,id=resource-1,name=resourceVar}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariable],
       });
       expect(result.processedQuery).toBe('@resourceVar');
-      expect(result.updatedQuery).toBe('@{type=resource,id=resource-1,name=resourceVar}');
+      expect(result.updatedQuery).toBe('@{type=file,id=resource-1,name=resourceVar}');
       expect(result.resourceVars).toEqual([mockResourceVariable]);
     });
 
@@ -157,37 +157,37 @@ describe('processQueryWithMentions', () => {
 
     it('should handle multiple mentions', () => {
       const query =
-        '@{type=var,id=var-1,name=testVar} and @{type=resource,id=resource-1,name=resourceVar} and @{type=step,id=step-1,name=dataStep} @{type=tool,id=tool-1,name=calcTool}';
+        '@{type=var,id=var-1,name=testVar} and @{type=file,id=resource-1,name=resourceVar} and @{type=step,id=step-1,name=dataStep} @{type=tool,id=tool-1,name=calcTool}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockWorkflowVariable, mockResourceVariable],
       });
       expect(result.processedQuery).toBe('hello world and @resourceVar and @dataStep @calcTool');
       expect(result.updatedQuery).toBe(
-        '@{type=var,id=var-1,name=testVar} and @{type=resource,id=resource-1,name=resourceVar} and @{type=step,id=step-1,name=dataStep} @{type=tool,id=tool-1,name=calcTool}',
+        '@{type=var,id=var-1,name=testVar} and @{type=file,id=resource-1,name=resourceVar} and @{type=step,id=step-1,name=dataStep} @{type=tool,id=tool-1,name=calcTool}',
       );
       expect(result.resourceVars).toEqual([mockResourceVariable]);
     });
 
     it('should replace resource mention with variable value name when entityId matches', () => {
-      const query = '@{type=resource,id=entity-123,name=oldResourceName}';
+      const query = '@{type=file,id=entity-123,name=oldResourceName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariableWithEntityId],
       });
       expect(result.processedQuery).toBe('@newResourceName');
-      expect(result.updatedQuery).toBe('@{type=resource,id=entity-123,name=newResourceName}');
+      expect(result.updatedQuery).toBe('@{type=file,id=entity-123,name=newResourceName}');
       expect(result.resourceVars).toEqual([mockResourceVariableWithEntityId]);
     });
 
     it('should use mention name when no matching resource variable found', () => {
-      const query = '@{type=resource,id=non-matching-entity,name=mentionName}';
+      const query = '@{type=file,id=non-matching-entity,name=mentionName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariableWithEntityId],
       });
       expect(result.processedQuery).toBe('@mentionName');
-      expect(result.updatedQuery).toBe('@{type=resource,id=non-matching-entity,name=mentionName}');
+      expect(result.updatedQuery).toBe('@{type=file,id=non-matching-entity,name=mentionName}');
       expect(result.resourceVars).toEqual([]);
     });
 
@@ -209,93 +209,92 @@ describe('processQueryWithMentions', () => {
         ],
       };
 
-      const query = '@{type=resource,id=entity-123,name=mentionName}';
+      const query = '@{type=file,id=entity-123,name=mentionName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [variableWithoutMatchingEntity],
       });
       expect(result.processedQuery).toBe('@mentionName');
-      expect(result.updatedQuery).toBe('@{type=resource,id=entity-123,name=mentionName}');
+      expect(result.updatedQuery).toBe('@{type=file,id=entity-123,name=mentionName}');
       expect(result.resourceVars).toEqual([]);
     });
 
     it('should use resource title from resources array when provided', () => {
-      const query = '@{type=resource,id=resource-123,name=oldName}';
-      const resources = [
+      const query = '@{type=file,id=resource-123,name=oldName}';
+      const files = [
         {
-          resourceId: 'resource-123',
-          title: 'Updated Resource Title',
-          resourceType: 'document' as const,
+          fileId: 'df-123',
+          canvasId: 'canvas-123',
+          name: 'Updated Resource Title',
+          type: 'text/plain',
         },
       ];
       const result = processQueryWithMentions(query, {
-        resources,
+        files,
       });
       expect(result.processedQuery).toBe('@Updated Resource Title');
-      expect(result.updatedQuery).toBe(
-        '@{type=resource,id=resource-123,name=Updated Resource Title}',
-      );
+      expect(result.updatedQuery).toBe('@{type=file,id=df-123,name=Updated Resource Title}');
       expect(result.resourceVars).toEqual([]);
     });
 
     it('should fallback to mention name when resource not found in resources array', () => {
-      const query = '@{type=resource,id=non-existent-resource,name=fallbackName}';
-      const resources = [
+      const query = '@{type=file,id=non-existent-resource,name=fallbackName}';
+      const files = [
         {
-          resourceId: 'resource-123',
-          title: 'Some Resource',
-          resourceType: 'document' as const,
+          fileId: 'resource-123',
+          canvasId: 'canvas-123',
+          name: 'Some Resource',
+          type: 'text/plain',
         },
       ];
       const result = processQueryWithMentions(query, {
-        resources,
+        files,
       });
       expect(result.processedQuery).toBe('@fallbackName');
-      expect(result.updatedQuery).toBe(
-        '@{type=resource,id=non-existent-resource,name=fallbackName}',
-      );
+      expect(result.updatedQuery).toBe('@{type=file,id=non-existent-resource,name=fallbackName}');
       expect(result.resourceVars).toEqual([]);
     });
 
     it('should prioritize resources array over variables when both are provided', () => {
-      const query = '@{type=resource,id=resource-123,name=mentionName}';
-      const resources = [
+      const query = '@{type=file,id=resource-123,name=mentionName}';
+      const files = [
         {
-          resourceId: 'resource-123',
-          title: 'Resource From Array',
-          resourceType: 'document' as const,
+          fileId: 'df-123',
+          canvasId: 'canvas-123',
+          name: 'Resource From Array',
+          type: 'text/plain',
         },
       ];
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariableWithEntityId],
-        resources,
+        files,
       });
       expect(result.processedQuery).toBe('@Resource From Array');
-      expect(result.updatedQuery).toBe('@{type=resource,id=resource-123,name=Resource From Array}');
+      expect(result.updatedQuery).toBe('@{type=file,id=resource-123,name=Resource From Array}');
       expect(result.resourceVars).toEqual([]);
     });
   });
 
   describe('updatedQuery with resource name updates', () => {
     it('should update resource mention name in updatedQuery when matching variable found', () => {
-      const query = '@{type=resource,id=entity-123,name=oldResourceName}';
+      const query = '@{type=file,id=entity-123,name=oldResourceName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariableWithEntityId],
       });
-      expect(result.updatedQuery).toBe('@{type=resource,id=entity-123,name=newResourceName}');
+      expect(result.updatedQuery).toBe('@{type=file,id=entity-123,name=newResourceName}');
       expect(result.processedQuery).toBe('@newResourceName');
       expect(result.resourceVars).toEqual([mockResourceVariableWithEntityId]);
     });
 
     it('should keep original mention name in updatedQuery when no matching variable found', () => {
-      const query = '@{type=resource,id=non-matching-entity,name=originalName}';
+      const query = '@{type=file,id=non-matching-entity,name=originalName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariableWithEntityId],
       });
-      expect(result.updatedQuery).toBe('@{type=resource,id=non-matching-entity,name=originalName}');
+      expect(result.updatedQuery).toBe('@{type=file,id=non-matching-entity,name=originalName}');
       expect(result.processedQuery).toBe('@originalName');
     });
 
@@ -318,13 +317,13 @@ describe('processQueryWithMentions', () => {
       };
 
       const query =
-        '@{type=resource,id=entity-123,name=oldName1} and @{type=resource,id=entity-456,name=oldName2} and @{type=resource,id=entity-789,name=oldName3}';
+        '@{type=file,id=entity-123,name=oldName1} and @{type=file,id=entity-456,name=oldName2} and @{type=file,id=entity-789,name=oldName3}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariableWithEntityId, anotherResourceVariable],
       });
       expect(result.updatedQuery).toBe(
-        '@{type=resource,id=entity-123,name=newResourceName} and @{type=resource,id=entity-456,name=anotherNewName} and @{type=resource,id=entity-789,name=oldName3}',
+        '@{type=file,id=entity-123,name=newResourceName} and @{type=file,id=entity-456,name=anotherNewName} and @{type=file,id=entity-789,name=oldName3}',
       );
       expect(result.processedQuery).toBe('@newResourceName and @anotherNewName and @oldName3');
       expect(result.resourceVars).toEqual([
@@ -334,26 +333,25 @@ describe('processQueryWithMentions', () => {
     });
 
     it('should handle resource mention with complex surrounding text', () => {
-      const query = 'Please analyze @{type=resource,id=entity-123,name=oldDocument} for insights';
+      const query = 'Please analyze @{type=file,id=entity-123,name=oldDocument} for insights';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockResourceVariableWithEntityId],
       });
       expect(result.updatedQuery).toBe(
-        'Please analyze @{type=resource,id=entity-123,name=newResourceName} for insights',
+        'Please analyze @{type=file,id=entity-123,name=newResourceName} for insights',
       );
       expect(result.processedQuery).toBe('Please analyze @newResourceName for insights');
     });
 
     it('should not update updatedQuery for non-resource mentions', () => {
-      const query =
-        '@{type=var,id=var-1,name=testVar} and @{type=resource,id=entity-123,name=oldName}';
+      const query = '@{type=var,id=var-1,name=testVar} and @{type=file,id=entity-123,name=oldName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [mockWorkflowVariable, mockResourceVariableWithEntityId],
       });
       expect(result.updatedQuery).toBe(
-        '@{type=var,id=var-1,name=testVar} and @{type=resource,id=entity-123,name=newResourceName}',
+        '@{type=var,id=var-1,name=testVar} and @{type=file,id=entity-123,name=newResourceName}',
       );
       expect(result.processedQuery).toBe('hello world and @newResourceName');
     });
@@ -376,12 +374,12 @@ describe('processQueryWithMentions', () => {
         ],
       };
 
-      const query = '@{type=resource,id=entity-999,name=someName}';
+      const query = '@{type=file,id=entity-999,name=someName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [resourceVariableWithEmptyName],
       });
-      expect(result.updatedQuery).toBe('@{type=resource,id=entity-999,name=}');
+      expect(result.updatedQuery).toBe('@{type=file,id=entity-999,name=}');
       expect(result.processedQuery).toBe('@');
     });
 
@@ -403,13 +401,13 @@ describe('processQueryWithMentions', () => {
         ],
       };
 
-      const query = '@{type=resource,id=entity-special,name=oldName}';
+      const query = '@{type=file,id=entity-special,name=oldName}';
       const result = processQueryWithMentions(query, {
         replaceVars: true,
         variables: [resourceVariableWithSpecialChars],
       });
       expect(result.updatedQuery).toBe(
-        '@{type=resource,id=entity-special,name=Document with spaces & symbols @#$%}',
+        '@{type=file,id=entity-special,name=Document with spaces & symbols @#$%}',
       );
       expect(result.processedQuery).toBe('@Document with spaces & symbols @#$%');
     });
@@ -441,7 +439,7 @@ describe('parseMentionsFromQuery', () => {
     });
 
     it('should parse a single resource mention correctly', () => {
-      const query = 'with resource @{type=resource,id=resource-1,name=resource_1}';
+      const query = 'with resource @{type=file,id=resource-1,name=resource_1}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -454,7 +452,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should parse multiple mentions correctly', () => {
       const query =
-        'this is a test @{type=var,id=var-1,name=cv_folder_url}, with resource @{type=resource,id=resource-1,name=resource_1}';
+        'this is a test @{type=var,id=var-1,name=cv_folder_url}, with resource @{type=file,id=resource-1,name=resource_1}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -510,7 +508,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should filter out mentions with invalid type', () => {
       const query =
-        '@{type=invalid,id=test-1,name=testName} @{type=var,id=var-1,name=testVar} @{type=resource,id=resource-1,name=testResource}';
+        '@{type=invalid,id=test-1,name=testName} @{type=var,id=var-1,name=testVar} @{type=file,id=resource-1,name=testResource}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -591,7 +589,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should handle malformed mention syntax gracefully', () => {
       const query =
-        '@{type=var,id=var-1,name=testVar @{type=resource,id=res-1,name=res} @{incomplete} @{type=var,id=var-2,name=testVar2}';
+        '@{type=var,id=var-1,name=testVar @{type=file,id=res-1,name=res} @{incomplete} @{type=var,id=var-2,name=testVar2}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -617,7 +615,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should handle mentions at the beginning and end of query', () => {
       const query =
-        '@{type=var,id=var-1,name=startVar} some text @{type=resource,id=res-1,name=endResource}';
+        '@{type=var,id=var-1,name=startVar} some text @{type=file,id=res-1,name=endResource}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -635,7 +633,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should handle multiple mentions of the same type', () => {
       const query =
-        '@{type=var,id=var-1,name=var1} @{type=var,id=var-2,name=var2} @{type=resource,id=res-1,name=res1} @{type=resource,id=res-2,name=res2}';
+        '@{type=var,id=var-1,name=var1} @{type=var,id=var-2,name=var2} @{type=file,id=res-1,name=res1} @{type=file,id=res-2,name=res2}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -662,7 +660,7 @@ describe('parseMentionsFromQuery', () => {
     });
 
     it('should handle mentions with parameters in different order', () => {
-      const query = '@{name=testName,type=var,id=var-1} @{id=res-1,type=resource,name=resName}';
+      const query = '@{name=testName,type=var,id=var-1} @{id=res-1,type=file,name=resName}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -737,36 +735,36 @@ describe('replaceResourceMentionsInQuery', () => {
 
   describe('resource mention processing', () => {
     it('should update resource mention with matching variable and entityIdMap', () => {
-      const query = '@{type=resource,id=entity-123,name=oldResourceName}';
+      const query = '@{type=file,id=entity-123,name=oldResourceName}';
       const entityIdMap = { 'entity-123': 'entity-789' };
       const result = replaceResourceMentionsInQuery(query, [mockResourceVariable], entityIdMap);
-      expect(result).toBe('@{type=resource,id=entity-789,name=newResourceName}');
+      expect(result).toBe('@{type=file,id=entity-789,name=newResourceName}');
     });
 
     it('should update resource mention with matching variable but no entityIdMap', () => {
-      const query = '@{type=resource,id=entity-123,name=oldResourceName}';
+      const query = '@{type=file,id=entity-123,name=oldResourceName}';
       const result = replaceResourceMentionsInQuery(query, [mockResourceVariable], {});
-      expect(result).toBe('@{type=resource,id=entity-123,name=newResourceName}');
+      expect(result).toBe('@{type=file,id=entity-123,name=newResourceName}');
     });
 
     it('should update only entityId when no matching variable found but entityIdMap exists', () => {
-      const query = '@{type=resource,id=entity-123,name=oldResourceName}';
+      const query = '@{type=file,id=entity-123,name=oldResourceName}';
       const entityIdMap = { 'entity-123': 'entity-789' };
       const result = replaceResourceMentionsInQuery(query, [], entityIdMap);
-      expect(result).toBe('@{type=resource,id=entity-789,name=oldResourceName}');
+      expect(result).toBe('@{type=file,id=entity-789,name=oldResourceName}');
     });
 
     it('should return original mention when no matching variable and no entityIdMap', () => {
-      const query = '@{type=resource,id=entity-123,name=oldResourceName}';
+      const query = '@{type=file,id=entity-123,name=oldResourceName}';
       const result = replaceResourceMentionsInQuery(query, [], {});
-      expect(result).toBe('@{type=resource,id=entity-123,name=oldResourceName}');
+      expect(result).toBe('@{type=file,id=entity-123,name=oldResourceName}');
     });
   });
 
   describe('multiple mentions', () => {
     it('should handle multiple resource mentions in one query', () => {
       const query =
-        '@{type=resource,id=entity-123,name=oldName1} and @{type=resource,id=entity-456,name=oldName2}';
+        '@{type=file,id=entity-123,name=oldName1} and @{type=file,id=entity-456,name=oldName2}';
       const entityIdMap = { 'entity-123': 'entity-789', 'entity-456': 'entity-999' };
       const result = replaceResourceMentionsInQuery(
         query,
@@ -774,24 +772,24 @@ describe('replaceResourceMentionsInQuery', () => {
         entityIdMap,
       );
       expect(result).toBe(
-        '@{type=resource,id=entity-789,name=newResourceName} and @{type=resource,id=entity-999,name=anotherNewName}',
+        '@{type=file,id=entity-789,name=newResourceName} and @{type=file,id=entity-999,name=anotherNewName}',
       );
     });
 
     it('should handle mixed mentions with some matches and some not', () => {
       const query =
-        '@{type=resource,id=entity-123,name=oldName1} @{type=var,id=var-1,name=testVar} @{type=resource,id=entity-999,name=oldName2}';
+        '@{type=file,id=entity-123,name=oldName1} @{type=var,id=var-1,name=testVar} @{type=file,id=entity-999,name=oldName2}';
       const entityIdMap = { 'entity-123': 'entity-789' };
       const result = replaceResourceMentionsInQuery(query, [mockResourceVariable], entityIdMap);
       expect(result).toBe(
-        '@{type=resource,id=entity-789,name=newResourceName} @{type=var,id=var-1,name=testVar} @{type=resource,id=entity-999,name=oldName2}',
+        '@{type=file,id=entity-789,name=newResourceName} @{type=var,id=var-1,name=testVar} @{type=file,id=entity-999,name=oldName2}',
       );
     });
   });
 
   describe('edge cases', () => {
     it('should handle malformed mentions gracefully', () => {
-      const query = '@{type=resource,id=entity-123} @{type=resource,name=oldName} @{malformed}';
+      const query = '@{type=file,id=entity-123} @{type=file,name=oldName} @{malformed}';
       const result = replaceResourceMentionsInQuery(query, [], {});
       expect(result).toBe(query);
     });
@@ -814,9 +812,9 @@ describe('replaceResourceMentionsInQuery', () => {
         ],
       };
 
-      const query = '@{type=resource,id=entity-999,name=oldName}';
+      const query = '@{type=file,id=entity-999,name=oldName}';
       const result = replaceResourceMentionsInQuery(query, [resourceVariableWithEmptyName], {});
-      expect(result).toBe('@{type=resource,id=entity-999,name=}');
+      expect(result).toBe('@{type=file,id=entity-999,name=}');
     });
 
     it('should handle resource variable with special characters in name', () => {
@@ -837,10 +835,10 @@ describe('replaceResourceMentionsInQuery', () => {
         ],
       };
 
-      const query = '@{type=resource,id=entity-special,name=oldName}';
+      const query = '@{type=file,id=entity-special,name=oldName}';
       const result = replaceResourceMentionsInQuery(query, [resourceVariableWithSpecialChars], {});
       expect(result).toBe(
-        '@{type=resource,id=entity-special,name=Document with spaces & symbols @#$%}',
+        '@{type=file,id=entity-special,name=Document with spaces & symbols @#$%}',
       );
     });
 
@@ -852,13 +850,13 @@ describe('replaceResourceMentionsInQuery', () => {
         value: [{ type: 'resource' }], // resource is undefined
       };
 
-      const query = '@{type=resource,id=entity-123,name=oldName}';
+      const query = '@{type=file,id=entity-123,name=oldName}';
       const result = replaceResourceMentionsInQuery(
         query,
         [resourceVariableWithUndefinedResource],
         {},
       );
-      expect(result).toBe('@{type=resource,id=entity-123,name=oldName}');
+      expect(result).toBe('@{type=file,id=entity-123,name=oldName}');
     });
 
     it('should handle resource variable with empty value array', () => {
@@ -869,30 +867,30 @@ describe('replaceResourceMentionsInQuery', () => {
         value: [],
       };
 
-      const query = '@{type=resource,id=entity-123,name=oldName}';
+      const query = '@{type=file,id=entity-123,name=oldName}';
       const result = replaceResourceMentionsInQuery(query, [resourceVariableWithEmptyValue], {});
-      expect(result).toBe('@{type=resource,id=entity-123,name=oldName}');
+      expect(result).toBe('@{type=file,id=entity-123,name=oldName}');
     });
   });
 
   describe('entityId matching', () => {
     it('should match resource variable by entityId from value array', () => {
-      const query = '@{type=resource,id=entity-123,name=oldName}';
+      const query = '@{type=file,id=entity-123,name=oldName}';
       const result = replaceResourceMentionsInQuery(query, [mockResourceVariable], {});
-      expect(result).toBe('@{type=resource,id=entity-123,name=newResourceName}');
+      expect(result).toBe('@{type=file,id=entity-123,name=newResourceName}');
     });
 
     it('should not match when entityId does not match', () => {
-      const query = '@{type=resource,id=entity-999,name=oldName}';
+      const query = '@{type=file,id=entity-999,name=oldName}';
       const result = replaceResourceMentionsInQuery(query, [mockResourceVariable], {});
-      expect(result).toBe('@{type=resource,id=entity-999,name=oldName}');
+      expect(result).toBe('@{type=file,id=entity-999,name=oldName}');
     });
 
     it('should prioritize entityIdMap over resource entityId', () => {
-      const query = '@{type=resource,id=entity-123,name=oldName}';
+      const query = '@{type=file,id=entity-123,name=oldName}';
       const entityIdMap = { 'entity-123': 'mapped-entity-id' };
       const result = replaceResourceMentionsInQuery(query, [mockResourceVariable], entityIdMap);
-      expect(result).toBe('@{type=resource,id=mapped-entity-id,name=newResourceName}');
+      expect(result).toBe('@{type=file,id=mapped-entity-id,name=newResourceName}');
     });
   });
 });
@@ -922,7 +920,7 @@ describe('parseMentionsFromQuery', () => {
     });
 
     it('should parse a single resource mention correctly', () => {
-      const query = 'with resource @{type=resource,id=resource-1,name=resource_1}';
+      const query = 'with resource @{type=file,id=resource-1,name=resource_1}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -935,7 +933,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should parse multiple mentions correctly', () => {
       const query =
-        'this is a test @{type=var,id=var-1,name=cv_folder_url}, with resource @{type=resource,id=resource-1,name=resource_1}';
+        'this is a test @{type=var,id=var-1,name=cv_folder_url}, with resource @{type=file,id=resource-1,name=resource_1}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -991,7 +989,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should filter out mentions with invalid type', () => {
       const query =
-        '@{type=invalid,id=test-1,name=testName} @{type=var,id=var-1,name=testVar} @{type=resource,id=resource-1,name=testResource}';
+        '@{type=invalid,id=test-1,name=testName} @{type=var,id=var-1,name=testVar} @{type=file,id=resource-1,name=testResource}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -1072,7 +1070,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should handle malformed mention syntax gracefully', () => {
       const query =
-        '@{type=var,id=var-1,name=testVar @{type=resource,id=res-1,name=res} @{incomplete} @{type=var,id=var-2,name=testVar2}';
+        '@{type=var,id=var-1,name=testVar @{type=file,id=res-1,name=res} @{incomplete} @{type=var,id=var-2,name=testVar2}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -1098,7 +1096,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should handle mentions at the beginning and end of query', () => {
       const query =
-        '@{type=var,id=var-1,name=startVar} some text @{type=resource,id=res-1,name=endResource}';
+        '@{type=var,id=var-1,name=startVar} some text @{type=file,id=res-1,name=endResource}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -1116,7 +1114,7 @@ describe('parseMentionsFromQuery', () => {
 
     it('should handle multiple mentions of the same type', () => {
       const query =
-        '@{type=var,id=var-1,name=var1} @{type=var,id=var-2,name=var2} @{type=resource,id=res-1,name=res1} @{type=resource,id=res-2,name=res2}';
+        '@{type=var,id=var-1,name=var1} @{type=var,id=var-2,name=var2} @{type=file,id=res-1,name=res1} @{type=file,id=res-2,name=res2}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {
@@ -1143,7 +1141,7 @@ describe('parseMentionsFromQuery', () => {
     });
 
     it('should handle mentions with parameters in different order', () => {
-      const query = '@{name=testName,type=var,id=var-1} @{id=res-1,type=resource,name=resName}';
+      const query = '@{name=testName,type=var,id=var-1} @{id=res-1,type=file,name=resName}';
       const result = parseMentionsFromQuery(query);
       expect(result).toEqual([
         {

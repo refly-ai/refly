@@ -148,7 +148,10 @@ const deduplicate = <T>(array: T[] | null | undefined, keyFn: (item: T) => strin
   });
 };
 
-export const convertContextItemsToInvokeParams = (items: IContextItem[]): SkillContext => {
+export const convertContextItemsToInvokeParams = (
+  items: IContextItem[],
+  upstreamResultIds: string[],
+): SkillContext => {
   const purgedItems = purgeContextItems(items);
 
   const context: SkillContext = {
@@ -161,9 +164,9 @@ export const convertContextItemsToInvokeParams = (items: IContextItem[]): SkillC
       (item) => item.fileId,
     ),
     results: deduplicate(
-      purgedItems
-        ?.filter((item) => item?.type === 'skillResponse')
-        .map((item) => ({ resultId: item.entityId })),
+      upstreamResultIds.map((resultId) => ({
+        resultId,
+      })),
       (item) => item.resultId,
     ),
   };
@@ -283,6 +286,20 @@ export const purgeContextForActionResult = (context: SkillContext) => {
       if (codeArtifact) {
         codeArtifact.content = '';
       }
+    }
+  }
+
+  if (contextCopy.files) {
+    for (const { file } of contextCopy.files) {
+      if (file) {
+        file.content = '';
+      }
+    }
+  }
+
+  if (contextCopy.results) {
+    for (const item of contextCopy.results) {
+      item.result = undefined;
     }
   }
 

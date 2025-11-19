@@ -449,6 +449,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         version = 0,
         tplConfig = {},
         runtimeConfig = {},
+        upstreamResultIds = [],
         projectId,
         selectedToolsets = [],
         agentMode = 'node_agent',
@@ -468,7 +469,10 @@ export const useInvokeAction = (params?: { source?: string }) => {
       globalAbortControllerRef.current = new AbortController();
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
 
-      const context = convertContextItemsToInvokeParams(contextItems ?? []);
+      const context = convertContextItemsToInvokeParams(
+        contextItems ?? [],
+        upstreamResultIds ?? [],
+      );
 
       const param: InvokeSkillRequest = {
         resultId,

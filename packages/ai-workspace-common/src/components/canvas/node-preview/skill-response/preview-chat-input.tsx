@@ -5,7 +5,7 @@ import { useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
 
-import { Resource } from '@refly/openapi-schema';
+import { DriveFile } from '@refly/openapi-schema';
 
 const { Paragraph } = Typography;
 
@@ -19,20 +19,20 @@ interface PreviewChatInputProps {
   };
   setEditMode: (mode: boolean) => void;
   readonly?: boolean;
-  resources?: Resource[];
+  files?: DriveFile[];
 }
 
 const PreviewChatInputComponent = (props: PreviewChatInputProps) => {
-  const { enabled, contextItems, query, readonly, setEditMode, resources } = props;
+  const { enabled, contextItems, query, readonly, setEditMode, files } = props;
   const { t } = useTranslation();
 
   // Function to render query with @variableName format as components
   const renderQueryWithVariables = useMemo(() => {
     if (!query) return t('common.noContent');
 
-    const { processedQuery } = processQueryWithMentions(query, { resources });
+    const { processedQuery } = processQueryWithMentions(query, { files });
     return String(processedQuery);
-  }, [query, t, resources]);
+  }, [query, t, files]);
 
   if (!enabled) {
     return null;
