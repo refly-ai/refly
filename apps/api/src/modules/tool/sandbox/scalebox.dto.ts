@@ -15,7 +15,7 @@ export interface ScaleboxExecutionJobData {
   timeout?: number;
   canvasId: string;
   apiKey: string;
-  version: string; // Version identifier for output isolation
+  version?: number;
 }
 
 /**

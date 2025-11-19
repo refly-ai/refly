@@ -9,15 +9,11 @@ import {
 } from './scalebox.exception';
 import {
   SANDBOX_DRIVE_MOUNT_POINT,
-  SANDBOX_WORKFLOW_MOUNT_POINT,
   SANDBOX_MOUNT_WAIT_MS,
   SANDBOX_MOUNT_MAX_RETRIES,
   SANDBOX_MOUNT_RETRY_DELAY_MS,
-  SANDBOX_UNMOUNT_POLL_MAX_ATTEMPTS,
-  SANDBOX_UNMOUNT_POLL_INTERVAL_MS,
-  SANDBOX_UNMOUNT_STABILIZE_DELAY_MS,
 } from './scalebox.constants';
-import { sleep, poll } from './scalebox.utils';
+import { sleep } from './scalebox.utils';
 
 export interface S3Config {
   endPoint: string; // MinIO SDK uses 'endPoint' with capital P
@@ -44,7 +40,7 @@ export interface SandboxContext {
   uid: string;
   apiKey: string;
   s3Config: S3Config;
-  s3DrivePath: string; // S3 path for drive files (user uploaded files): drive/{uid}/{canvasId}/
+  s3DrivePath: string; // S3 path for drive files (user uploaded files + generated files): drive/{uid}/{canvasId}/
 }
 
 /**
@@ -79,9 +75,8 @@ ${nonemptyFlag}`.trim();
  * Handles health checks, timeout management, and state persistence
  */
 export class SandboxWrapper {
-  private currentWorkflowPath?: string; // Cache current output S3 path
-  private s3Config: S3Config; // S3 configuration for remounting
-  private s3DrivePath: string; // S3 drive path (user uploaded files)
+  private s3Config: S3Config; // S3 configuration
+  private s3DrivePath: string; // S3 drive path (user uploaded files + generated files)
 
   private constructor(
     private readonly sandbox: Sandbox,
@@ -110,20 +105,17 @@ export class SandboxWrapper {
       context.uid,
       sandbox.sandboxId,
       context.canvasId,
-      SANDBOX_WORKFLOW_MOUNT_POINT,
+      SANDBOX_DRIVE_MOUNT_POINT,
       Date.now(),
       info.timeoutAt.getTime(),
     );
 
-    // Store S3 config and paths for logging and remounting
+    // Store S3 config and paths
     wrapper.s3Config = context.s3Config;
     wrapper.s3DrivePath = context.s3DrivePath;
 
-    // Mount drive (read-only, user uploaded files)
+    // Mount drive (read-write, contains user uploaded files and generated files)
     await wrapper.mountDrive(context);
-
-    // Create workflow directory (empty, will be mounted during executeCode)
-    await wrapper.createWorkflowDirectory(context.logger);
 
     context.logger.info(
       { sandboxId: wrapper.sandboxId, canvasId: context.canvasId },
@@ -164,7 +156,7 @@ export class SandboxWrapper {
       metadata.timeoutAt,
     );
 
-    // Store S3 config and paths for logging and remounting
+    // Store S3 config and paths
     wrapper.s3Config = context.s3Config;
     wrapper.s3DrivePath = context.s3DrivePath;
 
@@ -179,8 +171,8 @@ export class SandboxWrapper {
   }
 
   /**
-   * Mount drive storage (read-only)
-   * Contains user uploaded files from drive
+   * Mount drive storage (read-write)
+   * Contains user uploaded files and generated files
    */
   private async mountDrive(context: SandboxContext): Promise<void> {
     const { logger, s3Config, s3DrivePath } = context;
@@ -203,7 +195,7 @@ export class SandboxWrapper {
     if (mkdirResult.exitCode !== 0)
       throw new SandboxMountException(mkdirResult.stderr, this.canvasId);
 
-    const mountCmd = buildS3MountCommand(s3Config, s3DrivePath, mountPoint, { readOnly: true });
+    const mountCmd = buildS3MountCommand(s3Config, s3DrivePath, mountPoint);
 
     const mountResult = await guard
       .retry(() => sandbox.commands.run(mountCmd), {
@@ -218,133 +210,6 @@ export class SandboxWrapper {
     await sleep(SANDBOX_MOUNT_WAIT_MS);
 
     logger.info({ canvasId: this.canvasId, mountPoint }, 'Drive storage mounted successfully');
-  }
-
-  /**
-   * Create workflow directory (empty, will be mounted during executeCode)
-   */
-  private async createWorkflowDirectory(logger: PinoLogger): Promise<void> {
-    const sandbox = guard
-      .notEmpty(this.sandbox)
-      .orThrow(() => new Error('Sandbox not initialized'));
-
-    const mountPoint = SANDBOX_WORKFLOW_MOUNT_POINT;
-
-    logger.info({ canvasId: this.canvasId, mountPoint }, 'Creating workflow directory');
-
-    const mkdirResult = await guard(() => sandbox.commands.run(`mkdir -p ${mountPoint}`)).orThrow(
-      (e) => new SandboxMountException(e, this.canvasId),
-    );
-
-    if (mkdirResult.exitCode !== 0)
-      throw new SandboxMountException(mkdirResult.stderr, this.canvasId);
-
-    logger.info({ canvasId: this.canvasId, mountPoint }, 'Workflow directory created');
-  }
-
-  private async unmountWorkflow(logger: PinoLogger): Promise<void> {
-    if (!this.currentWorkflowPath) {
-      return;
-    }
-
-    const sandbox = guard
-      .notEmpty(this.sandbox)
-      .orThrow(() => new Error('Sandbox not initialized'));
-
-    const mountPoint = SANDBOX_WORKFLOW_MOUNT_POINT;
-
-    logger.info(
-      { mountPoint, previousPath: this.currentWorkflowPath },
-      'Unmounting previous workflow',
-    );
-
-    const mountCheckResult = await sandbox.commands.run(`mountpoint -q ${mountPoint}`);
-    const isMounted = mountCheckResult.exitCode === 0;
-
-    if (!isMounted) {
-      logger.info({ mountPoint }, 'Mount point is not mounted, skipping unmount');
-      return;
-    }
-
-    const unmountResult = await sandbox.commands.run(`fusermount -uz ${mountPoint}`);
-
-    if (unmountResult.exitCode !== 0) {
-      throw new SandboxMountException(
-        `Failed to unmount ${mountPoint}: ${unmountResult.stderr}`,
-        this.canvasId,
-      );
-    }
-
-    logger.info({ mountPoint }, 'Unmount command executed, waiting for cleanup');
-
-    await poll(
-      async () => {
-        const checkResult = await sandbox.commands.run(`mountpoint -q ${mountPoint}`);
-        return checkResult.exitCode === 0 ? null : true;
-      },
-      async () => {
-        throw new SandboxMountException(
-          `Unmount verification timed out after ${SANDBOX_UNMOUNT_POLL_MAX_ATTEMPTS * SANDBOX_UNMOUNT_POLL_INTERVAL_MS}ms`,
-          this.canvasId,
-        );
-      },
-      {
-        timeout: SANDBOX_UNMOUNT_POLL_MAX_ATTEMPTS * SANDBOX_UNMOUNT_POLL_INTERVAL_MS,
-        initialDelay: SANDBOX_UNMOUNT_POLL_INTERVAL_MS,
-        maxDelay: SANDBOX_UNMOUNT_POLL_INTERVAL_MS,
-        backoffFactor: 1,
-      },
-    );
-
-    logger.info({ mountPoint }, 'Unmount verified, waiting for kernel cleanup');
-
-    // Additional stabilization delay to allow kernel FUSE cleanup
-    await sleep(SANDBOX_UNMOUNT_STABILIZE_DELAY_MS);
-
-    logger.info({ mountPoint }, 'Unmount completed');
-  }
-
-  private async mountWorkflow(s3OutputPath: string, logger: PinoLogger): Promise<void> {
-    const sandbox = guard
-      .notEmpty(this.sandbox)
-      .orThrow(() => new Error('Sandbox not initialized'));
-
-    const mountPoint = SANDBOX_WORKFLOW_MOUNT_POINT;
-
-    logger.info(
-      { canvasId: this.canvasId, mountPoint, path: s3OutputPath },
-      'Mounting workflow storage',
-    );
-
-    // Ensure mount point directory exists (do not remove it to avoid "device busy" error)
-    const mkdirResult = await guard(() => sandbox.commands.run(`mkdir -p ${mountPoint}`)).orThrow(
-      (e) => new SandboxMountException(e, this.canvasId),
-    );
-
-    if (mkdirResult.exitCode !== 0) {
-      throw new SandboxMountException(mkdirResult.stderr, this.canvasId);
-    }
-
-    // Use nonempty option to allow mounting over existing directory
-    // This avoids race conditions with FUSE lazy unmount cleanup
-    const mountCmd = buildS3MountCommand(this.s3Config, s3OutputPath, mountPoint, {
-      allowNonEmpty: true,
-    });
-
-    const mountResult = await guard
-      .retry(() => sandbox.commands.run(mountCmd), {
-        maxAttempts: SANDBOX_MOUNT_MAX_RETRIES,
-        delayMs: SANDBOX_MOUNT_RETRY_DELAY_MS,
-      })
-      .orThrow((e) => new SandboxMountException(e, this.canvasId));
-
-    if (mountResult.exitCode !== 0) {
-      throw new SandboxMountException(mountResult.stderr, this.canvasId);
-    }
-
-    await sleep(SANDBOX_MOUNT_WAIT_MS);
-
-    logger.info({ canvasId: this.canvasId, mountPoint }, 'Workflow storage mounted successfully');
   }
 
   async isHealthy(): Promise<boolean> {
@@ -381,35 +246,17 @@ export class SandboxWrapper {
   async executeCode(
     code: string,
     language: Language,
-    workflowPath: string,
     logger: PinoLogger,
   ): Promise<ExecutionResult> {
-    // Ensure output path is provided
-    guard
-      .notEmpty(workflowPath)
-      .orThrow(() => new Error('Output path is required for code execution'));
-
-    const needsRemount = this.currentWorkflowPath !== workflowPath;
-
     logger.info(
       {
         sandboxId: this.sandboxId,
         canvasId: this.canvasId,
         language,
         s3DrivePath: this.s3DrivePath,
-        s3WorkflowPath: workflowPath,
-        currentWorkflowPath: this.currentWorkflowPath,
-        needsRemount,
       },
       'Executing code in sandbox',
     );
-
-    if (needsRemount) {
-      logger.info({ canvasId: this.canvasId, path: workflowPath }, 'Remounting workflow storage');
-      await this.unmountWorkflow(logger);
-      await this.mountWorkflow(workflowPath, logger);
-      this.currentWorkflowPath = workflowPath;
-    }
 
     return guard(() =>
       this.sandbox.runCode(code, {

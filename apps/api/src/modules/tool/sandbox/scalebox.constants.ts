@@ -62,13 +62,7 @@ export const S3_DEFAULT_CONFIG = {
 } as const;
 
 /**
- * Drive mount point inside sandbox (read-only)
- * Contains user uploaded files from drive
+ * Drive mount point inside sandbox (read-write)
+ * Contains user uploaded files and generated files
  */
-export const SANDBOX_DRIVE_MOUNT_POINT = '/mnt/refly/drive';
-
-/**
- * Workflow mount point inside sandbox (read-write)
- * Contains workflow intermediate files shared across all nodes
- */
-export const SANDBOX_WORKFLOW_MOUNT_POINT = '/mnt/refly/workflow';
+export const SANDBOX_DRIVE_MOUNT_POINT = '/mnt/refly';

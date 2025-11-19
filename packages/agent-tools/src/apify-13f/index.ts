@@ -1,19 +1,14 @@
 import { z } from 'zod/v3';
 import { ApifyClient, ActorRun } from 'apify-client';
 import type { ToolParams } from '@langchain/core/tools';
+import { RunnableConfig } from '@langchain/core/runnables';
 import {
   AgentBaseTool,
   AgentBaseToolset,
   type AgentToolConstructor,
   type ToolCallResult,
 } from '../base';
-import type {
-  ToolsetDefinition,
-  User,
-  EntityType,
-  FileVisibility,
-  UploadResponse,
-} from '@refly/openapi-schema';
+import type { ToolsetDefinition, User, DriveFile } from '@refly/openapi-schema';
 
 // Types for actor pricing and search results
 
@@ -123,16 +118,17 @@ export const Apify13FToolsetDefinition: ToolsetDefinition = {
 };
 
 export interface ReflyService {
-  uploadFile: (
+  writeFile: (
     user: User,
     param: {
-      file: { buffer: Buffer; mimetype?: string; originalname: string };
-      entityId?: string;
-      entityType?: EntityType;
-      visibility?: FileVisibility;
-      storageKey?: string;
+      name: string;
+      content: string;
+      type: string;
+      canvasId?: string;
+      resultId?: string;
+      resultVersion?: number;
     },
-  ) => Promise<UploadResponse['data']>;
+  ) => Promise<DriveFile>;
 }
 
 interface Apify13FToolParams extends ToolParams {
@@ -161,7 +157,11 @@ export class ApifyRun13FActor extends AgentBaseTool<Apify13FToolParams> {
     this.params = params;
   }
 
-  async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
+  async _call(
+    input: z.infer<typeof this.schema>,
+    _: unknown,
+    config: RunnableConfig,
+  ): Promise<ToolCallResult> {
     try {
       const client = new ApifyClient({
         token: this.params?.apiToken ?? '',
@@ -223,19 +223,22 @@ export class ApifyRun13FActor extends AgentBaseTool<Apify13FToolParams> {
         return lines.join('\n');
       };
 
-      let storageKey: string | undefined;
+      let driveFile: DriveFile | undefined;
       try {
         const csv = toCsv(items);
-        const buffer = Buffer.from(csv ?? '', 'utf8');
         const ts = new Date().toISOString().replace(/[:.]/g, '-');
-        const originalname = `13f-${input.manager_name.replace(/\s+/g, '-').toLowerCase()}-${input.quarter_year.replace(/\s+/g, '-').toLowerCase()}-${ts}.csv`;
-        const uploadRes = await this.params?.reflyService?.uploadFile?.(this.params?.user, {
-          file: { buffer, mimetype: 'text/csv', originalname },
+        const fileName = `13f-${input.manager_name.replace(/\s+/g, '-').toLowerCase()}-${input.quarter_year.replace(/\s+/g, '-').toLowerCase()}-${ts}.csv`;
+        driveFile = await this.params?.reflyService?.writeFile?.(this.params?.user, {
+          name: fileName,
+          content: csv,
+          type: 'text/csv',
+          canvasId: config.configurable?.canvasId,
+          resultId: config.configurable?.resultId,
+          resultVersion: config.configurable?.version,
         });
-        storageKey = uploadRes?.storageKey ?? undefined;
       } catch {
         // Ignore upload errors; continue returning the dataset items
-        storageKey = undefined;
+        driveFile = undefined;
       }
 
       // Calculate credit cost for PRICE_PER_DATASET_ITEM pricing ($2.00 / 1,000 reports)
@@ -245,12 +248,12 @@ export class ApifyRun13FActor extends AgentBaseTool<Apify13FToolParams> {
         status: 'success',
         data: {
           run,
-          storageKey,
+          file: driveFile,
           manager_name: input.manager_name,
           quarter_year: input.quarter_year,
         },
         creditCost,
-        summary: `Successfully ran 13F Actor for "${input.manager_name}" (${input.quarter_year}) and retrieved ${items.length} reports`,
+        summary: `Successfully ran 13F Actor for "${input.manager_name}" (${input.quarter_year}) and retrieved ${items.length} reports${driveFile ? ` with file ID: ${driveFile.fileId}` : ''}`,
       };
     } catch (error) {
       return {

@@ -31,7 +31,6 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
         uid,
         canvasId,
         language,
-        version,
       },
       'Processing job',
     );

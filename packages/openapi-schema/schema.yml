@@ -8511,7 +8511,6 @@ components:
       required:
         - code
         - language
-        - version
       properties:
         code:
           type: string
@@ -8536,9 +8535,6 @@ components:
           minimum: 1000
           maximum: 300000
           default: 30000
-        version:
-          type: string
-          description: Version identifier for output isolation (e.g., result version or execution ID)
         parentResultId:
           type: string
           description: Parent action result ID for context inheritance
@@ -8557,6 +8553,9 @@ components:
         providerItemId:
           type: string
           description: Provider item ID for credit tracking
+        version:
+          type: number
+          description: Result version for file registration
 
     SandboxExecuteResponse:
       allOf:

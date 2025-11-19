@@ -6419,7 +6419,7 @@ export const HeyGenGenerateVideoResponseSchema = {
 
 export const SandboxExecuteRequestSchema = {
   type: 'object',
-  required: ['code', 'language', 'version'],
+  required: ['code', 'language'],
   properties: {
     code: {
       type: 'string',
@@ -6437,10 +6437,6 @@ export const SandboxExecuteRequestSchema = {
       minimum: 1000,
       maximum: 300000,
       default: 30000,
-    },
-    version: {
-      type: 'string',
-      description: 'Version identifier for output isolation (e.g., result version or execution ID)',
     },
     parentResultId: {
       type: 'string',
@@ -6465,6 +6461,10 @@ export const SandboxExecuteRequestSchema = {
     providerItemId: {
       type: 'string',
       description: 'Provider item ID for credit tracking',
+    },
+    version: {
+      type: 'number',
+      description: 'Result version for file registration',
     },
   },
 } as const;

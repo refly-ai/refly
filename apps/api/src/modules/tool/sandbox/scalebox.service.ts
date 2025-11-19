@@ -101,10 +101,9 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
     apiKey: string;
     canvasId: string;
     uid: string;
-    version: string;
+    version?: number;
   }): Promise<ScaleboxExecutionResult> {
     const canvasId = guard.notEmpty(params.canvasId).orThrow(() => new MissingCanvasIdException());
-    guard.notEmpty(params.version).orThrow(() => new Error('Version is required'));
 
     const wrapper = await this.sandboxPool.acquire(params.uid, canvasId, params.apiKey);
 
@@ -113,9 +112,9 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         this.runCodeInSandbox(wrapper, {
           code: params.code,
           language: params.language,
-          version: params.version,
           uid: params.uid,
           canvasId: params.canvasId,
+          version: params.version,
         }),
       () => this.releaseSandbox(wrapper),
     );
@@ -123,36 +122,68 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
 
   private async runCodeInSandbox(
     wrapper: SandboxWrapper,
-    params: { code: string; language: Language; version: string; uid: string; canvasId: string },
+    params: { code: string; language: Language; uid: string; canvasId: string; version?: number },
   ): Promise<ScaleboxExecutionResult> {
     const startTime = Date.now();
 
-    // Build S3 paths for this execution using DriveService
-    const inputPath = this.driveService.buildS3DrivePath(params.uid, params.canvasId);
-    const outputPath = this.driveService.buildS3WorkflowPath(
-      params.uid,
-      params.canvasId,
-      params.version,
-    );
+    // Build S3 path for this execution using DriveService
+    const drivePath = this.driveService.buildS3DrivePath(params.uid, params.canvasId);
 
     this.logger.info(
       {
         sandboxId: wrapper.sandboxId,
         canvasId: wrapper.canvasId,
-        language: params.language,
+        uid: params.uid,
         version: params.version,
-        s3InputPath: inputPath,
-        s3OutputPath: outputPath,
+        language: params.language,
+        s3DrivePath: drivePath,
       },
-      'Executing code in sandbox',
+      '[Sandbox] Executing code in sandbox',
     );
 
     const previousFiles = await wrapper.listCwdFiles();
-    const result = await wrapper.executeCode(params.code, params.language, outputPath, this.logger);
+    this.logger.info(
+      {
+        sandboxId: wrapper.sandboxId,
+        canvasId: wrapper.canvasId,
+        uid: params.uid,
+        version: params.version,
+        previousFiles,
+        count: previousFiles.length,
+      },
+      '[Sandbox] Previous files in sandbox before execution',
+    );
+    const prevSet = new Set(previousFiles);
+
+    const result = await wrapper.executeCode(params.code, params.language, this.logger);
     const currentFiles = await wrapper.listCwdFiles();
-    const files = currentFiles
-      .filter((file) => !previousFiles.includes(file))
+    this.logger.info(
+      {
+        sandboxId: wrapper.sandboxId,
+        canvasId: wrapper.canvasId,
+        uid: params.uid,
+        version: params.version,
+        currentFiles,
+        count: currentFiles.length,
+      },
+      '[Sandbox] Current files in sandbox after execution',
+    );
+    const diffFiles = currentFiles
+      .filter((file) => !prevSet.has(file))
       .map((p) => p.replace(wrapper.cwd, ''));
+    this.logger.info(
+      {
+        sandboxId: wrapper.sandboxId,
+        canvasId: wrapper.canvasId,
+        uid: params.uid,
+        version: params.version,
+        diffFiles,
+        count: diffFiles.length,
+        previousCount: previousFiles.length,
+        currentCount: currentFiles.length,
+      },
+      '[Sandbox] Diff: New files generated in this execution',
+    );
 
     const executionTime = Date.now() - startTime;
 
@@ -164,9 +195,8 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         exitCode: result.exitCode,
         hasError: !!errorMessage,
         hasStderr: !!result.stderr,
-        files,
-        s3InputPath: inputPath,
-        s3OutputPath: outputPath,
+        files: diffFiles,
+        s3DrivePath: drivePath,
       },
       'Code execution completed',
     );
@@ -176,7 +206,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
       error: errorMessage,
       exitCode: result.exitCode,
       executionTime,
-      files,
+      files: diffFiles,
     };
   }
 
@@ -256,10 +286,6 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         .ensure(waitingCount < maxQueueSize)
         .orThrow(() => new QueueOverloadedException(waitingCount, maxQueueSize));
 
-      const version = guard
-        .notEmpty(request.version)
-        .orThrow(() => new Error('Version is required in SandboxExecuteRequest'));
-
       const job = await this.executionQueue.add(
         'execute',
         {
@@ -269,7 +295,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
           timeout: request.timeout,
           canvasId,
           apiKey,
-          version,
+          version: request.version,
         },
         {
           removeOnComplete: true,
@@ -306,7 +332,20 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
 
       const { exitCode, error, originResult, files = [] } = executionResult;
 
-      const storagePath = this.driveService.buildS3WorkflowPath(user.uid, canvasId, version);
+      const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
+
+      this.logger.info(
+        {
+          userId: user.uid,
+          canvasId,
+          parentResultId: request.parentResultId,
+          version: request.version,
+          files,
+          count: files.length,
+          storagePath,
+        },
+        '[Sandbox] Registering generated files to database',
+      );
 
       const processedFiles = await guard(() =>
         this.driveService.batchCreateDriveFiles(user, {
@@ -314,8 +353,9 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
             canvasId,
             name,
             source: 'agent',
-            resultVersion: Number.parseInt(version, 10),
             storageKey: `${storagePath}/${name}`,
+            resultId: request.parentResultId,
+            resultVersion: request.version,
           })),
         }),
       ).orThrow((error) => new SandboxExecutionFailedException(error, exitCode));
@@ -327,6 +367,18 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         type: file.type,
         category: file.category as DriveFileCategory,
       }));
+
+      this.logger.info(
+        {
+          userId: user.uid,
+          canvasId,
+          parentResultId: request.parentResultId,
+          version: request.version,
+          registeredFiles: formattedFiles.map((f) => ({ fileId: f.fileId, name: f.name })),
+          count: formattedFiles.length,
+        },
+        '[Sandbox] Successfully registered files to database',
+      );
 
       guard
         .ensure(exitCode === 0)

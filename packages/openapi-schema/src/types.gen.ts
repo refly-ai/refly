@@ -4588,10 +4588,6 @@ export type SandboxExecuteRequest = {
    */
   timeout?: number;
   /**
-   * Version identifier for output isolation (e.g., result version or execution ID)
-   */
-  version: string;
-  /**
    * Parent action result ID for context inheritance
    */
   parentResultId?: string;
@@ -4615,6 +4611,10 @@ export type SandboxExecuteRequest = {
    * Provider item ID for credit tracking
    */
   providerItemId?: string;
+  /**
+   * Result version for file registration
+   */
+  version?: number;
 };
 
 /**

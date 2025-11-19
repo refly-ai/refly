@@ -304,6 +304,21 @@ export class SkillInvokerService {
       // In desktop mode, we could handle usage tracking differently if needed
     }
 
+    // Archive files from previous execution of this result
+    const canvasId = data.target?.entityType === 'canvas' ? data.target?.entityId : undefined;
+    if (canvasId) {
+      this.logger.log(
+        `[Archive] Starting archive for resultId: ${resultId}, canvasId: ${canvasId}, uid: ${user.uid}`,
+      );
+      await this.driveService.archiveFiles(user, canvasId, {
+        resultId,
+        source: 'agent',
+      });
+      this.logger.log(`[Archive] Completed archive for resultId: ${resultId}`);
+    } else {
+      this.logger.log(`[Archive] Skipping archive - no canvasId found for resultId: ${resultId}`);
+    }
+
     // Create abort controller for this action
     const abortController = new AbortController();
 

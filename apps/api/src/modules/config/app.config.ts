@@ -28,7 +28,6 @@ export default () => ({
   },
   drive: {
     storageKeyPrefix: process.env.DRIVE_STORAGE_KEY_PREFIX || 'drive',
-    workflowStorageKeyPrefix: process.env.DRIVE_WORKFLOW_STORAGE_KEY_PREFIX || 'workflow',
     payloadMode: process.env.DRIVE_PAYLOAD_MODE || 'base64', // 'url' or 'base64'
     presignExpiry: Number.parseInt(process.env.DRIVE_PRESIGN_EXPIRY) || 15 * 60, // 15 minutes
     archiveConcurrencyLimit: Number.parseInt(process.env.DRIVE_ARCHIVE_CONCURRENCY_LIMIT) || 10, // Maximum concurrent file archive operations
