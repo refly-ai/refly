@@ -288,6 +288,7 @@ const SkillResponseNodePreviewComponent = ({
             value={activeTab}
             onChange={(value) => setResultActiveTab(resultId, value as ResultActiveTab)}
             block
+            size="small"
             shape="round"
           />
         </div>

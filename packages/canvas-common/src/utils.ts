@@ -15,6 +15,7 @@ export interface AddNodeParam {
   connectTo?: CanvasNodeFilter[];
   viewport?: Viewport;
   autoLayout?: boolean; // Control whether to enable auto layout
+  skipPurgeToolsets?: boolean; // Skip purging toolsets to preserve definition and authData
 }
 
 export const deduplicateNodes = (nodes: CanvasNode[]) => {
@@ -48,7 +49,15 @@ export const deduplicateEdges = <T extends { source?: string; target?: string; i
 export const prepareAddNode = (
   param: AddNodeParam,
 ): { newNode: CanvasNode; newEdges: CanvasEdge[] } => {
-  const { node = {}, connectTo = [], nodes, edges, viewport, autoLayout } = param;
+  const {
+    node = {},
+    connectTo = [],
+    nodes,
+    edges,
+    viewport,
+    autoLayout,
+    skipPurgeToolsets,
+  } = param;
 
   // Check if a node with the same entityType and entityId already exists
   const existingNode = nodes.find(
@@ -79,8 +88,8 @@ export const prepareAddNode = (
     );
   }
 
-  // Purge selected toolsets if they exist
-  if (node.data?.metadata?.selectedToolsets) {
+  // Purge selected toolsets if they exist (unless skipPurgeToolsets is true)
+  if (node.data?.metadata?.selectedToolsets && !skipPurgeToolsets) {
     node.data.metadata.selectedToolsets = purgeToolsets(
       node.data.metadata.selectedToolsets as GenericToolset[],
     );
