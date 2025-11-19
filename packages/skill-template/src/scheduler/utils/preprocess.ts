@@ -1,13 +1,12 @@
 import { Source } from '@refly/openapi-schema';
 import { SkillRunnableConfig } from '../../base';
 import { processQuery } from './queryProcessor';
-import { prepareContext } from './context';
+import { ContextBlock, prepareContext } from './context';
 import { SkillEngine } from '../../engine';
 
 export interface PreprocessResult {
   optimizedQuery: string;
-  rewrittenQueries: string[];
-  context: string;
+  context: ContextBlock;
   sources?: Source[];
   usedChatHistory?: any[];
 }
@@ -20,28 +19,25 @@ export const preprocess = async (
   const context = config?.configurable?.context ?? undefined;
 
   // Use shared query processor
-  const { optimizedQuery, usedChatHistory, hasContext, remainingTokens, rewrittenQueries } =
-    await processQuery(query, config);
+  const { optimizedQuery, usedChatHistory, hasContext, remainingTokens } = await processQuery(
+    query,
+    config,
+  );
 
   const needPrepareContext = hasContext && remainingTokens > 0;
 
-  const result = {
+  const result: PreprocessResult = {
     optimizedQuery,
-    rewrittenQueries,
-    context: '',
+    context: { files: [], results: [] },
     sources: [],
     usedChatHistory,
   };
 
   if (needPrepareContext) {
-    const preparedRes = await prepareContext(query, context, {
+    result.context = await prepareContext(context, {
       maxTokens: remainingTokens,
       engine,
     });
-
-    result.context = preparedRes.contextStr;
-
-    return result;
   }
 
   return result;

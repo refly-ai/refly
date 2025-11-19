@@ -10,7 +10,6 @@ import {
   User,
   ListDriveFilesData,
   ListOrder,
-  BatchCreateDriveFilesRequest,
   DriveFile,
   DriveFileCategory,
   DriveFileSource,
@@ -22,7 +21,11 @@ import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 
-interface ProcessedUpsertDriveFileResult extends UpsertDriveFileRequest {
+export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
+  buffer?: Buffer;
+}
+
+interface ProcessedUpsertDriveFileResult extends ExtendedUpsertDriveFileRequest {
   driveStorageKey: string;
   category: DriveFileCategory;
   size: bigint;
@@ -212,7 +215,7 @@ export class DriveService {
   private async batchProcessDriveFileRequests(
     user: User,
     canvasId: string,
-    requests: UpsertDriveFileRequest[],
+    requests: ExtendedUpsertDriveFileRequest[],
     options?: {
       archiveFiles?: boolean;
     },
@@ -234,7 +237,7 @@ export class DriveService {
 
       // Process each request in the batch
       for (const request of requests) {
-        const { canvasId, name, content, storageKey, externalUrl } = request;
+        const { canvasId, name, content, storageKey, externalUrl, buffer } = request;
 
         // Generate unique filename to avoid conflicts
         const uniqueName = this.generateUniqueFileName(name, existingFileNames);
@@ -260,13 +263,17 @@ export class DriveService {
           scope: 'present',
         });
 
-        let buffer: Buffer;
+        let rawData: Buffer;
         let size: bigint;
 
-        if (content !== undefined) {
+        if (buffer) {
+          // Case 0: Buffer upload
+          rawData = buffer;
+          size = BigInt(rawData.length);
+        } else if (content !== undefined) {
           // Case 1: Direct content upload
-          buffer = Buffer.from(content, 'utf8');
-          size = BigInt(buffer.length);
+          rawData = Buffer.from(content, 'utf8');
+          size = BigInt(rawData.length);
           request.type = 'text/plain';
         } else if (storageKey) {
           // Case 2: Transfer from existing storage key
@@ -286,8 +293,8 @@ export class DriveService {
             'application/octet-stream';
         } else if (externalUrl) {
           // Case 3: Download from external URL
-          buffer = await this.downloadFileFromUrl(externalUrl);
-          size = BigInt(buffer.length);
+          rawData = await this.downloadFileFromUrl(externalUrl);
+          size = BigInt(rawData.length);
 
           // Determine content type based on file extension or default to binary
           request.type = mime.getType(name) ?? 'application/octet-stream';
@@ -307,8 +314,8 @@ export class DriveService {
           }
         }
 
-        if (buffer) {
-          await this.internalOss.putObject(driveStorageKey, buffer, {
+        if (rawData) {
+          await this.internalOss.putObject(driveStorageKey, rawData, {
             'Content-Type': request.type,
           });
         }
@@ -468,7 +475,10 @@ export class DriveService {
    */
   async batchCreateDriveFiles(
     user: User,
-    request: BatchCreateDriveFilesRequest,
+    request: {
+      canvasId: string;
+      files: ExtendedUpsertDriveFileRequest[];
+    },
   ): Promise<DriveFileModel[]> {
     const { canvasId, files } = request;
 
@@ -502,7 +512,10 @@ export class DriveService {
   /**
    * Create a new drive file
    */
-  async createDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
+  async createDriveFile(
+    user: User,
+    request: ExtendedUpsertDriveFileRequest,
+  ): Promise<DriveFileModel> {
     const { canvasId } = request;
     if (!canvasId) {
       throw new ParamsError('Canvas ID is required for create operation');
@@ -544,7 +557,10 @@ export class DriveService {
   /**
    * Update an existing drive file
    */
-  async updateDriveFile(user: User, request: UpsertDriveFileRequest): Promise<DriveFileModel> {
+  async updateDriveFile(
+    user: User,
+    request: ExtendedUpsertDriveFileRequest,
+  ): Promise<DriveFileModel> {
     const { canvasId, fileId } = request;
     if (!canvasId || !fileId) {
       throw new ParamsError('Canvas ID and file ID are required for update operation');
