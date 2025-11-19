@@ -1205,7 +1205,7 @@ export class ShareCreationService {
     // If publishToCommunity is true, create an independent template share
     let templateShareRecord: ShareRecord | null = null;
     if (workflowApp.publishToCommunity) {
-      const templateShareId = workflowApp.templateShareId ?? genShareId('workflowApp');
+      const templateShareId = genShareId('workflowApp');
 
       // Process canvas data again with new shareId to create independent share records
       // This ensures all nested entities get new share records, making shares independent
@@ -1217,13 +1217,6 @@ export class ShareCreationService {
         title,
       );
 
-      // Check if template share record already exists
-      const existingTemplateShareRecord = workflowApp.templateShareId
-        ? await this.prisma.shareRecord.findFirst({
-            where: { shareId: workflowApp.templateShareId, deletedAt: null },
-          })
-        : null;
-
       // Create or update template share (independent from regular share)
       templateShareRecord = await this.createOrUpdateWorkflowAppShare(
         user,
@@ -1234,7 +1227,7 @@ export class ShareCreationService {
         title,
         null, // Template share has no parent
         allowDuplication,
-        existingTemplateShareRecord,
+        null,
         'template',
       );
     }
