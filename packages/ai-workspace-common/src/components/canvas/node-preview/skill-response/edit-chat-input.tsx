@@ -58,8 +58,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     setModelInfo,
   } = useAgentNodeManagement(nodeId);
 
-  console.log('query', query);
-
   // Function to get original query from action result
   const getOriginalQuery = useCallback(async (): Promise<string> => {
     // First try to get from store
