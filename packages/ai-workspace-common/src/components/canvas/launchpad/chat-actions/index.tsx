@@ -9,14 +9,12 @@ import {
 } from '@refly/stores';
 import { getRuntime } from '@refly/utils/env';
 import { ModelSelector } from './model-selector';
-import { ModelInfo } from '@refly/openapi-schema';
 import { cn } from '@refly/utils/index';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { IContextItem } from '@refly/common-types';
-import { GenericToolset } from '@refly/openapi-schema';
 import { ToolSelectorPopover } from '../tool-selector-panel';
 import { logEvent } from '@refly/telemetry-web';
 import { ChatModeSelector } from '@refly-packages/ai-workspace-common/components/canvas/front-page/chat-mode-selector';
+import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 
 export interface CustomAction {
   icon: React.ReactNode;
@@ -25,39 +23,29 @@ export interface CustomAction {
 }
 
 interface ChatActionsProps {
-  query: string;
-  model: ModelInfo | null;
-  setModel: (model: ModelInfo | null) => void;
+  nodeId: string;
   resultId?: string;
   className?: string;
   form?: FormInstance;
+  customActions?: CustomAction[];
   handleSendMessage: () => void;
   handleAbort?: () => void;
-  customActions?: CustomAction[];
   onUploadImage: (file: File) => Promise<void>;
-  contextItems: IContextItem[];
   isExecuting?: boolean;
-  selectedToolsets?: GenericToolset[];
-  setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
   enableChatModeSelector?: boolean;
   showLeftActions?: boolean;
 }
 
 export const ChatActions = memo((props: ChatActionsProps) => {
   const {
-    query,
-    model,
-    setModel,
+    nodeId,
     resultId,
     handleSendMessage,
     customActions,
     className,
     onUploadImage,
     handleAbort,
-    contextItems,
     isExecuting = false,
-    selectedToolsets,
-    setSelectedToolsets,
     enableChatModeSelector = false,
     showLeftActions = true,
   } = props;
@@ -70,6 +58,8 @@ export const ChatActions = memo((props: ChatActionsProps) => {
   const { result } = useActionResultStoreShallow((state) => ({
     result: resultId ? state.resultMap[resultId] : undefined,
   }));
+  const { query, modelInfo, contextItems, selectedToolsets, setModelInfo, setSelectedToolsets } =
+    useAgentNodeManagement(nodeId);
 
   const handleSendClick = useCallback(() => {
     // Check if knowledge base is used (resource or document types)
@@ -80,12 +70,12 @@ export const ChatActions = memo((props: ChatActionsProps) => {
 
     logEvent('canvas::node_execute', Date.now(), {
       node_type: 'askAI',
-      model_name: model?.name ?? '',
+      model_name: modelInfo?.name ?? '',
       used_knowledge_base: usedKnowledgeBase,
       used_tools: usedTools,
     });
     handleSendMessage();
-  }, [contextItems, model, handleSendMessage, selectedToolsets]);
+  }, [contextItems, modelInfo, handleSendMessage, selectedToolsets]);
 
   const handleAbortClick = useCallback(() => {
     handleAbort?.();
@@ -137,8 +127,8 @@ export const ChatActions = memo((props: ChatActionsProps) => {
           {(!enableChatModeSelector || chatMode === 'ask') && (
             <>
               <ModelSelector
-                model={model}
-                setModel={setModel}
+                model={modelInfo}
+                setModel={setModelInfo}
                 size="small"
                 briefMode={false}
                 trigger={['click']}

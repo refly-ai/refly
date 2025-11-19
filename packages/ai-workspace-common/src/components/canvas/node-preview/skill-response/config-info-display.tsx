@@ -15,8 +15,10 @@ interface ConfigInfoDisplayProps {
   prompt: string;
   selectedToolsets: GenericToolset[];
   contextItems: IContextItem[];
+  upstreamResultIds: string[];
   setContextItems: (items: IContextItem[]) => void;
   setSelectedToolsets: (toolsets: GenericToolset[]) => void;
+  setUpstreamResultIds: (resultIds: string[]) => void;
 }
 
 const SectionTitle = memo(
@@ -42,8 +44,10 @@ export const ConfigInfoDisplay = memo(
     prompt,
     selectedToolsets,
     contextItems = [],
+    upstreamResultIds = [],
     setContextItems,
     setSelectedToolsets,
+    setUpstreamResultIds,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
 
@@ -63,15 +67,6 @@ export const ConfigInfoDisplay = memo(
       return mentions.filter((item) => item.type === 'var');
     }, [prompt]);
 
-    // Extract files from contextItems
-    const files = useMemo(() => {
-      return contextItems.filter((item) => item.type === 'file');
-    }, [contextItems]);
-
-    const agents = useMemo(() => {
-      return contextItems.filter((item) => item.type === 'skillResponse');
-    }, [contextItems]);
-
     const { nodes } = useRealtimeCanvasData();
     const agentNodeMap = useMemo(() => {
       const m = new Map<string, CanvasNode>();
@@ -82,6 +77,17 @@ export const ConfigInfoDisplay = memo(
       }
       return m;
     }, [nodes]);
+
+    // Extract files from contextItems
+    const files = useMemo(() => {
+      return contextItems.filter((item) => item.type === 'file');
+    }, [contextItems]);
+
+    const agents = useMemo(() => {
+      return upstreamResultIds
+        .map((resultId) => agentNodeMap.get(resultId))
+        .filter((node): node is CanvasNode => node !== undefined);
+    }, [upstreamResultIds, agentNodeMap]);
 
     const handleRemoveContextItem = useCallback(
       (item: IContextItem) => {
@@ -96,6 +102,19 @@ export const ConfigInfoDisplay = memo(
         setContextItems(nextItems);
       },
       [contextItems, setContextItems],
+    );
+
+    const handleRemoveUpstreamResult = useCallback(
+      (resultId: string) => {
+        if (!resultId) {
+          return;
+        }
+
+        const currentResultIds = upstreamResultIds ?? [];
+        const nextResultIds = currentResultIds.filter((id) => id !== resultId);
+        setUpstreamResultIds(nextResultIds);
+      },
+      [upstreamResultIds, setUpstreamResultIds],
     );
 
     const handleRemoveToolset = useCallback(
@@ -194,16 +213,15 @@ export const ConfigInfoDisplay = memo(
               {t('agent.config.agents')}
             </SectionTitle>
             <div className="flex flex-wrap gap-2">
-              {agents.map((item: IContextItem, index) => {
-                const node = agentNodeMap.get(item.entityId);
-                const title = node?.data?.title ?? item.title;
+              {agents.map((node, index) => {
+                const title = node?.data?.title;
                 return (
                   <LabelItem
-                    key={`${item.entityId}-${index}`}
+                    key={`${node.id}-${index}`}
                     icon={<AiChat size={14} className="flex-shrink-0" />}
                     labeltext={title || t('canvas.richChatInput.untitledAgent')}
                     classnames="bg-refly-node-contrl-2"
-                    onClose={() => handleRemoveContextItem(item)}
+                    onClose={() => handleRemoveUpstreamResult(node.data?.entityId)}
                   />
                 );
               })}

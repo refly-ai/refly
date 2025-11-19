@@ -5,14 +5,8 @@ import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canv
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import {
-  CanvasNode,
-  convertResultContextToItems,
-  purgeContextItems,
-  ResponseNodeMeta,
-} from '@refly/canvas-common';
-import { ActionResult, GenericToolset } from '@refly/openapi-schema';
-import { IContextItem } from '@refly/common-types';
+import { CanvasNode, convertResultContextToItems, ResponseNodeMeta } from '@refly/canvas-common';
+import { ActionResult } from '@refly/openapi-schema';
 import {
   useActionResultStoreShallow,
   useCanvasStoreShallow,
@@ -130,42 +124,6 @@ const SkillResponseNodePreviewComponent = ({
   const contextItems =
     data?.metadata?.contextItems ?? convertResultContextToItems(result?.context, result?.history);
   const selectedToolsets = data?.metadata?.selectedToolsets ?? result?.toolsets;
-
-  const setQuery = useCallback(
-    (query: string) => {
-      setNodeData(node.id, {
-        metadata: { query },
-      });
-    },
-    [setNodeData, node.id],
-  );
-
-  const setModelInfo = useCallback(
-    (modelInfo: any | null) => {
-      setNodeData(node.id, {
-        metadata: { modelInfo },
-      });
-    },
-    [setNodeData, node.id],
-  );
-
-  const setSelectedToolsets = useCallback(
-    (toolsets: GenericToolset[]) => {
-      setNodeData(node.id, {
-        metadata: { selectedToolsets: toolsets },
-      });
-    },
-    [setNodeData, node.id],
-  );
-
-  const setContextItems = useCallback(
-    (contextItems: IContextItem[]) => {
-      setNodeData(node.id, {
-        metadata: { contextItems: purgeContextItems(contextItems) },
-      });
-    },
-    [setNodeData, node.id],
-  );
 
   const { steps = [] } = result ?? {};
 
@@ -315,14 +273,8 @@ const SkillResponseNodePreviewComponent = ({
               query={query}
               version={version}
               resultId={resultId}
-              modelInfo={modelInfo}
-              selectedToolsets={selectedToolsets}
-              contextItems={contextItems}
+              nodeId={node.id}
               canvasId={canvasId}
-              setModelInfo={setModelInfo}
-              setSelectedToolsets={setSelectedToolsets}
-              setContextItems={setContextItems}
-              setQuery={setQuery}
             />
           )}
 

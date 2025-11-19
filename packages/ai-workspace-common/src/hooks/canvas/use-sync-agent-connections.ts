@@ -8,7 +8,7 @@ export const useSyncAgentConnections = (
   nodeData: CanvasNodeData<ResponseNodeMeta>,
 ) => {
   const { getNodes, setEdges } = useReactFlow<CanvasNode<any>>();
-  const contextItems = nodeData?.metadata?.contextItems ?? [];
+  const resultIds = nodeData?.metadata?.upstreamResultIds ?? [];
 
   useEffect(() => {
     const nodes = getNodes();
@@ -16,19 +16,15 @@ export const useSyncAgentConnections = (
     const entityToNodeId = new Map<string, string>();
     for (const node of nodes ?? []) {
       const entityId = node?.data?.entityId;
-      if (entityId) {
+      if (entityId && node.type === 'skillResponse') {
         entityToNodeId.set(entityId, node.id);
       }
     }
 
     const uniqueSourceIds: string[] = [];
     const seenSourceIds = new Set<string>();
-    for (const item of contextItems ?? []) {
-      const entityId = item?.entityId ?? '';
-      if (!entityId) {
-        continue;
-      }
-      const sourceId = entityToNodeId.get(entityId);
+    for (const resultId of resultIds ?? []) {
+      const sourceId = entityToNodeId.get(resultId);
       if (!sourceId || sourceId === nodeId || seenSourceIds.has(sourceId)) {
         continue;
       }
@@ -59,5 +55,5 @@ export const useSyncAgentConnections = (
 
       return updatedEdges;
     });
-  }, [contextItems, getNodes, setEdges, nodeId]);
+  }, [resultIds, getNodes, setEdges, nodeId]);
 };

@@ -1,5 +1,4 @@
 import { CanvasNode } from '@refly/canvas-common';
-import { SkillNodePreview } from './skill';
 import { DocumentNodePreview } from './document';
 import { StartNodePreview } from './start';
 import { useMemo, memo } from 'react';
@@ -15,8 +14,6 @@ export const PreviewComponent = memo(
       switch (node.type) {
         case 'document':
           return <DocumentNodePreview node={node} />;
-        case 'skill':
-          return <SkillNodePreview node={node} />;
         case 'skillResponse':
           return (
             <SkillResponseNodePreview

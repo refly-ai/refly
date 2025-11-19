@@ -22,10 +22,12 @@ interface FollowingActionsProps {
   nodeId: string;
   initSelectedToolsets?: GenericToolset[];
 }
+
 export const FollowingActions = ({
   initContextItems,
   initModelInfo,
   initSelectedToolsets,
+  nodeId,
 }: FollowingActionsProps) => {
   const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
@@ -229,6 +231,7 @@ export const FollowingActions = ({
               >
                 <ChatComposer
                   ref={textareaRef}
+                  nodeId={nodeId}
                   query={followUpQuery}
                   setQuery={setFollowUpQuery}
                   handleSendMessage={handleFollowUpSend}
