@@ -13,7 +13,11 @@ import {
 } from '@refly/canvas-common';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
-import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
+import {
+  useActionResultStoreShallow,
+  useCanvasStoreShallow,
+  type ResultActiveTab,
+} from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
 import { Segmented, Button } from 'antd';
 import { memo, useCallback, useEffect, useState, useMemo } from 'react';
@@ -243,15 +247,27 @@ const SkillResponseNodePreviewComponent = ({
       })),
     );
   };
+  const { nodeExecutions } = useCanvasStoreShallow((state) => ({
+    nodeExecutions: state.canvasNodeExecutions[canvasId] ?? [],
+  }));
+
+  const isExecuting = useMemo(() => {
+    return nodeExecutions.some((execution) => ['executing', 'waiting'].includes(execution.status));
+  }, [nodeExecutions]);
+
+  const isRunning = useMemo(
+    () => isExecuting || result?.status === 'executing' || result?.status === 'waiting',
+    [isExecuting, result?.status],
+  );
 
   const TitleActions = useMemo(() => {
     return (
       <>
-        <Button type="text" icon={<Play size={20} />} onClick={handleRetry} />
+        <Button type="text" icon={<Play size={20} />} onClick={handleRetry} disabled={isRunning} />
         <Button type="text" icon={<Close size={24} />} onClick={handleClose} />
       </>
     );
-  }, [handleClose, handleRetry]);
+  }, [handleClose, handleRetry, isRunning]);
 
   return purePreview ? (
     !result && !loading ? (
