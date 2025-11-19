@@ -942,7 +942,7 @@ export class SkillService implements OnModuleInit {
   /**
    * Populate skill result history with actual result detail and steps.
    */
-  async populateSkillResultHistory(user: User, resultHistory: ActionResult[]) {
+  async populateSkillResultHistory(user: User, resultHistory: { resultId: string }[]) {
     // Fetch all results for the given resultIds
     const results = await this.prisma.actionResult.findMany({
       where: { resultId: { in: resultHistory.map((r) => r.resultId) }, uid: user.uid },

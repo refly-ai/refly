@@ -155,11 +155,10 @@ export const prepareNodeExecutions = (params: {
           const originalQuery = String(
             metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
           );
-          const { processedQuery, updatedQuery } = processQueryWithMentions(originalQuery, {
+          const { updatedQuery } = processQueryWithMentions(originalQuery, {
             replaceVars: true,
             variables,
           });
-          node.data.title = processedQuery;
           node.data.metadata = deepmerge(node.data.metadata, {
             query: updatedQuery,
           });
@@ -179,11 +178,10 @@ export const prepareNodeExecutions = (params: {
         const originalQuery = String(
           metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
         );
-        const { processedQuery, updatedQuery } = processQueryWithMentions(originalQuery, {
+        const { updatedQuery } = processQueryWithMentions(originalQuery, {
           replaceVars: true,
           variables,
         });
-        node.data.title = processedQuery;
         node.data.metadata = deepmerge(node.data.metadata, {
           query: updatedQuery,
         });

@@ -94,6 +94,7 @@ export type SkillNodeMeta = {
   query?: string;
   resultId?: string;
   version?: number;
+  upstreamResultIds?: string[];
   selectedSkill?: Skill;
   selectedToolsets?: GenericToolset[];
   modelInfo?: ModelInfo | null;
