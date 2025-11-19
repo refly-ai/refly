@@ -116,3 +116,9 @@ export class SandboxMountException extends SandboxException {
     super(messageOrError, 'SANDBOX_MOUNT_FAILED', { canvasId });
   }
 }
+
+export class SandboxFileListException extends SandboxException {
+  constructor(messageOrError: unknown) {
+    super(messageOrError, 'SANDBOX_FILE_LIST_FAILED');
+  }
+}

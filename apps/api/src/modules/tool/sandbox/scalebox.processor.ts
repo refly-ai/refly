@@ -65,6 +65,8 @@ export class ScaleboxExecutionProcessor extends WorkerHost {
         error: message,
         exitCode: 1,
         executionTime,
+        files: [], // Ensure files field is always present
+        originResult: undefined,
       };
     }
 

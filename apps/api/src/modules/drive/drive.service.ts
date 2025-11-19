@@ -37,6 +37,26 @@ export class DriveService {
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
   ) {}
 
+  /**
+   * Build S3 path for drive files (user uploaded files)
+   * Used for user uploaded files and manual resources
+   * @returns drive/{uid}/{canvasId}/{name}
+   */
+  buildS3DrivePath(uid: string, canvasId: string, name = ''): string {
+    const prefix = this.config.get<string>('drive.storageKeyPrefix').replace(/\/$/, '');
+    return [prefix, uid, canvasId, name].filter(Boolean).join('/');
+  }
+
+  /**
+   * Build S3 path for workflow intermediate files
+   * Used for files generated during workflow execution
+   * @returns {workflowStorageKeyPrefix}/{uid}/{canvasId}/{version}/{name}
+   */
+  buildS3WorkflowPath(uid: string, canvasId: string, version: string, name = ''): string {
+    const prefix = this.config.get<string>('drive.workflowStorageKeyPrefix').replace(/\/$/, '');
+    return [prefix, uid, canvasId, version, name].filter(Boolean).join('/');
+  }
+
   private generateStorageKey(
     user: User,
     file: { canvasId: string; name: string; scope?: string; source?: string },

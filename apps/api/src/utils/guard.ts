@@ -3,6 +3,11 @@
  * Provides a fluent API for error handling with custom exceptions
  */
 
+export interface RetryConfig {
+  maxAttempts: number;
+  delayMs: number;
+}
+
 interface GuardWrapper<T> {
   orThrow(errorFactory?: (error: unknown) => Error): T extends Promise<infer U> ? Promise<U> : T;
   orElse(fallback: (error: unknown) => T): T extends Promise<infer U> ? Promise<U> : T;
@@ -15,6 +20,11 @@ interface NotEmptyWrapper<T> {
 interface EnsureWrapper {
   orThrow(errorFactory: () => Error): void;
 }
+
+/**
+ * Sleep for the specified number of milliseconds
+ */
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function guard<T>(fn: () => T): GuardWrapper<T> {
   return {
@@ -100,4 +110,29 @@ guard.defer = async <T>(
   } finally {
     await cleanup();
   }
+};
+
+/**
+ * Execute function with retry logic
+ * Returns a GuardWrapper that can be chained with orThrow/orElse
+ */
+guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<Promise<T>> => {
+  return guard(async () => {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+
+        // Don't sleep after the last attempt
+        if (attempt < config.maxAttempts) {
+          await sleep(config.delayMs);
+        }
+      }
+    }
+
+    throw lastError;
+  });
 };

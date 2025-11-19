@@ -46,29 +46,6 @@ export async function performance<T>(task: () => Promise<T>): Promise<Performanc
 }
 
 /**
- * Build S3 paths for sandbox input/output storage
- * - input: User resources from drive (read-only)
- * - output: Execution results per version (read-write)
- */
-export const buildS3Path = {
-  /**
-   * Build input S3 path: {prefix}/{uid}/{canvasId}/{name?}
-   * Used for user uploaded files and previous results
-   */
-  input: (prefix: string, uid: string, canvasId: string, name = ''): string => {
-    return [prefix, uid, canvasId, name].filter(Boolean).join('/');
-  },
-
-  /**
-   * Build output S3 path: {prefix}/{uid}/{canvasId}/{version}/{name?}
-   * Used for current execution generated files
-   */
-  output: (prefix: string, uid: string, canvasId: string, version: string, name = ''): string => {
-    return [prefix, uid, canvasId, version, name].filter(Boolean).join('/');
-  },
-};
-
-/**
  * Sleep helper function
  * @param ms - Milliseconds to sleep
  */

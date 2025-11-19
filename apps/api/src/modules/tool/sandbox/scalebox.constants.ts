@@ -6,7 +6,7 @@ export const SCALEBOX_EXECUTION_QUEUE = 'scaleboxExecution';
 /**
  * Default configuration values for Scalebox
  */
-export const SCALEBOX_DEFAULT_TIMEOUT = 30000;
+export const SCALEBOX_DEFAULT_TIMEOUT = 60000;
 export const SCALEBOX_DEFAULT_MAX_QUEUE_SIZE = 50;
 export const SCALEBOX_DEFAULT_CONCURRENCY = 10;
 
@@ -29,10 +29,30 @@ export const ERROR_MESSAGE_MAX_LENGTH = 1000;
 export const SANDBOX_MOUNT_WAIT_MS = 2000;
 
 /**
+ * S3 mount retry configuration
+ * Retry on network failures or transient S3 service issues
+ */
+export const SANDBOX_MOUNT_MAX_RETRIES = 3;
+export const SANDBOX_MOUNT_RETRY_DELAY_MS = 2000;
+
+/**
+ * Unmount verification polling configuration
+ * Poll to verify FUSE lazy unmount completion
+ */
+export const SANDBOX_UNMOUNT_POLL_MAX_ATTEMPTS = 10;
+export const SANDBOX_UNMOUNT_POLL_INTERVAL_MS = 200;
+
+/**
+ * Unmount stabilization delay
+ * Additional wait time after unmount to allow kernel FUSE cleanup
+ */
+export const SANDBOX_UNMOUNT_STABILIZE_DELAY_MS = 500;
+
+/**
  * S3 Default Configuration
  */
 export const S3_DEFAULT_CONFIG = {
-  endpoint: 's3.us-east-1.amazonaws.com',
+  endPoint: 's3.us-east-1.amazonaws.com', // MinIO SDK uses 'endPoint' with capital P
   port: 443,
   useSSL: true,
   accessKey: '',
@@ -42,25 +62,13 @@ export const S3_DEFAULT_CONFIG = {
 } as const;
 
 /**
- * Input mount point inside sandbox (read-only)
- * Contains user uploaded files and previous execution results
+ * Drive mount point inside sandbox (read-only)
+ * Contains user uploaded files from drive
  */
-export const SANDBOX_INPUT_MOUNT_POINT = '/mnt/refly/input';
+export const SANDBOX_DRIVE_MOUNT_POINT = '/mnt/refly/drive';
 
 /**
- * Output mount point inside sandbox (read-write)
- * Contains current execution generated files
+ * Workflow mount point inside sandbox (read-write)
+ * Contains workflow intermediate files shared across all nodes
  */
-export const SANDBOX_OUTPUT_MOUNT_POINT = '/mnt/refly/output';
-
-/**
- * S3 path prefix for sandbox execution outputs
- * Format: sandbox/{uid}/{canvasId}/{version}/
- */
-export const S3_SANDBOX_PATH_PREFIX = 'sandbox';
-
-/**
- * Temporary S3 path prefix for development testing
- * Can be safely deleted after validation: aws s3 rm s3://bucket/tmp/perish/ --recursive
- */
-export const S3_DEV_PATH_PREFIX = 'tmp/perish';
+export const SANDBOX_WORKFLOW_MOUNT_POINT = '/mnt/refly/workflow';

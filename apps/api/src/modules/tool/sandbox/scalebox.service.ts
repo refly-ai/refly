@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 import {
@@ -30,11 +30,10 @@ import {
   SCALEBOX_DEFAULT_TIMEOUT,
   SCALEBOX_DEFAULT_MAX_QUEUE_SIZE,
   ERROR_MESSAGE_MAX_LENGTH,
-  S3_SANDBOX_PATH_PREFIX,
 } from './scalebox.constants';
 import stripAnsi from 'strip-ansi';
 import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
-import { formatError, buildSuccessResponse, buildS3Path } from './scalebox.utils';
+import { formatError, buildSuccessResponse } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { SandboxWrapper } from './scalebox.wrapper';
 
@@ -43,8 +42,9 @@ import { SandboxWrapper } from './scalebox.wrapper';
  * Execute code in a secure sandbox environment using Scalebox provider
  */
 @Injectable()
-export class ScaleboxService implements OnModuleDestroy {
+export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
   private queueEvents?: QueueEvents;
+  private queueEventsReady = false;
 
   constructor(
     private readonly config: ConfigService, // Used by @Config decorators
@@ -75,8 +75,19 @@ export class ScaleboxService implements OnModuleDestroy {
   @Config.integer('sandbox.scalebox.timeout', SCALEBOX_DEFAULT_TIMEOUT)
   private timeout: number;
 
-  @Config.string('drive.storageKeyPrefix', 'drive')
-  private driveStorageKeyPrefix: string;
+  async onModuleInit() {
+    // Wait for QueueEvents to be ready before accepting requests
+    if (this.queueEvents) {
+      try {
+        await this.queueEvents.waitUntilReady();
+        this.queueEventsReady = true;
+        this.logger.info('QueueEvents ready for sandbox execution');
+      } catch (error) {
+        this.logger.error(error, 'Failed to initialize QueueEvents');
+        this.queueEventsReady = false;
+      }
+    }
+  }
 
   async onModuleDestroy() {
     if (this.queueEvents) {
@@ -114,24 +125,26 @@ export class ScaleboxService implements OnModuleDestroy {
     wrapper: SandboxWrapper,
     params: { code: string; language: Language; version: string; uid: string; canvasId: string },
   ): Promise<ScaleboxExecutionResult> {
+    const startTime = Date.now();
+
+    // Build S3 paths for this execution using DriveService
+    const inputPath = this.driveService.buildS3DrivePath(params.uid, params.canvasId);
+    const outputPath = this.driveService.buildS3WorkflowPath(
+      params.uid,
+      params.canvasId,
+      params.version,
+    );
+
     this.logger.info(
       {
         sandboxId: wrapper.sandboxId,
         canvasId: wrapper.canvasId,
         language: params.language,
         version: params.version,
+        s3InputPath: inputPath,
+        s3OutputPath: outputPath,
       },
       'Executing code in sandbox',
-    );
-
-    const startTime = Date.now();
-
-    // Build complete output path for this execution
-    const outputPath = buildS3Path.output(
-      S3_SANDBOX_PATH_PREFIX,
-      params.uid,
-      params.canvasId,
-      params.version,
     );
 
     const previousFiles = await wrapper.listCwdFiles();
@@ -152,6 +165,8 @@ export class ScaleboxService implements OnModuleDestroy {
         hasError: !!errorMessage,
         hasStderr: !!result.stderr,
         files,
+        s3InputPath: inputPath,
+        s3OutputPath: outputPath,
       },
       'Code execution completed',
     );
@@ -166,10 +181,14 @@ export class ScaleboxService implements OnModuleDestroy {
   }
 
   private async releaseSandbox(wrapper: SandboxWrapper): Promise<void> {
+    this.logger.info({ sandboxId: wrapper.sandboxId }, 'Releasing sandbox to pool');
+
     await guard.bestEffort(
       () => this.sandboxPool.release(wrapper),
       (error) => this.logger.warn(error, 'Failed to release sandbox after execution'),
     );
+
+    this.logger.info({ sandboxId: wrapper.sandboxId }, 'Sandbox release completed');
   }
 
   private truncateErrorMessage(message: string): string {
@@ -227,6 +246,10 @@ export class ScaleboxService implements OnModuleDestroy {
       );
 
       guard.ensure(!!this.executionQueue).orThrow(() => new QueueUnavailableException());
+      guard
+        .ensure(!!this.queueEvents && this.queueEventsReady)
+        .orThrow(() => new QueueUnavailableException('QueueEvents is not ready'));
+
       const waitingCount = await this.executionQueue.getWaitingCount();
 
       guard
@@ -262,11 +285,28 @@ export class ScaleboxService implements OnModuleDestroy {
         'Sandbox job queued',
       );
 
+      this.logger.info(
+        {
+          jobId: job.id,
+          timeout,
+          queueEventsReady: this.queueEventsReady,
+        },
+        'Waiting for job to finish',
+      );
+
       const executionResult = await job.waitUntilFinished(this.queueEvents, timeout);
 
-      this.logger.info({ jobId: job.id }, 'Sandbox execution completed');
+      this.logger.info(
+        {
+          jobId: job.id,
+          exitCode: executionResult?.exitCode,
+        },
+        'Job finished successfully',
+      );
 
-      const { exitCode, error, originResult, files } = executionResult;
+      const { exitCode, error, originResult, files = [] } = executionResult;
+
+      const storagePath = this.driveService.buildS3WorkflowPath(user.uid, canvasId, version);
 
       const processedFiles = await guard(() =>
         this.driveService.batchCreateDriveFiles(user, {
@@ -274,13 +314,8 @@ export class ScaleboxService implements OnModuleDestroy {
             canvasId,
             name,
             source: 'agent',
-            storageKey: buildS3Path.output(
-              S3_SANDBOX_PATH_PREFIX,
-              user.uid,
-              canvasId,
-              version,
-              name,
-            ),
+            resultVersion: Number.parseInt(version, 10),
+            storageKey: `${storagePath}/${name}`,
           })),
         }),
       ).orThrow((error) => new SandboxExecutionFailedException(error, exitCode));

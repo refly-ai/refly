@@ -5,9 +5,10 @@ import { PinoLogger } from 'nestjs-pino';
 import { guard } from '../../../utils/guard';
 import { Config } from '../../config/config.decorator';
 import { RedisService } from '../../common/redis.service';
+import { DriveService } from '../../drive/drive.service';
 
 import { QueueOverloadedException } from './scalebox.exception';
-import { poll, buildS3Path } from './scalebox.utils';
+import { poll } from './scalebox.utils';
 import { SandboxWrapper, SandboxMetadata, SandboxContext, S3Config } from './scalebox.wrapper';
 import {
   SCALEBOX_DEFAULT_MAX_SANDBOXES,
@@ -21,6 +22,7 @@ export class SandboxPool {
   constructor(
     private readonly redis: RedisService,
     private readonly config: ConfigService, // Used by @Config decorators
+    private readonly driveService: DriveService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(SandboxPool.name);
@@ -129,13 +131,15 @@ export class SandboxPool {
     active.push(metadata.sandboxId);
     await this.redis.setJSON('scalebox:pool:active', active);
 
+    const s3DrivePath = this.driveService.buildS3DrivePath(uid, canvasId);
+
     const context: SandboxContext = {
       logger: this.logger,
       uid,
       canvasId,
       apiKey,
       s3Config: this.getS3Config(),
-      s3InputPath: buildS3Path.input(this.driveStorageKeyPrefix, uid, canvasId),
+      s3DrivePath,
     };
 
     const wrapper = await SandboxWrapper.reconnect(context, metadata);
@@ -247,13 +251,15 @@ export class SandboxPool {
       throw new QueueOverloadedException(active.length, this.maxSandboxes);
     }
 
+    const s3DrivePath = this.driveService.buildS3DrivePath(uid, canvasId);
+
     const context: SandboxContext = {
       logger: this.logger,
       uid,
       canvasId,
       apiKey,
       s3Config: this.getS3Config(),
-      s3InputPath: buildS3Path.input(this.driveStorageKeyPrefix, uid, canvasId),
+      s3DrivePath,
     };
 
     const wrapper = await SandboxWrapper.create(context, this.extendTimeoutMs);
