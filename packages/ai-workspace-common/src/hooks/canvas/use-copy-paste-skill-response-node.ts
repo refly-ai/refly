@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { useReactFlow, useStore } from '@xyflow/react';
+import { useStore } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
 import { useDuplicateNode } from './use-duplicate-node';
@@ -22,7 +22,6 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
       nodes: state.nodes,
     })),
   );
-  const reactFlowInstance = useReactFlow();
   const { duplicateNode } = useDuplicateNode();
 
   // Store copied nodes for paste operation
@@ -44,57 +43,25 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
   }, [nodes, readonly]);
 
   /**
-   * Paste copied nodes at viewport center
+   * Paste copied nodes at offset {x: 400, y: 100} from original position
    */
   const handlePaste = useCallback(() => {
     if (readonly || copiedNodes.length === 0 || !canvasId) return;
 
-    // Get viewport center for positioning pasted nodes
-    const viewportCenter = reactFlowInstance.screenToFlowPosition({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
+    // Fixed offset for pasted nodes (bottom right of original position)
+    const fixedOffset = { x: 0, y: 200 };
 
     if (copiedNodes.length === 1) {
-      // Single node: paste at viewport center
+      // Single node: paste at fixed offset from original position
       const node = copiedNodes[0];
-      const currentNode = reactFlowInstance.getNode(node.id);
-      const currentPosition = currentNode?.position || { x: 0, y: 0 };
-      const offset = {
-        x: viewportCenter.x - currentPosition.x,
-        y: viewportCenter.y - currentPosition.y,
-      };
-      duplicateNode(node, canvasId, { offset });
+      duplicateNode(node, canvasId, { offset: fixedOffset });
     } else {
-      // Multiple nodes: maintain relative positions, move group to viewport center
-      // Calculate center of copied nodes
-      const copiedPositions = copiedNodes.map((node) => {
-        const currentNode = reactFlowInstance.getNode(node.id);
-        return currentNode?.position || { x: 0, y: 0 };
-      });
-      const copiedCenter = {
-        x: copiedPositions.reduce((sum, pos) => sum + pos.x, 0) / copiedPositions.length,
-        y: copiedPositions.reduce((sum, pos) => sum + pos.y, 0) / copiedPositions.length,
-      };
-
-      // Calculate offset to move group center to viewport center
-      const groupOffset = {
-        x: viewportCenter.x - copiedCenter.x,
-        y: viewportCenter.y - copiedCenter.y,
-      };
-
-      // Paste each node with adjusted offset
+      // Multiple nodes: maintain relative positions, apply fixed offset to each node
       for (const node of copiedNodes) {
-        const currentNode = reactFlowInstance.getNode(node.id);
-        const currentPosition = currentNode?.position || { x: 0, y: 0 };
-        const nodeOffset = {
-          x: groupOffset.x + (currentPosition.x - copiedCenter.x),
-          y: groupOffset.y + (currentPosition.y - copiedCenter.y),
-        };
-        duplicateNode(node, canvasId, { offset: nodeOffset });
+        duplicateNode(node, canvasId, { offset: fixedOffset });
       }
     }
-  }, [copiedNodes, reactFlowInstance, duplicateNode, canvasId, readonly]);
+  }, [copiedNodes, duplicateNode, canvasId, readonly]);
 
   /**
    * Handle keyboard shortcuts for copy and paste
