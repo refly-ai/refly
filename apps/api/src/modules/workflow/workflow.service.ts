@@ -698,14 +698,6 @@ export class WorkflowService {
       },
     });
 
-    // Update workflow execution status
-    await this.prisma.workflowExecution.update({
-      where: { executionId },
-      data: {
-        status: 'failed',
-      },
-    });
-
     this.logger.log(`Workflow execution ${executionId} aborted by user ${user.uid}`);
   }
 
