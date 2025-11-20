@@ -73,9 +73,8 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
         !!templateResult?.templateContent &&
         (Array.isArray(variables)
           ? placeholders?.length === variables?.length &&
-            (variables?.every?.((v: any) =>
-              placeholders?.includes?.(`{{${v?.name ?? ''}}}`),
-            ) ?? false)
+            (variables?.every?.((v: any) => placeholders?.includes?.(`{{${v?.name ?? ''}}}`)) ??
+              false)
           : true);
 
       if (!isValid) {
@@ -104,5 +103,3 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
     }
   }
 }
-
-
