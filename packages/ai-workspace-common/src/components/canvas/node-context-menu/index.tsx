@@ -68,7 +68,7 @@ export const NodeContextMenu: FC<NodeContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] rounded-[12px] bg-refly-bg-float-z3 border-[1px] border-solid border-refly-Card-Border shadow-refly-l"
+      className="fixed z-[9999] rounded-lg bg-refly-bg-float-z3 shadow-refly-m"
       style={{
         left: `${reactFlowInstance.flowToScreenPosition(position).x}px`,
         top: `${reactFlowInstance.flowToScreenPosition(position).y}px`,
