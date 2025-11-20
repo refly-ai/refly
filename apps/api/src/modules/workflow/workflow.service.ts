@@ -664,13 +664,9 @@ export class WorkflowService {
 
     for (const node of executingSkillNodes) {
       try {
-        // Try to get version from nodeData metadata
-        const nodeData = safeParseJSON(node.nodeData) as CanvasNode;
-        const version = (nodeData?.data?.metadata as ResponseNodeMeta)?.version;
-
         await this.actionService.abortActionFromReq(
           user,
-          { resultId: node.entityId, version },
+          { resultId: node.entityId },
           'Workflow aborted by user',
         );
         this.logger.log(`Aborted action ${node.entityId} for node ${node.nodeId}`);
