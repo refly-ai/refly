@@ -120,7 +120,7 @@ const ConfigureTabComponent = ({
         >
           <span>{t('agent.config.model')}</span>
           <Tooltip title={t('agent.config.modelDescription')}>
-            <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+            <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
           </Tooltip>
         </div>
 
@@ -143,7 +143,7 @@ const ConfigureTabComponent = ({
           <div className="flex items-center gap-1">
             <span>{t('agent.config.prompt')}</span>
             <Tooltip title={t('agent.config.promptDescription')}>
-              <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+              <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
             </Tooltip>
           </div>
           <Button

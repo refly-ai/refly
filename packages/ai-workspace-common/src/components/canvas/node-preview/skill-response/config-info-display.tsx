@@ -29,7 +29,7 @@ const SectionTitle = memo(
       <span>{children}</span>
       {tooltip && (
         <Tooltip title={tooltip} placement="top">
-          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
         </Tooltip>
       )}
     </div>
