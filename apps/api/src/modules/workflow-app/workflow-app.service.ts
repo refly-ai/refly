@@ -22,7 +22,6 @@ import { ToolService } from '../tool/tool.service';
 import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { CreditService } from '../credit/credit.service';
-import { AppTemplateResult } from '../variable-extraction/variable-extraction.dto';
 import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { Queue } from 'bullmq';
@@ -155,8 +154,7 @@ export class WorkflowAppService {
         })(),
       ) === this.buildVariablesFingerprint(variables);
 
-    // Generate app template content (async via queue when available; fallback to sync)
-    let templateResult: AppTemplateResult | null = null;
+    // Generate app template content asynchronously when possible
     try {
       if (shouldSkipGeneration) {
         this.logger.log(
@@ -173,23 +171,10 @@ export class WorkflowAppService {
         );
         this.logger.log(`Enqueued template generation for workflow app: ${appId}`);
       } else {
-        const _templateResult = await this.variableExtractionService.generateAppPublishTemplate(
-          user,
-          canvasId,
-        );
+        // Always async: do not perform sync generation even if queue is unavailable
         this.logger.log(
-          `generateAppPublishTemplate result for workflow app: ${JSON.stringify(_templateResult)}`,
+          `Skip sync template generation for workflow app ${appId}: queue unavailable, enforce async-only`,
         );
-        if (
-          _templateResult?.templateContent &&
-          _templateResult?.templateContentPlaceholders?.length === variables?.length &&
-          variables?.every((variable) =>
-            _templateResult?.templateContentPlaceholders?.includes(`{{${variable.name}}}`),
-          )
-        ) {
-          templateResult = _templateResult;
-        }
-        this.logger.log(`Generated template content for workflow app (sync): ${appId}`);
       }
     } catch (error) {
       this.logger.error(
@@ -207,10 +192,10 @@ export class WorkflowAppService {
           description,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          // Reuse existing templateContent when skipping generation; otherwise write new content (sync path)
+          // Reuse existing templateContent when skipping generation; otherwise keep unchanged (async path)
           templateContent: shouldSkipGeneration
             ? (existingWorkflowApp?.templateContent ?? null)
-            : templateResult?.templateContent,
+            : undefined,
           remixEnabled,
           resultNodeIds,
           updatedAt: new Date(),
@@ -228,6 +213,7 @@ export class WorkflowAppService {
           canvasId,
           storageKey,
           coverStorageKey: coverStorageKey as any,
+          // Always async: initial templateContent remains null
           templateContent: null,
           remixEnabled,
           resultNodeIds,

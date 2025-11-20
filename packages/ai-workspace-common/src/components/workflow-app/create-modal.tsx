@@ -36,11 +36,13 @@ const SuccessMessage = memo(({ shareId, onClose }: SuccessMessageProps) => {
   const shareLink = useMemo(() => getShareLink('workflowApp', shareId), [shareId]);
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     if (!shareLink) return;
     try {
-      copyToClipboard(shareLink);
-      setCopied(true);
+      const ok = await copyToClipboard(shareLink);
+      if (ok) {
+        setCopied(true);
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to copy link:', err);
@@ -54,7 +56,8 @@ const SuccessMessage = memo(({ shareId, onClose }: SuccessMessageProps) => {
   // Auto copy link when component mounts
   useEffect(() => {
     if (shareLink) {
-      handleCopy();
+      // Fire and forget; internal function handles errors and success flag
+      void handleCopy();
     }
   }, [shareLink, handleCopy]);
 
@@ -320,32 +323,11 @@ export const CreateWorkflowAppModal = ({
       if (data?.success && shareId) {
         const workflowAppLink = getShareLink('workflowApp', shareId);
 
-        // Copy to clipboard with error handling
-        const copyToClipboard = async () => {
-          try {
-            await navigator.clipboard.writeText(workflowAppLink);
-          } catch (error) {
-            // Fallback for when document is not focused or clipboard API fails
-            console.warn('Clipboard API failed, using fallback:', error);
-            // Create a temporary textarea element for fallback copy
-            const textarea = document.createElement('textarea');
-            textarea.value = workflowAppLink;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-              document.execCommand('copy');
-            } catch (fallbackError) {
-              console.error('Fallback copy failed:', fallbackError);
-              message.error('Failed to copy link to clipboard');
-            }
-            document.body.removeChild(textarea);
-          }
-        };
-
         // Copy to clipboard immediately after creation
-        await copyToClipboard();
+        const copied = await copyToClipboard(workflowAppLink).catch(() => false);
+        if (!copied) {
+          message.error('Failed to copy link to clipboard');
+        }
 
         setVisible(false);
 
