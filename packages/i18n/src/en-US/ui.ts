@@ -3830,6 +3830,9 @@ const translations = {
       executionIdFailed: 'Failed to get execution ID',
       executeFailed: 'Failed to execute workflow',
       executeError: 'Failed to execute workflow',
+      thinking: 'Thinking...',
+      stop: 'Stop',
+      stopped: 'Workflow stopped',
     },
     revenueSharing: {
       title: 'Earn credits by running templates',

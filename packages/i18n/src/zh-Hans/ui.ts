@@ -3563,6 +3563,9 @@ const translations = {
       executionIdFailed: '获取执行 ID 失败',
       executeFailed: '执行工作流失败',
       executeError: '执行工作流失败',
+      thinking: '思考中...',
+      stop: '停止',
+      stopped: '工作流已停止',
     },
     revenueSharing: {
       title: '模板被运行可享受积分收益分成',

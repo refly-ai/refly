@@ -26,6 +26,8 @@ import WhyChooseRefly from './WhyChooseRefly';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/sider/layout';
 import { SelectedResultsGrid } from '@refly-packages/ai-workspace-common/components/workflow-app/selected-results-grid';
 import { WorkflowAPPForm } from './workflow-app-form';
+import Lottie from 'lottie-react';
+import loadingAnimation from './loading.json';
 
 // User Avatar component for header
 const UserAvatar = () => {
@@ -384,7 +386,6 @@ const WorkflowAppPage: React.FC = () => {
                       {workflowApp?.description ?? ''}
                     </p>
                   </div>
-
                   {/* Workflow Form */}
                   <WorkflowAPPForm
                     workflowApp={workflowApp}
@@ -398,6 +399,168 @@ const WorkflowAppPage: React.FC = () => {
                     executionCreditUsage={executionCreditUsage}
                     className="max-h-[500px] sm:max-h-[600px] bg-[var(--refly-bg-float-z3)] dark:bg-[var(--refly-bg-content-z2)] border border-[var(--refly-Card-Border)] dark:border-[var(--refly-semi-color-border)] shadow-[0_2px_20px_4px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_4px_rgba(0,0,0,0.2)] px-4 py-3 rounded-2xl"
                   />
+
+                  {/* Execution Status Section - Exact Figma Design */}
+                  {isRunning && (
+                    <div
+                      className="mt-6 w-full bg-white dark:bg-[var(--refly-bg-content-z2)] rounded-2xl relative mx-auto overflow-hidden"
+                      style={{ maxWidth: '800px', minHeight: '244px', border: '1px solid #0E9F77' }}
+                    >
+                      {/* Responsive wrapper for scaling on smaller screens */}
+                      <div className="relative w-full" style={{ minHeight: '244px' }}>
+                        {/* Stop Button - Exact Position: x:717, y:16 */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExecutionId(null);
+                            setIsRunning(false);
+                            stopPolling();
+                            message.info(t('workflowApp.run.stopped') || 'Workflow stopped');
+                          }}
+                          className="absolute flex items-center justify-center rounded-md bg-transparent hover:bg-[rgba(28,31,35,0.05)] dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors sm:left-[717px] right-4 sm:right-auto"
+                          style={{
+                            top: '16px',
+                            width: '67px',
+                            height: '28px',
+                            padding: '10px',
+                            gap: '10px',
+                            border: '0.5px solid rgba(28, 31, 35, 0.2)',
+                          }}
+                        >
+                          <span
+                            className="text-[#1C1F23] dark:text-[var(--refly-text-0)]"
+                            style={{
+                              fontFamily: 'Roboto',
+                              fontWeight: 600,
+                              fontSize: '12px',
+                              lineHeight: '1.6666666666666667em',
+                            }}
+                          >
+                            {t('workflowApp.run.stop') || 'Stop'}
+                          </span>
+                        </button>
+
+                        {/* Loading Animation and Status Group - Centered on mobile, exact position on desktop */}
+                        <div
+                          className="absolute left-1/2 -translate-x-1/2 sm:left-[268px] sm:translate-x-0"
+                          style={{ top: '61px', width: '324px', height: '122px' }}
+                        >
+                          {/* Loading Animation - Lottie - Position: x:0, y:0 relative to group */}
+                          <div
+                            className="absolute"
+                            style={{ left: '0px', top: '0px', width: '122px', height: '122px' }}
+                          >
+                            <Lottie
+                              animationData={loadingAnimation}
+                              loop
+                              autoplay
+                              style={{ width: '122px', height: '122px' }}
+                            />
+                          </div>
+
+                          {/* Thinking... Text - Position: x:126, y:40 relative to group */}
+                          <div
+                            className="absolute bg-clip-text text-transparent"
+                            style={{
+                              left: '126px',
+                              top: '40px',
+                              minWidth: '67px',
+                              height: '20px',
+                              fontFamily: 'Roboto',
+                              fontWeight: 600,
+                              fontSize: '14px',
+                              lineHeight: '1.4285714285714286em',
+                              background:
+                                'linear-gradient(24deg, rgba(142, 239, 182, 1) 0%, rgba(0, 178, 173, 1) 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                            }}
+                          >
+                            {t('workflowApp.run.thinking') || 'Thinking...'}
+                          </div>
+
+                          {/* Step Information Text - Position: x:126, y:64 relative to group */}
+                          {(() => {
+                            const nodes =
+                              nodeExecutions?.filter(
+                                (node: WorkflowNodeExecution) => node.nodeType === 'skillResponse',
+                              ) ?? [];
+                            const executingNodes =
+                              nodes?.filter(
+                                (node: WorkflowNodeExecution) => node.status === 'executing',
+                              ) ?? [];
+                            const totalNodes = nodes?.length ?? 0;
+                            const currentStep = executingNodes[0];
+                            const finishedCount =
+                              nodes?.filter(
+                                (node: WorkflowNodeExecution) => node.status === 'finish',
+                              ).length ?? 0;
+                            const stepNumber = finishedCount + (nodes.length > 0 ? 1 : 0);
+
+                            if (nodes?.length > 0 || stepNumber > 0) {
+                              return (
+                                <div
+                                  className="absolute"
+                                  style={{
+                                    left: '126px',
+                                    top: '64px',
+                                    width: '198px',
+                                    fontFamily: 'PingFang SC',
+                                    fontWeight: 400,
+                                    fontSize: '12px',
+                                    lineHeight: '1.6666666666666667em',
+                                    color: 'rgba(28, 31, 35, 0.6)',
+                                  }}
+                                >
+                                  {stepNumber > 0 && totalNodes > 0 ? (
+                                    <div className="flex items-start gap-0 align-top">
+                                      {/* First line with step info and first title - horizontal layout */}
+                                      <div
+                                        className="flex items-start gap-0 overflow-hidden dark:text-[rgba(255,255,255,0.6)] flex-shrink-0"
+                                        style={{
+                                          color: 'rgba(28, 31, 35, 0.6)',
+                                        }}
+                                      >
+                                        <span className="whitespace-nowrap flex-shrink-0">
+                                          Step {stepNumber}/{totalNodes}:{' '}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                        {/* Display all executing nodes with proper left padding to align with first title */}
+                                        {executingNodes
+                                          ?.slice(0, 5)
+                                          .map((node: any, index: number) => {
+                                            // Calculate padding to align with first title position
+                                            // "Step X/Y: " prefix length for alignment
+                                            return (
+                                              <div
+                                                key={node.nodeId ?? index}
+                                                className="overflow-hidden text-ellipsis whitespace-nowrap dark:text-[rgba(255,255,255,0.6)]"
+                                                style={{
+                                                  paddingLeft: 4,
+                                                  color: 'rgba(28, 31, 35, 0.6)',
+                                                }}
+                                              >
+                                                {node.title ?? ''}
+                                              </div>
+                                            );
+                                          })}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="overflow-hidden text-ellipsis whitespace-nowrap dark:text-[rgba(255,255,255,0.6)]">
+                                      {currentStep?.title ?? ''}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {logs.length > 0 && (
                     <>
