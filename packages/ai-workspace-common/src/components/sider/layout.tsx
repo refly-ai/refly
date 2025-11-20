@@ -336,6 +336,9 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     if (path.startsWith('/app-manager')) {
       return 'appManager';
     }
+    if (path.startsWith('/marketplace')) {
+      return 'marketplace';
+    }
     return 'home';
   }, [location.pathname]);
 
@@ -360,8 +363,14 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         onActionClick: () => navigate('/app-manager'),
         key: 'appManager',
       },
+      {
+        icon: <Project key="marketplace" style={{ fontSize: 20 }} />,
+        title: t('loggedHomePage.siderMenu.marketplace'),
+        onActionClick: () => navigate('/marketplace'),
+        key: 'marketplace',
+      },
     ],
-    [t, navigate, setShowLibraryModal],
+    [t, navigate],
   );
 
   const bottomMenuItems = useMemo(

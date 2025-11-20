@@ -2116,6 +2116,7 @@ const translations = {
       home: '工作台',
       canvas: '我的工作流',
       appManager: '我的模版',
+      marketplace: '模板市场',
       contactUs: '联系我们',
       addToChrome: '安装浏览器插件',
       canvasTitle: '画布',

@@ -2130,6 +2130,7 @@ const translations = {
       home: 'Dashboard',
       canvas: 'My Workflows',
       appManager: 'My Templates',
+      marketplace: 'Marketplace',
       contactUs: 'Contact Us',
       addToChrome: 'Install Browser Extension',
       canvasTitle: 'Canvas',
