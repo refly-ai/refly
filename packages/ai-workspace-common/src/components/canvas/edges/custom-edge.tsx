@@ -108,7 +108,7 @@ export const CustomEdge = memo(
         style.stroke = '#0DB8AD';
         style.strokeWidth = 2;
       } else if (isFailedStatus) {
-        style.strokeDasharray = undefined;
+        style.strokeDasharray = '6 6';
         // style.stroke = 'var(--refly-func-danger-active)';
       }
 
