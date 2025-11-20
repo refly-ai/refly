@@ -4,6 +4,7 @@ import { CommonModule } from '../common/common.module';
 import { CanvasModule } from '../canvas/canvas.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { SkillModule } from '../skill/skill.module';
+import { ActionModule } from '../action/action.module';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
 import { RunWorkflowProcessor, PollWorkflowProcessor } from './workflow.processor';
@@ -17,6 +18,7 @@ import { CreditModule } from '../credit/credit.module';
     CanvasModule,
     CanvasSyncModule,
     SkillModule,
+    ActionModule,
     CreditModule,
     ...(isDesktop()
       ? []

@@ -30,7 +30,6 @@ import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/n
 import {
   useNodeData,
   useNodeExecutionFocus,
-  useNodeExecutionStatus,
 } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
@@ -207,11 +206,7 @@ export const SkillResponseNode = memo(
       },
     );
 
-    // Get node execution status
-    const { status: executionStatus, isExecuting } = useNodeExecutionStatus({
-      canvasId: canvasId || '',
-      nodeId: id,
-    });
+    const isExecuting = data.metadata.status === 'executing' || data.metadata.status === 'waiting';
 
     // Auto-focus on node when executing
     useNodeExecutionFocus({
@@ -250,11 +245,10 @@ export const SkillResponseNode = memo(
       removeStreamResult: state.removeStreamResult,
     }));
     // Get skill response actions
-    const { isRunning, handleRerunSingle, handleRerunFromHere, handleStop } =
+    const { workflowIsRunning, handleRerunSingle, handleRerunFromHere, handleStop } =
       useSkillResponseActions({
         nodeId: id,
         entityId: data.entityId,
-        status,
         canvasId,
       });
 
@@ -311,7 +305,7 @@ export const SkillResponseNode = memo(
       }, delay);
 
       return () => clearTimeout(timer);
-    }, [selected, id, setEdges, setEdgesWithHighlight, status, executionStatus]);
+    }, [selected, id, setEdges, setEdgesWithHighlight, status]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
@@ -823,7 +817,8 @@ export const SkillResponseNode = memo(
               source="node"
               actions={
                 <SkillResponseActions
-                  isRunning={isRunning || isExecuting}
+                  nodeIsExecuting={isExecuting}
+                  workflowIsRunning={workflowIsRunning}
                   onRerunSingle={handleRerunSingle}
                   onRerunFromHere={handleRerunFromHere}
                   onStop={handleStop}
@@ -864,6 +859,7 @@ export const SkillResponseNode = memo(
       prevProps.data?.title === nextProps.data?.title &&
       prevProps.data?.contentPreview === nextProps.data?.contentPreview &&
       prevProps.data?.createdAt === nextProps.data?.createdAt &&
+      prevProps.onNodeClick === nextProps.onNodeClick &&
       JSON.stringify(prevProps.data?.metadata) === JSON.stringify(nextProps.data?.metadata) &&
       styleEqual
     );

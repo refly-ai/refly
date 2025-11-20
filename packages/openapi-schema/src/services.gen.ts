@@ -345,6 +345,9 @@ import type {
   InitializeWorkflowData,
   InitializeWorkflowError,
   InitializeWorkflowResponse2,
+  AbortWorkflowData,
+  AbortWorkflowError,
+  AbortWorkflowResponse,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
@@ -2323,6 +2326,19 @@ export const initializeWorkflow = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/workflow/initialize',
+  });
+};
+
+/**
+ * Abort workflow execution
+ * Abort a running workflow execution
+ */
+export const abortWorkflow = <ThrowOnError extends boolean = false>(
+  options: Options<AbortWorkflowData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<AbortWorkflowResponse, AbortWorkflowError, ThrowOnError>({
+    ...options,
+    url: '/workflow/abort',
   });
 };
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useAbortAction } from './use-abort-action';
 import {
   createNodeEventName,
@@ -6,30 +6,23 @@ import {
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { logEvent } from '@refly/telemetry-web';
-import { ActionStatus } from '@refly/openapi-schema';
 
 interface UseSkillResponseActionsProps {
   nodeId: string;
   entityId: string;
-  status?: ActionStatus;
   canvasId?: string;
 }
 
 export const useSkillResponseActions = ({
   nodeId,
   entityId,
-  status,
   canvasId,
 }: UseSkillResponseActionsProps) => {
   const { abortAction } = useAbortAction();
   const { workflow: workflowRun } = useCanvasContext();
 
-  // Check if node is currently running (either node execution or workflow)
-  const isRunning = useMemo(() => {
-    const nodeIsExecuting = status === 'executing' || status === 'waiting';
-    const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
-    return nodeIsExecuting || workflowIsRunning;
-  }, [status, workflowRun.isInitializing, workflowRun.isPolling]);
+  // Check if workflow is running
+  const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
 
   // Rerun only this node
   const handleRerunSingle = useCallback(() => {
@@ -68,12 +61,12 @@ export const useSkillResponseActions = ({
   // Stop the running node
   const handleStop = useCallback(() => {
     if (entityId) {
-      abortAction(entityId);
+      return abortAction(entityId);
     }
   }, [entityId, abortAction]);
 
   return {
-    isRunning,
+    workflowIsRunning,
     handleRerunSingle,
     handleRerunFromHere,
     handleStop,

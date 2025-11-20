@@ -1443,6 +1443,15 @@ const translations = {
           failed: 'Failed',
         },
         creditUsage: 'Estimated usage {{count}} credits',
+        abort: {
+          confirmTitle: 'Abort Workflow Execution',
+          confirmContent:
+            'The workflow is still running. If you abort it now, the consumed credits will not be refunded. Confirm abort?',
+          confirm: 'Confirm Abort',
+          abortButton: 'Abort',
+          success: 'Workflow execution has been aborted',
+          failed: 'Failed to abort workflow',
+        },
       },
     },
     connectionTimeout: {
@@ -1474,6 +1483,14 @@ const translations = {
       stepCompleted: 'Step Completed',
       rerunSingle: 'Rerun This Node',
       rerunFromHere: 'Run From Here',
+      stopConfirmModal: {
+        title: 'Terminate Workflow Run',
+        content:
+          'The workflow is still running. If you terminate it now, the consumed credits will not be refunded. Confirm termination?',
+        cancel: 'Cancel',
+        confirm: 'Confirm Termination',
+      },
+      stopSuccess: 'Workflow execution has been terminated',
       stepTitle: 'Step {{index}}',
       aiThinking: 'AI is thinking ...',
       sourcesCnt: 'Total of {{count}} source(s) found',

@@ -9332,6 +9332,18 @@ export const InitializeWorkflowResponseSchema = {
   ],
 } as const;
 
+export const AbortWorkflowRequestSchema = {
+  type: 'object',
+  required: ['executionId'],
+  properties: {
+    executionId: {
+      type: 'string',
+      description: 'Workflow execution ID to abort',
+      example: 'we-abc123',
+    },
+  },
+} as const;
+
 export const WorkflowNodeExecutionSchema = {
   type: 'object',
   required: ['nodeId'],

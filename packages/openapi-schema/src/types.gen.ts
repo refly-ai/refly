@@ -6603,6 +6603,13 @@ export type InitializeWorkflowResponse = BaseResponse & {
   };
 };
 
+export type AbortWorkflowRequest = {
+  /**
+   * Workflow execution ID to abort
+   */
+  executionId: string;
+};
+
 export type WorkflowNodeExecution = {
   /**
    * Node execution ID
@@ -8574,6 +8581,14 @@ export type InitializeWorkflowData = {
 export type InitializeWorkflowResponse2 = InitializeWorkflowResponse;
 
 export type InitializeWorkflowError = unknown;
+
+export type AbortWorkflowData = {
+  body: AbortWorkflowRequest;
+};
+
+export type AbortWorkflowResponse = BaseResponse;
+
+export type AbortWorkflowError = unknown;
 
 export type GetWorkflowDetailData = {
   query: {

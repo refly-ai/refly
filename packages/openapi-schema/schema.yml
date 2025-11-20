@@ -2845,6 +2845,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InitializeWorkflowResponse'
+  /workflow/abort:
+    post:
+      tags:
+        - workflow
+      summary: Abort workflow execution
+      description: Abort a running workflow execution
+      operationId: abortWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbortWorkflowRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /workflow/detail:
     get:
       tags:
@@ -10557,6 +10577,15 @@ components:
                   type: string
                   description: Workflow execution ID
                   example: "we-abc123"
+    AbortWorkflowRequest:
+      type: object
+      required:
+        - executionId
+      properties:
+        executionId:
+          type: string
+          description: Workflow execution ID to abort
+          example: "we-abc123"
     WorkflowNodeExecution:
       type: object
       required:

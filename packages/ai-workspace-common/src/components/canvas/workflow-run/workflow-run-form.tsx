@@ -1,9 +1,10 @@
 import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, Form, Typography, message } from 'antd';
-import { Play } from 'refly-icons';
+import { Button, Input, Select, Form, Typography, message, Modal } from 'antd';
+import { Play, Stop } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 import cn from 'classnames';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
@@ -77,6 +78,7 @@ export const WorkflowRunForm = ({
   workflowVariables,
   onSubmitVariables,
   loading,
+  executionId,
   isPolling,
   isRunning: externalIsRunning,
   onRunningChange,
@@ -303,6 +305,43 @@ export const WorkflowRunForm = ({
     setVariableValues(newValues);
     form.setFieldsValue(newValues);
   }, [workflowVariables, form]);
+
+  const handleAbort = async () => {
+    if (!executionId) {
+      return;
+    }
+
+    Modal.confirm({
+      title: t('canvas.workflow.run.abort.confirmTitle'),
+      content: t('canvas.workflow.run.abort.confirmContent'),
+      okText: t('canvas.workflow.run.abort.confirm'),
+      cancelText: t('common.cancel'),
+      onOk: async () => {
+        try {
+          const { error } = await getClient().abortWorkflow({
+            body: { executionId },
+          });
+
+          if (error) {
+            message.error(t('canvas.workflow.run.abort.failed'));
+            return;
+          }
+
+          message.success(t('canvas.workflow.run.abort.success'));
+
+          // Reset running state
+          if (onRunningChange) {
+            onRunningChange(false);
+          } else {
+            setInternalIsRunning(false);
+          }
+        } catch (error) {
+          console.error('Failed to abort workflow:', error);
+          message.error(t('canvas.workflow.run.abort.failed'));
+        }
+      },
+    });
+  };
 
   const handleRun = async () => {
     if (loading || isRunning) {
@@ -531,6 +570,8 @@ export const WorkflowRunForm = ({
     setTemplateVariables(variables);
   }, []);
 
+  const workflowIsRunning = isRunning || isPolling;
+
   return (
     <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
       {
@@ -591,14 +632,14 @@ export const WorkflowRunForm = ({
             )}
             <Button
               className="w-full h-8 text-sm"
-              type="primary"
-              icon={<Play size={16} />}
-              onClick={handleRun}
-              loading={loading || isRunning || isPolling}
-              disabled={loading || isRunning || isPolling || !isFormValid}
+              {...(workflowIsRunning ? { color: 'primary' } : { type: 'primary' })}
+              icon={workflowIsRunning ? <Stop size={16} /> : <Play size={16} />}
+              onClick={workflowIsRunning ? handleAbort : handleRun}
+              loading={loading}
+              disabled={loading || (!workflowIsRunning && !isFormValid)}
             >
-              {isPolling
-                ? t('canvas.workflow.run.executing') || 'Executing...'
+              {workflowIsRunning
+                ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
                 : t('canvas.workflow.run.run') || 'Run'}
             </Button>
           </div>

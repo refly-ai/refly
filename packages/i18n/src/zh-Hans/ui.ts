@@ -1441,6 +1441,15 @@ const translations = {
           failed: '运行失败',
         },
         creditUsage: '预计使用 {{count}} 积分',
+        abort: {
+          confirmTitle: '终止工作流执行',
+          confirmContent:
+            '工作流正在运行中，此时终止，已消耗的积分将不会返还。确认终止工作流执行吗？',
+          confirm: '确定终止',
+          abortButton: '终止',
+          success: '工作流已终止执行',
+          failed: '终止工作流失败',
+        },
       },
     },
     connectionTimeout: {
@@ -1469,6 +1478,13 @@ const translations = {
       stepCompleted: '步骤已完成',
       rerunSingle: '仅运行此节点',
       rerunFromHere: '从此节点开始运行',
+      stopConfirmModal: {
+        title: '终止工作流运行',
+        content: '工作流运行还未完成，此时终止，已消耗的积分将不会返还。确认终止工作流运行吗？',
+        cancel: '取消',
+        confirm: '确定终止',
+      },
+      stopSuccess: '工作流已终止执行',
       stepTitle: '步骤 {{index}}',
       aiThinking: 'AI 正在思考...',
       sourcesCnt: '共找到 {{count}} 个来源',
