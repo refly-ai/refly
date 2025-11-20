@@ -174,7 +174,7 @@ const ConfigureTabComponent = ({
             </div>
           )}
 
-          <div className="flex-none h-[50%] min-h-[100px] max-h-[270px] overflow-hidden">
+          <div className="flex-none h-[50%] min-h-[100px] overflow-hidden">
             <EditChatInput
               ref={chatComposerRef}
               enabled
