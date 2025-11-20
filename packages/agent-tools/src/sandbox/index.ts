@@ -57,11 +57,28 @@ export class Execute extends AgentBaseTool<SandboxParams> {
 Execute code in a secure sandbox environment.
 
 ** Critical Rules **
-1. Always use relative path for file operations (files are in current working directory)
-2. Always include all necessary imports
-3. Always create new files, never modify or delete existing files
-4. Prefer no code comments, use concise code instead.
-5. Each tool call's code context is isolated, always use file to store intermediate results.
+
+- Always use relative path for file operations (files are in current working directory)
+- Always include all necessary imports in EVERY execution
+- Always create new files, never modify or delete existing files
+- Prefer no code comments, use concise code instead
+- COMPLETE ISOLATION: Each tool call starts with a fresh Python environment - no variables, imports, or objects carry over from previous calls
+- File Persistence: Only files are persistent across calls - all Python variables and imports must be redefined each time
+- Self-Contained Code: Every code block must be completely self-contained with all required imports and variable definitions
+
+** Environment Behavior **
+
+✅ Files created in previous calls remain accessible
+❌ Variables from previous calls are NOT available
+❌ Imports from previous calls are NOT retained
+❌ Function definitions from previous calls are NOT accessible
+
+** Best Practices **
+
+Start each execution with all necessary imports
+Load data from files if continuing previous work
+Save results to files for future use
+Treat each call as a completely new Python session
 
 \`\`\`python
 import pandas as pd
