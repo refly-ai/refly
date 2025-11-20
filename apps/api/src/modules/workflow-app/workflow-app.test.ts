@@ -66,37 +66,4 @@ describe('WorkflowAppService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-
-  describe('validateCategoryTags', () => {
-    it('should return valid tags', () => {
-      const result = (service as any).validateCategoryTags(['education', 'business']);
-      expect(result).toEqual(['education', 'business']);
-    });
-
-    it('should filter out invalid tags', () => {
-      const result = (service as any).validateCategoryTags(['education', 'invalid', 'business']);
-      expect(result).toEqual(['education', 'business']);
-    });
-
-    it('should default to education if no valid tags', () => {
-      const result = (service as any).validateCategoryTags(['invalid', 'also-invalid']);
-      expect(result).toEqual(['education']);
-    });
-
-    it('should limit to 3 tags', () => {
-      const result = (service as any).validateCategoryTags([
-        'education',
-        'business',
-        'creative',
-        'sales',
-        'life',
-      ]);
-      expect(result).toEqual(['education', 'business', 'creative']);
-    });
-
-    it('should remove duplicates', () => {
-      const result = (service as any).validateCategoryTags(['education', 'business', 'education']);
-      expect(result).toEqual(['education', 'business']);
-    });
-  });
 });

@@ -74,7 +74,7 @@ export class WorkflowAppService {
 
     const appId = existingWorkflowApp?.appId ?? genWorkflowAppID();
 
-    const canvas = await this.prisma.canvas.findUnique({
+    const canvas = await this.prisma.canvas.findFirst({
       where: { canvasId, uid: user.uid, deletedAt: null },
     });
 
@@ -249,7 +249,7 @@ export class WorkflowAppService {
       }
     }
 
-    const workflowApp = await this.prisma.workflowApp.findUnique({
+    const workflowApp = await this.prisma.workflowApp.findFirst({
       where: { appId, uid: user.uid, deletedAt: null },
     });
 
@@ -266,7 +266,7 @@ export class WorkflowAppService {
   }
 
   async getWorkflowAppDetail(user: User, appId: string) {
-    const workflowApp = await this.prisma.workflowApp.findUnique({
+    const workflowApp = await this.prisma.workflowApp.findFirst({
       where: { appId, uid: user.uid, deletedAt: null },
     });
 
