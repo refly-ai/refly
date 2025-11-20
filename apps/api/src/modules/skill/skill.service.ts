@@ -977,7 +977,10 @@ export class SkillService implements OnModuleInit {
     try {
       const data = await this.skillInvokePreCheck(user, param);
       if (this.skillQueue) {
-        await this.skillQueue.add('invokeSkill', data);
+        const job = await this.skillQueue.add('invokeSkill', data);
+        // Register the job in Redis for abortion support
+        await this.actionService.registerQueuedJob(data.result.resultId, job.id);
+        this.logger.debug(`Registered queued job: ${data.result.resultId} -> ${job.id}`);
       } else {
         // In desktop mode or when queue is not available, invoke directly
         await this.invokeSkillFromQueue(data);

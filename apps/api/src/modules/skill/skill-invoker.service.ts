@@ -318,8 +318,46 @@ export class SkillInvokerService {
     // Network timeout tracking for AI model requests
     let networkTimeoutId: NodeJS.Timeout | null = null;
 
+    // Delete queued job mapping from Redis (job has started executing)
+    await this.actionService.deleteQueuedJob(resultId);
+
     // Register the abort controller with ActionService
     this.actionService.registerAbortController(resultId, abortController);
+
+    // Set up database polling for cross-pod abort detection
+    let abortCheckInterval: NodeJS.Timeout | null = null;
+    const startAbortCheck = () => {
+      abortCheckInterval = setInterval(
+        async () => {
+          if (abortController.signal.aborted) {
+            clearInterval(abortCheckInterval);
+            return;
+          }
+
+          try {
+            const shouldAbort = await this.actionService.isAbortRequested(resultId, version);
+            if (shouldAbort) {
+              this.logger.log(`Detected cross-pod abort request for ${resultId}`);
+              abortController.abort('Aborted by user');
+              clearInterval(abortCheckInterval);
+            }
+          } catch (error) {
+            this.logger.error(`Error checking abort status for ${resultId}: ${error?.message}`);
+          }
+        },
+        3000, // Check every 3 seconds
+      );
+    };
+
+    const stopAbortCheck = () => {
+      if (abortCheckInterval) {
+        clearInterval(abortCheckInterval);
+        abortCheckInterval = null;
+      }
+    };
+
+    // Start abort check
+    startAbortCheck();
 
     // Simple timeout tracking without Redis
     let lastOutputTime = Date.now();
@@ -485,6 +523,9 @@ export class SkillInvokerService {
     const performCleanup = () => {
       if (cleanupExecuted) return; // Prevent multiple cleanup executions
       cleanupExecuted = true;
+
+      // Stop abort check interval
+      stopAbortCheck();
 
       // Stop stream idle timeout check interval
       stopTimeoutCheck();
