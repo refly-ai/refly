@@ -374,7 +374,8 @@ export class ActionService {
 
     const abortReason = reason || 'User requested abort';
 
-    // Step 1: Check if controller is in memory (same pod)
+    // Step 1: Check if controller is in memory (same pod) - FASTEST
+    // Note: If controller exists, Redis mapping has already been deleted when execution started
     const entry = this.activeAbortControllers.get(resultId);
     if (entry) {
       this.logger.log(`Found controller in memory for ${resultId}, aborting directly`);
