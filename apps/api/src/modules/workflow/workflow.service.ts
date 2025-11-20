@@ -662,20 +662,28 @@ export class WorkflowService {
       (n) => n.status === 'executing' && n.nodeType === 'skillResponse',
     );
 
-    for (const node of executingSkillNodes) {
-      try {
-        await this.actionService.abortActionFromReq(
-          user,
-          { resultId: node.entityId },
-          'Workflow aborted by user',
-        );
-        this.logger.log(`Aborted action ${node.entityId} for node ${node.nodeId}`);
-      } catch (error) {
-        this.logger.warn(
-          `Failed to abort action ${node.entityId}: ${(error as any)?.message ?? error}`,
-        );
-      }
-    }
+    // Abort all executing nodes in parallel for better performance
+    const abortResults = await Promise.allSettled(
+      executingSkillNodes.map(async (node) => {
+        try {
+          await this.actionService.abortActionFromReq(
+            user,
+            { resultId: node.entityId },
+            'Workflow aborted by user',
+          );
+          this.logger.log(`Aborted action ${node.entityId} for node ${node.nodeId}`);
+          return { success: true, nodeId: node.nodeId };
+        } catch (error) {
+          this.logger.warn(
+            `Failed to abort action ${node.entityId}: ${(error as any)?.message ?? error}`,
+          );
+          return { success: false, nodeId: node.nodeId, error };
+        }
+      }),
+    );
+
+    const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
+    this.logger.log(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
 
     // Update all waiting and executing nodes to failed
     await this.prisma.workflowNodeExecution.updateMany({
