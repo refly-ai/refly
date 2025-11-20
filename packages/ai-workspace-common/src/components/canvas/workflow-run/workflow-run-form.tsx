@@ -640,7 +640,11 @@ export const WorkflowRunForm = ({
               icon={workflowIsRunning ? <Stop size={16} /> : <Play size={16} />}
               onClick={workflowIsRunning ? handleAbort : handleRun}
               loading={loading}
-              disabled={loading || (!workflowIsRunning && !isFormValid)}
+              disabled={
+                loading ||
+                (workflowIsRunning && !executionId) ||
+                (!workflowIsRunning && !isFormValid)
+              }
             >
               {workflowIsRunning
                 ? t('canvas.workflow.run.abort.abortButton') || 'Abort'

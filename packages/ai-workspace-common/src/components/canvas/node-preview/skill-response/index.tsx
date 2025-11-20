@@ -213,7 +213,7 @@ const SkillResponseNodePreviewComponent = ({
   };
 
   // Get node execution status
-  const isExecuting = data.metadata.status === 'executing' || data.metadata.status === 'waiting';
+  const isExecuting = data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';
 
   const { workflowIsRunning, handleStop } = useSkillResponseActions({
     nodeId: node.id,

@@ -206,7 +206,8 @@ export const SkillResponseNode = memo(
       },
     );
 
-    const isExecuting = data.metadata.status === 'executing' || data.metadata.status === 'waiting';
+    const isExecuting =
+      data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';
 
     // Auto-focus on node when executing
     useNodeExecutionFocus({
