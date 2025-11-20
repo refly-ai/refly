@@ -3,6 +3,8 @@ import { PinoLogger } from 'nestjs-pino';
 import { SandboxExecuteParams } from '@refly/openapi-schema';
 
 import { guard } from '../../../utils/guard';
+import { poll } from './scalebox.utils';
+import { Trace, Measure, setSpanAttributes } from './scalebox.tracer';
 
 import {
   SandboxCreationException,
@@ -12,11 +14,13 @@ import {
 } from './scalebox.exception';
 import {
   SANDBOX_DRIVE_MOUNT_POINT,
-  SANDBOX_MOUNT_WAIT_MS,
   SANDBOX_MOUNT_MAX_RETRIES,
   SANDBOX_MOUNT_RETRY_DELAY_MS,
+  SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS,
+  SANDBOX_MOUNT_VERIFICATION_INITIAL_DELAY_MS,
+  SANDBOX_MOUNT_VERIFICATION_MAX_DELAY_MS,
+  SANDBOX_MOUNT_VERIFICATION_BACKOFF_FACTOR,
 } from './scalebox.constants';
-import { sleep } from './scalebox.utils';
 
 export interface S3Config {
   endPoint: string; // MinIO SDK uses 'endPoint' with capital P
@@ -98,27 +102,28 @@ export class SandboxWrapper {
     return this.context.canvasId;
   }
 
+  @Trace('sandbox.create', { 'operation.type': 'cold_start' })
   static async create(context: SandboxContext, timeoutMs: number): Promise<SandboxWrapper> {
+    setSpanAttributes({
+      'sandbox.canvasId': context.canvasId,
+      'sandbox.uid': context.uid,
+      'sandbox.timeoutMs': timeoutMs,
+    });
+
     context.logger.info({ canvasId: context.canvasId }, 'Creating sandbox');
 
-    const sandbox = await guard(() =>
-      Sandbox.create('code-interpreter', {
-        apiKey: context.apiKey,
-        timeoutMs,
-      }),
-    ).orThrow((e) => new SandboxCreationException(e));
+    const sandbox = await SandboxWrapper.createSandboxInstance(context, timeoutMs);
 
-    const info = await sandbox.getInfo();
+    setSpanAttributes({ 'sandbox.id': sandbox.sandboxId });
 
     const wrapper = new SandboxWrapper(
       sandbox,
       context,
       SANDBOX_DRIVE_MOUNT_POINT,
       Date.now(),
-      info.timeoutAt.getTime(),
+      Date.now() + timeoutMs,
     );
 
-    // Mount drive (read-write, contains user uploaded files and generated files)
     await wrapper.mountDrive();
 
     context.logger.info(
@@ -127,6 +132,19 @@ export class SandboxWrapper {
     );
 
     return wrapper;
+  }
+
+  @Trace('sandbox.sdk.create')
+  private static async createSandboxInstance(
+    context: SandboxContext,
+    timeoutMs: number,
+  ): Promise<Sandbox> {
+    return guard(() =>
+      Sandbox.create('code-interpreter', {
+        apiKey: context.apiKey,
+        timeoutMs,
+      }),
+    ).orThrow((e) => new SandboxCreationException(e));
   }
 
   static async reconnect(
@@ -172,37 +190,93 @@ export class SandboxWrapper {
    * Mount drive storage (read-write)
    * Contains user uploaded files and generated files
    */
+  @Trace('sandbox.mount')
   private async mountDrive(): Promise<void> {
     const { logger, s3Config, s3DrivePath, canvasId } = this.context;
+    const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
 
+    setSpanAttributes({
+      'mount.point': mountPoint,
+      'mount.path': s3DrivePath,
+      'mount.canvasId': canvasId,
+    });
+
+    logger.info({ canvasId, mountPoint, path: s3DrivePath }, 'Mounting drive storage');
+
+    await this.createMountPoint(mountPoint);
+    await this.mountS3FileSystem(s3Config, s3DrivePath, mountPoint);
+    await this.waitForMountReady();
+
+    logger.info({ canvasId, mountPoint }, 'Drive storage mounted successfully');
+  }
+
+  @Trace('mount.mkdir')
+  private async createMountPoint(mountPoint: string): Promise<void> {
     const sandbox = guard
       .notEmpty(this.sandbox)
       .orThrow(() => new Error('Sandbox not initialized'));
 
-    const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
-
-    logger.info({ canvasId, mountPoint, path: s3DrivePath }, 'Mounting drive storage');
-
-    const mkdirResult = await guard(() => sandbox.commands.run(`mkdir -p ${mountPoint}`)).orThrow(
-      (e) => new SandboxMountException(e, canvasId),
+    const result = await guard(() => sandbox.commands.run(`mkdir -p ${mountPoint}`)).orThrow(
+      (e) => new SandboxMountException(e, this.context.canvasId),
     );
 
-    if (mkdirResult.exitCode !== 0) throw new SandboxMountException(mkdirResult.stderr, canvasId);
+    if (result.exitCode !== 0) {
+      throw new SandboxMountException(result.stderr, this.context.canvasId);
+    }
+  }
+
+  @Trace('mount.s3fs')
+  private async mountS3FileSystem(
+    s3Config: S3Config,
+    s3DrivePath: string,
+    mountPoint: string,
+  ): Promise<void> {
+    const sandbox = guard
+      .notEmpty(this.sandbox)
+      .orThrow(() => new Error('Sandbox not initialized'));
 
     const mountCmd = buildS3MountCommand(s3Config, s3DrivePath, mountPoint);
 
-    const mountResult = await guard
+    const result = await guard
       .retry(() => sandbox.commands.run(mountCmd), {
         maxAttempts: SANDBOX_MOUNT_MAX_RETRIES,
         delayMs: SANDBOX_MOUNT_RETRY_DELAY_MS,
       })
-      .orThrow((e) => new SandboxMountException(e, canvasId));
+      .orThrow((e) => new SandboxMountException(e, this.context.canvasId));
 
-    if (mountResult.exitCode !== 0) throw new SandboxMountException(mountResult.stderr, canvasId);
+    if (result.exitCode !== 0) {
+      throw new SandboxMountException(result.stderr, this.context.canvasId);
+    }
+  }
 
-    await sleep(SANDBOX_MOUNT_WAIT_MS);
+  private async runCommand(command: string): Promise<void> {
+    const result = await guard(() => this.sandbox.commands.run(command)).orElse(() =>
+      Promise.resolve({ exitCode: 1, stdout: '', stderr: 'Command failed' }),
+    );
 
-    logger.info({ canvasId, mountPoint }, 'Drive storage mounted successfully');
+    if (result.exitCode !== 0) {
+      throw new SandboxMountException(result.stderr, this.context.canvasId);
+    }
+  }
+
+  @Trace('mount.wait')
+  private async waitForMountReady(): Promise<void> {
+    await poll(
+      async () =>
+        guard(() => this.runCommand(`test -d ${SANDBOX_DRIVE_MOUNT_POINT}`)).orElse(() => null),
+      async () => {
+        throw new SandboxMountException(
+          `Mount verification timeout after ${SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS}ms`,
+          this.context.canvasId,
+        );
+      },
+      {
+        timeout: SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS,
+        initialDelay: SANDBOX_MOUNT_VERIFICATION_INITIAL_DELAY_MS,
+        maxDelay: SANDBOX_MOUNT_VERIFICATION_MAX_DELAY_MS,
+        backoffFactor: SANDBOX_MOUNT_VERIFICATION_BACKOFF_FACTOR,
+      },
+    );
   }
 
   async isHealthy(): Promise<boolean> {
@@ -236,7 +310,15 @@ export class SandboxWrapper {
     return this.sandbox;
   }
 
+  @Trace('sandbox.executeCode', { 'operation.type': 'code_execution' })
   async executeCode(params: SandboxExecuteParams, logger: PinoLogger): Promise<ExecutionResult> {
+    setSpanAttributes({
+      'code.language': params.language,
+      'code.length': params.code.length,
+      'sandbox.id': this.sandboxId,
+      'sandbox.canvasId': this.context.canvasId,
+    });
+
     logger.info(
       {
         sandboxId: this.sandboxId,
@@ -247,6 +329,11 @@ export class SandboxWrapper {
       'Executing code in sandbox',
     );
 
+    return this.runCode(params);
+  }
+
+  @Trace('code.execution')
+  private async runCode(params: SandboxExecuteParams): Promise<ExecutionResult> {
     return guard(() =>
       this.sandbox.runCode(params.code, {
         language: params.language,
@@ -255,7 +342,15 @@ export class SandboxWrapper {
     ).orThrow((e) => new CodeExecutionException(e));
   }
 
+  @Trace('sandbox.listFiles')
   async listCwdFiles(): Promise<string[]> {
+    const files = await this.listFiles();
+    setSpanAttributes({ 'files.count': files.length });
+    return files;
+  }
+
+  @Measure('files.list')
+  private async listFiles(): Promise<string[]> {
     return guard(() =>
       this.sandbox.files.list(this.cwd).then((files) => files.map((file) => file.name)),
     ).orThrow((error) => new SandboxFileListException(error));

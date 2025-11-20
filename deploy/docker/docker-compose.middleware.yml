@@ -88,6 +88,17 @@ services:
       - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
     networks:
       - refly_network
+  jaeger:
+    container_name: refly_jaeger
+    image: jaegertracing/all-in-one:latest
+    restart: unless-stopped
+    ports:
+      - 16686:16686  # Jaeger UI
+      - 4318:4318    # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - refly_network
 
 networks:
   refly_network:

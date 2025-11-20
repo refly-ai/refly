@@ -17,6 +17,7 @@ import {
   SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS,
   S3_DEFAULT_CONFIG,
 } from './scalebox.constants';
+import { Trace, Measure, setSpanAttributes } from './scalebox.tracer';
 
 @Injectable()
 export class SandboxPool {
@@ -41,13 +42,30 @@ export class SandboxPool {
   @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
   private s3Config: S3Config;
 
+  @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
   async acquire(context: ExecutionContext, maxWaitMs = 30000): Promise<SandboxWrapper> {
+    setSpanAttributes({
+      'pool.canvasId': context.canvasId,
+      'pool.uid': context.uid,
+      'pool.maxWait': maxWaitMs,
+    });
+
     return poll(
       async () => {
-        const wrapper = await this.tryAcquire(context);
-        if (wrapper) return wrapper;
+        const wrapper = await this.tryAcquireWithMetrics(context);
+        if (wrapper) {
+          setSpanAttributes({ 'pool.strategy': 'reuse' });
+          return wrapper;
+        }
+
         const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-        if (active.length < this.maxSandboxes) return this.createNew(context);
+        setSpanAttributes({ 'pool.active.count': active.length });
+
+        if (active.length < this.maxSandboxes) {
+          setSpanAttributes({ 'pool.strategy': 'create' });
+          return this.createNew(context);
+        }
+
         return null;
       },
       async () => {
@@ -56,6 +74,11 @@ export class SandboxPool {
       },
       { timeout: maxWaitMs },
     );
+  }
+
+  @Measure('pool.tryAcquire')
+  private async tryAcquireWithMetrics(context: ExecutionContext): Promise<SandboxWrapper | null> {
+    return this.tryAcquire(context);
   }
 
   private async tryAcquire(context: ExecutionContext): Promise<SandboxWrapper | null> {

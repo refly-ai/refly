@@ -17,9 +17,13 @@ export const SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 export const ERROR_MESSAGE_MAX_LENGTH = 1000;
 
 /**
- * Sandbox ready state check configuration
+ * Mount verification polling configuration
+ * Actively poll to verify mount readiness instead of fixed wait
  */
-export const SANDBOX_MOUNT_WAIT_MS = 2000;
+export const SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS = 5000;
+export const SANDBOX_MOUNT_VERIFICATION_INITIAL_DELAY_MS = 100;
+export const SANDBOX_MOUNT_VERIFICATION_MAX_DELAY_MS = 500;
+export const SANDBOX_MOUNT_VERIFICATION_BACKOFF_FACTOR = 1.5;
 
 /**
  * S3 mount retry configuration

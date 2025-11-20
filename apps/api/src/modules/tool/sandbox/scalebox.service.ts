@@ -25,6 +25,7 @@ import { ScaleboxExecutionResult, ExecutionContext } from './scalebox.dto';
 import { formatError, buildSuccessResponse, extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { SandboxWrapper } from './scalebox.wrapper';
+import { Trace, Measure, setSpanAttributes } from './scalebox.tracer';
 
 /**
  * Scalebox Service
@@ -59,20 +60,31 @@ export class ScaleboxService {
     );
   }
 
+  @Trace('sandbox.runCode')
   private async runCodeInSandbox(
     wrapper: SandboxWrapper,
     params: SandboxExecuteParams,
   ): Promise<ScaleboxExecutionResult> {
     const startTime = Date.now();
 
-    const previousFiles = await wrapper.listCwdFiles();
+    const previousFiles = await this.listFilesBeforeExecution(wrapper);
     const prevSet = new Set(previousFiles);
 
     const result = await wrapper.executeCode(params, this.logger);
-    const currentFiles = await wrapper.listCwdFiles();
+    setSpanAttributes({
+      'code.exitCode': result.exitCode,
+      'code.hasError': result.exitCode !== 0,
+    });
+
+    const currentFiles = await this.listFilesAfterExecution(wrapper);
     const diffFiles = currentFiles
       .filter((file) => !prevSet.has(file))
       .map((p) => p.replace(wrapper.cwd, ''));
+
+    setSpanAttributes({
+      'files.after.count': currentFiles.length,
+      'files.new.count': diffFiles.length,
+    });
 
     const executionTime = Date.now() - startTime;
     const errorMessage = extractErrorMessage(result);
@@ -84,6 +96,18 @@ export class ScaleboxService {
       executionTime,
       files: diffFiles,
     };
+  }
+
+  @Measure('files.listBefore')
+  private async listFilesBeforeExecution(wrapper: SandboxWrapper): Promise<string[]> {
+    const files = await wrapper.listCwdFiles();
+    setSpanAttributes({ 'files.before.count': files.length });
+    return files;
+  }
+
+  @Measure('files.listAfter')
+  private async listFilesAfterExecution(wrapper: SandboxWrapper): Promise<string[]> {
+    return wrapper.listCwdFiles();
   }
 
   private async releaseSandbox(wrapper: SandboxWrapper): Promise<void> {
