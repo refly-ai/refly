@@ -316,6 +316,10 @@ export const WorkflowRunForm = ({
       content: t('canvas.workflow.run.abort.confirmContent'),
       okText: t('canvas.workflow.run.abort.confirm'),
       cancelText: t('common.cancel'),
+      icon: null,
+      okButtonProps: {
+        className: '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
+      },
       onOk: async () => {
         try {
           const { error } = await getClient().abortWorkflow({

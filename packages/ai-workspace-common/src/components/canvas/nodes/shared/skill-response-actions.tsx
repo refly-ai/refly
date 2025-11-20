@@ -56,6 +56,11 @@ const SkillResponseActionsComponent = ({
           content: t('canvas.skillResponse.stopConfirmModal.content'),
           okText: t('canvas.skillResponse.stopConfirmModal.confirm'),
           cancelText: t('canvas.skillResponse.stopConfirmModal.cancel'),
+          icon: null,
+          okButtonProps: {
+            className:
+              '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
+          },
           onOk: async () => {
             await onStop();
             message.success(t('canvas.skillResponse.stopSuccess'));
