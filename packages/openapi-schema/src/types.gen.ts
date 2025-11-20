@@ -4568,7 +4568,7 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
  */
 export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
 
-export type SandboxExecuteRequest = {
+export type SandboxExecuteParams = {
   /**
    * Code to execute in the sandbox
    */
@@ -4590,6 +4590,23 @@ export type SandboxExecuteRequest = {
    * Execution timeout in milliseconds
    */
   timeout?: number;
+};
+
+/**
+ * Programming language for code execution
+ */
+export type language =
+  | 'python'
+  | 'javascript'
+  | 'typescript'
+  | 'r'
+  | 'java'
+  | 'bash'
+  | 'node'
+  | 'nodejs'
+  | 'deno';
+
+export type SandboxExecuteContext = {
   /**
    * Parent action result ID for context inheritance
    */
@@ -4620,19 +4637,10 @@ export type SandboxExecuteRequest = {
   version?: number;
 };
 
-/**
- * Programming language for code execution
- */
-export type language =
-  | 'python'
-  | 'javascript'
-  | 'typescript'
-  | 'r'
-  | 'java'
-  | 'bash'
-  | 'node'
-  | 'nodejs'
-  | 'deno';
+export type SandboxExecuteRequest = {
+  params: SandboxExecuteParams;
+  context?: SandboxExecuteContext;
+};
 
 export type SandboxExecuteResponse = BaseResponseV2 & {
   data?: {

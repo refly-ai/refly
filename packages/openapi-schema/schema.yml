@@ -8509,7 +8509,7 @@ components:
                     message:
                       type: string
 
-    SandboxExecuteRequest:
+    SandboxExecuteParams:
       type: object
       required:
         - code
@@ -8538,6 +8538,10 @@ components:
           minimum: 1000
           maximum: 300000
           default: 30000
+
+    SandboxExecuteContext:
+      type: object
+      properties:
         parentResultId:
           type: string
           description: Parent action result ID for context inheritance
@@ -8559,6 +8563,16 @@ components:
         version:
           type: number
           description: Result version for file registration
+
+    SandboxExecuteRequest:
+      type: object
+      required:
+        - params
+      properties:
+        params:
+          $ref: '#/components/schemas/SandboxExecuteParams'
+        context:
+          $ref: '#/components/schemas/SandboxExecuteContext'
 
     SandboxExecuteResponse:
       allOf:

@@ -1,6 +1,9 @@
-import { Sandbox, type Language, type ExecutionResult } from '@scalebox/sdk';
+import { Sandbox, type ExecutionResult } from '@scalebox/sdk';
 import { PinoLogger } from 'nestjs-pino';
+import { SandboxExecuteParams } from '@refly/openapi-schema';
+
 import { guard } from '../../../utils/guard';
+
 import {
   SandboxCreationException,
   SandboxMountException,
@@ -75,18 +78,25 @@ ${nonemptyFlag}`.trim();
  * Handles health checks, timeout management, and state persistence
  */
 export class SandboxWrapper {
-  private s3Config: S3Config; // S3 configuration
-  private s3DrivePath: string; // S3 drive path (user uploaded files + generated files)
+  public readonly context: SandboxContext;
 
   private constructor(
     private readonly sandbox: Sandbox,
-    public readonly uid: string,
-    public readonly sandboxId: string,
-    public readonly canvasId: string,
+    context: SandboxContext,
     public readonly cwd: string,
     public readonly createdAt: number,
     private timeoutAt: number,
-  ) {}
+  ) {
+    this.context = context;
+  }
+
+  get sandboxId(): string {
+    return this.sandbox.sandboxId;
+  }
+
+  get canvasId(): string {
+    return this.context.canvasId;
+  }
 
   static async create(context: SandboxContext, timeoutMs: number): Promise<SandboxWrapper> {
     context.logger.info({ canvasId: context.canvasId }, 'Creating sandbox');
@@ -102,20 +112,14 @@ export class SandboxWrapper {
 
     const wrapper = new SandboxWrapper(
       sandbox,
-      context.uid,
-      sandbox.sandboxId,
-      context.canvasId,
+      context,
       SANDBOX_DRIVE_MOUNT_POINT,
       Date.now(),
       info.timeoutAt.getTime(),
     );
 
-    // Store S3 config and paths
-    wrapper.s3Config = context.s3Config;
-    wrapper.s3DrivePath = context.s3DrivePath;
-
     // Mount drive (read-write, contains user uploaded files and generated files)
-    await wrapper.mountDrive(context);
+    await wrapper.mountDrive();
 
     context.logger.info(
       { sandboxId: wrapper.sandboxId, canvasId: context.canvasId },
@@ -148,17 +152,11 @@ export class SandboxWrapper {
 
     const wrapper = new SandboxWrapper(
       sandbox,
-      metadata.uid,
-      metadata.sandboxId,
-      metadata.canvasId,
+      context,
       metadata.cwd,
       metadata.createdAt,
       metadata.timeoutAt,
     );
-
-    // Store S3 config and paths
-    wrapper.s3Config = context.s3Config;
-    wrapper.s3DrivePath = context.s3DrivePath;
 
     if (!(await wrapper.isHealthy())) {
       context.logger.warn({ sandboxId: metadata.sandboxId }, 'Sandbox is not healthy');
@@ -174,8 +172,8 @@ export class SandboxWrapper {
    * Mount drive storage (read-write)
    * Contains user uploaded files and generated files
    */
-  private async mountDrive(context: SandboxContext): Promise<void> {
-    const { logger, s3Config, s3DrivePath } = context;
+  private async mountDrive(): Promise<void> {
+    const { logger, s3Config, s3DrivePath, canvasId } = this.context;
 
     const sandbox = guard
       .notEmpty(this.sandbox)
@@ -183,17 +181,13 @@ export class SandboxWrapper {
 
     const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
 
-    logger.info(
-      { canvasId: this.canvasId, mountPoint, path: s3DrivePath },
-      'Mounting drive storage',
-    );
+    logger.info({ canvasId, mountPoint, path: s3DrivePath }, 'Mounting drive storage');
 
     const mkdirResult = await guard(() => sandbox.commands.run(`mkdir -p ${mountPoint}`)).orThrow(
-      (e) => new SandboxMountException(e, this.canvasId),
+      (e) => new SandboxMountException(e, canvasId),
     );
 
-    if (mkdirResult.exitCode !== 0)
-      throw new SandboxMountException(mkdirResult.stderr, this.canvasId);
+    if (mkdirResult.exitCode !== 0) throw new SandboxMountException(mkdirResult.stderr, canvasId);
 
     const mountCmd = buildS3MountCommand(s3Config, s3DrivePath, mountPoint);
 
@@ -202,14 +196,13 @@ export class SandboxWrapper {
         maxAttempts: SANDBOX_MOUNT_MAX_RETRIES,
         delayMs: SANDBOX_MOUNT_RETRY_DELAY_MS,
       })
-      .orThrow((e) => new SandboxMountException(e, this.canvasId));
+      .orThrow((e) => new SandboxMountException(e, canvasId));
 
-    if (mountResult.exitCode !== 0)
-      throw new SandboxMountException(mountResult.stderr, this.canvasId);
+    if (mountResult.exitCode !== 0) throw new SandboxMountException(mountResult.stderr, canvasId);
 
     await sleep(SANDBOX_MOUNT_WAIT_MS);
 
-    logger.info({ canvasId: this.canvasId, mountPoint }, 'Drive storage mounted successfully');
+    logger.info({ canvasId, mountPoint }, 'Drive storage mounted successfully');
   }
 
   async isHealthy(): Promise<boolean> {
@@ -243,24 +236,20 @@ export class SandboxWrapper {
     return this.sandbox;
   }
 
-  async executeCode(
-    code: string,
-    language: Language,
-    logger: PinoLogger,
-  ): Promise<ExecutionResult> {
+  async executeCode(params: SandboxExecuteParams, logger: PinoLogger): Promise<ExecutionResult> {
     logger.info(
       {
         sandboxId: this.sandboxId,
-        canvasId: this.canvasId,
-        language,
-        s3DrivePath: this.s3DrivePath,
+        canvasId: this.context.canvasId,
+        language: params.language,
+        s3DrivePath: this.context.s3DrivePath,
       },
       'Executing code in sandbox',
     );
 
     return guard(() =>
-      this.sandbox.runCode(code, {
-        language,
+      this.sandbox.runCode(params.code, {
+        language: params.language,
         cwd: this.cwd,
       }),
     ).orThrow((e) => new CodeExecutionException(e));
@@ -274,9 +263,9 @@ export class SandboxWrapper {
 
   toMetadata(): SandboxMetadata {
     return {
-      uid: this.uid,
+      uid: this.context.uid,
       sandboxId: this.sandboxId,
-      canvasId: this.canvasId,
+      canvasId: this.context.canvasId,
       cwd: this.cwd,
       createdAt: this.createdAt,
       timeoutAt: this.timeoutAt,

@@ -1,8 +1,11 @@
 import { DriveFile, SandboxExecuteResponse } from '@refly/openapi-schema';
+import type { ExecutionResult } from '@scalebox/sdk';
+import stripAnsi from 'strip-ansi';
 
 import { buildResponse } from '../../../utils';
 import { SandboxException } from './scalebox.exception';
 import { ScaleboxExecutionResult } from './scalebox.dto';
+import { ERROR_MESSAGE_MAX_LENGTH } from './scalebox.constants';
 
 export interface PerformanceResult<T> {
   success: boolean;
@@ -131,4 +134,30 @@ export async function poll<T>(
   }
 
   await onTimeout();
+}
+
+/**
+ * Truncate error message to avoid excessive log size
+ * Strips ANSI escape codes for better readability in JSON responses
+ */
+export function truncateErrorMessage(message: string): string {
+  // Strip ANSI escape codes for better readability in JSON responses
+  const cleanMessage = stripAnsi(message);
+
+  if (cleanMessage.length <= ERROR_MESSAGE_MAX_LENGTH) {
+    return cleanMessage;
+  }
+  return `${cleanMessage.slice(0, ERROR_MESSAGE_MAX_LENGTH)}[... more info]`;
+}
+
+/**
+ * Extract error message from execution result
+ * Tries multiple sources in priority order: traceback > error message > stderr > stdout
+ */
+export function extractErrorMessage(result: ExecutionResult): string {
+  if (result.error?.traceback) return truncateErrorMessage(result.error.traceback);
+  if (result.error?.message) return truncateErrorMessage(result.error.message);
+  if (result.stderr) return truncateErrorMessage(result.stderr);
+  if (result.exitCode !== 0 && result.stdout) return truncateErrorMessage(result.stdout);
+  return '';
 }

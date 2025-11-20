@@ -6420,7 +6420,7 @@ export const HeyGenGenerateVideoResponseSchema = {
   ],
 } as const;
 
-export const SandboxExecuteRequestSchema = {
+export const SandboxExecuteParamsSchema = {
   type: 'object',
   required: ['code', 'language'],
   properties: {
@@ -6441,6 +6441,12 @@ export const SandboxExecuteRequestSchema = {
       maximum: 300000,
       default: 30000,
     },
+  },
+} as const;
+
+export const SandboxExecuteContextSchema = {
+  type: 'object',
+  properties: {
     parentResultId: {
       type: 'string',
       description: 'Parent action result ID for context inheritance',
@@ -6468,6 +6474,19 @@ export const SandboxExecuteRequestSchema = {
     version: {
       type: 'number',
       description: 'Result version for file registration',
+    },
+  },
+} as const;
+
+export const SandboxExecuteRequestSchema = {
+  type: 'object',
+  required: ['params'],
+  properties: {
+    params: {
+      $ref: '#/components/schemas/SandboxExecuteParams',
+    },
+    context: {
+      $ref: '#/components/schemas/SandboxExecuteContext',
     },
   },
 } as const;

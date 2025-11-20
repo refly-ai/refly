@@ -1,9 +1,30 @@
 import type { ExecutionResult, Language } from '@scalebox/sdk';
+import { SandboxExecuteParams, SandboxExecuteContext } from '@refly/openapi-schema';
 
 /**
  * Scalebox internal type definitions
  * These types are only used within the scalebox module
  */
+
+/**
+ * Re-export SandboxExecuteParams from OpenAPI schema for internal use
+ */
+export { SandboxExecuteParams };
+
+/**
+ * Execution context information
+ * Extends SandboxExecuteContext with internal required fields
+ */
+export interface ExecutionContext extends Partial<SandboxExecuteContext> {
+  // Internal required fields
+  uid: string;
+  apiKey: string;
+  canvasId: string; // Override as required
+  version?: number;
+
+  // Inherited optional fields from SandboxExecuteContext:
+  // parentResultId?, targetId?, targetType?, model?, providerItemId?
+}
 
 /**
  * Scalebox execution job data (internal use)

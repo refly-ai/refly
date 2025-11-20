@@ -115,12 +115,16 @@ plt.savefig('chart.png')
       }
 
       const request: SandboxExecuteRequest = {
-        code: input.code,
-        language: input.language,
-        timeout: input.timeout,
-        parentResultId: config.configurable?.resultId,
-        canvasId: config.configurable?.canvasId,
-        version: config.configurable?.version,
+        params: {
+          code: input.code,
+          language: input.language,
+          timeout: input.timeout,
+        },
+        context: {
+          parentResultId: config.configurable?.resultId,
+          canvasId: config.configurable?.canvasId,
+          version: config.configurable?.version,
+        },
       };
 
       const result = await reflyService.execute(user, request);

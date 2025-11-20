@@ -1,83 +1,79 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { Job } from 'bullmq';
-import { SCALEBOX_EXECUTION_QUEUE, SCALEBOX_DEFAULT_CONCURRENCY } from './scalebox.constants';
 import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
 import { ScaleboxService } from './scalebox.service';
 import { formatError, performance } from './scalebox.utils';
 
 /**
  * Scalebox Execution Processor
- * Consumes sandbox execution jobs from the internal queue
+ * Placeholder for future queue-based execution (currently unused)
  */
-@Processor(SCALEBOX_EXECUTION_QUEUE, {
-  concurrency: SCALEBOX_DEFAULT_CONCURRENCY,
-})
-export class ScaleboxExecutionProcessor extends WorkerHost {
+@Injectable()
+export class ScaleboxExecutionProcessor {
   constructor(
     private readonly scaleboxService: ScaleboxService,
     private readonly logger: PinoLogger,
   ) {
-    super();
     this.logger.setContext(ScaleboxExecutionProcessor.name);
   }
 
-  async process(job: Job<ScaleboxExecutionJobData>): Promise<ScaleboxExecutionResult> {
-    const { uid, code, language, canvasId, apiKey, version } = job.data;
+  async execute(data: ScaleboxExecutionJobData): Promise<ScaleboxExecutionResult> {
+    const { uid, code, language, canvasId, apiKey, version } = data;
 
     this.logger.info(
       {
-        jobId: job.id,
         uid,
         canvasId,
         language,
       },
-      'Processing job',
+      'Processing execution',
     );
 
     const result = await performance(() =>
-      this.scaleboxService.executeCode({
-        uid,
-        code,
-        language,
-        apiKey,
-        canvasId,
-        version,
-      }),
+      this.scaleboxService.executeCode(
+        {
+          code,
+          language,
+        },
+        {
+          uid,
+          apiKey,
+          canvasId,
+          version,
+        },
+      ),
     );
 
-    const { success, error, data, executionTime } = result;
+    const { success, error, data: resultData, executionTime } = result;
 
     if (!success) {
       const { message } = formatError(error);
 
       this.logger.error(
         {
-          jobId: job.id,
           error: message,
           stack: (error as Error).stack,
         },
-        'Job failed',
+        'Execution failed',
       );
 
       return {
         error: message,
         exitCode: 1,
         executionTime,
-        files: [], // Ensure files field is always present
+        files: [],
         originResult: undefined,
       };
     }
 
     this.logger.info(
       {
-        jobId: job.id,
-        executionTime: data!.executionTime,
-        exitCode: data!.exitCode,
+        executionTime: resultData!.executionTime,
+        exitCode: resultData!.exitCode,
       },
-      'Job completed',
+      'Execution completed',
     );
 
-    return data!;
+    return resultData!;
   }
 }

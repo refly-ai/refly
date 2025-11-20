@@ -145,6 +145,9 @@ export class ApifyRun13FActor extends AgentBaseTool<Apify13FToolParams> {
   schema = z.object({
     manager_name: z.string().describe("Enter a manager's name which is used to search on 13F"),
     quarter_year: z.string().describe('Enter quarter year, e.g. Q2 2024'),
+    file_name: z
+      .string()
+      .describe('Enter file name, e.g. 13f-manager-quarterly-report-scraper.csv'),
   });
 
   description =
@@ -224,10 +227,8 @@ export class ApifyRun13FActor extends AgentBaseTool<Apify13FToolParams> {
       };
 
       const csv = toCsv(items);
-      const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `13f-${input.manager_name.replace(/\s+/g, '-').toLowerCase()}-${input.quarter_year.replace(/\s+/g, '-').toLowerCase()}-${ts}.csv`;
       const driveFile = await this.params?.reflyService?.writeFile?.(this.params?.user, {
-        name: fileName,
+        name: input.file_name,
         content: csv,
         type: 'text/csv',
         canvasId: config.configurable?.canvasId,
