@@ -801,12 +801,15 @@ export const SkillResponseNode = memo(
             style={nodeStyle}
             className={cn(
               'h-full flex flex-col relative z-1 p-0 box-border',
-              getNodeCommonStyles({ selected, isHovered }),
+              getNodeCommonStyles({ selected, isHovered, nodeType: 'skillResponse' }),
               'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid bg-refly-bg-content-z2',
               // Apply error styles only when there's an error
-              status === 'failed' ? 'border-refly-func-danger-default' : 'border-refly-Card-Border',
+              status === 'failed'
+                ? '!border-refly-func-danger-default'
+                : 'border-refly-Card-Border',
             )}
           >
+            {isHovered && <div className="absolute inset-0 bg-refly-node-run opacity-[0.14]" />}
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
