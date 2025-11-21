@@ -3990,7 +3990,7 @@ const translations = {
     noWorkflows: '暂无工作流',
     noSearchResults: '没有找到相关工作流',
     searchWorkflows: '搜索工作流',
-    shared: '已共享',
+    shared: '已分享',
     private: '私有',
     published: '已发布',
     unpublished: '未发布',
