@@ -214,13 +214,13 @@ export class SandboxWrapper {
 
     // Use fusermount with lazy unmount (-z) for FUSE filesystems
     // -u: unmount, -z: lazy unmount (detach even if busy)
+    // Lazy unmount is asynchronous, completes in background
     await this.runCommand(`fusermount -uz ${mountPoint}`);
 
-    // Verify unmount: mountpoint returns 0 if mounted, 1 if not mounted
-    // Use ! to invert exit code - expect not mounted (1 -> 0 success)
-    await this.runCommand(`! mountpoint ${mountPoint} &>/dev/null`);
-
-    logger.info({ sandboxId: this.sandboxId, mountPoint }, 'Drive storage unmounted successfully');
+    logger.info(
+      { sandboxId: this.sandboxId, mountPoint },
+      'Drive storage unmount initiated (lazy)',
+    );
   }
 
   @Trace('sandbox.command')

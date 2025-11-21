@@ -31,19 +31,6 @@ export const SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS = 5000;
 export const SANDBOX_MOUNT_VERIFICATION_MAX_DELAY_MS = 500;
 
 /**
- * Unmount verification polling configuration
- * Poll to verify FUSE lazy unmount completion
- */
-export const SANDBOX_UNMOUNT_POLL_MAX_ATTEMPTS = 10;
-export const SANDBOX_UNMOUNT_POLL_INTERVAL_MS = 200;
-
-/**
- * Unmount stabilization delay
- * Additional wait time after unmount to allow kernel FUSE cleanup
- */
-export const SANDBOX_UNMOUNT_STABILIZE_DELAY_MS = 500;
-
-/**
  * S3 Default Configuration
  */
 export const S3_DEFAULT_CONFIG = {
