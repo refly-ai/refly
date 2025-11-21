@@ -262,37 +262,25 @@ export const CreateWorkflowAppModal = ({
   }, [driveFileNodes, resultNodes, skillResponseNodes]);
 
   // Load existing app data
-  const loadAppData = useCallback(
-    async (appId: string) => {
-      if (!appId) return;
+  const loadAppData = useCallback(async (appId: string) => {
+    if (!appId) return;
 
-      setLoadingAppData(true);
-      try {
-        const { data } = await getClient().getWorkflowAppDetail({
-          query: { appId },
-        });
+    setLoadingAppData(true);
+    try {
+      const { data } = await getClient().getWorkflowAppDetail({
+        query: { appId },
+      });
 
-        if (data?.success && data?.data) {
-          setAppData(data.data);
-
-          // When editing existing app, use saved node IDs
-          const savedNodeIds = data.data?.resultNodeIds ?? [];
-          // using all display nodes by default
-          const validNodeIds =
-            displayNodes.filter((node): node is CanvasNode => !!node?.id)?.map((node) => node.id) ??
-            [];
-          const intersectedNodeIds = savedNodeIds.filter((id) => validNodeIds.includes(id));
-
-          setSelectedResults(intersectedNodeIds);
-        }
-      } catch (error) {
-        console.error('Failed to load app data:', error);
-      } finally {
-        setLoadingAppData(false);
+      if (data?.success && data?.data) {
+        setAppData(data.data);
+        // Note: selectedResults will be set separately in useEffect when displayNodes is ready
       }
-    },
-    [displayNodes],
-  );
+    } catch (error) {
+      console.error('Failed to load app data:', error);
+    } finally {
+      setLoadingAppData(false);
+    }
+  }, []);
 
   // Handle cover image upload
   const uploadCoverImage = async (file: File): Promise<string> => {
@@ -537,6 +525,27 @@ export const CreateWorkflowAppModal = ({
       }
     }
   }, [appData, visible, title, form]);
+
+  // Sync selected results when appData loads and displayNodes is ready (for editing existing app)
+  // Use displayNodes.length as dependency instead of displayNodes to avoid infinite loop
+  useEffect(() => {
+    if (appData && visible && displayNodes.length > 0) {
+      const savedNodeIds = appData?.resultNodeIds ?? [];
+      const validNodeIds =
+        displayNodes.filter((node): node is CanvasNode => !!node?.id)?.map((node) => node.id) ?? [];
+      const intersectedNodeIds = savedNodeIds.filter((id) => validNodeIds.includes(id));
+
+      // Only update if different to avoid unnecessary re-renders
+      setSelectedResults((prev) => {
+        const prevSet = new Set(prev);
+        const newSet = new Set(intersectedNodeIds);
+        if (prevSet.size === newSet.size && [...prevSet].every((id) => newSet.has(id))) {
+          return prev; // No change, return previous reference
+        }
+        return intersectedNodeIds;
+      });
+    }
+  }, [appData, visible, displayNodes.length]);
 
   // Auto-select all result nodes when creating a new app or loading existing app
   useEffect(() => {

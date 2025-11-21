@@ -68,6 +68,7 @@ const WorkflowAppPage: React.FC = () => {
   const [finalNodeExecutions, setFinalNodeExecutions] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
+  const [showStatusSection, setShowStatusSection] = useState(false);
   const [executionCreditUsage, setExecutionCreditUsage] = useState<number | null>(null);
 
   // Drive files state for preview and runtime
@@ -236,6 +237,20 @@ const WorkflowAppPage: React.FC = () => {
       setIsRunning(false);
     }
   }, [executionId, status]);
+
+  // Handle status section visibility with animation
+  useEffect(() => {
+    if (isRunning || isStopped) {
+      // Show with animation
+      setShowStatusSection(true);
+    } else {
+      // Hide with animation delay
+      const timer = setTimeout(() => {
+        setShowStatusSection(false);
+      }, 300); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [isRunning, isStopped]);
 
   useEffect(() => {
     if (shareId) {
@@ -601,12 +616,16 @@ const WorkflowAppPage: React.FC = () => {
                   />
 
                   {/* Execution Status Section - Exact Figma Design */}
-                  {(isRunning || isStopped) && (
+                  {showStatusSection && (
                     <div
-                      className={`mt-6 w-full rounded-2xl relative mx-auto overflow-hidden ${
+                      className={`mt-6 w-full rounded-2xl relative mx-auto overflow-hidden transition-all duration-300 ease-in-out ${
                         isStopped
                           ? 'bg-[#F6F6F6] dark:bg-[var(--refly-bg-content-z2)]'
                           : 'bg-white dark:bg-[var(--refly-bg-content-z2)]'
+                      } ${
+                        isRunning || isStopped
+                          ? 'opacity-100 translate-y-0'
+                          : 'opacity-0 -translate-y-2'
                       }`}
                       style={{ maxWidth: '800px', minHeight: '244px', border: '1px solid #0E9F77' }}
                     >
@@ -618,14 +637,13 @@ const WorkflowAppPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={handleAbortWorkflow}
-                              className="absolute flex items-center justify-center rounded-md bg-transparent hover:bg-[rgba(28,31,35,0.05)] dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors sm:left-[717px] right-4 sm:right-auto"
+                              className="absolute flex items-center justify-center rounded-md bg-transparent hover:bg-[rgba(28,31,35,0.05)] dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors sm:left-[717px] right-4 sm:right-auto border border-[rgba(28,31,35,0.2)] dark:border-[rgba(255,255,255,0.2)]"
                               style={{
                                 top: '16px',
                                 width: '67px',
                                 height: '28px',
                                 padding: '10px',
                                 gap: '10px',
-                                border: '0.5px solid rgba(28, 31, 35, 0.2)',
                               }}
                             >
                               <span
@@ -702,7 +720,7 @@ const WorkflowAppPage: React.FC = () => {
                                 if (nodes?.length > 0 || stepNumber > 0) {
                                   return (
                                     <div
-                                      className="absolute"
+                                      className="absolute text-[rgba(28,31,35,0.6)] dark:text-[rgba(255,255,255,0.6)]"
                                       style={{
                                         left: '126px',
                                         top: '64px',
@@ -711,46 +729,29 @@ const WorkflowAppPage: React.FC = () => {
                                         fontWeight: 400,
                                         fontSize: '12px',
                                         lineHeight: '1.6666666666666667em',
-                                        color: 'rgba(28, 31, 35, 0.6)',
                                       }}
                                     >
                                       {stepNumber > 0 && totalNodes > 0 ? (
-                                        <div className="flex items-start gap-0 align-top">
-                                          {/* First line with step info and first title - horizontal layout */}
-                                          <div
-                                            className="flex items-start gap-0 overflow-hidden dark:text-[rgba(255,255,255,0.6)] flex-shrink-0"
-                                            style={{
-                                              color: 'rgba(28, 31, 35, 0.6)',
-                                            }}
-                                          >
-                                            <span className="whitespace-nowrap flex-shrink-0">
-                                              Step {stepNumber}/{totalNodes}:{' '}
-                                            </span>
-                                          </div>
-                                          <div className="flex flex-col">
-                                            {/* Display all executing nodes with proper left padding to align with first title */}
-                                            {executingNodes
-                                              ?.slice(0, 5)
-                                              .map((node: any, index: number) => {
-                                                // Calculate padding to align with first title position
-                                                // "Step X/Y: " prefix length for alignment
-                                                return (
-                                                  <div
-                                                    key={node.nodeId ?? index}
-                                                    className="overflow-hidden text-ellipsis whitespace-nowrap dark:text-[rgba(255,255,255,0.6)]"
-                                                    style={{
-                                                      paddingLeft: 4,
-                                                      color: 'rgba(28, 31, 35, 0.6)',
-                                                    }}
-                                                  >
-                                                    {node.title ?? ''}
-                                                  </div>
-                                                );
-                                              })}
-                                          </div>
+                                        <div className="flex flex-col">
+                                          {/* Display all executing nodes with Step prefix */}
+                                          {executingNodes
+                                            ?.slice(0, 5)
+                                            .map((node: any, index: number) => {
+                                              return (
+                                                <div
+                                                  key={node.nodeId ?? index}
+                                                  className="overflow-hidden text-ellipsis whitespace-nowrap"
+                                                >
+                                                  <span className="whitespace-nowrap flex-shrink-0">
+                                                    Step {stepNumber + index}/{totalNodes}:{' '}
+                                                  </span>
+                                                  <span>{node.title ?? ''}</span>
+                                                </div>
+                                              );
+                                            })}
                                         </div>
                                       ) : (
-                                        <div className="overflow-hidden text-ellipsis whitespace-nowrap dark:text-[rgba(255,255,255,0.6)]">
+                                        <div className="overflow-hidden text-ellipsis whitespace-nowrap">
                                           {currentStep?.title ?? ''}
                                         </div>
                                       )}
@@ -764,22 +765,21 @@ const WorkflowAppPage: React.FC = () => {
                         ) : isStopped ? (
                           /* Stopped State - Exact Figma Design */
                           <div
-                            className="absolute left-1/2 -translate-x-1/2 sm:left-[292px] sm:translate-x-0"
+                            className="absolute left-1/2 -translate-x-1/2"
                             style={{
                               top: '112px',
-                              width: '216px',
+                              width: '100%',
                               height: '22px',
                             }}
                           >
                             <div
-                              className="dark:text-[rgba(255,255,255,0.6)]"
+                              className="text-center text-[rgba(28,31,35,0.6)] dark:text-[rgba(255,255,255,0.6)]"
                               style={{
                                 fontFamily: 'PingFang SC',
                                 fontWeight: 400,
                                 fontSize: '12px',
                                 lineHeight: '1.8333333333333333em',
-                                color: 'rgba(28, 31, 35, 0.6)',
-                                textAlign: 'left',
+                                textAlign: 'center',
                               }}
                             >
                               {t('workflowApp.run.stoppedMessage') ||
