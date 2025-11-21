@@ -46,7 +46,6 @@ export class TemplateService {
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { category: true },
       orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
     });
 

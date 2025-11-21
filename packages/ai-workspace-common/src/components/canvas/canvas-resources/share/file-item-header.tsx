@@ -1,15 +1,11 @@
 import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Tooltip, Typography, Input, InputRef, message } from 'antd';
+import { Button, Tooltip, Typography, Input, InputRef } from 'antd';
 import { ScreenFull, ScreenDefault, Download } from 'refly-icons';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 // import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
-import {
-  getExtFromContentType,
-  buildSafeFileName,
-} from '@refly-packages/ai-workspace-common/utils/download-file';
-import { serverOrigin } from '@refly/ui-kit';
+import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 
 const { Text } = Typography;
 
@@ -27,7 +23,10 @@ export const FileItemHeader = memo(() => {
   const titleInputRef = useRef<InputRef>(null);
 
   const contentType = (currentFile?.type ?? '') as string;
-  const [isDownloading, setIsDownloading] = useState(false);
+  const { handleDownload, isDownloading } = useDownloadFile();
+  const handleDownloadFile = useCallback(() => {
+    handleDownload({ currentFile, contentType });
+  }, [handleDownload, currentFile, contentType]);
 
   const { wideScreenVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
     (state) => ({
@@ -94,64 +93,6 @@ export const FileItemHeader = memo(() => {
     [handleTitleSave, handleTitleCancel],
   );
 
-  const handleDownload = useCallback(async () => {
-    if (isDownloading) return;
-
-    if (!currentFile?.fileId) {
-      message.error(t('canvas.resourceLibrary.download.invalidUrl'));
-      return;
-    }
-
-    // Trigger download with custom filename
-    const triggerDownload = (href: string, fileName: string) => {
-      const link = document.createElement('a');
-      link.href = href;
-      link.download = fileName;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-
-    const baseTitle = currentFile?.name ?? t('common.untitled');
-    const fileExt = getExtFromContentType(contentType);
-    const fileName = buildSafeFileName(baseTitle, fileExt);
-    setIsDownloading(true);
-
-    try {
-      // Add download=1 query parameter to the URL
-      const url = new URL(`${serverOrigin}/v1/drive/file/content/${currentFile?.fileId}`);
-      url.searchParams.set('download', '1');
-
-      // Fetch the file with authentication
-      const response = await fetch(url.toString(), {
-        credentials: 'include',
-      });
-
-      if (!response?.ok) {
-        throw new Error(`Download failed: ${response?.status ?? 'unknown'}`);
-      }
-
-      // Get the blob from the response
-      const blob = await response.blob();
-
-      // Create a temporary object URL for download
-      const objectUrl = URL.createObjectURL(blob);
-
-      // Trigger download with custom filename
-      triggerDownload(objectUrl, fileName);
-      message.success(t('canvas.resourceLibrary.download.success'));
-
-      // Clean up the object URL
-      URL.revokeObjectURL(objectUrl);
-    } catch (error) {
-      console.error('Download failed:', error);
-      message.error(t('canvas.resourceLibrary.download.error'));
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [currentFile, contentType, isDownloading, t, setIsDownloading]);
-
   return (
     <div className="w-full h-14 flex-shrink-0 flex gap-2 items-center justify-between px-3 py-4">
       <div className="min-w-0 flex-1 flex items-center gap-1">
@@ -200,7 +141,7 @@ export const FileItemHeader = memo(() => {
           type="text"
           icon={<Download size={16} />}
           loading={isDownloading}
-          onClick={handleDownload}
+          onClick={handleDownloadFile}
           disabled={isDownloading}
         />
 

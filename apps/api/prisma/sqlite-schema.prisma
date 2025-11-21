@@ -134,6 +134,8 @@ model ActionResult {
   history        String?  @map("history")
   /// Errors
   errors         String?  @map("errors")
+  /// Error type
+  errorType      String?  @map("error_type")
   /// Locale setting
   locale         String?  @default("") @map("locale")
   /// Project id

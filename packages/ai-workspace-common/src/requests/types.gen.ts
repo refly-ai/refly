@@ -1559,6 +1559,11 @@ export type TokenUsageItem = {
 export type ActionStatus = 'init' | 'waiting' | 'executing' | 'finish' | 'failed';
 
 /**
+ * Action error type
+ */
+export type ActionErrorType = 'systemError' | 'userAbort';
+
+/**
  * Artifact type
  */
 export type ArtifactType = 'document' | 'codeArtifact' | 'image' | 'video' | 'audio';
@@ -1764,6 +1769,10 @@ export type ActionResult = {
    * Step status
    */
   status?: ActionStatus;
+  /**
+   * Error type (defaults to systemError if undefined)
+   */
+  errorType?: ActionErrorType;
   /**
    * Action type
    */
@@ -6360,6 +6369,10 @@ export type ToolsetDefinition = {
    */
   key: string;
   /**
+   * Whether this is a builtin toolset
+   */
+  builtin?: boolean;
+  /**
    * Toolset domain (used for display icon)
    */
   domain?: string;
@@ -6775,6 +6788,13 @@ export type InitializeWorkflowResponse = BaseResponse & {
   };
 };
 
+export type AbortWorkflowRequest = {
+  /**
+   * Workflow execution ID to abort
+   */
+  executionId: string;
+};
+
 export type WorkflowNodeExecution = {
   /**
    * Node execution ID
@@ -6842,6 +6862,10 @@ export type WorkflowExecution = {
    */
   status?: WorkflowExecutionStatus;
   /**
+   * Whether the workflow was aborted by user
+   */
+  abortedByUser?: boolean;
+  /**
    * Node executions
    */
   nodeExecutions?: Array<WorkflowNodeExecution>;
@@ -6892,6 +6916,10 @@ export type CreateWorkflowAppRequest = {
    * Whether remix is enabled for this app
    */
   remixEnabled?: boolean;
+  /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
 };
 
 export type DeleteWorkflowAppRequest = {
@@ -9964,6 +9992,14 @@ export type InitializeWorkflowData = {
 export type InitializeWorkflowResponse2 = InitializeWorkflowResponse;
 
 export type InitializeWorkflowError = unknown;
+
+export type AbortWorkflowData = {
+  body: AbortWorkflowRequest;
+};
+
+export type AbortWorkflowResponse = BaseResponse;
+
+export type AbortWorkflowError = unknown;
 
 export type GetWorkflowDetailData = {
   query: {

@@ -2056,6 +2056,12 @@ export const ActionStatusSchema = {
   enum: ['init', 'waiting', 'executing', 'finish', 'failed'],
 } as const;
 
+export const ActionErrorTypeSchema = {
+  type: 'string',
+  description: 'Action error type',
+  enum: ['systemError', 'userAbort'],
+} as const;
+
 export const ArtifactTypeSchema = {
   type: 'string',
   description: 'Artifact type',
@@ -2297,6 +2303,11 @@ export const ActionResultSchema = {
       type: 'string',
       description: 'Step status',
       $ref: '#/components/schemas/ActionStatus',
+    },
+    errorType: {
+      type: 'string',
+      description: 'Error type (defaults to systemError when omitted)',
+      $ref: '#/components/schemas/ActionErrorType',
     },
     type: {
       description: 'Action type',
@@ -8970,6 +8981,10 @@ export const ToolsetDefinitionSchema = {
       type: 'string',
       description: 'Toolset key',
     },
+    builtin: {
+      type: 'boolean',
+      description: 'Whether this is a builtin toolset',
+    },
     domain: {
       type: 'string',
       description: 'Toolset domain (used for display icon)',
@@ -9551,6 +9566,18 @@ export const InitializeWorkflowResponseSchema = {
   ],
 } as const;
 
+export const AbortWorkflowRequestSchema = {
+  type: 'object',
+  required: ['executionId'],
+  properties: {
+    executionId: {
+      type: 'string',
+      description: 'Workflow execution ID to abort',
+      example: 'we-abc123',
+    },
+  },
+} as const;
+
 export const WorkflowNodeExecutionSchema = {
   type: 'object',
   required: ['nodeId'],
@@ -9628,6 +9655,10 @@ export const WorkflowExecutionSchema = {
     status: {
       $ref: '#/components/schemas/WorkflowExecutionStatus',
       description: 'Workflow status',
+    },
+    abortedByUser: {
+      type: 'boolean',
+      description: 'Whether the workflow was aborted by user',
     },
     nodeExecutions: {
       type: 'array',
@@ -9707,6 +9738,10 @@ export const CreateWorkflowAppRequestSchema = {
     remixEnabled: {
       type: 'boolean',
       description: 'Whether remix is enabled for this app',
+    },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
     },
   },
 } as const;

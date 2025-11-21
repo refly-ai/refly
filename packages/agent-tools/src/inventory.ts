@@ -1,7 +1,5 @@
 import { ToolsetDefinition } from '@refly/openapi-schema';
 import {
-  BuiltinToolset,
-  BuiltinToolsetDefinition,
   BuiltinWebSearchToolset,
   BuiltinWebSearchDefinition,
   BuiltinGenerateDocToolset,
@@ -79,10 +77,6 @@ export const toolsetInventory: Record<
     definition: ToolsetDefinition;
   }
 > = {
-  [BuiltinToolsetDefinition.key]: {
-    class: BuiltinToolset,
-    definition: BuiltinToolsetDefinition,
-  },
   [FirecrawlToolsetDefinition.key]: {
     class: FirecrawlToolset,
     definition: FirecrawlToolsetDefinition,

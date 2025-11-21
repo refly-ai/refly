@@ -1450,6 +1450,15 @@ const translations = {
           failed: '运行失败',
         },
         creditUsage: '预计使用 {{count}} 积分',
+        abort: {
+          confirmTitle: '终止工作流执行',
+          confirmContent:
+            '工作流正在运行中，此时终止，已消耗的积分将不会返还。确认终止工作流执行吗？',
+          confirm: '确定终止',
+          abortButton: '终止',
+          success: '工作流已终止执行',
+          failed: '终止工作流失败',
+        },
       },
     },
     connectionTimeout: {
@@ -1478,6 +1487,13 @@ const translations = {
       stepCompleted: '步骤已完成',
       rerunSingle: '仅运行此节点',
       rerunFromHere: '从此节点开始运行',
+      stopConfirmModal: {
+        title: '终止工作流运行',
+        content: '工作流运行还未完成，此时终止，已消耗的积分将不会返还。确认终止工作流运行吗？',
+        cancel: '取消',
+        confirm: '确定终止',
+      },
+      stopSuccess: '工作流已终止执行',
       stepTitle: '步骤 {{index}}',
       aiThinking: 'AI 正在思考...',
       sourcesCnt: '共找到 {{count}} 个来源',
@@ -1520,6 +1536,10 @@ const translations = {
         title: '执行失败',
         description: '生成失败，请稍后重试或更换模型。',
         retryButton: '重试',
+      },
+      userAbort: {
+        title: '任务已停止',
+        description: '此任务已被手动终止。',
       },
       workflowFailure: {
         title: '执行失败',
@@ -1580,7 +1600,7 @@ const translations = {
       copy: '复制节点内容',
       copyDescription: '将节点内容以 Markdown 格式复制到剪贴板',
       createDocumentDescription: '创建文档',
-      askAI: '问问 AI',
+      askAI: '添加自定义Agent',
       askAIDescription:
         '向 AI 提问，选择上下文或切换技能后输入需求，获取写作、阅读理解或问题解答等帮助',
       cloneAskAI: '克隆 AI 提问',
@@ -2167,6 +2187,7 @@ const translations = {
       home: '工作台',
       canvas: '我的工作流',
       appManager: '我的模版',
+      marketplace: '模板市场',
       contactUs: '联系我们',
       addToChrome: '安装浏览器插件',
       canvasTitle: '画布',
@@ -3061,8 +3082,10 @@ const translations = {
   },
   components: {
     markdown: {
-      parameters: '参数：',
-      result: '结果：',
+      parameters: '输入',
+      result: ' 结果',
+      parameterName: '名称',
+      parameterValue: '值',
       copySuccess: '已复制到剪贴板',
       emptyCode: '无法创建空代码组件',
       codeArtifactCreated: '代码组件已创建',
@@ -3154,10 +3177,10 @@ const translations = {
     },
     sessionDetail: {
       thinking: '思考中',
-      approveAndRun: '采纳并运行',
+      approve: '采纳',
       confirmClearCanvas: {
         title: '确认清空画布',
-        content: '运行此工作流将清空当前画布的所有内容。是否继续？',
+        content: '采纳此工作流将清空当前画布的所有内容。是否继续？',
         confirm: '继续',
         cancel: '取消',
       },
@@ -3576,6 +3599,10 @@ const translations = {
       earningsHint: '预计模板每次运行可获得 <num>{{creditEarningsPerRun}}</num> 积分',
       howToEarn: '如何获得收益',
     },
+    publishToCommunity: {
+      label: '发布到社区',
+      help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
+    },
   },
   project: {
     create: '创建知识库',
@@ -3981,7 +4008,7 @@ const translations = {
     noWorkflows: '暂无工作流',
     noSearchResults: '没有找到相关工作流',
     searchWorkflows: '搜索工作流',
-    shared: '已共享',
+    shared: '已分享',
     private: '私有',
     published: '已发布',
     unpublished: '未发布',

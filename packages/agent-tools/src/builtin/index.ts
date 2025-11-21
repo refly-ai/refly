@@ -204,7 +204,7 @@ export class BuiltinLibrarySearch extends AgentBaseTool<BuiltinToolParams> {
 
 export class BuiltinWebSearch extends AgentBaseTool<BuiltinToolParams> {
   name = 'web_search';
-  toolsetKey = BuiltinToolsetDefinition.key;
+  toolsetKey = 'web_search';
 
   schema = z.object({
     query: z.string().describe('The search query to execute'),

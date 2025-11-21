@@ -1,6 +1,7 @@
 import { memo, useEffect, useState, useCallback, useMemo } from 'react';
 import { NodeProps, Position, useReactFlow } from '@xyflow/react';
 import { StartNodeHeader } from './shared/start-node-header';
+import cn from 'classnames';
 import { BiText } from 'react-icons/bi';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { getNodeCommonStyles } from './shared/styles';
@@ -22,7 +23,7 @@ import { genNodeEntityId } from '@refly/utils/id';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { CanvasNode } from '@refly/openapi-schema';
-import cn from 'classnames';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 const NODE_SIDE_CONFIG = { width: 320, height: 'auto' };
 
@@ -90,9 +91,9 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
   const { getNode, setEdges } = useReactFlow();
   useSelectedNodeZIndex(id, selected);
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
-  const { workflow } = useCanvasContext();
+  const { canvasId } = useCanvasContext();
   const [showCreateVariablesModal, setShowCreateVariablesModal] = useState(false);
-  const { workflowVariables } = workflow;
+  const { data: workflowVariables } = useVariablesManagement(canvasId);
   const { addNode } = useAddNode();
   const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
@@ -131,10 +132,6 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
             entityId: genNodeEntityId('skillResponse'),
             metadata: {
               status: 'init',
-              contextItems: workflowVariables.map((variable) => ({
-                name: variable.name,
-                value: variable.value,
-              })),
             },
           },
           position,
@@ -144,7 +141,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
         true,
       );
     },
-    [id, workflowVariables, addNode, getConnectionInfo],
+    [id, addNode, getConnectionInfo],
   );
 
   // Function to calculate width difference and adjust position

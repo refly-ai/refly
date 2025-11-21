@@ -17,6 +17,7 @@ interface ConfigureTabProps {
   resultId: string;
   nodeId: string;
   canvasId: string;
+  disabled: boolean;
 }
 
 const ConfigureTabComponent = ({
@@ -25,6 +26,7 @@ const ConfigureTabComponent = ({
   resultId,
   nodeId,
   canvasId,
+  disabled,
 }: ConfigureTabProps) => {
   const { t } = useTranslation();
   const { handleUploadImage } = useUploadImage();
@@ -120,7 +122,7 @@ const ConfigureTabComponent = ({
         >
           <span>{t('agent.config.model')}</span>
           <Tooltip title={t('agent.config.modelDescription')}>
-            <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+            <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
           </Tooltip>
         </div>
 
@@ -132,6 +134,7 @@ const ConfigureTabComponent = ({
           variant="filled"
           trigger={['click']}
           contextItems={contextItems}
+          disabled={disabled}
         />
       </div>
 
@@ -143,7 +146,7 @@ const ConfigureTabComponent = ({
           <div className="flex items-center gap-1">
             <span>{t('agent.config.prompt')}</span>
             <Tooltip title={t('agent.config.promptDescription')}>
-              <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+              <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
             </Tooltip>
           </div>
           <Button
@@ -151,6 +154,7 @@ const ConfigureTabComponent = ({
             size="small"
             className="text-xs !h-5 px-1 py-0.5 text-refly-text-1"
             onClick={handleAddToolsAndContext}
+            disabled={disabled}
           >
             @ {t('agent.config.addToolsAndContext')}
           </Button>
@@ -174,13 +178,14 @@ const ConfigureTabComponent = ({
             </div>
           )}
 
-          <div className="flex-none h-[50%] min-h-[100px] max-h-[270px] overflow-hidden">
+          <div className="flex-none h-[50%] min-h-[100px] overflow-hidden">
             <EditChatInput
               ref={chatComposerRef}
               enabled
               resultId={resultId}
               nodeId={nodeId}
               version={version}
+              readonly={disabled}
               setEditMode={() => {}}
               mentionPosition="bottom-start"
             />
@@ -197,6 +202,7 @@ const ConfigureTabComponent = ({
               setSelectedToolsets={setSelectedToolsets}
               upstreamAgentNodes={upstreamAgentNodes}
               removeUpstreamAgent={removeUpstreamAgent}
+              disabled={disabled}
             />
           </div>
         </div>

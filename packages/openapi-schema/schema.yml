@@ -2845,6 +2845,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InitializeWorkflowResponse'
+  /workflow/abort:
+    post:
+      tags:
+        - workflow
+      summary: Abort workflow execution
+      description: Abort a running workflow execution
+      operationId: abortWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbortWorkflowRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /workflow/detail:
     get:
       tags:
@@ -5471,6 +5491,12 @@ components:
         - executing
         - finish
         - failed
+    ActionErrorType:
+      type: string
+      description: Action error type
+      enum:
+        - systemError
+        - userAbort
     ArtifactType:
       type: string
       description: Artifact type
@@ -5670,6 +5696,10 @@ components:
           type: string
           description: Step status
           $ref: '#/components/schemas/ActionStatus'
+        errorType:
+          type: string
+          description: Error type (defaults to systemError when omitted)
+          $ref: '#/components/schemas/ActionErrorType'
         type:
           description: Action type
           $ref: '#/components/schemas/ActionType'
@@ -10341,6 +10371,9 @@ components:
         key:
           type: string
           description: Toolset key
+        builtin:
+          type: boolean
+          description: Whether this is a builtin toolset
         domain:
           type: string
           description: Toolset domain (used for display icon)
@@ -10766,6 +10799,15 @@ components:
                   type: string
                   description: Workflow execution ID
                   example: "we-abc123"
+    AbortWorkflowRequest:
+      type: object
+      required:
+        - executionId
+      properties:
+        executionId:
+          type: string
+          description: Workflow execution ID to abort
+          example: "we-abc123"
     WorkflowNodeExecution:
       type: object
       required:
@@ -10830,6 +10872,9 @@ components:
         status:
           $ref: '#/components/schemas/WorkflowExecutionStatus'
           description: Workflow status
+        abortedByUser:
+          type: boolean
+          description: Whether the workflow was aborted by user
         nodeExecutions:
           type: array
           description: Node executions
@@ -10889,6 +10934,9 @@ components:
         remixEnabled:
           type: boolean
           description: Whether remix is enabled for this app
+        publishToCommunity:
+          type: boolean
+          description: Whether to publish this app to the community
 
     DeleteWorkflowAppRequest:
       type: object

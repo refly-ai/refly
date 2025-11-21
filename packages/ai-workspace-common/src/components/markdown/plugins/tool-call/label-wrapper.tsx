@@ -1,8 +1,9 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { getVariableIcon } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/variable/getVariableIcon';
 import type { GenericToolset, WorkflowVariable } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { useTranslation } from 'react-i18next';
+import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
 const TOOLSET_ICON_CONFIG = {
   size: 14,
@@ -34,12 +35,22 @@ export const LabelWrapper = memo(
     const currentLanguage = i18n.language || 'en';
 
     const variableType = variable?.variableType;
-    const labelText =
-      source === 'variables'
-        ? (variable?.name ?? '')
-        : (String(toolset?.toolset?.definition?.labelDict?.[currentLanguage]) ??
-          toolset?.name ??
-          '');
+    const { data } = useListToolsetInventory({}, null, {
+      enabled: true,
+    });
+
+    const labelText = useMemo(() => {
+      if (source === 'variables') {
+        return variable?.name ?? '';
+      }
+
+      const toolsetDefinition = data?.data?.find((t) => t.key === toolset?.toolset?.key);
+      return (
+        (toolsetDefinition?.labelDict?.[currentLanguage] as string | undefined) ??
+        toolset?.name ??
+        ''
+      );
+    }, [source, variable, toolset, currentLanguage, data]);
 
     return (
       <div className="flex items-center gap-1 h-[18px] px-1 rounded-[4px] bg-refly-tertiary-default border-[0.5px] border-solid border-refly-Card-Border">

@@ -720,26 +720,30 @@ export class PilotService {
         const contextItems = convertResultContextToItems(context, history);
 
         if (targetType === 'canvas') {
-          await this.canvasSyncService.addNodeToCanvas(
+          await this.canvasSyncService.addNodesToCanvas(
             user,
             targetId,
-            {
-              type: 'skillResponse',
-              data: {
-                title: rawStep.name,
-                entityId: resultId,
-                metadata: {
-                  status: 'executing',
-                  contextItems,
-                  tplConfig: '{}',
-                  runtimeConfig: '{}',
-                  modelInfo: {
-                    modelId: chatModelId,
+            [
+              {
+                node: {
+                  type: 'skillResponse',
+                  data: {
+                    title: rawStep.name,
+                    entityId: resultId,
+                    metadata: {
+                      status: 'executing',
+                      contextItems,
+                      tplConfig: '{}',
+                      runtimeConfig: '{}',
+                      modelInfo: {
+                        modelId: chatModelId,
+                      },
+                    },
                   },
                 },
+                connectTo: convertContextItemsToNodeFilters(contextItems),
               },
-            },
-            convertContextItemsToNodeFilters(contextItems),
+            ],
             { autoLayout: true }, // Enable auto layout for Agent mode
           );
         }

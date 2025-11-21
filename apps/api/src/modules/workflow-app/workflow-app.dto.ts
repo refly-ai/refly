@@ -2,6 +2,15 @@ import { WorkflowApp } from '@refly/openapi-schema';
 import { WorkflowApp as WorkflowAppPO, User } from '../../generated/client';
 import { safeParseJSON } from '@refly/utils';
 
+/**
+ * Job data for generating workflow app template content asynchronously.
+ */
+export interface GenerateWorkflowAppTemplateJobData {
+  appId: string;
+  canvasId: string;
+  uid: string;
+}
+
 export function workflowAppPO2DTO(
   app: WorkflowAppPO & { owner: Pick<User, 'name' | 'nickname' | 'avatar'> | null },
 ): WorkflowApp | null {
@@ -32,6 +41,7 @@ export function workflowAppPO2DTO(
       ? generateCoverUrl((app as any).coverStorageKey)
       : undefined,
     remixEnabled: app.remixEnabled ?? false,
+    publishToCommunity: (app as any).publishToCommunity ?? false,
     templateContent: app.templateContent ?? undefined,
     createdAt: app.createdAt?.toISOString(),
     updatedAt: app.updatedAt?.toISOString(),

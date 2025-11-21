@@ -4,6 +4,7 @@ import { type Options } from '@hey-api/client-fetch';
 import { UseQueryResult } from '@tanstack/react-query';
 import {
   abortAction,
+  abortWorkflow,
   activateInvitationCode,
   addNodesToCanvasPage,
   authorizeComposioConnection,
@@ -1301,6 +1302,12 @@ export type InitializeWorkflowMutationResult = Awaited<ReturnType<typeof initial
 export const useInitializeWorkflowKey = 'InitializeWorkflow';
 export const UseInitializeWorkflowKeyFn = (mutationKey?: Array<unknown>) => [
   useInitializeWorkflowKey,
+  ...(mutationKey ?? []),
+];
+export type AbortWorkflowMutationResult = Awaited<ReturnType<typeof abortWorkflow>>;
+export const useAbortWorkflowKey = 'AbortWorkflow';
+export const UseAbortWorkflowKeyFn = (mutationKey?: Array<unknown>) => [
+  useAbortWorkflowKey,
   ...(mutationKey ?? []),
 ];
 export type CreateWorkflowAppMutationResult = Awaited<ReturnType<typeof createWorkflowApp>>;

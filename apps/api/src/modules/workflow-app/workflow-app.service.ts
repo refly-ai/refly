@@ -7,7 +7,8 @@ import {
   RawCanvasData,
   ListWorkflowAppsData,
 } from '@refly/openapi-schema';
-import { Logger } from '@nestjs/common';
+import { Logger, Optional } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaService } from '../common/prisma.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { MiscService } from '../misc/misc.service';
@@ -21,7 +22,15 @@ import { ToolService } from '../tool/tool.service';
 import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { CreditService } from '../credit/credit.service';
-import { AppTemplateResult } from '../variable-extraction/variable-extraction.dto';
+import { NotificationService } from '../notification/notification.service';
+import { ConfigService } from '@nestjs/config';
+import {
+  generateWorkflowAppReviewEmailHTML,
+  WORKFLOW_APP_REVIEW_EMAIL_TEMPLATE,
+} from './email-templates';
+import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
+import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
+import type { Queue } from 'bullmq';
 
 /**
  * Structure of shared workflow app data
@@ -51,12 +60,53 @@ export class WorkflowAppService {
     private readonly toolService: ToolService,
     private readonly variableExtractionService: VariableExtractionService,
     private readonly creditService: CreditService,
+    private readonly notificationService: NotificationService,
+    private readonly configService: ConfigService,
+    @Optional()
+    @InjectQueue(QUEUE_WORKFLOW_APP_TEMPLATE)
+    private readonly templateQueue?: Queue<GenerateWorkflowAppTemplateJobData>,
   ) {}
+
+  /**
+   * Build a deterministic fingerprint string for workflow variables.
+   * This ignores volatile fields (like entityId) and sorts entries for stability.
+   */
+  private buildVariablesFingerprint(variables: WorkflowVariable[] | undefined | null): string {
+    const safeVars = Array.isArray(variables) ? variables : [];
+    const simplified = safeVars
+      .map((v) => ({
+        name: v?.name ?? '',
+        description: v?.description ?? '',
+        variableType: v?.variableType ?? '',
+        value:
+          (Array.isArray(v?.value)
+            ? v.value.map((item) => {
+                if (item?.type === 'text') {
+                  return { type: 'text', text: item?.text ?? '' };
+                }
+                if (item?.type === 'resource') {
+                  return {
+                    type: 'resource',
+                    resource: {
+                      name: item?.resource?.name ?? '',
+                      fileType: item?.resource?.fileType ?? '',
+                      storageKey: item?.resource?.storageKey ?? '',
+                    },
+                  };
+                }
+                return { type: item?.type ?? '' };
+              })
+            : []) ?? [],
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return JSON.stringify(simplified);
+  }
 
   async createWorkflowApp(user: User, body: CreateWorkflowAppRequest) {
     const { canvasId, title, query, variables, description } = body;
     const coverStorageKey = (body as any).coverStorageKey;
     const remixEnabled = (body as any).remixEnabled ?? false;
+    const publishToCommunity = (body as any).publishToCommunity ?? false;
     const resultNodeIds = (body as any).resultNodeIds ?? [];
 
     const existingWorkflowApp = await this.prisma.workflowApp.findFirst({
@@ -65,7 +115,7 @@ export class WorkflowAppService {
 
     const appId = existingWorkflowApp?.appId ?? genWorkflowAppID();
 
-    const canvas = await this.prisma.canvas.findUnique({
+    const canvas = await this.prisma.canvas.findFirst({
       where: { canvasId, uid: user.uid, deletedAt: null },
     });
 
@@ -75,7 +125,13 @@ export class WorkflowAppService {
 
     const canvasData = await this.canvasService.getCanvasRawData(user, canvasId);
 
-    const creditUsage = await this.creditService.countCanvasCreditUsage(user, canvasData);
+    // Calculate raw credit usage from canvas
+    const rawCreditUsage = await this.creditService.countCanvasCreditUsage(user, canvasData);
+
+    // Apply markup coefficient to get final credit usage (same as what's saved in JSON)
+    const creditUsage = Math.ceil(
+      rawCreditUsage * this.configService.get('credit.executionCreditMarkup'),
+    );
 
     if (title) {
       canvasData.title = title;
@@ -96,32 +152,48 @@ export class WorkflowAppService {
       visibility: 'public',
     });
 
-    // Generate app template content
-    let templateResult: AppTemplateResult | null = null;
+    // Determine whether to skip template generation when inputs are unchanged
+    const shouldSkipGeneration =
+      !!existingWorkflowApp &&
+      (existingWorkflowApp?.title ?? '') === (canvasData?.title ?? '') &&
+      (existingWorkflowApp?.query ?? '') === (query ?? '') &&
+      this.buildVariablesFingerprint(
+        (() => {
+          try {
+            return existingWorkflowApp?.variables
+              ? (JSON.parse(existingWorkflowApp.variables) as WorkflowVariable[])
+              : [];
+          } catch {
+            return [];
+          }
+        })(),
+      ) === this.buildVariablesFingerprint(variables);
+
+    // Generate app template content asynchronously when possible
     try {
-      const _templateResult = await this.variableExtractionService.generateAppPublishTemplate(
-        user,
-        canvasId,
-      );
-
-      this.logger.log(
-        `generateAppPublishTemplate result for workflow app: ${JSON.stringify(_templateResult)}`,
-      );
-
-      if (
-        _templateResult?.templateContent &&
-        _templateResult?.templateContentPlaceholders?.length === variables?.length &&
-        variables?.every((variable) =>
-          _templateResult?.templateContentPlaceholders?.includes(`{{${variable.name}}}`),
-        )
-      ) {
-        templateResult = _templateResult;
+      if (shouldSkipGeneration) {
+        this.logger.log(
+          `Skip template generation for workflow app ${appId}: title/query/variables unchanged`,
+        );
+      } else if (this.templateQueue) {
+        await this.templateQueue.add(
+          'generate',
+          { appId, canvasId, uid: user.uid },
+          {
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
+        );
+        this.logger.log(`Enqueued template generation for workflow app: ${appId}`);
+      } else {
+        // Always async: do not perform sync generation even if queue is unavailable
+        this.logger.log(
+          `Skip sync template generation for workflow app ${appId}: queue unavailable, enforce async-only`,
+        );
       }
-
-      this.logger.log(`Generated template content for workflow app: ${appId}`);
     } catch (error) {
       this.logger.error(
-        `Failed to generate template content for workflow app ${appId}: ${error.stack}`,
+        `Failed to start template generation for workflow app ${appId}: ${error?.stack}`,
       );
     }
 
@@ -135,9 +207,15 @@ export class WorkflowAppService {
           description,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          templateContent: templateResult?.templateContent,
+          // Reuse existing templateContent when skipping generation; otherwise keep unchanged (async path)
+          templateContent: shouldSkipGeneration
+            ? (existingWorkflowApp?.templateContent ?? null)
+            : undefined,
           remixEnabled,
+          publishToCommunity,
+          publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
           resultNodeIds,
+          creditUsage,
           updatedAt: new Date(),
         },
       });
@@ -153,39 +231,86 @@ export class WorkflowAppService {
           canvasId,
           storageKey,
           coverStorageKey: coverStorageKey as any,
+          // Always async: initial templateContent remains null
           templateContent: null,
           remixEnabled,
+          publishToCommunity,
+          publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
           resultNodeIds,
+          creditUsage,
         },
       });
     }
 
     // Create share for workflow app
+    let shareId: string | null = null;
+    let templateShareId: string | null = null;
     try {
-      const { shareRecord } = await this.shareCreationService.createShareForWorkflowApp(user, {
-        entityId: appId,
-        entityType: 'workflowApp',
-        title: canvasData.title,
-        parentShareId: null,
-        allowDuplication: true,
-        creditUsage,
-      });
+      const { shareRecord, templateShareRecord } =
+        await this.shareCreationService.createShareForWorkflowApp(user, {
+          entityId: appId,
+          entityType: 'workflowApp',
+          title: canvasData.title,
+          parentShareId: null,
+          allowDuplication: true,
+          creditUsage,
+        });
 
-      // Update WorkflowApp record with shareId
+      shareId = shareRecord.shareId;
+      templateShareId = templateShareRecord?.shareId ?? null;
+
+      // Update WorkflowApp record with shareId and templateShareId
       await this.prisma.workflowApp.update({
         where: { appId },
         data: {
           shareId: shareRecord.shareId,
+          templateShareId,
         },
       });
 
       this.logger.log(`Created share for workflow app: ${appId}, shareId: ${shareRecord.shareId}`);
+      if (templateShareId) {
+        this.logger.log(
+          `Created template share for workflow app: ${appId}, templateShareId: ${templateShareId}`,
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to create share for workflow app ${appId}: ${error.stack}`);
       // Don't throw error, just log it - workflow app creation should still succeed
     }
 
-    const workflowApp = await this.prisma.workflowApp.findUnique({
+    // Send email notification if template is submitted for review
+    if (publishToCommunity && shareId) {
+      try {
+        const origin = this.configService.get<string>('origin')?.split(',')[0] || '';
+        const templateLink = `${origin}/app/${shareId}`;
+        const templateName = canvasData.title || 'Untitled Template';
+        const emailHTML = generateWorkflowAppReviewEmailHTML(templateName, templateLink);
+        const subject = WORKFLOW_APP_REVIEW_EMAIL_TEMPLATE.subject.replace(
+          '{{template_name}}',
+          templateName,
+        );
+
+        await this.notificationService.sendEmail(
+          {
+            subject,
+            html: emailHTML,
+          },
+          user,
+        );
+
+        this.logger.log(
+          `Sent review notification email for workflow app: ${appId} to user: ${user.uid}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send review notification email for workflow app ${appId}: ${error.stack}`,
+        );
+        // Don't throw error, just log it - workflow app creation should still succeed
+      }
+    }
+
+    const workflowApp = await this.prisma.workflowApp.findFirst({
       where: { appId, uid: user.uid, deletedAt: null },
     });
 
@@ -202,7 +327,7 @@ export class WorkflowAppService {
   }
 
   async getWorkflowAppDetail(user: User, appId: string) {
-    const workflowApp = await this.prisma.workflowApp.findUnique({
+    const workflowApp = await this.prisma.workflowApp.findFirst({
       where: { appId, uid: user.uid, deletedAt: null },
     });
 

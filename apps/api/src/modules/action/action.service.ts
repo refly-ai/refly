@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { ActionResultNotFoundError } from '@refly/errors';
 import { AbortActionRequest, EntityType, GetActionResultData, User } from '@refly/openapi-schema';
 import { batchReplaceRegex, genActionResultID, pick } from '@refly/utils';
@@ -11,6 +13,9 @@ import { ProviderService } from '../provider/provider.service';
 import { StepService } from '../step/step.service';
 import { ToolCallService } from '../tool-call/tool-call.service';
 import { DriveService } from '../drive/drive.service';
+import { RedisService } from '../common/redis.service';
+import { QUEUE_SKILL } from '../../utils';
+import { InvokeSkillJobData } from '../skill/skill.dto';
 
 type GetActionResultParams = GetActionResultData['query'] & {
   includeFiles?: boolean;
@@ -32,6 +37,10 @@ export class ActionService {
     private readonly toolCallService: ToolCallService,
     private readonly stepService: StepService,
     private readonly driveService: DriveService,
+    private readonly redis: RedisService,
+    @Optional()
+    @InjectQueue(QUEUE_SKILL)
+    private skillQueue?: Queue<InvokeSkillJobData>,
   ) {}
 
   async getActionResult(user: User, param: GetActionResultParams): Promise<ActionDetail> {
@@ -228,6 +237,7 @@ export class ActionService {
               'locale',
               'status',
               'errors',
+              'errorType',
             ]),
             context: batchReplaceRegex(JSON.stringify(context), replaceEntityMap),
             history: batchReplaceRegex(JSON.stringify(history), replaceEntityMap),
@@ -337,6 +347,7 @@ export class ActionService {
         data: {
           status: 'failed',
           errors: JSON.stringify([errorMessage]),
+          errorType: 'userAbort',
         },
       });
       this.logger.log(`Updated action ${resultId} status to failed: ${errorMessage}`);
@@ -363,6 +374,109 @@ export class ActionService {
       throw new ActionResultNotFoundError();
     }
 
-    await this.abortAction(user, result, reason);
+    const abortReason = reason || 'User requested abort';
+
+    // Step 1: Check if controller is in memory (same pod) - FASTEST
+    // Note: If controller exists, Redis mapping has already been deleted when execution started
+    const entry = this.activeAbortControllers.get(resultId);
+    if (entry) {
+      this.logger.log(`Found controller in memory for ${resultId}, aborting directly`);
+      entry.controller.abort(abortReason);
+      this.unregisterAbortController(resultId);
+      // Update database status
+      await this.markAbortRequested(resultId, version, abortReason);
+      this.logger.log(`Successfully aborted executing action (same pod): ${resultId}`);
+      return;
+    }
+
+    // Step 2: Check if job is still queued in BullMQ
+    const jobId = await this.getQueuedJobId(resultId);
+    if (jobId && this.skillQueue) {
+      this.logger.log(`Job ${resultId} is still queued, removing from queue`);
+      const job = await this.skillQueue.getJob(jobId);
+      if (job) {
+        await job.remove();
+        await this.deleteQueuedJob(resultId);
+        // Update database status (only for queued jobs, no need to check status)
+        await this.markAbortRequested(resultId, version, abortReason);
+        this.logger.log(`Successfully aborted queued job: ${resultId}`);
+        return;
+      }
+    }
+
+    // Step 3: Neither in memory nor in queue - must be executing on another pod
+    // Mark database status to 'failed' so the other pod can detect it
+    this.logger.log(
+      `Controller not found in memory for ${resultId}, marking database for cross-pod abort`,
+    );
+    await this.markAbortRequested(resultId, version, abortReason);
+  }
+
+  /**
+   * Register a queued job in Redis for abortion support
+   * Stores resultId -> jobId mapping for jobs in BullMQ queue
+   */
+  async registerQueuedJob(resultId: string, jobId: string): Promise<void> {
+    const key = `skill:abort:${resultId}`;
+    await this.redis.setex(key, 1800, jobId); // 30 minutes TTL
+    this.logger.debug(`Registered queued job: ${resultId} -> ${jobId}`);
+  }
+
+  /**
+   * Delete queued job mapping from Redis when job starts executing
+   */
+  async deleteQueuedJob(resultId: string): Promise<void> {
+    const key = `skill:abort:${resultId}`;
+    await this.redis.del(key);
+    this.logger.debug(`Deleted queued job mapping for: ${resultId}`);
+  }
+
+  /**
+   * Get job ID for a queued action
+   */
+  async getQueuedJobId(resultId: string): Promise<string | null> {
+    const key = `skill:abort:${resultId}`;
+    return await this.redis.get(key);
+  }
+
+  /**
+   * Mark an action for abortion in the database (for cross-pod scenarios)
+   * Directly update status to 'failed' so the executing pod can detect it
+   */
+  async markAbortRequested(resultId: string, version: number, reason: string): Promise<void> {
+    const updated = await this.prisma.actionResult.updateMany({
+      where: { resultId, version, status: 'executing' },
+      data: {
+        status: 'failed',
+        errors: JSON.stringify([reason]),
+        errorType: 'userAbort',
+      },
+    });
+
+    if (updated.count > 0) {
+      this.logger.log(
+        `Marked abort requested for action: ${resultId} v${version} by setting status to failed`,
+      );
+    } else {
+      this.logger.warn(
+        `Action ${resultId} v${version} not found or not executing, skipping abort mark`,
+      );
+    }
+  }
+
+  /**
+   * Check if an action has been requested to abort (for polling from executing pod)
+   */
+  async isAbortRequested(resultId: string, version: number): Promise<boolean> {
+    const result = await this.prisma.actionResult.findFirst({
+      where: { resultId, version },
+      select: { status: true },
+    });
+
+    if (!result) {
+      return false;
+    }
+
+    return result.status === 'failed';
   }
 }

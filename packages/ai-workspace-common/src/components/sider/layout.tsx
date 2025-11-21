@@ -238,6 +238,53 @@ export const SiderLogo = (props: {
   );
 };
 
+export const InvitationItem = React.memo(
+  ({
+    collapsed = false,
+    onClick,
+  }: {
+    collapsed?: boolean;
+    onClick: () => void;
+  }) => {
+    const { t } = useTranslation();
+
+    return (
+      <div
+        className={cn(
+          'w-full h-[64px] flex items-center justify-between cursor-pointer rounded-[20px] bg-gradient-to-r from-[#02AE8E] to-[#008AA6] px-1.5 transition-all duration-300',
+        )}
+        onClick={onClick}
+        data-cy="invite-friends-menu-item"
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex-shrink-0 flex items-center">
+            <img src={InviteIcon} alt="Invite" className="w-7 h-7" />
+          </div>
+          <div
+            className={cn(
+              'flex flex-col leading-tight transition-all duration-300',
+              collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+            )}
+          >
+            <span className="text-xs font-semibold text-white truncate">
+              {t('common.inviteFriends')}
+            </span>
+            <span className="text-xs text-white/80 truncate">{t('common.inviteRewardText')}</span>
+          </div>
+        </div>
+        <span
+          className={cn(
+            'text-white text-xs font-semibold leading-none transition-all duration-300',
+            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+          )}
+        >
+          &gt;
+        </span>
+      </div>
+    );
+  },
+);
+
 export const SettingItem = React.memo(
   ({
     showName = true,
@@ -427,6 +474,9 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     if (path.startsWith('/app-manager')) {
       return 'appManager';
     }
+    if (path.startsWith('/marketplace')) {
+      return 'marketplace';
+    }
     return 'home';
   }, [location.pathname]);
 
@@ -456,8 +506,14 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         onActionClick: () => navigate('/app-manager'),
         key: 'appManager',
       },
+      {
+        icon: <Project key="marketplace" style={{ fontSize: 20 }} />,
+        title: t('loggedHomePage.siderMenu.marketplace'),
+        onActionClick: () => navigate('/marketplace'),
+        key: 'marketplace',
+      },
     ],
-    [t, navigate, setShowLibraryModal],
+    [t, navigate],
   );
 
   const bottomMenuItems = useMemo(
@@ -609,28 +665,16 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
           {!!userProfile?.uid && (
             <>
               {authConfig?.data?.some((item) => item.provider === 'invitation') && (
-                <div
-                  className="flex items-center justify-between cursor-pointer rounded-[20px] bg-gradient-to-r from-[#02AE8E] to-[#008AA6] px-3 py-3 transition-shadow"
-                  onClick={handleInvitationClick}
-                  data-cy="invite-friends-menu-item"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <img src={InviteIcon} alt="Invite" className="w-7 h-7" />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-xs font-semibold text-white">
-                        {t('common.inviteFriends')}
-                      </span>
-                      <span className="text-xs text-white/80">{t('common.inviteRewardText')}</span>
-                    </div>
-                  </div>
-                  <span className="text-white text-xs font-semibold leading-none">&gt;</span>
-                </div>
+                <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
               )}
               <div
-                className="flex h-12 items-center justify-between cursor-pointer hover:bg-refly-tertiary-hover rounded-md px-2"
+                className={cn(
+                  'flex cursor-pointer hover:bg-refly-tertiary-hover rounded-md transition-all duration-300',
+                  'h-10 items-center justify-between px-0.5',
+                )}
                 data-cy="settings-menu-item"
               >
-                <SettingItem />
+                <SettingItem collapsed={isCollapsed} />
               </div>
             </>
           )}

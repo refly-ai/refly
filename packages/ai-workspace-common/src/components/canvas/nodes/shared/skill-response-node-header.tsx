@@ -7,7 +7,6 @@ interface SkillResponseNodeHeaderProps {
   nodeId: string;
   entityId: string;
   title: string;
-  readonly?: boolean;
   source?: 'preview' | 'node';
   className?: string;
   // Custom actions (e.g., Play button, More button)
@@ -25,7 +24,6 @@ export const SkillResponseNodeHeader = memo(
     nodeId,
     entityId,
     title,
-    readonly = false,
     source = 'node',
     className,
     actions,
@@ -50,11 +48,11 @@ export const SkillResponseNodeHeader = memo(
         fixedTitle={t('canvas.nodeTypes.agent')}
         placeholder={t('agent.editTitlePlaceholder')}
         canEdit={true}
-        disabled={readonly}
         updateTitle={onTitleChange}
         source={source === 'preview' ? 'skillResponsePreview' : 'node'}
         className={className}
         actions={actions}
+        maxLength={200}
       />
     );
   },

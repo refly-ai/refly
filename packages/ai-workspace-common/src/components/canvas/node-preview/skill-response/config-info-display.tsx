@@ -9,6 +9,7 @@ import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
 import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LabelItem } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
+import { useCanvasNodesStoreShallow } from '@refly/stores';
 
 interface ConfigInfoDisplayProps {
   prompt: string;
@@ -18,6 +19,7 @@ interface ConfigInfoDisplayProps {
   setContextItems: (items: IContextItem[]) => void;
   setSelectedToolsets: (toolsets: GenericToolset[]) => void;
   removeUpstreamAgent: (targetEntityId: string) => void;
+  disabled: boolean;
 }
 
 const SectionTitle = memo(
@@ -29,7 +31,7 @@ const SectionTitle = memo(
       <span>{children}</span>
       {tooltip && (
         <Tooltip title={tooltip} placement="top">
-          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
         </Tooltip>
       )}
     </div>
@@ -47,9 +49,12 @@ export const ConfigInfoDisplay = memo(
     setContextItems,
     setSelectedToolsets,
     removeUpstreamAgent,
+    disabled,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
-
+    const { setHighlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+      setHighlightedNodeId: state.setHighlightedNodeId,
+    }));
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
 
     // Extract tools
@@ -156,7 +161,7 @@ export const ConfigInfoDisplay = memo(
                   }
                   labeltext={labelName}
                   classnames="bg-refly-node-contrl-1"
-                  onClose={() => handleRemoveToolset(toolset)}
+                  onClose={disabled ? undefined : () => handleRemoveToolset(toolset)}
                 />
               );
             })}
@@ -173,8 +178,8 @@ export const ConfigInfoDisplay = memo(
                 key={`${file.entityId}-${index}`}
                 icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
                 labeltext={file.title}
-                classnames="bg-gray-100 dark:bg-gray-700"
-                onClose={() => handleRemoveContextItem(file)}
+                classnames="bg-refly-fill-label"
+                onClose={disabled ? undefined : () => handleRemoveContextItem(file)}
               />
             ))}
           </div>
@@ -189,11 +194,15 @@ export const ConfigInfoDisplay = memo(
               const title = node?.data?.title;
               return (
                 <LabelItem
+                  onMouseEnter={() => setHighlightedNodeId(node.id)}
+                  onMouseLeave={() => setHighlightedNodeId(null)}
                   key={`${node.id}-${index}`}
                   icon={<AiChat size={14} className="flex-shrink-0" />}
                   labeltext={title || t('canvas.richChatInput.untitledAgent')}
                   classnames="bg-refly-node-contrl-2"
-                  onClose={() => handleRemoveUpstreamAgent(node.data?.entityId)}
+                  onClose={
+                    disabled ? undefined : () => handleRemoveUpstreamAgent(node.data?.entityId)
+                  }
                 />
               );
             })}

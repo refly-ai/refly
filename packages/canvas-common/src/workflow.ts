@@ -155,12 +155,13 @@ export const prepareNodeExecutions = (params: {
           const originalQuery = String(
             metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
           );
-          const { updatedQuery } = processQueryWithMentions(originalQuery, {
+          const { llmInputQuery, updatedQuery } = processQueryWithMentions(originalQuery, {
             replaceVars: true,
             variables,
           });
           node.data.metadata = deepmerge(node.data.metadata, {
             query: updatedQuery,
+            llmInputQuery,
           });
         }
 
@@ -178,12 +179,13 @@ export const prepareNodeExecutions = (params: {
         const originalQuery = String(
           metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
         );
-        const { updatedQuery } = processQueryWithMentions(originalQuery, {
+        const { llmInputQuery, updatedQuery } = processQueryWithMentions(originalQuery, {
           replaceVars: true,
           variables,
         });
         node.data.metadata = deepmerge(node.data.metadata, {
           query: updatedQuery,
+          llmInputQuery,
         });
       }
       return node;
@@ -209,7 +211,7 @@ export const prepareNodeExecutions = (params: {
     return { nodeExecutions: [], startNodes };
   }
 
-  // Determine which nodes should be in 'waiting' status
+  // Determine which nodes should be in 'init' status
   const subtreeNodes = findSubtreeNodes(startNodes, childMap);
 
   const historyQuery = new ThreadHistoryQuery(newNodes, newEdges);
@@ -224,7 +226,7 @@ export const prepareNodeExecutions = (params: {
     const status =
       subtreeNodes.has(node.id) &&
       ['skillResponse', 'document', 'codeArtifact', 'image', 'video', 'audio'].includes(node.type)
-        ? 'waiting'
+        ? 'init'
         : 'finish';
 
     // Build connection filters based on parent entity IDs
@@ -255,9 +257,7 @@ export const prepareNodeExecutions = (params: {
       const metadata = node.data?.metadata as ResponseNodeMeta;
       const { contextItems = [] } = metadata as ResponseNodeMeta;
 
-      const originalQuery = String(
-        metadata?.query ?? metadata?.structuredData?.query ?? node.data?.title ?? '',
-      );
+      const originalQuery = metadata?.query ?? (metadata?.structuredData?.query as string) ?? '';
 
       // Add resource variables referenced in query to context items
       const enhancedContextItems = updateContextItemsFromVariables(contextItems, variables);
@@ -278,11 +278,11 @@ export const prepareNodeExecutions = (params: {
       };
 
       nodeExecution.originalQuery = originalQuery;
-      nodeExecution.processedQuery = node?.data.title;
+      nodeExecution.processedQuery = (node?.data.metadata?.llmInputQuery as string) ?? '';
       nodeExecution.resultHistory = resultHistory;
     } else if (['document', 'codeArtifact', 'image', 'video', 'audio'].includes(node.type)) {
       // Set status based on whether the node is in the subtree (computed with original ids)
-      const status = subtreeNodes.has(node.id) ? 'waiting' : 'finish';
+      const status = subtreeNodes.has(node.id) ? 'init' : 'finish';
       nodeExecution.status = status;
     }
 

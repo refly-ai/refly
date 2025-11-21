@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { CommonModule } from '../../common/common.module';
 import { CanvasSyncModule } from '../../canvas-sync/canvas-sync.module';
 import { DriveModule } from '../../drive/drive.module';
-import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execution-sync.interceptor';
 import { ScaleboxExecutionProcessor } from './scalebox.processor';
 import { ScaleboxService } from './scalebox.service';
 import { SandboxPool } from './scalebox.pool';
@@ -14,12 +13,7 @@ import { SandboxPool } from './scalebox.pool';
  */
 @Module({
   imports: [ConfigModule, CommonModule, CanvasSyncModule, DriveModule],
-  providers: [
-    ScaleboxService,
-    ScaleboxExecutionProcessor,
-    SandboxPool,
-    ToolExecutionSyncInterceptor,
-  ],
+  providers: [ScaleboxService, ScaleboxExecutionProcessor, SandboxPool],
   exports: [ScaleboxService],
 })
 export class ScaleboxModule {}

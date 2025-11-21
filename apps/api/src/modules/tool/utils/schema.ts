@@ -4,7 +4,7 @@
  */
 
 import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod';
-import type { JsonSchema } from '@refly/openapi-schema';
+import type { JsonSchema, SchemaProperty } from '@refly/openapi-schema';
 import type { z } from 'zod';
 
 /**
@@ -80,4 +80,73 @@ export function buildSchema(schemaJson: string): z.ZodTypeAny {
 
   // Convert to Zod schema
   return jsonSchemaToZod(jsonSchema);
+}
+
+/**
+ * Fill default values from JSON schema into input parameters
+ * Recursively processes nested objects and arrays
+ * @param params - Input parameters object
+ * @param schema - JSON schema with default values
+ * @returns Parameters with default values filled in
+ */
+export function fillDefaultValues(
+  params: Record<string, unknown>,
+  schema: JsonSchema | SchemaProperty,
+): Record<string, unknown> {
+  const properties = schema.properties;
+
+  if (!properties) {
+    return params;
+  }
+
+  const result = { ...params };
+
+  // Process each property in the schema
+  for (const [key, propertySchema] of Object.entries(properties)) {
+    // If value is undefined or null, apply default if exists
+    if (result[key] === undefined || result[key] === null) {
+      if ('default' in propertySchema) {
+        const defaultValue = propertySchema.default;
+        // If the default is a partial object, also fill nested defaults
+        result[key] =
+          propertySchema.type === 'object' && defaultValue && typeof defaultValue === 'object'
+            ? fillDefaultValues(defaultValue as Record<string, unknown>, propertySchema)
+            : defaultValue;
+      } else if (propertySchema.type === 'object' && propertySchema.properties) {
+        const filledObject = fillDefaultValues({}, propertySchema);
+        if (Object.keys(filledObject).length > 0) {
+          result[key] = filledObject;
+        }
+      }
+      continue;
+    }
+
+    // Recursively process nested objects
+    if (
+      propertySchema.type === 'object' &&
+      typeof result[key] === 'object' &&
+      result[key] !== null
+    ) {
+      result[key] = fillDefaultValues(result[key] as Record<string, unknown>, propertySchema);
+      continue;
+    }
+
+    // Process arrays
+    if (propertySchema.type === 'array' && Array.isArray(result[key])) {
+      const itemsSchema = propertySchema.items;
+      if (itemsSchema && itemsSchema.type === 'object') {
+        // Handle arrays of objects - recursively fill defaults
+        result[key] = (result[key] as unknown[]).map((item) => {
+          if (typeof item === 'object' && item !== null) {
+            return fillDefaultValues(item as Record<string, unknown>, itemsSchema);
+          }
+          return item;
+        });
+        // Arrays of primitives and nested arrays don't need default value filling
+        // as they don't have properties with defaults
+      }
+    }
+  }
+
+  return result;
 }
