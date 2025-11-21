@@ -71,7 +71,7 @@ export const useVariablesManagement = (canvasId: string) => {
 
   return {
     data: localVariables ?? [],
-    isLoading: isLoading && !localVariables === undefined,
+    isLoading: isLoading && localVariables === undefined,
     refetch,
     setVariables,
   };

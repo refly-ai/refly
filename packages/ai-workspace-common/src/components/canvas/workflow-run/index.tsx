@@ -80,7 +80,7 @@ export const WorkflowRun = () => {
         setIsRunning(false);
       }
     },
-    [canvasId, initializeWorkflow],
+    [canvasId, initializeWorkflow, setVariables, setIsRunning],
   );
 
   if (!showWorkflowRun) return null;
