@@ -3833,6 +3833,7 @@ const translations = {
       thinking: 'Thinking...',
       stop: 'Stop',
       stopped: 'Workflow stopped',
+      stoppedMessage: 'Workflow stopped, no results generated. You can rerun the template.',
       stopConfirmTitle: 'Stop Template Run?',
       stopConfirmContent:
         'Are you sure you want to stop this template run? The run will be terminated immediately, and credits already consumed will not be refunded.',
