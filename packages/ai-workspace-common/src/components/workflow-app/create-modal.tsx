@@ -13,8 +13,9 @@ import { MultiSelectResult } from './multi-select-result';
 import { SelectedResultsGrid } from './selected-results-grid';
 import BannerSvg from './banner.svg';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
-import { CanvasNode } from '@refly/openapi-schema';
+import { CanvasNode, DriveFile } from '@refly/openapi-schema';
 import { useGetCreditUsageByCanvasId } from '../../queries/queries';
+import { mapDriveFilesToCanvasNodes } from '@refly/utils';
 
 interface CreateWorkflowAppModalProps {
   title: string;
@@ -122,6 +123,9 @@ export const CreateWorkflowAppModal = ({
   // Run result selection state
   const [selectedResults, setSelectedResults] = useState<string[]>([]);
 
+  // Drive files state
+  const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
+
   const { workflow } = useCanvasContext();
   const { workflowVariables } = workflow ?? {};
   const { nodes } = useRealtimeCanvasData();
@@ -147,7 +151,58 @@ export const CreateWorkflowAppModal = ({
     return total;
   }, [creditUsageData]);
 
-  // Filter nodes by the specified types (similar to result-list logic)
+  // Fetch drive files when modal is visible
+  useEffect(() => {
+    if (!visible || !canvasId) {
+      return;
+    }
+
+    const fetchDriveFiles = async () => {
+      try {
+        const allFiles: DriveFile[] = [];
+        let page = 1;
+        const pageSize = 100;
+        const MAX_PAGES = 100; // Safety limit: max 10000 files
+
+        // Paginate through all drive files
+        while (page <= MAX_PAGES) {
+          const { data } = await getClient().listDriveFiles({
+            query: {
+              canvasId,
+              source: 'agent',
+              scope: 'present',
+              page,
+              pageSize,
+            },
+          });
+
+          const files = data?.data ?? [];
+          allFiles.push(...files);
+
+          if (files.length < pageSize) {
+            break;
+          }
+          page++;
+        }
+
+        setDriveFiles(allFiles);
+      } catch (error) {
+        console.error('Failed to fetch drive files:', error);
+        // Silently degrade - continue with empty drive files
+      }
+    };
+
+    fetchDriveFiles();
+  }, [visible, canvasId]);
+
+  // Map drive files to virtual CanvasNodes
+  const driveFileNodes: CanvasNode[] = useMemo(() => {
+    const serverOrigin = window.location.origin;
+    return mapDriveFilesToCanvasNodes(driveFiles, serverOrigin) as any;
+  }, [driveFiles]);
+
+  // Filter nodes for legacy product nodes (backward compatibility)
+  // Keep product nodes that may still exist in canvas (before migration to drive_files)
   const resultNodes: CanvasNode[] = useMemo(() => {
     if (!nodes?.length) {
       return [] as unknown as CanvasNode[];
@@ -160,10 +215,51 @@ export const CreateWorkflowAppModal = ({
     ) as unknown as CanvasNode[];
   }, [nodes]);
 
-  // Use skillResponseNodes if resultNodes is empty
+  // Merge all node types: driveFileNodes + resultNodes + skillResponseNodes
   const displayNodes: CanvasNode[] = useMemo(() => {
-    return [...resultNodes, ...(skillResponseNodes ?? [])] as unknown as CanvasNode[];
-  }, [resultNodes, skillResponseNodes]);
+    // Priority: resultNodes (legacy canvas nodes) > driveFileNodes > skillResponseNodes
+    // This ensures legacy product nodes take precedence over drive file duplicates
+    const allNodes = [
+      ...(resultNodes ?? []), // Legacy product nodes first
+      ...(driveFileNodes ?? []), // Drive file nodes second
+      ...(skillResponseNodes ?? []), // Skill response nodes last
+    ];
+
+    // Deduplicate by node ID
+    // Also check for potential duplicates by resultId to handle migration cases
+    const uniqueMap = new Map<string, any>();
+    const resultIdMap = new Map<string, any>();
+
+    for (const node of allNodes) {
+      if (!node?.id) continue;
+
+      // Skip if already added by node ID
+      if (uniqueMap.has(node.id as string)) continue;
+
+      // Check for duplicate by resultId + resultVersion (for migration compatibility)
+      // This prevents showing the same result twice during migration period
+      const resultId = (node.data?.metadata?.resultId ||
+        node.data?.metadata?.parentResultId) as string;
+      const resultVersion = node.data?.metadata?.resultVersion;
+
+      // Use resultId-v{version} as key, default version to 0 for legacy nodes
+      // This ensures old nodes (no resultVersion) and new drive files (resultVersion: 0) are treated as same version
+      const resultKey = resultId ? `${resultId}-v${resultVersion ?? 0}` : null;
+
+      if (resultKey && resultIdMap.has(resultKey)) {
+        // Already have a node with this resultId+version combination
+        // Skip to avoid showing duplicate during migration
+        continue;
+      }
+
+      uniqueMap.set(node.id as string, node);
+      if (resultKey) {
+        resultIdMap.set(resultKey, node);
+      }
+    }
+
+    return Array.from(uniqueMap.values()) as CanvasNode[];
+  }, [driveFileNodes, resultNodes, skillResponseNodes]);
 
   // Load existing app data
   const loadAppData = useCallback(
@@ -195,7 +291,7 @@ export const CreateWorkflowAppModal = ({
         setLoadingAppData(false);
       }
     },
-    [displayNodes?.length],
+    [displayNodes],
   );
 
   // Handle cover image upload

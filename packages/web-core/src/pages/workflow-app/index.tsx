@@ -8,8 +8,9 @@ import {
   WorkflowNodeExecution,
   WorkflowVariable,
   DriveFile,
+  CanvasNode,
 } from '@refly/openapi-schema';
-import { mapDriveFilesToWorkflowNodeExecutions } from '@refly/utils/drive-file-mapper';
+import { mapDriveFilesToCanvasNodes, mapDriveFilesToWorkflowNodeExecutions } from '@refly/utils';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { WorkflowAppProducts } from '@refly-packages/ai-workspace-common/components/workflow-app/products';
@@ -69,7 +70,7 @@ const WorkflowAppPage: React.FC = () => {
   const [executionCreditUsage, setExecutionCreditUsage] = useState<number | null>(null);
 
   // Drive files state for preview and runtime
-  const [_previewDriveFiles, setPreviewDriveFiles] = useState<DriveFile[]>([]);
+  const [previewDriveFiles, setPreviewDriveFiles] = useState<DriveFile[]>([]);
   const [runtimeDriveFiles, setRuntimeDriveFiles] = useState<DriveFile[]>([]);
 
   // Settings modal state
@@ -120,8 +121,9 @@ const WorkflowAppPage: React.FC = () => {
         const allFiles: DriveFile[] = [];
         let page = 1;
         const pageSize = 100;
+        const MAX_PAGES = 100; // Safety limit: max 10000 files
 
-        while (true) {
+        while (page <= MAX_PAGES) {
           const { data } = await getClient().listDriveFiles({
             query: {
               canvasId,
@@ -250,19 +252,21 @@ const WorkflowAppPage: React.FC = () => {
   // Fetch drive files for runtime products after execution completes
   useEffect(() => {
     const canvasId = workflowApp?.canvasData?.canvasId;
-    if (!canvasId || isRunning) {
+    if (!canvasId || isRunning || executionId) {
       return;
     }
 
-    // Only fetch after execution completes
-    if (!executionId && finalNodeExecutions.length > 0) {
+    // Fetch when execution has completed (finalNodeExecutions present)
+    // or when page loads with existing products (to support refresh)
+    if (finalNodeExecutions.length > 0) {
       const fetchRuntimeFiles = async () => {
         try {
           const allFiles: DriveFile[] = [];
           let page = 1;
           const pageSize = 100;
+          const MAX_PAGES = 100; // Safety limit: max 10000 files
 
-          while (true) {
+          while (page <= MAX_PAGES) {
             const { data } = await getClient().listDriveFiles({
               query: {
                 canvasId,
@@ -294,8 +298,18 @@ const WorkflowAppPage: React.FC = () => {
   }, [workflowApp?.canvasData?.canvasId, isRunning, executionId, finalNodeExecutions.length]);
 
   const products = useMemo(() => {
-    // Legacy skillResponse products
-    const legacyProducts = nodeExecutions
+    // Legacy product node executions (document, codeArtifact, image, video, audio)
+    // These are old product nodes that may still exist before migration to drive_files
+    const legacyNodeProducts = nodeExecutions
+      .filter((nodeExecution: WorkflowNodeExecution) =>
+        ['document', 'codeArtifact', 'image', 'video', 'audio'].includes(
+          nodeExecution.nodeType as CanvasNodeType,
+        ),
+      )
+      .filter((nodeExecution: WorkflowNodeExecution) => nodeExecution.status === 'finish');
+
+    // Legacy skillResponse products (selected via resultNodeIds)
+    const legacySkillProducts = nodeExecutions
       .filter(
         (nodeExecution: WorkflowNodeExecution) =>
           ['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType) &&
@@ -307,8 +321,9 @@ const WorkflowAppPage: React.FC = () => {
     const serverOrigin = window.location.origin;
     const driveProducts = mapDriveFilesToWorkflowNodeExecutions(runtimeDriveFiles, serverOrigin);
 
-    // Merge and deduplicate by nodeId
-    const allProducts = [...legacyProducts, ...driveProducts];
+    // Merge: priority order is legacyNodeProducts > legacySkillProducts > driveProducts
+    // This ensures existing node executions take precedence over drive files
+    const allProducts = [...legacyNodeProducts, ...legacySkillProducts, ...driveProducts];
     const uniqueMap = new Map<string, WorkflowNodeExecution>();
 
     for (const product of allProducts) {
@@ -329,6 +344,25 @@ const WorkflowAppPage: React.FC = () => {
       ['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType),
     );
   }, [nodeExecutions]);
+
+  // Map preview drive files to virtual CanvasNodes for result preview
+  const previewOptions = useMemo(() => {
+    const serverOrigin = window.location.origin;
+    const driveFileNodes = mapDriveFilesToCanvasNodes(previewDriveFiles, serverOrigin);
+    const canvasNodes = workflowApp?.canvasData?.nodes || [];
+
+    // Merge and deduplicate by node ID
+    const allNodes = [...driveFileNodes, ...canvasNodes];
+    const uniqueMap = new Map<string, CanvasNode>();
+
+    for (const node of allNodes) {
+      if (node?.id && !uniqueMap.has(node.id)) {
+        uniqueMap.set(node.id, node);
+      }
+    }
+
+    return Array.from(uniqueMap.values());
+  }, [previewDriveFiles, workflowApp?.canvasData?.nodes]);
 
   const onSubmit = useCallback(
     async (variables: WorkflowVariable[]) => {
@@ -748,7 +782,7 @@ const WorkflowAppPage: React.FC = () => {
                   fillRow
                   bordered
                   selectedResults={workflowApp?.resultNodeIds ?? []}
-                  options={workflowApp?.canvasData?.nodes || []}
+                  options={previewOptions}
                 />
               </div>
             )}
