@@ -212,7 +212,9 @@ export class SandboxWrapper {
 
     logger.info({ sandboxId: this.sandboxId, mountPoint }, 'Unmounting drive storage');
 
-    await this.runCommand(`umount ${mountPoint}`);
+    // Use fusermount with lazy unmount (-z) for FUSE filesystems
+    // -u: unmount, -z: lazy unmount (detach even if busy)
+    await this.runCommand(`fusermount -uz ${mountPoint}`);
 
     // Verify unmount: mountpoint returns 0 if mounted, 1 if not mounted
     // Use ! to invert exit code - expect not mounted (1 -> 0 success)
