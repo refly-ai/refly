@@ -3833,6 +3833,10 @@ const translations = {
       thinking: 'Thinking...',
       stop: 'Stop',
       stopped: 'Workflow stopped',
+      stopConfirmTitle: 'Stop Template Run?',
+      stopConfirmContent:
+        'Are you sure you want to stop this template run? The run will be terminated immediately, and credits already consumed will not be refunded.',
+      stopSuccess: 'The template run has been stopped successfully.',
     },
     revenueSharing: {
       title: 'Earn credits by running templates',

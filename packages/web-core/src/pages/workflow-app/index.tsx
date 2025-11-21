@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { Avatar, message, notification, Skeleton, Tooltip } from 'antd';
+import { Avatar, message, Modal, notification, Skeleton, Tooltip } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -464,41 +464,53 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [t, shareId]);
 
-  const handleAbortWorkflow = useCallback(async () => {
-    // Get all executing skillResponse nodes
-    const executingNodes = nodeExecutions.filter(
-      (node: WorkflowNodeExecution) =>
-        node.nodeType === 'skillResponse' &&
-        (node.status === 'executing' || node.status === 'waiting'),
-    );
+  const handleAbortWorkflow = useCallback(() => {
+    Modal.confirm({
+      title: t('workflowApp.run.stopConfirmTitle'),
+      content: t('workflowApp.run.stopConfirmContent'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      rootClassName: 'workflow-app-modal-confirm',
+      okButtonProps: {
+        type: 'primary',
+      },
+      onOk: async () => {
+        // Get all executing skillResponse nodes
+        const executingNodes = nodeExecutions.filter(
+          (node: WorkflowNodeExecution) =>
+            node.nodeType === 'skillResponse' &&
+            (node.status === 'executing' || node.status === 'waiting'),
+        );
 
-    // Extract resultIds (entityId)
-    const resultIds = executingNodes
-      .map((node: WorkflowNodeExecution) => node.entityId)
-      .filter((id: string): id is string => Boolean(id));
+        // Extract resultIds (entityId)
+        const resultIds = executingNodes
+          .map((node: WorkflowNodeExecution) => node.entityId)
+          .filter((id: string): id is string => Boolean(id));
 
-    // Abort all executing actions
-    if (resultIds.length > 0) {
-      await Promise.allSettled(
-        resultIds.map((resultId: string) =>
-          getClient()
-            .abortAction({
-              body: {
-                resultId,
-              },
-            })
-            .catch((error) => {
-              console.warn(`Failed to abort action ${resultId}:`, error);
-            }),
-        ),
-      );
-    }
+        // Abort all executing actions
+        if (resultIds.length > 0) {
+          await Promise.allSettled(
+            resultIds.map((resultId: string) =>
+              getClient()
+                .abortAction({
+                  body: {
+                    resultId,
+                  },
+                })
+                .catch((error) => {
+                  console.warn(`Failed to abort action ${resultId}:`, error);
+                }),
+            ),
+          );
+        }
 
-    // Clean up frontend state
-    setExecutionId(null);
-    setIsRunning(false);
-    stopPolling();
-    message.info(t('workflowApp.run.stopped') || 'Workflow stopped');
+        // Clean up frontend state
+        setExecutionId(null);
+        setIsRunning(false);
+        stopPolling();
+        message.success(t('workflowApp.run.stopSuccess'));
+      },
+    });
   }, [nodeExecutions, stopPolling, t]);
 
   return (
