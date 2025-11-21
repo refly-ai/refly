@@ -3,7 +3,13 @@ import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use
 import { Avatar, message, notification, Skeleton, Tooltip } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CanvasNodeType, WorkflowNodeExecution, WorkflowVariable } from '@refly/openapi-schema';
+import {
+  CanvasNodeType,
+  WorkflowNodeExecution,
+  WorkflowVariable,
+  DriveFile,
+} from '@refly/openapi-schema';
+import { mapDriveFilesToWorkflowNodeExecutions } from '@refly/utils/drive-file-mapper';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { WorkflowAppProducts } from '@refly-packages/ai-workspace-common/components/workflow-app/products';
@@ -62,6 +68,10 @@ const WorkflowAppPage: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [executionCreditUsage, setExecutionCreditUsage] = useState<number | null>(null);
 
+  // Drive files state for preview and runtime
+  const [_previewDriveFiles, setPreviewDriveFiles] = useState<DriveFile[]>([]);
+  const [runtimeDriveFiles, setRuntimeDriveFiles] = useState<DriveFile[]>([]);
+
   // Settings modal state
   const { showSettingModal, setShowSettingModal } = useSiderStoreShallow((state) => ({
     showSettingModal: state.showSettingModal,
@@ -97,6 +107,49 @@ const WorkflowAppPage: React.FC = () => {
   const workflowVariables = useMemo(() => {
     return workflowApp?.variables ?? [];
   }, [workflowApp]);
+
+  // Fetch drive files for preview when workflowApp loads
+  useEffect(() => {
+    const canvasId = workflowApp?.canvasData?.canvasId;
+    if (!canvasId) {
+      return;
+    }
+
+    const fetchPreviewFiles = async () => {
+      try {
+        const allFiles: DriveFile[] = [];
+        let page = 1;
+        const pageSize = 100;
+
+        while (true) {
+          const { data } = await getClient().listDriveFiles({
+            query: {
+              canvasId,
+              source: 'agent',
+              scope: 'present',
+              page,
+              pageSize,
+            },
+          });
+
+          const files = data?.data ?? [];
+          allFiles.push(...files);
+
+          if (files.length < pageSize) {
+            break;
+          }
+          page++;
+        }
+
+        setPreviewDriveFiles(allFiles);
+      } catch (error) {
+        console.error('Failed to fetch preview drive files:', error);
+        // Silently degrade
+      }
+    };
+
+    fetchPreviewFiles();
+  }, [workflowApp?.canvasData?.canvasId]);
 
   const {
     data: workflowDetail,
@@ -194,18 +247,78 @@ const WorkflowAppPage: React.FC = () => {
     return workflowDetail?.nodeExecutions || finalNodeExecutions || [];
   }, [workflowDetail, finalNodeExecutions]);
 
+  // Fetch drive files for runtime products after execution completes
+  useEffect(() => {
+    const canvasId = workflowApp?.canvasData?.canvasId;
+    if (!canvasId || isRunning) {
+      return;
+    }
+
+    // Only fetch after execution completes
+    if (!executionId && finalNodeExecutions.length > 0) {
+      const fetchRuntimeFiles = async () => {
+        try {
+          const allFiles: DriveFile[] = [];
+          let page = 1;
+          const pageSize = 100;
+
+          while (true) {
+            const { data } = await getClient().listDriveFiles({
+              query: {
+                canvasId,
+                source: 'agent',
+                scope: 'present',
+                page,
+                pageSize,
+              },
+            });
+
+            const files = data?.data ?? [];
+            allFiles.push(...files);
+
+            if (files.length < pageSize) {
+              break;
+            }
+            page++;
+          }
+
+          setRuntimeDriveFiles(allFiles);
+        } catch (error) {
+          console.error('Failed to fetch runtime drive files:', error);
+          // Silently degrade
+        }
+      };
+
+      fetchRuntimeFiles();
+    }
+  }, [workflowApp?.canvasData?.canvasId, isRunning, executionId, finalNodeExecutions.length]);
+
   const products = useMemo(() => {
-    return nodeExecutions
+    // Legacy skillResponse products
+    const legacyProducts = nodeExecutions
       .filter(
         (nodeExecution: WorkflowNodeExecution) =>
-          ['document', 'codeArtifact', 'image', 'video', 'audio'].includes(
-            nodeExecution.nodeType as CanvasNodeType,
-          ) ||
-          (['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType) &&
-            (workflowApp?.resultNodeIds?.includes(nodeExecution.nodeId) ?? false)),
+          ['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType) &&
+          (workflowApp?.resultNodeIds?.includes(nodeExecution.nodeId) ?? false),
       )
       .filter((nodeExecution: WorkflowNodeExecution) => nodeExecution.status === 'finish');
-  }, [nodeExecutions, workflowApp?.resultNodeIds]);
+
+    // Map drive files to pseudo WorkflowNodeExecutions
+    const serverOrigin = window.location.origin;
+    const driveProducts = mapDriveFilesToWorkflowNodeExecutions(runtimeDriveFiles, serverOrigin);
+
+    // Merge and deduplicate by nodeId
+    const allProducts = [...legacyProducts, ...driveProducts];
+    const uniqueMap = new Map<string, WorkflowNodeExecution>();
+
+    for (const product of allProducts) {
+      if (product?.nodeId && !uniqueMap.has(product.nodeId)) {
+        uniqueMap.set(product.nodeId, product);
+      }
+    }
+
+    return Array.from(uniqueMap.values());
+  }, [nodeExecutions, runtimeDriveFiles, workflowApp?.resultNodeIds]);
 
   useEffect(() => {
     products.length > 0 && setActiveTab('products');
@@ -317,6 +430,43 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [t, shareId]);
 
+  const handleAbortWorkflow = useCallback(async () => {
+    // Get all executing skillResponse nodes
+    const executingNodes = nodeExecutions.filter(
+      (node: WorkflowNodeExecution) =>
+        node.nodeType === 'skillResponse' &&
+        (node.status === 'executing' || node.status === 'waiting'),
+    );
+
+    // Extract resultIds (entityId)
+    const resultIds = executingNodes
+      .map((node: WorkflowNodeExecution) => node.entityId)
+      .filter((id: string): id is string => Boolean(id));
+
+    // Abort all executing actions
+    if (resultIds.length > 0) {
+      await Promise.allSettled(
+        resultIds.map((resultId: string) =>
+          getClient()
+            .abortAction({
+              body: {
+                resultId,
+              },
+            })
+            .catch((error) => {
+              console.warn(`Failed to abort action ${resultId}:`, error);
+            }),
+        ),
+      );
+    }
+
+    // Clean up frontend state
+    setExecutionId(null);
+    setIsRunning(false);
+    stopPolling();
+    message.info(t('workflowApp.run.stopped') || 'Workflow stopped');
+  }, [nodeExecutions, stopPolling, t]);
+
   return (
     <ReactFlowProvider>
       <CanvasProvider readonly={true} canvasId={workflowApp?.canvasData?.canvasId ?? ''}>
@@ -411,12 +561,7 @@ const WorkflowAppPage: React.FC = () => {
                         {/* Stop Button - Exact Position: x:717, y:16 */}
                         <button
                           type="button"
-                          onClick={() => {
-                            setExecutionId(null);
-                            setIsRunning(false);
-                            stopPolling();
-                            message.info(t('workflowApp.run.stopped') || 'Workflow stopped');
-                          }}
+                          onClick={handleAbortWorkflow}
                           className="absolute flex items-center justify-center rounded-md bg-transparent hover:bg-[rgba(28,31,35,0.05)] dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors sm:left-[717px] right-4 sm:right-auto"
                           style={{
                             top: '16px',
