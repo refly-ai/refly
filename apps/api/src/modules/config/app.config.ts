@@ -162,14 +162,11 @@ export default () => ({
     key: process.env.ENCRYPTION_KEY,
   },
   skill: {
-    streamIdleTimeout: Number.parseInt(process.env.SKILL_STREAM_IDLE_TIMEOUT) || 1000 * 30, // 30 seconds
+    streamIdleTimeout: Number.parseInt(process.env.SKILL_STREAM_IDLE_TIMEOUT) || 0,
     streamIdleCheckInterval:
-      Number.parseInt(process.env.SKILL_STREAM_IDLE_CHECK_INTERVAL) || 1000 * 10, // 10 seconds
-    stuckCheckInterval: Number.parseInt(process.env.SKILL_STUCK_CHECK_INTERVAL) || 1000 * 60, // 1 minute
-    stuckTimeoutThreshold:
-      Number.parseInt(process.env.SKILL_STUCK_TIMEOUT_THRESHOLD) || 1000 * 60 * 15, // 15 minutes
-    aiModelNetworkTimeout:
-      Number.parseInt(process.env.SKILL_AI_MODEL_NETWORK_TIMEOUT) || 1000 * 300, // 30 seconds
+      Number.parseInt(process.env.SKILL_STREAM_IDLE_CHECK_INTERVAL) || 1000 * 3, // 3 seconds
+    stuckCheckInterval: Number.parseInt(process.env.SKILL_STUCK_CHECK_INTERVAL) || 0,
+    stuckTimeoutThreshold: Number.parseInt(process.env.SKILL_STUCK_TIMEOUT_THRESHOLD) || 0,
   },
   provider: {
     defaultMode: process.env.PROVIDER_DEFAULT_MODE || 'custom',
