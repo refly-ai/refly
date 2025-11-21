@@ -1,18 +1,17 @@
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import { Divider, Button, Popconfirm, message } from 'antd';
-import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { useReactFlow } from '@xyflow/react';
 import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
-import { BiText } from 'react-icons/bi';
 import type { WorkflowVariable } from '@refly/openapi-schema';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
-import { locateToVariableEmitter } from '@refly-packages/ai-workspace-common/events/locateToVariable';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useTranslation } from 'react-i18next';
 import SVGX from '../../../assets/x.svg';
 import { CreateVariablesModal } from '../workflow-variables';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { locateToVariableEmitter } from '@refly-packages/ai-workspace-common/events/locateToVariable';
+import { useReactFlow } from '@xyflow/react';
+import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
+import { BiText } from 'react-icons/bi';
 import { VARIABLE_TYPE_ICON_MAP } from '../nodes/start';
 
 type VariableType = 'string' | 'option' | 'resource';
@@ -51,25 +50,9 @@ const VariableItem = memo(
     const { t } = useTranslation();
     const [isPopconfirmOpen, setIsPopconfirmOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const queryClient = useQueryClient();
 
     const handleDeleteVariable = async (variable: WorkflowVariable) => {
       const newVariables = totalVariables.filter((v) => v.variableId !== variable.variableId);
-
-      // Optimistically update local cache so the variable disappears immediately
-      queryClient.setQueryData(
-        ['GetWorkflowVariables', { query: { canvasId } }],
-        (oldData: any) => {
-          if (!oldData) {
-            return oldData;
-          }
-          return {
-            ...oldData,
-            data: newVariables,
-          };
-        },
-      );
-
       try {
         setIsDeleting(true);
         const { data } = await getClient().updateWorkflowVariables({
@@ -83,38 +66,9 @@ const VariableItem = memo(
             t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
           );
           refetchWorkflowVariables();
-        } else {
-          // Rollback optimistic update on failure
-          queryClient.setQueryData(
-            ['GetWorkflowVariables', { query: { canvasId } }],
-            (oldData: any) => {
-              if (!oldData) {
-                return oldData;
-              }
-              return {
-                ...oldData,
-                data: totalVariables,
-              };
-            },
-          );
-          message.error(t('canvas.workflow.variables.deleteError') || 'Failed to delete variable');
         }
       } catch (error) {
-        // Rollback optimistic update on error
-        queryClient.setQueryData(
-          ['GetWorkflowVariables', { query: { canvasId } }],
-          (oldData: any) => {
-            if (!oldData) {
-              return oldData;
-            }
-            return {
-              ...oldData,
-              data: totalVariables,
-            };
-          },
-        );
         console.error('Failed to delete variable:', error);
-        message.error(t('canvas.workflow.variables.deleteError') || 'Failed to delete variable');
       } finally {
         setIsDeleting(false);
       }

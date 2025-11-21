@@ -501,13 +501,13 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             options: options || [],
           }),
         };
-        // Optimistically close modal before waiting for backend response
-        onCancel(false);
+
         setIsSaving(true);
         const success = await saveVariable(variable);
         setIsSaving(false);
         if (success) {
           refetchWorkflowVariables();
+          onCancel(false);
 
           if (variableType === 'resource') {
             refetchFiles();
