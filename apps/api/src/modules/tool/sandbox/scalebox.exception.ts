@@ -43,19 +43,9 @@ export class ServiceConfigurationException extends SandboxException {
   }
 }
 
-export class MissingApiKeyException extends SandboxException {
-  constructor() {
-    super('Scalebox API key is not configured. Please contact administrator.', 'MISSING_API_KEY', {
-      missingConfig: 'apiKey',
-    });
-  }
-}
-
-export class MissingCanvasIdException extends SandboxException {
-  constructor() {
-    super('Canvas ID is required for sandbox execution.', 'MISSING_CANVAS_ID', {
-      missingParam: 'canvasId',
-    });
+export class SandboxRequestParamsException extends SandboxException {
+  constructor(operation: string, messageOrError: unknown) {
+    super(messageOrError, 'SANDBOX_REQUEST_PARAMS_ERROR', { operation });
   }
 }
 
@@ -92,6 +82,12 @@ export class SandboxCreationException extends SandboxException {
   }
 }
 
+export class SandboxConnectionException extends SandboxException {
+  constructor(messageOrError: unknown) {
+    super(messageOrError, 'SANDBOX_CONNECTION_FAILED');
+  }
+}
+
 export class SandboxExecutionFailedException extends SandboxException {
   constructor(
     message: unknown,
@@ -120,5 +116,26 @@ export class SandboxMountException extends SandboxException {
 export class SandboxFileListException extends SandboxException {
   constructor(messageOrError: unknown) {
     super(messageOrError, 'SANDBOX_FILE_LIST_FAILED');
+  }
+}
+
+export class SandboxCommandException extends SandboxException {
+  constructor(
+    messageOrError: unknown,
+    public readonly exitCode?: number,
+  ) {
+    super(messageOrError, 'SANDBOX_COMMAND_FAILED', { exitCode });
+  }
+}
+
+export class SandboxLockTimeoutException extends SandboxException {
+  constructor(
+    public readonly lockKey: string,
+    public readonly timeoutMs: number,
+  ) {
+    super(`Failed to acquire lock for ${lockKey} after ${timeoutMs}ms`, 'SANDBOX_LOCK_TIMEOUT', {
+      lockKey,
+      timeoutMs,
+    });
   }
 }

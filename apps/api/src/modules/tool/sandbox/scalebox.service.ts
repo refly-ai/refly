@@ -12,11 +12,12 @@ import {
 import { buildResponse } from '../../../utils';
 import { guard } from '../../../utils/guard';
 import { Config } from '../../config/config.decorator';
+import { RedisService } from '../../common/redis.service';
 import { DriveService } from '../../drive/drive.service';
 import {
-  MissingApiKeyException,
-  MissingCanvasIdException,
+  SandboxRequestParamsException,
   SandboxExecutionFailedException,
+  SandboxLockTimeoutException,
 } from './scalebox.exception';
 import { MEDIA_TYPES } from '../constant';
 import { ToolExecutionSync } from '../common/decorators/tool-execution-sync.decorator';
@@ -25,7 +26,11 @@ import { ScaleboxExecutionResult, ExecutionContext } from './scalebox.dto';
 import { formatError, buildSuccessResponse, extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { SandboxWrapper } from './scalebox.wrapper';
-import { Trace, Measure, setSpanAttributes } from './scalebox.tracer';
+import { Trace, setSpanAttributes } from './scalebox.tracer';
+import {
+  SCALEBOX_DEFAULT_LOCK_WAIT_TIMEOUT_MS,
+  SCALEBOX_DEFAULT_LOCK_POLL_INTERVAL_MS,
+} from './scalebox.constants';
 
 /**
  * Scalebox Service
@@ -35,6 +40,7 @@ import { Trace, Measure, setSpanAttributes } from './scalebox.tracer';
 export class ScaleboxService {
   constructor(
     private readonly config: ConfigService, // Used by @Config decorators
+    private readonly redis: RedisService,
     private readonly driveService: DriveService,
     private readonly sandboxPool: SandboxPool,
     private readonly toolExecutionSync: ToolExecutionSyncInterceptor,
@@ -46,17 +52,76 @@ export class ScaleboxService {
   @Config.string('sandbox.scalebox.apiKey', '')
   private scaleboxApiKey: string;
 
+  @Config.integer('sandbox.scalebox.lockWaitTimeoutMs', SCALEBOX_DEFAULT_LOCK_WAIT_TIMEOUT_MS)
+  private lockWaitTimeoutMs: number;
+
+  @Config.integer('sandbox.scalebox.lockPollIntervalMs', SCALEBOX_DEFAULT_LOCK_POLL_INTERVAL_MS)
+  private lockPollIntervalMs: number;
+
   async executeCode(
     params: SandboxExecuteParams,
     context: ExecutionContext,
   ): Promise<ScaleboxExecutionResult> {
-    guard.notEmpty(context.canvasId).orThrow(() => new MissingCanvasIdException());
+    guard
+      .notEmpty(context.canvasId)
+      .orThrow(() => new SandboxRequestParamsException('executeCode', 'canvasId is required'));
 
-    const wrapper = await this.sandboxPool.acquire(context);
+    const lockKey = `scalebox:execute:lock:${context.uid}:${context.canvasId}`;
 
-    return await guard.defer(
-      () => this.runCodeInSandbox(wrapper, params),
-      () => this.releaseSandbox(wrapper),
+    return guard.defer(
+      async () => {
+        const releaseLock = await this.waitForLock(lockKey);
+        return [undefined, () => void releaseLock()] as const;
+      },
+      () => this.executeCodeWithSandbox(params, context),
+      (error) => this.logger.warn(error, 'Failed to release lock'),
+    );
+  }
+
+  private async waitForLock(lockKey: string) {
+    return guard
+      .retry(
+        async () => {
+          const releaseLock = await this.redis.acquireLock(lockKey);
+          guard.ensure(!!releaseLock).orThrow(() => new Error('Lock not acquired'));
+          return releaseLock;
+        },
+        {
+          timeout: this.lockWaitTimeoutMs,
+          initialDelay: this.lockPollIntervalMs,
+          maxDelay: this.lockPollIntervalMs,
+          backoffFactor: 1,
+        },
+      )
+      .orThrow(() => new SandboxLockTimeoutException(lockKey, this.lockWaitTimeoutMs));
+  }
+
+  private async executeCodeWithSandbox(
+    params: SandboxExecuteParams,
+    context: ExecutionContext,
+  ): Promise<ScaleboxExecutionResult> {
+    return guard.defer(
+      async () => {
+        const wrapper = await this.sandboxPool.acquire(context);
+        return [wrapper, () => this.sandboxPool.release(wrapper)] as const;
+      },
+      (wrapper) => this.executeWithMount(wrapper, params, context.s3DrivePath),
+      (error) => this.logger.warn(error, 'Failed to release sandbox'),
+    );
+  }
+
+  private async executeWithMount(
+    wrapper: SandboxWrapper,
+    params: SandboxExecuteParams,
+    s3DrivePath: string,
+  ): Promise<ScaleboxExecutionResult> {
+    return guard.defer(
+      async () => {
+        await wrapper.mountDrive(s3DrivePath);
+        return [wrapper, () => wrapper.unmountDrive()] as const;
+      },
+      (wrapper) => this.runCodeInSandbox(wrapper, params),
+      (error) => this.logger.warn(error, 'Failed to unmount drive'),
     );
   }
 
@@ -67,7 +132,8 @@ export class ScaleboxService {
   ): Promise<ScaleboxExecutionResult> {
     const startTime = Date.now();
 
-    const previousFiles = await this.listFilesBeforeExecution(wrapper);
+    const previousFiles = await wrapper.listCwdFiles();
+    setSpanAttributes({ 'files.before.count': previousFiles.length });
     const prevSet = new Set(previousFiles);
 
     const result = await wrapper.executeCode(params, this.logger);
@@ -76,7 +142,7 @@ export class ScaleboxService {
       'code.hasError': result.exitCode !== 0,
     });
 
-    const currentFiles = await this.listFilesAfterExecution(wrapper);
+    const currentFiles = await wrapper.listCwdFiles();
     const diffFiles = currentFiles
       .filter((file) => !prevSet.has(file))
       .map((p) => p.replace(wrapper.cwd, ''));
@@ -98,29 +164,6 @@ export class ScaleboxService {
     };
   }
 
-  @Measure('files.listBefore')
-  private async listFilesBeforeExecution(wrapper: SandboxWrapper): Promise<string[]> {
-    const files = await wrapper.listCwdFiles();
-    setSpanAttributes({ 'files.before.count': files.length });
-    return files;
-  }
-
-  @Measure('files.listAfter')
-  private async listFilesAfterExecution(wrapper: SandboxWrapper): Promise<string[]> {
-    return wrapper.listCwdFiles();
-  }
-
-  private async releaseSandbox(wrapper: SandboxWrapper): Promise<void> {
-    this.logger.info({ sandboxId: wrapper.sandboxId }, 'Releasing sandbox to pool');
-
-    await guard.bestEffort(
-      () => this.sandboxPool.release(wrapper),
-      (error) => this.logger.warn(error, 'Failed to release sandbox after execution'),
-    );
-
-    this.logger.info({ sandboxId: wrapper.sandboxId }, 'Sandbox release completed');
-  }
-
   @ToolExecutionSync({
     resultType: MEDIA_TYPES.DOC,
     getParentResultId: (req) => req.parentResultId,
@@ -139,22 +182,23 @@ export class ScaleboxService {
     try {
       const canvasId = guard
         .notEmpty(request.context?.canvasId)
-        .orThrow(() => new MissingCanvasIdException());
+        .orThrow(() => new SandboxRequestParamsException('execute', 'canvasId is required'));
 
       const apiKey = guard
         .notEmpty(this.scaleboxApiKey)
-        .orThrow(() => new MissingApiKeyException());
+        .orThrow(() => new SandboxRequestParamsException('execute', 'apiKey is not configured'));
+
+      const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
 
       const executionResult = await this.executeCode(request.params, {
         uid: user.uid,
         apiKey,
         canvasId,
+        s3DrivePath: storagePath,
         version: request.context?.version,
       });
 
       const { exitCode, error, originResult, files = [] } = executionResult;
-
-      const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
 
       this.logger.info(
         {

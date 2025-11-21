@@ -11,6 +11,13 @@ export const SCALEBOX_DEFAULT_MIN_REMAINING_MS = 2 * 60 * 1000; // 2 minutes
 export const SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
+ * Canvas-level execution lock configuration
+ * Controls concurrent execution timeout for the same canvas
+ */
+export const SCALEBOX_DEFAULT_LOCK_WAIT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+export const SCALEBOX_DEFAULT_LOCK_POLL_INTERVAL_MS = 100; // 100ms
+
+/**
  * Maximum length for error messages (traceback, stderr, etc.)
  * Messages exceeding this length will be truncated with '[... more info]' suffix
  */
@@ -21,16 +28,7 @@ export const ERROR_MESSAGE_MAX_LENGTH = 1000;
  * Actively poll to verify mount readiness instead of fixed wait
  */
 export const SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS = 5000;
-export const SANDBOX_MOUNT_VERIFICATION_INITIAL_DELAY_MS = 100;
 export const SANDBOX_MOUNT_VERIFICATION_MAX_DELAY_MS = 500;
-export const SANDBOX_MOUNT_VERIFICATION_BACKOFF_FACTOR = 1.5;
-
-/**
- * S3 mount retry configuration
- * Retry on network failures or transient S3 service issues
- */
-export const SANDBOX_MOUNT_MAX_RETRIES = 3;
-export const SANDBOX_MOUNT_RETRY_DELAY_MS = 2000;
 
 /**
  * Unmount verification polling configuration

@@ -5,10 +5,8 @@ import { PinoLogger } from 'nestjs-pino';
 import { guard } from '../../../utils/guard';
 import { Config } from '../../config/config.decorator';
 import { RedisService } from '../../common/redis.service';
-import { DriveService } from '../../drive/drive.service';
 
-import { QueueOverloadedException } from './scalebox.exception';
-import { poll } from './scalebox.utils';
+import { QueueOverloadedException, SandboxCreationException } from './scalebox.exception';
 import { SandboxWrapper, SandboxMetadata, SandboxContext, S3Config } from './scalebox.wrapper';
 import { ExecutionContext } from './scalebox.dto';
 import {
@@ -17,14 +15,13 @@ import {
   SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS,
   S3_DEFAULT_CONFIG,
 } from './scalebox.constants';
-import { Trace, Measure, setSpanAttributes } from './scalebox.tracer';
+import { Trace, setSpanAttributes } from './scalebox.tracer';
 
 @Injectable()
 export class SandboxPool {
   constructor(
     private readonly redis: RedisService,
-    private readonly config: ConfigService, // Used by @Config decorators
-    private readonly driveService: DriveService,
+    private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(SandboxPool.name);
@@ -42,6 +39,12 @@ export class SandboxPool {
   @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
   private s3Config: S3Config;
 
+  private get redisClient() {
+    const client = this.redis.getClient();
+    guard.ensure(!!client).orThrow(() => new SandboxCreationException('Redis client not found'));
+    return client;
+  }
+
   @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
   async acquire(context: ExecutionContext, maxWaitMs = 30000): Promise<SandboxWrapper> {
     setSpanAttributes({
@@ -50,180 +53,161 @@ export class SandboxPool {
       'pool.maxWait': maxWaitMs,
     });
 
-    return poll(
-      async () => {
-        const wrapper = await this.tryAcquireWithMetrics(context);
-        if (wrapper) {
-          setSpanAttributes({ 'pool.strategy': 'reuse' });
-          return wrapper;
-        }
-
-        const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-        setSpanAttributes({ 'pool.active.count': active.length });
-
-        if (active.length < this.maxSandboxes) {
-          setSpanAttributes({ 'pool.strategy': 'create' });
-          return this.createNew(context);
-        }
-
-        return null;
-      },
-      async () => {
-        const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-        throw new QueueOverloadedException(active.length, this.maxSandboxes);
-      },
-      { timeout: maxWaitMs },
-    );
+    return guard.retry(() => this.tryAcquireOrCreate(context), { timeout: maxWaitMs }).orThrow();
   }
 
-  @Measure('pool.tryAcquire')
-  private async tryAcquireWithMetrics(context: ExecutionContext): Promise<SandboxWrapper | null> {
-    return this.tryAcquire(context);
+  private async tryAcquireOrCreate(context: ExecutionContext): Promise<SandboxWrapper> {
+    const reused = await this.tryReuseFromPool(context);
+    if (reused) {
+      setSpanAttributes({ 'pool.strategy': 'reuse' });
+      return reused;
+    }
+
+    setSpanAttributes({ 'pool.strategy': 'create' });
+    await this.ensureHasCapacity();
+    return this.createNew(context);
   }
 
-  private async tryAcquire(context: ExecutionContext): Promise<SandboxWrapper | null> {
-    const lockKey = `scalebox:pool:acquire:${context.canvasId}`;
-    const releaseLock = await this.redis.acquireLock(lockKey);
+  private async tryReuseFromPool(context: ExecutionContext): Promise<SandboxWrapper | null> {
+    const sandboxId = await this.popIdleSandbox();
+    if (!sandboxId) return null;
 
-    if (!releaseLock) return null;
-
-    return guard.defer(
-      () => this.acquireFromIdlePool(context),
-      () => void releaseLock(),
-    );
-  }
-
-  private async acquireFromIdlePool(context: ExecutionContext): Promise<SandboxWrapper | null> {
-    const metadata = await this.redis.getJSON<SandboxMetadata>(
-      `scalebox:pool:idle:${context.canvasId}`,
-    );
+    const metadata = await guard(() => this.getValidMetadata(sandboxId)).orElse(() => null);
     if (!metadata) return null;
 
-    if (metadata.timeoutAt <= Date.now()) {
-      await this.redis.del(`scalebox:pool:idle:${context.canvasId}`);
-      this.logger.info({ sandboxId: metadata.sandboxId }, 'Sandbox expired');
-      return null;
-    }
-
-    await this.redis.del(`scalebox:pool:idle:${context.canvasId}`);
-
-    const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-    active.push(metadata.sandboxId);
-    await this.redis.setJSON('scalebox:pool:active', active);
-
-    const s3DrivePath = this.driveService.buildS3DrivePath(context.uid, context.canvasId);
-
-    const wrapper = await SandboxWrapper.reconnect(
-      {
-        logger: this.logger,
-        uid: context.uid,
-        canvasId: context.canvasId,
-        apiKey: context.apiKey,
-        s3Config: this.s3Config,
-        s3DrivePath,
-      },
-      metadata,
-    );
-
-    if (!wrapper) {
-      const activeList = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-      const filtered = activeList.filter((id) => id !== metadata.sandboxId);
-      await this.redis.setJSON('scalebox:pool:active', filtered);
-      return null;
-    }
-
-    this.logger.info(
-      {
-        sandboxId: wrapper.sandboxId,
-        active: active.length,
-        max: this.maxSandboxes,
-      },
-      'Reused sandbox from idle pool',
-    );
-
+    const wrapper = await this.reconnectSandbox(sandboxId, metadata, context);
     return wrapper;
   }
 
-  async release(wrapper: SandboxWrapper): Promise<void> {
-    const activeList = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-    const filtered = activeList.filter((id) => id !== wrapper.sandboxId);
-    await this.redis.setJSON('scalebox:pool:active', filtered);
-
-    await guard.bestEffort(
-      () => this.returnToIdlePool(wrapper, filtered.length),
-      (error) =>
-        this.logger.warn(
-          { context: wrapper.context, error },
-          'Failed to release sandbox to idle pool',
-        ),
-    );
+  private async popIdleSandbox(): Promise<string | null> {
+    return this.redisClient.lpop('scalebox:pool:idle');
   }
 
-  private async returnToIdlePool(wrapper: SandboxWrapper, activeCount: number): Promise<void> {
-    await wrapper.extendTimeout(this.extendTimeoutMs);
+  private async getValidMetadata(sandboxId: string): Promise<SandboxMetadata> {
+    const metadata = await this.redis.getJSON<SandboxMetadata>(`scalebox:pool:meta:${sandboxId}`);
 
-    const remainingMs = wrapper.getRemainingTime();
+    guard.ensure(!!metadata).orThrow(() => {
+      this.logger.warn({ sandboxId }, 'Metadata not found for sandbox, discarding');
+      return new SandboxCreationException('Metadata not found');
+    });
 
-    if (!(await wrapper.isHealthy())) {
-      this.logger.info({ sandboxId: wrapper.sandboxId }, 'Sandbox is not healthy, discarding');
-      return;
-    }
+    guard.ensure(metadata.timeoutAt > Date.now()).orThrow(() => {
+      void this.redis.del(`scalebox:pool:meta:${sandboxId}`);
+      this.logger.info({ sandboxId }, 'Sandbox expired, discarding');
+      return new SandboxCreationException('Sandbox expired');
+    });
 
-    if (remainingMs < this.minRemainingMs) {
+    return metadata;
+  }
+
+  private async reconnectSandbox(
+    sandboxId: string,
+    metadata: SandboxMetadata,
+    context: ExecutionContext,
+  ): Promise<SandboxWrapper | null> {
+    await this.redisClient.sadd('scalebox:pool:active', sandboxId);
+
+    return guard(async () => {
+      const wrapper = await SandboxWrapper.reconnect(
+        {
+          logger: this.logger,
+          uid: context.uid,
+          canvasId: context.canvasId,
+          apiKey: context.apiKey,
+          s3Config: this.s3Config,
+        },
+        metadata,
+      );
+
+      const activeCount = await this.redisClient.scard('scalebox:pool:active');
       this.logger.info(
         {
           sandboxId: wrapper.sandboxId,
-          remainingSeconds: Math.floor(remainingMs / 1000),
+          canvasId: context.canvasId,
+          active: activeCount,
+          max: this.maxSandboxes,
         },
-        'Sandbox remaining time too low, discarding',
+        'Reconnected to sandbox from global pool (unmounted)',
       );
-      return;
-    }
 
-    const ttlSeconds = Math.floor(remainingMs / 1000);
-    await this.redis.setJSON(
-      `scalebox:pool:idle:${wrapper.canvasId}`,
-      wrapper.toMetadata(),
-      ttlSeconds,
-    );
+      return wrapper;
+    }).orElse(async () => {
+      await this.redisClient.srem('scalebox:pool:active', sandboxId);
+      await this.redis.del(`scalebox:pool:meta:${sandboxId}`);
+      return null;
+    });
+  }
 
-    this.logger.info(
-      {
-        sandboxId: wrapper.sandboxId,
-        expiresIn: ttlSeconds,
-        active: activeCount,
-        max: this.maxSandboxes,
+  private async ensureHasCapacity(): Promise<void> {
+    const activeCount = await this.redisClient.scard('scalebox:pool:active');
+    setSpanAttributes({ 'pool.active.count': activeCount });
+
+    guard
+      .ensure(activeCount < this.maxSandboxes)
+      .orThrow(() => new QueueOverloadedException(activeCount, this.maxSandboxes));
+  }
+
+  async release(wrapper: SandboxWrapper): Promise<void> {
+    const sandboxId = wrapper.sandboxId;
+
+    await this.redisClient.srem('scalebox:pool:active', sandboxId);
+    const activeCount = await this.redisClient.scard('scalebox:pool:active');
+
+    await guard.bestEffort(
+      async () => {
+        await wrapper.extendTimeout(this.extendTimeoutMs);
+        const remainingMs = wrapper.remainingTime;
+
+        const isHealthy = await wrapper.isHealthy();
+        guard.ensure(isHealthy).orThrow(() => new Error('Sandbox is not healthy'));
+        guard
+          .ensure(remainingMs >= this.minRemainingMs)
+          .orThrow(() => new Error('Sandbox remaining time too low'));
+
+        const metadata = wrapper.toMetadata();
+        const ttlSeconds = Math.floor(remainingMs / 1000);
+
+        await this.redis.setJSON(`scalebox:pool:meta:${sandboxId}`, metadata, ttlSeconds);
+        await this.redisClient.rpush('scalebox:pool:idle', sandboxId);
+
+        this.logger.info(
+          {
+            sandboxId,
+            expiresIn: ttlSeconds,
+            active: activeCount,
+            max: this.maxSandboxes,
+          },
+          'Released sandbox to global pool',
+        );
       },
-      'Released sandbox to pool',
+      (error) => this.logger.error(error, `Failed to return sandbox ${sandboxId} to pool`),
     );
   }
 
   private async createNew(context: ExecutionContext): Promise<SandboxWrapper> {
-    const lockKey = `scalebox:pool:create:${context.canvasId}`;
-    const releaseLock = await this.redis.acquireLock(lockKey);
-
-    if (!releaseLock) {
-      // Retry acquire after short delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return this.acquire(context);
-    }
+    const lockKey = 'scalebox:pool:create:global';
 
     return guard.defer(
+      async () => {
+        const releaseLock = await this.redis.acquireLock(lockKey);
+        guard
+          .ensure(!!releaseLock)
+          .orThrow(() => new QueueOverloadedException(this.maxSandboxes, this.maxSandboxes));
+
+        return [undefined, () => void releaseLock()] as const;
+      },
       () => this.createNewSandbox(context),
-      () => void releaseLock(),
     );
   }
 
   private async createNewSandbox(context: ExecutionContext): Promise<SandboxWrapper> {
-    const existing = await this.tryAcquire(context);
+    const existing = await this.tryReuseFromPool(context);
     if (existing) return existing;
 
-    const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-    if (active.length >= this.maxSandboxes) {
-      throw new QueueOverloadedException(active.length, this.maxSandboxes);
-    }
-
-    const s3DrivePath = this.driveService.buildS3DrivePath(context.uid, context.canvasId);
+    const activeCount = await this.redisClient.scard('scalebox:pool:active');
+    guard
+      .ensure(activeCount < this.maxSandboxes)
+      .orThrow(() => new QueueOverloadedException(activeCount, this.maxSandboxes));
 
     const sandboxContext: SandboxContext = {
       logger: this.logger,
@@ -231,40 +215,36 @@ export class SandboxPool {
       canvasId: context.canvasId,
       apiKey: context.apiKey,
       s3Config: this.s3Config,
-      s3DrivePath,
     };
 
     const wrapper = await SandboxWrapper.create(sandboxContext, this.extendTimeoutMs);
 
-    active.push(wrapper.sandboxId);
-    await this.redis.setJSON('scalebox:pool:active', active);
+    await this.redisClient.sadd('scalebox:pool:active', wrapper.sandboxId);
 
-    const activeCount = active.length;
+    const newActiveCount = await this.redisClient.scard('scalebox:pool:active');
     this.logger.info(
       {
         sandboxId: wrapper.sandboxId,
-        active: activeCount,
+        canvasId: context.canvasId,
+        active: newActiveCount,
         max: this.maxSandboxes,
-        expiresAt: new Date(wrapper.getTimeoutAt()).toISOString(),
       },
-      'Sandbox added to active pool',
+      'Sandbox created and added to active pool (unmounted)',
     );
 
     return wrapper;
   }
 
   async getStats() {
-    const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
+    const activeCount = await this.redisClient.scard('scalebox:pool:active');
 
     return {
-      active: active.length,
+      active: activeCount,
       max: this.maxSandboxes,
     };
   }
 
   async clear() {
     await this.redis.del('scalebox:pool:active');
-    // Note: Can't efficiently clear all scalebox:pool:idle:* keys without scanning
-    // Let TTL handle expiration naturally
   }
 }

@@ -20,6 +20,7 @@ export interface ExecutionContext extends Partial<SandboxExecuteContext> {
   uid: string;
   apiKey: string;
   canvasId: string; // Override as required
+  s3DrivePath: string; // S3 storage path for this execution
   version?: number;
 
   // Inherited optional fields from SandboxExecuteContext:
