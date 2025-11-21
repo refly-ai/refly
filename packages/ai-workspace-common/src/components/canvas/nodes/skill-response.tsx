@@ -37,7 +37,7 @@ import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
-import { usePilotStoreShallow } from '@refly/stores';
+import { usePilotStoreShallow, useCanvasNodesStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 
 import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
@@ -162,6 +162,12 @@ export const SkillResponseNode = memo(
     onNodeClick,
   }: SkillResponseNodeProps) => {
     const [isHovered, setIsHovered] = useState(false);
+    const { highlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+      highlightedNodeId: state.highlightedNodeId,
+    }));
+
+    const shouldHighlight = highlightedNodeId === id;
+
     const connection = useConnection();
     const isConnectingTarget = useMemo(
       () =>
@@ -801,7 +807,7 @@ export const SkillResponseNode = memo(
             style={nodeStyle}
             className={cn(
               'h-full flex flex-col relative z-1 p-0 box-border',
-              getNodeCommonStyles({ selected, isHovered, nodeType: 'skillResponse' }),
+              getNodeCommonStyles({ selected, isHovered, shouldHighlight }),
               'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid bg-refly-bg-content-z2',
               // Apply error styles only when there's an error
               status === 'failed'
@@ -809,7 +815,9 @@ export const SkillResponseNode = memo(
                 : 'border-refly-Card-Border',
             )}
           >
-            {isHovered && <div className="absolute inset-0 bg-refly-node-run opacity-[0.14]" />}
+            {shouldHighlight && (
+              <div className="absolute inset-0 bg-refly-node-run opacity-[0.14]" />
+            )}
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}

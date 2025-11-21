@@ -9,29 +9,13 @@ import { WorkflowPlan } from '@refly/canvas-common';
 import { safeParseJSON } from '@refly/utils/parse';
 import { ProductCard } from './product-card';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
-import { Button } from 'antd';
+import { Button, Typography } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
-import { ArrowDown, ArrowUp, Checked } from 'refly-icons';
+import { ArrowDown, ArrowUp, Cancelled, CheckCircleBroken } from 'refly-icons';
 import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
-const FailedIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="w-[18px] h-[18px] text-red-500 dark:text-red-400"
-  >
-    <path d="M18 6 6 18" />
-    <path d="M6 6l12 12" />
-  </svg>
-);
+const { Paragraph } = Typography;
 
 interface ToolCallProps {
   'data-tool-name'?: string;
@@ -72,17 +56,22 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     parseToolCallStatus(props['data-tool-call-status']) ?? ToolCallStatus.EXECUTING;
 
   // Format the content for parameters
-  const parametersContent = () => {
+  const parametersContent = useMemo(() => {
     try {
       const argsStr = props['data-tool-arguments'] ?? '{}';
       const args = JSON.parse(argsStr);
-      return Object.keys(args).length
-        ? JSON.stringify(args, null, 2)
-        : t('components.markdown.noParameters', 'No parameters');
-    } catch (_e) {
-      return props['data-tool-arguments'] ?? t('components.markdown.noParameters', 'No parameters');
+      return JSON.parse(args?.input ?? '{}');
+    } catch {
+      return {};
     }
-  };
+  }, [props['data-tool-arguments']]);
+
+  const parameterEntries = useMemo(() => {
+    if (!parametersContent || typeof parametersContent !== 'object') {
+      return [];
+    }
+    return Object.entries(parametersContent as Record<string, unknown>);
+  }, [parametersContent]);
 
   // Format the content for result
   const resultContent = props['data-tool-error'] ?? props['data-tool-result'] ?? '';
@@ -177,43 +166,68 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
       <div className="rounded-lg overflow-hidden bg-refly-bg-control-z0 text-refly-text-0">
         {/* Header bar */}
         <div
-          className="flex items-center justify-between p-3 gap-2 cursor-pointer select-none min-h-[44px]"
+          className="flex items-center justify-between p-3 gap-3 cursor-pointer select-none min-h-[48px]"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <ToolsetIcon
               toolsetKey={toolsetKey}
-              config={{ size: 16, className: 'flex-shrink-0', builtinClassName: '!w-4 !h-4' }}
+              config={{ size: 18, className: 'flex-shrink-0', builtinClassName: '!w-4.5 !h-4.5' }}
             />
-            <div className="flex-1 text-sm font-semibold">{`${toolsetName}`}</div>
-            {!toolsetDefinition?.builtin && (
-              <div className="text-xs text-refly-text-2">{`${toolName}`}</div>
-            )}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Paragraph
+                className="!m-0 text-sm font-semibold truncate max-w-[50%] flex-shrink-0"
+                ellipsis={{
+                  rows: 1,
+                  tooltip: {
+                    title: <div className="max-h-[200px] overflow-y-auto">{toolsetName}</div>,
+                    placement: 'bottom',
+                    arrow: false,
+                  },
+                }}
+              >
+                {toolsetName}
+              </Paragraph>
+              {!toolsetDefinition?.builtin && (
+                <Paragraph
+                  className="!m-0 text-xs text-refly-text-2 truncate flex-1 min-w-0"
+                  ellipsis={{
+                    rows: 1,
+                    tooltip: {
+                      title: <div className="max-h-[200px] overflow-y-auto">{toolName}</div>,
+                      placement: 'bottom',
+                      arrow: false,
+                    },
+                  }}
+                >
+                  {toolName}
+                </Paragraph>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {/* Status indicator */}
             {toolCallStatus === ToolCallStatus.EXECUTING && (
               <Spin size="small" className="text-refly-text-2" />
             )}
             {toolCallStatus === ToolCallStatus.COMPLETED && (
-              <span className="flex items-center">
-                <Checked size={14} color="var(--refly-primary-default)" />
+              <div className="flex items-center">
+                <CheckCircleBroken size={12} color="var(--refly-primary-default)" />
                 {durationText && (
-                  <span className="ml-2 text-xs text-refly-text-2">{durationText}</span>
+                  <span className="ml-1 text-xs text-refly-text-2 leading-4">{durationText}</span>
                 )}
-              </span>
+              </div>
             )}
             {toolCallStatus === ToolCallStatus.FAILED && (
-              <span className="ml-2 flex items-center">
-                <FailedIcon />
-              </span>
+              <Cancelled size={12} color="var(--refly-func-danger-default)" />
             )}
 
             <Button
               type="text"
               size="small"
-              icon={isCollapsed ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+              className="!w-4 !h-4 !rounded-[4px]"
+              icon={isCollapsed ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
               onClick={() => setIsCollapsed(!isCollapsed)}
             />
           </div>
@@ -221,23 +235,42 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
         {/* Content section */}
         {!isCollapsed && (
-          <div className="py-2">
+          <div className="py-2 flex flex-col gap-4">
             {/* Parameters section always shown */}
-            <div className="px-5 py-1 text-refly-text-2 text-[13px]">
-              {t('components.markdown.parameters', 'Parameters:')}
-            </div>
-            {/* Parameter content block with background, rounded corners, margin and padding */}
-            <div className="mx-4 my-2 rounded-lg bg-refly-tertiary-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
-              {parametersContent()}
-            </div>
+            {parameterEntries?.length > 0 && (
+              <div className="px-3 pb-2 flex flex-col gap-2">
+                <div className="leading-5">{t('components.markdown.parameters', 'Input')}</div>
+                <div className="rounded-lg border-[0.5px] border-solid border-refly-fill-hover overflow-hidden bg-refly-fill-hover">
+                  <div className="grid grid-cols-[120px_1fr] text-[10px] leading-[14px] text-refly-text-3">
+                    <div className="px-3 py-2">
+                      {t('components.markdown.parameterName', 'Name')}
+                    </div>
+                    <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover">
+                      {t('components.markdown.parameterValue', 'Value')}
+                    </div>
+                  </div>
+                  {parameterEntries.map(([key, value]) => (
+                    <div
+                      key={key}
+                      className="grid grid-cols-[120px_1fr] border-[0.5px] border-solid border-b-0 border-x-0 border-refly-tertiary-hover text-xs text-refly-text-0 leading-4"
+                    >
+                      <div className="px-3 py-2">{key}</div>
+                      <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover whitespace-pre-wrap break-words">
+                        {typeof value === 'object'
+                          ? JSON.stringify(value ?? {}, null, 2)
+                          : String(value ?? '')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Result section only if hasResult */}
             {hasResult && (
               <div>
-                <div className="px-5 py-1 text-refly-text-2 text-[13px]">
-                  {t('components.markdown.result', 'Result:')}
-                </div>
-                {/* Result content block with background, rounded corners, margin and padding */}
-                <div className="mx-4 my-2 rounded-lg bg-refly-tertiary-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
+                <div className="px-3 leading-5">{t('components.markdown.result', 'Output')}</div>
+                <div className="mx-4 my-2 rounded-lg bg-refly-fill-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
                   {resultContent}
                 </div>
               </div>

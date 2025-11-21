@@ -3077,8 +3077,10 @@ const translations = {
   },
   components: {
     markdown: {
-      parameters: '参数：',
-      result: '结果：',
+      parameters: '输入',
+      result: ' 结果',
+      parameterName: '名称',
+      parameterValue: '值',
       copySuccess: '已复制到剪贴板',
       emptyCode: '无法创建空代码组件',
       codeArtifactCreated: '代码组件已创建',

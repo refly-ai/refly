@@ -1,11 +1,9 @@
-import { CanvasNodeType } from '@refly/openapi-schema';
-
 // Common styles for canvas nodes
 export const getNodeCommonStyles = ({
   selected,
   isHovered,
-  nodeType,
-}: { selected: boolean; isHovered: boolean; nodeType?: CanvasNodeType }) => `
+  shouldHighlight,
+}: { selected: boolean; isHovered: boolean; shouldHighlight?: boolean }) => `
   bg-refly-bg-content-z2
   rounded-2xl
   box-border
@@ -14,6 +12,6 @@ export const getNodeCommonStyles = ({
   border-[1.5px]
   border-solid
   overflow-hidden
-  ${selected ? 'border-refly-bg-dark' : isHovered && nodeType === 'skillResponse' ? 'border-refly-node-run' : 'border-refly-Card-Border'}
+  ${selected ? 'border-refly-bg-dark' : shouldHighlight ? 'border-refly-node-run' : 'border-refly-Card-Border'}
   ${isHovered || selected ? 'shadow-refly-m' : ''}
 `;

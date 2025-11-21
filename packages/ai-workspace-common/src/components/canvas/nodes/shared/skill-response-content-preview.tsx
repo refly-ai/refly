@@ -11,6 +11,7 @@ import { X, File, AiChat } from 'refly-icons';
 import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 import { parseMentionsFromQuery, processQueryWithMentions } from '@refly/utils/query-processor';
 import { useRealtimeUpstreamAgents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-upstream-agent';
+import { useCanvasNodesStoreShallow } from '@refly/stores';
 
 interface SkillResponseContentPreviewProps {
   nodeId: string;
@@ -52,7 +53,9 @@ ModelLabel.displayName = 'ModelLabel';
 export const SkillResponseContentPreview = memo(
   ({ nodeId, metadata, className = '' }: SkillResponseContentPreviewProps) => {
     const { i18n, t } = useTranslation();
-
+    const { setHighlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+      setHighlightedNodeId: state.setHighlightedNodeId,
+    }));
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
 
     const query = metadata?.query ?? (metadata?.structuredData?.query as string) ?? '';
@@ -139,6 +142,8 @@ export const SkillResponseContentPreview = memo(
         <LabelDisplay
           title={t('canvas.skillResponse.config.agent')}
           labels={upstreamAgentNodes.map((agent) => ({
+            onMouseEnter: () => setHighlightedNodeId(agent.id),
+            onMouseLeave: () => setHighlightedNodeId(null),
             labeltext: agent.data?.title || t('canvas.richChatInput.untitledAgent'),
             icon: <AiChat size={12} className="flex-shrink-0" />,
           }))}
