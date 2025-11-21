@@ -3,10 +3,9 @@ import { Modal, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useReactFlow } from '@xyflow/react';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useCanvasStoreShallow, useActionResultStoreShallow } from '@refly/stores';
-import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
-import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
+import { useCanvasStoreShallow } from '@refly/stores';
 import type { CanvasNode } from '@refly/canvas-common';
+import { useCleanupAbortedNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-cleanup-aborted-node';
 
 interface UseAbortWorkflowOptions {
   executionId?: string | null;
@@ -45,20 +44,12 @@ export const useAbortWorkflow = ({
   const { t } = useTranslation();
   const [isAborting, setIsAborting] = useState(false);
   const { getNodes } = useReactFlow<CanvasNode<any>>();
-  const { setNodeData } = useNodeData();
+  const { cleanupAbortedNode } = useCleanupAbortedNode();
 
   const { canvasNodeExecutions, setCanvasNodeExecutions } = useCanvasStoreShallow((state) => ({
     canvasNodeExecutions: canvasId ? state.canvasNodeExecutions[canvasId] : null,
     setCanvasNodeExecutions: state.setCanvasNodeExecutions,
   }));
-
-  const { resultMap, stopPolling, removeStreamResult, removeActionResult } =
-    useActionResultStoreShallow((state) => ({
-      resultMap: state.resultMap,
-      stopPolling: state.stopPolling,
-      removeActionResult: state.removeActionResult,
-      removeStreamResult: state.removeStreamResult,
-    }));
 
   const handleAbort = useCallback(() => {
     if (!executionId) {
@@ -100,37 +91,7 @@ export const useAbortWorkflow = ({
 
           setCanvasNodeExecutions(canvasId, updatedNodeExecutions);
 
-          // For each affected node, perform the same cleanup as handleStop
-          for (const nodeExecution of affectedNodeExecutions) {
-            const node = nodes.find((n) => n.data?.entityId === nodeExecution.entityId);
-            if (!node) return;
-
-            const { entityId } = nodeExecution;
-            const result = resultMap[entityId];
-
-            // Stop polling if active
-            stopPolling(entityId);
-
-            // Update node status to 'failed' with content preview
-            const resultPreview = result
-              ? processContentPreview(result.steps?.map((s) => s?.content || ''))
-              : '';
-
-            setNodeData(node.id, {
-              metadata: {
-                status: 'failed',
-              },
-              contentPreview: resultPreview,
-            });
-
-            // Clean up action result and stream result from store
-            removeActionResult(entityId);
-            removeStreamResult(entityId);
-          }
-
-          message.success(t('canvas.workflow.run.abort.success'));
-
-          // Abort the workflow on backend
+          // Abort the workflow on backend first
           const { error } = await getClient().abortWorkflow({
             body: { executionId },
           });
@@ -140,6 +101,18 @@ export const useAbortWorkflow = ({
             setIsAborting(false);
             return;
           }
+
+          // For each affected node, clean up frontend state
+          for (const nodeExecution of affectedNodeExecutions) {
+            const node = nodes.find((n) => n.data?.entityId === nodeExecution.entityId);
+            if (!node) continue;
+
+            // Clean up frontend state for this node
+            cleanupAbortedNode(node.id, nodeExecution.entityId);
+          }
+
+          message.success(t('canvas.workflow.run.abort.success'));
+
           // Invoke success callback
           onSuccess?.();
         } catch (error) {
@@ -154,13 +127,9 @@ export const useAbortWorkflow = ({
     executionId,
     canvasId,
     canvasNodeExecutions,
-    resultMap,
     getNodes,
     setCanvasNodeExecutions,
-    setNodeData,
-    stopPolling,
-    removeActionResult,
-    removeStreamResult,
+    cleanupAbortedNode,
     t,
     onSuccess,
   ]);
