@@ -3118,8 +3118,10 @@ const translations = {
   },
   components: {
     markdown: {
-      parameters: 'Parameters:',
-      result: 'Result:',
+      parameters: 'Input',
+      result: ' Output',
+      parameterName: 'Name',
+      parameterValue: 'Value',
       copySuccess: 'Copied to clipboard',
       emptyCode: 'Cannot create empty code artifact',
       codeArtifactCreated: 'Code artifact created',
