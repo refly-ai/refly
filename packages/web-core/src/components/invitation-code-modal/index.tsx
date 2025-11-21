@@ -2,12 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { ActivationCodeInput } from '@refly-packages/ai-workspace-common/components/settings/activation-code-input';
-import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import reflyUnionSvg from '@refly-packages/ai-workspace-common/assets/refly-union.svg';
 
 export const InvitationCodeModal = () => {
   const { t } = useTranslation();
-  const isPublicAccessPage = usePublicAccessPage();
 
   const userStore = useUserStoreShallow((state) => ({
     showInvitationCodeModal: state.showInvitationCodeModal,
@@ -21,9 +19,8 @@ export const InvitationCodeModal = () => {
       const hasBeenInvited = invitationResp.data?.data ?? false;
 
       if (hasBeenInvited) {
-        // Close modal and refresh the page to ensure user can access the app
+        // Close modal without refreshing the page
         userStore.setShowInvitationCodeModal(false);
-        window.location.replace(isPublicAccessPage ? window.location.href : '/');
       }
     } catch (error) {
       // If check fails, keep modal open
