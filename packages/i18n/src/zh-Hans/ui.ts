@@ -3170,10 +3170,10 @@ const translations = {
     },
     sessionDetail: {
       thinking: '思考中',
-      approveAndRun: '采纳并运行',
+      approve: '采纳',
       confirmClearCanvas: {
         title: '确认清空画布',
-        content: '运行此工作流将清空当前画布的所有内容。是否继续？',
+        content: '采纳此工作流将清空当前画布的所有内容。是否继续？',
         confirm: '继续',
         cancel: '取消',
       },

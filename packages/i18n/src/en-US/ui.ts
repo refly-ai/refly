@@ -3177,11 +3177,11 @@ const translations = {
     },
     sessionDetail: {
       thinking: 'Thinking',
-      approveAndRun: 'Approve and Run',
+      approve: 'Approve',
       confirmClearCanvas: {
         title: 'Confirm Clear Canvas',
         content:
-          'Running this workflow will clear all current canvas content. Do you want to continue?',
+          'Approving this workflow will clear all current canvas content. Do you want to continue?',
         confirm: 'Continue',
         cancel: 'Cancel',
       },

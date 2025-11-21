@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import cn from 'classnames';
 import { Skeleton, Divider, Button, Modal } from 'antd';
 import {
@@ -14,9 +14,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { safeParseJSON } from '@refly/utils/parse';
 import { generateCanvasDataFromWorkflowPlan, WorkflowPlan } from '@refly/canvas-common';
 import { useReactFlow } from '@xyflow/react';
-import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas';
-import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 interface SessionDetailProps {
   sessionId: string;
@@ -103,9 +102,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     }
   }, [status, resultId, fetchActionResult]);
 
-  const { canvasId, forceSyncState, workflow } = useCanvasContext();
-  const { initializeWorkflow, isInitializing, isPolling } = workflow;
-  const [isLoading, setIsLoading] = useState(false);
+  const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
@@ -113,16 +110,14 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     return ['waiting', 'executing'].includes(status ?? '') && !content;
   }, [status, content]);
 
-  const { deleteNodes } = useDeleteNode();
-
   const { data: tools } = useListTools({ query: { enabled: true } }, undefined, {
     enabled: !!canvasId,
   });
 
-  const { getNodes } = useReactFlow();
-  const { refetch: refetchVariables } = useVariablesManagement(canvasId);
+  const { getNodes, setNodes, setEdges } = useReactFlow();
+  const { setVariables } = useVariablesManagement(canvasId);
 
-  const handleApproveAndRun = useCallback(async () => {
+  const handleApprove = useCallback(async () => {
     if (!workflowPlan) {
       return;
     }
@@ -159,36 +154,17 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       }
     }
 
-    setIsLoading(true);
-
-    deleteNodes(currentNodes.filter((node) => node.type !== 'start'));
-    await forceSyncState();
-
-    const canvasData = generateCanvasDataFromWorkflowPlan(workflowPlan, tools?.data ?? []);
-
-    try {
-      await initializeWorkflow({
-        canvasId: canvasId,
-        sourceCanvasData: canvasData,
-        nodeBehavior: 'create',
-        variables: workflowPlan.variables,
-      });
-      refetchVariables();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    canvasId,
-    workflowPlan,
-    tools?.data,
-    getNodes,
-    t,
-    modal,
-    deleteNodes,
-    forceSyncState,
-    initializeWorkflow,
-    refetchVariables,
-  ]);
+    const { nodes, edges, variables } = generateCanvasDataFromWorkflowPlan(
+      workflowPlan,
+      tools?.data ?? [],
+      {
+        autoLayout: true,
+      },
+    );
+    setNodes(nodes);
+    setEdges(edges);
+    setVariables(variables);
+  }, [canvasId, workflowPlan, tools?.data, getNodes, setNodes, setEdges, t, modal]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -208,13 +184,8 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       )}
       {workflowPlan && status === 'finish' && (
         <div className="mt-1">
-          <Button
-            type="primary"
-            onClick={handleApproveAndRun}
-            loading={isLoading || isInitializing || isPolling}
-            disabled={isLoading || isInitializing || isPolling}
-          >
-            {t('copilot.sessionDetail.approveAndRun')}
+          <Button type="primary" onClick={handleApprove}>
+            {t('copilot.sessionDetail.approve')}
           </Button>
         </div>
       )}
