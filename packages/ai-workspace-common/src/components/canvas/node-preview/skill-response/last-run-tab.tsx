@@ -3,7 +3,7 @@ import { Divider, Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Thinking } from 'refly-icons';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
-import { ActionContainer } from './action-container';
+// import { ActionContainer } from './action-container';
 import { ActionStepCard } from './action-step';
 import { FailureNotice } from './failure-notice';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
@@ -29,17 +29,17 @@ const LastRunTabComponent = ({
   statusText,
   query,
   title,
-  nodeId,
-  selectedToolsets,
+  // nodeId,
+  // selectedToolsets,
   handleRetry,
 }: LastRunTabProps) => {
   const { t } = useTranslation();
   const displayQuery = useMemo(() => query ?? title ?? '', [query, title]);
 
-  const initSelectedToolsets = useMemo(
-    () => (selectedToolsets?.length ? selectedToolsets : []),
-    [selectedToolsets],
-  );
+  // const initSelectedToolsets = useMemo(
+  //   () => (selectedToolsets?.length ? selectedToolsets : []),
+  //   [selectedToolsets],
+  // );
 
   if (!result && !loading) {
     return (
@@ -78,14 +78,14 @@ const LastRunTabComponent = ({
         )}
       </div>
 
-      {outputStep && result?.status === 'finish' && (
+      {/* {outputStep && result?.status === 'finish' && (
         <ActionContainer
           result={result}
           step={outputStep}
           nodeId={nodeId}
           initSelectedToolsets={initSelectedToolsets ?? []}
         />
-      )}
+      )} */}
     </div>
   );
 };

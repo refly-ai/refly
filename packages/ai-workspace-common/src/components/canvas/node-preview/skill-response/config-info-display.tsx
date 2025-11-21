@@ -19,6 +19,7 @@ interface ConfigInfoDisplayProps {
   setContextItems: (items: IContextItem[]) => void;
   setSelectedToolsets: (toolsets: GenericToolset[]) => void;
   removeUpstreamAgent: (targetEntityId: string) => void;
+  disabled: boolean;
 }
 
 const SectionTitle = memo(
@@ -48,6 +49,7 @@ export const ConfigInfoDisplay = memo(
     setContextItems,
     setSelectedToolsets,
     removeUpstreamAgent,
+    disabled,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
     const { setHighlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
@@ -159,7 +161,7 @@ export const ConfigInfoDisplay = memo(
                   }
                   labeltext={labelName}
                   classnames="bg-refly-node-contrl-1"
-                  onClose={() => handleRemoveToolset(toolset)}
+                  onClose={disabled ? undefined : () => handleRemoveToolset(toolset)}
                 />
               );
             })}
@@ -177,7 +179,7 @@ export const ConfigInfoDisplay = memo(
                 icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
                 labeltext={file.title}
                 classnames="bg-gray-100 dark:bg-gray-700"
-                onClose={() => handleRemoveContextItem(file)}
+                onClose={disabled ? undefined : () => handleRemoveContextItem(file)}
               />
             ))}
           </div>
@@ -198,7 +200,9 @@ export const ConfigInfoDisplay = memo(
                   icon={<AiChat size={14} className="flex-shrink-0" />}
                   labeltext={title || t('canvas.richChatInput.untitledAgent')}
                   classnames="bg-refly-node-contrl-2"
-                  onClose={() => handleRemoveUpstreamAgent(node.data?.entityId)}
+                  onClose={
+                    disabled ? undefined : () => handleRemoveUpstreamAgent(node.data?.entityId)
+                  }
                 />
               );
             })}

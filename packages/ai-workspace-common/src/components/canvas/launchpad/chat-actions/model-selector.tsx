@@ -35,6 +35,7 @@ interface ModelSelectorProps {
   placement?: DropdownProps['placement'];
   trigger?: DropdownProps['trigger'];
   contextItems?: IContextItem[];
+  disabled?: boolean;
 }
 
 // Memoize the selected model display
@@ -182,6 +183,7 @@ export const ModelSelector = memo(
     model,
     setModel,
     contextItems,
+    disabled,
   }: ModelSelectorProps) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<'llm'>('llm');
@@ -458,6 +460,7 @@ export const ModelSelector = memo(
         getPopupContainer={getPopupContainer}
         overlayClassName="model-selector-overlay"
         autoAdjustOverflow={true}
+        disabled={disabled}
       >
         {!briefMode ? (
           <div

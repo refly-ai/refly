@@ -23,6 +23,7 @@
   --refly-text-4: #1c1f231a;
   --refly-text-caption: #646a73;
   --text-icon-refly-text-2: rgba(28, 31, 35, 0.6);
+  --text-icon-refly-text-flip: #f3f3f3;
   --refly-text-StaticWhite: rgb(3, 3, 3);
   --refly-primary-default: #0e9f77;
   --refly-primary-light: #cdfff1;
@@ -64,6 +65,7 @@
   --refly-node-fill-2: #fef2cf;
   --refly-node-run: #7effdb;
   --refly-bg-dark: #2d2d2d;
+  --refly-fill-label: #ececec;
 }
 
 /* Dark Theme */
@@ -91,6 +93,7 @@
   --refly-text-4: #f9f9f91a;
   --refly-text-caption: rgba(166, 166, 166, 1);
   --text-icon-refly-text-2: rgba(243, 243, 243, 0.6);
+   --text-icon-refly-text-flip: #1c1f23;
   --refly-text-StaticWhite: #ffffff;
   --refly-primary-default: #009589;
   --refly-primary-light: #cdfff1;
@@ -132,4 +135,5 @@
   --refly-node-fill-2: #856e24;
   --refly-node-run: rgba(126, 255, 219, 0.6);
   --refly-bg-dark: #ececec;
+  --refly-fill-label: #424242;
 }

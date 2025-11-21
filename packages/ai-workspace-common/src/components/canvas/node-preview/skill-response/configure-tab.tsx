@@ -17,6 +17,7 @@ interface ConfigureTabProps {
   resultId: string;
   nodeId: string;
   canvasId: string;
+  disabled: boolean;
 }
 
 const ConfigureTabComponent = ({
@@ -25,6 +26,7 @@ const ConfigureTabComponent = ({
   resultId,
   nodeId,
   canvasId,
+  disabled,
 }: ConfigureTabProps) => {
   const { t } = useTranslation();
   const { handleUploadImage } = useUploadImage();
@@ -132,6 +134,7 @@ const ConfigureTabComponent = ({
           variant="filled"
           trigger={['click']}
           contextItems={contextItems}
+          disabled={disabled}
         />
       </div>
 
@@ -151,6 +154,7 @@ const ConfigureTabComponent = ({
             size="small"
             className="text-xs !h-5 px-1 py-0.5 text-refly-text-1"
             onClick={handleAddToolsAndContext}
+            disabled={disabled}
           >
             @ {t('agent.config.addToolsAndContext')}
           </Button>
@@ -181,6 +185,7 @@ const ConfigureTabComponent = ({
               resultId={resultId}
               nodeId={nodeId}
               version={version}
+              readonly={disabled}
               setEditMode={() => {}}
               mentionPosition="bottom-start"
             />
@@ -197,6 +202,7 @@ const ConfigureTabComponent = ({
               setSelectedToolsets={setSelectedToolsets}
               upstreamAgentNodes={upstreamAgentNodes}
               removeUpstreamAgent={removeUpstreamAgent}
+              disabled={disabled}
             />
           </div>
         </div>

@@ -264,11 +264,7 @@ const SkillResponseNodePreviewComponent = ({
       />
 
       {currentFile ? (
-        <ProductCard
-          file={currentFile}
-          classNames="w-full flex-1 overflow-y-auto"
-          source="preview"
-        />
+        <ProductCard file={currentFile} classNames="w-full flex-1" source="preview" />
       ) : (
         <div className="flex-1 flex flex-col min-h-0 px-4">
           <div className="py-3">
@@ -293,6 +289,7 @@ const SkillResponseNodePreviewComponent = ({
                 resultId={resultId}
                 nodeId={node.id}
                 canvasId={canvasId}
+                disabled={readonly || isExecuting}
               />
             )}
 
