@@ -548,6 +548,36 @@ const WorkflowAppPage: React.FC = () => {
             }
           `}
         </style>
+        {/* Modal confirm button styling with theme colors - scoped to workflow-app only */}
+        <style>
+          {`
+          .workflow-app-modal-confirm .ant-btn-primary {
+            background-color: var(--refly-primary-default) !important;
+            border-color: var(--refly-primary-default) !important;
+            color: #ffffff !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-primary:hover {
+            background-color: var(--refly-primary-hover) !important;
+            border-color: var(--refly-primary-hover) !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-primary:active {
+            background-color: var(--refly-primary-active) !important;
+            border-color: var(--refly-primary-active) !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-primary:disabled {
+            background-color: var(--refly-primary-disabled) !important;
+            border-color: var(--refly-primary-disabled) !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-default:hover {
+            border-color: var(--refly-primary-default) !important;
+            color: var(--refly-primary-default) !important;
+          }
+          `}
+        </style>
         <Helmet>
           <title>{workflowApp?.title ?? ''}</title>
         </Helmet>
