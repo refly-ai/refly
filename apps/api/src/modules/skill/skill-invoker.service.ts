@@ -323,9 +323,6 @@ export class SkillInvokerService {
     // Delete queued job mapping from Redis (job has started executing)
     await this.actionService.deleteQueuedJob(resultId);
 
-    // Delete queued job mapping from Redis (job has started executing)
-    await this.actionService.deleteQueuedJob(resultId);
-
     // Register the abort controller with ActionService
     this.actionService.registerAbortController(resultId, abortController);
 
