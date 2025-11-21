@@ -1,8 +1,12 @@
 import { useState, useCallback } from 'react';
 import { Modal, message } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useReactFlow } from '@xyflow/react';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useCanvasStoreShallow } from '@refly/stores';
+import { useCanvasStoreShallow, useActionResultStoreShallow } from '@refly/stores';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
+import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
+import type { CanvasNode } from '@refly/canvas-common';
 
 interface UseAbortWorkflowOptions {
   executionId?: string | null;
@@ -21,7 +25,10 @@ interface UseAbortWorkflowReturn {
  * Features:
  * - Shows confirmation modal before aborting
  * - Calls abort API endpoint
- * - Implements optimistic UI update (immediately marks executing nodes as 'failed')
+ * - Implements optimistic UI update (immediately marks executing/waiting nodes as 'failed')
+ * - Stops polling for all affected nodes
+ * - Cleans up action results and stream results from store
+ * - Updates node data in ReactFlow canvas
  * - Shows success/error messages
  *
  * @param options - Configuration options
@@ -37,11 +44,21 @@ export const useAbortWorkflow = ({
 }: UseAbortWorkflowOptions): UseAbortWorkflowReturn => {
   const { t } = useTranslation();
   const [isAborting, setIsAborting] = useState(false);
+  const { getNodes } = useReactFlow<CanvasNode<any>>();
+  const { setNodeData } = useNodeData();
 
   const { canvasNodeExecutions, setCanvasNodeExecutions } = useCanvasStoreShallow((state) => ({
     canvasNodeExecutions: canvasId ? state.canvasNodeExecutions[canvasId] : null,
     setCanvasNodeExecutions: state.setCanvasNodeExecutions,
   }));
+
+  const { resultMap, stopPolling, removeStreamResult, removeActionResult } =
+    useActionResultStoreShallow((state) => ({
+      resultMap: state.resultMap,
+      stopPolling: state.stopPolling,
+      removeActionResult: state.removeActionResult,
+      removeStreamResult: state.removeStreamResult,
+    }));
 
   const handleAbort = useCallback(() => {
     if (!executionId) {
@@ -60,6 +77,60 @@ export const useAbortWorkflow = ({
       onOk: async () => {
         setIsAborting(true);
         try {
+          // Optimistic UI update: immediately update all executing/waiting nodes
+          const nodes = getNodes();
+
+          // Find all nodes that are currently executing or waiting
+          const affectedNodeExecutions = canvasNodeExecutions.filter(
+            (nodeExecution) =>
+              nodeExecution.status === 'executing' || nodeExecution.status === 'waiting',
+          );
+
+          // Update canvasNodeExecutions state
+          const updatedNodeExecutions = canvasNodeExecutions.map((nodeExecution) => {
+            if (nodeExecution.status === 'executing' || nodeExecution.status === 'waiting') {
+              return {
+                ...nodeExecution,
+                status: 'failed' as const,
+                errorMessage: 'Workflow aborted by user',
+              };
+            }
+            return nodeExecution;
+          });
+
+          setCanvasNodeExecutions(canvasId, updatedNodeExecutions);
+
+          // For each affected node, perform the same cleanup as handleStop
+          for (const nodeExecution of affectedNodeExecutions) {
+            const node = nodes.find((n) => n.data?.entityId === nodeExecution.entityId);
+            if (!node) return;
+
+            const { entityId } = nodeExecution;
+            const result = resultMap[entityId];
+
+            // Stop polling if active
+            stopPolling(entityId);
+
+            // Update node status to 'failed' with content preview
+            const resultPreview = result
+              ? processContentPreview(result.steps?.map((s) => s?.content || ''))
+              : '';
+
+            setNodeData(node.id, {
+              metadata: {
+                status: 'failed',
+              },
+              contentPreview: resultPreview,
+            });
+
+            // Clean up action result and stream result from store
+            removeActionResult(entityId);
+            removeStreamResult(entityId);
+          }
+
+          message.success(t('canvas.workflow.run.abort.success'));
+
+          // Abort the workflow on backend
           const { error } = await getClient().abortWorkflow({
             body: { executionId },
           });
@@ -69,27 +140,6 @@ export const useAbortWorkflow = ({
             setIsAborting(false);
             return;
           }
-
-          // Optimistic UI update: immediately mark executing nodes as 'failed'
-          // This provides instant feedback before backend completes the abort
-          if (canvasId && canvasNodeExecutions) {
-            const updatedNodeExecutions = canvasNodeExecutions.map((nodeExecution) => {
-              // Only update nodes that are currently executing or waiting
-              if (nodeExecution.status === 'executing' || nodeExecution.status === 'waiting') {
-                return {
-                  ...nodeExecution,
-                  status: 'failed' as const,
-                  errorMessage: 'Workflow aborted by user',
-                };
-              }
-              return nodeExecution;
-            });
-
-            setCanvasNodeExecutions(canvasId, updatedNodeExecutions);
-          }
-
-          message.success(t('canvas.workflow.run.abort.success'));
-
           // Invoke success callback
           onSuccess?.();
         } catch (error) {
@@ -100,7 +150,20 @@ export const useAbortWorkflow = ({
         }
       },
     });
-  }, [executionId, canvasId, canvasNodeExecutions, setCanvasNodeExecutions, t, onSuccess]);
+  }, [
+    executionId,
+    canvasId,
+    canvasNodeExecutions,
+    resultMap,
+    getNodes,
+    setCanvasNodeExecutions,
+    setNodeData,
+    stopPolling,
+    removeActionResult,
+    removeStreamResult,
+    t,
+    onSuccess,
+  ]);
 
   return {
     handleAbort,
