@@ -22,6 +22,14 @@ export const SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 export const SCALEBOX_DEFAULT_MAX_LIFETIME_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 /**
+ * Auto-pause delay for idle sandboxes
+ * After release, sandbox stays running for this duration for quick reuse
+ * If not reused within this time, automatically paused to save resources
+ * Balances performance (fast reuse) and cost (resource usage)
+ */
+export const SCALEBOX_DEFAULT_AUTO_PAUSE_DELAY_MS = 10 * 60 * 1000; // 10 minutes
+
+/**
  * Canvas-level execution lock configuration
  * Controls concurrent execution timeout for the same canvas
  */

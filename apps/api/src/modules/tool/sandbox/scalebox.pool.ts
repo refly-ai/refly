@@ -14,12 +14,15 @@ import {
   SCALEBOX_DEFAULT_MIN_REMAINING_MS,
   SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS,
   SCALEBOX_DEFAULT_MAX_LIFETIME_MS,
+  SCALEBOX_DEFAULT_AUTO_PAUSE_DELAY_MS,
   S3_DEFAULT_CONFIG,
 } from './scalebox.constants';
 import { Trace, setSpanAttributes } from './scalebox.tracer';
 
 @Injectable()
 export class SandboxPool {
+  private pauseTimers = new Map<string, NodeJS.Timeout>();
+
   constructor(
     private readonly redis: RedisService,
     private readonly config: ConfigService,
@@ -39,6 +42,9 @@ export class SandboxPool {
 
   @Config.integer('sandbox.scalebox.maxLifetimeMs', SCALEBOX_DEFAULT_MAX_LIFETIME_MS)
   private maxLifetimeMs: number;
+
+  @Config.integer('sandbox.scalebox.autoPauseDelayMs', SCALEBOX_DEFAULT_AUTO_PAUSE_DELAY_MS)
+  private autoPauseDelayMs: number;
 
   @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
   private s3Config: S3Config;
@@ -109,6 +115,14 @@ export class SandboxPool {
     metadata: SandboxMetadata,
     context: ExecutionContext,
   ): Promise<SandboxWrapper | null> {
+    // Cancel auto-pause timer if exists
+    const timer = this.pauseTimers.get(sandboxId);
+    if (timer) {
+      clearTimeout(timer);
+      this.pauseTimers.delete(sandboxId);
+      this.logger.debug({ sandboxId }, 'Cancelled auto-pause timer');
+    }
+
     await this.redisClient.sadd('scalebox:pool:active', sandboxId);
 
     return guard(async () => {
@@ -123,11 +137,20 @@ export class SandboxPool {
         metadata,
       );
 
+      // Resume if paused
+      const info = await wrapper.getInfo();
+      if (info.status === 'paused') {
+        this.logger.info({ sandboxId }, 'Sandbox is paused, resuming');
+        await wrapper.resume();
+        this.logger.info({ sandboxId }, 'Sandbox resumed successfully');
+      }
+
       const activeCount = await this.redisClient.scard('scalebox:pool:active');
       this.logger.info(
         {
           sandboxId: wrapper.sandboxId,
           canvasId: context.canvasId,
+          status: info.status,
           active: activeCount,
           max: this.maxSandboxes,
         },
@@ -188,11 +211,19 @@ export class SandboxPool {
         await this.redis.setJSON(`scalebox:pool:meta:${sandboxId}`, metadata, ttlSeconds);
         await this.redisClient.rpush('scalebox:pool:idle', sandboxId);
 
+        // Set auto-pause timer
+        const pauseTimer = setTimeout(() => {
+          this.autoPauseSandbox(wrapper, sandboxId);
+        }, this.autoPauseDelayMs);
+
+        this.pauseTimers.set(sandboxId, pauseTimer);
+
         this.logger.info(
           {
             sandboxId,
             expiresIn: ttlSeconds,
             lifetimeHours: (lifetimeMs / (60 * 60 * 1000)).toFixed(2),
+            autoPauseIn: this.autoPauseDelayMs / 1000,
             active: activeCount,
             max: this.maxSandboxes,
           },
@@ -201,6 +232,27 @@ export class SandboxPool {
       },
       (error) => this.logger.error(error, `Failed to return sandbox ${sandboxId} to pool`),
     );
+  }
+
+  private autoPauseSandbox(wrapper: SandboxWrapper, sandboxId: string): void {
+    this.pauseTimers.delete(sandboxId);
+
+    guard
+      .bestEffort(
+        async () => {
+          await wrapper.betaPause();
+          this.logger.info({ sandboxId }, 'Auto-paused idle sandbox');
+        },
+        (error) => {
+          this.logger.warn(
+            { sandboxId, error: (error as Error).message },
+            'Failed to auto-pause sandbox',
+          );
+        },
+      )
+      .catch(() => {
+        // Suppress unhandled promise rejection
+      });
   }
 
   private async createNew(context: ExecutionContext): Promise<SandboxWrapper> {

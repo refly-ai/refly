@@ -108,6 +108,22 @@ export class SandboxWrapper {
     };
   }
 
+  async getInfo() {
+    return this.sandbox.getInfo();
+  }
+
+  @Trace('sandbox.pause')
+  async betaPause(): Promise<void> {
+    await this.sandbox.betaPause();
+    this.context.logger.info({ sandboxId: this.sandboxId }, 'Sandbox paused');
+  }
+
+  @Trace('sandbox.resume')
+  async resume(): Promise<void> {
+    await this.sandbox.resume();
+    this.context.logger.info({ sandboxId: this.sandboxId }, 'Sandbox resumed');
+  }
+
   @Trace('sandbox.create', { 'operation.type': 'cold_start' })
   static async create(context: SandboxContext, timeoutMs: number): Promise<SandboxWrapper> {
     setSpanAttributes({
