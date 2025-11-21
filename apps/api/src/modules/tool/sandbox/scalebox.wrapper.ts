@@ -120,7 +120,7 @@ export class SandboxWrapper {
 
   @Trace('sandbox.resume')
   async resume(): Promise<void> {
-    await this.sandbox.resume();
+    await (this.sandbox as any).resume();
     this.context.logger.info({ sandboxId: this.sandboxId }, 'Sandbox resumed');
   }
 
