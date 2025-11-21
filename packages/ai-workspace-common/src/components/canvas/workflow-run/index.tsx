@@ -109,6 +109,7 @@ export const WorkflowRun = () => {
             pollingError={pollingError}
             isRunning={isRunning}
             onRunningChange={setIsRunning}
+            canvasId={canvasId}
             creditUsage={isCreditUsageLoading ? null : (creditUsageData?.data?.total ?? 0)}
           />
         )}

@@ -240,11 +240,13 @@ export const SkillResponseNode = memo(
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
-    const { result, isStreaming, removeStreamResult } = useActionResultStoreShallow((state) => ({
-      result: state.resultMap[entityId],
-      isStreaming: !!state.streamResults[entityId],
-      removeStreamResult: state.removeStreamResult,
-    }));
+    const { result, isStreaming, removeStreamResult, removeActionResult } =
+      useActionResultStoreShallow((state) => ({
+        result: state.resultMap[entityId],
+        isStreaming: !!state.streamResults[entityId],
+        removeStreamResult: state.removeStreamResult,
+        removeActionResult: state.removeActionResult,
+      }));
     // Get skill response actions
     const { workflowIsRunning, handleRerunSingle, handleRerunFromHere, handleStop } =
       useSkillResponseActions({
@@ -317,6 +319,9 @@ export const SkillResponseNode = memo(
     useEffect(() => {
       if (!isStreaming) {
         if (['executing', 'waiting'].includes(status) && !shareId) {
+          // Reset failed state and start polling for new execution
+          resetFailedState(entityId);
+          removeActionResult(entityId);
           startPolling(entityId, version);
         }
       } else {
@@ -335,7 +340,16 @@ export const SkillResponseNode = memo(
           return () => clearTimeout(timeoutId);
         }
       }
-    }, [isStreaming, status, startPolling, entityId, shareId, version, removeStreamResult]);
+    }, [
+      isStreaming,
+      status,
+      startPolling,
+      resetFailedState,
+      entityId,
+      shareId,
+      version,
+      removeStreamResult,
+    ]);
 
     // Listen to pilot step status changes and sync with node status
     useEffect(() => {
