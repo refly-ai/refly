@@ -32,7 +32,11 @@ import { ToolDefinitionRegistry } from './definition';
 @Injectable()
 export class ToolFactory implements OnModuleInit {
   private readonly logger = new Logger(ToolFactory.name);
-  private readonly toolCache = new Map<string, DynamicStructuredTool[]>();
+  private readonly toolCache = new Map<
+    string,
+    { tools: DynamicStructuredTool[]; syncedAt: number }
+  >();
+  private readonly cacheTtlMs = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     private readonly configLoader: ConfigLoader,
@@ -85,9 +89,10 @@ export class ToolFactory implements OnModuleInit {
    */
   async instantiateToolsByKey(inventoryKey: string): Promise<DynamicStructuredTool[]> {
     try {
-      // Check cache first
-      if (this.toolCache.has(inventoryKey)) {
-        return this.toolCache.get(inventoryKey)!;
+      // Check cache with TTL
+      const cached = this.toolCache.get(inventoryKey);
+      if (cached && Date.now() - cached.syncedAt < this.cacheTtlMs) {
+        return cached.tools;
       }
 
       // Load configuration from inventory
@@ -114,8 +119,8 @@ export class ToolFactory implements OnModuleInit {
       // Create DynamicStructuredTool instances
       const tools = await this.createDynamicTools(config, definitions, credentials);
 
-      // Cache the tools
-      this.toolCache.set(inventoryKey, tools);
+      // Cache the tools with timestamp
+      this.toolCache.set(inventoryKey, { tools, syncedAt: Date.now() });
       this.logger.log(`Instantiated ${tools.length} tools for ${inventoryKey}`);
 
       return tools;
