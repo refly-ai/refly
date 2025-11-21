@@ -11,17 +11,18 @@ import type {
   ParsedMethodConfig,
   ToolsetConfig,
 } from '@refly/openapi-schema';
-import { AdapterFactory } from '../../adapters/factory/factory';
-import { ToolsetType } from '../../constant';
+import { CreditService } from '../../../../credit/credit.service';
+import { AdapterFactory } from './../../adapters/factory/factory';
+import { ToolsetType } from '../../../constant';
 import { HttpHandler } from '../../handlers/handler';
 import {
   ResourceHandler,
+  fillDefaultValues,
   parseJsonSchema,
   resolveCredentials,
-  fillDefaultValues,
-} from '../../utils';
+} from '../../../utils';
 import { getCurrentUser, runInContext, type SkillRunnableConfig } from '../context/tool-context';
-import { ConfigLoader } from '../loader/loader';
+import { ConfigLoader } from '../loader/loader.service';
 import { ToolDefinitionRegistry } from './definition';
 
 /**
@@ -38,6 +39,7 @@ export class ToolFactory implements OnModuleInit {
     private readonly definitionRegistry: ToolDefinitionRegistry,
     private readonly adapterFactory: AdapterFactory,
     private resourceHandler: ResourceHandler,
+    private readonly creditService: CreditService,
   ) {}
 
   /**
@@ -161,6 +163,7 @@ export class ToolFactory implements OnModuleInit {
           credentials,
           responseSchema: parsedMethod.responseSchema,
           billing: parsedMethod.billing,
+          creditService: this.creditService,
           timeout: parsedMethod.timeout,
           useFormData: parsedMethod.useFormData,
           formatResponse: false, // Return JSON, not formatted text

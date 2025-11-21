@@ -10,7 +10,9 @@ import type {
   HandlerRequest,
   HandlerResponse,
 } from '@refly/openapi-schema';
-import { calculateCredits, ResourceHandler } from '../../utils';
+import { calculateCredits, ResourceHandler } from '../../../utils';
+import type { CreditService } from '../../../../credit/credit.service';
+import type { SyncToolCreditUsageJobData } from '../../../../credit/credit.dto';
 
 /**
  * Configuration for base post-handler
@@ -20,6 +22,10 @@ export interface BasePostHandlerConfig {
    * Billing configuration
    */
   billing?: BillingConfig;
+  /**
+   * Credit service for recording usage
+   */
+  creditService?: CreditService;
   /**
    * ResourceHandler instance for output resource processing
    */
@@ -65,6 +71,7 @@ export function createBasePostHandler(
           processedResponse,
           request,
           config.billing,
+          config.creditService,
           logger,
         );
       }
@@ -104,6 +111,7 @@ async function processBilling(
   response: HandlerResponse,
   request: HandlerRequest,
   billingConfig: BillingConfig,
+  creditService: CreditService | undefined,
   logger: Logger,
 ): Promise<HandlerResponse> {
   try {
@@ -114,6 +122,29 @@ async function processBilling(
         `Calculated ${credits} credits for ${request.provider}.${request.method} (type: ${billingConfig.type})`,
       );
 
+      // Record credit usage if service and uid are available
+      if (creditService && request.user?.uid) {
+        const jobData: SyncToolCreditUsageJobData = {
+          uid: request.user.uid,
+          creditCost: credits,
+          timestamp: new Date(),
+          toolsetName:
+            (request.metadata?.toolsetKey as string) ||
+            (request.provider as string) ||
+            'unknown_toolset',
+          toolName: request.method,
+        };
+        try {
+          await creditService.syncToolCreditUsage(jobData);
+        } catch (err) {
+          logger.error(
+            `Failed to sync credit usage for ${request.provider}.${request.method}: ${
+              (err as Error).message
+            }`,
+          );
+        }
+      }
+
       return {
         ...response,
         metadata: {
@@ -123,8 +154,6 @@ async function processBilling(
         },
       };
     }
-
-    logger.debug(`No credits charged for ${request.provider}.${request.method}`);
     return response;
   } catch (error) {
     logger.error(

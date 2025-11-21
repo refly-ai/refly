@@ -7,7 +7,7 @@
  */
 
 import type { HandlerContext, HandlerRequest } from '@refly/openapi-schema';
-import { injectCredentials } from '../../utils';
+import { injectCredentials } from '../../../utils';
 
 /**
  * Configuration for base pre-handler

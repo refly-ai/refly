@@ -14,9 +14,9 @@ import type {
   UploadResult,
 } from '@refly/openapi-schema';
 import mime from 'mime';
+import { DriveService } from '../../../drive/drive.service';
+import { MiscService } from '../../../misc/misc.service';
 import { getCanvasId, getCurrentUser } from '../core/context/tool-context';
-import { DriveService } from '../../drive/drive.service';
-import { MiscService } from '../../misc/misc.service';
 
 /**
  * ============================================================================

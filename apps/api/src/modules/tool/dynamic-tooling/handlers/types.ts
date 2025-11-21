@@ -10,7 +10,7 @@ import type {
   UploadResult,
 } from '@refly/openapi-schema';
 
-export { HandlerError } from '../constant';
+export { HandlerError } from '../../constant';
 
 /**
  * Pre-handler function type

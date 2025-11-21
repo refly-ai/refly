@@ -6,9 +6,12 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
-import { ToolsetDefinition } from '@refly/openapi-schema';
+import { ToolsetDefinition, ToolsetConfig, PollingConfig } from '@refly/openapi-schema';
 import { safeParseJSON } from '@refly/utils';
 import { toolsetInventory as staticToolsetInventory } from '@refly/agent-tools';
+import { SingleFlightCache } from '../../../utils/cache';
+import { BillingType } from '../constant';
+import type { ToolMethod, ToolsetInventory } from '../../../generated/client';
 
 export interface ToolsetInventoryItem {
   class: any; // Reserved for SDK-based toolsets
@@ -22,8 +25,14 @@ export interface ToolsetInventoryItem {
 @Injectable()
 export class ToolInventoryService implements OnModuleInit {
   private readonly logger = new Logger(ToolInventoryService.name);
+  private inventoryCache: SingleFlightCache<Map<string, ToolsetInventoryItem>>;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    // Cache inventory with 5-minute TTL
+    this.inventoryCache = new SingleFlightCache(this.loadFromDatabase.bind(this), {
+      ttl: 5 * 60 * 1000,
+    });
+  }
 
   /**
    * Initialize on module startup
@@ -110,7 +119,6 @@ export class ToolInventoryService implements OnModuleInit {
           descriptionDict: { en: method.description, 'zh-CN': method.description },
         })),
         authPatterns,
-        configItems: item.configItems ? safeParseJSON(item.configItems) : undefined,
         requiresAuth,
       };
 
@@ -132,12 +140,240 @@ export class ToolInventoryService implements OnModuleInit {
   }
 
   /**
+   * Build ToolsetConfig from raw inventory + methods using schema types
+   */
+  private buildConfigFromRecords(
+    inventory: ToolsetInventory,
+    methods: ToolMethod[],
+  ): ToolsetConfig | null {
+    // Keep only the latest version per method name
+    const methodMap = new Map<string, ToolMethod>();
+    for (const method of methods) {
+      if (!methodMap.has(method.name)) {
+        methodMap.set(method.name, method);
+      }
+    }
+    const dedupedMethods = Array.from(methodMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+
+    if (dedupedMethods.length === 0) {
+      this.logger.warn(`No methods found for inventory key: ${inventory.key}`);
+      return null;
+    }
+
+    // Parse credit billing config with backward compatibility
+    const creditBillingMap: Record<string, number> = {};
+    let globalCreditDefault: number | undefined;
+    const parsePrice = (value: unknown): number | undefined => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string') {
+        const num = Number(value);
+        if (Number.isFinite(num)) return num;
+      }
+      if (value && typeof value === 'object') {
+        const candidate =
+          (value as Record<string, unknown>).price ??
+          (value as Record<string, unknown>).credits ??
+          (value as Record<string, unknown>).creditsPerCall;
+        return parsePrice(candidate);
+      }
+      return undefined;
+    };
+
+    if (inventory.creditBilling) {
+      try {
+        const parsed = JSON.parse(inventory.creditBilling);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          for (const [methodName, priceValue] of Object.entries(parsed)) {
+            const parsedPrice = parsePrice(priceValue);
+            if (parsedPrice !== undefined) {
+              creditBillingMap[methodName] = parsedPrice;
+            }
+          }
+        } else {
+          const parsedPrice = parsePrice(parsed);
+          if (parsedPrice !== undefined) {
+            globalCreditDefault = parsedPrice;
+          }
+        }
+      } catch {
+        const parsedPrice = parsePrice(inventory.creditBilling);
+        if (parsedPrice !== undefined) {
+          globalCreditDefault = parsedPrice;
+        }
+      }
+    }
+    const defaultCreditsPerCall = globalCreditDefault ?? 1;
+
+    let apiKeyHeaderFromAdapter: string | undefined;
+
+    const parsedMethods = dedupedMethods.map((method) => {
+      // Parse adapter config if present
+      let adapterConfig: Record<string, unknown> = {};
+      try {
+        if (method.adapterConfig) {
+          adapterConfig = JSON.parse(method.adapterConfig);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Failed to parse adapterConfig for method ${method.name}: ${(error as Error).message}`,
+        );
+      }
+
+      // Detect api-key header in adapterConfig to later drive auth header style
+      if (!apiKeyHeaderFromAdapter && adapterConfig.headers) {
+        const headerKey = Object.keys(adapterConfig.headers as Record<string, unknown>).find(
+          (key) => key.toLowerCase().includes('api-key'),
+        );
+        if (headerKey) {
+          apiKeyHeaderFromAdapter = headerKey;
+        }
+      }
+
+      // Normalize polling config (ensure absolute statusUrl)
+      let pollingConfig: PollingConfig | undefined;
+      const pollingFromAdapter = adapterConfig.polling as PollingConfig | undefined;
+      if (pollingFromAdapter?.statusUrl) {
+        let statusUrl = pollingFromAdapter.statusUrl;
+        const isAbsolute = /^https?:\/\//i.test(statusUrl);
+        if (!isAbsolute && inventory.domain) {
+          try {
+            statusUrl = new URL(statusUrl, inventory.domain).toString();
+          } catch (error) {
+            this.logger.warn(
+              `Failed to normalize polling.statusUrl for method ${method.name}: ${(error as Error).message}`,
+            );
+          }
+        }
+        pollingConfig = {
+          ...pollingFromAdapter,
+          statusUrl,
+        };
+      }
+
+      return {
+        name: method.name,
+        version: Number(method.versionId),
+        description: method.description,
+        endpoint: method.endpoint,
+        method: method.httpMethod as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+        schema: method.requestSchema,
+        responseSchema: method.responseSchema,
+        useSdk: method.adapterType === 'sdk',
+        timeout: (adapterConfig.timeout as number | undefined) || 30000,
+        maxRetries: adapterConfig.maxRetries as number | undefined,
+        useFormData: adapterConfig.useFormData as boolean | undefined,
+        polling: pollingConfig,
+        defaultHeaders: adapterConfig.headers as Record<string, string> | undefined,
+        billing: {
+          enabled: true,
+          type: BillingType.PER_CALL,
+          creditsPerCall:
+            creditBillingMap[method.name] !== undefined
+              ? creditBillingMap[method.name]
+              : defaultCreditsPerCall,
+        },
+      };
+    });
+
+    const credentials = inventory.apiKey
+      ? {
+          apiKey: inventory.apiKey,
+          ...(apiKeyHeaderFromAdapter ? { apiKeyHeader: apiKeyHeaderFromAdapter } : {}),
+        }
+      : undefined;
+
+    return {
+      inventoryKey: inventory.key,
+      domain: inventory.domain || '',
+      name: inventory.name,
+      credentials,
+      methods: parsedMethods,
+    };
+  }
+
+  /**
+   * Load full inventory data (including methods) for a specific key
+   * Used by runtime config loader to build ToolsetConfig
+   */
+  async getInventoryWithMethods(key: string): Promise<ToolsetConfig | null> {
+    const inventory = await this.prisma.toolsetInventory.findFirst({
+      where: {
+        key,
+        enabled: true,
+        deletedAt: null,
+      },
+    });
+
+    if (!inventory) {
+      return null;
+    }
+
+    const methods = await this.prisma.toolMethod.findMany({
+      where: {
+        inventoryKey: inventory.key,
+        enabled: true,
+        deletedAt: null,
+      },
+      orderBy: {
+        versionId: 'desc',
+      },
+    });
+
+    return this.buildConfigFromRecords(inventory, methods);
+  }
+
+  /**
+   * Load all enabled inventories with their methods
+   * Optionally filter by inventory type
+   */
+  async listInventoriesWithMethods(type?: string): Promise<ToolsetConfig[]> {
+    const inventories = await this.prisma.toolsetInventory.findMany({
+      where: {
+        enabled: true,
+        deletedAt: null,
+        ...(type ? { type } : {}),
+      },
+      orderBy: {
+        key: 'asc',
+      },
+    });
+
+    if (inventories.length === 0) {
+      return [];
+    }
+
+    const methods = await this.prisma.toolMethod.findMany({
+      where: {
+        inventoryKey: { in: inventories.map((item) => item.key) },
+        enabled: true,
+        deletedAt: null,
+      },
+      orderBy: {
+        versionId: 'desc',
+      },
+    });
+
+    const methodsByKey = methods.reduce<Map<string, ToolMethod[]>>((map, method) => {
+      const list = map.get(method.inventoryKey) || [];
+      list.push(method);
+      map.set(method.inventoryKey, list);
+      return map;
+    }, new Map());
+
+    return inventories
+      .map((item) => this.buildConfigFromRecords(item, methodsByKey.get(item.key) || []))
+      .filter((config): config is ToolsetConfig => Boolean(config));
+  }
+
+  /**
    * Get the entire inventory map
    * Loads directly from database on each call
    * @returns Inventory map (key -> ToolsetInventoryItem)
    */
   async getInventoryMap(): Promise<Record<string, ToolsetInventoryItem>> {
-    const inventory = await this.loadFromDatabase();
+    const inventory = await this.inventoryCache.get();
     return Object.fromEntries(inventory);
   }
 
@@ -148,7 +384,7 @@ export class ToolInventoryService implements OnModuleInit {
    * @returns ToolsetInventoryItem or undefined
    */
   async getInventoryItem(key: string): Promise<ToolsetInventoryItem | undefined> {
-    const inventory = await this.loadFromDatabase();
+    const inventory = await this.inventoryCache.get();
     return inventory.get(key);
   }
 
@@ -189,7 +425,7 @@ export class ToolInventoryService implements OnModuleInit {
    * @returns Array of toolset keys
    */
   async getInventoryKeys(): Promise<string[]> {
-    const inventory = await this.loadFromDatabase();
+    const inventory = await this.inventoryCache.get();
     return Array.from(inventory.keys());
   }
 
@@ -199,7 +435,7 @@ export class ToolInventoryService implements OnModuleInit {
    * @returns Array of ToolsetDefinition
    */
   async getInventoryDefinitions(): Promise<ToolsetDefinition[]> {
-    const inventory = await this.loadFromDatabase();
+    const inventory = await this.inventoryCache.get();
     return Array.from(inventory.values()).map((item) => item.definition);
   }
 
@@ -210,7 +446,7 @@ export class ToolInventoryService implements OnModuleInit {
    * @returns boolean
    */
   async hasInventoryItem(key: string): Promise<boolean> {
-    const inventory = await this.loadFromDatabase();
+    const inventory = await this.inventoryCache.get();
     return inventory.has(key);
   }
 
@@ -220,7 +456,7 @@ export class ToolInventoryService implements OnModuleInit {
    * @returns Number of toolsets in inventory
    */
   async getInventorySize(): Promise<number> {
-    const inventory = await this.loadFromDatabase();
+    const inventory = await this.inventoryCache.get();
     return inventory.size;
   }
 
@@ -232,6 +468,8 @@ export class ToolInventoryService implements OnModuleInit {
     this.logger.log('Manual inventory refresh triggered');
     try {
       const inventory = await this.loadFromDatabase();
+      // Manually update cache and timestamp
+      this.inventoryCache.set(inventory);
       this.logger.log(`Inventory refreshed with ${inventory.size} toolsets`);
     } catch (error) {
       this.logger.error(

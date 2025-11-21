@@ -1599,12 +1599,6 @@ model Toolset {
   name          String    @map("name")
   /// Toolset key
   key           String    @map("key")
-  /// Toolset domain
-  domain        String?   @map("domain")
-  /// Toolset label (display name) in JSON format: {"en": "Fish Audio", "zh": "Fish 音频"}
-  label         String?   @map("label") @db.Text
-  /// Toolset description in JSON format: {"en": "...", "zh": "..."}
-  description   String?   @map("description") @db.Text
   /// Toolset auth type (credentials, oauth, config_based)
   authType      String?   @default("config_based") @map("auth_type")
   /// Toolset auth data
@@ -1661,11 +1655,7 @@ model ToolMethod {
   /// Deletion timestamp (soft delete)
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
 
-  // Relations
-  inventory ToolsetInventory @relation(fields: [inventoryKey], references: [key], onDelete: Cascade)
-
-  @@unique([inventoryKey, versionId, name])
-  @@index([inventoryKey, versionId, enabled])
+  @@unique([inventoryKey, name, versionId])
   @@index([versionId])
   @@map("tool_methods")
 }
@@ -1685,8 +1675,6 @@ model ToolsetInventory {
   descriptionDict String    @map("description_dict") @db.Text
   /// API Key for authentication (optional)
   apiKey          String?   @map("api_key") @db.Text
-  /// Config items (configuration item definitions in JSON array format, optional)
-  configItems     String?   @map("config_items") @db.Text
   /// Toolset type ('regular', 'builtin', 'oauth')
   type            String    @default("regular") @map("type")
   /// Adapter type ('http', 'sdk')
@@ -1702,10 +1690,7 @@ model ToolsetInventory {
   /// Deletion timestamp (soft delete)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
-  // Relations
-  methods ToolMethod[]
-
-  @@index([type, enabled, deletedAt])
+  @@index([key])
   @@map("toolset_inventory")
 }
 

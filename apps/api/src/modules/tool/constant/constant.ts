@@ -287,6 +287,16 @@ export enum BillingType {
 }
 
 /**
+ * Composio connection status constants
+ */
+export const COMPOSIO_CONNECTION_STATUS = {
+  ACTIVE: 'active',
+  REVOKED: 'revoked',
+} as const;
+export type ComposioConnectionStatusValue =
+  (typeof COMPOSIO_CONNECTION_STATUS)[keyof typeof COMPOSIO_CONNECTION_STATUS];
+
+/**
  * Circuit breaker state enumeration
  */
 export enum CircuitBreakerState {

@@ -10,7 +10,7 @@ import type {
   PollingConfig,
 } from '@refly/openapi-schema';
 import axios, { AxiosResponse } from 'axios';
-import { AdapterType, HttpMethod } from '../../constant';
+import { AdapterType, HttpMethod } from '../../../constant';
 import { BaseAdapter } from '../../core/base';
 import type { IHttpAdapter } from '../../core/interfaces';
 import { AdapterError } from '../types';

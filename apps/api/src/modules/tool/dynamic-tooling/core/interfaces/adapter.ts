@@ -3,8 +3,8 @@
  */
 
 import type { AdapterRequest, AdapterResponse } from '@refly/openapi-schema';
-import type { AdapterTypeValue } from '../../constant';
-import { AdapterType } from '../../constant';
+import type { AdapterTypeValue } from '../../../constant';
+import { AdapterType } from '../../../constant';
 
 /**
  * Base adapter interface

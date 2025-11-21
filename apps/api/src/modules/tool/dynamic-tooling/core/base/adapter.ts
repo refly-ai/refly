@@ -5,7 +5,7 @@
 
 import { Logger } from '@nestjs/common';
 
-import { DEFAULT_RETRYABLE_ERROR_CODES } from '../../constant';
+import { DEFAULT_RETRYABLE_ERROR_CODES } from '../../../constant';
 import type { AdapterRequest, AdapterResponse, RetryConfig } from '@refly/openapi-schema';
 import { AdapterError } from '../../adapters/types';
 import type { IAdapter } from '../interfaces';

@@ -13,7 +13,7 @@ import type {
   ToolsetConfig,
   ParsedMethodConfig,
 } from '@refly/openapi-schema';
-import { buildSchema, parseJsonSchema } from '../../utils';
+import { buildSchema, parseJsonSchema } from '../../../utils';
 
 /**
  * Tool definition registry service
