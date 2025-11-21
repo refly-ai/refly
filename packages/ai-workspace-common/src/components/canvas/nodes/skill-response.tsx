@@ -822,7 +822,6 @@ export const SkillResponseNode = memo(
               nodeId={id}
               entityId={data.entityId}
               title={data.title ?? t('canvas.nodeTypes.agent')}
-              readonly={true}
               source="node"
               actions={
                 <SkillResponseActions

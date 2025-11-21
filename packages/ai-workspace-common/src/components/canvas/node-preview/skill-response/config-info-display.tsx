@@ -178,7 +178,7 @@ export const ConfigInfoDisplay = memo(
                 key={`${file.entityId}-${index}`}
                 icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
                 labeltext={file.title}
-                classnames="bg-gray-100 dark:bg-gray-700"
+                classnames="bg-refly-fill-label"
                 onClose={disabled ? undefined : () => handleRemoveContextItem(file)}
               />
             ))}
