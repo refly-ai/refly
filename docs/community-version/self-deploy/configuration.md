@@ -200,7 +200,7 @@ You can learn more about Google OAuth at [Google Developer](https://developers.g
 | Env | Description | Default Value |
 | --- | --- | --- |
 | SKILL_STREAM_IDLE_TIMEOUT | Skill stream idle timeout in milliseconds | `0` |
-| SKILL_STREAM_IDLE_CHECK_INTERVAL | Skill stream idle check interval in milliseconds | `3` |
+| SKILL_STREAM_IDLE_CHECK_INTERVAL | Skill stream idle check interval in milliseconds | `3000` |
 | SKILL_STUCK_CHECK_INTERVAL | Skill stuck check interval in milliseconds | `0` |
 | SKILL_STUCK_TIMEOUT_THRESHOLD | Skill stuck timeout threshold in milliseconds | `0` |
 
