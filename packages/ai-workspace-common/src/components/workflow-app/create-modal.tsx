@@ -15,6 +15,7 @@ import BannerSvg from './banner.svg';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
 import { CanvasNode } from '@refly/openapi-schema';
 import { useGetCreditUsageByCanvasId } from '../../queries/queries';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 interface CreateWorkflowAppModalProps {
   title: string;
@@ -125,8 +126,7 @@ export const CreateWorkflowAppModal = ({
   // Run result selection state
   const [selectedResults, setSelectedResults] = useState<string[]>([]);
 
-  const { workflow } = useCanvasContext();
-  const { workflowVariables } = workflow ?? {};
+  const { data: workflowVariables } = useVariablesManagement(canvasId);
   const { nodes } = useRealtimeCanvasData();
 
   const skillResponseNodes = nodes.filter((node) => node.type === 'skillResponse');

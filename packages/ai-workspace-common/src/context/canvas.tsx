@@ -18,7 +18,6 @@ import {
   CanvasState,
   CanvasTransaction,
   VersionConflict,
-  WorkflowVariable,
   SharedCanvasData,
   InitializeWorkflowRequest,
   WorkflowExecutionStatus,
@@ -39,7 +38,6 @@ import { useCanvasStore, useCanvasStoreShallow } from '@refly/stores';
 import { useDebouncedCallback } from 'use-debounce';
 import { IContextItem } from '@refly/common-types';
 import { useGetCanvasDetail } from '@refly-packages/ai-workspace-common/queries';
-import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { logEvent } from '@refly/telemetry-web';
@@ -69,9 +67,6 @@ interface CanvasContextType {
   shareData?: SharedCanvasData;
   lastUpdated?: number;
   workflow: {
-    workflowVariables: WorkflowVariable[];
-    workflowVariablesLoading: boolean;
-    refetchWorkflowVariables: () => void;
     initializeWorkflow: (param: InitializeWorkflowRequest) => Promise<boolean>;
     isInitializing: boolean;
     executionId?: string;
@@ -208,25 +203,12 @@ export const CanvasProvider = ({
     enabled: !readonly && !!canvasId,
   });
 
-  const {
-    data: workflowVariables,
-    refetch: refetchWorkflowVariables,
-    isLoading: workflowVariablesLoading,
-  } = useVariablesManagement(canvasId);
-
   // Use the hook to fetch canvas data when in readonly mode
   const {
     data: canvasData,
     error: canvasError,
     loading: shareLoading,
   } = useFetchShareData<SharedCanvasData>(readonly ? canvasId : undefined);
-
-  const finalVariables = useMemo(() => {
-    if (readonly) {
-      return canvasData?.variables ?? [];
-    }
-    return workflowVariables;
-  }, [readonly, workflowVariables, canvasData]);
 
   // Check if it's a 404 error
   const shareNotFound = useMemo(() => {
@@ -807,9 +789,6 @@ export const CanvasProvider = ({
         undo,
         redo,
         workflow: {
-          workflowVariables: finalVariables,
-          workflowVariablesLoading,
-          refetchWorkflowVariables,
           initializeWorkflow,
           isInitializing,
           executionId,

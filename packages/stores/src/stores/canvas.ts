@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CanvasNode, CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
 import { createAutoEvictionStorage, CacheInfo } from '../utils/storage';
-import { WorkflowNodeExecution } from '@refly/openapi-schema';
+import { WorkflowNodeExecution, WorkflowVariable } from '@refly/openapi-schema';
 
 interface NodePreviewData {
   metadata?: Record<string, unknown>;
@@ -47,6 +47,7 @@ export interface CanvasState {
   canvasInitializedAt: Record<string, number | undefined>;
   canvasExecutionId: Record<string, string>;
   canvasNodeExecutions: Record<string, WorkflowNodeExecution[]>;
+  canvasVariables: Record<string, WorkflowVariable[] | undefined>;
 
   setInitialFitViewCompleted: (completed: boolean) => void;
   deleteCanvasData: (canvasId: string) => void;
@@ -79,6 +80,7 @@ export interface CanvasState {
     canvasId: string,
     nodeExecutions: WorkflowNodeExecution[] | null,
   ) => void;
+  setCanvasVariables: (canvasId: string, variables: WorkflowVariable[]) => void;
 }
 
 const defaultCanvasConfig = (): CanvasConfig => ({
@@ -106,6 +108,7 @@ const defaultCanvasState = () => ({
   canvasInitializedAt: {},
   canvasExecutionId: {},
   canvasNodeExecutions: {},
+  canvasVariables: {},
 });
 
 // Create our custom storage with appropriate configuration
@@ -463,6 +466,15 @@ export const useCanvasStore = create<CanvasState>()(
             canvasNodeExecutions: newCanvasNodeExecutions,
           };
         }),
+
+      setCanvasVariables: (canvasId, variables) =>
+        set((state) => ({
+          ...state,
+          canvasVariables: {
+            ...state.canvasVariables,
+            [canvasId]: variables,
+          },
+        })),
     }),
     {
       name: 'canvas-storage',

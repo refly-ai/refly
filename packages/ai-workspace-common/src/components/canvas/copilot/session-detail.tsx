@@ -5,7 +5,11 @@ import {
   useGetCopilotSessionDetail,
   useListTools,
 } from '@refly-packages/ai-workspace-common/queries';
-import { useActionResultStoreShallow, useCopilotStoreShallow } from '@refly/stores';
+import {
+  useActionResultStoreShallow,
+  useCanvasResourcesPanelStoreShallow,
+  useCopilotStoreShallow,
+} from '@refly/stores';
 import { ActionResult, CanvasNode } from '@refly/openapi-schema';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { useTranslation } from 'react-i18next';
@@ -117,6 +121,10 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
   const { getNodes, setNodes, setEdges } = useReactFlow();
   const { setVariables } = useVariablesManagement(canvasId);
 
+  const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setShowWorkflowRun: state.setShowWorkflowRun,
+  }));
+
   const handleApprove = useCallback(async () => {
     if (!workflowPlan) {
       return;
@@ -164,7 +172,18 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     setNodes(nodes);
     setEdges(edges);
     setVariables(variables);
-  }, [canvasId, workflowPlan, tools?.data, getNodes, setNodes, setEdges, t, modal]);
+    setShowWorkflowRun(true);
+  }, [
+    canvasId,
+    workflowPlan,
+    tools?.data,
+    getNodes,
+    setNodes,
+    setEdges,
+    t,
+    modal,
+    setShowWorkflowRun,
+  ]);
 
   return (
     <div className="flex flex-col gap-4">

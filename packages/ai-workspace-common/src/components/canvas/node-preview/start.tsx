@@ -1,5 +1,6 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { Divider, Button, Popconfirm, message } from 'antd';
 import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
 import type { WorkflowVariable } from '@refly/openapi-schema';
@@ -7,7 +8,6 @@ import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin
 import { useTranslation } from 'react-i18next';
 import SVGX from '../../../assets/x.svg';
 import { CreateVariablesModal } from '../workflow-variables';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { locateToVariableEmitter } from '@refly-packages/ai-workspace-common/events/locateToVariable';
 import { useReactFlow } from '@xyflow/react';
 import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
@@ -32,7 +32,6 @@ const VariableItem = memo(
   ({
     canvasId,
     totalVariables,
-    refetchWorkflowVariables,
     variable,
     onEdit,
     readonly,
@@ -40,7 +39,6 @@ const VariableItem = memo(
   }: {
     canvasId: string;
     totalVariables: WorkflowVariable[];
-    refetchWorkflowVariables: () => void;
     variable: WorkflowVariable;
     onEdit?: (variable: WorkflowVariable) => void;
     readonly: boolean;
@@ -50,23 +48,16 @@ const VariableItem = memo(
     const { t } = useTranslation();
     const [isPopconfirmOpen, setIsPopconfirmOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const { setVariables } = useVariablesManagement(canvasId);
 
     const handleDeleteVariable = async (variable: WorkflowVariable) => {
       const newVariables = totalVariables.filter((v) => v.variableId !== variable.variableId);
       try {
         setIsDeleting(true);
-        const { data } = await getClient().updateWorkflowVariables({
-          body: {
-            canvasId: canvasId,
-            variables: newVariables,
-          },
-        });
-        if (data?.success) {
-          message.success(
-            t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
-          );
-          refetchWorkflowVariables();
-        }
+        setVariables(newVariables);
+        message.success(
+          t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
+        );
       } catch (error) {
         console.error('Failed to delete variable:', error);
       } finally {
@@ -162,7 +153,6 @@ const VariableTypeSection = ({
   type,
   variables,
   totalVariables,
-  refetchWorkflowVariables,
   readonly,
   highlightedVariableId,
 }: {
@@ -170,7 +160,6 @@ const VariableTypeSection = ({
   type: VariableType;
   variables: WorkflowVariable[];
   totalVariables: WorkflowVariable[];
-  refetchWorkflowVariables: () => void;
   readonly: boolean;
   highlightedVariableId?: string;
 }) => {
@@ -224,7 +213,6 @@ const VariableTypeSection = ({
               canvasId={canvasId}
               totalVariables={totalVariables}
               variable={variable}
-              refetchWorkflowVariables={refetchWorkflowVariables}
               onEdit={handleEditVariable}
               readonly={readonly}
               isHighlighted={highlightedVariableId === variable.variableId}
@@ -262,13 +250,14 @@ const VariableTypeSection = ({
 };
 
 export const StartNodePreview = () => {
-  const { workflow, canvasId, readonly } = useCanvasContext();
-  const { workflowVariables, workflowVariablesLoading, refetchWorkflowVariables } = workflow;
+  const { canvasId, readonly } = useCanvasContext();
+  const { data: workflowVariables, isLoading: workflowVariablesLoading } =
+    useVariablesManagement(canvasId);
+  console.log('workflowVariables', workflowVariables);
+
   const [highlightedVariableId, setHighlightedVariableId] = useState<string | undefined>();
-  // const { t } = useTranslation();
   const { setNodes } = useReactFlow();
 
-  // Listen for variable highlight events
   useEffect(() => {
     const handleLocateToVariable = (event: {
       canvasId: string;
@@ -347,19 +336,13 @@ export const StartNodePreview = () => {
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
       <StartNodeHeader source="preview" onClose={handleClose} className="!h-14" />
-      {/* <div className="h-[64px] px-3 py-4 flex gap-2 items-center justify-between border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
-        <div className="text-refly-text-0 text-base font-semibold leading-[26px] min-w-0 flex-1">
-          {t('canvas.nodeTypes.start')}
-        </div>
-        <Button type="text" icon={<Close size={24} />} onClick={handleClose} />
-      </div> */}
+
       <div className="space-y-5 flex-1 overflow-y-auto p-4">
         <VariableTypeSection
           canvasId={canvasId}
           type="string"
           variables={groupedVariables.string}
           totalVariables={workflowVariables}
-          refetchWorkflowVariables={refetchWorkflowVariables}
           readonly={readonly}
           highlightedVariableId={highlightedVariableId}
         />
@@ -369,7 +352,6 @@ export const StartNodePreview = () => {
           type="resource"
           variables={groupedVariables.resource}
           totalVariables={workflowVariables}
-          refetchWorkflowVariables={refetchWorkflowVariables}
           readonly={readonly}
           highlightedVariableId={highlightedVariableId}
         />
@@ -379,7 +361,6 @@ export const StartNodePreview = () => {
           type="option"
           variables={groupedVariables.option}
           totalVariables={workflowVariables}
-          refetchWorkflowVariables={refetchWorkflowVariables}
           readonly={readonly}
           highlightedVariableId={highlightedVariableId}
         />

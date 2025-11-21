@@ -3,7 +3,6 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useMemo, useState, useRef } from 'react';
 import { useEffect } from 'react';
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   CanvasNodeType,
   ResourceMeta,
@@ -16,11 +15,10 @@ import {
 import { ArrowRight, X } from 'refly-icons';
 import { getStartNodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/variable/getVariableIcon';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Button, message } from 'antd';
 import { cn, genVariableID } from '@refly/utils';
-import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { logEvent } from '@refly/telemetry-web';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import type { MentionItemSource } from './const';
@@ -70,14 +68,14 @@ export const MentionList = ({
   // Height tracking states
   const [firstLevelHeight, setFirstLevelHeight] = useState<number>(0);
   const [secondLevelHeight, setSecondLevelHeight] = useState<number>(0);
-  const { workflow, canvasId } = useCanvasContext();
-  const { workflowVariablesLoading: isLoadingVariables, workflowVariables } = workflow || {};
-
-  const [isAddingVariable, setIsAddingVariable] = useState(false);
+  const { canvasId } = useCanvasContext();
 
   const { handleVariableView } = useVariableView(canvasId);
-
-  const queryClient = useQueryClient();
+  const {
+    data: workflowVariables,
+    isLoading: isLoadingVariables,
+    setVariables,
+  } = useVariablesManagement(canvasId);
 
   const handleAddVariable = useCallback(async () => {
     const isDuplicate = workflowVariables.some((variable) => variable.name === query);
@@ -103,85 +101,34 @@ export const MentionList = ({
       variable: newItem,
     });
 
-    // Optimistic update: immediately update local cache
-    queryClient.setQueryData(['GetWorkflowVariables', { query: { canvasId } }], (oldData: any) => {
-      if (!oldData) return oldData;
-      return {
-        ...oldData,
-        data: newWorkflowVariables,
-      };
-    });
-
     // Immediately update UI
     const newMentionItem: MentionItem = { ...newItem, source: 'variables' } as MentionItem;
     command(newMentionItem);
 
     try {
-      setIsAddingVariable(true);
-      const { data } = await getClient().updateWorkflowVariables({
-        body: {
-          canvasId: canvasId,
-          variables: newWorkflowVariables,
-        },
-      });
-
-      if (data?.success) {
-        message.success(
-          <div className="flex items-center gap-2">
-            <span>
-              {t('canvas.workflow.variables.saveSuccess') || 'Variable created successfully'}
-            </span>
-            <Button
-              type="link"
-              size="small"
-              className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
-              onClick={() => handleVariableView(newItem)}
-            >
-              {t('canvas.workflow.variables.viewAndEdit') || 'View'}
-            </Button>
-          </div>,
-          5, // Show for 5 seconds
-        );
-      } else {
-        // Rollback optimistic update on failure
-        queryClient.setQueryData(
-          ['GetWorkflowVariables', { query: { canvasId } }],
-          (oldData: any) => {
-            if (!oldData) return oldData;
-            return {
-              ...oldData,
-              data: workflowVariables,
-            };
-          },
-        );
-        message.error(t('canvas.workflow.variables.saveError'));
-      }
-    } catch {
-      // Rollback optimistic update on error
-      queryClient.setQueryData(
-        ['GetWorkflowVariables', { query: { canvasId } }],
-        (oldData: any) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            data: workflowVariables,
-          };
-        },
+      setVariables(newWorkflowVariables);
+      message.success(
+        <div className="flex items-center gap-2">
+          <span>
+            {t('canvas.workflow.variables.saveSuccess') || 'Variable created successfully'}
+          </span>
+          <Button
+            type="link"
+            size="small"
+            className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
+            onClick={() => handleVariableView(newItem)}
+          >
+            {t('canvas.workflow.variables.viewAndEdit') || 'View'}
+          </Button>
+        </div>,
+        5, // Show for 5 seconds
       );
+    } catch (error) {
+      // Rollback optimistic update on failure
+      console.error('Failed to create variable:', error);
       message.error(t('canvas.workflow.variables.saveError'));
-    } finally {
-      setIsAddingVariable(false);
     }
-  }, [
-    queryClient,
-    query,
-    canvasId,
-    workflowVariables,
-    command,
-    t,
-    setIsAddingVariable,
-    handleVariableView,
-  ]);
+  }, [query, canvasId, workflowVariables, command, t, handleVariableView]);
 
   // Refs for measuring panel heights
   const firstLevelRef = useRef<HTMLDivElement>(null);
@@ -625,9 +572,6 @@ export const MentionList = ({
               <div className="flex-1 text-sm text-refly-text-0 leading-5 truncate">
                 {item.categoryLabel}
               </div>
-              {isAddingVariable && (
-                <Spin size="small" className="text-refly-text-3" spinning={isAddingVariable} />
-              )}
             </div>
           ) : item.source === 'variables' ? (
             <>
@@ -673,7 +617,7 @@ export const MentionList = ({
         </div>
       );
     },
-    [categoryConfigs, query, isAddingVariable, formatVariableValue, currentLanguage],
+    [categoryConfigs, query, formatVariableValue, currentLanguage],
   );
 
   // Generic function to render empty state

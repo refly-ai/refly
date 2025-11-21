@@ -154,6 +154,7 @@ export const planVariableToWorkflowVariable = (
 ): WorkflowVariable => {
   return {
     variableId: planVariable.variableId,
+    variableType: planVariable.variableType,
     name: planVariable.name,
     value: planVariable.value?.map((value) => ({
       type: value?.type,

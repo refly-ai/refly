@@ -44,13 +44,13 @@ describe('generateCanvasDataFromWorkflowPlan', () => {
     const workflowPlan = createWorkflowPlan([]);
     const result = generateCanvasDataFromWorkflowPlan(workflowPlan, []);
 
-    expect(result).toEqual({ nodes: [], edges: [] });
+    expect(result).toEqual({ nodes: [], edges: [], variables: [] });
   });
 
   it('should create task nodes with correct properties', () => {
     const task = createTask('task-1', 'Test Task', 'Test prompt');
     const workflowPlan = createWorkflowPlan([task]);
-    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, []);
+    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, [], { autoLayout: false });
 
     expect(result.nodes).toHaveLength(1);
     const taskNode = result.nodes[0];
@@ -139,7 +139,7 @@ describe('generateCanvasDataFromWorkflowPlan', () => {
     const task3 = createTask('task-3', 'Task 3', 'Prompt 3');
 
     const workflowPlan = createWorkflowPlan([task1, task2, task3]);
-    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, []);
+    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, [], { autoLayout: false });
 
     expect(result.nodes[0].position).toEqual({ x: 0, y: 0 });
     expect(result.nodes[1].position).toEqual({ x: 0, y: 240 });

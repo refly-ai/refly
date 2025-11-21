@@ -1,14 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 import { useGetWorkflowVariables } from '@refly-packages/ai-workspace-common/queries';
-import { useUserStoreShallow } from '@refly/stores';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCanvasStoreShallow, useUserStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 
 export const useVariablesManagement = (canvasId: string) => {
   const isSharePage = location?.pathname?.startsWith('/share/') ?? false;
   const isLogin = useUserStoreShallow((state) => state.isLogin);
-  const queryClient = useQueryClient();
 
   const {
     data: workflowVariables,
@@ -25,50 +24,54 @@ export const useVariablesManagement = (canvasId: string) => {
       enabled: !!canvasId && isLogin && !isSharePage,
     },
   );
+  const remoteVariables = workflowVariables?.data;
 
-  // Local state for optimistic updates
-  const [localVariables, setLocalVariables] = useState<WorkflowVariable[]>(
-    workflowVariables?.data ?? [],
-  );
+  const { canvasVariables: localVariables, setCanvasVariables: setLocalVariables } =
+    useCanvasStoreShallow((state) => ({
+      canvasVariables: state.canvasVariables[canvasId],
+      setCanvasVariables: state.setCanvasVariables,
+    }));
 
   // Sync local state with server data when it changes
   useEffect(() => {
-    if (workflowVariables?.data) {
-      setLocalVariables(workflowVariables.data);
+    if (remoteVariables && localVariables === undefined) {
+      setLocalVariables(canvasId, remoteVariables);
     }
-  }, [workflowVariables?.data]);
+  }, [canvasId, remoteVariables, localVariables, setLocalVariables]);
 
-  const setVariables = useCallback(
-    (variables: WorkflowVariable[]) => {
-      // Update local state immediately for optimistic UI
-      setLocalVariables(variables);
-
-      // Asynchronously update server (fire-and-forget)
-      getClient()
-        .updateWorkflowVariables({
+  // Debounced function to update server
+  const debouncedUpdateVariables = useDebouncedCallback(
+    async (variables: WorkflowVariable[]) => {
+      try {
+        await getClient().updateWorkflowVariables({
           body: {
             canvasId,
             variables,
           },
-        })
-        .then(() => {
-          // Invalidate and refetch to ensure consistency
-          queryClient.invalidateQueries({
-            queryKey: ['GetWorkflowVariables', { query: { canvasId } }],
-          });
-        })
-        .catch((error) => {
-          console.error('Failed to update workflow variables:', error);
-          // Revert local state on error
-          setLocalVariables(workflowVariables?.data ?? []);
         });
+      } catch (error) {
+        console.error('Failed to update workflow variables:', error);
+        // Revert local state on error
+        setLocalVariables(canvasId, remoteVariables);
+      }
     },
-    [canvasId, queryClient, workflowVariables?.data],
+    500, // 500ms debounce delay
+  );
+
+  const setVariables = useCallback(
+    (variables: WorkflowVariable[]) => {
+      // Update local state immediately for optimistic UI
+      setLocalVariables(canvasId, variables);
+
+      // Asynchronously update server with debounce (fire-and-forget)
+      debouncedUpdateVariables(variables);
+    },
+    [canvasId, remoteVariables, setLocalVariables, debouncedUpdateVariables],
   );
 
   return {
-    data: localVariables,
-    isLoading: isLoading && !localVariables,
+    data: localVariables ?? [],
+    isLoading: isLoading && !localVariables === undefined,
     refetch,
     setVariables,
   };
