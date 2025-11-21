@@ -166,7 +166,7 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
             </div>
           </div>
         )}
-        <FilePreview file={file} markdownClassName="text-sm" />
+        <FilePreview file={file} markdownClassName="text-sm min-h-[50px]" />
       </div>
     </div>
   );
