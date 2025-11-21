@@ -132,6 +132,14 @@ export class SkillService implements OnModuleInit {
 
     // Add the new recurring job
     const stuckCheckInterval = this.config.get<number>('skill.stuckCheckInterval');
+
+    if (!stuckCheckInterval || stuckCheckInterval <= 0) {
+      this.logger.log(
+        'Stuck actions check disabled: stuckCheckInterval is not set or is not a positive number',
+      );
+      return;
+    }
+
     const intervalMinutes = Math.max(1, Math.ceil(stuckCheckInterval / (1000 * 60))); // Convert to minutes, minimum 1 minute
 
     await this.checkStuckActionsQueue.add(
@@ -160,9 +168,6 @@ export class SkillService implements OnModuleInit {
 
     // Validate the threshold to ensure it's a positive number
     if (!stuckTimeoutThreshold || stuckTimeoutThreshold <= 0) {
-      this.logger.error(
-        `Invalid stuckTimeoutThreshold: ${stuckTimeoutThreshold}. Must be a positive number.`,
-      );
       return;
     }
 

@@ -4,6 +4,7 @@ import { Edit } from 'refly-icons';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { useTranslation } from 'react-i18next';
 import { HoverCardContainer } from '@refly-packages/ai-workspace-common/components/common/hover-card';
+import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 
 interface HoverCardProps {
   canvasId: string;
@@ -17,7 +18,7 @@ interface HoverCardProps {
 export const HoverCard = memo(
   ({ canvasId, canvasName, children, onEdit, className, onClick }: HoverCardProps) => {
     const { t } = useTranslation();
-
+    const { getCanvasList } = useHandleSiderData();
     const handleEdit = useCallback(() => {
       onEdit?.(canvasId);
     }, [canvasId, onEdit]);
@@ -39,7 +40,12 @@ export const HoverCard = memo(
           </Button>
 
           <div onClick={(e) => e.stopPropagation()}>
-            <CanvasActionDropdown canvasId={canvasId} canvasName={canvasName} btnSize="small">
+            <CanvasActionDropdown
+              canvasId={canvasId}
+              canvasName={canvasName}
+              btnSize="small"
+              afterDelete={getCanvasList}
+            >
               <Button className="flex items-center w-20 h-8 px-3 rounded-lg">
                 {t('frontPage.recentWorkflows.more')}
               </Button>
@@ -47,7 +53,7 @@ export const HoverCard = memo(
           </div>
         </>
       ),
-      [canvasId, canvasName, handleEdit, t],
+      [canvasId, canvasName, handleEdit, t, getCanvasList],
     );
 
     return (

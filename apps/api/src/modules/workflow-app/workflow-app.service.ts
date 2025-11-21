@@ -7,7 +7,8 @@ import {
   RawCanvasData,
   ListWorkflowAppsData,
 } from '@refly/openapi-schema';
-import { Logger } from '@nestjs/common';
+import { Logger, Optional } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaService } from '../common/prisma.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { MiscService } from '../misc/misc.service';
@@ -21,7 +22,9 @@ import { ToolService } from '../tool/tool.service';
 import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { CreditService } from '../credit/credit.service';
-import { AppTemplateResult } from '../variable-extraction/variable-extraction.dto';
+import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
+import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
+import type { Queue } from 'bullmq';
 
 /**
  * Structure of shared workflow app data
@@ -51,7 +54,45 @@ export class WorkflowAppService {
     private readonly toolService: ToolService,
     private readonly variableExtractionService: VariableExtractionService,
     private readonly creditService: CreditService,
+    @Optional()
+    @InjectQueue(QUEUE_WORKFLOW_APP_TEMPLATE)
+    private readonly templateQueue?: Queue<GenerateWorkflowAppTemplateJobData>,
   ) {}
+
+  /**
+   * Build a deterministic fingerprint string for workflow variables.
+   * This ignores volatile fields (like entityId) and sorts entries for stability.
+   */
+  private buildVariablesFingerprint(variables: WorkflowVariable[] | undefined | null): string {
+    const safeVars = Array.isArray(variables) ? variables : [];
+    const simplified = safeVars
+      .map((v) => ({
+        name: v?.name ?? '',
+        description: v?.description ?? '',
+        variableType: v?.variableType ?? '',
+        value:
+          (Array.isArray(v?.value)
+            ? v.value.map((item) => {
+                if (item?.type === 'text') {
+                  return { type: 'text', text: item?.text ?? '' };
+                }
+                if (item?.type === 'resource') {
+                  return {
+                    type: 'resource',
+                    resource: {
+                      name: item?.resource?.name ?? '',
+                      fileType: item?.resource?.fileType ?? '',
+                      storageKey: item?.resource?.storageKey ?? '',
+                    },
+                  };
+                }
+                return { type: item?.type ?? '' };
+              })
+            : []) ?? [],
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return JSON.stringify(simplified);
+  }
 
   async createWorkflowApp(user: User, body: CreateWorkflowAppRequest) {
     const { canvasId, title, query, variables, description } = body;
@@ -96,32 +137,48 @@ export class WorkflowAppService {
       visibility: 'public',
     });
 
-    // Generate app template content
-    let templateResult: AppTemplateResult | null = null;
+    // Determine whether to skip template generation when inputs are unchanged
+    const shouldSkipGeneration =
+      !!existingWorkflowApp &&
+      (existingWorkflowApp?.title ?? '') === (canvasData?.title ?? '') &&
+      (existingWorkflowApp?.query ?? '') === (query ?? '') &&
+      this.buildVariablesFingerprint(
+        (() => {
+          try {
+            return existingWorkflowApp?.variables
+              ? (JSON.parse(existingWorkflowApp.variables) as WorkflowVariable[])
+              : [];
+          } catch {
+            return [];
+          }
+        })(),
+      ) === this.buildVariablesFingerprint(variables);
+
+    // Generate app template content asynchronously when possible
     try {
-      const _templateResult = await this.variableExtractionService.generateAppPublishTemplate(
-        user,
-        canvasId,
-      );
-
-      this.logger.log(
-        `generateAppPublishTemplate result for workflow app: ${JSON.stringify(_templateResult)}`,
-      );
-
-      if (
-        _templateResult?.templateContent &&
-        _templateResult?.templateContentPlaceholders?.length === variables?.length &&
-        variables?.every((variable) =>
-          _templateResult?.templateContentPlaceholders?.includes(`{{${variable.name}}}`),
-        )
-      ) {
-        templateResult = _templateResult;
+      if (shouldSkipGeneration) {
+        this.logger.log(
+          `Skip template generation for workflow app ${appId}: title/query/variables unchanged`,
+        );
+      } else if (this.templateQueue) {
+        await this.templateQueue.add(
+          'generate',
+          { appId, canvasId, uid: user.uid },
+          {
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
+        );
+        this.logger.log(`Enqueued template generation for workflow app: ${appId}`);
+      } else {
+        // Always async: do not perform sync generation even if queue is unavailable
+        this.logger.log(
+          `Skip sync template generation for workflow app ${appId}: queue unavailable, enforce async-only`,
+        );
       }
-
-      this.logger.log(`Generated template content for workflow app: ${appId}`);
     } catch (error) {
       this.logger.error(
-        `Failed to generate template content for workflow app ${appId}: ${error.stack}`,
+        `Failed to start template generation for workflow app ${appId}: ${error?.stack}`,
       );
     }
 
@@ -135,7 +192,10 @@ export class WorkflowAppService {
           description,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          templateContent: templateResult?.templateContent,
+          // Reuse existing templateContent when skipping generation; otherwise keep unchanged (async path)
+          templateContent: shouldSkipGeneration
+            ? (existingWorkflowApp?.templateContent ?? null)
+            : undefined,
           remixEnabled,
           resultNodeIds,
           updatedAt: new Date(),
@@ -153,6 +213,7 @@ export class WorkflowAppService {
           canvasId,
           storageKey,
           coverStorageKey: coverStorageKey as any,
+          // Always async: initial templateContent remains null
           templateContent: null,
           remixEnabled,
           resultNodeIds,

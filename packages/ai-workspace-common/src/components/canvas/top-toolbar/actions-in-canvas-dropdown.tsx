@@ -56,11 +56,12 @@ interface ActionsInCanvasDropdownProps {
   canvasId: string;
   canvasName: string;
   onRename: () => void;
+  onDeleteSuccess?: () => void;
   offset?: [number, number];
 }
 
 export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps) => {
-  const { canvasId, canvasName, offset, onRename } = props;
+  const { canvasId, canvasName, offset, onRename, onDeleteSuccess } = props;
   const [popupVisible, setPopupVisible] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -258,6 +259,9 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
       canZoomIn,
       canZoomOut,
       t,
+      canvasId,
+      canvasName,
+      onDeleteSuccess,
     ],
   );
 

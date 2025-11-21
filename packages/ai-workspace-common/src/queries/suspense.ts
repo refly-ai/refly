@@ -35,6 +35,7 @@ import {
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
+  hasBeenInvited,
   listAccounts,
   listActions,
   listCanvases,
@@ -44,6 +45,7 @@ import {
   listCopilotSessions,
   listDocuments,
   listDriveFiles,
+  listInvitationCodes,
   listLabelClasses,
   listLabelInstances,
   listMcpServers,
@@ -124,6 +126,7 @@ import {
   GetWorkflowDetailError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
+  HasBeenInvitedError,
   ListAccountsData,
   ListAccountsError,
   ListActionsError,
@@ -140,6 +143,7 @@ import {
   ListDocumentsError,
   ListDriveFilesData,
   ListDriveFilesError,
+  ListInvitationCodesError,
   ListLabelClassesData,
   ListLabelClassesError,
   ListLabelInstancesData,
@@ -948,6 +952,36 @@ export const useGetCreditUsageByCanvasIdSuspense = <
       getCreditUsageByCanvasId({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
+    ...options,
+  });
+export const useListInvitationCodesSuspense = <
+  TData = Common.ListInvitationCodesDefaultResponse,
+  TError = ListInvitationCodesError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListInvitationCodesKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listInvitationCodes({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useHasBeenInvitedSuspense = <
+  TData = Common.HasBeenInvitedDefaultResponse,
+  TError = HasBeenInvitedError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseHasBeenInvitedKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      hasBeenInvited({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetSubscriptionPlansSuspense = <

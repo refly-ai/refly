@@ -9,6 +9,7 @@ import { ModelSelector } from '@refly-packages/ai-workspace-common/components/ca
 import { ConfigInfoDisplay } from './config-info-display';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
+import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
 
 interface ConfigureTabProps {
   query?: string | null;
@@ -38,12 +39,20 @@ const ConfigureTabComponent = ({
     modelInfo,
     contextItems,
     selectedToolsets,
-    upstreamResultIds,
     setModelInfo,
     setContextItems,
     setSelectedToolsets,
-    setUpstreamResultIds,
   } = useAgentNodeManagement(nodeId);
+
+  const { getUpstreamAgentNodes, disconnectFromUpstreamAgent } = useAgentConnections();
+  const upstreamAgentNodes = getUpstreamAgentNodes(nodeId);
+
+  const removeUpstreamAgent = useCallback(
+    (targetEntityId: string) => {
+      disconnectFromUpstreamAgent(nodeId, targetEntityId);
+    },
+    [disconnectFromUpstreamAgent, nodeId],
+  );
 
   const handleDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>) => {
@@ -111,7 +120,7 @@ const ConfigureTabComponent = ({
         >
           <span>{t('agent.config.model')}</span>
           <Tooltip title={t('agent.config.modelDescription')}>
-            <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+            <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
           </Tooltip>
         </div>
 
@@ -134,7 +143,7 @@ const ConfigureTabComponent = ({
           <div className="flex items-center gap-1">
             <span>{t('agent.config.prompt')}</span>
             <Tooltip title={t('agent.config.promptDescription')}>
-              <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+              <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
             </Tooltip>
           </div>
           <Button
@@ -165,7 +174,7 @@ const ConfigureTabComponent = ({
             </div>
           )}
 
-          <div className="flex-none h-[50%] min-h-[100px] max-h-[270px] overflow-hidden">
+          <div className="flex-none h-[50%] min-h-[100px] overflow-hidden">
             <EditChatInput
               ref={chatComposerRef}
               enabled
@@ -186,8 +195,8 @@ const ConfigureTabComponent = ({
               contextItems={contextItems}
               setContextItems={setContextItems}
               setSelectedToolsets={setSelectedToolsets}
-              upstreamResultIds={upstreamResultIds}
-              setUpstreamResultIds={setUpstreamResultIds}
+              upstreamAgentNodes={upstreamAgentNodes}
+              removeUpstreamAgent={removeUpstreamAgent}
             />
           </div>
         </div>

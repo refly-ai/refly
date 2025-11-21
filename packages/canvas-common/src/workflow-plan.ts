@@ -1,7 +1,6 @@
 import { z } from 'zod/v3';
 import { GenericToolset, RawCanvasData } from '@refly/openapi-schema';
 import { genNodeEntityId, genNodeID, genUniqueId } from '@refly/utils';
-import { IContextItem } from '@refly/common-types';
 
 export const workflowPlanSchema = z.object({
   tasks: z
@@ -150,10 +149,7 @@ export const normalizeWorkflowPlan = (plan: WorkflowPlan): WorkflowPlan => {
 
 // Generate canvas data from workflow plan
 // 1. each task should be represented as a 'skillResponse' node
-// 2. each product should be represented as a product node (e.g. 'document' or 'codeArtifact' nodes) with type being the product type
-// 3. connect task nodes to parent 'skillResponse' nodes according to its 'dependentTasks' definition
-// 4. connect task nodes to parent product nodes according to its 'dependentProducts' definition
-// 4. connect product nodes to parent task nodes according to parent task's 'products' definition
+// 2. connect task nodes via dependentTasks
 export const generateCanvasDataFromWorkflowPlan = (
   workflowPlan: WorkflowPlan,
   toolsets: GenericToolset[],
@@ -163,18 +159,14 @@ export const generateCanvasDataFromWorkflowPlan = (
 
   // Maps to resolve context references
   const taskIdToNodeId = new Map<string, string>();
-  const productIdToNodeId = new Map<string, string>();
   const taskIdToEntityId = new Map<string, string>();
-  const productIdToEntityId = new Map<string, string>();
 
   // Simple layout positions
   const taskStartX = 0;
-  const productOffsetX = 480;
   const rowStepY = 240;
-  const productStepY = 180;
 
   if (Array.isArray(workflowPlan.tasks)) {
-    // Phase 1: Create all task and product nodes, establish mappings
+    // Phase 1: Create all task nodes, establish mappings
     workflowPlan.tasks.forEach((task, taskIndex) => {
       const taskId = task?.id ?? `task-${taskIndex}`;
       const taskTitle = task?.title ?? '';
@@ -207,9 +199,10 @@ export const generateCanvasDataFromWorkflowPlan = (
           entityId: taskEntityId,
           contentPreview: '',
           metadata: {
-            structuredData: { query: taskPrompt },
+            query: taskPrompt,
             selectedToolsets,
             contextItems: [], // Will be populated in phase 2
+            status: 'init',
           },
         },
       };
@@ -217,49 +210,6 @@ export const generateCanvasDataFromWorkflowPlan = (
       nodes.push(taskNode);
       taskIdToNodeId.set(taskId, taskNodeId);
       taskIdToEntityId.set(taskId, taskEntityId);
-
-      // Create product nodes and connect from task node
-      if (Array.isArray(task.products) && task.products.length > 0) {
-        task.products.forEach((productId, pIndex) => {
-          // Find the product definition from the plan's products array
-          const productDef = workflowPlan.products?.find((p) => p.id === productId);
-          if (!productDef) return;
-
-          const productType = productDef.type;
-          const productTitle = productDef.title;
-
-          const productNodeId = genNodeID();
-          const productEntityId = genNodeEntityId(productType as any);
-          const productNode = {
-            id: productNodeId,
-            type: productType as any,
-            position: {
-              x: productOffsetX,
-              y: taskIndex * rowStepY + pIndex * productStepY,
-            },
-            data: {
-              title: productTitle,
-              entityId: productEntityId,
-              contentPreview: '',
-              metadata: {
-                parentResultId: taskEntityId,
-                contextItems: [],
-              },
-            },
-          };
-
-          nodes.push(productNode);
-          productIdToNodeId.set(productId, productNodeId);
-          productIdToEntityId.set(productId, productEntityId);
-
-          edges.push({
-            id: `edge-${genUniqueId()}`,
-            source: taskNodeId,
-            target: productNodeId,
-            type: 'default',
-          });
-        });
-      }
     });
 
     // Phase 2: Update task nodes with proper contextItems and create dependency edges
@@ -270,64 +220,10 @@ export const generateCanvasDataFromWorkflowPlan = (
 
       if (!taskNodeId || !taskEntityId) return;
 
-      // Build context items from dependent tasks and products
-      const contextItems: IContextItem[] = [];
-
-      // Add dependent tasks to context items
-      if (Array.isArray(task.dependentTasks)) {
-        for (const dependentTaskId of task.dependentTasks) {
-          const dependentEntityId = taskIdToEntityId.get(dependentTaskId);
-          if (dependentEntityId) {
-            contextItems.push({
-              entityId: dependentEntityId,
-              type: 'skillResponse',
-            });
-          }
-        }
-      }
-
-      // Add dependent products to context items
-      if (Array.isArray(task.dependentProducts)) {
-        for (const dependentProductId of task.dependentProducts) {
-          const dependentEntityId = productIdToEntityId.get(dependentProductId);
-          if (dependentEntityId) {
-            // Find the product definition to get its type
-            const productDef = workflowPlan.products?.find((p) => p.id === dependentProductId);
-            if (productDef) {
-              contextItems.push({
-                entityId: dependentEntityId,
-                type: productDef.type as any,
-              });
-            }
-          }
-        }
-      }
-
-      // Update the task node's contextItems
-      const taskNode = nodes.find((n) => n.id === taskNodeId);
-      if (taskNode?.data?.metadata) {
-        taskNode.data.metadata.contextItems = contextItems;
-      }
-
       // Create edges from dependent tasks to this task
       if (Array.isArray(task.dependentTasks)) {
         for (const dependentTaskId of task.dependentTasks) {
           const sourceNodeId = taskIdToNodeId.get(dependentTaskId);
-          if (sourceNodeId) {
-            edges.push({
-              id: `edge-${genUniqueId()}`,
-              source: sourceNodeId,
-              target: taskNodeId,
-              type: 'default',
-            });
-          }
-        }
-      }
-
-      // Create edges from dependent products to this task
-      if (Array.isArray(task.dependentProducts)) {
-        for (const dependentProductId of task.dependentProducts) {
-          const sourceNodeId = productIdToNodeId.get(dependentProductId);
           if (sourceNodeId) {
             edges.push({
               id: `edge-${genUniqueId()}`,

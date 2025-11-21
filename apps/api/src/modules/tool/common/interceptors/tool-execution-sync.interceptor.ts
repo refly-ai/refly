@@ -373,23 +373,29 @@ export class ToolExecutionSyncInterceptor {
     customMetadata: Record<string, any> = {},
   ): Promise<void> {
     const entityId = genMediaID(resultType as any);
-    await this.canvasSyncService.addNodeToCanvas(
+    await this.canvasSyncService.addNodesToCanvas(
       user,
       actionResult.targetId,
-      {
-        type: resultType as CanvasNodeType,
-        data: {
-          title: title || `${resultType}-${Date.now()}`,
-          entityId,
-          metadata: {
-            resultId: actionResult.resultId,
-            storageKey,
-            [`${resultType}Url`]: outputUrl,
-            ...customMetadata,
+      [
+        {
+          node: {
+            type: resultType as CanvasNodeType,
+            data: {
+              title: title || `${resultType}-${Date.now()}`,
+              entityId,
+              metadata: {
+                resultId: actionResult.resultId,
+                storageKey,
+                [`${resultType}Url`]: outputUrl,
+                ...customMetadata,
+              },
+            },
           },
+          connectTo: parentResultId
+            ? [{ type: 'skillResponse', entityId: parentResultId }]
+            : undefined,
         },
-      },
-      parentResultId ? [{ type: 'skillResponse', entityId: parentResultId }] : undefined,
+      ],
       { autoLayout: true },
     );
   }

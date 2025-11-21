@@ -10,8 +10,9 @@ export * from './fal-audio';
 export * from './fal-image';
 export * from './fal-video';
 export * from './firecrawl';
-export * from './fish-audio';
-export * from './heygen';
+// DEPRECATED: FishAudio and HeyGen are now loaded from configuration
+// export * from './fish-audio';
+// export * from './heygen';
 export * from './github';
 export * from './inventory';
 export * from './jina';

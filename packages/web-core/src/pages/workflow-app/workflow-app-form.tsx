@@ -8,8 +8,8 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import cn from 'classnames';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
-import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
-import { useNavigate } from 'react-router-dom';
+import { useUserStoreShallow } from '@refly/stores';
+import { useAuthStoreShallow } from '@refly/stores';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
 import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/workflow-app/mixed-text-editor';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
@@ -95,8 +95,12 @@ export const WorkflowAPPForm = ({
   workflowApp,
 }: WorkflowAPPFormProps) => {
   const { t } = useTranslation();
-  const { getLoginStatus } = useIsLogin();
-  const navigate = useNavigate();
+  const { isLogin } = useUserStoreShallow((state) => ({
+    isLogin: state.isLogin,
+  }));
+  const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
+    setLoginModalOpen: state.setLoginModalOpen,
+  }));
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
 
@@ -319,10 +323,8 @@ export const WorkflowAPPForm = ({
     }
 
     // Check if user is logged in
-    if (!getLoginStatus()) {
-      // Redirect to login with return URL
-      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      navigate(`/?autoLogin=true&returnUrl=${returnUrl}`);
+    if (!isLogin) {
+      setLoginModalOpen(true);
       return;
     }
 
@@ -440,6 +442,17 @@ export const WorkflowAPPForm = ({
         setInternalIsRunning(false);
       }
     }
+  };
+
+  const handleRemix = () => {
+    // Check if user is logged in
+    if (!isLogin) {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    // Call the original onCopyWorkflow function
+    onCopyWorkflow?.();
   };
 
   // Render form field based on variable type
@@ -692,7 +705,7 @@ export const WorkflowAPPForm = ({
                     <Button
                       className="h-10 w-[94px] flex items-center justify-center px-0 rounded-[12px] bg-[#fff] dark:bg-[#232323] border-[0.5px] border-solid border-[rgba(28,31,35,0.3)] text-[#1C1F23] dark:text-white hover:bg-[#eaeaea] shadow-none font-semibold font-roboto text-[16px] leading-[1.25em] gap-0"
                       type="default"
-                      onClick={onCopyWorkflow}
+                      onClick={handleRemix}
                       title={t('canvas.workflow.run.remix')}
                     >
                       <span className="">{t('canvas.workflow.run.remix')}</span>
@@ -835,7 +848,7 @@ export const WorkflowAPPForm = ({
                     <Button
                       className="h-10 w-[94px] flex items-center justify-center px-0 rounded-[12px] bg-[#F6F6F6] dark:bg-[#232323] border-[0.5px] border-solid border-[rgba(28,31,35,0.3)] text-[#1C1F23] dark:text-white hover:bg-[#eaeaea] shadow-none font-semibold font-roboto text-[16px] leading-[1.25em] gap-0"
                       type="default"
-                      onClick={onCopyWorkflow}
+                      onClick={handleRemix}
                       title={t('canvas.workflow.run.remix')}
                     >
                       <span className="">{t('canvas.workflow.run.remix')}</span>

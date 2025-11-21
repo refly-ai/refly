@@ -48,7 +48,6 @@ import { SkillResponseActions } from '@refly-packages/ai-workspace-common/compon
 import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
-import { useSyncAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-agent-connections';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useConnection } from '@xyflow/react';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
@@ -214,8 +213,6 @@ export const SkillResponseNode = memo(
       isExecuting,
       canvasId: canvasId || '',
     });
-
-    useSyncAgentConnections(id, data);
 
     const nodeStyle = useMemo(
       () => (isPreview ? { width: NODE_WIDTH, height: 214 } : NODE_SIDE_CONFIG),
@@ -449,13 +446,13 @@ export const SkillResponseNode = memo(
 
       invokeAction(
         {
+          nodeId: id,
           resultId: entityId,
           query: processedQuery,
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
           modelInfo: data?.metadata?.modelInfo,
-          upstreamResultIds: data?.metadata?.upstreamResultIds,
         },
         {
           entityType: 'canvas',
@@ -818,12 +815,15 @@ export const SkillResponseNode = memo(
             style={nodeStyle}
             className={cn(
               'h-full flex flex-col relative z-1 p-0 box-border',
-              getNodeCommonStyles({ selected, isHovered }),
+              getNodeCommonStyles({ selected, isHovered, nodeType: 'skillResponse' }),
               'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid bg-refly-bg-content-z2',
               // Apply error styles only when there's an error
-              status === 'failed' ? 'border-refly-func-danger-default' : 'border-refly-Card-Border',
+              status === 'failed'
+                ? '!border-refly-func-danger-default'
+                : 'border-refly-Card-Border',
             )}
           >
+            {isHovered && <div className="absolute inset-0 bg-refly-node-run opacity-[0.14]" />}
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
@@ -843,7 +843,7 @@ export const SkillResponseNode = memo(
 
             <div className={'relative flex-grow overflow-y-auto w-full'}>
               {/* Always show content preview, use prompt/query as fallback when content is empty */}
-              <SkillResponseContentPreview className="p-3" metadata={metadata} />
+              <SkillResponseContentPreview className="p-3" nodeId={id} metadata={metadata} />
             </div>
           </div>
         </div>

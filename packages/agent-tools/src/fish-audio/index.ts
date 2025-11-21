@@ -1,3 +1,10 @@
+/**
+ * DEPRECATED: This implementation is commented out.
+ * FishAudio tools are now loaded from configuration using the adapter pattern.
+ * See: apps/api/src/modules/tool/adapters/ for the new implementation.
+ */
+
+/*
 import {
   User,
   ToolsetDefinition,
@@ -311,3 +318,4 @@ export class FishAudioToolset extends AgentBaseToolset<FishAudioParams> {
   toolsetKey = FishAudioToolsetDefinition.key;
   tools = [TextToSpeech, SpeechToText] satisfies readonly AgentToolConstructor<FishAudioParams>[];
 }
+*/

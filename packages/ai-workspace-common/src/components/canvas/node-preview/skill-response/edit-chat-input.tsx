@@ -52,7 +52,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     modelInfo,
     contextItems,
     selectedToolsets,
-    upstreamResultIds,
     setQuery,
     setContextItems,
     setModelInfo,
@@ -130,8 +129,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
   }, [enabled, setEditMode]);
 
   const handleSendMessage = useCallback(() => {
-    const finalProjectId = getFinalProjectId();
-
     // Synchronize edges with latest context items
     const nodes = getNodes();
     let currentNode = nodes.find((node) => node.data?.entityId === resultId);
@@ -195,14 +192,13 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
     invokeAction(
       {
+        nodeId,
         resultId,
         version: (version ?? 0) + 1,
         query: llmInputQuery,
         contextItems,
         modelInfo,
-        projectId: finalProjectId,
         selectedToolsets,
-        upstreamResultIds,
       },
       {
         entityId: canvasId,
@@ -227,13 +223,13 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
     setEditMode(false);
   }, [
+    nodeId,
     resultId,
     query,
     modelInfo,
     contextItems,
     version,
     canvasId,
-    upstreamResultIds,
     getNodes,
     getEdges,
     addEdges,

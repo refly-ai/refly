@@ -528,9 +528,20 @@ export class MiscService implements OnModuleInit {
       await this.imageQueue?.add('resizeAndConvert', { storageKey, visibility });
     }
 
+    // For private files, generate a temporary signed URL if static endpoint is not configured
+    let url = this.generateFileURL({ visibility, storageKey });
+    if (visibility === 'private') {
+      const privateEndpoint = this.config.get<string>('static.private.endpoint');
+      if (!privateEndpoint || privateEndpoint === '') {
+        // Fallback to presigned URL if static endpoint is not configured
+        url = await this.generateTempPublicURL(storageKey, 7 * 24 * 60 * 60); // 7 days
+        this.logger.debug(`Generated presigned URL for private file: ${storageKey}`);
+      }
+    }
+
     return {
       storageKey,
-      url: this.generateFileURL({ visibility, storageKey }),
+      url,
     };
   }
 

@@ -3,7 +3,6 @@ import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { GenericToolset } from '@refly/openapi-schema';
 import { Mcp, Websearch, DocChecked, Code, Email, Time } from 'refly-icons';
 import { Favicon } from '@refly-packages/ai-workspace-common/components/common/favicon';
-import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
 interface ToolsetIconConfig {
@@ -53,14 +52,23 @@ export const ToolsetIcon: React.FC<{
 
   const { size = 24, className, builtinClassName } = config ?? {};
 
+  if (toolsetKey && Object.keys(builtinToolsetIconMap).includes(toolsetKey ?? '')) {
+    const builtinToolsetIcon = builtinToolsetIconMap[toolsetKey];
+    const IconComponent = builtinToolsetIcon?.icon ?? null;
+    return (
+      <div className={cn('flex items-center justify-center overflow-hidden', className)}>
+        <IconComponent
+          size={size}
+          style={{ background: builtinToolsetIcon.backgroundColor }}
+          className={cn('rounded-md text-black', builtinClassName)}
+        />
+      </div>
+    );
+  }
+
   // If only toolsetKey is provided without toolset, use inventory lookup
   if (!toolset && toolsetKey && !disableInventoryLookup) {
     return <ToolsetIconWithInventory toolsetKey={toolsetKey} size={size} className={className} />;
-  }
-
-  // If toolset is not provided, return null
-  if (!toolset) {
-    return null;
   }
 
   // MCP icons do not require inventory lookup
@@ -68,35 +76,6 @@ export const ToolsetIcon: React.FC<{
     return (
       <div className={cn('flex items-center justify-center overflow-hidden', className)}>
         <Mcp size={size} color="var(--refly-text-1)" />
-      </div>
-    );
-  }
-
-  // Builtin icon never needs inventory lookup
-  if (toolset.builtin) {
-    const toolsetKey = toolset.toolset?.key;
-    const builtinToolsetIcon = toolsetKey ? builtinToolsetIconMap[toolsetKey] : null;
-    const IconComponent = builtinToolsetIcon?.icon ?? null;
-
-    return (
-      <div
-        className={cn('flex items-center justify-center overflow-hidden', className)}
-        aria-label={`Toolset icon for ${toolset.toolset?.definition?.domain ?? 'unknown domain'}`}
-      >
-        {IconComponent ? (
-          // Handle different icon component types
-
-          <IconComponent
-            size={size}
-            style={{ background: builtinToolsetIcon.backgroundColor }}
-            className={cn('rounded-md text-black', builtinClassName)}
-          />
-        ) : (
-          <Logo
-            logoProps={{ show: true, className: builtinClassName }}
-            textProps={{ show: false }}
-          />
-        )}
       </div>
     );
   }

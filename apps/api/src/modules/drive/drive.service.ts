@@ -47,6 +47,16 @@ export class DriveService {
     private redis: RedisService,
   ) {}
 
+  /**
+   * Build S3 path for drive files (user uploaded files)
+   * Used for user uploaded files and manual resources
+   * @returns drive/{uid}/{canvasId}/{name}
+   */
+  buildS3DrivePath(uid: string, canvasId: string, name = ''): string {
+    const prefix = this.config.get<string>('drive.storageKeyPrefix').replace(/\/$/, '');
+    return [prefix, uid, canvasId, name].filter(Boolean).join('/');
+  }
+
   private generateStorageKey(
     user: User,
     file: { canvasId: string; name: string; scope?: string; source?: string },
@@ -130,7 +140,7 @@ export class DriveService {
     }
   }
 
-  private async archiveFiles(
+  async archiveFiles(
     user: User,
     canvasId: string,
     conditions: {
@@ -139,7 +149,9 @@ export class DriveService {
       resultId?: string;
     },
   ): Promise<void> {
-    this.logger.log(`Archiving files using conditions: ${JSON.stringify(conditions)}`);
+    this.logger.log(
+      `Archiving files - uid: ${user.uid}, canvasId: ${canvasId}, conditions: ${JSON.stringify(conditions)}`,
+    );
 
     const files = await this.prisma.driveFile.findMany({
       select: { canvasId: true, fileId: true, name: true, storageKey: true },
@@ -147,9 +159,15 @@ export class DriveService {
     });
 
     if (!files.length) {
-      this.logger.log('No files found to archive');
+      this.logger.log(
+        `No files found to archive - uid: ${user.uid}, canvasId: ${canvasId}, conditions: ${JSON.stringify(conditions)}`,
+      );
       return;
     }
+
+    this.logger.log(
+      `Found ${files.length} files to archive: ${files.map((f) => f.name).join(', ')}`,
+    );
 
     // Get concurrency limit from config or use default
     const concurrencyLimit = this.config.get<number>('drive.archiveConcurrencyLimit') ?? 10;
@@ -488,6 +506,7 @@ export class DriveService {
     const { canvasId, files } = request;
 
     if (!files?.length) {
+      this.logger.log('[DriveService] batchCreateDriveFiles: No files to create');
       return [];
     }
 
@@ -498,7 +517,7 @@ export class DriveService {
     // Process each file to prepare data for bulk creation
     const driveFilesData: Prisma.DriveFileCreateManyInput[] = processedRequests.map((req) => {
       return {
-        ...pick(req, ['canvasId', 'name', 'source', 'size']),
+        ...pick(req, ['canvasId', 'name', 'source', 'size', 'resultId', 'resultVersion']),
         fileId: genDriveFileID(),
         uid: user.uid,
         scope: 'present',
@@ -507,6 +526,16 @@ export class DriveService {
         storageKey: req.driveStorageKey,
       };
     });
+
+    this.logger.log(
+      `[DriveService] batchCreateDriveFiles: Inserting ${driveFilesData.length} records to database`,
+    );
+    if (driveFilesData.length > 0) {
+      const sample = driveFilesData[0];
+      this.logger.log(
+        `[DriveService] batchCreateDriveFiles: Sample record - name: ${sample.name}, resultId: ${sample.resultId || 'N/A'}, resultVersion: ${sample.resultVersion || 'N/A'}, size: ${sample.size}`,
+      );
+    }
 
     // Bulk create all drive files
     const createdFiles = await this.prisma.driveFile.createManyAndReturn({

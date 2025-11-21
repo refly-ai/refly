@@ -13,6 +13,7 @@ import { Button } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 import { ArrowDown, ArrowUp, Checked } from 'refly-icons';
+import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
 const FailedIcon = () => (
   <svg
@@ -60,7 +61,8 @@ interface ToolCallProps {
  * similar to the Cursor MCP UI seen in the screenshot
  */
 const ToolCall: React.FC<ToolCallProps> = (props) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language || 'en';
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   // Extract tool name from props
@@ -136,54 +138,85 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   }
 
   const resultData = safeParseJSON(resultContent)?.data as Record<string, unknown> | undefined;
-  const filePreviewDriveFile = useMemo<DriveFile | null>(() => {
-    if (!resultData?.fileId) return null;
-    return {
-      fileId: String(resultData.fileId),
-      canvasId: String(resultData.canvasId ?? ''),
-      name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
-      type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
-    };
+  const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
+    if (resultData?.fileId) {
+      return [
+        {
+          fileId: String(resultData.fileId),
+          canvasId: String(resultData.canvasId ?? ''),
+          name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
+          type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
+        },
+      ];
+    }
+
+    if (Array.isArray(resultData?.files)) {
+      return resultData.files.map((file) => ({
+        fileId: String(file.fileId),
+        canvasId: String(file.canvasId ?? ''),
+        name: String(file.name ?? file.fileName ?? 'Drive file'),
+        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+      }));
+    }
+
+    return [];
   }, [resultData]);
-  const shouldRenderFilePreview = Boolean(filePreviewDriveFile?.fileId);
+
+  const shouldRenderFilePreview = useMemo(() => {
+    return filePreviewDriveFile.length > 0;
+  }, [filePreviewDriveFile]);
+
+  const { data } = useListToolsetInventory({}, null, {
+    enabled: true,
+  });
+  const toolsetDefinition = data?.data?.find((t) => t.key === toolsetKey);
+  const toolsetName = toolsetDefinition?.labelDict?.[currentLanguage] ?? toolsetKey;
 
   return (
     <>
       <div className="rounded-lg overflow-hidden bg-refly-bg-control-z0 text-refly-text-0">
         {/* Header bar */}
         <div
-          className="flex items-center p-3 gap-2 cursor-pointer select-none min-h-[44px]"
+          className="flex items-center justify-between p-3 gap-2 cursor-pointer select-none min-h-[44px]"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          <ToolsetIcon
-            toolsetKey={toolsetKey}
-            config={{ size: 16, className: 'flex-shrink-0', builtinClassName: '!w-4 !h-4' }}
-          />
-          <div className="flex-1 text-sm font-semibold">{`${toolName}`}</div>
-          {/* Status indicator */}
-          {toolCallStatus === ToolCallStatus.EXECUTING && (
-            <Spin size="small" className="text-refly-text-2" />
-          )}
-          {toolCallStatus === ToolCallStatus.COMPLETED && (
-            <span className="flex items-center">
-              <Checked size={14} color="var(--refly-primary-default)" />
-              {durationText && (
-                <span className="ml-2 text-xs text-refly-text-2">{durationText}</span>
-              )}
-            </span>
-          )}
-          {toolCallStatus === ToolCallStatus.FAILED && (
-            <span className="ml-2 flex items-center">
-              <FailedIcon />
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <ToolsetIcon
+              toolsetKey={toolsetKey}
+              config={{ size: 16, className: 'flex-shrink-0', builtinClassName: '!w-4 !h-4' }}
+            />
+            <div className="flex-1 text-sm font-semibold">{`${toolsetName}`}</div>
+            {!toolsetDefinition?.builtin && (
+              <div className="text-xs text-refly-text-2">{`${toolName}`}</div>
+            )}
+          </div>
 
-          <Button
-            type="text"
-            size="small"
-            icon={isCollapsed ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
-            onClick={() => setIsCollapsed(!isCollapsed)}
-          />
+          <div className="flex items-center gap-2">
+            {/* Status indicator */}
+            {toolCallStatus === ToolCallStatus.EXECUTING && (
+              <Spin size="small" className="text-refly-text-2" />
+            )}
+            {toolCallStatus === ToolCallStatus.COMPLETED && (
+              <span className="flex items-center">
+                <Checked size={14} color="var(--refly-primary-default)" />
+                {durationText && (
+                  <span className="ml-2 text-xs text-refly-text-2">{durationText}</span>
+                )}
+              </span>
+            )}
+            {toolCallStatus === ToolCallStatus.FAILED && (
+              <span className="ml-2 flex items-center">
+                <FailedIcon />
+              </span>
+            )}
+
+            <Button
+              type="text"
+              size="small"
+              icon={isCollapsed ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+              onClick={() => setIsCollapsed(!isCollapsed)}
+            />
+          </div>
         </div>
 
         {/* Content section */}
@@ -213,9 +246,10 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
         )}
       </div>
 
-      {shouldRenderFilePreview && (
-        <ProductCard file={filePreviewDriveFile} source="card" classNames="mt-3" />
-      )}
+      {shouldRenderFilePreview &&
+        filePreviewDriveFile.map((file) => (
+          <ProductCard key={file.fileId} file={file} source="card" classNames="mt-3" />
+        ))}
     </>
   );
 };

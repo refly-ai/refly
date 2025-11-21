@@ -94,7 +94,6 @@ export type SkillNodeMeta = {
   query?: string;
   resultId?: string;
   version?: number;
-  upstreamResultIds?: string[];
   selectedSkill?: Skill;
   selectedToolsets?: GenericToolset[];
   modelInfo?: ModelInfo | null;
@@ -163,7 +162,6 @@ export type ResponseNodeMeta = {
   selectedSkill?: Skill;
   selectedToolsets?: GenericToolset[];
   contextItems?: IContextItem[];
-  upstreamResultIds?: string[];
   tplConfig?: SkillTemplateConfig;
   runtimeConfig?: SkillRuntimeConfig;
   sizeMode?: 'compact' | 'adaptive';

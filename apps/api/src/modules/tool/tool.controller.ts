@@ -30,13 +30,15 @@ export class ToolController {
       isGlobal,
       enabled,
     });
-    return buildSuccessResponse(tools);
+    // Populate toolsets with definition from inventory
+    const populatedTools = await this.toolService.populateToolsetsWithDefinition(tools);
+    return buildSuccessResponse(populatedTools);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('/inventory/list')
   async listToolsetInventory(): Promise<ListToolsetInventoryResponse> {
-    const toolsets = this.toolService.listToolsetInventory();
+    const toolsets = await this.toolService.listToolsetInventory();
     return buildSuccessResponse(toolsets);
   }
 

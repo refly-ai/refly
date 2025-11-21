@@ -1,7 +1,5 @@
 import { ToolsetDefinition } from '@refly/openapi-schema';
 import {
-  BuiltinToolset,
-  BuiltinToolsetDefinition,
   BuiltinWebSearchToolset,
   BuiltinWebSearchDefinition,
   BuiltinGenerateDocToolset,
@@ -21,9 +19,10 @@ import { FalAudioToolset, FalAudioToolsetDefinition } from './fal-audio';
 import { FalImageToolset, FalImageToolsetDefinition } from './fal-image';
 import { FalVideoToolset, FalVideoToolsetDefinition } from './fal-video';
 import { FirecrawlToolset, FirecrawlToolsetDefinition } from './firecrawl';
-import { FishAudioToolset, FishAudioToolsetDefinition } from './fish-audio';
+// DEPRECATED: FishAudio and HeyGen are now loaded from configuration
+// import { FishAudioToolset, FishAudioToolsetDefinition } from './fish-audio';
 import { GitHubToolsetDefinition } from './github';
-import { HeyGenToolset, HeyGenToolsetDefinition } from './heygen';
+// import { HeyGenToolset, HeyGenToolsetDefinition } from './heygen';
 import { GmailToolsetDefinition } from './gmail';
 import { GoogleDocsToolsetDefinition } from './google-docs';
 import { GoogleDriveToolsetDefinition } from './google-drive';
@@ -78,10 +77,6 @@ export const toolsetInventory: Record<
     definition: ToolsetDefinition;
   }
 > = {
-  [BuiltinToolsetDefinition.key]: {
-    class: BuiltinToolset,
-    definition: BuiltinToolsetDefinition,
-  },
   [FirecrawlToolsetDefinition.key]: {
     class: FirecrawlToolset,
     definition: FirecrawlToolsetDefinition,
@@ -134,14 +129,15 @@ export const toolsetInventory: Record<
     class: FalAudioToolset,
     definition: FalAudioToolsetDefinition,
   },
-  [FishAudioToolsetDefinition.key]: {
-    class: FishAudioToolset,
-    definition: FishAudioToolsetDefinition,
-  },
-  [HeyGenToolsetDefinition.key]: {
-    class: HeyGenToolset,
-    definition: HeyGenToolsetDefinition,
-  },
+  // DEPRECATED: FishAudio and HeyGen are now loaded from configuration
+  // [FishAudioToolsetDefinition.key]: {
+  //   class: FishAudioToolset,
+  //   definition: FishAudioToolsetDefinition,
+  // },
+  // [HeyGenToolsetDefinition.key]: {
+  //   class: HeyGenToolset,
+  //   definition: HeyGenToolsetDefinition,
+  // },
   [FalImageToolsetDefinition.key]: {
     class: FalImageToolset,
     definition: FalImageToolsetDefinition,

@@ -37,13 +37,8 @@ import {
   UploadResponse,
   FileVisibility,
   EntityType,
-  CanvasNode,
-  FishAudioTextToSpeechRequest,
-  FishAudioTextToSpeechResponse,
-  FishAudioSpeechToTextRequest,
-  FishAudioSpeechToTextResponse,
-  HeyGenGenerateVideoRequest,
-  HeyGenGenerateVideoResponse,
+  SandboxExecuteRequest,
+  SandboxExecuteResponse,
   DriveFile,
   UpsertDriveFileRequest,
 } from '@refly/openapi-schema';
@@ -137,12 +132,6 @@ export interface ReflyService {
       storageKey?: string;
     },
   ) => Promise<UploadResponse['data']>;
-  addNodeToCanvasWithoutCanvasId: (
-    user: User,
-    node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
-    connectTo?: any,
-    options?: { autoLayout?: boolean },
-  ) => Promise<void>;
   genImageID: () => Promise<string>;
   // Generate JWT token for user (same as AuthService.login)
   generateJwtToken: (user: User) => Promise<string>;
@@ -161,18 +150,6 @@ export interface ReflyService {
     model: string;
   } | null>;
 
-  textToSpeech: (
-    user: User,
-    request: FishAudioTextToSpeechRequest,
-  ) => Promise<FishAudioTextToSpeechResponse>;
-  speechToText: (
-    user: User,
-    request: FishAudioSpeechToTextRequest,
-  ) => Promise<FishAudioSpeechToTextResponse>;
-
-  // HeyGen video generation methods
-  generateVideo: (
-    user: User,
-    request: HeyGenGenerateVideoRequest,
-  ) => Promise<HeyGenGenerateVideoResponse>;
+  // Sandbox code execution
+  execute: (user: User, request: SandboxExecuteRequest) => Promise<SandboxExecuteResponse>;
 }

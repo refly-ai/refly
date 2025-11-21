@@ -5,6 +5,7 @@ import { type Options } from '@hey-api/client-fetch';
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from '@tanstack/react-query';
 import {
   abortAction,
+  activateInvitationCode,
   addNodesToCanvasPage,
   authorizeComposioConnection,
   autoNameCanvas,
@@ -96,6 +97,7 @@ import {
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
+  hasBeenInvited,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -108,6 +110,7 @@ import {
   listCopilotSessions,
   listDocuments,
   listDriveFiles,
+  listInvitationCodes,
   listLabelClasses,
   listLabelInstances,
   listMcpServers,
@@ -170,6 +173,8 @@ import {
 import {
   AbortActionData,
   AbortActionError,
+  ActivateInvitationCodeData,
+  ActivateInvitationCodeError,
   AddNodesToCanvasPageData,
   AddNodesToCanvasPageError,
   AuthorizeComposioConnectionData,
@@ -345,6 +350,7 @@ import {
   GetWorkflowDetailError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
+  HasBeenInvitedError,
   ImportCanvasData,
   ImportCanvasError,
   InitializeWorkflowData,
@@ -367,6 +373,7 @@ import {
   ListDocumentsError,
   ListDriveFilesData,
   ListDriveFilesError,
+  ListInvitationCodesError,
   ListLabelClassesData,
   ListLabelClassesError,
   ListLabelInstancesData,
@@ -1249,6 +1256,36 @@ export const useGetCreditUsageByCanvasId = <
       getCreditUsageByCanvasId({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
+    ...options,
+  });
+export const useListInvitationCodes = <
+  TData = Common.ListInvitationCodesDefaultResponse,
+  TError = ListInvitationCodesError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListInvitationCodesKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listInvitationCodes({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useHasBeenInvited = <
+  TData = Common.HasBeenInvitedDefaultResponse,
+  TError = HasBeenInvitedError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseHasBeenInvitedKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      hasBeenInvited({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetSubscriptionPlans = <
@@ -2719,6 +2756,24 @@ export const useExecuteWorkflowApp = <
   useMutation<TData, TError, Options<ExecuteWorkflowAppData, true>, TContext>({
     mutationKey: Common.UseExecuteWorkflowAppKeyFn(mutationKey),
     mutationFn: (clientOptions) => executeWorkflowApp(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useActivateInvitationCode = <
+  TData = Common.ActivateInvitationCodeMutationResult,
+  TError = ActivateInvitationCodeError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ActivateInvitationCodeData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ActivateInvitationCodeData, true>, TContext>({
+    mutationKey: Common.UseActivateInvitationCodeKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      activateInvitationCode(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateCheckoutSession = <

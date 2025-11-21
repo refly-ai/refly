@@ -11,6 +11,7 @@ packed
 .windsurf
 
 logs
+debug-logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -37,3 +38,6 @@ docs/.vitepress/cache/*
 
 # Profile
 .rspack-profile-*/
+
+# AI Task files
+.task

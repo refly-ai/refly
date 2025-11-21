@@ -111,7 +111,7 @@ const VariableItem = memo(
 
         {!readonly && (
           <div
-            className={`items-center gap-1 flex-shrik-0 ${
+            className={`items-center gap-1 flex-shrink-0 ${
               isPopconfirmOpen ? 'flex' : 'hidden group-hover:flex'
             }`}
           >

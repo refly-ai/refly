@@ -9,6 +9,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
     "@refly/ai-workspace-common": "workspace:*",
+    "@rjsf/validator-ajv8": "^6.1.1",
     "@refly/common-types": "workspace:*",
     "@refly/errors": "workspace:*",
     "@refly/i18n": "workspace:*",

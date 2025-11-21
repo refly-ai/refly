@@ -4,21 +4,31 @@ import { DynamicStructuredTool, type StructuredToolInterface } from '@langchain/
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ComposioConnectionStatus, GenericToolset, User } from '@refly/openapi-schema';
+import type {
+  ComposioConnectionStatus,
+  GenericToolset,
+  ToolsetDefinition,
+  User,
+} from '@refly/openapi-schema';
 import { Queue } from 'bullmq';
 import { QUEUE_SYNC_TOOL_CREDIT_USAGE } from '../../../utils/const';
 import { PrismaService } from '../../common/prisma.service';
+import { RedisService } from '../../common/redis.service';
 import { CreditService } from '../../credit/credit.service';
-import { SyncToolCreditUsageJobData } from '../../credit/credit.dto';
+import type { SyncToolCreditUsageJobData } from '../../credit/credit.dto';
+import type { OAuthToolsetConfig } from './composio.types';
 
 @Injectable()
 export class ComposioService {
   private readonly logger = new Logger(ComposioService.name);
   private composio: Composio;
+  private readonly DEFINITION_CACHE_TTL = 60 * 60 * 24; // 24 hours
+  private readonly DEFINITION_CACHE_PREFIX = 'oauth:definition:';
 
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
     private readonly creditService: CreditService,
     @Optional()
     @InjectQueue(QUEUE_SYNC_TOOL_CREDIT_USAGE)
@@ -231,14 +241,27 @@ export class ComposioService {
 
   /**
    * Save or update Composio connection record in the database
-   * This only manages the composio_connections table
+   * This manages both composio_connections and toolsets tables
    */
   private async saveConnection(user: User, appSlug: string, connectedAccount: any) {
     const connectedAccountId = connectedAccount.id;
     const status: ComposioConnectionStatus =
       connectedAccount.status?.toUpperCase() === 'ACTIVE' ? 'active' : 'revoked';
 
-    // 1. Save or update composio_connections
+    // 1. Fetch definition from Composio (with caching)
+    const definition = await this.getDefinition(appSlug);
+
+    // 2. Build OAuth config
+    const oauthConfig: OAuthToolsetConfig = {
+      integrationId: appSlug,
+      connectedAccountId,
+      ...(definition && {
+        definition,
+        lastDefinitionSync: new Date().toISOString(),
+      }),
+    };
+
+    // 3. Save or update composio_connections
     await this.prisma.composioConnection.upsert({
       where: {
         uid_integrationId: {
@@ -261,6 +284,52 @@ export class ComposioService {
         updatedAt: new Date(),
       },
     });
+
+    // 4. Create or update toolset with definition in config
+    const existingToolset = await this.prisma.toolset.findFirst({
+      where: {
+        uid: user.uid,
+        key: appSlug,
+        authType: 'oauth',
+      },
+    });
+
+    if (existingToolset) {
+      // Update existing toolset
+      await this.prisma.toolset.update({
+        where: { pk: existingToolset.pk },
+        data: {
+          enabled: true,
+          uninstalled: false,
+          deletedAt: null,
+          config: JSON.stringify(oauthConfig),
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(`OAuth toolset updated with definition: ${appSlug}`);
+    } else {
+      // Create new toolset
+      await this.prisma.toolset.create({
+        data: {
+          toolsetId: this.generateToolsetId(),
+          uid: user.uid,
+          key: appSlug,
+          name: (definition?.labelDict?.en as string) || appSlug,
+          authType: 'oauth',
+          enabled: true,
+          isGlobal: false,
+          config: JSON.stringify(oauthConfig),
+        },
+      });
+      this.logger.log(`OAuth toolset created with definition: ${appSlug}`);
+    }
+  }
+
+  /**
+   * Generate a unique toolset ID
+   */
+  private generateToolsetId(): string {
+    return `toolset_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 
   /**
@@ -375,5 +444,184 @@ export class ComposioService {
       structuredTools.push(...langchainTools);
     }
     return structuredTools;
+  }
+
+  /**
+   * Fetch OAuth integration definition from Composio API
+   * Returns definition metadata (name, description, icon, tools list)
+   */
+  async fetchDefinition(appSlug: string, domain?: string): Promise<ToolsetDefinition | null> {
+    try {
+      // If domain not provided, try to get from database
+      let toolsetDomain = domain;
+      if (!toolsetDomain) {
+        const toolset = await this.prisma.toolset.findFirst({
+          where: {
+            key: appSlug,
+            authType: 'oauth',
+            deletedAt: null,
+          },
+          select: {
+            domain: true,
+          },
+        });
+        toolsetDomain = toolset?.domain || appSlug;
+      }
+
+      // Fetch tools for this integration
+      const tools = await this.composio.tools.get('system', {
+        toolkits: [appSlug],
+        limit: 100,
+      });
+
+      if (!tools || tools.length === 0) {
+        this.logger.warn(`No tools found for integration: ${appSlug}`);
+        return null;
+      }
+
+      // Extract toolkit metadata from first tool (tools are in OpenAI function format)
+      const firstTool = tools[0] as any;
+      const toolkit = firstTool?.toolkit;
+      const toolkitName = toolkit?.name || appSlug;
+      const toolkitDesc = toolkit?.description || '';
+
+      // Build ToolsetDefinition from Composio data
+      const definition: ToolsetDefinition = {
+        key: appSlug,
+        domain: toolsetDomain,
+        labelDict: {
+          en: toolkitName,
+          zh: toolkitName,
+        },
+        descriptionDict: {
+          en: toolkitDesc || `${toolkitName} integration`,
+          zh: toolkitDesc || `${toolkitName} 集成`,
+        },
+        requiresAuth: true,
+        tools: tools.map((tool: any) => {
+          const fn = tool?.function || {};
+          return {
+            name: fn.name || 'unknown',
+            descriptionDict: {
+              en: fn.description || '',
+              zh: fn.description || '',
+            },
+            category: this.inferCategory(fn),
+          };
+        }),
+      };
+
+      return definition;
+    } catch (error) {
+      this.logger.error(`Failed to fetch definition for ${appSlug}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Get OAuth integration definition with caching
+   * Priority: Redis Cache > Toolset Config > Composio API
+   */
+  async getDefinition(appSlug: string): Promise<ToolsetDefinition | null> {
+    const cacheKey = `${this.DEFINITION_CACHE_PREFIX}${appSlug}`;
+
+    try {
+      // 1. Try Redis cache first
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        this.logger.debug(`Definition cache hit for ${appSlug}`);
+        return JSON.parse(cached);
+      }
+
+      // 2. Try from any toolset's config field
+      const toolset = await this.prisma.toolset.findFirst({
+        where: {
+          key: appSlug,
+          authType: 'oauth',
+          deletedAt: null,
+        },
+        select: {
+          config: true,
+        },
+      });
+
+      if (toolset?.config) {
+        const config: OAuthToolsetConfig = JSON.parse(toolset.config);
+        if (config?.definition) {
+          // Update cache
+          await this.redis.setex(
+            cacheKey,
+            this.DEFINITION_CACHE_TTL,
+            JSON.stringify(config.definition),
+          );
+          this.logger.debug(`Definition loaded from config for ${appSlug}`);
+          return config.definition;
+        }
+      }
+
+      // 3. Fetch from Composio API
+      const definition = await this.fetchDefinition(appSlug);
+      if (definition) {
+        // Save to cache
+        await this.redis.setex(cacheKey, this.DEFINITION_CACHE_TTL, JSON.stringify(definition));
+        this.logger.log(`Definition fetched from Composio API for ${appSlug}`);
+        return definition;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to get definition for ${appSlug}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Invalidate definition cache
+   */
+  async invalidateCache(appSlug: string): Promise<void> {
+    const cacheKey = `${this.DEFINITION_CACHE_PREFIX}${appSlug}`;
+    await this.redis.del(cacheKey);
+    this.logger.log(`Invalidated definition cache for ${appSlug}`);
+  }
+
+  /**
+   * Get default icon URL for known apps
+   */
+  private getDefaultIcon(appSlug: string): string {
+    const iconMap: Record<string, string> = {
+      'google-drive': '/icons/google-drive.svg',
+      'google-docs': '/icons/google-docs.svg',
+      'google-sheets': '/icons/google-sheets.svg',
+      gmail: '/icons/gmail.svg',
+      github: '/icons/github.svg',
+      twitter: '/icons/twitter.svg',
+      notion: '/icons/notion.svg',
+      reddit: '/icons/reddit.svg',
+    };
+
+    return iconMap[appSlug] || '/icons/oauth-default.svg';
+  }
+
+  /**
+   * Infer tool category from tool metadata
+   */
+  private inferCategory(tool: any): string {
+    const name = tool.name?.toLowerCase() || '';
+    const description = tool.description?.toLowerCase() || '';
+
+    if (name.includes('search') || description.includes('search')) {
+      return 'search';
+    }
+    if (name.includes('file') || name.includes('document')) {
+      return 'document';
+    }
+    if (name.includes('mail') || name.includes('email')) {
+      return 'communication';
+    }
+    if (name.includes('calendar') || name.includes('event')) {
+      return 'productivity';
+    }
+
+    return 'general';
   }
 }

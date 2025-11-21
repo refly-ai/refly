@@ -1,6 +1,6 @@
 import { Button, Modal, Divider, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -23,6 +23,7 @@ interface FormValues {
 const LoginModal = (props: { visible?: boolean; from?: string }) => {
   const [form] = Form.useForm<FormValues>();
   const [searchParams] = useSearchParams();
+  const [isEmailFormExpanded, setIsEmailFormExpanded] = useState(false);
 
   const authStore = useAuthStoreShallow((state) => ({
     loginInProgress: state.loginInProgress,
@@ -157,9 +158,14 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
     [form, authStore],
   );
 
+  const handleToggleEmailForm = useCallback(() => {
+    setIsEmailFormExpanded((prev) => !prev);
+  }, []);
+
   useEffect(() => {
     if (!authStore.loginModalOpen) {
       authStore.setIsSignUpMode(false);
+      setIsEmailFormExpanded(false);
     }
   }, [authStore]);
 
@@ -191,16 +197,6 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
         <div className="flex flex-col items-center justify-center p-10">
           {(isGithubEnabled || isGoogleEnabled) && (
             <div className="flex flex-col items-center justify-center gap-2 w-full">
-              {isGithubEnabled && (
-                <OAuthButton
-                  provider="github"
-                  onClick={() => handleLogin('github')}
-                  loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
-                  disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
-                  loadingText={t('landingPage.loginModal.loggingStatus')}
-                  buttonText={t('landingPage.loginModal.oauthBtn.github')}
-                />
-              )}
               {isGoogleEnabled && (
                 <OAuthButton
                   provider="google"
@@ -211,18 +207,38 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
                   buttonText={t('landingPage.loginModal.oauthBtn.google')}
                 />
               )}
+              {isGithubEnabled && (
+                <OAuthButton
+                  provider="github"
+                  onClick={() => handleLogin('github')}
+                  loading={authStore.loginInProgress && authStore.loginProvider === 'github'}
+                  disabled={authStore.loginInProgress && authStore.loginProvider !== 'github'}
+                  loadingText={t('landingPage.loginModal.loggingStatus')}
+                  buttonText={t('landingPage.loginModal.oauthBtn.github')}
+                />
+              )}
             </div>
           )}
 
           {(isGithubEnabled || isGoogleEnabled) && isEmailEnabled && (
             <Divider className="!mb-3 !mt-8 !h-4">
-              <span className="text-refly-text-2 text-xs font-normal leading-none">
-                {t('landingPage.loginModal.or')}
-              </span>
+              <Button
+                type="link"
+                className="px-3 py-1 text-xs font-normal border-0 bg-transparent"
+                onClick={handleToggleEmailForm}
+                data-cy="email-form-toggle"
+              >
+                <span className="mr-0 text-refly-text-2">{t('landingPage.loginModal.or')}</span>
+                <span
+                  className={`transition-transform duration-200 text-refly-text-2 ${isEmailFormExpanded ? 'rotate-180' : ''}`}
+                >
+                  ▼
+                </span>
+              </Button>
             </Divider>
           )}
 
-          {isEmailEnabled && (
+          {isEmailEnabled && isEmailFormExpanded && (
             <>
               <Form form={form} layout="vertical" className="w-full" requiredMark={false}>
                 <Form.Item

@@ -1,43 +1,42 @@
+import { mentionStyles } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/variable/mention-style';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import {
-  memo,
-  useCallback,
-  forwardRef,
-  useEffect,
-  useState,
-  useMemo,
-  useRef,
-  useImperativeHandle,
-} from 'react';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useSearchStoreShallow } from '@refly/stores';
-import { cn } from '@refly/utils/cn';
-import { useUserStoreShallow } from '@refly/stores';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import { PasteCleanupExtension } from './paste-extension';
+  createNodeEventName,
+  nodeActionEmitter,
+} from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
+import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import type { IContextItem } from '@refly/common-types';
 import type { CanvasNodeType, GenericToolset } from '@refly/openapi-schema';
-import { mentionStyles } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/variable/mention-style';
+import { useSearchStoreShallow, useUserStoreShallow } from '@refly/stores';
+import { cn } from '@refly/utils/cn';
+import Placeholder from '@tiptap/extension-placeholder';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 import { useStore } from '@xyflow/react';
+import React, {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import {
-  nodeActionEmitter,
-  createNodeEventName,
-} from '@refly-packages/ai-workspace-common/events/nodeActions';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
-import { type MentionItem } from './mentionList';
-import { createMentionExtension, type MentionPosition } from './mention-extension';
 import AtomicInlineKeymap from './atomic-inline-keymap';
+import { useListMentionItems } from './hooks/use-list-mention-items';
+import { createMentionExtension, type MentionPosition } from './mention-extension';
+import { type MentionItem } from './mentionList';
+import { PasteCleanupExtension } from './paste-extension';
 import {
-  serializeDocToTokens,
   buildNodesFromContent,
   createContextItemFromMentionItem,
+  serializeDocToTokens,
 } from './utils';
-import { useListMentionItems } from './hooks/use-list-mention-items';
-import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
+import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
 
 interface RichChatInputProps {
   readonly: boolean;
@@ -82,8 +81,9 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
     }));
-    const { query, setQuery, setContextItems, setSelectedToolsets, setUpstreamResultIds } =
+    const { query, setQuery, setContextItems, setSelectedToolsets } =
       useAgentNodeManagement(nodeId);
+    const { connectToUpstreamAgent } = useAgentConnections();
 
     const [isMentionListVisible, setIsMentionListVisible] = useState(false);
 
@@ -139,17 +139,11 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       [setSelectedToolsets],
     );
 
-    const addToUpstreamResultIds = useCallback(
+    const addToUpstreamAgents = useCallback(
       (resultId: string) => {
-        setUpstreamResultIds((prevResultIds) => {
-          const isAlreadyIncluded = (prevResultIds ?? []).includes(resultId);
-          if (isAlreadyIncluded) {
-            return prevResultIds ?? [];
-          }
-          return [...(prevResultIds ?? []), resultId];
-        });
+        connectToUpstreamAgent(nodeId, resultId);
       },
-      [setUpstreamResultIds],
+      [connectToUpstreamAgent, nodeId],
     );
 
     // Helper function to insert mention into editor
@@ -195,7 +189,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
               const contextItem = createContextItemFromMentionItem(item);
               addToContextItems(contextItem);
             } else if (item.source === 'agents') {
-              addToUpstreamResultIds(item.entityId);
+              addToUpstreamAgents(item.entityId);
             }
           }, 100);
         } else if (item.source === 'toolsets' || item.source === 'tools') {
@@ -388,18 +382,103 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       [editor, readonly, hasUserInteractedRef, popupInstanceRef],
     );
 
+    // Sync all mentions in the editor to contextItems/selectedToolsets
+    const syncMentionsToState = useCallback(() => {
+      if (!editor) return;
+
+      const doc = editor?.state?.doc;
+      if (!doc) return;
+
+      const mentionNodes: any[] = [];
+      doc.descendants((node: any) => {
+        if (node?.type?.name === 'mention') {
+          mentionNodes.push(node);
+        }
+      });
+
+      // Collect file mentions and sync to contextItems
+      const fileMentions = mentionNodes.filter(
+        (node) => node?.attrs?.source === 'files' || node?.attrs?.source === 'products',
+      );
+
+      if (fileMentions.length > 0) {
+        const newContextItems: IContextItem[] = [];
+        for (const mention of fileMentions) {
+          const attrs = mention?.attrs;
+          if (attrs?.entityId) {
+            const contextItem: IContextItem = {
+              entityId: attrs.entityId,
+              title: attrs.label || attrs.id,
+              type: 'file',
+              metadata: {
+                source: attrs.source || 'files',
+                resourceType: attrs.resourceType,
+                resourceMeta: attrs.resourceMeta,
+              },
+            };
+            newContextItems.push(contextItem);
+          }
+        }
+
+        if (newContextItems.length > 0) {
+          setContextItems((prevContextItems) => {
+            const existing = prevContextItems ?? [];
+            const merged = [...existing];
+            for (const item of newContextItems) {
+              if (!existing.some((ctx) => ctx.entityId === item.entityId)) {
+                merged.push(item);
+              }
+            }
+            return merged;
+          });
+        }
+      }
+
+      // Collect tool mentions and sync to selectedToolsets
+      const toolMentions = mentionNodes.filter(
+        (node) => node?.attrs?.source === 'tools' || node?.attrs?.source === 'toolsets',
+      );
+
+      if (toolMentions.length > 0) {
+        const newToolsets: GenericToolset[] = [];
+        for (const mention of toolMentions) {
+          const attrs = mention?.attrs;
+          if (attrs?.toolset && attrs?.toolsetId) {
+            newToolsets.push(attrs.toolset);
+          }
+        }
+
+        if (newToolsets.length > 0) {
+          setSelectedToolsets((prevToolsets) => {
+            const existing = prevToolsets ?? [];
+            const merged = [...existing];
+            for (const toolset of newToolsets) {
+              if (!existing.some((t) => t.id === toolset.id)) {
+                merged.push(toolset);
+              }
+            }
+            return merged;
+          });
+        }
+      }
+    }, [editor, setContextItems, setSelectedToolsets]);
+
     // Enhanced handleSendMessage that converts mentions to Handlebars
     const handleSendMessageWithMentions = useCallback(() => {
       if (editor) {
         const currentContent = serializeDocToTokens(editor?.state?.doc);
         // Update the query with the serialized content before sending
         setQuery(currentContent);
+
+        // Sync all mentions to state before sending
+        syncMentionsToState();
+
         // Call the original handleSendMessage
         handleSendMessage();
       } else {
         handleSendMessage();
       }
-    }, [editor, setQuery, handleSendMessage, serializeDocToTokens]);
+    }, [editor, setQuery, handleSendMessage, syncMentionsToState]);
 
     const isSyncedExternalQuery = useRef(false);
 

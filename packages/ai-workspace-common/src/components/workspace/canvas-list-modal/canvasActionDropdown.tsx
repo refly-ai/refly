@@ -32,6 +32,7 @@ export const CanvasActionDropdown = memo((props: CanvasActionDropdown) => {
     updateShowStatus,
     handleUseCanvas,
     handleRemoveFromProject,
+    afterDelete,
     children,
     offset,
   } = props;
@@ -124,7 +125,7 @@ export const CanvasActionDropdown = memo((props: CanvasActionDropdown) => {
           className="flex items-center text-refly-func-danger-default gap-1"
           onClick={(e) => {
             e.stopPropagation();
-            openDeleteModal(canvasId, canvasName);
+            openDeleteModal(canvasId, canvasName, afterDelete);
             setPopupVisible(false);
           }}
         >
