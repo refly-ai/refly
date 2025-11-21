@@ -117,7 +117,7 @@ export class ScaleboxService {
   ): Promise<ScaleboxExecutionResult> {
     return guard.defer(
       async () => {
-        await wrapper.mountDrive(s3DrivePath);
+        await wrapper.mountDrive(s3DrivePath, { allowNonEmpty: true });
         return [wrapper, () => wrapper.unmountDrive()] as const;
       },
       (wrapper) => this.runCodeInSandbox(wrapper, params),
