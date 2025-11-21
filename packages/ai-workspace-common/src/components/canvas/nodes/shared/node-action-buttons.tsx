@@ -121,8 +121,12 @@ export const NodeActionButtons: FC<NodeActionButtonsProps> = memo(
 
       try {
         const content = (await fetchNodeContent()) as string;
-        copyToClipboard(content || '');
-        message.success(t('copilot.message.copySuccess'));
+        const copied = await copyToClipboard(content || '').catch(() => false);
+        if (copied) {
+          message.success(t('copilot.message.copySuccess'));
+        } else {
+          message.error(t('copilot.message.copyFailed'));
+        }
       } catch (error) {
         console.error('Failed to copy content:', error);
         message.error(t('copilot.message.copyFailed'));

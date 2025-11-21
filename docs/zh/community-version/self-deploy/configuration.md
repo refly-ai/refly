@@ -199,11 +199,10 @@ Refly 需要两个 MinIO 实例：
 
 | 环境变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| SKILL_STREAM_IDLE_TIMEOUT | 技能流空闲超时时间（毫秒） | `30000` |
-| SKILL_STREAM_IDLE_CHECK_INTERVAL | 技能流空闲检查间隔（毫秒） | `10000` |
-| SKILL_STUCK_CHECK_INTERVAL | 技能卡住检查间隔（毫秒） | `60000` |
-| SKILL_STUCK_TIMEOUT_THRESHOLD | 技能卡住超时阈值（毫秒） | `300000` |
-| SKILL_AI_MODEL_NETWORK_TIMEOUT | AI 模型网络超时时间（毫秒） | `30000` |
+| SKILL_STREAM_IDLE_TIMEOUT | 技能流空闲超时时间（毫秒） | `0` |
+| SKILL_STREAM_IDLE_CHECK_INTERVAL | 技能流空闲检查间隔（毫秒） | `3000` |
+| SKILL_STUCK_CHECK_INTERVAL | 技能卡住检查间隔（毫秒） | `0` |
+| SKILL_STUCK_TIMEOUT_THRESHOLD | 技能卡住超时阈值（毫秒） | `0` |
 
 ### 提供商配置
 

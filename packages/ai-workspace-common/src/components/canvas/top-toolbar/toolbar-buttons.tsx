@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useCallback } from 'react';
 import { Divider, Button } from 'antd';
-import { Resource, Play, Note1, AiChat, Chat } from 'refly-icons';
+import { Play, Substrsct, AiChat, MessageSmile, ResourceFilled } from 'refly-icons';
 import { ToolsDependency } from '../tools-dependency';
 import { CreateVariablesModal } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { genMemoID } from '@refly/utils/id';
@@ -146,21 +146,21 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
       : [
           {
             key: 'addUserInput',
-            icon: <Chat size={16} />,
+            icon: <MessageSmile size={20} />,
             onClick: handleAddUserInput,
             label: t('canvas.toolbar.tooltip.addUserInput'),
             active: false,
           },
           {
             key: 'addAgent',
-            icon: <AiChat size={16} />,
+            icon: <AiChat size={20} />,
             onClick: handleAddAgent,
             label: t('canvas.toolbar.tooltip.addAgent'),
             active: false,
           },
           {
             key: 'addNote',
-            icon: <Note1 size={16} />,
+            icon: <Substrsct size={20} />,
             onClick: handleAddMemo,
             label: t('canvas.toolbar.tooltip.addNote'),
           },
@@ -174,7 +174,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
 
       {
         key: 'resources',
-        icon: <Resource size={16} />,
+        icon: <ResourceFilled size={18} />,
         onClick: handleResourcesPanelOpen,
         label: t('canvas.toolbar.tooltip.resourceLibrary'),
         active: sidePanelVisible,

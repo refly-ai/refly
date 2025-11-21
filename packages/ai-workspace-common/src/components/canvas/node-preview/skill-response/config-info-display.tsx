@@ -9,6 +9,7 @@ import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
 import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LabelItem } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
+import { useCanvasNodesStoreShallow } from '@refly/stores';
 
 interface ConfigInfoDisplayProps {
   prompt: string;
@@ -29,7 +30,7 @@ const SectionTitle = memo(
       <span>{children}</span>
       {tooltip && (
         <Tooltip title={tooltip} placement="top">
-          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
         </Tooltip>
       )}
     </div>
@@ -49,7 +50,9 @@ export const ConfigInfoDisplay = memo(
     removeUpstreamAgent,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
-
+    const { setHighlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+      setHighlightedNodeId: state.setHighlightedNodeId,
+    }));
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
 
     // Extract tools
@@ -189,6 +192,8 @@ export const ConfigInfoDisplay = memo(
               const title = node?.data?.title;
               return (
                 <LabelItem
+                  onMouseEnter={() => setHighlightedNodeId(node.id)}
+                  onMouseLeave={() => setHighlightedNodeId(null)}
                   key={`${node.id}-${index}`}
                   icon={<AiChat size={14} className="flex-shrink-0" />}
                   labeltext={title || t('canvas.richChatInput.untitledAgent')}

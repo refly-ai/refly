@@ -7,7 +7,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { useSkillResponseLoadingStatus } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-loading-status';
-import { ArrowRight } from 'refly-icons';
+import { TurnRight } from 'refly-icons';
 
 interface PublishTemplateButtonProps {
   canvasId: string;
@@ -89,7 +89,7 @@ const PublishTemplateButton = React.memo(
           <Button
             disabled={toolbarLoading || !skillResponseNodes?.length}
             type="primary"
-            icon={<ArrowRight size={16} />}
+            icon={<TurnRight size={16} />}
             onClick={() => {
               logEvent('canvas::canvas_publish_template', Date.now(), {
                 canvas_id: canvasId,

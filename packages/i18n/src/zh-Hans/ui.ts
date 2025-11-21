@@ -1596,7 +1596,7 @@ const translations = {
       copy: '复制节点内容',
       copyDescription: '将节点内容以 Markdown 格式复制到剪贴板',
       createDocumentDescription: '创建文档',
-      askAI: '问问 AI',
+      askAI: '添加自定义Agent',
       askAIDescription:
         '向 AI 提问，选择上下文或切换技能后输入需求，获取写作、阅读理解或问题解答等帮助',
       cloneAskAI: '克隆 AI 提问',
@@ -3077,8 +3077,10 @@ const translations = {
   },
   components: {
     markdown: {
-      parameters: '参数：',
-      result: '结果：',
+      parameters: '输入',
+      result: ' 结果',
+      parameterName: '名称',
+      parameterValue: '值',
       copySuccess: '已复制到剪贴板',
       emptyCode: '无法创建空代码组件',
       codeArtifactCreated: '代码组件已创建',

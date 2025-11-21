@@ -230,7 +230,6 @@ export class SkillInvokerService {
   }
 
   private categorizeError(err: Error): {
-    isNetworkTimeout: boolean;
     isGeneralTimeout: boolean;
     isNetworkError: boolean;
     isAbortError: boolean;
@@ -246,25 +245,18 @@ export class SkillInvokerService {
       err instanceof Error && (err.name === 'AbortError' || /abort/i.test(err.message));
     const isNetworkError =
       err instanceof Error && (err.name === 'NetworkError' || /network|fetch/i.test(err.message));
-    const isNetworkTimeout =
-      errorMessage.includes('AI model network timeout') ||
-      (isTimeoutError && errorMessage.includes('network'));
-    const isGeneralTimeout = isTimeoutError && !isNetworkTimeout;
+    const isGeneralTimeout = isTimeoutError;
 
     let userFriendlyMessage = errorMessage;
     let logLevel: 'error' | 'warn' = 'error';
 
     const ERROR_MESSAGES = {
-      NETWORK_TIMEOUT:
-        'AI provider network request timeout. Please check provider configuration or network connection.',
       GENERAL_TIMEOUT: 'Request timeout. Please try again later.',
       NETWORK_ERROR: 'Network connection error. Please check your network status.',
       ABORT_ERROR: 'Operation was aborted.',
     } as const;
 
-    if (isNetworkTimeout) {
-      userFriendlyMessage = ERROR_MESSAGES.NETWORK_TIMEOUT;
-    } else if (isGeneralTimeout) {
+    if (isGeneralTimeout) {
       userFriendlyMessage = ERROR_MESSAGES.GENERAL_TIMEOUT;
     } else if (isNetworkError) {
       userFriendlyMessage = ERROR_MESSAGES.NETWORK_ERROR;
@@ -274,7 +266,6 @@ export class SkillInvokerService {
     }
 
     return {
-      isNetworkTimeout,
       isGeneralTimeout,
       isNetworkError,
       isAbortError,
@@ -329,9 +320,6 @@ export class SkillInvokerService {
     // Create abort controller for this action
     const abortController = new AbortController();
 
-    // Network timeout tracking for AI model requests
-    let networkTimeoutId: NodeJS.Timeout | null = null;
-
     // Delete queued job mapping from Redis (job has started executing)
     await this.actionService.deleteQueuedJob(resultId);
 
@@ -381,12 +369,11 @@ export class SkillInvokerService {
     let timeoutCheckInterval: NodeJS.Timeout | null = null;
     const streamIdleTimeout = this.config.get('skill.streamIdleTimeout');
 
-    // Validate streamIdleTimeout to ensure it's a positive number
+    // Skip timeout check if streamIdleTimeout is not a positive number
     if (!streamIdleTimeout || streamIdleTimeout <= 0) {
-      this.logger.error(
-        `Invalid streamIdleTimeout: ${streamIdleTimeout}. Must be a positive number.`,
+      this.logger.debug(
+        `Stream idle timeout disabled (streamIdleTimeout: ${streamIdleTimeout}). Skipping timeout check.`,
       );
-      throw new Error(`Invalid streamIdleTimeout configuration: ${streamIdleTimeout}`);
     }
 
     // Helper function for timeout message generation
@@ -414,7 +401,7 @@ export class SkillInvokerService {
 
           const now = Date.now();
           const timeSinceLastOutput = now - lastOutputTime;
-          const isTimeout = timeSinceLastOutput > streamIdleTimeout;
+          const isTimeout = streamIdleTimeout > 0 && timeSinceLastOutput > streamIdleTimeout;
 
           if (isTimeout) {
             this.logger.warn(
@@ -544,12 +531,6 @@ export class SkillInvokerService {
       // Stop stream idle timeout check interval
       stopTimeoutCheck();
 
-      // Clear AI model network timeout
-      if (networkTimeoutId) {
-        clearTimeout(networkTimeoutId);
-        networkTimeoutId = null;
-      }
-
       this.logger.debug(
         `Cleaned up all timeout intervals for action ${resultId} due to abort/completion`,
       );
@@ -558,53 +539,12 @@ export class SkillInvokerService {
     // Register cleanup on abort signal
     abortController.signal.addEventListener('abort', performCleanup);
 
-    // Start the timeout check when we begin streaming
-    startTimeoutCheck();
+    // Start the timeout check when we begin streaming (only if timeout is enabled)
+    if (streamIdleTimeout > 0) {
+      startTimeoutCheck();
+    }
 
     try {
-      // AI model provider network timeout (30 seconds)
-      const aiModelNetworkTimeout = this.config.get<number>('skill.aiModelNetworkTimeout', 30000);
-
-      // Validate aiModelNetworkTimeout to ensure it's a positive number
-      if (aiModelNetworkTimeout <= 0) {
-        this.logger.error(
-          `Invalid aiModelNetworkTimeout: ${aiModelNetworkTimeout}. Must be a positive number.`,
-        );
-        throw new Error(`Invalid aiModelNetworkTimeout configuration: ${aiModelNetworkTimeout}`);
-      }
-
-      this.logger.log(
-        `🌐 Starting AI model network request (model timeout: ${aiModelNetworkTimeout}ms) for action: ${resultId}`,
-      );
-
-      // Create dedicated timeout for AI model network requests
-      const createNetworkTimeout = () => {
-        if (abortController.signal.aborted) {
-          return;
-        }
-        if (networkTimeoutId) {
-          clearTimeout(networkTimeoutId);
-        }
-        networkTimeoutId = setTimeout(() => {
-          if (abortController.signal.aborted) {
-            return;
-          }
-
-          this.logger.error(
-            `🚨 AI model network timeout (${aiModelNetworkTimeout}ms) for action: ${resultId}`,
-          );
-          abortController.abort('AI model network timeout');
-        }, aiModelNetworkTimeout);
-      };
-
-      // Reset network timeout on each network activity
-      const resetNetworkTimeout = () => {
-        createNetworkTimeout();
-      };
-
-      // Start initial network timeout
-      createNetworkTimeout();
-
       // tool callId, now we use first time returned run_id as tool call id
       const startTs = Date.now();
       const toolCallIds: Set<string> = new Set();
@@ -614,9 +554,6 @@ export class SkillInvokerService {
         version: 'v2',
         signal: abortController.signal,
       })) {
-        // Reset network timeout on receiving data from AI model
-        resetNetworkTimeout();
-
         if (abortController.signal.aborted) {
           const abortReason = abortController.signal.reason?.toString() ?? 'Request aborted';
           this.logger.warn(`🚨 Request aborted for action: ${resultId}, reason: ${abortReason}`);
@@ -880,9 +817,7 @@ export class SkillInvokerService {
       const errorType = err.name || 'Error';
 
       // Log error based on categorization
-      if (errorInfo.isNetworkTimeout) {
-        this.logger.error(`🚨 AI model network timeout for action: ${resultId} - ${errorMessage}`);
-      } else if (errorInfo.isGeneralTimeout) {
+      if (errorInfo.isGeneralTimeout) {
         this.logger.error(`🚨 Network timeout detected for action: ${resultId} - ${errorMessage}`);
       } else if (errorInfo.isNetworkError) {
         this.logger.error(`🌐 Network error for action: ${resultId} - ${errorMessage}`);

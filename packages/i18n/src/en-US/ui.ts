@@ -1603,7 +1603,7 @@ const translations = {
       copy: 'Copy Node Content',
       copyDescription: 'Copy the content of the selected node to the clipboard in Markdown format',
       createDocumentDescription: 'Create a document for writing',
-      askAI: 'Ask AI',
+      askAI: 'Add Custom Agent',
       askAIDescription:
         'Ask AI, select context or switch skill, input requirements, get help with writing, reading comprehension, or question answering',
       cloneAskAI: 'Clone Ask AI',
@@ -3118,8 +3118,10 @@ const translations = {
   },
   components: {
     markdown: {
-      parameters: 'Parameters:',
-      result: 'Result:',
+      parameters: 'Input',
+      result: ' Output',
+      parameterName: 'Name',
+      parameterValue: 'Value',
       copySuccess: 'Copied to clipboard',
       emptyCode: 'Cannot create empty code artifact',
       codeArtifactCreated: 'Code artifact created',

@@ -853,7 +853,7 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
             type="text"
             icon={
               <IoWarningOutline
-                size={16}
+                size={18}
                 color="var(--refly-func-warning-default)"
                 className="flex items-center"
               />
