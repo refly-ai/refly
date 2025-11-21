@@ -2306,7 +2306,7 @@ export const ActionResultSchema = {
     },
     errorType: {
       type: 'string',
-      description: 'Error type (defaults to systemError if undefined)',
+      description: 'Error type (defaults to systemError when omitted)',
       $ref: '#/components/schemas/ActionErrorType',
     },
     type: {

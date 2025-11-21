@@ -1770,7 +1770,7 @@ export type ActionResult = {
    */
   status?: ActionStatus;
   /**
-   * Error type (defaults to systemError if undefined)
+   * Error type (defaults to systemError when omitted)
    */
   errorType?: ActionErrorType;
   /**

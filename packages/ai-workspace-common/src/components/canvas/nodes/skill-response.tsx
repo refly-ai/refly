@@ -147,7 +147,7 @@ const NodeStatusBar = memo(
                   {t('canvas.skillResponse.userAbort.description')}
                 </Paragraph>
               ) : (
-                errors.map((error, index) => (
+                errors?.map((error, index) => (
                   <Paragraph
                     key={index}
                     className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
