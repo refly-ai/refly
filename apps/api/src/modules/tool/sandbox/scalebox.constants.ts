@@ -11,6 +11,17 @@ export const SCALEBOX_DEFAULT_MIN_REMAINING_MS = 2 * 60 * 1000; // 2 minutes
 export const SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
+ * Maximum lifetime for a single sandbox instance
+ * Prevents accumulation of:
+ * - FUSE mount/unmount residual state (memory, file descriptors)
+ * - User code side effects (background processes, timers, cron jobs)
+ * - Temporary files, log files, and orphaned processes
+ * - Global state pollution (env vars, Python modules, Node globals)
+ * Sandboxes exceeding this lifetime are discarded instead of being reused
+ */
+export const SCALEBOX_DEFAULT_MAX_LIFETIME_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+/**
  * Canvas-level execution lock configuration
  * Controls concurrent execution timeout for the same canvas
  */

@@ -13,6 +13,7 @@ import {
   SCALEBOX_DEFAULT_MAX_SANDBOXES,
   SCALEBOX_DEFAULT_MIN_REMAINING_MS,
   SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS,
+  SCALEBOX_DEFAULT_MAX_LIFETIME_MS,
   S3_DEFAULT_CONFIG,
 } from './scalebox.constants';
 import { Trace, setSpanAttributes } from './scalebox.tracer';
@@ -35,6 +36,9 @@ export class SandboxPool {
 
   @Config.integer('sandbox.scalebox.extendTimeoutMs', SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS)
   private extendTimeoutMs: number;
+
+  @Config.integer('sandbox.scalebox.maxLifetimeMs', SCALEBOX_DEFAULT_MAX_LIFETIME_MS)
+  private maxLifetimeMs: number;
 
   @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
   private s3Config: S3Config;
@@ -160,9 +164,23 @@ export class SandboxPool {
 
         const isHealthy = await wrapper.isHealthy();
         guard.ensure(isHealthy).orThrow(() => new Error('Sandbox is not healthy'));
+
         guard
           .ensure(remainingMs >= this.minRemainingMs)
           .orThrow(() => new Error('Sandbox remaining time too low'));
+
+        const lifetimeMs = Date.now() - wrapper.createdAt;
+        guard.ensure(lifetimeMs < this.maxLifetimeMs).orThrow(() => {
+          this.logger.info(
+            {
+              sandboxId,
+              lifetimeHours: (lifetimeMs / (60 * 60 * 1000)).toFixed(2),
+              maxLifetimeHours: (this.maxLifetimeMs / (60 * 60 * 1000)).toFixed(2),
+            },
+            'Sandbox exceeded max lifetime, discarding',
+          );
+          return new Error('Sandbox exceeded max lifetime');
+        });
 
         const metadata = wrapper.toMetadata();
         const ttlSeconds = Math.floor(remainingMs / 1000);
@@ -174,6 +192,7 @@ export class SandboxPool {
           {
             sandboxId,
             expiresIn: ttlSeconds,
+            lifetimeHours: (lifetimeMs / (60 * 60 * 1000)).toFixed(2),
             active: activeCount,
             max: this.maxSandboxes,
           },
