@@ -189,7 +189,15 @@ export const useAddNode = () => {
       // Return the calculated position
       return newNode.position;
     },
-    [canvasId, edgeStyles, setNodeCenter, previewNode, t, layoutBranchAndUpdatePositions],
+    [
+      canvasId,
+      edgeStyles,
+      setNodeCenter,
+      previewNode,
+      t,
+      layoutBranchAndUpdatePositions,
+      defaultChatModel,
+    ],
   );
 
   return { addNode };

@@ -198,7 +198,7 @@ export const generateCanvasDataFromWorkflowPlan = (
     const dependencyGraph = new Map<string, Set<string>>();
 
     for (const task of workflowPlan.tasks) {
-      const taskId = task?.id ?? `task-${task.id}`;
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
       taskMap.set(taskId, task);
 
       if (Array.isArray(task.dependentTasks)) {
@@ -216,7 +216,7 @@ export const generateCanvasDataFromWorkflowPlan = (
     const dependentTasks: typeof workflowPlan.tasks = [];
 
     for (const task of workflowPlan.tasks) {
-      const taskId = task?.id ?? `task-${task.id}`;
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
       const hasDependencies = dependencyGraph.has(taskId) && dependencyGraph.get(taskId)!.size > 0;
 
       if (!hasDependencies) {
@@ -229,7 +229,7 @@ export const generateCanvasDataFromWorkflowPlan = (
     // Process root tasks first
     let taskIndex = 0;
     for (const task of [...rootTasks, ...dependentTasks]) {
-      const taskId = task?.id ?? `task-${task.id}`;
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
       const taskTitle = task?.title ?? '';
       const taskPrompt = task?.prompt ?? '';
 
@@ -309,7 +309,7 @@ export const generateCanvasDataFromWorkflowPlan = (
 
     // Phase 2: Create dependency edges
     for (const task of workflowPlan.tasks) {
-      const taskId = task?.id ?? `task-${task.id}`;
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
       const taskNodeId = taskIdToNodeId.get(taskId);
 
       if (!taskNodeId) continue;
