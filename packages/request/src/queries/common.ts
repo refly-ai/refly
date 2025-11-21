@@ -4,9 +4,11 @@ import { type Options } from '@hey-api/client-fetch';
 import { UseQueryResult } from '@tanstack/react-query';
 import {
   abortAction,
+  activateInvitationCode,
   addNodesToCanvasPage,
   authorizeComposioConnection,
   autoNameCanvas,
+  batchCreateDriveFiles,
   batchCreateProviderItems,
   batchCreateResource,
   batchUpdateDocument,
@@ -21,6 +23,7 @@ import {
   createCheckoutSession,
   createCodeArtifact,
   createDocument,
+  createDriveFile,
   createLabelClass,
   createLabelInstance,
   createMcpServer,
@@ -39,6 +42,7 @@ import {
   createWorkflowApp,
   deleteCanvas,
   deleteDocument,
+  deleteDriveFile,
   deleteLabelClass,
   deleteLabelInstance,
   deleteMcpServer,
@@ -92,6 +96,7 @@ import {
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
+  hasBeenInvited,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -103,6 +108,8 @@ import {
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
+  listDriveFiles,
+  listInvitationCodes,
   listLabelClasses,
   listLabelInstances,
   listMcpServers,
@@ -143,6 +150,7 @@ import {
   updateCanvasTemplate,
   updateCodeArtifact,
   updateDocument,
+  updateDriveFile,
   updateLabelClass,
   updateLabelInstance,
   updateMcpServer,
@@ -319,6 +327,16 @@ export const UseGetWorkflowVariablesKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetWorkflowVariablesKey, ...(queryKey ?? [clientOptions])];
+export type ListDriveFilesDefaultResponse = Awaited<ReturnType<typeof listDriveFiles>>['data'];
+export type ListDriveFilesQueryResult<
+  TData = ListDriveFilesDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListDriveFilesKey = 'ListDriveFiles';
+export const UseListDriveFilesKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useListDriveFilesKey, ...(queryKey ?? [clientOptions])];
 export type ListCanvasTemplatesDefaultResponse = Awaited<
   ReturnType<typeof listCanvasTemplates>
 >['data'];
@@ -699,6 +717,28 @@ export const UseGetCreditUsageByCanvasIdKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCreditUsageByCanvasIdKey, ...(queryKey ?? [clientOptions])];
+export type ListInvitationCodesDefaultResponse = Awaited<
+  ReturnType<typeof listInvitationCodes>
+>['data'];
+export type ListInvitationCodesQueryResult<
+  TData = ListInvitationCodesDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListInvitationCodesKey = 'ListInvitationCodes';
+export const UseListInvitationCodesKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListInvitationCodesKey, ...(queryKey ?? [clientOptions])];
+export type HasBeenInvitedDefaultResponse = Awaited<ReturnType<typeof hasBeenInvited>>['data'];
+export type HasBeenInvitedQueryResult<
+  TData = HasBeenInvitedDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useHasBeenInvitedKey = 'HasBeenInvited';
+export const UseHasBeenInvitedKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useHasBeenInvitedKey, ...(queryKey ?? [clientOptions])];
 export type GetSubscriptionPlansDefaultResponse = Awaited<
   ReturnType<typeof getSubscriptionPlans>
 >['data'];
@@ -971,6 +1011,30 @@ export type UpdateWorkflowVariablesMutationResult = Awaited<
 export const useUpdateWorkflowVariablesKey = 'UpdateWorkflowVariables';
 export const UseUpdateWorkflowVariablesKeyFn = (mutationKey?: Array<unknown>) => [
   useUpdateWorkflowVariablesKey,
+  ...(mutationKey ?? []),
+];
+export type CreateDriveFileMutationResult = Awaited<ReturnType<typeof createDriveFile>>;
+export const useCreateDriveFileKey = 'CreateDriveFile';
+export const UseCreateDriveFileKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateDriveFileKey,
+  ...(mutationKey ?? []),
+];
+export type BatchCreateDriveFilesMutationResult = Awaited<ReturnType<typeof batchCreateDriveFiles>>;
+export const useBatchCreateDriveFilesKey = 'BatchCreateDriveFiles';
+export const UseBatchCreateDriveFilesKeyFn = (mutationKey?: Array<unknown>) => [
+  useBatchCreateDriveFilesKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateDriveFileMutationResult = Awaited<ReturnType<typeof updateDriveFile>>;
+export const useUpdateDriveFileKey = 'UpdateDriveFile';
+export const UseUpdateDriveFileKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateDriveFileKey,
+  ...(mutationKey ?? []),
+];
+export type DeleteDriveFileMutationResult = Awaited<ReturnType<typeof deleteDriveFile>>;
+export const useDeleteDriveFileKey = 'DeleteDriveFile';
+export const UseDeleteDriveFileKeyFn = (mutationKey?: Array<unknown>) => [
+  useDeleteDriveFileKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCanvasTemplateMutationResult = Awaited<ReturnType<typeof createCanvasTemplate>>;
@@ -1255,6 +1319,14 @@ export type ExecuteWorkflowAppMutationResult = Awaited<ReturnType<typeof execute
 export const useExecuteWorkflowAppKey = 'ExecuteWorkflowApp';
 export const UseExecuteWorkflowAppKeyFn = (mutationKey?: Array<unknown>) => [
   useExecuteWorkflowAppKey,
+  ...(mutationKey ?? []),
+];
+export type ActivateInvitationCodeMutationResult = Awaited<
+  ReturnType<typeof activateInvitationCode>
+>;
+export const useActivateInvitationCodeKey = 'ActivateInvitationCode';
+export const UseActivateInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
+  useActivateInvitationCodeKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;

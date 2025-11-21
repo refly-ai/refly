@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { isDesktop } from '../../utils/runtime';
 import { safeParseJSON } from '@refly/utils';
+import { OperationTooFrequent } from '@refly/errors';
 
 interface InMemoryItem {
   value: string;
@@ -339,6 +340,31 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     } catch (err) {
       this.logger.warn('Error acquiring lock:', err);
       return null;
+    }
+  }
+
+  async waitLock(
+    key: string,
+    options?: { maxRetries?: number; initialDelay?: number; noThrow?: boolean },
+  ) {
+    const { maxRetries = 3, initialDelay = 100, noThrow = false } = options ?? {};
+    let retries = 0;
+    let delay = initialDelay;
+    while (true) {
+      const releaseLock = await this.acquireLock(key);
+      if (releaseLock) {
+        return releaseLock;
+      }
+      if (retries >= maxRetries) {
+        if (noThrow) {
+          return null;
+        }
+        throw new OperationTooFrequent('Failed to get lock for canvas');
+      }
+      // Exponential backoff before next retry
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay *= 2;
+      retries += 1;
     }
   }
 

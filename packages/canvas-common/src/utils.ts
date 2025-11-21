@@ -15,6 +15,7 @@ export interface AddNodeParam {
   connectTo?: CanvasNodeFilter[];
   viewport?: Viewport;
   autoLayout?: boolean; // Control whether to enable auto layout
+  skipPurgeToolsets?: boolean; // Skip purging toolsets to preserve definition and authData
 }
 
 export const deduplicateNodes = (nodes: CanvasNode[]) => {
@@ -25,10 +26,22 @@ export const deduplicateNodes = (nodes: CanvasNode[]) => {
   return Array.from(uniqueNodesMap.values());
 };
 
-export const deduplicateEdges = (edges: CanvasEdge[]) => {
-  const uniqueEdgesMap = new Map<string, CanvasEdge>();
+export const deduplicateEdges = <T extends { source?: string; target?: string; id?: string }>(
+  edges: T[],
+): T[] => {
+  // Use a combination of source and target to identify duplicate edges
+  // This ensures that two nodes can only have one connection between them
+  const uniqueEdgesMap = new Map<string, T>();
   for (const edge of edges) {
-    uniqueEdgesMap.set(edge.id, edge);
+    if (!edge?.source || !edge?.target) {
+      continue;
+    }
+    // Create a unique key based on source and target
+    const edgeKey = `${edge.source}-${edge.target}`;
+    // Keep the first edge found for each source-target pair
+    if (!uniqueEdgesMap.has(edgeKey)) {
+      uniqueEdgesMap.set(edgeKey, edge);
+    }
   }
   return Array.from(uniqueEdgesMap.values());
 };
@@ -36,7 +49,15 @@ export const deduplicateEdges = (edges: CanvasEdge[]) => {
 export const prepareAddNode = (
   param: AddNodeParam,
 ): { newNode: CanvasNode; newEdges: CanvasEdge[] } => {
-  const { node = {}, connectTo = [], nodes, edges, viewport, autoLayout } = param;
+  const {
+    node = {},
+    connectTo = [],
+    nodes,
+    edges,
+    viewport,
+    autoLayout,
+    skipPurgeToolsets,
+  } = param;
 
   // Check if a node with the same entityType and entityId already exists
   const existingNode = nodes.find(
@@ -67,8 +88,8 @@ export const prepareAddNode = (
     );
   }
 
-  // Purge selected toolsets if they exist
-  if (node.data?.metadata?.selectedToolsets) {
+  // Purge selected toolsets if they exist (unless skipPurgeToolsets is true)
+  if (node.data?.metadata?.selectedToolsets && !skipPurgeToolsets) {
     node.data.metadata.selectedToolsets = purgeToolsets(
       node.data.metadata.selectedToolsets as GenericToolset[],
     );

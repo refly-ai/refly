@@ -2,6 +2,15 @@ import { WorkflowApp } from '@refly/openapi-schema';
 import { WorkflowApp as WorkflowAppPO, User } from '../../generated/client';
 import { safeParseJSON } from '@refly/utils';
 
+/**
+ * Job data for generating workflow app template content asynchronously.
+ */
+export interface GenerateWorkflowAppTemplateJobData {
+  appId: string;
+  canvasId: string;
+  uid: string;
+}
+
 export function workflowAppPO2DTO(
   app: WorkflowAppPO & { owner: Pick<User, 'name' | 'nickname' | 'avatar'> | null },
 ): WorkflowApp | null {

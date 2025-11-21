@@ -19,5 +19,26 @@
   },
   "[typescriptreact]": {
     "editor.defaultFormatter": "biomejs.biome"
+  },
+
+  "typescript.tsserver.maxTsServerMemory": 8192,
+  "files.exclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.turbo/**": true,
+    "**/.next/**": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.turbo/**": true,
+    "**/.next/**": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.enable": false,
+  "[sql]": {
+    "editor.defaultFormatter": "dbcode.dbcode"
   }
 }

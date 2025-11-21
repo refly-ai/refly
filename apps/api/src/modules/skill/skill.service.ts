@@ -18,7 +18,6 @@ import {
   ListSkillInstancesData,
   ListSkillTriggersData,
   PinSkillInstanceRequest,
-  Resource,
   SkillContext,
   Skill,
   SkillTriggerCreateParam,
@@ -28,12 +27,11 @@ import {
   UpdateSkillInstanceRequest,
   UpdateSkillTriggerRequest,
   User,
-  Document,
   ActionResult,
   LLMModelConfig,
-  CodeArtifact,
   MediaGenerationModelConfig,
   CreditBilling,
+  DriveFile,
 } from '@refly/openapi-schema';
 import { BaseSkill } from '@refly/skill-template';
 import { purgeContextForActionResult, purgeToolsets } from '@refly/canvas-common';
@@ -47,7 +45,6 @@ import {
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
 import { InvokeSkillJobData } from './skill.dto';
-import { DocumentDetail, documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
 import { CreditService } from '../credit/credit.service';
 import {
   ModelUsageQuotaExceeded,
@@ -57,16 +54,13 @@ import {
   SkillNotFoundError,
 } from '@refly/errors';
 import { actionResultPO2DTO } from '../action/action.dto';
-import { CodeArtifactService } from '../code-artifact/code-artifact.service';
 import { ProviderService } from '../provider/provider.service';
 import { providerPO2DTO, providerItemPO2DTO } from '../provider/provider.dto';
-import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
 import { SkillInvokerService } from './skill-invoker.service';
 import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
-import { DocumentService } from '../knowledge/document.service';
-import { ResourceService } from '../knowledge/resource.service';
+import { DriveService } from '../drive/drive.service';
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -89,12 +83,10 @@ export class SkillService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly resourceService: ResourceService,
-    private readonly documentService: DocumentService,
     private readonly credit: CreditService,
-    private readonly codeArtifactService: CodeArtifactService,
     private readonly providerService: ProviderService,
     private readonly toolService: ToolService,
+    private readonly driveService: DriveService,
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
     @Optional()
@@ -140,6 +132,14 @@ export class SkillService implements OnModuleInit {
 
     // Add the new recurring job
     const stuckCheckInterval = this.config.get<number>('skill.stuckCheckInterval');
+
+    if (!stuckCheckInterval || stuckCheckInterval <= 0) {
+      this.logger.log(
+        'Stuck actions check disabled: stuckCheckInterval is not set or is not a positive number',
+      );
+      return;
+    }
+
     const intervalMinutes = Math.max(1, Math.ceil(stuckCheckInterval / (1000 * 60))); // Convert to minutes, minimum 1 minute
 
     await this.checkStuckActionsQueue.add(
@@ -168,9 +168,6 @@ export class SkillService implements OnModuleInit {
 
     // Validate the threshold to ensure it's a positive number
     if (!stuckTimeoutThreshold || stuckTimeoutThreshold <= 0) {
-      this.logger.error(
-        `Invalid stuckTimeoutThreshold: ${stuckTimeoutThreshold}. Must be a positive number.`,
-      );
       return;
     }
 
@@ -510,19 +507,6 @@ export class SkillService implements OnModuleInit {
 
     if (param.context) {
       param.context = await this.populateSkillContext(user, param.context);
-
-      // Populate input.images with storage keys from image resources
-      if (param.context.resources?.length > 0) {
-        const imageResources = param.context.resources
-          .filter((item) => item.resource?.resourceType === 'image')
-          .map((item) => item.resource?.rawFileKey) // NOTE: for media resources, rawFileKey is the actual place where the media file is stored
-          .filter(Boolean);
-
-        if (imageResources.length > 0) {
-          param.input.images ??= [];
-          param.input.images.push(...imageResources);
-        }
-      }
     }
     if (param.resultHistory) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
@@ -899,83 +883,16 @@ export class SkillService implements OnModuleInit {
    * These data can be used in skill invocation.
    */
   async populateSkillContext(user: User, context: SkillContext): Promise<SkillContext> {
-    // Populate resources
-    if (context.resources?.length > 0) {
-      const resourceIds = [
-        ...new Set(context.resources.map((item) => item.resourceId).filter((id) => id)),
-      ];
+    if (context.files?.length > 0) {
+      const fileIds = [...new Set(context.files.map((item) => item.fileId).filter((id) => id))];
       const limit = pLimit(5);
-      const resources = (
+      const files = (
         await Promise.all(
-          resourceIds.map((id) =>
+          fileIds.map((id) =>
             limit(() =>
-              this.resourceService
-                .getResourceDetail(user, { resourceId: id, genPublicUrl: true })
-                .catch((error) => {
-                  this.logger.error(
-                    `Failed to get resource detail for resourceId ${id}: ${error?.message}`,
-                  );
-                  return null;
-                }),
-            ),
-          ),
-        )
-      )?.filter(Boolean);
-
-      const resourceMap = new Map<string, Resource>();
-      for (const r of resources) {
-        if (r) {
-          resourceMap.set(r.resourceId, resourcePO2DTO(r));
-        }
-      }
-
-      for (const item of context.resources) {
-        item.resource = resourceMap.get(item.resourceId);
-      }
-    }
-
-    // Populate documents
-    if (context.documents?.length > 0) {
-      const docIds = [...new Set(context.documents.map((item) => item.docId).filter((id) => id))];
-      const limit = pLimit(5);
-      const docs: DocumentDetail[] = (
-        await Promise.all(
-          docIds.map((id) =>
-            limit(() =>
-              this.documentService.getDocumentDetail(user, { docId: id }).catch((error) => {
+              this.driveService.getDriveFileDetail(user, id).catch((error) => {
                 this.logger.error(
-                  `Failed to get document detail for docId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
-            ),
-          ),
-        )
-      )?.filter(Boolean) as DocumentDetail[];
-
-      const docMap = new Map<string, Document>();
-      for (const d of docs) {
-        docMap.set(d.docId, documentPO2DTO(d));
-      }
-
-      for (const item of context.documents) {
-        item.document = docMap.get(item.docId);
-      }
-    }
-
-    // Populate code artifacts
-    if (context.codeArtifacts?.length > 0) {
-      const artifactIds = [
-        ...new Set(context.codeArtifacts.map((item) => item.artifactId).filter((id) => id)),
-      ];
-      const limit = pLimit(5);
-      const artifacts = (
-        await Promise.all(
-          artifactIds.map((id) =>
-            limit(() =>
-              this.codeArtifactService.getCodeArtifactDetail(user, id).catch((error) => {
-                this.logger.error(
-                  `Failed to get code artifact detail for artifactId ${id}: ${error?.message}`,
+                  `Failed to get drive file detail for fileId ${id}: ${error?.message}`,
                 );
                 return null;
               }),
@@ -984,53 +901,44 @@ export class SkillService implements OnModuleInit {
         )
       )?.filter(Boolean);
 
-      const artifactMap = new Map<string, CodeArtifact>();
-      for (const a of artifacts) {
-        artifactMap.set(a.artifactId, codeArtifactPO2DTO(a));
+      const fileMap = new Map<string, DriveFile>();
+      for (const f of files) {
+        fileMap.set(f.fileId, f);
       }
 
-      for (const item of context.codeArtifacts) {
-        item.codeArtifact = artifactMap.get(item.artifactId);
+      for (const item of context.files) {
+        item.file = fileMap.get(item.fileId);
+      }
+    }
+
+    if (context.results?.length > 0) {
+      const resultIds = [
+        ...new Set(context.results.map((item) => item.resultId).filter((id) => id)),
+      ];
+      const limit = pLimit(5);
+      const results = (
+        await Promise.all(
+          resultIds.map((id) =>
+            limit(() =>
+              this.actionService.getActionResult(user, { resultId: id }).catch((error) => {
+                this.logger.error(
+                  `Failed to get action result detail for resultId ${id}: ${error?.message}`,
+                );
+                return null;
+              }),
+            ),
+          ),
+        )
+      )?.filter(Boolean);
+
+      const resultMap = new Map<string, ActionResult>();
+      for (const r of results) {
+        resultMap.set(r.resultId, actionResultPO2DTO(r));
       }
 
-      // Process code artifacts and add them to contentList
-      if (!context.contentList) {
-        context.contentList = [];
+      for (const item of context.results) {
+        item.result = resultMap.get(item.resultId);
       }
-
-      const codeArtifactContentList = context.codeArtifacts
-        .filter((item) => item.codeArtifact?.content)
-        .map((item) => {
-          const codeArtifact = item.codeArtifact;
-          // For long code content, preserve beginning and end
-          const MAX_CONTENT_LENGTH = 10000;
-          const PRESERVED_SECTION_LENGTH = 2000;
-
-          let processedContent = codeArtifact.content;
-
-          if (codeArtifact.content.length > MAX_CONTENT_LENGTH) {
-            const startContent = codeArtifact.content.substring(0, PRESERVED_SECTION_LENGTH);
-            const endContent = codeArtifact.content.substring(
-              codeArtifact.content.length - PRESERVED_SECTION_LENGTH,
-              codeArtifact.content.length,
-            );
-            processedContent = `${startContent}\n\n... (content truncated) ...\n\n${endContent}`;
-          }
-
-          return {
-            title: codeArtifact.title ?? 'Code',
-            content: processedContent,
-            metadata: {
-              domain: 'codeArtifact',
-              entityId: item.artifactId,
-              title: codeArtifact.title ?? 'Code',
-              language: codeArtifact.language,
-              artifactType: codeArtifact.type,
-            },
-          };
-        });
-
-      context.contentList.push(...codeArtifactContentList);
     }
 
     return context;
@@ -1039,7 +947,7 @@ export class SkillService implements OnModuleInit {
   /**
    * Populate skill result history with actual result detail and steps.
    */
-  async populateSkillResultHistory(user: User, resultHistory: ActionResult[]) {
+  async populateSkillResultHistory(user: User, resultHistory: { resultId: string }[]) {
     // Fetch all results for the given resultIds
     const results = await this.prisma.actionResult.findMany({
       where: { resultId: { in: resultHistory.map((r) => r.resultId) }, uid: user.uid },
@@ -1074,7 +982,10 @@ export class SkillService implements OnModuleInit {
     try {
       const data = await this.skillInvokePreCheck(user, param);
       if (this.skillQueue) {
-        await this.skillQueue.add('invokeSkill', data);
+        const job = await this.skillQueue.add('invokeSkill', data);
+        // Register the job in Redis for abortion support
+        await this.actionService.registerQueuedJob(data.result.resultId, job.id);
+        this.logger.debug(`Registered queued job: ${data.result.resultId} -> ${job.id}`);
       } else {
         // In desktop mode or when queue is not available, invoke directly
         await this.invokeSkillFromQueue(data);

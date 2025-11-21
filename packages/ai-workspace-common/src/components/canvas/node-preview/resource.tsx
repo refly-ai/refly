@@ -1,4 +1,4 @@
-import { useState, memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { ResourceView } from '@refly-packages/ai-workspace-common/components/resource-view';
 import { FollowingActions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/sharedComponents/following-actions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -9,11 +9,11 @@ import { useTranslation } from 'react-i18next';
 interface ResourceNodePreviewProps {
   node: CanvasNode<ResourceNodeMeta>;
   resourceId: string;
+  hideMeta?: boolean;
 }
 
-const ResourceNodePreviewComponent = ({ node, resourceId }: ResourceNodePreviewProps) => {
+const ResourceNodePreviewComponent = ({ node, resourceId, hideMeta }: ResourceNodePreviewProps) => {
   const { t } = useTranslation();
-  const [deckSize, setDeckSize] = useState<number>(0);
   const { readonly } = useCanvasContext();
   const initContextItems: IContextItem[] = useMemo(() => {
     return [
@@ -39,10 +39,9 @@ const ResourceNodePreviewComponent = ({ node, resourceId }: ResourceNodePreviewP
       <div className="flex-1 pb-4 rounded overflow-y-auto">
         <ResourceView
           resourceId={resourceId}
-          deckSize={deckSize}
-          setDeckSize={setDeckSize}
           nodeId={node.id}
           shareId={node.data?.metadata?.shareId}
+          hideMeta={hideMeta}
         />
       </div>
       {!readonly && (
@@ -58,7 +57,4 @@ const ResourceNodePreviewComponent = ({ node, resourceId }: ResourceNodePreviewP
   );
 };
 
-export const ResourceNodePreview = memo(
-  ResourceNodePreviewComponent,
-  (prevProps, nextProps) => prevProps.resourceId === nextProps.resourceId,
-);
+export const ResourceNodePreview = memo(ResourceNodePreviewComponent);

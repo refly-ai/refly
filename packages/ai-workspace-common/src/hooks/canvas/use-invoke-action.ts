@@ -1,21 +1,19 @@
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
-import { useFindImages } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-images';
-import { useFindMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-memo';
-import { useFindThreadHistory } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-thread-history';
-import { useFindWebsite } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-website';
-import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
-import { SkillNodeMeta, convertContextItemsToInvokeParams } from '@refly/canvas-common';
+import { convertContextItemsToInvokeParams } from '@refly/canvas-common';
 import {
   ActionResult,
   ActionStatus,
   ActionStep,
   ActionStepMeta,
+  AgentMode,
   Artifact,
   CodeArtifactType,
   Entity,
+  GenericToolset,
   InvokeSkillRequest,
+  ModelInfo,
   SkillEvent,
 } from '@refly/openapi-schema';
 import { useActionResultStore } from '@refly/stores';
@@ -36,19 +34,33 @@ import {
   useAbortAction,
 } from './use-abort-action';
 import { useActionPolling } from './use-action-polling';
+import { IContextItem } from '@refly/common-types';
 import { useUpdateActionResult } from './use-update-action-result';
+import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
+
+export interface InvokeActionPayload {
+  nodeId: string;
+  query?: string;
+  resultId?: string;
+  version?: number;
+  modelInfo?: ModelInfo | null;
+  contextItems?: IContextItem[];
+  selectedToolsets?: GenericToolset[];
+  agentMode?: AgentMode;
+  copilotSessionId?: string;
+}
 
 export const useInvokeAction = (params?: { source?: string }) => {
   const latestStepsRef = useRef(new Map<string, ActionStep[]>());
 
   const { source } = params || {};
 
-  const setNodeDataByEntity = useSetNodeDataByEntity();
   const { abortAction } = useAbortAction(params);
 
   const deletedNodeIdsRef = useRef<Set<string>>(new Set());
 
   const { refetchUsage } = useSubscriptionUsage();
+  const { getUpstreamAgentNodes } = useAgentConnections();
 
   useEffect(() => {
     const handleNodeDeleted = (entityId: string) => {
@@ -346,42 +358,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
       globalCurrentResultIdRef.current = '';
     }
 
-    const artifacts = result.steps?.flatMap((s) => s.artifacts ?? []);
-    if (artifacts?.length) {
-      for (const artifact of artifacts) {
-        if (deletedNodeIdsRef.current.has(artifact.entityId)) {
-          continue;
-        }
-
-        if (artifact.type === 'codeArtifact') {
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
-                activeTab: 'preview', // Set to preview when skill finishes
-              },
-            },
-          );
-        } else {
-          setNodeDataByEntity(
-            {
-              type: artifact.type,
-              entityId: artifact.entityId,
-            },
-            {
-              metadata: {
-                status: 'finish',
-              },
-            },
-          );
-        }
-      }
-    }
-
     refetchUsage();
   };
 
@@ -474,96 +450,51 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onCompleted = () => {};
   const onStart = () => {};
-  const findThreadHistory = useFindThreadHistory();
-  const findMemo = useFindMemo();
-  const findWebsite = useFindWebsite();
-  const findImages = useFindImages();
 
   const invokeAction = useCallback(
-    async (payload: SkillNodeMeta, target: Entity) => {
+    async (payload: InvokeActionPayload, target: Entity) => {
       deletedNodeIdsRef.current = new Set();
 
       payload.resultId ||= genActionResultID();
-      payload.selectedSkill ||= { name: 'commonQnA' };
 
       const {
+        nodeId,
         query,
         modelInfo,
         contextItems,
-        selectedSkill,
         resultId,
         version = 0,
-        tplConfig = {},
-        runtimeConfig = {},
-        projectId,
         selectedToolsets = [],
         agentMode = 'node_agent',
         copilotSessionId,
       } = payload;
-
-      const originalQuery = payload.structuredData?.query as string;
 
       logEvent('model::invoke_trigger', Date.now(), {
         source,
         resultId,
         model: modelInfo?.name,
         target: target?.entityType,
-        skill: selectedSkill?.name,
       });
 
       globalAbortControllerRef.current = new AbortController();
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
 
-      const { context, resultHistory, images } = convertContextItemsToInvokeParams(
+      const upstreamAgentNodes = getUpstreamAgentNodes(nodeId);
+      const context = convertContextItemsToInvokeParams(
         contextItems ?? [],
-        (item) =>
-          findThreadHistory({ resultId: item.entityId }).map((node) => ({
-            title: node.data?.title,
-            resultId: node.data?.entityId,
-          })),
-        (item) => {
-          if (item.type === 'memo') {
-            return findMemo({ resultId: item.entityId }).map((node) => ({
-              content: node.data?.contentPreview ?? '',
-              title: node.data?.title ?? 'Memo',
-            }));
-          }
-          return [];
-        },
-        (item) => {
-          if (item.type === 'image') {
-            return findImages({ resultId: item.entityId });
-          }
-          return [];
-        },
-        (item) => {
-          if (item.type === 'website') {
-            return findWebsite({ resultId: item.entityId }).map((node) => ({
-              url: node.data?.metadata?.url ?? '',
-              title: node.data?.title ?? 'Website',
-            }));
-          }
-          return [];
-        },
+        upstreamAgentNodes.map((node) => node.data?.entityId) ?? [],
       );
 
       const param: InvokeSkillRequest = {
         resultId,
         input: {
           query,
-          originalQuery,
-          images,
         },
         target,
         modelName: modelInfo?.name,
         modelItemId: modelInfo?.providerItemId,
         context,
-        resultHistory,
-        skillName: selectedSkill?.name,
         toolsets: selectedToolsets,
-        tplConfig,
-        runtimeConfig,
-        projectId,
         mode: agentMode,
         copilotSessionId,
       };
@@ -572,16 +503,12 @@ export const useInvokeAction = (params?: { source?: string }) => {
         resultId,
         version,
         type: 'skill',
-        actionMeta: selectedSkill,
         modelInfo,
         title: query,
         input: param.input,
         targetId: target?.entityId,
         targetType: target?.entityType,
         context,
-        history: resultHistory,
-        tplConfig,
-        runtimeConfig,
         status: 'waiting' as ActionStatus,
         steps: [],
         errors: [],
@@ -589,6 +516,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
       onUpdateResult(resultId, initialResult);
       useActionResultStore.getState().addStreamResult(resultId, initialResult);
+      useActionResultStore.getState().setResultActiveTab(resultId, 'lastRun');
 
       // Create timeout handler for this action
       const { resetTimeout, cleanup: timeoutCleanup } = createTimeoutHandler(resultId, version);
@@ -625,7 +553,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         timeoutCleanup();
       };
     },
-    [setNodeDataByEntity, onUpdateResult, createTimeoutHandler],
+    [onUpdateResult, createTimeoutHandler],
   );
 
   return { invokeAction, abortAction };

@@ -11,8 +11,6 @@ export async function processQuery(
   const { modelConfigMap, chatHistory: rawChatHistory = [], context } = config.configurable;
   const modelInfo = modelConfigMap.queryAnalysis;
 
-  const rewrittenQueries: string[] = [];
-
   // Process chat history
   const chatHistory = rawChatHistory.filter((message) => !isEmptyMessage(message));
   const usedChatHistory = truncateMessages(chatHistory, 20, 4000, 30000);
@@ -35,6 +33,5 @@ export async function processQuery(
     hasContext,
     remainingTokens,
     mentionedContext,
-    rewrittenQueries,
   };
 }

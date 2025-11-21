@@ -382,14 +382,8 @@ model WorkflowNodeExecution {
   @@map("workflow_node_executions")
 }
 
-enum WorkflowNodeStatus {
-  waiting
-  executing
-  finish
-  failed
-}
-
 enum ActionStatus {
+  init
   waiting
   executing
   finish
@@ -787,6 +781,48 @@ model CodeArtifact {
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@map("code_artifacts")
+}
+
+model DriveFile {
+  /// Primary key
+  pk            BigInt    @id @default(autoincrement())
+  /// Drive file id
+  fileId        String    @unique @map("file_id")
+  /// UID
+  uid           String    @map("uid")
+  /// Canvas id
+  canvasId      String    @map("canvas_id")
+  /// Drive file name
+  name          String    @map("name")
+  /// Drive file type (MIME type)
+  type          String    @map("type")
+  /// Drive file category
+  category      String    @map("category")
+  /// Drive file size
+  size          BigInt    @default(0) @map("size")
+  /// Drive file source
+  source        String    @default("manual") @map("source")
+  /// Drive file scope
+  scope         String    @default("present") @map("scope")
+  /// Storage key for this file
+  storageKey    String?   @map("storage_key")
+  /// Drive file summary
+  summary       String?   @map("summary")
+  /// Related variable id (when source is 'variable')
+  variableId    String?   @map("variable_id")
+  /// Action result id (when source is 'agent')
+  resultId      String?   @map("result_id")
+  /// Action result version (when source is 'agent')
+  resultVersion Int?      @map("result_version")
+  /// Drive file create timestamp
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([canvasId, deletedAt, updatedAt])
+  @@map("drive_files")
 }
 
 model Project {
@@ -1356,6 +1392,29 @@ model CreditUsage {
   @@map("credit_usages")
 }
 
+model InvitationCode {
+  /// Primary key
+  pk         BigInt   @id @default(autoincrement())
+  /// Invitation code
+  code       String   @unique @map("code")
+  /// Inviter UID
+  inviterUid String   @map("inviter_uid")
+  /// Invitee UID
+  inviteeUid String?  @unique @map("invitee_uid")
+  /// Invitation status: pending, accepted, expired
+  status     String   @default("pending") @map("status")
+  /// Create timestamp
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([inviterUid, inviteeUid])
+  @@index([inviterUid])
+  @@index([inviteeUid])
+  @@index([status])
+  @@map("invitation_codes")
+}
+
 model StorageUsageMeter {
   /// Primary key
   pk                 BigInt    @id @default(autoincrement())
@@ -1573,11 +1632,17 @@ model Toolset {
   name          String    @map("name")
   /// Toolset key
   key           String    @map("key")
-  /// Toolset auth type (credentials, oauth)
-  authType      String?   @default("credentials") @map("auth_type")
+  /// Toolset domain
+  domain        String?   @map("domain")
+  /// Toolset label (display name) in JSON format: {"en": "Fish Audio", "zh": "Fish 音频"}
+  label         String?   @map("label") @db.Text
+  /// Toolset description in JSON format: {"en": "...", "zh": "..."}
+  description   String?   @map("description") @db.Text
+  /// Toolset auth type (credentials, oauth, config_based)
+  authType      String?   @default("config_based") @map("auth_type")
   /// Toolset auth data
   authData      String?   @map("auth_data")
-  /// Toolset config
+  /// Toolset config (deprecated, use ToolMethod table instead)
   config        String?   @map("config")
   /// Whether the toolset is enabled
   enabled       Boolean   @default(true) @map("enabled")
@@ -1593,7 +1658,88 @@ model Toolset {
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@index([uid, isGlobal, deletedAt])
+  @@index([key, enabled])
   @@map("toolsets")
+}
+
+model ToolMethod {
+  /// Primary key
+  pk             Int       @id @default(autoincrement())
+  /// Toolset inventory key (foreign key to ToolsetInventory)
+  inventoryKey   String    @map("inventory_key")
+  /// Version ID (for version control)
+  versionId      Int       @default(1) @map("version_id")
+  /// Method name (unique within toolset version)
+  name           String    @map("name")
+  /// Method description (for LLM understanding)
+  description    String    @map("description")
+  /// API endpoint full URL
+  endpoint       String    @map("endpoint")
+  /// HTTP method (GET, POST, PUT, DELETE, PATCH)
+  httpMethod     String    @default("POST") @map("http_method")
+  /// Request schema (JSON string)
+  requestSchema  String    @map("request_schema") @db.Text
+  /// Response schema (JSON string)
+  responseSchema String    @map("response_schema") @db.Text
+  /// Adapter type (http, sdk)
+  adapterType    String    @default("http") @map("adapter_type")
+  /// Adapter config (JSON string, optional SDK-specific config)
+  adapterConfig  String?   @map("adapter_config") @db.Text
+  /// Whether the method is enabled
+  enabled        Boolean   @default(true) @map("enabled")
+  /// Create timestamp
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Deletion timestamp (soft delete)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
+
+  // Relations
+  inventory ToolsetInventory @relation(fields: [inventoryKey], references: [key], onDelete: Cascade)
+
+  @@unique([inventoryKey, versionId, name])
+  @@index([inventoryKey, versionId, enabled])
+  @@index([versionId])
+  @@map("tool_methods")
+}
+
+model ToolsetInventory {
+  /// Primary key
+  pk              Int       @id @default(autoincrement())
+  /// Toolset key (unique identifier, e.g., 'firecrawl', 'calculator')
+  key             String    @unique @map("key")
+  /// Toolset name (human-readable name, e.g., 'Firecrawl', 'Calculator')
+  name            String    @map("name")
+  /// Toolset domain (for displaying favicon, e.g., 'firecrawl.dev')
+  domain          String?   @map("domain")
+  /// Toolset label dictionary (display name in JSON format: {"en": "Firecrawl", "zh": "Firecrawl"})
+  labelDict       String    @map("label_dict") @db.Text
+  /// Toolset description dictionary (description in JSON format: {"en": "...", "zh": "..."})
+  descriptionDict String    @map("description_dict") @db.Text
+  /// API Key for authentication (optional)
+  apiKey          String?   @map("api_key") @db.Text
+  /// Config items (configuration item definitions in JSON array format, optional)
+  configItems     String?   @map("config_items") @db.Text
+  /// Toolset type ('regular', 'builtin', 'oauth')
+  type            String    @default("regular") @map("type")
+  /// Adapter type ('http', 'sdk')
+  adapterType     String    @default("http") @map("adapter_type")
+  /// Whether the toolset is enabled in inventory
+  enabled         Boolean   @default(true) @map("enabled")
+  /// Credit billing info (in JSON format)
+  creditBilling   String?   @map("credit_billing") @db.Text
+  /// Create timestamp
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Deletion timestamp (soft delete)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+
+  // Relations
+  methods ToolMethod[]
+
+  @@index([type, enabled, deletedAt])
+  @@map("toolset_inventory")
 }
 
 model ComposioConnection {

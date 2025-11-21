@@ -18,7 +18,10 @@ import {
   genSubscriptionRechargeId,
   genCommissionCreditUsageId,
   genCommissionCreditRechargeId,
+  genRegistrationCreditRechargeId,
+  genInvitationActivationCreditRechargeId,
 } from '@refly/utils';
+
 import { CreditBalance } from './credit.dto';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { ConfigService } from '@nestjs/config';
@@ -43,7 +46,7 @@ export class CreditService {
     creditAmount: number,
     rechargeData: {
       rechargeId: string;
-      source: 'gift' | 'subscription' | 'commission';
+      source: 'gift' | 'subscription' | 'commission' | 'invitation';
       description?: string;
       createdAt: Date;
       expiresAt: Date;
@@ -242,6 +245,112 @@ export class CreditService {
         appId,
         commissionRate: this.configService.get('credit.canvasCreditCommissionRate'),
       },
+    );
+  }
+
+  /**
+   * Create registration credit recharge for a user
+   * This method creates a one-time configurable credit registration bonus
+   * Each user can only receive this bonus once (uid unique constraint)
+   */
+  async createRegistrationCreditRecharge(uid: string, now: Date = new Date()): Promise<void> {
+    // Check if user already has registration bonus
+    const existingBonus = await this.prisma.creditRecharge.findFirst({
+      where: {
+        uid,
+        source: 'gift',
+        description: 'Registration bonus credit recharge',
+        enabled: true,
+      },
+    });
+
+    if (existingBonus) {
+      this.logger.log(`User ${uid} already has registration bonus, skipping`);
+      return;
+    }
+
+    const bonusCreditAmount = this.configService.get('auth.registration.bonusCreditAmount');
+    const bonusCreditExpiresInMonths = this.configService.get(
+      'auth.registration.bonusCreditExpiresInMonths',
+    );
+
+    // Calculate expiration date
+    const expiresAt = new Date(now);
+    expiresAt.setMonth(expiresAt.getMonth() + bonusCreditExpiresInMonths);
+
+    await this.processCreditRecharge(
+      uid,
+      bonusCreditAmount,
+      {
+        rechargeId: genRegistrationCreditRechargeId(uid),
+        source: 'gift',
+        description: 'Registration bonus credit recharge',
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+    );
+
+    this.logger.log(
+      `Created registration bonus: ${uid} received ${bonusCreditAmount} credits, expires at ${expiresAt.toISOString()}`,
+    );
+  }
+
+  /**
+   * Create invitation activation credit recharge for both inviter and invitee
+   * Credit amounts and expiration periods are configurable
+   */
+  async createInvitationActivationCreditRecharge(
+    inviterUid: string,
+    inviteeUid: string,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const inviterCreditAmount = this.configService.get('auth.invitation.inviterCreditAmount');
+    const inviteeCreditAmount = this.configService.get('auth.invitation.inviteeCreditAmount');
+    const inviterCreditExpiresInMonths = this.configService.get(
+      'auth.invitation.inviterCreditExpiresInMonths',
+    );
+    const inviteeCreditExpiresInMonths = this.configService.get(
+      'auth.invitation.inviteeCreditExpiresInMonths',
+    );
+
+    // Calculate expiration dates
+    const inviterExpiresAt = new Date(now);
+    inviterExpiresAt.setMonth(inviterExpiresAt.getMonth() + inviterCreditExpiresInMonths);
+
+    const inviteeExpiresAt = new Date(now);
+    inviteeExpiresAt.setMonth(inviteeExpiresAt.getMonth() + inviteeCreditExpiresInMonths);
+
+    // Create recharge for inviter
+    await this.processCreditRecharge(
+      inviterUid,
+      inviterCreditAmount,
+      {
+        rechargeId: genInvitationActivationCreditRechargeId(inviterUid, inviteeUid),
+        source: 'invitation',
+        description: `Invitation activation bonus for inviting user ${inviteeUid}`,
+        createdAt: now,
+        expiresAt: inviterExpiresAt,
+      },
+      now,
+    );
+
+    // Create recharge for invitee
+    await this.processCreditRecharge(
+      inviteeUid,
+      inviteeCreditAmount,
+      {
+        rechargeId: genInvitationActivationCreditRechargeId(inviteeUid, inviterUid),
+        source: 'invitation',
+        description: `Invitation activation bonus for being invited by user ${inviterUid}`,
+        createdAt: now,
+        expiresAt: inviteeExpiresAt,
+      },
+      now,
+    );
+
+    this.logger.log(
+      `Created invitation activation credits: ${inviterUid} received ${inviterCreditAmount} credits (expires at ${inviterExpiresAt.toISOString()}), ${inviteeUid} received ${inviteeCreditAmount} credits (expires at ${inviteeExpiresAt.toISOString()})`,
     );
   }
 
@@ -1013,6 +1122,7 @@ export class CreditService {
       select: {
         amount: true,
         balance: true,
+        source: true,
       },
       orderBy: {
         expiresAt: 'asc',
@@ -1049,9 +1159,21 @@ export class CreditService {
     // Net balance is positive balance minus debt
     const netBalance = totalBalance - totalDebt;
 
+    // Calculate regular credits and template earnings credits
+    const regularCredits =
+      activeRecharges
+        .filter((record) => record.source !== 'commission')
+        .reduce((sum, record) => sum + Number(record.balance), 0) - totalDebt;
+
+    const templateEarningsCredits = activeRecharges
+      .filter((record) => record.source === 'commission')
+      .reduce((sum, record) => sum + Number(record.balance), 0);
+
     return {
       creditAmount: totalAmount,
       creditBalance: netBalance,
+      regularCredits: regularCredits,
+      templateEarningsCredits: templateEarningsCredits,
     };
   }
 

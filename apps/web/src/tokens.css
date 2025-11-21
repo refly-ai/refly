@@ -10,11 +10,12 @@
   --refly-gradient-modal-top: #d8fffc;
   --refly-gradient-modal-bottom: #ffffff;
   --refly-bg-canvas: #fbfbfb;
+  --refly-bg-body: #ffffff;
   --refly-modal-mask: rgba(0, 0, 0, 0.15);
   --refly-Card-Border: rgba(0, 0, 0, 0.1);
   --refly-semi-color-border: rgba(28, 31, 35, 0.08);
   --refly-semi-color-bg-0: #ffffff;
-  --refly-line: #1c232229;
+  --refly-line: #b9c1c1;
   --refly-text-0: #1c1f23;
   --refly-text-1: #1c1f23cc;
   --refly-text-2: #1c1f2399;
@@ -55,6 +56,14 @@
   --refly-func-success-hover: #30953b;
   --refly-func-success-active: #25772f;
   --refly-text-placeholder: #8f959e;
+  --refly-node-input-fill: #f4f5f6;
+  --refly-node-input-control: #f4f5f6;
+  --refly-node-contrl-1: rgba(217, 255, 254, 0.5);
+  --refly-node-contrl-2: rgba(254, 242, 207, 0.5);
+  --refly-node-fill-1: #d9fffe;
+  --refly-node-fill-2: #fef2cf;
+  --refly-node-run: #7effdb;
+  --refly-bg-dark: #2d2d2d;
 }
 
 /* Dark Theme */
@@ -69,11 +78,12 @@
   --refly-gradient-modal-top: rgb(36, 53, 50);
   --refly-gradient-modal-bottom: var(--refly-bg-content-z2);
   --refly-bg-canvas: #1e1d1d;
+  --refly-bg-body: #1a1a1a;
   --refly-modal-mask: rgba(0, 0, 0, 0.4);
   --refly-Card-Border: rgba(216, 216, 216, 0.1);
   --refly-semi-color-border: rgba(255, 255, 255 0.08);
   --refly-semi-color-bg-0: rgba(22, 22, 26, 1);
-  --refly-line: #1c23221a;
+  --refly-line: #383b3b;
   --refly-text-0: #f9f9f9;
   --refly-text-1: #f9f9f9cc;
   --refly-text-2: #f9f9f999;
@@ -114,4 +124,12 @@
   --refly-func-success-hover: #7fd184;
   --refly-func-success-active: #a6e1a8;
   --refly-text-placeholder: rgba(117, 117, 117, 1);
+  --refly-node-input-fill: rgba(14, 14, 14, 0.5);
+  --refly-node-input-control: #303031;
+  --refly-node-contrl-1: rgba(44, 92, 90, 0.5);
+  --refly-node-contrl-2: rgba(133, 110, 36, 0.5);
+  --refly-node-fill-1: #2c5c5a;
+  --refly-node-fill-2: #856e24;
+  --refly-node-run: rgba(126, 255, 219, 0.6);
+  --refly-bg-dark: #ececec;
 }

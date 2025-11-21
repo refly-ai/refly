@@ -1,7 +1,6 @@
 import { memo, useEffect, useState, useCallback, useMemo } from 'react';
 import { NodeProps, Position, useReactFlow } from '@xyflow/react';
-import { NodeIcon } from './shared/node-icon';
-import { Divider } from 'antd';
+import { StartNodeHeader } from './shared/start-node-header';
 import { BiText } from 'react-icons/bi';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { getNodeCommonStyles } from './shared/styles';
@@ -13,18 +12,17 @@ import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CreateVariablesModal } from '../workflow-variables';
 import { Attachment, List } from 'refly-icons';
-import SVGX from '../../../assets/x.svg';
 import {
   nodeActionEmitter,
   createNodeEventName,
   cleanupNodeEvents,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genSkillID } from '@refly/utils/id';
+import { genNodeEntityId } from '@refly/utils/id';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { CanvasNode } from '@refly/openapi-schema';
-import { cn } from '@refly/utils/cn';
+import cn from 'classnames';
 
 const NODE_SIDE_CONFIG = { width: 320, height: 'auto' };
 
@@ -33,20 +31,6 @@ export const VARIABLE_TYPE_ICON_MAP = {
   option: List,
   resource: Attachment,
 };
-
-const Header = memo(({ className }: { className?: string }) => {
-  const { t } = useTranslation();
-  return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <NodeIcon type="start" filled={true} />
-      <span className="text-sm font-semibold leading-6 text-refly-text-0">
-        {t('canvas.nodeTypes.start')}
-      </span>
-    </div>
-  );
-});
-
-Header.displayName = 'Header';
 
 // Input parameter row component
 export const InputParameterRow = memo(
@@ -70,8 +54,6 @@ export const InputParameterRow = memo(
     return (
       <div className="flex gap-2 items-center justify-between py-1.5 px-3 bg-refly-bg-control-z0 rounded-lg">
         <div className="flex items-center gap-1 flex-1 min-w-0">
-          <img src={SVGX} alt="x" className="w-[10px] h-[10px] flex-shrink-0" />
-          <Divider type="vertical" className="bg-refly-Card-Border mx-2 my-0 flex-shrink-0" />
           <div className="text-xs font-medium text-refly-text-1 truncate max-w-full">{label}</div>
           {isRequired && (
             <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
@@ -100,11 +82,12 @@ type StartNodeProps = NodeProps & {
 };
 
 export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodeProps) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [previousWidth, setPreviousWidth] = useState<string | number>('fit-content');
   const { edges } = useCanvasData();
   const { setNodeStyle, setNodePosition } = useNodeData();
-  const { getNode } = useReactFlow();
+  const { getNode, setEdges } = useReactFlow();
   useSelectedNodeZIndex(id, selected);
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
   const { workflow } = useCanvasContext();
@@ -142,12 +125,16 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
 
       addNode(
         {
-          type: 'skill',
+          type: 'skillResponse',
           data: {
-            title: 'Skill',
-            entityId: genSkillID(),
+            title: '',
+            entityId: genNodeEntityId('skillResponse'),
             metadata: {
-              contextItems: [],
+              status: 'init',
+              contextItems: workflowVariables.map((variable) => ({
+                name: variable.name,
+                value: variable.value,
+              })),
             },
           },
           position,
@@ -254,6 +241,29 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
     };
   }, [id, handleAskAI]);
 
+  const setEdgesWithHighlight = useCallback(
+    (highlight: boolean) => {
+      setEdges((edges) =>
+        edges.map((edge) => {
+          if (edge.source === id || edge.target === id) {
+            return { ...edge, data: { ...edge.data, highlight: highlight } };
+          }
+          return edge;
+        }),
+      );
+    },
+    [id, setEdges],
+  );
+
+  useEffect(() => {
+    const delay = selected ? 100 : 0;
+    const timer = setTimeout(() => {
+      setEdgesWithHighlight(selected);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [selected, id, setEdges, setEdgesWithHighlight]);
+
   return (
     <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onClick={onNodeClick}>
       <CustomHandle
@@ -270,28 +280,34 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
         style={
           workflowVariables.length > 0 ? NODE_SIDE_CONFIG : { width: 'fit-content', height: 'auto' }
         }
-        className={`h-full flex flex-col relative p-4 box-border z-1
-          ${getNodeCommonStyles({ selected, isHovered })}
-        `}
+        className={cn(
+          'h-full flex flex-col relative box-border z-1 p-0',
+          getNodeCommonStyles({ selected, isHovered }),
+          'rounded-2xl border-solid border border-gray-200 bg-refly-bg-content-z2',
+        )}
       >
         {/* Header section */}
-        {workflowVariables.length > 0 && <Header className="mb-4" />}
+        <StartNodeHeader source="node" />
 
         {/* Input parameters section */}
         {workflowVariables.length > 0 ? (
-          <div className="space-y-2">
-            {workflowVariables.slice(0, 6).map((variable) => (
-              <InputParameterRow
-                key={variable.name}
-                label={variable.name}
-                isRequired={variable.required}
-                variableType={variable.variableType}
-                isSingle={variable.isSingle}
-              />
-            ))}
+          <div className="flex flex-col p-3">
+            <div className="space-y-2">
+              {workflowVariables.slice(0, 6).map((variable) => (
+                <InputParameterRow
+                  key={variable.name}
+                  label={variable.name}
+                  isRequired={variable.required}
+                  variableType={variable.variableType}
+                  isSingle={variable.isSingle}
+                />
+              ))}
+            </div>
           </div>
         ) : (
-          <Header />
+          <div className="flex flex-col p-3 text-xs text-refly-text-2">
+            {t('canvas.nodeActions.selectToEdit')}
+          </div>
         )}
       </div>
 

@@ -52,8 +52,6 @@ interface PaginationState {
   pageSize: number;
 }
 
-const filesPlanMap = { free: 100, starter: 200, maker: 500 };
-
 // Component to handle commission source display with app name
 const CommissionSourceCell = React.memo(({ record }: { record: CreditRechargeRecord }) => {
   const { t } = useTranslation('ui');
@@ -170,10 +168,12 @@ export const Subscription = () => {
     setShowSettingModal: state.setShowSettingModal,
   }));
 
-  const { storageUsage, isUsageLoading } = useSubscriptionUsage();
+  const { isUsageLoading } = useSubscriptionUsage();
 
   const { data: balanceData, isLoading: isBalanceLoading } = useGetCreditBalance();
   const creditBalance = balanceData?.data?.creditBalance ?? 0;
+  const regularCredits = balanceData?.data?.regularCredits ?? 0;
+  const templateEarningsCredits = balanceData?.data?.templateEarningsCredits ?? 0;
 
   // State for active history tab
   const [activeTab, setActiveTab] = useState<'usage' | 'recharge'>('usage');
@@ -332,6 +332,7 @@ export const Subscription = () => {
           promotion: t('subscription.subscriptionManagement.rechargeType.promotion'),
           refund: t('subscription.subscriptionManagement.rechargeType.refund'),
           subscription: t('subscription.subscriptionManagement.rechargeType.subscription'),
+          invitation: t('subscription.subscriptionManagement.rechargeType.invitation'),
         };
         return sourceMap[source] || source;
       },
@@ -499,24 +500,23 @@ export const Subscription = () => {
                   <div className="usage-label">
                     {t('subscription.subscriptionManagement.availableCredits')}
                   </div>
-                  <div className="usage-value">{creditBalance.toLocaleString()}</div>
+                  <div className="usage-value">{creditBalance?.toLocaleString()}</div>
                 </div>
-                <div className="usage-card files-card">
+
+                <div className="usage-card regular-credits-card">
                   <div className="usage-label">
-                    {t('subscription.subscriptionManagement.knowledgeBaseFiles')}
+                    {t('subscription.subscriptionManagement.regularCredits')}
                   </div>
-                  <div className="usage-value">
-                    {storageUsage?.fileCountUsed || 0}{' '}
-                    <span className="quota-text">
-                      /{' '}
-                      {storageUsage?.fileCountQuota && storageUsage?.fileCountQuota < 0
-                        ? filesPlanMap[planType as keyof typeof filesPlanMap]
-                        : storageUsage?.fileCountQuota}
-                    </span>
+                  <div className="usage-value">{regularCredits?.toLocaleString()}</div>
+                </div>
+
+                <div className="usage-card template-earnings-card">
+                  <div className="usage-label">
+                    {t('subscription.subscriptionManagement.templateEarningsCredits')}
                   </div>
+                  <div className="usage-value">{templateEarningsCredits?.toLocaleString()}</div>
                 </div>
               </div>
-
               <div className="points-history">
                 <Segmented
                   options={[

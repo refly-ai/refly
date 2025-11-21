@@ -40,6 +40,8 @@ import { WorkflowModule } from './workflow/workflow.module';
 import { WorkflowAppModule } from './workflow-app/workflow-app.module';
 import { ToolModule } from './tool/tool.module';
 import { VariableExtractionModule } from './variable-extraction/variable-extraction.module';
+import { InvitationModule } from './invitation/invitation.module';
+import { DriveModule } from './drive/drive.module';
 
 import { isDesktop } from '../utils/runtime';
 
@@ -109,9 +111,11 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     InternalMcpModule,
     MediaGeneratorModule,
     CreditModule,
+    InvitationModule,
     WorkflowModule,
     WorkflowAppModule,
     VariableExtractionModule,
+    DriveModule,
     ...(isDesktop()
       ? []
       : [

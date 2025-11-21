@@ -1,3 +1,10 @@
+/**
+ * DEPRECATED: This implementation is commented out.
+ * HeyGen tools are now loaded from configuration using the adapter pattern.
+ * See: apps/api/src/modules/tool/adapters/ for the new implementation.
+ */
+
+/*
 import {
   User,
   ToolsetDefinition,
@@ -370,6 +377,7 @@ Use cases:
           thumbnailUrl: result.data?.thumbnailUrl,
           duration: result.data?.duration,
           parentResultId: config.configurable?.resultId,
+          parentResultVersion: config.configurable?.version,
         },
         summary,
         creditCost,
@@ -390,3 +398,4 @@ export class HeyGenToolset extends AgentBaseToolset<HeyGenParams> {
   toolsetKey = HeyGenToolsetDefinition.key;
   tools = [GenerateVideo] satisfies readonly AgentToolConstructor<HeyGenParams>[];
 }
+*/

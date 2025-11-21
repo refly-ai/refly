@@ -314,9 +314,9 @@ export const useListenNodeOperationEvents = () => {
           },
         });
 
-        if (data?.success && data?.resultId) {
+        if (data?.success && data?.data?.resultId) {
           // Create MediaSkillResponse node
-          const resultId = data.resultId;
+          const resultId = data.data.resultId;
           const entityId = genMediaSkillResponseID();
 
           const currentNode = getNode(targetNodeId);

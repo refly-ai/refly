@@ -30,6 +30,8 @@ tags:
     description: Pilot management endpoints
   - name: copilot
     description: Copilot management endpoints
+  - name: drive
+    description: Drive management endpoints
   - name: codeArtifact
     description: Code artifact management endpoints
   - name: user
@@ -1056,6 +1058,134 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateWorkflowVariablesResponse'
+  /drive/file/list:
+    get:
+      tags:
+        - drive
+      summary: List drive files
+      description: List all drive files
+      operationId: listDriveFiles
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          required: true
+          schema:
+            type: string
+        - name: source
+          in: query
+          description: Drive file source
+          schema:
+            $ref: '#/components/schemas/DriveFileSource'
+        - name: scope
+          in: query
+          description: Drive file scope
+          schema:
+            $ref: '#/components/schemas/DriveFileScope'
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          schema:
+            type: number
+            default: 10
+        - name: order
+          in: query
+          description: Order
+          schema:
+            $ref: '#/components/schemas/ListOrder'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDriveFilesResponse'
+  /drive/file/create:
+    post:
+      tags:
+        - drive
+      summary: Create drive file
+      description: Create a new drive file
+      operationId: createDriveFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDriveFileRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertDriveFileResponse'
+  /drive/file/batchCreate:
+    post:
+      tags:
+        - drive
+      summary: Batch create drive files
+      description: Batch create drive files
+      operationId: batchCreateDriveFiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreateDriveFilesRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCreateDriveFilesResponse'
+  /drive/file/update:
+    post:
+      tags:
+        - drive
+      summary: Update drive file
+      description: Update an existing drive file
+      operationId: updateDriveFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDriveFileRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertDriveFileResponse'
+  /drive/file/delete:
+    post:
+      tags:
+        - drive
+      summary: Delete drive file
+      description: Delete an existing drive file
+      operationId: deleteDriveFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteDriveFileRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /template/list:
     get:
       tags:
@@ -2715,6 +2845,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InitializeWorkflowResponse'
+  /workflow/abort:
+    post:
+      tags:
+        - workflow
+      summary: Abort workflow execution
+      description: Abort a running workflow execution
+      operationId: abortWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbortWorkflowRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /workflow/detail:
     get:
       tags:
@@ -3069,6 +3219,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetCreditUsageByCanvasIdResponse'
+  /invitation/list:
+    get:
+      tags:
+        - invitation
+      summary: List invitation codes
+      description: List all invitation codes
+      operationId: listInvitationCodes
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListInvitationCodesResponse'
+  /invitation/activate:
+    post:
+      tags:
+        - invitation
+      summary: Activate invitation code
+      description: Activate an invitation code
+      operationId: activateInvitationCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateInvitationCodeRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+  /invitation/invited:
+    get:
+      tags:
+        - invitation
+      summary: Check if user has been invited
+      description: Check if user has been invited
+      operationId: hasBeenInvited
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasBeenInvitedResponse'
   /subscription/plans:
     get:
       tags:
@@ -4401,6 +4599,9 @@ components:
         shareRecord:
           description: Canvas share record
           $ref: '#/components/schemas/ShareRecord'
+        workflowApp:
+          description: Canvas workflow app
+          $ref: '#/components/schemas/WorkflowApp'
         usedToolsets:
           type: array
           description: Used toolsets in the canvas
@@ -5285,6 +5486,7 @@ components:
       type: string
       description: Action status
       enum:
+        - init
         - waiting
         - executing
         - finish
@@ -5418,6 +5620,9 @@ components:
         - application/refly.artifacts.code
         - text/html
         - application/refly.artifacts.mindmap
+        - text/csv
+        - application/json
+        - text/plain
     CodeArtifact:
       type: object
       description: Code artifact
@@ -5474,6 +5679,7 @@ components:
         title:
           type: string
           description: Action result title
+          deprecated: true
         input:
           description: Action input
           $ref: '#/components/schemas/SkillInput'
@@ -5539,6 +5745,11 @@ components:
           description: Tool calls during action execution
           items:
             $ref: '#/components/schemas/ToolCallResult'
+        files:
+          type: array
+          description: Files generated by the action
+          items:
+            $ref: '#/components/schemas/DriveFile'
         outputUrl:
           type: string
           format: uri
@@ -5844,6 +6055,13 @@ components:
           type: boolean
           description: Whether to disable hover tutorial
           default: false
+        hasBeenInvited:
+          type: boolean
+          description: Whether the user has been invited
+          default: false
+        requireInvitationCode:
+          type: boolean
+          description: Whether to require invitation code
         webSearch:
           description: Web search config
           $ref: '#/components/schemas/ProviderConfig'
@@ -5935,6 +6153,7 @@ components:
         - email
         - google
         - github
+        - invitation
     AuthConfigItem:
       type: object
       required:
@@ -6268,8 +6487,14 @@ components:
             resources:
               type: array
               description: Resources in the canvas
+              deprecated: true
               items:
                 $ref: '#/components/schemas/Resource'
+            files:
+              type: array
+              description: Drive files in the canvas
+              items:
+                $ref: '#/components/schemas/DriveFile'
     ExportCanvasResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -7557,6 +7782,7 @@ components:
         images:
           type: array
           description: Image list (storage keys)
+          deprecated: true
           items:
             type: string
     SkillContextResourceItem:
@@ -7660,6 +7886,28 @@ components:
         metadata:
           type: object
           description: Media context metadata
+    SkillContextFileItem:
+      type: object
+      description: Skill context file item
+      required:
+        - fileId
+      properties:
+        fileId:
+          type: string
+          description: File ID
+        file:
+          description: File object
+          $ref: '#/components/schemas/DriveFile'
+    SkillContextResultItem:
+      type: object
+      description: Skill context result item
+      properties:
+        resultId:
+          type: string
+          description: Result ID
+        result:
+          description: Result
+          $ref: '#/components/schemas/ActionResult'
     SkillContext:
       type: object
       description: Skill invocation context
@@ -7695,6 +7943,16 @@ components:
           description: List of media
           items:
             $ref: '#/components/schemas/SkillContextMediaItem'
+        files:
+          type: array
+          description: List of files
+          items:
+            $ref: '#/components/schemas/SkillContextFileItem'
+        results:
+          type: array
+          description: List of results
+          items:
+            $ref: '#/components/schemas/SkillContextResultItem'
     SelectionKey:
       type: string
       enum:
@@ -7730,6 +7988,7 @@ components:
           description: Skill result history
           items:
             $ref: '#/components/schemas/ActionResult'
+          deprecated: true
         runtimeConfig:
           description: Skill runtime config
           $ref: '#/components/schemas/SkillRuntimeConfig'
@@ -7912,7 +8171,11 @@ components:
           model:
             type: string
             description: Model name for content generation
+          title:
+            type: string
+            description: Title of the generated media
           targetType:
+            description: Target type
             $ref: '#/components/schemas/EntityType'
           targetId:
             type: string
@@ -7937,6 +8200,9 @@ components:
           parentResultId:
             type: string
             description: Parent result ID for the media generation (usually the actor agent result ID)
+          parentResultVersion:
+            type: number
+            description: Parent result version for the media generation (usually the actor agent result version)
           apiKey:
             type: string
             description: API key for the provider
@@ -7952,26 +8218,36 @@ components:
           unitCost:
             type: number
             description: Unit cost for the media generation
-          
+    MediaGenerationResult:
+      type: object
+      required:
+        - resultId
+      properties:
+        resultId:
+          type: string
+          description: Media generation result ID
+          example: ar-g30e1b80b5g1itbemc0g5jj3
+        file:
+          $ref: '#/components/schemas/DriveFile'
+          description: Generated file
+        outputUrl:
+          type: string
+          description: Media generation output URL (only available when `wait` is true)
+          deprecated: true
+        storageKey:
+          type: string
+          description: Media generation output storage key (only available when `wait` is true)
+          deprecated: true
+        originalResult:
+          type: object
+          description: Media generation original result from provider
     MediaGenerateResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
         - type: object
           properties:
-            resultId:
-              type: string
-              description: Media generation result ID
-              example: ar-g30e1b80b5g1itbemc0g5jj3
-            outputUrl:
-              type: string
-              description: Media generation output URL (only available when `wait` is true)
-            storageKey:
-              type: string
-              description: Media generation output storage key (only available when `wait` is true)
-            originalResult:
-              type: object
-              description: Media generation original result from provider
-
+            data:
+              $ref: '#/components/schemas/MediaGenerationResult'
 
     FishAudioTextToSpeechRequest:
       allOf:
@@ -8311,6 +8587,97 @@ components:
                       type: string
                     message:
                       type: string
+
+    SandboxExecuteParams:
+      type: object
+      required:
+        - code
+        - language
+      properties:
+        code:
+          type: string
+          description: Code to execute in the sandbox
+        language:
+          type: string
+          description: Programming language for code execution
+          enum:
+            - python
+            - javascript
+            - typescript
+            - r
+            - java
+            - bash
+            - node
+            - nodejs
+            - deno
+          example: "python"
+        timeout:
+          type: integer
+          description: Execution timeout in milliseconds
+          minimum: 1000
+          maximum: 300000
+          default: 30000
+
+    SandboxExecuteContext:
+      type: object
+      properties:
+        parentResultId:
+          type: string
+          description: Parent action result ID for context inheritance
+        canvasId:
+          type: string
+          description: Canvas ID for context
+        targetId:
+          type: string
+          description: Target entity ID
+        targetType:
+          type: string
+          description: Target entity type
+        model:
+          type: string
+          description: Model name for credit tracking
+        providerItemId:
+          type: string
+          description: Provider item ID for credit tracking
+        version:
+          type: number
+          description: Result version for file registration
+
+    SandboxExecuteRequest:
+      type: object
+      required:
+        - params
+      properties:
+        params:
+          $ref: '#/components/schemas/SandboxExecuteParams'
+        context:
+          $ref: '#/components/schemas/SandboxExecuteContext'
+
+    SandboxExecuteResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponseV2'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                output:
+                  type: string
+                  description: Standard output from code execution
+                error:
+                  type: string
+                  description: Standard error from code execution
+                exitCode:
+                  type: integer
+                  description: Exit code of the execution
+                executionTime:
+                  type: number
+                  description: Execution time in milliseconds
+                files:
+                  type: array
+                  description: List of files generated by the code execution.
+                  items:
+                    $ref: '#/components/schemas/DriveFile'
 
     PilotStepStatus:
       type: string
@@ -8679,6 +9046,12 @@ components:
                 creditAmount:
                   type: number
                   description: Credit amount
+                regularCredits:
+                  type: number
+                  description: Regular credits (from purchases, gifts, subscriptions)
+                templateEarningsCredits:
+                  type: number
+                  description: Template earnings credits                
     GetCreditUsageByResultIdResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -8730,6 +9103,58 @@ components:
                   description: Credit usage list by canvas ID
                   items:
                     $ref: '#/components/schemas/CreditUsage'
+    InvitationCode:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Invitation code
+        inviterUid:
+          type: string
+          description: Inviter UID
+        inviteeUid:
+          type: string
+          description: Invitee UID
+        status:
+          type: string
+          description: Invitation status
+        createdAt:
+          type: string
+          format: date-time
+          description: Invitation creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: Invitation update time
+    ActivateInvitationCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Invitation code
+    ListInvitationCodesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Invitation code list
+              items:
+                $ref: '#/components/schemas/InvitationCode'
+    HasBeenInvitedResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Has been invited data
+              properties:
+                hasBeenInvited:
+                  type: boolean
+                  description: Whether user has been invited
+                  default: false
     SubscriptionPlan:
       type: object
       properties:
@@ -9886,6 +10311,7 @@ components:
       enum:
         - credentials
         - oauth
+        - config_based
     ToolDefinition:
       type: object
       required:
@@ -9899,6 +10325,9 @@ components:
           type: object
           additionalProperties: true
           description: Tool description dictionary for humans
+        modelOnly:
+          type: boolean
+          description: Whether the tool is only visible to model
     AuthPattern:
       type: object
       required:
@@ -9932,6 +10361,9 @@ components:
         key:
           type: string
           description: Toolset key
+        builtin:
+          type: boolean
+          description: Whether this is a builtin toolset
         domain:
           type: string
           description: Toolset domain (used for display icon)
@@ -10201,6 +10633,7 @@ components:
         - website
         - resource
         - skill
+        - file
         - tool
         - skillResponse
         - toolResponse
@@ -10225,6 +10658,7 @@ components:
         editedTitle:
           type: string
           description: Node edited title
+          deprecated: true
         entityId:
           type: string
           description: Node entity ID
@@ -10355,6 +10789,15 @@ components:
                   type: string
                   description: Workflow execution ID
                   example: "we-abc123"
+    AbortWorkflowRequest:
+      type: object
+      required:
+        - executionId
+      properties:
+        executionId:
+          type: string
+          description: Workflow execution ID to abort
+          example: "we-abc123"
     WorkflowNodeExecution:
       type: object
       required:
@@ -10732,6 +11175,171 @@ components:
               description: Updated list of workflow variables
               items:
                 $ref: '#/components/schemas/WorkflowVariable'
+    DriveFileCategory:
+      type: string
+      enum:
+        - document
+        - image
+        - video
+        - audio
+        - others
+    DriveFileSource:
+      type: string
+      enum:
+        - manual
+        - variable
+        - agent
+    DriveFileScope:
+      type: string
+      enum:
+        - present
+        - archive
+    DriveFile:
+      type: object
+      required:
+        - fileId
+        - canvasId
+        - name
+        - type
+      properties:
+        fileId:
+          type: string
+          description: Drive file ID
+        canvasId:
+          type: string
+          description: Canvas ID
+        name:
+          type: string
+          description: Drive file name
+        type:
+          type: string
+          description: Drive file type
+        category:
+          $ref: '#/components/schemas/DriveFileCategory'
+          description: Drive file category
+        source:
+          $ref: '#/components/schemas/DriveFileSource'
+          description: Drive file source
+        scope:
+          $ref: '#/components/schemas/DriveFileScope'
+          description: Drive file scope
+        size:
+          type: number
+          description: Drive file size
+        summary:
+          type: string
+          description: Drive file summary
+        variableId:
+          type: string
+          description: Related variable ID
+        resultId:
+          type: string
+          description: Action result ID
+        resultVersion:
+          type: number
+          description: Action result version
+        content:
+          type: string
+          description: Drive file content (only used for model input)
+        createdAt:
+          type: string
+          format: date-time
+          description: Drive file creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Drive file update timestamp
+    ListDriveFilesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of drive files
+              items:
+                $ref: '#/components/schemas/DriveFile'
+    UpsertDriveFileRequest:
+      type: object
+      required:
+        - canvasId
+        - name
+      properties:
+        fileId:
+          type: string
+          description: File ID (required for update)
+        canvasId:
+          type: string
+          description: Canvas ID
+        name:
+          type: string
+          description: Drive file name
+        type:
+          type: string
+          description: Drive file type (MIME type)
+        summary:
+          type: string
+          description: Brief summary for this file
+        content:
+          type: string
+          description: File content (for plain text files)
+        storageKey:
+          type: string
+          description: File storage key (for uploaded files)
+        externalUrl:
+          type: string
+          description: External URL to download from
+        source:
+          $ref: '#/components/schemas/DriveFileSource'
+          description: File source
+        variableId:
+          type: string
+          description: Related variable ID
+        resultId:
+          type: string
+          description: Related agent result ID
+        resultVersion:
+          type: number
+          description: Related agent result version
+    BatchCreateDriveFilesRequest:
+      type: object
+      required:
+        - canvasId
+        - files
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID
+        files:
+          type: array
+          description: List of drive files
+          items:
+            $ref: '#/components/schemas/UpsertDriveFileRequest'
+    BatchCreateDriveFilesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of drive files
+              items:
+                $ref: '#/components/schemas/DriveFile'
+    UpsertDriveFileResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriveFile'
+    DeleteDriveFileRequest:
+      type: object
+      required:
+        - fileId
+      properties:
+        fileId:
+          type: string
+          description: Drive file ID
     SendEmailRequest:
       type: object
       required:
@@ -10833,6 +11441,1210 @@ components:
               items:
                 type: string
               example: ["data-processing", "automation"]
+
+    FormDefinition:
+      type: object
+      required:
+        - formId
+        - title
+        - schema
+        - createdAt
+        - updatedAt
+      properties:
+        formId:
+          type: string
+          description: Form ID
+          example: "form-123"
+        title:
+          type: string
+          description: Form title
+          example: "User feedback survey"
+        description:
+          type: string
+          description: Form description
+          example: "Please fill out the following survey"
+        schema:
+          type: string
+          description: JSON Schema definition (RJSF compatible)
+          example: '{"type":"object","properties":{"feedback":{"type":"string","title":"Feedback content"}},"required":["feedback"]}'
+        uiSchema:
+          type: string
+          description: UI Schema definition (RJSF compatible for controlling UI elements like emoji, layout, helper text)
+          example: '{"feedback":{"ui:widget":"textarea","ui:placeholder":"Please enter your feedback"}}'
+        status:
+          type: string
+          description: Form status
+          enum: [draft, published, archived]
+          default: draft
+          example: "published"
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        deletedAt:
+          type: string
+          format: date-time
+          description: Soft delete timestamp
+
+    FormSubmission:
+      type: object
+      required:
+        - formId
+        - uid
+        - answers
+        - createdAt
+        - updatedAt
+      properties:
+        submissionId:
+          type: string
+          description: Submission ID
+          example: "sub-456"
+        formId:
+          type: string
+          description: Associated form ID
+          example: "form-123"
+        uid:
+          type: string
+          description: User ID who submitted the form
+          example: "user-789"
+        answers:
+          type: string
+          description: Submission answers (JSON object with field values)
+          example: '{"feedback":"The service is very good","rating":5}'
+        status:
+          type: string
+          description: Submission status
+          enum: [draft, submitted, reviewed]
+          default: draft
+          example: "submitted"
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    FormFieldSchema:
+      type: object
+      description: RJSF compatible field schema definition
+      properties:
+        type:
+          type: string
+          description: Field type
+          enum: [string, number, integer, boolean, object, array]
+          example: "string"
+        title:
+          type: string
+          description: Field display title
+          example: "Your name"
+        description:
+          type: string
+          description: Field description/helper text
+          example: "Please enter your real name"
+        enum:
+          type: array
+          description: Enumeration values for radio/select fields
+          items:
+            type: string
+          example: ["A", "B", "C"]
+        enumNames:
+          type: array
+          description: Display names for enum values
+          items:
+            type: string
+          example: ["Excellent", "Good", "Average"]
+        default:
+          description: Default value for the field
+        minLength:
+          type: integer
+          description: Minimum string length
+          example: 2
+        maxLength:
+          type: integer
+          description: Maximum string length
+          example: 100
+        pattern:
+          type: string
+          description: Regex pattern for validation
+          example: "^[a-zA-Z0-9]+$"
+        minimum:
+          type: number
+          description: Minimum numeric value
+        maximum:
+          type: number
+          description: Maximum numeric value
+        required:
+          type: boolean
+          description: Whether this field is required
+          default: false
+
+    FormUiSchema:
+      type: object
+      description: RJSF UI schema for controlling form appearance and behavior
+      properties:
+        'ui:widget':
+          type: string
+          description: Widget type override
+          enum: [text, textarea, select, radio, checkbox, checkboxes, date, email, password]
+          example: "textarea"
+        'ui:placeholder':
+          type: string
+          description: Input placeholder text
+          example: "Please enter content..."
+        'ui:help':
+          type: string
+          description: Help text displayed below the field
+          example: "This field is required"
+        'ui:options':
+          type: object
+          description: Widget-specific options (can include emoji, layout settings, etc.)
+          properties:
+            emoji:
+              type: string
+              description: Emoji to display with the field
+              example: "📝"
+            layout:
+              type: string
+              description: Layout style
+              enum: [horizontal, vertical]
+              example: "vertical"
+            rows:
+              type: integer
+              description: Number of rows for textarea
+              example: 4
+            inline:
+              type: boolean
+              description: Whether to display radio/checkbox options inline
+              example: true
+    # ==========================================
+    # Tool System Type Definitions
+    # ==========================================
+
+    # Billing Configuration
+    BillingType:
+      type: string
+      enum:
+        - per_call
+        - per_quantity
+      description: Type of billing for a tool method
+
+    BillingConfig:
+      type: object
+      required:
+        - enabled
+        - type
+      properties:
+        enabled:
+          type: boolean
+          description: Whether billing is enabled
+        type:
+          $ref: '#/components/schemas/BillingType'
+        creditsPerCall:
+          type: number
+          description: Credits per call (for PER_CALL type)
+        creditsPerUnit:
+          type: number
+          description: Credits per unit (for PER_QUANTITY type)
+        quantityField:
+          type: string
+          description: Field name to extract quantity from (for PER_QUANTITY type)
+        maxCredits:
+          type: number
+          description: Maximum credits per single call
+        quantityTransform:
+          type: string
+          description: Transform function name for custom quantity calculation
+
+    # Schema Definitions
+    SchemaPropertyType:
+      type: string
+      enum:
+        - string
+        - number
+        - boolean
+        - object
+        - array
+      description: JSON Schema property type
+
+    ToolResourceType:
+      type: string
+      enum:
+        - audio
+        - video
+        - image
+        - document
+      description: Resource type for tool operations (subset of ResourceType)
+
+    SchemaProperty:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          $ref: '#/components/schemas/SchemaPropertyType'
+        description:
+          type: string
+          description: Property description
+        isResource:
+          type: boolean
+          description: Whether this property is a resource reference
+        format:
+          type: string
+          description: 'Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.'
+          example: 'binary'
+        minLength:
+          type: number
+          description: Minimum length (for string)
+        maxLength:
+          type: number
+          description: Maximum length (for string)
+        min:
+          type: number
+          description: Minimum value (for number)
+        max:
+          type: number
+          description: Maximum value (for number)
+        enum:
+          type: array
+          items:
+            type: string
+          description: Enum values
+        default:
+          description: Default value
+        optional:
+          type: boolean
+          description: Whether this property is optional
+        properties:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/SchemaProperty'
+          description: Nested properties (for object type)
+        items:
+          $ref: '#/components/schemas/SchemaProperty'
+        required:
+          type: array
+          items:
+            type: string
+          description: Required properties (for object type)
+
+    JsonSchema:
+      type: object
+      required:
+        - type
+        - properties
+      properties:
+        type:
+          type: string
+          enum:
+            - object
+          description: Schema type
+        properties:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/SchemaProperty'
+          description: Schema properties
+        required:
+          type: array
+          items:
+            type: string
+          description: Required property names
+        additionalProperties:
+          type: boolean
+          description: Additional properties allowed
+
+    ResponseSchema:
+      allOf:
+        - $ref: '#/components/schemas/JsonSchema'
+        - type: object
+          description: Response schema definition for identifying resource fields
+
+    ResourceField:
+      type: object
+      required:
+        - fieldPath
+        - isArray
+      properties:
+        fieldPath:
+          type: string
+          description: JSONPath to the resource field
+        type:
+          $ref: '#/components/schemas/ToolResourceType'
+          description: Resource type hint (optional, can be inferred from file MIME type)
+        isArray:
+          type: boolean
+          description: Whether this field is an array of resources
+        format:
+          type: string
+          description: 'Format to convert resource content to (default is binary). Options: base64, url, binary, text'
+          example: 'binary'
+
+    # Tool Configuration
+    HttpMethod:
+      type: string
+      enum:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+      description: HTTP method
+
+    ToolMethodConfig:
+      type: object
+      required:
+        - name
+        - description
+        - endpoint
+        - schema
+        - responseSchema
+      properties:
+        name:
+          type: string
+          description: Method name (e.g., 'text_to_speech')
+        version:
+          type: number
+          description: Version number (incremental integer, derived from pk or timestamp)
+        displayName:
+          type: string
+          description: Human-readable display name
+        description:
+          type: string
+          description: Method description for LLM
+        endpoint:
+          type: string
+          description: API endpoint URL
+        method:
+          $ref: '#/components/schemas/HttpMethod'
+        schema:
+          type: string
+          description: Input parameter schema (JSON string)
+        responseSchema:
+          type: string
+          description: Response schema for resource identification (JSON string)
+        billing:
+          $ref: '#/components/schemas/BillingConfig'
+        customHandler:
+          type: string
+          description: Custom handler class name (optional)
+        useSdk:
+          type: boolean
+          description: Whether to use SDK instead of HTTP (optional)
+        sdkPackage:
+          type: string
+          description: SDK package name (if useSdk is true)
+        sdkMethod:
+          type: string
+          description: SDK method path (e.g., 'client.textToSpeech.convert')
+        timeout:
+          type: number
+          description: Request timeout in milliseconds
+        maxRetries:
+          type: number
+          description: Maximum retries on failure
+
+    CredentialConfig:
+      type: object
+      additionalProperties:
+        type: string
+      properties:
+        apiKey:
+          type: string
+          description: API key
+        apiSecret:
+          type: string
+          description: API secret
+        accessToken:
+          type: string
+          description: OAuth access token
+        refreshToken:
+          type: string
+          description: OAuth refresh token
+      description: Credential configuration
+
+    ToolsetConfig:
+      type: object
+      required:
+        - inventoryKey
+        - domain
+        - methods
+      properties:
+        inventoryKey:
+          type: string
+          description: Toolset inventory key (e.g., 'fish_audio', 'heygen')
+        domain:
+          type: string
+          description: Tool domain (e.g., 'fish.audio')
+        name:
+          type: string
+          description: Display name
+        credentials:
+          $ref: '#/components/schemas/CredentialConfig'
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolMethodConfig'
+          description: Tool methods
+        version:
+          type: number
+          description: Configuration version
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Configuration metadata
+
+    ParsedMethodConfig:
+      type: object
+      required:
+        - name
+        - description
+        - endpoint
+        - schema
+        - responseSchema
+      properties:
+        name:
+          type: string
+          description: Method name
+        version:
+          type: number
+          description: Version number
+        displayName:
+          type: string
+          description: Human-readable display name
+        description:
+          type: string
+          description: Method description for LLM
+        endpoint:
+          type: string
+          description: API endpoint URL
+        method:
+          $ref: '#/components/schemas/HttpMethod'
+        schema:
+          $ref: '#/components/schemas/JsonSchema'
+        responseSchema:
+          $ref: '#/components/schemas/ResponseSchema'
+        billing:
+          $ref: '#/components/schemas/BillingConfig'
+        customHandler:
+          type: string
+          description: Custom handler class name
+        useSdk:
+          type: boolean
+          description: Whether to use SDK instead of HTTP
+        sdkPackage:
+          type: string
+          description: SDK package name
+        sdkMethod:
+          type: string
+          description: SDK method path
+        timeout:
+          type: number
+          description: Request timeout in milliseconds
+        maxRetries:
+          type: number
+          description: Maximum retries on failure
+        useFormData:
+          type: boolean
+          description: Whether to use multipart/form-data encoding
+
+    ParsedToolsetConfig:
+      type: object
+      required:
+        - inventoryKey
+        - domain
+        - methods
+      properties:
+        inventoryKey:
+          type: string
+          description: Toolset inventory key (e.g., 'fish_audio', 'heygen')
+        domain:
+          type: string
+          description: Tool domain
+        name:
+          type: string
+          description: Display name
+        credentials:
+          $ref: '#/components/schemas/CredentialConfig'
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParsedMethodConfig'
+          description: Parsed methods with JSON schemas
+        version:
+          type: number
+          description: Configuration version
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Configuration metadata
+
+    ConfigChangeEvent:
+      type: object
+      required:
+        - toolsetKey
+        - md5
+        - config
+        - timestamp
+      properties:
+        toolsetKey:
+          type: string
+          description: Toolset key
+        md5:
+          type: string
+          description: Configuration MD5 hash
+        config:
+          $ref: '#/components/schemas/ToolsetConfig'
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+
+    # Adapter Types
+    AdapterRequest:
+      type: object
+      required:
+        - endpoint
+        - params
+      properties:
+        endpoint:
+          type: string
+          description: API endpoint or SDK method path
+        method:
+          $ref: '#/components/schemas/HttpMethod'
+        params:
+          type: object
+          additionalProperties: true
+          description: Request parameters
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Request headers (for HTTP adapter)
+        credentials:
+          type: object
+          additionalProperties: true
+          description: Credentials for authentication
+        timeout:
+          type: number
+          description: Request timeout in milliseconds
+        useFormData:
+          type: boolean
+          description: Whether to use multipart/form-data (for HTTP adapter)
+
+    AdapterResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          description: Response data
+        status:
+          type: number
+          description: HTTP status code (for HTTP adapter)
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Response headers (for HTTP adapter)
+        raw:
+          description: Raw response body (for debugging)
+
+    HttpAdapterConfig:
+      type: object
+      properties:
+        baseUrl:
+          type: string
+          description: Base URL for the API
+        defaultHeaders:
+          type: object
+          additionalProperties:
+            type: string
+          description: Default headers
+        timeout:
+          type: number
+          description: Request timeout in milliseconds
+        maxRetries:
+          type: number
+          description: Maximum retries
+        retryDelay:
+          type: number
+          description: Retry delay in milliseconds
+        proxy:
+          type: string
+          description: HTTP proxy URL
+        polling:
+          $ref: '#/components/schemas/PollingConfig'
+          description: Polling configuration for async task tracking
+
+    PollingConfig:
+      type: object
+      required:
+        - statusUrl
+      properties:
+        statusUrl:
+          type: string
+          description: 'Status check endpoint template (e.g., "/v1/tasks/{id}" or "/v1/video_status.get?video_id={id}")'
+        maxWaitSeconds:
+          type: number
+          description: Maximum wait time in seconds
+          default: 300
+        intervalSeconds:
+          type: number
+          description: Poll interval in seconds
+          default: 5
+
+    SdkAdapterConfig:
+      type: object
+      required:
+        - packageName
+        - methodPath
+      properties:
+        packageName:
+          type: string
+          description: NPM package name
+        methodPath:
+          type: string
+          description: Method path in the SDK (e.g., 'client.textToSpeech.convert')
+        clientFactory:
+          description: SDK client initialization function (runtime only, not serializable)
+        paramTransformer:
+          description: Parameter transformer function (runtime only, not serializable)
+
+    RetryConfig:
+      type: object
+      required:
+        - maxRetries
+        - initialDelay
+        - maxDelay
+        - backoffMultiplier
+      properties:
+        maxRetries:
+          type: number
+          description: Maximum number of retries
+        initialDelay:
+          type: number
+          description: Initial retry delay in milliseconds
+        maxDelay:
+          type: number
+          description: Maximum retry delay in milliseconds
+        backoffMultiplier:
+          type: number
+          description: Backoff multiplier
+        retryableStatusCodes:
+          type: array
+          items:
+            type: number
+          description: Status codes that should trigger a retry
+        retryableErrorCodes:
+          type: array
+          items:
+            type: string
+          description: Error codes that should trigger a retry
+
+    CircuitBreakerState:
+      type: string
+      enum:
+        - closed
+        - open
+        - half_open
+      description: Circuit breaker state
+
+    CircuitBreakerConfig:
+      type: object
+      required:
+        - failureThreshold
+        - successThreshold
+        - timeout
+        - rollingWindowSize
+      properties:
+        failureThreshold:
+          type: number
+          description: Failure threshold to open the circuit
+        successThreshold:
+          type: number
+          description: Success threshold to close the circuit from half-open
+        timeout:
+          type: number
+          description: Timeout in milliseconds before attempting to close
+        rollingWindowSize:
+          type: number
+          description: Rolling window size for failure counting
+
+    # Handler Types
+    HandlerRequest:
+      type: object
+      required:
+        - provider
+        - method
+        - params
+      properties:
+        provider:
+          type: string
+          description: Provider/toolset identifier
+        method:
+          type: string
+          description: Method name
+        params:
+          type: object
+          additionalProperties: true
+          description: Input parameters
+        user:
+          $ref: '#/components/schemas/User'
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Request metadata
+
+    UploadResultMetadata:
+      type: object
+      properties:
+        size:
+          type: number
+          description: File size in bytes
+        mimeType:
+          type: string
+          description: MIME type
+        duration:
+          type: number
+          description: Duration (for audio/video)
+        width:
+          type: number
+          description: Width (for images/video)
+        height:
+          type: number
+          description: Height (for images/video)
+        format:
+          type: string
+          description: File format
+
+    UploadResult:
+      type: object
+      required:
+        - fileId
+        - resourceType
+      properties:
+        fileId:
+          type: string
+          description: File ID in database (DriveService)
+        resourceType:
+          $ref: '#/components/schemas/ToolResourceType'
+        metadata:
+          $ref: '#/components/schemas/UploadResultMetadata'
+
+    HandlerResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Success status
+        data:
+          type: object
+          additionalProperties: true
+          description: Response data
+        localPath:
+          type: string
+          description: Local file path (if file was saved)
+        storageKey:
+          type: string
+          description: Storage key (if file was uploaded)
+        entityId:
+          type: string
+          description: Entity ID (if resource was created)
+        fileId:
+          type: string
+          description: File ID in database
+        url:
+          type: string
+          description: CDN/public URL
+        uploadResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/UploadResult'
+          description: Upload results for multiple resources
+        error:
+          type: string
+          description: Error information
+        errorCode:
+          type: string
+          description: Error code
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Response metadata
+
+    HandlerContext:
+      type: object
+      required:
+        - startTime
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+          description: User information for billing and tracking
+        credentials:
+          type: object
+          additionalProperties: true
+          description: Credentials for authentication
+        responseSchema:
+          $ref: '#/components/schemas/ResponseSchema'
+          description: Response schema for identifying resource fields via traversal
+        startTime:
+          type: number
+          description: Request start timestamp
+
+    HandlerConfig:
+      type: object
+      required:
+        - endpoint
+      properties:
+        endpoint:
+          type: string
+          description: API endpoint URL
+        method:
+          $ref: '#/components/schemas/HttpMethod'
+        credentials:
+          type: object
+          additionalProperties: true
+          description: Credentials
+        responseSchema:
+          $ref: '#/components/schemas/ResponseSchema'
+          description: Response schema for identifying resource fields via traversal
+        timeout:
+          type: number
+          description: Request timeout (ms)
+        maxRetries:
+          type: number
+          description: Maximum retries
+        useFormData:
+          type: boolean
+          description: Whether to use multipart/form-data
+
+    FileMetadata:
+      type: object
+      required:
+        - entityId
+        - storageKey
+        - type
+        - visibility
+      properties:
+        entityId:
+          type: string
+          description: Entity ID
+        storageKey:
+          type: string
+          description: Storage key
+        type:
+          type: string
+          description: File type
+        mimeType:
+          type: string
+          description: MIME type
+        visibility:
+          type: string
+          enum:
+            - public
+            - private
+          description: Visibility
+        size:
+          type: number
+          description: File size in bytes
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata
+
+    UploadMetadata:
+      type: object
+      required:
+        - provider
+        - method
+        - type
+      properties:
+        provider:
+          type: string
+          description: Provider name
+        method:
+          type: string
+          description: Method name
+        type:
+          $ref: '#/components/schemas/ToolResourceType'
+        mimeType:
+          type: string
+          description: MIME type
+        userId:
+          type: string
+          description: User ID
+
+    HandlerExecutionResult:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Success status
+        data:
+          description: Result data
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+            message:
+              type: string
+              description: Error message
+            details:
+              type: object
+              additionalProperties: true
+              description: Error details
+        metrics:
+          type: object
+          properties:
+            duration:
+              type: number
+              description: Execution duration in milliseconds
+            retries:
+              type: number
+              description: Number of retries
+
+    # Tool Types
+    ToolMetadataBilling:
+      type: object
+      required:
+        - enabled
+        - type
+      properties:
+        enabled:
+          type: boolean
+          description: Whether billing is enabled
+        type:
+          type: string
+          enum:
+            - per_call
+            - per_quantity
+          description: Billing type
+        creditsPerCall:
+          type: number
+          description: Credits per call
+        creditsPerUnit:
+          type: number
+          description: Credits per unit
+
+    ToolMetadata:
+      type: object
+      required:
+        - version
+        - toolsetKey
+        - methodName
+      properties:
+        version:
+          type: number
+          description: Version number (incremental integer for version tracking)
+        toolsetKey:
+          type: string
+          description: Toolset key
+        methodName:
+          type: string
+          description: Method name
+        billing:
+          $ref: '#/components/schemas/ToolMetadataBilling'
+        resourceTypes:
+          type: array
+          items:
+            type: string
+          description: Resource types handled by this tool
+        resourceExtensions:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Supported file extensions for each resource type
+
+    ToolInstantiationContextUser:
+      type: object
+      required:
+        - uid
+      properties:
+        uid:
+          type: string
+          description: User ID
+        name:
+          type: string
+          description: User name
+        email:
+          type: string
+          description: User email
+
+    ToolInstantiationContext:
+      type: object
+      required:
+        - user
+        - toolsetId
+      properties:
+        user:
+          $ref: '#/components/schemas/ToolInstantiationContextUser'
+        toolsetId:
+          type: string
+          description: Toolset ID
+        configId:
+          type: string
+          description: Configuration ID (for versioned configs)
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional context
+
+    ToolExecutionContextUser:
+      type: object
+      required:
+        - uid
+      properties:
+        uid:
+          type: string
+          description: User ID
+        name:
+          type: string
+          description: User name
+        email:
+          type: string
+          description: User email
+
+    ToolExecutionContext:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          $ref: '#/components/schemas/ToolExecutionContextUser'
+        parentResultId:
+          type: string
+          description: Parent result ID (for workflow chaining)
+        actionStepPk:
+          type: number
+          description: Action step PK (for workflow tracking)
+        canvasNodeId:
+          type: string
+          description: Canvas node ID
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata
+
+    ToolExecutionResult:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Success status
+        data:
+          description: Result data
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+            message:
+              type: string
+              description: Error message
+            details:
+              type: object
+              additionalProperties: true
+              description: Error details
+        metrics:
+          type: object
+          properties:
+            duration:
+              type: number
+              description: Execution duration in milliseconds
+            creditsCost:
+              type: number
+              description: Credits cost
+
+    DynamicToolDefinition:
+      type: object
+      required:
+        - name
+        - description
+        - metadata
+      properties:
+        name:
+          type: string
+          description: Tool name (unique identifier)
+        description:
+          type: string
+          description: Tool description for LLM
+        schema:
+          description: Zod schema for parameters (runtime only, not serializable)
+        metadata:
+          $ref: '#/components/schemas/ToolMetadata'
+
+    InstantiatedTool:
+      type: object
+      required:
+        - metadata
+      properties:
+        tool:
+          description: LangChain DynamicStructuredTool instance (runtime only, not serializable)
+        metadata:
+          $ref: '#/components/schemas/ToolMetadata'
+        configVersion:
+          type: number
+          description: Configuration version
+
+    ToolCacheEntry:
+      type: object
+      required:
+        - configHash
+        - timestamp
+        - expiresAt
+      properties:
+        configHash:
+          type: string
+          description: Configuration MD5 hash
+        timestamp:
+          type: string
+          format: date-time
+          description: Cache timestamp
+        expiresAt:
+          type: string
+          format: date-time
+          description: Cache expiration time
+
+    ToolRegistryEntry:
+      type: object
+      required:
+        - toolsetKey
+        - definitions
+        - configVersion
+        - updatedAt
+      properties:
+        toolsetKey:
+          type: string
+          description: Toolset key
+        definitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DynamicToolDefinition'
+          description: Tool definitions
+        configVersion:
+          type: number
+          description: Configuration version
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
   securitySchemes:
     api_key:
       type: apiKey

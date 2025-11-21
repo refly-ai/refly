@@ -14,6 +14,7 @@ export enum IDPrefix {
   RESOURCE = 'r-',
   CANVAS = 'c-',
   CANVAS_TEMPLATE = 'ct-',
+  DRIVE_FILE = 'df-',
   REFERENCE = 'rf-',
   TOKEN_USAGE_METER = 'tum-',
   STORAGE_USAGE_METER = 'sum-',
@@ -71,6 +72,10 @@ export function genPilotSessionID(): string {
 
 export function genPilotStepID(): string {
   return IDPrefix.PILOT_STEP + createId();
+}
+
+export function genDriveFileID(): string {
+  return IDPrefix.DRIVE_FILE + createId();
 }
 
 export function genCopilotSessionID(): string {
@@ -258,6 +263,10 @@ export const genDailyCreditRechargeId = (uid: string, t: Date) => {
   return `${IDPrefix.CREDIT_RECHARGE}daily-${uid}-${getYYYYMMDD(t)}`;
 };
 
+export const genRegistrationCreditRechargeId = (uid: string) => {
+  return `${IDPrefix.CREDIT_RECHARGE}registration-${uid}`;
+};
+
 export const genCommissionCreditRechargeId = (executionId: string) => {
   return `${IDPrefix.CREDIT_RECHARGE}commission-${executionId}`;
 };
@@ -287,3 +296,7 @@ export function genNodeID(): string {
 export function genWorkflowAppID(): string {
   return IDPrefix.WorkflowApp + createId();
 }
+
+export const genInvitationActivationCreditRechargeId = (inviterUid: string, inviteeUid: string) => {
+  return `${IDPrefix.CREDIT_RECHARGE}invitation-${inviterUid}-${inviteeUid}`;
+};

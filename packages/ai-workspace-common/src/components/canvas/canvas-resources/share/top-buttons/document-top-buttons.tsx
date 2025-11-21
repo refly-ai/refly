@@ -74,7 +74,6 @@ export const DocumentTopButtons = () => {
     return items;
   }, [t]);
 
-  // keep same logic as NodePreviewHeader
   const handleExport = useCallback(
     async (type: 'markdown' | 'docx' | 'pdf') => {
       if (isExporting) return;

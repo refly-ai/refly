@@ -3,7 +3,12 @@ import { useReactFlow, useStoreApi, XYPosition } from '@xyflow/react';
 import { CanvasNode as SchemaCanvasNode } from '@refly/openapi-schema';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { CanvasNode, CanvasNodeFilter, prepareAddNode } from '@refly/canvas-common';
+import {
+  CanvasNode,
+  CanvasNodeFilter,
+  prepareAddNode,
+  deduplicateEdges,
+} from '@refly/canvas-common';
 import { useEdgeStyles } from '../../components/canvas/constants';
 import { useNodeSelection } from './use-node-selection';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -30,14 +35,6 @@ const deduplicateNodes = (nodes: any[]) => {
   return Array.from(uniqueNodesMap.values());
 };
 
-const deduplicateEdges = (edges: any[]) => {
-  const uniqueEdgesMap = new Map();
-  for (const edge of edges) {
-    uniqueEdgesMap.set(edge.id, edge);
-  }
-  return Array.from(uniqueEdgesMap.values());
-};
-
 export const useAddNode = () => {
   const { t } = useTranslation();
   const edgeStyles = useEdgeStyles();
@@ -61,6 +58,7 @@ export const useAddNode = () => {
       shouldPreview = true,
       needSetCenter = false,
       retryCount = 0,
+      skipPurgeToolsets = false,
     ): XYPosition | undefined => {
       const { canvasInitialized } = useCanvasStore.getState();
 
@@ -77,7 +75,7 @@ export const useAddNode = () => {
         const delay = Math.min(INITIAL_RETRY_DELAY * 2 ** retryCount, MAX_RETRY_DELAY);
 
         setTimeout(() => {
-          addNode(node, connectTo, shouldPreview, needSetCenter, retryCount + 1);
+          addNode(node, connectTo, shouldPreview, needSetCenter, retryCount + 1, skipPurgeToolsets);
         }, delay);
         return undefined;
       }
@@ -136,6 +134,7 @@ export const useAddNode = () => {
         connectTo,
         nodes,
         edges,
+        skipPurgeToolsets,
       });
 
       const updatedNodes = deduplicateNodes([...nodes, newNode]);

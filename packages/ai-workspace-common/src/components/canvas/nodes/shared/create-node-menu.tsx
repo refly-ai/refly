@@ -127,7 +127,6 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
       icon: AiChat,
       label: t('canvas.nodeActions.askAI'),
       onClick: handleAskAI,
-      primary: true,
     };
 
     const createMemoItem = {
@@ -164,7 +163,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
     const getMenuItems = useCallback((): MenuItem[] => {
       switch (nodeType) {
         case 'skillResponse':
-          return [askAI, createDocumentItem, createMemoItem];
+          return [askAI];
 
         case 'skill':
         case 'mediaSkill':
@@ -205,7 +204,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
     const menuItems = getMenuItems();
 
     return (
-      <div className="bg-white rounded-[12px] shadow-lg p-2 border border-[rgba(0,0,0,0.06)] relative dark:bg-gray-900 dark:border-gray-700">
+      <div className="px-2 py-1.5">
         {menuItems.map((item) => {
           const button = (
             <Button
@@ -229,7 +228,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
               loading={item.loading}
               onClick={item.onClick}
             >
-              {item.icon ? <item.icon size={18} /> : undefined}
+              {item.icon ? <item.icon size={20} /> : undefined}
               {item.label}
             </Button>
           );

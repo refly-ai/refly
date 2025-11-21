@@ -1,7 +1,7 @@
 import {
   User,
   MediaGenerateRequest,
-  MediaGenerateResponse,
+  MediaGenerationResult,
   ToolsetDefinition,
 } from '@refly/openapi-schema';
 import { ToolParams } from '@langchain/core/tools';
@@ -10,7 +10,7 @@ import { z } from 'zod/v3';
 import { RunnableConfig } from '@langchain/core/runnables';
 
 export interface ReflyService {
-  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerateResponse>;
+  generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerationResult>;
 }
 
 export interface FalAudioParams extends ToolParams {
@@ -59,6 +59,7 @@ export class VibeVoiceGenerateAudio extends AgentBaseTool<FalAudioParams> {
   toolsetKey = FalAudioToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the audio. Should be concise and descriptive.'),
     script: z
       .string()
       .describe(
@@ -111,13 +112,20 @@ export class VibeVoiceGenerateAudio extends AgentBaseTool<FalAudioParams> {
       const { reflyService, user } = this.params;
       const result = await reflyService.generateMedia(user, {
         mediaType: 'audio',
+        title: input.title,
         prompt: input.script,
         model: 'fal-ai/vibevoice/7b',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
+
+      const { file } = result;
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on duration
       let creditCost = 140; // fallback to default unit cost
@@ -143,8 +151,8 @@ export class VibeVoiceGenerateAudio extends AgentBaseTool<FalAudioParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated audio with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated audio with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -163,6 +171,7 @@ export class ElevenLabsDialogueGenerateAudio extends AgentBaseTool<FalAudioParam
   toolsetKey = FalAudioToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the audio. Should be concise and descriptive.'),
     inputs: z
       .array(
         z.object({
@@ -221,13 +230,20 @@ export class ElevenLabsDialogueGenerateAudio extends AgentBaseTool<FalAudioParam
       const { reflyService, user } = this.params;
       const result = await reflyService.generateMedia(user, {
         mediaType: 'audio',
+        title: input.title,
         prompt: '',
         model: 'fal-ai/elevenlabs/text-to-dialogue/eleven-v3',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
+
+      const { file } = result;
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on character count
       let creditCost = 70; // fallback to default unit cost
@@ -243,8 +259,8 @@ export class ElevenLabsDialogueGenerateAudio extends AgentBaseTool<FalAudioParam
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated audio with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated audio with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {
@@ -263,6 +279,7 @@ export class MinimaxSpeechGenerateAudio extends AgentBaseTool<FalAudioParams> {
   toolsetKey = FalAudioToolsetDefinition.key;
 
   schema = z.object({
+    title: z.string().describe('The title of the audio. Should be concise and descriptive.'),
     text: z
       .string()
       .describe(
@@ -362,13 +379,20 @@ export class MinimaxSpeechGenerateAudio extends AgentBaseTool<FalAudioParams> {
       const { reflyService, user } = this.params;
       const result = await reflyService.generateMedia(user, {
         mediaType: 'audio',
+        title: input.title,
         prompt: input.text,
         model: 'fal-ai/minimax/preview/speech-2.5-turbo',
         provider: 'fal',
         input,
         wait: true,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       });
+
+      const { file } = result;
+      if (!file) {
+        throw new Error('No file generated, please try again');
+      }
 
       // Calculate dynamic credit cost based on character count
       let creditCost = 35; // fallback to default unit cost
@@ -382,8 +406,8 @@ export class MinimaxSpeechGenerateAudio extends AgentBaseTool<FalAudioParams> {
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated audio with URL: ${result?.outputUrl}`,
+        data: file,
+        summary: `Successfully generated audio with file ID: ${file.fileId}`,
         creditCost,
       };
     } catch (error) {

@@ -26,6 +26,14 @@ export const BuiltinToolsetDefinition: ToolsetDefinition = {
       },
     },
     {
+      name: 'read_file',
+      descriptionDict: {
+        en: 'Read content from a file.',
+        'zh-CN': '读取文件内容。',
+      },
+      modelOnly: true,
+    },
+    {
       name: 'generate_doc',
       descriptionDict: {
         en: 'Generate a new document based on a title and content.',
@@ -196,7 +204,7 @@ export class BuiltinLibrarySearch extends AgentBaseTool<BuiltinToolParams> {
 
 export class BuiltinWebSearch extends AgentBaseTool<BuiltinToolParams> {
   name = 'web_search';
-  toolsetKey = BuiltinToolsetDefinition.key;
+  toolsetKey = 'web_search';
 
   schema = z.object({
     query: z.string().describe('The search query to execute'),
@@ -266,16 +274,19 @@ export class BuiltinGenerateDoc extends AgentBaseTool<BuiltinToolParams> {
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const document = await reflyService.createDocument(user, {
-        title: input.title,
-        initialContent: input.content,
+      const file = await reflyService.writeFile(user, {
+        name: input.title,
+        content: input.content,
+        type: 'text/plain',
+        canvasId: config.configurable?.canvasId,
         resultId: config.configurable?.resultId,
+        resultVersion: config.configurable?.version,
       });
 
       return {
         status: 'success',
-        data: document,
-        summary: `Successfully generated document: "${input.title}" with ID: ${document.docId}`,
+        data: file,
+        summary: `Successfully generated document: "${input.title}" with ID: ${file.fileId}`,
       };
     } catch (error) {
       return {
@@ -295,18 +306,9 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
   toolsetKey = 'generate_code_artifact';
 
   schema = z.object({
-    title: z.string().describe('Title of the code artifact to generate'),
-    type: z
-      .enum([
-        'application/refly.artifacts.react',
-        'image/svg+xml',
-        'application/refly.artifacts.mermaid',
-        'text/markdown',
-        'application/refly.artifacts.code',
-        'text/html',
-        'application/refly.artifacts.mindmap',
-      ])
-      .describe('Type of code artifact'),
+    filename: z
+      .string()
+      .describe('Name of the code file to generate, should contain valid file extension'),
     content: z.string().describe('Actual code content'),
   });
 
@@ -326,17 +328,19 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.createCodeArtifact(user, {
-        title: input.title,
-        type: input.type,
+      const file = await reflyService.writeFile(user, {
+        name: input.filename,
+        type: 'text/plain',
         content: input.content,
+        canvasId: config.configurable?.canvasId,
         resultId: config.configurable?.resultId,
+        resultVersion: config.configurable?.version,
       });
 
       return {
         status: 'success',
-        data: result,
-        summary: `Successfully generated code artifact: "${input.title}" with ID: ${result.artifactId}`,
+        data: file,
+        summary: `Successfully generated code artifact: "${input.filename}" with file ID: ${file.fileId}`,
       };
     } catch (error) {
       return {
@@ -449,6 +453,44 @@ export class BuiltinGetTime extends AgentBaseTool<BuiltinToolParams> {
   }
 }
 
+export class BuiltinReadFile extends AgentBaseTool<BuiltinToolParams> {
+  name = 'read_file';
+  toolsetKey = 'read_file';
+
+  schema = z.object({
+    fileId: z.string().describe('The ID of the file to read'),
+  });
+
+  description = 'Read content from a drive file.';
+
+  protected params: BuiltinToolParams;
+
+  constructor(params: BuiltinToolParams) {
+    super(params);
+    this.params = params;
+  }
+
+  async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
+    try {
+      const { reflyService, user } = this.params;
+      const file = await reflyService.readFile(user, input.fileId);
+
+      return {
+        status: 'success',
+        data: file,
+        summary: `Successfully read file: "${file.name}" with file ID: ${file.fileId}`,
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: 'Error reading file',
+        summary:
+          error instanceof Error ? error.message : 'Unknown error occurred while reading file',
+      };
+    }
+  }
+}
+
 export class BuiltinLibrarySearchToolset extends AgentBaseToolset<BuiltinToolParams> {
   toolsetKey = BuiltinLibrarySearchDefinition.key;
   tools = [BuiltinLibrarySearch] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
@@ -489,5 +531,6 @@ export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
     BuiltinGenerateCodeArtifact,
     BuiltinSendEmail,
     BuiltinGetTime,
+    BuiltinReadFile,
   ] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }

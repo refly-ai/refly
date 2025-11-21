@@ -1,9 +1,5 @@
 import { Modal, Button, Segmented, message } from 'antd';
-import {
-  ImportResourceMenuItem,
-  useCanvasResourcesPanelStoreShallow,
-  useImportResourceStoreShallow,
-} from '@refly/stores';
+import { ImportResourceMenuItem, useImportResourceStoreShallow } from '@refly/stores';
 
 import { useTranslation } from 'react-i18next';
 
@@ -17,13 +13,12 @@ import { Close } from 'refly-icons';
 import WaitingList from './components/waiting-list';
 import { StorageLimit } from '@refly-packages/ai-workspace-common/components/import-resource/intergrations/storageLimit';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
-import { useUpdateSourceList } from '@refly-packages/ai-workspace-common/hooks/canvas/use-update-source-list';
-import { UpsertResourceRequest } from '@refly/openapi-schema';
+import { UpsertDriveFileRequest } from '@refly/openapi-schema';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { getAvailableFileCount } from '@refly/utils/quota';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
-import { useListResources } from '@refly-packages/ai-workspace-common/queries';
+import { useListDriveFiles } from '@refly-packages/ai-workspace-common/queries';
 
 export const ImportResourceModal = memo(() => {
   const { t } = useTranslation();
@@ -49,23 +44,19 @@ export const ImportResourceModal = memo(() => {
     clearWaitingList: state.clearWaitingList,
     setExtensionModalVisible: state.setExtensionModalVisible,
   }));
-  const { setActiveTab } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setActiveTab: state.setActiveTab,
-  }));
+
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   const [saveLoading, setSaveLoading] = useState(false);
   const { projectId, canvasId } = useGetProjectCanvasId();
   const { refetchUsage, storageUsage } = useSubscriptionUsage();
   const canImportCount = getAvailableFileCount(storageUsage);
-  const { updateSourceList } = useUpdateSourceList();
-  const { refetch: refetchResources } = useListResources({ query: { canvasId, projectId } }, [], {
+  const { refetch: refetchDriveFiles } = useListDriveFiles({ query: { canvasId } }, [], {
     enabled: false,
   });
 
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(projectId);
 
-  // TODO: 计算文件数量时需要去除上传的图片吗？需要测试一下文件余额不足的情况不能上传
   const disableSave = useMemo(() => {
     return saveLoading || waitingList.length === 0 || waitingList.length > canImportCount;
   }, [waitingList, canImportCount, saveLoading]);
@@ -100,40 +91,21 @@ export const ImportResourceModal = memo(() => {
 
     setSaveLoading(true);
     try {
-      const batchCreateResourceData: UpsertResourceRequest[] = waitingList.map((item) => {
-        // For weblink items, use the link data if available
-        if (item.type === 'weblink' && item.link) {
-          return {
-            projectId: currentProjectId,
-            resourceType: 'weblink',
-            title: item.link.title || item.title || item.url || '',
-            canvasId,
-            data: {
-              url: item.url,
-              title: item.link.title || item.title || '',
-              description: item.link.description || '',
-              image: item.link.image || '',
-            },
-          };
-        }
-
-        // For other types, use the basic item data
+      const batchCreateFilesData: UpsertDriveFileRequest[] = waitingList.map((item) => {
         return {
-          projectId: currentProjectId,
-          resourceType: item.file?.type,
-          title: item.title ?? '',
           canvasId,
+          name: item.title ?? '',
+          content: item.content,
           storageKey: item.file?.storageKey,
-          data: {
-            url: item.url,
-            title: item.title,
-            content: item.content,
-          },
+          externalUrl: item.url,
         };
       });
 
-      const { data } = await getClient().batchCreateResource({
-        body: batchCreateResourceData,
+      const { data } = await getClient().batchCreateDriveFiles({
+        body: {
+          canvasId,
+          files: batchCreateFilesData,
+        },
       });
 
       if (!data?.success) {
@@ -141,8 +113,7 @@ export const ImportResourceModal = memo(() => {
       }
 
       refetchUsage();
-      refetchResources();
-      setActiveTab('myUpload');
+      refetchDriveFiles();
 
       message.success(t('common.putSuccess'));
 
@@ -170,8 +141,6 @@ export const ImportResourceModal = memo(() => {
         }
       }
 
-      // Update source list and clear waiting list after successful save
-      updateSourceList(data && Array.isArray(data.data) ? data.data : [], currentProjectId);
       clearWaitingList();
       setImportResourceModalVisible(false);
     } catch (error) {

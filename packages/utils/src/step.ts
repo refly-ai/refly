@@ -157,7 +157,6 @@ export const mergeActionResults = (
   return {
     resultId: (incoming.resultId ?? oldResult?.resultId) as string,
     version,
-    title: incoming.title ?? oldResult?.title,
     input: incoming.input ?? oldResult?.input,
     tier: incoming.tier ?? oldResult?.tier,
     status,

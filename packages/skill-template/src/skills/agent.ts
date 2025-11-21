@@ -7,55 +7,17 @@ import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema
 // types
 import { GraphState } from '../scheduler/types';
 // utils
-import { buildFinalRequestMessages, SkillPromptModule } from '../scheduler/utils/message';
+import { buildFinalRequestMessages } from '../scheduler/utils/message';
 
 // prompts
-import * as commonQnA from '../scheduler/module/commonQnA';
-import { ITool, ToolInputSchema } from '../tool';
-import { buildSystemPrompt } from '../prompts/node-agent';
+import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
+import { buildUserPrompt } from '../prompts/user-prompt';
 import { buildWorkflowCopilotPrompt } from '../prompts/copilot-agent';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
-
-/**
- * Converts LangChain StructuredToolInterface array to ITool array.
- * This is used to prepare tools for the system prompt, matching the ITool interface.
- */
-function convertToTools(langchainTools: StructuredToolInterface[]): ITool[] {
-  return langchainTools.map((tool) => {
-    // tool.schema is expected to be a Zod schema object
-    const zodSchema = tool.schema;
-    // Convert Zod schema to JSON schema.
-    // The `as any` is used because zodToJsonSchema returns a generic JSONSchema7Type,
-    // and we need to access properties like title, description, etc., which might not be strictly typed.
-    const jsonSchema = zodToJsonSchema(zodSchema as any) as any;
-
-    const properties = (jsonSchema?.properties ?? {}) as Record<string, object>;
-    const propertyKeys = Object.keys(properties);
-
-    const inputSchema: ToolInputSchema = {
-      type: jsonSchema.type || 'object',
-      title: jsonSchema.title || tool.name,
-      description: jsonSchema.description || tool.description || '',
-      properties,
-      // Azure OpenAI requires `required` to list every key in properties when present
-      required: propertyKeys,
-    };
-
-    return {
-      id: tool.name,
-      serverId: '',
-      serverName: '',
-      name: tool.name,
-      description: tool.description || '',
-      inputSchema,
-    };
-  });
-}
 
 // Define a more specific type for the compiled graph
 type CompiledGraphApp = {
@@ -91,29 +53,27 @@ export class Agent extends BaseSkill {
     ...baseStateGraphArgs,
   };
 
-  commonPreprocess = async (
-    state: GraphState,
-    config: SkillRunnableConfig,
-    module: SkillPromptModule,
-    customInstructions?: string,
-  ) => {
-    const { query, messages = [], images = [] } = state;
-    const { locale = 'auto', preprocessResult } = config.configurable;
-    const { optimizedQuery, rewrittenQueries, context, sources, usedChatHistory } =
-      preprocessResult;
+  commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
+    const { messages = [], images = [] } = state;
+    const { preprocessResult, mode = 'node_agent' } = config.configurable;
+    const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
+
+    const systemPrompt =
+      mode === 'copilot_agent'
+        ? buildWorkflowCopilotPrompt({
+            installedToolsets: config.configurable.installedToolsets ?? [],
+          })
+        : buildNodeAgentSystemPrompt();
+
+    const userPrompt = buildUserPrompt(optimizedQuery, context);
 
     const requestMessages = buildFinalRequestMessages({
-      module,
-      locale,
+      systemPrompt,
+      userPrompt,
       chatHistory: usedChatHistory,
       messages,
-      context,
       images,
-      originalQuery: query,
-      optimizedQuery,
-      rewrittenQueries,
       modelInfo: config?.configurable?.modelConfigMap.chat,
-      customInstructions,
     });
 
     return { requestMessages, sources };
@@ -319,39 +279,12 @@ export class Agent extends BaseSkill {
     config: SkillRunnableConfig,
   ): Promise<Partial<GraphState>> => {
     const { currentSkill, user } = config.configurable;
-    const { locale = 'auto', mode = 'node_agent' } = config.configurable;
-
-    const project = config.configurable?.project as
-      | { projectId: string; customInstructions?: string }
-      | undefined;
-    const customInstructions = project?.projectId ? project?.customInstructions : undefined;
-
     const { compiledLangGraphApp, toolsAvailable, tools } = await this.initializeAgentComponents(
       user,
       config,
     );
-    const iTools = convertToTools(tools);
 
-    const module: SkillPromptModule = {
-      buildSystemPrompt:
-        mode === 'copilot_agent'
-          ? () =>
-              buildWorkflowCopilotPrompt({
-                installedToolsets: config.configurable.installedToolsets ?? [],
-              })
-          : toolsAvailable
-            ? () => buildSystemPrompt(iTools, locale)
-            : commonQnA.buildCommonQnASystemPrompt,
-      buildContextUserPrompt: commonQnA.buildCommonQnAContextUserPrompt,
-      buildUserPrompt: commonQnA.buildCommonQnAUserPrompt,
-    };
-
-    const { requestMessages } = await this.commonPreprocess(
-      state,
-      config,
-      module,
-      customInstructions,
-    );
+    const { requestMessages } = await this.commonPreprocess(state, config);
 
     config.metadata.step = { name: 'answerQuestion' };
 

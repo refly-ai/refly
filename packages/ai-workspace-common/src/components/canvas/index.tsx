@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useEffect, useState, useRef, memo } from 'react';
-import { Modal, Result, message, Splitter, Popover } from 'antd';
+import { Modal, Result, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
@@ -18,6 +18,7 @@ import { TopToolbar } from './top-toolbar';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
+import { useCopyPasteSkillResponseNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-copy-paste-skill-response-node';
 import {
   CanvasProvider,
   useCanvasContext,
@@ -29,6 +30,7 @@ import {
   useCanvasNodesStore,
   useCanvasResourcesPanelStoreShallow,
   useUserStoreShallow,
+  useCopilotStoreShallow,
 } from '@refly/stores';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
@@ -57,16 +59,18 @@ import {
   NodeDragCreateInfo,
   nodeOperationsEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeOperations';
-import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
-import { CanvasResources, CanvasResourcesWidescreenModal } from './canvas-resources';
-import { ResourceOverview } from './canvas-resources/share/resource-overview';
-import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
-import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
 import { WorkflowRun } from './workflow-run';
-import { useMatch } from '@refly-packages/ai-workspace-common/utils/router';
+import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
+import { CanvasDrive, CanvasResourcesWidescreenModal } from './canvas-resources';
+import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
+import { CanvasControlButtons } from './top-toolbar/canvas-control-buttons';
+import { ToggleCopilotPanel } from './top-toolbar/toggle-copilot-panel';
+import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
 import { UploadNotification } from '@refly-packages/ai-workspace-common/components/common/upload-notification';
-import { Copilot } from './copilot';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
+import { PreviewBoxInCanvas } from './preview-box-in-canvas';
+import { CopilotContainer } from './copilot-container';
+import { cn } from '@refly/utils/cn';
 
 const GRID_SIZE = 10;
 
@@ -114,10 +118,21 @@ interface FlowProps {
   canvasId: string;
   copilotWidth: number;
   setCopilotWidth: (width: number | null) => void;
+  maxPanelWidth: number;
 }
 
-const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
+const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: FlowProps) => {
   const { t } = useTranslation();
+
+  // Wrap setCopilotWidth to handle null values
+  const handleSetCopilotWidth = useCallback(
+    (width: number) => {
+      if (width !== null && width !== undefined) {
+        setCopilotWidth(width);
+      }
+    },
+    [setCopilotWidth],
+  );
 
   useHandleOrphanNode();
 
@@ -156,6 +171,9 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
   const { loading, readonly, shareNotFound, shareLoading, undo, redo } = useCanvasContext();
   const { onLayout } = useCanvasLayout();
 
+  // Use copy paste hook for skillResponse nodes
+  useCopyPasteSkillResponseNode({ canvasId, readonly });
+
   const {
     canvasInitialized,
     operatingNodeId,
@@ -170,10 +188,12 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
     setContextMenuOpenedCanvasId: state.setContextMenuOpenedCanvasId,
   }));
 
-  const { showWorkflowRun, setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setShowWorkflowRun: state.setShowWorkflowRun,
-    showWorkflowRun: state.showWorkflowRun,
-  }));
+  const { showWorkflowRun, setShowWorkflowRun, sidePanelVisible } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      setShowWorkflowRun: state.setShowWorkflowRun,
+      showWorkflowRun: state.showWorkflowRun,
+      sidePanelVisible: state.sidePanelVisible,
+    }));
 
   const { handleNodePreview } = useNodePreviewControl({ canvasId });
 
@@ -324,7 +344,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
   }, []);
 
   const { onConnectEnd: temporaryEdgeOnConnectEnd, onConnectStart: temporaryEdgeOnConnectStart } =
-    useDragToCreateNode();
+    useDragToCreateNode(onConnect);
 
   const cleanupTemporaryEdges = useCallback(() => {
     const rfInstance = reactFlowInstance;
@@ -351,6 +371,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
       if (selectedEdgeId) {
         setSelectedEdgeId(null);
       }
+      setShowWorkflowRun(false);
 
       // Handle double click detection
       const currentTime = new Date().getTime();
@@ -378,6 +399,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
       selectedEdgeId,
       cleanupTemporaryEdges,
       readonly,
+      setShowWorkflowRun,
     ],
   );
 
@@ -601,9 +623,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
         case 'skill':
           menuNodeType = 'skill';
           break;
-        case 'memo':
-          menuNodeType = 'memo';
-          break;
         case 'group':
           menuNodeType = 'group';
           break;
@@ -670,6 +689,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
         console.warn('Invalid node clicked');
         return;
       }
+      setShowWorkflowRun(false);
 
       if (node.selected && node.id === operatingNodeId) {
         // Already in operating mode, do nothing
@@ -703,12 +723,13 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
       // Handle preview if enabled
       handleNodePreview(node);
     },
-    [handleNodePreview, setOperatingNodeId, setSelectedNode],
+    [handleNodePreview, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
   );
 
   // Memoize nodes and edges
   const memoizedNodes = useMemo(() => nodes, [nodes]);
   const memoizedEdges = useMemo(() => edges, [edges]);
+  const selectedNode = useMemo(() => nodes.find((node) => node.selected) as CanvasNode, [nodes]);
 
   // Memoize the Background component
   const memoizedBackground = useMemo(() => <MemoizedBackground />, []);
@@ -991,7 +1012,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
           extra={t('canvas.connectionTimeout.extra')}
         />
       </Modal>
-      <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm">
+      <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm rounded-xl border-solid border-[1px] border-refly-Card-Border">
         <div className="flex-grow relative">
           <style>{selectionStyles}</style>
           {readonly && (
@@ -1055,15 +1076,18 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
             <HelperLines horizontal={helperLineHorizontal} vertical={helperLineVertical} />
           </ReactFlow>
         </div>
-
         {/* Display the not found overlay when shareNotFound is true */}
         {readonly && shareNotFound && <NotFoundOverlay />}
-        <ToolbarButtons
-          canvasId={canvasId}
+        {!sidePanelVisible && <CanvasControlButtons />}
+        <ToolbarButtons canvasId={canvasId} />
+        <PreviewBoxInCanvas node={selectedNode} />
+        <WorkflowRun />
+        <CopilotContainer
           copilotWidth={copilotWidth}
-          setCopilotWidth={setCopilotWidth}
+          setCopilotWidth={handleSetCopilotWidth}
+          maxPanelWidth={maxPanelWidth}
         />
-
+        <ToggleCopilotPanel copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
         <UnifiedContextMenu
           open={contextMenu.open}
           position={contextMenu.position}
@@ -1083,36 +1107,48 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth }: FlowProps) => {
 });
 
 export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
-  const isPreviewCanvas = useMatch('/preview/canvas/:shareId');
   const { canvasId, readonly } = props;
   const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
 
-  const {
-    sidePanelVisible,
-    resourcesPanelWidth,
-    setResourcesPanelWidth,
-    showLeftOverview,
-    setShowLeftOverview,
-    showWorkflowRun,
-  } = useCanvasResourcesPanelStoreShallow((state) => ({
-    sidePanelVisible: state.sidePanelVisible,
-    resourcesPanelWidth: state.panelWidth,
-    setResourcesPanelWidth: state.setPanelWidth,
-    showLeftOverview: state.showLeftOverview,
-    setShowLeftOverview: state.setShowLeftOverview,
-    showWorkflowRun: state.showWorkflowRun,
+  const { sidePanelVisible, setSidePanelVisible, resetState } = useCanvasResourcesPanelStoreShallow(
+    (state) => ({
+      sidePanelVisible: state.sidePanelVisible,
+      setSidePanelVisible: state.setSidePanelVisible,
+      resetState: state.resetState,
+    }),
+  );
+
+  const { canvasCopilotWidth, setCanvasCopilotWidth } = useCopilotStoreShallow((state) => ({
+    canvasCopilotWidth: state.canvasCopilotWidth[canvasId] ?? 400,
+    setCanvasCopilotWidth: state.setCanvasCopilotWidth,
   }));
   const isLogin = useUserStoreShallow((state) => state.isLogin);
 
   const [copilotWidth, setCopilotWidth] = useState(!readonly && isLogin ? 400 : 0);
 
-  useEffect(() => {
-    if (sidePanelVisible && resourcesPanelWidth === 0) {
-      setResourcesPanelWidth(400);
-    }
-  }, [sidePanelVisible, resourcesPanelWidth, setResourcesPanelWidth]);
+  const handleSetCopilotWidth = useCallback(
+    (width: number) => {
+      setCopilotWidth(width);
+      setCanvasCopilotWidth(canvasId, width);
+    },
+    [canvasId, setCanvasCopilotWidth, setCopilotWidth],
+  );
 
   useEffect(() => {
+    if (readonly || !isLogin) {
+      handleSetCopilotWidth(0);
+      return;
+    }
+    if (!canvasCopilotWidth && canvasCopilotWidth !== 0) {
+      handleSetCopilotWidth(400);
+    } else {
+      setCopilotWidth(canvasCopilotWidth);
+    }
+  }, [canvasCopilotWidth, canvasId]);
+
+  useEffect(() => {
+    setSidePanelVisible(false);
+
     if (readonly) {
       return;
     }
@@ -1128,32 +1164,14 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     };
   }, [canvasId, setCurrentCanvasId]);
 
-  // Handle panel resize
-  const handleRightPanelResize = useCallback(
-    (sizes: number[]) => {
-      if (sizes.length < 3) {
-        return;
-      }
-
-      if (sizes[0] !== 0) {
-        setCopilotWidth(sizes[0]);
-      }
-
-      if (sizes[2] !== 0) {
-        setResourcesPanelWidth(sizes[2]);
-      }
-    },
-    [setResourcesPanelWidth, setCopilotWidth],
-  );
-
   // Calculate max width as 50% of parent container
   const [maxPanelWidth, setMaxPanelWidth] = useState(800);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updateMaxWidth = () => {
-      const canvasContainer = document.querySelector('.canvas-splitter');
-      if (canvasContainer) {
-        setMaxPanelWidth(Math.floor(canvasContainer.clientWidth * 0.5));
+      if (containerRef.current) {
+        setMaxPanelWidth(Math.floor(containerRef.current.clientWidth * 0.5));
       }
     };
 
@@ -1162,9 +1180,8 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
 
     // Listen for window resize events
     const resizeObserver = new ResizeObserver(updateMaxWidth);
-    const canvasContainer = document.querySelector('.canvas-splitter');
-    if (canvasContainer) {
-      resizeObserver.observe(canvasContainer);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
 
     return () => {
@@ -1172,33 +1189,9 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     };
   }, []);
 
-  // Close resources overview popover when clicking outside
-  const handleClickOutsideResourcesPopover = useCallback(
-    (event: MouseEvent) => {
-      if (!showLeftOverview) {
-        return;
-      }
-
-      const targetEl = event.target as HTMLElement | null;
-      const isInside = targetEl?.closest?.('[data-refly-resources-popover="true"]');
-      if (isInside) return;
-
-      setShowLeftOverview(false);
-    },
-    [showLeftOverview, setShowLeftOverview],
-  );
-
   useEffect(() => {
-    if (!showLeftOverview) {
-      return;
-    }
-
-    // Use capture phase to ensure we catch early
-    document.addEventListener('mousedown', handleClickOutsideResourcesPopover, true);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutsideResourcesPopover, true);
-    };
-  }, [showLeftOverview, handleClickOutsideResourcesPopover]);
+    resetState();
+  }, [canvasId]);
 
   return (
     <EditorPerformanceProvider>
@@ -1207,52 +1200,21 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
           <UploadNotification />
           <TopToolbar canvasId={canvasId} />
 
-          <Splitter
-            className="canvas-splitter w-full bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border flex-grow overflow-hidden"
-            onResize={handleRightPanelResize}
+          <div
+            ref={containerRef}
+            className={cn(
+              'canvas-container flex w-full h-full flex-grow overflow-hidden',
+              !sidePanelVisible ? 'gap-0' : 'gap-2',
+            )}
           >
-            <Splitter.Panel size={copilotWidth} min={400} max={maxPanelWidth}>
-              <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
-            </Splitter.Panel>
-
-            <Splitter.Panel className="shadow-refly-m">
-              <Flow
-                canvasId={canvasId}
-                copilotWidth={copilotWidth}
-                setCopilotWidth={setCopilotWidth}
-              />
-            </Splitter.Panel>
-
-            <Splitter.Panel
-              size={sidePanelVisible ? resourcesPanelWidth : 0}
-              min={400}
-              max={maxPanelWidth}
-            >
-              {showWorkflowRun && !readonly && !isPreviewCanvas ? (
-                <WorkflowRun />
-              ) : (
-                <Popover
-                  classNames={{
-                    root: 'resources-panel-popover',
-                  }}
-                  open={showLeftOverview}
-                  onOpenChange={setShowLeftOverview}
-                  arrow={false}
-                  content={
-                    <div className="flex w-[360px] h-full" data-refly-resources-popover="true">
-                      <ResourceOverview />
-                    </div>
-                  }
-                  placement="left"
-                  align={{
-                    offset: [0, 0],
-                  }}
-                >
-                  <CanvasResources />
-                </Popover>
-              )}
-            </Splitter.Panel>
-          </Splitter>
+            <Flow
+              canvasId={canvasId}
+              copilotWidth={copilotWidth}
+              setCopilotWidth={handleSetCopilotWidth}
+              maxPanelWidth={maxPanelWidth}
+            />
+            <CanvasDrive className={!sidePanelVisible ? 'hidden' : ''} />
+          </div>
           <CanvasResourcesWidescreenModal />
         </CanvasProvider>
       </ReactFlowProvider>

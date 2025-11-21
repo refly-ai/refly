@@ -16,9 +16,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 export const CodeArtifactTopButtons = () => {
   const { t } = useTranslation();
   const { readonly, canvasId } = useCanvasContext();
-  const { setWideScreenVisible, setParentType } = useCanvasResourcesPanelStoreShallow((state) => ({
+  const { setWideScreenVisible } = useCanvasResourcesPanelStoreShallow((state) => ({
     setWideScreenVisible: state.setWideScreenVisible,
-    setParentType: state.setParentType,
   }));
   const { activeNode } = useActiveNode(canvasId);
 
@@ -103,8 +102,7 @@ export const CodeArtifactTopButtons = () => {
       data: activeNode.data as any,
     });
     setWideScreenVisible(false);
-    setParentType(null);
-  }, [activeNode, deleteNode, setWideScreenVisible, setParentType]);
+  }, [activeNode, deleteNode, setWideScreenVisible]);
 
   const moreMenuItems: MenuProps['items'] = useMemo(() => {
     return [

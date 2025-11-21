@@ -38,7 +38,7 @@ export class FsStorageBackend implements ObjectStorageBackend {
       this.initialized = true;
       this.logger.log(`FS storage backend initialized at ${this.baseDir}`);
     } catch (error) {
-      this.logger.error(`Failed to initialize FS storage backend: ${error}`);
+      this.logger.error(`Failed to initialize FS storage backend: ${error.stack}`);
       throw error;
     }
   }
@@ -54,7 +54,7 @@ export class FsStorageBackend implements ObjectStorageBackend {
 
       return createReadStream(filePath);
     } catch (error) {
-      this.logger.error(`Failed to get object with key ${key}`, error);
+      this.logger.error(`Failed to get object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
@@ -98,7 +98,7 @@ export class FsStorageBackend implements ObjectStorageBackend {
       }
       throw new TypeError('Input must be a Readable stream, Buffer, or string');
     } catch (error) {
-      this.logger.error(`Failed to put object with key ${key}`, error);
+      this.logger.error(`Failed to put object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
@@ -126,12 +126,12 @@ export class FsStorageBackend implements ObjectStorageBackend {
         await this.cleanEmptyDirectories(path.dirname(filePath));
       } catch (err) {
         // Ignore errors when cleaning directories
-        this.logger.warn('Error while cleaning empty directories', err);
+        this.logger.warn(`Error while cleaning empty directories: ${err.stack}`);
       }
 
       return true;
     } catch (error) {
-      this.logger.error(`Failed to remove object with key ${key}`, error);
+      this.logger.error(`Failed to remove object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
@@ -148,7 +148,7 @@ export class FsStorageBackend implements ObjectStorageBackend {
       await Promise.all(keys.map((key) => this.removeObject(key, force)));
       return true;
     } catch (error) {
-      this.logger.error(`Failed to remove objects with keys ${keys}`, error);
+      this.logger.error(`Failed to remove objects with keys ${keys}: ${error.stack}`);
       throw error;
     }
   }
@@ -170,7 +170,7 @@ export class FsStorageBackend implements ObjectStorageBackend {
         etag: `${stat.size}-${stat.mtimeMs}`,
       };
     } catch (error) {
-      this.logger.error(`Failed to stat object with key ${key}`, error);
+      this.logger.error(`Failed to stat object with key ${key}: ${error.stack}`);
       throw error;
     }
   }
@@ -194,7 +194,41 @@ export class FsStorageBackend implements ObjectStorageBackend {
       // Get the new file's info
       return await this.statObject(targetKey);
     } catch (error) {
-      this.logger.error(`Failed to duplicate file from ${sourceKey} to ${targetKey}`, error);
+      this.logger.error(
+        `Failed to duplicate file from ${sourceKey} to ${targetKey}: ${error.stack}`,
+      );
+      throw error;
+    }
+  }
+
+  async moveObject(sourceKey: string, targetKey: string): Promise<ObjectInfo | null> {
+    try {
+      const sourcePath = this.getFilePath(sourceKey);
+      const targetPath = this.getFilePath(targetKey);
+
+      // Check if source exists
+      if (!existsSync(sourcePath)) {
+        return null;
+      }
+
+      // Ensure the target directory exists
+      await fs.mkdir(path.dirname(targetPath), { recursive: true });
+
+      // Move the file (rename operation)
+      await fs.rename(sourcePath, targetPath);
+
+      // Try to remove empty parent directories of the source
+      try {
+        await this.cleanEmptyDirectories(path.dirname(sourcePath));
+      } catch (err) {
+        // Ignore errors when cleaning directories
+        this.logger.warn(`Error while cleaning empty directories after move: ${err.stack}`);
+      }
+
+      // Get the moved file's info
+      return await this.statObject(targetKey);
+    } catch (error) {
+      this.logger.error(`Failed to move object from ${sourceKey} to ${targetKey}: ${error.stack}`);
       throw error;
     }
   }

@@ -9,14 +9,17 @@
       "request": "launch",
       "name": "Launch API (debug)",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "api", "dev"],
+      "runtimeArgs": ["-F", "api", "dev:debug"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "env": {
         "NODE_OPTIONS": "--inspect=0.0.0.0:9229"
       },
       "autoAttachChildProcesses": true,
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"]
     },
     {
       "type": "node",
@@ -24,10 +27,118 @@
       "name": "Attach to API",
       "port": 9229,
       "address": "localhost",
-      "restart": false,
+      "restart": true,
       "localRoot": "${workspaceFolder}",
       "remoteRoot": "${workspaceFolder}",
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug API (Direct)",
+      "program": "${workspaceFolder}/apps/api/src/main.ts",
+      "preLaunchTask": "npm: build:api",
+      "cwd": "${workspaceFolder}/apps/api",
+      "console": "integratedTerminal",
+      "runtimeArgs": ["--inspect-brk", "-r", "ts-node/register", "-r", "tsconfig-paths/register"],
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Fish TTS - Basic Usage",
+      "program": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo/examples/basic-usage.ts",
+      "cwd": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo",
+      "console": "integratedTerminal",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "env": {
+        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Fish TTS - Custom Handlers",
+      "program": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo/examples/custom-handlers.ts",
+      "cwd": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo",
+      "console": "integratedTerminal",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "env": {
+        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Tool Service Tests",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand", "--no-cache", "--watchAll=false", "tool.service.spec.ts"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "NODE_ENV": "test"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Backend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "api", "dev"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_OPTIONS": "--inspect=0.0.0.0:9229",
+        "DEBUG": "refly:tool:*",
+        "DEBUG_TO_FILE": "true",
+        "DEBUG_DIR": "${workspaceFolder}/debug-logs",
+        "DEBUG_CONSOLE": "true"
+      },
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"],
+      "presentation": {
+        "hidden": false,
+        "group": "debug",
+        "order": 1
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "web", "dev"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "presentation": {
+        "hidden": false,
+        "group": "debug",
+        "order": 2
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Full Stack",
+      "configurations": ["Debug Backend", "Debug Frontend"],
+      "presentation": {
+        "hidden": false,
+        "group": "debug",
+        "order": 1
+      }
     }
   ]
 }

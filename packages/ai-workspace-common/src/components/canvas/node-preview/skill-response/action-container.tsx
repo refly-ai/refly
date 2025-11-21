@@ -88,10 +88,14 @@ const ActionContainerComponent = ({
   );
 
   const handleCopyToClipboard = useCallback(
-    (content: string) => {
+    async (content: string) => {
       const parsedText = parseMarkdownCitationsAndCanvasTags(content, sources);
-      copyToClipboard(parsedText || '');
-      message.success(t('copilot.message.copySuccess'));
+      const copied = await copyToClipboard(parsedText || '').catch(() => false);
+      if (copied) {
+        message.success(t('copilot.message.copySuccess'));
+      } else {
+        message.error(t('copilot.message.copyFailed'));
+      }
     },
     [sources, t],
   );
@@ -184,7 +188,7 @@ const ActionContainerComponent = ({
 
   return (
     <div
-      className="border-[1px] border-solid border-b-0 border-x-0 border-refly-Card-Border pt-3"
+      className="border-[1px] border-solid border-b-0 border-x-0 border-refly-Card-Border"
       onClick={(e) => {
         e.stopPropagation();
       }}

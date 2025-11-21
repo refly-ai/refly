@@ -1,129 +1,196 @@
-import { memo, useState, useCallback } from 'react';
+import { memo, useCallback, useMemo, type CSSProperties } from 'react';
 import { BaseEdge, EdgeProps, getBezierPath, useReactFlow, Position } from '@xyflow/react';
 import { useEdgeStyles } from '../constants';
-import { IconDelete } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { useThrottledCallback } from 'use-debounce';
-import { Input } from 'antd';
-const { TextArea } = Input;
-interface CustomEdgeData {
-  label?: string;
-  hover?: boolean;
-}
+import { Delete } from 'refly-icons';
 
-const DeleteButton = ({ handleDelete }: { handleDelete: (e: React.MouseEvent) => void }) => {
+type DeleteButtonProps = {
+  handleDelete: (event: React.MouseEvent) => void;
+};
+
+const DeleteButton = memo(({ handleDelete }: DeleteButtonProps) => {
   return (
     <div
-      className="flex items-center justify-center w-5 h-5 rounded-full bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700 cursor-pointer hover:bg-gray-50"
+      className="flex items-center justify-center w-6 h-6 rounded-full bg-refly-bg-body-z0 border-[1px] border-solid border-refly-func-danger-active hover:bg-refly-fill-hover"
       onClick={handleDelete}
     >
-      <IconDelete className="w-3 h-3 text-red-500" />
+      <Delete size={12} />
     </div>
   );
-};
+});
+
+DeleteButton.displayName = 'DeleteButton';
 
 export const CustomEdge = memo(
   ({ sourceX, sourceY, targetX, targetY, selected, data, id, source, target }: EdgeProps) => {
+    const highlight = data?.highlight;
     const edgeStyles = useEdgeStyles();
-    const { getNode } = useReactFlow();
+    const { setEdges, getNode } = useReactFlow();
+    const sourceNode = getNode(source);
+    const targetNode = getNode(target);
 
-    // Check if the edge is connected to a start node
-    const isConnectedToStartNode = useCallback(() => {
-      if (!source || !target) return false;
-
-      const sourceNode = getNode(source);
-      const targetNode = getNode(target);
-
-      return sourceNode?.type === 'start' || targetNode?.type === 'start';
-    }, [source, target, getNode]);
+    const isConnectedToStartNode = sourceNode?.type === 'start' || targetNode?.type === 'start';
 
     const [edgePath, labelX, labelY] = getBezierPath({
-      sourceX,
+      sourceX: sourceX - 30,
       sourceY,
-      targetX,
+      targetX: targetX + 30,
       targetY,
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
       curvature: 0.35,
     });
-    const [isEditing, setIsEditing] = useState(false);
 
-    const selectedStyle = {
-      stroke: isEditing ? 'rgba(0, 150, 143, 0.2)' : '#0E9F77',
-      strokeWidth: 2,
+    const selectedStyle: CSSProperties = {
+      stroke: 'var(--refly-primary-default)',
+      strokeWidth: 1.5,
       transition: 'stroke 0.2s, stroke-width 0.2s',
     };
-    const edgeStyle = data?.hover ? edgeStyles.hover : edgeStyles.default;
 
-    const [label, setLabel] = useState((data as CustomEdgeData)?.label ?? '');
-    const reactFlowInstance = useReactFlow();
-    const { setEdges } = reactFlowInstance;
-    const handleLabelClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (label) {
-          setIsEditing(true);
-        }
-      },
-      [label],
-    );
+    const defaultEdgeStyle: CSSProperties = (edgeStyles?.default ?? {}) as CSSProperties;
+    const hoverEdgeStyle: CSSProperties = (edgeStyles?.hover ?? defaultEdgeStyle) as CSSProperties;
+    const edgeStyle: CSSProperties = (
+      data?.hover ? hoverEdgeStyle : defaultEdgeStyle
+    ) as CSSProperties;
 
-    const handleEdgeDoubleClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsEditing(true);
-      },
-      [label],
-    );
+    const markerId = useMemo(() => `custom-edge-arrow-${id}`, [id]);
 
-    const updateEdgeData = useCallback(
-      (edgeId: string, label: string) => {
-        setEdges((eds) =>
-          eds.map((edge) =>
-            edge.id === edgeId ? { ...edge, data: { ...edge.data, label } } : edge,
-          ),
-        );
-      },
-      [setEdges],
-    );
+    const {
+      baseEdgeStyle,
+      isRunningEdge,
+    }: {
+      baseEdgeStyle: CSSProperties;
+      isRunningEdge: boolean;
+    } = useMemo(() => {
+      const style: CSSProperties = {
+        ...(edgeStyle ?? {}),
+      };
 
-    const throttledUpdateEdgeData = useThrottledCallback(updateEdgeData, 300, {
-      leading: true,
-      trailing: true,
-    });
+      const isTempEdge = id?.startsWith?.('temp-edge-') ?? false;
 
-    const handleLabelChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setLabel(e.target.value);
-      throttledUpdateEdgeData(id, e.target.value);
-    }, []);
+      const targetNodeType = targetNode?.type;
+      const targetMetadata = (targetNode?.data as { metadata?: { status?: string } } | undefined)
+        ?.metadata;
+      const targetStatus = targetMetadata?.status;
 
-    const handleLabelBlur = useCallback(() => {
-      setIsEditing(false);
-    }, []);
+      const isSkillResponseTarget = targetNodeType === 'skillResponse';
+      const isRunningStatus =
+        isSkillResponseTarget && (targetStatus === 'executing' || targetStatus === 'waiting');
+      const isFinishedStatus = isSkillResponseTarget && targetStatus === 'finish';
+      const isFailedStatus = isSkillResponseTarget && targetStatus === 'failed';
 
-    const handleKeyDown = useCallback(
-      (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          setIsEditing(false);
-          if (id) {
-            updateEdgeData(id, label);
-          }
-        }
-      },
-      [id, label, updateEdgeData],
-    );
-
-    const handleDelete = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (id) {
-        setEdges((eds) => eds.filter((e) => e.id !== id));
+      // Default dashed edge style
+      style.strokeDasharray = '6 6';
+      if (style.stroke && style.stroke !== 'transparent') {
+        style.stroke = 'var(--refly-line)';
       }
-    };
+
+      if (isFinishedStatus) {
+        style.strokeDasharray = undefined;
+        style.stroke = 'var(--refly-line)';
+      }
+
+      // Edge color when connected nodes are selected (keep dash or solid)
+      if (highlight) {
+        style.stroke = 'var(--refly-bg-dark)';
+        style.strokeWidth = style.strokeWidth ?? 2;
+      }
+
+      // Temporary edges always use dashed default style
+      if (isTempEdge) {
+        style.strokeDasharray = '6 6';
+        style.stroke = 'var(--refly-line)';
+      }
+
+      // Edge selected color (highest priority, keep dash or solid)
+      // Override for skill response target status
+      if (isRunningStatus) {
+        style.strokeDasharray = undefined;
+        style.stroke = '#0DB8AD';
+        style.strokeWidth = 2;
+      } else if (isFailedStatus) {
+        style.strokeDasharray = '6 6';
+        // style.stroke = 'var(--refly-func-danger-active)';
+      }
+
+      const mergedStyle: CSSProperties = {
+        ...style,
+      };
+
+      if (selected) {
+        mergedStyle.strokeWidth = selectedStyle.strokeWidth;
+        if (!isRunningStatus) {
+          mergedStyle.stroke = selectedStyle.stroke;
+        }
+      }
+
+      return {
+        baseEdgeStyle: mergedStyle,
+        isRunningEdge: isRunningStatus,
+      };
+    }, [
+      edgeStyle,
+      selected,
+      selectedStyle,
+      id,
+      sourceNode?.selected,
+      targetNode?.selected,
+      targetNode?.data?.metadata,
+      targetNode?.type,
+    ]);
+
+    const markerColor = useMemo(() => {
+      const strokeColor = baseEdgeStyle?.stroke;
+      if (typeof strokeColor === 'string' && strokeColor.length > 0) {
+        return strokeColor;
+      }
+      return 'var(--refly-primary-default)';
+    }, [baseEdgeStyle]);
+
+    const runningHighlightStrokeWidth = useMemo(() => {
+      const widthValue = baseEdgeStyle?.strokeWidth;
+      if (typeof widthValue === 'number') {
+        return widthValue + 0.5;
+      }
+      const numericWidth = Number(widthValue ?? 0);
+      const safeWidth = Number.isFinite(numericWidth) && numericWidth > 0 ? numericWidth : 2;
+      return safeWidth + 0.5;
+    }, [baseEdgeStyle?.strokeWidth]);
+
+    const markerEndUrl = useMemo(() => `url(#${markerId})`, [markerId]);
+
+    const handleDelete = useCallback(
+      (event: React.MouseEvent) => {
+        event.stopPropagation();
+        if (!id) {
+          return;
+        }
+        setEdges((currentEdges) => {
+          if (!Array.isArray(currentEdges)) {
+            return currentEdges;
+          }
+          return currentEdges.filter((edgeItem) => edgeItem?.id !== id);
+        });
+      },
+      [id, setEdges],
+    );
 
     return (
       <>
-        <g onDoubleClick={handleEdgeDoubleClick}>
+        <defs>
+          <marker
+            id={markerId}
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerUnits="strokeWidth"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 z" fill={markerColor} />
+          </marker>
+        </defs>
+        <g>
           <path
             className="react-flow__edge-path-selector"
             d={edgePath}
@@ -131,63 +198,41 @@ export const CustomEdge = memo(
             strokeWidth={20}
             stroke="transparent"
           />
-          <BaseEdge
-            path={edgePath}
-            style={
-              id.startsWith('temp-edge-')
-                ? { ...edgeStyle, stroke: '#94a3b8', strokeDasharray: '10,10' }
-                : selected
-                  ? selectedStyle
-                  : edgeStyle
-            }
-          />
+          <BaseEdge path={edgePath} style={baseEdgeStyle} markerEnd={markerEndUrl} />
+          {isRunningEdge ? (
+            <path
+              className="fill-none"
+              d={edgePath}
+              stroke="#81E9B5"
+              strokeWidth={runningHighlightStrokeWidth}
+              strokeLinecap="round"
+              strokeDasharray="120 220"
+              strokeDashoffset={0}
+            >
+              <animate
+                attributeName="stroke-dashoffset"
+                values="0;-340"
+                dur="1s"
+                repeatCount="indefinite"
+              />
+              <animate
+                attributeName="stroke-opacity"
+                values="0;1;0"
+                keyTimes="0;0.4;1"
+                dur="1s"
+                repeatCount="indefinite"
+              />
+            </path>
+          ) : null}
         </g>
 
-        {label || isEditing ? (
-          <foreignObject
-            width={120}
-            height={80}
-            x={labelX - 60}
-            y={labelY - 40}
-            className="edge-label"
-            requiredExtensions="http://www.w3.org/1999/xhtml"
-          >
-            <div
-              className={
-                'w-full h-full overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]'
-              }
-            >
-              {isEditing ? (
-                <TextArea
-                  value={label}
-                  onChange={handleLabelChange}
-                  onBlur={handleLabelBlur}
-                  onKeyDown={handleKeyDown}
-                  className="nowheel text-[10px] w-full h-full bg-white resize-none overflow-y-scroll"
-                  autoFocus
-                  autoSize={{ minRows: 1, maxRows: 4 }}
-                />
-              ) : (
-                label && (
-                  <div
-                    className="nowheel px-2 py-1 text-[10px] text-center text-gray-700 bg-opacity-0 rounded cursor-pointer break-all dark:text-gray-200"
-                    onClick={handleLabelClick}
-                  >
-                    {label}
-                  </div>
-                )
-              )}
-            </div>
-          </foreignObject>
-        ) : null}
-
         {/* Only show delete button if selected and not connected to start node */}
-        {selected && !isConnectedToStartNode() && (
+        {selected && !isConnectedToStartNode && !isRunningEdge && (
           <foreignObject
-            width={20}
-            height={20}
-            x={targetX - 20}
-            y={targetY - 20}
+            width={24}
+            height={24}
+            x={(labelX ?? targetX) - 12}
+            y={(labelY ?? targetY) - 12}
             className="edge-delete-button"
             requiredExtensions="http://www.w3.org/1999/xhtml"
           >

@@ -7,6 +7,8 @@ import {
   InitializeWorkflowRequest,
   InitializeWorkflowResponse,
   GetWorkflowDetailResponse,
+  AbortWorkflowRequest,
+  BaseResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 import { ParamsError } from '@refly/errors';
@@ -37,6 +39,20 @@ export class WorkflowController {
     );
 
     return buildSuccessResponse({ workflowExecutionId: executionId });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('abort')
+  async abortWorkflow(
+    @LoginedUser() user: UserModel,
+    @Body() request: AbortWorkflowRequest,
+  ): Promise<BaseResponse> {
+    if (!request.executionId) {
+      throw new ParamsError('Execution ID is required');
+    }
+
+    await this.workflowService.abortWorkflowExecution(user, request.executionId);
+    return buildSuccessResponse(null);
   }
 
   @UseGuards(JwtAuthGuard)

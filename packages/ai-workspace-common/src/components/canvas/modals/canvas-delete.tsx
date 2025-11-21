@@ -1,6 +1,5 @@
 import { memo, useState } from 'react';
 import { Modal } from 'antd';
-import { IoAlertCircle } from 'react-icons/io5';
 import { useTranslation } from 'react-i18next';
 import { useCanvasOperationStoreShallow } from '@refly/stores';
 import { useDeleteCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-canvas';
@@ -40,12 +39,7 @@ export const CanvasDeleteModal = memo(() => {
 
   return (
     <Modal
-      title={
-        <div className="flex items-center gap-2">
-          <IoAlertCircle size={26} className="mr-2 text-[#faad14]" />
-          {t('common.deleteConfirmMessage')}
-        </div>
-      }
+      title={t('common.deleteConfirmMessage')}
       centered
       width={416}
       open={modalVisible && modalType === 'delete'}
@@ -53,12 +47,12 @@ export const CanvasDeleteModal = memo(() => {
       onCancel={() => reset()}
       okText={t('common.confirm')}
       cancelText={t('common.cancel')}
-      okButtonProps={{ danger: true, loading: isLoading }}
+      okButtonProps={{ loading: isLoading }}
       destroyOnHidden
       closeIcon={null}
       confirmLoading={isLoading}
     >
-      <div className="pl-10">
+      <div>
         <div className="mb-2">
           {t('workspace.deleteDropdownMenu.deleteConfirmForCanvas', {
             canvas: canvasTitle || t('common.untitled'),

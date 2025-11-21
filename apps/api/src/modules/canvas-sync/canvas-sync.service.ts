@@ -14,6 +14,8 @@ import {
   CanvasNode,
   GenericToolset,
   SyncCanvasStateResult,
+  NodeDiff,
+  EdgeDiff,
 } from '@refly/openapi-schema';
 import {
   getCanvasDataFromState,
@@ -30,12 +32,7 @@ import {
   extractToolsetsWithNodes,
   haveToolsetsChanged,
 } from '@refly/canvas-common';
-import {
-  CanvasNotFoundError,
-  CanvasVersionNotFoundError,
-  OperationTooFrequent,
-  ParamsError,
-} from '@refly/errors';
+import { CanvasNotFoundError, CanvasVersionNotFoundError, ParamsError } from '@refly/errors';
 import { Canvas as CanvasModel } from '../../generated/client';
 import { PrismaService } from '../common/prisma.service';
 import { LockReleaseFn, RedisService } from '../common/redis.service';
@@ -43,6 +40,11 @@ import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { streamToBuffer, streamToString } from '../../utils';
 import { genCanvasVersionId, genTransactionId, safeParseJSON } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
+
+type NodeWithConnection = {
+  node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>;
+  connectTo?: CanvasNodeFilter[];
+};
 
 @Injectable()
 export class CanvasSyncService {
@@ -320,24 +322,8 @@ export class CanvasSyncService {
    * @returns A function to release the lock
    * @throws OperationTooFrequent if lock cannot be acquired after retries
    */
-  async lockState(canvasId: string, options?: { maxRetries?: number; initialDelay?: number }) {
-    const { maxRetries = 3, initialDelay = 100 } = options ?? {};
-    const lockKey = `canvas-sync:${canvasId}`;
-    let retries = 0;
-    let delay = initialDelay;
-    while (true) {
-      const releaseLock = await this.redis.acquireLock(lockKey);
-      if (releaseLock) {
-        return releaseLock;
-      }
-      if (retries >= maxRetries) {
-        throw new OperationTooFrequent('Failed to get lock for canvas');
-      }
-      // Exponential backoff before next retry
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      delay *= 2;
-      retries += 1;
-    }
+  async lockState(canvasId: string) {
+    return this.redis.waitLock(`canvas-sync:${canvasId}`);
   }
 
   /**
@@ -480,83 +466,114 @@ export class CanvasSyncService {
       await releaseLock();
     }
   }
-
   /**
-   * Add a node to the canvas
-   * @param user - The user who is adding the node
-   * @param canvasId - The id of the canvas to add the node to
-   * @param node - The node to add
-   * @param connectTo - The nodes to connect to
+   * Add one or more nodes to the canvas
+   * @param user - The user who is adding the nodes
+   * @param canvasId - The id of the canvas to add the nodes to
+   * @param nodesWithConnections - The nodes to add with optional connection filters
    * @param options - Additional options including autoLayout
    */
-  async addNodeToCanvas(
+  async addNodesToCanvas(
     user: User,
     canvasId: string,
-    node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
-    connectTo?: CanvasNodeFilter[],
+    nodesWithConnections: NodeWithConnection[],
     options?: { autoLayout?: boolean },
   ) {
+    if (!Array.isArray(nodesWithConnections) || nodesWithConnections.length === 0) {
+      this.logger.warn('[addNodesToCanvas] no nodes provided, skip syncing');
+      return;
+    }
+
     const releaseLock = await this.lockState(canvasId);
-    const { nodes, edges } = await this.getCanvasData(user, { canvasId });
+    let syncStateInvoked = false;
 
-    const { newNode, newEdges } = prepareAddNode({
-      node,
-      nodes,
-      edges,
-      connectTo,
-      autoLayout: options?.autoLayout, // Pass autoLayout parameter
-    });
+    try {
+      const canvasData = await this.getCanvasData(user, { canvasId });
+      const workingNodes = [...(canvasData.nodes ?? [])];
+      const workingEdges = [...(canvasData.edges ?? [])];
 
-    this.logger.log(
-      `[addNodeToCanvas] new node: ${JSON.stringify(newNode)}, new edges: ${JSON.stringify(newEdges)}`,
-    );
+      const nodeDiffs: NodeDiff[] = [];
+      const edgeDiffs: EdgeDiff[] = [];
 
-    await this.syncState(
-      user,
-      {
-        canvasId,
-        transactions: [
-          {
-            txId: genTransactionId(),
-            createdAt: Date.now(),
-            syncedAt: Date.now(),
-            source: { type: 'system' },
-            nodeDiffs: [
-              {
-                type: 'add',
-                id: newNode.id,
-                to: newNode,
-              },
-            ],
-            edgeDiffs: newEdges.map((edge) => ({
+      for (const item of nodesWithConnections) {
+        if (!item?.node) {
+          continue;
+        }
+
+        const { newNode, newEdges } = prepareAddNode({
+          node: item.node,
+          nodes: workingNodes,
+          edges: workingEdges,
+          connectTo: item.connectTo ? [...item.connectTo] : undefined,
+          autoLayout: options?.autoLayout,
+        });
+
+        const existingNodeIndex = workingNodes.findIndex((node) => node.id === newNode.id);
+        if (existingNodeIndex >= 0) {
+          const existingNode = workingNodes[existingNodeIndex];
+          workingNodes[existingNodeIndex] = newNode;
+
+          nodeDiffs.push({
+            type: 'update',
+            id: newNode.id,
+            from: existingNode,
+            to: newNode,
+          } as NodeDiff);
+        } else {
+          workingNodes.push(newNode);
+
+          nodeDiffs.push({
+            type: 'add',
+            id: newNode.id,
+            to: newNode,
+          } as NodeDiff);
+        }
+
+        workingEdges.push(...newEdges);
+
+        edgeDiffs.push(
+          ...newEdges.map(
+            (edge): EdgeDiff => ({
               type: 'add',
               id: edge.id,
               to: edge,
-            })),
-          },
-        ],
-      },
-      { releaseLock },
-    );
-  }
+            }),
+          ),
+        );
 
-  async addNodeToCanvasWithoutCanvasId(
-    user: User,
-    node: Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>,
-    connectTo?: CanvasNodeFilter[],
-    options?: { autoLayout?: boolean },
-  ) {
-    const parentResult = await this.prisma.actionResult.findFirst({
-      select: {
-        targetId: true,
-        targetType: true,
-        workflowNodeExecutionId: true,
-      },
-      where: { resultId: node.data?.metadata?.parentResultId },
-      orderBy: { version: 'desc' },
-    });
+        this.logger.log(
+          `[addNodesToCanvas] new node: ${JSON.stringify(newNode)}, new edges: ${JSON.stringify(newEdges)}`,
+        );
+      }
 
-    await this.addNodeToCanvas(user, parentResult.targetId, node, connectTo, options);
+      if (!nodeDiffs.length && !edgeDiffs.length) {
+        this.logger.warn('[addNodesToCanvas] no diffs generated, skip syncing');
+        return;
+      }
+
+      syncStateInvoked = true;
+      await this.syncState(
+        user,
+        {
+          canvasId,
+          transactions: [
+            {
+              txId: genTransactionId(),
+              createdAt: Date.now(),
+              syncedAt: Date.now(),
+              source: { type: 'system' },
+              nodeDiffs,
+              edgeDiffs,
+            },
+          ],
+        },
+        { releaseLock },
+      );
+    } finally {
+      if (!syncStateInvoked) {
+        await releaseLock();
+      }
+    }
   }
 
   async createCanvasVersion(

@@ -1,5 +1,6 @@
 import type { MentionItem } from './mentionList';
 import { mentionItemSourceToType, type MentionItemSource } from './const';
+import type { MentionItemType } from '@refly/utils';
 import type { IContextItem } from '@refly/common-types';
 import type { CanvasNodeType } from '@refly/openapi-schema';
 
@@ -11,39 +12,17 @@ export const createContextItemFromMentionItem = (item: MentionItem): IContextIte
     entityId: item.entityId,
     title: item.name,
     type: (() => {
-      if (item.source === 'stepRecord') {
+      if (item.source === 'agents') {
         return 'skillResponse' as CanvasNodeType;
       } else if (item.source === 'tools') {
         return 'tool' as CanvasNodeType;
-      } else if (item.source === 'resultRecord') {
-        const validCanvasNodeTypes: CanvasNodeType[] = [
-          'document',
-          'codeArtifact',
-          'website',
-          'resource',
-          'skill',
-          'tool',
-          'skillResponse',
-          'toolResponse',
-          'memo',
-          'group',
-          'image',
-          'video',
-          'audio',
-          'mediaSkill',
-          'mediaSkillResponse',
-          'start',
-        ];
-
-        if (validCanvasNodeTypes.includes(item.variableType as CanvasNodeType)) {
-          return item.variableType as CanvasNodeType;
-        }
-        return 'resource' as CanvasNodeType;
-      } else if (item.source === 'myUpload') {
-        return 'resource' as CanvasNodeType;
+      } else if (item.source === 'files') {
+        return 'file';
+      } else if (item.source === 'products') {
+        return 'file';
       }
 
-      return 'resource' as CanvasNodeType;
+      return 'file';
     })(),
 
     metadata: {
@@ -175,12 +154,12 @@ export const buildNodesFromContent = (
     };
   };
 
-  // Find meta for step type (step -> stepRecord)
-  const findStepMeta = (tokenId: string, tokenName: string) => {
+  // Find meta for agent type
+  const findAgentMeta = (tokenId: string, tokenName: string) => {
     if (!tokenId && !tokenName) return null;
 
-    const foundFromAll = (allItems || []).find((it: any) => {
-      if (it.source !== 'stepRecord') return false;
+    const foundFromAll = (allItems || []).find((it) => {
+      if (it.source !== 'agents') return false;
 
       const vid = it?.variableId ?? '';
       const eid = it?.entityId ?? '';
@@ -206,13 +185,13 @@ export const buildNodesFromContent = (
     return null;
   };
 
-  // Find meta for resource type (resource -> resultRecord/resourceLibrary/myUpload)
-  const findResourceMeta = (tokenId: string, tokenName: string) => {
+  // Find meta for file type
+  const findFileMeta = (tokenId: string, tokenName: string) => {
     if (!tokenId && !tokenName) return null;
 
-    const resourceSources: MentionItemSource[] = ['resourceLibrary', 'myUpload'];
+    const resourceSources: MentionItemSource[] = ['files', 'products'];
 
-    const foundFromAll = (allItems || []).find((it: any) => {
+    const foundFromAll = (allItems || []).find((it) => {
       if (!resourceSources.includes(it.source)) return false;
 
       const vid = it?.variableId ?? '';
@@ -304,7 +283,7 @@ export const buildNodesFromContent = (
               map[k] = v;
             }
           }
-          const tokenType = map.type || 'var';
+          const tokenType: MentionItemType = (map.type as MentionItemType) || 'var';
           const tokenId = map.id || '';
           const tokenName = map.name || '';
 
@@ -315,7 +294,7 @@ export const buildNodesFromContent = (
 
           // Map type to source and variableType
           let label = tokenName || tokenId;
-          let source = 'variables';
+          let source: MentionItemSource = 'variables';
           let variableType = 'string';
           let toolInfo: any = null;
 
@@ -324,15 +303,15 @@ export const buildNodesFromContent = (
             const meta = findVarMeta(tokenId, tokenName);
             variableType = meta?.variableType ?? 'string';
             toolInfo = meta;
-          } else if (tokenType === 'step') {
-            source = 'stepRecord';
-            const meta = findStepMeta(tokenId, tokenName);
+          } else if (tokenType === 'agent') {
+            source = 'agents';
+            const meta = findAgentMeta(tokenId, tokenName);
             variableType = meta?.variableType ?? 'skillResponse';
             toolInfo = meta;
-          } else if (tokenType === 'resource') {
-            const meta = findResourceMeta(tokenId, tokenName);
+          } else if (tokenType === 'file') {
+            const meta = findFileMeta(tokenId, tokenName);
             label = meta?.label ?? tokenName;
-            source = meta?.source ?? 'resultRecord';
+            source = meta?.source ?? 'files';
             variableType = meta?.variableType ?? 'resource';
             toolInfo = meta;
           } else if (tokenType === 'toolset') {
@@ -399,14 +378,13 @@ export const buildNodesFromContent = (
               meta = findVarMeta('', matchedName);
               toolInfo = meta;
               break;
-            case 'stepRecord':
-              meta = findStepMeta('', matchedName);
+            case 'agents':
+              meta = findAgentMeta('', matchedName);
               toolInfo = meta;
               break;
-            case 'resultRecord':
-            case 'resourceLibrary':
-            case 'myUpload':
-              meta = findResourceMeta('', matchedName);
+            case 'files':
+            case 'products':
+              meta = findFileMeta('', matchedName);
               toolInfo = meta;
               break;
             case 'tools':

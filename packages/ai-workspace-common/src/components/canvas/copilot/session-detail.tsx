@@ -130,7 +130,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     // Check current canvas nodes
     const currentNodes = getNodes() as CanvasNode[];
     const startNodes = currentNodes.filter((node) => node.type === 'start');
-    const skillNodes = currentNodes.filter((node) => node.type === 'skill');
+    const skillNodes = currentNodes.filter((node) => node.type === 'skillResponse');
 
     // Check if canvas only contains one start node or one start node + one skill node with empty contentPreview
     const shouldSkipConfirmation =
@@ -138,7 +138,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       (currentNodes.length === 2 &&
         startNodes.length === 1 &&
         skillNodes.length === 1 &&
-        !skillNodes[0]?.data?.contentPreview);
+        !skillNodes[0]?.data?.metadata?.query);
 
     if (!shouldSkipConfirmation) {
       // Show confirmation modal

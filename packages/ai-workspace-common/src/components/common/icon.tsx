@@ -79,7 +79,7 @@ import { HiOutlineChevronDown } from 'react-icons/hi';
 import { RxExit } from 'react-icons/rx';
 
 import { AiOutlineShrink } from 'react-icons/ai';
-import { TbWorldSearch, TbWorldCog, TbInputSpark } from 'react-icons/tb';
+import { TbWorldSearch, TbWorldCog, TbInputSpark, TbBolt } from 'react-icons/tb';
 import { GrCircleQuestion } from 'react-icons/gr';
 import { AiOutlineLink } from 'react-icons/ai';
 import { HiOutlineTableCells } from 'react-icons/hi2';
@@ -194,6 +194,7 @@ export const IconVideo = HiOutlineFilm;
 export const IconAudio = HiOutlineSpeakerWave;
 export const IconLightMode = MdOutlineLightMode;
 export const IconDarkMode = MdOutlineDarkMode;
+export const IconLightning01 = TbBolt;
 export const IconVariable = X;
 export const IconChrome = ChromeIcon;
 export const ModelProviderIcons = {

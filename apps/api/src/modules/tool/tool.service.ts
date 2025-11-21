@@ -6,9 +6,9 @@ import {
   AnyToolsetClass,
   BuiltinToolset,
   BuiltinToolsetDefinition,
+  GenerateWorkflow,
   builtinToolsetInventory,
   toolsetInventory,
-  GenerateWorkflow,
 } from '@refly/agent-tools';
 import { extractToolsetsWithNodes } from '@refly/canvas-common';
 import { ParamsError, ToolsetNotFoundError } from '@refly/errors';
@@ -18,29 +18,35 @@ import {
   DynamicConfigItem,
   GenericToolset,
   ListToolsData,
+  SkillContext,
   ToolsetAuthType,
   ToolsetDefinition,
   UpsertToolsetRequest,
   User,
 } from '@refly/openapi-schema';
-import { genToolsetID, safeParseJSON, validateConfig } from '@refly/utils';
 import {
-  convertMcpServersToClientConfig,
   MultiServerMCPClient,
   SkillEngine,
+  convertMcpServersToClientConfig,
 } from '@refly/skill-template';
+import { genToolsetID, safeParseJSON, validateConfig } from '@refly/utils';
 import { Queue } from 'bullmq';
 import { McpServer as McpServerPO, Prisma, Toolset as ToolsetPO } from '../../generated/client';
 import { QUEUE_SYNC_TOOL_CREDIT_USAGE } from '../../utils/const';
 import { EncryptionService } from '../common/encryption.service';
 import { PrismaService } from '../common/prisma.service';
-import { CreditService } from '../credit/credit.service';
 import { SyncToolCreditUsageJobData } from '../credit/credit.dto';
+import { CreditService } from '../credit/credit.service';
 import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
 import { McpServerService } from '../mcp-server/mcp-server.service';
+import { MiscService } from '../misc/misc.service';
 import { ComposioService } from './composio/composio.service';
+import { AuthType, ToolsetType } from './constant';
+import { ToolFactory } from './core/registry/factory';
+import { ToolInventoryService } from './inventory/inventory.service';
 import {
   mcpServerPo2GenericToolset,
+  populateToolsets,
   toolsetPo2GenericOAuthToolset,
   toolsetPo2GenericToolset,
 } from './tool.dto';
@@ -56,39 +62,48 @@ export class ToolService {
     private readonly mcpServerService: McpServerService,
     private readonly composioService: ComposioService,
     private readonly creditService: CreditService,
+    private readonly toolFactory: ToolFactory,
+    private readonly miscService: MiscService,
+    private readonly inventoryService: ToolInventoryService,
     @Optional()
     @InjectQueue(QUEUE_SYNC_TOOL_CREDIT_USAGE)
     private readonly toolCreditUsageQueue?: Queue<SyncToolCreditUsageJobData>,
   ) {}
 
-  get toolsetInventory(): Record<
-    string,
-    {
-      class: AnyToolsetClass;
-      definition: ToolsetDefinition;
-    }
+  async getToolsetInventory(): Promise<
+    Record<
+      string,
+      {
+        class: AnyToolsetClass;
+        definition: ToolsetDefinition;
+      }
+    >
   > {
     const supportedToolsets = this.configService.get<string>('tools.supportedToolsets');
+    const inventoryMap = await this.inventoryService.getInventoryMap();
 
     if (!supportedToolsets) {
-      return toolsetInventory;
+      return inventoryMap;
     }
 
     const supportedToolsetsArray = supportedToolsets.split(',');
     return Object.fromEntries(
-      Object.entries(toolsetInventory).filter(([key]) => supportedToolsetsArray.includes(key)),
+      Object.entries(inventoryMap).filter(([key]) => supportedToolsetsArray.includes(key)),
     );
   }
 
-  listToolsetInventory(): ToolsetDefinition[] {
-    return Object.values(this.toolsetInventory)
-      .map((toolset) => toolset.definition)
-      .sort((a, b) => a.key.localeCompare(b.key));
+  async listToolsetInventory(): Promise<ToolsetDefinition[]> {
+    const builtinInventory = Object.values(builtinToolsetInventory).map((toolset) => ({
+      ...toolset.definition,
+      builtin: true,
+    }));
+    const definitions = await this.inventoryService.getInventoryDefinitions();
+    return [...builtinInventory, ...definitions].sort((a, b) => a.key.localeCompare(b.key));
   }
 
   listBuiltinTools(): GenericToolset[] {
     return Object.values(builtinToolsetInventory).map((toolset) => ({
-      type: 'regular' as const,
+      type: ToolsetType.REGULAR,
       id: toolset.definition.key,
       name: (toolset.definition.labelDict?.en as string) ?? toolset.definition.key,
       builtin: true,
@@ -101,6 +116,49 @@ export class ToolService {
     }));
   }
 
+  /**
+   * List OAuth-based tools from active Composio connections
+   * Queries active integrations from composio_connections and returns corresponding toolsets
+   */
+  async listOAuthTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
+    const { enabled } = param ?? {};
+    // Get active Composio connections for the user
+    const activeConnections = await this.prisma.composioConnection.findMany({
+      where: {
+        uid: user.uid,
+        status: 'active',
+        deletedAt: null,
+      },
+      select: {
+        integrationId: true,
+      },
+    });
+
+    if (activeConnections.length === 0) {
+      return [];
+    }
+
+    // Extract integration IDs
+    const integrationIds = activeConnections.map((conn) => conn.integrationId);
+
+    // Query toolsets with matching keys (integration_id = toolset.key)
+    const oauthToolsets = await this.prisma.toolset.findMany({
+      where: {
+        key: { in: integrationIds },
+        authType: AuthType.OAUTH,
+        uninstalled: false,
+        deletedAt: null,
+        ...(enabled !== undefined && { enabled }),
+      },
+    });
+    const inventoryMap = await this.inventoryService.getInventoryMap();
+    return oauthToolsets.map((toolset) => toolsetPo2GenericToolset(toolset, inventoryMap));
+  }
+
+  /**
+   * List regular tools
+   * Combines both regular (code-based) and config_based (database-configured) toolsets
+   */
   async listRegularTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
     const { isGlobal, enabled } = param ?? {};
 
@@ -118,7 +176,8 @@ export class ToolService {
     const toolsets = await this.prisma.toolset.findMany({
       where: whereCondition,
     });
-    return toolsets.map(toolsetPo2GenericToolset);
+    const inventoryMap = await this.inventoryService.getInventoryMap();
+    return toolsets.map((toolset) => toolsetPo2GenericToolset(toolset, inventoryMap));
   }
 
   async listMcpTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
@@ -132,11 +191,28 @@ export class ToolService {
 
   async listTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
     const builtinTools = this.listBuiltinTools();
-    const [regularTools, mcpTools] = await Promise.all([
-      this.listRegularTools(user, param),
-      this.listMcpTools(user, param),
+    const [regularTools, oauthTools, mcpTools] = await Promise.all([
+      this.listRegularTools(user, param), // Includes both regular
+      this.listOAuthTools(user, param), // OAuth tools from Composio connections
+      this.listMcpTools(user, param), // MCP server tools
     ]);
-    return [...builtinTools, ...regularTools, ...mcpTools];
+    return [...builtinTools, ...regularTools, ...oauthTools, ...mcpTools];
+  }
+
+  /**
+   * Populate toolsets with definitions from inventory (for canvas and other use cases)
+   * This is a simpler version that only uses inventory data, no user-specific data
+   */
+  async populateToolsetsWithDefinition(toolsets: GenericToolset[]): Promise<GenericToolset[]> {
+    if (!Array.isArray(toolsets) || toolsets.length === 0) {
+      return [];
+    }
+
+    // Get inventory map from service
+    const inventoryMap = await this.inventoryService.getInventoryMap();
+
+    // Use DTO method to populate
+    return populateToolsets(toolsets, inventoryMap);
   }
 
   /**
@@ -167,19 +243,22 @@ export class ToolService {
 
     if (!key) {
       throw new ParamsError('key is required');
-    } else if (!this.toolsetInventory[key]) {
-      throw new ParamsError(`Toolset ${key} not valid`);
+    }
+
+    const inventoryItem = await this.inventoryService.getInventoryItem(key);
+    if (!inventoryItem) {
+      throw new ParamsError(`Inventory item not found for key: ${key}`);
     }
 
     // Get toolset definition for validation
-    const toolsetDefinition = this.toolsetInventory[key]?.definition;
+    const toolsetDefinition = inventoryItem.definition;
     if (!toolsetDefinition) {
       throw new ParamsError(`Toolset definition not found for key: ${key}`);
     }
 
     let finalAuthData = authData;
 
-    if (toolsetDefinition.requiresAuth) {
+    if (toolsetDefinition?.requiresAuth) {
       if (!authType) {
         throw new ParamsError(`authType is required for toolset ${key}`);
       }
@@ -314,7 +393,9 @@ export class ToolService {
       }
 
       // Validate authData against toolset schema (skip for OAuth type)
-      const toolsetDefinition = toolsetInventory[param.key ?? toolset.key]?.definition;
+      const toolsetDefinition = (
+        await this.inventoryService.getInventoryItem(param.key ?? toolset.key)
+      )?.definition;
       if (toolsetDefinition?.requiresAuth && authType !== ('oauth' as ToolsetAuthType)) {
         this.validateAuthData(finalAuthData, toolsetDefinition, authType);
       }
@@ -324,7 +405,9 @@ export class ToolService {
     }
     if (config !== undefined) {
       // Validate config against toolset schema
-      const toolsetDefinition = toolsetInventory[param.key ?? toolset.key]?.definition;
+      const toolsetDefinition = (
+        await this.inventoryService.getInventoryItem(param.key ?? toolset.key)
+      )?.definition;
       if (toolsetDefinition?.configItems) {
         this.validateConfig(config, toolsetDefinition.configItems);
       }
@@ -382,7 +465,7 @@ export class ToolService {
     for (const selectedToolset of toolsets) {
       const { type, id, selectedTools, builtin } = selectedToolset;
 
-      if (type === 'regular') {
+      if (type === ToolsetType.REGULAR) {
         if (builtin) {
           continue;
         }
@@ -390,7 +473,7 @@ export class ToolService {
         if (selectedTools?.length) {
           toolsetToolMap.set(id, selectedTools);
         }
-      } else if (type === 'mcp') {
+      } else if (type === ToolsetType.MCP) {
         mcpServerNames.push(id);
         if (selectedTools?.length) {
           mcpToolMap.set(id, selectedTools);
@@ -485,14 +568,20 @@ export class ToolService {
     toolset: ToolsetPO,
     selectedTools?: string[],
   ): Promise<void> {
+    // Config-based toolsets don't need inventory validation
+    // They are dynamically loaded from database
+    if (toolset.authType === 'config_based') {
+      return;
+    }
+
     // Validate that the toolset key exists in inventory
-    if (!toolsetInventory[toolset.key]) {
+    if (!(await this.inventoryService.hasInventoryItem(toolset.key))) {
       throw new ParamsError(`Toolset ${toolset.key} is not valid`);
     }
 
     // Validate selected tools if specified
     if (selectedTools?.length) {
-      this.validateToolsetTools(toolset.key, selectedTools);
+      await this.validateToolsetTools(toolset.key, selectedTools);
     }
   }
 
@@ -515,8 +604,8 @@ export class ToolService {
   /**
    * Validate that the selected tools exist in the toolset
    */
-  private validateToolsetTools(toolsetKey: string, selectedTools: string[]): void {
-    const toolset = toolsetInventory[toolsetKey];
+  private async validateToolsetTools(toolsetKey: string, selectedTools: string[]): Promise<void> {
+    const toolset = await this.inventoryService.getInventoryItem(toolsetKey);
     if (!toolset) {
       throw new ParamsError(`Toolset ${toolsetKey} not found in inventory`);
     }
@@ -579,11 +668,11 @@ export class ToolService {
 
       let importedToolset: GenericToolset | null = null;
 
-      if (toolset.type === 'regular') {
+      if (toolset.type === ToolsetType.REGULAR) {
         importedToolset = await this.importRegularToolset(user, toolset);
-      } else if (toolset.type === 'mcp') {
+      } else if (toolset.type === ToolsetType.MCP) {
         importedToolset = await this.importMcpToolset(user, toolset);
-      } else if (toolset.type === 'external_oauth') {
+      } else if (toolset.type === ToolsetType.EXTERNAL_OAUTH) {
         importedToolset = await this.importOAuthToolset(user, toolset);
       } else {
         this.logger.warn(`Unknown toolset type: ${toolset.type}, skipping`);
@@ -646,12 +735,22 @@ export class ToolService {
       return null;
     }
 
-    // Check if toolset key exists in inventory
-    const toolsetDefinition = this.toolsetInventory[key];
-    if (!toolsetDefinition) {
-      this.logger.warn(`Toolset key not found in inventory: ${key}, skipping`);
-      return null;
+    // Check if toolset is config-based (doesn't need inventory check)
+    // Config-based toolsets have authType='config_based' in the database
+    const isConfigBased = toolsetInstance?.authType === AuthType.CONFIG_BASED;
+
+    // Check if toolset key exists in inventory (skip for config_based)
+    let toolsetDefinition = null;
+    if (!isConfigBased) {
+      toolsetDefinition = await this.inventoryService.getInventoryItem(key);
+      if (!toolsetDefinition) {
+        this.logger.warn(`Toolset key not found in inventory: ${key}, skipping`);
+        return null;
+      }
     }
+
+    // Load inventory map for DTO functions
+    const inventoryMap = await this.inventoryService.getInventoryMap();
 
     // Search for existing toolset with same key for this user
     const existingToolsets = await this.prisma.toolset.findMany({
@@ -670,7 +769,7 @@ export class ToolService {
         this.logger.debug(
           `Found existing regular user-specific toolset for key ${key}, toolset id: ${validUserToolset.toolsetId}`,
         );
-        return toolsetPo2GenericToolset(validUserToolset);
+        return toolsetPo2GenericToolset(validUserToolset, inventoryMap);
       }
 
       const validGlobalToolset = existingToolsets.find((t) => t.isGlobal && t.enabled);
@@ -678,19 +777,21 @@ export class ToolService {
         this.logger.debug(
           `Found existing regular global toolset for key ${key}, toolset id: ${validGlobalToolset.toolsetId}`,
         );
-        return toolsetPo2GenericToolset(validGlobalToolset);
+        return toolsetPo2GenericToolset(validGlobalToolset, inventoryMap);
       }
 
       // Return the first existing toolset if no valid user or global toolset is found
-      return toolsetPo2GenericToolset(existingToolsets[0]);
+      return toolsetPo2GenericToolset(existingToolsets[0], inventoryMap);
     }
 
     // Create uninstalled toolset with pre-generated ID
     const toolsetId = genToolsetID();
+    const toolsetName = await this.inventoryService.getNameByKey(key);
+
     const createdToolset = await this.prisma.toolset.create({
       data: {
         toolsetId,
-        name: name || (toolsetDefinition.definition.labelDict?.en as string) || key,
+        name: toolsetName,
         key,
         uid: user.uid,
         enabled: false, // Uninstalled toolsets are disabled
@@ -699,7 +800,7 @@ export class ToolService {
     });
 
     this.logger.log(`Created uninstalled regular toolset: ${toolsetId} for key ${key}`);
-    return toolsetPo2GenericToolset(createdToolset);
+    return toolsetPo2GenericToolset(createdToolset, inventoryMap);
   }
 
   /**
@@ -790,23 +891,30 @@ export class ToolService {
     user: User,
     toolsets: GenericToolset[],
     engine: SkillEngine,
+    options?: {
+      context?: SkillContext;
+      canvasId?: string;
+    },
   ): Promise<StructuredToolInterface[]> {
-    const builtinKeys = toolsets.filter((t) => t.type === 'regular' && t.builtin).map((t) => t.id);
+    const builtinKeys = toolsets
+      .filter((t) => t.type === ToolsetType.REGULAR && t.builtin)
+      .map((t) => t.id);
     let builtinTools: DynamicStructuredTool[] = [];
     if (builtinKeys.length > 0) {
       builtinTools = this.instantiateBuiltinToolsets(user, engine, builtinKeys);
     }
 
     let copilotTools: DynamicStructuredTool[] = [];
-    if (toolsets.find((t) => t.type === 'regular' && t.id === 'copilot')) {
+    if (toolsets.find((t) => t.type === ToolsetType.REGULAR && t.id === 'copilot')) {
       copilotTools = this.instantiateCopilotToolsets();
     }
 
-    const regularToolsets = toolsets.filter((t) => t.type === 'regular' && !t.builtin);
-    const mcpServers = toolsets.filter((t) => t.type === 'mcp');
+    // Regular toolsets now include both regular and config_based (mapped to 'regular' type)
+    const regularToolsets = toolsets.filter((t) => t.type === ToolsetType.REGULAR && !t.builtin);
+    const mcpServers = toolsets.filter((t) => t.type === ToolsetType.MCP);
 
     const [regularTools, mcpTools, oauthToolsets] = await Promise.all([
-      this.instantiateRegularToolsets(user, regularToolsets, engine),
+      this.instantiateRegularToolsets(user, regularToolsets, engine, options),
       this.instantiateMcpServers(user, mcpServers),
       this.instantiateOAuthToolsets(user, toolsets),
     ]);
@@ -844,9 +952,9 @@ export class ToolService {
             func: tool.invoke.bind(tool),
             metadata: {
               name: tool.name,
-              type: 'regular',
-              toolsetKey: 'builtin',
-              toolsetName: 'Builtin',
+              type: ToolsetType.REGULAR,
+              toolsetKey: tool.toolsetKey,
+              toolsetName: tool.name,
             },
           }),
       );
@@ -878,6 +986,10 @@ export class ToolService {
     user: User,
     toolsets: GenericToolset[],
     engine: SkillEngine,
+    options?: {
+      context?: SkillContext;
+      canvasId?: string;
+    },
   ): Promise<DynamicStructuredTool[]> {
     if (!toolsets?.length) {
       return [];
@@ -900,12 +1012,22 @@ export class ToolService {
       },
     });
 
-    const tools = toolsetPOs.flatMap((t) => {
-      const toolset = toolsetInventory[t.key];
-      if (!toolset) {
-        throw new ParamsError(`Toolset ${t.key} not found in inventory`);
+    // Separate static and dynamic toolsets
+    const staticToolsets: typeof toolsetPOs = [];
+    const configBasedToolsets: typeof toolsetPOs = [];
+    for (const toolsetPO of toolsetPOs) {
+      // Check if this toolset is in staticToolsetInventory (SDK-based)
+      const staticToolset = !!toolsetInventory[toolsetPO.key];
+      if (staticToolset) {
+        staticToolsets.push(toolsetPO);
+      } else {
+        configBasedToolsets.push(toolsetPO);
       }
+    }
 
+    // static toolsets
+    const staticTools = staticToolsets.flatMap((t) => {
+      const toolset = toolsetInventory[t.key];
       const config = t.config ? safeParseJSON(t.config) : {};
       const authData = t.authData ? safeParseJSON(this.encryptionService.decrypt(t.authData)) : {};
 
@@ -916,6 +1038,8 @@ export class ToolService {
         reflyService: engine.service,
         user,
         isGlobalToolset: t?.isGlobal ?? false,
+        engine, // Pass SkillEngine instance for tools that need LLM access
+        context: options?.context, // Pass context for tools that need access to skill context
       });
 
       return toolset.definition.tools
@@ -956,7 +1080,43 @@ export class ToolService {
         );
     });
 
-    return tools;
+    // Instantiate config-based tools via ToolFactory
+    const configTools = await this.instantiateDynamicToolsets(configBasedToolsets);
+    this.logger.log(
+      `Instantiated ${staticTools.length} static tools and ${configTools.length} config-based tools`,
+    );
+
+    return [...staticTools, ...configTools];
+  }
+
+  /**
+   * Instantiate config-based toolsets via ToolFactory
+   * Credentials are automatically loaded from the toolset configuration
+   */
+  private async instantiateDynamicToolsets(
+    toolsetPOs: Array<{
+      key: string;
+      name: string;
+    }>,
+  ): Promise<DynamicStructuredTool[]> {
+    if (!toolsetPOs?.length) {
+      return [];
+    }
+    const allTools: DynamicStructuredTool[] = [];
+    for (const toolsetPO of toolsetPOs) {
+      try {
+        // Use ToolFactory to instantiate tools
+        // Credentials are loaded automatically from the config
+        const tools = await this.toolFactory.instantiateToolsByKey(toolsetPO.key);
+        allTools.push(...tools);
+      } catch (error) {
+        this.logger.error(
+          `Failed to instantiate config-based toolset ${toolsetPO.key}: ${(error as Error).message}`,
+          (error as Error).stack,
+        );
+      }
+    }
+    return allTools;
   }
 
   /**

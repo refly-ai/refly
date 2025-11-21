@@ -39,6 +39,7 @@ const ICONS: Record<CanvasNodeType | SelectionKey, IconComponent> = {
   audio: Audio,
   document: Doc1,
   resource: File,
+  file: File,
   codeArtifact: Code1,
   website: Web1,
   memo: Note,

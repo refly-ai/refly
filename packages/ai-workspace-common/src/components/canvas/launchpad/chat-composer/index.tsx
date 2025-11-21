@@ -1,7 +1,5 @@
 import { forwardRef, memo, useMemo, useCallback, useRef, useImperativeHandle } from 'react';
 import type { IContextItem } from '@refly/common-types';
-import type { GenericToolset, ModelInfo, SkillRuntimeConfig } from '@refly/openapi-schema';
-import { ContextManager } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/context-manager';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import {
   RichChatInput,
@@ -16,24 +14,12 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useActionResultStore, useChatStoreShallow } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
 import { message } from 'antd';
+import { type MentionPosition } from '../rich-chat-input/mention-extension';
+import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 
 export interface ChatComposerProps {
-  query: string;
-  setQuery: (text: string) => void;
   handleSendMessage: () => void;
   handleAbort?: () => void;
-
-  // Context items
-  contextItems: IContextItem[];
-  setContextItems: (
-    items: IContextItem[] | ((prevItems: IContextItem[]) => IContextItem[]),
-  ) => void;
-
-  // Model and runtime config
-  modelInfo: ModelInfo | null;
-  setModelInfo: (model: ModelInfo | null) => void;
-  runtimeConfig?: SkillRuntimeConfig;
-  setRuntimeConfig?: (config: SkillRuntimeConfig) => void;
 
   // Optional UI behaviors
   placeholder?: string;
@@ -47,14 +33,10 @@ export interface ChatComposerProps {
   // Action result ID
   resultId?: string;
 
-  mentionPosition?: 'top-start' | 'bottom-start';
+  mentionPosition?: MentionPosition;
 
   // Rich input
   enableRichInput?: boolean;
-
-  // Toolsets
-  selectedToolsets?: GenericToolset[];
-  onSelectedToolsetsChange?: (toolsets: GenericToolset[]) => void;
 
   // Execution state
   isExecuting?: boolean;
@@ -64,11 +46,15 @@ export interface ChatComposerProps {
   // Custom actions
   customActions?: CustomAction[];
 
-  nodeId?: string;
+  nodeId: string;
+
+  // Show/hide ChatActions
+  showActions?: boolean;
 }
 
 export interface ChatComposerRef {
   focus: () => void;
+  insertAtSymbol?: () => void;
 }
 
 /**
@@ -77,47 +63,50 @@ export interface ChatComposerRef {
  */
 const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((props, ref) => {
   const {
-    query,
-    setQuery,
     handleSendMessage,
     handleAbort,
-    contextItems,
-    setContextItems,
-    modelInfo,
-    setModelInfo,
-    runtimeConfig,
-    setRuntimeConfig,
     placeholder,
     inputClassName = 'px-1 py-0',
     maxRows = 6,
     onFocus,
     resultId,
     className = '',
-    contextClassName = '',
     actionsClassName = '',
     enableRichInput = false,
     mentionPosition = 'bottom-start',
-    selectedToolsets,
-    onSelectedToolsetsChange,
     isExecuting = false,
     enableChatModeSelector = false,
     customActions,
     nodeId,
+    showActions = true,
   } = props;
 
   const { handleUploadImage, handleUploadMultipleImages } = useUploadImage();
   const { canvasId, readonly } = useCanvasContext();
   const { t } = useTranslation();
+  const {
+    query,
+    setQuery,
+    contextItems,
+    setContextItems,
+    modelInfo,
+    setModelInfo,
+    selectedToolsets,
+    setSelectedToolsets,
+  } = useAgentNodeManagement(nodeId);
 
   // Ref for the input component
   const inputRef = useRef<RichChatInputRef>(null);
 
-  // Expose focus method through ref
+  // Expose focus and insertAtSymbol methods through ref
   useImperativeHandle(
     ref,
     () => ({
       focus: () => {
         inputRef.current?.focus();
+      },
+      insertAtSymbol: () => {
+        inputRef.current?.insertAtSymbol?.();
       },
     }),
     [],
@@ -140,23 +129,16 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
 
   const handleImageUpload = useCallback(
     async (file: File) => {
-      const resource = await handleUploadImage(file, canvasId);
-      if (resource) {
+      const driveFile = await handleUploadImage(file, canvasId);
+      if (driveFile) {
         setTimeout(() => {
           // Use functional update to avoid state race conditions
           setContextItems((prevContextItems) => [
             ...(prevContextItems || []),
             {
-              type: 'resource',
-              entityId: resource.resourceId,
-              title: resource.title,
-              metadata: {
-                resourceType: resource.resourceType,
-                resourceMeta: resource.data,
-                storageKey: resource.storageKey,
-                rawFileKey: resource.rawFileKey,
-                downloadURL: resource.downloadURL,
-              },
+              type: 'file',
+              entityId: driveFile.fileId,
+              title: driveFile.name,
             },
           ]);
         }, 10);
@@ -167,20 +149,13 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
 
   const handleMultipleImagesUpload = useCallback(
     async (files: File[]) => {
-      const resources = await handleUploadMultipleImages(files, canvasId);
-      if (resources?.length) {
+      const driveFiles = await handleUploadMultipleImages(files, canvasId);
+      if (driveFiles?.length) {
         setTimeout(() => {
-          const newContextItems: IContextItem[] = resources.map((resource) => ({
-            type: 'resource' as const,
-            entityId: resource.resourceId,
-            title: resource.title,
-            metadata: {
-              resourceType: resource.resourceType,
-              resourceMeta: resource.data,
-              storageKey: resource.storageKey,
-              rawFileKey: resource.rawFileKey,
-              downloadURL: resource.downloadURL,
-            },
+          const newContextItems: IContextItem[] = driveFiles.map((driveFile) => ({
+            type: 'file',
+            entityId: driveFile.fileId,
+            title: driveFile.name,
           }));
 
           // Use functional update to avoid state race conditions
@@ -206,33 +181,19 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
   }, [resultId, handleSendMessage]);
 
   return (
-    <div className={`flex flex-col gap-3 h-full box-border ${className}`}>
-      <ContextManager
-        className={contextClassName}
-        contextItems={contextItems}
-        setContextItems={setContextItems}
-      />
-
+    <div className={`flex flex-col gap-3 h-full ${className}`}>
       {enableRichInput ? (
         <RichChatInput
           readonly={readonly}
           ref={inputRef}
-          query={query}
-          setQuery={(value) => {
-            setQuery(value);
-          }}
           inputClassName={inputClassName}
           maxRows={maxRows}
           handleSendMessage={handleSendMessageInternal}
           onUploadImage={handleImageUpload as (file: File) => Promise<void>}
           onUploadMultipleImages={handleMultipleImagesUpload as (files: File[]) => Promise<void>}
           onFocus={onFocus}
-          contextItems={contextItems}
-          setContextItems={setContextItems}
           placeholder={defaultPlaceholder}
           mentionPosition={mentionPosition}
-          selectedToolsets={selectedToolsets}
-          setSelectedToolsets={onSelectedToolsetsChange}
           nodeId={nodeId}
         />
       ) : (
@@ -253,24 +214,24 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
         />
       )}
 
-      <ChatActions
-        className={actionsClassName}
-        query={query}
-        model={modelInfo}
-        setModel={setModelInfo}
-        resultId={resultId}
-        handleSendMessage={handleSendMessageInternal}
-        handleAbort={handleAbort ?? (() => {})}
-        onUploadImage={handleImageUpload as (file: File) => Promise<void>}
-        contextItems={contextItems}
-        runtimeConfig={runtimeConfig}
-        setRuntimeConfig={setRuntimeConfig}
-        selectedToolsets={selectedToolsets}
-        setSelectedToolsets={onSelectedToolsetsChange}
-        isExecuting={isExecuting}
-        enableChatModeSelector={enableChatModeSelector}
-        customActions={customActions}
-      />
+      {showActions && (
+        <ChatActions
+          query={query}
+          modelInfo={modelInfo}
+          contextItems={contextItems}
+          selectedToolsets={selectedToolsets}
+          setModelInfo={setModelInfo}
+          setSelectedToolsets={setSelectedToolsets}
+          className={actionsClassName}
+          resultId={resultId}
+          handleSendMessage={handleSendMessageInternal}
+          handleAbort={handleAbort ?? (() => {})}
+          onUploadImage={handleImageUpload as (file: File) => Promise<void>}
+          isExecuting={isExecuting}
+          enableChatModeSelector={enableChatModeSelector}
+          customActions={customActions}
+        />
+      )}
     </div>
   );
 });

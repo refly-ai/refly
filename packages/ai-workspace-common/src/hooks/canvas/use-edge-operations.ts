@@ -1,16 +1,17 @@
 import { useCallback } from 'react';
-import { Connection, Edge, applyEdgeChanges, EdgeChange, useStoreApi } from '@xyflow/react';
+import { Connection, Edge, EdgeChange, applyEdgeChanges, useStoreApi } from '@xyflow/react';
 import { genUniqueId } from '@refly/utils/id';
 import { useEdgeStyles, getEdgeStyles } from '../../components/canvas/constants';
 import { CanvasNode } from '@refly/canvas-common';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
-import { useThemeStore } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
 
 export const useEdgeOperations = () => {
   const { getState, setState } = useStoreApi<CanvasNode<any>>();
   const edgeStyles = useEdgeStyles();
   const { forceSyncState } = useCanvasContext();
+  const { setNodeData } = useNodeData();
 
   const updateEdgesWithSync = useCallback(
     (edges: Edge[]) => {
@@ -23,11 +24,12 @@ export const useEdgeOperations = () => {
   const onEdgesChange = useCallback(
     (changes: EdgeChange<Edge>[]) => {
       const { edges } = getState();
-      const updatedEdges = applyEdgeChanges(changes, edges);
+      const safePrevEdges = edges ?? [];
+      const updatedEdges = applyEdgeChanges(changes ?? [], safePrevEdges);
 
       updateEdgesWithSync(updatedEdges);
     },
-    [getState, updateEdgesWithSync],
+    [getState, setNodeData, updateEdgesWithSync],
   );
 
   const onConnect = useCallback(
@@ -38,9 +40,10 @@ export const useEdgeOperations = () => {
       }
 
       const { edges } = getState();
+      const safeEdges = edges ?? [];
 
       // check if the edge already exists
-      const connectionExists = edges?.some(
+      const connectionExists = safeEdges.some(
         (edge) => edge.source === params.source && edge.target === params.target,
       );
 
@@ -56,23 +59,24 @@ export const useEdgeOperations = () => {
         style: edgeStyles.default,
       };
 
-      const updatedEdges = [...edges, newEdge];
+      const updatedEdges = [...safeEdges, newEdge];
 
       updateEdgesWithSync(updatedEdges);
+
       edgeEventsEmitter.emit('edgeChange', {
-        oldEdges: edges,
+        oldEdges: safeEdges,
         newEdges: updatedEdges,
       });
     },
-    [getState, updateEdgesWithSync],
+    [getState, setNodeData, updateEdgesWithSync],
   );
 
   const updateAllEdgesStyle = useCallback(
     (showEdges: boolean) => {
       const { edges } = getState();
-      const { isDarkMode } = useThemeStore.getState();
-      const edgeStyles = getEdgeStyles(showEdges, isDarkMode);
-      const updatedEdges = edges.map((edge) => ({
+      const edgeStyles = getEdgeStyles(showEdges);
+      const safeEdges = edges ?? [];
+      const updatedEdges = safeEdges.map((edge) => ({
         ...edge,
         style: edgeStyles.default,
       }));

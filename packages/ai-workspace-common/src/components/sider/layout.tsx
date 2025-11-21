@@ -2,7 +2,6 @@ import React, { useMemo, useEffect, useCallback, useState } from 'react';
 import { Avatar, Button, Divider, Layout } from 'antd';
 import {
   useLocation,
-  useMatch,
   useNavigate,
   useSearchParams,
 } from '@refly-packages/ai-workspace-common/utils/router';
@@ -14,11 +13,13 @@ import { useSubscriptionStoreShallow, useUserStoreShallow } from '@refly/stores'
 import { useTranslation } from 'react-i18next';
 import { SiderMenuSettingList } from '../sider-menu-setting-list';
 import { SettingModal } from '@refly-packages/ai-workspace-common/components/settings';
+import { InvitationModal } from '@refly-packages/ai-workspace-common/components/settings/invitation-modal';
 import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
 // hooks
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
+import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
 import {
   Account,
   File,
@@ -30,7 +31,7 @@ import {
   SideLeft,
 } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
-
+import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
 import { useKnowledgeBaseStoreShallow } from '@refly/stores';
 import { subscriptionEnabled } from '@refly/ui-kit';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
@@ -131,30 +132,44 @@ const SiderSectionHeader = ({
   onActionClick,
   actionIcon,
   isActive = false,
+  collapsed = false,
 }: {
   icon: React.ReactNode;
   title: string;
   onActionClick?: () => void;
   actionIcon?: React.ReactNode;
   isActive?: boolean;
+  collapsed?: boolean;
 }) => {
   return (
     <div
       className={cn(
-        'w-full h-[42px] p-2 flex items-center justify-between text-refly-text-0 group select-none rounded-xl cursor-pointer',
+        'w-full h-[42px] p-2 flex items-center justify-between text-refly-text-0 group select-none rounded-xl cursor-pointer transition-all duration-300',
         isActive ? 'bg-refly-tertiary-hover' : 'hover:bg-refly-tertiary-hover',
       )}
       onClick={!actionIcon ? onActionClick : undefined}
+      title={collapsed ? title : undefined}
     >
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        {icon}
-        <span className={cn('truncate', isActive ? 'font-semibold' : 'font-normal')}>{title}</span>
+        <div className="flex-shrink-0 flex items-center">{icon}</div>
+        <span
+          className={cn(
+            'truncate transition-all duration-300',
+            isActive ? 'font-semibold' : 'font-normal',
+            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+          )}
+        >
+          {title}
+        </span>
       </div>
       {actionIcon && onActionClick && (
         <Button
           type="text"
           size="small"
-          className="box-border px-1 text-refly-text-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          className={cn(
+            'box-border px-1 text-refly-text-0 transition-opacity duration-200',
+            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-0 group-hover:opacity-100',
+          )}
           icon={actionIcon}
           onClick={(e) => {
             e.stopPropagation();
@@ -169,34 +184,113 @@ const SiderSectionHeader = ({
 export const SiderLogo = (props: {
   navigate?: (path: string) => void;
   showCollapseButton?: boolean;
-  onCollapseClick?: () => void;
+  onCollapseClick?: (nextCollapsed: boolean) => void;
+  collapsed?: boolean;
 }) => {
-  const { navigate, showCollapseButton = false, onCollapseClick } = props;
+  const { navigate, showCollapseButton = false, onCollapseClick, collapsed = false } = props;
 
   return (
-    <div className={cn('flex items-center mb-6 gap-2 justify-between')}>
-      <div className="flex items-center gap-2">
-        <Logo onClick={() => navigate?.('/')} />
-        <GithubStar />
+    <div className={cn('flex items-center mb-6 gap-2 justify-between transition-all duration-300')}>
+      <div className="flex items-center gap-2 px-1 flex-shrink-0">
+        {collapsed && showCollapseButton ? (
+          <div className="group relative w-8 h-8">
+            <div className="group-hover:opacity-0 transition-opacity duration-200">
+              <Logo
+                onClick={() => navigate?.('/')}
+                logoProps={{ show: true }}
+                textProps={{ show: false }}
+              />
+            </div>
+            <Button
+              type="text"
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-refly-text-0 hover:bg-refly-tertiary-hover"
+              icon={<SideRight size={20} />}
+              onClick={() => onCollapseClick?.(false)}
+            />
+          </div>
+        ) : (
+          <Logo
+            onClick={() => navigate?.('/')}
+            logoProps={collapsed ? { show: true } : undefined}
+            textProps={collapsed ? { show: false } : undefined}
+          />
+        )}
+        <div
+          className={cn(
+            'transition-all duration-300',
+            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+          )}
+        >
+          {!collapsed && <GithubStar />}
+        </div>
       </div>
-      {showCollapseButton && (
-        <Button
-          type="text"
-          size="small"
-          className="text-refly-text-0 hover:bg-refly-tertiary-hover"
-          icon={<SideLeft size={16} />}
-          onClick={onCollapseClick}
-        />
+      {showCollapseButton && !collapsed && (
+        <div className="transition-all duration-300 flex-shrink-0">
+          <Button
+            type="text"
+            className="w-8 h-8 text-refly-text-0 hover:bg-refly-tertiary-hover"
+            icon={<SideLeft size={20} />}
+            onClick={() => onCollapseClick?.(true)}
+          />
+        </div>
       )}
     </div>
   );
 };
 
+export const InvitationItem = React.memo(
+  ({
+    collapsed = false,
+    onClick,
+  }: {
+    collapsed?: boolean;
+    onClick: () => void;
+  }) => {
+    const { t } = useTranslation();
+
+    return (
+      <div
+        className={cn(
+          'w-full h-[64px] flex items-center justify-between cursor-pointer rounded-[20px] bg-gradient-to-r from-[#02AE8E] to-[#008AA6] px-1.5 transition-all duration-300',
+        )}
+        onClick={onClick}
+        data-cy="invite-friends-menu-item"
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex-shrink-0 flex items-center">
+            <img src={InviteIcon} alt="Invite" className="w-7 h-7" />
+          </div>
+          <div
+            className={cn(
+              'flex flex-col leading-tight transition-all duration-300',
+              collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+            )}
+          >
+            <span className="text-xs font-semibold text-white truncate">
+              {t('common.inviteFriends')}
+            </span>
+            <span className="text-xs text-white/80 truncate">{t('common.inviteRewardText')}</span>
+          </div>
+        </div>
+        <span
+          className={cn(
+            'text-white text-xs font-semibold leading-none transition-all duration-300',
+            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+          )}
+        >
+          &gt;
+        </span>
+      </div>
+    );
+  },
+);
+
 export const SettingItem = React.memo(
   ({
     showName = true,
     avatarAlign = 'left',
-  }: { showName?: boolean; avatarAlign?: 'left' | 'right' }) => {
+    collapsed = false,
+  }: { showName?: boolean; avatarAlign?: 'left' | 'right'; collapsed?: boolean }) => {
     const { userProfile } = useUserStoreShallow((state) => ({
       userProfile: state.userProfile,
     }));
@@ -257,23 +351,51 @@ export const SettingItem = React.memo(
       [showName, userProfile],
     );
 
+    if (collapsed) {
+      return (
+        <SiderMenuSettingList creditBalance={creditBalance}>
+          <div className="group w-full flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex-shrink-0 flex items-center">
+                <UserAvatar showName={false} userProfile={userProfile} avatarAlign="left" />
+              </div>
+              <div className="opacity-0 w-0 overflow-hidden">
+                <SubscriptionInfo
+                  creditBalance={creditBalance}
+                  userProfile={userProfile}
+                  onCreditClick={handleCreditClick}
+                  onSubscriptionClick={handleSubscriptionClick}
+                  t={t}
+                />
+              </div>
+            </div>
+          </div>
+        </SiderMenuSettingList>
+      );
+    }
+
     return (
       <div className="group w-full">
         <SiderMenuSettingList creditBalance={creditBalance}>
-          <div className="flex flex-1 items-center justify-between">
-            {avatarAlign === 'left' && (
-              <>
-                {renderUserAvatar}
-                {renderSubscriptionInfo}
-              </>
-            )}
-
-            {avatarAlign === 'right' && (
-              <>
-                {renderSubscriptionInfo}
-                {renderUserAvatar}
-              </>
-            )}
+          <div className="flex flex-1 items-center justify-between transition-all duration-300">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex-shrink-0 flex items-center">
+                {avatarAlign === 'left' && renderUserAvatar}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+              <div className="flex-shrink-0 flex items-center">
+                {avatarAlign === 'right' && renderUserAvatar}
+              </div>
+            </div>
+            <div
+              className={cn(
+                'transition-all duration-300 flex-shrink-0',
+                collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+              )}
+            >
+              {renderSubscriptionInfo}
+            </div>
           </div>
         </SiderMenuSettingList>
       </div>
@@ -288,25 +410,41 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
   const { updateLibraryModalActiveKey } = useKnowledgeBaseStoreShallow((state) => ({
     updateLibraryModalActiveKey: state.updateLibraryModalActiveKey,
   }));
+  const { setShowInvitationModal } = useSiderStoreShallow((state) => ({
+    setShowInvitationModal: state.setShowInvitationModal,
+  }));
 
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
   }));
 
   const {
-    collapse,
+    collapseState,
     setCollapse,
     setShowSettingModal,
     setShowLibraryModal,
     setSettingsModalActiveTab,
+    setIsManualCollapse,
   } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
+    collapseState: state.collapseState,
     setCollapse: state.setCollapse,
     setShowSettingModal: state.setShowSettingModal,
     setShowLibraryModal: state.setShowLibraryModal,
     showLibraryModal: state.showLibraryModal,
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
+    setIsManualCollapse: state.setIsManualCollapse,
   }));
+
+  // Get auth config to determine if invitation feature should be shown
+  const { data: authConfig } = useGetAuthConfig();
+
+  const handleCollapseToggle = useCallback(
+    (nextCollapsed: boolean) => {
+      setCollapse(nextCollapsed);
+      setIsManualCollapse(nextCollapsed);
+    },
+    [setCollapse, setIsManualCollapse],
+  );
 
   useHandleSiderData(true);
 
@@ -341,6 +479,11 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     }
     return 'home';
   }, [location.pathname]);
+
+  // Handle invitation button click - show modal directly, codes will be loaded lazily
+  const handleInvitationClick = useCallback(() => {
+    setShowInvitationModal(true);
+  }, [setShowInvitationModal]);
 
   // Menu items configuration
   const menuItems = useMemo(
@@ -431,126 +574,136 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     updateLibraryModalActiveKey,
   ]);
 
+  const isCollapsed = useMemo(() => collapseState !== 'expanded', [collapseState]);
+  const isHidden = useMemo(() => collapseState === 'hidden', [collapseState]);
+  const siderWidth = useMemo(() => {
+    if (source !== 'sider') {
+      return 248;
+    }
+    if (isHidden) {
+      return 0;
+    }
+    return isCollapsed ? 48 : 248;
+  }, [isCollapsed, isHidden, source]);
+
   return (
-    <Sider
-      width={source === 'sider' ? (collapse ? 0 : 248) : 248}
-      className={cn(
-        'bg-transparent',
-        source === 'sider'
-          ? ''
-          : 'rounded-lg border-r border-solid border-[1px] border-refly-Card-Border bg-refly-bg-Glass-content backdrop-blur-md shadow-[0_6px_60px_0px_rgba(0,0,0,0.08)]',
-      )}
+    <div
+      className="transition-all duration-500 ease-in-out overflow-hidden"
       style={{
+        width: siderWidth,
         height: source === 'sider' ? 'var(--screen-height)' : 'calc(var(--screen-height) - 16px)',
       }}
     >
-      <div className="flex h-full flex-col gap-3 overflow-hidden p-4 pr-2 pt-6">
-        <div className="flex flex-col gap-2 flex-1 overflow-hidden">
-          <SiderLogo
-            navigate={(path) => navigate(path)}
-            showCollapseButton={source === 'sider'}
-            onCollapseClick={() => setCollapse(true)}
-          />
-
-          {/* Main menu items */}
-          {menuItems.map((item, index) => (
-            <SiderSectionHeader
-              key={index}
-              icon={item.icon}
-              title={item.title}
-              onActionClick={item.onActionClick}
-              isActive={item.key === getActiveKey()} // First item (home) is active when on /canvas/empty
+      <Sider
+        width="100%"
+        className={cn(
+          'bg-transparent',
+          source === 'sider'
+            ? ''
+            : 'rounded-lg border-r border-solid border-[1px] border-refly-Card-Border bg-refly-bg-Glass-content backdrop-blur-md shadow-[0_6px_60px_0px_rgba(0,0,0,0.08)]',
+        )}
+        style={{
+          height: '100%',
+          overflow: isHidden ? 'hidden' : undefined,
+        }}
+      >
+        <div className="flex h-full flex-col gap-3 overflow-hidden p-2 pr-0 pt-6">
+          <div className="flex flex-col gap-2 flex-1 overflow-hidden">
+            <SiderLogo
+              navigate={(path) => navigate(path)}
+              showCollapseButton={source === 'sider'}
+              onCollapseClick={handleCollapseToggle}
+              collapsed={isCollapsed}
             />
-          ))}
 
-          <Divider className="m-0 border-refly-Card-Border" />
-
-          {/* Bottom menu items */}
-          {bottomMenuItems.map((item, index) => {
-            if (item.key === 'contactUs') {
-              return (
-                <ContactUsPopover
-                  key={`bottom-${index}`}
-                  open={openContactUs}
-                  setOpen={setOpenContactUs}
-                >
-                  <SiderSectionHeader
-                    icon={item.icon}
-                    title={item.title}
-                    onActionClick={item.onActionClick}
-                    isActive={openContactUs}
-                  />
-                </ContactUsPopover>
-              );
-            }
-            return (
+            {/* Main menu items */}
+            {menuItems.map((item, index) => (
               <SiderSectionHeader
-                key={`bottom-${index}`}
+                key={index}
                 icon={item.icon}
                 title={item.title}
                 onActionClick={item.onActionClick}
-                isActive={item.key === getActiveKey()}
+                isActive={item.key === getActiveKey()} // First item (home) is active when on /canvas/empty
+                collapsed={isCollapsed}
               />
-            );
-          })}
-        </div>
+            ))}
 
-        {!!userProfile?.uid && (
-          <div
-            className="flex h-12 items-center justify-between cursor-pointer hover:bg-refly-tertiary-hover rounded-md px-2"
-            data-cy="settings-menu-item"
-          >
-            <SettingItem />
+            <Divider className="m-0 border-refly-Card-Border" />
+
+            {/* Bottom menu items */}
+            {bottomMenuItems.map((item, index) => {
+              if (item.key === 'contactUs') {
+                return (
+                  <ContactUsPopover
+                    key={`bottom-${index}`}
+                    open={openContactUs}
+                    setOpen={setOpenContactUs}
+                  >
+                    <SiderSectionHeader
+                      icon={item.icon}
+                      title={item.title}
+                      onActionClick={item.onActionClick}
+                      isActive={openContactUs}
+                      collapsed={isCollapsed}
+                    />
+                  </ContactUsPopover>
+                );
+              }
+              return (
+                <SiderSectionHeader
+                  key={`bottom-${index}`}
+                  icon={item.icon}
+                  title={item.title}
+                  onActionClick={item.onActionClick}
+                  isActive={item.key === getActiveKey()}
+                  collapsed={isCollapsed}
+                />
+              );
+            })}
           </div>
-        )}
-      </div>
-    </Sider>
-  );
-};
 
-// Floating expand button component for when sider is collapsed
-const FloatingExpandButton = React.memo(() => {
-  const { setCollapse } = useSiderStoreShallow((state) => ({
-    setCollapse: state.setCollapse,
-  }));
-
-  return (
-    <div className="fixed left-4 top-6 z-50">
-      <Button
-        type="text"
-        size="small"
-        className="bg-white dark:bg-gray-800 shadow-lg border border-refly-Card-Border text-refly-text-0 hover:bg-refly-tertiary-hover"
-        icon={<SideRight size={16} className="" />}
-        onClick={() => setCollapse(false)}
-      />
+          {!!userProfile?.uid && (
+            <>
+              {authConfig?.data?.some((item) => item.provider === 'invitation') && (
+                <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
+              )}
+              <div
+                className={cn(
+                  'flex cursor-pointer hover:bg-refly-tertiary-hover rounded-md transition-all duration-300',
+                  'h-10 items-center justify-between px-0.5',
+                )}
+                data-cy="settings-menu-item"
+              >
+                <SettingItem collapsed={isCollapsed} />
+              </div>
+            </>
+          )}
+        </div>
+      </Sider>
     </div>
   );
-});
+};
 
 export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
   const { source = 'sider' } = props;
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
-  const { collapse } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
-  }));
-  const pathParams = useMatch('/canvas/:canvasId');
-  const isWorkflowDetail = pathParams?.params?.canvasId && pathParams?.params?.canvasId !== 'empty';
 
-  const { showSettingModal, setShowSettingModal } = useSiderStoreShallow((state) => ({
-    showSettingModal: state.showSettingModal,
-    setShowSettingModal: state.setShowSettingModal,
-  }));
+  const { showSettingModal, setShowSettingModal, showInvitationModal, setShowInvitationModal } =
+    useSiderStoreShallow((state) => ({
+      showSettingModal: state.showSettingModal,
+      setShowSettingModal: state.setShowSettingModal,
+      showInvitationModal: state.showInvitationModal,
+      setShowInvitationModal: state.setShowInvitationModal,
+    }));
 
   return (
     <>
       <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
+      <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
       <StorageExceededModal />
       <CanvasTemplateModal />
-
-      {/* Show floating expand button when sider is collapsed and user is logged in */}
-      {isLogin && source === 'sider' && collapse && !isWorkflowDetail && <FloatingExpandButton />}
 
       {isLogin ? <SiderLoggedIn source={source} /> : <SiderLoggedOut source={source} />}
     </>

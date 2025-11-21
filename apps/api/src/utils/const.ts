@@ -28,3 +28,4 @@ export const QUEUE_CLEAN_STATIC_FILES = 'cleanStaticFiles';
 export const QUEUE_CHECK_STUCK_ACTIONS = 'checkStuckActions';
 export const SUCCESS_STATUS = 'success';
 export const FAILED_STATUS = 'failed';
+export const QUEUE_WORKFLOW_APP_TEMPLATE = 'workflowAppTemplate';

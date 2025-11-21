@@ -5,6 +5,7 @@ import {
   BaseMessageFields,
 } from '@langchain/core/messages';
 import { LLMModelConfig } from '@refly/openapi-schema';
+import { ContextBlock } from './context';
 
 export interface SkillPromptModule {
   buildSystemPrompt: (
@@ -12,19 +13,12 @@ export interface SkillPromptModule {
     needPrepareContext: boolean,
     customInstructions?: string,
   ) => string;
-  buildContextUserPrompt: (context: string, needPrepareContext: boolean) => string;
   buildUserPrompt: ({
-    originalQuery,
-    optimizedQuery,
-    rewrittenQueries,
-    locale,
-    customInstructions,
+    query,
+    context,
   }: {
-    originalQuery: string;
-    optimizedQuery: string;
-    rewrittenQueries: string[];
-    locale: string;
-    customInstructions?: string;
+    query: string;
+    context: ContextBlock;
   }) => string;
 }
 
@@ -50,43 +44,20 @@ type ContentItem = TextContent | ImageUrlContent;
 // - 2048 tokens: Claude 3.5 Haiku, Claude 3 Haiku
 
 export const buildFinalRequestMessages = ({
-  module,
-  locale,
+  systemPrompt,
+  userPrompt,
   chatHistory,
   messages,
-  context,
   images,
-  originalQuery,
-  optimizedQuery,
-  rewrittenQueries,
   modelInfo,
-  customInstructions,
 }: {
-  module: SkillPromptModule;
-  locale: string;
+  systemPrompt: string;
+  userPrompt: string;
   chatHistory: BaseMessage[];
   messages: BaseMessage[];
-  context: string;
   images: string[];
-  originalQuery: string;
-  optimizedQuery: string;
-  rewrittenQueries?: string[];
   modelInfo?: LLMModelConfig;
-  customInstructions?: string;
 }) => {
-  const systemPrompt = module.buildSystemPrompt(locale, !!context);
-  const contextUserPrompt = module.buildContextUserPrompt?.(context, !!context) || '';
-  const userPrompt = module.buildUserPrompt({
-    originalQuery,
-    optimizedQuery,
-    rewrittenQueries,
-    locale,
-    customInstructions,
-  });
-
-  // Create context messages
-  const contextMessages = contextUserPrompt ? [new HumanMessage(contextUserPrompt)] : [];
-
   // Prepare the final user message (with or without images)
   const finalUserMessage = images?.length
     ? createHumanMessageWithContent([
@@ -109,7 +80,6 @@ export const buildFinalRequestMessages = ({
     new SystemMessage(systemPrompt), // System message comes first in our implementation
     ...chatHistory, // Historical conversation
     ...messages, // Additional messages
-    ...contextMessages, // Context messages
     finalUserMessage, // The actual query that needs a response (should not be cached)
   ];
 

@@ -1,11 +1,17 @@
-import { toolsetInventory } from '@refly/agent-tools';
-import { GenericToolset, ToolsetAuthType, ToolsetInstance } from '@refly/openapi-schema';
+import type { GenericToolset, ToolsetAuthType, ToolsetInstance } from '@refly/openapi-schema';
 import { pick, safeParseJSON } from '@refly/utils';
-import { McpServer as McpServerPO, Toolset as ToolsetPO } from '../../generated/client';
+import type { McpServer as McpServerPO, Toolset as ToolsetPO } from '../../generated/client';
 import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
+import { ToolsetType } from './constant';
+import type { ToolsetInventoryItem } from './inventory/inventory.service';
 
-export const toolsetPO2DTO = (toolset: ToolsetPO): ToolsetInstance => {
-  const inventoryItem = toolsetInventory[toolset.key];
+export const toolsetPO2DTO = (
+  toolset: ToolsetPO,
+  inventoryMap?: Record<string, ToolsetInventoryItem>,
+): ToolsetInstance => {
+  // Get definition from inventoryMap if provided
+  const inventoryItem = inventoryMap?.[toolset.key];
+
   return {
     ...pick(toolset, ['toolsetId', 'name', 'key', 'isGlobal', 'enabled']),
     authType: toolset.authType as ToolsetAuthType,
@@ -16,13 +22,25 @@ export const toolsetPO2DTO = (toolset: ToolsetPO): ToolsetInstance => {
   };
 };
 
-export const populateToolsetsWithDefinition = (toolsets: GenericToolset[]): GenericToolset[] => {
-  const populateSingleToolset = (toolset: GenericToolset): GenericToolset => {
+/**
+ * Populate toolsets with definitions from inventory (synchronous version with inventoryMap)
+ * @param toolsets - Array of generic toolsets to populate
+ * @param inventoryMap - Inventory map from ToolInventoryService
+ * @returns Populated toolsets with definitions
+ */
+export const populateToolsets = (
+  toolsets: GenericToolset[],
+  inventoryMap?: Record<string, ToolsetInventoryItem>,
+): GenericToolset[] => {
+  if (!Array.isArray(toolsets) || toolsets.length === 0) {
+    return [];
+  }
+
+  return toolsets.map((toolset) => {
     if (!toolset.toolset?.key) {
       return toolset;
     }
-
-    const inventoryItem = toolsetInventory[toolset.toolset.key];
+    const inventoryItem = inventoryMap?.[toolset.toolset.key];
     return {
       ...toolset,
       toolset: {
@@ -30,34 +48,34 @@ export const populateToolsetsWithDefinition = (toolsets: GenericToolset[]): Gene
         definition: inventoryItem?.definition,
       },
     };
-  };
-
-  if (Array.isArray(toolsets)) {
-    return toolsets.map(populateSingleToolset);
-  }
-
-  return [];
+  });
 };
 
-export const toolsetPo2GenericToolset = (toolset: ToolsetPO): GenericToolset => ({
+export const toolsetPo2GenericToolset = (
+  toolset: ToolsetPO,
+  inventoryMap?: Record<string, ToolsetInventoryItem>,
+): GenericToolset => ({
   type: 'regular',
   id: toolset.toolsetId,
   name: toolset.name,
-  toolset: toolsetPO2DTO(toolset),
+  toolset: toolsetPO2DTO(toolset, inventoryMap),
 });
 
 export const mcpServerPo2GenericToolset = (server: McpServerPO): GenericToolset => ({
-  type: 'mcp',
+  type: ToolsetType.MCP,
   id: server.name,
   name: server.name,
   mcpServer: mcpServerPO2DTO(server),
 });
 
-export const toolsetPo2GenericOAuthToolset = (toolset: ToolsetPO): GenericToolset => {
+export const toolsetPo2GenericOAuthToolset = (
+  toolset: ToolsetPO,
+  inventoryMap?: Record<string, ToolsetInventoryItem>,
+): GenericToolset => {
   return {
-    type: 'external_oauth',
+    type: ToolsetType.EXTERNAL_OAUTH,
     id: toolset.toolsetId,
     name: toolset.name,
-    toolset: toolsetPO2DTO(toolset),
+    toolset: toolsetPO2DTO(toolset, inventoryMap),
   };
 };

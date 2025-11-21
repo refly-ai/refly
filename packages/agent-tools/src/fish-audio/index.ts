@@ -1,3 +1,10 @@
+/**
+ * DEPRECATED: This implementation is commented out.
+ * FishAudio tools are now loaded from configuration using the adapter pattern.
+ * See: apps/api/src/modules/tool/adapters/ for the new implementation.
+ */
+
+/*
 import {
   User,
   ToolsetDefinition,
@@ -145,6 +152,7 @@ and emotional expression. Ideal for generating natural-sounding speech with cust
         temperature: input.temperature,
         topP: input.topP,
         parentResultId: config.configurable?.resultId,
+        parentResultVersion: config.configurable?.version,
       };
       const result = await reflyService.textToSpeech(user, request);
       if (result.status === 'success') {
@@ -175,6 +183,7 @@ and emotional expression. Ideal for generating natural-sounding speech with cust
             format: result?.data?.format,
             size: result?.data?.size,
             parentResultId: config.configurable?.resultId,
+            parentResultVersion: config.configurable?.version,
           },
           summary,
           creditCost,
@@ -276,6 +285,7 @@ various audio formats (MP3, WAV, M4A, OGG, FLAC, AAC). Maximum file size: 100MB,
             duration: result?.data?.duration,
             segments: result?.data?.segments,
             parentResultId: config.configurable?.resultId,
+            parentResultVersion: config.configurable?.version,
           },
           summary,
           creditCost,
@@ -308,3 +318,4 @@ export class FishAudioToolset extends AgentBaseToolset<FishAudioParams> {
   toolsetKey = FishAudioToolsetDefinition.key;
   tools = [TextToSpeech, SpeechToText] satisfies readonly AgentToolConstructor<FishAudioParams>[];
 }
+*/

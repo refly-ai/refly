@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { type ActionResult } from '@refly/openapi-schema';
+import { type ActionResult, type DriveFile } from '@refly/openapi-schema';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { type CacheInfo, createAutoEvictionStorage } from '../stores/utils/storage-manager';
 
@@ -13,11 +13,15 @@ interface PollingState {
   lastEventTime: number | null;
 }
 
+export type ResultActiveTab = 'configure' | 'lastRun';
+
 interface ActionResultState {
   resultMap: Record<string, ActionResult & CacheInfo>;
+  resultActiveTabMap: Record<string, ResultActiveTab>;
   pollingStateMap: Record<string, PollingState & CacheInfo>;
   streamResults: Record<string, ActionResult>;
   traceIdMap: Record<string, string>; // key: resultId, value: traceId
+  currentFile: DriveFile | null;
 
   // Stream result actions
   addStreamResult: (resultId: string, result: ActionResult) => void;
@@ -31,6 +35,7 @@ interface ActionResultState {
   // Individual update actions
   updateActionResult: (resultId: string, result: ActionResult) => void;
   removeActionResult: (resultId: string) => void;
+  setResultActiveTab: (resultId: string, tab: ResultActiveTab) => void;
   startPolling: (resultId: string, version: number) => void;
   stopPolling: (resultId: string) => void;
   removePollingState: (resultId: string) => void;
@@ -48,14 +53,19 @@ interface ActionResultState {
   // Storage management
   updateLastUsedTimestamp: (resultId: string) => void;
   cleanupOldResults: () => void;
+
+  // Current file management
+  setCurrentFile: (file: DriveFile | null) => void;
 }
 
 export const defaultState = {
   resultMap: {},
+  resultActiveTabMap: {},
   pollingStateMap: {},
   isBatchUpdateScheduled: false,
   streamResults: {},
   traceIdMap: {},
+  currentFile: null,
 };
 
 const POLLING_STATE_INITIAL: PollingState = {
@@ -154,6 +164,13 @@ export const useActionResultStore = create<ActionResultState>()(
             resultMap: newResultMap,
           };
         });
+      },
+
+      setResultActiveTab: (resultId: string, tab: ResultActiveTab) => {
+        set((state) => ({
+          ...state,
+          resultActiveTabMap: { ...state.resultActiveTabMap, [resultId]: tab },
+        }));
       },
 
       startPolling: (resultId: string, version: number) => {
@@ -413,6 +430,14 @@ export const useActionResultStore = create<ActionResultState>()(
             traceIdMap: newTraceIdMap,
           };
         });
+      },
+
+      // Current file management methods
+      setCurrentFile: (file: DriveFile | null) => {
+        set((state) => ({
+          ...state,
+          currentFile: file,
+        }));
       },
     }),
     {

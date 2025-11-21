@@ -312,23 +312,23 @@ export class DocumentService {
     });
 
     if (param.canvasId && param.resultId) {
-      await this.canvasSyncService.addNodeToCanvas(
-        user,
-        param.canvasId,
+      await this.canvasSyncService.addNodesToCanvas(user, param.canvasId, [
         {
-          type: 'document',
-          data: {
-            title: doc.title,
-            entityId: doc.docId,
-            metadata: {
-              status: 'finish',
-              parentResultId: param.resultId,
+          node: {
+            type: 'document',
+            data: {
+              title: doc.title,
+              entityId: doc.docId,
+              metadata: {
+                status: 'finish',
+                parentResultId: param.resultId,
+              },
+              contentPreview: doc.contentPreview,
             },
-            contentPreview: doc.contentPreview,
           },
+          connectTo: [{ type: 'skillResponse', entityId: param.resultId }],
         },
-        [{ type: 'skillResponse', entityId: param.resultId }],
-      );
+      ]);
     }
 
     await this.subscriptionService.syncStorageUsage(user);

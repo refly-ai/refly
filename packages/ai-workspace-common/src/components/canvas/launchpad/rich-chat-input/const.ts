@@ -1,20 +1,18 @@
+import type { MentionItemType } from '@refly/utils';
+
 export type MentionItemSource =
   | 'variables'
-  | 'stepRecord'
-  | 'resourceLibrary'
-  | 'resultRecord'
-  | 'myUpload'
+  | 'agents'
+  | 'files'
+  | 'products'
   | 'toolsets'
   | 'tools';
 
-export type MentionItemType = 'var' | 'step' | 'resource' | 'toolset' | 'tool';
-
 export const mentionItemSourceToType: Record<MentionItemSource, MentionItemType> = {
   variables: 'var',
-  stepRecord: 'step',
-  resourceLibrary: 'resource',
-  resultRecord: 'resource',
-  myUpload: 'resource',
+  agents: 'agent',
+  files: 'file',
+  products: 'file',
   toolsets: 'toolset',
   tools: 'tool',
 };

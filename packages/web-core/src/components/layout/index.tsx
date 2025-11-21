@@ -12,6 +12,7 @@ import { LoginModal } from '../../components/login-modal';
 import { SubscribeModal } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal';
 import { VerificationModal } from '../../components/verification-modal';
 import { ResetPasswordModal } from '../../components/reset-password-modal';
+import { InvitationCodeModal } from '../../components/invitation-code-modal';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { CanvasListModal } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal';
 import { LibraryModal } from '@refly-packages/ai-workspace-common/components/workspace/library-modal';
@@ -130,6 +131,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         <BigSearchModal />
         <LoginModal />
         <VerificationModal />
+        <InvitationCodeModal />
         <ResetPasswordModal />
         <SubscribeModal />
         <CanvasListModal visible={showCanvasListModal} setVisible={setShowCanvasListModal} />

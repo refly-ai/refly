@@ -4,25 +4,14 @@ import { useReactFlow } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNode } from '@refly/canvas-common';
 import DeleteNodeMessageContent from '../../components/message/delete-node-message';
-import { useActiveNode } from '@refly/stores';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 
 interface DeleteNodeOptions {
   showMessage?: boolean;
 }
 
 export const useDeleteNode = () => {
-  const { canvasId } = useCanvasContext();
   const { setNodes, setEdges } = useReactFlow();
   const { t } = useTranslation();
-  const { setActiveNode, activeNode } = useActiveNode(canvasId);
-  const { wideScreenVisible, setWideScreenVisible, setParentType } =
-    useCanvasResourcesPanelStoreShallow((state) => ({
-      wideScreenVisible: state.wideScreenVisible,
-      setWideScreenVisible: state.setWideScreenVisible,
-      setParentType: state.setParentType,
-    }));
 
   const deleteSingleNode = useCallback(
     (node: CanvasNode<any>, options: DeleteNodeOptions = {}) => {
@@ -36,15 +25,6 @@ export const useDeleteNode = () => {
 
       // Delete connected edges
       setEdges((edges) => edges.filter((e) => e.source !== node.id && e.target !== node.id));
-
-      // Clear active node if the deleted node is the active one
-      if (activeNode?.id === node.id) {
-        setActiveNode(null);
-        if (wideScreenVisible) {
-          setWideScreenVisible(false);
-        }
-        setParentType(null);
-      }
 
       if (showMessage) {
         // Get node title based on node type
@@ -64,16 +44,7 @@ export const useDeleteNode = () => {
 
       return true;
     },
-    [
-      setNodes,
-      setEdges,
-      t,
-      activeNode?.id,
-      setActiveNode,
-      wideScreenVisible,
-      setWideScreenVisible,
-      setParentType,
-    ],
+    [setNodes, setEdges, t],
   );
 
   const deleteNodes = useCallback(

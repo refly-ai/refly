@@ -1,33 +1,29 @@
-import { EditChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/edit-chat-input';
-import { SourceListModal } from '@refly-packages/ai-workspace-common/components/source-list/source-list-modal';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
-import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
-import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { useFetchResources } from '@refly-packages/ai-workspace-common/hooks/use-fetch-resources';
-import {
-  CanvasNode,
-  convertResultContextToItems,
-  purgeContextItems,
-  ResponseNodeMeta,
-} from '@refly/canvas-common';
-import { ActionResult, GenericToolset } from '@refly/openapi-schema';
-import { useActionResultStoreShallow, useKnowledgeBaseStoreShallow } from '@refly/stores';
-import { cn } from '@refly/utils/cn';
+import { CanvasNode, convertResultContextToItems, ResponseNodeMeta } from '@refly/canvas-common';
+import { ActionResult } from '@refly/openapi-schema';
+import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
-import { Button, Divider, Result, Skeleton } from 'antd';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Segmented, Button } from 'antd';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Thinking } from 'refly-icons';
-import { ActionContainer } from './action-container';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
+import { ConfigureTab } from './configure-tab';
+import { LastRunTab } from './last-run-tab';
 import { ActionStepCard } from './action-step';
-import { FailureNotice } from './failure-notice';
-import { PreviewChatInput } from './preview-chat-input';
+import { Close } from 'refly-icons';
+import { useReactFlow } from '@xyflow/react';
+import { processQueryWithMentions } from '@refly/utils/query-processor';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
+import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
+import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -36,24 +32,32 @@ interface SkillResponseNodePreviewProps {
 }
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
-const EMPTY_TOOLSET: GenericToolset = { id: 'empty', type: 'regular', name: 'empty' };
 
 const SkillResponseNodePreviewComponent = ({
   node,
   resultId,
   purePreview,
 }: SkillResponseNodePreviewProps) => {
-  const { result, isStreaming, updateActionResult } = useActionResultStoreShallow((state) => ({
+  const {
+    result,
+    activeTab = 'configure',
+    isStreaming,
+    updateActionResult,
+    setResultActiveTab,
+    setCurrentFile,
+    currentFile,
+  } = useActionResultStoreShallow((state) => ({
     result: state.resultMap[resultId],
+    activeTab: state.resultActiveTabMap[resultId],
     isStreaming: !!state.streamResults[resultId],
     updateActionResult: state.updateActionResult,
+    setResultActiveTab: state.setResultActiveTab,
+    setCurrentFile: state.setCurrentFile,
+    currentFile: state.currentFile,
   }));
-  const knowledgeBaseStore = useKnowledgeBaseStoreShallow((state) => ({
-    sourceListDrawerVisible: state.sourceListDrawer.visible,
-  }));
+  const { setNodes } = useReactFlow();
 
   const { setNodeData } = useNodeData();
-  const { deleteNode } = useDeleteNode();
   const { fetchActionResult, loading: fetchActionResultLoading } = useFetchActionResult();
 
   const { canvasId, readonly } = useCanvasContext();
@@ -61,22 +65,14 @@ const SkillResponseNodePreviewComponent = ({
   const { resetFailedState } = useActionPolling();
 
   const { t } = useTranslation();
-  const [editMode, setEditMode] = useState(false);
-
-  const nodeSelectedToolsets = node?.data?.metadata?.selectedToolsets;
-  const [selectedToolsets, setSelectedToolsets] = useState<GenericToolset[]>(
-    nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET],
-  );
+  const { data: variables } = useVariablesManagement(canvasId);
 
   const shareId = node.data?.metadata?.shareId;
+  const nodeStatus = node.data?.metadata?.status;
   const { data: shareData, loading: shareDataLoading } = useFetchShareData(shareId);
   const loading = fetchActionResultLoading || shareDataLoading;
 
   const [statusText, setStatusText] = useState('');
-
-  useEffect(() => {
-    setSelectedToolsets(nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET]);
-  }, [nodeSelectedToolsets]);
 
   useEffect(() => {
     if (shareData && !result && shareData?.resultId === resultId) {
@@ -86,14 +82,14 @@ const SkillResponseNodePreviewComponent = ({
 
   useEffect(() => {
     // Do not fetch action result if streaming
-    if (isStreaming) {
+    if (isStreaming || nodeStatus === 'init') {
       return;
     }
     if (!!resultId && shareData?.resultId !== resultId) {
       // Always refresh in background to keep store up-to-date
       fetchActionResult(resultId, { silent: !!result, nodeToUpdate: node });
     }
-  }, [resultId, shareId, isStreaming, shareData, node?.data?.metadata?.status]);
+  }, [resultId, shareId, isStreaming, shareData, nodeStatus]);
 
   const scrollToBottom = useCallback(
     (event: { resultId: string; payload: ActionResult }) => {
@@ -122,34 +118,17 @@ const SkillResponseNodePreviewComponent = ({
 
   const { data } = node;
 
-  const title = result?.title ?? data?.title;
   const actionMeta = result?.actionMeta ?? data?.metadata?.actionMeta;
   const version = result?.version ?? data?.metadata?.version ?? 0;
-  const modelInfo = result?.modelInfo ?? data?.metadata?.modelInfo;
-  const runtimeConfig = result?.runtimeConfig ?? data?.metadata?.runtimeConfig;
-  const structuredData = data?.metadata?.structuredData;
 
-  const [currentQuery, setCurrentQuery] = useState<string | null>(
-    (structuredData?.query as string) ?? (result?.input?.query as string) ?? title,
-  );
+  const title = data?.title ?? result?.title;
+  const query = data?.metadata?.query ?? result?.input?.query;
+  const modelInfo = data?.metadata?.modelInfo ?? result?.modelInfo;
+  const contextItems =
+    data?.metadata?.contextItems ?? convertResultContextToItems(result?.context, result?.history);
+  const selectedToolsets = data?.metadata?.selectedToolsets ?? result?.toolsets;
 
-  // Update currentQuery when node data changes, ensuring it's specific to this node
-  useEffect(() => {
-    const nodeSpecificQuery =
-      (structuredData?.query as string) ?? (result?.input?.query as string) ?? title;
-    setCurrentQuery(nodeSpecificQuery);
-  }, [node.id, structuredData?.query, result?.input?.query, title]);
-
-  const { steps = [], context, history = [] } = result ?? {};
-  const contextItems = useMemo(() => {
-    // Prefer contextItems from node metadata
-    if (data?.metadata?.contextItems) {
-      return purgeContextItems(data?.metadata?.contextItems);
-    }
-
-    // Fallback to contextItems from context (could be legacy nodes)
-    return convertResultContextToItems(context ?? {}, history);
-  }, [data?.metadata?.contextItems, context, history]);
+  const { steps = [] } = result ?? {};
 
   useEffect(() => {
     const skillName = actionMeta?.name || 'commonQnA';
@@ -174,25 +153,18 @@ const SkillResponseNodePreviewComponent = ({
     );
   }, [result?.status, steps, t]);
 
-  const handleDelete = useCallback(() => {
-    deleteNode({
-      id: node.id,
-      type: 'skillResponse',
-      data: node.data,
-      position: node.position || { x: 0, y: 0 },
-    });
-  }, [node, deleteNode]);
-
   const handleRetry = useCallback(() => {
     // Reset failed state before retrying
     resetFailedState(resultId);
+    const { llmInputQuery } = processQueryWithMentions(query, {
+      replaceVars: true,
+      variables,
+    });
 
     // Update node status immediately to show "waiting" state
     const nextVersion = (node.data?.metadata?.version || 0) + 1;
     setNodeData(node.id, {
-      ...node.data,
       metadata: {
-        ...node.data?.metadata,
         status: 'waiting',
         version: nextVersion,
       },
@@ -200,13 +172,12 @@ const SkillResponseNodePreviewComponent = ({
 
     invokeAction(
       {
+        nodeId: node.id,
         resultId,
-        query: title,
-        selectedSkill: {
-          name: actionMeta?.name || 'commonQnA',
-        },
+        query: llmInputQuery,
+        modelInfo,
         contextItems,
-        selectedToolsets: nodeSelectedToolsets,
+        selectedToolsets,
         version: nextVersion,
       },
       {
@@ -214,152 +185,134 @@ const SkillResponseNodePreviewComponent = ({
         entityType: 'canvas',
       },
     );
-  }, [resultId, title, canvasId, invokeAction, resetFailedState, setNodeData, node.id, node.data]);
-
-  useEffect(() => {
-    const handleLocateToPreview = (event: { id: string; type?: 'editResponse' }) => {
-      if (event.id === node.id && event.type === 'editResponse') {
-        setEditMode(true);
-      }
-    };
-
-    locateToNodePreviewEmitter.on('locateToNodePreview', handleLocateToPreview);
-
-    return () => {
-      locateToNodePreviewEmitter.off('locateToNodePreview', handleLocateToPreview);
-    };
-  }, [node.id]);
+  }, [
+    resultId,
+    query,
+    modelInfo,
+    contextItems,
+    selectedToolsets,
+    canvasId,
+    invokeAction,
+    resetFailedState,
+    setNodeData,
+    node.id,
+    node.data,
+  ]);
 
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
 
-  const { data: resources } = useFetchResources();
+  const handleClose = () => {
+    setNodes((nodes) =>
+      nodes.map((n) => ({
+        ...n,
+        selected: false,
+      })),
+    );
+  };
+
+  // Get node execution status
+  const isExecuting = data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';
+
+  const { workflowIsRunning, handleStop } = useSkillResponseActions({
+    nodeId: node.id,
+    entityId: data.entityId,
+    canvasId,
+  });
+
+  useEffect(() => {
+    setCurrentFile(null);
+  }, [resultId]);
+
+  useEffect(() => {
+    if (result?.status === 'waiting') {
+      setCurrentFile(null);
+    }
+  }, [result?.status]);
 
   return purePreview ? (
     !result && !loading ? (
       <div className="h-full w-full flex items-center justify-center">
-        <Result
-          status="404"
-          subTitle={t('canvas.skillResponse.resultNotFound')}
-          extra={<Button onClick={handleDelete}>{t('canvas.nodeActions.delete')}</Button>}
-        />
+        <img src={EmptyImage} alt="no content" className="w-[120px] h-[120px] -mb-4" />
       </div>
     ) : (
       <ActionStepCard
         result={result}
         step={outputStep}
         status={result?.status}
-        query={currentQuery ?? title ?? ''}
+        query={query ?? title ?? ''}
       />
     )
   ) : (
-    <div
-      className="flex flex-col gap-4 h-full w-full max-w-[1024px] mx-auto overflow-hidden"
-      onClick={() => {
-        if (editMode) {
-          setEditMode(false);
+    <div className="h-full w-full max-w-[1024px] mx-auto flex flex-col overflow-hidden">
+      <SkillResponseNodeHeader
+        nodeId={node.id}
+        entityId={data.entityId}
+        title={title}
+        readonly={readonly}
+        source="preview"
+        className="!h-14"
+        actions={
+          <SkillResponseActions
+            nodeIsExecuting={isExecuting}
+            workflowIsRunning={workflowIsRunning}
+            variant="preview"
+            onRerun={handleRetry}
+            onStop={handleStop}
+            extraActions={<Button type="text" icon={<Close size={24} />} onClick={handleClose} />}
+          />
         }
-      }}
-    >
-      {
-        <div className="px-4 pt-4">
-          <EditChatInput
-            enabled={editMode}
-            resultId={resultId}
-            version={version}
-            contextItems={contextItems}
-            query={currentQuery}
-            actionMeta={actionMeta}
-            modelInfo={
-              modelInfo ?? {
-                name: '',
-                label: '',
-                provider: '',
-                contextLimit: 0,
-                maxOutput: 0,
-              }
-            }
-            setEditMode={setEditMode}
-            runtimeConfig={runtimeConfig}
-            onQueryChange={setCurrentQuery}
-            selectedToolsets={selectedToolsets}
-            setSelectedToolsets={setSelectedToolsets}
-          />
-          <PreviewChatInput
-            enabled={!editMode}
-            readonly={readonly}
-            contextItems={contextItems}
-            query={currentQuery}
-            actionMeta={actionMeta}
-            setEditMode={setEditMode}
-            resources={resources}
-          />
-        </div>
-      }
+      />
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4">
-        {!result && !loading ? (
-          <div className="h-full w-full flex items-center justify-center">
-            <Result
-              status="404"
-              subTitle={t('canvas.skillResponse.resultNotFound')}
-              extra={<Button onClick={handleDelete}>{t('canvas.nodeActions.delete')}</Button>}
+      {currentFile ? (
+        <ProductCard
+          file={currentFile}
+          classNames="w-full flex-1 overflow-y-auto"
+          source="preview"
+        />
+      ) : (
+        <div className="flex-1 flex flex-col min-h-0 px-4">
+          <div className="py-3">
+            <Segmented
+              options={[
+                { label: t('agent.configure'), value: 'configure' },
+                { label: t('agent.lastRun'), value: 'lastRun' },
+              ]}
+              value={activeTab}
+              onChange={(value) => setResultActiveTab(resultId, value as ResultActiveTab)}
+              block
+              size="small"
+              shape="round"
             />
           </div>
-        ) : (
-          <div className="h-full w-full flex flex-col">
-            <div
-              className={cn(
-                'h-full overflow-auto preview-container transition-opacity duration-500',
-                { 'opacity-30': editMode },
-              )}
-            >
-              {loading && !isStreaming && (
-                <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
-              )}
-              {(result?.status === 'executing' || result?.status === 'waiting') &&
-                !outputStep &&
-                statusText && (
-                  <div className="flex flex-col gap-2 animate-pulse">
-                    <Divider dashed className="my-2" />
-                    <div className="m-2 flex items-center gap-1 text-gray-500">
-                      <Thinking size={16} />
-                      <span className="text-sm">{statusText}</span>
-                    </div>
-                  </div>
-                )}
-              {outputStep && (
-                <>
-                  <Divider dashed className="my-2" />
-                  <ActionStepCard
-                    result={result}
-                    step={outputStep}
-                    status={result?.status}
-                    query={currentQuery ?? title ?? ''}
-                  />
-                </>
-              )}
-              {result?.status === 'failed' && !loading && (
-                <FailureNotice result={result} handleRetry={handleRetry} />
-              )}
-            </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {activeTab === 'configure' && (
+              <ConfigureTab
+                query={query}
+                version={version}
+                resultId={resultId}
+                nodeId={node.id}
+                canvasId={canvasId}
+              />
+            )}
+
+            {activeTab === 'lastRun' && (
+              <LastRunTab
+                loading={loading}
+                isStreaming={isStreaming}
+                result={result}
+                outputStep={outputStep}
+                statusText={statusText}
+                query={query}
+                title={title}
+                nodeId={node.id}
+                selectedToolsets={selectedToolsets}
+                handleRetry={handleRetry}
+              />
+            )}
           </div>
-        )}
-      </div>
-
-      {outputStep && result?.status === 'finish' && (
-        <ActionContainer
-          result={result}
-          step={outputStep}
-          nodeId={node.id}
-          initSelectedToolsets={
-            nodeSelectedToolsets?.length > 0 ? nodeSelectedToolsets : [EMPTY_TOOLSET]
-          }
-        />
+        </div>
       )}
-
-      {knowledgeBaseStore?.sourceListDrawerVisible ? (
-        <SourceListModal classNames="source-list-modal" />
-      ) : null}
     </div>
   );
 };

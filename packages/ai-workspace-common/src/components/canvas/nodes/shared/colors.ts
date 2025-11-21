@@ -41,13 +41,14 @@ export const NODE_COLORS: Record<
 
   codeArtifact: 'var(--refly-Colorful-Blue)',
   website: 'var(--refly-Colorful-Blue)',
+  file: 'var(--refly-Colorful-Blue)',
 
-  start: 'var(--refly-primary-default)',
+  start: 'black',
   resource: 'var(--refly-primary-default)',
   resourceSelection: 'var(--refly-primary-default)',
 
-  skillResponse: 'var(--refly-Colorful-orange)',
-  skillResponseSelection: 'var(--refly-Colorful-orange)',
+  skillResponse: 'var(--refly-text-0)',
+  skillResponseSelection: 'var(--refly-text-0)',
   toolResponse: 'var(--refly-Colorful-orange)',
   memo: 'var(--refly-Colorful-orange)',
 

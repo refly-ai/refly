@@ -1,16 +1,6 @@
 import { ToolsetInstance } from '@refly/openapi-schema';
 import { Delete, Edit, More } from 'refly-icons';
-import {
-  Button,
-  Skeleton,
-  Tag,
-  Switch,
-  MenuProps,
-  Popconfirm,
-  Dropdown,
-  message,
-  Tooltip,
-} from 'antd';
+import { Button, Skeleton, Tag, Switch, MenuProps, Modal, Dropdown, message, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useState } from 'react';
@@ -30,10 +20,22 @@ const ActionDropdown = ({
 }) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const onEdit = () => {
     setVisible(false);
     handleEdit();
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      await handleDelete();
+      setModalVisible(false);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const items: MenuProps['items'] = [
@@ -49,22 +51,16 @@ const ActionDropdown = ({
     },
     {
       label: (
-        <Popconfirm
-          placement="bottomLeft"
-          title={t('settings.modelConfig.deleteConfirm', {
-            name: tool.name || t('common.untitled'),
-          })}
-          onConfirm={handleDelete}
-          onCancel={() => setVisible(false)}
-          okText={t('common.confirm')}
-          cancelText={t('common.cancel')}
-          overlayStyle={{ maxWidth: '300px' }}
+        <div
+          className="flex items-center text-red-600 flex-grow cursor-pointer"
+          onClick={() => {
+            setVisible(false);
+            setModalVisible(true);
+          }}
         >
-          <div className="flex items-center text-red-600 flex-grow">
-            <Delete size={16} className="mr-2" />
-            {t('common.delete')}
-          </div>
-        </Popconfirm>
+          <Delete size={16} className="mr-2" />
+          {t('common.delete')}
+        </div>
       ),
       key: 'delete',
     },
@@ -77,9 +73,33 @@ const ActionDropdown = ({
   };
 
   return (
-    <Dropdown trigger={['click']} open={visible} onOpenChange={handleOpenChange} menu={{ items }}>
-      <Button type="text" icon={<More size={18} />} size="small" />
-    </Dropdown>
+    <>
+      <Dropdown trigger={['click']} open={visible} onOpenChange={handleOpenChange} menu={{ items }}>
+        <Button type="text" icon={<More size={18} />} size="small" />
+      </Dropdown>
+      <Modal
+        title={t('common.deleteConfirmMessage')}
+        centered
+        width={416}
+        open={modalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => setModalVisible(false)}
+        okText={t('common.confirm')}
+        cancelText={t('common.cancel')}
+        okButtonProps={{ loading: isDeleting }}
+        destroyOnHidden
+        closeIcon={null}
+        confirmLoading={isDeleting}
+      >
+        <div>
+          <div className="mb-2">
+            {t('settings.modelConfig.deleteConfirm', {
+              name: tool.name || t('common.untitled'),
+            })}
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 };
 
@@ -181,7 +201,7 @@ const ToolItem = ({
           )}
         </div>
 
-        {tool?.definition?.tools?.length && (
+        {(tool?.definition?.tools?.length ?? 0) > 0 && (
           <div className="mt-2 p-2 bg-refly-bg-control-z0 rounded-[8px]">
             <div className="flex items-center flex-wrap gap-1">
               {tool?.definition?.tools?.map((t, index) => {

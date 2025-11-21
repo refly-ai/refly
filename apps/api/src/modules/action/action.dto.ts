@@ -6,6 +6,7 @@ import {
   EntityType,
   ModelInfo,
   ModelTier,
+  DriveFile,
   ToolCallResult,
 } from '@refly/openapi-schema';
 import {
@@ -21,6 +22,7 @@ type ActionStepDetail = ActionStepModel & {
 
 export type ActionDetail = ActionResultModel & {
   steps?: ActionStepDetail[];
+  files?: DriveFile[];
   modelInfo?: ModelInfo;
 };
 
@@ -80,6 +82,7 @@ export function actionResultPO2DTO(result: ActionDetail): ActionResult {
     createdAt: result.createdAt.toJSON(),
     updatedAt: result.updatedAt.toJSON(),
     steps: result.steps?.map(actionStepPO2DTO),
+    files: result.files,
     toolsets: safeParseJSON(result.toolsets || '[]'),
     modelInfo: result.modelInfo,
   };

@@ -5,10 +5,9 @@ import { PrismaService } from '../common/prisma.service';
 import { SyncTokenCreditUsageProcessor } from './credit.processor';
 import { CommonModule } from '../common/common.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
-import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [CommonModule, CanvasSyncModule, ConfigModule],
+  imports: [CommonModule, CanvasSyncModule],
   controllers: [CreditController],
   providers: [CreditService, PrismaService, SyncTokenCreditUsageProcessor],
   exports: [CreditService],

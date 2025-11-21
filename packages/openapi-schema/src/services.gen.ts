@@ -132,6 +132,21 @@ import type {
   UpdateWorkflowVariablesData,
   UpdateWorkflowVariablesError,
   UpdateWorkflowVariablesResponse2,
+  ListDriveFilesData,
+  ListDriveFilesError,
+  ListDriveFilesResponse2,
+  CreateDriveFileData,
+  CreateDriveFileError,
+  CreateDriveFileResponse,
+  BatchCreateDriveFilesData,
+  BatchCreateDriveFilesError,
+  BatchCreateDriveFilesResponse2,
+  UpdateDriveFileData,
+  UpdateDriveFileError,
+  UpdateDriveFileResponse,
+  DeleteDriveFileData,
+  DeleteDriveFileError,
+  DeleteDriveFileResponse,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
   ListCanvasTemplatesResponse,
@@ -330,6 +345,9 @@ import type {
   InitializeWorkflowData,
   InitializeWorkflowError,
   InitializeWorkflowResponse2,
+  AbortWorkflowData,
+  AbortWorkflowError,
+  AbortWorkflowResponse,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
@@ -373,6 +391,13 @@ import type {
   GetCreditUsageByCanvasIdData,
   GetCreditUsageByCanvasIdError,
   GetCreditUsageByCanvasIdResponse2,
+  ListInvitationCodesError,
+  ListInvitationCodesResponse2,
+  ActivateInvitationCodeData,
+  ActivateInvitationCodeError,
+  ActivateInvitationCodeResponse,
+  HasBeenInvitedError,
+  HasBeenInvitedResponse2,
   GetSubscriptionPlansError,
   GetSubscriptionPlansResponse2,
   GetSubscriptionUsageError,
@@ -1137,6 +1162,91 @@ export const updateWorkflowVariables = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/canvas/workflow/variables',
+  });
+};
+
+/**
+ * List drive files
+ * List all drive files
+ */
+export const listDriveFiles = <ThrowOnError extends boolean = false>(
+  options: Options<ListDriveFilesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListDriveFilesResponse2,
+    ListDriveFilesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/list',
+  });
+};
+
+/**
+ * Create drive file
+ * Create a new drive file
+ */
+export const createDriveFile = <ThrowOnError extends boolean = false>(
+  options: Options<CreateDriveFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateDriveFileResponse,
+    CreateDriveFileError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/create',
+  });
+};
+
+/**
+ * Batch create drive files
+ * Batch create drive files
+ */
+export const batchCreateDriveFiles = <ThrowOnError extends boolean = false>(
+  options: Options<BatchCreateDriveFilesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    BatchCreateDriveFilesResponse2,
+    BatchCreateDriveFilesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/batchCreate',
+  });
+};
+
+/**
+ * Update drive file
+ * Update an existing drive file
+ */
+export const updateDriveFile = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateDriveFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateDriveFileResponse,
+    UpdateDriveFileError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/update',
+  });
+};
+
+/**
+ * Delete drive file
+ * Delete an existing drive file
+ */
+export const deleteDriveFile = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteDriveFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DeleteDriveFileResponse,
+    DeleteDriveFileError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/delete',
   });
 };
 
@@ -2227,6 +2337,19 @@ export const initializeWorkflow = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Abort workflow execution
+ * Abort a running workflow execution
+ */
+export const abortWorkflow = <ThrowOnError extends boolean = false>(
+  options: Options<AbortWorkflowData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<AbortWorkflowResponse, AbortWorkflowError, ThrowOnError>({
+    ...options,
+    url: '/workflow/abort',
+  });
+};
+
+/**
  * Get workflow detail
  * Get detail for a workflow execution
  */
@@ -2472,6 +2595,57 @@ export const getCreditUsageByCanvasId = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/credit/canvas',
+  });
+};
+
+/**
+ * List invitation codes
+ * List all invitation codes
+ */
+export const listInvitationCodes = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListInvitationCodesResponse2,
+    ListInvitationCodesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/invitation/list',
+  });
+};
+
+/**
+ * Activate invitation code
+ * Activate an invitation code
+ */
+export const activateInvitationCode = <ThrowOnError extends boolean = false>(
+  options: Options<ActivateInvitationCodeData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ActivateInvitationCodeResponse,
+    ActivateInvitationCodeError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/invitation/activate',
+  });
+};
+
+/**
+ * Check if user has been invited
+ * Check if user has been invited
+ */
+export const hasBeenInvited = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    HasBeenInvitedResponse2,
+    HasBeenInvitedError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/invitation/invited',
   });
 };
 

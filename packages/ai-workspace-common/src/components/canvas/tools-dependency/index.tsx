@@ -1,14 +1,4 @@
-import {
-  Button,
-  Popover,
-  Input,
-  Segmented,
-  Dropdown,
-  Badge,
-  Typography,
-  Tooltip,
-  Divider,
-} from 'antd';
+import { Button, Popover, Input, Segmented, Dropdown, Badge, Typography, Tooltip } from 'antd';
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Close, Mcp, Cancelled } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
@@ -826,6 +816,7 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
   return (
     <Popover
       className="tools-in-canvas"
+      align={{ offset: [0, 10] }}
       open={open}
       onOpenChange={setOpen}
       trigger="click"
@@ -862,20 +853,14 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
             type="text"
             icon={
               <IoWarningOutline
-                size={16}
+                size={18}
                 color="var(--refly-func-warning-default)"
                 className="flex items-center"
               />
             }
-            className={cn(
-              'p-2 flex items-center justify-center font-semibold',
-              open && '!bg-refly-fill-hover',
-            )}
-          >
-            {t('canvas.toolbar.tooltip.toolDependencies')}
-          </Button>
+            className="p-2 flex items-center justify-center font-semibold"
+          />
         </Badge>
-        <Divider type="vertical" className="m-0 ml-2 h-5 bg-refly-Card-Border" />
       </div>
     </Popover>
   );

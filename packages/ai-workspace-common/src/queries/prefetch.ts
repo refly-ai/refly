@@ -35,6 +35,7 @@ import {
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
+  hasBeenInvited,
   listAccounts,
   listActions,
   listCanvases,
@@ -43,6 +44,8 @@ import {
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
+  listDriveFiles,
+  listInvitationCodes,
   listLabelClasses,
   listLabelInstances,
   listMcpServers,
@@ -97,6 +100,7 @@ import {
   ListCodeArtifactsData,
   ListCopilotSessionsData,
   ListDocumentsData,
+  ListDriveFilesData,
   ListLabelClassesData,
   ListLabelInstancesData,
   ListMcpServersData,
@@ -234,6 +238,14 @@ export const prefetchUseGetWorkflowVariables = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetWorkflowVariablesKeyFn(clientOptions),
     queryFn: () => getWorkflowVariables({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListDriveFiles = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListDriveFilesData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListDriveFilesKeyFn(clientOptions),
+    queryFn: () => listDriveFiles({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListCanvasTemplates = (
   queryClient: QueryClient,
@@ -508,6 +520,22 @@ export const prefetchUseGetCreditUsageByCanvasId = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetCreditUsageByCanvasIdKeyFn(clientOptions),
     queryFn: () => getCreditUsageByCanvasId({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListInvitationCodes = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListInvitationCodesKeyFn(clientOptions),
+    queryFn: () => listInvitationCodes({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseHasBeenInvited = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseHasBeenInvitedKeyFn(clientOptions),
+    queryFn: () => hasBeenInvited({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetSubscriptionPlans = (
   queryClient: QueryClient,

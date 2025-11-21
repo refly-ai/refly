@@ -11,6 +11,7 @@ import {
   ActionStep,
   Artifact,
   CreditBilling,
+  DriveFile,
   ProviderItem,
   SkillEvent,
   TokenUsageItem,
@@ -24,11 +25,12 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { getWholeParsedContent, safeParseJSON } from '@refly/utils';
+import { genImageID, getWholeParsedContent, safeParseJSON } from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
 import * as Y from 'yjs';
+import { ToolCallResult } from '../../generated/client';
 import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
@@ -54,7 +56,8 @@ import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/
 import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service';
 import { ToolService } from '../tool/tool.service';
 import { InvokeSkillJobData } from './skill.dto';
-import { ToolCallResult } from '../../generated/client';
+import { DriveService } from '../drive/drive.service';
+import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 
 @Injectable()
 export class SkillInvokerService {
@@ -63,17 +66,22 @@ export class SkillInvokerService {
   private skillEngine: SkillEngine;
   private skillInventory: BaseSkill[];
 
+  // Track added files to prevent duplicates (key: storageKey, value: entityId)
+  private addedFilesMap: Map<string, string> = new Map();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly miscService: MiscService,
     private readonly providerService: ProviderService,
+    private readonly driveService: DriveService,
     private readonly toolService: ToolService,
     private readonly toolCallService: ToolCallService,
     private readonly skillEngineService: SkillEngineService,
     private readonly actionService: ActionService,
     private readonly stepService: StepService,
     private readonly creditService: CreditService,
+    private readonly canvasSyncService: CanvasSyncService,
     @Optional()
     @InjectQueue(QUEUE_SYNC_REQUEST_USAGE)
     private requestUsageQueue?: Queue<SyncRequestUsageJobData>,
@@ -150,10 +158,8 @@ export class SkillInvokerService {
       context,
       tplConfig,
       runtimeConfig,
-      providerItem,
       modelConfigMap,
       provider,
-      resultHistory,
       projectId,
       eventListener,
       toolsets,
@@ -180,6 +186,7 @@ export class SkillInvokerService {
         mode: data.mode,
         resultId: data.result?.resultId,
         version: data.result?.version,
+        canvasId: data.target?.entityType === 'canvas' ? data.target?.entityId : undefined,
       },
     };
 
@@ -194,14 +201,10 @@ export class SkillInvokerService {
       config.configurable.project = projectPO2DTO(project);
     }
 
-    if (resultHistory?.length > 0) {
-      config.configurable.chatHistory = await Promise.all(
-        resultHistory.map((r) => this.buildLangchainMessages(user, providerItem, r, r.steps)),
-      ).then((messages) => messages.flat());
-    }
-
     if (toolsets?.length > 0) {
-      const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine);
+      const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
+        context,
+      });
       config.configurable.selectedTools = tools;
     }
 
@@ -227,7 +230,6 @@ export class SkillInvokerService {
   }
 
   private categorizeError(err: Error): {
-    isNetworkTimeout: boolean;
     isGeneralTimeout: boolean;
     isNetworkError: boolean;
     isAbortError: boolean;
@@ -243,25 +245,18 @@ export class SkillInvokerService {
       err instanceof Error && (err.name === 'AbortError' || /abort/i.test(err.message));
     const isNetworkError =
       err instanceof Error && (err.name === 'NetworkError' || /network|fetch/i.test(err.message));
-    const isNetworkTimeout =
-      errorMessage.includes('AI model network timeout') ||
-      (isTimeoutError && errorMessage.includes('network'));
-    const isGeneralTimeout = isTimeoutError && !isNetworkTimeout;
+    const isGeneralTimeout = isTimeoutError;
 
     let userFriendlyMessage = errorMessage;
     let logLevel: 'error' | 'warn' = 'error';
 
     const ERROR_MESSAGES = {
-      NETWORK_TIMEOUT:
-        'AI provider network request timeout. Please check provider configuration or network connection.',
       GENERAL_TIMEOUT: 'Request timeout. Please try again later.',
       NETWORK_ERROR: 'Network connection error. Please check your network status.',
       ABORT_ERROR: 'Operation was aborted.',
     } as const;
 
-    if (isNetworkTimeout) {
-      userFriendlyMessage = ERROR_MESSAGES.NETWORK_TIMEOUT;
-    } else if (isGeneralTimeout) {
+    if (isGeneralTimeout) {
       userFriendlyMessage = ERROR_MESSAGES.GENERAL_TIMEOUT;
     } else if (isNetworkError) {
       userFriendlyMessage = ERROR_MESSAGES.NETWORK_ERROR;
@@ -271,7 +266,6 @@ export class SkillInvokerService {
     }
 
     return {
-      isNetworkTimeout,
       isGeneralTimeout,
       isNetworkError,
       isAbortError,
@@ -281,14 +275,18 @@ export class SkillInvokerService {
   }
 
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
-    const { input, result } = data;
+    const { input, result, context } = data;
     const { resultId, version, actionMeta, tier } = result;
     this.logger.log(
       `invoke skill with input: ${JSON.stringify(input)}, resultId: ${resultId}, version: ${version}`,
     );
 
-    if (input.images?.length > 0 && (data.providerItem?.config as any)?.capabilities?.vision) {
-      input.images = await this.miscService.generateImageUrls(user, input.images);
+    const imageFiles: DriveFile[] = context?.files
+      ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
+      ?.map((item) => item.file);
+
+    if (imageFiles.length > 0 && (data.providerItem?.config as any)?.capabilities?.vision) {
+      input.images = await this.driveService.generateDriveFileUrls(user, imageFiles);
     } else {
       input.images = [];
     }
@@ -304,14 +302,64 @@ export class SkillInvokerService {
       // In desktop mode, we could handle usage tracking differently if needed
     }
 
+    // Archive files from previous execution of this result
+    const canvasId = data.target?.entityType === 'canvas' ? data.target?.entityId : undefined;
+    if (canvasId) {
+      this.logger.log(
+        `[Archive] Starting archive for resultId: ${resultId}, canvasId: ${canvasId}, uid: ${user.uid}`,
+      );
+      await this.driveService.archiveFiles(user, canvasId, {
+        resultId,
+        source: 'agent',
+      });
+      this.logger.log(`[Archive] Completed archive for resultId: ${resultId}`);
+    } else {
+      this.logger.log(`[Archive] Skipping archive - no canvasId found for resultId: ${resultId}`);
+    }
+
     // Create abort controller for this action
     const abortController = new AbortController();
 
-    // Network timeout tracking for AI model requests
-    let networkTimeoutId: NodeJS.Timeout | null = null;
+    // Delete queued job mapping from Redis (job has started executing)
+    await this.actionService.deleteQueuedJob(resultId);
 
     // Register the abort controller with ActionService
     this.actionService.registerAbortController(resultId, abortController);
+
+    // Set up database polling for cross-pod abort detection
+    let abortCheckInterval: NodeJS.Timeout | null = null;
+    const startAbortCheck = () => {
+      abortCheckInterval = setInterval(
+        async () => {
+          if (abortController.signal.aborted) {
+            clearInterval(abortCheckInterval);
+            return;
+          }
+
+          try {
+            const shouldAbort = await this.actionService.isAbortRequested(resultId, version);
+            if (shouldAbort) {
+              this.logger.log(`Detected cross-pod abort request for ${resultId}`);
+              abortController.abort('Aborted by user');
+              clearInterval(abortCheckInterval);
+            }
+          } catch (error) {
+            this.logger.error(`Error checking abort status for ${resultId}: ${error?.message}`);
+          }
+        },
+        3000, // Check every 3 seconds
+      );
+    };
+
+    const stopAbortCheck = () => {
+      if (abortCheckInterval) {
+        clearInterval(abortCheckInterval);
+        abortCheckInterval = null;
+      }
+    };
+
+    // Start abort check
+    startAbortCheck();
 
     // Simple timeout tracking without Redis
     let lastOutputTime = Date.now();
@@ -321,12 +369,11 @@ export class SkillInvokerService {
     let timeoutCheckInterval: NodeJS.Timeout | null = null;
     const streamIdleTimeout = this.config.get('skill.streamIdleTimeout');
 
-    // Validate streamIdleTimeout to ensure it's a positive number
+    // Skip timeout check if streamIdleTimeout is not a positive number
     if (!streamIdleTimeout || streamIdleTimeout <= 0) {
-      this.logger.error(
-        `Invalid streamIdleTimeout: ${streamIdleTimeout}. Must be a positive number.`,
+      this.logger.debug(
+        `Stream idle timeout disabled (streamIdleTimeout: ${streamIdleTimeout}). Skipping timeout check.`,
       );
-      throw new Error(`Invalid streamIdleTimeout configuration: ${streamIdleTimeout}`);
     }
 
     // Helper function for timeout message generation
@@ -354,7 +401,7 @@ export class SkillInvokerService {
 
           const now = Date.now();
           const timeSinceLastOutput = now - lastOutputTime;
-          const isTimeout = timeSinceLastOutput > streamIdleTimeout;
+          const isTimeout = streamIdleTimeout > 0 && timeSinceLastOutput > streamIdleTimeout;
 
           if (isTimeout) {
             this.logger.warn(
@@ -478,14 +525,11 @@ export class SkillInvokerService {
       if (cleanupExecuted) return; // Prevent multiple cleanup executions
       cleanupExecuted = true;
 
+      // Stop abort check interval
+      stopAbortCheck();
+
       // Stop stream idle timeout check interval
       stopTimeoutCheck();
-
-      // Clear AI model network timeout
-      if (networkTimeoutId) {
-        clearTimeout(networkTimeoutId);
-        networkTimeoutId = null;
-      }
 
       this.logger.debug(
         `Cleaned up all timeout intervals for action ${resultId} due to abort/completion`,
@@ -495,65 +539,21 @@ export class SkillInvokerService {
     // Register cleanup on abort signal
     abortController.signal.addEventListener('abort', performCleanup);
 
-    // Start the timeout check when we begin streaming
-    startTimeoutCheck();
+    // Start the timeout check when we begin streaming (only if timeout is enabled)
+    if (streamIdleTimeout > 0) {
+      startTimeoutCheck();
+    }
 
     try {
-      // AI model provider network timeout (30 seconds)
-      const aiModelNetworkTimeout = this.config.get<number>('skill.aiModelNetworkTimeout', 30000);
-
-      // Validate aiModelNetworkTimeout to ensure it's a positive number
-      if (aiModelNetworkTimeout <= 0) {
-        this.logger.error(
-          `Invalid aiModelNetworkTimeout: ${aiModelNetworkTimeout}. Must be a positive number.`,
-        );
-        throw new Error(`Invalid aiModelNetworkTimeout configuration: ${aiModelNetworkTimeout}`);
-      }
-
-      this.logger.log(
-        `🌐 Starting AI model network request (model timeout: ${aiModelNetworkTimeout}ms) for action: ${resultId}`,
-      );
-
-      // Create dedicated timeout for AI model network requests
-      const createNetworkTimeout = () => {
-        if (abortController.signal.aborted) {
-          return;
-        }
-        if (networkTimeoutId) {
-          clearTimeout(networkTimeoutId);
-        }
-        networkTimeoutId = setTimeout(() => {
-          if (abortController.signal.aborted) {
-            return;
-          }
-
-          this.logger.error(
-            `🚨 AI model network timeout (${aiModelNetworkTimeout}ms) for action: ${resultId}`,
-          );
-          abortController.abort('AI model network timeout');
-        }, aiModelNetworkTimeout);
-      };
-
-      // Reset network timeout on each network activity
-      const resetNetworkTimeout = () => {
-        createNetworkTimeout();
-      };
-
-      // Start initial network timeout
-      createNetworkTimeout();
-
       // tool callId, now we use first time returned run_id as tool call id
       const startTs = Date.now();
-
       const toolCallIds: Set<string> = new Set();
+
       for await (const event of skill.streamEvents(input, {
         ...config,
         version: 'v2',
         signal: abortController.signal,
       })) {
-        // Reset network timeout on receiving data from AI model
-        resetNetworkTimeout();
-
         if (abortController.signal.aborted) {
           const abortReason = abortController.signal.reason?.toString() ?? 'Request aborted';
           this.logger.warn(`🚨 Request aborted for action: ${resultId}, reason: ${abortReason}`);
@@ -720,6 +720,14 @@ export class SkillInvokerService {
                     event_name: 'stream',
                   });
                 }
+
+                // Handle generated files from tools (sandbox, scalebox, etc.)
+                // Add them to canvas as image/audio/video/document nodes
+                await this.handleToolGeneratedFiles(user, data, event.data.output, resultId).catch(
+                  (error) => {
+                    this.logger.error(`Failed to handle tool generated files: ${error?.message}`);
+                  },
+                );
               }
               this.toolCallService.releaseToolCallId({
                 resultId,
@@ -809,9 +817,7 @@ export class SkillInvokerService {
       const errorType = err.name || 'Error';
 
       // Log error based on categorization
-      if (errorInfo.isNetworkTimeout) {
-        this.logger.error(`🚨 AI model network timeout for action: ${resultId} - ${errorMessage}`);
-      } else if (errorInfo.isGeneralTimeout) {
+      if (errorInfo.isGeneralTimeout) {
         this.logger.error(`🚨 Network timeout detected for action: ${resultId} - ${errorMessage}`);
       } else if (errorInfo.isNetworkError) {
         this.logger.error(`🌐 Network error for action: ${resultId} - ${errorMessage}`);
@@ -924,6 +930,14 @@ export class SkillInvokerService {
 
       await resultAggregator.clearCache();
 
+      // Clean up added files map for this result to prevent memory leak
+      // Remove all entries for this resultId
+      for (const key of this.addedFilesMap.keys()) {
+        if (key.startsWith(`${resultId}:`)) {
+          this.addedFilesMap.delete(key);
+        }
+      }
+
       // Process credit billing for all steps after skill completion
       if (!result.errors.length) {
         await this.processCreditUsageReport(user, resultId, version, resultAggregator);
@@ -933,6 +947,160 @@ export class SkillInvokerService {
 
   getSkillInventory() {
     return this.skillInventory;
+  }
+
+  /**
+   * Get programming language from MIME type for codeArtifact
+   */
+  private getLanguageFromMimeType(mimeType?: string): string | undefined {
+    if (!mimeType) return undefined;
+
+    const mimeToLanguageMap: Record<string, string> = {
+      'text/csv': 'csv',
+      'application/json': 'json',
+      'text/xml': 'xml',
+      'application/xml': 'xml',
+      'text/html': 'html',
+      'text/markdown': 'markdown',
+      'application/vnd.ms-excel': 'excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'excel',
+      'text/x-python': 'python',
+      'text/javascript': 'javascript',
+      'application/javascript': 'javascript',
+      'text/typescript': 'typescript',
+      'application/typescript': 'typescript',
+      'text/plain': 'plain',
+    };
+
+    return mimeToLanguageMap[mimeType];
+  }
+
+  /**
+   * Handle files generated by tools (sandbox, scalebox, etc.)
+   * Add them to canvas as image/audio/video/document nodes
+   */
+  private async handleToolGeneratedFiles(
+    user: User,
+    data: InvokeSkillJobData,
+    toolOutput: any,
+    parentResultId: string,
+  ): Promise<void> {
+    try {
+      // Check if tool output contains generated files
+      const uploadedFiles = toolOutput?.data?.uploadedFiles || toolOutput?.data?.uploads;
+      const hasGeneratedFiles = toolOutput?.data?.hasGeneratedFiles;
+
+      if (
+        !hasGeneratedFiles ||
+        !uploadedFiles ||
+        !Array.isArray(uploadedFiles) ||
+        uploadedFiles.length === 0
+      ) {
+        return;
+      }
+
+      this.logger.log(
+        `Handling ${uploadedFiles.length} generated files from tool for result ${parentResultId}`,
+      );
+
+      const { target } = data;
+      const targetType = target?.entityType;
+      const targetId = target?.entityId;
+
+      // Only add to canvas if target is a canvas
+      if (targetType !== 'canvas' || !targetId) {
+        this.logger.warn(
+          `Target is not a canvas (type: ${targetType}, id: ${targetId}), skipping canvas node creation`,
+        );
+        return;
+      }
+
+      // Add each generated file as a canvas node
+      for (const file of uploadedFiles) {
+        try {
+          const { type, entityId, storageKey, url, title, name, mimeType, artifactType } = file;
+
+          if (!storageKey || !url) {
+            this.logger.warn(`File ${name || title} is missing storageKey or url, skipping`);
+            continue;
+          }
+
+          // Check if this file has already been added to prevent duplicates
+          // Use storageKey as unique identifier
+          const dedupeKey = `${parentResultId}:${storageKey}`;
+          if (this.addedFilesMap.has(dedupeKey)) {
+            this.logger.log(
+              `File ${storageKey} already added for result ${parentResultId}, skipping duplicate`,
+            );
+            continue;
+          }
+
+          const nodeType = type || 'image'; // Default to image if type is not specified
+          const mediaId = entityId || genImageID();
+          const nodeTitle = title || name || `Generated ${nodeType}`;
+
+          // Prepare metadata based on node type
+          const metadata: any = {
+            resultId: mediaId,
+            storageKey,
+            parentResultId,
+          };
+
+          // Add type-specific URL field
+          if (nodeType === 'image') {
+            metadata.imageUrl = url;
+            metadata.imageType = mimeType?.split('/')?.[1] || 'png';
+          } else if (nodeType === 'audio') {
+            metadata.audioUrl = url;
+          } else if (nodeType === 'video') {
+            metadata.videoUrl = url;
+          } else if (nodeType === 'document') {
+            metadata.documentUrl = url;
+          } else if (nodeType === 'codeArtifact') {
+            // For codeArtifact, store artifact type and URL
+            metadata.artifactType = artifactType || mimeType || 'text/csv';
+            metadata.artifactUrl = url;
+            metadata.language = this.getLanguageFromMimeType(mimeType);
+          }
+
+          // Add node to canvas
+          await this.canvasSyncService.addNodesToCanvas(
+            user,
+            targetId,
+            [
+              {
+                node: {
+                  type: nodeType,
+                  data: {
+                    title: nodeTitle,
+                    entityId: mediaId,
+                    metadata,
+                  },
+                },
+                connectTo: [{ type: 'skillResponse', entityId: parentResultId }],
+              },
+            ],
+            { autoLayout: true },
+          );
+
+          // Mark this file as added
+          this.addedFilesMap.set(dedupeKey, mediaId);
+
+          this.logger.log(
+            `Successfully added ${nodeType} node to canvas: ${nodeTitle} (${mediaId})`,
+          );
+        } catch (fileError) {
+          this.logger.error(
+            `Failed to add file to canvas: ${fileError?.message}`,
+            fileError?.stack,
+          );
+          // Continue processing other files even if one fails
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error in handleToolGeneratedFiles: ${error?.message}`, error?.stack);
+      throw error;
+    }
   }
 
   /**

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useCanvasStoreShallow } from '@refly/stores';
-import { WorkflowNodeExecution } from '@refly/openapi-schema';
+import { ActionStatus, WorkflowNodeExecution } from '@refly/openapi-schema';
 
 interface UseNodeExecutionStatusOptions {
   canvasId: string;
@@ -9,7 +9,7 @@ interface UseNodeExecutionStatusOptions {
 
 interface UseNodeExecutionStatusReturn {
   nodeExecution: WorkflowNodeExecution | null;
-  status: 'waiting' | 'executing' | 'finish' | 'failed' | null;
+  status: ActionStatus;
   isExecuting: boolean;
   isWaiting: boolean;
   isFinished: boolean;
