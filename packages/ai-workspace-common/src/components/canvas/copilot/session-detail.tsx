@@ -177,7 +177,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     );
     setNodes(nodes);
     setEdges(edges);
-    setVariables(variables);
+    setVariables(variables ?? []);
     setShowWorkflowRun(true);
   }, [
     canvasId,
@@ -186,6 +186,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     getNodes,
     setNodes,
     setEdges,
+    setVariables,
     t,
     modal,
     setShowWorkflowRun,

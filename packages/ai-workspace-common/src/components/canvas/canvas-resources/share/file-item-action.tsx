@@ -57,7 +57,7 @@ export const FileItemAction = ({
         setIsDeleting(false);
       }
     },
-    [refetchFiles, setCurrentFile],
+    [isDeleting, refetchFiles, setCurrentFile, t],
   );
 
   // Create default variable data for the current resource
