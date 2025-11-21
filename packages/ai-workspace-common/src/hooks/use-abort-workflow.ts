@@ -68,28 +68,39 @@ export const useAbortWorkflow = ({
       onOk: async () => {
         setIsAborting(true);
         try {
-          // Optimistic UI update: immediately update all executing/waiting nodes
-          const nodes = getNodes();
+          if (canvasId && Array.isArray(canvasNodeExecutions) && canvasNodeExecutions.length) {
+            // Optimistic UI update: immediately update all executing/waiting nodes
+            const nodes = getNodes();
 
-          // Find all nodes that are currently executing or waiting
-          const affectedNodeExecutions = canvasNodeExecutions.filter(
-            (nodeExecution) =>
-              nodeExecution.status === 'executing' || nodeExecution.status === 'waiting',
-          );
+            // Find all nodes that are currently executing or waiting
+            const affectedNodeExecutions = canvasNodeExecutions.filter(
+              (nodeExecution) =>
+                nodeExecution.status === 'executing' || nodeExecution.status === 'waiting',
+            );
 
-          // Update canvasNodeExecutions state
-          const updatedNodeExecutions = canvasNodeExecutions.map((nodeExecution) => {
-            if (nodeExecution.status === 'executing' || nodeExecution.status === 'waiting') {
-              return {
-                ...nodeExecution,
-                status: 'failed' as const,
-                errorMessage: 'Workflow aborted by user',
-              };
+            // Update canvasNodeExecutions state
+            const updatedNodeExecutions = canvasNodeExecutions.map((nodeExecution) => {
+              if (nodeExecution.status === 'executing' || nodeExecution.status === 'waiting') {
+                return {
+                  ...nodeExecution,
+                  status: 'failed' as const,
+                  errorMessage: 'Workflow aborted by user',
+                };
+              }
+              return nodeExecution;
+            });
+
+            setCanvasNodeExecutions(canvasId, updatedNodeExecutions);
+
+            // For each affected node, clean up frontend state
+            for (const nodeExecution of affectedNodeExecutions) {
+              const node = nodes.find((n) => n.data?.entityId === nodeExecution.entityId);
+              if (!node) continue;
+
+              // Clean up frontend state for this node
+              cleanupAbortedNode(node.id, nodeExecution.entityId);
             }
-            return nodeExecution;
-          });
-
-          setCanvasNodeExecutions(canvasId, updatedNodeExecutions);
+          }
 
           // Abort the workflow on backend first
           const { error } = await getClient().abortWorkflow({
@@ -100,15 +111,6 @@ export const useAbortWorkflow = ({
             message.error(t('canvas.workflow.run.abort.failed'));
             setIsAborting(false);
             return;
-          }
-
-          // For each affected node, clean up frontend state
-          for (const nodeExecution of affectedNodeExecutions) {
-            const node = nodes.find((n) => n.data?.entityId === nodeExecution.entityId);
-            if (!node) continue;
-
-            // Clean up frontend state for this node
-            cleanupAbortedNode(node.id, nodeExecution.entityId);
           }
 
           message.success(t('canvas.workflow.run.abort.success'));
