@@ -237,6 +237,7 @@ export class ActionService {
               'locale',
               'status',
               'errors',
+              'errorType',
             ]),
             context: batchReplaceRegex(JSON.stringify(context), replaceEntityMap),
             history: batchReplaceRegex(JSON.stringify(history), replaceEntityMap),
@@ -346,6 +347,7 @@ export class ActionService {
         data: {
           status: 'failed',
           errors: JSON.stringify([errorMessage]),
+          errorType: 'userAbort',
         },
       });
       this.logger.log(`Updated action ${resultId} status to failed: ${errorMessage}`);
@@ -447,6 +449,7 @@ export class ActionService {
       data: {
         status: 'failed',
         errors: JSON.stringify([reason]),
+        errorType: 'userAbort',
       },
     });
 

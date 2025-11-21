@@ -26,16 +26,19 @@ export const useInitializeWorkflow = (
 
   // Memoize callbacks to avoid recreating them on every render
   const handleComplete = useMemo(
-    () => (status: string, _data: any) => {
+    () => (status: string, data: any) => {
       if (status === 'finish') {
         notification.success({
           message:
             t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
         });
       } else if (status === 'failed') {
-        notification.error({
-          message: t('canvas.workflow.run.failed') || 'Workflow execution failed',
-        });
+        // Only show error notification if NOT aborted by user
+        if (!data?.data?.abortedByUser) {
+          notification.error({
+            message: t('canvas.workflow.run.failed') || 'Workflow execution failed',
+          });
+        }
       }
     },
     [t],

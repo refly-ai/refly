@@ -1537,6 +1537,10 @@ const translations = {
         description: '生成失败，请稍后重试或更换模型。',
         retryButton: '重试',
       },
+      userAbort: {
+        title: '任务已停止',
+        description: '此任务已被手动终止。',
+      },
       workflowFailure: {
         title: '执行失败',
         description: 'workflow 执行中断，请稍后重试或检查节点配置。',

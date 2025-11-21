@@ -54,6 +54,7 @@ export const useCleanupAbortedNode = () => {
       setNodeData(nodeId, {
         metadata: {
           status: 'failed',
+          errorType: 'userAbort',
         },
         contentPreview: resultPreview,
       });

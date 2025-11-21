@@ -61,17 +61,23 @@ const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 300 };
 const NodeStatusBar = memo(
   ({
     status,
+    errorType,
     executionTime,
     creditCost,
     errors,
   }: {
     status: string;
+    errorType?: string;
     executionTime?: number;
     creditCost?: number;
     errors?: string[];
   }) => {
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // Default to systemError if undefined
+    const effectiveErrorType = errorType || 'systemError';
+    const isUserAbort = effectiveErrorType === 'userAbort';
 
     const getStatusIcon = () => {
       switch (status) {
@@ -133,15 +139,24 @@ const NodeStatusBar = memo(
           </div>
           {hasErrors && isExpanded && (
             <div className="min-w-0 mt-[10px] mb-1">
-              {errors.map((error, index) => (
+              {status === 'failed' && isUserAbort ? (
                 <Paragraph
-                  key={index}
                   className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
                   ellipsis={{ rows: 8, tooltip: true }}
                 >
-                  {error}
+                  {t('canvas.skillResponse.userAbort.description')}
                 </Paragraph>
-              ))}
+              ) : (
+                errors.map((error, index) => (
+                  <Paragraph
+                    key={index}
+                    className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
+                    ellipsis={{ rows: 8, tooltip: true }}
+                  >
+                    {error}
+                  </Paragraph>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -233,7 +248,7 @@ export const SkillResponseNode = memo(
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     const { data: variables } = useVariablesManagement(canvasId);
 
-    const { status, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
+    const { status, errorType, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
@@ -851,6 +866,7 @@ export const SkillResponseNode = memo(
         {!isPreview && status !== 'init' && (
           <NodeStatusBar
             status={status}
+            errorType={errorType}
             creditCost={metadata?.creditCost}
             executionTime={metadata?.executionTime}
             errors={result?.errors}

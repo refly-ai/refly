@@ -134,6 +134,8 @@ model ActionResult {
   history                 String?      @map("history")
   /// Errors
   errors                  String?      @map("errors")
+  /// Error type
+  errorType               String?      @map("error_type")
   /// Toolsets (JSON array of `GenericToolset`)
   toolsets                String?      @map("toolsets")
   /// Locale setting
@@ -312,6 +314,8 @@ model WorkflowExecution {
   title          String   @map("title")
   /// Workflow status: init, executing, finished, failed
   status         String   @default("init") @map("status")
+  /// Whether the workflow was aborted by user
+  abortedByUser  Boolean  @default(false) @map("aborted_by_user")
   /// Workflow app id
   appId          String?  @map("app_id")
   /// Workflow variables (JSON)

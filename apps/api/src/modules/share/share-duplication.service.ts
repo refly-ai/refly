@@ -472,6 +472,7 @@ export class ShareDuplicationService {
           tplConfig: JSON.stringify(result.tplConfig),
           runtimeConfig: JSON.stringify(result.runtimeConfig),
           errors: JSON.stringify(result.errors),
+          errorType: result.errorType,
           modelName: result.modelInfo?.name,
           duplicateFrom: result.resultId,
           projectId,

@@ -1559,6 +1559,11 @@ export type TokenUsageItem = {
 export type ActionStatus = 'init' | 'waiting' | 'executing' | 'finish' | 'failed';
 
 /**
+ * Action error type
+ */
+export type ActionErrorType = 'systemError' | 'userAbort';
+
+/**
  * Artifact type
  */
 export type ArtifactType = 'document' | 'codeArtifact' | 'image' | 'video' | 'audio';
@@ -1764,6 +1769,10 @@ export type ActionResult = {
    * Step status
    */
   status?: ActionStatus;
+  /**
+   * Error type (defaults to systemError if undefined)
+   */
+  errorType?: ActionErrorType;
   /**
    * Action type
    */
@@ -6852,6 +6861,10 @@ export type WorkflowExecution = {
    * Workflow status
    */
   status?: WorkflowExecutionStatus;
+  /**
+   * Whether the workflow was aborted by user
+   */
+  abortedByUser?: boolean;
   /**
    * Node executions
    */

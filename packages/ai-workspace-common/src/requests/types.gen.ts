@@ -1559,6 +1559,11 @@ export type TokenUsageItem = {
 export type ActionStatus = 'init' | 'waiting' | 'executing' | 'finish' | 'failed';
 
 /**
+ * Action error type
+ */
+export type ActionErrorType = 'systemError' | 'userAbort';
+
+/**
  * Artifact type
  */
 export type ArtifactType = 'document' | 'codeArtifact' | 'image' | 'video' | 'audio';
@@ -1764,6 +1769,10 @@ export type ActionResult = {
    * Step status
    */
   status?: ActionStatus;
+  /**
+   * Error type (defaults to systemError if undefined)
+   */
+  errorType?: ActionErrorType;
   /**
    * Action type
    */
@@ -6779,6 +6788,13 @@ export type InitializeWorkflowResponse = BaseResponse & {
   };
 };
 
+export type AbortWorkflowRequest = {
+  /**
+   * Workflow execution ID to abort
+   */
+  executionId: string;
+};
+
 export type WorkflowNodeExecution = {
   /**
    * Node execution ID
@@ -6845,6 +6861,10 @@ export type WorkflowExecution = {
    * Workflow status
    */
   status?: WorkflowExecutionStatus;
+  /**
+   * Whether the workflow was aborted by user
+   */
+  abortedByUser?: boolean;
   /**
    * Node executions
    */
@@ -9968,6 +9988,14 @@ export type InitializeWorkflowData = {
 export type InitializeWorkflowResponse2 = InitializeWorkflowResponse;
 
 export type InitializeWorkflowError = unknown;
+
+export type AbortWorkflowData = {
+  body: AbortWorkflowRequest;
+};
+
+export type AbortWorkflowResponse = BaseResponse;
+
+export type AbortWorkflowError = unknown;
 
 export type GetWorkflowDetailData = {
   query: {

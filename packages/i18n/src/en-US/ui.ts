@@ -1540,6 +1540,10 @@ const translations = {
         description: 'Generation failed, please try again later or switch to another model.',
         retryButton: 'Retry',
       },
+      userAbort: {
+        title: 'Task Stopped',
+        description: 'This task has been manually terminated.',
+      },
       workflowFailure: {
         title: 'Execution Failed',
         description:
