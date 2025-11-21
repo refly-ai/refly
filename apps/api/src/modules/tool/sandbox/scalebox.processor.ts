@@ -18,7 +18,7 @@ export class ScaleboxExecutionProcessor {
   }
 
   async execute(data: ScaleboxExecutionJobData): Promise<ScaleboxExecutionResult> {
-    const { uid, code, language, canvasId, apiKey, version } = data;
+    const { uid, code, language, canvasId, apiKey, s3DrivePath, version } = data;
 
     this.logger.info(
       {
@@ -39,6 +39,7 @@ export class ScaleboxExecutionProcessor {
           uid,
           apiKey,
           canvasId,
+          s3DrivePath,
           version,
         },
       ),

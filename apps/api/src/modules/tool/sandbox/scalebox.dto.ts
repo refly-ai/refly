@@ -37,6 +37,7 @@ export interface ScaleboxExecutionJobData {
   timeout?: number;
   canvasId: string;
   apiKey: string;
+  s3DrivePath: string;
   version?: number;
 }
 
