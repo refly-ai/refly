@@ -37,7 +37,7 @@ export const InvitationCodeModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-refly-bg-canvas flex flex-col items-center justify-center">
-      <div className="max-w-[580px] h-[357px] px-6 flex flex-col items-center mb-8">
+      <div className="max-w-[580px] h-[357px] px-6 flex flex-col items-center mb-8 relative z-10">
         <div className="text-center mb-8">
           <h1 className="text-[32px] font-bold text-gray-900 dark:text-white mb-2 max-w-[540px]">
             <div>{t('invitationCode.title1')}</div>
@@ -47,7 +47,11 @@ export const InvitationCodeModal = () => {
         </div>
         <ActivationCodeInput onSuccess={handleActivationSuccess} />
       </div>
-      <img src={reflyUnionSvg} alt="Refly Union" className="w-full absolute bottom-0 left-0" />
+      <img
+        src={reflyUnionSvg}
+        alt="Refly Union"
+        className="w-full absolute bottom-0 left-0 -z-10"
+      />
     </div>
   );
 };
