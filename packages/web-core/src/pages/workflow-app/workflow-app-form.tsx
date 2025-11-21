@@ -15,7 +15,6 @@ import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
-import { calculateCreditCost } from '@refly-packages/ai-workspace-common/utils';
 import { Question } from 'refly-icons';
 
 const EmptyContent = () => {
@@ -641,7 +640,7 @@ export const WorkflowAPPForm = ({
                         </svg>
 
                         <span className="font-semibold text-[20px] leading-[1.25em] font-roboto text-[#1C1F23] dark:text-white inline-flex items-center gap-[3px]">
-                          {calculateCreditCost(workflowApp?.creditUsage) ?? 0}
+                          {workflowApp?.creditUsage ?? 0}
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="15"
@@ -784,7 +783,7 @@ export const WorkflowAPPForm = ({
                         </svg>
 
                         <span className="font-semibold text-[20px] leading-[1.25em] font-roboto text-[#1C1F23] dark:text-white inline-flex items-center gap-[3px]">
-                          {calculateCreditCost(workflowApp?.creditUsage) ?? 0}
+                          {workflowApp?.creditUsage ?? 0}
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="15"
