@@ -16,6 +16,7 @@ import { useNodePosition } from './use-node-position';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { adoptUserNodes } from '@xyflow/system';
 import { useCanvasStore } from '@refly/stores';
+import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 
 // Define the maximum number of nodes allowed in a canvas
 const MAX_NODES_PER_CANVAS = 500;
@@ -50,6 +51,11 @@ export const useAddNode = () => {
     setNodes((nodes) => nodes.filter((node) => !node.id.startsWith('ghost-')));
     setEdges((edges) => edges.filter((edge) => !edge.id.startsWith('temp-edge-')));
   };
+
+  const { defaultChatModel } = useFetchProviderItems({
+    category: 'llm',
+    enabled: true,
+  });
 
   const addNode = useCallback(
     (
@@ -87,6 +93,10 @@ export const useAddNode = () => {
         handleCleanGhost();
         return undefined;
       }
+
+      // Set default model info if not provided
+      node.data.metadata ??= {};
+      node.data.metadata.modelInfo ??= defaultChatModel;
 
       // Check for node limit
       const nodeCount = nodes?.length ?? 0;

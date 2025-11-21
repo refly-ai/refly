@@ -15,11 +15,12 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { useTranslation } from 'react-i18next';
 import { Greeting } from './greeting';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { safeParseJSON } from '@refly/utils/parse';
+import { safeParseJSON } from '@refly/utils';
 import { generateCanvasDataFromWorkflowPlan, WorkflowPlan } from '@refly/canvas-common';
 import { useReactFlow } from '@xyflow/react';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 
 interface SessionDetailProps {
   sessionId: string;
@@ -124,6 +125,10 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
   const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
     setShowWorkflowRun: state.setShowWorkflowRun,
   }));
+  const { defaultChatModel } = useFetchProviderItems({
+    category: 'llm',
+    enabled: true,
+  });
 
   const handleApprove = useCallback(async () => {
     if (!workflowPlan) {
@@ -167,6 +172,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       tools?.data ?? [],
       {
         autoLayout: true,
+        defaultModel: defaultChatModel,
       },
     );
     setNodes(nodes);
@@ -183,6 +189,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     t,
     modal,
     setShowWorkflowRun,
+    defaultChatModel,
   ]);
 
   return (

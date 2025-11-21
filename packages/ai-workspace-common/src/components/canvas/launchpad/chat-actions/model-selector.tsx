@@ -3,13 +3,7 @@ import { Button, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip, Typograp
 import { useTranslation } from 'react-i18next';
 import { ModelIcon } from '@lobehub/icons';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
-import {
-  LLMModelConfig,
-  MediaGenerationModelConfig,
-  ModelInfo,
-  TokenUsageMeter,
-  ModelCapabilities,
-} from '@refly/openapi-schema';
+import { ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LuInfo } from 'react-icons/lu';
@@ -19,6 +13,7 @@ import { IContextItem } from '@refly/common-types';
 import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/model';
 import { useGroupModels } from '@refly-packages/ai-workspace-common/hooks/use-group-models';
 import './index.scss';
+import { providerItemToModelInfo } from '@refly/utils';
 import { useUserStoreShallow } from '@refly/stores';
 import { ArrowDown, Settings } from 'refly-icons';
 import cn from 'classnames';
@@ -265,42 +260,7 @@ export const ModelSelector = memo(
           const category = item?.category;
           return category === selectedCategory;
         })
-        .map((item) => {
-          // Validate config existence and type before destructuring
-          const category = item?.category;
-
-          if (category === 'mediaGeneration') {
-            const config = item?.config as MediaGenerationModelConfig;
-            return {
-              name: config?.modelId ?? '',
-              label: item?.name ?? '',
-              provider: item?.provider?.providerKey ?? '',
-              providerItemId: item?.itemId ?? '',
-              contextLimit: 0, // MediaGenerationModelConfig doesn't have contextLimit
-              maxOutput: 0, // MediaGenerationModelConfig doesn't have maxOutput
-              capabilities: config?.capabilities as ModelCapabilities, // Cast to ModelCapabilities for compatibility
-              creditBilling: item?.creditBilling ?? null,
-              group: item?.group ?? '',
-              category: item?.category,
-              inputParameters: config?.inputParameters ?? [],
-            };
-          } else {
-            const config = item?.config as LLMModelConfig;
-            return {
-              name: config?.modelId ?? '',
-              label: item?.name ?? '',
-              provider: item?.provider?.providerKey ?? '',
-              providerItemId: item?.itemId ?? '',
-              contextLimit: config?.contextLimit ?? 0,
-              maxOutput: config?.maxOutput ?? 0,
-              capabilities: config?.capabilities ?? {},
-              creditBilling: item?.creditBilling ?? null,
-              group: item?.group ?? '',
-              category: item?.category,
-              inputParameters: [],
-            };
-          }
-        });
+        .map((item) => providerItemToModelInfo(item));
     }, [providerItemList, selectedCategory]);
 
     const { handleGroupModelList } = useGroupModels();

@@ -1,5 +1,11 @@
 import { z } from 'zod/v3';
-import { GenericToolset, RawCanvasData, CanvasNode, WorkflowVariable } from '@refly/openapi-schema';
+import {
+  GenericToolset,
+  RawCanvasData,
+  CanvasNode,
+  WorkflowVariable,
+  ModelInfo,
+} from '@refly/openapi-schema';
 import { genNodeEntityId, genUniqueId } from '@refly/utils';
 import { CanvasNodeFilter } from './types';
 import { prepareAddNode } from './utils';
@@ -170,7 +176,7 @@ export const planVariableToWorkflowVariable = (
 export const generateCanvasDataFromWorkflowPlan = (
   workflowPlan: WorkflowPlan,
   toolsets: GenericToolset[],
-  options?: { autoLayout?: boolean },
+  options?: { autoLayout?: boolean; defaultModel?: ModelInfo },
 ): RawCanvasData => {
   const nodes: RawCanvasData['nodes'] = [];
   const edges: RawCanvasData['edges'] = [];
@@ -179,7 +185,7 @@ export const generateCanvasDataFromWorkflowPlan = (
   const taskIdToNodeId = new Map<string, string>();
   const taskIdToEntityId = new Map<string, string>();
 
-  const { autoLayout = false } = options ?? {};
+  const { autoLayout = false, defaultModel } = options ?? {};
 
   // Simple layout positions for non-auto-layout mode
   const taskStartX = 0;
@@ -282,6 +288,7 @@ export const generateCanvasDataFromWorkflowPlan = (
             selectedToolsets,
             contextItems: [],
             status: 'init',
+            modelInfo: defaultModel,
           },
         },
       };
