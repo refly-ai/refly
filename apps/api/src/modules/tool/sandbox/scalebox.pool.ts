@@ -222,15 +222,16 @@ export class SandboxPool {
   }
 
   private async tryAutoPause(sandboxId: string): Promise<void> {
-    const metadata = await this.storage.loadMetadata(sandboxId);
-    if (!metadata) return;
+    this.logger.info({ sandboxId }, 'Attempting to auto-pause sandbox');
 
-    // Skip if already paused to avoid frequent reconnect->resume->pause cycles
+    const metadata = await this.storage.loadMetadata(sandboxId);
+    if (!metadata) {
+      this.logger.info({ sandboxId }, 'Sandbox metadata not found, skipping auto-pause');
+      return;
+    }
+
     if (metadata.isPaused) {
-      this.logger.debug(
-        { sandboxId, pausedAt: metadata.lastPausedAt },
-        'Sandbox already paused, skipping auto-pause',
-      );
+      this.logger.info({ sandboxId }, 'Sandbox already paused, skipping auto-pause');
       return;
     }
 
@@ -262,16 +263,7 @@ export class SandboxPool {
               { sandboxId, status: info.status, idleMinutes: (idleDuration / 60000).toFixed(1) },
               'Starting auto-pause for idle sandbox',
             );
-
             await wrapper.betaPause();
-
-            const finalInfo = await wrapper.getInfo();
-            this.logger.info(
-              { sandboxId, finalStatus: finalInfo.status },
-              'Auto-pause completed successfully',
-            );
-
-            // Mark as paused and save metadata
             wrapper.markAsPaused();
             await this.storage.saveMetadata(wrapper);
           },
