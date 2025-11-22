@@ -248,7 +248,6 @@ const SkillResponseNodePreviewComponent = ({
         nodeId={node.id}
         entityId={data.entityId}
         title={title}
-        readonly={readonly}
         source="preview"
         className="!h-14"
         actions={

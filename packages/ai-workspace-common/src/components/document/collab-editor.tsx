@@ -3,10 +3,7 @@ import { useThrottledCallback } from 'use-debounce';
 import classNames from 'classnames';
 import wordsCount from 'words-count';
 import { useTranslation } from 'react-i18next';
-import {
-  CollabEditorCommand,
-  CollabGenAIBlockMenu,
-} from '@refly-packages/ai-workspace-common/components/editor/components/advanced-editor';
+import { CollabEditorCommand } from '@refly-packages/ai-workspace-common/components/editor/components/advanced-editor';
 import {
   EditorRoot,
   EditorContent,
@@ -499,7 +496,6 @@ export const CollaborativeEditor = memo(
               }
             >
               <CollabEditorCommand entityId={docId} entityType="document" />
-              <CollabGenAIBlockMenu />
               <TableRowMenu editor={editorRef.current} appendTo={menuContainerRef} />
               <TableColumnMenu editor={editorRef.current} appendTo={menuContainerRef} />
             </EditorContent>
