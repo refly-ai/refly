@@ -91,9 +91,17 @@ export const NODE_COLORS: Record<
   'audio/aac': 'var(--refly-Colorful-red)',
   'audio/webm': 'var(--refly-Colorful-red)',
 };
+
 export const NODE_MINI_MAP_COLORS = {
   ...NODE_COLORS,
   resource: '#40df2b',
   group: '#bfc5bf',
   memo: 'transparent',
+};
+
+export const AGENT_CONFIG_KEY_CLASSNAMES = {
+  inputs: 'bg-refly-node-contrl-2',
+  tools: 'bg-refly-node-contrl-1',
+  files: 'bg-refly-fill-label',
+  agents: 'bg-refly-node-contrl-2',
 };

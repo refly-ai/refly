@@ -56,8 +56,6 @@ export const NodeHeader = memo(
     title,
     placeholder,
     type, // backward compatibility
-    resourceType,
-    resourceMeta,
     canEdit = false,
     updateTitle,
     showIcon = true,
@@ -122,8 +120,7 @@ export const NodeHeader = memo(
           {showIcon && (
             <NodeIcon
               type={actualNodeType}
-              resourceType={resourceType}
-              resourceMeta={resourceMeta}
+              filename={title}
               filled={iconFilled}
               iconColor={iconColor}
               iconSize={16}

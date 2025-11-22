@@ -43,7 +43,6 @@ export const mentionStyles = `
   }
   
   [data-cy="rich-chat-input"] .mention {
-    background-color: var(--refly-tertiary-default);
     border-radius: 4px;
     padding: 2px 4px 2px;
     border: 1px solid var(--refly-Card-Border);

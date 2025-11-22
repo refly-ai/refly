@@ -487,11 +487,9 @@ export const MentionList = ({
       },
       files: {
         nodeIconProps: (item: MentionItem) => ({
-          type: item.variableType as CanvasNodeType,
+          type: 'file' as const,
           small: true,
-          url: item.variableType === 'image' ? item.metadata?.imageUrl : undefined,
-          resourceType: item.metadata?.resourceType,
-          resourceMeta: item.metadata?.resourceMeta,
+          filename: item.name,
         }),
         emptyStateKey: 'noFiles',
       },

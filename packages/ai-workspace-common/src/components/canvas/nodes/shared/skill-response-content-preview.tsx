@@ -7,11 +7,12 @@ import { ResponseNodeMeta } from '@refly/canvas-common';
 import { ModelInfo } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { X, File, AiChat } from 'refly-icons';
+import { X, AiChat } from 'refly-icons';
 import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 import { parseMentionsFromQuery, processQueryWithMentions } from '@refly/utils/query-processor';
 import { useRealtimeUpstreamAgents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-upstream-agent';
 import { useCanvasNodesStoreShallow } from '@refly/stores';
+import { NodeIcon } from './node-icon';
 
 interface SkillResponseContentPreviewProps {
   nodeId: string;
@@ -133,7 +134,14 @@ export const SkillResponseContentPreview = memo(
           title={t('canvas.skillResponse.config.file')}
           labels={files.map((file) => ({
             labeltext: file.title || t('canvas.richChatInput.untitledFile'),
-            icon: <File size={12} className="flex-shrink-0" />,
+            icon: (
+              <NodeIcon
+                type="file"
+                filename={file.title}
+                filled={false}
+                className="!w-3.5 !h-3.5"
+              />
+            ),
           }))}
           labelClassnames="bg-refly-node-input-control"
           showMore={false}
