@@ -25,11 +25,14 @@ import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execut
 import { ScaleboxExecutionResult, ExecutionContext } from './scalebox.dto';
 import { formatError, buildSuccessResponse, extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
-import { SandboxWrapper } from './scalebox.wrapper';
-import { Trace, setSpanAttributes } from './scalebox.tracer';
+import { SandboxWrapper, S3Config } from './scalebox.wrapper';
+import { Trace } from './scalebox.tracer';
 import {
-  SCALEBOX_DEFAULT_LOCK_WAIT_TIMEOUT_MS,
-  SCALEBOX_DEFAULT_LOCK_POLL_INTERVAL_MS,
+  SCALEBOX_DEFAULT_MAX_LIFETIME_MS,
+  S3_DEFAULT_CONFIG,
+  REDIS_KEYS,
+  LOCK_RETRY_CONFIG,
+  LOCK_TTL_CONFIG,
 } from './scalebox.constants';
 
 /**
@@ -52,11 +55,15 @@ export class ScaleboxService {
   @Config.string('sandbox.scalebox.apiKey', '')
   private scaleboxApiKey: string;
 
-  @Config.integer('sandbox.scalebox.lockWaitTimeoutMs', SCALEBOX_DEFAULT_LOCK_WAIT_TIMEOUT_MS)
-  private lockWaitTimeoutMs: number;
+  @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
+  private s3Config: S3Config;
 
-  @Config.integer('sandbox.scalebox.lockPollIntervalMs', SCALEBOX_DEFAULT_LOCK_POLL_INTERVAL_MS)
-  private lockPollIntervalMs: number;
+  @Config.integer('sandbox.scalebox.maxLifetimeMs', SCALEBOX_DEFAULT_MAX_LIFETIME_MS)
+  private maxLifetimeMs: number;
+
+  private getExecuteLockKey(context: ExecutionContext): string {
+    return `${REDIS_KEYS.LOCK_EXECUTE_PREFIX}:${context.uid}:${context.canvasId}`;
+  }
 
   async executeCode(
     params: SandboxExecuteParams,
@@ -66,48 +73,32 @@ export class ScaleboxService {
       .notEmpty(context.canvasId)
       .orThrow(() => new SandboxRequestParamsException('executeCode', 'canvasId is required'));
 
-    const lockKey = `scalebox:execute:lock:${context.uid}:${context.canvasId}`;
-
     return guard.defer(
-      async () => {
-        const releaseLock = await this.waitForLock(lockKey);
-        return [undefined, () => void releaseLock()] as const;
-      },
-      () => this.executeCodeWithSandbox(params, context),
-      (error) => this.logger.warn(error, 'Failed to release lock'),
+      () => this.acquireExecuteLock(context),
+      () =>
+        guard.defer(
+          () => this.sandboxPool.acquire(context, this.maxLifetimeMs),
+          (wrapper) => this.executeWithMount(wrapper, params, context.s3DrivePath),
+        ),
     );
   }
 
-  private async waitForLock(lockKey: string) {
-    return guard
-      .retry(
-        async () => {
-          const releaseLock = await this.redis.acquireLock(lockKey);
-          guard.ensure(!!releaseLock).orThrow(() => new Error('Lock not acquired'));
-          return releaseLock;
-        },
-        {
-          timeout: this.lockWaitTimeoutMs,
-          initialDelay: this.lockPollIntervalMs,
-          maxDelay: this.lockPollIntervalMs,
-          backoffFactor: 1,
-        },
-      )
-      .orThrow(() => new SandboxLockTimeoutException(lockKey, this.lockWaitTimeoutMs));
-  }
+  private async acquireExecuteLock(context: ExecutionContext) {
+    const lockKey = this.getExecuteLockKey(context);
 
-  private async executeCodeWithSandbox(
-    params: SandboxExecuteParams,
-    context: ExecutionContext,
-  ): Promise<ScaleboxExecutionResult> {
-    return guard.defer(
-      async () => {
-        const wrapper = await this.sandboxPool.acquire(context);
-        return [wrapper, () => this.sandboxPool.release(wrapper)] as const;
-      },
-      (wrapper) => this.executeWithMount(wrapper, params, context.s3DrivePath),
-      (error) => this.logger.warn(error, 'Failed to release sandbox'),
-    );
+    const timeout = LOCK_RETRY_CONFIG.EXECUTE_TIMEOUT_MS;
+    const ttl = LOCK_TTL_CONFIG.EXECUTE_TTL_SEC;
+
+    const releaseLock = await guard
+      .retry(async () => this.redis.acquireLock(lockKey, ttl), {
+        timeout,
+        initialDelay: LOCK_RETRY_CONFIG.POLL_INTERVAL_MS,
+        maxDelay: LOCK_RETRY_CONFIG.POLL_INTERVAL_MS,
+        backoffFactor: 1,
+      })
+      .orThrow(() => new SandboxLockTimeoutException(lockKey, timeout));
+
+    return [undefined, () => void releaseLock()] as const;
   }
 
   private async executeWithMount(
@@ -115,13 +106,15 @@ export class ScaleboxService {
     params: SandboxExecuteParams,
     s3DrivePath: string,
   ): Promise<ScaleboxExecutionResult> {
+    const sandboxId = wrapper.sandboxId;
+
     return guard.defer(
       async () => {
-        await wrapper.mountDrive(s3DrivePath, { allowNonEmpty: true });
+        await wrapper.mountDrive(s3DrivePath, this.s3Config, { allowNonEmpty: true });
         return [wrapper, () => wrapper.unmountDrive()] as const;
       },
       (wrapper) => this.runCodeInSandbox(wrapper, params),
-      (error) => this.logger.warn(error, 'Failed to unmount drive'),
+      (error) => this.logger.warn({ sandboxId, error }, 'Failed to unmount drive'),
     );
   }
 
@@ -133,24 +126,14 @@ export class ScaleboxService {
     const startTime = Date.now();
 
     const previousFiles = await wrapper.listCwdFiles();
-    setSpanAttributes({ 'files.before.count': previousFiles.length });
     const prevSet = new Set(previousFiles);
 
     const result = await wrapper.executeCode(params, this.logger);
-    setSpanAttributes({
-      'code.exitCode': result.exitCode,
-      'code.hasError': result.exitCode !== 0,
-    });
 
     const currentFiles = await wrapper.listCwdFiles();
     const diffFiles = currentFiles
       .filter((file) => !prevSet.has(file))
       .map((p) => p.replace(wrapper.cwd, ''));
-
-    setSpanAttributes({
-      'files.after.count': currentFiles.length,
-      'files.new.count': diffFiles.length,
-    });
 
     const executionTime = Date.now() - startTime;
     const errorMessage = extractErrorMessage(result);

@@ -7,16 +7,12 @@ import { Trace, setSpanAttributes } from './scalebox.tracer';
 
 import {
   SandboxCreationException,
-  SandboxCommandException,
-  CodeExecutionException,
+  SandboxExecutionFailedException,
   SandboxFileListException,
   SandboxConnectionException,
 } from './scalebox.exception';
-import {
-  SANDBOX_DRIVE_MOUNT_POINT,
-  SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS,
-  SANDBOX_MOUNT_VERIFICATION_MAX_DELAY_MS,
-} from './scalebox.constants';
+import { SANDBOX_DRIVE_MOUNT_POINT } from './scalebox.constants';
+import { ExecutionContext } from './scalebox.dto';
 
 export interface S3Config {
   endPoint: string; // MinIO SDK uses 'endPoint' with capital P
@@ -33,14 +29,9 @@ export interface SandboxMetadata {
   cwd: string;
   createdAt: number;
   timeoutAt: number;
-}
-
-export interface SandboxContext {
-  logger: PinoLogger;
-  canvasId: string;
-  uid: string;
-  apiKey: string;
-  s3Config: S3Config;
+  idleSince: number;
+  isPaused?: boolean; // Whether the sandbox is currently paused
+  lastPausedAt?: number; // Timestamp of last pause operation
 }
 
 const COMMAND_BUILDER = {
@@ -66,12 +57,17 @@ ${nonemptyFlag}`.trim();
 };
 
 export class SandboxWrapper {
+  private isPaused: boolean;
+  private lastPausedAt?: number;
+
   private constructor(
     private readonly sandbox: Sandbox,
-    public readonly context: SandboxContext,
+    private readonly logger: PinoLogger,
+    public readonly context: ExecutionContext,
     public readonly cwd: string,
     public readonly createdAt: number,
     private timeoutAt: number,
+    public readonly idleSince: number,
   ) {}
 
   get sandboxId(): string {
@@ -80,19 +76,6 @@ export class SandboxWrapper {
 
   get canvasId(): string {
     return this.context.canvasId;
-  }
-
-  async isHealthy(): Promise<boolean> {
-    if (!(await this.sandbox.isRunning())) {
-      return false;
-    }
-
-    const info = await this.sandbox.getInfo();
-    if (info.status !== 'running' && info.status !== 'paused') {
-      return false;
-    }
-
-    return true;
   }
 
   get remainingTime(): number {
@@ -105,7 +88,19 @@ export class SandboxWrapper {
       cwd: this.cwd,
       createdAt: this.createdAt,
       timeoutAt: this.timeoutAt,
+      idleSince: this.idleSince,
+      isPaused: this.isPaused,
+      lastPausedAt: this.lastPausedAt,
     };
+  }
+
+  markAsPaused(): void {
+    this.isPaused = true;
+    this.lastPausedAt = Date.now();
+  }
+
+  markAsRunning(): void {
+    this.isPaused = false;
   }
 
   async getInfo() {
@@ -114,25 +109,29 @@ export class SandboxWrapper {
 
   @Trace('sandbox.pause')
   async betaPause(): Promise<void> {
-    await this.sandbox.betaPause();
-    this.context.logger.info({ sandboxId: this.sandboxId }, 'Sandbox paused');
-  }
-
-  @Trace('sandbox.resume')
-  async resume(): Promise<void> {
-    await (this.sandbox as any).resume();
-    this.context.logger.info({ sandboxId: this.sandboxId }, 'Sandbox resumed');
+    await guard.bestEffort(
+      async () => {
+        this.logger.info({ sandboxId: this.sandboxId }, 'Triggering sandbox pause');
+        await this.sandbox.betaPause();
+        this.logger.info({ sandboxId: this.sandboxId }, 'Sandbox paused successfully');
+      },
+      (error) => this.logger.error({ sandboxId: this.sandboxId, error }, 'Failed to pause sandbox'),
+    );
   }
 
   @Trace('sandbox.create', { 'operation.type': 'cold_start' })
-  static async create(context: SandboxContext, timeoutMs: number): Promise<SandboxWrapper> {
+  static async create(
+    logger: PinoLogger,
+    context: ExecutionContext,
+    timeoutMs: number,
+  ): Promise<SandboxWrapper> {
     setSpanAttributes({
       'sandbox.canvasId': context.canvasId,
       'sandbox.uid': context.uid,
       'sandbox.timeoutMs': timeoutMs,
     });
 
-    context.logger.info({ canvasId: context.canvasId }, 'Creating sandbox');
+    logger.info({ canvasId: context.canvasId }, 'Creating sandbox');
 
     const sandbox = await guard(() =>
       Sandbox.create('code-interpreter', {
@@ -143,15 +142,18 @@ export class SandboxWrapper {
 
     setSpanAttributes({ 'sandbox.id': sandbox.sandboxId });
 
+    const now = Date.now();
     const wrapper = new SandboxWrapper(
       sandbox,
+      logger,
       context,
       SANDBOX_DRIVE_MOUNT_POINT,
-      Date.now(),
-      Date.now() + timeoutMs,
+      now,
+      now + timeoutMs,
+      now,
     );
 
-    context.logger.info(
+    logger.info(
       { sandboxId: wrapper.sandboxId, canvasId: context.canvasId },
       'Sandbox created successfully (mount required)',
     );
@@ -161,10 +163,11 @@ export class SandboxWrapper {
 
   @Trace('sandbox.reconnect', { 'operation.type': 'reconnect' })
   static async reconnect(
-    context: SandboxContext,
+    logger: PinoLogger,
+    context: ExecutionContext,
     metadata: SandboxMetadata,
   ): Promise<SandboxWrapper> {
-    context.logger.info({ sandboxId: metadata.sandboxId }, 'Reconnecting to sandbox');
+    logger.info({ sandboxId: metadata.sandboxId }, 'Reconnecting to sandbox');
 
     const sandbox = await guard(() =>
       Sandbox.connect(metadata.sandboxId, { apiKey: context.apiKey }),
@@ -172,23 +175,32 @@ export class SandboxWrapper {
 
     const wrapper = new SandboxWrapper(
       sandbox,
+      logger,
       context,
       metadata.cwd,
       metadata.createdAt,
       metadata.timeoutAt,
+      metadata.idleSince,
     );
 
-    const isHealthy = await wrapper.isHealthy();
-    guard.ensure(isHealthy).orThrow(() => new SandboxConnectionException('Sandbox is not healthy'));
+    // Restore pause state from metadata
+    if (metadata.isPaused) {
+      wrapper.isPaused = true;
+      wrapper.lastPausedAt = metadata.lastPausedAt;
+    }
 
-    context.logger.info({ sandboxId: metadata.sandboxId }, 'Reconnected to sandbox successfully');
+    logger.info({ metadata }, 'Reconnected to sandbox successfully');
 
     return wrapper;
   }
 
   @Trace('sandbox.mount')
-  async mountDrive(s3DrivePath: string, options?: { allowNonEmpty?: boolean }): Promise<void> {
-    const { logger, s3Config, canvasId } = this.context;
+  async mountDrive(
+    s3DrivePath: string,
+    s3Config: S3Config,
+    options?: { allowNonEmpty?: boolean },
+  ): Promise<void> {
+    const canvasId = this.context.canvasId;
     const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
 
     setSpanAttributes({
@@ -198,7 +210,7 @@ export class SandboxWrapper {
       'mount.allowNonEmpty': options?.allowNonEmpty ?? false,
     });
 
-    logger.info({ canvasId, mountPoint, path: s3DrivePath }, 'Mounting drive storage');
+    this.logger.info({ canvasId, mountPoint, s3DrivePath }, 'Mounting drive storage');
 
     await this.runCommand(`mkdir -p ${mountPoint}`);
 
@@ -206,19 +218,12 @@ export class SandboxWrapper {
 
     await this.runCommand(mountCmd);
 
-    await guard
-      .retry(() => this.runCommand(`test -d ${mountPoint}`), {
-        timeout: SANDBOX_MOUNT_VERIFICATION_TIMEOUT_MS,
-        maxDelay: SANDBOX_MOUNT_VERIFICATION_MAX_DELAY_MS,
-      })
-      .orThrow();
-
-    logger.info({ canvasId, mountPoint }, 'Drive storage mounted successfully');
+    this.logger.info({ canvasId, mountPoint }, 'Drive storage mounted successfully');
   }
 
   @Trace('sandbox.unmount')
   async unmountDrive(): Promise<void> {
-    const { logger, canvasId } = this.context;
+    const canvasId = this.context.canvasId;
     const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
 
     setSpanAttributes({
@@ -226,14 +231,14 @@ export class SandboxWrapper {
       'sandbox.canvasId': canvasId,
     });
 
-    logger.info({ sandboxId: this.sandboxId, mountPoint }, 'Unmounting drive storage');
+    this.logger.info({ sandboxId: this.sandboxId, mountPoint }, 'Unmounting drive storage');
 
     // Use fusermount with lazy unmount (-z) for FUSE filesystems
     // -u: unmount, -z: lazy unmount (detach even if busy)
     // Lazy unmount is asynchronous, completes in background
     await this.runCommand(`fusermount -uz ${mountPoint}`);
 
-    logger.info(
+    this.logger.info(
       { sandboxId: this.sandboxId, mountPoint },
       'Drive storage unmount initiated (lazy)',
     );
@@ -244,11 +249,11 @@ export class SandboxWrapper {
     setSpanAttributes({ 'command.text': command });
 
     const result = await guard(() => this.sandbox.commands.run(command)).orThrow(
-      (error) => new SandboxCommandException(error),
+      (error) => new SandboxExecutionFailedException(error),
     );
 
     if (result.exitCode !== 0) {
-      throw new SandboxCommandException(result.stderr, result.exitCode);
+      throw new SandboxExecutionFailedException(result.stderr, result.exitCode);
     }
 
     return result;
@@ -282,7 +287,7 @@ export class SandboxWrapper {
         language: params.language,
         cwd: this.cwd,
       }),
-    ).orThrow((e) => new CodeExecutionException(e));
+    ).orThrow((e) => new SandboxExecutionFailedException(e));
   }
 
   @Trace('sandbox.listFiles')
@@ -294,12 +299,5 @@ export class SandboxWrapper {
     setSpanAttributes({ 'files.count': files.length });
 
     return files;
-  }
-
-  @Trace('sandbox.extendTimeout')
-  async extendTimeout(ms: number): Promise<void> {
-    await this.sandbox.setTimeout(ms);
-    const info = await this.sandbox.getInfo();
-    this.timeoutAt = info.timeoutAt.getTime();
   }
 }

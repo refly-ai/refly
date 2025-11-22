@@ -37,21 +37,9 @@ export class SandboxException extends Error {
   }
 }
 
-export class ServiceConfigurationException extends SandboxException {
-  constructor(messageOrError: unknown, missingConfig?: string) {
-    super(messageOrError, 'SERVICE_CONFIGURATION_ERROR', { missingConfig });
-  }
-}
-
 export class SandboxRequestParamsException extends SandboxException {
   constructor(operation: string, messageOrError: unknown) {
     super(messageOrError, 'SANDBOX_REQUEST_PARAMS_ERROR', { operation });
-  }
-}
-
-export class QueueUnavailableException extends SandboxException {
-  constructor(messageOrError: unknown = 'Sandbox execution queue is not available') {
-    super(messageOrError, 'QUEUE_UNAVAILABLE');
   }
 }
 
@@ -64,15 +52,6 @@ export class QueueOverloadedException extends SandboxException {
       currentSize,
       maxSize,
     });
-  }
-}
-
-export class CodeExecutionException extends SandboxException {
-  constructor(
-    messageOrError: unknown,
-    public readonly exitCode?: number,
-  ) {
-    super(messageOrError, 'CODE_EXECUTION_FAILED', { exitCode });
   }
 }
 
@@ -97,34 +76,9 @@ export class SandboxExecutionFailedException extends SandboxException {
   }
 }
 
-export class SandboxReadyTimeoutException extends SandboxException {
-  constructor(sandboxId: string, retries: number) {
-    super(
-      `Sandbox ${sandboxId} failed to become ready after ${retries} retries`,
-      'SANDBOX_READY_TIMEOUT',
-      { sandboxId, retries },
-    );
-  }
-}
-
-export class SandboxMountException extends SandboxException {
-  constructor(messageOrError: unknown, canvasId: string) {
-    super(messageOrError, 'SANDBOX_MOUNT_FAILED', { canvasId });
-  }
-}
-
 export class SandboxFileListException extends SandboxException {
   constructor(messageOrError: unknown) {
     super(messageOrError, 'SANDBOX_FILE_LIST_FAILED');
-  }
-}
-
-export class SandboxCommandException extends SandboxException {
-  constructor(
-    messageOrError: unknown,
-    public readonly exitCode?: number,
-  ) {
-    super(messageOrError, 'SANDBOX_COMMAND_FAILED', { exitCode });
   }
 }
 
@@ -137,5 +91,21 @@ export class SandboxLockTimeoutException extends SandboxException {
       lockKey,
       timeoutMs,
     });
+  }
+}
+
+export class SandboxLifetimeExceededException extends SandboxException {
+  constructor(
+    public readonly sandboxId: string,
+    public readonly lifetimeMs: number,
+    public readonly maxLifetimeMs: number,
+  ) {
+    const lifetimeHours = (lifetimeMs / (60 * 60 * 1000)).toFixed(2);
+    const maxLifetimeHours = (maxLifetimeMs / (60 * 60 * 1000)).toFixed(2);
+    super(
+      `Sandbox ${sandboxId} exceeded max lifetime (${lifetimeHours}h / ${maxLifetimeHours}h)`,
+      'SANDBOX_LIFETIME_EXCEEDED',
+      { sandboxId, lifetimeMs, maxLifetimeMs, lifetimeHours, maxLifetimeHours },
+    );
   }
 }

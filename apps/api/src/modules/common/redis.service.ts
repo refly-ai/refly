@@ -324,14 +324,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return newValue;
   }
 
-  async acquireLock(key: string): Promise<LockReleaseFn | null> {
+  async acquireLock(key: string, ttlSeconds = 10): Promise<LockReleaseFn | null> {
     if (!this.client) {
       return async () => true;
     }
 
     try {
       const token = `${process.pid}-${Date.now()}`;
-      const success = await this.client.set(key, token, 'EX', 10, 'NX');
+      const success = await this.client.set(key, token, 'EX', ttlSeconds, 'NX');
 
       if (success) {
         return async () => await this.releaseLock(key, token);

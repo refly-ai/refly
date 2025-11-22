@@ -7,6 +7,7 @@ import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execut
 import { ScaleboxExecutionProcessor } from './scalebox.processor';
 import { ScaleboxService } from './scalebox.service';
 import { SandboxPool } from './scalebox.pool';
+import { ScaleboxStorage } from './scalebox.storage';
 
 /**
  * Scalebox Module
@@ -18,6 +19,7 @@ import { SandboxPool } from './scalebox.pool';
     ScaleboxService,
     ScaleboxExecutionProcessor,
     SandboxPool,
+    ScaleboxStorage,
     ToolExecutionSyncInterceptor,
   ],
   exports: [ScaleboxService],
