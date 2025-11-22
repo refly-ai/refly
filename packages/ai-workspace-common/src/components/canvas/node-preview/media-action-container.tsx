@@ -1,79 +1,12 @@
-import { memo, useMemo } from 'react';
-import type { IContextItem } from '@refly/common-types';
+import { memo } from 'react';
 import type { ModelInfo } from '@refly/openapi-schema';
-import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
-import { FollowingActions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/sharedComponents/following-actions';
 import { ModelIcon } from '@lobehub/icons';
 
-type MediaType = 'image' | 'video' | 'audio';
-
 interface MediaActionContainerProps {
-  title?: string;
-  contextItems?: IContextItem[];
   modelInfo?: ModelInfo | null;
-  mediaType: MediaType;
-  entityId?: string;
-  storageKey?: string;
-  nodeId: string;
 }
 
-const MediaActionContainerComponent = ({
-  title,
-  contextItems,
-  modelInfo,
-  mediaType,
-  entityId,
-  nodeId,
-  storageKey,
-}: MediaActionContainerProps) => {
-  const { data: providerItemList } = useFetchProviderItems({
-    enabled: true,
-    category: 'mediaGeneration',
-  });
-
-  // Default provider item from existing modelInfo or first item
-  const defaultProviderItem = useMemo(() => {
-    if (modelInfo?.providerItemId) {
-      return providerItemList.find((p) => p.itemId === modelInfo?.providerItemId) ?? null;
-    }
-    return providerItemList.length > 0 ? providerItemList[0] : null;
-  }, [providerItemList, modelInfo?.providerItemId]);
-
-  // Prepare context items with media artifact reference
-  const initContextItems: IContextItem[] = useMemo(() => {
-    const mediaItem: IContextItem | null = entityId
-      ? {
-          type: mediaType,
-          entityId: entityId,
-          title: title ?? '',
-          metadata: storageKey ? { storageKey } : {},
-        }
-      : null;
-
-    return mediaItem ? [mediaItem, ...(contextItems ?? [])] : (contextItems ?? []);
-  }, [entityId, mediaType, title, storageKey, contextItems]);
-
-  // Prepare model info
-  const initModelInfo: ModelInfo | null = useMemo(() => {
-    if (modelInfo) return modelInfo;
-
-    if (defaultProviderItem) {
-      const cfg = (defaultProviderItem.config ?? {}) as any;
-      return {
-        name: cfg?.modelId ?? defaultProviderItem.name ?? '',
-        label: defaultProviderItem.name ?? '',
-        provider: defaultProviderItem.provider?.name ?? '',
-        providerItemId: defaultProviderItem.itemId,
-        contextLimit: cfg?.contextLimit ?? 0,
-        maxOutput: cfg?.maxOutput ?? 0,
-        capabilities: cfg?.capabilities ?? {},
-        category: 'mediaGeneration',
-      };
-    }
-
-    return null;
-  }, [modelInfo, defaultProviderItem]);
-
+const MediaActionContainerComponent = ({ modelInfo }: MediaActionContainerProps) => {
   return (
     <div
       className="border-[1px] border-solid border-b-0 border-x-0 border-refly-Card-Border pt-3"
@@ -81,12 +14,6 @@ const MediaActionContainerComponent = ({
         e.stopPropagation();
       }}
     >
-      <FollowingActions
-        initContextItems={initContextItems}
-        initModelInfo={initModelInfo}
-        nodeId={nodeId}
-      />
-
       {modelInfo ? (
         <div className="w-full px-3 pt-3 rounded-b-xl flex items-center text-refly-text-1 text-xs gap-1 pb-3">
           <ModelIcon size={16} model={modelInfo.name} type="color" />

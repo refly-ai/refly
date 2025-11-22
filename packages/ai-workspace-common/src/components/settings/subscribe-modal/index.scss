@@ -215,6 +215,15 @@
         align-items: center;
         align-self: stretch;
 
+        background-color: var(--refly-bg-control-z0);
+        border: 1px solid var(--refly-Card-Border);
+        color: var(--primary---refly-primary-default, #0e9f77);
+        font-family: "PingFang SC";
+        font-size: 14px;
+        font-style: normal;
+        font-weight: 600;
+        line-height: 20px;
+
         &--upgrade {
           border-radius: 8px;
           border: 0px solid
@@ -238,15 +247,6 @@
             color: var(--primary---refly-primary-default, #0e9f77) !important;
           }
         }
-
-        background-color: var(--refly-bg-control-z0);
-        border: 1px solid var(--refly-Card-Border);
-        color: var(--primary---refly-primary-default, #0e9f77);
-        font-family: "PingFang SC";
-        font-size: 14px;
-        font-style: normal;
-        font-weight: 600;
-        line-height: 20px;
 
         &:disabled {
           background-color: var(--refly-bg-control-z0);

@@ -39,7 +39,7 @@ import { useUpdateActionResult } from './use-update-action-result';
 import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
 
 export interface InvokeActionPayload {
-  nodeId: string;
+  nodeId?: string;
   query?: string;
   resultId?: string;
   version?: number;
@@ -479,7 +479,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       globalAbortControllerRef.current = new AbortController();
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
 
-      const upstreamAgentNodes = getUpstreamAgentNodes(nodeId);
+      const upstreamAgentNodes = nodeId ? getUpstreamAgentNodes(nodeId) : [];
       const context = convertContextItemsToInvokeParams(
         contextItems ?? [],
         upstreamAgentNodes.map((node) => node.data?.entityId) ?? [],

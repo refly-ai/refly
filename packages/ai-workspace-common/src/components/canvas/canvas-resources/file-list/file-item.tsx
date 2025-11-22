@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@refly/utils/cn';
 import { FileItemAction } from '../share/file-item-action';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
-import type { DriveFile, ResourceType } from '@refly/openapi-schema';
+import type { DriveFile } from '@refly/openapi-schema';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 const { Text } = Typography;
@@ -14,20 +14,6 @@ export interface FileItemProps {
   isActive: boolean;
   onSelect: (resource: DriveFile, beforeParsed: boolean) => void;
 }
-
-// Convert DriveFile type to ResourceType
-const getResourceType = (fileType: string): ResourceType => {
-  const typeMap: Record<string, ResourceType> = {
-    'text/plain': 'file',
-    'application/pdf': 'document',
-    'image/jpeg': 'image',
-    'image/png': 'image',
-    'image/gif': 'image',
-    'video/mp4': 'video',
-    'audio/mpeg': 'audio',
-  };
-  return typeMap[fileType] || 'file';
-};
 
 /**
  * Render a single file item.
@@ -48,13 +34,7 @@ export const FileItem = memo(({ file, isActive, onSelect }: FileItemProps) => {
       onClick={() => onSelect(file, beforeParsed)}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        <NodeIcon
-          type="resource"
-          resourceType={getResourceType(file.type)}
-          resourceMeta={{ contentType: file.type }}
-          filled={false}
-          small
-        />
+        <NodeIcon type="file" filename={file.name} filled={false} small />
 
         <Text
           ellipsis={{ tooltip: { placement: 'left' } }}

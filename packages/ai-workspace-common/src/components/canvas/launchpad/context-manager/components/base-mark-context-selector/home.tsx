@@ -34,13 +34,7 @@ export function Home({
             item?.onItemClick?.(item.data);
           }}
         >
-          <NodeIcon
-            type={item.type}
-            resourceType={item?.data?.metadata?.resourceType}
-            resourceMeta={item?.data?.metadata?.resourceMeta}
-            filled={false}
-            iconSize={14}
-          />
+          <NodeIcon type={item.type} filename={item?.data?.title} filled={false} iconSize={14} />
           <div className="search-res-container">
             <p
               className="search-res-title dark:!text-gray-200"

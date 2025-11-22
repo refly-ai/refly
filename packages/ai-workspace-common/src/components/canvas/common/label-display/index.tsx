@@ -30,7 +30,7 @@ export const LabelItem = memo(
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
-        {icon && icon}
+        {icon}
         <Paragraph
           className="text-xs text-refly-text-0 max-w-[100px] leading-4 !m-0"
           ellipsis={{

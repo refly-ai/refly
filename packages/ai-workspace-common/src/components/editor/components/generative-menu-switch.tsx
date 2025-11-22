@@ -1,9 +1,7 @@
-import { EditorBubble, useEditor } from '../../../core/components';
-import { removeAIHighlight } from '../../../core/extensions';
+import { EditorBubble, useEditor } from '../core/components';
+import { removeAIHighlight } from '../core/extensions';
 import { type ReactNode, useEffect, useRef } from 'react';
 import type { Instance } from 'tippy.js';
-
-import { AISelector } from '../common/ai-selector';
 import { editorEmitter } from '@refly/utils/event-emitter/editor';
 
 interface GenerativeMenuSwitchProps {
@@ -16,16 +14,6 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
   const { editor } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<Instance | null>(null);
-
-  const handleBubbleClose = () => {
-    if (bubbleRef.current) {
-      handleBubbleHide();
-
-      requestAnimationFrame(() => {
-        editor.chain().setTextSelection(editor.state.selection.from).run();
-      });
-    }
-  };
 
   const handleBubbleHide = () => {
     onOpenChange(false);
@@ -68,14 +56,6 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
         }}
         className="flex items-center overflow-hidden z-50 max-w-full rounded-md border border-solid border-gray-200 dark:border-gray-700 shadow-xl bg-background"
       >
-        {open && (
-          <AISelector
-            open={open}
-            onOpenChange={onOpenChange}
-            handleBubbleClose={handleBubbleClose}
-            inPlaceEditType="inline"
-          />
-        )}
         {!open && children}
       </EditorBubble>
     </div>

@@ -125,13 +125,7 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
                 onClick={handleClosePreview}
               />
             )}
-            <NodeIcon
-              type="resource"
-              resourceType={getResourceType(file.type)}
-              resourceMeta={{ contentType: file.type }}
-              filled={false}
-              small
-            />
+            <NodeIcon type="file" filename={title} fileType={file.type} filled={false} small />
             <Text className="text-sm font-semibold">{title}</Text>
           </div>
 

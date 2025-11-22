@@ -1,10 +1,13 @@
 import React from 'react';
+import { cn } from '@refly/utils';
 import { NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
-import { getVariableIcon } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/variable/getVariableIcon';
+import { X } from 'refly-icons';
 import type { CanvasNodeType } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
+import { MentionItemSource } from './const';
+import { AGENT_CONFIG_KEY_CLASSNAMES } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 
 const TOOLSET_ICON_CONFIG = {
   size: 14,
@@ -12,32 +15,17 @@ const TOOLSET_ICON_CONFIG = {
   builtinClassName: '!w-3.5 !h-3.5',
 } as const;
 
-function renderNodeIcon(source: string, variableType: string, nodeAttrs: any) {
+function renderNodeIcon(source: MentionItemSource, variableType: string, nodeAttrs: any) {
   if (source === 'variables') {
-    return getVariableIcon(variableType);
+    return <X size={12} className="flex-shrink-0" />;
   }
-  if (source === 'stepRecord') {
-    return (
-      <NodeIcon
-        type={'skillResponse' as CanvasNodeType}
-        small
-        filled={false}
-        className="!w-3.5 !h-3.5"
-      />
-    );
+  if (source === 'agents') {
+    return <NodeIcon type="skillResponse" small filled={false} className="!w-3.5 !h-3.5" />;
   }
-  if (source === 'resultRecord' || source === 'myUpload') {
-    const nodeType = variableType || 'document';
+  if (source === 'files' || source === 'products') {
+    const filename = nodeAttrs?.label as string;
     return (
-      <NodeIcon
-        type={nodeType as CanvasNodeType}
-        small
-        filled={false}
-        url={nodeType === 'image' ? (nodeAttrs?.url ?? undefined) : undefined}
-        resourceType={nodeAttrs?.resourceType}
-        resourceMeta={nodeAttrs?.resourceMeta}
-        className="!w-3.5 !h-3.5"
-      />
+      <NodeIcon type="file" small filled={false} filename={filename} className="!w-3.5 !h-3.5" />
     );
   }
   if (source === 'toolsets' || source === 'tools') {
@@ -55,16 +43,32 @@ function renderNodeIcon(source: string, variableType: string, nodeAttrs: any) {
   );
 }
 
+const getMentionClassName = (source: MentionItemSource) => {
+  if (source === 'variables') {
+    return AGENT_CONFIG_KEY_CLASSNAMES.inputs;
+  }
+  if (source === 'toolsets' || source === 'tools') {
+    return AGENT_CONFIG_KEY_CLASSNAMES.tools;
+  }
+  if (source === 'files' || source === 'products') {
+    return AGENT_CONFIG_KEY_CLASSNAMES.files;
+  }
+  if (source === 'agents') {
+    return AGENT_CONFIG_KEY_CLASSNAMES.agents;
+  }
+  return '';
+};
+
 function MentionNodeViewBase(props: NodeViewProps) {
   const { node } = props;
   const labelText = (node?.attrs?.label as string) ?? (node?.attrs?.id as string) ?? '';
-  const source = (node?.attrs?.source as string) ?? '';
-  const variableType = (node?.attrs?.variableType as string) ?? source ?? '';
+  const source = node?.attrs?.source as MentionItemSource;
+  const variableType = node?.attrs?.variableType as string;
 
   return (
     <NodeViewWrapper
       as="span"
-      className="mention"
+      className={cn('mention', getMentionClassName(source))}
       contentEditable={false}
       draggable={false}
       data-mention="true"

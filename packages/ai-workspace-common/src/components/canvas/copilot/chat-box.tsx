@@ -82,10 +82,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
       {
         query,
         resultId,
-        selectedSkill: undefined,
         modelInfo: null,
-        tplConfig: {},
-        runtimeConfig: {},
         agentMode: 'copilot_agent',
         copilotSessionId: sessionId,
       },

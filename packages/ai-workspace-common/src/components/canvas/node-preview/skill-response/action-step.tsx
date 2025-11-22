@@ -6,15 +6,11 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { cn } from '@refly/utils/cn';
 import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { genUniqueId } from '@refly/utils/id';
-import { SelectionContext } from '@refly-packages/ai-workspace-common/modules/selection-menu/selection-context';
 import { safeParseJSON } from '@refly/utils/parse';
 import { SourceViewer } from './source-viewer';
 import { getArtifactIcon } from '@refly-packages/ai-workspace-common/components/common/result-display';
 import { RecommendQuestions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/recommend-questions';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
-import { IContextItem } from '@refly/common-types';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { getParsedReasoningContent } from '@refly/utils/content-parser';
 import { Thinking, ArrowDown, ArrowUp } from 'refly-icons';
 
@@ -107,14 +103,12 @@ const ReasoningContent = memo(
     resultId,
     reasoningContent,
     sources,
-    buildContextItem,
     step,
     status,
   }: {
     resultId: string;
     reasoningContent: string;
     sources: Source[];
-    buildContextItem: (text: string) => IContextItem;
     step: ActionStep;
     status: ActionStatus;
   }) => {
@@ -129,13 +123,6 @@ const ReasoningContent = memo(
         setCollapsed(true);
       }
     }, [status]);
-
-    const getSourceNode = useCallback(() => {
-      return {
-        type: 'skillResponse' as const,
-        entityId: resultId,
-      };
-    }, [resultId]);
 
     if (!reasoningContent) return null;
 
@@ -171,11 +158,6 @@ const ReasoningContent = memo(
               sources={sources}
               resultId={resultId}
             />
-            <SelectionContext
-              containerClass={`skill-response-reasoning-${resultId}-${step.name}`}
-              getContextItem={buildContextItem}
-              getSourceNode={getSourceNode}
-            />
           </div>
         )}
       </div>
@@ -188,36 +170,19 @@ const ActualContent = memo(
     resultId,
     content,
     sources,
-    buildContextItem,
     step,
   }: {
     resultId: string;
     content: string;
     sources: Source[];
-    buildContextItem: (text: string) => IContextItem;
     step: ActionStep;
   }) => {
-    const { readonly } = useCanvasContext();
-    const getSourceNode = useCallback(() => {
-      return {
-        type: 'skillResponse' as const,
-        entityId: resultId,
-      };
-    }, [resultId]);
-
     if (!content) return null;
 
     return (
       <div className="my-3 text-base">
         <div className={`skill-response-content-${resultId}-${step.name}`}>
           <Markdown content={content} sources={sources} resultId={resultId} />
-          {!readonly && (
-            <SelectionContext
-              containerClass={`skill-response-content-${resultId}-${step.name}`}
-              getContextItem={buildContextItem}
-              getSourceNode={getSourceNode}
-            />
-          )}
         </div>
       </div>
     );
@@ -291,25 +256,6 @@ export const ActionStepCard = memo(
       }
     }, [result?.status]);
 
-    const buildContextItem = useCallback(
-      (text: string) => {
-        const item: IContextItem = {
-          type: 'skillResponseSelection',
-          entityId: genUniqueId(),
-          title: text.slice(0, 50),
-          selection: {
-            content: text,
-            sourceEntityType: 'skillResponse',
-            sourceEntityId: result?.resultId ?? '',
-            sourceTitle: result?.title ?? '',
-          },
-        };
-
-        return item;
-      },
-      [result?.resultId, result?.title],
-    );
-
     // Prioritize original query from structuredData over other sources
     const displayQuery = useMemo(() => {
       const structuredData = step?.structuredData;
@@ -369,7 +315,6 @@ export const ActionStepCard = memo(
             resultId={result?.resultId}
             reasoningContent={step.reasoningContent}
             sources={parsedData.sources}
-            buildContextItem={buildContextItem}
             step={step}
             status={status}
           />
@@ -380,7 +325,6 @@ export const ActionStepCard = memo(
             resultId={result?.resultId}
             content={step?.content}
             sources={parsedData.sources}
-            buildContextItem={buildContextItem}
             step={step}
           />
         )}
