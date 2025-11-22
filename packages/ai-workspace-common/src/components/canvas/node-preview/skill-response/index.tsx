@@ -7,25 +7,23 @@ import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { CanvasNode, convertResultContextToItems, ResponseNodeMeta } from '@refly/canvas-common';
 import { ActionResult } from '@refly/openapi-schema';
-import {
-  useActionResultStoreShallow,
-  useCanvasStoreShallow,
-  type ResultActiveTab,
-} from '@refly/stores';
+import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
 import { Segmented, Button } from 'antd';
-import { memo, useCallback, useEffect, useState, useMemo } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';
 import { ActionStepCard } from './action-step';
-import { Close, Play } from 'refly-icons';
+import { Close } from 'refly-icons';
 import { useReactFlow } from '@xyflow/react';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
+import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
+import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -129,7 +127,6 @@ const SkillResponseNodePreviewComponent = ({
   const contextItems =
     data?.metadata?.contextItems ?? convertResultContextToItems(result?.context, result?.history);
   const selectedToolsets = data?.metadata?.selectedToolsets ?? result?.toolsets;
-  const upstreamResultIds = data?.metadata?.upstreamResultIds;
 
   const { steps = [] } = result ?? {};
 
@@ -175,12 +172,12 @@ const SkillResponseNodePreviewComponent = ({
 
     invokeAction(
       {
+        nodeId: node.id,
         resultId,
         query: llmInputQuery,
         modelInfo,
         contextItems,
         selectedToolsets,
-        upstreamResultIds,
         version: nextVersion,
       },
       {
@@ -194,7 +191,6 @@ const SkillResponseNodePreviewComponent = ({
     modelInfo,
     contextItems,
     selectedToolsets,
-    upstreamResultIds,
     canvasId,
     invokeAction,
     resetFailedState,
@@ -213,18 +209,15 @@ const SkillResponseNodePreviewComponent = ({
       })),
     );
   };
-  const { nodeExecutions } = useCanvasStoreShallow((state) => ({
-    nodeExecutions: state.canvasNodeExecutions[canvasId] ?? [],
-  }));
 
-  const isExecuting = useMemo(() => {
-    return nodeExecutions.some((execution) => ['executing', 'waiting'].includes(execution.status));
-  }, [nodeExecutions]);
+  // Get node execution status
+  const isExecuting = data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';
 
-  const isRunning = useMemo(
-    () => isExecuting || result?.status === 'executing' || result?.status === 'waiting',
-    [isExecuting, result?.status],
-  );
+  const { workflowIsRunning, handleStop } = useSkillResponseActions({
+    nodeId: node.id,
+    entityId: data.entityId,
+    canvasId,
+  });
 
   useEffect(() => {
     setCurrentFile(null);
@@ -235,15 +228,6 @@ const SkillResponseNodePreviewComponent = ({
       setCurrentFile(null);
     }
   }, [result?.status]);
-
-  const TitleActions = useMemo(() => {
-    return (
-      <>
-        <Button type="text" icon={<Play size={20} />} onClick={handleRetry} disabled={isRunning} />
-        <Button type="text" icon={<Close size={24} />} onClick={handleClose} />
-      </>
-    );
-  }, [handleClose, handleRetry, isRunning]);
 
   return purePreview ? (
     !result && !loading ? (
@@ -267,15 +251,20 @@ const SkillResponseNodePreviewComponent = ({
         readonly={readonly}
         source="preview"
         className="!h-14"
-        actions={TitleActions}
+        actions={
+          <SkillResponseActions
+            nodeIsExecuting={isExecuting}
+            workflowIsRunning={workflowIsRunning}
+            variant="preview"
+            onRerun={handleRetry}
+            onStop={handleStop}
+            extraActions={<Button type="text" icon={<Close size={24} />} onClick={handleClose} />}
+          />
+        }
       />
 
       {currentFile ? (
-        <ProductCard
-          file={currentFile}
-          classNames="w-full flex-1 overflow-y-auto"
-          source="preview"
-        />
+        <ProductCard file={currentFile} classNames="w-full flex-1" source="preview" />
       ) : (
         <div className="flex-1 flex flex-col min-h-0 px-4">
           <div className="py-3">
@@ -300,6 +289,7 @@ const SkillResponseNodePreviewComponent = ({
                 resultId={resultId}
                 nodeId={node.id}
                 canvasId={canvasId}
+                disabled={readonly || isExecuting}
               />
             )}
 

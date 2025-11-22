@@ -45,3 +45,6 @@ export * from './use-drag-create-node';
 // Node execution hooks
 export * from './use-node-execution-status';
 export * from './use-node-execution-focus';
+
+// Resource operations
+export * from './use-download-file';

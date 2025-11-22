@@ -1,32 +1,30 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { ReflyService } from '@refly/agent-tools';
 import { SkillEngine, SkillEngineOptions } from '@refly/skill-template';
-import { CanvasService } from '../canvas/canvas.service';
+import { genImageID } from '@refly/utils';
+import { buildSuccessResponse } from '../../utils';
+import { genBaseRespDataFromError } from '../../utils/exception';
+import { ActionService } from '../action/action.service';
+import { AuthService } from '../auth/auth.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
+import { canvasPO2DTO } from '../canvas/canvas.dto';
+import { CanvasService } from '../canvas/canvas.service';
+import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
+import { CodeArtifactService } from '../code-artifact/code-artifact.service';
+import { DriveService } from '../drive/drive.service';
+import { DocumentService } from '../knowledge/document.service';
+import { documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
+import { ParserFactory } from '../knowledge/parsers/factory';
+import { ResourceService } from '../knowledge/resource.service';
+import { MediaGeneratorService } from '../media-generator/media-generator.service';
+import { MiscService } from '../misc/misc.service';
+import { NotificationService } from '../notification/notification.service';
 import { ProviderService } from '../provider/provider.service';
 import { RAGService } from '../rag/rag.service';
 import { SearchService } from '../search/search.service';
-import { buildSuccessResponse } from '../../utils';
-import { canvasPO2DTO } from '../canvas/canvas.dto';
-import { ParserFactory } from '../knowledge/parsers/factory';
-import { documentPO2DTO, resourcePO2DTO } from '../knowledge/knowledge.dto';
-import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth/auth.service';
-import { MediaGeneratorService } from '../media-generator/media-generator.service';
-import { ActionService } from '../action/action.service';
-import { NotificationService } from '../notification/notification.service';
-import { genBaseRespDataFromError } from '../../utils/exception';
-import { CodeArtifactService } from '../code-artifact/code-artifact.service';
-import { codeArtifactPO2DTO } from '../code-artifact/code-artifact.dto';
-import { ResourceService } from '../knowledge/resource.service';
-import { DocumentService } from '../knowledge/document.service';
-import { MiscService } from '../misc/misc.service';
-import { genImageID } from '@refly/utils';
-import { FishAudioService } from '../tool/media/audio/fish-audio.service';
-import { HeyGenService } from '../tool/media/video/heygen.service';
 import { ScaleboxService } from '../tool/sandbox/scalebox.service';
-import { DriveService } from '../drive/drive.service';
 import { ToolService } from '../tool/tool.service';
 
 @Injectable()
@@ -48,8 +46,6 @@ export class SkillEngineService implements OnModuleInit {
   private miscService: MiscService;
   private engine: SkillEngine;
   private canvasSyncService: CanvasSyncService;
-  private fishAudioService: FishAudioService;
-  private heygenService: HeyGenService;
   private toolService: ToolService;
   private scaleboxService: ScaleboxService;
   constructor(
@@ -72,8 +68,6 @@ export class SkillEngineService implements OnModuleInit {
     this.codeArtifactService = this.moduleRef.get(CodeArtifactService, { strict: false });
     this.miscService = this.moduleRef.get(MiscService, { strict: false });
     this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
-    this.fishAudioService = this.moduleRef.get(FishAudioService, { strict: false });
-    this.heygenService = this.moduleRef.get(HeyGenService, { strict: false });
     this.toolService = this.moduleRef.get(ToolService, { strict: false });
     this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
   }
@@ -237,9 +231,6 @@ export class SkillEngineService implements OnModuleInit {
         const result = await this.miscService.uploadBase64(user, param);
         return result;
       },
-      addNodeToCanvasWithoutCanvasId: async (user, node, connectTo, options) => {
-        await this.canvasSyncService.addNodeToCanvasWithoutCanvasId(user, node, connectTo, options);
-      },
       readFile: async (user, fileId) => {
         const result = await this.driveService.getDriveFileDetail(user, fileId);
         return result;
@@ -249,15 +240,6 @@ export class SkillEngineService implements OnModuleInit {
       },
       genImageID: async () => {
         return genImageID();
-      },
-      textToSpeech: async (user, req) => {
-        return await this.fishAudioService.textToSpeech(user, req);
-      },
-      speechToText: async (user, req) => {
-        return await this.fishAudioService.speechToText(user, req);
-      },
-      generateVideo: async (user, req) => {
-        return await this.heygenService.generateVideo(user, req);
       },
       execute: async (user, req) => {
         return await this.scaleboxService.execute(user, req);

@@ -1,10 +1,10 @@
 import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message } from 'antd';
-import { Play } from 'refly-icons';
+import { Play, Stop } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
-
+import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
 import cn from 'classnames';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
@@ -67,6 +67,7 @@ interface WorkflowRunFormProps {
   pollingError?: any;
   isRunning?: boolean;
   onRunningChange?: (isRunning: boolean) => void;
+  canvasId?: string;
   className?: string;
   templateContent?: string;
   workflowApp?: any;
@@ -77,14 +78,17 @@ export const WorkflowRunForm = ({
   workflowVariables,
   onSubmitVariables,
   loading,
+  executionId,
   isPolling,
   isRunning: externalIsRunning,
   onRunningChange,
+  canvasId,
   className,
   templateContent,
   workflowApp,
   creditUsage,
 }: WorkflowRunFormProps) => {
+  console.log('[WorkflowRunForm] workflowVariables', workflowVariables);
   const { t } = useTranslation();
   const { isLoggedRef } = useIsLogin();
   const navigate = useNavigate();
@@ -93,6 +97,20 @@ export const WorkflowRunForm = ({
 
   // Use external isRunning if provided, otherwise use internal state
   const isRunning = externalIsRunning ?? internalIsRunning;
+
+  // Abort workflow with optimistic UI update (immediately marks nodes as 'failed')
+  const { handleAbort } = useAbortWorkflow({
+    executionId,
+    canvasId,
+    onSuccess: () => {
+      // Reset running state after successful abort
+      if (onRunningChange) {
+        onRunningChange(false);
+      } else {
+        setInternalIsRunning(false);
+      }
+    },
+  });
   const [form] = Form.useForm();
   const [variableValues, setVariableValues] = useState<Record<string, any>>({});
   const [templateVariables, setTemplateVariables] = useState<WorkflowVariable[]>([]);
@@ -531,6 +549,8 @@ export const WorkflowRunForm = ({
     setTemplateVariables(variables);
   }, []);
 
+  const workflowIsRunning = isRunning || isPolling;
+
   return (
     <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
       {
@@ -591,14 +611,18 @@ export const WorkflowRunForm = ({
             )}
             <Button
               className="w-full h-8 text-sm"
-              type="primary"
-              icon={<Play size={16} />}
-              onClick={handleRun}
-              loading={loading || isRunning || isPolling}
-              disabled={loading || isRunning || isPolling || !isFormValid}
+              {...(workflowIsRunning ? { color: 'primary' } : { type: 'primary' })}
+              icon={workflowIsRunning ? <Stop size={16} /> : <Play size={16} />}
+              onClick={workflowIsRunning ? handleAbort : handleRun}
+              loading={loading}
+              disabled={
+                loading ||
+                (workflowIsRunning && !executionId) ||
+                (!workflowIsRunning && !isFormValid)
+              }
             >
-              {isPolling
-                ? t('canvas.workflow.run.executing') || 'Executing...'
+              {workflowIsRunning
+                ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
                 : t('canvas.workflow.run.run') || 'Run'}
             </Button>
           </div>

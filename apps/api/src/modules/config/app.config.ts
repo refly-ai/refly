@@ -28,7 +28,7 @@ export default () => ({
   },
   drive: {
     storageKeyPrefix: process.env.DRIVE_STORAGE_KEY_PREFIX || 'drive',
-    payloadMode: process.env.DRIVE_PAYLOAD_MODE || 'base64', // 'url' or 'base64'
+    payloadMode: process.env.DRIVE_PAYLOAD_MODE || 'url', // 'url' or 'base64'
     presignExpiry: Number.parseInt(process.env.DRIVE_PRESIGN_EXPIRY) || 15 * 60, // 15 minutes
     archiveConcurrencyLimit: Number.parseInt(process.env.DRIVE_ARCHIVE_CONCURRENCY_LIMIT) || 10, // Maximum concurrent file archive operations
   },
@@ -135,6 +135,20 @@ export default () => ({
       callbackUrl: process.env.NOTION_CALLBACK_URL || 'test',
       authorizationURL: process.env.NOTION_AUTHORIZATION_URL || 'test',
     },
+    invitation: {
+      requireInvitationCode: process.env.AUTH_REQUIRE_INVITATION_CODE === 'true' || false,
+      inviterCreditAmount: Number.parseInt(process.env.INVITATION_INVITER_CREDIT_AMOUNT) || 500,
+      inviteeCreditAmount: Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_AMOUNT) || 500,
+      inviterCreditExpiresInMonths:
+        Number.parseInt(process.env.INVITATION_INVITER_CREDIT_EXPIRES_IN_MONTHS) || 3,
+      inviteeCreditExpiresInMonths:
+        Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_MONTHS) || 3,
+    },
+    registration: {
+      bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 3000,
+      bonusCreditExpiresInMonths:
+        Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_MONTHS) || 3,
+    },
   },
   tools: {
     supportedToolsets: process.env.SUPPORTED_TOOLSETS || '', // comma separated list of toolset keys
@@ -148,14 +162,11 @@ export default () => ({
     key: process.env.ENCRYPTION_KEY,
   },
   skill: {
-    streamIdleTimeout: Number.parseInt(process.env.SKILL_STREAM_IDLE_TIMEOUT) || 1000 * 30, // 30 seconds
+    streamIdleTimeout: Number.parseInt(process.env.SKILL_STREAM_IDLE_TIMEOUT) || 0,
     streamIdleCheckInterval:
-      Number.parseInt(process.env.SKILL_STREAM_IDLE_CHECK_INTERVAL) || 1000 * 10, // 10 seconds
-    stuckCheckInterval: Number.parseInt(process.env.SKILL_STUCK_CHECK_INTERVAL) || 1000 * 60, // 1 minute
-    stuckTimeoutThreshold:
-      Number.parseInt(process.env.SKILL_STUCK_TIMEOUT_THRESHOLD) || 1000 * 60 * 15, // 15 minutes
-    aiModelNetworkTimeout:
-      Number.parseInt(process.env.SKILL_AI_MODEL_NETWORK_TIMEOUT) || 1000 * 300, // 30 seconds
+      Number.parseInt(process.env.SKILL_STREAM_IDLE_CHECK_INTERVAL) || 1000 * 3, // 3 seconds
+    stuckCheckInterval: Number.parseInt(process.env.SKILL_STUCK_CHECK_INTERVAL) || 0,
+    stuckTimeoutThreshold: Number.parseInt(process.env.SKILL_STUCK_TIMEOUT_THRESHOLD) || 0,
   },
   provider: {
     defaultMode: process.env.PROVIDER_DEFAULT_MODE || 'custom',

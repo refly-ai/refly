@@ -1,38 +1,15 @@
 import { WorkflowApp } from '@refly/openapi-schema';
 import { HoverCardContainer } from '@refly-packages/ai-workspace-common/components/common/hover-card';
-import { Avatar, Button, message, Modal } from 'antd';
+import { Avatar, Button } from 'antd';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useTranslation } from 'react-i18next';
 import { WiTime3 } from 'react-icons/wi';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useState } from 'react';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 
-export const AppCard = ({ data, onDelete }: { data: WorkflowApp; onDelete?: () => void }) => {
+export const AppCard = ({ data }: { data: WorkflowApp; onDelete?: () => void }) => {
   const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const handleUnpublish = async () => {
-    if (isDeleting) return;
-    setIsDeleting(true);
-    try {
-      const response = await getClient().deleteWorkflowApp({ body: { appId: data.appId } });
-      if (response?.data?.success) {
-        message.success(t('appManager.unpublishSuccess', { title: data.title }));
-        onDelete?.();
-        setModalVisible(false);
-      } else {
-        message.error(t('appManager.unpublishFailed', { title: data.title }));
-      }
-    } catch {
-      message.error(t('appManager.unpublishFailed', { title: data.title }));
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   const handleView = () => {
     window.open(`/app/${data.shareId}`, '_blank');
@@ -43,18 +20,10 @@ export const AppCard = ({ data, onDelete }: { data: WorkflowApp; onDelete?: () =
     handleView();
   };
 
-  const handleUnpublishClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setModalVisible(true);
-  };
-
   const actionContent = (
     <>
       <Button type="primary" onClick={(e) => handleViewButtonClick(e)} className="flex-1">
         {t('appManager.view')}
-      </Button>
-      <Button type="default" onClick={(e) => handleUnpublishClick(e)} className="flex-1">
-        {t('appManager.unpublish')}
       </Button>
     </>
   );
@@ -91,24 +60,6 @@ export const AppCard = ({ data, onDelete }: { data: WorkflowApp; onDelete?: () =
           </div>
         </div>
       </HoverCardContainer>
-      <Modal
-        title={t('common.deleteConfirmMessage')}
-        centered
-        width={416}
-        open={modalVisible}
-        onOk={handleUnpublish}
-        onCancel={() => setModalVisible(false)}
-        okText={t('common.confirm')}
-        cancelText={t('common.cancel')}
-        okButtonProps={{ loading: isDeleting }}
-        destroyOnHidden
-        closeIcon={null}
-        confirmLoading={isDeleting}
-      >
-        <div>
-          <div className="mb-2">{t('appManager.deleteConfirm', { title: data.title })}</div>
-        </div>
-      </Modal>
     </>
   );
 };

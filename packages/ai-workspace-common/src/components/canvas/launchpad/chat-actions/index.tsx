@@ -14,7 +14,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { ToolSelectorPopover } from '../tool-selector-panel';
 import { logEvent } from '@refly/telemetry-web';
 import { ChatModeSelector } from '@refly-packages/ai-workspace-common/components/canvas/front-page/chat-mode-selector';
-import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
+import type { IContextItem } from '@refly/common-types';
+import type { ModelInfo, GenericToolset } from '@refly/openapi-schema';
 
 export interface CustomAction {
   icon: React.ReactNode;
@@ -23,7 +24,6 @@ export interface CustomAction {
 }
 
 interface ChatActionsProps {
-  nodeId: string;
   resultId?: string;
   className?: string;
   form?: FormInstance;
@@ -34,11 +34,22 @@ interface ChatActionsProps {
   isExecuting?: boolean;
   enableChatModeSelector?: boolean;
   showLeftActions?: boolean;
+
+  // New props from useAgentNodeManagement
+  query: string;
+  modelInfo?: ModelInfo | null;
+  contextItems?: IContextItem[];
+  selectedToolsets?: GenericToolset[];
+  setModelInfo?: (
+    modelInfo: ModelInfo | null | ((prevModelInfo: ModelInfo | null) => ModelInfo | null),
+  ) => void;
+  setSelectedToolsets?: (
+    toolsets: GenericToolset[] | ((prevToolsets: GenericToolset[]) => GenericToolset[]),
+  ) => void;
 }
 
 export const ChatActions = memo((props: ChatActionsProps) => {
   const {
-    nodeId,
     resultId,
     handleSendMessage,
     customActions,
@@ -48,6 +59,12 @@ export const ChatActions = memo((props: ChatActionsProps) => {
     isExecuting = false,
     enableChatModeSelector = false,
     showLeftActions = true,
+    query,
+    modelInfo,
+    contextItems,
+    selectedToolsets,
+    setModelInfo,
+    setSelectedToolsets,
   } = props;
   const { t } = useTranslation();
   const { readonly } = useCanvasContext();
@@ -58,8 +75,6 @@ export const ChatActions = memo((props: ChatActionsProps) => {
   const { result } = useActionResultStoreShallow((state) => ({
     result: resultId ? state.resultMap[resultId] : undefined,
   }));
-  const { query, modelInfo, contextItems, selectedToolsets, setModelInfo, setSelectedToolsets } =
-    useAgentNodeManagement(nodeId);
 
   const handleSendClick = useCallback(() => {
     // Check if knowledge base is used (resource or document types)

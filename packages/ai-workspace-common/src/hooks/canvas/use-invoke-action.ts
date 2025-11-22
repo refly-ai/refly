@@ -1,16 +1,19 @@
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/deleted-nodes';
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
-import { SkillNodeMeta, convertContextItemsToInvokeParams } from '@refly/canvas-common';
+import { convertContextItemsToInvokeParams } from '@refly/canvas-common';
 import {
   ActionResult,
   ActionStatus,
   ActionStep,
   ActionStepMeta,
+  AgentMode,
   Artifact,
   CodeArtifactType,
   Entity,
+  GenericToolset,
   InvokeSkillRequest,
+  ModelInfo,
   SkillEvent,
 } from '@refly/openapi-schema';
 import { useActionResultStore } from '@refly/stores';
@@ -31,7 +34,21 @@ import {
   useAbortAction,
 } from './use-abort-action';
 import { useActionPolling } from './use-action-polling';
+import { IContextItem } from '@refly/common-types';
 import { useUpdateActionResult } from './use-update-action-result';
+import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
+
+export interface InvokeActionPayload {
+  nodeId: string;
+  query?: string;
+  resultId?: string;
+  version?: number;
+  modelInfo?: ModelInfo | null;
+  contextItems?: IContextItem[];
+  selectedToolsets?: GenericToolset[];
+  agentMode?: AgentMode;
+  copilotSessionId?: string;
+}
 
 export const useInvokeAction = (params?: { source?: string }) => {
   const latestStepsRef = useRef(new Map<string, ActionStep[]>());
@@ -43,6 +60,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
   const deletedNodeIdsRef = useRef<Set<string>>(new Set());
 
   const { refetchUsage } = useSubscriptionUsage();
+  const { getUpstreamAgentNodes } = useAgentConnections();
 
   useEffect(() => {
     const handleNodeDeleted = (entityId: string) => {
@@ -434,61 +452,49 @@ export const useInvokeAction = (params?: { source?: string }) => {
   const onStart = () => {};
 
   const invokeAction = useCallback(
-    async (payload: SkillNodeMeta, target: Entity) => {
+    async (payload: InvokeActionPayload, target: Entity) => {
       deletedNodeIdsRef.current = new Set();
 
       payload.resultId ||= genActionResultID();
-      payload.selectedSkill ||= { name: 'commonQnA' };
 
       const {
+        nodeId,
         query,
         modelInfo,
         contextItems,
-        selectedSkill,
         resultId,
         version = 0,
-        tplConfig = {},
-        runtimeConfig = {},
-        upstreamResultIds = [],
-        projectId,
         selectedToolsets = [],
         agentMode = 'node_agent',
         copilotSessionId,
       } = payload;
-
-      const originalQuery = payload.structuredData?.query as string;
 
       logEvent('model::invoke_trigger', Date.now(), {
         source,
         resultId,
         model: modelInfo?.name,
         target: target?.entityType,
-        skill: selectedSkill?.name,
       });
 
       globalAbortControllerRef.current = new AbortController();
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
 
+      const upstreamAgentNodes = getUpstreamAgentNodes(nodeId);
       const context = convertContextItemsToInvokeParams(
         contextItems ?? [],
-        upstreamResultIds ?? [],
+        upstreamAgentNodes.map((node) => node.data?.entityId) ?? [],
       );
 
       const param: InvokeSkillRequest = {
         resultId,
         input: {
           query,
-          originalQuery,
         },
         target,
         modelName: modelInfo?.name,
         modelItemId: modelInfo?.providerItemId,
         context,
-        skillName: selectedSkill?.name,
         toolsets: selectedToolsets,
-        tplConfig,
-        runtimeConfig,
-        projectId,
         mode: agentMode,
         copilotSessionId,
       };
@@ -497,15 +503,12 @@ export const useInvokeAction = (params?: { source?: string }) => {
         resultId,
         version,
         type: 'skill',
-        actionMeta: selectedSkill,
         modelInfo,
         title: query,
         input: param.input,
         targetId: target?.entityId,
         targetType: target?.entityType,
         context,
-        tplConfig,
-        runtimeConfig,
         status: 'waiting' as ActionStatus,
         steps: [],
         errors: [],

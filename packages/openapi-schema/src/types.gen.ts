@@ -1559,6 +1559,11 @@ export type TokenUsageItem = {
 export type ActionStatus = 'init' | 'waiting' | 'executing' | 'finish' | 'failed';
 
 /**
+ * Action error type
+ */
+export type ActionErrorType = 'systemError' | 'userAbort';
+
+/**
  * Artifact type
  */
 export type ArtifactType = 'document' | 'codeArtifact' | 'image' | 'video' | 'audio';
@@ -1764,6 +1769,10 @@ export type ActionResult = {
    * Step status
    */
   status?: ActionStatus;
+  /**
+   * Error type (defaults to systemError when omitted)
+   */
+  errorType?: ActionErrorType;
   /**
    * Action type
    */
@@ -2135,6 +2144,14 @@ export type UserPreferences = {
    */
   disableHoverCard?: boolean;
   /**
+   * Whether the user has been invited
+   */
+  hasBeenInvited?: boolean;
+  /**
+   * Whether to require invitation code
+   */
+  requireInvitationCode?: boolean;
+  /**
    * Web search config
    */
   webSearch?: ProviderConfig;
@@ -2226,7 +2243,7 @@ export type UserSettings = {
 /**
  * Auth provider
  */
-export type AuthProvider = 'email' | 'google' | 'github';
+export type AuthProvider = 'email' | 'google' | 'github' | 'invitation';
 
 export type AuthConfigItem = {
   /**
@@ -5033,6 +5050,14 @@ export type getCreditBalanceResponse = BaseResponse & {
      * Credit amount
      */
     creditAmount?: number;
+    /**
+     * Regular credits (from purchases, gifts, subscriptions)
+     */
+    regularCredits?: number;
+    /**
+     * Template earnings credits
+     */
+    templateEarningsCredits?: number;
   };
 };
 
@@ -5081,6 +5106,59 @@ export type GetCreditUsageByCanvasIdResponse = BaseResponse & {
      * Credit usage list by canvas ID
      */
     usages?: Array<CreditUsage>;
+  };
+};
+
+export type InvitationCode = {
+  /**
+   * Invitation code
+   */
+  code?: string;
+  /**
+   * Inviter UID
+   */
+  inviterUid?: string;
+  /**
+   * Invitee UID
+   */
+  inviteeUid?: string;
+  /**
+   * Invitation status
+   */
+  status?: string;
+  /**
+   * Invitation creation time
+   */
+  createdAt?: string;
+  /**
+   * Invitation update time
+   */
+  updatedAt?: string;
+};
+
+export type ActivateInvitationCodeRequest = {
+  /**
+   * Invitation code
+   */
+  code?: string;
+};
+
+export type ListInvitationCodesResponse = BaseResponse & {
+  /**
+   * Invitation code list
+   */
+  data?: Array<InvitationCode>;
+};
+
+export type HasBeenInvitedResponse = BaseResponse & {
+  /**
+   * Has been invited data
+   */
+  data?: {
+    /**
+     * Whether user has been invited
+     */
+    hasBeenInvited?: boolean;
   };
 };
 
@@ -6291,6 +6369,10 @@ export type ToolsetDefinition = {
    */
   key: string;
   /**
+   * Whether this is a builtin toolset
+   */
+  builtin?: boolean;
+  /**
    * Toolset domain (used for display icon)
    */
   domain?: string;
@@ -6706,6 +6788,13 @@ export type InitializeWorkflowResponse = BaseResponse & {
   };
 };
 
+export type AbortWorkflowRequest = {
+  /**
+   * Workflow execution ID to abort
+   */
+  executionId: string;
+};
+
 export type WorkflowNodeExecution = {
   /**
    * Node execution ID
@@ -6773,6 +6862,10 @@ export type WorkflowExecution = {
    */
   status?: WorkflowExecutionStatus;
   /**
+   * Whether the workflow was aborted by user
+   */
+  abortedByUser?: boolean;
+  /**
    * Node executions
    */
   nodeExecutions?: Array<WorkflowNodeExecution>;
@@ -6823,6 +6916,10 @@ export type CreateWorkflowAppRequest = {
    * Whether remix is enabled for this app
    */
   remixEnabled?: boolean;
+  /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
 };
 
 export type DeleteWorkflowAppRequest = {
@@ -7288,6 +7385,212 @@ export type AppTemplateResult = {
  */
 export type canvasComplexity = 'simple' | 'medium' | 'complex';
 
+export type FormDefinition = {
+  /**
+   * Form ID
+   */
+  formId: string;
+  /**
+   * Form title
+   */
+  title: string;
+  /**
+   * Form description
+   */
+  description?: string;
+  /**
+   * JSON Schema definition (RJSF compatible)
+   */
+  schema: string;
+  /**
+   * UI Schema definition (RJSF compatible for controlling UI elements like emoji, layout, helper text)
+   */
+  uiSchema?: string;
+  /**
+   * Form status
+   */
+  status?: 'draft' | 'published' | 'archived';
+  /**
+   * Creation timestamp
+   */
+  createdAt: string;
+  /**
+   * Last update timestamp
+   */
+  updatedAt: string;
+  /**
+   * Soft delete timestamp
+   */
+  deletedAt?: string;
+};
+
+/**
+ * Form status
+ */
+export type status6 = 'draft' | 'published' | 'archived';
+
+export type FormSubmission = {
+  /**
+   * Submission ID
+   */
+  submissionId?: string;
+  /**
+   * Associated form ID
+   */
+  formId: string;
+  /**
+   * User ID who submitted the form
+   */
+  uid: string;
+  /**
+   * Submission answers (JSON object with field values)
+   */
+  answers: string;
+  /**
+   * Submission status
+   */
+  status?: 'draft' | 'submitted' | 'reviewed';
+  /**
+   * Creation timestamp
+   */
+  createdAt: string;
+  /**
+   * Last update timestamp
+   */
+  updatedAt: string;
+};
+
+/**
+ * Submission status
+ */
+export type status7 = 'draft' | 'submitted' | 'reviewed';
+
+/**
+ * RJSF compatible field schema definition
+ */
+export type FormFieldSchema = {
+  /**
+   * Field type
+   */
+  type?: 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
+  /**
+   * Field display title
+   */
+  title?: string;
+  /**
+   * Field description/helper text
+   */
+  description?: string;
+  /**
+   * Enumeration values for radio/select fields
+   */
+  enum?: Array<string>;
+  /**
+   * Display names for enum values
+   */
+  enumNames?: Array<string>;
+  /**
+   * Default value for the field
+   */
+  default?: unknown;
+  /**
+   * Minimum string length
+   */
+  minLength?: number;
+  /**
+   * Maximum string length
+   */
+  maxLength?: number;
+  /**
+   * Regex pattern for validation
+   */
+  pattern?: string;
+  /**
+   * Minimum numeric value
+   */
+  minimum?: number;
+  /**
+   * Maximum numeric value
+   */
+  maximum?: number;
+  /**
+   * Whether this field is required
+   */
+  required?: boolean;
+};
+
+/**
+ * Field type
+ */
+export type type5 = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
+
+/**
+ * RJSF UI schema for controlling form appearance and behavior
+ */
+export type FormUiSchema = {
+  /**
+   * Widget type override
+   */
+  'ui:widget'?:
+    | 'text'
+    | 'textarea'
+    | 'select'
+    | 'radio'
+    | 'checkbox'
+    | 'checkboxes'
+    | 'date'
+    | 'email'
+    | 'password';
+  /**
+   * Input placeholder text
+   */
+  'ui:placeholder'?: string;
+  /**
+   * Help text displayed below the field
+   */
+  'ui:help'?: string;
+  /**
+   * Widget-specific options (can include emoji, layout settings, etc.)
+   */
+  'ui:options'?: {
+    /**
+     * Emoji to display with the field
+     */
+    emoji?: string;
+    /**
+     * Layout style
+     */
+    layout?: 'horizontal' | 'vertical';
+    /**
+     * Number of rows for textarea
+     */
+    rows?: number;
+    /**
+     * Whether to display radio/checkbox options inline
+     */
+    inline?: boolean;
+  };
+};
+
+/**
+ * Widget type override
+ */
+export type ui_widget =
+  | 'text'
+  | 'textarea'
+  | 'select'
+  | 'radio'
+  | 'checkbox'
+  | 'checkboxes'
+  | 'date'
+  | 'email'
+  | 'password';
+
+/**
+ * Layout style
+ */
+export type layout = 'horizontal' | 'vertical';
+
 /**
  * Type of billing for a tool method
  */
@@ -7410,7 +7713,7 @@ export type JsonSchema = {
 /**
  * Schema type
  */
-export type type5 = 'object';
+export type type6 = 'object';
 
 export type ResponseSchema = JsonSchema & {
   [key: string]: unknown;
@@ -8103,7 +8406,7 @@ export type ToolMetadataBilling = {
 /**
  * Billing type
  */
-export type type6 = 'per_call' | 'per_quantity';
+export type type7 = 'per_call' | 'per_quantity';
 
 export type ToolMetadata = {
   /**
@@ -9690,6 +9993,14 @@ export type InitializeWorkflowResponse2 = InitializeWorkflowResponse;
 
 export type InitializeWorkflowError = unknown;
 
+export type AbortWorkflowData = {
+  body: AbortWorkflowRequest;
+};
+
+export type AbortWorkflowResponse = BaseResponse;
+
+export type AbortWorkflowError = unknown;
+
 export type GetWorkflowDetailData = {
   query: {
     /**
@@ -9874,6 +10185,22 @@ export type GetCreditUsageByCanvasIdData = {
 export type GetCreditUsageByCanvasIdResponse2 = GetCreditUsageByCanvasIdResponse;
 
 export type GetCreditUsageByCanvasIdError = unknown;
+
+export type ListInvitationCodesResponse2 = ListInvitationCodesResponse;
+
+export type ListInvitationCodesError = unknown;
+
+export type ActivateInvitationCodeData = {
+  body: ActivateInvitationCodeRequest;
+};
+
+export type ActivateInvitationCodeResponse = BaseResponse;
+
+export type ActivateInvitationCodeError = unknown;
+
+export type HasBeenInvitedResponse2 = HasBeenInvitedResponse;
+
+export type HasBeenInvitedError = unknown;
 
 export type GetSubscriptionPlansResponse2 = GetSubscriptionPlansResponse;
 

@@ -2,160 +2,10 @@ import { useCallback } from 'react';
 import { Connection, Edge, EdgeChange, applyEdgeChanges, useStoreApi } from '@xyflow/react';
 import { genUniqueId } from '@refly/utils/id';
 import { useEdgeStyles, getEdgeStyles } from '../../components/canvas/constants';
-import { CanvasNode, CanvasNodeData } from '@refly/canvas-common';
+import { CanvasNode } from '@refly/canvas-common';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
-
-const isStringArrayEqual = (source: string[], target: string[]) => {
-  if (source.length !== target.length) {
-    return false;
-  }
-  const sourceSet = new Set(source);
-  const targetSet = new Set(target);
-  return (
-    sourceSet.size === targetSet.size && Array.from(sourceSet).every((item) => targetSet.has(item))
-  );
-};
-
-const createNodeMap = (nodes: CanvasNode<any>[]) => {
-  const map = new Map<string, CanvasNode<any>>();
-  for (const node of nodes ?? []) {
-    const nodeId = node?.id ?? '';
-    if (!nodeId) {
-      continue;
-    }
-    map.set(nodeId, node);
-  }
-  return map;
-};
-
-const buildUpstreamResultIdsForTarget = (
-  targetNodeId: string,
-  edges: Edge[],
-  nodeMap: Map<string, CanvasNode<any>>,
-) => {
-  const resultIds: string[] = [];
-  const seenResultIds = new Set<string>();
-
-  for (const edge of edges ?? []) {
-    if ((edge?.target ?? '') !== targetNodeId) {
-      continue;
-    }
-
-    const sourceNodeId = edge?.source ?? '';
-    if (!sourceNodeId) {
-      continue;
-    }
-
-    const sourceNode = nodeMap.get(sourceNodeId);
-    if (sourceNode?.type !== 'skillResponse') {
-      continue;
-    }
-
-    const resultId = sourceNode?.data?.entityId ?? '';
-    if (!resultId || seenResultIds.has(resultId)) {
-      continue;
-    }
-
-    seenResultIds.add(resultId);
-    resultIds.push(resultId);
-  }
-
-  return resultIds;
-};
-
-const collectTargetEdgeIds = (edges: Edge[]) => {
-  const map = new Map<string, string[]>();
-
-  for (const edge of edges ?? []) {
-    const targetId = edge?.target ?? '';
-    const edgeId = edge?.id ?? '';
-
-    if (!targetId || !edgeId) {
-      continue;
-    }
-
-    const existing = map.get(targetId) ?? [];
-    existing.push(edgeId);
-    map.set(targetId, existing);
-  }
-
-  return map;
-};
-
-const haveEdgeSetsChanged = (prevIds: string[], nextIds: string[]) => {
-  if (prevIds.length !== nextIds.length) {
-    return true;
-  }
-
-  const prevSet = new Set(prevIds);
-
-  for (const id of nextIds) {
-    if (!prevSet.has(id)) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-const getTargetNodeIdsToSync = (prevEdges: Edge[], nextEdges: Edge[]) => {
-  const prevTargetEdges = collectTargetEdgeIds(prevEdges);
-  const nextTargetEdges = collectTargetEdgeIds(nextEdges);
-  const uniqueTargetIds = new Set<string>([...prevTargetEdges.keys(), ...nextTargetEdges.keys()]);
-  const changedTargetIds = new Set<string>();
-
-  for (const targetId of uniqueTargetIds) {
-    if (!targetId) {
-      continue;
-    }
-    const prevIds = prevTargetEdges.get(targetId) ?? [];
-    const nextIds = nextTargetEdges.get(targetId) ?? [];
-    if (haveEdgeSetsChanged(prevIds, nextIds)) {
-      changedTargetIds.add(targetId);
-    }
-  }
-
-  return changedTargetIds;
-};
-
-const syncAgentConnectionsForTargets = (
-  targetNodeIds: Set<string>,
-  nodes: CanvasNode<any>[],
-  edges: Edge[],
-  setNodeData: (nodeId: string, nodeData: Partial<CanvasNodeData<any>>) => void,
-) => {
-  if (!targetNodeIds?.size) {
-    return;
-  }
-
-  const nodeMap = createNodeMap(nodes ?? []);
-
-  for (const targetNodeId of targetNodeIds) {
-    if (!targetNodeId) {
-      continue;
-    }
-
-    const targetNode = nodeMap.get(targetNodeId);
-    if (!targetNode) {
-      continue;
-    }
-
-    const desiredResultIds = buildUpstreamResultIdsForTarget(targetNodeId, edges ?? [], nodeMap);
-    const currentResultIds = targetNode?.data?.metadata?.upstreamResultIds ?? [];
-
-    if (isStringArrayEqual(currentResultIds, desiredResultIds)) {
-      continue;
-    }
-
-    setNodeData(targetNodeId, {
-      metadata: {
-        upstreamResultIds: desiredResultIds,
-      },
-    });
-  }
-};
 
 export const useEdgeOperations = () => {
   const { getState, setState } = useStoreApi<CanvasNode<any>>();
@@ -173,13 +23,11 @@ export const useEdgeOperations = () => {
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange<Edge>[]) => {
-      const { edges, nodes } = getState();
+      const { edges } = getState();
       const safePrevEdges = edges ?? [];
       const updatedEdges = applyEdgeChanges(changes ?? [], safePrevEdges);
 
       updateEdgesWithSync(updatedEdges);
-      const targetNodeIds = getTargetNodeIdsToSync(safePrevEdges, updatedEdges);
-      syncAgentConnectionsForTargets(targetNodeIds, nodes ?? [], updatedEdges, setNodeData);
     },
     [getState, setNodeData, updateEdgesWithSync],
   );
@@ -191,7 +39,7 @@ export const useEdgeOperations = () => {
         return;
       }
 
-      const { edges, nodes } = getState();
+      const { edges } = getState();
       const safeEdges = edges ?? [];
 
       // check if the edge already exists
@@ -214,12 +62,7 @@ export const useEdgeOperations = () => {
       const updatedEdges = [...safeEdges, newEdge];
 
       updateEdgesWithSync(updatedEdges);
-      syncAgentConnectionsForTargets(
-        new Set<string>([params.target]),
-        nodes ?? [],
-        updatedEdges,
-        setNodeData,
-      );
+
       edgeEventsEmitter.emit('edgeChange', {
         oldEdges: safeEdges,
         newEdges: updatedEdges,

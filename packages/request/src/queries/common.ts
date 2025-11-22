@@ -4,6 +4,8 @@ import { type Options } from '@hey-api/client-fetch';
 import { UseQueryResult } from '@tanstack/react-query';
 import {
   abortAction,
+  abortWorkflow,
+  activateInvitationCode,
   addNodesToCanvasPage,
   authorizeComposioConnection,
   autoNameCanvas,
@@ -95,6 +97,7 @@ import {
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
+  hasBeenInvited,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -107,6 +110,7 @@ import {
   listCopilotSessions,
   listDocuments,
   listDriveFiles,
+  listInvitationCodes,
   listLabelClasses,
   listLabelInstances,
   listMcpServers,
@@ -714,6 +718,28 @@ export const UseGetCreditUsageByCanvasIdKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCreditUsageByCanvasIdKey, ...(queryKey ?? [clientOptions])];
+export type ListInvitationCodesDefaultResponse = Awaited<
+  ReturnType<typeof listInvitationCodes>
+>['data'];
+export type ListInvitationCodesQueryResult<
+  TData = ListInvitationCodesDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListInvitationCodesKey = 'ListInvitationCodes';
+export const UseListInvitationCodesKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListInvitationCodesKey, ...(queryKey ?? [clientOptions])];
+export type HasBeenInvitedDefaultResponse = Awaited<ReturnType<typeof hasBeenInvited>>['data'];
+export type HasBeenInvitedQueryResult<
+  TData = HasBeenInvitedDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useHasBeenInvitedKey = 'HasBeenInvited';
+export const UseHasBeenInvitedKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useHasBeenInvitedKey, ...(queryKey ?? [clientOptions])];
 export type GetSubscriptionPlansDefaultResponse = Awaited<
   ReturnType<typeof getSubscriptionPlans>
 >['data'];
@@ -1278,6 +1304,12 @@ export const UseInitializeWorkflowKeyFn = (mutationKey?: Array<unknown>) => [
   useInitializeWorkflowKey,
   ...(mutationKey ?? []),
 ];
+export type AbortWorkflowMutationResult = Awaited<ReturnType<typeof abortWorkflow>>;
+export const useAbortWorkflowKey = 'AbortWorkflow';
+export const UseAbortWorkflowKeyFn = (mutationKey?: Array<unknown>) => [
+  useAbortWorkflowKey,
+  ...(mutationKey ?? []),
+];
 export type CreateWorkflowAppMutationResult = Awaited<ReturnType<typeof createWorkflowApp>>;
 export const useCreateWorkflowAppKey = 'CreateWorkflowApp';
 export const UseCreateWorkflowAppKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1294,6 +1326,14 @@ export type ExecuteWorkflowAppMutationResult = Awaited<ReturnType<typeof execute
 export const useExecuteWorkflowAppKey = 'ExecuteWorkflowApp';
 export const UseExecuteWorkflowAppKeyFn = (mutationKey?: Array<unknown>) => [
   useExecuteWorkflowAppKey,
+  ...(mutationKey ?? []),
+];
+export type ActivateInvitationCodeMutationResult = Awaited<
+  ReturnType<typeof activateInvitationCode>
+>;
+export const useActivateInvitationCodeKey = 'ActivateInvitationCode';
+export const UseActivateInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
+  useActivateInvitationCodeKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;

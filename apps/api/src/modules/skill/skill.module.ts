@@ -31,8 +31,6 @@ import { isDesktop } from '../../utils/runtime';
 import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
 import { ToolCallModule } from '../tool-call/tool-call.module';
-import { FishAudioModule } from '../tool/media/audio/fish-audio.module';
-import { HeyGenModule } from '../tool/media/video/heygen.module';
 import { DriveModule } from '../drive/drive.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 
@@ -55,8 +53,6 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
     ToolCallModule,
     McpServerModule,
     MediaGeneratorModule,
-    FishAudioModule,
-    HeyGenModule,
     CanvasSyncModule,
     ...(isDesktop()
       ? []

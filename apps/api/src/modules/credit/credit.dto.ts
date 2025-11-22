@@ -24,6 +24,8 @@ export interface SyncToolCreditUsageJobData {
 export interface CreditBalance {
   creditAmount: number;
   creditBalance: number;
+  regularCredits?: number;
+  templateEarningsCredits?: number;
 }
 
 // New interfaces for batch processing

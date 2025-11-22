@@ -14,8 +14,8 @@
   "scripts": {
     "copy-env": "ncp .env.example .env",
     "copy-env:develop": "ncp .env.development .env",
-    "build": "prisma generate && node scripts/build.js --verbose && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated && ncp src/modules/tool/media/audio/fish-audio.cjs dist/modules/tool/media/audio/fish-audio.cjs",
-    "build:fast": "prisma generate && node scripts/build.js --fast && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated && ncp src/modules/tool/media/audio/fish-audio.cjs dist/modules/tool/media/audio/fish-audio.cjs",
+    "build": "prisma generate && node scripts/build.js --verbose && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated",
+    "build:fast": "prisma generate && node scripts/build.js --fast && ncp prisma/ dist/prisma/ && ncp src/generated dist/generated",
     "build:electron": "pnpm prisma:generate:sqlite && tsc --build --verbose && ncp src/generated dist/generated",
     "prisma:generate": "prisma format && prisma generate",
     "prisma:generate:sqlite": "prisma format --schema=prisma/sqlite-schema.prisma && prisma generate --schema=prisma/sqlite-schema.prisma",

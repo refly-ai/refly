@@ -1,4 +1,11 @@
-import { ProviderCategory } from '@refly/openapi-schema';
+import {
+  LLMModelConfig,
+  MediaGenerationModelConfig,
+  ModelCapabilities,
+  ModelInfo,
+  ProviderCategory,
+  ProviderItem,
+} from '@refly/openapi-schema';
 
 export type ProviderField = 'apiKey' | 'baseUrl';
 
@@ -124,3 +131,39 @@ export const providerInfoList: ProviderInfo[] = [
     },
   },
 ];
+
+export const providerItemToModelInfo = (item: ProviderItem): ModelInfo => {
+  const category = item?.category;
+
+  if (category === 'mediaGeneration') {
+    const config = item?.config as MediaGenerationModelConfig;
+    return {
+      name: config?.modelId ?? '',
+      label: item?.name ?? '',
+      provider: item?.provider?.providerKey ?? '',
+      providerItemId: item?.itemId ?? '',
+      contextLimit: 0, // MediaGenerationModelConfig doesn't have contextLimit
+      maxOutput: 0, // MediaGenerationModelConfig doesn't have maxOutput
+      capabilities: config?.capabilities as ModelCapabilities, // Cast to ModelCapabilities for compatibility
+      creditBilling: item?.creditBilling ?? null,
+      group: item?.group ?? '',
+      category: item?.category,
+      inputParameters: config?.inputParameters ?? [],
+    };
+  } else {
+    const config = item?.config as LLMModelConfig;
+    return {
+      name: config?.modelId ?? '',
+      label: item?.name ?? '',
+      provider: item?.provider?.providerKey ?? '',
+      providerItemId: item?.itemId ?? '',
+      contextLimit: config?.contextLimit ?? 0,
+      maxOutput: config?.maxOutput ?? 0,
+      capabilities: config?.capabilities ?? {},
+      creditBilling: item?.creditBilling ?? null,
+      group: item?.group ?? '',
+      category: item?.category,
+      inputParameters: [],
+    };
+  }
+};

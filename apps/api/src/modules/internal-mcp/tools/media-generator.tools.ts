@@ -238,6 +238,7 @@ export class MediaGeneratorTools {
         outputUrl: actionResult.outputUrl,
         storageKey: actionResult.storageKey,
         errors: actionResult.errors || [],
+        errorType: actionResult.errorType,
         createdAt: actionResult.createdAt,
         updatedAt: actionResult.updatedAt,
       };

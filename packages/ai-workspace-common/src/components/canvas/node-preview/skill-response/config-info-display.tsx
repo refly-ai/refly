@@ -7,18 +7,19 @@ import { X, AiChat, File } from 'refly-icons';
 import { Question } from 'refly-icons';
 import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
-import { CanvasNode } from '@refly/canvas-common';
-import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
+import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LabelItem } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
+import { useCanvasNodesStoreShallow } from '@refly/stores';
 
 interface ConfigInfoDisplayProps {
   prompt: string;
   selectedToolsets: GenericToolset[];
   contextItems: IContextItem[];
-  upstreamResultIds: string[];
+  upstreamAgentNodes: CanvasNode<ResponseNodeMeta>[];
   setContextItems: (items: IContextItem[]) => void;
   setSelectedToolsets: (toolsets: GenericToolset[]) => void;
-  setUpstreamResultIds: (resultIds: string[]) => void;
+  removeUpstreamAgent: (targetEntityId: string) => void;
+  disabled: boolean;
 }
 
 const SectionTitle = memo(
@@ -30,7 +31,7 @@ const SectionTitle = memo(
       <span>{children}</span>
       {tooltip && (
         <Tooltip title={tooltip} placement="top">
-          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-help" />
+          <Question color="rgba(28, 31, 35, 0.6)" className="w-3 h-3 cursor-pointer" />
         </Tooltip>
       )}
     </div>
@@ -44,13 +45,16 @@ export const ConfigInfoDisplay = memo(
     prompt,
     selectedToolsets,
     contextItems = [],
-    upstreamResultIds = [],
+    upstreamAgentNodes = [],
     setContextItems,
     setSelectedToolsets,
-    setUpstreamResultIds,
+    removeUpstreamAgent,
+    disabled,
   }: ConfigInfoDisplayProps) => {
     const { t, i18n } = useTranslation();
-
+    const { setHighlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+      setHighlightedNodeId: state.setHighlightedNodeId,
+    }));
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
 
     // Extract tools
@@ -67,27 +71,10 @@ export const ConfigInfoDisplay = memo(
       return mentions.filter((item) => item.type === 'var');
     }, [prompt]);
 
-    const { nodes } = useRealtimeCanvasData();
-    const agentNodeMap = useMemo(() => {
-      const m = new Map<string, CanvasNode>();
-      for (const node of nodes) {
-        if (node.type === 'skillResponse') {
-          m.set(node.data?.entityId, node);
-        }
-      }
-      return m;
-    }, [nodes]);
-
     // Extract files from contextItems
     const files = useMemo(() => {
       return contextItems.filter((item) => item.type === 'file');
     }, [contextItems]);
-
-    const agents = useMemo(() => {
-      return upstreamResultIds
-        .map((resultId) => agentNodeMap.get(resultId))
-        .filter((node): node is CanvasNode => node !== undefined);
-    }, [upstreamResultIds, agentNodeMap]);
 
     const handleRemoveContextItem = useCallback(
       (item: IContextItem) => {
@@ -104,17 +91,14 @@ export const ConfigInfoDisplay = memo(
       [contextItems, setContextItems],
     );
 
-    const handleRemoveUpstreamResult = useCallback(
+    const handleRemoveUpstreamAgent = useCallback(
       (resultId: string) => {
         if (!resultId) {
           return;
         }
-
-        const currentResultIds = upstreamResultIds ?? [];
-        const nextResultIds = currentResultIds.filter((id) => id !== resultId);
-        setUpstreamResultIds(nextResultIds);
+        removeUpstreamAgent(resultId);
       },
-      [upstreamResultIds, setUpstreamResultIds],
+      [removeUpstreamAgent],
     );
 
     const handleRemoveToolset = useCallback(
@@ -177,7 +161,7 @@ export const ConfigInfoDisplay = memo(
                   }
                   labeltext={labelName}
                   classnames="bg-refly-node-contrl-1"
-                  onClose={() => handleRemoveToolset(toolset)}
+                  onClose={disabled ? undefined : () => handleRemoveToolset(toolset)}
                 />
               );
             })}
@@ -194,8 +178,8 @@ export const ConfigInfoDisplay = memo(
                 key={`${file.entityId}-${index}`}
                 icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
                 labeltext={file.title}
-                classnames="bg-gray-100 dark:bg-gray-700"
-                onClose={() => handleRemoveContextItem(file)}
+                classnames="bg-refly-fill-label"
+                onClose={disabled ? undefined : () => handleRemoveContextItem(file)}
               />
             ))}
           </div>
@@ -206,15 +190,19 @@ export const ConfigInfoDisplay = memo(
             {t('agent.config.agents')}
           </SectionTitle>
           <div className="flex flex-wrap gap-2">
-            {agents.map((node, index) => {
+            {upstreamAgentNodes.map((node, index) => {
               const title = node?.data?.title;
               return (
                 <LabelItem
+                  onMouseEnter={() => setHighlightedNodeId(node.id)}
+                  onMouseLeave={() => setHighlightedNodeId(null)}
                   key={`${node.id}-${index}`}
                   icon={<AiChat size={14} className="flex-shrink-0" />}
                   labeltext={title || t('canvas.richChatInput.untitledAgent')}
                   classnames="bg-refly-node-contrl-2"
-                  onClose={() => handleRemoveUpstreamResult(node.data?.entityId)}
+                  onClose={
+                    disabled ? undefined : () => handleRemoveUpstreamAgent(node.data?.entityId)
+                  }
                 />
               );
             })}

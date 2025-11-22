@@ -8,6 +8,7 @@ import {
   ModelTier,
   DriveFile,
   ToolCallResult,
+  ActionErrorType,
 } from '@refly/openapi-schema';
 import {
   ActionResult as ActionResultModel,
@@ -77,6 +78,7 @@ export function actionResultPO2DTO(result: ActionDetail): ActionResult {
     runtimeConfig: safeParseJSON(result.runtimeConfig || '{}'),
     history: safeParseJSON(result.history || '[]'),
     errors: safeParseJSON(result.errors || '[]'),
+    errorType: result.errorType as ActionErrorType,
     outputUrl: result.outputUrl,
     storageKey: result.storageKey,
     createdAt: result.createdAt.toJSON(),

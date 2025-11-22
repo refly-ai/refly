@@ -126,14 +126,8 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
 
       <ChatActions
         query={query}
-        model={null}
-        setModel={() => {}}
         handleSendMessage={handleSendMessage}
         onUploadImage={() => Promise.resolve()}
-        contextItems={[]}
-        selectedToolsets={[]}
-        setSelectedToolsets={() => {}}
-        customActions={[]}
         isExecuting={isExecuting}
         showLeftActions={false}
       />

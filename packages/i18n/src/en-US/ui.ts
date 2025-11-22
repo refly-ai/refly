@@ -29,6 +29,7 @@ const translations = {
     library: 'Library',
     untitled: 'Untitled',
     loading: 'Loading...',
+    activating: 'Activating...',
     loadMore: 'Load More',
     dontShow: "Don't show again",
     appStarting: 'Application is starting',
@@ -64,6 +65,8 @@ const translations = {
     project: 'Project',
     upgrade: 'Upgrade',
     upgradeSubscription: 'Upgrade Subscription',
+    inviteFriends: 'Earn Credits by Inviting',
+    inviteRewardText: 'Each gets 500 credits',
     dismiss: 'Dismiss',
     copyRequestInfo: 'Copy Request Info',
     tryAgain: 'Try again',
@@ -165,6 +168,7 @@ const translations = {
     no: 'No',
     sharing: 'Sharing...',
     view: 'View',
+    joinDiscord: 'Join Discord Community',
   },
   mode: {
     ask: 'Ask',
@@ -1445,6 +1449,15 @@ const translations = {
           failed: 'Failed',
         },
         creditUsage: 'Estimated usage {{count}} credits',
+        abort: {
+          confirmTitle: 'Abort Workflow Execution',
+          confirmContent:
+            'The workflow is still running. If you abort it now, the consumed credits will not be refunded. Confirm abort?',
+          confirm: 'Confirm Abort',
+          abortButton: 'Abort',
+          success: 'Workflow execution has been aborted',
+          failed: 'Failed to abort workflow',
+        },
       },
     },
     connectionTimeout: {
@@ -1476,6 +1489,14 @@ const translations = {
       stepCompleted: 'Step Completed',
       rerunSingle: 'Rerun This Node',
       rerunFromHere: 'Run From Here',
+      stopConfirmModal: {
+        title: 'Terminate Workflow Run',
+        content:
+          'The workflow is still running. If you terminate it now, the consumed credits will not be refunded. Confirm termination?',
+        cancel: 'Cancel',
+        confirm: 'Confirm Termination',
+      },
+      stopSuccess: 'Workflow execution has been terminated',
       stepTitle: 'Step {{index}}',
       aiThinking: 'AI is thinking ...',
       sourcesCnt: 'Total of {{count}} source(s) found',
@@ -1518,6 +1539,10 @@ const translations = {
         title: 'Execution Failed',
         description: 'Generation failed, please try again later or switch to another model.',
         retryButton: 'Retry',
+      },
+      userAbort: {
+        title: 'Task Stopped',
+        description: 'This task has been manually terminated.',
       },
       workflowFailure: {
         title: 'Execution Failed',
@@ -1582,7 +1607,7 @@ const translations = {
       copy: 'Copy Node Content',
       copyDescription: 'Copy the content of the selected node to the clipboard in Markdown format',
       createDocumentDescription: 'Create a document for writing',
-      askAI: 'Ask AI',
+      askAI: 'Add Custom Agent',
       askAIDescription:
         'Ask AI, select context or switch skill, input requirements, get help with writing, reading comprehension, or question answering',
       cloneAskAI: 'Clone Ask AI',
@@ -2174,6 +2199,7 @@ const translations = {
       home: 'Dashboard',
       canvas: 'My Workflows',
       appManager: 'My Templates',
+      marketplace: 'Marketplace',
       contactUs: 'Contact Us',
       addToChrome: 'Install Browser Extension',
       canvasTitle: 'Canvas',
@@ -2600,6 +2626,28 @@ const translations = {
       imageSizeLimited: 'Image must be less than {{size}}MB',
       onlyImageAllowed: 'Only support {{type}} pictures',
       cropAvatar: 'Crop Avatar',
+
+      // Invitation codes
+      invitationCodes: 'Invitation Codes',
+      noInvitationCodes: 'No invitation codes yet',
+      expiresAt: 'Expires at',
+      copy: 'Copy',
+      statusUsed: 'Used',
+      enterInvitationCode: 'Enter invitation code',
+      activateInvitationCode: 'Activate Code',
+      activateInvitationCodeSuccess: 'Welcome to Refly 🎉 Start your AI automation journey!',
+      activateInvitationCodeFailed:
+        'Invite code is invalid. Please try again or join Discord to get a new one.',
+      invitationCodeCopied: 'Invite code copied! Go share it with your friends~',
+      invitationCodeCopyFailed: 'Failed to copy invitation code',
+      invitationReward: '+{amount} credits',
+      inviteFriendsTitle: 'Invite friends with your code',
+      inviteFriendsSubtitle: 'Both of you get 500 credits',
+      invitationLimitText: 'Each user can invite {{used}}/{{limit}} times',
+      copyInvitationCodeAction: 'Copy',
+      resendInvitationCodeAction: 'Resend invite',
+      statusUnknown: 'Unknown',
+      tapCardToCopy: 'Tap to copy',
     },
 
     language: {
@@ -2950,6 +2998,13 @@ const translations = {
       },
     },
   },
+  invitationCode: {
+    title1: 'Enter an invitation code to unlock',
+    title2: 'Refly AI Automation',
+    description: 'Enter your 6-digit invitation code',
+    dontHaveInvitationCode: "Don't have an invite code yet?",
+    reward: 'Used +500 points',
+  },
   contentDetail: {
     breadcrumb: {
       homePage: 'Home',
@@ -3068,8 +3123,10 @@ const translations = {
   },
   components: {
     markdown: {
-      parameters: 'Parameters:',
-      result: 'Result:',
+      parameters: 'Input',
+      result: ' Output',
+      parameterName: 'Name',
+      parameterValue: 'Value',
       copySuccess: 'Copied to clipboard',
       emptyCode: 'Cannot create empty code artifact',
       codeArtifactCreated: 'Code artifact created',
@@ -3127,11 +3184,11 @@ const translations = {
     },
     sessionDetail: {
       thinking: 'Thinking',
-      approveAndRun: 'Approve and Run',
+      approve: 'Approve',
       confirmClearCanvas: {
         title: 'Confirm Clear Canvas',
         content:
-          'Running this workflow will clear all current canvas content. Do you want to continue?',
+          'Approving this workflow will clear all current canvas content. Do you want to continue?',
         confirm: 'Continue',
         cancel: 'Cancel',
       },
@@ -3595,7 +3652,9 @@ const translations = {
       changePlan: 'Change Plan',
       viewPricing: 'View Pricing',
       upgradePlan: 'Upgrade Plan',
-      availableCredits: 'Available Credits',
+      availableCredits: 'Total Available Credits',
+      regularCredits: 'Regular Credits',
+      templateEarningsCredits: 'Template Earnings Credits',
       remainingCredits: 'Credits',
       knowledgeBaseFiles: 'Knowledge Base Files',
       creditUsageDetails: 'Credit Usage Details',
@@ -3630,6 +3689,7 @@ const translations = {
         subscription: 'Subscription',
         commission: 'Template earnings',
         commissionPrefix: 'Template earnings: ',
+        invitation: 'Invitation bonus',
       },
       depleted: 'Depleted',
       expired: 'Expired',
@@ -3794,11 +3854,23 @@ const translations = {
       executionIdFailed: 'Failed to get execution ID',
       executeFailed: 'Failed to execute workflow',
       executeError: 'Failed to execute workflow',
+      thinking: 'Thinking...',
+      stop: 'Stop',
+      stopped: 'Workflow stopped',
+      stoppedMessage: 'Workflow stopped, no results generated. You can rerun the template.',
+      stopConfirmTitle: 'Stop Template Run?',
+      stopConfirmContent:
+        'Are you sure you want to stop this template run? The run will be terminated immediately, and credits already consumed will not be refunded.',
+      stopSuccess: 'The template run has been stopped successfully.',
     },
     revenueSharing: {
       title: 'Earn credits by running templates',
       earningsHint: 'Each run can earn <num>{{creditEarningsPerRun}}</num> credits',
       howToEarn: 'How to earn',
+    },
+    publishToCommunity: {
+      label: 'Publish to Community',
+      help: 'After publishing to the community, other users can discover and use your workflow app',
     },
   },
   project: {

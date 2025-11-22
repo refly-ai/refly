@@ -25,6 +25,7 @@ export const useGetUserSettings = () => {
     setIsLogin: state.setIsLogin,
     setShowTourModal: state.setShowTourModal,
     setShowSettingsGuideModal: state.setShowSettingsGuideModal,
+    setShowInvitationCodeModal: state.setShowInvitationCodeModal,
     userProfile: state.userProfile,
     localSettings: state.localSettings,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
@@ -71,6 +72,16 @@ export const useGetUserSettings = () => {
     userStore.setUserProfile(settings);
     localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     userStore.setIsLogin(true);
+
+    // Check if user has been invited to show invitation code modal
+    try {
+      const invitationResp = await getClient().hasBeenInvited();
+      const hasBeenInvited = invitationResp.data?.data ?? false;
+      userStore.setShowInvitationCodeModal(!hasBeenInvited);
+    } catch (_error) {
+      // If invitation check fails, don't block user login, default to not showing modal
+      userStore.setShowInvitationCodeModal(false);
+    }
 
     // set tour guide
     const showSettingsGuideModal = !['skipped', 'completed'].includes(

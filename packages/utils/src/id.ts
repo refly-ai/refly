@@ -263,6 +263,10 @@ export const genDailyCreditRechargeId = (uid: string, t: Date) => {
   return `${IDPrefix.CREDIT_RECHARGE}daily-${uid}-${getYYYYMMDD(t)}`;
 };
 
+export const genRegistrationCreditRechargeId = (uid: string) => {
+  return `${IDPrefix.CREDIT_RECHARGE}registration-${uid}`;
+};
+
 export const genCommissionCreditRechargeId = (executionId: string) => {
   return `${IDPrefix.CREDIT_RECHARGE}commission-${executionId}`;
 };
@@ -292,3 +296,7 @@ export function genNodeID(): string {
 export function genWorkflowAppID(): string {
   return IDPrefix.WorkflowApp + createId();
 }
+
+export const genInvitationActivationCreditRechargeId = (inviterUid: string, inviteeUid: string) => {
+  return `${IDPrefix.CREDIT_RECHARGE}invitation-${inviterUid}-${inviteeUid}`;
+};

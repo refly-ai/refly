@@ -39,4 +39,13 @@ export class SingleFlightCache<T = any> {
       this.dataFetchPromise = null;
     }
   }
+
+  /**
+   * Manually set cache data and refresh timestamp
+   */
+  set(data: T) {
+    this.data = data;
+    this.dataSyncedAt = new Date();
+    this.dataFetchPromise = null;
+  }
 }

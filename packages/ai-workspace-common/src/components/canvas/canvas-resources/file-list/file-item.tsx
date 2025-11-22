@@ -5,6 +5,7 @@ import { cn } from '@refly/utils/cn';
 import { FileItemAction } from '../share/file-item-action';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import type { DriveFile, ResourceType } from '@refly/openapi-schema';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 const { Text } = Typography;
 
@@ -33,6 +34,7 @@ const getResourceType = (fileType: string): ResourceType => {
  */
 export const FileItem = memo(({ file, isActive, onSelect }: FileItemProps) => {
   const { t } = useTranslation();
+  const { readonly } = useCanvasContext();
 
   // For DriveFile, we assume it's always parsed and ready to use
   const beforeParsed = false;
@@ -63,9 +65,11 @@ export const FileItem = memo(({ file, isActive, onSelect }: FileItemProps) => {
           {file?.name ?? t('common.untitled')}
         </Text>
       </div>
-      <div className="flex items-center gap-2">
-        <FileItemAction file={file} />
-      </div>
+      {!readonly && (
+        <div className="flex items-center gap-2">
+          <FileItemAction file={file} />
+        </div>
+      )}
     </div>
   );
 });

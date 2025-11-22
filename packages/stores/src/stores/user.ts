@@ -24,6 +24,7 @@ export interface UserState {
   showTourModal: boolean;
   showSettingsGuideModal: boolean;
   helpModalVisible: boolean;
+  showInvitationCodeModal: boolean;
 
   // method
   setIsCheckingLoginStatus: (val: boolean) => void;
@@ -35,6 +36,7 @@ export interface UserState {
   setShowTourModal: (val: boolean) => void;
   setShowSettingsGuideModal: (val: boolean) => void;
   setHelpModalVisible: (val: boolean) => void;
+  setShowInvitationCodeModal: (val: boolean) => void;
 }
 
 const getDefaultLocale = () => {
@@ -76,6 +78,7 @@ export const defaultState = {
   showTourModal: false,
   showSettingsGuideModal: false,
   helpModalVisible: false,
+  showInvitationCodeModal: false,
 };
 
 export const useUserStore = create<UserState>()(
@@ -93,6 +96,8 @@ export const useUserStore = create<UserState>()(
     setShowSettingsGuideModal: (val: boolean) =>
       set((state) => ({ ...state, showSettingsGuideModal: val })),
     setHelpModalVisible: (val: boolean) => set((state) => ({ ...state, helpModalVisible: val })),
+    setShowInvitationCodeModal: (val: boolean) =>
+      set((state) => ({ ...state, showInvitationCodeModal: val })),
   })),
 );
 

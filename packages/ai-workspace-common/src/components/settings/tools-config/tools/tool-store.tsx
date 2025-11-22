@@ -121,7 +121,7 @@ export const ToolStore = () => {
   });
 
   const tools = useMemo(
-    () => (data?.data || []).filter((tool) => tool.key !== 'builtin'),
+    () => (data?.data || []).filter((tool) => !tool.builtin && tool.key !== 'builtin'),
     [data?.data],
   );
 

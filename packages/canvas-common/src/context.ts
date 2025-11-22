@@ -150,7 +150,7 @@ const deduplicate = <T>(array: T[] | null | undefined, keyFn: (item: T) => strin
 
 export const convertContextItemsToInvokeParams = (
   items: IContextItem[],
-  upstreamResultIds: string[],
+  resultIds: string[],
 ): SkillContext => {
   const purgedItems = purgeContextItems(items);
 
@@ -164,7 +164,7 @@ export const convertContextItemsToInvokeParams = (
       (item) => item.fileId,
     ),
     results: deduplicate(
-      upstreamResultIds.map((resultId) => ({
+      resultIds.map((resultId) => ({
         resultId,
       })),
       (item) => item.resultId,

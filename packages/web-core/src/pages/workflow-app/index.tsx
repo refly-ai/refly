@@ -1,9 +1,16 @@
 import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { Avatar, message, notification, Skeleton, Tooltip } from 'antd';
+import { Avatar, message, Modal, notification, Skeleton, Tooltip } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CanvasNodeType, WorkflowNodeExecution, WorkflowVariable } from '@refly/openapi-schema';
+import {
+  CanvasNodeType,
+  WorkflowNodeExecution,
+  WorkflowVariable,
+  DriveFile,
+  CanvasNode,
+} from '@refly/openapi-schema';
+import { mapDriveFilesToCanvasNodes, mapDriveFilesToWorkflowNodeExecutions } from '@refly/utils';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { WorkflowAppProducts } from '@refly-packages/ai-workspace-common/components/workflow-app/products';
@@ -26,6 +33,8 @@ import WhyChooseRefly from './WhyChooseRefly';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/sider/layout';
 import { SelectedResultsGrid } from '@refly-packages/ai-workspace-common/components/workflow-app/selected-results-grid';
 import { WorkflowAPPForm } from './workflow-app-form';
+import Lottie from 'lottie-react';
+import loadingAnimation from './loading.json';
 
 // User Avatar component for header
 const UserAvatar = () => {
@@ -58,7 +67,13 @@ const WorkflowAppPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('runLogs');
   const [finalNodeExecutions, setFinalNodeExecutions] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isStopped, setIsStopped] = useState(false);
+  const [showStatusSection, setShowStatusSection] = useState(false);
   const [executionCreditUsage, setExecutionCreditUsage] = useState<number | null>(null);
+
+  // Drive files state for preview and runtime
+  const [previewDriveFiles, setPreviewDriveFiles] = useState<DriveFile[]>([]);
+  const [runtimeDriveFiles, setRuntimeDriveFiles] = useState<DriveFile[]>([]);
 
   // Settings modal state
   const { showSettingModal, setShowSettingModal } = useSiderStoreShallow((state) => ({
@@ -95,6 +110,50 @@ const WorkflowAppPage: React.FC = () => {
   const workflowVariables = useMemo(() => {
     return workflowApp?.variables ?? [];
   }, [workflowApp]);
+
+  // Fetch drive files for preview when workflowApp loads
+  useEffect(() => {
+    const canvasId = workflowApp?.canvasData?.canvasId;
+    if (!canvasId) {
+      return;
+    }
+
+    const fetchPreviewFiles = async () => {
+      try {
+        const allFiles: DriveFile[] = [];
+        let page = 1;
+        const pageSize = 100;
+        const MAX_PAGES = 100; // Safety limit: max 10000 files
+
+        while (page <= MAX_PAGES) {
+          const { data } = await getClient().listDriveFiles({
+            query: {
+              canvasId,
+              source: 'agent',
+              scope: 'present',
+              page,
+              pageSize,
+            },
+          });
+
+          const files = data?.data ?? [];
+          allFiles.push(...files);
+
+          if (files.length < pageSize) {
+            break;
+          }
+          page++;
+        }
+
+        setPreviewDriveFiles(allFiles);
+      } catch (error) {
+        console.error('Failed to fetch preview drive files:', error);
+        // Silently degrade
+      }
+    };
+
+    fetchPreviewFiles();
+  }, [workflowApp?.canvasData?.canvasId]);
 
   const {
     data: workflowDetail,
@@ -179,11 +238,26 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [executionId, status]);
 
+  // Handle status section visibility with animation
+  useEffect(() => {
+    if (isRunning || isStopped) {
+      // Show with animation
+      setShowStatusSection(true);
+    } else {
+      // Hide with animation delay
+      const timer = setTimeout(() => {
+        setShowStatusSection(false);
+      }, 300); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [isRunning, isStopped]);
+
   useEffect(() => {
     if (shareId) {
       setFinalNodeExecutions([]);
       stopPolling();
       setIsRunning(false);
+      setIsStopped(false);
     }
   }, [shareId]);
 
@@ -192,18 +266,91 @@ const WorkflowAppPage: React.FC = () => {
     return workflowDetail?.nodeExecutions || finalNodeExecutions || [];
   }, [workflowDetail, finalNodeExecutions]);
 
+  // Fetch drive files for runtime products after execution completes
+  useEffect(() => {
+    const canvasId = workflowApp?.canvasData?.canvasId;
+    if (!canvasId || isRunning || executionId) {
+      return;
+    }
+
+    // Fetch when execution has completed (finalNodeExecutions present)
+    // or when page loads with existing products (to support refresh)
+    if (finalNodeExecutions.length > 0) {
+      const fetchRuntimeFiles = async () => {
+        try {
+          const allFiles: DriveFile[] = [];
+          let page = 1;
+          const pageSize = 100;
+          const MAX_PAGES = 100; // Safety limit: max 10000 files
+
+          while (page <= MAX_PAGES) {
+            const { data } = await getClient().listDriveFiles({
+              query: {
+                canvasId,
+                source: 'agent',
+                scope: 'present',
+                page,
+                pageSize,
+              },
+            });
+
+            const files = data?.data ?? [];
+            allFiles.push(...files);
+
+            if (files.length < pageSize) {
+              break;
+            }
+            page++;
+          }
+
+          setRuntimeDriveFiles(allFiles);
+        } catch (error) {
+          console.error('Failed to fetch runtime drive files:', error);
+          // Silently degrade
+        }
+      };
+
+      fetchRuntimeFiles();
+    }
+  }, [workflowApp?.canvasData?.canvasId, isRunning, executionId, finalNodeExecutions.length]);
+
   const products = useMemo(() => {
-    return nodeExecutions
-      .filter(
-        (nodeExecution: WorkflowNodeExecution) =>
-          ['document', 'codeArtifact', 'image', 'video', 'audio'].includes(
-            nodeExecution.nodeType as CanvasNodeType,
-          ) ||
-          (['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType) &&
-            (workflowApp?.resultNodeIds?.includes(nodeExecution.nodeId) ?? false)),
+    // Legacy product node executions (document, codeArtifact, image, video, audio)
+    // These are old product nodes that may still exist before migration to drive_files
+    const legacyNodeProducts = nodeExecutions
+      .filter((nodeExecution: WorkflowNodeExecution) =>
+        ['document', 'codeArtifact', 'image', 'video', 'audio'].includes(
+          nodeExecution.nodeType as CanvasNodeType,
+        ),
       )
       .filter((nodeExecution: WorkflowNodeExecution) => nodeExecution.status === 'finish');
-  }, [nodeExecutions, workflowApp?.resultNodeIds]);
+
+    // Legacy skillResponse products (selected via resultNodeIds)
+    const legacySkillProducts = nodeExecutions
+      .filter(
+        (nodeExecution: WorkflowNodeExecution) =>
+          ['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType) &&
+          (workflowApp?.resultNodeIds?.includes(nodeExecution.nodeId) ?? false),
+      )
+      .filter((nodeExecution: WorkflowNodeExecution) => nodeExecution.status === 'finish');
+
+    // Map drive files to pseudo WorkflowNodeExecutions
+    const serverOrigin = window.location.origin;
+    const driveProducts = mapDriveFilesToWorkflowNodeExecutions(runtimeDriveFiles, serverOrigin);
+
+    // Merge: priority order is legacyNodeProducts > legacySkillProducts > driveProducts
+    // This ensures existing node executions take precedence over drive files
+    const allProducts = [...legacyNodeProducts, ...legacySkillProducts, ...driveProducts];
+    const uniqueMap = new Map<string, WorkflowNodeExecution>();
+
+    for (const product of allProducts) {
+      if (product?.nodeId && !uniqueMap.has(product.nodeId)) {
+        uniqueMap.set(product.nodeId, product);
+      }
+    }
+
+    return Array.from(uniqueMap.values());
+  }, [nodeExecutions, runtimeDriveFiles, workflowApp?.resultNodeIds]);
 
   useEffect(() => {
     products.length > 0 && setActiveTab('products');
@@ -214,6 +361,25 @@ const WorkflowAppPage: React.FC = () => {
       ['skillResponse'].includes(nodeExecution.nodeType as CanvasNodeType),
     );
   }, [nodeExecutions]);
+
+  // Map preview drive files to virtual CanvasNodes for result preview
+  const previewOptions = useMemo(() => {
+    const serverOrigin = window.location.origin;
+    const driveFileNodes = mapDriveFilesToCanvasNodes(previewDriveFiles, serverOrigin);
+    const canvasNodes = workflowApp?.canvasData?.nodes || [];
+
+    // Merge and deduplicate by node ID
+    const allNodes = [...driveFileNodes, ...canvasNodes];
+    const uniqueMap = new Map<string, CanvasNode>();
+
+    for (const node of allNodes) {
+      if (node?.id && !uniqueMap.has(node.id)) {
+        uniqueMap.set(node.id, node);
+      }
+    }
+
+    return Array.from(uniqueMap.values());
+  }, [previewDriveFiles, workflowApp?.canvasData?.nodes]);
 
   const onSubmit = useCallback(
     async (variables: WorkflowVariable[]) => {
@@ -231,6 +397,7 @@ const WorkflowAppPage: React.FC = () => {
 
       try {
         setIsRunning(true);
+        setIsStopped(false);
 
         const { data, error } = await getClient().executeWorkflowApp({
           body: {
@@ -315,6 +482,56 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [t, shareId]);
 
+  const handleAbortWorkflow = useCallback(() => {
+    Modal.confirm({
+      title: t('workflowApp.run.stopConfirmTitle'),
+      content: t('workflowApp.run.stopConfirmContent'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      rootClassName: 'workflow-app-modal-confirm',
+      okButtonProps: {
+        type: 'primary',
+      },
+      onOk: async () => {
+        // Get all executing skillResponse nodes
+        const executingNodes = nodeExecutions.filter(
+          (node: WorkflowNodeExecution) =>
+            node.nodeType === 'skillResponse' &&
+            (node.status === 'executing' || node.status === 'waiting'),
+        );
+
+        // Extract resultIds (entityId)
+        const resultIds = executingNodes
+          .map((node: WorkflowNodeExecution) => node.entityId)
+          .filter((id: string): id is string => Boolean(id));
+
+        // Abort all executing actions
+        if (resultIds.length > 0) {
+          await Promise.allSettled(
+            resultIds.map((resultId: string) =>
+              getClient()
+                .abortAction({
+                  body: {
+                    resultId,
+                  },
+                })
+                .catch((error) => {
+                  console.warn(`Failed to abort action ${resultId}:`, error);
+                }),
+            ),
+          );
+        }
+
+        // Clean up frontend state
+        setExecutionId(null);
+        setIsRunning(false);
+        setIsStopped(true);
+        stopPolling();
+        message.success(t('workflowApp.run.stopSuccess'));
+      },
+    });
+  }, [nodeExecutions, stopPolling, t]);
+
   return (
     <ReactFlowProvider>
       <CanvasProvider readonly={true} canvasId={workflowApp?.canvasData?.canvasId ?? ''}>
@@ -329,6 +546,36 @@ const WorkflowAppPage: React.FC = () => {
             .dark .refly.ant-layout {
               background: var(--bg---refly-bg-body-z0, #0E0E0E);
             }
+          `}
+        </style>
+        {/* Modal confirm button styling with theme colors - scoped to workflow-app only */}
+        <style>
+          {`
+          .workflow-app-modal-confirm .ant-btn-primary {
+            background-color: var(--refly-primary-default) !important;
+            border-color: var(--refly-primary-default) !important;
+            color: #ffffff !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-primary:hover {
+            background-color: var(--refly-primary-hover) !important;
+            border-color: var(--refly-primary-hover) !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-primary:active {
+            background-color: var(--refly-primary-active) !important;
+            border-color: var(--refly-primary-active) !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-primary:disabled {
+            background-color: var(--refly-primary-disabled) !important;
+            border-color: var(--refly-primary-disabled) !important;
+          }
+
+          .workflow-app-modal-confirm .ant-btn-default:hover {
+            border-color: var(--refly-primary-default) !important;
+            color: var(--refly-primary-default) !important;
+          }
           `}
         </style>
         <Helmet>
@@ -384,7 +631,6 @@ const WorkflowAppPage: React.FC = () => {
                       {workflowApp?.description ?? ''}
                     </p>
                   </div>
-
                   {/* Workflow Form */}
                   <WorkflowAPPForm
                     workflowApp={workflowApp}
@@ -398,6 +644,182 @@ const WorkflowAppPage: React.FC = () => {
                     executionCreditUsage={executionCreditUsage}
                     className="max-h-[500px] sm:max-h-[600px] bg-[var(--refly-bg-float-z3)] dark:bg-[var(--refly-bg-content-z2)] border border-[var(--refly-Card-Border)] dark:border-[var(--refly-semi-color-border)] shadow-[0_2px_20px_4px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_4px_rgba(0,0,0,0.2)] px-4 py-3 rounded-2xl"
                   />
+
+                  {/* Execution Status Section - Exact Figma Design */}
+                  {showStatusSection && (
+                    <div
+                      className={`mt-6 w-full rounded-2xl relative mx-auto overflow-hidden transition-all duration-300 ease-in-out ${
+                        isStopped
+                          ? 'bg-[#F6F6F6] dark:bg-[var(--refly-bg-content-z2)]'
+                          : 'bg-white dark:bg-[var(--refly-bg-content-z2)]'
+                      } ${
+                        isRunning || isStopped
+                          ? 'opacity-100 translate-y-0'
+                          : 'opacity-0 -translate-y-2'
+                      }`}
+                      style={{ maxWidth: '800px', minHeight: '244px', border: '1px solid #0E9F77' }}
+                    >
+                      {/* Responsive wrapper for scaling on smaller screens */}
+                      <div className="relative w-full" style={{ minHeight: '244px' }}>
+                        {isRunning ? (
+                          <>
+                            {/* Stop Button - Exact Position: x:717, y:16 */}
+                            <button
+                              type="button"
+                              onClick={handleAbortWorkflow}
+                              className="absolute flex items-center justify-center rounded-md bg-transparent hover:bg-[rgba(28,31,35,0.05)] dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors sm:left-[717px] right-4 sm:right-auto border border-[rgba(28,31,35,0.2)] dark:border-[rgba(255,255,255,0.2)]"
+                              style={{
+                                top: '16px',
+                                width: '67px',
+                                height: '28px',
+                                padding: '10px',
+                                gap: '10px',
+                              }}
+                            >
+                              <span
+                                className="text-[#1C1F23] dark:text-[var(--refly-text-0)]"
+                                style={{
+                                  fontFamily: 'Roboto',
+                                  fontWeight: 600,
+                                  fontSize: '12px',
+                                  lineHeight: '1.6666666666666667em',
+                                }}
+                              >
+                                {t('workflowApp.run.stop') || 'Stop'}
+                              </span>
+                            </button>
+
+                            {/* Loading Animation and Status Group - Centered on mobile, exact position on desktop */}
+                            <div
+                              className="absolute left-1/2 -translate-x-1/2 sm:left-[268px] sm:translate-x-0"
+                              style={{ top: '61px', width: '324px', height: '122px' }}
+                            >
+                              {/* Loading Animation - Lottie - Position: x:0, y:0 relative to group */}
+                              <div
+                                className="absolute"
+                                style={{ left: '0px', top: '0px', width: '122px', height: '122px' }}
+                              >
+                                <Lottie
+                                  animationData={loadingAnimation}
+                                  loop
+                                  autoplay
+                                  style={{ width: '122px', height: '122px' }}
+                                />
+                              </div>
+
+                              {/* Thinking... Text - Position: x:126, y:40 relative to group */}
+                              <div
+                                className="absolute bg-clip-text text-transparent"
+                                style={{
+                                  left: '126px',
+                                  top: '40px',
+                                  minWidth: '67px',
+                                  height: '20px',
+                                  fontFamily: 'Roboto',
+                                  fontWeight: 600,
+                                  fontSize: '14px',
+                                  lineHeight: '1.4285714285714286em',
+                                  background:
+                                    'linear-gradient(24deg, rgba(142, 239, 182, 1) 0%, rgba(0, 178, 173, 1) 100%)',
+                                  WebkitBackgroundClip: 'text',
+                                  WebkitTextFillColor: 'transparent',
+                                }}
+                              >
+                                {t('workflowApp.run.thinking') || 'Thinking...'}
+                              </div>
+
+                              {/* Step Information Text - Position: x:126, y:64 relative to group */}
+                              {(() => {
+                                const nodes =
+                                  nodeExecutions?.filter(
+                                    (node: WorkflowNodeExecution) =>
+                                      node.nodeType === 'skillResponse',
+                                  ) ?? [];
+                                const executingNodes =
+                                  nodes?.filter(
+                                    (node: WorkflowNodeExecution) => node.status === 'executing',
+                                  ) ?? [];
+                                const totalNodes = nodes?.length ?? 0;
+                                const currentStep = executingNodes[0];
+                                const finishedCount =
+                                  nodes?.filter(
+                                    (node: WorkflowNodeExecution) => node.status === 'finish',
+                                  ).length ?? 0;
+                                const stepNumber = finishedCount + (nodes.length > 0 ? 1 : 0);
+
+                                if (nodes?.length > 0 || stepNumber > 0) {
+                                  return (
+                                    <div
+                                      className="absolute text-[rgba(28,31,35,0.6)] dark:text-[rgba(255,255,255,0.6)]"
+                                      style={{
+                                        left: '126px',
+                                        top: '64px',
+                                        width: '198px',
+                                        fontFamily: 'PingFang SC',
+                                        fontWeight: 400,
+                                        fontSize: '12px',
+                                        lineHeight: '1.6666666666666667em',
+                                      }}
+                                    >
+                                      {stepNumber > 0 && totalNodes > 0 ? (
+                                        <div className="flex flex-col">
+                                          {/* Display all executing nodes with Step prefix */}
+                                          {executingNodes
+                                            ?.slice(0, 5)
+                                            .map((node: any, index: number) => {
+                                              return (
+                                                <div
+                                                  key={node.nodeId ?? index}
+                                                  className="overflow-hidden text-ellipsis whitespace-nowrap"
+                                                >
+                                                  <span className="whitespace-nowrap flex-shrink-0">
+                                                    Step {stepNumber + index}/{totalNodes}:{' '}
+                                                  </span>
+                                                  <span>{node.title ?? ''}</span>
+                                                </div>
+                                              );
+                                            })}
+                                        </div>
+                                      ) : (
+                                        <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+                                          {currentStep?.title ?? ''}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          </>
+                        ) : isStopped ? (
+                          /* Stopped State - Exact Figma Design */
+                          <div
+                            className="absolute left-1/2 -translate-x-1/2"
+                            style={{
+                              top: '112px',
+                              width: '100%',
+                              height: '22px',
+                            }}
+                          >
+                            <div
+                              className="text-center text-[rgba(28,31,35,0.6)] dark:text-[rgba(255,255,255,0.6)]"
+                              style={{
+                                fontFamily: 'PingFang SC',
+                                fontWeight: 400,
+                                fontSize: '12px',
+                                lineHeight: '1.8333333333333333em',
+                                textAlign: 'center',
+                              }}
+                            >
+                              {t('workflowApp.run.stoppedMessage') ||
+                                '停止运行，未生成结果，可重新运行模板'}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
 
                   {logs.length > 0 && (
                     <>
@@ -440,7 +862,7 @@ const WorkflowAppPage: React.FC = () => {
                   fillRow
                   bordered
                   selectedResults={workflowApp?.resultNodeIds ?? []}
-                  options={workflowApp?.canvasData?.nodes || []}
+                  options={previewOptions}
                 />
               </div>
             )}

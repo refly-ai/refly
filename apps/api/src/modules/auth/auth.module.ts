@@ -14,13 +14,14 @@ import { NotionOauthStrategy } from './strategy/notion-oauth.strategy';
 import { ProviderModule } from '../provider/provider.module';
 import { NotificationModule } from '../notification/notification.module';
 import { GoogleToolOauthStrategy } from './strategy/google-tool-oauth.strategy';
-
+import { CreditModule } from '../credit/credit.module';
 @Module({
   imports: [
     CommonModule,
     MiscModule,
     ProviderModule,
     NotificationModule,
+    CreditModule,
     PassportModule.register({
       session: true,
     }),

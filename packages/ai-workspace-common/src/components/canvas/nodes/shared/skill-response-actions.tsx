@@ -1,44 +1,84 @@
-import { Button, Dropdown } from 'antd';
+import { Button, Dropdown, Modal, message } from 'antd';
 import { memo, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Running1, Stop } from 'refly-icons';
 import type { MenuProps } from 'antd';
 
 interface SkillResponseActionsProps {
-  isRunning: boolean;
-  onRerunSingle: () => void;
-  onRerunFromHere: () => void;
-  onStop: () => void;
+  nodeIsExecuting: boolean;
+  workflowIsRunning: boolean;
+  // Variant: 'node' shows dropdown menu, 'preview' shows simple button
+  variant?: 'node' | 'preview';
+  // For node variant
+  onRerunSingle?: () => void;
+  onRerunFromHere?: () => void;
+  // For preview variant
+  onRerun?: () => void;
+  // Common
+  onStop: () => Promise<void>;
+  // Extra actions (e.g., Close button in preview)
+  extraActions?: React.ReactNode;
 }
 
 const SkillResponseActionsComponent = ({
-  isRunning,
+  nodeIsExecuting,
+  workflowIsRunning,
+  variant = 'node',
   onRerunSingle,
   onRerunFromHere,
+  onRerun,
   onStop,
+  extraActions,
 }: SkillResponseActionsProps) => {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
 
+  // When workflow is running but current node is not executing, disable actions
+  const disabled = workflowIsRunning;
+
   const handleMenuClick = useCallback<NonNullable<MenuProps['onClick']>>(
     ({ key }) => {
-      if (key === 'rerunSingle') {
+      if (key === 'rerunSingle' && onRerunSingle) {
         onRerunSingle();
-      } else if (key === 'rerunFromHere') {
+      } else if (key === 'rerunFromHere' && onRerunFromHere) {
         onRerunFromHere();
       }
     },
     [onRerunSingle, onRerunFromHere],
   );
 
-  const handleRunClick = useCallback(
+  const handleStopClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (isRunning) {
-        onStop();
+      if (nodeIsExecuting) {
+        Modal.confirm({
+          title: t('canvas.skillResponse.stopConfirmModal.title'),
+          content: t('canvas.skillResponse.stopConfirmModal.content'),
+          okText: t('canvas.skillResponse.stopConfirmModal.confirm'),
+          cancelText: t('canvas.skillResponse.stopConfirmModal.cancel'),
+          icon: null,
+          okButtonProps: {
+            className:
+              '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
+          },
+          onOk: async () => {
+            await onStop();
+            message.success(t('canvas.skillResponse.stopSuccess'));
+          },
+        });
       }
     },
-    [isRunning, onStop],
+    [nodeIsExecuting, onStop, t],
+  );
+
+  const handleRerunClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onRerun) {
+        onRerun();
+      }
+    },
+    [onRerun],
   );
 
   const menuItems: MenuProps['items'] = useMemo(
@@ -56,31 +96,42 @@ const SkillResponseActionsComponent = ({
   );
 
   // Determine which icon to show
-  let icon = <Play size={12} className="translate-y-[-1px]" />;
-  if (isRunning) {
+  const iconSize = variant === 'preview' ? 20 : 12;
+  const iconClassName = variant === 'preview' ? '' : 'translate-y-[-1px]';
+  let icon = <Play size={iconSize} className={iconClassName} />;
+  if (nodeIsExecuting && !disabled) {
     icon = isHovered ? (
-      <Stop size={12} className="translate-y-[-1px]" />
+      <Stop size={iconSize} className={iconClassName} />
     ) : (
-      <Running1 size={12} className="translate-y-[-1px]" />
+      <Running1 size={iconSize} className={iconClassName} />
     );
   }
 
-  // When running, just show a button; when not running, show dropdown
-  if (isRunning) {
+  const buttonClassName =
+    variant === 'preview'
+      ? 'flex items-center justify-center'
+      : '!h-6 !w-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover';
+
+  // Preview variant: simple button(s)
+  if (variant === 'preview' || nodeIsExecuting) {
     return (
-      <Button
-        type="text"
-        size="small"
-        icon={icon}
-        disabled={isRunning}
-        onClick={handleRunClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className="!h-6 !w-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
-      />
+      <>
+        <Button
+          type="text"
+          icon={icon}
+          onClick={nodeIsExecuting ? handleStopClick : handleRerunClick}
+          disabled={disabled}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={buttonClassName}
+        />
+        {extraActions}
+      </>
     );
   }
 
+  // Node variant: dropdown or stop button
+  // When running, just show a button; when not running, show dropdown
   return (
     <Dropdown
       menu={{
@@ -89,15 +140,16 @@ const SkillResponseActionsComponent = ({
       }}
       trigger={['click']}
       placement="topLeft"
+      disabled={disabled}
     >
       <Button
         type="text"
         size="small"
         icon={icon}
-        onClick={handleRunClick}
+        disabled={disabled}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="!h-6 !w-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover"
+        className={buttonClassName}
       />
     </Dropdown>
   );

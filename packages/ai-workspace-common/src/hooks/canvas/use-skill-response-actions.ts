@@ -1,35 +1,30 @@
-import { useCallback, useMemo } from 'react';
-import { useAbortAction } from './use-abort-action';
+import { useCallback } from 'react';
 import {
   createNodeEventName,
   nodeActionEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { logEvent } from '@refly/telemetry-web';
-import { ActionStatus } from '@refly/openapi-schema';
+import { useCleanupAbortedNode } from './use-cleanup-aborted-node';
+import { useAbortAction } from './use-abort-action';
 
 interface UseSkillResponseActionsProps {
   nodeId: string;
   entityId: string;
-  status?: ActionStatus;
   canvasId?: string;
 }
 
 export const useSkillResponseActions = ({
   nodeId,
   entityId,
-  status,
   canvasId,
 }: UseSkillResponseActionsProps) => {
+  const { cleanupAbortedNode } = useCleanupAbortedNode();
   const { abortAction } = useAbortAction();
   const { workflow: workflowRun } = useCanvasContext();
 
-  // Check if node is currently running (either node execution or workflow)
-  const isRunning = useMemo(() => {
-    const nodeIsExecuting = status === 'executing' || status === 'waiting';
-    const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
-    return nodeIsExecuting || workflowIsRunning;
-  }, [status, workflowRun.isInitializing, workflowRun.isPolling]);
+  // Check if workflow is running
+  const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
 
   // Rerun only this node
   const handleRerunSingle = useCallback(() => {
@@ -66,14 +61,16 @@ export const useSkillResponseActions = ({
   }, [nodeId, canvasId, workflowRun]);
 
   // Stop the running node
-  const handleStop = useCallback(() => {
-    if (entityId) {
-      abortAction(entityId);
-    }
-  }, [entityId, abortAction]);
+  const handleStop = useCallback(async () => {
+    // First, abort the action on backend
+    await abortAction(entityId);
+
+    // Then, clean up frontend state
+    cleanupAbortedNode(nodeId, entityId);
+  }, [nodeId, entityId, abortAction, cleanupAbortedNode]);
 
   return {
-    isRunning,
+    workflowIsRunning,
     handleRerunSingle,
     handleRerunFromHere,
     handleStop,

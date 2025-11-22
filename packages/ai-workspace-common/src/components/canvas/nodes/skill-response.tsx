@@ -30,7 +30,6 @@ import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/n
 import {
   useNodeData,
   useNodeExecutionFocus,
-  useNodeExecutionStatus,
 } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
@@ -38,7 +37,7 @@ import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
-import { usePilotStoreShallow } from '@refly/stores';
+import { usePilotStoreShallow, useCanvasNodesStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 
 import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
@@ -49,7 +48,6 @@ import { SkillResponseActions } from '@refly-packages/ai-workspace-common/compon
 import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
-import { useSyncAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-sync-agent-connections';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useConnection } from '@xyflow/react';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
@@ -63,17 +61,23 @@ const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 300 };
 const NodeStatusBar = memo(
   ({
     status,
+    errorType,
     executionTime,
     creditCost,
     errors,
   }: {
     status: string;
+    errorType?: string;
     executionTime?: number;
     creditCost?: number;
     errors?: string[];
   }) => {
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // Default to systemError if undefined
+    const effectiveErrorType = errorType || 'systemError';
+    const isUserAbort = effectiveErrorType === 'userAbort';
 
     const getStatusIcon = () => {
       switch (status) {
@@ -135,15 +139,24 @@ const NodeStatusBar = memo(
           </div>
           {hasErrors && isExpanded && (
             <div className="min-w-0 mt-[10px] mb-1">
-              {errors.map((error, index) => (
+              {status === 'failed' && isUserAbort ? (
                 <Paragraph
-                  key={index}
                   className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
                   ellipsis={{ rows: 8, tooltip: true }}
                 >
-                  {error}
+                  {t('canvas.skillResponse.userAbort.description')}
                 </Paragraph>
-              ))}
+              ) : (
+                errors?.map((error, index) => (
+                  <Paragraph
+                    key={index}
+                    className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
+                    ellipsis={{ rows: 8, tooltip: true }}
+                  >
+                    {error}
+                  </Paragraph>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -164,6 +177,12 @@ export const SkillResponseNode = memo(
     onNodeClick,
   }: SkillResponseNodeProps) => {
     const [isHovered, setIsHovered] = useState(false);
+    const { highlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+      highlightedNodeId: state.highlightedNodeId,
+    }));
+
+    const shouldHighlight = highlightedNodeId === id;
+
     const connection = useConnection();
     const isConnectingTarget = useMemo(
       () =>
@@ -207,19 +226,14 @@ export const SkillResponseNode = memo(
       },
     );
 
-    // Get node execution status
-    const { status: executionStatus, isExecuting } = useNodeExecutionStatus({
-      canvasId: canvasId || '',
-      nodeId: id,
-    });
+    const isExecuting =
+      data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';
 
     // Auto-focus on node when executing
     useNodeExecutionFocus({
       isExecuting,
       canvasId: canvasId || '',
     });
-
-    useSyncAgentConnections(id, data);
 
     const nodeStyle = useMemo(
       () => (isPreview ? { width: NODE_WIDTH, height: 214 } : NODE_SIDE_CONFIG),
@@ -240,21 +254,22 @@ export const SkillResponseNode = memo(
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     const { data: variables } = useVariablesManagement(canvasId);
 
-    const { status, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
+    const { status, errorType, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
-    const { result, isStreaming, removeStreamResult } = useActionResultStoreShallow((state) => ({
-      result: state.resultMap[entityId],
-      isStreaming: !!state.streamResults[entityId],
-      removeStreamResult: state.removeStreamResult,
-    }));
+    const { result, isStreaming, removeStreamResult, removeActionResult } =
+      useActionResultStoreShallow((state) => ({
+        result: state.resultMap[entityId],
+        isStreaming: !!state.streamResults[entityId],
+        removeStreamResult: state.removeStreamResult,
+        removeActionResult: state.removeActionResult,
+      }));
     // Get skill response actions
-    const { isRunning, handleRerunSingle, handleRerunFromHere, handleStop } =
+    const { workflowIsRunning, handleRerunSingle, handleRerunFromHere, handleStop } =
       useSkillResponseActions({
         nodeId: id,
         entityId: data.entityId,
-        status,
         canvasId,
       });
 
@@ -311,7 +326,7 @@ export const SkillResponseNode = memo(
       }, delay);
 
       return () => clearTimeout(timer);
-    }, [selected, id, setEdges, setEdgesWithHighlight, status, executionStatus]);
+    }, [selected, id, setEdges, setEdgesWithHighlight, status]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
@@ -322,6 +337,9 @@ export const SkillResponseNode = memo(
     useEffect(() => {
       if (!isStreaming) {
         if (['executing', 'waiting'].includes(status) && !shareId) {
+          // Reset failed state and start polling for new execution
+          resetFailedState(entityId);
+          removeActionResult(entityId);
           startPolling(entityId, version);
         }
       } else {
@@ -340,7 +358,16 @@ export const SkillResponseNode = memo(
           return () => clearTimeout(timeoutId);
         }
       }
-    }, [isStreaming, status, startPolling, entityId, shareId, version, removeStreamResult]);
+    }, [
+      isStreaming,
+      status,
+      startPolling,
+      resetFailedState,
+      entityId,
+      shareId,
+      version,
+      removeStreamResult,
+    ]);
 
     // Listen to pilot step status changes and sync with node status
     useEffect(() => {
@@ -440,13 +467,13 @@ export const SkillResponseNode = memo(
 
       invokeAction(
         {
+          nodeId: id,
           resultId: entityId,
           query: processedQuery,
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
           modelInfo: data?.metadata?.modelInfo,
-          upstreamResultIds: data?.metadata?.upstreamResultIds,
         },
         {
           entityType: 'canvas',
@@ -809,21 +836,26 @@ export const SkillResponseNode = memo(
             style={nodeStyle}
             className={cn(
               'h-full flex flex-col relative z-1 p-0 box-border',
-              getNodeCommonStyles({ selected, isHovered }),
+              getNodeCommonStyles({ selected, isHovered, shouldHighlight }),
               'flex max-h-60 flex-col items-start self-stretch rounded-2xl border-solid bg-refly-bg-content-z2',
               // Apply error styles only when there's an error
-              status === 'failed' ? 'border-refly-func-danger-default' : 'border-refly-Card-Border',
+              status === 'failed'
+                ? '!border-refly-func-danger-default'
+                : 'border-refly-Card-Border',
             )}
           >
+            {shouldHighlight && (
+              <div className="absolute inset-0 bg-refly-node-run opacity-[0.14]" />
+            )}
             <SkillResponseNodeHeader
               nodeId={id}
               entityId={data.entityId}
               title={data.title ?? t('canvas.nodeTypes.agent')}
-              readonly={true}
               source="node"
               actions={
                 <SkillResponseActions
-                  isRunning={isRunning || isExecuting}
+                  nodeIsExecuting={isExecuting}
+                  workflowIsRunning={workflowIsRunning}
                   onRerunSingle={handleRerunSingle}
                   onRerunFromHere={handleRerunFromHere}
                   onStop={handleStop}
@@ -833,7 +865,7 @@ export const SkillResponseNode = memo(
 
             <div className={'relative flex-grow overflow-y-auto w-full'}>
               {/* Always show content preview, use prompt/query as fallback when content is empty */}
-              <SkillResponseContentPreview className="p-3" metadata={metadata} />
+              <SkillResponseContentPreview className="p-3" nodeId={id} metadata={metadata} />
             </div>
           </div>
         </div>
@@ -841,6 +873,7 @@ export const SkillResponseNode = memo(
         {!isPreview && status !== 'init' && (
           <NodeStatusBar
             status={status}
+            errorType={errorType}
             creditCost={metadata?.creditCost}
             executionTime={metadata?.executionTime}
             errors={result?.errors}
@@ -864,6 +897,7 @@ export const SkillResponseNode = memo(
       prevProps.data?.title === nextProps.data?.title &&
       prevProps.data?.contentPreview === nextProps.data?.contentPreview &&
       prevProps.data?.createdAt === nextProps.data?.createdAt &&
+      prevProps.onNodeClick === nextProps.onNodeClick &&
       JSON.stringify(prevProps.data?.metadata) === JSON.stringify(nextProps.data?.metadata) &&
       styleEqual
     );

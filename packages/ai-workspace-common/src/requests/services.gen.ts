@@ -345,6 +345,9 @@ import type {
   InitializeWorkflowData,
   InitializeWorkflowError,
   InitializeWorkflowResponse2,
+  AbortWorkflowData,
+  AbortWorkflowError,
+  AbortWorkflowResponse,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
@@ -388,6 +391,13 @@ import type {
   GetCreditUsageByCanvasIdData,
   GetCreditUsageByCanvasIdError,
   GetCreditUsageByCanvasIdResponse2,
+  ListInvitationCodesError,
+  ListInvitationCodesResponse2,
+  ActivateInvitationCodeData,
+  ActivateInvitationCodeError,
+  ActivateInvitationCodeResponse,
+  HasBeenInvitedError,
+  HasBeenInvitedResponse2,
   GetSubscriptionPlansError,
   GetSubscriptionPlansResponse2,
   GetSubscriptionUsageError,
@@ -2327,6 +2337,19 @@ export const initializeWorkflow = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Abort workflow execution
+ * Abort a running workflow execution
+ */
+export const abortWorkflow = <ThrowOnError extends boolean = false>(
+  options: Options<AbortWorkflowData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<AbortWorkflowResponse, AbortWorkflowError, ThrowOnError>({
+    ...options,
+    url: '/workflow/abort',
+  });
+};
+
+/**
  * Get workflow detail
  * Get detail for a workflow execution
  */
@@ -2572,6 +2595,57 @@ export const getCreditUsageByCanvasId = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/credit/canvas',
+  });
+};
+
+/**
+ * List invitation codes
+ * List all invitation codes
+ */
+export const listInvitationCodes = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListInvitationCodesResponse2,
+    ListInvitationCodesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/invitation/list',
+  });
+};
+
+/**
+ * Activate invitation code
+ * Activate an invitation code
+ */
+export const activateInvitationCode = <ThrowOnError extends boolean = false>(
+  options: Options<ActivateInvitationCodeData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ActivateInvitationCodeResponse,
+    ActivateInvitationCodeError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/invitation/activate',
+  });
+};
+
+/**
+ * Check if user has been invited
+ * Check if user has been invited
+ */
+export const hasBeenInvited = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    HasBeenInvitedResponse2,
+    HasBeenInvitedError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/invitation/invited',
   });
 };
 

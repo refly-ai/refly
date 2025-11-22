@@ -142,7 +142,7 @@ const ReasoningContent = memo(
     return (
       <div className="p-3 bg-refly-bg-control-z0 rounded-lg transition-all">
         <div
-          className="flex items-center justify-between cursor-pointer select-none"
+          className="flex items-center justify-between cursor-pointer select-none min-h-[24px]"
           onClick={(e) => {
             e.stopPropagation();
             setCollapsed(!collapsed);
@@ -155,7 +155,8 @@ const ReasoningContent = memo(
           <Button
             type="text"
             size="small"
-            icon={collapsed ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+            className="!w-4 !h-4 !rounded-[4px]"
+            icon={collapsed ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
             onClick={(e) => {
               e.stopPropagation();
               setCollapsed(!collapsed);

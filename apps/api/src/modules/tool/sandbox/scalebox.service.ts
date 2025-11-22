@@ -19,9 +19,6 @@ import {
   SandboxExecutionFailedException,
   SandboxLockTimeoutException,
 } from './scalebox.exception';
-import { MEDIA_TYPES } from '../constant';
-import { ToolExecutionSync } from '../common/decorators/tool-execution-sync.decorator';
-import { ToolExecutionSyncInterceptor } from '../common/interceptors/tool-execution-sync.interceptor';
 import { ScaleboxExecutionResult, ExecutionContext } from './scalebox.dto';
 import { formatError, buildSuccessResponse, extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
@@ -46,7 +43,7 @@ export class ScaleboxService {
     private readonly redis: RedisService,
     private readonly driveService: DriveService,
     private readonly sandboxPool: SandboxPool,
-    private readonly toolExecutionSync: ToolExecutionSyncInterceptor,
+
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(ScaleboxService.name);
@@ -147,20 +144,6 @@ export class ScaleboxService {
     };
   }
 
-  @ToolExecutionSync({
-    resultType: MEDIA_TYPES.DOC,
-    getParentResultId: (req) => req.parentResultId,
-    getTitle: (req) => `sandbox-execute-${req.language}`,
-    getModel: (req) => req.model,
-    getProviderItemId: (req) => req.providerItemId,
-    createCanvasNode: true,
-    updateWorkflowNode: true,
-    getMetadata: (_req, result) => ({
-      output: result?.data?.output,
-      exitCode: result?.data?.exitCode,
-      executionTime: result?.data?.executionTime,
-    }),
-  })
   async execute(user: User, request: SandboxExecuteRequest): Promise<SandboxExecuteResponse> {
     try {
       const canvasId = guard

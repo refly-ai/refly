@@ -42,7 +42,7 @@ import { McpServerService } from '../mcp-server/mcp-server.service';
 import { MiscService } from '../misc/misc.service';
 import { ComposioService } from './composio/composio.service';
 import { AuthType, ToolsetType } from './constant';
-import { ToolFactory } from './core/registry/factory';
+import { ToolFactory } from './dynamic-tooling/core/registry/factory';
 import { ToolInventoryService } from './inventory/inventory.service';
 import {
   mcpServerPo2GenericToolset,
@@ -93,8 +93,12 @@ export class ToolService {
   }
 
   async listToolsetInventory(): Promise<ToolsetDefinition[]> {
+    const builtinInventory = Object.values(builtinToolsetInventory).map((toolset) => ({
+      ...toolset.definition,
+      builtin: true,
+    }));
     const definitions = await this.inventoryService.getInventoryDefinitions();
-    return definitions.sort((a, b) => a.key.localeCompare(b.key));
+    return [...builtinInventory, ...definitions].sort((a, b) => a.key.localeCompare(b.key));
   }
 
   listBuiltinTools(): GenericToolset[] {
@@ -276,7 +280,7 @@ export class ToolService {
     }
 
     // Validate config against toolset schema
-    if (config && toolsetDefinition.configItems) {
+    if (config) {
       this.validateConfig(config, toolsetDefinition.configItems);
     }
 
@@ -949,8 +953,8 @@ export class ToolService {
             metadata: {
               name: tool.name,
               type: ToolsetType.REGULAR,
-              toolsetKey: 'builtin',
-              toolsetName: 'Builtin',
+              toolsetKey: tool.toolsetKey,
+              toolsetName: tool.name,
             },
           }),
       );

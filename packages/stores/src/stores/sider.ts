@@ -29,6 +29,7 @@ interface SiderState {
   showCanvasListModal: boolean;
   showLibraryModal: boolean;
   showSettingModal: boolean;
+  showInvitationModal: boolean;
   settingsModalActiveTab: SettingsModalActiveTab | null;
 
   // method
@@ -42,6 +43,7 @@ interface SiderState {
   setShowCanvasListModal: (val: boolean) => void;
   setShowLibraryModal: (val: boolean) => void;
   setShowSettingModal: (val: boolean) => void;
+  setShowInvitationModal: (val: boolean) => void;
   setSettingsModalActiveTab: (val: SettingsModalActiveTab) => void;
   updateCanvasTitle: (canvasId: string, title: string) => void;
 }
@@ -58,6 +60,7 @@ export const useSiderStore = create<SiderState>()(
     showLibraryModal: false,
     showCanvasListModal: false,
     showSettingModal: false,
+    showInvitationModal: false,
     settingsModalActiveTab: null,
 
     setCollapse: (val: boolean) =>
@@ -78,6 +81,7 @@ export const useSiderStore = create<SiderState>()(
     setShowCanvasListModal: (val: boolean) => set({ showCanvasListModal: val }),
     setShowLibraryModal: (val: boolean) => set({ showLibraryModal: val }),
     setShowSettingModal: (val: boolean) => set({ showSettingModal: val }),
+    setShowInvitationModal: (val: boolean) => set({ showInvitationModal: val }),
     setSettingsModalActiveTab: (val: SettingsModalActiveTab) =>
       set({ settingsModalActiveTab: val }),
     updateCanvasTitle: (canvasId: string, title: string) => {

@@ -50,6 +50,7 @@ export interface ChatComposerProps {
 
   // Show/hide ChatActions
   showActions?: boolean;
+  disabled?: boolean;
 }
 
 export interface ChatComposerRef {
@@ -79,12 +80,22 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
     customActions,
     nodeId,
     showActions = true,
+    disabled = false,
   } = props;
 
   const { handleUploadImage, handleUploadMultipleImages } = useUploadImage();
   const { canvasId, readonly } = useCanvasContext();
   const { t } = useTranslation();
-  const { query, setQuery, setContextItems } = useAgentNodeManagement(nodeId);
+  const {
+    query,
+    setQuery,
+    contextItems,
+    setContextItems,
+    modelInfo,
+    setModelInfo,
+    selectedToolsets,
+    setSelectedToolsets,
+  } = useAgentNodeManagement(nodeId);
 
   // Ref for the input component
   const inputRef = useRef<RichChatInputRef>(null);
@@ -175,7 +186,7 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
     <div className={`flex flex-col gap-3 h-full ${className}`}>
       {enableRichInput ? (
         <RichChatInput
-          readonly={readonly}
+          readonly={readonly || disabled}
           ref={inputRef}
           inputClassName={inputClassName}
           maxRows={maxRows}
@@ -189,7 +200,7 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
         />
       ) : (
         <ChatInput
-          readonly={readonly}
+          readonly={readonly || disabled}
           ref={ref as any}
           query={query}
           setQuery={(value) => {
@@ -207,7 +218,12 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
 
       {showActions && (
         <ChatActions
-          nodeId={nodeId}
+          query={query}
+          modelInfo={modelInfo}
+          contextItems={contextItems}
+          selectedToolsets={selectedToolsets}
+          setModelInfo={setModelInfo}
+          setSelectedToolsets={setSelectedToolsets}
           className={actionsClassName}
           resultId={resultId}
           handleSendMessage={handleSendMessageInternal}

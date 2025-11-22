@@ -2056,6 +2056,12 @@ export const ActionStatusSchema = {
   enum: ['init', 'waiting', 'executing', 'finish', 'failed'],
 } as const;
 
+export const ActionErrorTypeSchema = {
+  type: 'string',
+  description: 'Action error type',
+  enum: ['systemError', 'userAbort'],
+} as const;
+
 export const ArtifactTypeSchema = {
   type: 'string',
   description: 'Artifact type',
@@ -2297,6 +2303,11 @@ export const ActionResultSchema = {
       type: 'string',
       description: 'Step status',
       $ref: '#/components/schemas/ActionStatus',
+    },
+    errorType: {
+      type: 'string',
+      description: 'Error type (defaults to systemError when omitted)',
+      $ref: '#/components/schemas/ActionErrorType',
     },
     type: {
       description: 'Action type',
@@ -2747,6 +2758,15 @@ export const UserPreferencesSchema = {
       description: 'Whether to disable hover tutorial',
       default: false,
     },
+    hasBeenInvited: {
+      type: 'boolean',
+      description: 'Whether the user has been invited',
+      default: false,
+    },
+    requireInvitationCode: {
+      type: 'boolean',
+      description: 'Whether to require invitation code',
+    },
     webSearch: {
       description: 'Web search config',
       $ref: '#/components/schemas/ProviderConfig',
@@ -2857,7 +2877,7 @@ export const UserSettingsSchema = {
 export const AuthProviderSchema = {
   type: 'string',
   description: 'Auth provider',
-  enum: ['email', 'google', 'github'],
+  enum: ['email', 'google', 'github', 'invitation'],
 } as const;
 
 export const AuthConfigItemSchema = {
@@ -7085,6 +7105,14 @@ export const getCreditBalanceResponseSchema = {
               type: 'number',
               description: 'Credit amount',
             },
+            regularCredits: {
+              type: 'number',
+              description: 'Regular credits (from purchases, gifts, subscriptions)',
+            },
+            templateEarningsCredits: {
+              type: 'number',
+              description: 'Template earnings credits',
+            },
           },
         },
       },
@@ -7174,6 +7202,92 @@ export const GetCreditUsageByCanvasIdResponseSchema = {
               items: {
                 $ref: '#/components/schemas/CreditUsage',
               },
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const InvitationCodeSchema = {
+  type: 'object',
+  properties: {
+    code: {
+      type: 'string',
+      description: 'Invitation code',
+    },
+    inviterUid: {
+      type: 'string',
+      description: 'Inviter UID',
+    },
+    inviteeUid: {
+      type: 'string',
+      description: 'Invitee UID',
+    },
+    status: {
+      type: 'string',
+      description: 'Invitation status',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Invitation creation time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Invitation update time',
+    },
+  },
+} as const;
+
+export const ActivateInvitationCodeRequestSchema = {
+  type: 'object',
+  properties: {
+    code: {
+      type: 'string',
+      description: 'Invitation code',
+    },
+  },
+} as const;
+
+export const ListInvitationCodesResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Invitation code list',
+          items: {
+            $ref: '#/components/schemas/InvitationCode',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const HasBeenInvitedResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Has been invited data',
+          properties: {
+            hasBeenInvited: {
+              type: 'boolean',
+              description: 'Whether user has been invited',
+              default: false,
             },
           },
         },
@@ -8867,6 +8981,10 @@ export const ToolsetDefinitionSchema = {
       type: 'string',
       description: 'Toolset key',
     },
+    builtin: {
+      type: 'boolean',
+      description: 'Whether this is a builtin toolset',
+    },
     domain: {
       type: 'string',
       description: 'Toolset domain (used for display icon)',
@@ -9448,6 +9566,18 @@ export const InitializeWorkflowResponseSchema = {
   ],
 } as const;
 
+export const AbortWorkflowRequestSchema = {
+  type: 'object',
+  required: ['executionId'],
+  properties: {
+    executionId: {
+      type: 'string',
+      description: 'Workflow execution ID to abort',
+      example: 'we-abc123',
+    },
+  },
+} as const;
+
 export const WorkflowNodeExecutionSchema = {
   type: 'object',
   required: ['nodeId'],
@@ -9525,6 +9655,10 @@ export const WorkflowExecutionSchema = {
     status: {
       $ref: '#/components/schemas/WorkflowExecutionStatus',
       description: 'Workflow status',
+    },
+    abortedByUser: {
+      type: 'boolean',
+      description: 'Whether the workflow was aborted by user',
     },
     nodeExecutions: {
       type: 'array',
@@ -9604,6 +9738,10 @@ export const CreateWorkflowAppRequestSchema = {
     remixEnabled: {
       type: 'boolean',
       description: 'Whether remix is enabled for this app',
+    },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
     },
   },
 } as const;
@@ -10305,6 +10443,237 @@ Variables are represented using handlebars syntax (e.g., {{variableName}}).
             type: 'string',
           },
           example: ['data-processing', 'automation'],
+        },
+      },
+    },
+  },
+} as const;
+
+export const FormDefinitionSchema = {
+  type: 'object',
+  required: ['formId', 'title', 'schema', 'createdAt', 'updatedAt'],
+  properties: {
+    formId: {
+      type: 'string',
+      description: 'Form ID',
+      example: 'form-123',
+    },
+    title: {
+      type: 'string',
+      description: 'Form title',
+      example: 'User feedback survey',
+    },
+    description: {
+      type: 'string',
+      description: 'Form description',
+      example: 'Please fill out the following survey',
+    },
+    schema: {
+      type: 'string',
+      description: 'JSON Schema definition (RJSF compatible)',
+      example:
+        '{"type":"object","properties":{"feedback":{"type":"string","title":"Feedback content"}},"required":["feedback"]}',
+    },
+    uiSchema: {
+      type: 'string',
+      description:
+        'UI Schema definition (RJSF compatible for controlling UI elements like emoji, layout, helper text)',
+      example:
+        '{"feedback":{"ui:widget":"textarea","ui:placeholder":"Please enter your feedback"}}',
+    },
+    status: {
+      type: 'string',
+      description: 'Form status',
+      enum: ['draft', 'published', 'archived'],
+      default: 'draft',
+      example: 'published',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Creation timestamp',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Last update timestamp',
+    },
+    deletedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Soft delete timestamp',
+    },
+  },
+} as const;
+
+export const FormSubmissionSchema = {
+  type: 'object',
+  required: ['formId', 'uid', 'answers', 'createdAt', 'updatedAt'],
+  properties: {
+    submissionId: {
+      type: 'string',
+      description: 'Submission ID',
+      example: 'sub-456',
+    },
+    formId: {
+      type: 'string',
+      description: 'Associated form ID',
+      example: 'form-123',
+    },
+    uid: {
+      type: 'string',
+      description: 'User ID who submitted the form',
+      example: 'user-789',
+    },
+    answers: {
+      type: 'string',
+      description: 'Submission answers (JSON object with field values)',
+      example: '{"feedback":"The service is very good","rating":5}',
+    },
+    status: {
+      type: 'string',
+      description: 'Submission status',
+      enum: ['draft', 'submitted', 'reviewed'],
+      default: 'draft',
+      example: 'submitted',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Creation timestamp',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Last update timestamp',
+    },
+  },
+} as const;
+
+export const FormFieldSchemaSchema = {
+  type: 'object',
+  description: 'RJSF compatible field schema definition',
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Field type',
+      enum: ['string', 'number', 'integer', 'boolean', 'object', 'array'],
+      example: 'string',
+    },
+    title: {
+      type: 'string',
+      description: 'Field display title',
+      example: 'Your name',
+    },
+    description: {
+      type: 'string',
+      description: 'Field description/helper text',
+      example: 'Please enter your real name',
+    },
+    enum: {
+      type: 'array',
+      description: 'Enumeration values for radio/select fields',
+      items: {
+        type: 'string',
+      },
+      example: ['A', 'B', 'C'],
+    },
+    enumNames: {
+      type: 'array',
+      description: 'Display names for enum values',
+      items: {
+        type: 'string',
+      },
+      example: ['Excellent', 'Good', 'Average'],
+    },
+    default: {
+      description: 'Default value for the field',
+    },
+    minLength: {
+      type: 'integer',
+      description: 'Minimum string length',
+      example: 2,
+    },
+    maxLength: {
+      type: 'integer',
+      description: 'Maximum string length',
+      example: 100,
+    },
+    pattern: {
+      type: 'string',
+      description: 'Regex pattern for validation',
+      example: '^[a-zA-Z0-9]+$',
+    },
+    minimum: {
+      type: 'number',
+      description: 'Minimum numeric value',
+    },
+    maximum: {
+      type: 'number',
+      description: 'Maximum numeric value',
+    },
+    required: {
+      type: 'boolean',
+      description: 'Whether this field is required',
+      default: false,
+    },
+  },
+} as const;
+
+export const FormUiSchemaSchema = {
+  type: 'object',
+  description: 'RJSF UI schema for controlling form appearance and behavior',
+  properties: {
+    'ui:widget': {
+      type: 'string',
+      description: 'Widget type override',
+      enum: [
+        'text',
+        'textarea',
+        'select',
+        'radio',
+        'checkbox',
+        'checkboxes',
+        'date',
+        'email',
+        'password',
+      ],
+      example: 'textarea',
+    },
+    'ui:placeholder': {
+      type: 'string',
+      description: 'Input placeholder text',
+      example: 'Please enter content...',
+    },
+    'ui:help': {
+      type: 'string',
+      description: 'Help text displayed below the field',
+      example: 'This field is required',
+    },
+    'ui:options': {
+      type: 'object',
+      description: 'Widget-specific options (can include emoji, layout settings, etc.)',
+      properties: {
+        emoji: {
+          type: 'string',
+          description: 'Emoji to display with the field',
+          example: '📝',
+        },
+        layout: {
+          type: 'string',
+          description: 'Layout style',
+          enum: ['horizontal', 'vertical'],
+          example: 'vertical',
+        },
+        rows: {
+          type: 'integer',
+          description: 'Number of rows for textarea',
+          example: 4,
+        },
+        inline: {
+          type: 'boolean',
+          description: 'Whether to display radio/checkbox options inline',
+          example: true,
         },
       },
     },
