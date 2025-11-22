@@ -60,7 +60,6 @@ import {
   nodeOperationsEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { WorkflowRun } from './workflow-run';
-import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
 import { CanvasDrive, CanvasResourcesWidescreenModal } from './canvas-resources';
 import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
 import { CanvasControlButtons } from './top-toolbar/canvas-control-buttons';
@@ -135,8 +134,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   );
 
   useHandleOrphanNode();
-
-  useCanvasInitialActions(canvasId);
 
   const { addNode } = useAddNode();
   const { nodes, edges } = useStore(
