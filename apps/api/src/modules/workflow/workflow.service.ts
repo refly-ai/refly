@@ -699,11 +699,11 @@ export class WorkflowService {
     const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
     this.logger.log(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
 
-    // Update all waiting and executing nodes to failed
+    // Update all non-terminal nodes to failed (not just waiting/executing)
     await this.prisma.workflowNodeExecution.updateMany({
       where: {
         executionId,
-        status: { in: ['waiting', 'executing'] },
+        status: { notIn: ['finish', 'failed'] },
       },
       data: {
         status: 'failed',
@@ -712,9 +712,12 @@ export class WorkflowService {
       },
     });
 
-    // Update workflow execution status and set abortedByUser flag
-    await this.prisma.workflowExecution.update({
-      where: { executionId },
+    // Update workflow execution to failed if not already terminal
+    await this.prisma.workflowExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
       data: {
         status: 'failed',
         abortedByUser: true,

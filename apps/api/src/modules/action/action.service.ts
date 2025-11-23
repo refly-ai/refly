@@ -361,8 +361,8 @@ export class ActionService {
   async abortActionFromReq(user: User, req: AbortActionRequest, reason?: string) {
     const { resultId, version } = req;
 
-    // Verify that the action belongs to the user
-    const result = await this.prisma.actionResult.findFirst({
+    // Try exact version first, fallback to latest version if not found (handles rapid start-stop)
+    let result = await this.prisma.actionResult.findFirst({
       where: {
         resultId,
         version,
@@ -370,11 +370,28 @@ export class ActionService {
       },
     });
 
+    // If exact version not found, try to find the latest version for this resultId
+    if (!result) {
+      this.logger.warn(
+        `Action result ${resultId} version ${version} not found, trying to find latest version`,
+      );
+      result = await this.prisma.actionResult.findFirst({
+        where: {
+          resultId,
+          uid: user.uid,
+        },
+        orderBy: {
+          version: 'desc',
+        },
+      });
+    }
+
     if (!result) {
       throw new ActionResultNotFoundError();
     }
 
     const abortReason = reason || 'User requested abort';
+    const actualVersion = result.version;
 
     // Step 1: Check if controller is in memory (same pod) - FASTEST
     // Note: If controller exists, Redis mapping has already been deleted when execution started
@@ -384,7 +401,7 @@ export class ActionService {
       entry.controller.abort(abortReason);
       this.unregisterAbortController(resultId);
       // Update database status
-      await this.markAbortRequested(resultId, version, abortReason);
+      await this.markAbortRequested(resultId, actualVersion, abortReason);
       this.logger.log(`Successfully aborted executing action (same pod): ${resultId}`);
       return;
     }
@@ -398,7 +415,7 @@ export class ActionService {
         await job.remove();
         await this.deleteQueuedJob(resultId);
         // Update database status (only for queued jobs, no need to check status)
-        await this.markAbortRequested(resultId, version, abortReason);
+        await this.markAbortRequested(resultId, actualVersion, abortReason);
         this.logger.log(`Successfully aborted queued job: ${resultId}`);
         return;
       }
@@ -409,7 +426,7 @@ export class ActionService {
     this.logger.log(
       `Controller not found in memory for ${resultId}, marking database for cross-pod abort`,
     );
-    await this.markAbortRequested(resultId, version, abortReason);
+    await this.markAbortRequested(resultId, actualVersion, abortReason);
   }
 
   /**
@@ -441,11 +458,16 @@ export class ActionService {
 
   /**
    * Mark an action for abortion in the database (for cross-pod scenarios)
-   * Directly update status to 'failed' so the executing pod can detect it
+   *
+   * Updates all non-terminal states to prevent race conditions during queue-to-execution transition
    */
   async markAbortRequested(resultId: string, version: number, reason: string): Promise<void> {
     const updated = await this.prisma.actionResult.updateMany({
-      where: { resultId, version, status: 'executing' },
+      where: {
+        resultId,
+        version,
+        status: { notIn: ['finish', 'failed'] }, // Update any non-terminal status
+      },
       data: {
         status: 'failed',
         errors: JSON.stringify([reason]),
@@ -459,7 +481,7 @@ export class ActionService {
       );
     } else {
       this.logger.warn(
-        `Action ${resultId} v${version} not found or not executing, skipping abort mark`,
+        `Action ${resultId} v${version} not found or already in terminal state, skipping abort mark`,
       );
     }
   }
