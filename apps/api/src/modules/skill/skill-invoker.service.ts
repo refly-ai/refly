@@ -426,6 +426,8 @@ export class SkillInvokerService {
               // Fallback to direct abort if ActionService fails
               abortController.abort(timeoutReason);
               result.errors.push(timeoutReason);
+              result.status = 'failed';
+              result.errorType = 'systemError';
             }
             // Stop the timeout check after triggering
             if (timeoutCheckInterval) {
@@ -546,6 +548,16 @@ export class SkillInvokerService {
     }
 
     try {
+      // Check if already aborted before starting execution (handles queued aborts)
+      const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
+      if (isAlreadyAborted) {
+        this.logger.warn(`Action ${resultId} already marked for abort before execution, skipping`);
+        abortController.abort('Action was aborted before execution started');
+        result.status = 'failed';
+        result.errorType = 'userAbort';
+        throw new Error('Action was aborted before execution started');
+      }
+
       // tool callId, now we use first time returned run_id as tool call id
       const startTs = Date.now();
       const toolCallIds: Set<string> = new Set();
@@ -842,6 +854,12 @@ export class SkillInvokerService {
           error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
           originError: err.message,
         });
+      }
+      if (errorInfo.isAbortError) {
+        result.status = 'failed';
+        result.errorType = 'userAbort';
+      } else {
+        result.status = 'failed';
       }
       result.errors.push(errorInfo.userFriendlyMessage);
     } finally {
@@ -1231,7 +1249,7 @@ export class SkillInvokerService {
       this.logger.error(`invoke skill error: ${err.stack}`);
 
       await this.prisma.actionResult.updateMany({
-        where: { resultId, version },
+        where: { resultId, version, status: { notIn: ['finish', 'failed'] } },
         data: {
           status: 'failed',
           errors: JSON.stringify([err.message]),

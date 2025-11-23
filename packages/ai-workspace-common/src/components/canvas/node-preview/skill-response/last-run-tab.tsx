@@ -51,7 +51,7 @@ const LastRunTabComponent = ({
   }
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col mb-4">
       <div className="flex-1 overflow-auto preview-container transition-opacity duration-500">
         {loading && !isStreaming && <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />}
         {(result?.status === 'executing' || result?.status === 'waiting') &&
