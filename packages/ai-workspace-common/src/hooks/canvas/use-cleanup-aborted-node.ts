@@ -20,12 +20,12 @@ import { processContentPreview } from '@refly-packages/ai-workspace-common/utils
 export const useCleanupAbortedNode = () => {
   const { setNodeData } = useNodeData();
 
-  const { resultMap, stopPolling, removeStreamResult, updateActionResult } =
+  const { resultMap, stopPolling, removeStreamResult, removeActionResult } =
     useActionResultStoreShallow((state) => ({
       resultMap: state.resultMap,
       stopPolling: state.stopPolling,
       removeStreamResult: state.removeStreamResult,
-      updateActionResult: state.updateActionResult,
+      removeActionResult: state.removeActionResult,
     }));
 
   /**
@@ -59,19 +59,10 @@ export const useCleanupAbortedNode = () => {
         contentPreview: resultPreview,
       });
 
-      // Update store to 'failed' status to prevent race conditions with backend updates
-      if (result) {
-        updateActionResult(entityId, {
-          ...result,
-          status: 'failed',
-          errorType: 'userAbort',
-          errors: ['User aborted the action'],
-        });
-      }
-
       removeStreamResult(entityId);
+      removeActionResult(entityId);
     },
-    [resultMap, stopPolling, setNodeData, removeStreamResult, updateActionResult],
+    [resultMap, stopPolling, setNodeData, removeStreamResult, removeActionResult],
   );
 
   return {

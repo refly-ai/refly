@@ -416,6 +416,7 @@ export class SkillInvokerService {
                 user,
                 { resultId, version },
                 timeoutReason,
+                'systemError',
               );
               this.logger.log(`Successfully aborted action ${resultId} due to stream idle timeout`);
             } catch (error) {
@@ -560,6 +561,8 @@ export class SkillInvokerService {
           if (runMeta) {
             result.errors.push(abortReason);
           }
+          result.status = 'failed';
+          result.errorType = 'userAbort';
           throw new Error(`Request aborted: ${abortReason}`);
         }
 
@@ -883,6 +886,7 @@ export class SkillInvokerService {
           where: { resultId, version },
           data: {
             status,
+            errorType: result.errorType,
             errors: JSON.stringify(result.errors),
           },
         }),

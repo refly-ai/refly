@@ -672,9 +672,7 @@ export class WorkflowService {
     );
 
     // Abort all executing skillResponse nodes by calling abort action
-    const executingSkillNodes = nodesToAbort.filter(
-      (n) => n.status === 'executing' && n.nodeType === 'skillResponse',
-    );
+    const executingSkillNodes = nodesToAbort.filter((n) => n.nodeType === 'skillResponse');
 
     // Abort all executing nodes in parallel for better performance
     const abortResults = await Promise.allSettled(

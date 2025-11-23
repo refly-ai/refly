@@ -2,7 +2,13 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { ActionResultNotFoundError } from '@refly/errors';
-import { AbortActionRequest, EntityType, GetActionResultData, User } from '@refly/openapi-schema';
+import {
+  AbortActionRequest,
+  ActionErrorType,
+  EntityType,
+  GetActionResultData,
+  User,
+} from '@refly/openapi-schema';
 import { batchReplaceRegex, genActionResultID, pick } from '@refly/utils';
 import pLimit from 'p-limit';
 import { ActionResult } from '../../generated/client';
@@ -358,7 +364,12 @@ export class ActionService {
     }
   }
 
-  async abortActionFromReq(user: User, req: AbortActionRequest, reason?: string) {
+  async abortActionFromReq(
+    user: User,
+    req: AbortActionRequest,
+    reason?: string,
+    errorType?: ActionErrorType,
+  ) {
     const { resultId, version } = req;
 
     // Try exact version first, fallback to latest version if not found (handles rapid start-stop)
@@ -393,40 +404,28 @@ export class ActionService {
     const abortReason = reason || 'User requested abort';
     const actualVersion = result.version;
 
+    await this.markAbortRequested(resultId, actualVersion, abortReason, errorType);
+
     // Step 1: Check if controller is in memory (same pod) - FASTEST
     // Note: If controller exists, Redis mapping has already been deleted when execution started
     const entry = this.activeAbortControllers.get(resultId);
     if (entry) {
-      this.logger.log(`Found controller in memory for ${resultId}, aborting directly`);
       entry.controller.abort(abortReason);
       this.unregisterAbortController(resultId);
       // Update database status
-      await this.markAbortRequested(resultId, actualVersion, abortReason);
       this.logger.log(`Successfully aborted executing action (same pod): ${resultId}`);
-      return;
     }
 
     // Step 2: Check if job is still queued in BullMQ
     const jobId = await this.getQueuedJobId(resultId);
     if (jobId && this.skillQueue) {
-      this.logger.log(`Job ${resultId} is still queued, removing from queue`);
       const job = await this.skillQueue.getJob(jobId);
       if (job) {
         await job.remove();
         await this.deleteQueuedJob(resultId);
-        // Update database status (only for queued jobs, no need to check status)
-        await this.markAbortRequested(resultId, actualVersion, abortReason);
         this.logger.log(`Successfully aborted queued job: ${resultId}`);
-        return;
       }
     }
-
-    // Step 3: Neither in memory nor in queue - must be executing on another pod
-    // Mark database status to 'failed' so the other pod can detect it
-    this.logger.log(
-      `Controller not found in memory for ${resultId}, marking database for cross-pod abort`,
-    );
-    await this.markAbortRequested(resultId, actualVersion, abortReason);
   }
 
   /**
@@ -461,17 +460,21 @@ export class ActionService {
    *
    * Updates all non-terminal states to prevent race conditions during queue-to-execution transition
    */
-  async markAbortRequested(resultId: string, version: number, reason: string): Promise<void> {
+  async markAbortRequested(
+    resultId: string,
+    version: number,
+    reason: string,
+    errorType: ActionErrorType = 'userAbort',
+  ): Promise<void> {
     const updated = await this.prisma.actionResult.updateMany({
       where: {
         resultId,
         version,
-        status: { notIn: ['finish', 'failed'] }, // Update any non-terminal status
       },
       data: {
         status: 'failed',
         errors: JSON.stringify([reason]),
-        errorType: 'userAbort',
+        errorType,
       },
     });
 
