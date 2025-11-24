@@ -374,7 +374,6 @@ import type {
   CheckSettingsFieldData,
   CheckSettingsFieldError,
   CheckSettingsFieldResponse2,
-  GetFormDefinitionData,
   GetFormDefinitionError,
   GetFormDefinitionResponse2,
   SubmitFormData,
@@ -2507,7 +2506,7 @@ export const checkSettingsField = <ThrowOnError extends boolean = false>(
  * Get form definition
  */
 export const getFormDefinition = <ThrowOnError extends boolean = false>(
-  options: Options<GetFormDefinitionData, ThrowOnError>,
+  options?: Options<unknown, ThrowOnError>,
 ) => {
   return (options?.client ?? client).get<
     GetFormDefinitionResponse2,

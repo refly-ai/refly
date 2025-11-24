@@ -6,8 +6,8 @@ import { FormDefinition, FormSubmission } from '@refly/openapi-schema';
 export class FormService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getFormDefinition(uid: string): Promise<FormDefinition> {
-    const formDefinition = await this.prisma.formDefinition.findFirst({ where: { uid } });
+  async getFormDefinition(_uid: string): Promise<FormDefinition> {
+    const formDefinition = await this.prisma.formDefinition.findFirst();
     return {
       formId: formDefinition.formId,
       title: formDefinition.title,

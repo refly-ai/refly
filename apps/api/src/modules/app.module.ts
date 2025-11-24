@@ -42,6 +42,7 @@ import { ToolModule } from './tool/tool.module';
 import { VariableExtractionModule } from './variable-extraction/variable-extraction.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { DriveModule } from './drive/drive.module';
+import { FormModule } from './form/form.module';
 
 import { isDesktop } from '../utils/runtime';
 
@@ -116,6 +117,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     WorkflowAppModule,
     VariableExtractionModule,
     DriveModule,
+    FormModule,
     ...(isDesktop()
       ? []
       : [

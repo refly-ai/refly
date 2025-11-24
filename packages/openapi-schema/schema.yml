@@ -3084,13 +3084,6 @@ paths:
       summary: Get form definition
       description: Get form definition
       operationId: getFormDefinition
-      parameters:
-        - name: formId
-          in: query
-          description: Form ID
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           description: successful operation

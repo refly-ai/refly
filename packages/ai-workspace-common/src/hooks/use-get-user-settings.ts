@@ -26,6 +26,7 @@ export const useGetUserSettings = () => {
     setShowTourModal: state.setShowTourModal,
     setShowSettingsGuideModal: state.setShowSettingsGuideModal,
     setShowInvitationCodeModal: state.setShowInvitationCodeModal,
+    setShowOnboardingFormModal: state.setShowOnboardingFormModal,
     userProfile: state.userProfile,
     localSettings: state.localSettings,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
@@ -72,6 +73,9 @@ export const useGetUserSettings = () => {
     userStore.setUserProfile(settings);
     localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     userStore.setIsLogin(true);
+
+    // Show onboarding form when user enters the workspace
+    userStore.setShowOnboardingFormModal(true);
 
     // Check if user has been invited to show invitation code modal
     try {

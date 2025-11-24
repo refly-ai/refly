@@ -10123,15 +10123,6 @@ export type CheckSettingsFieldResponse2 = CheckSettingsFieldResponse;
 
 export type CheckSettingsFieldError = unknown;
 
-export type GetFormDefinitionData = {
-  query: {
-    /**
-     * Form ID
-     */
-    formId: string;
-  };
-};
-
 export type GetFormDefinitionResponse2 = GetFormDefinitionResponse;
 
 export type GetFormDefinitionError = unknown;

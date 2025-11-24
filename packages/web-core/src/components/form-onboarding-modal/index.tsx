@@ -1,0 +1,112 @@
+import { memo, useCallback, useMemo } from 'react';
+import validator from '@rjsf/validator-ajv8';
+import { ReflyRjsfForm } from '@refly-packages/ai-workspace-common/components/rjsf';
+import { useUserStoreShallow } from '@refly/stores';
+import { useGetFormDefinition } from '@refly-packages/ai-workspace-common/queries';
+import type { GetFormDefinitionDefaultResponse } from '@refly-packages/ai-workspace-common/queries/common';
+import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+
+const FormOnboardingModalComponent: React.FC = () => {
+  const { showOnboardingFormModal, setShowOnboardingFormModal } = useUserStoreShallow((state) => ({
+    showOnboardingFormModal: state.showOnboardingFormModal,
+    setShowOnboardingFormModal: state.setShowOnboardingFormModal,
+  }));
+
+  const {
+    data: formDefinitionResponse,
+    isLoading: isFormDefinitionLoading,
+    isError: isFormDefinitionError,
+  } = useGetFormDefinition<GetFormDefinitionDefaultResponse>();
+
+  const { formSchema, formUiSchema } = useMemo<{
+    formSchema: RJSFSchema | null;
+    formUiSchema: UiSchema | null;
+  }>(() => {
+    const definition = formDefinitionResponse?.data;
+
+    if (!definition?.schema) {
+      return {
+        formSchema: null,
+        formUiSchema: null,
+      };
+    }
+
+    try {
+      const parsedSchema = JSON.parse(definition.schema) as RJSFSchema;
+      const parsedUiSchema = definition.uiSchema
+        ? (JSON.parse(definition.uiSchema) as UiSchema)
+        : null;
+
+      return {
+        formSchema: parsedSchema,
+        formUiSchema: parsedUiSchema,
+      };
+    } catch (error) {
+      // Log parsing error for debugging
+      // eslint-disable-next-line no-console
+      console.error('Failed to parse form definition', error);
+
+      return {
+        formSchema: null,
+        formUiSchema: null,
+      };
+    }
+  }, [formDefinitionResponse?.data]);
+
+  const handleClose = useCallback(() => {
+    setShowOnboardingFormModal(false);
+  }, [setShowOnboardingFormModal]);
+
+  const handleLog = useCallback(
+    (type: string) => (data: unknown) => {
+      // Log form events for debugging only
+      // eslint-disable-next-line no-console
+      console.log(type, data);
+    },
+    [],
+  );
+
+  if (!showOnboardingFormModal) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+      <div className="relative flex items-center justify-center rounded-2xl bg-refly-bg-content-z2 shadow-refly-m px-6 py-4">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-refly-bg-control-z0 text-refly-text-2 hover:bg-refly-bg-control-z1 hover:text-refly-text-0"
+        >
+          <span className="sr-only">Close onboarding form</span>
+          <span className="text-lg leading-none">×</span>
+        </button>
+        {isFormDefinitionLoading && (
+          <div className="flex items-center justify-center px-8 py-6 text-sm text-refly-text-2">
+            Loading form definition...
+          </div>
+        )}
+        {!isFormDefinitionLoading && (isFormDefinitionError || !formSchema) && (
+          <div className="flex flex-col items-center justify-center px-8 py-6 text-center text-sm text-refly-text-2">
+            <span className="mb-2 font-medium text-refly-text-1">
+              Failed to load onboarding form
+            </span>
+            <span>Please try again later.</span>
+          </div>
+        )}
+        {!isFormDefinitionLoading && !isFormDefinitionError && formSchema && (
+          <ReflyRjsfForm
+            schema={formSchema}
+            uiSchema={formUiSchema ?? {}}
+            validator={validator}
+            onChange={handleLog('changed')}
+            onSubmit={handleLog('submitted')}
+            onError={handleLog('errors')}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const FormOnboardingModal = memo(FormOnboardingModalComponent);

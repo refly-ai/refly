@@ -87,7 +87,6 @@ import {
   GetCreditUsageByResultIdData,
   GetCreditUsageData,
   GetDocumentDetailData,
-  GetFormDefinitionData,
   GetPageByCanvasIdData,
   GetPageDetailData,
   GetPilotSessionDetailData,
@@ -476,7 +475,7 @@ export const ensureUseCheckSettingsFieldData = (
   });
 export const ensureUseGetFormDefinitionData = (
   queryClient: QueryClient,
-  clientOptions: Options<GetFormDefinitionData, true>,
+  clientOptions: Options<unknown, true> = {},
 ) =>
   queryClient.ensureQueryData({
     queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions),

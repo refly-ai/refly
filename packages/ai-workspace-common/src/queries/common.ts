@@ -661,7 +661,7 @@ export type GetFormDefinitionQueryResult<
 > = UseQueryResult<TData, TError>;
 export const useGetFormDefinitionKey = 'GetFormDefinition';
 export const UseGetFormDefinitionKeyFn = (
-  clientOptions: Options<unknown, true>,
+  clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useGetFormDefinitionKey, ...(queryKey ?? [clientOptions])];
 export type GetCreditRechargeDefaultResponse = Awaited<

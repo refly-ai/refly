@@ -335,7 +335,6 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
-  GetFormDefinitionData,
   GetFormDefinitionError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
@@ -1175,7 +1174,7 @@ export const useGetFormDefinition = <
   TError = GetFormDefinitionError,
   TQueryKey extends Array<unknown> = unknown[],
 >(
-  clientOptions: Options<GetFormDefinitionData, true>,
+  clientOptions: Options<unknown, true> = {},
   queryKey?: TQueryKey,
   options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
 ) =>
