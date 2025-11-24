@@ -12,7 +12,7 @@ const FormPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center">
+    <div className="min-h-screen flex justify-center">
       <ReflyRjsfForm
         schema={rjsfSchema}
         uiSchema={rjsfUiSchema}

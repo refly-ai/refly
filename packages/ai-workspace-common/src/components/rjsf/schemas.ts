@@ -9,33 +9,37 @@ export const roleOptions = [
   { value: 'educator', label: '📚 Educator (Teacher, Trainer, Knowledge Creator)' },
   { value: 'business', label: '💼 Business / Sales' },
   { value: 'student', label: '🧑‍🎓 Student / Personal Development' },
-  { value: 'other', label: '🪴 Other' },
+  { value: 'other', label: '🌿 Other' },
 ];
 
 export const useCaseOptions = [
   { value: 'collection', label: '📥 Content collection' },
-  { value: 'creation', label: '✍️ Content creation' },
-  { value: 'visual', label: '🎨 Visual generation' },
+  { value: 'image', label: '🎨 Image Generation' },
+  { value: 'video', label: '🎬 Video Generation' },
+  { value: 'information', label: '📥 Information Collection' },
   { value: 'data', label: '📊 Data processing' },
   { value: 'office', label: '🗂️ Office automation' },
-  { value: 'ops', label: '🚀 Operations automation' },
-  { value: 'developer', label: '🛠️ Developer tasks' },
+  { value: 'ops', label: '⚙️ Operations automation' },
+  { value: 'developer', label: '🧑‍💻 Web/App Development' },
   {
     value: 'newbie',
-    label: '🌱 I have not used automation tools yet (but I am ready to explore)',
+    label: "🌱  I'm New to Automation",
   },
-  { value: 'other', label: '🪴 Other' },
+  { value: 'other', label: '✨ Other' },
 ];
 
 export const interestOptions = [
-  { value: 'material', label: '📥 Material collection workflows' },
-  { value: 'media', label: '🎬 Image / video content workflows' },
-  { value: 'writing', label: '✍️ AI writing / document workflows' },
-  { value: 'analytics', label: '📊 Data analysis / reporting workflows' },
-  { value: 'social', label: '📣 Social media automation' },
-  { value: 'business', label: '💼 Business workflows (reports, emails, summaries)' },
-  { value: 'developer', label: '🛠️ Developer workflows (crawlers, APIs, task orchestration)' },
-  { value: 'other', label: '🪴 Other' },
+  { value: 'productHunt', label: '🚀 Product Hunt' },
+  { value: 'twitter', label: '🐦 X / Twitter' },
+  { value: 'instagram', label: '📸 Instagram' },
+  { value: 'youtube', label: '▶️ YouTube' },
+  { value: 'reddit', label: '🔥 Reddit' },
+  { value: 'discord', label: '💬 Discord community)' },
+  { value: 'github', label: '🧑‍💻 GitHub' },
+  { value: 'search', label: '🔍 Search engine (Google / Bing, etc.)' },
+  { value: 'referral', label: '👥 Friend or colleague referral' },
+  { value: 'podcast', label: '🎧 Podcast' },
+  { value: 'other', label: '📝 Other' },
 ];
 
 // RJSF onboarding schema for demo
@@ -70,7 +74,7 @@ export const rjsfSchema: RJSFSchema = {
     },
     interests: {
       type: 'array',
-      title: '🌿 3. What type of automation workflow are you most interested in?',
+      title: '✨ Where did you first hear about Refly?',
       uniqueItems: true,
       minItems: 1,
       default: [],

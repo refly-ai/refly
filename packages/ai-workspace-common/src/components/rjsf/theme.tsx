@@ -119,16 +119,64 @@ const getEnumOptions = (options?: Record<string, unknown>): EnumOption[] => {
   return [];
 };
 
+const getSchemaEnumValues = (
+  schema: RjsfObjectFieldTemplateProps['schema'],
+  key?: string,
+): string[] => {
+  if (!schema || !key) {
+    return [];
+  }
+
+  const propertyDefinition = schema.properties?.[key];
+  if (!propertyDefinition || typeof propertyDefinition !== 'object') {
+    return [];
+  }
+
+  const extractFromAnyOf = (target: Record<string, unknown>): string[] => {
+    if (!('anyOf' in target)) {
+      return [];
+    }
+
+    const anyOf = (target as { anyOf?: unknown }).anyOf;
+    if (!Array.isArray(anyOf)) {
+      return [];
+    }
+
+    const values: string[] = [];
+    for (const item of anyOf) {
+      if (item && typeof item === 'object' && 'const' in (item as Record<string, unknown>)) {
+        const constValue = (item as { const?: unknown }).const;
+        if (typeof constValue === 'string') {
+          values.push(constValue);
+        }
+      }
+    }
+
+    return values;
+  };
+
+  const propertyObject = propertyDefinition as Record<string, unknown>;
+  const fromTopLevel = extractFromAnyOf(propertyObject);
+  if (fromTopLevel.length > 0) {
+    return fromTopLevel;
+  }
+
+  if ('items' in propertyObject) {
+    const items = propertyObject.items;
+    if (items && typeof items === 'object') {
+      return extractFromAnyOf(items as Record<string, unknown>);
+    }
+  }
+
+  return [];
+};
+
 const getSchemaPropertyTitle = (
   schema: RjsfObjectFieldTemplateProps['schema'],
   key: string,
 ): string => {
   const propertyDefinition = schema?.properties?.[key];
-  if (
-    propertyDefinition &&
-    typeof propertyDefinition === 'object' &&
-    'title' in (propertyDefinition as Record<string, unknown>)
-  ) {
+  if (propertyDefinition && typeof propertyDefinition === 'object') {
     const maybeTitle = (propertyDefinition as { title?: unknown }).title;
     if (typeof maybeTitle === 'string') {
       return maybeTitle;
@@ -138,19 +186,7 @@ const getSchemaPropertyTitle = (
 };
 
 const FieldTemplate = (props: RjsfFieldTemplateProps) => {
-  const {
-    id,
-    classNames,
-    style,
-    label,
-    required,
-    errors,
-    help,
-    children,
-    displayLabel,
-    rawErrors,
-  } = props;
-  const hasErrors = Array.isArray(rawErrors) && rawErrors.length > 0;
+  const { id, classNames, style, label, required, help, children, displayLabel } = props;
 
   return (
     <div className={mergeClassNames('flex flex-col gap-2', classNames ?? '')} style={style} id={id}>
@@ -164,11 +200,6 @@ const FieldTemplate = (props: RjsfFieldTemplateProps) => {
         </label>
       )}
       <div className="bg-white rounded-3xl">{children}</div>
-      {hasErrors ? (
-        <div className="text-xs text-refly-func-danger-default" role="alert">
-          {errors}
-        </div>
-      ) : null}
       {help}
     </div>
   );
@@ -293,6 +324,9 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
     }
 
     // Check if current page has a value
+    const currentFieldEnumValues = currentFieldName
+      ? getSchemaEnumValues(schema, currentFieldName)
+      : [];
     const currentFieldValue = currentFieldName ? effectiveFormData[currentFieldName] : undefined;
     const hasCurrentValue = hasValue(currentFieldValue);
 
@@ -306,9 +340,13 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
         // For multi-select, check if "other" is selected and there's a corresponding text input
         const hasOtherSelected = currentFieldValue.includes('other');
         if (hasOtherSelected) {
-          // Look for a text value that is not just "other"
+          // Look for a custom text value that is not part of the predefined enum options
           const hasOtherText = currentFieldValue.some(
-            (item) => typeof item === 'string' && item.trim() !== '' && item !== 'other',
+            (item) =>
+              typeof item === 'string' &&
+              item.trim() !== '' &&
+              item !== 'other' &&
+              !currentFieldEnumValues.includes(item),
           );
           hasValidOtherInput = hasOtherText;
         }
@@ -318,34 +356,35 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
     const canProceed = hasCurrentValue && hasValidOtherInput;
 
     return (
-      <div className="flex items-center justify-between">
-        <Button
-          type="default"
-          onClick={goToPrevPage}
-          disabled={currentPage === 0}
-          className="w-[296px] h-9 -mt-8"
-        >
-          上一题
-        </Button>
+      <div className="flex items-center justify-center gap-6">
+        {currentPage > 0 && (
+          <Button
+            type="default"
+            onClick={goToPrevPage}
+            className="w-[180px] h-14 -mt-8 rounded-full"
+          >
+            上一题
+          </Button>
+        )}
 
         {isLastPage ? (
           <Button
             type="primary"
             htmlType="submit"
             disabled={!canProceed}
-            className="w-[296px] h-9 -mt-8"
+            className="w-[180px] h-14 -mt-8 rounded-full"
             onClick={() => {
               console.log('rjsf表单提交时的value:', effectiveFormData);
             }}
           >
-            提交
+            提交获得积分
           </Button>
         ) : (
           <Button
             type="primary"
             onClick={goToNextPage}
             disabled={!canProceed}
-            className="w-[296px] h-9 -mt-8"
+            className="w-[180px] h-14 -mt-8 rounded-full"
           >
             下一题
           </Button>
@@ -563,7 +602,7 @@ const RadioWidget = (props: RjsfWidgetProps) => {
   }, [isOtherSelected, value]);
 
   return (
-    <div className="space-y-1">
+    <div className="grid grid-cols-2 gap-2">
       {enumOptions.map((option, index) => {
         const checked = value === option.value || (option.value === 'other' && isOtherSelected);
         const optionId = id ? `${id}-${index}` : undefined;
@@ -572,8 +611,8 @@ const RadioWidget = (props: RjsfWidgetProps) => {
             type="button"
             key={String(option.value)}
             className={mergeClassNames(
-              'w-full h-[42px] flex items-center gap-3 border rounded-2xl px-4 text-left transition-colors',
-              'border-transparent bg-white',
+              'w-full h-[52px] flex items-center gap-3 border rounded-2xl px-4 text-left transition-colors',
+              'border-refly-Card-Border bg-white',
               disabled || readonly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
             )}
             aria-pressed={checked}
@@ -623,7 +662,7 @@ const RadioWidget = (props: RjsfWidgetProps) => {
         );
       })}
       {isOtherSelected && (
-        <div className="mt-3">
+        <div className="col-span-2 mt-1">
           <Input
             placeholder="请输入其他选项"
             value={otherValue}
@@ -633,7 +672,7 @@ const RadioWidget = (props: RjsfWidgetProps) => {
               setOtherValue(newValue);
               onChange(newValue);
             }}
-            className="w-full"
+            className="w-full h-[56px]"
           />
         </div>
       )}
@@ -647,7 +686,12 @@ const CheckboxesWidget = (props: RjsfWidgetProps) => {
   const selectedValues = Array.isArray(value) ? value : [];
 
   // Handle "other" option with input field
-  const isOtherSelected = selectedValues.includes('other');
+  const hasCustomText = selectedValues.some(
+    (item) =>
+      typeof item === 'string' &&
+      !enumOptions.some((opt) => opt.value === item) &&
+      item !== 'other',
+  );
   const otherTextValue =
     (selectedValues.find(
       (item) =>
@@ -673,9 +717,9 @@ const CheckboxesWidget = (props: RjsfWidgetProps) => {
     const exists = selectedValues.some((item) => item === optionValue);
     if (exists) {
       if (optionValue === 'other') {
-        // When unchecking "other", remove both "other" and any custom text
+        // When unchecking "other", remove "other" and any custom text (not in enumOptions)
         const filtered = selectedValues.filter(
-          (item) => item !== 'other' && enumOptions.some((opt) => opt.value === item),
+          (item) => enumOptions.some((opt) => opt.value === item) && item !== 'other',
         );
         onChange(filtered);
         setOtherValue('');
@@ -690,34 +734,41 @@ const CheckboxesWidget = (props: RjsfWidgetProps) => {
   const handleOtherInputChange = (newValue: string) => {
     setOtherValue(newValue);
 
-    // Remove any existing custom text values and "other" from selectedValues
-    const filteredValues = selectedValues.filter((item) =>
+    // Remove any existing custom text values and all "other" from selectedValues
+    const filteredValues = selectedValues.filter(
+      (item) => enumOptions.some((opt) => opt.value === item) && item !== 'other',
+    );
+
+    // Remove any existing custom text values (those not in enumOptions)
+    const finalFilteredValues = filteredValues.filter((item) =>
       enumOptions.some((opt) => opt.value === item),
     );
 
     if (newValue.trim()) {
-      // Add the custom text value
-      onChange([...filteredValues, 'other', newValue.trim()]);
+      // Add only the custom text value (don't include "other")
+      onChange([...finalFilteredValues, newValue.trim()]);
     } else {
-      // Just add "other" if no text
-      onChange([...filteredValues, 'other']);
+      // Don't add anything if no text (user needs to explicitly check "other" if they want it)
+      onChange(finalFilteredValues);
     }
   };
 
   return (
-    <div className="space-y-1">
+    <div className="grid grid-cols-2 gap-2">
       {enumOptions.map((option) => {
-        const checked =
-          selectedValues.some((item) => item === option.value) ||
-          (option.value === 'other' && isOtherSelected);
         const isOtherOption = option.value === 'other';
+        const checked =
+          selectedValues.some((item) => item === option.value) || (isOtherOption && hasCustomText);
+        const shouldShowInput =
+          isOtherOption && (selectedValues.includes('other') || hasCustomText);
         return (
-          <div key={String(option.value)}>
+          <>
             <button
               type="button"
+              key={String(option.value)}
               className={mergeClassNames(
-                'w-full h-[42px] flex items-center gap-3 border rounded-2xl px-4 text-left transition-colors',
-                'border-transparent bg-white',
+                'w-full h-[52px] flex items-center gap-3 border rounded-2xl px-4 text-left transition-colors',
+                'border-refly-Card-Border bg-white',
                 disabled || readonly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
               )}
               onClick={() => {
@@ -739,18 +790,18 @@ const CheckboxesWidget = (props: RjsfWidgetProps) => {
                 {buildOptionLabel(option.label, option.value)}
               </span>
             </button>
-            {isOtherOption && checked && (
-              <div className="mt-3">
+            {shouldShowInput && (
+              <div className="col-span-2 mt-3">
                 <Input
                   placeholder="请输入其他选项"
                   value={otherValue}
                   disabled={disabled || readonly}
                   onChange={(e) => handleOtherInputChange(e.target.value)}
-                  className="w-full"
+                  className="w-full h-[56px]"
                 />
               </div>
             )}
-          </div>
+          </>
         );
       })}
     </div>
