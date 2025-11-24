@@ -37,6 +37,7 @@ import {
   serializeDocToTokens,
 } from './utils';
 import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 interface RichChatInputProps {
   readonly: boolean;
@@ -76,7 +77,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const [isDragging, setIsDragging] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const isLogin = useUserStoreShallow((state) => state.isLogin);
-    const { canvasId, workflow } = useCanvasContext();
+    const { canvasId } = useCanvasContext();
     const { data: files } = useFetchDriveFiles();
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
@@ -84,10 +85,9 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const { query, setQuery, setContextItems, setSelectedToolsets } =
       useAgentNodeManagement(nodeId);
     const { connectToUpstreamAgent } = useAgentConnections();
+    const { data: workflowVariables } = useVariablesManagement(canvasId);
 
     const [isMentionListVisible, setIsMentionListVisible] = useState(false);
-
-    const { workflowVariables = [] } = workflow || {};
 
     // Gate mention suggestions until explicit user interaction
     // Prevent auto-popup on initial load when content already contains '@xx'

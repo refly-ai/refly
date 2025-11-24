@@ -9,6 +9,7 @@ import { useCallback, useState } from 'react';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import { useGetCreditUsageByCanvasId } from '@refly-packages/ai-workspace-common/queries/queries';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 export const WorkflowRun = () => {
   const { t } = useTranslation();
@@ -19,9 +20,6 @@ export const WorkflowRun = () => {
 
   const { workflow, canvasId } = useCanvasContext();
   const {
-    workflowVariables,
-    workflowVariablesLoading,
-    refetchWorkflowVariables,
     initializeWorkflow,
     isInitializing: loading,
     executionId,
@@ -29,6 +27,11 @@ export const WorkflowRun = () => {
     isPolling,
     pollingError,
   } = workflow;
+  const {
+    data: workflowVariables,
+    setVariables,
+    isLoading: workflowVariablesLoading,
+  } = useVariablesManagement(canvasId);
 
   const { data: creditUsageData, isLoading: isCreditUsageLoading } = useGetCreditUsageByCanvasId(
     {
@@ -58,16 +61,15 @@ export const WorkflowRun = () => {
         canvasId,
       });
 
+      setVariables(variables);
+
       try {
         const success = await initializeWorkflow({
           canvasId,
           variables,
         });
 
-        // Only refetch if initialization was successful
-        if (success) {
-          refetchWorkflowVariables();
-        } else {
+        if (!success) {
           console.warn('Workflow initialization failed');
           // Reset running state on failure
           setIsRunning(false);
@@ -78,7 +80,7 @@ export const WorkflowRun = () => {
         setIsRunning(false);
       }
     },
-    [canvasId, initializeWorkflow, refetchWorkflowVariables],
+    [canvasId, initializeWorkflow, setVariables, setIsRunning],
   );
 
   if (!showWorkflowRun) return null;
@@ -109,6 +111,7 @@ export const WorkflowRun = () => {
             pollingError={pollingError}
             isRunning={isRunning}
             onRunningChange={setIsRunning}
+            canvasId={canvasId}
             creditUsage={isCreditUsageLoading ? null : (creditUsageData?.data?.total ?? 0)}
           />
         )}

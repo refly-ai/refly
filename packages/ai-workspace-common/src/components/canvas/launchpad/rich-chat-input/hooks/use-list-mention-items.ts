@@ -6,13 +6,14 @@ import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas'
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useListTools } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.languages?.[0] || 'en';
 
   const { nodes } = useCanvasData();
-  const { workflow } = useCanvasContext();
+  const { canvasId } = useCanvasContext();
   const { data: files } = useFetchDriveFiles();
 
   // Fetch tools
@@ -20,7 +21,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     refetchOnWindowFocus: false,
   });
   const toolsets = toolsData?.data ?? [];
-  const { workflowVariables = [] } = workflow || {};
+  const { data: workflowVariables } = useVariablesManagement(canvasId);
 
   const allItems: MentionItem[] = useMemo(() => {
     const variableItems: MentionItem[] = workflowVariables.map((variable) => ({

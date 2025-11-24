@@ -50,6 +50,7 @@ export const reflyColors = {
   'refly-text-2': 'var(--refly-text-2)',
   'refly-text-3': 'var(--refly-text-3)',
   'refly-text-4': 'var(--refly-text-4)',
+  'refly-text-flip': 'var(--text-icon-refly-text-flip)',
   'refly-text-caption': 'var(--refly-text-caption)',
   'refly-text-StaticWhite': 'var(--refly-text-StaticWhite)',
   'refly-text-placeholder': 'var(--refly-text-placeholder)',
@@ -60,4 +61,5 @@ export const reflyColors = {
   'refly-node-run': 'var(--refly-node-run)',
   'refly-node-fill-1': 'var(--refly-node-fill-1)',
   'refly-node-fill-2': 'var(--refly-node-fill-2)',
+  'refly-fill-label': 'var(--refly-fill-label)',
 } as const;

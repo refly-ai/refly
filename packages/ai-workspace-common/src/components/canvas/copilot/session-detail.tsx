@@ -1,22 +1,26 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import cn from 'classnames';
 import { Skeleton, Divider, Button, Modal } from 'antd';
 import {
   useGetCopilotSessionDetail,
   useListTools,
 } from '@refly-packages/ai-workspace-common/queries';
-import { useActionResultStoreShallow, useCopilotStoreShallow } from '@refly/stores';
+import {
+  useActionResultStoreShallow,
+  useCanvasResourcesPanelStoreShallow,
+  useCopilotStoreShallow,
+} from '@refly/stores';
 import { ActionResult, CanvasNode } from '@refly/openapi-schema';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { useTranslation } from 'react-i18next';
 import { Greeting } from './greeting';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { safeParseJSON } from '@refly/utils/parse';
+import { safeParseJSON } from '@refly/utils';
 import { generateCanvasDataFromWorkflowPlan, WorkflowPlan } from '@refly/canvas-common';
 import { useReactFlow } from '@xyflow/react';
-import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas';
-import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 
 interface SessionDetailProps {
   sessionId: string;
@@ -103,9 +107,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     }
   }, [status, resultId, fetchActionResult]);
 
-  const { canvasId, forceSyncState, workflow } = useCanvasContext();
-  const { initializeWorkflow, isInitializing, isPolling } = workflow;
-  const [isLoading, setIsLoading] = useState(false);
+  const { canvasId } = useCanvasContext();
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
@@ -113,16 +115,22 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     return ['waiting', 'executing'].includes(status ?? '') && !content;
   }, [status, content]);
 
-  const { deleteNodes } = useDeleteNode();
-
   const { data: tools } = useListTools({ query: { enabled: true } }, undefined, {
     enabled: !!canvasId,
   });
 
-  const { getNodes } = useReactFlow();
-  const { refetch: refetchVariables } = useVariablesManagement(canvasId);
+  const { getNodes, setNodes, setEdges } = useReactFlow();
+  const { setVariables } = useVariablesManagement(canvasId);
 
-  const handleApproveAndRun = useCallback(async () => {
+  const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setShowWorkflowRun: state.setShowWorkflowRun,
+  }));
+  const { defaultChatModel } = useFetchProviderItems({
+    category: 'llm',
+    enabled: true,
+  });
+
+  const handleApprove = useCallback(async () => {
     if (!workflowPlan) {
       return;
     }
@@ -159,35 +167,30 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       }
     }
 
-    setIsLoading(true);
-
-    deleteNodes(currentNodes.filter((node) => node.type !== 'start'));
-    await forceSyncState();
-
-    const canvasData = generateCanvasDataFromWorkflowPlan(workflowPlan, tools?.data ?? []);
-
-    try {
-      await initializeWorkflow({
-        canvasId: canvasId,
-        sourceCanvasData: canvasData,
-        nodeBehavior: 'create',
-        variables: workflowPlan.variables,
-      });
-      refetchVariables();
-    } finally {
-      setIsLoading(false);
-    }
+    const { nodes, edges, variables } = generateCanvasDataFromWorkflowPlan(
+      workflowPlan,
+      tools?.data ?? [],
+      {
+        autoLayout: true,
+        defaultModel: defaultChatModel,
+      },
+    );
+    setNodes(nodes);
+    setEdges(edges);
+    setVariables(variables ?? []);
+    setShowWorkflowRun(true);
   }, [
     canvasId,
     workflowPlan,
     tools?.data,
     getNodes,
+    setNodes,
+    setEdges,
+    setVariables,
     t,
     modal,
-    deleteNodes,
-    forceSyncState,
-    initializeWorkflow,
-    refetchVariables,
+    setShowWorkflowRun,
+    defaultChatModel,
   ]);
 
   return (
@@ -208,13 +211,8 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       )}
       {workflowPlan && status === 'finish' && (
         <div className="mt-1">
-          <Button
-            type="primary"
-            onClick={handleApproveAndRun}
-            loading={isLoading || isInitializing || isPolling}
-            disabled={isLoading || isInitializing || isPolling}
-          >
-            {t('copilot.sessionDetail.approveAndRun')}
+          <Button type="primary" onClick={handleApprove}>
+            {t('copilot.sessionDetail.approve')}
           </Button>
         </div>
       )}

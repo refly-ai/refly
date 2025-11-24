@@ -55,7 +55,7 @@ export const workflowExecutionPO2DTO = (
   execution: WorkflowExecutionPO & { nodeExecutions?: WorkflowNodeExecutionPO[] },
 ): WorkflowExecution => {
   return {
-    ...pick(execution, ['executionId', 'canvasId', 'title']),
+    ...pick(execution, ['executionId', 'canvasId', 'title', 'abortedByUser']),
     status: execution.status as WorkflowExecutionStatus,
     nodeExecutions: execution.nodeExecutions?.map(workflowNodeExecutionPO2DTO),
     createdAt: execution.createdAt.toJSON(),

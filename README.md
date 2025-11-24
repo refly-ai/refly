@@ -31,6 +31,7 @@ Refly.AI is the open-source Agentic Workspace for Human–AI Collaboration. Seam
 [<img src="https://raw.githubusercontent.com/ClawCloud/Run-Template/refs/heads/main/Run-on-ClawCloud.svg" alt="SVG" style="height:45px; vertical-align:middle;">](https://template.run.claw.cloud/?openapp=system-fastdeploy%3FtemplateName%3Drefly)
 [![Deploy on Sealos](https://sealos.io/Deploy-on-Sealos.svg)](https://template.sealos.io/deploy?templateName=refly)
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
+[![Deploy on Hostinger](https://assets.hostinger.com/vps/deploy.svg)](https://www.hostinger.com/vps/docker-hosting?compose_url=https://github.com/refly-ai/refly)
 
 <p align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>

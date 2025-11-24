@@ -1540,6 +1540,10 @@ const translations = {
         description: 'Generation failed, please try again later or switch to another model.',
         retryButton: 'Retry',
       },
+      userAbort: {
+        title: 'Task Stopped',
+        description: 'This task has been manually terminated.',
+      },
       workflowFailure: {
         title: 'Execution Failed',
         description:
@@ -2195,6 +2199,7 @@ const translations = {
       home: 'Dashboard',
       canvas: 'My Workflows',
       appManager: 'My Templates',
+      marketplace: 'Marketplace',
       contactUs: 'Contact Us',
       addToChrome: 'Install Browser Extension',
       canvasTitle: 'Canvas',
@@ -3179,11 +3184,11 @@ const translations = {
     },
     sessionDetail: {
       thinking: 'Thinking',
-      approveAndRun: 'Approve and Run',
+      approve: 'Approve',
       confirmClearCanvas: {
         title: 'Confirm Clear Canvas',
         content:
-          'Running this workflow will clear all current canvas content. Do you want to continue?',
+          'Approving this workflow will clear all current canvas content. Do you want to continue?',
         confirm: 'Continue',
         cancel: 'Cancel',
       },
@@ -3849,11 +3854,23 @@ const translations = {
       executionIdFailed: 'Failed to get execution ID',
       executeFailed: 'Failed to execute workflow',
       executeError: 'Failed to execute workflow',
+      thinking: 'Thinking...',
+      stop: 'Stop',
+      stopped: 'Workflow stopped',
+      stoppedMessage: 'Workflow stopped, no results generated. You can rerun the template.',
+      stopConfirmTitle: 'Stop Template Run?',
+      stopConfirmContent:
+        'Are you sure you want to stop this template run? The run will be terminated immediately, and credits already consumed will not be refunded.',
+      stopSuccess: 'The template run has been stopped successfully.',
     },
     revenueSharing: {
       title: 'Earn credits by running templates',
       earningsHint: 'Each run can earn <num>{{creditEarningsPerRun}}</num> credits',
       howToEarn: 'How to earn',
+    },
+    publishToCommunity: {
+      label: 'Publish to Community',
+      help: 'After publishing to the community, other users can discover and use your workflow app',
     },
   },
   project: {

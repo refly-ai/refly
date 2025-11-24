@@ -158,6 +158,7 @@ export type ResponseNodeMeta = {
   artifacts?: Artifact[];
   currentLog?: ActionLog;
   errors?: string[];
+  errorType?: string;
   structuredData?: Record<string, unknown>;
   selectedSkill?: Skill;
   selectedToolsets?: GenericToolset[];

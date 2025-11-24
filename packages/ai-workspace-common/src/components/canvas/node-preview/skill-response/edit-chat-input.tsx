@@ -31,7 +31,7 @@ interface EditChatInputProps {
 }
 
 const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((props, ref) => {
-  const { enabled, resultId, nodeId, version, setEditMode, mentionPosition } = props;
+  const { enabled, resultId, nodeId, version, setEditMode, mentionPosition, readonly } = props;
 
   const { getEdges, getNodes, deleteElements, addEdges } = useReactFlow();
 
@@ -294,6 +294,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
         mentionPosition={mentionPosition}
         resultId={resultId}
         enableRichInput={true}
+        disabled={readonly}
         customActions={customActions}
         showActions={false}
         className="overflow-hidden"

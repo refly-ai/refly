@@ -3,11 +3,7 @@ import { useThrottledCallback } from 'use-debounce';
 import classNames from 'classnames';
 import wordsCount from 'words-count';
 import { useTranslation } from 'react-i18next';
-import {
-  CollabEditorCommand,
-  CollabGenAIMenuSwitch,
-  CollabGenAIBlockMenu,
-} from '@refly-packages/ai-workspace-common/components/editor/components/advanced-editor';
+import { CollabEditorCommand } from '@refly-packages/ai-workspace-common/components/editor/components/advanced-editor';
 import {
   EditorRoot,
   EditorContent,
@@ -37,14 +33,10 @@ import {
   TableRowMenu,
 } from '@refly-packages/ai-workspace-common/components/editor/extensions/Table/menus';
 
-import { genUniqueId } from '@refly/utils/id';
-import { useSelectionContext } from '@refly-packages/ai-workspace-common/modules/selection-menu/use-selection-context';
 import { useDocumentContext } from '@refly-packages/ai-workspace-common/context/document';
 import { editorEmitter } from '@refly/utils/event-emitter/editor';
 import { useEditorPerformance } from '@refly-packages/ai-workspace-common/context/editor-performance';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
-import { useCreateMemo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-memo';
-import { IContextItem } from '@refly/common-types';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { useThemeStoreShallow } from '@refly/stores';
 
@@ -249,53 +241,7 @@ export const CollaborativeEditor = memo(
       ];
     }, [ydoc, docId, documentActions, createPlaceholderExtension]);
 
-    const { addToContext, selectedText } = useSelectionContext({
-      containerClass: 'ai-note-editor-content-container',
-      enabled: !!editorRef.current,
-      editor: editorRef.current,
-    });
-
     // Get document data once at component level
-    const documentData = useDocumentStore((state) => state.data?.[docId]?.document);
-
-    const buildContextItem = useCallback(
-      (text: string): IContextItem => {
-        return {
-          title: text.slice(0, 50),
-          entityId: genUniqueId(),
-          type: 'documentSelection',
-          selection: {
-            content: text,
-            sourceTitle: documentData?.title ?? 'Selected Content',
-            sourceEntityId: documentData?.docId ?? '',
-            sourceEntityType: 'document',
-          },
-        };
-      },
-      [documentData],
-    );
-
-    const handleAddToContext = useCallback(
-      (text: string) => {
-        const item = buildContextItem(text);
-        addToContext(item);
-      },
-      [addToContext, buildContextItem],
-    );
-
-    const { createMemo } = useCreateMemo();
-    const handleCreateMemo = useCallback(
-      (selectedText: string) => {
-        createMemo({
-          content: selectedText,
-          sourceNode: {
-            type: 'document',
-            entityId: docId,
-          },
-        });
-      },
-      [docId, createMemo],
-    );
 
     useEffect(() => {
       return () => {
@@ -550,14 +496,6 @@ export const CollaborativeEditor = memo(
               }
             >
               <CollabEditorCommand entityId={docId} entityType="document" />
-              <CollabGenAIMenuSwitch
-                contentSelector={{
-                  text: t('knowledgeBase.context.addToContext'),
-                  handleClick: () => handleAddToContext(selectedText),
-                  createMemo: () => handleCreateMemo(selectedText),
-                }}
-              />
-              <CollabGenAIBlockMenu />
               <TableRowMenu editor={editorRef.current} appendTo={menuContainerRef} />
               <TableColumnMenu editor={editorRef.current} appendTo={menuContainerRef} />
             </EditorContent>

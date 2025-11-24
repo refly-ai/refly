@@ -2056,6 +2056,12 @@ export const ActionStatusSchema = {
   enum: ['init', 'waiting', 'executing', 'finish', 'failed'],
 } as const;
 
+export const ActionErrorTypeSchema = {
+  type: 'string',
+  description: 'Action error type',
+  enum: ['systemError', 'userAbort'],
+} as const;
+
 export const ArtifactTypeSchema = {
   type: 'string',
   description: 'Artifact type',
@@ -2297,6 +2303,11 @@ export const ActionResultSchema = {
       type: 'string',
       description: 'Step status',
       $ref: '#/components/schemas/ActionStatus',
+    },
+    errorType: {
+      type: 'string',
+      description: 'Error type (defaults to systemError when omitted)',
+      $ref: '#/components/schemas/ActionErrorType',
     },
     type: {
       description: 'Action type',
@@ -9645,6 +9656,10 @@ export const WorkflowExecutionSchema = {
       $ref: '#/components/schemas/WorkflowExecutionStatus',
       description: 'Workflow status',
     },
+    abortedByUser: {
+      type: 'boolean',
+      description: 'Whether the workflow was aborted by user',
+    },
     nodeExecutions: {
       type: 'array',
       description: 'Node executions',
@@ -9723,6 +9738,10 @@ export const CreateWorkflowAppRequestSchema = {
     remixEnabled: {
       type: 'boolean',
       description: 'Whether remix is enabled for this app',
+    },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
     },
   },
 } as const;

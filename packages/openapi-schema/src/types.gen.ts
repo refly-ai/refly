@@ -1559,6 +1559,11 @@ export type TokenUsageItem = {
 export type ActionStatus = 'init' | 'waiting' | 'executing' | 'finish' | 'failed';
 
 /**
+ * Action error type
+ */
+export type ActionErrorType = 'systemError' | 'userAbort';
+
+/**
  * Artifact type
  */
 export type ArtifactType = 'document' | 'codeArtifact' | 'image' | 'video' | 'audio';
@@ -1764,6 +1769,10 @@ export type ActionResult = {
    * Step status
    */
   status?: ActionStatus;
+  /**
+   * Error type (defaults to systemError when omitted)
+   */
+  errorType?: ActionErrorType;
   /**
    * Action type
    */
@@ -6853,6 +6862,10 @@ export type WorkflowExecution = {
    */
   status?: WorkflowExecutionStatus;
   /**
+   * Whether the workflow was aborted by user
+   */
+  abortedByUser?: boolean;
+  /**
    * Node executions
    */
   nodeExecutions?: Array<WorkflowNodeExecution>;
@@ -6903,6 +6916,10 @@ export type CreateWorkflowAppRequest = {
    * Whether remix is enabled for this app
    */
   remixEnabled?: boolean;
+  /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
 };
 
 export type DeleteWorkflowAppRequest = {

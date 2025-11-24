@@ -10,7 +10,8 @@ export type ErrorNoticeType =
   | 'creditInsufficient'
   | 'modelCallFailure'
   | 'toolCallFailure'
-  | 'multimodalFailure';
+  | 'multimodalFailure'
+  | 'userAbort';
 
 interface BaseErrorNoticeProps {
   /** Result data */
@@ -45,7 +46,11 @@ interface ExecutionFailureProps extends BaseErrorNoticeProps {
   onRetryClick?: () => void;
 }
 
-type ErrorNoticeProps = CreditInsufficientProps | ExecutionFailureProps;
+interface UserAbortProps extends BaseErrorNoticeProps {
+  errorType: 'userAbort';
+}
+
+type ErrorNoticeProps = CreditInsufficientProps | ExecutionFailureProps | UserAbortProps;
 
 /**
  * Error Notice Component
@@ -75,6 +80,7 @@ export const ErrorNotice: React.FC<ErrorNoticeProps> = React.memo((props) => {
       modelCallFailure: 'modelCallFailure',
       toolCallFailure: 'toolCallFailure',
       multimodalFailure: 'multimodalFailure',
+      userAbort: 'userAbort',
     };
     return `canvas.skillResponse.${typeMap[errorType]}.${key}`;
   };
@@ -147,6 +153,9 @@ export const ErrorNotice: React.FC<ErrorNoticeProps> = React.memo((props) => {
           {displayUpgradeText}
         </Button>
       );
+    } else if (errorType === 'userAbort') {
+      // No button for user abort
+      return null;
     } else {
       return (
         <Refresh
@@ -158,9 +167,18 @@ export const ErrorNotice: React.FC<ErrorNoticeProps> = React.memo((props) => {
     }
   };
 
+  // Determine styles based on error type
+  const isWarning = errorType === 'userAbort';
+  const bgColor = isWarning
+    ? 'bg-[#FFFBE6] dark:bg-yellow-950/20'
+    : 'bg-[#FFEFED] dark:bg-red-950/20';
+  const iconBgColor = isWarning
+    ? 'bg-[#faad14] dark:bg-yellow-500'
+    : 'bg-[#F93920] dark:bg-red-500';
+
   return (
     <div
-      className={`flex items-center gap-2 border border-solid border-black/10 dark:border-white/10 bg-[#FFEFED] dark:bg-red-950/20 px-4 py-3 rounded-xl font-['PingFang_SC','-apple-system','BlinkMacSystemFont','sans-serif'] ${className}`}
+      className={`flex items-center gap-2 border border-solid border-black/10 dark:border-white/10 ${bgColor} px-4 py-3 rounded-xl font-['PingFang_SC','-apple-system','BlinkMacSystemFont','sans-serif'] ${className}`}
       onClick={(e) => {
         e.stopPropagation();
       }}
@@ -169,8 +187,10 @@ export const ErrorNotice: React.FC<ErrorNoticeProps> = React.memo((props) => {
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         {/* Title Row with Icon */}
         <div className="flex items-center gap-2">
-          {/* Error Icon */}
-          <div className="flex items-center justify-center p-0.5 bg-[#F93920] dark:bg-red-500 rounded-full flex-shrink-0">
+          {/* Error/Warning Icon */}
+          <div
+            className={`flex items-center justify-center p-0.5 ${iconBgColor} rounded-full flex-shrink-0`}
+          >
             <Close size={12} color="white" />
           </div>
           {/* Title */}

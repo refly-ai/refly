@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
-import { useAbortAction } from './use-abort-action';
 import {
   createNodeEventName,
   nodeActionEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { logEvent } from '@refly/telemetry-web';
+import { useCleanupAbortedNode } from './use-cleanup-aborted-node';
+import { useAbortAction } from './use-abort-action';
 
 interface UseSkillResponseActionsProps {
   nodeId: string;
@@ -18,6 +19,7 @@ export const useSkillResponseActions = ({
   entityId,
   canvasId,
 }: UseSkillResponseActionsProps) => {
+  const { cleanupAbortedNode } = useCleanupAbortedNode();
   const { abortAction } = useAbortAction();
   const { workflow: workflowRun } = useCanvasContext();
 
@@ -59,11 +61,13 @@ export const useSkillResponseActions = ({
   }, [nodeId, canvasId, workflowRun]);
 
   // Stop the running node
-  const handleStop = useCallback(() => {
-    if (entityId) {
-      return abortAction(entityId);
-    }
-  }, [entityId, abortAction]);
+  const handleStop = useCallback(async () => {
+    // First, abort the action on backend
+    await abortAction(entityId);
+
+    // Then, clean up frontend state
+    cleanupAbortedNode(nodeId, entityId);
+  }, [nodeId, entityId, abortAction, cleanupAbortedNode]);
 
   return {
     workflowIsRunning,

@@ -1,6 +1,14 @@
 import { z } from 'zod/v3';
-import { GenericToolset, RawCanvasData } from '@refly/openapi-schema';
-import { genNodeEntityId, genNodeID, genUniqueId } from '@refly/utils';
+import {
+  GenericToolset,
+  RawCanvasData,
+  CanvasNode,
+  WorkflowVariable,
+  ModelInfo,
+} from '@refly/openapi-schema';
+import { genNodeEntityId, genUniqueId } from '@refly/utils';
+import { CanvasNodeFilter } from './types';
+import { prepareAddNode } from './utils';
 
 export const workflowPlanSchema = z.object({
   tasks: z
@@ -147,12 +155,28 @@ export const normalizeWorkflowPlan = (plan: WorkflowPlan): WorkflowPlan => {
   };
 };
 
+export const planVariableToWorkflowVariable = (
+  planVariable: WorkflowPlan['variables'][number],
+): WorkflowVariable => {
+  return {
+    variableId: planVariable.variableId,
+    variableType: planVariable.variableType,
+    name: planVariable.name,
+    value: planVariable.value?.map((value) => ({
+      type: value?.type,
+      text: value?.text,
+    })),
+    description: planVariable.description,
+  };
+};
+
 // Generate canvas data from workflow plan
 // 1. each task should be represented as a 'skillResponse' node
 // 2. connect task nodes via dependentTasks
 export const generateCanvasDataFromWorkflowPlan = (
   workflowPlan: WorkflowPlan,
   toolsets: GenericToolset[],
+  options?: { autoLayout?: boolean; defaultModel?: ModelInfo },
 ): RawCanvasData => {
   const nodes: RawCanvasData['nodes'] = [];
   const edges: RawCanvasData['edges'] = [];
@@ -161,14 +185,51 @@ export const generateCanvasDataFromWorkflowPlan = (
   const taskIdToNodeId = new Map<string, string>();
   const taskIdToEntityId = new Map<string, string>();
 
-  // Simple layout positions
+  const { autoLayout = false, defaultModel } = options ?? {};
+
+  // Simple layout positions for non-auto-layout mode
   const taskStartX = 0;
   const rowStepY = 240;
 
-  if (Array.isArray(workflowPlan.tasks)) {
-    // Phase 1: Create all task nodes, establish mappings
-    workflowPlan.tasks.forEach((task, taskIndex) => {
-      const taskId = task?.id ?? `task-${taskIndex}`;
+  if (Array.isArray(workflowPlan.tasks) && workflowPlan.tasks.length > 0) {
+    // Phase 1: Process tasks in dependency order
+    // First, identify tasks with no dependencies (roots)
+    const taskMap = new Map<string, (typeof workflowPlan.tasks)[0]>();
+    const dependencyGraph = new Map<string, Set<string>>();
+
+    for (const task of workflowPlan.tasks) {
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
+      taskMap.set(taskId, task);
+
+      if (Array.isArray(task.dependentTasks)) {
+        for (const depTaskId of task.dependentTasks) {
+          if (!dependencyGraph.has(taskId)) {
+            dependencyGraph.set(taskId, new Set());
+          }
+          dependencyGraph.get(taskId)!.add(depTaskId);
+        }
+      }
+    }
+
+    // Find tasks with no dependencies (roots)
+    const rootTasks: typeof workflowPlan.tasks = [];
+    const dependentTasks: typeof workflowPlan.tasks = [];
+
+    for (const task of workflowPlan.tasks) {
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
+      const hasDependencies = dependencyGraph.has(taskId) && dependencyGraph.get(taskId)!.size > 0;
+
+      if (!hasDependencies) {
+        rootTasks.push(task);
+      } else {
+        dependentTasks.push(task);
+      }
+    }
+
+    // Process root tasks first
+    let taskIndex = 0;
+    for (const task of [...rootTasks, ...dependentTasks]) {
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
       const taskTitle = task?.title ?? '';
       const taskPrompt = task?.prompt ?? '';
 
@@ -186,13 +247,37 @@ export const generateCanvasDataFromWorkflowPlan = (
         }
       }
 
-      // Create task node (skillResponse) with empty contextItems for now
-      const taskNodeId = genNodeID();
+      // Create connection filters for dependent tasks
+      const connectTo: CanvasNodeFilter[] = [];
+      if (Array.isArray(task.dependentTasks)) {
+        for (const dependentTaskId of task.dependentTasks) {
+          const dependentEntityId = taskIdToEntityId.get(dependentTaskId);
+          if (dependentEntityId) {
+            connectTo.push({
+              type: 'skillResponse',
+              entityId: dependentEntityId,
+              handleType: 'source',
+            });
+          }
+        }
+      }
+
+      // Create the node data for prepareAddNode
       const taskEntityId = genNodeEntityId('skillResponse');
-      const taskNode = {
-        id: taskNodeId,
-        type: 'skillResponse' as const,
-        position: { x: taskStartX, y: taskIndex * rowStepY },
+
+      // Calculate default position for non-auto-layout mode
+      const defaultPosition = autoLayout
+        ? undefined
+        : {
+            x: taskStartX,
+            y: taskIndex * rowStepY,
+          };
+
+      taskIndex++;
+
+      const nodeData: Partial<CanvasNode> = {
+        type: 'skillResponse',
+        position: defaultPosition,
         data: {
           title: taskTitle,
           editedTitle: taskTitle,
@@ -201,41 +286,61 @@ export const generateCanvasDataFromWorkflowPlan = (
           metadata: {
             query: taskPrompt,
             selectedToolsets,
-            contextItems: [], // Will be populated in phase 2
+            contextItems: [],
             status: 'init',
+            modelInfo: defaultModel,
           },
         },
       };
 
-      nodes.push(taskNode);
-      taskIdToNodeId.set(taskId, taskNodeId);
+      // Use prepareAddNode to calculate proper position
+      const { newNode } = prepareAddNode({
+        node: nodeData,
+        nodes: nodes as any[], // Cast to match expected type
+        edges: edges as any[], // Cast to match expected type
+        connectTo,
+        autoLayout,
+      });
+
+      nodes.push(newNode);
+      taskIdToNodeId.set(taskId, newNode.id);
       taskIdToEntityId.set(taskId, taskEntityId);
-    });
+    }
 
-    // Phase 2: Update task nodes with proper contextItems and create dependency edges
-    workflowPlan.tasks.forEach((task, taskIndex) => {
-      const taskId = task?.id ?? `task-${taskIndex}`;
+    // Phase 2: Create dependency edges
+    for (const task of workflowPlan.tasks) {
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
       const taskNodeId = taskIdToNodeId.get(taskId);
-      const taskEntityId = taskIdToEntityId.get(taskId);
 
-      if (!taskNodeId || !taskEntityId) return;
+      if (!taskNodeId) continue;
 
       // Create edges from dependent tasks to this task
       if (Array.isArray(task.dependentTasks)) {
         for (const dependentTaskId of task.dependentTasks) {
           const sourceNodeId = taskIdToNodeId.get(dependentTaskId);
-          if (sourceNodeId) {
-            edges.push({
-              id: `edge-${genUniqueId()}`,
-              source: sourceNodeId,
-              target: taskNodeId,
-              type: 'default',
-            });
+          if (sourceNodeId && sourceNodeId !== taskNodeId) {
+            // Check if edge already exists
+            const edgeExists = edges.some(
+              (edge) => edge.source === sourceNodeId && edge.target === taskNodeId,
+            );
+
+            if (!edgeExists) {
+              edges.push({
+                id: `edge-${genUniqueId()}`,
+                source: sourceNodeId,
+                target: taskNodeId,
+                type: 'default',
+              });
+            }
           }
         }
       }
-    });
+    }
   }
 
-  return { nodes, edges };
+  return {
+    nodes,
+    edges,
+    variables: workflowPlan.variables?.map(planVariableToWorkflowVariable),
+  };
 };

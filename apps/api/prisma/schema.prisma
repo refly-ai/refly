@@ -134,6 +134,8 @@ model ActionResult {
   history                 String?      @map("history")
   /// Errors
   errors                  String?      @map("errors")
+  /// Error type
+  errorType               String?      @map("error_type")
   /// Toolsets (JSON array of `GenericToolset`)
   toolsets                String?      @map("toolsets")
   /// Locale setting
@@ -312,6 +314,8 @@ model WorkflowExecution {
   title          String   @map("title")
   /// Workflow status: init, executing, finished, failed
   status         String   @default("init") @map("status")
+  /// Whether the workflow was aborted by user
+  abortedByUser  Boolean  @default(false) @map("aborted_by_user")
   /// Workflow app id
   appId          String?  @map("app_id")
   /// Workflow variables (JSON)
@@ -389,6 +393,8 @@ enum ActionStatus {
   finish
   failed
 }
+
+// Publish review status will be stored as String for extensibility
 
 model TokenUsage {
   /// Primary key
@@ -525,41 +531,43 @@ model CanvasVersion {
 
 model CanvasTemplate {
   /// Primary key
-  pk             BigInt                  @id @default(autoincrement())
+  pk              BigInt    @id @default(autoincrement())
   /// Canvas template id
-  templateId     String                  @unique @map("template_id")
+  templateId      String    @unique @map("template_id")
   /// Origin canvas id (deprecated)
-  originCanvasId String                  @default("") @map("origin_canvas_id")
-  /// Category id
-  categoryId     String?                 @map("category_id")
+  originCanvasId  String    @default("") @map("origin_canvas_id")
+  /// Category id (deprecated, use categories relation instead)
+  categoryId      String?   @map("category_id")
   /// Workflow app id
-  appId          String?                 @map("app_id")
+  appId           String?   @map("app_id")
   /// Share id
-  shareId        String                  @default("") @map("share_id")
+  shareId         String    @default("") @map("share_id")
+  /// Credit usage for running this workflow app
+  creditUsage     Int?      @map("credit_usage")
+  /// Cover image storage key
+  coverStorageKey String?   @map("cover_storage_key")
   /// Version
-  version        Int                     @default(0) @map("version")
+  version         Int       @default(0) @map("version")
   /// UID
-  uid            String                  @map("uid")
+  uid             String    @map("uid")
   /// Share user (JSON of `ShareUser`)
-  shareUser      String                  @map("share_user")
+  shareUser       String    @map("share_user")
   /// Canvas template title
-  title          String                  @map("title")
+  title           String    @map("title")
   /// Canvas template description
-  description    String                  @map("description")
+  description     String    @map("description")
   /// Whether this canvas template is public
-  isPublic       Boolean                 @default(false) @map("is_public")
+  isPublic        Boolean   @default(false) @map("is_public")
   /// Priority
-  priority       Int                     @default(0) @map("priority")
+  priority        Int       @default(0) @map("priority")
   /// Language code
-  language       String                  @map("language")
+  language        String    @map("language")
   /// Create timestamp
-  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt      DateTime?               @map("deleted_at") @db.Timestamptz()
-  /// Category
-  category       CanvasTemplateCategory? @relation(fields: [categoryId], references: [categoryId])
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@index([uid, updatedAt])
   @@index([isPublic, priority])
@@ -568,25 +576,43 @@ model CanvasTemplate {
 
 model CanvasTemplateCategory {
   /// Primary key
-  pk              BigInt           @id @default(autoincrement())
+  pk              BigInt    @id @default(autoincrement())
   /// Category id
-  categoryId      String           @unique @map("category_id")
+  categoryId      String    @unique @map("category_id")
   /// Category name
-  name            String           @map("name")
+  name            String    @map("name")
   /// Label dictionary (JSON)
-  labelDict       String           @map("label_dict")
+  labelDict       String    @map("label_dict")
   /// Description dictionary (JSON)
-  descriptionDict String           @map("description_dict")
+  descriptionDict String    @map("description_dict")
   /// Create timestamp
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz()
-  /// Templates
-  templates       CanvasTemplate[]
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@map("canvas_template_categories")
+}
+
+model CanvasTemplateCategoryRelation {
+  /// Primary key
+  pk         BigInt    @id @default(autoincrement())
+  /// Template id
+  templateId String    @map("template_id")
+  /// Category id
+  categoryId String    @map("category_id")
+  /// Create timestamp
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@unique([templateId, categoryId])
+  @@index([templateId, deletedAt])
+  @@index([categoryId, deletedAt])
+  @@map("canvas_template_category_relations")
 }
 
 model CanvasEntityRelation {
@@ -837,42 +863,53 @@ model Project {
 
 model WorkflowApp {
   /// Primary key
-  pk              BigInt    @id @default(autoincrement())
+  pk                  BigInt    @id @default(autoincrement())
   /// Workflow app id
-  appId           String    @unique @map("app_id")
+  appId               String    @unique @map("app_id")
   /// UID
-  uid             String    @map("uid")
+  uid                 String    @map("uid")
   /// Title
-  title           String    @default("") @map("title")
+  title               String    @default("") @map("title")
   /// Description
-  description     String?   @map("description")
+  description         String?   @map("description")
   /// Query
-  query           String?   @map("query")
+  query               String?   @map("query")
   /// Variables
-  variables       String?   @map("variables")
+  variables           String?   @map("variables")
   /// Canvas id
-  canvasId        String?   @map("canvas_id")
+  canvasId            String?   @map("canvas_id")
   /// Storage key
-  storageKey      String?   @map("storage_key")
+  storageKey          String?   @map("storage_key")
   /// Share id for public access
-  shareId         String?   @map("share_id")
+  shareId             String?   @map("share_id")
+  /// Template share id for community publishing (independent from shareId)
+  templateShareId     String?   @map("template_share_id")
   /// Cover image storage key
-  coverStorageKey String?   @map("cover_storage_key")
+  coverStorageKey     String?   @map("cover_storage_key")
   /// Template content for app publishing
-  templateContent String?   @map("template_content")
+  templateContent     String?   @map("template_content")
   /// Whether remix is enabled for this app
-  remixEnabled    Boolean   @default(false) @map("remix_enabled")
+  remixEnabled        Boolean   @default(false) @map("remix_enabled")
+  /// Whether to publish this app to the community
+  publishToCommunity  Boolean   @default(false) @map("publish_to_community")
+  /// Community publish review status
+  publishReviewStatus String    @default("init") @map("publish_review_status")
+  /// Review remarks/notes from admin
+  remarks             String?   @map("remarks")
   /// Result node IDs
-  resultNodeIds   String[]  @default([]) @map("result_node_ids")
+  resultNodeIds       String[]  @default([]) @map("result_node_ids")
+  /// Credit usage for running this workflow app
+  creditUsage         Int?      @map("credit_usage")
   /// Create timestamp
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@index([canvasId, deletedAt])
   @@index([shareId])
+  @@index([templateShareId])
   @@map("workflow_apps")
 }
 
@@ -1599,12 +1636,6 @@ model Toolset {
   name          String    @map("name")
   /// Toolset key
   key           String    @map("key")
-  /// Toolset domain
-  domain        String?   @map("domain")
-  /// Toolset label (display name) in JSON format: {"en": "Fish Audio", "zh": "Fish 音频"}
-  label         String?   @map("label") @db.Text
-  /// Toolset description in JSON format: {"en": "...", "zh": "..."}
-  description   String?   @map("description") @db.Text
   /// Toolset auth type (credentials, oauth, config_based)
   authType      String?   @default("config_based") @map("auth_type")
   /// Toolset auth data
@@ -1661,11 +1692,7 @@ model ToolMethod {
   /// Deletion timestamp (soft delete)
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
 
-  // Relations
-  inventory ToolsetInventory @relation(fields: [inventoryKey], references: [key], onDelete: Cascade)
-
-  @@unique([inventoryKey, versionId, name])
-  @@index([inventoryKey, versionId, enabled])
+  @@unique([inventoryKey, name, versionId])
   @@index([versionId])
   @@map("tool_methods")
 }
@@ -1685,8 +1712,6 @@ model ToolsetInventory {
   descriptionDict String    @map("description_dict") @db.Text
   /// API Key for authentication (optional)
   apiKey          String?   @map("api_key") @db.Text
-  /// Config items (configuration item definitions in JSON array format, optional)
-  configItems     String?   @map("config_items") @db.Text
   /// Toolset type ('regular', 'builtin', 'oauth')
   type            String    @default("regular") @map("type")
   /// Adapter type ('http', 'sdk')
@@ -1702,10 +1727,7 @@ model ToolsetInventory {
   /// Deletion timestamp (soft delete)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
-  // Relations
-  methods ToolMethod[]
-
-  @@index([type, enabled, deletedAt])
+  @@index([key])
   @@map("toolset_inventory")
 }
 

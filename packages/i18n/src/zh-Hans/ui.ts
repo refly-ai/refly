@@ -1537,6 +1537,10 @@ const translations = {
         description: '生成失败，请稍后重试或更换模型。',
         retryButton: '重试',
       },
+      userAbort: {
+        title: '任务已停止',
+        description: '此任务已被手动终止。',
+      },
       workflowFailure: {
         title: '执行失败',
         description: 'workflow 执行中断，请稍后重试或检查节点配置。',
@@ -2183,6 +2187,7 @@ const translations = {
       home: '工作台',
       canvas: '我的工作流',
       appManager: '我的模版',
+      marketplace: '模板市场',
       contactUs: '联系我们',
       addToChrome: '安装浏览器插件',
       canvasTitle: '画布',
@@ -3172,10 +3177,10 @@ const translations = {
     },
     sessionDetail: {
       thinking: '思考中',
-      approveAndRun: '采纳并运行',
+      approve: '采纳',
       confirmClearCanvas: {
         title: '确认清空画布',
-        content: '运行此工作流将清空当前画布的所有内容。是否继续？',
+        content: '采纳此工作流将清空当前画布的所有内容。是否继续？',
         confirm: '继续',
         cancel: '取消',
       },
@@ -3581,11 +3586,22 @@ const translations = {
       executionIdFailed: '获取执行 ID 失败',
       executeFailed: '执行工作流失败',
       executeError: '执行工作流失败',
+      thinking: '思考中...',
+      stop: '停止',
+      stopped: '工作流已停止',
+      stoppedMessage: '停止运行，未生成结果，可重新运行模板',
+      stopConfirmTitle: '停止模板运行？',
+      stopConfirmContent: '确定要停止此模板运行吗？运行将立即终止，已消耗的积分不会退还。',
+      stopSuccess: '模板运行已成功停止。',
     },
     revenueSharing: {
       title: '模板被运行可享受积分收益分成',
       earningsHint: '预计模板每次运行可获得 <num>{{creditEarningsPerRun}}</num> 积分',
       howToEarn: '如何获得收益',
+    },
+    publishToCommunity: {
+      label: '发布到社区',
+      help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
     },
   },
   project: {

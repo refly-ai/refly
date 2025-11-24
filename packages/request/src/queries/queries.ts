@@ -4,6 +4,7 @@ import { type Options } from '@hey-api/client-fetch';
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from '@tanstack/react-query';
 import {
   abortAction,
+  abortWorkflow,
   activateInvitationCode,
   addNodesToCanvasPage,
   authorizeComposioConnection,
@@ -172,6 +173,8 @@ import {
 import {
   AbortActionData,
   AbortActionError,
+  AbortWorkflowData,
+  AbortWorkflowError,
   ActivateInvitationCodeData,
   ActivateInvitationCodeError,
   AddNodesToCanvasPageData,
@@ -2704,6 +2707,23 @@ export const useInitializeWorkflow = <
   useMutation<TData, TError, Options<InitializeWorkflowData, true>, TContext>({
     mutationKey: Common.UseInitializeWorkflowKeyFn(mutationKey),
     mutationFn: (clientOptions) => initializeWorkflow(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useAbortWorkflow = <
+  TData = Common.AbortWorkflowMutationResult,
+  TError = AbortWorkflowError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<AbortWorkflowData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<AbortWorkflowData, true>, TContext>({
+    mutationKey: Common.UseAbortWorkflowKeyFn(mutationKey),
+    mutationFn: (clientOptions) => abortWorkflow(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateWorkflowApp = <

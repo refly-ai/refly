@@ -12,7 +12,7 @@ export const ResourceIcon = (props: {
   resourceMeta: ResourceMeta;
   size?: number;
 }) => {
-  const { url, resourceType, resourceMeta, size = 18 } = props;
+  const { url, resourceType, size = 18 } = props;
   const [showFallbackIcon, setShowFallbackIcon] = useState(false);
 
   if (
@@ -21,15 +21,7 @@ export const ResourceIcon = (props: {
     resourceType === 'video' ||
     resourceType === 'audio'
   ) {
-    return (
-      <NodeIcon
-        type="resource"
-        resourceType={resourceType}
-        resourceMeta={resourceMeta}
-        filled={false}
-        iconSize={size}
-      />
-    );
+    return <NodeIcon type="resource" filename={resourceType} filled={false} iconSize={size} />;
   }
 
   if (url) {

@@ -34,6 +34,7 @@
     "html2canvas": "^1.4.1",
     "i18next": "^25.3.2",
     "lodash.throttle": "^4.1.1",
+    "lottie-react": "^2.4.1",
     "lucide-react": "~0.454.0",
     "motion": "^12.4.5",
     "qs": "~6.12.3",

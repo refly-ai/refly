@@ -8,6 +8,7 @@ import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/us
 import { useWorkflowExecutionPolling } from './use-workflow-execution-polling';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { InitializeWorkflowRequest } from '@refly/openapi-schema';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 export const useInitializeWorkflow = (
   canvasId: string,
@@ -23,19 +24,23 @@ export const useInitializeWorkflow = (
     executionId: state.canvasExecutionId[canvasId],
     setCanvasExecutionId: state.setCanvasExecutionId,
   }));
+  const { data: workflowVariables } = useVariablesManagement(canvasId);
 
   // Memoize callbacks to avoid recreating them on every render
   const handleComplete = useMemo(
-    () => (status: string, _data: any) => {
+    () => (status: string, data: any) => {
       if (status === 'finish') {
         notification.success({
           message:
             t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
         });
       } else if (status === 'failed') {
-        notification.error({
-          message: t('canvas.workflow.run.failed') || 'Workflow execution failed',
-        });
+        // Only show error notification if NOT aborted by user
+        if (!data?.data?.abortedByUser) {
+          notification.error({
+            message: t('canvas.workflow.run.failed') || 'Workflow execution failed',
+          });
+        }
       }
     },
     [t],
@@ -74,7 +79,10 @@ export const useInitializeWorkflow = (
         await forceSyncState({ syncRemote: true });
 
         const { data, error } = await getClient().initializeWorkflow({
-          body: param,
+          body: {
+            variables: workflowVariables,
+            ...param,
+          },
         });
 
         if (error) {
@@ -96,7 +104,7 @@ export const useInitializeWorkflow = (
         setLoading(false);
       }
     },
-    [t, canvasId, setCanvasExecutionId, forceSyncState],
+    [t, canvasId, setCanvasExecutionId, forceSyncState, workflowVariables],
   );
 
   const initializeWorkflowInNewCanvas = useCallback(

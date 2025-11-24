@@ -2,11 +2,9 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Modal, Form, Input, Checkbox, message } from 'antd';
 import { Attachment, Close, List, Text1 } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { cn, genVariableID } from '@refly/utils';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { MAX_VARIABLE_LENGTH } from '../node-preview/start';
 import { StringTypeForm } from './string-type-form';
 import { ResourceTypeForm } from './resource-type-form';
@@ -18,10 +16,10 @@ import { getFileType } from './utils';
 import type { CreateVariablesModalProps, VariableFormData } from './types';
 import type { WorkflowVariable, VariableValue } from '@refly/openapi-schema';
 import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import './index.scss';
 import { RESOURCE_TYPE } from './constants';
 import { logEvent } from '@refly/telemetry-web';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 
 export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.memo(
   ({
@@ -39,11 +37,9 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       defaultValue?.variableType || initialVariableType || 'string',
     );
     const [fileList, setFileList] = useState<UploadFile[]>([]);
-    const { workflow, canvasId } = useCanvasContext();
-    const { workflowVariables, refetchWorkflowVariables } = workflow;
-    const [isSaving, setIsSaving] = useState(false);
+    const { canvasId } = useCanvasContext();
     const { handleVariableView } = useVariableView(canvasId);
-    const queryClient = useQueryClient();
+    const { data: workflowVariables, setVariables } = useVariablesManagement(canvasId);
 
     const title = useMemo(() => {
       if (disableChangeVariableType) {
@@ -54,8 +50,6 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       }
       return t(`canvas.workflow.variables.${mode === 'create' ? 'addTitle' : 'editTitle'}`);
     }, [t, mode, disableChangeVariableType, variableType]);
-
-    const { refetch: refetchFiles } = useFetchDriveFiles();
 
     const variableTypeOptions = useMemo(() => {
       return [
@@ -332,7 +326,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     );
 
     const saveVariable = useCallback(
-      async (variable: WorkflowVariable) => {
+      (variable: WorkflowVariable) => {
         logVariableCreationEvent(variable);
         const existingIndex = workflowVariables.findIndex(
           (v) => v.variableId === variable.variableId,
@@ -346,76 +340,25 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           newWorkflowVariables = [...workflowVariables, variable];
         }
 
-        // Optimistic update: immediately update local cache
-        queryClient.setQueryData(
-          ['GetWorkflowVariables', { query: { canvasId } }],
-          (oldData: any) => {
-            if (!oldData) return oldData;
-            return {
-              ...oldData,
-              data: newWorkflowVariables,
-            };
-          },
+        setVariables(newWorkflowVariables);
+        message.success(
+          <div className="flex items-center gap-2">
+            <span>
+              {t('canvas.workflow.variables.saveSuccess') || 'Variable created successfully'}
+            </span>
+            <Button
+              type="link"
+              size="small"
+              className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
+              onClick={() => handleVariableView(variable)}
+            >
+              {t('canvas.workflow.variables.viewAndEdit') || 'View'}
+            </Button>
+          </div>,
+          5, // Show for 5 seconds
         );
-
-        try {
-          const { data } = await getClient().updateWorkflowVariables({
-            body: {
-              canvasId: canvasId,
-              variables: newWorkflowVariables,
-            },
-          });
-
-          if (data?.success) {
-            message.success(
-              <div className="flex items-center gap-2">
-                <span>
-                  {t('canvas.workflow.variables.saveSuccess') || 'Variable created successfully'}
-                </span>
-                <Button
-                  type="link"
-                  size="small"
-                  className="p-0 h-auto !text-refly-primary-default hover:!text-refly-primary-default"
-                  onClick={() => handleVariableView(variable)}
-                >
-                  {t('canvas.workflow.variables.viewAndEdit') || 'View'}
-                </Button>
-              </div>,
-              5, // Show for 5 seconds
-            );
-            return true;
-          } else {
-            // Rollback optimistic update on failure
-            queryClient.setQueryData(
-              ['GetWorkflowVariables', { query: { canvasId } }],
-              (oldData: any) => {
-                if (!oldData) return oldData;
-                return {
-                  ...oldData,
-                  data: workflowVariables,
-                };
-              },
-            );
-            message.error(t('canvas.workflow.variables.saveError') || 'Failed to save variable');
-            return false;
-          }
-        } catch {
-          // Rollback optimistic update on error
-          queryClient.setQueryData(
-            ['GetWorkflowVariables', { query: { canvasId } }],
-            (oldData: any) => {
-              if (!oldData) return oldData;
-              return {
-                ...oldData,
-                data: workflowVariables,
-              };
-            },
-          );
-          message.error(t('canvas.workflow.variables.saveError') || 'Failed to save variable');
-          return false;
-        }
       },
-      [queryClient, t, canvasId, workflowVariables, handleVariableView, logVariableCreationEvent],
+      [t, workflowVariables, handleVariableView, logVariableCreationEvent],
     );
 
     const handleSubmit = useCallback(async () => {
@@ -502,17 +445,8 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           }),
         };
 
-        setIsSaving(true);
-        const success = await saveVariable(variable);
-        setIsSaving(false);
-        if (success) {
-          refetchWorkflowVariables();
-          onCancel(false);
-
-          if (variableType === 'resource') {
-            refetchFiles();
-          }
-        }
+        saveVariable(variable);
+        onCancel(false);
       } catch (error) {
         console.error('Form validation failed:', error);
       }
@@ -523,7 +457,6 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       onCancel,
       t,
       saveVariable,
-      refetchWorkflowVariables,
       options,
       workflowVariables,
       defaultValue,
@@ -716,13 +649,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             <Button className="w-[80px]" onClick={handleModalClose}>
               {t('common.cancel') || 'Cancel'}
             </Button>
-            <Button
-              className="w-[80px]"
-              type="primary"
-              onClick={handleSubmit}
-              loading={isSaving}
-              disabled={isSaving}
-            >
+            <Button className="w-[80px]" type="primary" onClick={handleSubmit}>
               {t('common.save') || 'Save'}
             </Button>
           </div>

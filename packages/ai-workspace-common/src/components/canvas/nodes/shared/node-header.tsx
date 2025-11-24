@@ -22,7 +22,6 @@ interface NodeHeaderProps {
 
   // Edit behavior
   canEdit?: boolean;
-  disabled?: boolean;
   updateTitle?: (title: string) => void;
 
   // Visual customization
@@ -37,6 +36,7 @@ interface NodeHeaderProps {
   // Additional props
   source?: 'preview' | 'node' | 'skillResponsePreview';
   className?: string;
+  maxLength?: number;
 }
 
 // Background color classes for different node types
@@ -56,10 +56,7 @@ export const NodeHeader = memo(
     title,
     placeholder,
     type, // backward compatibility
-    resourceType,
-    resourceMeta,
     canEdit = false,
-    disabled = false,
     updateTitle,
     showIcon = true,
     iconColor = 'black',
@@ -68,6 +65,7 @@ export const NodeHeader = memo(
     actions,
     source = 'node',
     className = '',
+    maxLength,
   }: NodeHeaderProps) => {
     const [editTitle, setEditTitle] = useState(title);
     const [isEditing, setIsEditing] = useState(false);
@@ -122,19 +120,18 @@ export const NodeHeader = memo(
           {showIcon && (
             <NodeIcon
               type={actualNodeType}
-              resourceType={resourceType}
-              resourceMeta={resourceMeta}
+              filename={title}
               filled={iconFilled}
               iconColor={iconColor}
               iconSize={16}
             />
           )}
 
-          {canEdit && isEditing && !disabled ? (
+          {canEdit && isEditing ? (
             <Input
               ref={inputRef}
               className={cn(
-                '!border-transparent rounded-md font-semibold focus:!bg-refly-tertiary-hover px-0.5 py-0 !bg-refly-tertiary-hover !text-refly-text-0',
+                '!border-transparent rounded-md font-semibold focus:!bg-refly-tertiary-hover h-6 px-0.5 py-0 !bg-refly-tertiary-hover !text-refly-text-0',
                 {
                   'text-lg': source === 'skillResponsePreview',
                 },
@@ -144,6 +141,7 @@ export const NodeHeader = memo(
               placeholder={placeholder}
               onBlur={handleBlur}
               onChange={handleChange}
+              maxLength={maxLength}
             />
           ) : (
             <div
@@ -152,11 +150,12 @@ export const NodeHeader = memo(
                 {
                   'text-lg': source === 'skillResponsePreview',
                   'text-sm': source !== 'skillResponsePreview',
+                  'cursor-pointer hover:bg-refly-tertiary-hover': canEdit,
                 },
               )}
               title={editTitle || fixedTitle}
               onClick={() => {
-                if (canEdit && !disabled) {
+                if (canEdit) {
                   setIsEditing(true);
                 }
               }}

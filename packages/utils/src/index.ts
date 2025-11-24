@@ -24,3 +24,4 @@ export * from './time';
 export * from './artifact';
 export * from './validator';
 export * from './query-processor';
+export * from './drive-file-mapper';

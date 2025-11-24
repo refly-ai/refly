@@ -1,11 +1,10 @@
 import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, Form, Typography, message, Modal } from 'antd';
+import { Button, Input, Select, Form, Typography, message } from 'antd';
 import { Play, Stop } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-
+import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
 import cn from 'classnames';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
@@ -68,6 +67,7 @@ interface WorkflowRunFormProps {
   pollingError?: any;
   isRunning?: boolean;
   onRunningChange?: (isRunning: boolean) => void;
+  canvasId?: string;
   className?: string;
   templateContent?: string;
   workflowApp?: any;
@@ -82,11 +82,13 @@ export const WorkflowRunForm = ({
   isPolling,
   isRunning: externalIsRunning,
   onRunningChange,
+  canvasId,
   className,
   templateContent,
   workflowApp,
   creditUsage,
 }: WorkflowRunFormProps) => {
+  console.log('[WorkflowRunForm] workflowVariables', workflowVariables);
   const { t } = useTranslation();
   const { isLoggedRef } = useIsLogin();
   const navigate = useNavigate();
@@ -95,6 +97,20 @@ export const WorkflowRunForm = ({
 
   // Use external isRunning if provided, otherwise use internal state
   const isRunning = externalIsRunning ?? internalIsRunning;
+
+  // Abort workflow with optimistic UI update (immediately marks nodes as 'failed')
+  const { handleAbort } = useAbortWorkflow({
+    executionId,
+    canvasId,
+    onSuccess: () => {
+      // Reset running state after successful abort
+      if (onRunningChange) {
+        onRunningChange(false);
+      } else {
+        setInternalIsRunning(false);
+      }
+    },
+  });
   const [form] = Form.useForm();
   const [variableValues, setVariableValues] = useState<Record<string, any>>({});
   const [templateVariables, setTemplateVariables] = useState<WorkflowVariable[]>([]);
@@ -305,47 +321,6 @@ export const WorkflowRunForm = ({
     setVariableValues(newValues);
     form.setFieldsValue(newValues);
   }, [workflowVariables, form]);
-
-  const handleAbort = async () => {
-    if (!executionId) {
-      return;
-    }
-
-    Modal.confirm({
-      title: t('canvas.workflow.run.abort.confirmTitle'),
-      content: t('canvas.workflow.run.abort.confirmContent'),
-      okText: t('canvas.workflow.run.abort.confirm'),
-      cancelText: t('common.cancel'),
-      icon: null,
-      okButtonProps: {
-        className: '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
-      },
-      onOk: async () => {
-        try {
-          const { error } = await getClient().abortWorkflow({
-            body: { executionId },
-          });
-
-          if (error) {
-            message.error(t('canvas.workflow.run.abort.failed'));
-            return;
-          }
-
-          message.success(t('canvas.workflow.run.abort.success'));
-
-          // Reset running state
-          if (onRunningChange) {
-            onRunningChange(false);
-          } else {
-            setInternalIsRunning(false);
-          }
-        } catch (error) {
-          console.error('Failed to abort workflow:', error);
-          message.error(t('canvas.workflow.run.abort.failed'));
-        }
-      },
-    });
-  };
 
   const handleRun = async () => {
     if (loading || isRunning) {

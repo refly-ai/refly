@@ -14,6 +14,7 @@ import type {
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 export const FileItemAction = ({
   file,
@@ -23,14 +24,12 @@ export const FileItemAction = ({
   className?: string;
 }) => {
   const { t } = useTranslation();
-  const { readonly, workflow } = useCanvasContext();
-  if (readonly) return null;
+  const { canvasId } = useCanvasContext();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const { refetch: refetchFiles } = useFetchDriveFiles();
+  const { data: workflowVariables } = useVariablesManagement(canvasId);
 
-  // Safely extract workflowVariables with fallback to prevent runtime crashes
-  const workflowVariables = workflow?.workflowVariables ?? [];
   const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
     setCurrentFile: state.setCurrentFile,
   }));
@@ -58,7 +57,7 @@ export const FileItemAction = ({
         setIsDeleting(false);
       }
     },
-    [refetchFiles, setCurrentFile],
+    [isDeleting, refetchFiles, setCurrentFile, t],
   );
 
   // Create default variable data for the current resource
@@ -179,31 +178,29 @@ export const FileItemAction = ({
             }}
           />
         </Tooltip>
-        {!readonly && (
-          <Popconfirm
-            title={t('canvas.nodeActions.resourceDeleteConfirm', {
-              title: file?.name || t('common.untitled'),
-            })}
-            onConfirm={async (e) => {
-              e?.stopPropagation();
-              await handleDeleteFile(file);
-            }}
-            onCancel={(e) => {
-              e?.stopPropagation();
-            }}
-            okText={t('common.confirm')}
-            cancelText={t('common.cancel')}
-          >
-            <Tooltip title={t('common.delete')} arrow={false} placement="bottom">
-              <Button
-                type="text"
-                size="small"
-                icon={<Delete size={16} />}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Tooltip>
-          </Popconfirm>
-        )}
+        <Popconfirm
+          title={t('canvas.nodeActions.resourceDeleteConfirm', {
+            title: file?.name || t('common.untitled'),
+          })}
+          onConfirm={async (e) => {
+            e?.stopPropagation();
+            await handleDeleteFile(file);
+          }}
+          onCancel={(e) => {
+            e?.stopPropagation();
+          }}
+          okText={t('common.confirm')}
+          cancelText={t('common.cancel')}
+        >
+          <Tooltip title={t('common.delete')} arrow={false} placement="bottom">
+            <Button
+              type="text"
+              size="small"
+              icon={<Delete size={16} />}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Tooltip>
+        </Popconfirm>
       </div>
 
       {/* Create Variables Modal */}
