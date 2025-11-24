@@ -1238,7 +1238,7 @@ const translations = {
       searchNodeDescription: 'Search nodes in the canvas, click to locate.',
       enablePointerMode: 'Enable Pointer Mode',
       disablePointerMode: 'Disable Pointer Mode',
-      deleteCanvas: 'Delete',
+      deleteCanvas: 'Delete Workflow',
       importResource: 'Import Resource',
       importResourceDescription:
         'Import resources through online search, manual addition of web links or text to add writing materials for consumption in the canvas.',
