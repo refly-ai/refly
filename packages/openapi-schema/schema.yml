@@ -3077,6 +3077,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CheckSettingsFieldResponse'
+  /form/definition:
+    get:
+      tags:
+        - form
+      summary: Get form definition
+      description: Get form definition
+      operationId: getFormDefinition
+      parameters:
+        - name: formId
+          in: query
+          description: Form ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFormDefinitionResponse'
+  /form/submission:
+    post:
+      tags:
+        - form
+      summary: Submit form
+      description: Submit a form
+      operationId: submitForm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitFormRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
   /credit/recharge:
     get:
       tags:
@@ -8995,6 +9036,23 @@ components:
                 url:
                   type: string
                   description: Portal session URL
+    SubmitFormRequest:
+      type: object
+      required:
+        - formSubmission
+      properties:
+        formSubmission:
+          description: Form submission
+          $ref: '#/components/schemas/FormSubmission'
+    GetFormDefinitionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Form definition
+              $ref: '#/components/schemas/FormDefinition'
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

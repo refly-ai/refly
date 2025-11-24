@@ -7009,6 +7009,35 @@ export const CreatePortalSessionResponseSchema = {
   ],
 } as const;
 
+export const SubmitFormRequestSchema = {
+  type: 'object',
+  required: ['formSubmission'],
+  properties: {
+    formSubmission: {
+      description: 'Form submission',
+      $ref: '#/components/schemas/FormSubmission',
+    },
+  },
+} as const;
+
+export const GetFormDefinitionResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Form definition',
+          $ref: '#/components/schemas/FormDefinition',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const GetCreditRechargeResponseSchema = {
   allOf: [
     {

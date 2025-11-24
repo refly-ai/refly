@@ -374,6 +374,12 @@ import type {
   CheckSettingsFieldData,
   CheckSettingsFieldError,
   CheckSettingsFieldResponse2,
+  GetFormDefinitionData,
+  GetFormDefinitionError,
+  GetFormDefinitionResponse2,
+  SubmitFormData,
+  SubmitFormError,
+  SubmitFormResponse,
   GetCreditRechargeData,
   GetCreditRechargeError,
   GetCreditRechargeResponse2,
@@ -2493,6 +2499,36 @@ export const checkSettingsField = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/user/checkSettingsField',
+  });
+};
+
+/**
+ * Get form definition
+ * Get form definition
+ */
+export const getFormDefinition = <ThrowOnError extends boolean = false>(
+  options: Options<GetFormDefinitionData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetFormDefinitionResponse2,
+    GetFormDefinitionError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/form/definition',
+  });
+};
+
+/**
+ * Submit form
+ * Submit a form
+ */
+export const submitForm = <ThrowOnError extends boolean = false>(
+  options: Options<SubmitFormData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<SubmitFormResponse, SubmitFormError, ThrowOnError>({
+    ...options,
+    url: '/form/submission',
   });
 };
 

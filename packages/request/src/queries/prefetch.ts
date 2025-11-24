@@ -24,6 +24,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -86,6 +87,7 @@ import {
   GetCreditUsageByResultIdData,
   GetCreditUsageData,
   GetDocumentDetailData,
+  GetFormDefinitionData,
   GetPageByCanvasIdData,
   GetPageDetailData,
   GetPilotSessionDetailData,
@@ -471,6 +473,14 @@ export const prefetchUseCheckSettingsField = (
   queryClient.prefetchQuery({
     queryKey: Common.UseCheckSettingsFieldKeyFn(clientOptions),
     queryFn: () => checkSettingsField({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetFormDefinition = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetFormDefinitionData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions),
+    queryFn: () => getFormDefinition({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetCreditRecharge = (
   queryClient: QueryClient,

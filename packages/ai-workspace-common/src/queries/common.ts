@@ -86,6 +86,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -144,6 +145,7 @@ import {
   setCanvasState,
   sharePage,
   streamInvokeSkill,
+  submitForm,
   syncCanvasState,
   testProviderConnection,
   unpinSkillInstance,
@@ -650,6 +652,18 @@ export const UseCheckSettingsFieldKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useCheckSettingsFieldKey, ...(queryKey ?? [clientOptions])];
+export type GetFormDefinitionDefaultResponse = Awaited<
+  ReturnType<typeof getFormDefinition>
+>['data'];
+export type GetFormDefinitionQueryResult<
+  TData = GetFormDefinitionDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetFormDefinitionKey = 'GetFormDefinition';
+export const UseGetFormDefinitionKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetFormDefinitionKey, ...(queryKey ?? [clientOptions])];
 export type GetCreditRechargeDefaultResponse = Awaited<
   ReturnType<typeof getCreditRecharge>
 >['data'];
@@ -1326,6 +1340,20 @@ export type ExecuteWorkflowAppMutationResult = Awaited<ReturnType<typeof execute
 export const useExecuteWorkflowAppKey = 'ExecuteWorkflowApp';
 export const UseExecuteWorkflowAppKeyFn = (mutationKey?: Array<unknown>) => [
   useExecuteWorkflowAppKey,
+  ...(mutationKey ?? []),
+];
+export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;
+export const useSubmitFormKey = 'SubmitForm';
+export const UseSubmitFormKeyFn = (mutationKey?: Array<unknown>) => [
+  useSubmitFormKey,
+  ...(mutationKey ?? []),
+];
+export type GenerateInvitationCodeMutationResult = Awaited<
+  ReturnType<typeof generateInvitationCode>
+>;
+export const useGenerateInvitationCodeKey = 'GenerateInvitationCode';
+export const UseGenerateInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
+  useGenerateInvitationCodeKey,
   ...(mutationKey ?? []),
 ];
 export type ActivateInvitationCodeMutationResult = Awaited<
