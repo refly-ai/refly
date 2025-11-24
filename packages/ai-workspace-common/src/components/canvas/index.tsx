@@ -34,7 +34,6 @@ import {
   useToolStoreShallow,
 } from '@refly/stores';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { UnifiedContextMenu } from './unified-context-menu';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-preview-control';
 import {
@@ -174,12 +173,14 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   useCopyPasteSkillResponseNode({ canvasId, readonly });
 
   const {
+    nodePreviewId,
     canvasInitialized,
     operatingNodeId,
     setOperatingNodeId,
     setInitialFitViewCompleted,
     setContextMenuOpenedCanvasId,
   } = useCanvasStoreShallow((state) => ({
+    nodePreviewId: state.config[canvasId]?.nodePreviewId,
     canvasInitialized: state.canvasInitialized[canvasId],
     operatingNodeId: state.operatingNodeId,
     setOperatingNodeId: state.setOperatingNodeId,
@@ -503,28 +504,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
     if (showWorkflowRun) {
       setShowWorkflowRun(false);
     }
-
-    const unsubscribe = locateToNodePreviewEmitter.on(
-      'locateToNodePreview',
-      ({ canvasId: emittedCanvasId, id }) => {
-        if (emittedCanvasId === canvasId) {
-          requestAnimationFrame(() => {
-            const previewContainer = document.querySelector('.preview-container');
-            const targetPreview = document.querySelector(`[data-preview-id="${id}"]`);
-
-            if (previewContainer && targetPreview) {
-              targetPreview?.scrollIntoView?.({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'center',
-              });
-            }
-          });
-        }
-      },
-    );
-
-    return unsubscribe;
   }, [canvasId]);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -709,22 +688,10 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       }
 
       // Memo nodes are not previewable
-      if (
-        [
-          'memo',
-          'skill',
-          'group',
-          'image',
-          'mediaSkill',
-          'video',
-          'audio',
-          'mediaSkillResponse',
-        ].includes(node.type)
-      ) {
+      if (!['start', 'skillResponse'].includes(node.type)) {
         return;
       }
 
-      // Handle preview if enabled
       handleNodePreview(node);
     },
     [handleNodePreview, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
@@ -733,7 +700,10 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   // Memoize nodes and edges
   const memoizedNodes = useMemo(() => nodes, [nodes]);
   const memoizedEdges = useMemo(() => edges, [edges]);
-  const selectedNode = useMemo(() => nodes.find((node) => node.selected) as CanvasNode, [nodes]);
+  const selectedNode = useMemo(
+    () => nodes.find((node) => node.id === nodePreviewId) as CanvasNode,
+    [nodes, nodePreviewId],
+  );
 
   // Memoize the Background component
   const memoizedBackground = useMemo(() => <MemoizedBackground />, []);

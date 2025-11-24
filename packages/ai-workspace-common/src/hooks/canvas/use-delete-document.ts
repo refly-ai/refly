@@ -5,7 +5,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { useDocumentStoreShallow } from '@refly/stores';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSubscriptionUsage } from '../use-subscription-usage';
-import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 export const useDeleteDocument = () => {
   const [isRemoving, setIsRemoving] = useState(false);
@@ -29,9 +28,6 @@ export const useDeleteDocument = () => {
       if (data?.success) {
         success = true;
         deleteDocumentData(docId);
-        nodeOperationsEmitter.emit('closeNodePreviewByEntityId', {
-          entityId: docId,
-        });
 
         // Clear IndexedDB persistence for the deleted document
         const indexedDbProvider = new IndexeddbPersistence(docId, new Y.Doc());

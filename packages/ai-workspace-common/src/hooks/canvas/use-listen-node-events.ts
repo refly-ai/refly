@@ -16,7 +16,6 @@ import { CodeArtifactNodeMeta } from '@refly/canvas-common';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-preview-control';
 import { CanvasNodeType } from '@refly-packages/ai-workspace-common/requests';
 import { useReactFlow } from '@xyflow/react';
-import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { genMediaSkillResponseID, genMediaSkillID } from '@refly/utils/id';
 import { useChatStore, useChatStoreShallow, useActionResultStore } from '@refly/stores';
 import { useFindImages } from '@refly-packages/ai-workspace-common/hooks/canvas/use-find-images';
@@ -31,7 +30,7 @@ export const useListenNodeOperationEvents = () => {
   const { t } = useTranslation();
 
   // Only use canvas store if in interactive mode and not readonly
-  const { previewNode, closeNodePreviewByEntityId } = useNodePreviewControl({ canvasId });
+  const { previewNode } = useNodePreviewControl({ canvasId });
 
   // Get mediaSelectedModel from store for new mediaSkill nodes
   const { mediaSelectedModel } = useChatStoreShallow((state) => ({
@@ -78,7 +77,6 @@ export const useListenNodeOperationEvents = () => {
             new Date(b.data.createdAt ?? '').getTime() - new Date(a.data.createdAt ?? '').getTime(),
         );
       let artifactNode: CanvasNode<CodeArtifactNodeMeta> | null = descendantNodes[0] || null;
-      let nodeIdForEvent: string | undefined; // Track the node ID to use in the locate event
 
       // If artifactNode doesn't exist, try to fetch it from API
       if (!artifactNode && descendantNodeType === 'codeArtifact') {
@@ -125,10 +123,6 @@ export const useListenNodeOperationEvents = () => {
               (node) =>
                 node.data?.entityId === artifactData.artifactId && node.type === 'codeArtifact',
             ) as CanvasNode<CodeArtifactNodeMeta> | null;
-
-            if (artifactNode) {
-              nodeIdForEvent = artifactNode.id;
-            }
           } else {
             // API call succeeded but no data returned
             message.error(t('artifact.componentNotFound', 'Current component does not exist'));
@@ -144,13 +138,7 @@ export const useListenNodeOperationEvents = () => {
 
       if (artifactNode && shouldPreview) {
         // Use the existing node's information for the preview
-        nodeIdForEvent = artifactNode.id;
         previewNode(artifactNode as unknown as CanvasNode);
-      }
-
-      if (nodeIdForEvent) {
-        // Emit the locate event with the correct node ID
-        locateToNodePreviewEmitter.emit('locateToNodePreview', { canvasId, id: nodeIdForEvent });
       }
     },
     [getNodes, getEdges, previewNode, canvasId, addNode, t],
@@ -401,28 +389,14 @@ export const useListenNodeOperationEvents = () => {
       jumpToDescendantNode(event.entityId, event.descendantNodeType, event.shouldPreview);
     };
 
-    const handleCloseNodePreviewByEntityId = (event: Events['closeNodePreviewByEntityId']) => {
-      if (readonly) return;
-      closeNodePreviewByEntityId(event.entityId);
-    };
-
     nodeOperationsEmitter.on('addNode', handleAddNode);
     nodeOperationsEmitter.on('jumpToDescendantNode', handleJumpToNode);
-    nodeOperationsEmitter.on('closeNodePreviewByEntityId', handleCloseNodePreviewByEntityId);
     nodeOperationsEmitter.on('generateMedia', handleGenerateMedia);
 
     return () => {
       nodeOperationsEmitter.off('addNode', handleAddNode);
       nodeOperationsEmitter.off('jumpToDescendantNode', handleJumpToNode);
-      nodeOperationsEmitter.off('closeNodePreviewByEntityId', handleCloseNodePreviewByEntityId);
       nodeOperationsEmitter.off('generateMedia', handleGenerateMedia);
     };
-  }, [
-    addNode,
-    readonly,
-    previewNode,
-    closeNodePreviewByEntityId,
-    jumpToDescendantNode,
-    handleGenerateMedia,
-  ]);
+  }, [addNode, readonly, previewNode, jumpToDescendantNode, handleGenerateMedia]);
 };
