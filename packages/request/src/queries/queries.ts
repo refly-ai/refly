@@ -2815,24 +2815,6 @@ export const useSubmitForm = <
     mutationFn: (clientOptions) => submitForm(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
-export const useGenerateInvitationCode = <
-  TData = Common.GenerateInvitationCodeMutationResult,
-  TError = GenerateInvitationCodeError,
-  TQueryKey extends Array<unknown> = unknown[],
-  TContext = unknown,
->(
-  mutationKey?: TQueryKey,
-  options?: Omit<
-    UseMutationOptions<TData, TError, Options<unknown, true>, TContext>,
-    'mutationKey' | 'mutationFn'
-  >,
-) =>
-  useMutation<TData, TError, Options<unknown, true>, TContext>({
-    mutationKey: Common.UseGenerateInvitationCodeKeyFn(mutationKey),
-    mutationFn: (clientOptions) =>
-      generateInvitationCode(clientOptions) as unknown as Promise<TData>,
-    ...options,
-  });
 export const useActivateInvitationCode = <
   TData = Common.ActivateInvitationCodeMutationResult,
   TError = ActivateInvitationCodeError,

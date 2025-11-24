@@ -1348,14 +1348,6 @@ export const UseSubmitFormKeyFn = (mutationKey?: Array<unknown>) => [
   useSubmitFormKey,
   ...(mutationKey ?? []),
 ];
-export type GenerateInvitationCodeMutationResult = Awaited<
-  ReturnType<typeof generateInvitationCode>
->;
-export const useGenerateInvitationCodeKey = 'GenerateInvitationCode';
-export const UseGenerateInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
-  useGenerateInvitationCodeKey,
-  ...(mutationKey ?? []),
-];
 export type ActivateInvitationCodeMutationResult = Awaited<
   ReturnType<typeof activateInvitationCode>
 >;
