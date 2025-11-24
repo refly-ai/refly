@@ -7,10 +7,13 @@ import type { GetFormDefinitionDefaultResponse } from '@refly-packages/ai-worksp
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 const FormOnboardingModalComponent: React.FC = () => {
-  const { showOnboardingFormModal, setShowOnboardingFormModal } = useUserStoreShallow((state) => ({
-    showOnboardingFormModal: state.showOnboardingFormModal,
-    setShowOnboardingFormModal: state.setShowOnboardingFormModal,
-  }));
+  const { showOnboardingFormModal, setShowOnboardingFormModal, userProfile } = useUserStoreShallow(
+    (state) => ({
+      showOnboardingFormModal: state.showOnboardingFormModal,
+      setShowOnboardingFormModal: state.setShowOnboardingFormModal,
+      userProfile: state.userProfile,
+    }),
+  );
 
   const {
     data: formDefinitionResponse,
@@ -33,12 +36,17 @@ const FormOnboardingModalComponent: React.FC = () => {
 
     try {
       const parsedSchema = JSON.parse(definition.schema) as RJSFSchema;
+      const mergedSchema: RJSFSchema = {
+        ...parsedSchema,
+        formId: definition?.formId ?? '',
+        uid: userProfile?.uid ?? '',
+      };
       const parsedUiSchema = definition.uiSchema
         ? (JSON.parse(definition.uiSchema) as UiSchema)
         : null;
 
       return {
-        formSchema: parsedSchema,
+        formSchema: mergedSchema,
         formUiSchema: parsedUiSchema,
       };
     } catch (error) {

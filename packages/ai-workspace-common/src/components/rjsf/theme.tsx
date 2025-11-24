@@ -2,6 +2,7 @@ import { withTheme } from '@rjsf/core';
 import { Button, Checkbox, Input, Radio } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { useSubmitForm } from '@refly-packages/ai-workspace-common/queries';
 
 interface RjsfFieldTemplateProps {
   id?: string;
@@ -218,6 +219,8 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
     readonly,
   } = props;
 
+  const submitFormMutation = useSubmitForm();
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
   const uiOptions = (uiSchema?.['ui:options'] ?? {}) as Record<string, unknown>;
@@ -363,7 +366,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
             onClick={goToPrevPage}
             className="w-[180px] h-14 -mt-8 rounded-full"
           >
-            上一题
+            previous
           </Button>
         )}
 
@@ -371,13 +374,27 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
           <Button
             type="primary"
             htmlType="submit"
-            disabled={!canProceed}
+            disabled={!canProceed || submitFormMutation.isPending}
             className="w-[180px] h-14 -mt-8 rounded-full"
             onClick={() => {
-              console.log('rjsf表单提交时的value:', effectiveFormData);
+              const formId = (schema as { formId?: string })?.formId;
+              const uid = (schema as { uid?: string })?.uid;
+
+              if (formId && uid) {
+                submitFormMutation.mutate({
+                  body: {
+                    formSubmission: {
+                      formId,
+                      uid,
+                      answers: JSON.stringify(effectiveFormData),
+                      status: 'submitted',
+                    } as any,
+                  },
+                });
+              }
             }}
           >
-            提交获得积分
+            {submitFormMutation.isPending ? 'Submitting...' : 'submit to get credits'}
           </Button>
         ) : (
           <Button
@@ -386,7 +403,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
             disabled={!canProceed}
             className="w-[180px] h-14 -mt-8 rounded-full"
           >
-            下一题
+            next
           </Button>
         )}
       </div>
