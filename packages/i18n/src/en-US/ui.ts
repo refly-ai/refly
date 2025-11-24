@@ -3654,7 +3654,7 @@ const translations = {
       upgradePlan: 'Upgrade Plan',
       availableCredits: 'Total Available Credits',
       regularCredits: 'Regular Credits',
-      templateEarningsCredits: 'Template Earnings Credits',
+      templateEarningsCredits: 'Earnings Credits',
       remainingCredits: 'Credits',
       knowledgeBaseFiles: 'Knowledge Base Files',
       creditUsageDetails: 'Credit Usage Details',

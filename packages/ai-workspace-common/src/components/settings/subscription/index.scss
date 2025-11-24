@@ -171,14 +171,57 @@
     }
   }
 
-  .usage-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+  .usage-section-wrapper {
+    border: 0.5px solid var(--border---refly-Card-Border, rgba(0, 0, 0, 0.1));
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .available-credits-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 24px;
 
+    .usage-label {
+      font-size: 14px;
+      color: #555;
+
+      color: var(--refly-text-0, #1c1f23);
+
+      font-family: "PingFang SC";
+      font-size: 12px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 16px;
+    }
+    .usage-value {
+      color: var(--refly-text-0, #1c1f23);
+
+      font-family: "PingFang SC";
+      font-size: 18px;
+      font-style: normal;
+      font-weight: 600;
+      line-height: 28px;
+
+      display: flex;
+      align-items: center;
+      gap: 2px;
+
+      .quota-text {
+        color: rgba(28, 31, 35, 0.5);
+      }
+    }
+  }
+
+  .usage-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+
     .usage-card {
-      padding: 16px;
+      padding: 0;
       border-radius: 12px;
       background-color: #f7f7f7;
 
@@ -347,6 +390,25 @@
             color: var(--refly-text-1);
           }
         }
+      }
+    }
+
+    .usage-section-wrapper {
+      border: 0.5px solid var(--border---refly-Card-Border, rgba(0, 0, 0, 0.1));
+    }
+
+    .available-credits-section {
+      .usage-label,
+      .usage-value {
+        color: var(--text-color-primary);
+
+        .quota-text {
+          color: rgba(255, 255, 255, 0.5);
+        }
+      }
+
+      .usage-label {
+        color: var(--text-color-secondary);
       }
     }
 
