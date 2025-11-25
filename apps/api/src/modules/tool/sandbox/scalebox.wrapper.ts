@@ -133,9 +133,9 @@ export class SandboxWrapper {
   async betaPause(): Promise<void> {
     await guard.bestEffort(
       async () => {
-        this.logger.info({ sandboxId: this.sandboxId }, 'Triggering sandbox pause');
+        this.logger.debug({ sandboxId: this.sandboxId }, 'Triggering sandbox pause');
         await this.sandbox.betaPause();
-        this.logger.info({ sandboxId: this.sandboxId }, 'Sandbox paused successfully');
+        this.logger.info('Sandbox paused');
       },
       (error) => this.logger.error({ sandboxId: this.sandboxId, error }, 'Failed to pause sandbox'),
     );
@@ -153,7 +153,7 @@ export class SandboxWrapper {
       'sandbox.timeoutMs': timeoutMs,
     });
 
-    logger.info({ canvasId: context.canvasId }, 'Creating sandbox');
+    logger.debug({ canvasId: context.canvasId }, 'Creating sandbox');
 
     const sandbox = await guard(() =>
       Sandbox.create('code-interpreter', {
@@ -174,10 +174,7 @@ export class SandboxWrapper {
       now,
     );
 
-    logger.info(
-      { sandboxId: wrapper.sandboxId, canvasId: context.canvasId },
-      'Sandbox created successfully (mount required)',
-    );
+    logger.debug({ sandboxId: wrapper.sandboxId, canvasId: context.canvasId }, 'Sandbox created');
 
     return wrapper;
   }
@@ -188,7 +185,7 @@ export class SandboxWrapper {
     context: ExecutionContext,
     metadata: SandboxMetadata,
   ): Promise<SandboxWrapper> {
-    logger.info({ sandboxId: metadata.sandboxId }, 'Reconnecting to sandbox');
+    logger.debug({ sandboxId: metadata.sandboxId }, 'Reconnecting to sandbox');
 
     const sandbox = await guard(() =>
       Sandbox.connect(metadata.sandboxId, { apiKey: context.apiKey }),
@@ -209,7 +206,7 @@ export class SandboxWrapper {
       wrapper.lastPausedAt = metadata.lastPausedAt;
     }
 
-    logger.info({ metadata }, 'Reconnected to sandbox successfully');
+    logger.debug({ sandboxId: metadata.sandboxId }, 'Reconnected to sandbox');
 
     return wrapper;
   }
@@ -223,7 +220,7 @@ export class SandboxWrapper {
     const canvasId = this.context.canvasId;
     const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
 
-    this.logger.info({ canvasId, mountPoint, s3DrivePath }, 'Mounting drive storage');
+    this.logger.debug({ canvasId, mountPoint, s3DrivePath }, 'Mounting drive storage');
 
     await this.runCommand(`mkdir -p ${mountPoint}`);
 
@@ -231,30 +228,26 @@ export class SandboxWrapper {
 
     await this.runCommand(mountCmd);
 
-    this.logger.info({ canvasId, mountPoint }, 'Drive storage mounted successfully');
+    this.logger.debug({ canvasId, mountPoint }, 'Drive storage mounted');
   }
 
   @Trace('sandbox.unmount')
   async unmountDrive(): Promise<void> {
-    const canvasId = this.context.canvasId;
     const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
 
     setSpanAttributes({
       'unmount.point': mountPoint,
-      'sandbox.canvasId': canvasId,
+      'sandbox.canvasId': this.context.canvasId,
     });
 
-    this.logger.info({ sandboxId: this.sandboxId, mountPoint }, 'Unmounting drive storage');
+    this.logger.debug({ sandboxId: this.sandboxId, mountPoint }, 'Unmounting drive storage');
 
     // Use fusermount with lazy unmount (-z) for FUSE filesystems
     // -u: unmount, -z: lazy unmount (detach even if busy)
     // Lazy unmount is asynchronous, completes in background
     await this.runCommand(`fusermount -uz ${mountPoint}`);
 
-    this.logger.info(
-      { sandboxId: this.sandboxId, mountPoint },
-      'Drive storage unmount initiated (lazy)',
-    );
+    this.logger.debug({ sandboxId: this.sandboxId, mountPoint }, 'Drive storage unmounted');
   }
 
   @Trace('sandbox.command')
@@ -275,15 +268,7 @@ export class SandboxWrapper {
     params: SandboxExecuteParams,
     ctx: ExecuteCodeContext,
   ): Promise<ExecutionResult> {
-    ctx.logger.info(
-      {
-        sandboxId: this.sandboxId,
-        canvasId: this.context.canvasId,
-        language: params.language,
-        timeoutMs: ctx.timeoutMs,
-      },
-      'Executing code in sandbox',
-    );
+    ctx.logger.info({ language: params.language }, 'Executing code');
 
     const result = await this.sandbox.runCode(params.code, {
       language: params.language,

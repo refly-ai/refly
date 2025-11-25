@@ -58,6 +58,8 @@ export class ScaleboxLock {
     const ttlSec = this.runCodeTimeoutSec + this.fileBufferSec + this.driveBufferSec;
     const timeoutMs = this.queueDepth * ttlSec * 1000;
 
+    this.logger.debug({ lockKey, ttlSec, timeoutMs }, 'Acquiring execute lock');
+
     const releaseLock = await guard
       .retry(() => this.tryExecuteLock(lockKey, ttlSec), {
         timeout: timeoutMs,
@@ -67,12 +69,16 @@ export class ScaleboxLock {
       })
       .orThrow(() => new SandboxLockTimeoutException(lockKey, timeoutMs));
 
+    this.logger.info({ lockKey }, 'Execute lock acquired');
+
     return [undefined, releaseLock] as const;
   }
 
   async acquireSandboxLock(sandboxId: string): Promise<readonly [undefined, () => Promise<void>]> {
     const ttlSec = this.runCodeTimeoutSec + this.fileBufferSec;
     const timeoutMs = this.queueDepth * ttlSec * 1000;
+
+    this.logger.debug({ sandboxId, ttlSec, timeoutMs }, 'Acquiring sandbox lock');
 
     const releaseLock = await guard
       .retry(() => this.trySandboxLock(sandboxId), {
@@ -83,24 +89,34 @@ export class ScaleboxLock {
       })
       .orThrow(() => new SandboxLockTimeoutException(`sandbox:${sandboxId}`, timeoutMs));
 
+    this.logger.info('Sandbox lock acquired');
+
     return [undefined, releaseLock] as const;
   }
 
   async trySandboxLock(sandboxId: string): Promise<() => Promise<void>> {
     const added = await this.redis.getClient().sadd(REDIS_KEYS.ACTIVE_SET, sandboxId);
+    if (added === 0) {
+      this.logger.debug({ sandboxId }, 'Sandbox lock held, waiting...');
+    }
     guard.ensure(added > 0).orThrow(() => new Error('Sandbox lock is held'));
 
     return async () => {
       await this.redis.getClient().srem(REDIS_KEYS.ACTIVE_SET, sandboxId);
+      this.logger.debug({ sandboxId }, 'Sandbox lock released');
     };
   }
 
   private async tryExecuteLock(lockKey: string, ttlSec: number): Promise<() => Promise<void>> {
     const result = await this.redis.getClient().set(lockKey, '1', 'EX', ttlSec, 'NX');
+    if (result !== 'OK') {
+      this.logger.debug({ lockKey }, 'Execute lock held, waiting...');
+    }
     guard.ensure(result === 'OK').orThrow(() => new Error('Execute lock is held'));
 
     return async () => {
       await this.redis.getClient().del(lockKey);
+      this.logger.debug({ lockKey }, 'Execute lock released');
     };
   }
 }

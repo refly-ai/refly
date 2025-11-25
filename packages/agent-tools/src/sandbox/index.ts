@@ -50,7 +50,6 @@ export class Execute extends AgentBaseTool<SandboxParams> {
     language: z
       .enum(['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'])
       .describe('Programming language for code execution'),
-    timeout: z.number().optional().default(30).describe('Execution timeout in seconds'),
   });
 
   description = `
@@ -118,7 +117,6 @@ plt.savefig('chart.png')
         params: {
           code: input.code,
           language: input.language,
-          timeout: input.timeout,
         },
         context: {
           parentResultId: config.configurable?.resultId,

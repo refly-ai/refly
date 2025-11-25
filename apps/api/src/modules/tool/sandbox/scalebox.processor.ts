@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
+import { storage, Store } from 'nestjs-pino/storage';
 
 import { guard } from '../../../utils/guard';
 import { QUEUE_SCALEBOX_EXECUTE, QUEUE_SCALEBOX_PAUSE } from '../../../utils/const';
@@ -11,60 +12,52 @@ import { ScaleboxService } from './scalebox.service';
 import { ScaleboxStorage } from './scalebox.storage';
 import { ScaleboxLock } from './scalebox.lock';
 import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
+import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 import {
   SandboxExecuteJobData,
   SandboxPauseJobData,
   ScaleboxExecutionResult,
   ExecutionContext,
 } from './scalebox.dto';
-import { SCALEBOX_DEFAULTS } from './scalebox.constants';
+
+// Note: @Processor decorator options are evaluated at compile-time, not runtime.
+// Dynamic config via getWorkerOptions() is NOT supported by @nestjs/bullmq.
+// Concurrency must be set directly in the decorator using static values.
 
 /**
  * Sandbox Execution Processor
  *
  * Handles code execution jobs. Delegates to ScaleboxService.executeCode().
- * Concurrency controlled via localConcurrency config.
+ * Concurrency controlled via SCALEBOX_DEFAULTS.LOCAL_CONCURRENCY.
  */
 @Injectable()
 @Processor(QUEUE_SCALEBOX_EXECUTE, {
-  concurrency: 1, // Will be overridden by getWorkerOptions
+  concurrency: SCALEBOX_DEFAULTS.LOCAL_CONCURRENCY,
 })
 export class ScaleboxExecuteProcessor extends WorkerHost {
   constructor(
     private readonly scaleboxService: ScaleboxService,
-    private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
     super();
     this.logger.setContext(ScaleboxExecuteProcessor.name);
-    void this.config;
-  }
-
-  @Config.integer('sandbox.scalebox.localConcurrency', SCALEBOX_DEFAULTS.LOCAL_CONCURRENCY)
-  private localConcurrency: number;
-
-  getWorkerOptions() {
-    return {
-      concurrency: this.localConcurrency,
-    };
   }
 
   async process(job: Job<SandboxExecuteJobData>): Promise<ScaleboxExecutionResult> {
     const { params, context } = job.data;
 
-    this.logger.info(
-      { jobId: job.id, canvasId: context.canvasId, uid: context.uid },
-      'Processing sandbox execution job',
-    );
+    // Initialize AsyncLocalStorage context for non-HTTP worker
+    return storage.run(new Store(this.logger.logger), async () => {
+      this.logger.assign({ jobId: job.id, canvasId: context.canvasId, uid: context.uid });
 
-    const result = await this.scaleboxService.executeCode(params, context);
+      this.logger.debug('Processing execution job');
 
-    this.logger.info(
-      { jobId: job.id, canvasId: context.canvasId, exitCode: result.exitCode },
-      'Sandbox execution job completed',
-    );
+      const result = await this.scaleboxService.executeCode(params, context);
 
-    return result;
+      this.logger.info({ exitCode: result.exitCode }, 'Execution completed');
+
+      return result;
+    });
   }
 }
 
@@ -96,20 +89,25 @@ export class ScaleboxPauseProcessor extends WorkerHost {
   async process(job: Job<SandboxPauseJobData>): Promise<void> {
     const { sandboxId } = job.data;
 
-    this.logger.info({ jobId: job.id, sandboxId }, 'Processing auto-pause job');
+    // Initialize AsyncLocalStorage context for non-HTTP worker
+    return storage.run(new Store(this.logger.logger), async () => {
+      this.logger.assign({ jobId: job.id, sandboxId });
 
-    const metadata = await this.storage.loadMetadata(sandboxId);
-    if (!metadata) {
-      this.logger.info({ sandboxId }, 'Sandbox metadata not found, skipping pause');
-      return;
-    }
+      this.logger.debug('Processing auto-pause job');
 
-    if (metadata.isPaused) {
-      this.logger.info({ sandboxId }, 'Sandbox already paused, skipping');
-      return;
-    }
+      const metadata = await this.storage.loadMetadata(sandboxId);
+      if (!metadata) {
+        this.logger.debug('Sandbox metadata not found, skipping pause');
+        return;
+      }
 
-    await this.tryPauseSandbox(sandboxId, metadata);
+      if (metadata.isPaused) {
+        this.logger.debug('Sandbox already paused, skipping');
+        return;
+      }
+
+      await this.tryPauseSandbox(sandboxId, metadata);
+    });
   }
 
   private async tryPauseSandbox(sandboxId: string, metadata: SandboxMetadata): Promise<void> {
@@ -130,7 +128,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
     return [undefined, release] as const;
   }
 
-  private async executePause(sandboxId: string, metadata: SandboxMetadata): Promise<void> {
+  private async executePause(_sandboxId: string, metadata: SandboxMetadata): Promise<void> {
     const context: ExecutionContext = {
       uid: '',
       apiKey: this.scaleboxApiKey,
@@ -142,7 +140,5 @@ export class ScaleboxPauseProcessor extends WorkerHost {
     await wrapper.betaPause();
     wrapper.markAsPaused();
     await this.storage.saveMetadata(wrapper);
-
-    this.logger.info({ sandboxId }, 'Sandbox paused successfully');
   }
 }

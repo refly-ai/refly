@@ -1,5 +1,8 @@
 /**
  * Scalebox Default Configuration (flat structure)
+ *
+ * Note: These values serve as defaults for runtime-configurable options.
+ * LOCAL_CONCURRENCY is compile-time only (used directly in @Processor decorator).
  */
 export const SCALEBOX_DEFAULTS = {
   // Sandbox
@@ -7,7 +10,7 @@ export const SCALEBOX_DEFAULTS = {
 
   // Pool
   MAX_SANDBOXES: 5,
-  LOCAL_CONCURRENCY: 2,
+  LOCAL_CONCURRENCY: 2, // Compile-time constant, not env-configurable
   MAX_QUEUE_SIZE: 100,
   AUTO_PAUSE_DELAY_MS: 2 * 60 * 1000, // 2 minutes
 

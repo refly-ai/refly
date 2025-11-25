@@ -241,7 +241,6 @@ export default () => ({
       sandboxTimeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
       // Pool
       maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
-      localConcurrency: process.env.SCALEBOX_LOCAL_CONCURRENCY,
       maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
       autoPauseDelayMs: process.env.SCALEBOX_AUTO_PAUSE_DELAY_MS,
       // Lock

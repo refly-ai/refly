@@ -39,12 +39,12 @@ export class SandboxPool {
 
   @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
   async acquire(context: ExecutionContext): Promise<SandboxWrapper> {
-    return guard(async () => {
+    const wrapper = await guard(async () => {
       const sandboxId = await this.storage.popFromIdleQueue();
       await this.cancelPause(sandboxId);
       return await this.reconnect(sandboxId, context);
     }).orElse(async (error) => {
-      this.logger.warn({ canvasId: context.canvasId, error }, 'Failed to reuse idle sandbox');
+      this.logger.warn({ error }, 'Failed to reuse idle sandbox');
 
       const totalCount = await this.storage.getTotalSandboxCount();
       guard
@@ -56,16 +56,20 @@ export class SandboxPool {
             ),
         );
 
-      const created = await SandboxWrapper.create(this.logger, context, this.sandboxTimeoutMs);
-      this.logger.info({ canvasId: context.canvasId }, 'Created new sandbox');
-      return created;
+      return await SandboxWrapper.create(this.logger, context, this.sandboxTimeoutMs);
     });
+
+    // Inject sandboxId into logger context for all subsequent logs
+    this.logger.assign({ sandboxId: wrapper.sandboxId });
+    this.logger.info('Sandbox acquired');
+
+    return wrapper;
   }
 
   async release(wrapper: SandboxWrapper): Promise<void> {
     const sandboxId = wrapper.sandboxId;
 
-    this.logger.info({ sandboxId }, 'Starting sandbox cleanup and release');
+    this.logger.debug({ sandboxId }, 'Starting sandbox cleanup and release');
 
     // Mark sandbox as idle before saving metadata
     wrapper.markAsIdle();
@@ -82,7 +86,7 @@ export class SandboxPool {
       },
     );
 
-    this.logger.info({ sandboxId }, 'Sandbox cleanup completed');
+    this.logger.info('Sandbox released to idle pool');
   }
 
   private pauseJobId(sandboxId: string): string {
@@ -101,7 +105,7 @@ export class SandboxPool {
       },
     );
 
-    this.logger.info(
+    this.logger.debug(
       { sandboxId, jobId, delayMs: this.autoPauseDelayMs },
       'Scheduled auto-pause job',
     );
@@ -113,7 +117,7 @@ export class SandboxPool {
 
     if (job) {
       await job.remove();
-      this.logger.info({ sandboxId, jobId }, 'Cancelled pending auto-pause job');
+      this.logger.debug({ sandboxId, jobId }, 'Cancelled pending auto-pause job');
     }
   }
 
