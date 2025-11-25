@@ -1,18 +1,49 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, memo } from 'react';
 import { Empty } from 'antd';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import {
-  Spinner,
-  EndMessage,
-} from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
+import { Spinner } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
 import { useTranslation } from 'react-i18next';
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useCanvasTemplateModal } from '@refly/stores';
 import { TemplateCard } from './template-card';
 import { TemplateCardSkeleton } from './template-card-skeleton';
+import { FaDiscord } from 'react-icons/fa6';
 
 import cn from 'classnames';
+
+// Discord community link
+const DISCORD_LINK = 'https://discord.gg/bWjffrb89h';
+
+// Custom EndMessage component for template list
+const EndMessage = memo(() => {
+  const { t } = useTranslation();
+
+  const handleJoinDiscord = useCallback(() => {
+    window.open(DISCORD_LINK, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 text-center mb-3">
+        {t('frontPage.template.endMessage.title')}
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+        {t('frontPage.template.endMessage.subtitle')}
+      </p>
+      <button
+        type="button"
+        onClick={handleJoinDiscord}
+        className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-gray-800 text-white text-base font-medium rounded-xl hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors duration-200"
+      >
+        <FaDiscord size={24} />
+        <span>{t('frontPage.template.endMessage.joinDiscord')}</span>
+      </button>
+    </div>
+  );
+});
+
+EndMessage.displayName = 'EndMessage';
 
 interface TemplateListProps {
   source: 'front-page' | 'template-library';

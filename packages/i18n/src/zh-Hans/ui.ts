@@ -885,6 +885,11 @@ const translations = {
     },
     template: {
       title: '社区模板',
+      endMessage: {
+        title: '没有找到你需要的工作流自动化模板？',
+        subtitle: '加入我们的 Discord 社区，告诉我们你想要什么',
+        joinDiscord: '加入 Discord',
+      },
     },
     agentInputPlaceholder: '输入任务描述，Agent 将生成可复用的工作流',
     chatInputPlaceholder: '输入一个任务，支持选择模型和工具',
