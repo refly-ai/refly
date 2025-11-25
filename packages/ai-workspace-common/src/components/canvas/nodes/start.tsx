@@ -25,7 +25,7 @@ import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/n
 import { CanvasNode } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
-const NODE_SIDE_CONFIG = { width: 320, height: 'auto' };
+const NODE_SIDE_CONFIG = { width: 'fit-content', height: 'auto' };
 
 export const VARIABLE_TYPE_ICON_MAP = {
   string: BiText,
@@ -182,13 +182,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
   useEffect(() => {
     const newWidth = workflowVariables.length > 0 ? 320 : 'fit-content';
     const oldWidth = previousWidth;
-
-    // Update the node style
-    if (workflowVariables.length > 0) {
-      setNodeStyle(id, NODE_SIDE_CONFIG);
-    } else {
-      setNodeStyle(id, { width: 'fit-content', height: 'auto' });
-    }
+    setNodeStyle(id, NODE_SIDE_CONFIG);
 
     // Adjust position if width has changed to keep right edge in the same place
     if (oldWidth !== newWidth) {
@@ -274,9 +268,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
       />
 
       <div
-        style={
-          workflowVariables.length > 0 ? NODE_SIDE_CONFIG : { width: 'fit-content', height: 'auto' }
-        }
+        style={NODE_SIDE_CONFIG}
         className={cn(
           'h-full flex flex-col relative box-border z-1 p-0',
           getNodeCommonStyles({ selected, isHovered }),
@@ -288,7 +280,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
 
         {/* Input parameters section */}
         {workflowVariables.length > 0 ? (
-          <div className="flex flex-col p-3">
+          <div className="flex flex-col p-3 w-[320px]">
             <div className="space-y-2">
               {workflowVariables.slice(0, 6).map((variable) => (
                 <InputParameterRow

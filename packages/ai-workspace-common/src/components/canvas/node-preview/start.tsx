@@ -1,7 +1,7 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
-import { Divider, Button, Popconfirm, message } from 'antd';
+import { Divider, Button, Popconfirm, message, Typography } from 'antd';
 import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
@@ -13,6 +13,7 @@ import { useReactFlow } from '@xyflow/react';
 import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
 import { BiText } from 'react-icons/bi';
 import { VARIABLE_TYPE_ICON_MAP } from '../nodes/start';
+const { Paragraph } = Typography;
 
 type VariableType = 'string' | 'option' | 'resource';
 export const MAX_VARIABLE_LENGTH = {
@@ -115,9 +116,19 @@ const VariableItem = memo(
             <Popconfirm
               icon={null}
               title={
-                <div className="text-[16px] font-semibold leading-[26px] p-3">
+                <Paragraph
+                  className="!m-0 !p-0 text-[16px] font-semibold leading-[26px] p-3 max-w-[400px]"
+                  ellipsis={{
+                    rows: 1,
+                    tooltip: (
+                      <div className="max-h-[200px] overflow-y-auto">
+                        {t('canvas.workflow.variables.deleteUserInput', { value: name })}
+                      </div>
+                    ),
+                  }}
+                >
                   {t('canvas.workflow.variables.deleteUserInput', { value: name })}
-                </div>
+                </Paragraph>
               }
               description={
                 <div className="w-[400px] leading-5 px-3 pt-1 pb-2">
