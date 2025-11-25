@@ -24,10 +24,12 @@ export const ToggleCopilotPanel = memo(
 
     return (
       <div
-        className="absolute top-6 left-6 z-20 py-2 px-4 flex items-center justify-center bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border cursor-pointer hover:bg-refly-tertiary-hover shadow-refly-m"
+        className="absolute top-6 left-6 z-20 bg-refly-bg-content-z2 rounded-xl border-solid border-[1px] border-refly-Card-Border cursor-pointer shadow-refly-m overflow-hidden"
         onClick={handleCopilotOpen}
       >
-        <ReflyAssistant />
+        <div className="w-full h-full py-2 px-4 flex items-center justify-center hover:bg-refly-tertiary-hover">
+          <ReflyAssistant />
+        </div>
       </div>
     );
   },

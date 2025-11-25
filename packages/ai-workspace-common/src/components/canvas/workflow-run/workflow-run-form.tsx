@@ -1,7 +1,7 @@
 import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message } from 'antd';
-import { Play, Stop } from 'refly-icons';
+import { Play, StopCircle } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
@@ -612,7 +612,13 @@ export const WorkflowRunForm = ({
             <Button
               className="w-full h-8 text-sm"
               {...(workflowIsRunning ? { color: 'primary' } : { type: 'primary' })}
-              icon={workflowIsRunning ? <Stop size={16} /> : <Play size={16} />}
+              icon={
+                workflowIsRunning ? (
+                  <StopCircle size={16} className="translate-y-[1px]" />
+                ) : (
+                  <Play size={16} className="translate-y-[1px]" />
+                )
+              }
               onClick={workflowIsRunning ? handleAbort : handleRun}
               loading={loading}
               disabled={

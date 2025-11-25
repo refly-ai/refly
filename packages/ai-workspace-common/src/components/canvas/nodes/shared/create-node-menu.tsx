@@ -184,7 +184,7 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
         case 'image':
         case 'group':
         case 'start':
-          return [askAI, createMemoItem];
+          return [askAI];
 
         case 'memo':
           return [askAI, createMemoItem, duplicateMemoItem];

@@ -5,10 +5,9 @@ import { useReactFlow } from '@xyflow/react';
 import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-selector/components';
 import { CanvasNodeType, SearchDomain } from '@refly/openapi-schema';
 import { ContextItem } from '@refly-packages/ai-workspace-common/types/context';
-import { IconAskAI, IconMemo } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { AiChat, Substrsct } from 'refly-icons';
 import { genMemoID, genNodeEntityId } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { cn } from '@refly/utils/cn';
 import { logEvent } from '@refly/telemetry-web';
 
 interface ContextMenuProps {
@@ -38,7 +37,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuHeight, setMenuHeight] = useState<number>(0);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
   const { addNode } = useAddNode();
 
   const createSkillResponseNode = (position: { x: number; y: number }) => {
@@ -74,14 +72,13 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     // Creation menu items
     {
       key: 'askAI',
-      icon: IconAskAI,
+      icon: AiChat,
       type: 'button',
-      primary: true,
       title: t('canvas.toolbar.askAI'),
     },
     {
       key: 'createMemo',
-      icon: IconMemo,
+      icon: Substrsct,
       type: 'button',
       title: t('canvas.toolbar.createMemo'),
     },
@@ -139,8 +136,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
   const menuScreenPosition = getMenuScreenPosition();
 
   const handleMenuClick = async (key: string) => {
-    setActiveKey(key);
-
     // Creation actions
     switch (key) {
       case 'askAI':
@@ -178,7 +173,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      setActiveKey(null);
     };
   }, [open, setOpen]);
 
@@ -188,18 +182,9 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     const button = (
       <Button
         key={item.key}
-        className={cn(
-          'w-full h-8 flex items-center gap-2 px-2 rounded text-sm hover:bg-gray-50 transition-colors dark:bg-gray-900',
-          {
-            'bg-gray-100 dark:bg-gray-800': activeKey === item.key,
-            'text-primary-600 dark:text-primary-300': item.primary,
-            'text-red-600 dark:text-red-300': item.danger,
-            'text-gray-700 dark:text-gray-200': !item.primary && !item.danger,
-          },
-        )}
+        className="w-full h-8 flex items-center gap-2 px-2 rounded text-sm hover:bg-refly-tertiary-hover"
         type="text"
         loading={false}
-        icon={item.icon && <item.icon className="flex items-center w-4 h-4" />}
         onClick={() => {
           logEvent('canvas::add_node', Date.now(), {
             node_type: item.key,
@@ -207,6 +192,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
           handleMenuClick(item.key);
         }}
       >
+        {item.icon && <item.icon size={18} className="flex items-center w-4.5 h-4.5" />}
         <span className="flex-1 text-left truncate">{item.title}</span>
       </Button>
     );
