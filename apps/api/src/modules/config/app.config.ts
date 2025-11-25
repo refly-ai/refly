@@ -247,6 +247,8 @@ export default () => ({
       runCodeTimeoutSec: process.env.SCALEBOX_RUN_CODE_TIMEOUT_SEC,
       lockWaitTimeoutSec: process.env.SCALEBOX_LOCK_WAIT_TIMEOUT_SEC,
       lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
+      lockInitialTtlSec: process.env.SCALEBOX_LOCK_INITIAL_TTL_SEC,
+      lockRenewalIntervalMs: process.env.SCALEBOX_LOCK_RENEWAL_INTERVAL_MS,
     },
   },
 });
