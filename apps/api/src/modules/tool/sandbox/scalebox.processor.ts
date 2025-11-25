@@ -1,80 +1,80 @@
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
-import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
+
+import { QUEUE_SANDBOX } from '../../../utils/const';
+import { Config } from '../../config/config.decorator';
 import { ScaleboxService } from './scalebox.service';
-import { formatError, performance } from './scalebox.utils';
+import { SandboxExecuteJobData, ScaleboxExecutionResult } from './scalebox.dto';
+import { SCALEBOX_DEFAULT_CONFIG } from './scalebox.constants';
 
 /**
- * Scalebox Execution Processor
- * Placeholder for future queue-based execution (currently unused)
+ * Sandbox Execution Processor
+ *
+ * Responsibilities:
+ * - Task queue management
+ * - Concurrency control via BullMQ (limited by maxSize)
+ * - Job parameter persistence
+ *
+ * Delegates actual execution to ScaleboxService.executeCode()
  */
 @Injectable()
-export class ScaleboxExecutionProcessor {
+@Processor(QUEUE_SANDBOX, {
+  concurrency: 1, // Will be overridden by getWorkerOptions
+})
+export class SandboxProcessor extends WorkerHost {
   constructor(
     private readonly scaleboxService: ScaleboxService,
+    private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
-    this.logger.setContext(ScaleboxExecutionProcessor.name);
+    super();
+    this.logger.setContext(SandboxProcessor.name);
+    void this.config; // Suppress unused warning - used by @Config decorators
   }
 
-  async execute(data: ScaleboxExecutionJobData): Promise<ScaleboxExecutionResult> {
-    const { uid, code, language, canvasId, apiKey, s3DrivePath, version } = data;
+  @Config.integer(
+    'sandbox.scalebox.pool.localConcurrentMaxSize',
+    SCALEBOX_DEFAULT_CONFIG.pool.localConcurrentMaxSize,
+  )
+  private localConcurrentMaxSize: number;
+
+  getWorkerOptions() {
+    return {
+      concurrency: this.localConcurrentMaxSize,
+    };
+  }
+
+  /**
+   * Process sandbox execution job
+   * Note: Queue size limiting is handled at submission time in service layer
+   * BullMQ concurrency controls max parallel workers
+   */
+  async process(job: Job<SandboxExecuteJobData>): Promise<ScaleboxExecutionResult> {
+    const { params, context } = job.data;
 
     this.logger.info(
       {
-        uid,
-        canvasId,
-        language,
+        jobId: job.id,
+        canvasId: context.canvasId,
+        uid: context.uid,
       },
-      'Processing execution',
+      'Processing sandbox execution job',
     );
 
-    const result = await performance(() =>
-      this.scaleboxService.executeCode(
-        {
-          code,
-          language,
-        },
-        {
-          uid,
-          apiKey,
-          canvasId,
-          s3DrivePath,
-          version,
-        },
-      ),
-    );
-
-    const { success, error, data: resultData, executionTime } = result;
-
-    if (!success) {
-      const { message } = formatError(error);
-
-      this.logger.error(
-        {
-          error: message,
-          stack: (error as Error).stack,
-        },
-        'Execution failed',
-      );
-
-      return {
-        error: message,
-        exitCode: 1,
-        executionTime,
-        files: [],
-        originResult: undefined,
-      };
-    }
+    const result = await this.scaleboxService.executeCode(params, context);
 
     this.logger.info(
       {
-        executionTime: resultData!.executionTime,
-        exitCode: resultData!.exitCode,
+        jobId: job.id,
+        canvasId: context.canvasId,
+        exitCode: result.exitCode,
       },
-      'Execution completed',
+      'Sandbox execution job completed',
     );
 
-    return resultData!;
+    return result;
   }
 }

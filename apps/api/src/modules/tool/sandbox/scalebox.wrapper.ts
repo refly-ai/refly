@@ -10,6 +10,7 @@ import {
   SandboxExecutionFailedException,
   SandboxFileListException,
   SandboxConnectionException,
+  SandboxExecutionBadResultException,
 } from './scalebox.exception';
 import { SANDBOX_DRIVE_MOUNT_POINT } from './scalebox.constants';
 import { ExecutionContext } from './scalebox.dto';
@@ -28,7 +29,6 @@ export interface SandboxMetadata {
   sandboxId: string;
   cwd: string;
   createdAt: number;
-  timeoutAt: number;
   idleSince: number;
   isPaused?: boolean; // Whether the sandbox is currently paused
   lastPausedAt?: number; // Timestamp of last pause operation
@@ -57,8 +57,9 @@ ${nonemptyFlag}`.trim();
 };
 
 export class SandboxWrapper {
-  private isPaused: boolean;
+  private isPaused = false;
   private lastPausedAt?: number;
+  private _idleSince: number;
 
   private constructor(
     private readonly sandbox: Sandbox,
@@ -66,9 +67,14 @@ export class SandboxWrapper {
     public readonly context: ExecutionContext,
     public readonly cwd: string,
     public readonly createdAt: number,
-    private timeoutAt: number,
-    public readonly idleSince: number,
-  ) {}
+    idleSince: number,
+  ) {
+    this._idleSince = idleSince;
+  }
+
+  get idleSince(): number {
+    return this._idleSince;
+  }
 
   get sandboxId(): string {
     return this.sandbox.sandboxId;
@@ -78,16 +84,11 @@ export class SandboxWrapper {
     return this.context.canvasId;
   }
 
-  get remainingTime(): number {
-    return this.timeoutAt - Date.now();
-  }
-
   toMetadata(): SandboxMetadata {
     return {
       sandboxId: this.sandboxId,
       cwd: this.cwd,
       createdAt: this.createdAt,
-      timeoutAt: this.timeoutAt,
       idleSince: this.idleSince,
       isPaused: this.isPaused,
       lastPausedAt: this.lastPausedAt,
@@ -101,6 +102,10 @@ export class SandboxWrapper {
 
   markAsRunning(): void {
     this.isPaused = false;
+  }
+
+  markAsIdle(): void {
+    this._idleSince = Date.now();
   }
 
   async getInfo() {
@@ -149,7 +154,6 @@ export class SandboxWrapper {
       context,
       SANDBOX_DRIVE_MOUNT_POINT,
       now,
-      now + timeoutMs,
       now,
     );
 
@@ -171,7 +175,10 @@ export class SandboxWrapper {
 
     const sandbox = await guard(() =>
       Sandbox.connect(metadata.sandboxId, { apiKey: context.apiKey }),
-    ).orThrow((error) => new SandboxConnectionException(error));
+    ).orThrow((error) => {
+      logger.error({ sandboxId: metadata.sandboxId, error }, 'Failed to reconnect to sandbox');
+      return new SandboxConnectionException(error);
+    });
 
     const wrapper = new SandboxWrapper(
       sandbox,
@@ -179,7 +186,6 @@ export class SandboxWrapper {
       context,
       metadata.cwd,
       metadata.createdAt,
-      metadata.timeoutAt,
       metadata.idleSince,
     );
 
@@ -260,34 +266,37 @@ export class SandboxWrapper {
   }
 
   @Trace('sandbox.executeCode', { 'operation.type': 'code_execution' })
-  async executeCode(params: SandboxExecuteParams, logger: PinoLogger): Promise<ExecutionResult> {
-    setSpanAttributes({
-      'code.language': params.language,
-      'code.length': params.code.length,
-      'sandbox.id': this.sandboxId,
-      'sandbox.canvasId': this.context.canvasId,
-    });
-
+  async executeCode(
+    params: SandboxExecuteParams,
+    logger: PinoLogger,
+    timeoutMs: number,
+  ): Promise<ExecutionResult> {
     logger.info(
       {
         sandboxId: this.sandboxId,
         canvasId: this.context.canvasId,
         language: params.language,
+        timeoutMs,
       },
       'Executing code in sandbox',
     );
 
-    return this.runCode(params);
+    const result = await this.runCode(params, timeoutMs);
+
+    guard
+      .ensure(result.exitCode === 0)
+      .orThrow(() => new SandboxExecutionBadResultException(result));
+
+    return result;
   }
 
   @Trace('code.execution')
-  private async runCode(params: SandboxExecuteParams): Promise<ExecutionResult> {
-    return guard(() =>
-      this.sandbox.runCode(params.code, {
-        language: params.language,
-        cwd: this.cwd,
-      }),
-    ).orThrow((e) => new SandboxExecutionFailedException(e));
+  private async runCode(params: SandboxExecuteParams, timeoutMs: number): Promise<ExecutionResult> {
+    return this.sandbox.runCode(params.code, {
+      language: params.language,
+      cwd: this.cwd,
+      timeout: timeoutMs,
+    });
   }
 
   @Trace('sandbox.listFiles')
@@ -299,5 +308,9 @@ export class SandboxWrapper {
     setSpanAttributes({ 'files.count': files.length });
 
     return files;
+  }
+
+  async kill(): Promise<void> {
+    await this.sandbox.kill();
   }
 }

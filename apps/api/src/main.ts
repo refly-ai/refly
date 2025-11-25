@@ -14,7 +14,6 @@ import { AppModule } from './modules/app.module';
 import { ConfigService } from '@nestjs/config';
 import { isDesktop } from './utils/runtime';
 
-import tracer from './tracer';
 import { setTraceID } from './utils/middleware/set-trace-id';
 import { GlobalExceptionFilter } from './utils/filters/global-exception.filter';
 import { CustomWsAdapter } from './utils/adapters/ws-adapter';
@@ -119,8 +118,6 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(new CustomWsAdapter(app, configService.get<number>('wsPort')));
   app.useGlobalFilters(new GlobalExceptionFilter(configService));
-
-  tracer.start();
 
   try {
     await setupStatsig();

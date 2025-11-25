@@ -1,3 +1,5 @@
+import type { ExecutionResult } from '@scalebox/sdk';
+
 export class SandboxException extends Error {
   constructor(
     messageOrError: unknown,
@@ -94,18 +96,12 @@ export class SandboxLockTimeoutException extends SandboxException {
   }
 }
 
-export class SandboxLifetimeExceededException extends SandboxException {
-  constructor(
-    public readonly sandboxId: string,
-    public readonly lifetimeMs: number,
-    public readonly maxLifetimeMs: number,
-  ) {
-    const lifetimeHours = (lifetimeMs / (60 * 60 * 1000)).toFixed(2);
-    const maxLifetimeHours = (maxLifetimeMs / (60 * 60 * 1000)).toFixed(2);
+export class SandboxExecutionBadResultException extends SandboxException {
+  constructor(public readonly result: ExecutionResult) {
     super(
-      `Sandbox ${sandboxId} exceeded max lifetime (${lifetimeHours}h / ${maxLifetimeHours}h)`,
-      'SANDBOX_LIFETIME_EXCEEDED',
-      { sandboxId, lifetimeMs, maxLifetimeMs, lifetimeHours, maxLifetimeHours },
+      result.error?.message || result.stderr || 'Execution returned non-zero exit code',
+      'SANDBOX_EXECUTION_BAD_RESULT',
+      { result },
     );
   }
 }

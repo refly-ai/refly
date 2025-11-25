@@ -7,47 +7,6 @@ import { SandboxException } from './scalebox.exception';
 import { ScaleboxExecutionResult } from './scalebox.dto';
 import { ERROR_MESSAGE_MAX_LENGTH } from './scalebox.constants';
 
-export interface PerformanceResult<T> {
-  success: boolean;
-  data?: T;
-  error?: unknown;
-  executionTime: number;
-}
-
-/**
- * Measure execution time of an async task
- * Returns success/failure with execution time
- *
- * @param task - Async task to execute
- * @returns Result with data or error, and execution time
- *
- * @example
- * const result = await performance(() => doWork());
- * if (!result.success) {
- *   console.error(`Task failed in ${result.executionTime}ms:`, result.error);
- *   return;
- * }
- * console.log(`Task succeeded in ${result.executionTime}ms:`, result.data);
- */
-export async function performance<T>(task: () => Promise<T>): Promise<PerformanceResult<T>> {
-  const startTime = Date.now();
-
-  try {
-    const data = await task();
-    return {
-      success: true,
-      data,
-      executionTime: Date.now() - startTime,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error,
-      executionTime: Date.now() - startTime,
-    };
-  }
-}
-
 /**
  * Sleep helper function
  * @param ms - Milliseconds to sleep
@@ -77,63 +36,17 @@ export function buildSuccessResponse(
   output: string,
   processedFiles: DriveFile[],
   result: ScaleboxExecutionResult,
+  executionTime: number,
 ): SandboxExecuteResponse {
   return buildResponse<SandboxExecuteResponse>(true, {
     data: {
       output,
       error: result.error || '',
       exitCode: result.exitCode || 0,
-      executionTime: result.executionTime || 0,
+      executionTime,
       files: processedFiles,
     },
   });
-}
-
-/**
- * Poll until task returns a non-null result or timeout
- *
- * @param task - Task to execute, returns result or null to continue polling
- * @param onTimeout - Async function that throws exception when timeout is reached
- * @param options - Polling options with defaults
- * @returns The result when task succeeds
- *
- * @example
- * const result = await poll(
- *   async () => {
- *     const item = await tryGetItem();
- *     if (item) return item;
- *     return null; // Continue polling
- *   },
- *   async () => {
- *     throw new TimeoutException('Item not available');
- *   },
- *   { timeout: 30000 }
- * );
- */
-export async function poll<T>(
-  task: () => Promise<T | null>,
-  onTimeout: () => Promise<never>,
-  options: {
-    timeout?: number;
-    initialDelay?: number;
-    maxDelay?: number;
-    backoffFactor?: number;
-  } = {},
-): Promise<T> {
-  const { timeout = 30000, initialDelay = 100, maxDelay = 1000, backoffFactor = 1.5 } = options;
-
-  const startTime = Date.now();
-  let delay = initialDelay;
-
-  while (Date.now() - startTime < timeout) {
-    const result = await task();
-    if (result !== null) return result;
-
-    await new Promise((resolve) => setTimeout(resolve, delay));
-    delay = Math.min(delay * backoffFactor, maxDelay);
-  }
-
-  await onTimeout();
 }
 
 /**
@@ -160,4 +73,41 @@ export function extractErrorMessage(result: ExecutionResult): string {
   if (result.stderr) return truncateErrorMessage(result.stderr);
   if (result.exitCode !== 0 && result.stdout) return truncateErrorMessage(result.stdout);
   return '';
+}
+
+/**
+ * Check if execution result indicates a critical sandbox failure
+ * Critical failures require killing the sandbox instance
+ */
+export function isCriticalSandboxError(result: ExecutionResult): boolean {
+  const stderr = result.stderr || '';
+  return (
+    stderr.includes('connection refused') ||
+    stderr.includes('dial tcp') ||
+    stderr.includes('failed to create context kernel')
+  );
+}
+
+/**
+ * Result of critical error check
+ */
+export interface CriticalErrorCheckResult {
+  isCritical: boolean;
+  stderr?: string;
+}
+
+/**
+ * Check if error is a critical sandbox error that requires killing the sandbox
+ * @param error - The error to check
+ * @returns Check result with isCritical flag and stderr if applicable
+ */
+export function checkCriticalError(error: unknown): CriticalErrorCheckResult {
+  const result = (error as any)?.context?.result as ExecutionResult | undefined;
+  if (result && isCriticalSandboxError(result)) {
+    return {
+      isCritical: true,
+      stderr: result.stderr,
+    };
+  }
+  return { isCritical: false };
 }

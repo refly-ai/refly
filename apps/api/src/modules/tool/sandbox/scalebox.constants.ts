@@ -1,75 +1,39 @@
-/**
- * Default configuration values for Scalebox
- */
-export const SCALEBOX_DEFAULT_TIMEOUT = 60000;
+import { DEFAULT_LOCK_BASE_CONFIG } from './scalebox.lock';
 
 /**
- * Default configuration values for Sandbox Pool
+ * Scalebox Default Configuration
+ * Centralized configuration for sandbox, pool, and lock management
  */
-export const SCALEBOX_DEFAULT_MAX_SANDBOXES = 10;
-export const SCALEBOX_DEFAULT_MIN_REMAINING_MS = 2 * 60 * 1000; // 2 minutes
-export const SCALEBOX_DEFAULT_SANDBOX_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+export const SCALEBOX_DEFAULT_CONFIG = {
+  /** Sandbox instance configuration */
+  sandbox: {
+    /** Sandbox timeout in milliseconds (passed to Scalebox provider on creation) */
+    timeoutMs: 60 * 60 * 1000, // 1 hour
+  },
 
-/**
- * Maximum lifetime for a single sandbox instance
- * Prevents accumulation of:
- * - FUSE mount/unmount residual state (memory, file descriptors)
- * - User code side effects (background processes, timers, cron jobs)
- * - Temporary files, log files, and orphaned processes
- * - Global state pollution (env vars, Python modules, Node globals)
- * Sandboxes exceeding this lifetime are discarded instead of being reused
- */
-export const SCALEBOX_DEFAULT_MAX_LIFETIME_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-/**
- * Auto-pause delay for idle sandboxes
- * After release, sandbox stays running for this duration for quick reuse
- * If not reused within this time, automatically paused to save resources
- * Balances performance (fast reuse) and cost (resource usage)
- */
-export const SCALEBOX_DEFAULT_AUTO_PAUSE_DELAY_MS = 3 * 60 * 1000; // 3 minutes
-
-/**
- * Lock TTL (Time-To-Live) Configuration
- * Controls how long a lock is held in Redis before automatic expiration
- * CRITICAL: TTL must be >= actual operation time to prevent premature release
- */
-export const LOCK_TTL_CONFIG = {
-  /**
-   * Pool capacity lock TTL
-   * Protects sandbox allocation to prevent exceeding maxSandboxes limit
-   * Covers: Sandbox.create (~9.5s) + capacity check ≈ 10s
-   * Set to 30s to provide safety margin for slow operations
-   */
-  POOL_CAPACITY_TTL_SEC: 30,
+  /** Pool management configuration */
+  pool: {
+    /** Maximum concurrent sandboxes per worker instance (local limit) */
+    localConcurrentMaxSize: 2,
+    /** Maximum queue size across all instances (global limit, 0 = no limit) */
+    globalMaxQueueSize: 100,
+    /** Maximum total sandboxes (idle + active) per instance (resource limit) */
+    maxSandboxes: 5,
+    /**
+     * Auto-pause delay for idle sandboxes in milliseconds
+     * After release, sandbox stays running for this duration for quick reuse
+     * If not reused within this time, automatically paused to save resources
+     * Balances performance (fast reuse) and cost (resource usage)
+     */
+    autoPauseDelayMs: 2 * 60 * 1000, // 2 minutes
+  },
 
   /**
-   * Canvas-level execution lock TTL
-   * Covers: mount (~0.8s) + user code execution (unknown) + unmount (~0.3s)
-   * Set to 5 minutes to allow for long-running user code
+   * Base lock configuration (input parameters)
+   * All lock TTL and timeout values are calculated from these base parameters
+   * See calculateLockConfig() for derivation formulas
    */
-  EXECUTE_TTL_SEC: 5 * 60,
-
-  /**
-   * Sandbox-level lock TTL (used for auto-pause)
-   * Covers: reconnect (~0.5s) + pause (~1s) ≈ 1.5s
-   * Set to 30s for safety margin
-   */
-  SANDBOX_TTL_SEC: 30,
-} as const;
-
-/**
- * Lock acquisition retry configuration
- * Controls polling behavior when waiting for locks
- * NOTE: TIMEOUT_MS should be > TTL_SEC to allow for lock queue processing
- */
-export const LOCK_RETRY_CONFIG = {
-  /** Pool capacity lock acquisition timeout (must wait for other sandbox allocations to finish) */
-  POOL_CAPACITY_TIMEOUT_MS: 60 * 1000, // 60 seconds (2x TTL for queue tolerance)
-  /** Canvas-level execution lock acquisition timeout (allow queued executions) */
-  EXECUTE_TIMEOUT_MS: 10 * 60 * 1000, // 10 minutes (2x TTL for queue tolerance)
-  /** Lock polling interval for retry attempts */
-  POLL_INTERVAL_MS: 100, // 100ms
+  lockBase: DEFAULT_LOCK_BASE_CONFIG,
 } as const;
 
 /**
@@ -108,8 +72,8 @@ export const REDIS_KEYS = {
   IDLE_QUEUE: 'scalebox:pool:idle',
   /** Active sandbox set (concurrency tracking) */
   ACTIVE_SET: 'scalebox:pool:active',
-  /** Pool capacity lock - prevents exceeding maxSandboxes limit during allocation */
-  LOCK_POOL_CAPACITY: 'scalebox:pool:capacity',
   /** Prefix for canvas-level execution locks */
   LOCK_EXECUTE_PREFIX: 'scalebox:execute:lock',
+  /** Prefix for sandbox-level locks */
+  LOCK_SANDBOX_PREFIX: 'scalebox:sandbox:lock',
 } as const;

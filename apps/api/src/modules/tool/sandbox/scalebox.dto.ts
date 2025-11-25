@@ -1,5 +1,5 @@
 import type { ExecutionResult, Language } from '@scalebox/sdk';
-import { SandboxExecuteParams, SandboxExecuteContext } from '@refly/openapi-schema';
+import { SandboxExecuteParams, SandboxExecuteContext, type DriveFile } from '@refly/openapi-schema';
 
 /**
  * Scalebox internal type definitions
@@ -23,12 +23,16 @@ export interface ExecutionContext extends Partial<SandboxExecuteContext> {
   s3DrivePath: string; // S3 storage path for this execution
   version?: number;
 
+  // Mutable internal fields
+  registeredFiles?: DriveFile[];
+
   // Inherited optional fields from SandboxExecuteContext:
   // parentResultId?, targetId?, targetType?, model?, providerItemId?
 }
 
 /**
  * Scalebox execution job data (internal use)
+ * @deprecated Use SandboxExecuteJobData instead
  */
 export interface ScaleboxExecutionJobData {
   uid: string;
@@ -42,14 +46,22 @@ export interface ScaleboxExecutionJobData {
 }
 
 /**
+ * BullMQ job data for sandbox execution
+ * Contains all parameters needed for executeCode
+ */
+export interface SandboxExecuteJobData {
+  params: SandboxExecuteParams;
+  context: ExecutionContext;
+}
+
+/**
  * Scalebox execution result (internal use)
  */
 export interface ScaleboxExecutionResult {
   originResult?: ExecutionResult;
   error: string;
   exitCode: number;
-  executionTime: number;
-  files?: string[];
+  files: DriveFile[];
 }
 
 /**

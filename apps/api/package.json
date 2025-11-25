@@ -93,6 +93,7 @@
     "express": "~4.19.2",
     "express-session": "^1.18.2",
     "fish-audio": "^0.0.2",
+    "formdata-node": "^6.0.3",
     "get-audio-duration": "^4.0.1",
     "get-port": "^5.1.1",
     "handlebars": "^4.7.8",
@@ -116,6 +117,7 @@
     "passport-twitter": "~1.0.4",
     "pdf-parse": "~1.1.1",
     "pino-http": "^10.3.0",
+    "pino-loki": "^2.6.0",
     "pino-pretty": "^11.0.0",
     "prisma": "5.16.1",
     "reading-time-estimator": "^1.11.0",
@@ -132,8 +134,7 @@
     "y-protocols": "^1.0.6",
     "yjs": "^13.6.8",
     "zod": "^3.25.76",
-    "zod-to-json-schema": "3.24.6",
-    "formdata-node": "^6.0.3"
+    "zod-to-json-schema": "3.24.6"
   },
   "devDependencies": {
     "@golevelup/ts-jest": "^0.6.2",
