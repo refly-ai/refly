@@ -199,11 +199,11 @@ const LoginPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col lg:flex-row"
+      className="h-screen w-full flex flex-col lg:flex-row overflow-hidden"
       style={{ backgroundColor: 'var(--refly-bg-login-page)' }}
     >
       {/* Desktop: Left side - Introduction section */}
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center px-16 py-12">
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center px-16 py-12 overflow-y-auto">
         <div className="flex items-center justify-center">
           {/* Introduction image */}
           <div
@@ -225,12 +225,13 @@ const LoginPage = () => {
       </div>
 
       {/* Right side - Login form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-[60px] lg:pt-[120px] lg:pb-[60px]">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-[60px] lg:py-8 overflow-y-auto">
         <div
           className="relative flex flex-col w-full max-w-[520px] rounded-[20px] shadow-[0_8px_40px_0_rgba(0,0,0,0.08)] p-6 sm:p-8 lg:p-[60px]"
           style={{
             backgroundColor: 'var(--refly-bg-body-z0)',
             gap: '32px',
+            margin: 'auto',
           }}
         >
           {/* Logo - absolute positioned */}
