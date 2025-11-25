@@ -13,8 +13,7 @@
   },
   "scripts": {
     "commit": "cz",
-    "dev": "turbo run dev --filter='!refly-desktop'",
-    "dev:electron": "turbo run dev:electron",
+    "dev": "turbo run dev",
     "start": "turbo run start",
     "build": "turbo run build",
     "build:api": "turbo run build --filter=@refly/api",
