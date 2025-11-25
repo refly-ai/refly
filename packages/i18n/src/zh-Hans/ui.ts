@@ -2609,7 +2609,7 @@ const translations = {
       statusUsed: '已使用',
       enterInvitationCode: '请输入邀请码',
       activateInvitationCode: '激活邀请码',
-      activateInvitationCodeSuccess: '欢迎使用 Refly 🎉 开始您的 AI 自动化之旅！',
+      activateInvitationCodeSuccess: '欢迎使用 Refly 🎉 开始您的 vibe-workflow 之旅吧！',
       activateInvitationCodeFailed: '邀请码无效，请重试或加入 Discord 群组获取新邀请码。',
       invitationCodeCopied: '邀请码已复制！快去分享给你的朋友吧~',
       invitationCodeCopyFailed: '复制邀请码失败',

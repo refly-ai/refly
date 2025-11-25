@@ -2640,7 +2640,7 @@ const translations = {
       statusUsed: 'Used',
       enterInvitationCode: 'Enter invitation code',
       activateInvitationCode: 'Activate Code',
-      activateInvitationCodeSuccess: 'Welcome to Refly 🎉 Start your AI automation journey!',
+      activateInvitationCodeSuccess: "Welcome to Refly 🎉 Let's start your vibe-workflow journey!",
       activateInvitationCodeFailed:
         'Invite code is invalid. Please try again or join Discord to get a new one.',
       invitationCodeCopied: 'Invite code copied! Go share it with your friends~',

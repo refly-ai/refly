@@ -47,7 +47,7 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
   // Copy invitation code to clipboard
   const handleCopyInvitationCode = async (invitationCode: string) => {
     try {
-      const invitationText = `* Join Refly and start your AI automation journey.\n\n* Invitation code: ${invitationCode}\n\n* Click the link and enter the code to join: https://refly.ai`;
+      const invitationText = `- Unlock Refly.ai's vibe-workflow and supercharge your automation with Banana, Gemini, and other top-tier AI models — plus 3,000 free credits to get you started!\n\nInvitation code: ${invitationCode}\n\nJoin here → https://refly.ai`;
       await navigator.clipboard.writeText(invitationText);
       message.success(t('settings.account.invitationCodeCopied'));
     } catch (error) {
