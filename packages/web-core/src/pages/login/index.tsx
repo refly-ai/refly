@@ -153,7 +153,7 @@ const LoginPage = () => {
             ? decodeURIComponent(returnUrl)
             : isPublicAccessPage
               ? window.location.href
-              : '/';
+              : '/workspace';
           window.location.replace(redirectUrl);
         } else {
           authStore.setEmail(values.email);
@@ -175,7 +175,7 @@ const LoginPage = () => {
         // Note: No need to close modal as this is a standalone login page
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
-        const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/';
+        const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace';
         window.location.replace(redirectUrl);
       }
     }
