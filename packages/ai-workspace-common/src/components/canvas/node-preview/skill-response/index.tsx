@@ -237,55 +237,63 @@ const SkillResponseNodePreviewComponent = ({
         }
       />
 
-      {currentFile ? (
-        <ProductCard file={currentFile} classNames="w-full flex-1" source="preview" />
-      ) : (
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="py-3 px-4">
-            <Segmented
-              options={[
-                { label: t('agent.configure'), value: 'configure' },
-                { label: t('agent.lastRun'), value: 'lastRun' },
-              ]}
-              value={activeTab}
-              onChange={(value) => setResultActiveTab(resultId, value as ResultActiveTab)}
-              block
-              size="small"
-              shape="round"
+      <div className="flex-1 flex flex-col min-h-0 px-4 relative">
+        <div className="py-3">
+          <Segmented
+            options={[
+              { label: t('agent.configure'), value: 'configure' },
+              { label: t('agent.lastRun'), value: 'lastRun' },
+            ]}
+            value={activeTab}
+            onChange={(value) => setResultActiveTab(resultId, value as ResultActiveTab)}
+            block
+            size="small"
+            shape="round"
+          />
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto relative">
+          <div
+            className={activeTab === 'configure' ? 'h-full' : 'hidden'}
+            style={{ display: activeTab === 'configure' ? 'block' : 'none' }}
+          >
+            <ConfigureTab
+              readonly={readonly}
+              query={query}
+              version={version}
+              resultId={resultId}
+              nodeId={node.id}
+              canvasId={canvasId}
+              disabled={readonly || isExecuting}
             />
           </div>
 
-          <div className="flex-1 min-h-0">
-            {activeTab === 'configure' && (
-              <ConfigureTab
-                readonly={readonly}
-                query={query}
-                version={version}
-                resultId={resultId}
-                nodeId={node.id}
-                canvasId={canvasId}
-                disabled={readonly || isExecuting}
-              />
-            )}
-
-            {activeTab === 'lastRun' && (
-              <LastRunTab
-                loading={loading}
-                isStreaming={isStreaming}
-                resultId={resultId}
-                result={result}
-                outputStep={outputStep}
-                statusText={statusText}
-                query={query}
-                title={title}
-                nodeId={node.id}
-                selectedToolsets={selectedToolsets}
-                handleRetry={handleRetry}
-              />
-            )}
+          <div
+            className={activeTab === 'lastRun' ? 'h-full' : 'hidden'}
+            style={{ display: activeTab === 'lastRun' ? 'block' : 'none' }}
+          >
+            <LastRunTab
+              loading={loading}
+              isStreaming={isStreaming}
+              resultId={resultId}
+              result={result}
+              outputStep={outputStep}
+              statusText={statusText}
+              query={query}
+              title={title}
+              nodeId={node.id}
+              selectedToolsets={selectedToolsets}
+              handleRetry={handleRetry}
+            />
           </div>
         </div>
-      )}
+
+        {currentFile && (
+          <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
+            <ProductCard file={currentFile} classNames="w-full h-full" source="preview" />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

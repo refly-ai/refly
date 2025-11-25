@@ -24,6 +24,7 @@ import {
   ResourceType,
   VariableValue,
   CanvasNode,
+  GenericToolset,
 } from '@refly/openapi-schema';
 import { Prisma } from '@prisma/client';
 import {
@@ -34,6 +35,7 @@ import {
   genDocumentID,
   genResourceID,
   genCodeArtifactID,
+  batchReplaceRegex,
 } from '@refly/utils';
 import { DeleteKnowledgeEntityJobData } from '../knowledge/knowledge.dto';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '../../utils/const';
@@ -302,6 +304,7 @@ export class CanvasService {
 
     // Pre-generate all new entity IDs upfront for better performance
     const replaceEntityMap = this.preGenerateEntityIds(nodesWithResources, canvasId, newCanvasId);
+    const { replaceToolsetMap } = await this.toolService.importToolsetsFromNodes(user, nodes);
 
     // Create a temporary canvas record first to satisfy foreign key constraints
     // This will be updated later in the transaction
@@ -452,13 +455,23 @@ export class CanvasService {
         if (entityId) {
           node.data.entityId = replaceEntityMap[entityId];
         }
-        if (Array.isArray(metadata.contextItems)) {
-          metadata.contextItems = metadata.contextItems.map((item) => {
-            if (item.entityId && replaceEntityMap[item.entityId]) {
-              item.entityId = replaceEntityMap[item.entityId];
-            }
-            return item;
-          });
+
+        if (metadata.contextItems) {
+          metadata.contextItems = safeParseJSON(
+            batchReplaceRegex(JSON.stringify(metadata.contextItems), replaceEntityMap),
+          );
+        }
+
+        if (metadata.structuredData) {
+          metadata.structuredData = safeParseJSON(
+            batchReplaceRegex(JSON.stringify(metadata.structuredData), replaceEntityMap),
+          );
+        }
+
+        if (metadata.selectedToolsets) {
+          metadata.selectedToolsets = (metadata.selectedToolsets as GenericToolset[]).map(
+            (toolset) => replaceToolsetMap[toolset.id] || toolset,
+          );
         }
       }
 

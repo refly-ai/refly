@@ -8,6 +8,8 @@ export const getShareLink = (entityType: string, shareId: string) => {
     entity = 'answer';
   } else if (entityType === 'document') {
     entity = 'doc';
+  } else if (entityType === 'driveFile') {
+    entity = 'file';
   } else if (entityType === 'workflowApp') {
     entity = 'app';
     // WorkflowApp uses direct /app route, not /share/app

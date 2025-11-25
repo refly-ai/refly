@@ -6,6 +6,7 @@ import {
   ShareCodePage,
   SkillResponseSharePage,
   DocumentSharePage,
+  DriveFileSharePage,
   WorkflowAppPage,
   WorkflowListPage,
   AppManager,
@@ -47,6 +48,10 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/share/doc/:shareId',
     element: <DocumentSharePage />,
+  },
+  {
+    path: '/share/file/:shareId',
+    element: <DriveFileSharePage />,
   },
 
   // Deprecated routes - redirect to new routes

@@ -33,6 +33,7 @@ const generateFullNodeDataUpdates = (
     contentPreview: processContentPreview((payload?.steps || []).map((s) => s?.content || '')),
     metadata: {
       status: payload?.status ?? 'finish',
+      errorType: payload?.errorType ?? 'systemError',
       errors: payload.errors,
       actionMeta: payload.actionMeta,
       modelInfo: payload.modelInfo,

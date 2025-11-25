@@ -12,4 +12,5 @@ export const SHARE_CODE_PREFIX: Record<EntityType, string> = {
   project: 'prj-',
   mediaResult: 'med-',
   workflowApp: 'wfa-',
+  driveFile: 'drv-',
 };

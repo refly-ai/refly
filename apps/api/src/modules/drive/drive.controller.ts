@@ -31,11 +31,11 @@ import { buildSuccessResponse } from '../../utils/response';
 import { Response, Request } from 'express';
 
 @Controller('v1/drive')
-@UseGuards(JwtAuthGuard)
 export class DriveController {
   constructor(private readonly driveService: DriveService) {}
 
   @Get('file/list')
+  @UseGuards(JwtAuthGuard)
   async listDriveFiles(
     @LoginedUser() user: User,
     @Query('canvasId') canvasId: string,
@@ -57,6 +57,7 @@ export class DriveController {
   }
 
   @Post('file/create')
+  @UseGuards(JwtAuthGuard)
   async createDriveFile(
     @LoginedUser() user: User,
     @Body() request: UpsertDriveFileRequest,
@@ -66,6 +67,7 @@ export class DriveController {
   }
 
   @Post('file/batchCreate')
+  @UseGuards(JwtAuthGuard)
   async batchCreateDriveFiles(
     @LoginedUser() user: User,
     @Body() request: BatchCreateDriveFilesRequest,
@@ -75,6 +77,7 @@ export class DriveController {
   }
 
   @Post('file/update')
+  @UseGuards(JwtAuthGuard)
   async updateDriveFile(
     @LoginedUser() user: User,
     @Body() request: UpsertDriveFileRequest,
@@ -84,6 +87,7 @@ export class DriveController {
   }
 
   @Post('file/delete')
+  @UseGuards(JwtAuthGuard)
   async deleteDriveFile(
     @LoginedUser() user: User,
     @Body() request: DeleteDriveFileRequest,
@@ -93,6 +97,7 @@ export class DriveController {
   }
 
   @Get('file/content/:fileId')
+  @UseGuards(JwtAuthGuard)
   async serveDriveFile(
     @LoginedUser() user: User,
     @Param('fileId') fileId: string,
@@ -107,13 +112,57 @@ export class DriveController {
 
     const origin = req.headers.origin;
 
+    // Sanitize and encode filename for Content-Disposition header
+    // Remove any control characters and encode for RFC 6266 compliance
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+    const sanitizedFilename = filename?.replace(/[\x00-\x1F\x7F]/g, '') ?? 'download';
+    const encodedFilename = encodeURIComponent(sanitizedFilename);
+
     res.set({
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
       'Content-Length': String(data.length),
-      ...(download ? { 'Content-Disposition': `attachment; filename="${filename}"` } : {}),
+      ...(download
+        ? {
+            'Content-Disposition': `attachment; filename="${sanitizedFilename}"; filename*=UTF-8''${encodedFilename}`,
+          }
+        : {}),
+    });
+
+    res.end(data);
+  }
+
+  @Get('file/public/:storageKey(*)')
+  async servePublicDriveFile(
+    @Param('storageKey') storageKey: string,
+    @Query('download') download: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    const { data, contentType, filename } =
+      await this.driveService.getPublicFileContent(storageKey);
+
+    const origin = req.headers.origin;
+
+    // Sanitize and encode filename for Content-Disposition header
+    // Remove any control characters and encode for RFC 6266 compliance
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+    const sanitizedFilename = filename?.replace(/[\x00-\x1F\x7F]/g, '') ?? 'download';
+    const encodedFilename = encodeURIComponent(sanitizedFilename);
+
+    res.set({
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'Content-Length': String(data.length),
+      ...(download
+        ? {
+            'Content-Disposition': `attachment; filename="${sanitizedFilename}"; filename*=UTF-8''${encodedFilename}`,
+          }
+        : {}),
     });
 
     res.end(data);

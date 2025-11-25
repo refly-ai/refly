@@ -31,6 +31,8 @@ export default () => ({
     payloadMode: process.env.DRIVE_PAYLOAD_MODE || 'url', // 'url' or 'base64'
     presignExpiry: Number.parseInt(process.env.DRIVE_PRESIGN_EXPIRY) || 15 * 60, // 15 minutes
     archiveConcurrencyLimit: Number.parseInt(process.env.DRIVE_ARCHIVE_CONCURRENCY_LIMIT) || 10, // Maximum concurrent file archive operations
+    publicEndpoint:
+      process.env.DRIVE_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/drive/file/public',
   },
   session: {
     secret: process.env.SESSION_SECRET || 'refly-session-secret-key-change-in-production',

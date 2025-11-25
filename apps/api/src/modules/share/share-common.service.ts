@@ -151,40 +151,48 @@ export class ShareCommonService {
    * Handle file duplication and cleanup for share creation/update
    * This is the main entry point for processing files when creating or updating shares
    */
-  async processFilesForShare(
-    user: User,
-    canvasData: SharedCanvasData,
-    shareId: string,
-    existingShareRecord: any | null,
-  ): Promise<void> {
-    // If updating an existing share, clean up old files first
-    if (existingShareRecord) {
-      await this.cleanupOldSharedFiles(user, shareId);
-    }
-
-    // Duplicate drive files for the share to make it independent from original canvas
+  async processFilesForShare(canvasData: SharedCanvasData, shareId: string): Promise<void> {
+    // Process drive files for sharing
     if (canvasData.files && canvasData.files.length > 0) {
-      const { fileIdMap, storageKeyMap } = await this.duplicateDriveFilesForShare(
-        user,
-        canvasData.files,
-        shareId,
+      // Fetch current file details from database to get publicURL
+      const limit = pLimit(10);
+
+      // For each file, ensure it has a publicURL
+      const promises = canvasData.files.map((file: any) =>
+        limit(async () => {
+          let publicURL = file.publicURL;
+
+          // If file doesn't have publicURL, create one and update database
+          if (!publicURL && file.storageKey) {
+            try {
+              publicURL = await this.driveService.publishDriveFile(file.storageKey);
+
+              // Update the DriveFile record with publicURL
+              await this.prisma.driveFile.update({
+                where: { fileId: file.fileId },
+                data: { publicURL },
+              });
+
+              this.logger.log(`Created publicURL for file ${file.fileId}`);
+            } catch (error) {
+              this.logger.error(
+                `Failed to create publicURL for file ${file.fileId}: ${error.stack}`,
+              );
+            }
+          }
+
+          // Return file with publicURL
+          return {
+            ...file,
+            publicURL,
+          };
+        }),
       );
 
-      // Update canvasData.files with new fileIds
-      canvasData.files = canvasData.files.map((file: any) => ({
-        ...file,
-        storageKey: storageKeyMap.get(file.fileId) ?? file.storageKey,
-        fileId: fileIdMap.get(file.fileId) ?? file.fileId,
-        canvasId: shareId, // Use shareId as the logical canvasId for shared files
-      }));
-
-      // Update file references in nodes (e.g., contextItems in skillResponse nodes)
-      if (canvasData.nodes) {
-        this.updateFileReferencesInNodes(canvasData.nodes, fileIdMap);
-      }
+      canvasData.files = await Promise.all(promises);
 
       this.logger.log(
-        `Duplicated ${canvasData.files.length} files for share ${shareId}. FileId mappings: ${JSON.stringify(Array.from(fileIdMap.entries()))}`,
+        `Processed ${canvasData.files.length} files for share ${shareId}. All files now have publicURL.`,
       );
     } else {
       // No files in current canvas, clear files array
