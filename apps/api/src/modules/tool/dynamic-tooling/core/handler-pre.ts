@@ -7,7 +7,7 @@
  */
 
 import type { HandlerContext, HandlerRequest } from '@refly/openapi-schema';
-import { injectCredentials } from '../../../utils';
+import { injectCredentials } from '../../utils';
 
 /**
  * Configuration for base pre-handler
@@ -31,8 +31,6 @@ export function createBasePreHandler(
     // Inject credentials if configured
     if (config.credentials) {
       injectCredentials(context, config.credentials);
-      // Note: context mutation doesn't affect the request
-      // This is mainly for backward compatibility
     }
 
     // Return request as-is (no resource processing here)

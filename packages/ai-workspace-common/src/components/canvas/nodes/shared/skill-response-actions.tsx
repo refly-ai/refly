@@ -18,6 +18,7 @@ interface SkillResponseActionsProps {
   onStop: () => Promise<void>;
   // Extra actions (e.g., Close button in preview)
   extraActions?: React.ReactNode;
+  readonly?: boolean;
 }
 
 const SkillResponseActionsComponent = ({
@@ -29,12 +30,13 @@ const SkillResponseActionsComponent = ({
   onRerun,
   onStop,
   extraActions,
+  readonly = false,
 }: SkillResponseActionsProps) => {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
 
   // When workflow is running but current node is not executing, disable actions
-  const disabled = workflowIsRunning;
+  const disabled = readonly || workflowIsRunning;
 
   const handleMenuClick = useCallback<NonNullable<MenuProps['onClick']>>(
     ({ key }) => {

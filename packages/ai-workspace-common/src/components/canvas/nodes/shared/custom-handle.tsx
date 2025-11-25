@@ -4,6 +4,7 @@ import { Tooltip } from 'antd';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 interface CustomHandleProps {
   id: string;
@@ -19,6 +20,7 @@ export const CustomHandle = React.memo(
   ({ id, type, position, isNodeHovered, nodeType, nodeId }: CustomHandleProps) => {
     const { t } = useTranslation();
     const isTarget = type === 'target';
+    const { readonly } = useCanvasContext();
 
     const handlePlusClick = useCallback(
       (e: React.MouseEvent) => {
@@ -41,7 +43,7 @@ export const CustomHandle = React.memo(
           source: 'handle',
         });
       },
-      [nodeId, id, nodeType],
+      [nodeId, id, nodeType, readonly],
     );
 
     // Only show plus icon on right handle when node is hovered
@@ -83,7 +85,7 @@ export const CustomHandle = React.memo(
         pointer-events-none
       `}
       >
-        {shouldShowPlusIcon ? (
+        {shouldShowPlusIcon && !readonly ? (
           <div className="pointer-events-auto">
             <Tooltip
               title={
@@ -100,7 +102,7 @@ export const CustomHandle = React.memo(
                 type={type}
                 position={position}
                 style={showPlusIconStyle}
-                isConnectable={true}
+                isConnectable={!readonly}
                 onClick={handlePlusClick}
               >
                 <div className="flex items-center justify-center w-[14px] h-[14px] bg-refly-bg-body-z0 border-solid border-[1.5px] border-refly-bg-dark rounded-full pointer-events-none">

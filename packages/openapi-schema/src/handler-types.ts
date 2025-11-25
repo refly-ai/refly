@@ -1,5 +1,8 @@
 /**
  * Handler-related type definitions and interfaces
+ *
+ * This file contains TypeScript-specific types that cannot be auto-generated from OpenAPI schema
+ * These types work with the auto-generated types from schema.yml
  */
 
 import type {
@@ -8,12 +11,11 @@ import type {
   HandlerResponse,
   UploadMetadata,
   UploadResult,
-} from '@refly/openapi-schema';
-
-export { HandlerError } from '../../constant';
+} from './types.gen';
 
 /**
  * Pre-handler function type
+ * Processes request before it's sent to the API
  */
 export type PreHandler = (
   request: HandlerRequest,
@@ -22,6 +24,7 @@ export type PreHandler = (
 
 /**
  * Post-handler function type
+ * Processes response after it's received from the API
  */
 export type PostHandler = (
   response: HandlerResponse,
@@ -31,6 +34,7 @@ export type PostHandler = (
 
 /**
  * Resource resolver interface
+ * Resolves drive files by file ID and converts to specified format
  */
 export interface ResourceResolver {
   /**

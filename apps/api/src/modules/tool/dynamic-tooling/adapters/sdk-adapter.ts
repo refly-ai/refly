@@ -3,11 +3,9 @@
  * Handles SDK-based API calls with dynamic loading
  */
 
-import type { ISdkAdapter } from '../../core/interfaces';
-import { BaseAdapter } from '../../core/base';
+import { BaseAdapter, type ISdkAdapter } from '../core/adapter';
 import type { AdapterRequest, AdapterResponse, SdkAdapterConfig } from '@refly/openapi-schema';
-import { AdapterError } from '../types';
-import { AdapterType } from '../../../constant';
+import { AdapterError, AdapterType } from '../../constant/constant';
 
 /**
  * SDK adapter for making SDK-based API calls

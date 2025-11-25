@@ -1,0 +1,109 @@
+/* Login page input styles */
+.login-input {
+  height: 32px !important;
+  padding: 0px 12px !important;
+  background-color: var(--refly-bg-input, #f6f6f6) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: var(--refly-text-0) !important;
+}
+
+.login-input::placeholder {
+  color: var(--refly-text-3, rgba(28, 31, 35, 0.6)) !important;
+}
+
+.login-input:hover {
+  background-color: var(--refly-bg-input, #f6f6f6) !important;
+  border: none !important;
+}
+
+.login-input:focus {
+  background-color: var(--refly-bg-input, #f6f6f6) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Override Ant Design Input wrapper styles */
+.ant-input-affix-wrapper.login-input,
+.ant-input-affix-wrapper.login-input:hover,
+.ant-input-affix-wrapper.login-input:focus,
+.ant-input-affix-wrapper.login-input-focused {
+  height: 32px !important;
+  background-color: var(--refly-bg-input, #f6f6f6) !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0px 12px !important;
+  border-radius: 8px !important;
+}
+
+.ant-input-affix-wrapper.login-input .ant-input {
+  height: 30px !important;
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: var(--refly-text-0) !important;
+}
+
+.ant-input-affix-wrapper.login-input .ant-input::placeholder {
+  color: var(--refly-text-3, rgba(28, 31, 35, 0.6)) !important;
+}
+
+.ant-input-affix-wrapper.login-input .ant-input:focus {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Regular input (not password) */
+.ant-input.login-input {
+  height: 32px !important;
+  padding: 0px 12px !important;
+  background-color: var(--refly-bg-input, #f6f6f6) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: var(--refly-text-0) !important;
+}
+
+.ant-input.login-input::placeholder {
+  color: var(--refly-text-3, rgba(28, 31, 35, 0.6)) !important;
+}
+
+.ant-input.login-input:hover,
+.ant-input.login-input:focus {
+  background-color: var(--refly-bg-input, #f6f6f6) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* OAuth button styles */
+.oauth-button {
+  height: auto !important;
+  padding: 16px 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--refly-border-divider, rgba(0, 0, 0, 0.08)) !important;
+  background-color: var(--refly-oauth-button-bg, #fdfdfd) !important;
+  box-shadow: 0px 2px 20px 4px rgba(0, 0, 0, 0.04) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.4285714285714286em !important;
+  color: var(--refly-text-0) !important;
+}
+
+.oauth-button:hover {
+  border-color: var(--refly-border-divider, rgba(0, 0, 0, 0.08)) !important;
+  background-color: var(--refly-oauth-button-bg, #fdfdfd) !important;
+  color: var(--refly-text-0) !important;
+  opacity: 0.8;
+}
+
+/* Divider line */
+.login-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: var(--refly-border-divider, rgba(0, 0, 0, 0.1));
+}

@@ -4,9 +4,9 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import type { IAdapter } from '../../core/interfaces';
-import { HttpAdapter } from '../http';
-import { SdkAdapter } from '../sdk';
+import type { IAdapter } from '../core/adapter';
+import { HttpAdapter } from './http-adapter';
+import { SdkAdapter } from './sdk-adapter';
 import type {
   HttpAdapterConfig,
   ParsedMethodConfig,

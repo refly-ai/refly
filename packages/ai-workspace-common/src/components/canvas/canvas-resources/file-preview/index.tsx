@@ -198,5 +198,5 @@ export const FilePreview = memo(({ file, markdownClassName = '' }: FilePreviewPr
     );
   };
 
-  return <div className="h-full overflow-hidden">{renderFilePreview()}</div>;
+  return <div className="flex-1 overflow-hidden">{renderFilePreview()}</div>;
 });

@@ -37,6 +37,7 @@ interface NodeHeaderProps {
   source?: 'preview' | 'node' | 'skillResponsePreview';
   className?: string;
   maxLength?: number;
+  iconSize?: number;
 }
 
 // Background color classes for different node types
@@ -66,6 +67,7 @@ export const NodeHeader = memo(
     source = 'node',
     className = '',
     maxLength,
+    iconSize = 16,
   }: NodeHeaderProps) => {
     const [editTitle, setEditTitle] = useState(title);
     const [isEditing, setIsEditing] = useState(false);
@@ -123,7 +125,7 @@ export const NodeHeader = memo(
               filename={title}
               filled={iconFilled}
               iconColor={iconColor}
-              iconSize={16}
+              iconSize={iconSize}
             />
           )}
 

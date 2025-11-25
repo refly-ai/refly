@@ -172,15 +172,23 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
     return [
       ...internalActions,
 
-      {
-        key: 'resources',
-        icon: <ResourceFilled size={18} />,
-        onClick: handleResourcesPanelOpen,
-        label: t('canvas.toolbar.tooltip.resourceLibrary'),
-        active: sidePanelVisible,
-      },
+      ...(readonly
+        ? []
+        : [
+            {
+              key: 'resources',
+              icon: <ResourceFilled size={18} />,
+              onClick: handleResourcesPanelOpen,
+              label: t('canvas.toolbar.tooltip.resourceLibrary'),
+              active: sidePanelVisible,
+            },
+          ]),
     ];
-  }, [internalActions, handleResourcesPanelOpen, t, sidePanelVisible]);
+  }, [internalActions, handleResourcesPanelOpen, t, sidePanelVisible, readonly]);
+
+  if (actions.length === 0) {
+    return null;
+  }
 
   return (
     <div className="absolute bottom-6 left-0 right-0 z-20 p-2 flex items-center justify-center pointer-events-none">

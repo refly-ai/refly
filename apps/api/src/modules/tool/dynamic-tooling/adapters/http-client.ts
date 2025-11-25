@@ -5,7 +5,7 @@
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { Logger } from '@nestjs/common';
-import { AdapterError } from '../types';
+import { AdapterError } from '../../constant/constant';
 import type { FormData } from 'formdata-node';
 
 /**

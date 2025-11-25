@@ -22,6 +22,7 @@ export function driveFilePO2DTO(driveFile: DriveFileModel): DriveFile {
       'variableId',
       'resultId',
       'resultVersion',
+      'storageKey',
     ]),
     source: driveFile.source as DriveFileSource,
     scope: driveFile.scope as DriveFileScope,

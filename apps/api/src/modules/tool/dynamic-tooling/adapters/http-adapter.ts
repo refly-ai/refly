@@ -10,11 +10,9 @@ import type {
   PollingConfig,
 } from '@refly/openapi-schema';
 import axios, { AxiosResponse } from 'axios';
-import { AdapterType, HttpMethod } from '../../../constant';
-import { BaseAdapter } from '../../core/base';
-import type { IHttpAdapter } from '../../core/interfaces';
-import { AdapterError } from '../types';
-import { HttpClient } from './client';
+import { AdapterType, HttpMethod, AdapterError } from '../../constant/constant';
+import { BaseAdapter, type IHttpAdapter } from '../core/adapter';
+import { HttpClient } from './http-client';
 
 /**
  * HTTP adapter for making HTTP API calls with intelligent polling support

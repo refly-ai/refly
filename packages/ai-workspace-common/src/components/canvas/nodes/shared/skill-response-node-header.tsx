@@ -11,6 +11,7 @@ interface SkillResponseNodeHeaderProps {
   className?: string;
   // Custom actions (e.g., Play button, More button)
   actions?: React.ReactNode;
+  canEdit?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export const SkillResponseNodeHeader = memo(
     source = 'node',
     className,
     actions,
+    canEdit,
   }: SkillResponseNodeHeaderProps) => {
     const { t } = useTranslation();
     const updateNodeTitle = useUpdateNodeTitle();
@@ -47,7 +49,7 @@ export const SkillResponseNodeHeader = memo(
         title={title}
         fixedTitle={t('canvas.nodeTypes.agent')}
         placeholder={t('agent.editTitlePlaceholder')}
-        canEdit={true}
+        canEdit={canEdit}
         updateTitle={onTitleChange}
         source={source === 'preview' ? 'skillResponsePreview' : 'node'}
         className={className}

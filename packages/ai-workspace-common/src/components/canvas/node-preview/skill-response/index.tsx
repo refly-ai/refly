@@ -1,12 +1,10 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { CanvasNode, convertResultContextToItems, ResponseNodeMeta } from '@refly/canvas-common';
-import { ActionResult } from '@refly/openapi-schema';
 import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
 import { Segmented, Button } from 'antd';
@@ -90,31 +88,6 @@ const SkillResponseNodePreviewComponent = ({
       fetchActionResult(resultId, { silent: !!result, nodeToUpdate: node });
     }
   }, [resultId, shareId, isStreaming, shareData, nodeStatus]);
-
-  const scrollToBottom = useCallback(
-    (event: { resultId: string; payload: ActionResult }) => {
-      if (event.resultId !== resultId || event.payload?.status !== 'executing') {
-        return;
-      }
-
-      const container = document.body.querySelector('.preview-container');
-      if (container) {
-        const { scrollHeight, clientHeight } = container;
-        container.scroll({
-          behavior: 'smooth',
-          top: scrollHeight - clientHeight + 50,
-        });
-      }
-    },
-    [resultId],
-  );
-
-  useEffect(() => {
-    actionEmitter.on('updateResult', scrollToBottom);
-    return () => {
-      actionEmitter.off('updateResult', scrollToBottom);
-    };
-  }, [scrollToBottom]);
 
   const { data } = node;
 
@@ -250,8 +223,10 @@ const SkillResponseNodePreviewComponent = ({
         title={title}
         source="preview"
         className="!h-14"
+        canEdit={!readonly}
         actions={
           <SkillResponseActions
+            readonly={readonly}
             nodeIsExecuting={isExecuting}
             workflowIsRunning={workflowIsRunning}
             variant="preview"
@@ -265,8 +240,8 @@ const SkillResponseNodePreviewComponent = ({
       {currentFile ? (
         <ProductCard file={currentFile} classNames="w-full flex-1" source="preview" />
       ) : (
-        <div className="flex-1 flex flex-col min-h-0 px-4">
-          <div className="py-3">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="py-3 px-4">
             <Segmented
               options={[
                 { label: t('agent.configure'), value: 'configure' },
@@ -280,9 +255,10 @@ const SkillResponseNodePreviewComponent = ({
             />
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 min-h-0">
             {activeTab === 'configure' && (
               <ConfigureTab
+                readonly={readonly}
                 query={query}
                 version={version}
                 resultId={resultId}
@@ -296,6 +272,7 @@ const SkillResponseNodePreviewComponent = ({
               <LastRunTab
                 loading={loading}
                 isStreaming={isStreaming}
+                resultId={resultId}
                 result={result}
                 outputStep={outputStep}
                 statusText={statusText}

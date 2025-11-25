@@ -32,9 +32,9 @@ export const StartNodeHeader = memo(
     return (
       <NodeHeader
         nodeType="start"
-        fixedTitle={t('canvas.workflow.userInput')}
+        fixedTitle={t('canvas.nodeTypes.start')}
         title=""
-        iconFilled={true}
+        iconSize={20}
         className={className}
         actions={source === 'preview' ? actions || defaultPreviewActions : undefined}
       />

@@ -41,3 +41,9 @@ docs/.vitepress/cache/*
 
 # AI Task files
 .task
+
+# local database files
+*.db
+
+# local prompt files
+*.prompt

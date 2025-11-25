@@ -24,6 +24,7 @@ import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
 import { isDesktop } from '../../utils/runtime';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { ToolModule } from '../tool/tool.module';
+import { DriveModule } from '../drive/drive.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ToolModule } from '../tool/tool.module';
     CanvasSyncModule,
     CodeArtifactModule,
     SubscriptionModule,
+    DriveModule,
     ...(isDesktop()
       ? []
       : [

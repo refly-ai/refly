@@ -254,8 +254,8 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
                       key={key}
                       className="grid grid-cols-[120px_1fr] border-[0.5px] border-solid border-b-0 border-x-0 border-refly-tertiary-hover text-xs text-refly-text-0 leading-4"
                     >
-                      <div className="px-3 py-2">{key}</div>
-                      <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover whitespace-pre-wrap break-words">
+                      <div className="px-3 py-2 break-all">{key}</div>
+                      <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover whitespace-pre-wrap break-all">
                         {typeof value === 'object'
                           ? JSON.stringify(value ?? {}, null, 2)
                           : String(value ?? '')}

@@ -114,10 +114,11 @@ const ReasoningContent = memo(
   }) => {
     const { t } = useTranslation();
     const [collapsed, setCollapsed] = useState(status !== 'executing');
+    const isFinished = status === 'finish' || status === 'failed';
 
     // Auto-collapse when step status changes from executing to finish
     useEffect(() => {
-      if (status === 'executing') {
+      if (['executing', 'waiting'].includes(status)) {
         setCollapsed(false);
       } else {
         setCollapsed(true);
@@ -152,7 +153,9 @@ const ReasoningContent = memo(
         </div>
 
         {!collapsed && (
-          <div className={`mt-3 skill-response-reasoning-${resultId}-${step.name}`}>
+          <div
+            className={`mt-3 skill-response-reasoning-${resultId}-${step.name} ${isFinished ? 'max-h-[400px] overflow-y-auto' : ''}`}
+          >
             <Markdown
               content={getParsedReasoningContent(reasoningContent)}
               sources={sources}

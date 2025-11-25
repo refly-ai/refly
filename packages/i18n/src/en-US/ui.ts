@@ -1507,7 +1507,7 @@ const translations = {
       pilotRecoveryStarted: 'Pilot recovery started successfully',
       pilotRecoveryFailed: 'Pilot recovery failed',
       resultNotFound: 'Sorry, the execution result seems to be lost.',
-      reasoningContent: 'AI Thinking Process',
+      reasoningContent: 'Refly Thinking Process',
       shareLoading: 'Loading shared skill response...',
       notFound: 'Skill Response Not Found',
       notFoundDesc: 'The skill response you are looking for does not exist or has been removed.',
@@ -3164,7 +3164,7 @@ const translations = {
   },
   copilot: {
     title: 'Workflow Assistant',
-    assistant: 'Assistant',
+    assistant: 'Copilot',
     placeholder: 'Describe the workflow you want to generate...',
     header: {
       history: 'Chat History',

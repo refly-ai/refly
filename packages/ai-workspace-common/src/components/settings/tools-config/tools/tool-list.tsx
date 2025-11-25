@@ -209,7 +209,11 @@ const ToolItem = ({
                   t?.descriptionDict?.en ||
                   '') as string;
                 return (
-                  <Tooltip key={index} title={toolDesc} placement="top">
+                  <Tooltip
+                    key={index}
+                    title={<div className="max-h-[200px] overflow-y-auto text-xs">{toolDesc}</div>}
+                    placement="top"
+                  >
                     <Tag className="bg-refly-tertiary-default border-solid border-[1px] border-refly-Card-Border font-semibold text-refly-text-1 h-[18px] flex items-center justify-center rounded-[4px] text-[10px] leading-[14px] cursor-pointer">
                       {t.name}
                     </Tag>

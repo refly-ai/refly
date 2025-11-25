@@ -25,14 +25,14 @@ import {
   CodeZip,
   GeneralFile,
   Html,
-  Start,
   File,
+  MessageSmile,
 } from 'refly-icons';
 import { Avatar } from 'antd';
 
 type IconComponent = ComponentType<{ size?: number | string; color?: string }>;
 const ICONS: Record<CanvasNodeType | SelectionKey, IconComponent> = {
-  start: Start,
+  start: MessageSmile,
   group: Group,
   image: Image,
   video: Video,
