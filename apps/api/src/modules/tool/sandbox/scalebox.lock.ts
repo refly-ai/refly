@@ -95,14 +95,17 @@ export class ScaleboxLock {
   }
 
   async trySandboxLock(sandboxId: string): Promise<() => Promise<void>> {
-    const added = await this.redis.getClient().sadd(REDIS_KEYS.ACTIVE_SET, sandboxId);
-    if (added === 0) {
+    const lockKey = `${REDIS_KEYS.LOCK_SANDBOX_PREFIX}:${sandboxId}`;
+    const ttlSec = this.runCodeTimeoutSec + this.fileBufferSec;
+
+    const result = await this.redis.getClient().set(lockKey, '1', 'EX', ttlSec, 'NX');
+    if (result !== 'OK') {
       this.logger.debug({ sandboxId }, 'Sandbox lock held, waiting...');
     }
-    guard.ensure(added > 0).orThrow(() => new Error('Sandbox lock is held'));
+    guard.ensure(result === 'OK').orThrow(() => new Error('Sandbox lock is held'));
 
     return async () => {
-      await this.redis.getClient().srem(REDIS_KEYS.ACTIVE_SET, sandboxId);
+      await this.redis.getClient().del(lockKey);
       this.logger.debug({ sandboxId }, 'Sandbox lock released');
     };
   }

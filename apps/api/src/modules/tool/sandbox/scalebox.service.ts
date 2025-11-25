@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, QueueEvents } from 'bullmq';
@@ -11,19 +11,18 @@ import {
   DriveFile,
 } from '@refly/openapi-schema';
 
-import { buildResponse } from '../../../utils';
 import { guard } from '../../../utils/guard';
 import { QUEUE_SCALEBOX_EXECUTE } from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
 import { DriveService } from '../../drive/drive.service';
 import { SandboxRequestParamsException, QueueOverloadedException } from './scalebox.exception';
-import { ScaleboxExecutionResult, ExecutionContext, SandboxExecuteJobData } from './scalebox.dto';
 import {
-  formatError,
-  buildSuccessResponse,
-  extractErrorMessage,
-  checkCriticalError,
-} from './scalebox.utils';
+  ScaleboxExecutionResult,
+  ExecutionContext,
+  SandboxExecuteJobData,
+  ScaleboxResponseFactory,
+} from './scalebox.dto';
+import { formatError, extractErrorMessage, checkCriticalError } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { SandboxWrapper, S3Config } from './scalebox.wrapper';
 import { Trace } from './scalebox.tracer';
@@ -35,7 +34,9 @@ import { ScaleboxLock } from './scalebox.lock';
  * Execute code in a secure sandbox environment using Scalebox provider
  */
 @Injectable()
-export class ScaleboxService {
+export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
+  private queueEvents: QueueEvents;
+
   constructor(
     private readonly config: ConfigService, // Used by @Config decorators
     private readonly lock: ScaleboxLock,
@@ -47,6 +48,18 @@ export class ScaleboxService {
   ) {
     this.logger.setContext(ScaleboxService.name);
     void this.config; // Suppress unused warning - used by @Config decorators
+  }
+
+  onModuleInit() {
+    this.queueEvents = new QueueEvents(QUEUE_SCALEBOX_EXECUTE, {
+      connection: this.sandboxQueue.opts.connection,
+    });
+    this.logger.debug('QueueEvents initialized');
+  }
+
+  async onModuleDestroy() {
+    await this.queueEvents?.close();
+    this.logger.debug('QueueEvents closed');
   }
 
   @Config.string('sandbox.scalebox.apiKey', '')
@@ -97,13 +110,6 @@ export class ScaleboxService {
     ] as const;
   }
 
-  private async acquireQueueEvents(): Promise<readonly [QueueEvents, () => Promise<void>]> {
-    const queueEvents = new QueueEvents(QUEUE_SCALEBOX_EXECUTE, {
-      connection: this.sandboxQueue.opts.connection,
-    });
-    return [queueEvents, () => queueEvents.close()] as const;
-  }
-
   async execute(user: User, request: SandboxExecuteRequest): Promise<SandboxExecuteResponse> {
     const startTime = Date.now();
 
@@ -131,10 +137,15 @@ export class ScaleboxService {
 
       const executionTime = Date.now() - startTime;
 
-      return buildSuccessResponse(originResult?.text || '', files, executionResult, executionTime);
+      return ScaleboxResponseFactory.success(
+        originResult?.text || '',
+        files,
+        executionResult,
+        executionTime,
+      );
     } catch (error) {
       this.logger.error(error, 'Sandbox execution failed');
-      return buildResponse<SandboxExecuteResponse>(false, { data: null }, formatError(error));
+      return ScaleboxResponseFactory.error(formatError(error));
     }
   }
 
@@ -264,25 +275,16 @@ export class ScaleboxService {
       });
     }
 
-    return guard.defer(
-      () => this.acquireQueueEvents(),
-      async (queueEvents) => {
-        const job = await this.sandboxQueue.add('execute', {
-          params,
-          context,
-        });
+    const job = await this.sandboxQueue.add('execute', {
+      params,
+      context,
+    });
 
-        this.logger.info(
-          {
-            jobId: job.id,
-            canvasId: context.canvasId,
-            uid: context.uid,
-          },
-          'Added sandbox execution job to queue',
-        );
-
-        return await job.waitUntilFinished(queueEvents);
-      },
+    this.logger.info(
+      { jobId: job.id, canvasId: context.canvasId, uid: context.uid },
+      'Added sandbox execution job to queue',
     );
+
+    return await job.waitUntilFinished(this.queueEvents);
   }
 }

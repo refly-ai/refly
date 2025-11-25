@@ -13,7 +13,6 @@ import { REDIS_KEYS, SCALEBOX_DEFAULTS } from './scalebox.constants';
  * Encapsulates all Redis operations for sandbox pool management:
  * - Metadata CRUD (sandbox state persistence)
  * - Idle queue operations (FIFO pool management)
- * - Active set operations (concurrency tracking)
  */
 @Injectable()
 export class ScaleboxStorage {
@@ -58,10 +57,9 @@ export class ScaleboxStorage {
   }
 
   async getTotalSandboxCount(): Promise<number> {
-    const [idleCount, activeCount] = await Promise.all([
-      this.redis.getClient().llen(REDIS_KEYS.IDLE_QUEUE),
-      this.redis.getClient().scard(REDIS_KEYS.ACTIVE_SET),
-    ]);
-    return idleCount + activeCount;
+    // Count metadata keys as the source of truth for total sandbox count
+    // Each sandbox has a metadata entry that expires with sandboxTimeoutMs
+    const keys = await this.redis.getClient().keys(`${REDIS_KEYS.METADATA_PREFIX}:*`);
+    return keys.length;
   }
 }

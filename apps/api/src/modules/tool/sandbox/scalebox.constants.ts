@@ -39,7 +39,6 @@ export const SANDBOX_DRIVE_MOUNT_POINT = '/mnt/refly';
 export const REDIS_KEYS = {
   METADATA_PREFIX: 'scalebox:pool:meta',
   IDLE_QUEUE: 'scalebox:pool:idle',
-  ACTIVE_SET: 'scalebox:pool:active',
   LOCK_EXECUTE_PREFIX: 'scalebox:execute:lock',
   LOCK_SANDBOX_PREFIX: 'scalebox:sandbox:lock',
 } as const;

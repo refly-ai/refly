@@ -1,5 +1,10 @@
 import type { ExecutionResult, Language } from '@scalebox/sdk';
-import { SandboxExecuteParams, SandboxExecuteContext, type DriveFile } from '@refly/openapi-schema';
+import {
+  SandboxExecuteParams,
+  SandboxExecuteContext,
+  SandboxExecuteResponse,
+  type DriveFile,
+} from '@refly/openapi-schema';
 
 /**
  * Scalebox internal type definitions
@@ -106,3 +111,34 @@ export interface SimplifiedSandboxResult {
     errorCode?: string;
   };
 }
+
+/**
+ * Factory for building sandbox execution responses
+ */
+export const ScaleboxResponseFactory = {
+  success(
+    output: string,
+    files: DriveFile[],
+    result: ScaleboxExecutionResult,
+    executionTime: number,
+  ): SandboxExecuteResponse {
+    return {
+      status: 'success',
+      data: {
+        output,
+        error: result.error || '',
+        exitCode: result.exitCode || 0,
+        executionTime,
+        files,
+      },
+    };
+  },
+
+  error(err: { code: string; message: string }): SandboxExecuteResponse {
+    return {
+      status: 'failed',
+      data: null,
+      errors: [err],
+    };
+  },
+};

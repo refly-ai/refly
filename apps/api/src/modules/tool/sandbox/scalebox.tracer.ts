@@ -90,16 +90,6 @@ export function recordTiming(name: string, durationMs: number, attributes?: Reco
   }
 }
 
-/** Sets attributes on current active span */
-export function setSpanAttributes(attributes: Record<string, string | number | boolean>) {
-  const span = trace.getActiveSpan();
-  if (span) {
-    for (const [key, value] of Object.entries(attributes)) {
-      span.setAttribute(key, value);
-    }
-  }
-}
-
 /** Gets current active span */
 export function getCurrentSpan(): Span | undefined {
   return trace.getActiveSpan();

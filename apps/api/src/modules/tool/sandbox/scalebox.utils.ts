@@ -1,11 +1,8 @@
-import { DriveFile, SandboxExecuteResponse } from '@refly/openapi-schema';
 import type { ExecutionResult } from '@scalebox/sdk';
 import stripAnsi from 'strip-ansi';
 
-import { buildResponse } from '../../../utils';
-import { SandboxException } from './scalebox.exception';
-import { ScaleboxExecutionResult } from './scalebox.dto';
 import { ERROR_MESSAGE_MAX_LENGTH } from './scalebox.constants';
+import { SandboxException } from './scalebox.exception';
 
 /**
  * Sleep helper function
@@ -16,7 +13,7 @@ export async function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Format error into structured code and message
+ * Format error into structured code and message for response
  */
 export function formatError(error: unknown): { code: string; message: string } {
   const message =
@@ -27,26 +24,6 @@ export function formatError(error: unknown): { code: string; message: string } {
         : `[Unknown error]: ${String(error)}`;
   const code = error instanceof SandboxException ? error.code : 'QUEUE_EXECUTION_FAILED';
   return { code, message };
-}
-
-/**
- * Build successful sandbox execution response
- */
-export function buildSuccessResponse(
-  output: string,
-  processedFiles: DriveFile[],
-  result: ScaleboxExecutionResult,
-  executionTime: number,
-): SandboxExecuteResponse {
-  return buildResponse<SandboxExecuteResponse>(true, {
-    data: {
-      output,
-      error: result.error || '',
-      exitCode: result.exitCode || 0,
-      executionTime,
-      files: processedFiles,
-    },
-  });
 }
 
 /**

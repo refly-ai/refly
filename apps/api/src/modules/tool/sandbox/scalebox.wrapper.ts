@@ -3,7 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { SandboxExecuteParams } from '@refly/openapi-schema';
 
 import { guard } from '../../../utils/guard';
-import { Trace, setSpanAttributes } from './scalebox.tracer';
+import { Trace } from './scalebox.tracer';
 
 import {
   SandboxCreationException,
@@ -68,8 +68,8 @@ const COMMAND_BUILDER = {
       .filter(Boolean)
       .join(' ');
 
-    // Subshell: create passwd file → run s3fs → cleanup → return original exit code
-    return `(echo "${passwdContent}" > ${S3FS_PASSWD_FILE} && chmod 600 ${S3FS_PASSWD_FILE}; ${s3fsCmd}; ret=$?; rm -f ${S3FS_PASSWD_FILE}; exit $ret)`;
+    // Subshell: mkdir → create passwd file → run s3fs → cleanup → return original exit code
+    return `(mkdir -p ${mountPoint} && echo "${passwdContent}" > ${S3FS_PASSWD_FILE} && chmod 600 ${S3FS_PASSWD_FILE}; ${s3fsCmd}; ret=$?; rm -f ${S3FS_PASSWD_FILE}; exit $ret)`;
   },
 };
 
@@ -147,12 +147,6 @@ export class SandboxWrapper {
     context: ExecutionContext,
     timeoutMs: number,
   ): Promise<SandboxWrapper> {
-    setSpanAttributes({
-      'sandbox.canvasId': context.canvasId,
-      'sandbox.uid': context.uid,
-      'sandbox.timeoutMs': timeoutMs,
-    });
-
     logger.debug({ canvasId: context.canvasId }, 'Creating sandbox');
 
     const sandbox = await guard(() =>
@@ -161,8 +155,6 @@ export class SandboxWrapper {
         timeoutMs,
       }),
     ).orThrow((e) => new SandboxCreationException(e));
-
-    setSpanAttributes({ 'sandbox.id': sandbox.sandboxId });
 
     const now = Date.now();
     const wrapper = new SandboxWrapper(
@@ -222,11 +214,7 @@ export class SandboxWrapper {
 
     this.logger.debug({ canvasId, mountPoint, s3DrivePath }, 'Mounting drive storage');
 
-    await this.runCommand(`mkdir -p ${mountPoint}`);
-
-    const mountCmd = COMMAND_BUILDER.mountS3(s3Config, s3DrivePath, mountPoint, options);
-
-    await this.runCommand(mountCmd);
+    await this.runCommand(COMMAND_BUILDER.mountS3(s3Config, s3DrivePath, mountPoint, options));
 
     this.logger.debug({ canvasId, mountPoint }, 'Drive storage mounted');
   }
@@ -234,11 +222,6 @@ export class SandboxWrapper {
   @Trace('sandbox.unmount')
   async unmountDrive(): Promise<void> {
     const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
-
-    setSpanAttributes({
-      'unmount.point': mountPoint,
-      'sandbox.canvasId': this.context.canvasId,
-    });
 
     this.logger.debug({ sandboxId: this.sandboxId, mountPoint }, 'Unmounting drive storage');
 
