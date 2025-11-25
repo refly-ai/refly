@@ -366,7 +366,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           },
         },
       },
-      [placeholder],
+      [placeholder, nodeId],
     );
 
     // Expose focus and insertAtSymbol methods through ref
@@ -500,23 +500,31 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     }, [editor, setQuery, handleSendMessage, syncMentionsToState]);
 
     const isSyncedExternalQuery = useRef(false);
+    const lastNodeIdRef = useRef<string | undefined>(undefined);
 
-    // Reset sync flag when query changes externally
+    // Reset sync flag when query or nodeId changes
     useEffect(() => {
       isSyncedExternalQuery.current = false;
-    }, [query]);
+    }, [query, nodeId]);
 
-    // Update editor content when query changes externally
+    // Update editor content when query or nodeId changes
     useEffect(() => {
-      if (!editor || isSyncedExternalQuery.current) return;
+      if (!editor || isSyncedExternalQuery.current) {
+        return;
+      }
+
       const currentText = serializeDocToTokens(editor?.state?.doc);
       const nextText = query ?? '';
-      if (currentText !== nextText) {
+      const hasNodeChanged = lastNodeIdRef.current !== nodeId;
+
+      // Force re-render when nodeId changes even if content text is the same
+      if (currentText !== nextText || hasNodeChanged) {
         // Convert handlebars variables back to mention nodes for rendering
         const nodes = buildNodesFromContent(nextText, workflowVariables, allItems);
         // Preserve full selection range to avoid collapsing selection
         const prevFrom = editor.state?.selection?.from ?? null;
         const prevTo = editor.state?.selection?.to ?? null;
+
         if (nodes.length > 0) {
           const jsonDoc = {
             type: 'doc',
@@ -540,8 +548,10 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           editor.commands.setTextSelection({ from: clampedFrom, to: clampedTo });
         }
       }
+
+      lastNodeIdRef.current = nodeId;
       isSyncedExternalQuery.current = true;
-    }, [query, editor, workflowVariables, allItems]);
+    }, [query, editor, workflowVariables, allItems, nodeId]);
 
     // Additional effect to re-render content when canvas data becomes available
     useEffect(() => {
