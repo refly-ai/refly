@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useCallback, useState } from 'react';
-import { Avatar, Button, Divider, Layout } from 'antd';
+import { Button, Layout, Divider } from 'antd';
 import {
   useLocation,
   useNavigate,
@@ -8,10 +8,8 @@ import {
 
 import cn from 'classnames';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
-import { useSubscriptionStoreShallow, useUserStoreShallow } from '@refly/stores';
 // components
 import { useTranslation } from 'react-i18next';
-import { SiderMenuSettingList } from '../sider-menu-setting-list';
 import { SettingModal } from '@refly-packages/ai-workspace-common/components/settings';
 import { InvitationModal } from '@refly-packages/ai-workspace-common/components/settings/invitation-modal';
 import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
@@ -20,110 +18,17 @@ import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/us
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
-import {
-  Account,
-  File,
-  Project,
-  Flow,
-  Subscription,
-  Contact,
-  SideRight,
-  SideLeft,
-} from 'refly-icons';
+import { File, Project, Flow, Contact, SideRight, SideLeft, Settings } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
-import { useKnowledgeBaseStoreShallow } from '@refly/stores';
-import { subscriptionEnabled } from '@refly/ui-kit';
+import { useKnowledgeBaseStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
 
 import './layout.scss';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
-import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
-
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 
 const Sider = Layout.Sider;
-
-// User avatar component for displaying user profile
-const UserAvatar = React.memo(
-  ({
-    showName = true,
-    userProfile,
-    avatarAlign,
-  }: {
-    showName?: boolean;
-    userProfile?: any;
-    avatarAlign: 'left' | 'right';
-  }) => (
-    <div
-      className={
-        // biome-ignore lint/style/useTemplate: <explanation>
-        'flex items-center gap-2 flex-shrink min-w-0 cursor-pointer ' +
-        (avatarAlign === 'left' ? 'mr-2' : 'ml-2')
-      }
-      title={userProfile?.nickname}
-    >
-      <Avatar
-        size={36}
-        src={userProfile?.avatar || defaultAvatar}
-        icon={<Account />}
-        className="flex-shrink-0 "
-      />
-      {showName && (
-        <span className={cn('inline-block truncate font-semibold text-refly-text-0')}>
-          {userProfile?.nickname}
-        </span>
-      )}
-    </div>
-  ),
-);
-
-// Subscription info component for displaying credit balance and upgrade button
-const SubscriptionInfo = React.memo(
-  ({
-    creditBalance,
-    userProfile,
-    onCreditClick,
-    onSubscriptionClick,
-    t,
-  }: {
-    creditBalance: number | string;
-    userProfile?: any;
-    onCreditClick: (e: React.MouseEvent) => void;
-    onSubscriptionClick: (e: React.MouseEvent) => void;
-    t: (key: string) => string;
-  }) => {
-    if (!subscriptionEnabled) return null;
-
-    return (
-      <div
-        onClick={onCreditClick}
-        className="h-8 p-2 flex items-center gap-1.5 text-refly-text-0 text-xs cursor-pointer
-        rounded-[80px] border-[1px] border-solid border-refly-Card-Border bg-refly-bg-content-z2 whitespace-nowrap flex-shrink-0
-      "
-      >
-        <div className="flex items-center gap-1 min-w-0 flex-1">
-          <Subscription size={14} className="text-[#1C1F23] dark:text-white flex-shrink-0" />
-          <span className="font-medium truncate">{creditBalance}</span>
-        </div>
-
-        {(!userProfile?.subscription?.planType ||
-          userProfile?.subscription?.planType === 'free') && (
-          <>
-            <Divider type="vertical" className="m-0" />
-            <div
-              onClick={onSubscriptionClick}
-              className="text-refly-primary-default text-xs font-semibold leading-4 whitespace-nowrap truncate"
-            >
-              {t('common.upgrade')}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  },
-);
 
 // Reusable section header component
 const SiderSectionHeader = ({
@@ -249,156 +154,44 @@ export const InvitationItem = React.memo(
     const { t } = useTranslation();
 
     return (
-      <div
-        className={cn(
-          'w-full h-[64px] flex items-center justify-between cursor-pointer rounded-[20px] bg-gradient-to-r from-[#02AE8E] to-[#008AA6] px-1.5 transition-all duration-300',
-        )}
-        onClick={onClick}
-        data-cy="invite-friends-menu-item"
-      >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="flex-shrink-0 flex items-center">
-            <img src={InviteIcon} alt="Invite" className="w-7 h-7" />
-          </div>
+      <>
+        {!collapsed && (
           <div
             className={cn(
-              'flex flex-col leading-tight transition-all duration-300',
-              collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+              'w-full h-[64px] flex items-center justify-between cursor-pointer rounded-[20px] bg-gradient-to-r from-[#02AE8E] to-[#008AA6] px-1.5 transition-all duration-300',
             )}
+            onClick={onClick}
+            data-cy="invite-friends-menu-item"
           >
-            <span className="text-xs font-semibold text-white truncate">
-              {t('common.inviteFriends')}
-            </span>
-            <span className="text-xs text-white/80 truncate">{t('common.inviteRewardText')}</span>
-          </div>
-        </div>
-        <span
-          className={cn(
-            'text-white text-xs font-semibold leading-none transition-all duration-300',
-            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
-          )}
-        >
-          &gt;
-        </span>
-      </div>
-    );
-  },
-);
-
-export const SettingItem = React.memo(
-  ({
-    showName = true,
-    avatarAlign = 'left',
-    collapsed = false,
-  }: { showName?: boolean; avatarAlign?: 'left' | 'right'; collapsed?: boolean }) => {
-    const { userProfile } = useUserStoreShallow((state) => ({
-      userProfile: state.userProfile,
-    }));
-
-    const { t } = useTranslation();
-
-    const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
-
-    const { setSubscribeModalVisible } = useSubscriptionStoreShallow((state) => ({
-      setSubscribeModalVisible: state.setSubscribeModalVisible,
-    }));
-
-    const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
-      setShowSettingModal: state.setShowSettingModal,
-      setSettingsModalActiveTab: state.setSettingsModalActiveTab,
-    }));
-
-    const handleSubscriptionClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setSubscribeModalVisible(true);
-      },
-      [setSubscribeModalVisible],
-    );
-
-    const handleCreditClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setSettingsModalActiveTab(SettingsModalActiveTab.Subscription);
-        setShowSettingModal(true);
-      },
-      [setShowSettingModal, setSettingsModalActiveTab],
-    );
-
-    const renderSubscriptionInfo = useMemo(() => {
-      if (!subscriptionEnabled || !isBalanceSuccess) return null;
-
-      return (
-        <SubscriptionInfo
-          creditBalance={creditBalance}
-          userProfile={userProfile}
-          onCreditClick={handleCreditClick}
-          onSubscriptionClick={handleSubscriptionClick}
-          t={t}
-        />
-      );
-    }, [
-      creditBalance,
-      userProfile,
-      handleCreditClick,
-      handleSubscriptionClick,
-      t,
-      isBalanceSuccess,
-    ]);
-
-    const renderUserAvatar = useMemo(
-      () => <UserAvatar showName={showName} userProfile={userProfile} avatarAlign={avatarAlign} />,
-      [showName, userProfile],
-    );
-
-    if (collapsed) {
-      return (
-        <SiderMenuSettingList creditBalance={creditBalance}>
-          <div className="group w-full flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="flex-shrink-0 flex items-center">
-                <UserAvatar showName={false} userProfile={userProfile} avatarAlign="left" />
+                <img src={InviteIcon} alt="Invite" className="w-7 h-7" />
               </div>
-              <div className="opacity-0 w-0 overflow-hidden">
-                <SubscriptionInfo
-                  creditBalance={creditBalance}
-                  userProfile={userProfile}
-                  onCreditClick={handleCreditClick}
-                  onSubscriptionClick={handleSubscriptionClick}
-                  t={t}
-                />
-              </div>
-            </div>
-          </div>
-        </SiderMenuSettingList>
-      );
-    }
-
-    return (
-      <div className="group w-full">
-        <SiderMenuSettingList creditBalance={creditBalance}>
-          <div className="flex flex-1 items-center justify-between transition-all duration-300">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="flex-shrink-0 flex items-center">
-                {avatarAlign === 'left' && renderUserAvatar}
+              <div
+                className={cn(
+                  'flex flex-col leading-tight transition-all duration-300',
+                  collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
+                )}
+              >
+                <span className="text-xs font-semibold text-white truncate">
+                  {t('common.inviteFriends')}
+                </span>
+                <span className="text-xs text-white/80 truncate">
+                  {t('common.inviteRewardText')}
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-              <div className="flex-shrink-0 flex items-center">
-                {avatarAlign === 'right' && renderUserAvatar}
-              </div>
-            </div>
-            <div
+            <span
               className={cn(
-                'transition-all duration-300 flex-shrink-0',
+                'text-white text-xs font-semibold leading-none transition-all duration-300',
                 collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
               )}
             >
-              {renderSubscriptionInfo}
-            </div>
+              &gt;
+            </span>
           </div>
-        </SiderMenuSettingList>
-      </div>
+        )}
+      </>
     );
   },
 );
@@ -484,6 +277,11 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
   const handleInvitationClick = useCallback(() => {
     setShowInvitationModal(true);
   }, [setShowInvitationModal]);
+
+  // Handle settings button click
+  const handleSettingsClick = useCallback(() => {
+    setShowSettingModal(true);
+  }, [setShowSettingModal]);
 
   // Menu items configuration
   const menuItems = useMemo(
@@ -629,55 +427,65 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             ))}
 
             <Divider className="m-0 border-refly-Card-Border" />
-
-            {/* Bottom menu items */}
-            {bottomMenuItems.map((item, index) => {
-              if (item.key === 'contactUs') {
-                return (
-                  <ContactUsPopover
-                    key={`bottom-${index}`}
-                    open={openContactUs}
-                    setOpen={setOpenContactUs}
-                  >
-                    <SiderSectionHeader
-                      icon={item.icon}
-                      title={item.title}
-                      onActionClick={item.onActionClick}
-                      isActive={openContactUs}
-                      collapsed={isCollapsed}
-                    />
-                  </ContactUsPopover>
-                );
-              }
-              return (
-                <SiderSectionHeader
-                  key={`bottom-${index}`}
-                  icon={item.icon}
-                  title={item.title}
-                  onActionClick={item.onActionClick}
-                  isActive={item.key === getActiveKey()}
-                  collapsed={isCollapsed}
-                />
-              );
-            })}
           </div>
 
-          {!!userProfile?.uid && (
-            <>
-              {authConfig?.data?.some((item) => item.provider === 'invitation') && (
-                <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
-              )}
+          {!!userProfile?.uid &&
+            authConfig?.data?.some((item) => item.provider === 'invitation') && (
+              <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
+            )}
+
+          <div className="p-2 pr-0">
+            {/* Contact in collapsed state - above Settings */}
+            {isCollapsed &&
+              bottomMenuItems.map((item, index) => {
+                if (item.key === 'contactUs') {
+                  return (
+                    <ContactUsPopover
+                      key={`bottom-${index}`}
+                      open={openContactUs}
+                      setOpen={setOpenContactUs}
+                    >
+                      <div className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 mb-2">
+                        <Contact key="contactUs" style={{ fontSize: 20 }} />
+                      </div>
+                    </ContactUsPopover>
+                  );
+                }
+                return null;
+              })}
+
+            {/* Settings and Contact in expanded state */}
+            <div className="flex items-center gap-2">
               <div
-                className={cn(
-                  'flex cursor-pointer hover:bg-refly-tertiary-hover rounded-md transition-all duration-300',
-                  'h-10 items-center justify-between px-0.5',
-                )}
+                className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                onClick={handleSettingsClick}
                 data-cy="settings-menu-item"
               >
-                <SettingItem collapsed={isCollapsed} />
+                <Settings
+                  size={24}
+                  className="text-gray-800 dark:text-gray-200"
+                  style={{ strokeWidth: '2.5' }}
+                />
               </div>
-            </>
-          )}
+              {!isCollapsed &&
+                bottomMenuItems.map((item, index) => {
+                  if (item.key === 'contactUs') {
+                    return (
+                      <ContactUsPopover
+                        key={`bottom-${index}`}
+                        open={openContactUs}
+                        setOpen={setOpenContactUs}
+                      >
+                        <div className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
+                          <Contact key="contactUs" style={{ fontSize: 20 }} />
+                        </div>
+                      </ContactUsPopover>
+                    );
+                  }
+                  return null;
+                })}
+            </div>
+          </div>
         </div>
       </Sider>
     </div>

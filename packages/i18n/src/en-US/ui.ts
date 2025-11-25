@@ -705,7 +705,7 @@ const translations = {
         joinGroup: 'Join User Community',
         scanToJoinWechatGroup: 'Scan to Join WeChat Group',
         discordGroup: 'Discord Community',
-        joinDiscordGroup: 'Join Community',
+        joinDiscordGroup: 'Join Discord Community',
         notionDocument: 'Notion Document',
         viewNotionDocument: 'View Document',
         followReflyUpdates: 'Follow Refly Updates',

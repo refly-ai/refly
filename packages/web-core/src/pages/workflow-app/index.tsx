@@ -30,7 +30,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { Helmet } from 'react-helmet';
 import FooterSection from '@refly-packages/ai-workspace-common/components/workflow-app/FooterSection';
 import WhyChooseRefly from './WhyChooseRefly';
-import { SettingItem } from '@refly-packages/ai-workspace-common/components/sider/layout';
+import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 import { SelectedResultsGrid } from '@refly-packages/ai-workspace-common/components/workflow-app/selected-results-grid';
 import { WorkflowAPPForm } from './workflow-app-form';
 import Lottie from 'lottie-react';

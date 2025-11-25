@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
@@ -12,6 +12,184 @@ import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+import { useSubscriptionStoreShallow, useUserStoreShallow } from '@refly/stores';
+import { SettingsModalActiveTab } from '@refly/stores';
+import { subscriptionEnabled } from '@refly/ui-kit';
+import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
+import { SiderMenuSettingList } from '../../sider-menu-setting-list';
+import { Subscription, Account } from 'refly-icons';
+import { Avatar, Divider } from 'antd';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+
+// User avatar component for displaying user profile
+const UserAvatar = React.memo(
+  ({
+    showName = true,
+    userProfile,
+    avatarAlign,
+  }: {
+    showName?: boolean;
+    userProfile?: any;
+    avatarAlign: 'left' | 'right';
+  }) => (
+    <div
+      className={
+        // biome-ignore lint/style/useTemplate: <explanation>
+        'flex items-center gap-2 flex-shrink min-w-0 cursor-pointer ' +
+        (avatarAlign === 'left' ? 'mr-2' : 'ml-2')
+      }
+      title={userProfile?.nickname}
+    >
+      <Avatar
+        size={36}
+        src={userProfile?.avatar || defaultAvatar}
+        icon={<Account />}
+        className="flex-shrink-0 "
+      />
+      {showName && (
+        <span className={cn('inline-block truncate font-semibold text-refly-text-0')}>
+          {userProfile?.nickname}
+        </span>
+      )}
+    </div>
+  ),
+);
+
+// Subscription info component for displaying credit balance and upgrade button
+const SubscriptionInfo = React.memo(
+  ({
+    creditBalance,
+    userProfile,
+    onCreditClick,
+    onSubscriptionClick,
+    t,
+  }: {
+    creditBalance: number | string;
+    userProfile?: any;
+    onCreditClick: (e: React.MouseEvent) => void;
+    onSubscriptionClick: (e: React.MouseEvent) => void;
+    t: (key: string) => string;
+  }) => {
+    if (!subscriptionEnabled) return null;
+
+    return (
+      <div
+        onClick={onCreditClick}
+        className="h-8 p-2 flex items-center gap-1.5 text-refly-text-0 text-xs cursor-pointer
+        rounded-[80px] border-[1px] border-solid border-refly-Card-Border bg-refly-bg-content-z2 whitespace-nowrap flex-shrink-0
+      "
+      >
+        <div className="flex items-center gap-1 min-w-0 flex-1">
+          <Subscription size={14} className="text-[#1C1F23] dark:text-white flex-shrink-0" />
+          <span className="font-medium truncate">{creditBalance}</span>
+        </div>
+
+        {(!userProfile?.subscription?.planType ||
+          userProfile?.subscription?.planType === 'free') && (
+          <>
+            <Divider type="vertical" className="m-0" />
+            <div
+              onClick={onSubscriptionClick}
+              className="text-refly-primary-default text-xs font-semibold leading-4 whitespace-nowrap truncate"
+            >
+              {t('common.upgrade')}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  },
+);
+
+// Setting item component for user settings
+export const SettingItem = React.memo(
+  ({
+    showName = true,
+    avatarAlign = 'left',
+  }: { showName?: boolean; avatarAlign?: 'left' | 'right' }) => {
+    const { userProfile } = useUserStoreShallow((state) => ({
+      userProfile: state.userProfile,
+    }));
+
+    const { t } = useTranslation();
+
+    const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
+
+    const { setSubscribeModalVisible } = useSubscriptionStoreShallow((state) => ({
+      setSubscribeModalVisible: state.setSubscribeModalVisible,
+    }));
+
+    const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
+      setShowSettingModal: state.setShowSettingModal,
+      setSettingsModalActiveTab: state.setSettingsModalActiveTab,
+    }));
+
+    const handleSubscriptionClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSubscribeModalVisible(true);
+      },
+      [setSubscribeModalVisible],
+    );
+
+    const handleCreditClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSettingsModalActiveTab(SettingsModalActiveTab.Subscription);
+        setShowSettingModal(true);
+      },
+      [setShowSettingModal, setSettingsModalActiveTab],
+    );
+
+    const renderSubscriptionInfo = useMemo(() => {
+      if (!subscriptionEnabled || !isBalanceSuccess) return null;
+
+      return (
+        <SubscriptionInfo
+          creditBalance={creditBalance}
+          userProfile={userProfile}
+          onCreditClick={handleCreditClick}
+          onSubscriptionClick={handleSubscriptionClick}
+          t={t}
+        />
+      );
+    }, [
+      creditBalance,
+      userProfile,
+      handleCreditClick,
+      handleSubscriptionClick,
+      t,
+      isBalanceSuccess,
+    ]);
+
+    const renderUserAvatar = useMemo(
+      () => <UserAvatar showName={showName} userProfile={userProfile} avatarAlign={avatarAlign} />,
+      [showName, userProfile],
+    );
+
+    return (
+      <div className="group w-full">
+        <SiderMenuSettingList creditBalance={creditBalance}>
+          <div className="flex flex-1 items-center justify-between transition-all duration-300">
+            <div className="transition-all duration-300 flex-shrink-0 opacity-100 w-auto">
+              {renderSubscriptionInfo}
+            </div>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex-shrink-0 flex items-center">
+                {avatarAlign === 'left' && renderUserAvatar}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+              <div className="flex-shrink-0 flex items-center">
+                {avatarAlign === 'right' && renderUserAvatar}
+              </div>
+            </div>
+          </div>
+        </SiderMenuSettingList>
+      </div>
+    );
+  },
+);
 
 const ModuleContainer = ({
   title,
@@ -76,10 +254,6 @@ export const FrontPage = memo(() => {
     [setTemplateCategoryId],
   );
 
-  const handleViewGuide = useCallback(() => {
-    window.open('https://reflydoc.notion.site/how-to-use-refly', '_blank');
-  }, []);
-
   const handleViewAllWorkflows = useCallback(() => {
     navigate('/workflow-list');
   }, []);
@@ -91,23 +265,16 @@ export const FrontPage = memo(() => {
   return (
     <div
       className={cn(
-        'w-full h-full bg-refly-bg-content-z2 overflow-y-auto p-5 rounded-xl border border-solid border-refly-Card-Border',
+        'w-full h-full bg-refly-bg-content-z2 overflow-y-auto p-5 rounded-xl border border-solid border-refly-Card-Border relative',
       )}
       id="front-page-scrollable-div"
     >
       <Helmet>
         <title>{t('loggedHomePage.siderMenu.home')}</title>
       </Helmet>
-      <div className="p-4 rounded-xl flex flex-wrap items-center gap-6 bg-gradient-tools-open bg-refly-bg-body-z0 dark:bg-gradient-to-br dark:from-emerald-500/20 dark:via-cyan-500/15 dark:to-blue-500/10 dark:bg-refly-bg-body-z0">
-        <div className="text-xl leading-7">
-          <span className="text-refly-primary-default font-[800] mr-2">
-            {t('frontPage.guide.title')}
-          </span>
-          <span className="text-refly-text-0">{t('frontPage.guide.description')}</span>
-        </div>
-        <Button type="primary" onClick={handleViewGuide} className="font-semibold">
-          {t('frontPage.guide.view')}
-        </Button>
+
+      <div className="absolute top-4 right-4 z-10">
+        <SettingItem showName={false} avatarAlign={'right'} />
       </div>
 
       <ModuleContainer title={t('frontPage.newWorkflow.title')} className="mt-[120px]">

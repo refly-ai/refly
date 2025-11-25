@@ -15,6 +15,7 @@ import './index.scss';
 import { ListOrder } from '@refly/openapi-schema';
 import { useDebouncedCallback } from 'use-debounce';
 import { TemplateCardSkeleton } from '../canvas-template/template-card-skeleton';
+import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 
 export const AppManager = () => {
   const { t } = useTranslation();
@@ -109,6 +110,9 @@ export const AppManager = () => {
               <Sort size={20} color="var(--refly-text-0)" />
             )}
           </Button>
+          <div className="group relative">
+            <SettingItem showName={false} avatarAlign={'right'} />
+          </div>
         </div>
       </div>
 
