@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo, memo } from 'react';
-import { Empty } from 'antd';
+import { Empty, Button } from 'antd';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { Spinner } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,6 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useCanvasTemplateModal } from '@refly/stores';
 import { TemplateCard } from './template-card';
 import { TemplateCardSkeleton } from './template-card-skeleton';
-import { FaDiscord } from 'react-icons/fa6';
 
 import cn from 'classnames';
 
@@ -28,14 +27,14 @@ const EndMessage = memo(() => {
       <p className="text-sm text-refly-text-1 text-center mb-6">
         {t('frontPage.template.endMessage.title')}
       </p>
-      <button
-        type="button"
+      <Button
+        type="default"
+        size="large"
         onClick={handleGoToMarketplace}
-        className="inline-flex items-center gap-2 px-6 py-3 text-refly-primary-default text-base font-medium rounded-xl transition-colors duration-200 border border-refly-primary-default"
+        className="rounded-2xl bg-transparent border-2 border-refly-primary-default text-refly-primary-default font-semibold px-8 py-6 h-10 hover:!bg-refly-fill-hover hover:!border-refly-primary-hover hover:!text-refly-primary-hover"
       >
-        <FaDiscord size={24} />
-        <span>{t('frontPage.template.endMessage.goToMarketplace')}</span>
-      </button>
+        {t('frontPage.template.endMessage.goToMarketplace')}
+      </Button>
     </div>
   );
 });
