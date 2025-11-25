@@ -2,7 +2,7 @@ import { ActionLog, Artifact, SkillEvent, TokenUsageItem } from '@refly/openapi-
 import { SkillRunnableMeta } from '@refly/skill-template';
 
 import { aggregateTokenUsage } from '@refly/utils';
-import { Prisma } from '../generated/client';
+import { Prisma } from '@prisma/client';
 import { StepService } from '../modules/step/step.service';
 
 export interface StepData {

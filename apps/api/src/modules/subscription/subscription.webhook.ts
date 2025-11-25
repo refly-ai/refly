@@ -4,7 +4,7 @@ import { StripeWebhookHandler } from '@golevelup/nestjs-stripe';
 import { PrismaService } from '../common/prisma.service';
 import { SubscriptionService } from './subscription.service';
 import { SubscriptionInterval, SubscriptionPlanType } from '@refly/openapi-schema';
-import { Prisma } from '../../generated/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SubscriptionWebhooks {

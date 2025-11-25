@@ -11,7 +11,7 @@ import {
 } from '@refly/openapi-schema';
 import { batchReplaceRegex, genActionResultID, pick } from '@refly/utils';
 import pLimit from 'p-limit';
-import { ActionResult } from '../../generated/client';
+import { ActionResult } from '@prisma/client';
 import { ActionDetail } from '../action/action.dto';
 import { PrismaService } from '../common/prisma.service';
 import { providerItem2ModelInfo } from '../provider/provider.dto';

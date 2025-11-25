@@ -8,7 +8,7 @@ import { WebSocket } from 'ws';
 import { Server, Hocuspocus } from '@hocuspocus/server';
 import { Redis } from '@hocuspocus/extension-redis';
 import { RAGService } from '../rag/rag.service';
-import { CodeArtifact, Prisma } from '../../generated/client';
+import { CodeArtifact, Prisma } from '@prisma/client';
 import { UpsertCodeArtifactRequest, User } from '@refly/openapi-schema';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../common/redis.service';

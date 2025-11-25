@@ -1,6 +1,6 @@
 import type { GenericToolset, ToolsetAuthType, ToolsetInstance } from '@refly/openapi-schema';
 import { pick, safeParseJSON } from '@refly/utils';
-import type { McpServer as McpServerPO, Toolset as ToolsetPO } from '../../generated/client';
+import type { McpServer as McpServerPO, Toolset as ToolsetPO } from '@prisma/client';
 import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
 import { ToolsetType } from './constant';
 import type { ToolsetInventoryItem } from './inventory/inventory.service';

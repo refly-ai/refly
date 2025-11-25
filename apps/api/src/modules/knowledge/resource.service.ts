@@ -11,7 +11,7 @@ import {
   Resource as ResourceModel,
   StaticFile as StaticFileModel,
   User as UserModel,
-} from '../../generated/client';
+} from '@prisma/client';
 import { RAGService } from '../rag/rag.service';
 import { PrismaService } from '../common/prisma.service';
 import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';

@@ -17,7 +17,7 @@ interface SubtaskExecutionStatus {
 }
 import { IntentAnalysisService } from './intent-analysis.service';
 
-import { PilotStep, ActionResult } from '../../generated/client';
+import { PilotStep, ActionResult } from '@prisma/client';
 import { safeParseJSON } from '@refly/utils';
 
 @Injectable()

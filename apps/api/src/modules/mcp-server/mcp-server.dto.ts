@@ -1,4 +1,4 @@
-import { McpServer } from '../../generated/client';
+import { McpServer } from '@prisma/client';
 import { McpServerDTO, McpServerType } from '@refly/openapi-schema';
 import { pick } from '../../utils';
 import { safeParseJSON } from '@refly/utils';

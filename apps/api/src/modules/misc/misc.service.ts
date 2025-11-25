@@ -37,7 +37,7 @@ import {
 } from '@refly/errors';
 import { FileObject } from '../misc/misc.dto';
 import { createId } from '@paralleldrive/cuid2';
-import { StaticFile } from '../../generated/client';
+import { StaticFile } from '@prisma/client';
 import { PandocParser } from '../knowledge/parsers/pandoc.parser';
 import pLimit from 'p-limit';
 import { isDesktop } from '../../utils/runtime';

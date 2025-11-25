@@ -1,8 +1,5 @@
 import { pick } from '../../utils';
-import {
-  LabelClass as LabelClassModel,
-  LabelInstance as LabelInstanceModel,
-} from '../../generated/client';
+import { LabelClass as LabelClassModel, LabelInstance as LabelInstanceModel } from '@prisma/client';
 import { LabelClass, LabelInstance } from '@refly/openapi-schema';
 import { safeParseJSON } from '@refly/utils';
 

@@ -31,7 +31,7 @@ import {
 } from '@refly/skill-template';
 import { genToolsetID, safeParseJSON, validateConfig } from '@refly/utils';
 import { Queue } from 'bullmq';
-import { McpServer as McpServerPO, Prisma, Toolset as ToolsetPO } from '../../generated/client';
+import { McpServer as McpServerPO, Prisma, Toolset as ToolsetPO } from '@prisma/client';
 import { QUEUE_SYNC_TOOL_CREDIT_USAGE } from '../../utils/const';
 import { EncryptionService } from '../common/encryption.service';
 import { PrismaService } from '../common/prisma.service';

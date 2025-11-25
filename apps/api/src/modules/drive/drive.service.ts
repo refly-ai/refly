@@ -14,7 +14,7 @@ import {
   DriveFileCategory,
   DriveFileSource,
 } from '@refly/openapi-schema';
-import { Prisma, DriveFile as DriveFileModel } from '../../generated/client';
+import { Prisma, DriveFile as DriveFileModel } from '@prisma/client';
 import { genDriveFileID, getFileCategory, pick } from '@refly/utils';
 import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';

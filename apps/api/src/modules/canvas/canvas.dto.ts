@@ -3,7 +3,7 @@ import {
   ShareRecord as ShareRecordModel,
   User as UserModel,
   WorkflowApp as WorkflowAppModel,
-} from '../../generated/client';
+} from '@prisma/client';
 import { Canvas, Entity, EntityType } from '@refly/openapi-schema';
 import { pick } from '../../utils';
 import { shareRecordPO2DTO } from '../share/share.dto';

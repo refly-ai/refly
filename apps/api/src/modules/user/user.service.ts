@@ -7,7 +7,7 @@ import {
   UpdateUserSettingsRequest,
   User,
 } from '@refly/openapi-schema';
-import { Subscription } from '../../generated/client';
+import { Subscription } from '@prisma/client';
 import { pick, safeParseJSON } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';

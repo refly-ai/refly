@@ -30,7 +30,7 @@ import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
 import * as Y from 'yjs';
-import { ToolCallResult } from '../../generated/client';
+import { ToolCallResult } from '@prisma/client';
 import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,

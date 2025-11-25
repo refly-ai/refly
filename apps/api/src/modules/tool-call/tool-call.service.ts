@@ -4,7 +4,7 @@ import type { Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { writeSSEResponse } from '../../utils/response';
 import { PrismaService } from '../common/prisma.service';
-import { ActionStep, ToolCallResult } from '../../generated/client';
+import { ActionStep, ToolCallResult } from '@prisma/client';
 export type ToolEventPayload = {
   run_id?: string;
   metadata?: { toolsetKey?: string; name?: string };

@@ -1,4 +1,4 @@
-import { Canvas, Document } from '../../generated/client';
+import { Canvas, Document } from '@prisma/client';
 import { User } from '@refly/openapi-schema';
 
 type BaseEntity = {

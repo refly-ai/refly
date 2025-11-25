@@ -3,7 +3,7 @@ import { Tool, Context } from '@rekog/mcp-nest';
 import { z } from 'zod';
 import { Request } from 'express';
 import { InternalMcpService } from '../internal-mcp.service';
-import { User as UserModel } from '../../../generated/client';
+import { User as UserModel } from '@prisma/client';
 import { ProviderService } from '../../provider/provider.service';
 import { MediaGenerationModelConfig } from '@refly/openapi-schema';
 import { safeParseJSON } from '@refly/utils';
