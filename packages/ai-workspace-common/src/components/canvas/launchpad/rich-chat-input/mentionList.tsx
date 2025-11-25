@@ -492,6 +492,7 @@ export const MentionList = ({
           type: 'file' as const,
           small: true,
           filename: item.name,
+          filled: false,
         }),
         emptyStateKey: 'noFiles',
       },

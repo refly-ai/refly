@@ -176,7 +176,7 @@ export const planVariableToWorkflowVariable = (
 export const generateCanvasDataFromWorkflowPlan = (
   workflowPlan: WorkflowPlan,
   toolsets: GenericToolset[],
-  options?: { autoLayout?: boolean; defaultModel?: ModelInfo },
+  options?: { autoLayout?: boolean; defaultModel?: ModelInfo; startNodes?: CanvasNode[] },
 ): RawCanvasData => {
   const nodes: RawCanvasData['nodes'] = [];
   const edges: RawCanvasData['edges'] = [];
@@ -185,7 +185,7 @@ export const generateCanvasDataFromWorkflowPlan = (
   const taskIdToNodeId = new Map<string, string>();
   const taskIdToEntityId = new Map<string, string>();
 
-  const { autoLayout = false, defaultModel } = options ?? {};
+  const { autoLayout = false, defaultModel, startNodes = [] } = options ?? {};
 
   // Simple layout positions for non-auto-layout mode
   const taskStartX = 0;
@@ -296,7 +296,7 @@ export const generateCanvasDataFromWorkflowPlan = (
       // Use prepareAddNode to calculate proper position
       const { newNode } = prepareAddNode({
         node: nodeData,
-        nodes: nodes as any[], // Cast to match expected type
+        nodes: [...startNodes, ...nodes] as any[], // Cast to match expected type
         edges: edges as any[], // Cast to match expected type
         connectTo,
         autoLayout,
