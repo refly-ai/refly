@@ -117,7 +117,7 @@ const VariableItem = memo(
               icon={null}
               title={
                 <Paragraph
-                  className="!m-0 !p-0 text-[16px] font-semibold leading-[26px] p-3 max-w-[400px]"
+                  className="!m-0 text-[16px] font-semibold leading-[26px] p-3 max-w-[400px]"
                   ellipsis={{
                     rows: 1,
                     tooltip: (
