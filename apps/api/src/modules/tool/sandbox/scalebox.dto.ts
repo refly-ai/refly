@@ -55,6 +55,18 @@ export interface SandboxExecuteJobData {
 }
 
 /**
+ * BullMQ job data for sandbox pause (auto-pause feature)
+ */
+export interface SandboxPauseJobData {
+  sandboxId: string;
+}
+
+/**
+ * Union type for all sandbox job types
+ */
+export type SandboxJobData = SandboxExecuteJobData | SandboxPauseJobData;
+
+/**
  * Scalebox execution result (internal use)
  */
 export interface ScaleboxExecutionResult {

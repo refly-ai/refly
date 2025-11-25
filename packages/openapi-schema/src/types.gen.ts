@@ -4607,10 +4607,6 @@ export type SandboxExecuteParams = {
     | 'node'
     | 'nodejs'
     | 'deno';
-  /**
-   * Execution timeout in milliseconds
-   */
-  timeout?: number;
 };
 
 /**

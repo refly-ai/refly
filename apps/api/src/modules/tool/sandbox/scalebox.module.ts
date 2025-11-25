@@ -4,12 +4,12 @@ import { BullModule } from '@nestjs/bullmq';
 import { CommonModule } from '../../common/common.module';
 import { CanvasSyncModule } from '../../canvas-sync/canvas-sync.module';
 import { DriveModule } from '../../drive/drive.module';
-import { QUEUE_SANDBOX } from '../../../utils/const';
+import { QUEUE_SCALEBOX_EXECUTE, QUEUE_SCALEBOX_PAUSE } from '../../../utils/const';
 import { ScaleboxService } from './scalebox.service';
 import { SandboxPool } from './scalebox.pool';
 import { ScaleboxStorage } from './scalebox.storage';
 import { ScaleboxLock } from './scalebox.lock';
-import { SandboxProcessor } from './scalebox.processor';
+import { ScaleboxExecuteProcessor, ScaleboxPauseProcessor } from './scalebox.processor';
 
 /**
  * Scalebox Module
@@ -22,14 +22,28 @@ import { SandboxProcessor } from './scalebox.processor';
     CanvasSyncModule,
     DriveModule,
     BullModule.registerQueue({
-      name: QUEUE_SANDBOX,
+      name: QUEUE_SCALEBOX_EXECUTE,
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+    }),
+    BullModule.registerQueue({
+      name: QUEUE_SCALEBOX_PAUSE,
       defaultJobOptions: {
         removeOnComplete: true,
         removeOnFail: true,
       },
     }),
   ],
-  providers: [ScaleboxService, SandboxPool, ScaleboxStorage, ScaleboxLock, SandboxProcessor],
+  providers: [
+    ScaleboxService,
+    SandboxPool,
+    ScaleboxStorage,
+    ScaleboxLock,
+    ScaleboxExecuteProcessor,
+    ScaleboxPauseProcessor,
+  ],
   exports: [ScaleboxService],
 })
 export class ScaleboxModule {}

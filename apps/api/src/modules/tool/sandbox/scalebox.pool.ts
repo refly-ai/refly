@@ -1,13 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 
 import { guard } from '../../../utils/guard';
+import { QUEUE_SCALEBOX_PAUSE } from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
 
 import { SandboxCreationException } from './scalebox.exception';
 import { SandboxWrapper } from './scalebox.wrapper';
-import { ExecutionContext } from './scalebox.dto';
+import { ExecutionContext, SandboxPauseJobData } from './scalebox.dto';
 import { ScaleboxStorage } from './scalebox.storage';
 import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 import { Trace } from './scalebox.tracer';
@@ -18,6 +21,8 @@ export class SandboxPool {
     private readonly storage: ScaleboxStorage,
     private readonly config: ConfigService,
     private readonly logger: PinoLogger,
+    @InjectQueue(QUEUE_SCALEBOX_PAUSE)
+    private readonly pauseQueue: Queue<SandboxPauseJobData>,
   ) {
     this.logger.setContext(SandboxPool.name);
     void this.config; // Suppress unused warning - used by @Config decorators
@@ -29,10 +34,14 @@ export class SandboxPool {
   @Config.integer('sandbox.scalebox.maxSandboxes', SCALEBOX_DEFAULTS.MAX_SANDBOXES)
   private maxSandboxes: number;
 
+  @Config.integer('sandbox.scalebox.autoPauseDelayMs', SCALEBOX_DEFAULTS.AUTO_PAUSE_DELAY_MS)
+  private autoPauseDelayMs: number;
+
   @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
   async acquire(context: ExecutionContext): Promise<SandboxWrapper> {
     return guard(async () => {
       const sandboxId = await this.storage.popFromIdleQueue();
+      await this.cancelPause(sandboxId);
       return await this.reconnect(sandboxId, context);
     }).orElse(async (error) => {
       this.logger.warn({ canvasId: context.canvasId, error }, 'Failed to reuse idle sandbox');
@@ -65,6 +74,7 @@ export class SandboxPool {
       async () => {
         await this.storage.saveMetadata(wrapper);
         await this.storage.pushToIdleQueue(sandboxId);
+        await this.schedulePause(sandboxId);
       },
       async (error) => {
         this.logger.warn({ sandboxId, error }, 'Failed to return to idle pool');
@@ -73,6 +83,38 @@ export class SandboxPool {
     );
 
     this.logger.info({ sandboxId }, 'Sandbox cleanup completed');
+  }
+
+  private pauseJobId(sandboxId: string): string {
+    return `pause:${sandboxId}`;
+  }
+
+  private async schedulePause(sandboxId: string): Promise<void> {
+    const jobId = this.pauseJobId(sandboxId);
+
+    await this.pauseQueue.add(
+      'pause',
+      { sandboxId },
+      {
+        delay: this.autoPauseDelayMs,
+        jobId,
+      },
+    );
+
+    this.logger.info(
+      { sandboxId, jobId, delayMs: this.autoPauseDelayMs },
+      'Scheduled auto-pause job',
+    );
+  }
+
+  private async cancelPause(sandboxId: string): Promise<void> {
+    const jobId = this.pauseJobId(sandboxId);
+    const job = await this.pauseQueue.getJob(jobId);
+
+    if (job) {
+      await job.remove();
+      this.logger.info({ sandboxId, jobId }, 'Cancelled pending auto-pause job');
+    }
   }
 
   private async deleteMetadata(sandboxId: string) {

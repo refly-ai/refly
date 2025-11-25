@@ -6458,13 +6458,6 @@ export const SandboxExecuteParamsSchema = {
       enum: ['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'],
       example: 'python',
     },
-    timeout: {
-      type: 'integer',
-      description: 'Execution timeout in milliseconds',
-      minimum: 1000,
-      maximum: 300000,
-      default: 30000,
-    },
   },
 } as const;
 
