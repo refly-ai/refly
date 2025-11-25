@@ -12,32 +12,29 @@ import { FaDiscord } from 'react-icons/fa6';
 
 import cn from 'classnames';
 
-// Discord community link
-const DISCORD_LINK = 'https://discord.gg/bWjffrb89h';
+// Marketplace link
+const MARKETPLACE_LINK = 'https://refly.ai/workflow-marketplace';
 
 // Custom EndMessage component for template list
 const EndMessage = memo(() => {
   const { t } = useTranslation();
 
-  const handleJoinDiscord = useCallback(() => {
-    window.open(DISCORD_LINK, '_blank', 'noopener,noreferrer');
+  const handleGoToMarketplace = useCallback(() => {
+    window.open(MARKETPLACE_LINK, '_blank', 'noopener,noreferrer');
   }, []);
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 text-center mb-3">
+      <p className="text-sm text-refly-text-1 text-center mb-6">
         {t('frontPage.template.endMessage.title')}
-      </h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
-        {t('frontPage.template.endMessage.subtitle')}
       </p>
       <button
         type="button"
-        onClick={handleJoinDiscord}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-gray-800 text-white text-base font-medium rounded-xl hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors duration-200"
+        onClick={handleGoToMarketplace}
+        className="inline-flex items-center gap-2 px-6 py-3 text-refly-primary-default text-base font-medium rounded-xl transition-colors duration-200 border border-refly-primary-default"
       >
         <FaDiscord size={24} />
-        <span>{t('frontPage.template.endMessage.joinDiscord')}</span>
+        <span>{t('frontPage.template.endMessage.goToMarketplace')}</span>
       </button>
     </div>
   );
