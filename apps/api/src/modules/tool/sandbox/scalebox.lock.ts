@@ -1,112 +1,106 @@
 /**
- * Scalebox Lock Configuration and Calculation
- * Provides lock configuration types, validation, and automatic derivation
- */
-
-/**
- * Lock configuration for Redis-based distributed locks
- */
-export interface ScaleboxLockConfig {
-  /** Redis lock TTL in seconds (auto-expire if holder crashes) */
-  ttlSec: number;
-  /** Lock acquisition timeout in milliseconds (max wait time) */
-  timeoutMs: number;
-  /** Lock polling interval in milliseconds (retry frequency) */
-  pollIntervalMs: number;
-}
-
-/**
- * Base configuration parameters for lock calculation
- * All lock TTL and timeout values are derived from these base parameters
- */
-export interface ScaleboxLockBaseConfig {
-  /** Maximum code execution timeout in seconds (base parameter) */
-  runCodeTimeout: number;
-  /** Buffer time for file operations (listFiles × 2 + registerFiles) in seconds */
-  fileOperationBuffer: number;
-  /** Buffer time for mount/unmount operations in seconds */
-  mountUnmountBuffer: number;
-  /** Queue depth: how many requests can wait for lock */
-  queueDepth: number;
-  /** Lock polling interval in milliseconds */
-  pollIntervalMs: number;
-}
-
-/**
- * Calculated lock configuration result
- */
-export interface ScaleboxCalculatedLockConfig {
-  /** Runtime runCode timeout in milliseconds (passed to SDK) */
-  runCodeTimeoutMs: number;
-  /** Sandbox lock configuration */
-  sandbox: ScaleboxLockConfig;
-  /** Execute lock configuration */
-  execute: ScaleboxLockConfig;
-}
-
-/**
- * Calculate lock configuration from base runCodeTimeout
+ * Scalebox Distributed Lock
  *
- * Calculation formulas:
- * - sandboxLockTTL = runCodeTimeout + fileOperationBuffer
- * - executeLockTTL = sandboxLockTTL + mountUnmountBuffer
- * - sandboxLockTimeoutMs = queueDepth × sandboxLockTTL × 1000
- * - executeLockTimeoutMs = queueDepth × executeLockTTL × 1000
- *
- * Hierarchy: executeLockTTL > sandboxLockTTL > runCodeTimeout
- *
- * @param baseConfig - Base configuration parameters
- * @returns Calculated lock configuration with all derived values
+ * Execute Lifecycle (defer pattern):
+ *   🔒 execute(uid, canvasId)
+ *   └─ ↩️ wrapper [acquire/release]
+ *      └─ 🔒 sandbox(sandboxId)
+ *         └─ ↩️ drive [mount/unmount]
+ *            └─ ↩️ file [pre/post]
+ *               └─ runCode (timeout: runCodeTimeoutMs)
  */
-export function calculateLockConfig(
-  baseConfig: ScaleboxLockBaseConfig,
-): ScaleboxCalculatedLockConfig {
-  const { runCodeTimeout, fileOperationBuffer, mountUnmountBuffer, queueDepth, pollIntervalMs } =
-    baseConfig;
 
-  // Calculate Sandbox Lock TTL (covers runCode + file operations)
-  const sandboxLockTTL = runCodeTimeout + fileOperationBuffer;
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PinoLogger } from 'nestjs-pino';
 
-  // Calculate Execute Lock TTL (covers sandboxLock + mount/unmount)
-  const executeLockTTL = sandboxLockTTL + mountUnmountBuffer;
+import { guard } from '../../../utils/guard';
+import { RedisService } from '../../common/redis.service';
+import { Config } from '../../config/config.decorator';
+import { SandboxLockTimeoutException } from './scalebox.exception';
+import { REDIS_KEYS, SCALEBOX_DEFAULTS } from './scalebox.constants';
 
-  // Calculate lock acquisition timeouts (support queuing)
-  const sandboxLockTimeoutMs = queueDepth * sandboxLockTTL * 1000;
-  const executeLockTimeoutMs = queueDepth * executeLockTTL * 1000;
+@Injectable()
+export class ScaleboxLock {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly redis: RedisService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(ScaleboxLock.name);
+    void this.config;
+  }
 
-  return {
-    runCodeTimeoutMs: runCodeTimeout * 1000,
-    sandbox: {
-      ttlSec: sandboxLockTTL,
-      timeoutMs: sandboxLockTimeoutMs,
-      pollIntervalMs,
-    },
-    execute: {
-      ttlSec: executeLockTTL,
-      timeoutMs: executeLockTimeoutMs,
-      pollIntervalMs,
-    },
-  };
+  @Config.integer('sandbox.scalebox.runCodeTimeoutSec', SCALEBOX_DEFAULTS.RUN_CODE_TIMEOUT_SEC)
+  private runCodeTimeoutSec: number;
+
+  @Config.integer('sandbox.scalebox.fileBufferSec', SCALEBOX_DEFAULTS.FILE_BUFFER_SEC)
+  private fileBufferSec: number;
+
+  @Config.integer('sandbox.scalebox.driveBufferSec', SCALEBOX_DEFAULTS.DRIVE_BUFFER_SEC)
+  private driveBufferSec: number;
+
+  @Config.integer('sandbox.scalebox.queueDepth', SCALEBOX_DEFAULTS.QUEUE_DEPTH)
+  private queueDepth: number;
+
+  @Config.integer('sandbox.scalebox.lockPollIntervalMs', SCALEBOX_DEFAULTS.LOCK_POLL_INTERVAL_MS)
+  private lockPollIntervalMs: number;
+
+  get runCodeTimeoutMs(): number {
+    return this.runCodeTimeoutSec * 1000;
+  }
+
+  async acquireExecuteLock(
+    uid: string,
+    canvasId: string,
+  ): Promise<readonly [undefined, () => Promise<void>]> {
+    const lockKey = `${REDIS_KEYS.LOCK_EXECUTE_PREFIX}:${uid}:${canvasId}`;
+    const ttlSec = this.runCodeTimeoutSec + this.fileBufferSec + this.driveBufferSec;
+    const timeoutMs = this.queueDepth * ttlSec * 1000;
+
+    const releaseLock = await guard
+      .retry(() => this.tryExecuteLock(lockKey, ttlSec), {
+        timeout: timeoutMs,
+        initialDelay: this.lockPollIntervalMs,
+        maxDelay: this.lockPollIntervalMs,
+        backoffFactor: 1,
+      })
+      .orThrow(() => new SandboxLockTimeoutException(lockKey, timeoutMs));
+
+    return [undefined, releaseLock] as const;
+  }
+
+  async acquireSandboxLock(sandboxId: string): Promise<readonly [undefined, () => Promise<void>]> {
+    const ttlSec = this.runCodeTimeoutSec + this.fileBufferSec;
+    const timeoutMs = this.queueDepth * ttlSec * 1000;
+
+    const releaseLock = await guard
+      .retry(() => this.trySandboxLock(sandboxId), {
+        timeout: timeoutMs,
+        initialDelay: this.lockPollIntervalMs,
+        maxDelay: this.lockPollIntervalMs,
+        backoffFactor: 1,
+      })
+      .orThrow(() => new SandboxLockTimeoutException(`sandbox:${sandboxId}`, timeoutMs));
+
+    return [undefined, releaseLock] as const;
+  }
+
+  async trySandboxLock(sandboxId: string): Promise<() => Promise<void>> {
+    const added = await this.redis.getClient().sadd(REDIS_KEYS.ACTIVE_SET, sandboxId);
+    guard.ensure(added > 0).orThrow(() => new Error('Sandbox lock is held'));
+
+    return async () => {
+      await this.redis.getClient().srem(REDIS_KEYS.ACTIVE_SET, sandboxId);
+    };
+  }
+
+  private async tryExecuteLock(lockKey: string, ttlSec: number): Promise<() => Promise<void>> {
+    const result = await this.redis.getClient().set(lockKey, '1', 'EX', ttlSec, 'NX');
+    guard.ensure(result === 'OK').orThrow(() => new Error('Execute lock is held'));
+
+    return async () => {
+      await this.redis.getClient().del(lockKey);
+    };
+  }
 }
-
-/**
- * Default base lock configuration
- */
-export const DEFAULT_LOCK_BASE_CONFIG: ScaleboxLockBaseConfig = {
-  /** Maximum code execution timeout in seconds */
-  runCodeTimeout: 5 * 60, // 300 seconds = 5 minutes
-  /** Buffer time for file operations (listFiles × 2 + registerFiles) */
-  fileOperationBuffer: 30, // 30 seconds
-  /** Buffer time for mount/unmount operations */
-  mountUnmountBuffer: 30, // 30 seconds
-  /** Queue depth: allow 2 requests to wait for lock */
-  queueDepth: 2,
-  /** Lock polling interval in milliseconds */
-  pollIntervalMs: 100,
-};
-
-/**
- * Pre-calculated default lock configuration
- * Derived from DEFAULT_LOCK_BASE_CONFIG
- */
-export const DEFAULT_LOCK_CONFIG = calculateLockConfig(DEFAULT_LOCK_BASE_CONFIG);

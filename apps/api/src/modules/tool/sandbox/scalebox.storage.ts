@@ -2,13 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 
-import { guard } from '../../../utils/guard';
 import { RedisService } from '../../common/redis.service';
 import { Config } from '../../config/config.decorator';
 import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
-import { SandboxLockTimeoutException } from './scalebox.exception';
-import { REDIS_KEYS, SCALEBOX_DEFAULT_CONFIG } from './scalebox.constants';
-import { ScaleboxLockConfig } from './scalebox.lock';
+import { REDIS_KEYS, SCALEBOX_DEFAULTS } from './scalebox.constants';
 
 /**
  * Scalebox Storage Layer
@@ -29,7 +26,7 @@ export class ScaleboxStorage {
     void this.config; // Suppress unused warning - used by @Config decorators
   }
 
-  @Config.integer('sandbox.scalebox.sandbox.timeoutMs', SCALEBOX_DEFAULT_CONFIG.sandbox.timeoutMs)
+  @Config.integer('sandbox.scalebox.sandboxTimeoutMs', SCALEBOX_DEFAULTS.SANDBOX_TIMEOUT_MS)
   private sandboxTimeoutMs: number;
 
   // ==================== Metadata Operations ====================
@@ -66,59 +63,5 @@ export class ScaleboxStorage {
       this.redis.getClient().scard(REDIS_KEYS.ACTIVE_SET),
     ]);
     return idleCount + activeCount;
-  }
-
-  // ==================== Lock Operations ====================
-
-  async tryCommonLock(lockKey: string, ttlSec: number): Promise<() => Promise<void>> {
-    const result = await this.redis.getClient().set(lockKey, '1', 'EX', ttlSec, 'NX');
-
-    guard.ensure(result === 'OK').orThrow(() => new Error('Common lock is held'));
-
-    return async () => {
-      await this.redis.getClient().del(lockKey);
-    };
-  }
-
-  async acquireCommonLock(
-    lockKey: string,
-    lockConfig: ScaleboxLockConfig,
-  ): Promise<readonly [undefined, () => Promise<void>]> {
-    const releaseLock = await guard
-      .retry(() => this.tryCommonLock(lockKey, lockConfig.ttlSec), {
-        timeout: lockConfig.timeoutMs,
-        initialDelay: lockConfig.pollIntervalMs,
-        maxDelay: lockConfig.pollIntervalMs,
-        backoffFactor: 1,
-      })
-      .orThrow(() => new SandboxLockTimeoutException(lockKey, lockConfig.timeoutMs));
-
-    return [undefined, releaseLock] as const;
-  }
-
-  async acquireSandboxLock(
-    sandboxId: string,
-    lockConfig: ScaleboxLockConfig,
-  ): Promise<readonly [undefined, () => Promise<void>]> {
-    const releaseLock = await guard
-      .retry(() => this.trySandboxLock(sandboxId), {
-        timeout: lockConfig.timeoutMs,
-        initialDelay: lockConfig.pollIntervalMs,
-        maxDelay: lockConfig.pollIntervalMs,
-        backoffFactor: 1,
-      })
-      .orThrow(() => new SandboxLockTimeoutException(`sandbox:${sandboxId}`, lockConfig.timeoutMs));
-
-    return [undefined, releaseLock] as const;
-  }
-
-  async trySandboxLock(sandboxId: string): Promise<() => Promise<void>> {
-    const added = await this.redis.getClient().sadd(REDIS_KEYS.ACTIVE_SET, sandboxId);
-
-    guard.ensure(added > 0).orThrow(() => new Error('Sandbox lock is held'));
-
-    return async () => {
-      await this.redis.getClient().srem(REDIS_KEYS.ACTIVE_SET, sandboxId);
-    };
   }
 }

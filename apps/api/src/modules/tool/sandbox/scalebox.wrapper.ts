@@ -8,7 +8,6 @@ import { Trace, setSpanAttributes } from './scalebox.tracer';
 import {
   SandboxCreationException,
   SandboxExecutionFailedException,
-  SandboxFileListException,
   SandboxConnectionException,
   SandboxExecutionBadResultException,
 } from './scalebox.exception';
@@ -34,6 +33,13 @@ export interface SandboxMetadata {
   lastPausedAt?: number; // Timestamp of last pause operation
 }
 
+export interface ExecuteCodeContext {
+  logger: PinoLogger;
+  timeoutMs: number;
+}
+
+const S3FS_PASSWD_FILE = '/tmp/s3fs_passwd';
+
 const COMMAND_BUILDER = {
   mountS3: (
     s3Config: S3Config,
@@ -41,18 +47,29 @@ const COMMAND_BUILDER = {
     mountPoint: string,
     options?: { readOnly?: boolean; allowNonEmpty?: boolean },
   ): string => {
+    const passwdContent = `${s3Config.accessKey}:${s3Config.secretKey}`;
     const s3EndpointUrl = `https://${s3Config.endPoint}`;
-    const readOnlyFlag = options?.readOnly ? '-o ro' : '';
-    const nonemptyFlag = options?.allowNonEmpty ? '-o nonempty' : '';
-    return `AWSACCESSKEYID=${s3Config.accessKey} \
-AWSSECRETACCESSKEY=${s3Config.secretKey} \
-s3fs ${s3Config.bucket}:/${path} ${mountPoint} \
--o url=${s3EndpointUrl} \
--o endpoint=${s3Config.region} \
--o use_path_request_style \
--o compat_dir \
-${readOnlyFlag} \
-${nonemptyFlag}`.trim();
+    const optionalFlags = [
+      options?.readOnly ? '-o ro' : '',
+      options?.allowNonEmpty ? '-o nonempty' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    const s3fsCmd = [
+      `s3fs ${s3Config.bucket}:/${path} ${mountPoint}`,
+      `-o url=${s3EndpointUrl}`,
+      `-o endpoint=${s3Config.region}`,
+      `-o passwd_file=${S3FS_PASSWD_FILE}`,
+      '-o use_path_request_style',
+      '-o compat_dir',
+      optionalFlags,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    // Subshell: create passwd file → run s3fs → cleanup → return original exit code
+    return `(echo "${passwdContent}" > ${S3FS_PASSWD_FILE} && chmod 600 ${S3FS_PASSWD_FILE}; ${s3fsCmd}; ret=$?; rm -f ${S3FS_PASSWD_FILE}; exit $ret)`;
   },
 };
 
@@ -175,10 +192,7 @@ export class SandboxWrapper {
 
     const sandbox = await guard(() =>
       Sandbox.connect(metadata.sandboxId, { apiKey: context.apiKey }),
-    ).orThrow((error) => {
-      logger.error({ sandboxId: metadata.sandboxId, error }, 'Failed to reconnect to sandbox');
-      return new SandboxConnectionException(error);
-    });
+    ).orThrow((error) => new SandboxConnectionException(error));
 
     const wrapper = new SandboxWrapper(
       sandbox,
@@ -208,13 +222,6 @@ export class SandboxWrapper {
   ): Promise<void> {
     const canvasId = this.context.canvasId;
     const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
-
-    setSpanAttributes({
-      'mount.point': mountPoint,
-      'mount.path': s3DrivePath,
-      'mount.canvasId': canvasId,
-      'mount.allowNonEmpty': options?.allowNonEmpty ?? false,
-    });
 
     this.logger.info({ canvasId, mountPoint, s3DrivePath }, 'Mounting drive storage');
 
@@ -252,15 +259,13 @@ export class SandboxWrapper {
 
   @Trace('sandbox.command')
   private async runCommand(command: string) {
-    setSpanAttributes({ 'command.text': command });
-
     const result = await guard(() => this.sandbox.commands.run(command)).orThrow(
       (error) => new SandboxExecutionFailedException(error),
     );
 
-    if (result.exitCode !== 0) {
-      throw new SandboxExecutionFailedException(result.stderr, result.exitCode);
-    }
+    guard
+      .ensure(result.exitCode === 0)
+      .orThrow(() => new SandboxExecutionFailedException(result.stderr, result.exitCode));
 
     return result;
   }
@@ -268,20 +273,23 @@ export class SandboxWrapper {
   @Trace('sandbox.executeCode', { 'operation.type': 'code_execution' })
   async executeCode(
     params: SandboxExecuteParams,
-    logger: PinoLogger,
-    timeoutMs: number,
+    ctx: ExecuteCodeContext,
   ): Promise<ExecutionResult> {
-    logger.info(
+    ctx.logger.info(
       {
         sandboxId: this.sandboxId,
         canvasId: this.context.canvasId,
         language: params.language,
-        timeoutMs,
+        timeoutMs: ctx.timeoutMs,
       },
       'Executing code in sandbox',
     );
 
-    const result = await this.runCode(params, timeoutMs);
+    const result = await this.sandbox.runCode(params.code, {
+      language: params.language,
+      cwd: this.cwd,
+      timeout: ctx.timeoutMs,
+    });
 
     guard
       .ensure(result.exitCode === 0)
@@ -290,24 +298,11 @@ export class SandboxWrapper {
     return result;
   }
 
-  @Trace('code.execution')
-  private async runCode(params: SandboxExecuteParams, timeoutMs: number): Promise<ExecutionResult> {
-    return this.sandbox.runCode(params.code, {
-      language: params.language,
-      cwd: this.cwd,
-      timeout: timeoutMs,
-    });
-  }
-
   @Trace('sandbox.listFiles')
   async listCwdFiles(): Promise<string[]> {
-    const files = await guard(() =>
+    return guard(() =>
       this.sandbox.files.list(this.cwd).then((files) => files.map((file) => file.name)),
-    ).orThrow((error) => new SandboxFileListException(error));
-
-    setSpanAttributes({ 'files.count': files.length });
-
-    return files;
+    ).orThrow((error) => new SandboxExecutionFailedException(error));
   }
 
   async kill(): Promise<void> {

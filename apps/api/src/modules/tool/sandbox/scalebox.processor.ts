@@ -8,7 +8,7 @@ import { QUEUE_SANDBOX } from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
 import { ScaleboxService } from './scalebox.service';
 import { SandboxExecuteJobData, ScaleboxExecutionResult } from './scalebox.dto';
-import { SCALEBOX_DEFAULT_CONFIG } from './scalebox.constants';
+import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 
 /**
  * Sandbox Execution Processor
@@ -35,15 +35,12 @@ export class SandboxProcessor extends WorkerHost {
     void this.config; // Suppress unused warning - used by @Config decorators
   }
 
-  @Config.integer(
-    'sandbox.scalebox.pool.localConcurrentMaxSize',
-    SCALEBOX_DEFAULT_CONFIG.pool.localConcurrentMaxSize,
-  )
-  private localConcurrentMaxSize: number;
+  @Config.integer('sandbox.scalebox.localConcurrency', SCALEBOX_DEFAULTS.LOCAL_CONCURRENCY)
+  private localConcurrency: number;
 
   getWorkerOptions() {
     return {
-      concurrency: this.localConcurrentMaxSize,
+      concurrency: this.localConcurrency,
     };
   }
 

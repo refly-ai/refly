@@ -237,31 +237,19 @@ export default () => ({
   sandbox: {
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
-
-      sandbox: {
-        timeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
-      },
-
-      pool: {
-        maxSize: process.env.SCALEBOX_POOL_MAX_SIZE,
-        autoPauseDelayMs: process.env.SCALEBOX_POOL_AUTO_PAUSE_DELAY_MS,
-        queue: {
-          maxSize: process.env.SCALEBOX_POOL_QUEUE_MAX_SIZE,
-        },
-      },
-
-      lock: {
-        poolCapacity: {
-          ttlSec: process.env.SCALEBOX_LOCK_POOL_CAPACITY_TTL_SEC,
-          timeoutMs: process.env.SCALEBOX_LOCK_POOL_CAPACITY_TIMEOUT_MS,
-          pollIntervalMs: process.env.SCALEBOX_LOCK_POOL_CAPACITY_POLL_INTERVAL_MS,
-        },
-        execute: {
-          ttlSec: process.env.SCALEBOX_LOCK_EXECUTE_TTL_SEC,
-          timeoutMs: process.env.SCALEBOX_LOCK_EXECUTE_TIMEOUT_MS,
-          pollIntervalMs: process.env.SCALEBOX_LOCK_EXECUTE_POLL_INTERVAL_MS,
-        },
-      },
+      // Sandbox
+      sandboxTimeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
+      // Pool
+      maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
+      localConcurrency: process.env.SCALEBOX_LOCAL_CONCURRENCY,
+      maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+      autoPauseDelayMs: process.env.SCALEBOX_AUTO_PAUSE_DELAY_MS,
+      // Lock
+      runCodeTimeoutSec: process.env.SCALEBOX_RUN_CODE_TIMEOUT_SEC,
+      fileBufferSec: process.env.SCALEBOX_FILE_BUFFER_SEC,
+      driveBufferSec: process.env.SCALEBOX_DRIVE_BUFFER_SEC,
+      queueDepth: process.env.SCALEBOX_QUEUE_DEPTH,
+      lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
     },
   },
 });

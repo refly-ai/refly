@@ -28,12 +28,8 @@ import { SandboxPool } from './scalebox.pool';
 import { ScaleboxStorage } from './scalebox.storage';
 import { SandboxWrapper, S3Config } from './scalebox.wrapper';
 import { Trace } from './scalebox.tracer';
-import { S3_DEFAULT_CONFIG, REDIS_KEYS, SCALEBOX_DEFAULT_CONFIG } from './scalebox.constants';
-import {
-  ScaleboxLockBaseConfig,
-  ScaleboxCalculatedLockConfig,
-  calculateLockConfig,
-} from './scalebox.lock';
+import { S3_DEFAULT_CONFIG, SCALEBOX_DEFAULTS } from './scalebox.constants';
+import { ScaleboxLock } from './scalebox.lock';
 
 /**
  * Scalebox Service
@@ -44,6 +40,7 @@ export class ScaleboxService {
   constructor(
     private readonly config: ConfigService, // Used by @Config decorators
     private readonly storage: ScaleboxStorage,
+    private readonly lock: ScaleboxLock,
     private readonly driveService: DriveService,
     private readonly sandboxPool: SandboxPool,
     private readonly logger: PinoLogger,
@@ -60,113 +57,11 @@ export class ScaleboxService {
   @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
   private s3Config: S3Config;
 
-  @Config.object('sandbox.scalebox.lockBase', SCALEBOX_DEFAULT_CONFIG.lockBase)
-  private lockBaseConfig: ScaleboxLockBaseConfig;
-
-  @Config.integer(
-    'sandbox.scalebox.pool.autoPauseDelayMs',
-    SCALEBOX_DEFAULT_CONFIG.pool.autoPauseDelayMs,
-  )
+  @Config.integer('sandbox.scalebox.autoPauseDelayMs', SCALEBOX_DEFAULTS.AUTO_PAUSE_DELAY_MS)
   private autoPauseDelayMs: number;
 
-  @Config.integer(
-    'sandbox.scalebox.pool.globalMaxQueueSize',
-    SCALEBOX_DEFAULT_CONFIG.pool.globalMaxQueueSize,
-  )
-  private globalMaxQueueSize: number;
-
-  private _lockConfig: ScaleboxCalculatedLockConfig | null = null;
-
-  /**
-   * Get calculated lock configuration with validation
-   * Lock config is calculated once from base parameters and cached
-   */
-  private get lockConfig(): ScaleboxCalculatedLockConfig {
-    if (!this._lockConfig) {
-      // Validate base configuration
-      guard
-        .ensure(this.lockBaseConfig.runCodeTimeout >= 10)
-        .orThrow(
-          () =>
-            new SandboxRequestParamsException('lockConfig', 'runCodeTimeout must be >= 10 seconds'),
-        );
-
-      guard
-        .ensure(this.lockBaseConfig.runCodeTimeout <= 3600)
-        .orThrow(
-          () =>
-            new SandboxRequestParamsException(
-              'lockConfig',
-              'runCodeTimeout must be <= 3600 seconds (1 hour)',
-            ),
-        );
-
-      guard
-        .ensure(this.lockBaseConfig.fileOperationBuffer >= 5)
-        .orThrow(
-          () =>
-            new SandboxRequestParamsException(
-              'lockConfig',
-              'fileOperationBuffer must be >= 5 seconds',
-            ),
-        );
-
-      guard
-        .ensure(this.lockBaseConfig.mountUnmountBuffer >= 5)
-        .orThrow(
-          () =>
-            new SandboxRequestParamsException(
-              'lockConfig',
-              'mountUnmountBuffer must be >= 5 seconds',
-            ),
-        );
-
-      guard
-        .ensure(this.lockBaseConfig.queueDepth >= 1 && this.lockBaseConfig.queueDepth <= 10)
-        .orThrow(
-          () =>
-            new SandboxRequestParamsException('lockConfig', 'queueDepth must be between 1 and 10'),
-        );
-
-      guard
-        .ensure(
-          this.lockBaseConfig.pollIntervalMs >= 50 && this.lockBaseConfig.pollIntervalMs <= 1000,
-        )
-        .orThrow(
-          () =>
-            new SandboxRequestParamsException(
-              'lockConfig',
-              'pollIntervalMs must be between 50 and 1000',
-            ),
-        );
-
-      // Calculate lock configuration
-      this._lockConfig = calculateLockConfig(this.lockBaseConfig);
-
-      this.logger.info(
-        {
-          baseConfig: this.lockBaseConfig,
-          calculated: {
-            runCodeTimeoutMs: this._lockConfig.runCodeTimeoutMs,
-            sandboxLockTTL: this._lockConfig.sandbox.ttlSec,
-            executeLockTTL: this._lockConfig.execute.ttlSec,
-            sandboxLockTimeout: this._lockConfig.sandbox.timeoutMs,
-            executeLockTimeout: this._lockConfig.execute.timeoutMs,
-          },
-        },
-        'Lock configuration calculated and validated',
-      );
-    }
-
-    return this._lockConfig;
-  }
-
-  private async acquireExecuteLock(context: ExecutionContext) {
-    return this.storage.acquireCommonLock(
-      `${REDIS_KEYS.LOCK_EXECUTE_PREFIX}:${context.uid}:${context.canvasId}`,
-      this.lockConfig.execute,
-    );
-  }
+  @Config.integer('sandbox.scalebox.maxQueueSize', SCALEBOX_DEFAULTS.MAX_QUEUE_SIZE)
+  private maxQueueSize: number;
 
   private async acquireSandboxWrapper(
     context: ExecutionContext,
@@ -250,15 +145,15 @@ export class ScaleboxService {
       .orThrow(() => new SandboxRequestParamsException('executeCode', 'canvasId is required'));
 
     return guard.defer(
-      () => this.acquireExecuteLock(context),
+      () => this.lock.acquireExecuteLock(context.uid, context.canvasId),
       () =>
         guard.defer(
           () => this.acquireSandboxWrapper(context),
           (wrapper) =>
             guard.defer(
-              () => this.storage.acquireSandboxLock(wrapper.sandboxId, this.lockConfig.sandbox),
-              async () => {
-                const result = await guard.defer(
+              () => this.lock.acquireSandboxLock(wrapper.sandboxId),
+              () =>
+                guard.defer(
                   () => this.acquireMountDrive(wrapper, context),
                   () => this.runCodeInSandbox(wrapper, params, context),
                   (error) =>
@@ -266,10 +161,7 @@ export class ScaleboxService {
                       { sandboxId: wrapper.sandboxId, error },
                       'Failed to unmount drive',
                     ),
-                );
-                this.scheduleAutoPause(wrapper.sandboxId);
-                return result;
-              },
+                ),
             ),
         ),
     );
@@ -308,12 +200,9 @@ export class ScaleboxService {
     params: SandboxExecuteParams,
     context: ExecutionContext,
   ): Promise<ScaleboxExecutionResult> {
-    // Use pre-calculated runCode timeout from lock configuration
-    const timeoutMs = this.lockConfig.runCodeTimeoutMs;
-
     const result = await guard.defer(
       () => this.acquireRegisterFiles(wrapper, context),
-      () => this.executeDefenseCriticalError(wrapper, params, timeoutMs),
+      () => this.executeDefenseCriticalError(wrapper, params),
       (error) => this.logger.error({ error }, 'Failed to register files'),
     );
 
@@ -327,12 +216,10 @@ export class ScaleboxService {
     };
   }
 
-  private async executeDefenseCriticalError(
-    wrapper: SandboxWrapper,
-    params: SandboxExecuteParams,
-    timeoutMs: number,
-  ) {
-    return guard(() => wrapper.executeCode(params, this.logger, timeoutMs)).orElse(
+  private async executeDefenseCriticalError(wrapper: SandboxWrapper, params: SandboxExecuteParams) {
+    const timeoutMs = this.lock.runCodeTimeoutMs;
+
+    return guard(() => wrapper.executeCode(params, { logger: this.logger, timeoutMs })).orElse(
       async (error) => {
         this.logger.error({ error }, 'Defense critical error');
 
@@ -361,111 +248,106 @@ export class ScaleboxService {
    * Schedule auto-pause for idle sandbox (cost optimization strategy)
    * Non-blocking: scheduled in background, errors are logged but don't affect caller
    */
-  private scheduleAutoPause(sandboxId: string): void {
-    this.logger.info(
-      {
-        sandboxId,
-        autoPauseInMinutes: this.autoPauseDelayMs / 60000,
-      },
-      'Scheduling auto-pause for idle sandbox',
-    );
+  // private scheduleAutoPause(sandboxId: string): void {
+  //   this.logger.info(
+  //     {
+  //       sandboxId,
+  //       autoPauseInMinutes: this.autoPauseDelayMs / 60000,
+  //     },
+  //     'Scheduling auto-pause for idle sandbox',
+  //   );
 
-    setTimeout(
-      () =>
-        guard.bestEffort(
-          () => this.tryAutoPause(sandboxId),
-          (error) => this.logger.warn({ sandboxId, error }, 'Failed to auto-pause sandbox'),
-        ),
-      this.autoPauseDelayMs,
-    );
-  }
+  //   setTimeout(
+  //     () =>
+  //       guard.bestEffort(
+  //         () => this.tryAutoPause(sandboxId),
+  //         (error) => this.logger.warn({ sandboxId, error }, 'Failed to auto-pause sandbox'),
+  //       ),
+  //     this.autoPauseDelayMs,
+  //   );
+  // }
 
   /**
    * Attempt to auto-pause an idle sandbox
    * Tries to acquire sandbox lock once, skips if lock is held
    */
-  private async tryAutoPause(sandboxId: string): Promise<void> {
-    this.logger.info({ sandboxId }, 'Attempting to auto-pause sandbox');
+  // private async tryAutoPause(sandboxId: string): Promise<void> {
+  //   this.logger.info({ sandboxId }, 'Attempting to auto-pause sandbox');
 
-    const metadata = await this.storage.loadMetadata(sandboxId);
-    if (!metadata) {
-      this.logger.info({ sandboxId }, 'Sandbox metadata not found, skipping auto-pause');
-      return;
-    }
+  //   const metadata = await this.storage.loadMetadata(sandboxId);
+  //   if (!metadata) {
+  //     this.logger.info({ sandboxId }, 'Sandbox metadata not found, skipping auto-pause');
+  //     return;
+  //   }
 
-    if (metadata.isPaused) {
-      this.logger.info({ sandboxId }, 'Sandbox already paused, skipping auto-pause');
-      return;
-    }
+  //   if (metadata.isPaused) {
+  //     this.logger.info({ sandboxId }, 'Sandbox already paused, skipping auto-pause');
+  //     return;
+  //   }
 
-    const idleDuration = Date.now() - metadata.idleSince;
+  //   const idleDuration = Date.now() - metadata.idleSince;
 
-    if (idleDuration < this.autoPauseDelayMs) {
-      this.logger.info(
-        { sandboxId, idleSeconds: (idleDuration / 1000).toFixed(1) },
-        'Sandbox not idle long enough, skipping auto-pause',
-      );
-      return;
-    }
+  //   if (idleDuration < this.autoPauseDelayMs) {
+  //     this.logger.info(
+  //       { sandboxId, idleSeconds: (idleDuration / 1000).toFixed(1) },
+  //       'Sandbox not idle long enough, skipping auto-pause',
+  //     );
+  //     return;
+  //   }
 
-    await guard.bestEffort(
-      async () => {
-        await guard.defer(
-          async () => {
-            const releaseLock = await this.storage.trySandboxLock(sandboxId);
-            return [undefined, releaseLock] as const;
-          },
-          async () => {
-            const context: ExecutionContext = {
-              uid: '',
-              apiKey: this.scaleboxApiKey,
-              canvasId: '',
-              s3DrivePath: '',
-            };
+  //   await guard.bestEffort(
+  //     async () => {
+  //       await guard.defer(
+  //         async () => {
+  //           const releaseLock = await this.lock.trySandboxLock(sandboxId);
+  //           return [undefined, releaseLock] as const;
+  //         },
+  //         async () => {
+  //           const context: ExecutionContext = {
+  //             uid: '',
+  //             apiKey: this.scaleboxApiKey,
+  //             canvasId: '',
+  //             s3DrivePath: '',
+  //           };
 
-            const wrapper = await SandboxWrapper.reconnect(this.logger, context, metadata);
+  //           const wrapper = await SandboxWrapper.reconnect(this.logger, context, metadata);
 
-            const info = await wrapper.getInfo();
-            this.logger.info(
-              { sandboxId, status: info.status, idleMinutes: (idleDuration / 60000).toFixed(1) },
-              'Starting auto-pause for idle sandbox',
-            );
-            await wrapper.betaPause();
-            wrapper.markAsPaused();
-            await this.storage.saveMetadata(wrapper);
-          },
-        );
-      },
-      (error) => this.logger.warn({ sandboxId, error }, 'Failed to auto-pause sandbox'),
-    );
-  }
+  //           const info = await wrapper.getInfo();
+  //           this.logger.info(
+  //             { sandboxId, status: info.status, idleMinutes: (idleDuration / 60000).toFixed(1) },
+  //             'Starting auto-pause for idle sandbox',
+  //           );
+  //           await wrapper.betaPause();
+  //           wrapper.markAsPaused();
+  //           await this.storage.saveMetadata(wrapper);
+  //         },
+  //       );
+  //     },
+  //     (error) => this.logger.warn({ sandboxId, error }, 'Failed to auto-pause sandbox'),
+  //   );
+  // }
 
   private async executeViaQueue(
     params: SandboxExecuteParams,
     context: ExecutionContext,
   ): Promise<ScaleboxExecutionResult> {
-    if (this.globalMaxQueueSize > 0) {
+    if (this.maxQueueSize > 0) {
       const queueSize = await this.sandboxQueue.count();
-      guard.ensure(queueSize < this.globalMaxQueueSize).orThrow(() => {
+      guard.ensure(queueSize < this.maxQueueSize).orThrow(() => {
         this.logger.warn(
           {
             queueSize,
-            globalMaxQueueSize: this.globalMaxQueueSize,
+            maxQueueSize: this.maxQueueSize,
             canvasId: context.canvasId,
           },
           'Sandbox queue is full, rejecting request',
         );
-        return new QueueOverloadedException(queueSize, this.globalMaxQueueSize);
+        return new QueueOverloadedException(queueSize, this.maxQueueSize);
       });
     }
 
     return guard.defer(
-      async () => {
-        const queueEvents = new QueueEvents(QUEUE_SANDBOX, {
-          connection: this.sandboxQueue.opts.connection,
-        });
-        return [queueEvents, () => queueEvents.close()] as const;
-      },
+      () => this.acquireQueueEvents(),
       async (queueEvents) => {
         const job = await this.sandboxQueue.add('execute', {
           params,
@@ -484,5 +366,12 @@ export class ScaleboxService {
         return await job.waitUntilFinished(queueEvents);
       },
     );
+  }
+
+  private async acquireQueueEvents(): Promise<readonly [QueueEvents, () => Promise<void>]> {
+    const queueEvents = new QueueEvents(QUEUE_SANDBOX, {
+      connection: this.sandboxQueue.opts.connection,
+    });
+    return [queueEvents, () => queueEvents.close()] as const;
   }
 }

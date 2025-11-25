@@ -9,7 +9,7 @@ import { SandboxCreationException } from './scalebox.exception';
 import { SandboxWrapper } from './scalebox.wrapper';
 import { ExecutionContext } from './scalebox.dto';
 import { ScaleboxStorage } from './scalebox.storage';
-import { SCALEBOX_DEFAULT_CONFIG } from './scalebox.constants';
+import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 import { Trace } from './scalebox.tracer';
 
 @Injectable()
@@ -23,10 +23,10 @@ export class SandboxPool {
     void this.config; // Suppress unused warning - used by @Config decorators
   }
 
-  @Config.integer('sandbox.scalebox.sandbox.timeoutMs', SCALEBOX_DEFAULT_CONFIG.sandbox.timeoutMs)
+  @Config.integer('sandbox.scalebox.sandboxTimeoutMs', SCALEBOX_DEFAULTS.SANDBOX_TIMEOUT_MS)
   private sandboxTimeoutMs: number;
 
-  @Config.integer('sandbox.scalebox.pool.maxSandboxes', SCALEBOX_DEFAULT_CONFIG.pool.maxSandboxes)
+  @Config.integer('sandbox.scalebox.maxSandboxes', SCALEBOX_DEFAULTS.MAX_SANDBOXES)
   private maxSandboxes: number;
 
   @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })

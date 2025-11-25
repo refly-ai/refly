@@ -8,6 +8,7 @@ import { QUEUE_SANDBOX } from '../../../utils/const';
 import { ScaleboxService } from './scalebox.service';
 import { SandboxPool } from './scalebox.pool';
 import { ScaleboxStorage } from './scalebox.storage';
+import { ScaleboxLock } from './scalebox.lock';
 import { SandboxProcessor } from './scalebox.processor';
 
 /**
@@ -28,7 +29,7 @@ import { SandboxProcessor } from './scalebox.processor';
       },
     }),
   ],
-  providers: [ScaleboxService, SandboxPool, ScaleboxStorage, SandboxProcessor],
+  providers: [ScaleboxService, SandboxPool, ScaleboxStorage, ScaleboxLock, SandboxProcessor],
   exports: [ScaleboxService],
 })
 export class ScaleboxModule {}
