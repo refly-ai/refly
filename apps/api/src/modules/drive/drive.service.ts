@@ -14,7 +14,7 @@ import {
   DriveFileCategory,
   DriveFileSource,
 } from '@refly/openapi-schema';
-import { Prisma, DriveFile as DriveFileModel } from '../../generated/client';
+import { Prisma, DriveFile as DriveFileModel } from '@prisma/client';
 import { genDriveFileID, getFileCategory, pick } from '@refly/utils';
 import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
@@ -654,19 +654,90 @@ export class DriveService {
   }
 
   /**
+   * Duplicate a drive file to a new canvas
+   */
+  async duplicateDriveFile(
+    user: User,
+    sourceFile: DriveFile & { storageKey?: string | null },
+    newCanvasId: string,
+    newFileId?: string,
+  ): Promise<DriveFile> {
+    const fileId = newFileId ?? genDriveFileID();
+
+    const newStorageKey = this.generateStorageKey(user, {
+      ...sourceFile,
+      canvasId: newCanvasId,
+    });
+
+    try {
+      await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
+    } catch (error) {
+      this.logger.error(
+        `Failed to copy file ${sourceFile.fileId} from ${sourceFile.storageKey} to ${newStorageKey}: ${error.stack}`,
+      );
+      throw error;
+    }
+
+    // Create new drive file record with same metadata but new IDs
+    const duplicatedFile = await this.prisma.driveFile.create({
+      data: {
+        fileId: fileId,
+        uid: user.uid,
+        canvasId: newCanvasId,
+        name: sourceFile.name,
+        type: sourceFile.type,
+        category: sourceFile.category,
+        size: BigInt(sourceFile.size || 0),
+        source: sourceFile.source,
+        scope: sourceFile.scope,
+        storageKey: newStorageKey,
+        summary: sourceFile.summary ?? null,
+        variableId: sourceFile.variableId ?? null,
+        resultId: sourceFile.resultId ?? null,
+        resultVersion: sourceFile.resultVersion ?? null,
+      },
+    });
+
+    this.logger.log(
+      `Duplicated drive file record from ${sourceFile.fileId} to ${fileId} for canvas ${newCanvasId}`,
+    );
+
+    return driveFilePO2DTO(duplicatedFile);
+  }
+
+  /**
    * Get drive file stream for serving file content
+   * Supports both user-owned files and shared files
    */
   async getDriveFileStream(
     user: User,
     fileId: string,
   ): Promise<{ data: Buffer; contentType: string; filename: string }> {
-    const driveFile = await this.prisma.driveFile.findFirst({
+    // First try to find the file owned by the current user
+    let driveFile = await this.prisma.driveFile.findFirst({
       select: { uid: true, canvasId: true, name: true, type: true, storageKey: true },
       where: { fileId, uid: user.uid, deletedAt: null },
     });
 
+    // If not found, check if it's a shared file
     if (!driveFile) {
-      throw new NotFoundException(`Drive file not found: ${fileId}`);
+      driveFile = await this.prisma.driveFile.findFirst({
+        select: { uid: true, canvasId: true, name: true, type: true, storageKey: true },
+        where: { fileId, deletedAt: null },
+      });
+
+      // Verify the share exists and is not deleted
+      const shareRecord = await this.prisma.shareRecord.findFirst({
+        where: { shareId: driveFile.canvasId, deletedAt: null },
+      });
+
+      if (!shareRecord) {
+        throw new NotFoundException(`Shared file not found: ${fileId}`);
+      }
+
+      this.logger.log(
+        `Serving shared file ${fileId} from share ${driveFile.canvasId} to user ${user.uid}`,
+      );
     }
 
     // Generate drive storage path

@@ -9,7 +9,7 @@ import { useActionResultStoreShallow } from '@refly/stores';
 import { TbArrowBackUp } from 'react-icons/tb';
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 import { useTranslation } from 'react-i18next';
-const { Text } = Typography;
+const { Paragraph } = Typography;
 
 // Convert DriveFile type to ResourceType
 const getResourceType = (fileType: string): ResourceType => {
@@ -114,50 +114,55 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
         source === 'card' ? 'rounded-lg border-[1px] border-solid border-refly-Card-Border' : '',
       )}
     >
-      <div className="flex flex-col justify-between px-3 py-4">
-        <div className="flex justify-between">
-          <div className="flex items-center gap-2">
-            {source === 'preview' && (
-              <Button
-                type="text"
-                size="small"
-                icon={<TbArrowBackUp className="text-refly-text-0 w-5 h-5" />}
-                onClick={handleClosePreview}
-              />
-            )}
-            <NodeIcon
-              type="resource"
-              resourceType={getResourceType(file.type)}
-              resourceMeta={{ contentType: file.type }}
-              filled={false}
-              small
+      <div className="w-full px-3 py-4 flex justify-between">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {source === 'preview' && (
+            <Button
+              type="text"
+              size="small"
+              icon={<TbArrowBackUp className="text-refly-text-0 w-5 h-5" />}
+              onClick={handleClosePreview}
             />
-            <Text className="text-sm font-semibold">{title}</Text>
-          </div>
+          )}
+          <NodeIcon type="file" filename={title} fileType={file.type} filled={false} small />
+          <Paragraph
+            className="!m-0 text-sm font-semibold flex-1 min-w-0"
+            ellipsis={{
+              rows: 1,
+              tooltip: {
+                title: <div className="max-h-[200px] overflow-y-auto">{title}</div>,
+                placement: 'left',
+                arrow: false,
+              },
+            }}
+          >
+            {title}
+          </Paragraph>
+        </div>
 
-          <div className="flex items-center gap-1">
-            {actions.map(
-              (action) =>
-                action && (
-                  <ActionButton
-                    key={action.label}
-                    icon={action.icon}
-                    label={action.label}
-                    onClick={action.onClick}
-                    loading={action.loading}
-                  />
-                ),
-            )}
-          </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {actions.map(
+            (action) =>
+              action && (
+                <ActionButton
+                  key={action.label}
+                  icon={action.icon}
+                  label={action.label}
+                  onClick={action.onClick}
+                  loading={action.loading}
+                />
+              ),
+          )}
         </div>
       </div>
+
       <div
-        className={cn('relative w-full px-3 pb-3 overflow-y-auto group', {
-          'max-h-[240px] !overflow-hidden relative': !isMediaFile && source === 'card',
+        className={cn('relative w-full px-3 overflow-y-auto pb-3 group', {
+          'max-h-[240px] !overflow-hidden flex': !isMediaFile && source === 'card',
         })}
       >
         {canPreview && source === 'card' && (
-          <div className="absolute z-10 bottom-2.5 left-2.5 right-3.5 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
+          <div className="absolute z-10 bottom-3 left-3 right-3 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
             <div
               className="p-3 rounded-[80px] bg-refly-text-2 text-sm leading-5 font-semibold text-refly-text-flip cursor-pointer select-none"
               onClick={handlePreview}

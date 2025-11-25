@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useEffect, useState, useRef, memo } from 'react';
-import { Modal, Result, message } from 'antd';
+import { Modal, Result, message, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
@@ -31,6 +31,7 @@ import {
   useCanvasResourcesPanelStoreShallow,
   useUserStoreShallow,
   useCopilotStoreShallow,
+  useToolStoreShallow,
 } from '@refly/stores';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
@@ -59,8 +60,6 @@ import {
   NodeDragCreateInfo,
   nodeOperationsEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeOperations';
-import { WorkflowRun } from './workflow-run';
-import { useCanvasInitialActions } from '@refly-packages/ai-workspace-common/hooks/use-canvas-initial-actions';
 import { CanvasDrive, CanvasResourcesWidescreenModal } from './canvas-resources';
 import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
 import { CanvasControlButtons } from './top-toolbar/canvas-control-buttons';
@@ -71,6 +70,8 @@ import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canva
 import { PreviewBoxInCanvas } from './preview-box-in-canvas';
 import { CopilotContainer } from './copilot-container';
 import { cn } from '@refly/utils/cn';
+import { ToolStore } from '../settings/tools-config/tools/tool-store';
+import { Close } from 'refly-icons';
 
 const GRID_SIZE = 10;
 
@@ -135,8 +136,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   );
 
   useHandleOrphanNode();
-
-  useCanvasInitialActions(canvasId);
 
   const { addNode } = useAddNode();
   const { nodes, edges } = useStore(
@@ -253,6 +252,11 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
 
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState(0);
+  const [previewWidth, setPreviewWidth] = useState(400);
+
+  const handlePreviewWidthChange = useCallback((width: number) => {
+    setPreviewWidth(width);
+  }, []);
 
   // Handle selection state to prevent text selection outside canvas
   useEffect(() => {
@@ -737,11 +741,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   // Memoize the node types configuration
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
-  const readonlyNodesChange = useCallback(() => {
-    // No-op function for readonly mode
-    return nodes;
-  }, [nodes]);
-
   const readonlyEdgesChange = useCallback(() => {
     // No-op function for readonly mode
     return edges;
@@ -1015,13 +1014,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm rounded-xl border-solid border-[1px] border-refly-Card-Border">
         <div className="flex-grow relative">
           <style>{selectionStyles}</style>
-          {readonly && (
-            <style>{`
-              .react-flow__node {
-                cursor: not-allowed !important;
-              }
-            `}</style>
-          )}
           <DropOverlay />
           <ReactFlow
             {...flowConfig}
@@ -1043,7 +1035,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
             nodeTypes={memoizedNodeTypes}
             nodes={memoizedNodes}
             edges={memoizedEdges}
-            onNodesChange={readonly ? readonlyNodesChange : onNodesChange}
+            onNodesChange={onNodesChange}
             onEdgesChange={readonly ? readonlyEdgesChange : onEdgesChange}
             onConnect={readonly ? readonlyConnect : onConnect}
             onConnectStart={readonly ? undefined : temporaryEdgeOnConnectStart}
@@ -1057,7 +1049,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
             nodeDragThreshold={10}
             nodesDraggable={!readonly}
             nodesConnectable={!readonly}
-            elementsSelectable={!readonly}
+            elementsSelectable={true}
             onSelectionContextMenu={readonly ? undefined : onSelectionContextMenu}
             deleteKeyCode={readonly ? null : ['Backspace', 'Delete']}
             multiSelectionKeyCode={readonly ? null : ['Shift', 'Meta']}
@@ -1080,8 +1072,13 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
         {readonly && shareNotFound && <NotFoundOverlay />}
         {!sidePanelVisible && <CanvasControlButtons />}
         <ToolbarButtons canvasId={canvasId} />
-        <PreviewBoxInCanvas node={selectedNode} />
-        <WorkflowRun />
+        <PreviewBoxInCanvas
+          node={selectedNode}
+          previewWidth={previewWidth}
+          setPreviewWidth={handlePreviewWidthChange}
+          maxPanelWidth={maxPanelWidth}
+        />
+
         <CopilotContainer
           copilotWidth={copilotWidth}
           setCopilotWidth={handleSetCopilotWidth}
@@ -1108,6 +1105,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
 
 export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
   const { canvasId, readonly } = props;
+  const { t } = useTranslation();
   const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
 
   const { sidePanelVisible, setSidePanelVisible, resetState } = useCanvasResourcesPanelStoreShallow(
@@ -1123,6 +1121,11 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     setCanvasCopilotWidth: state.setCanvasCopilotWidth,
   }));
   const isLogin = useUserStoreShallow((state) => state.isLogin);
+
+  const { toolStoreModalOpen, setToolStoreModalOpen } = useToolStoreShallow((state) => ({
+    toolStoreModalOpen: state.toolStoreModalOpen,
+    setToolStoreModalOpen: state.setToolStoreModalOpen,
+  }));
 
   const [copilotWidth, setCopilotWidth] = useState(!readonly && isLogin ? 400 : 0);
 
@@ -1216,6 +1219,35 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
             <CanvasDrive className={!sidePanelVisible ? 'hidden' : ''} />
           </div>
           <CanvasResourcesWidescreenModal />
+
+          {/* Tool Store Modal */}
+          <Modal
+            open={toolStoreModalOpen}
+            onCancel={() => setToolStoreModalOpen(false)}
+            title={null}
+            footer={null}
+            className="provider-store-modal"
+            width="calc(100vw - 80px)"
+            style={{ height: 'calc(var(--screen-height) - 80px)' }}
+            centered
+            closable={false}
+            destroyOnClose
+          >
+            <div className="h-full w-full overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-5 border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
+                <div className="text-lg font-semibold text-refly-text-0 leading-7">
+                  {t('settings.toolStore.title')}
+                </div>
+                <Button
+                  type="text"
+                  icon={<Close size={24} />}
+                  onClick={() => setToolStoreModalOpen(false)}
+                />
+              </div>
+
+              <ToolStore />
+            </div>
+          </Modal>
         </CanvasProvider>
       </ReactFlowProvider>
     </EditorPerformanceProvider>

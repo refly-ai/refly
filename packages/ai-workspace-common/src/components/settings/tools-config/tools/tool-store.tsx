@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
+import {
+  useListToolsetInventory,
+  useListToolsets,
+} from '@refly-packages/ai-workspace-common/queries';
 import { Col, Empty, Row, Button, Typography, Skeleton, Input, message } from 'antd';
 import { ToolsetDefinition } from '@refly-packages/ai-workspace-common/requests';
 import { Search } from 'refly-icons';
@@ -120,10 +123,22 @@ export const ToolStore = () => {
     enabled: toolStoreModalOpen,
   });
 
-  const tools = useMemo(
-    () => (data?.data || []).filter((tool) => !tool.builtin && tool.key !== 'builtin'),
-    [data?.data],
-  );
+  // Get list of installed toolsets to filter out from store
+  const { data: installedToolsets } = useListToolsets({}, [], {
+    enabled: toolStoreModalOpen,
+  });
+
+  const tools = useMemo(() => {
+    const allTools = (data?.data || []).filter((tool) => !tool.builtin && tool.key !== 'builtin');
+
+    // Get set of keys for all installed toolsets (both global and user-installed)
+    const installedToolKeys = new Set(
+      (installedToolsets?.data || []).map((toolset) => toolset.key),
+    );
+
+    // Filter out tools that are already installed (globally or by user)
+    return allTools.filter((tool) => !installedToolKeys.has(tool.key));
+  }, [data?.data, installedToolsets?.data]);
 
   // Debounce search text to improve performance
   useEffect(() => {

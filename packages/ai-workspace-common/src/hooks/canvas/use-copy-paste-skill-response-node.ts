@@ -84,18 +84,23 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
 
       // Check for mod key (Command on Mac, Ctrl on Windows/Linux)
       const isModKey = e.metaKey || e.ctrlKey;
+      const selectedTextLength =
+        typeof window === 'undefined' ? 0 : (window.getSelection()?.toString()?.length ?? 0);
+      const hasTextSelection = selectedTextLength > 0;
 
-      // Handle copy (Cmd/Ctrl + C)
+      // Handle copy (Cmd/Ctrl + C) only when there is no text selection
       if (isModKey && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
-        handleCopy();
+        if (!hasTextSelection) {
+          handleCopy();
+        }
         return;
       }
 
-      // Handle paste (Cmd/Ctrl + V)
+      // Handle paste (Cmd/Ctrl + V) only when there is no text selection
       if (isModKey && e.key.toLowerCase() === 'v') {
-        e.preventDefault();
-        handlePaste();
+        if (!hasTextSelection) {
+          handlePaste();
+        }
         return;
       }
     },

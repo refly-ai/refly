@@ -2,10 +2,16 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { ActionResultNotFoundError } from '@refly/errors';
-import { AbortActionRequest, EntityType, GetActionResultData, User } from '@refly/openapi-schema';
+import {
+  AbortActionRequest,
+  ActionErrorType,
+  EntityType,
+  GetActionResultData,
+  User,
+} from '@refly/openapi-schema';
 import { batchReplaceRegex, genActionResultID, pick } from '@refly/utils';
 import pLimit from 'p-limit';
-import { ActionResult } from '../../generated/client';
+import { ActionResult } from '@prisma/client';
 import { ActionDetail } from '../action/action.dto';
 import { PrismaService } from '../common/prisma.service';
 import { providerItem2ModelInfo } from '../provider/provider.dto';
@@ -358,11 +364,16 @@ export class ActionService {
     }
   }
 
-  async abortActionFromReq(user: User, req: AbortActionRequest, reason?: string) {
+  async abortActionFromReq(
+    user: User,
+    req: AbortActionRequest,
+    reason?: string,
+    errorType?: ActionErrorType,
+  ) {
     const { resultId, version } = req;
 
-    // Verify that the action belongs to the user
-    const result = await this.prisma.actionResult.findFirst({
+    // Try exact version first, fallback to latest version if not found (handles rapid start-stop)
+    let result = await this.prisma.actionResult.findFirst({
       where: {
         resultId,
         version,
@@ -370,46 +381,51 @@ export class ActionService {
       },
     });
 
+    // If exact version not found, try to find the latest version for this resultId
+    if (!result) {
+      this.logger.warn(
+        `Action result ${resultId} version ${version} not found, trying to find latest version`,
+      );
+      result = await this.prisma.actionResult.findFirst({
+        where: {
+          resultId,
+          uid: user.uid,
+        },
+        orderBy: {
+          version: 'desc',
+        },
+      });
+    }
+
     if (!result) {
       throw new ActionResultNotFoundError();
     }
 
     const abortReason = reason || 'User requested abort';
+    const actualVersion = result.version;
+
+    await this.markAbortRequested(resultId, actualVersion, abortReason, errorType);
 
     // Step 1: Check if controller is in memory (same pod) - FASTEST
     // Note: If controller exists, Redis mapping has already been deleted when execution started
     const entry = this.activeAbortControllers.get(resultId);
     if (entry) {
-      this.logger.log(`Found controller in memory for ${resultId}, aborting directly`);
       entry.controller.abort(abortReason);
       this.unregisterAbortController(resultId);
       // Update database status
-      await this.markAbortRequested(resultId, version, abortReason);
       this.logger.log(`Successfully aborted executing action (same pod): ${resultId}`);
-      return;
     }
 
     // Step 2: Check if job is still queued in BullMQ
     const jobId = await this.getQueuedJobId(resultId);
     if (jobId && this.skillQueue) {
-      this.logger.log(`Job ${resultId} is still queued, removing from queue`);
       const job = await this.skillQueue.getJob(jobId);
       if (job) {
         await job.remove();
         await this.deleteQueuedJob(resultId);
-        // Update database status (only for queued jobs, no need to check status)
-        await this.markAbortRequested(resultId, version, abortReason);
         this.logger.log(`Successfully aborted queued job: ${resultId}`);
-        return;
       }
     }
-
-    // Step 3: Neither in memory nor in queue - must be executing on another pod
-    // Mark database status to 'failed' so the other pod can detect it
-    this.logger.log(
-      `Controller not found in memory for ${resultId}, marking database for cross-pod abort`,
-    );
-    await this.markAbortRequested(resultId, version, abortReason);
   }
 
   /**
@@ -441,15 +457,24 @@ export class ActionService {
 
   /**
    * Mark an action for abortion in the database (for cross-pod scenarios)
-   * Directly update status to 'failed' so the executing pod can detect it
+   *
+   * Updates all non-terminal states to prevent race conditions during queue-to-execution transition
    */
-  async markAbortRequested(resultId: string, version: number, reason: string): Promise<void> {
+  async markAbortRequested(
+    resultId: string,
+    version: number,
+    reason: string,
+    errorType: ActionErrorType = 'userAbort',
+  ): Promise<void> {
     const updated = await this.prisma.actionResult.updateMany({
-      where: { resultId, version, status: 'executing' },
+      where: {
+        resultId,
+        version,
+      },
       data: {
         status: 'failed',
         errors: JSON.stringify([reason]),
-        errorType: 'userAbort',
+        errorType,
       },
     });
 
@@ -459,7 +484,7 @@ export class ActionService {
       );
     } else {
       this.logger.warn(
-        `Action ${resultId} v${version} not found or not executing, skipping abort mark`,
+        `Action ${resultId} v${version} not found or already in terminal state, skipping abort mark`,
       );
     }
   }

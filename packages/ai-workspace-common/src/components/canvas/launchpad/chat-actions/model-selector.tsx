@@ -31,6 +31,7 @@ interface ModelSelectorProps {
   trigger?: DropdownProps['trigger'];
   contextItems?: IContextItem[];
   disabled?: boolean;
+  readonly?: boolean;
 }
 
 // Memoize the selected model display
@@ -41,12 +42,14 @@ const SelectedModelDisplay = memo(
     size = 'medium',
     variant = 'default',
     handleOpenSettingModal,
+    readonly = false,
   }: {
     open: boolean;
     model: ModelInfo | null;
     size?: 'small' | 'medium';
     variant?: 'default' | 'filled';
     handleOpenSettingModal: () => void;
+    readonly?: boolean;
   }) => {
     const { t } = useTranslation();
 
@@ -57,6 +60,7 @@ const SelectedModelDisplay = memo(
         <Button
           type="text"
           size="small"
+          disabled={readonly}
           className={cn(
             'text-xs gap-1.5 hover:bg-refly-tertiary-hover',
             isFilled
@@ -77,6 +81,7 @@ const SelectedModelDisplay = memo(
       <Button
         type="text"
         size="small"
+        disabled={readonly}
         className={cn(
           'text-sm hover:bg-refly-tertiary-hover min-w-0 flex items-center rounded-lg',
           isFilled
@@ -179,6 +184,7 @@ export const ModelSelector = memo(
     setModel,
     contextItems,
     disabled,
+    readonly = false,
   }: ModelSelectorProps) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<'llm'>('llm');
@@ -431,6 +437,7 @@ export const ModelSelector = memo(
             )}
           >
             <SelectedModelDisplay
+              readonly={readonly}
               open={dropdownOpen}
               model={model}
               size={size}

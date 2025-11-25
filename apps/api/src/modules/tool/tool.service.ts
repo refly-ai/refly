@@ -23,6 +23,7 @@ import {
   ToolsetDefinition,
   UpsertToolsetRequest,
   User,
+  UserTool,
 } from '@refly/openapi-schema';
 import {
   MultiServerMCPClient,
@@ -31,7 +32,7 @@ import {
 } from '@refly/skill-template';
 import { genToolsetID, safeParseJSON, validateConfig } from '@refly/utils';
 import { Queue } from 'bullmq';
-import { McpServer as McpServerPO, Prisma, Toolset as ToolsetPO } from '../../generated/client';
+import { McpServer as McpServerPO, Prisma, Toolset as ToolsetPO } from '@prisma/client';
 import { QUEUE_SYNC_TOOL_CREDIT_USAGE } from '../../utils/const';
 import { EncryptionService } from '../common/encryption.service';
 import { PrismaService } from '../common/prisma.service';
@@ -42,7 +43,7 @@ import { McpServerService } from '../mcp-server/mcp-server.service';
 import { MiscService } from '../misc/misc.service';
 import { ComposioService } from './composio/composio.service';
 import { AuthType, ToolsetType } from './constant';
-import { ToolFactory } from './dynamic-tooling/core/registry/factory';
+import { ToolFactory } from './dynamic-tooling/factory.service';
 import { ToolInventoryService } from './inventory/inventory.service';
 import {
   mcpServerPo2GenericToolset,
@@ -99,6 +100,49 @@ export class ToolService {
     }));
     const definitions = await this.inventoryService.getInventoryDefinitions();
     return [...builtinInventory, ...definitions].sort((a, b) => a.key.localeCompare(b.key));
+  }
+
+  /**
+   * List user tools for mention list
+   * Returns installed tools (authorized) and uninstalled external OAuth tools (unauthorized)
+   */
+  async listUserTools(user: User): Promise<UserTool[]> {
+    // 1. Get all installed tools for current user (enabled)
+    const installedTools = await this.listTools(user, { enabled: true });
+    const populatedTools = await this.populateToolsetsWithDefinition(installedTools);
+
+    // 2. Get installed toolset keys for filtering
+    const installedKeys = new Set(populatedTools.map((t) => t.toolset.key));
+
+    // 3. Get all external OAuth tools from inventory that are not installed
+    // external_oauth type tools have requiresAuth=true and authPatterns with type='oauth'
+    const allDefinitions = await this.inventoryService.getInventoryDefinitions();
+    const unauthorizedTools = allDefinitions.filter(
+      (def) => def.requiresAuth && !installedKeys.has(def.key),
+    );
+
+    // 4. Build result: authorized tools first, then unauthorized
+    const authorizedItems: UserTool[] = populatedTools.map((tool) => ({
+      toolsetId: tool.id,
+      key: tool.toolset?.key || tool.id,
+      name: tool.name,
+      description: (tool.toolset?.definition?.descriptionDict?.en as string) || tool.name,
+      authorized: true,
+      domain: tool.toolset?.definition?.domain,
+      toolset: tool,
+    }));
+
+    const unauthorizedItems: UserTool[] = unauthorizedTools.map((def) => ({
+      toolsetId: def.key,
+      key: def.key,
+      name: (def.labelDict?.en as string) || def.key,
+      description: (def.descriptionDict?.en as string) || '',
+      authorized: false,
+      domain: def.domain,
+      definition: def,
+    }));
+
+    return [...authorizedItems, ...unauthorizedItems];
   }
 
   listBuiltinTools(): GenericToolset[] {

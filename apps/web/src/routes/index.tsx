@@ -19,6 +19,7 @@ import {
   MarketplacePage,
   WorkflowPage,
   WorkspacePage,
+  LoginPage,
 } from '@refly/web-core';
 
 import type { RouteObject } from 'react-router-dom';
@@ -28,6 +29,10 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/',
     element: <HomeRedirect defaultNode={<UnsignedFrontPage />} />,
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
   },
   {
     path: '/pricing',
@@ -92,6 +97,10 @@ export const RoutesList: RouteObject[] = [
   },
   {
     path: '/workflow-list',
+    element: <WorkflowListPage />,
+  },
+  {
+    path: '/workflow-template',
     element: <WorkflowListPage />,
   },
   {

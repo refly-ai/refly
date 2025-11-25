@@ -2,6 +2,7 @@
  * Adapters index
  */
 
-export * from './http';
-export * from './sdk';
-export * from './factory/factory';
+export * from './factory';
+export * from './http-adapter';
+export * from './http-client';
+export * from './sdk-adapter';

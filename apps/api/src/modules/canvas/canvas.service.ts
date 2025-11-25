@@ -25,7 +25,7 @@ import {
   VariableValue,
   CanvasNode,
 } from '@refly/openapi-schema';
-import { Prisma } from '../../generated/client';
+import { Prisma } from '@prisma/client';
 import {
   genCanvasID,
   genTransactionId,
@@ -51,6 +51,7 @@ import { isDesktop } from '../../utils/runtime';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { initEmptyCanvasState, mirrorCanvasData } from '@refly/canvas-common';
 import { ToolService } from '../tool/tool.service';
+import { DriveService } from '../drive/drive.service';
 
 @Injectable()
 export class CanvasService {
@@ -68,6 +69,7 @@ export class CanvasService {
     private providerService: ProviderService,
     private codeArtifactService: CodeArtifactService,
     private subscriptionService: SubscriptionService,
+    private readonly driveService: DriveService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
     @Inject(FULLTEXT_SEARCH) private fts: FulltextSearchService,
     @Optional()
@@ -316,6 +318,37 @@ export class CanvasService {
     });
 
     try {
+      // Duplicate drive files
+      const driveFiles = await this.prisma.driveFile.findMany({
+        where: {
+          canvasId,
+          deletedAt: null,
+        },
+      });
+      const fileIdMap = new Map<string, string>();
+      const limit = pLimit(10);
+
+      const promises = driveFiles.map((file: any) =>
+        limit(async () => {
+          try {
+            const { fileId: newFileId } = (await this.driveService.duplicateDriveFile(
+              user,
+              file,
+              newCanvasId,
+            )) as any;
+
+            fileIdMap.set(file.fileId, newFileId);
+
+            this.logger.log(
+              `Successfully duplicated drive file ${file.fileId} to ${newFileId} for share ${newCanvasId}`,
+            );
+          } catch (error) {
+            this.logger.error(`Failed to duplicate drive file ${file.fileId}: ${error.stack}`);
+          }
+        }),
+      );
+      await Promise.all(promises);
+
       // Duplicate resources and documents if needed
       if (duplicateEntities) {
         const limit = pLimit(10); // Higher concurrency for better performance

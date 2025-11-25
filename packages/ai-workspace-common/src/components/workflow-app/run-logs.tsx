@@ -98,8 +98,8 @@ const NodeExecutionResult = ({ nodeExecution }: { nodeExecution: WorkflowNodeExe
   return (
     <div className="p-3">
       {/* Provide necessary context providers for ActionStepCard */}
-      {/* ReactFlowProvider: Required for useReactFlow hooks in SelectionContext */}
-      {/* CanvasProvider: Required for useCanvasContext in ActionStepCard and SelectionContext */}
+      {/* ReactFlowProvider: Required for useReactFlow hooks */}
+      {/* CanvasProvider: Required for useCanvasContext in ActionStepCard */}
       <ReactFlowProvider>
         <CanvasProvider canvasId={nodeExecution.nodeId} readonly={true}>
           <ActionStepCard

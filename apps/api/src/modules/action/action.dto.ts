@@ -14,7 +14,7 @@ import {
   ActionResult as ActionResultModel,
   ActionStep as ActionStepModel,
   ToolCallResult as ToolCallResultModel,
-} from '../../generated/client';
+} from '@prisma/client';
 import { pick, safeParseJSON } from '@refly/utils';
 
 type ActionStepDetail = ActionStepModel & {

@@ -13,12 +13,10 @@ import {
 } from './builtin';
 import { AgentBaseToolset } from './base';
 import { BrowserUseToolset, BrowserUseToolsetDefinition } from './browser-use';
-import { CalculatorToolset, CalculatorToolsetDefinition } from './calculator';
-import { CodeInterpreterToolset, CodeInterpreterToolsetDefinition } from './code-interpreter';
-import { FalAudioToolset, FalAudioToolsetDefinition } from './fal-audio';
-import { FalImageToolset, FalImageToolsetDefinition } from './fal-image';
-import { FalVideoToolset, FalVideoToolsetDefinition } from './fal-video';
-import { FirecrawlToolset, FirecrawlToolsetDefinition } from './firecrawl';
+// import { FalAudioToolset, FalAudioToolsetDefinition } from './fal-audio';
+// import { FalImageToolset, FalImageToolsetDefinition } from './fal-image';
+// import { FalVideoToolset, FalVideoToolsetDefinition } from './fal-video';
+// import { FirecrawlToolset, FirecrawlToolsetDefinition } from './firecrawl';
 // DEPRECATED: FishAudio and HeyGen are now loaded from configuration
 // import { FishAudioToolset, FishAudioToolsetDefinition } from './fish-audio';
 import { GitHubToolsetDefinition } from './github';
@@ -34,7 +32,7 @@ import { PerplexityToolset, PerplexityToolsetDefinition } from './perplexity';
 import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt';
 import { RedditToolsetDefinition } from './reddit';
 import { TwitterToolsetDefinition } from './twitter';
-import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
+// import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
 import { SandboxToolset, SandboxToolsetDefinition } from './sandbox';
 import { Apify13FToolset, Apify13FToolsetDefinition } from './apify-13f';
 
@@ -77,10 +75,10 @@ export const toolsetInventory: Record<
     definition: ToolsetDefinition;
   }
 > = {
-  [FirecrawlToolsetDefinition.key]: {
-    class: FirecrawlToolset,
-    definition: FirecrawlToolsetDefinition,
-  },
+  // [FirecrawlToolsetDefinition.key]: {
+  //   class: FirecrawlToolset,
+  //   definition: FirecrawlToolsetDefinition,
+  // },
   [SandboxToolsetDefinition.key]: {
     class: SandboxToolset,
     definition: SandboxToolsetDefinition,
@@ -89,10 +87,7 @@ export const toolsetInventory: Record<
     class: Apify13FToolset,
     definition: Apify13FToolsetDefinition,
   },
-  [CalculatorToolsetDefinition.key]: {
-    class: CalculatorToolset,
-    definition: CalculatorToolsetDefinition,
-  },
+
   [GoogleDriveToolsetDefinition.key]: {
     class: undefined,
     definition: GoogleDriveToolsetDefinition,
@@ -101,14 +96,10 @@ export const toolsetInventory: Record<
     class: JinaToolset,
     definition: JinaToolsetDefinition,
   },
-  [CodeInterpreterToolsetDefinition.key]: {
-    class: CodeInterpreterToolset,
-    definition: CodeInterpreterToolsetDefinition,
-  },
-  [WhaleWisdomToolsetDefinition.key]: {
-    class: WhaleWisdomToolset,
-    definition: WhaleWisdomToolsetDefinition,
-  },
+  // [WhaleWisdomToolsetDefinition.key]: {
+  //   class: WhaleWisdomToolset,
+  //   definition: WhaleWisdomToolsetDefinition,
+  // },
   [GoogleDocsToolsetDefinition.key]: {
     class: undefined,
     definition: GoogleDocsToolsetDefinition,
@@ -125,27 +116,18 @@ export const toolsetInventory: Record<
     class: NotionToolset,
     definition: NotionToolsetDefinition,
   },
-  [FalAudioToolsetDefinition.key]: {
-    class: FalAudioToolset,
-    definition: FalAudioToolsetDefinition,
-  },
-  // DEPRECATED: FishAudio and HeyGen are now loaded from configuration
-  // [FishAudioToolsetDefinition.key]: {
-  //   class: FishAudioToolset,
-  //   definition: FishAudioToolsetDefinition,
+  // [FalAudioToolsetDefinition.key]: {
+  //   class: FalAudioToolset,
+  //   definition: FalAudioToolsetDefinition,
   // },
-  // [HeyGenToolsetDefinition.key]: {
-  //   class: HeyGenToolset,
-  //   definition: HeyGenToolsetDefinition,
+  // [FalImageToolsetDefinition.key]: {
+  //   class: FalImageToolset,
+  //   definition: FalImageToolsetDefinition,
   // },
-  [FalImageToolsetDefinition.key]: {
-    class: FalImageToolset,
-    definition: FalImageToolsetDefinition,
-  },
-  [FalVideoToolsetDefinition.key]: {
-    class: FalVideoToolset,
-    definition: FalVideoToolsetDefinition,
-  },
+  // [FalVideoToolsetDefinition.key]: {
+  //   class: FalVideoToolset,
+  //   definition: FalVideoToolsetDefinition,
+  // },
   [PerplexityToolsetDefinition.key]: {
     class: PerplexityToolset,
     definition: PerplexityToolsetDefinition,

@@ -1,5 +1,5 @@
 import { UserSettings } from '@refly/openapi-schema';
-import { User as UserModel, Subscription as SubscriptionModel } from '../../generated/client';
+import { User as UserModel, Subscription as SubscriptionModel } from '@prisma/client';
 import { pick, safeParseJSON } from '@refly/utils';
 import { subscriptionPO2DTO } from '../subscription/subscription.dto';
 

@@ -12,6 +12,7 @@ import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hook
 import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
 
 interface ConfigureTabProps {
+  readonly?: boolean;
   query?: string | null;
   version: number;
   resultId: string;
@@ -27,6 +28,7 @@ const ConfigureTabComponent = ({
   nodeId,
   canvasId,
   disabled,
+  readonly = false,
 }: ConfigureTabProps) => {
   const { t } = useTranslation();
   const { handleUploadImage } = useUploadImage();
@@ -114,7 +116,7 @@ const ConfigureTabComponent = ({
   }, []);
 
   return (
-    <div className="h-full flex flex-col gap-4">
+    <div className="h-full flex flex-col gap-4 px-4 overflow-y-auto">
       <div>
         <div
           className="text-xs font-semibold leading-4 mb-2 flex items-center gap-1"
@@ -127,6 +129,7 @@ const ConfigureTabComponent = ({
         </div>
 
         <ModelSelector
+          readonly={readonly}
           model={modelInfo ?? null}
           setModel={setModelInfo}
           size="medium"
@@ -154,7 +157,7 @@ const ConfigureTabComponent = ({
             size="small"
             className="text-xs !h-5 px-1 py-0.5 text-refly-text-1"
             onClick={handleAddToolsAndContext}
-            disabled={disabled}
+            disabled={readonly || disabled}
           >
             @ {t('agent.config.addToolsAndContext')}
           </Button>
@@ -162,10 +165,10 @@ const ConfigureTabComponent = ({
 
         <div
           className="rounded-lg pt-2 pb-3 px-3 relative bg-refly-bg-control-z0 flex-1 min-h-0 overflow-hidden flex flex-col"
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
+          onDrop={!readonly ? handleDrop : undefined}
+          onDragOver={!readonly ? handleDragOver : undefined}
+          onDragEnter={!readonly ? handleDragEnter : undefined}
+          onDragLeave={!readonly ? handleDragLeave : undefined}
         >
           {dragging && (
             <div
@@ -195,6 +198,7 @@ const ConfigureTabComponent = ({
 
           <div className="flex-1 min-h-0 overflow-hidden">
             <ConfigInfoDisplay
+              readonly={readonly}
               prompt={query ?? ''}
               selectedToolsets={selectedToolsets}
               contextItems={contextItems}

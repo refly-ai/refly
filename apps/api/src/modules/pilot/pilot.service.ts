@@ -12,7 +12,7 @@ import {
   convertContextItemsToNodeFilters,
   convertResultContextToItems,
 } from '@refly/canvas-common';
-import { PilotSession } from '../../generated/client';
+import { PilotSession } from '@prisma/client';
 import { SkillService } from '../skill/skill.service';
 import {
   detectLanguage,

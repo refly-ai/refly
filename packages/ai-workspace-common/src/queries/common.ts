@@ -129,6 +129,7 @@ import {
   listTools,
   listToolsetInventory,
   listToolsets,
+  listUserTools,
   listWorkflowApps,
   logout,
   multiLingualWebSearch,
@@ -818,6 +819,16 @@ export const UseListToolsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsKey, ...(queryKey ?? [clientOptions])];
+export type ListUserToolsDefaultResponse = Awaited<ReturnType<typeof listUserTools>>['data'];
+export type ListUserToolsQueryResult<
+  TData = ListUserToolsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListUserToolsKey = 'ListUserTools';
+export const UseListUserToolsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListUserToolsKey, ...(queryKey ?? [clientOptions])];
 export type ListToolsetInventoryDefaultResponse = Awaited<
   ReturnType<typeof listToolsetInventory>
 >['data'];

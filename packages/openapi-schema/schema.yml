@@ -3684,6 +3684,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListToolsResponse'
+  /tool/user/list:
+    get:
+      tags:
+        - tool
+      summary: List user tools
+      description: Get installed tools and unauthorized external OAuth tools for current user.
+      operationId: listUserTools
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListUserToolsResponse'
   /tool/inventory/list:
     get:
       tags:
@@ -10603,6 +10617,42 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/GenericToolset'
+    ListUserToolsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserTool'
+    UserTool:
+      type: object
+      properties:
+        toolsetId:
+          type: string
+          description: Toolset ID (toolsetId for installed, key for uninstalled)
+        key:
+          type: string
+          description: Toolset key
+        name:
+          type: string
+          description: Tool name
+        description:
+          type: string
+          description: Tool description
+        authorized:
+          type: boolean
+          description: Whether the tool is authorized/installed
+        domain:
+          type: string
+          description: Tool domain for favicon
+        toolset:
+          $ref: '#/components/schemas/GenericToolset'
+          description: Full toolset data (only for authorized tools)
+        definition:
+          $ref: '#/components/schemas/ToolsetDefinition'
+          description: Toolset definition (for unauthorized tools)
     DeleteToolsetRequest:
       type: object
       required:
@@ -11774,6 +11824,12 @@ components:
         - $ref: '#/components/schemas/JsonSchema'
         - type: object
           description: Response schema definition for identifying resource fields
+          properties:
+            omitFields:
+              type: array
+              items:
+                type: string
+              description: Field names to omit from the response (e.g., ['thoughtSignature'])
 
     ResourceField:
       type: object

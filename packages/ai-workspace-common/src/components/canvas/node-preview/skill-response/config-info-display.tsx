@@ -3,15 +3,18 @@ import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { GenericToolset } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
-import { X, AiChat, File } from 'refly-icons';
+import { X, AiChat } from 'refly-icons';
 import { Question } from 'refly-icons';
 import { MentionCommonData, parseMentionsFromQuery } from '@refly/utils';
 import { IContextItem } from '@refly/common-types';
 import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LabelItem } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 import { useCanvasNodesStoreShallow } from '@refly/stores';
+import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
+import { AGENT_CONFIG_KEY_CLASSNAMES } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 
 interface ConfigInfoDisplayProps {
+  readonly?: boolean;
   prompt: string;
   selectedToolsets: GenericToolset[];
   contextItems: IContextItem[];
@@ -42,6 +45,7 @@ SectionTitle.displayName = 'SectionTitle';
 
 export const ConfigInfoDisplay = memo(
   ({
+    readonly = false,
     prompt,
     selectedToolsets,
     contextItems = [],
@@ -97,8 +101,9 @@ export const ConfigInfoDisplay = memo(
           return;
         }
         removeUpstreamAgent(resultId);
+        setHighlightedNodeId(null);
       },
-      [removeUpstreamAgent],
+      [removeUpstreamAgent, setHighlightedNodeId],
     );
 
     const handleRemoveToolset = useCallback(
@@ -125,10 +130,11 @@ export const ConfigInfoDisplay = memo(
           <div className="flex flex-wrap gap-2">
             {variables.map((variable: MentionCommonData, index) => (
               <LabelItem
+                readonly={readonly}
                 key={`${variable.id}-${index}`}
                 icon={<X size={12} className="flex-shrink-0" />}
                 labeltext={variable.name}
-                classnames="bg-refly-node-contrl-2"
+                classnames={AGENT_CONFIG_KEY_CLASSNAMES.inputs}
               />
             ))}
           </div>
@@ -148,6 +154,7 @@ export const ConfigInfoDisplay = memo(
 
               return (
                 <LabelItem
+                  readonly={readonly}
                   key={`${toolset.id || toolset.name}-${index}`}
                   icon={
                     <ToolsetIcon
@@ -160,7 +167,7 @@ export const ConfigInfoDisplay = memo(
                     />
                   }
                   labeltext={labelName}
-                  classnames="bg-refly-node-contrl-1"
+                  classnames={AGENT_CONFIG_KEY_CLASSNAMES.tools}
                   onClose={disabled ? undefined : () => handleRemoveToolset(toolset)}
                 />
               );
@@ -173,12 +180,20 @@ export const ConfigInfoDisplay = memo(
             {t('agent.config.files')}
           </SectionTitle>
           <div className="flex flex-wrap gap-2">
-            {files.map((file: any, index) => (
+            {files.map((file, index) => (
               <LabelItem
+                readonly={readonly}
                 key={`${file.entityId}-${index}`}
-                icon={<File size={12} className="flex-shrink-0" />} // TODO: use file icon for file type
+                icon={
+                  <NodeIcon
+                    type="file"
+                    filename={file.title}
+                    filled={false}
+                    className="!w-3.5 !h-3.5"
+                  />
+                }
                 labeltext={file.title}
-                classnames="bg-refly-fill-label"
+                classnames={AGENT_CONFIG_KEY_CLASSNAMES.files}
                 onClose={disabled ? undefined : () => handleRemoveContextItem(file)}
               />
             ))}
@@ -194,12 +209,13 @@ export const ConfigInfoDisplay = memo(
               const title = node?.data?.title;
               return (
                 <LabelItem
-                  onMouseEnter={() => setHighlightedNodeId(node.id)}
-                  onMouseLeave={() => setHighlightedNodeId(null)}
+                  onMouseEnter={!readonly ? () => setHighlightedNodeId(node.id) : undefined}
+                  onMouseLeave={!readonly ? () => setHighlightedNodeId(null) : undefined}
+                  readonly={readonly}
                   key={`${node.id}-${index}`}
                   icon={<AiChat size={14} className="flex-shrink-0" />}
                   labeltext={title || t('canvas.richChatInput.untitledAgent')}
-                  classnames="bg-refly-node-contrl-2"
+                  classnames={AGENT_CONFIG_KEY_CLASSNAMES.agents}
                   onClose={
                     disabled ? undefined : () => handleRemoveUpstreamAgent(node.data?.entityId)
                   }

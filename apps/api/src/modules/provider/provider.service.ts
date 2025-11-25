@@ -21,10 +21,7 @@ import {
   UserPreferences,
   MediaGenerationModelConfig,
 } from '@refly/openapi-schema';
-import {
-  Provider as ProviderModel,
-  ProviderItem as ProviderItemModel,
-} from '../../generated/client';
+import { Provider as ProviderModel, ProviderItem as ProviderItemModel } from '@prisma/client';
 import { genProviderItemID, genProviderID, providerInfoList, safeParseJSON } from '@refly/utils';
 import {
   ProviderNotFoundError,

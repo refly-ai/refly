@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { Request } from 'express';
 import { McpServerService } from '../../mcp-server/mcp-server.service';
 import { InternalMcpService } from '../internal-mcp.service';
-import { User as UserModel } from '../../../generated/client';
+import { User as UserModel } from '@prisma/client';
 import { mcpServerPO2DTO } from '../../mcp-server/mcp-server.dto';
 import { UpsertMcpServerRequest } from '@refly/openapi-schema';
 

@@ -49,14 +49,16 @@ export const CopilotContainer = memo(
     }, []);
 
     useEffect(() => {
-      if (isResizing) {
-        document.addEventListener('mousemove', handleResizeMove);
-        document.addEventListener('mouseup', handleResizeEnd);
-        return () => {
-          document.removeEventListener('mousemove', handleResizeMove);
-          document.removeEventListener('mouseup', handleResizeEnd);
-        };
-      }
+      if (!isResizing) return;
+
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
     }, [isResizing, handleResizeMove, handleResizeEnd]);
 
     if (copilotWidth <= 0) {

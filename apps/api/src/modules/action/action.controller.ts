@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Query, Body, UseGuards } from '@nestjs/common';
 import { GetActionResultResponse, BaseResponse, AbortActionRequest } from '@refly/openapi-schema';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
-import { User as UserModel } from '../../generated/client';
+import { User as UserModel } from '@prisma/client';
 import { buildSuccessResponse } from '../../utils/response';
 import { ActionService } from '../action/action.service';
 import { actionResultPO2DTO } from '../action/action.dto';

@@ -80,6 +80,9 @@ export const ssePost = async ({
   onCompleted?: (val?: boolean) => void;
 }) => {
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  // Batch processing state - defined at function level so finally block can access it
+  const batchedEvents: SkillEvent[] = [];
+  let batchTimer: number | null = null;
 
   try {
     const response = await makeSSERequest(payload, controller);
@@ -100,7 +103,6 @@ export const ssePost = async ({
     let bufferStr = '';
 
     // Improved batching configuration
-    const batchedEvents: SkillEvent[] = [];
     let processingBatch = false;
     const BATCH_SIZE = 30; // Maximum number of events to process at once
     const BATCH_INTERVAL = 250; // Time between batch processing in ms
@@ -225,8 +227,6 @@ export const ssePost = async ({
     };
 
     // Schedule batch processing
-    let batchTimer: number | null = null;
-
     const scheduleBatchProcessing = () => {
       if (batchTimer !== null) return; // Already scheduled
 
@@ -335,7 +335,14 @@ export const ssePost = async ({
       });
     }
   } finally {
-    // Clean up resources
+    // Clear batch processing state to prevent stale events from processing after abort
+    if (batchTimer !== null) {
+      clearTimeout(batchTimer);
+      batchTimer = null;
+    }
+    batchedEvents.length = 0;
+
+    // Clean up reader resources
     if (reader) {
       try {
         await reader.cancel();

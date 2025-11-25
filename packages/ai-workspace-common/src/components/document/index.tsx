@@ -1,4 +1,4 @@
-import { useEffect, useState, memo, useCallback, useMemo } from 'react';
+import { useEffect, useState, memo, useCallback } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useSearchParams } from 'react-router-dom';
 
@@ -23,7 +23,7 @@ import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hook
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { ydoc2Markdown } from '@refly/utils/editor';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
-import { IContextItem, LOCALE } from '@refly/common-types';
+import { LOCALE } from '@refly/common-types';
 import { useDocumentSync } from '@refly-packages/ai-workspace-common/hooks/use-document-sync';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
@@ -31,7 +31,6 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { editorEmitter } from '@refly/utils/event-emitter/editor';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
 import { useSiderStoreShallow } from '@refly/stores';
-import { FollowingActions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/sharedComponents/following-actions';
 import { useReactFlow } from '@xyflow/react';
 
 // Define the table of contents item type
@@ -135,7 +134,7 @@ const DocumentToc = memo(() => {
   );
 });
 
-const StatusBar = memo(({ docId, nodeId }: { docId: string; nodeId: string }) => {
+const StatusBar = memo(({ docId }: { docId: string }) => {
   const { provider, ydoc } = useDocumentContext();
 
   const { t, i18n } = useTranslation();
@@ -143,19 +142,6 @@ const StatusBar = memo(({ docId, nodeId }: { docId: string; nodeId: string }) =>
 
   const [unsyncedChanges, setUnsyncedChanges] = useState(provider?.unsyncedChanges || 0);
   const [debouncedUnsyncedChanges] = useDebounce(unsyncedChanges, 500);
-
-  const { readonly } = useCanvasContext();
-
-  const initContextItems: IContextItem[] = useMemo(() => {
-    return [
-      {
-        type: 'document',
-        entityId: docId,
-        title: ydoc?.getText('title')?.toJSON() || '',
-        content: ydoc2Markdown(ydoc),
-      },
-    ];
-  }, [docId, ydoc]);
 
   const handleUnsyncedChanges = useCallback((data: number) => {
     setUnsyncedChanges(data);
@@ -231,14 +217,6 @@ const StatusBar = memo(({ docId, nodeId }: { docId: string; nodeId: string }) =>
 
   return (
     <div className="w-full pt-3 border-x-0 border-b-0 border-t-[1px] border-solid border-refly-Card-Border">
-      {!readonly && (
-        <FollowingActions
-          initContextItems={initContextItems}
-          initModelInfo={null}
-          nodeId={nodeId}
-        />
-      )}
-
       {/* Status bar with follow-up button */}
       <div className="h-10 p-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-1">
@@ -502,7 +480,7 @@ export const DocumentEditor = memo(
       <DocumentProvider docId={docId} shareId={shareId} readonly={readonly}>
         <div className="flex flex-col ai-note-container">
           <DocumentBody docId={docId} nodeId={nodeId} />
-          {!canvasReadOnly && <StatusBar docId={docId} nodeId={nodeId} />}
+          {!canvasReadOnly && <StatusBar docId={docId} />}
         </div>
       </DocumentProvider>
     );

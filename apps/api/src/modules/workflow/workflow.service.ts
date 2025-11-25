@@ -28,7 +28,7 @@ import {
 } from '@refly/utils';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { WorkflowNodeExecution as WorkflowNodeExecutionPO } from '../../generated/client';
+import { WorkflowNodeExecution as WorkflowNodeExecutionPO } from '@prisma/client';
 import { QUEUE_POLL_WORKFLOW, QUEUE_RUN_WORKFLOW } from '../../utils/const';
 import { WorkflowExecutionNotFoundError } from '@refly/errors';
 import { RedisService } from '../common/redis.service';
@@ -672,9 +672,7 @@ export class WorkflowService {
     );
 
     // Abort all executing skillResponse nodes by calling abort action
-    const executingSkillNodes = nodesToAbort.filter(
-      (n) => n.status === 'executing' && n.nodeType === 'skillResponse',
-    );
+    const executingSkillNodes = nodesToAbort.filter((n) => n.nodeType === 'skillResponse');
 
     // Abort all executing nodes in parallel for better performance
     const abortResults = await Promise.allSettled(
@@ -699,11 +697,11 @@ export class WorkflowService {
     const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
     this.logger.log(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
 
-    // Update all waiting and executing nodes to failed
+    // Update all non-terminal nodes to failed (not just waiting/executing)
     await this.prisma.workflowNodeExecution.updateMany({
       where: {
         executionId,
-        status: { in: ['waiting', 'executing'] },
+        status: { notIn: ['finish', 'failed'] },
       },
       data: {
         status: 'failed',
@@ -712,9 +710,12 @@ export class WorkflowService {
       },
     });
 
-    // Update workflow execution status and set abortedByUser flag
-    await this.prisma.workflowExecution.update({
-      where: { executionId },
+    // Update workflow execution to failed if not already terminal
+    await this.prisma.workflowExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
       data: {
         status: 'failed',
         abortedByUser: true,

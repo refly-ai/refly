@@ -20,10 +20,7 @@ import {
   PlanQuota,
 } from '../subscription/subscription.dto';
 import { pick } from '../../utils';
-import {
-  Subscription as SubscriptionModel,
-  ModelInfo as ModelInfoModel,
-} from '../../generated/client';
+import { Subscription as SubscriptionModel, ModelInfo as ModelInfoModel } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { OperationTooFrequent, ParamsError } from '@refly/errors';
 import {

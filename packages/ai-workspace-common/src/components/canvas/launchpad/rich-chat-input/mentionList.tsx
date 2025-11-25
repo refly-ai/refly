@@ -35,6 +35,8 @@ export interface MentionItem {
   categoryLabel?: string;
   toolset?: GenericToolset;
   toolsetId?: string;
+  toolDefinition?: any; // ToolsetDefinition type
+  isInstalled?: boolean;
   metadata?: {
     imageUrl?: string | undefined;
     videoUrl?: string | undefined;
@@ -487,11 +489,10 @@ export const MentionList = ({
       },
       files: {
         nodeIconProps: (item: MentionItem) => ({
-          type: item.variableType as CanvasNodeType,
+          type: 'file' as const,
           small: true,
-          url: item.variableType === 'image' ? item.metadata?.imageUrl : undefined,
-          resourceType: item.metadata?.resourceType,
-          resourceMeta: item.metadata?.resourceMeta,
+          filename: item.name,
+          filled: false,
         }),
         emptyStateKey: 'noFiles',
       },
@@ -590,21 +591,27 @@ export const MentionList = ({
             <>
               <ToolsetIcon
                 toolset={item.toolset}
+                toolsetKey={item.isInstalled === false ? item.toolsetId : undefined}
                 config={{
                   size: 16,
                   className: 'flex-shrink-0',
                   builtinClassName: '!w-4 !h-4',
                 }}
               />
-              <div className="flex-1 text-sm text-refly-text-0 leading-5 truncate">
+              <div
+                className={cn(
+                  'flex-1 text-sm leading-5 truncate min-w-0',
+                  item.isInstalled === false ? 'text-refly-text-2' : 'text-refly-text-0',
+                )}
+              >
                 {item.toolset?.builtin
                   ? ((item.toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
                     item.name)
                   : item.name}
               </div>
-              {item.toolset?.uninstalled && (
-                <div className="text-xs text-refly-text-2 px-1.5 py-0.5 rounded bg-refly-fill-hover">
-                  {t('canvas.toolsDepencency.uninstalled')}
+              {(item.toolset?.uninstalled || item.isInstalled === false) && (
+                <div className="text-xs text-amber-600 px-1.5 py-0.5 rounded flex items-center justify-center bg-amber-50 flex-shrink-0 font-medium">
+                  {t('canvas.richChatInput.unauthorized')}
                 </div>
               )}
             </>
@@ -617,7 +624,7 @@ export const MentionList = ({
         </div>
       );
     },
-    [categoryConfigs, query, formatVariableValue, currentLanguage],
+    [categoryConfigs, query, formatVariableValue, currentLanguage, t],
   );
 
   // Generic function to render empty state

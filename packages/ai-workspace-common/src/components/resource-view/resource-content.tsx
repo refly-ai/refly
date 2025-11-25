@@ -1,11 +1,7 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useState } from 'react';
 import classNames from 'classnames';
 
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
-import { genUniqueId } from '@refly/utils/id';
-import { SelectionContext } from '@refly-packages/ai-workspace-common/modules/selection-menu/selection-context';
-import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { IContextItem } from '@refly/common-types';
 import { Resource } from '@refly/openapi-schema';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 
@@ -15,32 +11,7 @@ interface ResourceContentProps {
 }
 
 export const ResourceContent = memo(({ resourceDetail, resourceId }: ResourceContentProps) => {
-  const { readonly } = useCanvasContext();
   const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
-
-  const buildContextItem = useCallback(
-    (text: string) => {
-      return {
-        type: 'resourceSelection',
-        entityId: genUniqueId(),
-        title: text.slice(0, 50),
-        selection: {
-          content: text,
-          sourceTitle: resourceDetail.title,
-          sourceEntityId: resourceDetail.resourceId,
-          sourceEntityType: 'resource',
-        },
-      } as IContextItem;
-    },
-    [resourceDetail],
-  );
-
-  const getSourceNode = useCallback(() => {
-    return {
-      type: 'resource' as const,
-      entityId: resourceId,
-    };
-  }, [resourceId]);
 
   const renderMediaContent = () => {
     const resourceType = resourceDetail.resourceType;
@@ -129,18 +100,7 @@ export const ResourceContent = memo(({ resourceDetail, resourceId }: ResourceCon
     }
 
     // Default: render markdown content for non-media resources
-    return (
-      <>
-        <Markdown content={resourceDetail?.content || ''} className="text-base" />
-        {!readonly && (
-          <SelectionContext
-            containerClass={`resource-content-${resourceId}`}
-            getContextItem={buildContextItem}
-            getSourceNode={getSourceNode}
-          />
-        )}
-      </>
-    );
+    return <Markdown content={resourceDetail?.content || ''} className="text-base" />;
   };
 
   return (

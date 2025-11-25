@@ -1,5 +1,5 @@
 import { CopilotSession } from '@refly/openapi-schema';
-import { CopilotSession as CopilotSessionPO } from '../../generated/client';
+import { CopilotSession as CopilotSessionPO } from '@prisma/client';
 import { pick } from '../../utils';
 import { ActionDetail, actionResultPO2DTO } from '../action/action.dto';
 

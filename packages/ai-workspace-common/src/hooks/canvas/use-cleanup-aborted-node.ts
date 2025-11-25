@@ -24,8 +24,8 @@ export const useCleanupAbortedNode = () => {
     useActionResultStoreShallow((state) => ({
       resultMap: state.resultMap,
       stopPolling: state.stopPolling,
-      removeActionResult: state.removeActionResult,
       removeStreamResult: state.removeStreamResult,
+      removeActionResult: state.removeActionResult,
     }));
 
   /**
@@ -59,11 +59,10 @@ export const useCleanupAbortedNode = () => {
         contentPreview: resultPreview,
       });
 
-      // Clean up action result and stream result from store
-      removeActionResult(entityId);
       removeStreamResult(entityId);
+      removeActionResult(entityId);
     },
-    [resultMap, stopPolling, setNodeData, removeActionResult, removeStreamResult],
+    [resultMap, stopPolling, setNodeData, removeStreamResult, removeActionResult],
   );
 
   return {

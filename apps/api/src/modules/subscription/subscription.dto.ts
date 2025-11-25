@@ -13,7 +13,7 @@ import {
   Subscription as SubscriptionModel,
   TokenUsageMeter as TokenUsageMeterModel,
   StorageUsageMeter as StorageUsageMeterModel,
-} from '../../generated/client';
+} from '@prisma/client';
 import { pick } from '../../utils';
 
 export interface PlanQuota {

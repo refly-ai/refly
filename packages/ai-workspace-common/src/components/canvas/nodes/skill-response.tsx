@@ -312,7 +312,7 @@ export const SkillResponseNode = memo(
             if (edge.source === id || edge.target === id) {
               return { ...edge, data: { ...edge.data, highlight: highlight } };
             }
-            return edge;
+            return { ...edge, data: { ...edge.data, highlight: false } };
           }),
         );
       },
@@ -852,8 +852,10 @@ export const SkillResponseNode = memo(
               entityId={data.entityId}
               title={data.title ?? t('canvas.nodeTypes.agent')}
               source="node"
+              canEdit={!readonly}
               actions={
                 <SkillResponseActions
+                  readonly={readonly}
                   nodeIsExecuting={isExecuting}
                   workflowIsRunning={workflowIsRunning}
                   onRerunSingle={handleRerunSingle}

@@ -5,6 +5,7 @@ import { Close } from 'refly-icons';
 const { Paragraph } = Typography;
 
 export interface LabelConfig {
+  readonly?: boolean;
   icon?: ReactNode;
   labeltext: string;
   classnames?: string;
@@ -23,14 +24,22 @@ interface LabelDisplayProps {
 
 // Single label item component
 export const LabelItem = memo(
-  ({ icon, labeltext, classnames, onClose, onMouseEnter, onMouseLeave }: LabelConfig) => {
+  ({
+    readonly = false,
+    icon,
+    labeltext,
+    classnames,
+    onClose,
+    onMouseEnter,
+    onMouseLeave,
+  }: LabelConfig) => {
     return (
       <div
         className={`flex items-center gap-1 h-5 px-1 rounded-[4px] border-[0.5px] border-solid border-refly-Card-Border cursor-pointer select-none ${classnames ?? ''}`}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
+        onMouseEnter={readonly ? undefined : onMouseEnter}
+        onMouseLeave={readonly ? undefined : onMouseLeave}
       >
-        {icon && icon}
+        {icon}
         <Paragraph
           className="text-xs text-refly-text-0 max-w-[100px] leading-4 !m-0"
           ellipsis={{
@@ -40,7 +49,7 @@ export const LabelItem = memo(
         >
           {labeltext}
         </Paragraph>
-        {onClose && (
+        {onClose && !readonly && (
           <Button
             type="text"
             className="!w-[14px] !h-[14px] !p-0 !rounded-[2px]"

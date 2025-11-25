@@ -288,6 +288,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
       ref={editAreaRef}
     >
       <ChatComposer
+        key={nodeId}
         ref={ref}
         nodeId={nodeId}
         handleSendMessage={handleSendMessage}

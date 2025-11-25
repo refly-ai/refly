@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Document as DocumentPO, Prisma } from '../../generated/client';
+import { Document as DocumentPO, Prisma } from '@prisma/client';
 import { RAGService } from '../rag/rag.service';
 import { PrismaService } from '../common/prisma.service';
 import { FULLTEXT_SEARCH, FulltextSearchService } from '../common/fulltext-search';

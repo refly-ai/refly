@@ -1,5 +1,5 @@
 import { CodeArtifact, CodeArtifactType } from '@refly/openapi-schema';
-import { CodeArtifact as CodeArtifactModel } from '../../generated/client';
+import { CodeArtifact as CodeArtifactModel } from '@prisma/client';
 import { pick } from '../../utils';
 
 export const codeArtifactPO2DTO = (

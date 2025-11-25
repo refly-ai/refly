@@ -2,7 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { createId } from '@paralleldrive/cuid2';
 import { PrismaService } from '../common/prisma.service';
 import { MiscService } from '../misc/misc.service';
-import { ShareRecord, WorkflowApp } from '../../generated/client';
+import { ShareRecord, WorkflowApp } from '@prisma/client';
 import * as Y from 'yjs';
 import { CreateShareRequest, EntityType, SharedCanvasData, User } from '@refly/openapi-schema';
 import { PageNotFoundError, ParamsError, ShareNotFoundError } from '@refly/errors';
@@ -97,6 +97,34 @@ export class ShareCreationService {
     canvasData.resources = resourceShareRecords.map((resource) =>
       omit(resource.resource, ['content']),
     );
+
+    // Process drive files in parallel
+    const driveFiles = await this.prisma.driveFile.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        deletedAt: null,
+      },
+    });
+
+    canvasData.files = driveFiles.map((file) => ({
+      fileId: file.fileId,
+      canvasId: file.canvasId,
+      name: file.name,
+      type: file.type,
+      category: file.category as any,
+      size: Number(file.size),
+      source: file.source as any,
+      scope: file.scope as any,
+      summary: file.summary ?? undefined,
+      variableId: file.variableId ?? undefined,
+      resultId: file.resultId ?? undefined,
+      resultVersion: file.resultVersion ?? undefined,
+      createdAt: file.createdAt.toJSON(),
+      updatedAt: file.updatedAt.toJSON(),
+      // Include internal storageKey for duplication (not in public API)
+      storageKey: file.storageKey ?? undefined,
+    }));
 
     // Find all image video audio nodes
     const mediaNodes =
@@ -306,6 +334,14 @@ export class ShareCreationService {
       shareId,
       allowDuplication,
       title,
+    );
+
+    // Process files for the share (cleanup old files and duplicate new ones)
+    await this.shareCommonService.processFilesForShare(
+      user,
+      canvasData,
+      shareId,
+      existingShareRecord,
     );
 
     // Publish minimap
@@ -1188,6 +1224,14 @@ export class ShareCreationService {
       title,
     );
 
+    // Process files for the regular share (cleanup old files and duplicate new ones)
+    await this.shareCommonService.processFilesForShare(
+      user,
+      canvasData,
+      shareId,
+      existingShareRecord,
+    );
+
     // Create or update regular share
     const shareRecord = await this.createOrUpdateWorkflowAppShare(
       user,
@@ -1215,6 +1259,14 @@ export class ShareCreationService {
         templateShareId,
         allowDuplication,
         title,
+      );
+
+      // Process files for the template share (no existing record for template shares)
+      await this.shareCommonService.processFilesForShare(
+        user,
+        independentCanvasData,
+        templateShareId,
+        null,
       );
 
       // Create or update template share (independent from regular share)

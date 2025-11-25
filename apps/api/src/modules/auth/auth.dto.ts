@@ -1,5 +1,5 @@
 import { Account, AuthType } from '@refly/openapi-schema';
-import { Account as AccountPO } from '../../generated/client';
+import { Account as AccountPO } from '@prisma/client';
 import { safeParseJSON } from '@refly/utils';
 
 export interface TokenData {

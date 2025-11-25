@@ -20,6 +20,8 @@ import { ToolModule } from '../tool/tool.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { CreditModule } from '../credit/credit.module';
 import { ConfigModule } from '@nestjs/config';
+import { DriveModule } from '../drive/drive.module';
+import { DriveService } from '../drive/drive.service';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { ConfigModule } from '@nestjs/config';
     SubscriptionModule,
     CreditModule,
     ConfigModule,
+    DriveModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_CREATE_SHARE })]),
   ],
   providers: [
@@ -42,6 +45,7 @@ import { ConfigModule } from '@nestjs/config';
     ShareCreationService,
     ShareDuplicationService,
     ShareRateLimitService,
+    DriveService,
     ...(isDesktop() ? [] : [CreateShareProcessor]),
   ],
   controllers: [ShareController],

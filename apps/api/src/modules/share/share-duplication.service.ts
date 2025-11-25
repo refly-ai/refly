@@ -770,6 +770,22 @@ export class ShareDuplicationService {
       newCanvasId,
     );
 
+    // Duplicate drive files first to get the fileId mapping
+    const { fileIdMap } = await this.shareCommonService.duplicateDriveFilesForShare(
+      user,
+      canvasData.files,
+      newCanvasId,
+    );
+
+    // Merge fileIdMap into replaceEntityMap for consistent entity replacement
+    for (const [oldId, newId] of fileIdMap.entries()) {
+      replaceEntityMap[oldId] = newId;
+    }
+
+    this.logger.log(
+      `File duplication completed. New canvasId: ${newCanvasId}, FileId mappings: ${JSON.stringify(Array.from(fileIdMap.entries()))}`,
+    );
+
     // Replace resource variables with new entity ids
     const updatedVariables = canvasData.variables?.map((variable) => {
       if (variable.variableType !== 'resource') {
@@ -791,7 +807,6 @@ export class ShareDuplicationService {
     const { replaceToolsetMap } = await this.toolService.importToolsetsFromNodes(user, nodes);
     this.logger.log(`Replace toolsets map: ${JSON.stringify(replaceToolsetMap)}`);
 
-    // Duplicate entities with higher concurrency
     const limit = pLimit(10);
 
     // Prepare duplication tasks in parallel

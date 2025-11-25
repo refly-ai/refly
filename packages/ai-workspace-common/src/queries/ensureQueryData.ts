@@ -64,6 +64,7 @@ import {
   listTools,
   listToolsetInventory,
   listToolsets,
+  listUserTools,
   listWorkflowApps,
   serveStatic,
 } from '../requests/services.gen';
@@ -592,6 +593,14 @@ export const ensureUseListToolsData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListToolsKeyFn(clientOptions),
     queryFn: () => listTools({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListUserToolsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListUserToolsKeyFn(clientOptions),
+    queryFn: () => listUserTools({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListToolsetInventoryData = (
   queryClient: QueryClient,

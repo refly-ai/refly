@@ -33,7 +33,7 @@ import {
   haveToolsetsChanged,
 } from '@refly/canvas-common';
 import { CanvasNotFoundError, CanvasVersionNotFoundError, ParamsError } from '@refly/errors';
-import { Canvas as CanvasModel } from '../../generated/client';
+import { Canvas as CanvasModel } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
 import { LockReleaseFn, RedisService } from '../common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';

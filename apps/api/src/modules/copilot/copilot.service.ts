@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { User, ListCopilotSessionsData, GetCopilotSessionDetailData } from '@refly/openapi-schema';
-import { CopilotSession } from '../../generated/client';
+import { CopilotSession } from '@prisma/client';
 import { CopilotSessionNotFoundError } from '@refly/errors';
 import { ActionService } from '../action/action.service';
 import { ActionDetail } from '../action/action.dto';

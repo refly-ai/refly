@@ -15,11 +15,9 @@ import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { MiscModule } from '../misc/misc.module';
 import { ProviderModule } from '../provider/provider.module';
 import { ComposioModule } from './composio/composio.module';
-import { AdapterFactory } from './dynamic-tooling/adapters/factory/factory';
-import { ConfigLoader } from './dynamic-tooling/core/loader/loader.service';
-import { ToolDefinitionRegistry } from './dynamic-tooling/core/registry/definition';
-import { ToolFactory } from './dynamic-tooling/core/registry/factory';
-import { ResourceHandler } from './dynamic-tooling/resource/resource.service';
+import { AdapterFactory } from './dynamic-tooling/adapters/factory';
+import { ToolFactory } from './dynamic-tooling/factory.service';
+import { ResourceHandler } from './dynamic-tooling/resource.service';
 import { ToolInventoryService } from './inventory/inventory.service';
 import { ScaleboxModule } from './sandbox/scalebox.module';
 import { ToolController } from './tool.controller';
@@ -48,14 +46,12 @@ import { ToolService } from './tool.service';
     SyncToolCreditUsageProcessor,
     // Tool inventory service (loads from database)
     ToolInventoryService,
-    // Configuration and registry services for dual-table tool system
-    ConfigLoader,
-    ToolDefinitionRegistry,
+    // Tool factory for creating dynamic tools from inventory
     ToolFactory,
     AdapterFactory,
     // Resource handler for input/output resource preprocessing
     ResourceHandler,
   ],
-  exports: [ToolService, ToolInventoryService, ConfigLoader, ToolDefinitionRegistry, ToolFactory],
+  exports: [ToolService, ToolInventoryService, ToolFactory],
 })
 export class ToolModule {}

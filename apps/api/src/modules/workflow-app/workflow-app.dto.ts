@@ -1,5 +1,5 @@
 import { WorkflowApp } from '@refly/openapi-schema';
-import { WorkflowApp as WorkflowAppPO, User } from '../../generated/client';
+import { WorkflowApp as WorkflowAppPO, User } from '@prisma/client';
 import { safeParseJSON } from '@refly/utils';
 
 /**
