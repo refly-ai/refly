@@ -13,7 +13,7 @@ import {
   SandboxRunCodeException,
   SandboxFileListException,
 } from './scalebox.exception';
-import { SANDBOX_DRIVE_MOUNT_POINT } from './scalebox.constants';
+import { SANDBOX_DRIVE_MOUNT_POINT, SCALEBOX_DEFAULTS, GRPC_CODE } from './scalebox.constants';
 import { ExecutionContext } from './scalebox.dto';
 
 export interface S3Config {
@@ -238,10 +238,31 @@ export class SandboxWrapper {
 
   @Trace('sandbox.command')
   private async runCommand(command: string) {
-    const result = await guard(() => this.sandbox.commands.run(command)).orThrow((error) => {
-      this.logger.warn(error, 'Sandbox command failed');
-      return new SandboxExecutionFailedException(error);
-    });
+    const result = await guard
+      .retry(
+        () =>
+          guard(() => this.sandbox.commands.run(command)).orThrow((error) => {
+            this.logger.warn(
+              { error, sandboxId: this.sandboxId },
+              'Sandbox command attempt failed',
+            );
+            throw error;
+          }),
+        {
+          maxAttempts: SCALEBOX_DEFAULTS.COMMAND_RETRY_MAX_ATTEMPTS,
+          initialDelay: SCALEBOX_DEFAULTS.COMMAND_RETRY_DELAY_MS,
+          maxDelay: SCALEBOX_DEFAULTS.COMMAND_RETRY_DELAY_MS,
+          backoffFactor: 1,
+          retryIf: (error) => (error as any)?.code === GRPC_CODE.UNAVAILABLE,
+        },
+      )
+      .orThrow((error) => {
+        this.logger.error(
+          { error, sandboxId: this.sandboxId },
+          'Sandbox command failed after retries',
+        );
+        return new SandboxExecutionFailedException(error);
+      });
 
     guard.ensure(result.exitCode === 0).orThrow(() => {
       this.logger.warn(

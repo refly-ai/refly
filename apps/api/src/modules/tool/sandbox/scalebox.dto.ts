@@ -6,6 +6,9 @@ import {
   type DriveFile,
 } from '@refly/openapi-schema';
 
+import { SandboxException, SandboxExecutionBadResultException } from './scalebox.exception';
+import { extractErrorMessage, isGrpcTransientError } from './scalebox.utils';
+
 /**
  * Scalebox internal type definitions
  * These types are only used within the scalebox module
@@ -113,9 +116,42 @@ export interface SimplifiedSandboxResult {
 }
 
 /**
+ * Type guard for SandboxExecutionBadResultException
+ * Handles both native instances AND serialized objects from BullMQ
+ *
+ * BullMQ serializes exceptions to JSON, losing prototype chain.
+ * After deserialization, instanceof checks fail, but properties are preserved:
+ * { type, name, code, result, message, stack, context }
+ */
+function isBadResultException(
+  error: unknown,
+): error is { result: ExecutionResult; code: string; message: string } {
+  if (error instanceof SandboxExecutionBadResultException) {
+    return true;
+  }
+  // Check for serialized exception from BullMQ
+  const e = error as Record<string, unknown>;
+  return (
+    e?.code === 'SANDBOX_EXECUTION_BAD_RESULT' &&
+    typeof e?.result === 'object' &&
+    e?.result !== null &&
+    'exitCode' in (e.result as object)
+  );
+}
+
+/**
  * Factory for building sandbox execution responses
+ *
+ * Response status mapping:
+ * - status='success' + exitCode=0: Code executed successfully
+ * - status='success' + exitCode!=0: Code error (syntax error, runtime exception, etc.)
+ * - status='failed': System error (sandbox creation failed, lock timeout, etc.)
  */
 export const ScaleboxResponseFactory = {
+  /**
+   * Build success response (covers both successful execution and code errors)
+   * Code errors are indicated by non-zero exitCode
+   */
   success(
     output: string,
     files: DriveFile[],
@@ -127,18 +163,77 @@ export const ScaleboxResponseFactory = {
       data: {
         output,
         error: result.error || '',
-        exitCode: result.exitCode || 0,
+        exitCode: result.exitCode ?? 0,
         executionTime,
         files,
       },
     };
   },
 
-  error(err: { code: string; message: string }): SandboxExecuteResponse {
+  /**
+   * Build error response - automatically classifies as code error or system error
+   *
+   * Classification logic:
+   * 1. SandboxExecutionBadResultException with gRPC transient error → system_error (retry suggested)
+   * 2. SandboxExecutionBadResultException without gRPC error → code_error (model can fix)
+   * 3. Other exceptions → system_error (infrastructure failure)
+   *
+   * Note: Uses property-based check instead of instanceof to handle
+   * BullMQ serialized exceptions that lose their prototype chain.
+   */
+  error(error: unknown, executionTime: number): SandboxExecuteResponse {
+    // Check for code execution error (handles both native and BullMQ-serialized exceptions)
+    if (isBadResultException(error)) {
+      const result = error.result;
+
+      // Check if it's a gRPC transient error (502/503 UNAVAILABLE)
+      // These are system errors, not code errors - retry may help
+      if (isGrpcTransientError(result)) {
+        return {
+          status: 'failed',
+          data: null,
+          errors: [
+            {
+              code: 'SANDBOX_TRANSIENT_ERROR',
+              message:
+                'Sandbox service temporarily unavailable. This is a transient error, please retry the request.',
+            },
+          ],
+        };
+      }
+
+      // Code error: non-zero exitCode from user's code
+      // Return success with exitCode != 0 so model can fix the code
+      return {
+        status: 'success',
+        data: {
+          output: result.text || '',
+          error: extractErrorMessage(result),
+          exitCode: result.exitCode,
+          executionTime,
+          files: [],
+        },
+      };
+    }
+
+    // System error: infrastructure failure (sandbox creation, lock timeout, etc.)
+    // Return failed status - model cannot fix this by changing code
     return {
       status: 'failed',
       data: null,
-      errors: [err],
+      errors: [formatSandboxError(error)],
     };
   },
 };
+
+/** Format error into structured code and message for response */
+function formatSandboxError(error: unknown): { code: string; message: string } {
+  if (error instanceof SandboxException) {
+    return { code: error.code, message: error.getFormattedMessage() };
+  }
+  // Return raw message without prefix - agent-tools will add appropriate prefix
+  if (error instanceof Error) {
+    return { code: 'QUEUE_EXECUTION_FAILED', message: error.message };
+  }
+  return { code: 'QUEUE_EXECUTION_FAILED', message: String(error) };
+}

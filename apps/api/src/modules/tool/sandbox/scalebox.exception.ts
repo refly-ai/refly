@@ -89,7 +89,8 @@ export class SandboxLockTimeoutException extends SandboxException {
     public readonly lockKey: string,
     public readonly timeoutMs: number,
   ) {
-    super(`Failed to acquire lock for ${lockKey} after ${timeoutMs}ms`, 'SANDBOX_LOCK_TIMEOUT', {
+    // User-friendly message for model consumption; internal details in context for logging
+    super('Sandbox is busy, please retry', 'SANDBOX_LOCK_TIMEOUT', {
       lockKey,
       timeoutMs,
     });

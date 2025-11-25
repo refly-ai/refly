@@ -22,7 +22,7 @@ import {
   SandboxExecuteJobData,
   ScaleboxResponseFactory,
 } from './scalebox.dto';
-import { formatError, extractErrorMessage, checkCriticalError } from './scalebox.utils';
+import { extractErrorMessage, checkCriticalError } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { SandboxWrapper, S3Config } from './scalebox.wrapper';
 import { Trace } from './scalebox.tracer';
@@ -144,8 +144,8 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         executionTime,
       );
     } catch (error) {
-      this.logger.error(error, 'Sandbox execution failed');
-      return ScaleboxResponseFactory.error(formatError(error));
+      this.logger.error({ error }, 'Sandbox execution failed');
+      return ScaleboxResponseFactory.error(error, Date.now() - startTime);
     }
   }
 
@@ -215,7 +215,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
   ): Promise<ScaleboxExecutionResult> {
     const result = await guard.defer(
       () => this.acquireRegisterFiles(wrapper, context),
-      () => this.executeDefenseCriticalError(wrapper, params),
+      () => this.executeDefenseCriticalError(wrapper, params, context),
       (error) => this.logger.error({ error }, 'Failed to register files'),
     );
 
@@ -229,7 +229,11 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  private async executeDefenseCriticalError(wrapper: SandboxWrapper, params: SandboxExecuteParams) {
+  private async executeDefenseCriticalError(
+    wrapper: SandboxWrapper,
+    params: SandboxExecuteParams,
+    _context: ExecutionContext,
+  ) {
     const timeoutMs = this.lock.runCodeTimeoutMs;
 
     return guard(() => wrapper.executeCode(params, { logger: this.logger, timeoutMs })).orElse(

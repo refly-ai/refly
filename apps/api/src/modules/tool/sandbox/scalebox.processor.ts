@@ -19,6 +19,8 @@ import {
   ScaleboxExecutionResult,
   ExecutionContext,
 } from './scalebox.dto';
+import { SandboxExecutionBadResultException } from './scalebox.exception';
+import { extractErrorMessage } from './scalebox.utils';
 
 // Note: @Processor decorator options are evaluated at compile-time, not runtime.
 // Dynamic config via getWorkerOptions() is NOT supported by @nestjs/bullmq.
@@ -57,6 +59,20 @@ export class ScaleboxExecuteProcessor extends WorkerHost {
         this.logger.info({ exitCode: result.exitCode }, 'Execution completed');
         return result;
       } catch (error) {
+        // Handle code execution errors (non-zero exit code) by returning as normal result
+        // BullMQ serializes exceptions and loses custom properties (code, result),
+        // so we must catch SandboxExecutionBadResultException here and convert to result
+        if (error instanceof SandboxExecutionBadResultException) {
+          this.logger.info({ exitCode: error.result.exitCode }, 'Code error (non-zero exit code)');
+          return {
+            originResult: error.result,
+            error: extractErrorMessage(error.result),
+            exitCode: error.result.exitCode,
+            files: context.registeredFiles ?? [],
+          };
+        }
+
+        // Other errors are system failures, let BullMQ handle them
         this.logger.error(error, 'Execution failed');
         throw error;
       }

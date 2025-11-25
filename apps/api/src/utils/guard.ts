@@ -9,6 +9,7 @@ export interface RetryConfig {
   initialDelay?: number;
   maxDelay?: number;
   backoffFactor?: number;
+  retryIf?: (error: unknown) => boolean; // Only retry if returns true; retries all errors if not provided
 }
 
 interface GuardWrapper<T> {
@@ -215,7 +216,14 @@ guard.bracket = async <R extends any[], T>(
  */
 guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<Promise<T>> => {
   return guard(async () => {
-    const { maxAttempts, timeout, initialDelay = 0, maxDelay = 1000, backoffFactor = 1 } = config;
+    const {
+      maxAttempts,
+      timeout,
+      initialDelay = 0,
+      maxDelay = 1000,
+      backoffFactor = 1,
+      retryIf,
+    } = config;
 
     let lastError: unknown;
     const startTime = Date.now();
@@ -230,10 +238,11 @@ guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<P
       } catch (error) {
         lastError = error;
 
+        const shouldRetry = retryIf ? retryIf(error) : true;
         const hasMoreAttempts = maxAttempts ? attempt < maxAttempts : true;
         const hasMoreTime = timeout ? Date.now() - startTime < timeout : true;
 
-        if (!hasMoreAttempts || !hasMoreTime) {
+        if (!shouldRetry || !hasMoreAttempts || !hasMoreTime) {
           throw lastError;
         }
 

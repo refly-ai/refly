@@ -245,9 +245,7 @@ export default () => ({
       autoPauseDelayMs: process.env.SCALEBOX_AUTO_PAUSE_DELAY_MS,
       // Lock
       runCodeTimeoutSec: process.env.SCALEBOX_RUN_CODE_TIMEOUT_SEC,
-      fileBufferSec: process.env.SCALEBOX_FILE_BUFFER_SEC,
-      driveBufferSec: process.env.SCALEBOX_DRIVE_BUFFER_SEC,
-      queueDepth: process.env.SCALEBOX_QUEUE_DEPTH,
+      lockWaitTimeoutSec: process.env.SCALEBOX_LOCK_WAIT_TIMEOUT_SEC,
       lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
     },
   },
