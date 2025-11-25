@@ -52,11 +52,14 @@ export class ScaleboxExecuteProcessor extends WorkerHost {
 
       this.logger.debug('Processing execution job');
 
-      const result = await this.scaleboxService.executeCode(params, context);
-
-      this.logger.info({ exitCode: result.exitCode }, 'Execution completed');
-
-      return result;
+      try {
+        const result = await this.scaleboxService.executeCode(params, context);
+        this.logger.info({ exitCode: result.exitCode }, 'Execution completed');
+        return result;
+      } catch (error) {
+        this.logger.error(error, 'Execution failed');
+        throw error;
+      }
     });
   }
 }

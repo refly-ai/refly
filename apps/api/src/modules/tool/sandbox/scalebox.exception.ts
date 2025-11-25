@@ -105,3 +105,9 @@ export class SandboxExecutionBadResultException extends SandboxException {
     );
   }
 }
+
+export class SandboxRunCodeException extends SandboxException {
+  constructor(messageOrError: unknown) {
+    super(messageOrError, 'SANDBOX_RUN_CODE_FAILED');
+  }
+}

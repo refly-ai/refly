@@ -10,6 +10,8 @@ import {
   SandboxExecutionFailedException,
   SandboxConnectionException,
   SandboxExecutionBadResultException,
+  SandboxRunCodeException,
+  SandboxFileListException,
 } from './scalebox.exception';
 import { SANDBOX_DRIVE_MOUNT_POINT } from './scalebox.constants';
 import { ExecutionContext } from './scalebox.dto';
@@ -87,6 +89,7 @@ export class SandboxWrapper {
     idleSince: number,
   ) {
     this._idleSince = idleSince;
+    this.logger.setContext(SandboxWrapper.name);
   }
 
   get idleSince(): number {
@@ -235,13 +238,18 @@ export class SandboxWrapper {
 
   @Trace('sandbox.command')
   private async runCommand(command: string) {
-    const result = await guard(() => this.sandbox.commands.run(command)).orThrow(
-      (error) => new SandboxExecutionFailedException(error),
-    );
+    const result = await guard(() => this.sandbox.commands.run(command)).orThrow((error) => {
+      this.logger.warn(error, 'Sandbox command failed');
+      return new SandboxExecutionFailedException(error);
+    });
 
-    guard
-      .ensure(result.exitCode === 0)
-      .orThrow(() => new SandboxExecutionFailedException(result.stderr, result.exitCode));
+    guard.ensure(result.exitCode === 0).orThrow(() => {
+      this.logger.warn(
+        { exitCode: result.exitCode, stderr: result.stderr },
+        'Sandbox command non-zero exit',
+      );
+      return new SandboxExecutionFailedException(result.stderr, result.exitCode);
+    });
 
     return result;
   }
@@ -253,10 +261,15 @@ export class SandboxWrapper {
   ): Promise<ExecutionResult> {
     ctx.logger.info({ language: params.language }, 'Executing code');
 
-    const result = await this.sandbox.runCode(params.code, {
-      language: params.language,
-      cwd: this.cwd,
-      timeout: ctx.timeoutMs,
+    const result = await guard(() =>
+      this.sandbox.runCode(params.code, {
+        language: params.language,
+        cwd: this.cwd,
+        timeout: ctx.timeoutMs,
+      }),
+    ).orThrow((error) => {
+      this.logger.warn(error, 'Sandbox runCode failed');
+      return new SandboxRunCodeException(error);
     });
 
     guard
@@ -270,7 +283,10 @@ export class SandboxWrapper {
   async listCwdFiles(): Promise<string[]> {
     return guard(() =>
       this.sandbox.files.list(this.cwd).then((files) => files.map((file) => file.name)),
-    ).orThrow((error) => new SandboxExecutionFailedException(error));
+    ).orThrow((error) => {
+      this.logger.warn(error, 'Failed to list files');
+      return new SandboxFileListException(error);
+    });
   }
 
   async kill(): Promise<void> {

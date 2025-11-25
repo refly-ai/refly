@@ -93,7 +93,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
     const previousFiles = await wrapper.listCwdFiles();
     const prevSet = new Set(previousFiles);
 
-    this.logger.info({ context, previousFiles }, 'Previous files');
+    this.logger.info({ previousFiles }, 'Previous files');
 
     return [
       prevSet,
@@ -103,7 +103,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
           .filter((file) => !prevSet.has(file))
           .map((p) => p.replace(wrapper.cwd, ''));
 
-        this.logger.info({ context, diffFiles }, 'Diff files');
+        this.logger.info({ diffFiles }, 'Diff files');
 
         context.registeredFiles = await this.registerFiles(context, diffFiles);
       },
