@@ -37,6 +37,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   listAccounts,
   listActions,
   listCanvases,
@@ -480,6 +481,14 @@ export const ensureUseGetFormDefinitionData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions),
     queryFn: () => getFormDefinition({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseHasFilledFormData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseHasFilledFormKeyFn(clientOptions),
+    queryFn: () => hasFilledForm({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetCreditRechargeData = (
   queryClient: QueryClient,

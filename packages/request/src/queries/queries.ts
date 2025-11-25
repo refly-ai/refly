@@ -99,6 +99,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -356,6 +357,7 @@ import {
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   HasBeenInvitedError,
+  HasFilledFormError,
   ImportCanvasData,
   ImportCanvasError,
   InitializeWorkflowData,
@@ -1182,6 +1184,21 @@ export const useGetFormDefinition = <
     queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getFormDefinition({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useHasFilledForm = <
+  TData = Common.HasFilledFormDefaultResponse,
+  TError = HasFilledFormError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseHasFilledFormKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      hasFilledForm({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCreditRecharge = <

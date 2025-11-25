@@ -10,6 +10,7 @@ export const InvitationCodeModal = () => {
   const userStore = useUserStoreShallow((state) => ({
     showInvitationCodeModal: state.showInvitationCodeModal,
     setShowInvitationCodeModal: state.setShowInvitationCodeModal,
+    setShowOnboardingFormModal: state.setShowOnboardingFormModal,
   }));
 
   const handleActivationSuccess = async () => {
@@ -19,8 +20,10 @@ export const InvitationCodeModal = () => {
       const hasBeenInvited = invitationResp.data?.data ?? false;
 
       if (hasBeenInvited) {
-        // Close modal without refreshing the page
+        // Close invitation code modal
         userStore.setShowInvitationCodeModal(false);
+        // Open onboarding form modal immediately
+        userStore.setShowOnboardingFormModal(true);
       }
     } catch (error) {
       // If check fails, keep modal open

@@ -379,6 +379,8 @@ import type {
   SubmitFormData,
   SubmitFormError,
   SubmitFormResponse,
+  HasFilledFormError,
+  HasFilledFormResponse2,
   GetCreditRechargeData,
   GetCreditRechargeError,
   GetCreditRechargeResponse2,
@@ -2528,6 +2530,19 @@ export const submitForm = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<SubmitFormResponse, SubmitFormError, ThrowOnError>({
     ...options,
     url: '/form/submission',
+  });
+};
+
+/**
+ * Check if user has filled the form
+ * Check if user has filled the form
+ */
+export const hasFilledForm = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<HasFilledFormResponse2, HasFilledFormError, ThrowOnError>({
+    ...options,
+    url: '/form/hasFilledForm',
   });
 };
 

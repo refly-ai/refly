@@ -5,15 +5,13 @@ import { useUserStoreShallow } from '@refly/stores';
 import { useGetFormDefinition } from '@refly-packages/ai-workspace-common/queries';
 import type { GetFormDefinitionDefaultResponse } from '@refly-packages/ai-workspace-common/queries/common';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+import reflyUnionSvg from '@refly-packages/ai-workspace-common/assets/refly-union.svg';
 
 const FormOnboardingModalComponent: React.FC = () => {
-  const { showOnboardingFormModal, setShowOnboardingFormModal, userProfile } = useUserStoreShallow(
-    (state) => ({
-      showOnboardingFormModal: state.showOnboardingFormModal,
-      setShowOnboardingFormModal: state.setShowOnboardingFormModal,
-      userProfile: state.userProfile,
-    }),
-  );
+  const { showOnboardingFormModal, userProfile } = useUserStoreShallow((state) => ({
+    showOnboardingFormModal: state.showOnboardingFormModal,
+    userProfile: state.userProfile,
+  }));
 
   const {
     data: formDefinitionResponse,
@@ -61,10 +59,6 @@ const FormOnboardingModalComponent: React.FC = () => {
     }
   }, [formDefinitionResponse?.data]);
 
-  const handleClose = useCallback(() => {
-    setShowOnboardingFormModal(false);
-  }, [setShowOnboardingFormModal]);
-
   const handleLog = useCallback(
     (type: string) => (data: unknown) => {
       // Log form events for debugging only
@@ -79,16 +73,8 @@ const FormOnboardingModalComponent: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-      <div className="relative flex items-center justify-center rounded-2xl bg-refly-bg-content-z2 shadow-refly-m px-6 py-4">
-        <button
-          type="button"
-          onClick={handleClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-refly-bg-control-z0 text-refly-text-2 hover:bg-refly-bg-control-z1 hover:text-refly-text-0"
-        >
-          <span className="sr-only">Close onboarding form</span>
-          <span className="text-lg leading-none">×</span>
-        </button>
+    <div className="fixed inset-0 z-[60] bg-refly-bg-canvas flex flex-col items-center justify-center">
+      <div className="max-w-[580px] px-6 flex flex-col items-center mb-8 relative z-10">
         {isFormDefinitionLoading && (
           <div className="flex items-center justify-center px-8 py-6 text-sm text-refly-text-2">
             Loading form definition...
@@ -113,6 +99,11 @@ const FormOnboardingModalComponent: React.FC = () => {
           />
         )}
       </div>
+      <img
+        src={reflyUnionSvg}
+        alt="Refly Union"
+        className="w-full absolute bottom-0 left-0 -z-10"
+      />
     </div>
   );
 };

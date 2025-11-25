@@ -66,6 +66,7 @@ export class AuthService {
     return JSON.stringify({
       requireInvitationCode,
       hasBeenInvited: false,
+      hasFilledForm: false,
     });
   }
 

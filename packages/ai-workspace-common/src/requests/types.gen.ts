@@ -5003,6 +5003,18 @@ export type GetFormDefinitionResponse = BaseResponse & {
   data?: FormDefinition;
 };
 
+export type HasFilledFormResponse = BaseResponse & {
+  /**
+   * Has filled form data
+   */
+  data?: {
+    /**
+     * Whether the user has filled the form
+     */
+    hasFilledForm?: boolean;
+  };
+};
+
 export type GetCreditRechargeResponse = BaseResponse & {
   /**
    * Credit recharge data with pagination
@@ -7730,7 +7742,10 @@ export type JsonSchema = {
 export type type6 = 'object';
 
 export type ResponseSchema = JsonSchema & {
-  [key: string]: unknown;
+  /**
+   * Field names to omit from the response (e.g., ['thoughtSignature'])
+   */
+  omitFields?: Array<string>;
 };
 
 export type ResourceField = {
@@ -10134,6 +10149,10 @@ export type SubmitFormData = {
 export type SubmitFormResponse = BaseResponse;
 
 export type SubmitFormError = unknown;
+
+export type HasFilledFormResponse2 = HasFilledFormResponse;
+
+export type HasFilledFormError = unknown;
 
 export type GetCreditRechargeData = {
   query?: {

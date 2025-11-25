@@ -3,6 +3,7 @@ import { Button, Checkbox, Input, Radio } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useSubmitForm } from '@refly-packages/ai-workspace-common/queries';
+import { useUserStoreShallow } from '@refly/stores';
 
 interface RjsfFieldTemplateProps {
   id?: string;
@@ -220,6 +221,9 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
   } = props;
 
   const submitFormMutation = useSubmitForm();
+  const userStore = useUserStoreShallow((state) => ({
+    setShowOnboardingFormModal: state.setShowOnboardingFormModal,
+  }));
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -381,16 +385,24 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
               const uid = (schema as { uid?: string })?.uid;
 
               if (formId && uid) {
-                submitFormMutation.mutate({
-                  body: {
-                    formSubmission: {
-                      formId,
-                      uid,
-                      answers: JSON.stringify(effectiveFormData),
-                      status: 'submitted',
-                    } as any,
+                submitFormMutation.mutate(
+                  {
+                    body: {
+                      formSubmission: {
+                        formId,
+                        uid,
+                        answers: JSON.stringify(effectiveFormData),
+                        status: 'submitted',
+                      } as any,
+                    },
                   },
-                });
+                  {
+                    onSuccess: () => {
+                      // Close the onboarding form modal after successful submission
+                      userStore.setShowOnboardingFormModal(false);
+                    },
+                  },
+                );
               }
             }}
           >

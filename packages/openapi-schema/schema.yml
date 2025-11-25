@@ -3111,6 +3111,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /form/hasFilledForm:
+    get:
+      tags:
+        - form
+      summary: Check if user has filled the form
+      description: Check if user has filled the form
+      operationId: hasFilledForm
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasFilledFormResponse'
   /credit/recharge:
     get:
       tags:
@@ -9046,6 +9060,19 @@ components:
               type: object
               description: Form definition
               $ref: '#/components/schemas/FormDefinition'
+    HasFilledFormResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Has filled form data
+              properties:
+                hasFilledForm:
+                  type: boolean
+                  description: Whether the user has filled the form
+                  default: false
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

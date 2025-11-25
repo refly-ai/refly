@@ -99,6 +99,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -664,6 +665,16 @@ export const UseGetFormDefinitionKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useGetFormDefinitionKey, ...(queryKey ?? [clientOptions])];
+export type HasFilledFormDefaultResponse = Awaited<ReturnType<typeof hasFilledForm>>['data'];
+export type HasFilledFormQueryResult<
+  TData = HasFilledFormDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useHasFilledFormKey = 'HasFilledForm';
+export const UseHasFilledFormKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useHasFilledFormKey, ...(queryKey ?? [clientOptions])];
 export type GetCreditRechargeDefaultResponse = Awaited<
   ReturnType<typeof getCreditRecharge>
 >['data'];

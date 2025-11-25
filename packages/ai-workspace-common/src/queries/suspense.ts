@@ -37,6 +37,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   listAccounts,
   listActions,
   listCanvases,
@@ -129,6 +130,7 @@ import {
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   HasBeenInvitedError,
+  HasFilledFormError,
   ListAccountsData,
   ListAccountsError,
   ListActionsError,
@@ -873,6 +875,21 @@ export const useGetFormDefinitionSuspense = <
     queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getFormDefinition({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useHasFilledFormSuspense = <
+  TData = Common.HasFilledFormDefaultResponse,
+  TError = HasFilledFormError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseHasFilledFormKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      hasFilledForm({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCreditRechargeSuspense = <

@@ -7038,6 +7038,30 @@ export const GetFormDefinitionResponseSchema = {
   ],
 } as const;
 
+export const HasFilledFormResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Has filled form data',
+          properties: {
+            hasFilledForm: {
+              type: 'boolean',
+              description: 'Whether the user has filled the form',
+              default: false,
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const GetCreditRechargeResponseSchema = {
   allOf: [
     {
