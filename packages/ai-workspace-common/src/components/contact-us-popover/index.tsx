@@ -57,7 +57,7 @@ export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, op
   }, [setOpen]);
 
   const handleDiscordClick = useCallback(() => {
-    window.open('https://discord.gg/bWjffrb89h', '_blank');
+    window.open('https://discord.gg/YVuYFjFvRC', '_blank');
   }, []);
 
   const handleNotionDocumentClick = useCallback(() => {

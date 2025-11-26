@@ -198,7 +198,7 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
   }, [handleLogout]);
 
   const handleDiscordClick = useCallback(() => {
-    window.open('https://discord.gg/bWjffrb89h', '_blank');
+    window.open('https://discord.gg/YVuYFjFvRC', '_blank');
   }, []);
 
   // Theme mode options

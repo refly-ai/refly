@@ -134,4 +134,4 @@ If the application fails to function properly, you can try the following steps:
 3. If the unhealthy container is `refly_api`, you can first try to run `docker restart refly_api` to restart the container.
 4. For others, you can search for the cause of error messages in the container's logs.
 
-If the issue persists, you can raise an issue in our [GitHub repository](https://github.com/refly-ai/refly/issues), or contact us in our [Discord Server](https://discord.gg/bWjffrb89h).
+If the issue persists, you can raise an issue in our [GitHub repository](https://github.com/refly-ai/refly/issues), or contact us in our [Discord Server](https://discord.gg/YVuYFjFvRC).

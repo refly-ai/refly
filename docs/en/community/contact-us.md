@@ -6,7 +6,7 @@ Join our community to get help, share your experience, and connect with other Re
 
 Join our Discord server for real-time discussions and support:
 
-Discord 👉 [https://discord.com/invite/bWjffrb89h](https://discord.com/invite/bWjffrb89h)
+Discord 👉 [https://discord.com/invite/YVuYFjFvRC](https://discord.com/invite/YVuYFjFvRC)
 
 ## Email
 
