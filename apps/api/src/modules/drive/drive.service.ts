@@ -366,7 +366,7 @@ export class DriveService {
    * List drive files with pagination and filtering
    */
   async listDriveFiles(user: User, params: ListDriveFilesParams): Promise<DriveFile[]> {
-    const { order, page, pageSize, includeContent } = params;
+    const { order, page = 1, pageSize = 10, includeContent } = params;
 
     const where: Prisma.DriveFileWhereInput = {
       uid: user.uid,
@@ -387,6 +387,42 @@ export class DriveService {
       );
     }
     return driveFiles.map(driveFilePO2DTO);
+  }
+
+  /**
+   * List all drive files without pagination (fetches all files page by page)
+   */
+  async listAllDriveFiles(
+    user: User,
+    params: Omit<ListDriveFilesParams, 'page' | 'pageSize'>,
+  ): Promise<DriveFile[]> {
+    const pageSize = 100; // Use larger page size for efficiency
+    let page = 1;
+    const allFiles: DriveFile[] = [];
+
+    while (true) {
+      const files = await this.listDriveFiles(user, {
+        ...params,
+        page,
+        pageSize,
+      });
+
+      if (files.length === 0) {
+        // No more files to fetch
+        break;
+      }
+
+      allFiles.push(...files);
+
+      if (files.length < pageSize) {
+        // Last page reached
+        break;
+      }
+
+      page++;
+    }
+
+    return allFiles;
   }
 
   async getDriveFileDetail(user: User, fileId: string, file?: DriveFileModel): Promise<DriveFile> {

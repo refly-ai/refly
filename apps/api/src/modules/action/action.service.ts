@@ -67,12 +67,12 @@ export class ActionService {
     const enrichedResult = await this.enrichActionResultWithDetails(user, result);
 
     if (includeFiles) {
-      enrichedResult.files = await this.driveService.listDriveFiles(user, {
+      enrichedResult.files = await this.driveService.listAllDriveFiles(user, {
         canvasId: result.targetId,
         source: 'agent',
         resultId,
-        resultVersion: version,
         includeContent: true,
+        ...(version ? { resultVersion: version } : { scope: 'present' }),
       });
     }
 

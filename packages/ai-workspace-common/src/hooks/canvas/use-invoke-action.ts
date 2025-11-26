@@ -39,6 +39,7 @@ import { useUpdateActionResult } from './use-update-action-result';
 import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
 
 export interface InvokeActionPayload {
+  title?: string;
   nodeId?: string;
   query?: string;
   resultId?: string;
@@ -458,6 +459,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       payload.resultId ||= genActionResultID();
 
       const {
+        title,
         nodeId,
         query,
         modelInfo,
@@ -487,6 +489,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
       const param: InvokeSkillRequest = {
         resultId,
+        title: title ?? query,
         input: {
           query,
         },

@@ -145,6 +145,7 @@ const SkillResponseNodePreviewComponent = ({
 
     invokeAction(
       {
+        title: title ?? query,
         nodeId: node.id,
         resultId,
         query: llmInputQuery,
@@ -160,6 +161,7 @@ const SkillResponseNodePreviewComponent = ({
     );
   }, [
     resultId,
+    title,
     query,
     modelInfo,
     contextItems,

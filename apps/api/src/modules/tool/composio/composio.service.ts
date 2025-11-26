@@ -223,7 +223,7 @@ export class ComposioService {
 
       return null;
     } catch (composioError) {
-      this.logger.warn('Failed to query Composio API: ', composioError.message);
+      this.logger.warn(`Failed to query Composio API: ${composioError.message}`);
       return null;
     }
   }

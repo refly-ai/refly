@@ -5597,6 +5597,10 @@ export const InvokeSkillRequestSchema = {
       description: 'Skill input',
       $ref: '#/components/schemas/SkillInput',
     },
+    title: {
+      description: 'Agent title',
+      type: 'string',
+    },
     context: {
       description: 'Skill invocation context',
       $ref: '#/components/schemas/SkillContext',

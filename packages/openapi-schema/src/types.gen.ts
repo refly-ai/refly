@@ -4006,6 +4006,10 @@ export type InvokeSkillRequest = {
    */
   input?: SkillInput;
   /**
+   * Agent title
+   */
+  title?: string;
+  /**
    * Skill invocation context
    */
   context?: SkillContext;
