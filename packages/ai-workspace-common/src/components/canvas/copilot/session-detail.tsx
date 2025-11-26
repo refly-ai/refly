@@ -210,7 +210,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       ) : (
         <Markdown content={content} mode="readonly" />
       )}
-      {workflowPlan && status === 'finish' && (
+      {workflowPlan && (
         <div className="mt-1">
           <Button type="primary" onClick={handleApprove}>
             {t('copilot.sessionDetail.approve')}

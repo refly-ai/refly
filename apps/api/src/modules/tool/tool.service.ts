@@ -112,7 +112,7 @@ export class ToolService {
     const populatedTools = await this.populateToolsetsWithDefinition(installedTools);
 
     // 2. Get installed toolset keys for filtering
-    const installedKeys = new Set(populatedTools.map((t) => t.toolset.key));
+    const installedKeys = new Set(populatedTools.map((t) => t.toolset?.key).filter(Boolean));
 
     // 3. Get all external OAuth tools from inventory that are not installed
     // external_oauth type tools have requiresAuth=true and authPatterns with type='oauth'

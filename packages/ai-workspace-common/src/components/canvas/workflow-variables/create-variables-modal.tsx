@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Modal, Form, Input, Checkbox, message } from 'antd';
-import { Attachment, Close, List, Text1 } from 'refly-icons';
+import { /*Attachment, */ Close, List, Text1 } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -58,11 +58,11 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           value: 'string',
           icon: <Text1 size={16} />,
         },
-        {
-          label: t('canvas.workflow.variables.variableTypeOptions.resource'),
-          value: 'resource',
-          icon: <Attachment size={16} />,
-        },
+        // {
+        //   label: t('canvas.workflow.variables.variableTypeOptions.resource'),
+        //   value: 'resource',
+        //   icon: <Attachment size={16} />,
+        // },
         {
           label: t('canvas.workflow.variables.variableTypeOptions.option'),
           value: 'option',
