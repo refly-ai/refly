@@ -589,6 +589,8 @@ export const CreateWorkflowAppModal = ({
         maxHeight: '70vh',
         overflowY: 'auto',
         padding: 0,
+        paddingInline: 8,
+        scrollbarGutter: 'stable both-edges',
       }}
     >
       {contextHolder}

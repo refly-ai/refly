@@ -216,6 +216,7 @@ const translations = {
     goBack: '返回',
     library: '知识库',
     untitled: '未命名',
+    agent: '智能体',
     loading: '加载中...',
     activating: '激活中...',
     loadMore: '加载更多',

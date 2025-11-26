@@ -28,6 +28,7 @@ const translations = {
     goBack: 'Go Back',
     library: 'Library',
     untitled: 'Untitled',
+    agent: 'Agent',
     loading: 'Loading...',
     activating: 'Activating...',
     loadMore: 'Load More',
