@@ -879,7 +879,8 @@ export type EntityType =
   | 'codeArtifact'
   | 'page'
   | 'mediaResult'
-  | 'workflowApp';
+  | 'workflowApp'
+  | 'driveFile';
 
 /**
  * Entity

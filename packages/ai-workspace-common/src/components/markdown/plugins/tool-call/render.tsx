@@ -11,7 +11,6 @@ import { ProductCard } from './product-card';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { Button, Typography } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 
 import { ArrowDown, ArrowUp, Cancelled, CheckCircleBroken } from 'refly-icons';
 import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
@@ -128,65 +127,29 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   }
 
   const resultData = safeParseJSON(resultContent)?.data as Record<string, unknown> | undefined;
-
-  // Extract fileIds from result data
-  const fileIds = useMemo<string[]>(() => {
+  const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
     if (resultData?.fileId) {
-      return [String(resultData.fileId)];
+      return [
+        {
+          fileId: String(resultData.fileId),
+          canvasId: String(resultData.canvasId ?? ''),
+          name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
+          type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
+        },
+      ];
     }
 
     if (Array.isArray(resultData?.files)) {
-      return resultData.files.map((file) => String(file.fileId));
+      return resultData.files.map((file) => ({
+        fileId: String(file.fileId),
+        canvasId: String(file.canvasId ?? ''),
+        name: String(file.name ?? file.fileName ?? 'Drive file'),
+        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+      }));
     }
 
     return [];
   }, [resultData]);
-
-  // Fetch complete drive files data (including publicURL in share pages)
-  const { data: allDriveFiles } = useFetchDriveFiles();
-
-  // Match the complete file data from useFetchDriveFiles
-  const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
-    if (fileIds.length === 0) {
-      return [];
-    }
-
-    // Try to find files with complete data from allDriveFiles
-    const matchedFiles = fileIds
-      .map((fileId) => {
-        const matchedFile = allDriveFiles.find((f) => f.fileId === fileId);
-        if (matchedFile) {
-          return matchedFile;
-        }
-
-        // Fallback: construct partial file data from resultData if not found in allDriveFiles
-        if (resultData?.fileId === fileId) {
-          return {
-            fileId: String(resultData.fileId),
-            canvasId: String(resultData.canvasId ?? ''),
-            name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
-            type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
-          } as DriveFile;
-        }
-
-        if (Array.isArray(resultData?.files)) {
-          const fileData = resultData.files.find((f) => String(f.fileId) === fileId);
-          if (fileData) {
-            return {
-              fileId: String(fileData.fileId),
-              canvasId: String(fileData.canvasId ?? ''),
-              name: String(fileData.name ?? fileData.fileName ?? 'Drive file'),
-              type: String(fileData.type ?? fileData.mimeType ?? 'application/octet-stream'),
-            } as DriveFile;
-          }
-        }
-
-        return null;
-      })
-      .filter((file): file is DriveFile => file !== null);
-
-    return matchedFiles;
-  }, [fileIds, allDriveFiles, resultData]);
 
   const shouldRenderFilePreview = useMemo(() => {
     return filePreviewDriveFile.length > 0;

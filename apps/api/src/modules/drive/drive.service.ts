@@ -20,6 +20,7 @@ import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
+import path from 'node:path';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -671,34 +672,15 @@ export class DriveService {
       canvasId: newCanvasId,
     });
 
-    try {
-      // If file has publicURL but no storageKey, download from publicURL and upload
-      if (sourceFile.publicURL) {
-        this.logger.log(
-          `Downloading file from publicURL ${sourceFile.publicURL} for duplication to ${newStorageKey}`,
-        );
-
-        // Download file from publicURL
-        const response = await fetch(sourceFile.publicURL);
-        if (!response.ok) {
-          throw new Error(`Failed to download file from publicURL: ${response.statusText}`);
-        }
-
-        const buffer = Buffer.from(await response.arrayBuffer());
-
-        // Upload to new location in internal OSS
-        await this.internalOss.putObject(newStorageKey, buffer);
-      } else if (sourceFile.storageKey) {
-        // Normal case: duplicate from storageKey
-        await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
-      } else {
-        throw new Error(`File ${sourceFile.fileId} has neither storageKey nor publicURL`);
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to copy file ${sourceFile.fileId} to ${newStorageKey}: ${error.stack}`,
+    if (await this.internalOss.statObject(sourceFile.storageKey)) {
+      await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
+    } else if (await this.externalOss.statObject(sourceFile.storageKey)) {
+      const stream = await this.externalOss.getObject(sourceFile.storageKey);
+      await this.internalOss.putObject(newStorageKey, stream);
+    } else {
+      throw new Error(
+        `Failed to copy file ${sourceFile.fileId} to ${newStorageKey}: source file not found`,
       );
-      throw error;
     }
 
     // Create new drive file record with same metadata but new IDs
@@ -786,22 +768,20 @@ export class DriveService {
    * Copies the file from internal OSS to external OSS and returns the public URL
    * Creates a new storage key for the public file to avoid conflicts with internal file deletion
    */
-  async publishDriveFile(storageKey: string): Promise<string> {
-    if (!storageKey) {
+  async publishDriveFile(storageKey: string, fileId: string): Promise<string> {
+    if (!storageKey || !fileId) {
       return '';
+    }
+
+    if ((await this.externalOss.statObject(storageKey))?.size > 0) {
+      // File already exists in external OSS
+      return;
     }
 
     try {
       // Copy file from internal to external OSS
       const stream = await this.internalOss.getObject(storageKey);
       await this.externalOss.putObject(storageKey, stream);
-
-      // Generate public URL using the drive public endpoint
-      const publicEndpoint = this.config.get<string>('drive.publicEndpoint')?.replace(/\/$/, '');
-      const publicURL = `${publicEndpoint}/${storageKey}`;
-
-      this.logger.log(`Published drive file to public OSS: ${storageKey} -> ${publicURL}`);
-      return publicURL;
     } catch (error) {
       this.logger.error(`Failed to publish drive file ${storageKey}: ${error.stack}`);
       throw error;
@@ -812,18 +792,28 @@ export class DriveService {
    * Get public drive file content for serving via public endpoint
    * Used by the public file endpoint to serve shared files
    */
-  async getPublicFileContent(storageKey: string): Promise<{
+  async getPublicFileContent(fileId: string): Promise<{
     data: Buffer;
     contentType: string;
     filename: string;
   }> {
     try {
+      const driveFile = await this.prisma.driveFile.findFirst({
+        select: {
+          type: true,
+          storageKey: true,
+        },
+        where: { fileId },
+      });
+
+      const storageKey = driveFile.storageKey;
+
       // Get file from external OSS
       const readable = await this.externalOss.getObject(storageKey);
       const data = await streamToBuffer(readable);
 
       // Extract filename from storageKey
-      const filename = storageKey.split('/').pop() || 'file';
+      const filename = path.basename(storageKey) || 'file';
 
       // Try to get contentType from file extension
       const contentType = mime.getType(filename) || 'application/octet-stream';
@@ -838,7 +828,7 @@ export class DriveService {
         error?.code === 'NoSuchKey' ||
         error?.message?.includes('The specified key does not exist')
       ) {
-        throw new NotFoundException(`Public file with key ${storageKey} not found`);
+        throw new NotFoundException(`Public file with id ${fileId} not found`);
       }
       throw error;
     }

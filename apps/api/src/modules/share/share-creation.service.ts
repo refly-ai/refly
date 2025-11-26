@@ -126,8 +126,6 @@ export class ShareCreationService {
       updatedAt: file.updatedAt.toJSON(),
       // Include internal storageKey for duplication (not in public API)
       storageKey: file.storageKey ?? undefined,
-      // Include publicURL if available (for shared files)
-      publicURL: file.publicURL ?? undefined,
     }));
 
     // Find all image video audio nodes
@@ -448,13 +446,7 @@ export class ShareCreationService {
 
     // Publish file if storageKey exists and update database
     if (driveFile.storageKey) {
-      driveFile.publicURL = await this.driveService.publishDriveFile(driveFile.storageKey);
-      // Persist publicURL to database
-      await this.prisma.driveFile.update({
-        where: { fileId },
-        data: { publicURL: driveFile.publicURL },
-      });
-      this.logger.log(`Set publicURL for drive file: ${fileId}`);
+      await this.driveService.publishDriveFile(driveFile.storageKey, fileId);
     }
 
     // Upload drive file data to storage

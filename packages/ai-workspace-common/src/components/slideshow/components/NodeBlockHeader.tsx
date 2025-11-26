@@ -11,7 +11,7 @@ import { CanvasNodeType } from '@refly/openapi-schema';
 // Get node title
 const getNodeTitle = (node: NodeRelation) => {
   const { t } = useTranslation();
-  return node.nodeData?.title || t('pages.components.nodeBlock.untitledNode');
+  return node.nodeData?.title || t('common.agent', { defaultValue: 'Agent' });
 };
 
 interface NodeBlockHeaderProps {
@@ -26,6 +26,8 @@ interface NodeBlockHeaderProps {
   isFullscreen?: boolean;
   isModal?: boolean;
   rightActions?: React.ReactNode;
+  // Allow parent to customize NodeHeader styles (e.g., override background)
+  nodeHeaderClassName?: string;
 }
 
 export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
@@ -39,6 +41,7 @@ export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
     isMinimap = false,
     onDelete,
     rightActions,
+    nodeHeaderClassName,
   }) => {
     const { t } = useTranslation();
     const title = getNodeTitle(node);
@@ -90,6 +93,7 @@ export const NodeBlockHeader: React.FC<NodeBlockHeaderProps> = memo(
               resourceType={node.nodeData?.metadata?.resourceType as any}
               canEdit={false}
               updateTitle={handleTitleUpdate}
+              className={nodeHeaderClassName}
             />
           </div>
         </div>

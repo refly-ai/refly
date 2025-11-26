@@ -216,6 +216,7 @@ const translations = {
     goBack: '返回',
     library: '知识库',
     untitled: '未命名',
+    agent: '智能体',
     loading: '加载中...',
     activating: '激活中...',
     loadMore: '加载更多',
@@ -1003,16 +1004,6 @@ const translations = {
     },
   },
   knowledgeBase: {
-    keepOneWindow: '至少保留一个窗口',
-    resourceCollectionAssociativeModal: {
-      resourceTitle: '添加资源',
-      projectTitle: '添加到项目',
-      resource: '资源',
-      project: '项目',
-      resourcePlaceholder: '请选择资源',
-      projectPlaceholder: '请选择项目',
-      importResource: '导入资源',
-    },
     directory: {
       canvasCount: '{{count}} 篇画布',
       resourceCount: '{{count}} 篇资源',
@@ -1250,7 +1241,7 @@ const translations = {
       searchNodeDescription: '搜索画布中的节点，点击节点进行定位。',
       enablePointerMode: '启用框选模式',
       disablePointerMode: '关闭框选模式',
-      deleteCanvas: '删除',
+      deleteCanvas: '删除工作流',
       importResource: '导入资源',
       importResourceDescription:
         '通过在线搜索、手动添加网页链接或文本的方式批量添加写作素材在画布中阅读或消费。',
@@ -1966,7 +1957,7 @@ const translations = {
       },
     },
     import: {
-      title: '导入资源',
+      title: '导入文件',
       fromWebSearch: '全网搜索',
       fromFile: '导入本地文件',
       fromImage: '上传图片',

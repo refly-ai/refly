@@ -5,14 +5,14 @@ import {
   getExtFromContentType,
 } from '@refly-packages/ai-workspace-common/utils/download-file';
 import { useTranslation } from 'react-i18next';
-import { getFileUrl } from './use-file-url';
+import { useMatch } from 'react-router-dom';
+import { getDriveFileUrl } from './use-drive-file-url';
 import type { DriveFile } from '@refly/openapi-schema';
 
 interface DownloadableFile {
   fileId?: string;
   type?: string;
   name?: string;
-  publicURL?: string;
 }
 
 interface DownloadFileParams {
@@ -23,7 +23,11 @@ interface DownloadFileParams {
 export const useDownloadFile = () => {
   const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
-  const isSharePage = location?.pathname?.startsWith('/share/') ?? false;
+
+  // Check if current page is any share page (consistent with use-file-url.ts)
+  const isShareCanvas = useMatch('/share/canvas/:canvasId');
+  const isShareFile = useMatch('/share/file/:shareId');
+  const isSharePage = Boolean(isShareCanvas || isShareFile);
 
   const handleDownload = useCallback(
     async ({ currentFile, contentType }: DownloadFileParams) => {
@@ -46,23 +50,19 @@ export const useDownloadFile = () => {
         document.body.removeChild(link);
       };
 
-      let fileName = currentFile?.name ?? t('common.untitled');
-      if (!fileName.includes('.')) {
-        const fileExt = getExtFromContentType(contentType ?? '');
-        fileName = buildSafeFileName(fileName, fileExt);
-      }
       setIsDownloading(true);
 
       try {
-        // Use the getFileUrl pure function
         const file = currentFile as DriveFile;
-        const { fileUrl, shouldFetch } = getFileUrl(file, isSharePage, false);
+        // Use async getFileUrl which handles publicURL fetching automatically
+        const { fileUrl } = getDriveFileUrl(file, isSharePage);
 
         if (!fileUrl) {
           throw new Error('File URL not available');
         }
 
-        const fetchOptions: RequestInit = shouldFetch ? { credentials: 'include' } : {};
+        // Use credentials for all requests
+        const fetchOptions: RequestInit = { credentials: 'include' };
         const response = await fetch(fileUrl, fetchOptions);
 
         if (!response?.ok) {
@@ -71,6 +71,17 @@ export const useDownloadFile = () => {
 
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
+
+        let type = contentType;
+        if (type === 'application/octet-stream') {
+          type = response.headers.get('content-type') || 'application/octet-stream';
+        }
+
+        let fileName = currentFile?.name ?? t('common.untitled');
+        if (!fileName.includes('.')) {
+          const fileExt = getExtFromContentType(type ?? '');
+          fileName = buildSafeFileName(fileName, fileExt);
+        }
 
         triggerDownload(objectUrl, fileName);
         message.success(t('canvas.resourceLibrary.download.success'));

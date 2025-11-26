@@ -28,6 +28,7 @@ const translations = {
     goBack: 'Go Back',
     library: 'Library',
     untitled: 'Untitled',
+    agent: 'Agent',
     loading: 'Loading...',
     activating: 'Activating...',
     loadMore: 'Load More',
@@ -993,16 +994,6 @@ const translations = {
     },
   },
   knowledgeBase: {
-    keepOneWindow: 'Keep at least one window',
-    resourceCollectionAssociativeModal: {
-      resourceTitle: 'Add Resources',
-      projectTitle: 'Add To Project',
-      resource: 'Resource',
-      project: 'Project',
-      resourcePlaceholder: 'Please select resources',
-      projectPlaceholder: 'Please select project',
-      importResource: 'Import Resource',
-    },
     directory: {
       canvasCount: '{{count}} canvases',
       resourceCount: '{{count}} resources',
@@ -1245,7 +1236,7 @@ const translations = {
       searchNodeDescription: 'Search nodes in the canvas, click to locate.',
       enablePointerMode: 'Enable Pointer Mode',
       disablePointerMode: 'Disable Pointer Mode',
-      deleteCanvas: 'Delete',
+      deleteCanvas: 'Delete Workflow',
       importResource: 'Import Resource',
       importResourceDescription:
         'Import resources through online search, manual addition of web links or text to add writing materials for consumption in the canvas.',
@@ -1457,13 +1448,13 @@ const translations = {
         },
         creditUsage: 'Estimated usage {{count}} credits',
         abort: {
-          confirmTitle: 'Abort Workflow Execution',
+          confirmTitle: 'Stop Workflow Execution',
           confirmContent:
-            'The workflow is still running. If you abort it now, the consumed credits will not be refunded. Confirm abort?',
-          confirm: 'Confirm Abort',
-          abortButton: 'Abort',
-          success: 'Workflow execution has been aborted',
-          failed: 'Failed to abort workflow',
+            'The workflow is still running. If you stop it now, the consumed credits will not be refunded. Confirm stop?',
+          confirm: 'Confirm Stop',
+          abortButton: 'Stop',
+          success: 'Workflow execution has been stopped',
+          failed: 'Failed to stop workflow',
         },
       },
     },
@@ -1980,7 +1971,7 @@ const translations = {
       },
     },
     import: {
-      title: 'Import Resource',
+      title: 'Import Files',
       fromWebSearch: 'Web Search',
       fromFile: 'Upload File',
       fromImage: 'Upload Image',

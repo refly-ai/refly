@@ -181,6 +181,25 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
         disabled: duplicateLoading,
       },
       {
+        label: (
+          <div
+            className="flex items-center text-refly-func-danger-default gap-1 w-32"
+            onClick={(e) => {
+              e.stopPropagation();
+              openDeleteModal(canvasId, canvasName, () => {
+                // After successful deletion, navigate back to dashboard to prevent canvas not found error
+                handleBackDashboard();
+                onDeleteSuccess?.();
+              });
+              setPopupVisible(false);
+            }}
+          >
+            {t('canvas.toolbar.deleteCanvas')}
+          </div>
+        ),
+        key: 'delete',
+      },
+      {
         type: 'divider' as const,
       },
       {
@@ -246,28 +265,6 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
             shortcut={isMac ? '⌘⇧L' : 'Ctrl⇧L'}
           />
         ),
-      },
-      {
-        type: 'divider' as const,
-      },
-      {
-        label: (
-          <div
-            className="flex items-center text-refly-func-danger-default gap-1 w-32"
-            onClick={(e) => {
-              e.stopPropagation();
-              openDeleteModal(canvasId, canvasName, () => {
-                // After successful deletion, navigate back to dashboard to prevent canvas not found error
-                handleBackDashboard();
-                onDeleteSuccess?.();
-              });
-              setPopupVisible(false);
-            }}
-          >
-            {t('canvas.toolbar.deleteCanvas')}
-          </div>
-        ),
-        key: 'delete',
       },
     ],
     [

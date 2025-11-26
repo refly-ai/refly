@@ -88,6 +88,7 @@ const NodeRenderer = memo(
           node={node}
           isMinimap={isMinimap}
           onDelete={onDelete}
+          nodeHeaderClassName={fromProducts ? 'bg-transparent' : undefined}
           rightActions={
             <div className="flex items-center gap-1">
               {canDownload && (
