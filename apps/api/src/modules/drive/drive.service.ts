@@ -820,13 +820,9 @@ export class DriveService {
     try {
       const driveFile = await this.prisma.driveFile.findFirst({
         select: {
-          fileId: true,
-          publicURL: true,
           storageKey: true,
-          canvasId: true,
-          uid: true,
         },
-        where: { fileId, deletedAt: null },
+        where: { fileId },
       });
 
       const storageKey = driveFile.storageKey;
