@@ -1,5 +1,5 @@
 import { withTheme } from '@rjsf/core';
-import { Button, Checkbox, Input, Radio } from 'antd';
+import { Button, Checkbox, Input, Radio, message } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useSubmitForm } from '@refly-packages/ai-workspace-common/queries';
@@ -400,6 +400,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
                   },
                   {
                     onSuccess: () => {
+                      message.success(t('form.submitSuccess'));
                       // Close the onboarding form modal after successful submission
                       userStore.setShowOnboardingFormModal(false);
                     },

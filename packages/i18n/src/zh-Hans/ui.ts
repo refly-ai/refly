@@ -201,6 +201,7 @@ const translations = {
     next: '下一页 →',
     submit: '提交获取积分',
     submitting: '提交中...',
+    submitSuccess: '🎉 Refly 将推荐最佳模板和任务！',
   },
   common: {
     poweredBy: 'Powered by',

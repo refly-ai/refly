@@ -13,6 +13,7 @@ const translations = {
     next: 'Next →',
     submit: 'Submit to get credits',
     submitting: 'Submitting...',
+    submitSuccess: '🎉 Refly will recommend the best templates and tasks!',
   },
   common: {
     poweredBy: 'Powered by',
