@@ -676,7 +676,7 @@ export class DriveService {
       this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
     } else if (this.externalOss.statObject(sourceFile.storageKey)) {
       const stream = await this.externalOss.getObject(sourceFile.storageKey);
-      this.externalOss.putObject(newStorageKey, stream);
+      this.internalOss.putObject(newStorageKey, stream);
     } else {
       throw new Error(
         `Failed to copy file ${sourceFile.fileId} to ${newStorageKey}: source file not found`,
