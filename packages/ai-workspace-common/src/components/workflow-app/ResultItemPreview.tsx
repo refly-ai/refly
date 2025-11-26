@@ -351,7 +351,7 @@ export const ResultItemPreview = memo(
     // Priority 1: Use FilePreview for Drive files (when fileId exists)
     // This handles all file types including document, image, video, audio, etc.
     if (driveFile) {
-      content = <FilePreview file={driveFile} source="card" />;
+      content = <FilePreview file={driveFile} source="preview" />;
     } else if (node.type === 'image' && node.data?.metadata?.imageUrl) {
       // Fallback to existing image preview for backward compatibility
       content = <ImagePreview node={node} inModal={inModal} />;
