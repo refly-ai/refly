@@ -25,7 +25,8 @@ export const useFetchDriveFiles = (params?: Partial<ListDriveFilesData['query']>
   const { projectId } = useGetProjectCanvasId();
   const isLogin = useUserStoreShallow((state) => state.isLogin);
 
-  const fetchRemoteEnabled = isLogin && !shareData;
+  // Avoid fetching when not inside CanvasProvider (no canvasId)
+  const fetchRemoteEnabled = isLogin && !shareData && Boolean(canvasId);
   const {
     data: filesData,
     isLoading: isLoadingFiles,
