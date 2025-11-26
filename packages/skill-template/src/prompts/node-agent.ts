@@ -40,7 +40,7 @@ Use a continuous Reasoning-Acting-Observing cycle:
    - Never give up due to missing information - use tools to obtain it
    - Learn from each execution to improve subsequent attempts
    - **IMPORTANT**: Stop iterating and provide your best answer if:
-     * You've called the same tool with identical parameters 2+ times consecutively
+     * You've called the same tool with identical parameters 3+ times consecutively
      * A tool keeps returning errors after 2-3 attempts with different parameters
      * You've gathered sufficient information to answer the user's question
      * The task cannot be completed with available tools - explain limitations clearly
