@@ -24,6 +24,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFilePublicUrl,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -64,6 +65,7 @@ import {
   listTools,
   listToolsetInventory,
   listToolsets,
+  listUserTools,
   listWorkflowApps,
   serveStatic,
 } from '../requests/services.gen';
@@ -107,6 +109,8 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetFilePublicUrlData,
+  GetFilePublicUrlError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
   GetPageDetailData,
@@ -177,6 +181,7 @@ import {
   ListToolsetInventoryError,
   ListToolsetsData,
   ListToolsetsError,
+  ListUserToolsError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
   ServeStaticError,
@@ -426,6 +431,21 @@ export const useListDriveFilesSuspense = <
     queryKey: Common.UseListDriveFilesKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listDriveFiles({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetFilePublicUrlSuspense = <
+  TData = Common.GetFilePublicUrlDefaultResponse,
+  TError = GetFilePublicUrlError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetFilePublicUrlData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetFilePublicUrlKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getFilePublicUrl({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListCanvasTemplatesSuspense = <
@@ -1093,6 +1113,21 @@ export const useListToolsSuspense = <
     queryKey: Common.UseListToolsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listTools({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useListUserToolsSuspense = <
+  TData = Common.ListUserToolsDefaultResponse,
+  TError = ListUserToolsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListUserToolsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listUserTools({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListToolsetInventorySuspense = <

@@ -24,6 +24,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFilePublicUrl,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -64,6 +65,7 @@ import {
   listTools,
   listToolsetInventory,
   listToolsets,
+  listUserTools,
   listWorkflowApps,
   serveStatic,
 } from '../requests/services.gen';
@@ -86,6 +88,7 @@ import {
   GetCreditUsageByResultIdData,
   GetCreditUsageData,
   GetDocumentDetailData,
+  GetFilePublicUrlData,
   GetPageByCanvasIdData,
   GetPageDetailData,
   GetPilotSessionDetailData,
@@ -246,6 +249,14 @@ export const ensureUseListDriveFilesData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListDriveFilesKeyFn(clientOptions),
     queryFn: () => listDriveFiles({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetFilePublicUrlData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetFilePublicUrlData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetFilePublicUrlKeyFn(clientOptions),
+    queryFn: () => getFilePublicUrl({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListCanvasTemplatesData = (
   queryClient: QueryClient,
@@ -592,6 +603,14 @@ export const ensureUseListToolsData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListToolsKeyFn(clientOptions),
     queryFn: () => listTools({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListUserToolsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListUserToolsKeyFn(clientOptions),
+    queryFn: () => listUserTools({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListToolsetInventoryData = (
   queryClient: QueryClient,

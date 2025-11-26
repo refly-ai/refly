@@ -24,6 +24,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFilePublicUrl,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -87,6 +88,7 @@ import {
   GetCreditUsageByResultIdData,
   GetCreditUsageData,
   GetDocumentDetailData,
+  GetFilePublicUrlData,
   GetPageByCanvasIdData,
   GetPageDetailData,
   GetPilotSessionDetailData,
@@ -247,6 +249,14 @@ export const ensureUseListDriveFilesData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListDriveFilesKeyFn(clientOptions),
     queryFn: () => listDriveFiles({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetFilePublicUrlData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetFilePublicUrlData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetFilePublicUrlKeyFn(clientOptions),
+    queryFn: () => getFilePublicUrl({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListCanvasTemplatesData = (
   queryClient: QueryClient,

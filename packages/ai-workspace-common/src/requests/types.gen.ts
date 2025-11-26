@@ -879,7 +879,8 @@ export type EntityType =
   | 'codeArtifact'
   | 'page'
   | 'mediaResult'
-  | 'workflowApp';
+  | 'workflowApp'
+  | 'driveFile';
 
 /**
  * Entity
@@ -7238,6 +7239,10 @@ export type DriveFile = {
    */
   content?: string;
   /**
+   * Public URL for shared files (only set when file is shared)
+   */
+  publicURL?: string;
+  /**
    * Drive file creation timestamp
    */
   createdAt?: string;
@@ -9181,6 +9186,24 @@ export type DeleteDriveFileData = {
 export type DeleteDriveFileResponse = BaseResponse;
 
 export type DeleteDriveFileError = unknown;
+
+export type GetFilePublicUrlData = {
+  path: {
+    /**
+     * File ID
+     */
+    fileId: string;
+  };
+};
+
+export type GetFilePublicUrlResponse = {
+  success?: boolean;
+  data?: {
+    publicUrl?: string | null;
+  };
+};
+
+export type GetFilePublicUrlError = unknown;
 
 export type ListCanvasTemplatesData = {
   query?: {

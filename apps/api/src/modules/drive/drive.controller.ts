@@ -11,6 +11,7 @@ import {
   Res,
   Req,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { DriveService } from './drive.service';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -29,7 +30,9 @@ import {
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import { Response, Request } from 'express';
+import { buildContentDisposition } from '../../utils/filename';
 
+@ApiTags('Drive')
 @Controller('v1/drive')
 export class DriveController {
   constructor(private readonly driveService: DriveService) {}
@@ -96,6 +99,14 @@ export class DriveController {
     return buildSuccessResponse();
   }
 
+  @ApiOperation({ summary: 'Get public URL for a drive file' })
+  @ApiResponse({ status: 200, description: 'Public URL retrieved successfully' })
+  @Get('file/publicUrl/:fileId')
+  async getFilePublicUrl(@Param('fileId') fileId: string): Promise<BaseResponse> {
+    const publicUrl = await this.driveService.getFilePublicUrl(fileId);
+    return buildSuccessResponse({ publicUrl });
+  }
+
   @Get('file/content/:fileId')
   @UseGuards(JwtAuthGuard)
   async serveDriveFile(
@@ -112,12 +123,6 @@ export class DriveController {
 
     const origin = req.headers.origin;
 
-    // Sanitize and encode filename for Content-Disposition header
-    // Remove any control characters and encode for RFC 6266 compliance
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-    const sanitizedFilename = filename?.replace(/[\x00-\x1F\x7F]/g, '') ?? 'download';
-    const encodedFilename = encodeURIComponent(sanitizedFilename);
-
     res.set({
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': origin || '*',
@@ -126,7 +131,7 @@ export class DriveController {
       'Content-Length': String(data.length),
       ...(download
         ? {
-            'Content-Disposition': `attachment; filename="${sanitizedFilename}"; filename*=UTF-8''${encodedFilename}`,
+            'Content-Disposition': buildContentDisposition(filename),
           }
         : {}),
     });
@@ -146,12 +151,6 @@ export class DriveController {
 
     const origin = req.headers.origin;
 
-    // Sanitize and encode filename for Content-Disposition header
-    // Remove any control characters and encode for RFC 6266 compliance
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-    const sanitizedFilename = filename?.replace(/[\x00-\x1F\x7F]/g, '') ?? 'download';
-    const encodedFilename = encodeURIComponent(sanitizedFilename);
-
     res.set({
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': origin || '*',
@@ -160,7 +159,7 @@ export class DriveController {
       'Content-Length': String(data.length),
       ...(download
         ? {
-            'Content-Disposition': `attachment; filename="${sanitizedFilename}"; filename*=UTF-8''${encodedFilename}`,
+            'Content-Disposition': buildContentDisposition(filename),
           }
         : {}),
     });

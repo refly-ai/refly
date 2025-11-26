@@ -86,6 +86,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFilePublicUrl,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -129,6 +130,7 @@ import {
   listTools,
   listToolsetInventory,
   listToolsets,
+  listUserTools,
   listWorkflowApps,
   logout,
   multiLingualWebSearch,
@@ -338,6 +340,16 @@ export const UseListDriveFilesKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useListDriveFilesKey, ...(queryKey ?? [clientOptions])];
+export type GetFilePublicUrlDefaultResponse = Awaited<ReturnType<typeof getFilePublicUrl>>['data'];
+export type GetFilePublicUrlQueryResult<
+  TData = GetFilePublicUrlDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetFilePublicUrlKey = 'GetFilePublicUrl';
+export const UseGetFilePublicUrlKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetFilePublicUrlKey, ...(queryKey ?? [clientOptions])];
 export type ListCanvasTemplatesDefaultResponse = Awaited<
   ReturnType<typeof listCanvasTemplates>
 >['data'];
@@ -818,6 +830,16 @@ export const UseListToolsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsKey, ...(queryKey ?? [clientOptions])];
+export type ListUserToolsDefaultResponse = Awaited<ReturnType<typeof listUserTools>>['data'];
+export type ListUserToolsQueryResult<
+  TData = ListUserToolsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListUserToolsKey = 'ListUserTools';
+export const UseListUserToolsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListUserToolsKey, ...(queryKey ?? [clientOptions])];
 export type ListToolsetInventoryDefaultResponse = Awaited<
   ReturnType<typeof listToolsetInventory>
 >['data'];

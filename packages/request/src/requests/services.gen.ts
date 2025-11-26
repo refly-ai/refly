@@ -147,6 +147,9 @@ import type {
   DeleteDriveFileData,
   DeleteDriveFileError,
   DeleteDriveFileResponse,
+  GetFilePublicUrlData,
+  GetFilePublicUrlError,
+  GetFilePublicUrlResponse,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
   ListCanvasTemplatesResponse,
@@ -454,6 +457,8 @@ import type {
   ListToolsData,
   ListToolsError,
   ListToolsResponse2,
+  ListUserToolsError,
+  ListUserToolsResponse2,
   ListToolsetInventoryError,
   ListToolsetInventoryResponse2,
   ListToolsetsData,
@@ -1247,6 +1252,23 @@ export const deleteDriveFile = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/drive/file/delete',
+  });
+};
+
+/**
+ * Get public URL for a drive file
+ * Get public URL for a drive file by fileId
+ */
+export const getFilePublicUrl = <ThrowOnError extends boolean = false>(
+  options: Options<GetFilePublicUrlData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetFilePublicUrlResponse,
+    GetFilePublicUrlError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/publicUrl/{fileId}',
   });
 };
 
@@ -2970,6 +2992,19 @@ export const listTools = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).get<ListToolsResponse2, ListToolsError, ThrowOnError>({
     ...options,
     url: '/tool/list',
+  });
+};
+
+/**
+ * List user tools
+ * Get installed tools and unauthorized external OAuth tools for current user.
+ */
+export const listUserTools = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<ListUserToolsResponse2, ListUserToolsError, ThrowOnError>({
+    ...options,
+    url: '/tool/user/list',
   });
 };
 

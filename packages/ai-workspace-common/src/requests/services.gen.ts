@@ -147,6 +147,9 @@ import type {
   DeleteDriveFileData,
   DeleteDriveFileError,
   DeleteDriveFileResponse,
+  GetFilePublicUrlData,
+  GetFilePublicUrlError,
+  GetFilePublicUrlResponse,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
   ListCanvasTemplatesResponse,
@@ -1249,6 +1252,23 @@ export const deleteDriveFile = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/drive/file/delete',
+  });
+};
+
+/**
+ * Get public URL for a drive file
+ * Get public URL for a drive file by fileId
+ */
+export const getFilePublicUrl = <ThrowOnError extends boolean = false>(
+  options: Options<GetFilePublicUrlData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetFilePublicUrlResponse,
+    GetFilePublicUrlError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/file/publicUrl/{fileId}',
   });
 };
 

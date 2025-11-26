@@ -87,6 +87,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFilePublicUrl,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -335,6 +336,8 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetFilePublicUrlData,
+  GetFilePublicUrlError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
   GetPageDetailData,
@@ -735,6 +738,21 @@ export const useListDriveFiles = <
     queryKey: Common.UseListDriveFilesKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listDriveFiles({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetFilePublicUrl = <
+  TData = Common.GetFilePublicUrlDefaultResponse,
+  TError = GetFilePublicUrlError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetFilePublicUrlData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetFilePublicUrlKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getFilePublicUrl({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListCanvasTemplates = <
