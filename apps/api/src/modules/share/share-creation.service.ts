@@ -86,10 +86,6 @@ export class ShareCreationService {
       },
     });
 
-    this.logger.debug(
-      `Found ${resources.length} resources for canvas: ${canvasId} \n ${JSON.stringify(resources)}`,
-    );
-
     const resourceShareRecords = await Promise.all(
       resources.map((resource) => {
         return this.createShareForResource(user, {
