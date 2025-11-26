@@ -11,6 +11,7 @@ import {
   DriveFile,
   SkillEvent,
   TokenUsageItem,
+  ToolCallMeta,
   User,
 } from '@refly/openapi-schema';
 import {
@@ -510,6 +511,7 @@ export class SkillInvokerService {
       // tool callId, now we use first time returned run_id as tool call id
       const startTs = Date.now();
       const toolCallIds: Set<string> = new Set();
+      const toolCallStartTimes: Map<string, number> = new Map();
 
       for await (const event of skill.streamEvents(input, {
         ...config,
@@ -593,16 +595,19 @@ export class SkillInvokerService {
             if (event.event === 'on_tool_start') {
               if (!toolCallIds.has(toolCallId)) {
                 toolCallIds.add(toolCallId);
+                const toolStartTs = Date.now();
+                toolCallStartTimes.set(toolCallId, toolStartTs);
                 await persistToolCall(ToolCallStatus.EXECUTING, {
                   input: event.data?.input,
                   output: '',
                 });
 
-                const toolCallMeta = {
+                const toolCallMeta: ToolCallMeta = {
                   toolName,
                   toolsetKey,
                   toolsetId,
                   toolCallId,
+                  startTs: toolStartTs,
                   status: 'executing' as const,
                 };
                 const toolMessageId = messageAggregator.addToolMessage({
@@ -642,11 +647,15 @@ export class SkillInvokerService {
               });
 
               // Add ToolMessage for failed tool execution
-              const toolCallMeta = {
+              const toolStartTs = toolCallStartTimes.get(toolCallId);
+              const toolEndTs = Date.now();
+              const toolCallMeta: ToolCallMeta = {
                 toolName,
                 toolsetKey,
                 toolsetId,
                 toolCallId,
+                startTs: toolStartTs,
+                endTs: toolEndTs,
                 status: 'failed' as const,
                 error: errorMsg,
               };
@@ -694,11 +703,15 @@ export class SkillInvokerService {
               });
 
               // Add ToolMessage for message persistence
-              const toolCallMeta = {
+              const toolStartTs = toolCallStartTimes.get(toolCallId);
+              const toolEndTs = Date.now();
+              const toolCallMeta: ToolCallMeta = {
                 toolName,
                 toolsetKey,
                 toolsetId,
                 toolCallId,
+                startTs: toolStartTs,
+                endTs: toolEndTs,
                 status: 'completed' as const,
               };
               const toolMessageId = messageAggregator.addToolMessage({

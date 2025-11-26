@@ -59,12 +59,12 @@ const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
       'data-tool-toolset-key': toolCallMeta?.toolsetKey ?? 'unknown',
       'data-tool-call-id': toolCallMeta?.toolCallId ?? message.toolCallId ?? '',
       'data-tool-call-status': toolCallResult?.status ?? toolCallMeta?.status ?? 'executing',
-      'data-tool-created-at': message.createdAt
-        ? String(new Date(message.createdAt).getTime())
-        : '0',
-      'data-tool-updated-at': message.updatedAt
-        ? String(new Date(message.updatedAt).getTime())
-        : '0',
+      'data-tool-created-at': String(
+        toolCallMeta?.startTs ?? new Date(toolCallResult?.createdAt ?? 0).getTime(),
+      ),
+      'data-tool-updated-at': String(
+        toolCallMeta?.endTs ?? new Date(toolCallResult?.updatedAt ?? 0).getTime(),
+      ),
       'data-tool-arguments': JSON.stringify(toolCallResult?.input),
       'data-tool-result': JSON.stringify(toolCallResult?.output),
       'data-tool-error': toolCallMeta?.error,
