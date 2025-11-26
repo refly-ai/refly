@@ -196,6 +196,12 @@ const translations = {
   termsPage: {
     title: '服务条款',
   },
+  form: {
+    previous: '← 上一页',
+    next: '下一页 →',
+    submit: '提交获取积分',
+    submitting: '提交中...',
+  },
   common: {
     poweredBy: 'Powered by',
     confirm: '确认',

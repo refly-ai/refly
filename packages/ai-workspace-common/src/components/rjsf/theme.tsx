@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useSubmitForm } from '@refly-packages/ai-workspace-common/queries';
 import { useUserStoreShallow } from '@refly/stores';
+import { useTranslation } from 'react-i18next';
 
 interface RjsfFieldTemplateProps {
   id?: string;
@@ -201,7 +202,7 @@ const FieldTemplate = (props: RjsfFieldTemplateProps) => {
           {required ? <span className="text-refly-func-danger-default">*</span> : null}
         </label>
       )}
-      <div className="bg-white rounded-3xl">{children}</div>
+      <div className="bg-transparent rounded-3xl">{children}</div>
       {help}
     </div>
   );
@@ -220,6 +221,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
     readonly,
   } = props;
 
+  const { t } = useTranslation();
   const submitFormMutation = useSubmitForm();
   const userStore = useUserStoreShallow((state) => ({
     setShowOnboardingFormModal: state.setShowOnboardingFormModal,
@@ -368,9 +370,9 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
           <Button
             type="default"
             onClick={goToPrevPage}
-            className="w-[180px] h-14 -mt-8 rounded-full"
+            className="w-[180px] h-14 -mt-8 rounded-full !bg-transparent"
           >
-            previous
+            {t('form.previous')}
           </Button>
         )}
 
@@ -406,7 +408,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
               }
             }}
           >
-            {submitFormMutation.isPending ? 'Submitting...' : 'submit to get credits'}
+            {submitFormMutation.isPending ? t('form.submitting') : t('form.submit')}
           </Button>
         ) : (
           <Button
@@ -415,7 +417,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
             disabled={!canProceed}
             className="w-[180px] h-14 -mt-8 rounded-full"
           >
-            next
+            {t('form.next')}
           </Button>
         )}
       </div>
@@ -425,7 +427,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
   return (
     <section
       className={mergeClassNames(
-        'rounded-[32px] shadow-xl p-6 sm:p-10 space-y-8',
+        'p-6 sm:p-10 space-y-8',
         disabled ? 'opacity-60' : undefined,
         readonly ? 'pointer-events-none' : undefined,
       )}
@@ -641,7 +643,7 @@ const RadioWidget = (props: RjsfWidgetProps) => {
             key={String(option.value)}
             className={mergeClassNames(
               'w-full h-[52px] flex items-center gap-3 border rounded-2xl px-4 text-left transition-colors',
-              'border-refly-Card-Border bg-white',
+              'border-refly-Card-Border bg-transparent',
               disabled || readonly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
             )}
             aria-pressed={checked}
@@ -797,7 +799,7 @@ const CheckboxesWidget = (props: RjsfWidgetProps) => {
               key={String(option.value)}
               className={mergeClassNames(
                 'w-full h-[52px] flex items-center gap-3 border rounded-2xl px-4 text-left transition-colors',
-                'border-refly-Card-Border bg-white',
+                'border-refly-Card-Border bg-transparent',
                 disabled || readonly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
               )}
               onClick={() => {

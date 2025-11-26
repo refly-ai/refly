@@ -8,6 +8,12 @@ const translations = {
   termsPage: {
     title: 'Terms of Service',
   },
+  form: {
+    previous: '← Previous',
+    next: 'Next →',
+    submit: 'Submit to get credits',
+    submitting: 'Submitting...',
+  },
   common: {
     poweredBy: 'Powered by',
     confirm: 'Confirm',
