@@ -433,6 +433,27 @@ export class DriveService {
   }
 
   /**
+   * Normalize whitespace in content by compressing repeated spaces/tabs and excessive line breaks
+   * @param content - Original content
+   * @returns Content with normalized whitespace
+   */
+  private normalizeWhitespace(content: string): string {
+    return (
+      content
+        // Compress multiple spaces/tabs to single space
+        .replace(/[ \t]+/g, ' ')
+        // Compress more than 2 consecutive line breaks to 2 line breaks
+        .replace(/\n{3,}/g, '\n\n')
+        // Trim whitespace at start and end of each line
+        .split('\n')
+        .map((line) => line.trim())
+        .join('\n')
+        // Trim overall content
+        .trim()
+    );
+  }
+
+  /**
    * Truncate content by keeping head and tail, removing middle section
    * @param content - Original content
    * @param maxWords - Maximum word count to keep
@@ -448,8 +469,8 @@ export class DriveService {
     const headWords = Math.floor(maxWords * 0.4); // Keep 40% at the beginning
     const tailWords = Math.floor(maxWords * 0.4); // Keep 40% at the end
 
-    const head = words.slice(0, headWords).join(' ');
-    const tail = words.slice(-tailWords).join(' ');
+    const head = words.slice(0, headWords).join('');
+    const tail = words.slice(-tailWords).join('');
 
     return `${head}\n\n...[content truncated, ${words.length - maxWords} words removed]...\n\n${tail}`;
   }
@@ -472,7 +493,10 @@ export class DriveService {
         const stream = await this.internalOss.getObject(cache.contentStorageKey);
         let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
 
-        // Truncate content if it exceeds max word limit
+        content = content?.replace(/x00/g, '') || '';
+        content = this.normalizeWhitespace(content);
+
+        // Truncate content if it exceeds max word limit before storing
         const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
         content = this.truncateContent(content, maxWords);
 
@@ -554,12 +578,17 @@ export class DriveService {
         throw new Error(`Parse failed: ${result.error}`);
       }
 
-      // Process content
-      const processedContent = result.content?.replace(/x00/g, '') || '';
+      // Process content: remove null bytes and normalize whitespace
+      let processedContent = result.content?.replace(/x00/g, '') || '';
+      processedContent = this.normalizeWhitespace(processedContent);
+
+      // Truncate content if it exceeds max word limit before storing
+      const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
+      processedContent = this.truncateContent(processedContent, maxWords);
 
       // Store to OSS
       const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
-      await this.internalOss.putObject(contentStorageKey, processedContent);
+      await this.internalOss.putObject(contentStorageKey, result.content);
 
       // Calculate word count
       const wordCount = readingTime(processedContent).words;
@@ -606,11 +635,7 @@ export class DriveService {
         `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
       );
 
-      // Truncate content if it exceeds max word limit before returning
-      const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
-      const truncatedContent = this.truncateContent(processedContent, maxWords);
-
-      return { ...driveFilePO2DTO(driveFile), content: truncatedContent };
+      return { ...driveFilePO2DTO(driveFile), content: processedContent };
     } catch (error) {
       this.logger.error(
         `Failed to parse drive file ${fileId}: ${JSON.stringify({ message: error.message })}`,
