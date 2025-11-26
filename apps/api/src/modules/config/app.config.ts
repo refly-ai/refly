@@ -33,6 +33,7 @@ export default () => ({
     archiveConcurrencyLimit: Number.parseInt(process.env.DRIVE_ARCHIVE_CONCURRENCY_LIMIT) || 10, // Maximum concurrent file archive operations
     publicEndpoint:
       process.env.DRIVE_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/drive/file/public',
+    maxContentWords: Number.parseInt(process.env.DRIVE_MAX_CONTENT_WORDS) || 3000, // Maximum words in returned content, truncates if exceeded
   },
   session: {
     secret: process.env.SESSION_SECRET || 'refly-session-secret-key-change-in-production',

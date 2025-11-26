@@ -25,6 +25,7 @@ import path from 'node:path';
 import { ProviderService } from '../provider/provider.service';
 import { ParserFactory } from '../knowledge/parsers/factory';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { readingTime } from 'reading-time-estimator';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -432,6 +433,28 @@ export class DriveService {
   }
 
   /**
+   * Truncate content by keeping head and tail, removing middle section
+   * @param content - Original content
+   * @param maxWords - Maximum word count to keep
+   * @returns Truncated content with ellipsis in the middle
+   */
+  private truncateContent(content: string, maxWords: number): string {
+    const words = content.split(/\s+/).filter((w) => w.length > 0);
+
+    if (words.length <= maxWords) {
+      return content;
+    }
+
+    const headWords = Math.floor(maxWords * 0.4); // Keep 40% at the beginning
+    const tailWords = Math.floor(maxWords * 0.4); // Keep 40% at the end
+
+    const head = words.slice(0, headWords).join(' ');
+    const tail = words.slice(-tailWords).join(' ');
+
+    return `${head}\n\n...[content truncated, ${words.length - maxWords} words removed]...\n\n${tail}`;
+  }
+
+  /**
    * Load drive file content from cache or parse if not cached
    */
   private async loadOrParseDriveFile(user: User, driveFile: DriveFileModel): Promise<DriveFile> {
@@ -447,7 +470,12 @@ export class DriveService {
     if (cache?.parseStatus === 'success') {
       try {
         const stream = await this.internalOss.getObject(cache.contentStorageKey);
-        const content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
+        let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
+
+        // Truncate content if it exceeds max word limit
+        const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
+        content = this.truncateContent(content, maxWords);
+
         this.logger.log(
           `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
         );
@@ -527,14 +555,14 @@ export class DriveService {
       }
 
       // Process content
-      const processedContent = result.content || '';
+      const processedContent = result.content?.replace(/x00/g, '') || '';
 
       // Store to OSS
       const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
       await this.internalOss.putObject(contentStorageKey, processedContent);
 
       // Calculate word count
-      const wordCount = processedContent.split(/\s+/).filter((w) => w.length > 0).length;
+      const wordCount = readingTime(processedContent).words;
 
       // Save cache record (upsert ensures concurrency safety)
       await this.prisma.driveFileParseCache.upsert({
@@ -578,7 +606,11 @@ export class DriveService {
         `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
       );
 
-      return { ...driveFilePO2DTO(driveFile), content: processedContent };
+      // Truncate content if it exceeds max word limit before returning
+      const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
+      const truncatedContent = this.truncateContent(processedContent, maxWords);
+
+      return { ...driveFilePO2DTO(driveFile), content: truncatedContent };
     } catch (error) {
       this.logger.error(
         `Failed to parse drive file ${fileId}: ${JSON.stringify({ message: error.message })}`,
