@@ -179,9 +179,12 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     );
     setNodes(nodes);
     setEdges(edges);
-    onLayout('LR');
     setVariables(variables ?? []);
     setShowWorkflowRun(true);
+
+    setTimeout(() => {
+      onLayout('LR');
+    }, 200);
   }, [
     canvasId,
     workflowPlan,
