@@ -6,11 +6,7 @@ import { Profile } from 'passport';
 import { CookieOptions, Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import {
-  User as UserModel,
-  VerificationSession,
-  Account as AccountModel,
-} from '../../generated/client';
+import { User as UserModel, VerificationSession, Account as AccountModel } from '@prisma/client';
 import { TokenData } from './auth.dto';
 import {
   ACCESS_TOKEN_COOKIE,

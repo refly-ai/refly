@@ -45,6 +45,12 @@ import { DriveModule } from './drive/drive.module';
 import { FormModule } from './form/form.module';
 
 import { isDesktop } from '../utils/runtime';
+import { initTracer } from '../tracer';
+
+// Initialize OpenTelemetry tracing if endpoint is configured
+if (process.env.OTLP_TRACES_ENDPOINT) {
+  initTracer(process.env.OTLP_TRACES_ENDPOINT);
+}
 
 class CustomThrottlerGuard extends ThrottlerGuard {
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
@@ -79,7 +85,22 @@ class CustomThrottlerGuard extends ThrottlerGuard {
         },
         autoLogging: false,
         genReqId: () => api.trace.getSpan(api.context.active())?.spanContext()?.traceId,
-        transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+        transport: process.env.LOKI_HOST
+          ? {
+              target: 'pino-loki',
+              options: {
+                batching: true,
+                interval: 5,
+                host: process.env.LOKI_HOST,
+                labels: {
+                  app: 'refly-api',
+                  env: process.env.NODE_ENV || 'development',
+                },
+              },
+            }
+          : process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty' }
+            : undefined,
         formatters: {
           level: (level) => ({ level }),
         },

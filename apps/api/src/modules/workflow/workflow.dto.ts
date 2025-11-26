@@ -8,7 +8,7 @@ import type {
 import {
   WorkflowExecution as WorkflowExecutionPO,
   WorkflowNodeExecution as WorkflowNodeExecutionPO,
-} from '../../generated/client';
+} from '@prisma/client';
 import { pick } from '@refly/utils';
 
 type JobUser = Pick<User, 'uid'>;

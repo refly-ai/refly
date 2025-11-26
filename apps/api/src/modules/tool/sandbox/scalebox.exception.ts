@@ -1,3 +1,5 @@
+import type { ExecutionResult } from '@scalebox/sdk';
+
 export class SandboxException extends Error {
   constructor(
     messageOrError: unknown,
@@ -37,31 +39,9 @@ export class SandboxException extends Error {
   }
 }
 
-export class ServiceConfigurationException extends SandboxException {
-  constructor(messageOrError: unknown, missingConfig?: string) {
-    super(messageOrError, 'SERVICE_CONFIGURATION_ERROR', { missingConfig });
-  }
-}
-
-export class MissingApiKeyException extends SandboxException {
-  constructor() {
-    super('Scalebox API key is not configured. Please contact administrator.', 'MISSING_API_KEY', {
-      missingConfig: 'apiKey',
-    });
-  }
-}
-
-export class MissingCanvasIdException extends SandboxException {
-  constructor() {
-    super('Canvas ID is required for sandbox execution.', 'MISSING_CANVAS_ID', {
-      missingParam: 'canvasId',
-    });
-  }
-}
-
-export class QueueUnavailableException extends SandboxException {
-  constructor(messageOrError: unknown = 'Sandbox execution queue is not available') {
-    super(messageOrError, 'QUEUE_UNAVAILABLE');
+export class SandboxRequestParamsException extends SandboxException {
+  constructor(operation: string, messageOrError: unknown) {
+    super(messageOrError, 'SANDBOX_REQUEST_PARAMS_ERROR', { operation });
   }
 }
 
@@ -77,18 +57,15 @@ export class QueueOverloadedException extends SandboxException {
   }
 }
 
-export class CodeExecutionException extends SandboxException {
-  constructor(
-    messageOrError: unknown,
-    public readonly exitCode?: number,
-  ) {
-    super(messageOrError, 'CODE_EXECUTION_FAILED', { exitCode });
-  }
-}
-
 export class SandboxCreationException extends SandboxException {
   constructor(messageOrError: unknown) {
     super(messageOrError, 'SANDBOX_CREATION_FAILED');
+  }
+}
+
+export class SandboxConnectionException extends SandboxException {
+  constructor(messageOrError: unknown) {
+    super(messageOrError, 'SANDBOX_CONNECTION_FAILED');
   }
 }
 
@@ -101,24 +78,37 @@ export class SandboxExecutionFailedException extends SandboxException {
   }
 }
 
-export class SandboxReadyTimeoutException extends SandboxException {
-  constructor(sandboxId: string, retries: number) {
+export class SandboxFileListException extends SandboxException {
+  constructor(messageOrError: unknown) {
+    super(messageOrError, 'SANDBOX_FILE_LIST_FAILED');
+  }
+}
+
+export class SandboxLockTimeoutException extends SandboxException {
+  constructor(
+    public readonly lockKey: string,
+    public readonly timeoutMs: number,
+  ) {
+    // User-friendly message for model consumption; internal details in context for logging
+    super('Sandbox is busy, please retry', 'SANDBOX_LOCK_TIMEOUT', {
+      lockKey,
+      timeoutMs,
+    });
+  }
+}
+
+export class SandboxExecutionBadResultException extends SandboxException {
+  constructor(public readonly result: ExecutionResult) {
     super(
-      `Sandbox ${sandboxId} failed to become ready after ${retries} retries`,
-      'SANDBOX_READY_TIMEOUT',
-      { sandboxId, retries },
+      result.error?.message || result.stderr || 'Execution returned non-zero exit code',
+      'SANDBOX_EXECUTION_BAD_RESULT',
+      { result },
     );
   }
 }
 
-export class SandboxMountException extends SandboxException {
-  constructor(messageOrError: unknown, canvasId: string) {
-    super(messageOrError, 'SANDBOX_MOUNT_FAILED', { canvasId });
-  }
-}
-
-export class SandboxFileListException extends SandboxException {
+export class SandboxRunCodeException extends SandboxException {
   constructor(messageOrError: unknown) {
-    super(messageOrError, 'SANDBOX_FILE_LIST_FAILED');
+    super(messageOrError, 'SANDBOX_RUN_CODE_FAILED');
   }
 }

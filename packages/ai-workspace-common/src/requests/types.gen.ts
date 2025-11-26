@@ -6622,6 +6622,45 @@ export type ListToolsResponse = BaseResponse & {
   data?: Array<GenericToolset>;
 };
 
+export type ListUserToolsResponse = BaseResponse & {
+  data?: Array<UserTool>;
+};
+
+export type UserTool = {
+  /**
+   * Toolset ID (toolsetId for installed, key for uninstalled)
+   */
+  toolsetId?: string;
+  /**
+   * Toolset key
+   */
+  key?: string;
+  /**
+   * Tool name
+   */
+  name?: string;
+  /**
+   * Tool description
+   */
+  description?: string;
+  /**
+   * Whether the tool is authorized/installed
+   */
+  authorized?: boolean;
+  /**
+   * Tool domain for favicon
+   */
+  domain?: string;
+  /**
+   * Full toolset data (only for authorized tools)
+   */
+  toolset?: GenericToolset;
+  /**
+   * Toolset definition (for unauthorized tools)
+   */
+  definition?: ToolsetDefinition;
+};
+
 export type DeleteToolsetRequest = {
   /**
    * Toolset ID
@@ -10442,6 +10481,10 @@ export type ListToolsData = {
 export type ListToolsResponse2 = ListToolsResponse;
 
 export type ListToolsError = unknown;
+
+export type ListUserToolsResponse2 = ListUserToolsResponse;
+
+export type ListUserToolsError = unknown;
 
 export type ListToolsetInventoryResponse2 = ListToolsetInventoryResponse;
 

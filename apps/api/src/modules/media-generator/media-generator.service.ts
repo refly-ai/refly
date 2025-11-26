@@ -15,7 +15,7 @@ import { ActionResultNotFoundError } from '@refly/errors';
 import { genActionResultID, safeParseJSON } from '@refly/utils';
 import { fal } from '@fal-ai/client';
 import Replicate from 'replicate';
-import { ActionResult } from '../../generated/client';
+import { ActionResult } from '@prisma/client';
 import { DriveService } from '../drive/drive.service';
 
 @Injectable()

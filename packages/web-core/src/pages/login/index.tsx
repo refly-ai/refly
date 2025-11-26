@@ -1,7 +1,7 @@
 import { Button, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Navigate } from 'react-router-dom';
 
 import { OAuthButton } from '../../components/login-modal/oauth-button';
 
@@ -11,11 +11,15 @@ import { useAuthStoreShallow } from '@refly/stores';
 import { serverOrigin } from '@refly/ui-kit';
 import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { logEvent } from '@refly/telemetry-web';
+import { useCookie } from 'react-use';
+import { UID_COOKIE } from '@refly/utils/cookie';
 import loginImage from '../../assets/login.png';
 import loginDarkImage from '../../assets/login-dark.png';
 import './index.css';
+import { useUserStoreShallow } from '@refly/stores';
 
 interface FormValues {
   email: string;
@@ -27,6 +31,11 @@ const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const [isEmailFormExpanded, setIsEmailFormExpanded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { getLoginStatus } = useIsLogin();
+  const { isLogin, isCheckingLoginStatus } = useUserStoreShallow((state) => ({
+    isLogin: state.isLogin,
+    isCheckingLoginStatus: state.isCheckingLoginStatus,
+  }));
 
   // Detect dark mode
   useEffect(() => {
@@ -66,6 +75,24 @@ const LoginPage = () => {
   const { t } = useTranslation();
 
   const { data: authConfig, isLoading: isAuthConfigLoading } = useGetAuthConfig();
+
+  // If already logged in, redirect to /workspace
+  const [uid] = useCookie(UID_COOKIE);
+  const hasLoginCredentials = !!uid;
+  const isLoggedIn = useMemo(() => {
+    return getLoginStatus() || isLogin;
+  }, [getLoginStatus, isLogin]);
+
+  // Wait only when explicitly checking to avoid flicker; do not block on undefined
+  if (isCheckingLoginStatus === true) {
+    return null;
+  }
+
+  // Avoid redirect loop: only use cookie-based fast path when there is no returnUrl
+  const hasReturnUrl = !!searchParams.get('returnUrl');
+  if (isLoggedIn || (hasLoginCredentials && !hasReturnUrl)) {
+    return <Navigate to="/workspace" replace />;
+  }
 
   // Provide default values if config is not loaded
   const { isGithubEnabled, isGoogleEnabled, isEmailEnabled } = useMemo(() => {
@@ -126,7 +153,7 @@ const LoginPage = () => {
             ? decodeURIComponent(returnUrl)
             : isPublicAccessPage
               ? window.location.href
-              : '/';
+              : '/workspace';
           window.location.replace(redirectUrl);
         } else {
           authStore.setEmail(values.email);
@@ -148,7 +175,7 @@ const LoginPage = () => {
         // Note: No need to close modal as this is a standalone login page
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
-        const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/';
+        const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace';
         window.location.replace(redirectUrl);
       }
     }
@@ -172,11 +199,11 @@ const LoginPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col lg:flex-row"
+      className="h-screen w-full flex flex-col lg:flex-row overflow-hidden"
       style={{ backgroundColor: 'var(--refly-bg-login-page)' }}
     >
       {/* Desktop: Left side - Introduction section */}
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center px-16 py-12">
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center px-16 py-12 overflow-y-auto">
         <div className="flex items-center justify-center">
           {/* Introduction image */}
           <div
@@ -198,12 +225,13 @@ const LoginPage = () => {
       </div>
 
       {/* Right side - Login form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-[60px] lg:pt-[120px] lg:pb-[60px]">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-[60px] lg:py-8 overflow-y-auto">
         <div
           className="relative flex flex-col w-full max-w-[520px] rounded-[20px] shadow-[0_8px_40px_0_rgba(0,0,0,0.08)] p-6 sm:p-8 lg:p-[60px]"
           style={{
             backgroundColor: 'var(--refly-bg-body-z0)',
             gap: '32px',
+            margin: 'auto',
           }}
         >
           {/* Logo - absolute positioned */}

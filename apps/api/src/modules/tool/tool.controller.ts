@@ -1,7 +1,7 @@
 import { Body, Controller, Get, ParseBoolPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
-import { User as UserModel } from '../../generated/client';
+import { User as UserModel } from '@prisma/client';
 import { buildSuccessResponse } from '../../utils/response';
 import { ToolService } from './tool.service';
 import {
@@ -12,6 +12,7 @@ import {
   UpsertToolsetResponse,
   UpsertToolsetRequest,
   ListToolsetInventoryResponse,
+  ListUserToolsResponse,
 } from '@refly/openapi-schema';
 import { toolsetPO2DTO } from './tool.dto';
 
@@ -33,6 +34,19 @@ export class ToolController {
     // Populate toolsets with definition from inventory
     const populatedTools = await this.toolService.populateToolsetsWithDefinition(tools);
     return buildSuccessResponse(populatedTools);
+  }
+
+  /**
+   * List all tools including UnAuthorized tools for the user
+   * @param user
+   * @returns
+   */
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/user/list')
+  async listUserTools(@LoginedUser() user: UserModel): Promise<ListUserToolsResponse> {
+    const userTools = await this.toolService.listUserTools(user);
+    return buildSuccessResponse(userTools);
   }
 
   @UseGuards(JwtAuthGuard)

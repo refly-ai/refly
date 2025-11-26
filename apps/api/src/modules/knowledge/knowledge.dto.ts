@@ -2,7 +2,7 @@ import {
   Resource as ResourceModel,
   Document as DocumentModel,
   StaticFile as StaticFileModel,
-} from '../../generated/client';
+} from '@prisma/client';
 import {
   Resource,
   ResourceType,

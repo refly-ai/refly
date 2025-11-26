@@ -1,79 +1,163 @@
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
-import { ScaleboxExecutionJobData, ScaleboxExecutionResult } from './scalebox.dto';
+import { storage, Store } from 'nestjs-pino/storage';
+
+import { guard } from '../../../utils/guard';
+import { QUEUE_SCALEBOX_EXECUTE, QUEUE_SCALEBOX_PAUSE } from '../../../utils/const';
+import { Config } from '../../config/config.decorator';
 import { ScaleboxService } from './scalebox.service';
-import { formatError, performance } from './scalebox.utils';
+import { ScaleboxStorage } from './scalebox.storage';
+import { ScaleboxLock } from './scalebox.lock';
+import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
+import { SCALEBOX_DEFAULTS } from './scalebox.constants';
+import {
+  SandboxExecuteJobData,
+  SandboxPauseJobData,
+  ScaleboxExecutionResult,
+  ExecutionContext,
+} from './scalebox.dto';
+import { SandboxExecutionBadResultException } from './scalebox.exception';
+import { extractErrorMessage } from './scalebox.utils';
+
+// Note: @Processor decorator options are evaluated at compile-time, not runtime.
+// Dynamic config via getWorkerOptions() is NOT supported by @nestjs/bullmq.
+// Concurrency must be set directly in the decorator using static values.
 
 /**
- * Scalebox Execution Processor
- * Placeholder for future queue-based execution (currently unused)
+ * Sandbox Execution Processor
+ *
+ * Handles code execution jobs. Delegates to ScaleboxService.executeCode().
+ * Concurrency controlled via SCALEBOX_DEFAULTS.LOCAL_CONCURRENCY.
  */
 @Injectable()
-export class ScaleboxExecutionProcessor {
+@Processor(QUEUE_SCALEBOX_EXECUTE, {
+  concurrency: SCALEBOX_DEFAULTS.LOCAL_CONCURRENCY,
+})
+export class ScaleboxExecuteProcessor extends WorkerHost {
   constructor(
     private readonly scaleboxService: ScaleboxService,
     private readonly logger: PinoLogger,
   ) {
-    this.logger.setContext(ScaleboxExecutionProcessor.name);
+    super();
+    this.logger.setContext(ScaleboxExecuteProcessor.name);
   }
 
-  async execute(data: ScaleboxExecutionJobData): Promise<ScaleboxExecutionResult> {
-    const { uid, code, language, canvasId, apiKey, version } = data;
+  async process(job: Job<SandboxExecuteJobData>): Promise<ScaleboxExecutionResult> {
+    const { params, context } = job.data;
 
-    this.logger.info(
-      {
-        uid,
-        canvasId,
-        language,
-      },
-      'Processing execution',
+    // Initialize AsyncLocalStorage context for non-HTTP worker
+    return storage.run(new Store(this.logger.logger), async () => {
+      this.logger.assign({ jobId: job.id, canvasId: context.canvasId, uid: context.uid });
+
+      this.logger.debug('Processing execution job');
+
+      try {
+        const result = await this.scaleboxService.executeCode(params, context);
+        this.logger.info({ exitCode: result.exitCode }, 'Execution completed');
+        return result;
+      } catch (error) {
+        // Handle code execution errors (non-zero exit code) by returning as normal result
+        // BullMQ serializes exceptions and loses custom properties (code, result),
+        // so we must catch SandboxExecutionBadResultException here and convert to result
+        if (error instanceof SandboxExecutionBadResultException) {
+          this.logger.info({ exitCode: error.result.exitCode }, 'Code error (non-zero exit code)');
+          return {
+            originResult: error.result,
+            error: extractErrorMessage(error.result),
+            exitCode: error.result.exitCode,
+            files: context.registeredFiles ?? [],
+          };
+        }
+
+        // Other errors are system failures, let BullMQ handle them
+        this.logger.error(error, 'Execution failed');
+        throw error;
+      }
+    });
+  }
+}
+
+/**
+ * Sandbox Pause Processor
+ *
+ * Handles auto-pause jobs for idle sandboxes (cost optimization).
+ * Runs with concurrency=1 to avoid parallel pause operations.
+ */
+@Injectable()
+@Processor(QUEUE_SCALEBOX_PAUSE, {
+  concurrency: 5,
+})
+export class ScaleboxPauseProcessor extends WorkerHost {
+  constructor(
+    private readonly storage: ScaleboxStorage,
+    private readonly lock: ScaleboxLock,
+    private readonly config: ConfigService,
+    private readonly logger: PinoLogger,
+  ) {
+    super();
+    this.logger.setContext(ScaleboxPauseProcessor.name);
+    void this.config;
+  }
+
+  @Config.string('sandbox.scalebox.apiKey', '')
+  private scaleboxApiKey: string;
+
+  async process(job: Job<SandboxPauseJobData>): Promise<void> {
+    const { sandboxId } = job.data;
+
+    // Initialize AsyncLocalStorage context for non-HTTP worker
+    return storage.run(new Store(this.logger.logger), async () => {
+      this.logger.assign({ jobId: job.id, sandboxId });
+
+      this.logger.debug('Processing auto-pause job');
+
+      const metadata = await this.storage.loadMetadata(sandboxId);
+      if (!metadata) {
+        this.logger.debug('Sandbox metadata not found, skipping pause');
+        return;
+      }
+
+      if (metadata.isPaused) {
+        this.logger.debug('Sandbox already paused, skipping');
+        return;
+      }
+
+      await this.tryPauseSandbox(sandboxId, metadata);
+    });
+  }
+
+  private async tryPauseSandbox(sandboxId: string, metadata: SandboxMetadata): Promise<void> {
+    await guard.bestEffort(
+      () =>
+        guard.defer(
+          () => this.acquirePauseLock(sandboxId),
+          () => this.executePause(sandboxId, metadata),
+        ),
+      (error) => this.logger.debug({ sandboxId, error }, 'Skipped pause (sandbox in use or error)'),
     );
+  }
 
-    const result = await performance(() =>
-      this.scaleboxService.executeCode(
-        {
-          code,
-          language,
-        },
-        {
-          uid,
-          apiKey,
-          canvasId,
-          version,
-        },
-      ),
-    );
+  private async acquirePauseLock(
+    sandboxId: string,
+  ): Promise<readonly [undefined, () => Promise<void>]> {
+    const release = await this.lock.trySandboxLock(sandboxId);
+    return [undefined, release] as const;
+  }
 
-    const { success, error, data: resultData, executionTime } = result;
+  private async executePause(_sandboxId: string, metadata: SandboxMetadata): Promise<void> {
+    const context: ExecutionContext = {
+      uid: '',
+      apiKey: this.scaleboxApiKey,
+      canvasId: '',
+      s3DrivePath: '',
+    };
 
-    if (!success) {
-      const { message } = formatError(error);
-
-      this.logger.error(
-        {
-          error: message,
-          stack: (error as Error).stack,
-        },
-        'Execution failed',
-      );
-
-      return {
-        error: message,
-        exitCode: 1,
-        executionTime,
-        files: [],
-        originResult: undefined,
-      };
-    }
-
-    this.logger.info(
-      {
-        executionTime: resultData!.executionTime,
-        exitCode: resultData!.exitCode,
-      },
-      'Execution completed',
-    );
-
-    return resultData!;
+    const wrapper = await SandboxWrapper.reconnect(this.logger, context, metadata);
+    await wrapper.betaPause();
+    wrapper.markAsPaused();
+    await this.storage.saveMetadata(wrapper);
   }
 }

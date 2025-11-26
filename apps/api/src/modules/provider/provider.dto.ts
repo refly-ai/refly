@@ -1,8 +1,5 @@
 import { safeParseJSON } from '@refly/utils';
-import {
-  ProviderItem as ProviderItemModel,
-  Provider as ProviderModel,
-} from '../../generated/client';
+import { ProviderItem as ProviderItemModel, Provider as ProviderModel } from '@prisma/client';
 import { pick } from '../../utils';
 import {
   Provider,

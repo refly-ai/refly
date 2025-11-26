@@ -47,8 +47,8 @@ export const useDeleteCanvas = () => {
         if (latestCurrentCanvasId === canvasId) {
           // Use setTimeout to ensure all state updates are processed
           setTimeout(() => {
-            // Always navigate to empty canvas after deletion
-            navigate('/canvas/empty', { replace: true });
+            // Always navigate to workspace after deletion
+            navigate('/workspace', { replace: true });
           }, 0);
         }
       }

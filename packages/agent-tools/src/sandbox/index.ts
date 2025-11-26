@@ -50,7 +50,6 @@ export class Execute extends AgentBaseTool<SandboxParams> {
     language: z
       .enum(['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'])
       .describe('Programming language for code execution'),
-    timeout: z.number().optional().default(30).describe('Execution timeout in seconds'),
   });
 
   description = `
@@ -110,7 +109,7 @@ plt.savefig('chart.png')
         return {
           status: 'error',
           error: 'Sandbox service is not available',
-          summary: 'Sandbox service is not configured.',
+          summary: '[SYSTEM_ERROR] Sandbox service is not configured.',
         };
       }
 
@@ -118,7 +117,6 @@ plt.savefig('chart.png')
         params: {
           code: input.code,
           language: input.language,
-          timeout: input.timeout,
         },
         context: {
           parentResultId: config.configurable?.resultId,
@@ -130,53 +128,117 @@ plt.savefig('chart.png')
       const result = await reflyService.execute(user, request);
 
       if (result.status === 'success') {
-        const output = result.data?.output || 'No output';
+        const output = result.data?.output || '';
+        const error = result.data?.error || '';
+        const exitCode = result.data?.exitCode ?? 0;
         const executionTime = result.data?.executionTime || 0;
-        const exitCode = result.data?.exitCode || 0;
+        const files = result.data?.files || [];
 
-        const summary = `**Result:**
-📄 Output: ${output}
-⏱️ Execution Time: ${executionTime}ms
-✅ Exit Code: ${exitCode}`;
+        // Code error: exitCode != 0 means user's code has issues
+        if (exitCode !== 0) {
+          return {
+            status: 'error',
+            error: error || 'Code execution returned non-zero exit code',
+            data: { output, exitCode, executionTime },
+            summary: this.formatCodeErrorSummary(error, output),
+            creditCost: 1,
+          };
+        }
 
+        // Success: code executed without errors
         return {
           status: 'success',
           data: {
             output,
-            error: result.data?.error,
             exitCode,
             executionTime,
             parentResultId: config.configurable?.resultId,
-            files: result.data?.files,
+            files,
           },
-          summary,
-          creditCost: 1, // Placeholder credit cost
+          summary: this.formatSuccessSummary(output, files),
+          creditCost: 1,
         };
       }
 
-      // Handle error response
-      let errorMessage = 'Code execution failed';
-
-      if (result.errors && result.errors.length > 0) {
-        errorMessage = result.errors.map((err) => `[${err.code}] ${err.message}`).join('; ');
-      } else if (result.data?.error) {
-        errorMessage = `Execution error: ${result.data.error}`;
-      }
-
-      return {
-        status: 'error',
-        error: errorMessage,
-        summary: '❌ **Code execution failed**',
-      };
+      // System error: infrastructure failure
+      return this.formatSystemError(result.errors);
     } catch (error) {
       const errorMsg =
         error instanceof Error ? error.message : 'Unknown error occurred while executing code';
       return {
         status: 'error',
         error: errorMsg,
-        summary: '❌ **Unexpected error during code execution**',
+        summary: `[SYSTEM_ERROR] ${errorMsg}`,
       };
     }
+  }
+
+  private formatSuccessSummary(
+    output: string,
+    files: Array<{ name?: string; storageKey?: string }>,
+  ): string {
+    // Summary should be concise since data.output already contains full content
+    const parts: string[] = [];
+
+    if (files.length > 0) {
+      const fileNames = files.map((f) => f.name || f.storageKey || 'unnamed').join(', ');
+      parts.push(`[OK] Files created: ${fileNames}`);
+    } else if (output) {
+      parts.push('[OK] Execution completed with output');
+    } else {
+      parts.push('[OK] Execution completed (no output)');
+    }
+
+    return parts.join('\n');
+  }
+
+  private formatCodeErrorSummary(error: string, output: string): string {
+    const MAX_ERROR_LENGTH = 1500;
+    const MAX_OUTPUT_LENGTH = 500;
+
+    const truncatedError =
+      error.length > MAX_ERROR_LENGTH
+        ? `${error.slice(0, MAX_ERROR_LENGTH)}... [truncated]`
+        : error;
+
+    const parts = [`[CODE_ERROR] ${truncatedError}`];
+
+    if (output) {
+      const truncatedOutput =
+        output.length > MAX_OUTPUT_LENGTH
+          ? `${output.slice(0, MAX_OUTPUT_LENGTH)}... [truncated]`
+          : output;
+      parts.push(`Output before error: ${truncatedOutput}`);
+    }
+
+    parts.push('Fix the code and retry.');
+
+    return parts.join('\n');
+  }
+
+  private formatSystemError(errors?: Array<{ code?: string; message?: string }>): ToolCallResult {
+    const TRANSIENT_ERROR_CODE = 'SANDBOX_TRANSIENT_ERROR';
+
+    if (!errors || errors.length === 0) {
+      return {
+        status: 'error',
+        error: 'Unknown system error',
+        summary: '[SYSTEM_ERROR] Unknown system error',
+      };
+    }
+
+    const errorMessages = errors.map((e) => e.message || e.code || 'Unknown').join('; ');
+    const isTransient = errors.some((e) => e.code === TRANSIENT_ERROR_CODE);
+
+    const summary = isTransient
+      ? `[SYSTEM_ERROR] ${errorMessages}\nThis is a temporary issue. Retry the request.`
+      : `[SYSTEM_ERROR] ${errorMessages}`;
+
+    return {
+      status: 'error',
+      error: errorMessages,
+      summary,
+    };
   }
 }
 

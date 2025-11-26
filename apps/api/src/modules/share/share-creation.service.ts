@@ -2,7 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { createId } from '@paralleldrive/cuid2';
 import { PrismaService } from '../common/prisma.service';
 import { MiscService } from '../misc/misc.service';
-import { ShareRecord, WorkflowApp } from '../../generated/client';
+import { ShareRecord, WorkflowApp } from '@prisma/client';
 import * as Y from 'yjs';
 import { CreateShareRequest, EntityType, SharedCanvasData, User } from '@refly/openapi-schema';
 import { PageNotFoundError, ParamsError, ShareNotFoundError } from '@refly/errors';

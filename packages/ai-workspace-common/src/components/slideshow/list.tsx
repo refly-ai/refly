@@ -136,7 +136,7 @@ function PagesPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('pages.list.myPages')}</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/canvas')}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/workspace')}>
           {t('pages.list.createPage')}
         </Button>
       </div>

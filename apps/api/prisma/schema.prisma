@@ -1,8 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["tracing"]
-  output          = "../src/generated/client"
-  binaryTargets   = ["native", "darwin", "darwin-arm64"]
 }
 
 datasource db {

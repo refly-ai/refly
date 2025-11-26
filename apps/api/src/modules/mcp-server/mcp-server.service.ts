@@ -6,7 +6,7 @@ import {
   UpsertMcpServerRequest,
   User,
 } from '@refly/openapi-schema';
-import { McpServer as McpServerModel } from '../../generated/client';
+import { McpServer as McpServerModel } from '@prisma/client';
 import { McpServerNotFoundError, ParamsError } from '@refly/errors';
 import { SingleFlightCache } from '../../utils/cache';
 import { EncryptionService } from '../common/encryption.service';

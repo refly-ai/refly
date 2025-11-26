@@ -13,7 +13,7 @@ import {
 import {
   SkillInstance as SkillInstanceModel,
   SkillTrigger as SkillTriggerModel,
-} from '../../generated/client';
+} from '@prisma/client';
 import { pick } from '../../utils';
 import { safeParseJSON } from '@refly/utils';
 

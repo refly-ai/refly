@@ -16,7 +16,7 @@ import { BrowserUseToolset, BrowserUseToolsetDefinition } from './browser-use';
 // import { FalAudioToolset, FalAudioToolsetDefinition } from './fal-audio';
 // import { FalImageToolset, FalImageToolsetDefinition } from './fal-image';
 // import { FalVideoToolset, FalVideoToolsetDefinition } from './fal-video';
-import { FirecrawlToolset, FirecrawlToolsetDefinition } from './firecrawl';
+// import { FirecrawlToolset, FirecrawlToolsetDefinition } from './firecrawl';
 // DEPRECATED: FishAudio and HeyGen are now loaded from configuration
 // import { FishAudioToolset, FishAudioToolsetDefinition } from './fish-audio';
 import { GitHubToolsetDefinition } from './github';
@@ -32,7 +32,7 @@ import { PerplexityToolset, PerplexityToolsetDefinition } from './perplexity';
 import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt';
 import { RedditToolsetDefinition } from './reddit';
 import { TwitterToolsetDefinition } from './twitter';
-import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
+// import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
 import { SandboxToolset, SandboxToolsetDefinition } from './sandbox';
 import { Apify13FToolset, Apify13FToolsetDefinition } from './apify-13f';
 
@@ -75,10 +75,10 @@ export const toolsetInventory: Record<
     definition: ToolsetDefinition;
   }
 > = {
-  [FirecrawlToolsetDefinition.key]: {
-    class: FirecrawlToolset,
-    definition: FirecrawlToolsetDefinition,
-  },
+  // [FirecrawlToolsetDefinition.key]: {
+  //   class: FirecrawlToolset,
+  //   definition: FirecrawlToolsetDefinition,
+  // },
   [SandboxToolsetDefinition.key]: {
     class: SandboxToolset,
     definition: SandboxToolsetDefinition,
@@ -96,10 +96,10 @@ export const toolsetInventory: Record<
     class: JinaToolset,
     definition: JinaToolsetDefinition,
   },
-  [WhaleWisdomToolsetDefinition.key]: {
-    class: WhaleWisdomToolset,
-    definition: WhaleWisdomToolsetDefinition,
-  },
+  // [WhaleWisdomToolsetDefinition.key]: {
+  //   class: WhaleWisdomToolset,
+  //   definition: WhaleWisdomToolsetDefinition,
+  // },
   [GoogleDocsToolsetDefinition.key]: {
     class: undefined,
     definition: GoogleDocsToolsetDefinition,

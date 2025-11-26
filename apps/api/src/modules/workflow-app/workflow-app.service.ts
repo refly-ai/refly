@@ -1,4 +1,4 @@
-import { Prisma, User } from '../../generated/client';
+import { Prisma, User } from '@prisma/client';
 import {
   CreateWorkflowAppRequest,
   WorkflowVariable,

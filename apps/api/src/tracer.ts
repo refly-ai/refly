@@ -5,32 +5,36 @@ import * as opentelemetry from '@opentelemetry/sdk-node';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { PrismaInstrumentation } from '@prisma/instrumentation';
 
-// Configure the SDK to export telemetry data to the console
-// Enable all auto-instrumentations from the meta package
-const exporterOptions = {
-  url: `${process.env.OTLP_TRACES_ENDPOINT}/v1/traces`,
-};
+let sdk: opentelemetry.NodeSDK | null = null;
 
-const traceExporter = new OTLPTraceExporter(exporterOptions);
-const sdk = new opentelemetry.NodeSDK({
-  traceExporter,
-  instrumentations: [getNodeAutoInstrumentations(), new PrismaInstrumentation()],
-  resource: new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: 'reflyd',
-  }),
-});
+/**
+ * Initialize OpenTelemetry tracing
+ * @param endpoint OTLP traces endpoint (e.g., http://localhost:34318)
+ */
+export function initTracer(endpoint: string): void {
+  const exporterOptions = {
+    url: `${endpoint}/v1/traces`,
+  };
 
-// initialize the SDK and register with the OpenTelemetry API
-// this enables the API to record telemetry
-sdk.start();
+  const traceExporter = new OTLPTraceExporter(exporterOptions);
+  sdk = new opentelemetry.NodeSDK({
+    traceExporter,
+    instrumentations: [getNodeAutoInstrumentations(), new PrismaInstrumentation()],
+    resource: new Resource({
+      [SemanticResourceAttributes.SERVICE_NAME]: 'reflyd',
+    }),
+  });
 
-// gracefully shut down the SDK on process exit
-process.on('SIGTERM', () => {
-  sdk
-    .shutdown()
-    .then(() => console.log('Tracing terminated'))
-    .catch((error) => console.log('Error terminating tracing', error))
-    .finally(() => process.exit(0));
-});
+  sdk.start();
+
+  // Gracefully shut down the SDK on process exit
+  process.on('SIGTERM', () => {
+    sdk
+      ?.shutdown()
+      .then(() => console.log('Tracing terminated'))
+      .catch((error) => console.log('Error terminating tracing', error))
+      .finally(() => process.exit(0));
+  });
+}
 
 export default sdk;

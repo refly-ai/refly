@@ -1,51 +1,40 @@
 /**
- * Default configuration values for Scalebox
+ * Scalebox Default Configuration (flat structure)
+ *
+ * Note: These values serve as defaults for runtime-configurable options.
+ * LOCAL_CONCURRENCY is compile-time only (used directly in @Processor decorator).
  */
-export const SCALEBOX_DEFAULT_TIMEOUT = 60000;
+export const SCALEBOX_DEFAULTS = {
+  // Sandbox
+  SANDBOX_TIMEOUT_MS: 60 * 60 * 1000, // 1 hour
 
-/**
- * Default configuration values for Sandbox Pool
- */
-export const SCALEBOX_DEFAULT_MAX_SANDBOXES = 10;
-export const SCALEBOX_DEFAULT_MIN_REMAINING_MS = 2 * 60 * 1000; // 2 minutes
-export const SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+  // Pool
+  MAX_SANDBOXES: 10,
+  LOCAL_CONCURRENCY: 5, // Compile-time constant, not env-configurable
+  MAX_QUEUE_SIZE: 100,
+  AUTO_PAUSE_DELAY_MS: 2 * 60 * 1000, // 2 minutes
 
-/**
- * Maximum length for error messages (traceback, stderr, etc.)
- * Messages exceeding this length will be truncated with '[... more info]' suffix
- */
+  // Lock
+  RUN_CODE_TIMEOUT_SEC: 5 * 60, // 5 minutes
+  LOCK_WAIT_TIMEOUT_SEC: 60, // Max time to wait for lock acquisition
+  LOCK_POLL_INTERVAL_MS: 100,
+  LOCK_INITIAL_TTL_SEC: 10, // Short initial TTL, renewed periodically
+  LOCK_RENEWAL_INTERVAL_MS: 3000, // Renew every 3s (should be < TTL/2)
+
+  // Retry (for transient gRPC errors like UNAVAILABLE)
+  COMMAND_RETRY_MAX_ATTEMPTS: 4, // 4 attempts = 3 retries
+  COMMAND_RETRY_DELAY_MS: 500, // Fixed interval
+} as const;
+
+// gRPC error codes from @connectrpc/connect
+export const GRPC_CODE = {
+  UNAVAILABLE: 14, // Service temporarily unavailable, safe to retry
+} as const;
+
 export const ERROR_MESSAGE_MAX_LENGTH = 1000;
 
-/**
- * Sandbox ready state check configuration
- */
-export const SANDBOX_MOUNT_WAIT_MS = 2000;
-
-/**
- * S3 mount retry configuration
- * Retry on network failures or transient S3 service issues
- */
-export const SANDBOX_MOUNT_MAX_RETRIES = 3;
-export const SANDBOX_MOUNT_RETRY_DELAY_MS = 2000;
-
-/**
- * Unmount verification polling configuration
- * Poll to verify FUSE lazy unmount completion
- */
-export const SANDBOX_UNMOUNT_POLL_MAX_ATTEMPTS = 10;
-export const SANDBOX_UNMOUNT_POLL_INTERVAL_MS = 200;
-
-/**
- * Unmount stabilization delay
- * Additional wait time after unmount to allow kernel FUSE cleanup
- */
-export const SANDBOX_UNMOUNT_STABILIZE_DELAY_MS = 500;
-
-/**
- * S3 Default Configuration
- */
 export const S3_DEFAULT_CONFIG = {
-  endPoint: 's3.us-east-1.amazonaws.com', // MinIO SDK uses 'endPoint' with capital P
+  endPoint: 's3.us-east-1.amazonaws.com',
   port: 443,
   useSSL: true,
   accessKey: '',
@@ -54,8 +43,11 @@ export const S3_DEFAULT_CONFIG = {
   region: 'us-east-1',
 } as const;
 
-/**
- * Drive mount point inside sandbox (read-write)
- * Contains user uploaded files and generated files
- */
 export const SANDBOX_DRIVE_MOUNT_POINT = '/mnt/refly';
+
+export const REDIS_KEYS = {
+  METADATA_PREFIX: 'scalebox:pool:meta',
+  IDLE_QUEUE: 'scalebox:pool:idle',
+  LOCK_EXECUTE_PREFIX: 'scalebox:execute:lock',
+  LOCK_SANDBOX_PREFIX: 'scalebox:sandbox:lock',
+} as const;

@@ -1,0 +1,75 @@
+services:
+  loki:
+    container_name: refly_loki
+    image: grafana/loki:2.9.0
+    restart: unless-stopped
+    ports:
+      - 33100:3100
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
+
+  tempo:
+    container_name: refly_tempo
+    image: grafana/tempo:2.3.0
+    restart: unless-stopped
+    ports:
+      - 34318:4318  # OTLP HTTP receiver
+      - 33200:3200  # Tempo HTTP API
+    command: -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./tempo/tempo-config.yaml:/etc/tempo/tempo.yaml
+      - tempo_data:/tmp/tempo
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
+
+  grafana:
+    container_name: refly_grafana
+    image: grafana/grafana:10.2.0
+    restart: unless-stopped
+    ports:
+      - 33000:3000
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS_ENABLED:-true}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GRAFANA_ANONYMOUS_ORG_ROLE:-Admin}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:33000}
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
+
+networks:
+  refly_network:
+    driver: bridge
+
+volumes:
+  loki_data:
+  tempo_data:
+  grafana_data:

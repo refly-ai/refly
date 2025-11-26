@@ -113,7 +113,7 @@ const LastRunTabComponent = ({
   }, [handleUpdateResult]);
 
   return (
-    <div className="h-full w-full flex flex-col mb-4">
+    <div className="h-full w-full flex flex-col mb-4 pb-4">
       <div
         ref={previewContainerRef}
         className="flex-1 overflow-auto last-run-preview-container transition-opacity duration-500 px-4"

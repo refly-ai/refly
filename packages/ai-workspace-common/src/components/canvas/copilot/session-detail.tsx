@@ -173,6 +173,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
       {
         autoLayout: true,
         defaultModel: defaultChatModel,
+        startNodes,
       },
     );
     setNodes(nodes);

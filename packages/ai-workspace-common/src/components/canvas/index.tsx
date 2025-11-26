@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useEffect, useState, useRef, memo } from 'react';
-import { Modal, Result, message } from 'antd';
+import { Modal, Result, message, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
@@ -31,6 +31,7 @@ import {
   useCanvasResourcesPanelStoreShallow,
   useUserStoreShallow,
   useCopilotStoreShallow,
+  useToolStoreShallow,
 } from '@refly/stores';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
@@ -69,6 +70,8 @@ import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canva
 import { PreviewBoxInCanvas } from './preview-box-in-canvas';
 import { CopilotContainer } from './copilot-container';
 import { cn } from '@refly/utils/cn';
+import { ToolStore } from '../settings/tools-config/tools/tool-store';
+import { Close } from 'refly-icons';
 
 const GRID_SIZE = 10;
 
@@ -1102,6 +1105,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
 
 export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
   const { canvasId, readonly } = props;
+  const { t } = useTranslation();
   const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
 
   const { sidePanelVisible, setSidePanelVisible, resetState } = useCanvasResourcesPanelStoreShallow(
@@ -1117,6 +1121,11 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
     setCanvasCopilotWidth: state.setCanvasCopilotWidth,
   }));
   const isLogin = useUserStoreShallow((state) => state.isLogin);
+
+  const { toolStoreModalOpen, setToolStoreModalOpen } = useToolStoreShallow((state) => ({
+    toolStoreModalOpen: state.toolStoreModalOpen,
+    setToolStoreModalOpen: state.setToolStoreModalOpen,
+  }));
 
   const [copilotWidth, setCopilotWidth] = useState(!readonly && isLogin ? 400 : 0);
 
@@ -1210,6 +1219,36 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
             <CanvasDrive className={!sidePanelVisible ? 'hidden' : ''} />
           </div>
           <CanvasResourcesWidescreenModal />
+
+          {/* Tool Store Modal */}
+          <Modal
+            open={toolStoreModalOpen}
+            onCancel={() => setToolStoreModalOpen(false)}
+            title={null}
+            footer={null}
+            className="provider-store-modal"
+            width="calc(100vw - 80px)"
+            style={{ height: 'calc(var(--screen-height) - 80px)' }}
+            centered
+            closable={false}
+            destroyOnClose
+            zIndex={10001}
+          >
+            <div className="h-full w-full overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-5 border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
+                <div className="text-lg font-semibold text-refly-text-0 leading-7">
+                  {t('settings.toolStore.title')}
+                </div>
+                <Button
+                  type="text"
+                  icon={<Close size={24} />}
+                  onClick={() => setToolStoreModalOpen(false)}
+                />
+              </div>
+
+              <ToolStore />
+            </div>
+          </Modal>
         </CanvasProvider>
       </ReactFlowProvider>
     </EditorPerformanceProvider>

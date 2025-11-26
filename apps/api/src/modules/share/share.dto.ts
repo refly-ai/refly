@@ -1,4 +1,4 @@
-import { ShareRecord as ShareRecordModel } from '../../generated/client';
+import { ShareRecord as ShareRecordModel } from '@prisma/client';
 import { CreateShareRequest, EntityType, ShareRecord, User } from '@refly/openapi-schema';
 import { pick } from '@refly/utils';
 

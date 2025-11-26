@@ -1,247 +1,158 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 
 import { guard } from '../../../utils/guard';
+import { QUEUE_SCALEBOX_PAUSE } from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
-import { RedisService } from '../../common/redis.service';
-import { DriveService } from '../../drive/drive.service';
 
-import { QueueOverloadedException } from './scalebox.exception';
-import { poll } from './scalebox.utils';
-import { SandboxWrapper, SandboxMetadata, SandboxContext, S3Config } from './scalebox.wrapper';
-import { ExecutionContext } from './scalebox.dto';
-import {
-  SCALEBOX_DEFAULT_MAX_SANDBOXES,
-  SCALEBOX_DEFAULT_MIN_REMAINING_MS,
-  SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS,
-  S3_DEFAULT_CONFIG,
-} from './scalebox.constants';
+import { SandboxCreationException } from './scalebox.exception';
+import { SandboxWrapper } from './scalebox.wrapper';
+import { ExecutionContext, SandboxPauseJobData } from './scalebox.dto';
+import { ScaleboxStorage } from './scalebox.storage';
+import { SCALEBOX_DEFAULTS } from './scalebox.constants';
+import { Trace } from './scalebox.tracer';
 
 @Injectable()
 export class SandboxPool {
   constructor(
-    private readonly redis: RedisService,
-    private readonly config: ConfigService, // Used by @Config decorators
-    private readonly driveService: DriveService,
+    private readonly storage: ScaleboxStorage,
+    private readonly config: ConfigService,
     private readonly logger: PinoLogger,
+    @InjectQueue(QUEUE_SCALEBOX_PAUSE)
+    private readonly pauseQueue: Queue<SandboxPauseJobData>,
   ) {
     this.logger.setContext(SandboxPool.name);
+    void this.config; // Suppress unused warning - used by @Config decorators
   }
 
-  @Config.integer('sandbox.scalebox.maxSandboxes', SCALEBOX_DEFAULT_MAX_SANDBOXES)
+  @Config.integer('sandbox.scalebox.sandboxTimeoutMs', SCALEBOX_DEFAULTS.SANDBOX_TIMEOUT_MS)
+  private sandboxTimeoutMs: number;
+
+  @Config.integer('sandbox.scalebox.maxSandboxes', SCALEBOX_DEFAULTS.MAX_SANDBOXES)
   private maxSandboxes: number;
 
-  @Config.integer('sandbox.scalebox.minRemainingMs', SCALEBOX_DEFAULT_MIN_REMAINING_MS)
-  private minRemainingMs: number;
+  @Config.integer('sandbox.scalebox.autoPauseDelayMs', SCALEBOX_DEFAULTS.AUTO_PAUSE_DELAY_MS)
+  private autoPauseDelayMs: number;
 
-  @Config.integer('sandbox.scalebox.extendTimeoutMs', SCALEBOX_DEFAULT_EXTEND_TIMEOUT_MS)
-  private extendTimeoutMs: number;
+  @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
+  async acquire(context: ExecutionContext): Promise<SandboxWrapper> {
+    const wrapper = await guard(async () => {
+      const sandboxId = await this.storage.popFromIdleQueue();
+      await this.cancelPause(sandboxId);
+      return await this.reconnect(sandboxId, context);
+    }).orElse(async (error) => {
+      this.logger.warn({ error }, 'Failed to reuse idle sandbox');
 
-  @Config.object('objectStorage.minio.internal', S3_DEFAULT_CONFIG)
-  private s3Config: S3Config;
+      const totalCount = await this.storage.getTotalSandboxCount();
+      guard
+        .ensure(totalCount < this.maxSandboxes)
+        .orThrow(
+          () =>
+            new SandboxCreationException(
+              `Sandbox resource limit exceeded (${totalCount}/${this.maxSandboxes})`,
+            ),
+        );
 
-  async acquire(context: ExecutionContext, maxWaitMs = 30000): Promise<SandboxWrapper> {
-    return poll(
-      async () => {
-        const wrapper = await this.tryAcquire(context);
-        if (wrapper) return wrapper;
-        const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-        if (active.length < this.maxSandboxes) return this.createNew(context);
-        return null;
-      },
-      async () => {
-        const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-        throw new QueueOverloadedException(active.length, this.maxSandboxes);
-      },
-      { timeout: maxWaitMs },
-    );
-  }
+      return await SandboxWrapper.create(this.logger, context, this.sandboxTimeoutMs);
+    });
 
-  private async tryAcquire(context: ExecutionContext): Promise<SandboxWrapper | null> {
-    const lockKey = `scalebox:pool:acquire:${context.canvasId}`;
-    const releaseLock = await this.redis.acquireLock(lockKey);
-
-    if (!releaseLock) return null;
-
-    return guard.defer(
-      () => this.acquireFromIdlePool(context),
-      () => void releaseLock(),
-    );
-  }
-
-  private async acquireFromIdlePool(context: ExecutionContext): Promise<SandboxWrapper | null> {
-    const metadata = await this.redis.getJSON<SandboxMetadata>(
-      `scalebox:pool:idle:${context.canvasId}`,
-    );
-    if (!metadata) return null;
-
-    if (metadata.timeoutAt <= Date.now()) {
-      await this.redis.del(`scalebox:pool:idle:${context.canvasId}`);
-      this.logger.info({ sandboxId: metadata.sandboxId }, 'Sandbox expired');
-      return null;
-    }
-
-    await this.redis.del(`scalebox:pool:idle:${context.canvasId}`);
-
-    const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-    active.push(metadata.sandboxId);
-    await this.redis.setJSON('scalebox:pool:active', active);
-
-    const s3DrivePath = this.driveService.buildS3DrivePath(context.uid, context.canvasId);
-
-    const wrapper = await SandboxWrapper.reconnect(
-      {
-        logger: this.logger,
-        uid: context.uid,
-        canvasId: context.canvasId,
-        apiKey: context.apiKey,
-        s3Config: this.s3Config,
-        s3DrivePath,
-      },
-      metadata,
-    );
-
-    if (!wrapper) {
-      const activeList = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-      const filtered = activeList.filter((id) => id !== metadata.sandboxId);
-      await this.redis.setJSON('scalebox:pool:active', filtered);
-      return null;
-    }
-
-    this.logger.info(
-      {
-        sandboxId: wrapper.sandboxId,
-        active: active.length,
-        max: this.maxSandboxes,
-      },
-      'Reused sandbox from idle pool',
-    );
+    // Inject sandboxId into logger context for all subsequent logs
+    this.logger.assign({ sandboxId: wrapper.sandboxId });
+    this.logger.info('Sandbox acquired');
 
     return wrapper;
   }
 
   async release(wrapper: SandboxWrapper): Promise<void> {
-    const activeList = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-    const filtered = activeList.filter((id) => id !== wrapper.sandboxId);
-    await this.redis.setJSON('scalebox:pool:active', filtered);
+    const sandboxId = wrapper.sandboxId;
+
+    this.logger.debug({ sandboxId }, 'Starting sandbox cleanup and release');
+
+    // Mark sandbox as idle before saving metadata
+    wrapper.markAsIdle();
 
     await guard.bestEffort(
-      () => this.returnToIdlePool(wrapper, filtered.length),
-      (error) =>
-        this.logger.warn(
-          { context: wrapper.context, error },
-          'Failed to release sandbox to idle pool',
-        ),
-    );
-  }
-
-  private async returnToIdlePool(wrapper: SandboxWrapper, activeCount: number): Promise<void> {
-    await wrapper.extendTimeout(this.extendTimeoutMs);
-
-    const remainingMs = wrapper.getRemainingTime();
-
-    if (!(await wrapper.isHealthy())) {
-      this.logger.info({ sandboxId: wrapper.sandboxId }, 'Sandbox is not healthy, discarding');
-      return;
-    }
-
-    if (remainingMs < this.minRemainingMs) {
-      this.logger.info(
-        {
-          sandboxId: wrapper.sandboxId,
-          remainingSeconds: Math.floor(remainingMs / 1000),
-        },
-        'Sandbox remaining time too low, discarding',
-      );
-      return;
-    }
-
-    const ttlSeconds = Math.floor(remainingMs / 1000);
-    await this.redis.setJSON(
-      `scalebox:pool:idle:${wrapper.canvasId}`,
-      wrapper.toMetadata(),
-      ttlSeconds,
-    );
-
-    this.logger.info(
-      {
-        sandboxId: wrapper.sandboxId,
-        expiresIn: ttlSeconds,
-        active: activeCount,
-        max: this.maxSandboxes,
+      async () => {
+        await this.storage.saveMetadata(wrapper);
+        await this.storage.pushToIdleQueue(sandboxId);
+        await this.schedulePause(sandboxId);
       },
-      'Released sandbox to pool',
-    );
-  }
-
-  private async createNew(context: ExecutionContext): Promise<SandboxWrapper> {
-    const lockKey = `scalebox:pool:create:${context.canvasId}`;
-    const releaseLock = await this.redis.acquireLock(lockKey);
-
-    if (!releaseLock) {
-      // Retry acquire after short delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return this.acquire(context);
-    }
-
-    return guard.defer(
-      () => this.createNewSandbox(context),
-      () => void releaseLock(),
-    );
-  }
-
-  private async createNewSandbox(context: ExecutionContext): Promise<SandboxWrapper> {
-    const existing = await this.tryAcquire(context);
-    if (existing) return existing;
-
-    const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-    if (active.length >= this.maxSandboxes) {
-      throw new QueueOverloadedException(active.length, this.maxSandboxes);
-    }
-
-    const s3DrivePath = this.driveService.buildS3DrivePath(context.uid, context.canvasId);
-
-    const sandboxContext: SandboxContext = {
-      logger: this.logger,
-      uid: context.uid,
-      canvasId: context.canvasId,
-      apiKey: context.apiKey,
-      s3Config: this.s3Config,
-      s3DrivePath,
-    };
-
-    const wrapper = await SandboxWrapper.create(sandboxContext, this.extendTimeoutMs);
-
-    active.push(wrapper.sandboxId);
-    await this.redis.setJSON('scalebox:pool:active', active);
-
-    const activeCount = active.length;
-    this.logger.info(
-      {
-        sandboxId: wrapper.sandboxId,
-        active: activeCount,
-        max: this.maxSandboxes,
-        expiresAt: new Date(wrapper.getTimeoutAt()).toISOString(),
+      async (error) => {
+        this.logger.warn({ sandboxId, error }, 'Failed to return to idle pool');
+        await this.deleteMetadata(sandboxId);
       },
-      'Sandbox added to active pool',
+    );
+
+    this.logger.info('Sandbox released to idle pool');
+  }
+
+  private pauseJobId(sandboxId: string): string {
+    return `pause:${sandboxId}`;
+  }
+
+  private async schedulePause(sandboxId: string): Promise<void> {
+    const jobId = this.pauseJobId(sandboxId);
+
+    await this.pauseQueue.add(
+      'pause',
+      { sandboxId },
+      {
+        delay: this.autoPauseDelayMs,
+        jobId,
+      },
+    );
+
+    this.logger.debug(
+      { sandboxId, jobId, delayMs: this.autoPauseDelayMs },
+      'Scheduled auto-pause job',
+    );
+  }
+
+  private async cancelPause(sandboxId: string): Promise<void> {
+    const jobId = this.pauseJobId(sandboxId);
+    const job = await this.pauseQueue.getJob(jobId);
+
+    if (job) {
+      await job.remove();
+      this.logger.debug({ sandboxId, jobId }, 'Cancelled pending auto-pause job');
+    }
+  }
+
+  private async deleteMetadata(sandboxId: string) {
+    await guard.bestEffort(
+      () => this.storage.deleteMetadata(sandboxId),
+      (error) => this.logger.warn({ sandboxId, error }, 'Failed to delete metadata'),
+    );
+  }
+
+  private async reconnect(sandboxId: string, context: ExecutionContext): Promise<SandboxWrapper> {
+    guard.ensure(!!sandboxId).orThrow(() => {
+      this.logger.debug('No sandbox ID from idle queue (queue is empty)');
+      return new SandboxCreationException('No idle sandbox available');
+    });
+
+    const metadata = await this.storage.loadMetadata(sandboxId);
+
+    guard.ensure(!!metadata).orThrow(() => new SandboxCreationException('Metadata not found'));
+
+    const wrapper = await guard(() =>
+      SandboxWrapper.reconnect(this.logger, context, metadata),
+    ).orElse(async (error) => {
+      await this.deleteMetadata(sandboxId);
+      throw new SandboxCreationException(error);
+    });
+
+    await guard.bestEffort(
+      async () => {
+        wrapper.markAsRunning();
+        await this.storage.saveMetadata(wrapper);
+      },
+      (error) => this.logger.warn({ sandboxId, error }, 'Failed to mark sandbox as running'),
     );
 
     return wrapper;
-  }
-
-  async getStats() {
-    const active = (await this.redis.getJSON<string[]>('scalebox:pool:active')) || [];
-
-    return {
-      active: active.length,
-      max: this.maxSandboxes,
-    };
-  }
-
-  async clear() {
-    await this.redis.del('scalebox:pool:active');
-    // Note: Can't efficiently clear all scalebox:pool:idle:* keys without scanning
-    // Let TTL handle expiration naturally
   }
 }

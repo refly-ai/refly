@@ -188,7 +188,9 @@ export class HttpClient {
 
       // Determine error code based on status
       let code = 'HTTP_ERROR';
-      if (statusCode === 401) {
+      if (statusCode === 400) {
+        code = 'BAD_REQUEST';
+      } else if (statusCode === 401) {
         code = 'UNAUTHORIZED';
       } else if (statusCode === 403) {
         code = 'FORBIDDEN';

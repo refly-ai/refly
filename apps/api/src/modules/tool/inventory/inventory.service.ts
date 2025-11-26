@@ -11,7 +11,7 @@ import { safeParseJSON } from '@refly/utils';
 import { toolsetInventory as staticToolsetInventory } from '@refly/agent-tools';
 import { SingleFlightCache } from '../../../utils/cache';
 import { BillingType } from '../constant';
-import type { ToolMethod, ToolsetInventory } from '../../../generated/client';
+import type { ToolMethod, ToolsetInventory } from '@prisma/client';
 
 export interface ToolsetInventoryItem {
   class: any; // Reserved for SDK-based toolsets

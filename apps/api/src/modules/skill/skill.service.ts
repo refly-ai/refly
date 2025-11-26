@@ -7,7 +7,7 @@ import {
   SkillTrigger as SkillTriggerModel,
   ActionResult as ActionResultModel,
   ProviderItem as ProviderItemModel,
-} from '../../generated/client';
+} from '@prisma/client';
 import { Response } from 'express';
 import {
   CreateSkillInstanceRequest,

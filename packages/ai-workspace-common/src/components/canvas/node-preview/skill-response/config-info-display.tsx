@@ -101,8 +101,9 @@ export const ConfigInfoDisplay = memo(
           return;
         }
         removeUpstreamAgent(resultId);
+        setHighlightedNodeId(null);
       },
-      [removeUpstreamAgent],
+      [removeUpstreamAgent, setHighlightedNodeId],
     );
 
     const handleRemoveToolset = useCallback(

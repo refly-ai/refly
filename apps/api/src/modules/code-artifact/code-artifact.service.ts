@@ -16,7 +16,7 @@ import {
 } from '@refly/errors';
 import { genCodeArtifactID, safeParseJSON } from '@refly/utils';
 import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
-import { CodeArtifact as CodeArtifactModel } from '../../generated/client';
+import { CodeArtifact as CodeArtifactModel } from '@prisma/client';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 
 @Injectable()

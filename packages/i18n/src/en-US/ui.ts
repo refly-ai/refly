@@ -1254,11 +1254,11 @@ const translations = {
       addTool: 'Add Tool',
       autoLayout: 'Auto Layout',
       autoName: 'Auto Name',
-      askAI: 'Ask AI',
+      askAI: 'Add Custom Agent',
       mediaGenerate: 'Media Generate',
       askAIDescription:
         'Ask AI, select context or switch skill, input requirements, get help with writing, reading comprehension, or question answering',
-      createMemo: 'Create Memo',
+      createMemo: 'Add Memo',
       createMemoDescription: 'Create a memo for quick recording ideas, supporting Markdown format',
       addMemo: 'Add Memo',
       createDocument: 'Create Document',
@@ -1910,6 +1910,7 @@ const translations = {
       loadingUserInput: 'Loading user input...',
       defaultPlaceholder: 'Describe what you want to generate...',
       createUserInput: 'Create user input "{{userInputName}}"',
+      unauthorized: 'Auth',
     },
     toolsDepencency: {
       title: 'Tool Dependencies',
@@ -2565,6 +2566,8 @@ const translations = {
       noSearchResults: 'No tools found matching your search',
       noTools: 'No tools',
       searchPlaceholder: 'Search tools...',
+      installedTools: 'Installed Tools',
+      availableTools: 'Available Tools',
       install: {
         installTitle: 'Install Tool',
         updateTitle: 'Update Tool',

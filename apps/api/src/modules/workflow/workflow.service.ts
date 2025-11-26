@@ -28,7 +28,7 @@ import {
 } from '@refly/utils';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { WorkflowNodeExecution as WorkflowNodeExecutionPO } from '../../generated/client';
+import { WorkflowNodeExecution as WorkflowNodeExecutionPO } from '@prisma/client';
 import { QUEUE_POLL_WORKFLOW, QUEUE_RUN_WORKFLOW } from '../../utils/const';
 import { WorkflowExecutionNotFoundError } from '@refly/errors';
 import { RedisService } from '../common/redis.service';

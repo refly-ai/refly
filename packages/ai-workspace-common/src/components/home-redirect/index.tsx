@@ -13,7 +13,7 @@ export const HomeRedirect = ({ defaultNode }: { defaultNode: ReactNode }) => {
 
   const handleHomeRedirect = async () => {
     if (isLogin) {
-      return <Navigate to={'/canvas/empty'} replace />;
+      return <Navigate to={'/workspace'} replace />;
     }
     return defaultNode;
   };

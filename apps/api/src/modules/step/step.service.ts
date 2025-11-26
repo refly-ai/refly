@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ActionStep } from '../../generated/client';
+import { ActionStep } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 

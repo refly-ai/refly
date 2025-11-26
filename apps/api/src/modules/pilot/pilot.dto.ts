@@ -2,7 +2,7 @@ import {
   PilotSession as PilotSessionPO,
   PilotStep as PilotStepPO,
   ActionResult as ActionResultPO,
-} from '../../generated/client';
+} from '@prisma/client';
 import { actionResultPO2DTO } from '../action/action.dto';
 import { pick } from '../../utils';
 import {

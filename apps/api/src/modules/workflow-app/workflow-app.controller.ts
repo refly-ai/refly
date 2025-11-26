@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
-import { User as UserModel } from '../../generated/client';
+import { User as UserModel } from '@prisma/client';
 import { WorkflowAppService } from './workflow-app.service';
 import {
   CreateWorkflowAppRequest,

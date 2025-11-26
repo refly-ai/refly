@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { merge } from 'lodash';
 
 /**
  * Configuration decorators for property-based config injection
@@ -108,10 +109,27 @@ export namespace Config {
 
   /**
    * Decorator for object configuration values
-   * Reads nested config object from ConfigService with default fallback
-   * Merges runtime config with defaults to handle partial configs
+   * Reads nested config object from ConfigService and merges with defaults
+   *
+   * Supports two modes:
+   * 1. Pass an object → Automatically deep merges using lodash merge
+   * 2. Pass a function → Custom merge logic
+   *
+   * @example
+   * ```typescript
+   * // Mode 1: Object (auto deep merge)
+   * @Config.object('app.settings', DEFAULT_SETTINGS)
+   * private settings: Settings;
+   *
+   * // Mode 2: Function (custom merge)
+   * @Config.object('app.settings', (raw) => customMerge(DEFAULT_SETTINGS, raw))
+   * private settings: Settings;
+   * ```
    */
-  export function object<T extends Record<string, any>>(path: string, defaultValue: T) {
+  export function object<T extends Record<string, any>>(
+    path: string,
+    defaultValueOrFactory: T | ((raw: T | undefined) => T),
+  ) {
     // biome-ignore lint/complexity/useArrowFunction: need dynamic this binding in decorators
     return function (target: any, propertyKey: string) {
       Object.defineProperty(target, propertyKey, {
@@ -123,10 +141,15 @@ export namespace Config {
             );
           }
           const raw = config.get<T>(path);
-          if (!raw || typeof raw !== 'object') return defaultValue;
 
-          // Merge with defaults to handle partial configs
-          return { ...defaultValue, ...raw };
+          // Check if it's a function (custom factory) or object (auto merge)
+          if (typeof defaultValueOrFactory === 'function') {
+            // Mode 2: Custom factory
+            return defaultValueOrFactory(raw);
+          } else {
+            // Mode 1: Auto deep merge with lodash
+            return merge({}, defaultValueOrFactory, raw);
+          }
         },
         enumerable: true,
         configurable: true,

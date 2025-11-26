@@ -1,6 +1,0 @@
-{
-  "watch": ["src"],
-  "ext": "ts",
-  "ignore": ["src/**/*.spec.ts"],
-  "exec": "tsc --build --verbose && tsc-alias --project tsconfig.json && electron ."
-}

@@ -237,11 +237,18 @@ export default () => ({
   sandbox: {
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
-      timeout: process.env.SCALEBOX_TIMEOUT,
-      maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+      // Sandbox
+      sandboxTimeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
+      // Pool
       maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
-      minRemainingMs: process.env.SCALEBOX_MIN_REMAINING_MS,
-      extendTimeoutMs: process.env.SCALEBOX_EXTEND_TIMEOUT_MS,
+      maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+      autoPauseDelayMs: process.env.SCALEBOX_AUTO_PAUSE_DELAY_MS,
+      // Lock
+      runCodeTimeoutSec: process.env.SCALEBOX_RUN_CODE_TIMEOUT_SEC,
+      lockWaitTimeoutSec: process.env.SCALEBOX_LOCK_WAIT_TIMEOUT_SEC,
+      lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
+      lockInitialTtlSec: process.env.SCALEBOX_LOCK_INITIAL_TTL_SEC,
+      lockRenewalIntervalMs: process.env.SCALEBOX_LOCK_RENEWAL_INTERVAL_MS,
     },
   },
 });

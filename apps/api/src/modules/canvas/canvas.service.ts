@@ -25,7 +25,7 @@ import {
   VariableValue,
   CanvasNode,
 } from '@refly/openapi-schema';
-import { Prisma } from '../../generated/client';
+import { Prisma } from '@prisma/client';
 import {
   genCanvasID,
   genTransactionId,

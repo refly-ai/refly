@@ -1,4 +1,4 @@
-import { DriveFile as DriveFileModel } from '../../generated/client';
+import { DriveFile as DriveFileModel } from '@prisma/client';
 import type {
   DriveFile,
   DriveFileSource,

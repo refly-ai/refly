@@ -421,16 +421,22 @@ export class ResourceHandler {
 
   /**
    * Resolve fileId to specified format
-   * @param value - String fileId or object with fileId property
+   * @param value - String fileId or object with fileId property (supports 'df-xxx' or 'fileId://df-xxx' format)
    * @param format - Output format (base64/url/binary/text, or legacy 'buffer')
-   * @param fieldPath - Field path for logging
    * @returns Resolved content in specified format
    */
   private async resolveFileIdToFormat(value: unknown, format: string): Promise<string | Buffer> {
     // Extract fileId from value
-    const fileId = typeof value === 'string' ? value : (value as any)?.fileId;
+    let fileId = typeof value === 'string' ? value : (value as any)?.fileId;
     if (!fileId) {
       throw new Error('Invalid resource value: missing fileId');
+    }
+
+    // Strip prefix if present ('fileId://' or '@file:')
+    if (fileId.startsWith('fileId://')) {
+      fileId = fileId.slice('fileId://'.length);
+    } else if (fileId.startsWith('@file:')) {
+      fileId = fileId.slice('@file:'.length);
     }
 
     // Get user context
@@ -522,18 +528,29 @@ export class ResourceHandler {
 
   /**
    * Validate if a value is a valid fileId
-   * FileId must start with 'df-' prefix
+   * FileId can be in formats:
+   * - Direct: 'df-xxx'
+   * - URI format: 'fileId://df-xxx'
+   * - Mention format: '@file:df-xxx'
    *
    * @param value - Value to validate (can be string or object with fileId property)
    * @returns True if the value is a valid fileId
    */
   private isValidFileId(value: unknown): boolean {
     if (typeof value === 'string') {
-      return value.startsWith('df-');
+      // Support 'df-xxx', 'fileId://df-xxx', and '@file:df-xxx' formats
+      return (
+        value.startsWith('df-') || value.startsWith('fileId://df-') || value.startsWith('@file:df-')
+      );
     }
     if (value && typeof value === 'object' && 'fileId' in value) {
       const fileId = (value as any).fileId;
-      return typeof fileId === 'string' && fileId.startsWith('df-');
+      return (
+        typeof fileId === 'string' &&
+        (fileId.startsWith('df-') ||
+          fileId.startsWith('fileId://df-') ||
+          fileId.startsWith('@file:df-'))
+      );
     }
     return false;
   }
@@ -571,8 +588,91 @@ export class ResourceHandler {
   }
 
   /**
+   * Find the best matching object option from oneOf/anyOf based on data
+   * Uses multiple strategies:
+   * 1. Match by discriminator field (e.g., 'type' with const value)
+   * 2. Match by property key overlap (prefer options with more matching keys)
+   * 3. Prefer options that contain isResource fields when data has potential fileIds
+   *
+   * @param options - Array of schema options from oneOf/anyOf
+   * @param dataObj - Data object to match against
+   * @returns The best matching schema option, or undefined if no match
+   */
+  private findMatchingObjectOption(
+    options: SchemaProperty[],
+    dataObj: Record<string, unknown>,
+  ): SchemaProperty | undefined {
+    const objectOptions = options.filter(
+      (opt: SchemaProperty) => opt.type === 'object' && opt.properties,
+    );
+
+    if (objectOptions.length === 0) {
+      return undefined;
+    }
+
+    if (objectOptions.length === 1) {
+      return objectOptions[0];
+    }
+
+    const dataKeys = Object.keys(dataObj);
+
+    // Strategy 1: Try to match by discriminator field (e.g., 'type' with const value)
+    for (const option of objectOptions) {
+      const props = option.properties!;
+      let allConstMatch = true;
+      let hasConst = false;
+
+      for (const [propKey, propSchema] of Object.entries(props)) {
+        const schemaWithConst = propSchema as SchemaProperty & { const?: unknown };
+        if (schemaWithConst.const !== undefined) {
+          hasConst = true;
+          if (dataObj[propKey] !== schemaWithConst.const) {
+            allConstMatch = false;
+            break;
+          }
+        }
+      }
+
+      if (hasConst && allConstMatch) {
+        return option;
+      }
+    }
+
+    // Strategy 2: Match by property key overlap and isResource presence
+    // Prefer options where data keys match schema keys and contain isResource fields
+    let bestOption: SchemaProperty | undefined;
+    let bestScore = -1;
+
+    for (const option of objectOptions) {
+      const schemaKeys = Object.keys(option.properties!);
+      const matchingKeys = dataKeys.filter((k) => schemaKeys.includes(k));
+      const hasResourceField = Object.values(option.properties!).some(
+        (prop) => (prop as SchemaProperty).isResource,
+      );
+
+      // Score: matching keys count + bonus for having resource fields
+      let score = matchingKeys.length;
+      if (hasResourceField) {
+        // Check if any matching key has a value that looks like a fileId
+        const hasFileIdValue = matchingKeys.some((k) => this.isValidFileId(dataObj[k]));
+        if (hasFileIdValue) {
+          score += 10; // Strong preference for options with resource fields when data has fileIds
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestOption = option;
+      }
+    }
+
+    return bestOption || objectOptions[0];
+  }
+
+  /**
    * Handle oneOf/anyOf schema patterns
    * Processes fields that can be one of multiple types, finding resource options
+   * Also handles nested objects/arrays within oneOf/anyOf options
    *
    * @param schemaProperty - Schema property with oneOf/anyOf
    * @param dataValue - Data value to process
@@ -597,6 +697,7 @@ export class ResourceHandler {
     const options = schemaWithOneOf.oneOf || schemaWithOneOf.anyOf || [];
     const resourceOption = options.find((opt: SchemaProperty) => opt.isResource);
 
+    // Case 1: Found a resource option and value matches resource criteria
     if (resourceOption && dataValue !== undefined && dataValue !== null) {
       if (mode === 'output' || this.isValidFileId(dataValue)) {
         parent[key] = await processor(dataValue, resourceOption);
@@ -604,6 +705,44 @@ export class ResourceHandler {
       }
     }
 
+    // Case 2: Value is an object - try to find matching object schema in oneOf/anyOf and process recursively
+    if (dataValue && typeof dataValue === 'object' && !Array.isArray(dataValue)) {
+      const dataObj = dataValue as Record<string, unknown>;
+      // Find the best matching object option based on discriminator field (e.g., 'type') or structure
+      const objectOption = this.findMatchingObjectOption(options, dataObj);
+      if (objectOption?.properties) {
+        const processedNested = { ...dataObj };
+        await Promise.all(
+          Object.entries(objectOption.properties).map(async ([nestedKey, nestedSchema]) => {
+            const nestedValue = dataObj[nestedKey];
+            if (nestedValue !== undefined) {
+              await this.traverseSchema(
+                nestedSchema as SchemaProperty,
+                nestedValue,
+                nestedKey,
+                processedNested,
+                processor,
+                mode,
+              );
+            }
+          }),
+        );
+        parent[key] = processedNested;
+        return;
+      }
+    }
+
+    // Case 3: Value is an array - try to find matching array schema in oneOf/anyOf and process recursively
+    if (Array.isArray(dataValue)) {
+      const arrayOption = options.find((opt: SchemaProperty) => opt.type === 'array' && opt.items);
+      if (arrayOption?.items) {
+        // Delegate to handleArray for consistent array processing
+        await this.handleArray(arrayOption, dataValue, key, parent, processor, mode);
+        return;
+      }
+    }
+
+    // Default: keep original value
     parent[key] = dataValue;
   }
 

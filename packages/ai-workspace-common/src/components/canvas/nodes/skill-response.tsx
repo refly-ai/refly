@@ -312,7 +312,7 @@ export const SkillResponseNode = memo(
             if (edge.source === id || edge.target === id) {
               return { ...edge, data: { ...edge.data, highlight: highlight } };
             }
-            return edge;
+            return { ...edge, data: { ...edge.data, highlight: false } };
           }),
         );
       },

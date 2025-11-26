@@ -8,7 +8,7 @@ import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hook
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import type { IContextItem } from '@refly/common-types';
 import type { CanvasNodeType, GenericToolset } from '@refly/openapi-schema';
-import { useSearchStoreShallow, useUserStoreShallow } from '@refly/stores';
+import { useSearchStoreShallow, useUserStoreShallow, useToolStoreShallow } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
@@ -81,6 +81,9 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const { data: files } = useFetchDriveFiles();
     const searchStore = useSearchStoreShallow((state) => ({
       setIsSearchOpen: state.setIsSearchOpen,
+    }));
+    const { setToolStoreModalOpen } = useToolStoreShallow((state) => ({
+      setToolStoreModalOpen: state.setToolStoreModalOpen,
     }));
     const { query, setQuery, setContextItems, setSelectedToolsets } =
       useAgentNodeManagement(nodeId);
@@ -167,6 +170,15 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const handleCommand = useCallback(
       ({ editor, range, props }: { editor: any; range: any; props: MentionItem }) => {
         const item = props;
+
+        // If tool/toolset is not installed, open tool store modal to browse and install
+        if ((item.source === 'toolsets' || item.source === 'tools') && item.isInstalled === false) {
+          setToolStoreModalOpen(true);
+          // Optionally pre-select the tool if we want to open install modal directly
+          // setCurrentToolDefinition(item.toolDefinition);
+          // setToolInstallModalOpen(true);
+          return;
+        }
 
         // For step and result records, add to context instead of inserting text
         if (item.source === 'agents' || item.source === 'files') {
@@ -258,7 +270,14 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           });
         }
       },
-      [addToContextItems, addToSelectedToolsets, insertMention, files],
+      [
+        addToContextItems,
+        addToSelectedToolsets,
+        insertMention,
+        files,
+        setToolStoreModalOpen,
+        addToUpstreamAgents,
+      ],
     );
 
     // Create mention extension with custom suggestion
@@ -347,7 +366,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           },
         },
       },
-      [placeholder],
+      [placeholder, nodeId],
     );
 
     // Expose focus and insertAtSymbol methods through ref
@@ -481,23 +500,31 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     }, [editor, setQuery, handleSendMessage, syncMentionsToState]);
 
     const isSyncedExternalQuery = useRef(false);
+    const lastNodeIdRef = useRef<string | undefined>(undefined);
 
-    // Reset sync flag when query changes externally
+    // Reset sync flag when query or nodeId changes
     useEffect(() => {
       isSyncedExternalQuery.current = false;
-    }, [query]);
+    }, [query, nodeId]);
 
-    // Update editor content when query changes externally
+    // Update editor content when query or nodeId changes
     useEffect(() => {
-      if (!editor || isSyncedExternalQuery.current) return;
+      if (!editor || isSyncedExternalQuery.current) {
+        return;
+      }
+
       const currentText = serializeDocToTokens(editor?.state?.doc);
       const nextText = query ?? '';
-      if (currentText !== nextText) {
+      const hasNodeChanged = lastNodeIdRef.current !== nodeId;
+
+      // Force re-render when nodeId changes even if content text is the same
+      if (currentText !== nextText || hasNodeChanged) {
         // Convert handlebars variables back to mention nodes for rendering
         const nodes = buildNodesFromContent(nextText, workflowVariables, allItems);
         // Preserve full selection range to avoid collapsing selection
         const prevFrom = editor.state?.selection?.from ?? null;
         const prevTo = editor.state?.selection?.to ?? null;
+
         if (nodes.length > 0) {
           const jsonDoc = {
             type: 'doc',
@@ -521,8 +548,10 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           editor.commands.setTextSelection({ from: clampedFrom, to: clampedTo });
         }
       }
+
+      lastNodeIdRef.current = nodeId;
       isSyncedExternalQuery.current = true;
-    }, [query, editor, workflowVariables, allItems]);
+    }, [query, editor, workflowVariables, allItems, nodeId]);
 
     // Additional effect to re-render content when canvas data becomes available
     useEffect(() => {

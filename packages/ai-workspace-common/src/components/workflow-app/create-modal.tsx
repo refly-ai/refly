@@ -585,9 +585,14 @@ export const CreateWorkflowAppModal = ({
       cancelText={t('common.cancel')}
       title={t('workflowApp.publish')}
       okButtonProps={{ disabled: isUploading }}
+      bodyStyle={{
+        maxHeight: '70vh',
+        overflowY: 'auto',
+        padding: 0,
+      }}
     >
       {contextHolder}
-      <div className="w-full h-full pt-4 overflow-y-auto">
+      <div className="w-full pt-4">
         {loadingAppData ? (
           <div className="flex items-center justify-center py-8">
             <Spin size="large" />
