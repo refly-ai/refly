@@ -4,7 +4,7 @@ import { TFunction } from 'i18next';
 import { getFileExtensionFromType } from '@refly/utils/artifact';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
-import { getFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-file-url';
+import { getDriveFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drive-file-url';
 import type { DriveFile } from '@refly/openapi-schema';
 
 // Interface for node data structure
@@ -200,18 +200,17 @@ export const downloadNodeData = async (nodeData: NodeData, t: TFunction): Promis
         resultId: metadata?.resultId,
         resultVersion: metadata?.resultVersion,
         content: metadata?.content,
-        publicURL: metadata?.publicURL,
         createdAt: metadata?.createdAt,
         updatedAt: metadata?.updatedAt,
       };
 
-      const { fileUrl, shouldFetch } = getFileUrl(driveFile, isSharePage, false);
+      const { fileUrl } = getDriveFileUrl(driveFile, isSharePage, false);
       if (!fileUrl) {
         message.error(t('canvas.resourceLibrary.download.invalidUrl'));
         return;
       }
 
-      const fetchOptions: RequestInit = shouldFetch ? { credentials: 'include' } : {};
+      const fetchOptions: RequestInit = { credentials: 'include' };
       const response = await fetch(fileUrl, fetchOptions);
       if (!response?.ok) {
         throw new Error(`Download failed: ${response?.status ?? 'unknown'}`);
