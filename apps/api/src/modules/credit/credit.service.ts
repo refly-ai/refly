@@ -612,6 +612,7 @@ export class CreditService {
   /**
    * Deduct credits from user's recharge records and create usage record
    * If insufficient credits, create debt record instead of negative balance
+   * @returns true if balance is zero or has debt after deduction, false otherwise
    */
   private async deductCreditsAndCreateUsage(
     uid: string,
@@ -630,7 +631,7 @@ export class CreditService {
     },
     dueAmount?: number,
     extraData?: CreditUsageExtraData,
-  ): Promise<void> {
+  ): Promise<boolean> {
     // Lazy load daily gift recharge
     await this.lazyLoadDailyGiftCredits(uid);
 
@@ -718,6 +719,9 @@ export class CreditService {
 
     // Execute transaction
     await this.prisma.$transaction(transactionOperations);
+
+    // Return true if balance is zero or has debt (remainingCost >= 0 indicates balance is zero or debt was created)
+    return remainingCost >= 0;
   }
 
   private async isEarlyBirdUser(user: User) {
@@ -813,7 +817,7 @@ export class CreditService {
     });
   }
 
-  async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData) {
+  async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData): Promise<boolean> {
     const { uid, creditUsageSteps, timestamp, resultId, version } = data;
 
     // Find user
@@ -886,7 +890,7 @@ export class CreditService {
     }
 
     // Use the extracted method to handle credit deduction with model usage details
-    await this.deductCreditsAndCreateUsage(
+    const requireRecharge = await this.deductCreditsAndCreateUsage(
       uid,
       totalCreditCost,
       {
@@ -898,6 +902,7 @@ export class CreditService {
       },
       dueAmount,
     );
+    return requireRecharge;
   }
 
   async getCreditRecharge(

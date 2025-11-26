@@ -35,6 +35,7 @@ import { RedisService } from '../common/redis.service';
 import { PollWorkflowJobData, RunWorkflowJobData } from './workflow.dto';
 import { CreditService } from '../credit/credit.service';
 import { ceil } from 'lodash';
+import { SkillInvokerService } from '../skill/skill-invoker.service';
 
 const WORKFLOW_POLL_INTERVAL = 1500;
 
@@ -50,6 +51,7 @@ export class WorkflowService {
     private readonly canvasService: CanvasService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly creditService: CreditService,
+    private readonly skillInvokerService: SkillInvokerService,
     @InjectQueue(QUEUE_RUN_WORKFLOW) private readonly runWorkflowQueue?: Queue<RunWorkflowJobData>,
     @InjectQueue(QUEUE_POLL_WORKFLOW)
     private readonly pollWorkflowQueue?: Queue<PollWorkflowJobData>,
@@ -636,95 +638,9 @@ export class WorkflowService {
     }
   }
 
-  /**
-   * Abort workflow execution - stop all running/waiting nodes
-   * @param user - The user
-   * @param executionId - The workflow execution ID to abort
-   */
-  async abortWorkflowExecution(user: User, executionId: string): Promise<void> {
-    // Verify workflow execution exists and belongs to user
-    const workflowExecution = await this.prisma.workflowExecution.findUnique({
-      where: { executionId, uid: user.uid },
-    });
-
-    if (!workflowExecution) {
-      throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
-    }
-
-    // Check if workflow is already finished or failed
-    if (workflowExecution.status === 'finish' || workflowExecution.status === 'failed') {
-      this.logger.warn(
-        `Workflow execution ${executionId} is already ${workflowExecution.status}, cannot abort`,
-      );
-      return;
-    }
-
-    // Get all executing and waiting nodes
-    const nodesToAbort = await this.prisma.workflowNodeExecution.findMany({
-      where: {
-        executionId,
-        status: { in: ['waiting', 'executing'] },
-      },
-    });
-
-    this.logger.log(
-      `Aborting workflow ${executionId}: found ${nodesToAbort.length} nodes to abort`,
-    );
-
-    // Abort all executing skillResponse nodes by calling abort action
-    const executingSkillNodes = nodesToAbort.filter((n) => n.nodeType === 'skillResponse');
-
-    // Abort all executing nodes in parallel for better performance
-    const abortResults = await Promise.allSettled(
-      executingSkillNodes.map(async (node) => {
-        try {
-          await this.actionService.abortActionFromReq(
-            user,
-            { resultId: node.entityId },
-            'Workflow aborted by user',
-          );
-          this.logger.log(`Aborted action ${node.entityId} for node ${node.nodeId}`);
-          return { success: true, nodeId: node.nodeId };
-        } catch (error) {
-          this.logger.warn(
-            `Failed to abort action ${node.entityId}: ${(error as any)?.message ?? error}`,
-          );
-          return { success: false, nodeId: node.nodeId, error };
-        }
-      }),
-    );
-
-    const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
-    this.logger.log(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
-
-    // Update all non-terminal nodes to failed (not just waiting/executing)
-    await this.prisma.workflowNodeExecution.updateMany({
-      where: {
-        executionId,
-        status: { notIn: ['finish', 'failed'] },
-      },
-      data: {
-        status: 'failed',
-        errorMessage: 'Workflow aborted by user',
-        endTime: new Date(),
-      },
-    });
-
-    // Update workflow execution to failed if not already terminal
-    await this.prisma.workflowExecution.updateMany({
-      where: {
-        executionId,
-        status: { notIn: ['finish', 'failed'] },
-      },
-      data: {
-        status: 'failed',
-        abortedByUser: true,
-      },
-    });
-
-    this.logger.log(`Workflow execution ${executionId} aborted by user ${user.uid}`);
+  async abortWorkflow(user: User, executionId: string): Promise<void> {
+    await this.skillInvokerService.abortWorkflowExecution(user, executionId);
   }
-
   /**
    * Get workflow execution detail with node executions
    * @param user - The user requesting the workflow detail
