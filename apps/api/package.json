@@ -88,6 +88,7 @@
     "cookie-parser": "~1.4.6",
     "express": "~4.19.2",
     "express-session": "^1.18.2",
+    "file-type": "^21.1.1",
     "fish-audio": "^0.0.2",
     "formdata-node": "^6.0.3",
     "get-audio-duration": "^4.0.1",
