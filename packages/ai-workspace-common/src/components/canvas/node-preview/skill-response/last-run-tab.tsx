@@ -58,7 +58,7 @@ const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
       'data-tool-name': toolCallMeta?.toolName ?? 'unknown',
       'data-tool-toolset-key': toolCallMeta?.toolsetKey ?? 'unknown',
       'data-tool-call-id': toolCallMeta?.toolCallId ?? message.toolCallId ?? '',
-      'data-tool-call-status': toolCallMeta?.status ?? 'executing',
+      'data-tool-call-status': toolCallResult?.status ?? toolCallMeta?.status ?? 'executing',
       'data-tool-created-at': message.createdAt
         ? String(new Date(message.createdAt).getTime())
         : '0',
