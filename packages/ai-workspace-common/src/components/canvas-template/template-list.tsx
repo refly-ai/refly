@@ -28,10 +28,13 @@ const EndMessage = memo(() => {
         {t('frontPage.template.endMessage.title')}
       </p>
       <Button
-        type="default"
+        type="text"
         size="large"
         onClick={handleGoToMarketplace}
-        className="rounded-2xl bg-transparent border-2 border-refly-primary-default text-refly-primary-default font-semibold px-8 py-6 h-10 hover:!bg-refly-fill-hover hover:!border-refly-primary-hover hover:!text-refly-primary-hover"
+        className="rounded-2xl bg-transparent border
+        border-refly-primary-default !text-refly-primary-default
+        font-semibold px-8 py-6 h-10 hover:bg-refly-fill-hover
+        hover:border-refly-primary-hover hover:text-refly-primary-hover"
       >
         {t('frontPage.template.endMessage.goToMarketplace')}
       </Button>
