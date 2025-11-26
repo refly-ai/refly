@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useCallback, useMemo } from 'react';
+import { memo, useState, useEffect, useCallback } from 'react';
 import { Button } from 'antd';
 import { DriveFile } from '@refly/openapi-schema';
 import { Download, File } from 'refly-icons';
@@ -6,7 +6,6 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { isCodeFile, getCodeLanguage } from '@refly-packages/ai-workspace-common/utils/file-type';
 import { useFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-file-url';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import SyntaxHighlighter from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/syntax-highlighter';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
 import CodeViewer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
@@ -32,21 +31,7 @@ export const FilePreview = memo(
     const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
 
-    // Fetch all drive files (in share page, this will use shareData.files which includes publicURL)
-    const { data: allDriveFiles } = useFetchDriveFiles();
-
-    // Find the file with matching fileId to get publicURL
-    const enrichedFile = useMemo<DriveFile>(() => {
-      if (!file.publicURL && file.fileId && allDriveFiles.length > 0) {
-        const matchedFile = allDriveFiles.find((f) => f.fileId === file.fileId);
-        if (matchedFile) {
-          return matchedFile;
-        }
-      }
-      return file;
-    }, [file, allDriveFiles]);
-
-    const { fileUrl, shouldFetch } = useFileUrl({ file: enrichedFile });
+    const { fileUrl, shouldFetch } = useFileUrl({ file: file });
 
     const fetchFileContent = useCallback(async () => {
       if (!fileUrl) {
@@ -69,7 +54,7 @@ export const FilePreview = memo(
         // Use file.type (MIME type) instead of response header for publicURL
         // because publicURL headers might return application/octet-stream
         const contentType =
-          enrichedFile.type || response.headers.get('content-type') || 'application/octet-stream';
+          file.type || response.headers.get('content-type') || 'application/octet-stream';
         const arrayBuffer = await response.arrayBuffer();
 
         // Create object URL for the blob with correct MIME type
@@ -87,7 +72,7 @@ export const FilePreview = memo(
       } finally {
         setLoading(false);
       }
-    }, [fileUrl, shouldFetch, enrichedFile.type]);
+    }, [fileUrl, shouldFetch, file.type]);
 
     useEffect(() => {
       fetchFileContent();
