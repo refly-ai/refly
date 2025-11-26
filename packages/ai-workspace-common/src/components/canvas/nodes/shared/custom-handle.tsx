@@ -95,6 +95,7 @@ export const CustomHandle = React.memo(
                   {t('canvas.nodeActions.dragToConnect')}
                 </span>
               }
+              arrow={false}
               placement="top"
             >
               <Handle

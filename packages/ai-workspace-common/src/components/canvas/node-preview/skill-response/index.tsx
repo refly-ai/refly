@@ -216,7 +216,7 @@ const SkillResponseNodePreviewComponent = ({
       />
     )
   ) : (
-    <div className="h-full w-full max-w-[1024px] mx-auto flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       <SkillResponseNodeHeader
         nodeId={node.id}
         entityId={data.entityId}
@@ -237,8 +237,8 @@ const SkillResponseNodePreviewComponent = ({
         }
       />
 
-      <div className="flex-1 flex flex-col min-h-0 px-4 relative">
-        <div className="py-3">
+      <div className="flex-1 flex flex-col min-h-0 relative">
+        <div className="py-3 px-4">
           <Segmented
             options={[
               { label: t('agent.configure'), value: 'configure' },
