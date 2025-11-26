@@ -1123,6 +1123,13 @@ const translations = {
     shareError: 'Failed to share document',
     noHeadings: 'No headings found',
   },
+  driveFile: {
+    sharing: 'Sharing file...',
+    shareSuccess: 'File shared successfully! Link copied to clipboard.',
+    shareLoading: 'Loading shared file...',
+    notFound: 'File Not Found',
+    notFoundDesc: 'The file you are looking for does not exist or has been removed.',
+  },
   artifact: {
     generating: 'Generating',
     completed: 'Completed',

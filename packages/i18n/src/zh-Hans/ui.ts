@@ -1131,6 +1131,13 @@ const translations = {
     shareSuccess: '文档分享成功！链接已复制到剪贴板。',
     shareError: '分享文档失败',
   },
+  driveFile: {
+    sharing: '正在分享文件...',
+    shareSuccess: '文件分享成功！链接已复制到剪贴板。',
+    shareLoading: '正在加载共享文件...',
+    notFound: '文件未找到',
+    notFoundDesc: '您查找的文件不存在或已被删除。',
+  },
   artifact: {
     generating: '生成中',
     completed: '已完成',
