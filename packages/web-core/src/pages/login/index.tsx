@@ -117,9 +117,17 @@ const LoginPage = () => {
       logEvent('auth::oauth_login_click', provider);
       authStore.setLoginInProgress(true);
       authStore.setLoginProvider(provider);
-      location.href = `${serverOrigin}/v1/auth/${provider}`;
+      // Prefer explicit returnUrl; otherwise go to workspace
+      const returnUrl = searchParams.get('returnUrl');
+      const desired = returnUrl
+        ? decodeURIComponent(returnUrl)
+        : `${window.location.origin}/workspace`;
+      const base = `${serverOrigin}/v1/auth/${provider}`;
+      // Google supports redirect via state; backend parses it and redirects to allowed origin
+      const url = provider === 'google' ? `${base}?redirect=${encodeURIComponent(desired)}` : base;
+      location.replace(url);
     },
-    [authStore],
+    [authStore, searchParams],
   );
 
   const handleEmailAuth = useCallback(async () => {
