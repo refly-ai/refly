@@ -117,7 +117,6 @@ export const FilePreview = memo(
       }
 
       if (error) {
-        console.error('Error fetching file content:', error);
         return (
           <div className="h-full flex items-center justify-center flex-col gap-4">
             <div className="text-red-500 text-center">
@@ -312,8 +311,6 @@ export const FilePreview = memo(
           </div>
         );
       }
-
-      console.log('fileContent', fileContent);
 
       // Unsupported file types - show download option
       return (
