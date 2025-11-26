@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { message } from 'antd';
-import { useMatch } from 'react-router-dom';
 import {
   buildSafeFileName,
   getExtFromContentType,
@@ -24,8 +23,7 @@ interface DownloadFileParams {
 export const useDownloadFile = () => {
   const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
-  const isShareCanvas = useMatch('/share/canvas/:canvasId');
-  const isSharePage = Boolean(isShareCanvas);
+  const isSharePage = location?.pathname?.startsWith('/share/') ?? false;
 
   const handleDownload = useCallback(
     async ({ currentFile, contentType }: DownloadFileParams) => {
