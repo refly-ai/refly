@@ -20,7 +20,7 @@ export const HomeRedirect = ({ defaultNode }: { defaultNode: ReactNode }) => {
 
   useEffect(() => {
     handleHomeRedirect().then(setElement);
-  }, []);
+  }, [isLogin]);
 
   return element ?? <LightLoading />;
 };

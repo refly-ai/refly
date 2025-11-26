@@ -42,7 +42,11 @@ export const CanvasDrive = memo(({ className, wideScreen }: CanvasDriveProps) =>
         >
           <FileItemHeader />
           <div className="flex-grow overflow-hidden min-w-0">
-            <FilePreview file={currentFile} markdownClassName="text-base px-3 py-2" />
+            <FilePreview
+              file={currentFile}
+              markdownClassName="text-base px-3 py-2"
+              source="preview"
+            />
           </div>
         </div>
       )}

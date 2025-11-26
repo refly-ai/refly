@@ -808,6 +808,8 @@ model DriveFile {
   scope         String    @default("present") @map("scope")
   /// Storage key for this file
   storageKey    String?   @map("storage_key")
+  /// Public URL for shared files (only set when file is shared)
+  publicURL     String?   @map("public_url")
   /// Drive file summary
   summary       String?   @map("summary")
   /// Related variable id (when source is 'variable')

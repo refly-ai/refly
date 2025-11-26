@@ -860,6 +860,7 @@ export class SkillInvokerService {
         result.errorType = 'userAbort';
       } else {
         result.status = 'failed';
+        result.errorType = result.errorType ?? 'systemError';
       }
       result.errors.push(errorInfo.userFriendlyMessage);
     } finally {
@@ -904,7 +905,7 @@ export class SkillInvokerService {
           where: { resultId, version },
           data: {
             status,
-            errorType: result.errorType,
+            errorType: result.errorType ?? 'systemError',
             errors: JSON.stringify(result.errors),
           },
         }),
@@ -1252,6 +1253,7 @@ export class SkillInvokerService {
         where: { resultId, version, status: { notIn: ['finish', 'failed'] } },
         data: {
           status: 'failed',
+          errorType: 'systemError',
           errors: JSON.stringify([err.message]),
         },
       });

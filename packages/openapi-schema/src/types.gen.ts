@@ -879,7 +879,8 @@ export type EntityType =
   | 'codeArtifact'
   | 'page'
   | 'mediaResult'
-  | 'workflowApp';
+  | 'workflowApp'
+  | 'driveFile';
 
 /**
  * Entity
@@ -7265,6 +7266,10 @@ export type DriveFile = {
    * Drive file content (only used for model input)
    */
   content?: string;
+  /**
+   * Public URL for shared files (only set when file is shared)
+   */
+  publicURL?: string;
   /**
    * Drive file creation timestamp
    */

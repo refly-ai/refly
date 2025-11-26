@@ -18,6 +18,7 @@ export const WorkflowAppPage = lazy(() => import('./pages/workflow-app'));
 export const TemplatePreviewPage = lazy(() => import('./pages/template-preview'));
 export const SkillResponseSharePage = lazy(() => import('./pages/skill-response-share'));
 export const DocumentSharePage = lazy(() => import('./pages/document-share'));
+export const DriveFileSharePage = lazy(() => import('./pages/drive-file-share'));
 export const ArtifactGalleryPage = lazy(() => import('./pages/artifact-gallery'));
 export const UseCasesGalleryPage = lazy(() => import('./pages/use-cases-gallery'));
 export const ProjectPage = lazy(() => import('./pages/project'));

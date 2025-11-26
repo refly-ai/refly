@@ -1249,6 +1249,7 @@ export const EntityTypeSchema = {
     'page',
     'mediaResult',
     'workflowApp',
+    'driveFile',
   ],
 } as const;
 
@@ -10279,6 +10280,10 @@ export const DriveFileSchema = {
     content: {
       type: 'string',
       description: 'Drive file content (only used for model input)',
+    },
+    publicURL: {
+      type: 'string',
+      description: 'Public URL for shared files (only set when file is shared)',
     },
     createdAt: {
       type: 'string',

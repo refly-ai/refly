@@ -1,11 +1,12 @@
 import { HomeRedirect } from '@refly-packages/ai-workspace-common/components/home-redirect';
+import BackendRedirect from '@refly-packages/ai-workspace-common/components/backend-redirect';
 import {
-  UnsignedFrontPage,
   Pricing,
   ShareCanvasPage,
   ShareCodePage,
   SkillResponseSharePage,
   DocumentSharePage,
+  DriveFileSharePage,
   WorkflowAppPage,
   WorkflowListPage,
   AppManager,
@@ -22,7 +23,7 @@ export const RoutesList: RouteObject[] = [
   // TODO: deprecated and navigate to framer page
   {
     path: '/',
-    element: <HomeRedirect defaultNode={<UnsignedFrontPage />} />,
+    element: <HomeRedirect defaultNode={<BackendRedirect />} />,
   },
   {
     path: '/login',
@@ -47,6 +48,10 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/share/doc/:shareId',
     element: <DocumentSharePage />,
+  },
+  {
+    path: '/share/file/:shareId',
+    element: <DriveFileSharePage />,
   },
 
   // Deprecated routes - redirect to new routes

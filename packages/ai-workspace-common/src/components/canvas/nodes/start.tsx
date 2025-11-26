@@ -91,11 +91,13 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
   const { getNode, setEdges } = useReactFlow();
   useSelectedNodeZIndex(id, selected);
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
-  const { canvasId } = useCanvasContext();
+  const { canvasId, shareData } = useCanvasContext();
   const [showCreateVariablesModal, setShowCreateVariablesModal] = useState(false);
-  const { data: workflowVariables } = useVariablesManagement(canvasId);
+  const { data: variables } = useVariablesManagement(canvasId);
   const { addNode } = useAddNode();
   const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
+
+  const workflowVariables = shareData?.variables ?? variables;
 
   // Check if node has any connections
   const isSourceConnected = edges?.some((edge) => edge.source === id);

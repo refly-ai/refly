@@ -53,15 +53,19 @@ export const startApiServerForElectron = async (logger: LoggerService) => {
   // Set the static endpoints for the desktop app
   const publicStaticEndpoint = `http://localhost:${port}/v1/misc/public`;
   const privateStaticEndpoint = `http://localhost:${port}/v1/misc`;
+  const drivePublicEndpoint = `http://localhost:${port}/v1/drive/file/public`;
   process.env.RF_PUBLIC_STATIC_ENDPOINT = publicStaticEndpoint;
   process.env.RF_PRIVATE_STATIC_ENDPOINT = privateStaticEndpoint;
+  process.env.RF_DRIVE_PUBLIC_ENDPOINT = drivePublicEndpoint;
 
   configService.set('static.public.endpoint', publicStaticEndpoint);
   configService.set('static.private.endpoint', privateStaticEndpoint);
+  configService.set('drive.publicEndpoint', drivePublicEndpoint);
 
   logger.log('API server configuration completed', {
     publicStaticEndpoint,
     privateStaticEndpoint,
+    drivePublicEndpoint,
     collabUrl: process.env.RF_COLLAB_URL,
     apiBaseUrl: process.env.RF_API_BASE_URL,
   });
