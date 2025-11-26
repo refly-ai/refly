@@ -829,7 +829,7 @@ const CheckboxesWidget = (props: RjsfWidgetProps) => {
                   value={otherValue}
                   disabled={disabled || readonly}
                   onChange={(e) => handleOtherInputChange(e.target.value)}
-                  className="w-full h-[56px]"
+                  className="w-full h-[56px] bg-transparent"
                 />
               </div>
             )}
