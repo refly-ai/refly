@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import mime from 'mime';
 import pLimit from 'p-limit';
+import pdf from 'pdf-parse';
 import { PrismaService } from '../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../common/redis.service';
@@ -21,6 +22,9 @@ import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/obje
 import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 import path from 'node:path';
+import { ProviderService } from '../provider/provider.service';
+import { ParserFactory } from '../knowledge/parsers/factory';
+import { SubscriptionService } from '../subscription/subscription.service';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -47,6 +51,8 @@ export class DriveService {
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
     @Inject(OSS_EXTERNAL) private externalOss: ObjectStorageService,
     private redis: RedisService,
+    private providerService: ProviderService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   /**
@@ -401,7 +407,7 @@ export class DriveService {
 
     let content = driveFile.summary;
 
-    // If file type is text/plain, retrieve actual content from minio storage
+    // Case 1: text/plain - 直接读取
     if (driveFile.type === 'text/plain') {
       try {
         const driveStorageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
@@ -412,15 +418,195 @@ export class DriveService {
         }
       } catch (error) {
         this.logger.warn(`Failed to retrieve text content for file ${fileId}:`, error);
-        // Fall back to summary if content retrieval fails
         content = driveFile.summary;
+      }
+
+      return {
+        ...driveFilePO2DTO(driveFile),
+        content,
+      };
+    }
+
+    // Case 2: 其他类型 - 检查缓存或解析
+    return await this.loadOrParseDriveFile(user, driveFile);
+  }
+
+  /**
+   * Load drive file content from cache or parse if not cached
+   */
+  private async loadOrParseDriveFile(user: User, driveFile: DriveFileModel): Promise<DriveFile> {
+    const { fileId, type: contentType } = driveFile;
+
+    this.logger.log(`Loading or parsing drive file ${fileId}, contentType: ${contentType}`);
+
+    // Step 1: 尝试从缓存加载
+    const cache = await this.prisma.driveFileParseCache.findUnique({
+      where: { fileId },
+    });
+
+    if (cache?.parseStatus === 'success') {
+      try {
+        const stream = await this.internalOss.getObject(cache.contentStorageKey);
+        const content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
+        this.logger.log(
+          `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
+        );
+        return { ...driveFilePO2DTO(driveFile), content };
+      } catch (error) {
+        this.logger.warn(`Cache read failed for ${fileId}, will re-parse:`, error);
+        // 继续执行解析
       }
     }
 
-    return {
-      ...driveFilePO2DTO(driveFile),
-      content,
-    };
+    // Step 2: 没有缓存，执行解析
+    try {
+      this.logger.log(`No cache found for ${fileId}, starting parse process`);
+
+      const parserFactory = new ParserFactory(this.config, this.providerService);
+      const parser = await parserFactory.createDocumentParser(user, contentType, {
+        resourceId: fileId,
+      });
+
+      // 读取文件
+      const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
+      const fileStream = await this.internalOss.getObject(storageKey);
+      const fileBuffer = await streamToBuffer(fileStream);
+      this.logger.log(`File loaded from storage for ${fileId}, size: ${fileBuffer.length} bytes`);
+
+      // PDF 页数检查
+      let numPages: number | undefined = undefined;
+      if (contentType === 'application/pdf') {
+        const pdfInfo = await pdf(fileBuffer);
+        numPages = pdfInfo.numpages;
+
+        // 检查页数限制
+        const { available, pageUsed, pageLimit } =
+          await this.subscriptionService.checkFileParseUsage(user);
+
+        if (numPages > available) {
+          const errorMessage = `Page limit exceeded: ${numPages} pages, available: ${available}`;
+          this.logger.log(
+            `Drive file ${fileId} parse failed due to page limit, numpages: ${numPages}, available: ${available}`,
+          );
+
+          // 记录失败状态
+          await this.prisma.driveFileParseCache.upsert({
+            where: { fileId },
+            create: {
+              fileId,
+              uid: user.uid,
+              contentStorageKey: '',
+              contentType,
+              parser: '',
+              numPages,
+              parseStatus: 'failed',
+              parseError: JSON.stringify({
+                type: 'pageLimitExceeded',
+                metadata: { numPages, pageLimit, pageUsed },
+              }),
+            },
+            update: {
+              parseStatus: 'failed',
+              parseError: JSON.stringify({
+                type: 'pageLimitExceeded',
+                metadata: { numPages, pageLimit, pageUsed },
+              }),
+              updatedAt: new Date(),
+            },
+          });
+
+          throw new Error(errorMessage);
+        }
+      }
+
+      // 执行解析
+      this.logger.log(`Starting to parse file ${fileId} with parser: ${parser.name}`);
+      const result = await parser.parse(fileBuffer);
+      if (result.error) {
+        throw new Error(`Parse failed: ${result.error}`);
+      }
+
+      // 处理内容
+      const processedContent = result.content || '';
+
+      // 存储到 OSS
+      const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
+      await this.internalOss.putObject(contentStorageKey, processedContent);
+
+      // 计算字数
+      const wordCount = processedContent.split(/\s+/).filter((w) => w.length > 0).length;
+
+      // 保存缓存记录（upsert 保证并发安全）
+      await this.prisma.driveFileParseCache.upsert({
+        where: { fileId },
+        create: {
+          fileId,
+          uid: user.uid,
+          contentStorageKey,
+          contentType,
+          parser: parser.name,
+          numPages: numPages ?? null,
+          wordCount,
+          parseStatus: 'success',
+        },
+        update: {
+          contentStorageKey,
+          parser: parser.name,
+          numPages: numPages ?? null,
+          wordCount,
+          parseStatus: 'success',
+          parseError: null,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 如果是 PDF，记录页数使用到 fileParseRecord
+      if (contentType === 'application/pdf' && numPages) {
+        await this.prisma.fileParseRecord.create({
+          data: {
+            resourceId: fileId,
+            uid: user.uid,
+            parser: parser.name,
+            contentType,
+            numPages,
+            storageKey: contentStorageKey,
+          },
+        });
+      }
+
+      this.logger.log(
+        `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
+      );
+
+      return { ...driveFilePO2DTO(driveFile), content: processedContent };
+    } catch (error) {
+      this.logger.error(
+        `Failed to parse drive file ${fileId}: ${JSON.stringify({ message: error.message })}`,
+      );
+
+      // 记录失败状态
+      await this.prisma.driveFileParseCache.upsert({
+        where: { fileId },
+        create: {
+          fileId,
+          uid: user.uid,
+          contentStorageKey: '',
+          contentType,
+          parser: '',
+          parseStatus: 'failed',
+          parseError: JSON.stringify({ message: error.message }),
+        },
+        update: {
+          parseStatus: 'failed',
+          parseError: JSON.stringify({ message: error.message }),
+          updatedAt: new Date(),
+        },
+      });
+
+      // 降级返回 summary
+      this.logger.log(`Returning fallback summary for ${fileId} due to parse failure`);
+      return { ...driveFilePO2DTO(driveFile), content: driveFile.summary };
+    }
   }
 
   /**
@@ -663,9 +849,8 @@ export class DriveService {
     user: User,
     sourceFile: DriveFile & { storageKey?: string | null },
     newCanvasId: string,
-    newFileId?: string,
   ): Promise<DriveFile> {
-    const fileId = newFileId ?? genDriveFileID();
+    const fileId = genDriveFileID();
 
     const newStorageKey = this.generateStorageKey(user, {
       ...sourceFile,
@@ -708,46 +893,65 @@ export class DriveService {
       `Duplicated drive file record from ${sourceFile.fileId} to ${fileId} for canvas ${newCanvasId}`,
     );
 
+    // Copy driveFileParseCache if exists
+    const sourceCache = await this.prisma.driveFileParseCache.findUnique({
+      where: { fileId: sourceFile.fileId },
+    });
+
+    if (sourceCache) {
+      // Copy the parsed content to a new storage location
+      const newContentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
+
+      // Only copy if the source cache has successful parse status and valid content storage
+      if (sourceCache.parseStatus === 'success' && sourceCache.contentStorageKey) {
+        try {
+          // Duplicate the parsed content file
+          await this.internalOss.duplicateFile(sourceCache.contentStorageKey, newContentStorageKey);
+
+          // Create new parse cache record for the duplicated file
+          await this.prisma.driveFileParseCache.create({
+            data: {
+              fileId: fileId,
+              uid: user.uid,
+              contentStorageKey: newContentStorageKey,
+              contentType: sourceCache.contentType,
+              parser: sourceCache.parser,
+              numPages: sourceCache.numPages,
+              wordCount: sourceCache.wordCount,
+              parseStatus: sourceCache.parseStatus,
+              parseError: sourceCache.parseError,
+            },
+          });
+
+          this.logger.log(`Duplicated parse cache from ${sourceFile.fileId} to ${fileId}`);
+        } catch (error) {
+          this.logger.warn(`Failed to duplicate parse cache for ${fileId}: ${error.message}`);
+          // Continue without failing the entire duplication
+        }
+      }
+    }
+
     return driveFilePO2DTO(duplicatedFile);
   }
 
   /**
    * Get drive file stream for serving file content
-   * Supports both user-owned files and shared files
    */
   async getDriveFileStream(
     user: User,
     fileId: string,
   ): Promise<{ data: Buffer; contentType: string; filename: string }> {
-    // First try to find the file owned by the current user
-    let driveFile = await this.prisma.driveFile.findFirst({
-      select: { uid: true, canvasId: true, name: true, type: true, storageKey: true },
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: { uid: true, canvasId: true, name: true, type: true },
       where: { fileId, uid: user.uid, deletedAt: null },
     });
 
-    // If not found, check if it's a shared file
     if (!driveFile) {
-      driveFile = await this.prisma.driveFile.findFirst({
-        select: { uid: true, canvasId: true, name: true, type: true, storageKey: true },
-        where: { fileId, deletedAt: null },
-      });
-
-      // Verify the share exists and is not deleted
-      const shareRecord = await this.prisma.shareRecord.findFirst({
-        where: { shareId: driveFile.canvasId, deletedAt: null },
-      });
-
-      if (!shareRecord) {
-        throw new NotFoundException(`Shared file not found: ${fileId}`);
-      }
-
-      this.logger.log(
-        `Serving shared file ${fileId} from share ${driveFile.canvasId} to user ${user.uid}`,
-      );
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
     }
 
     // Generate drive storage path
-    const driveStorageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
+    const driveStorageKey = `drive/${user.uid}/${driveFile.canvasId}/${driveFile.name}`;
 
     const readable = await this.internalOss.getObject(driveStorageKey);
     if (!readable) {

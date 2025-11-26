@@ -1835,6 +1835,38 @@ model McpServer {
   @@map("mcp_servers")
 }
 
+/// Drive file parse cache
+model DriveFileParseCache {
+  /// Primary key
+  pk                BigInt   @id @default(autoincrement())
+  /// Drive file id
+  fileId            String   @unique @map("file_id")
+  /// UID
+  uid               String   @map("uid")
+  /// 解析后内容的存储路径
+  contentStorageKey String   @map("content_storage_key")
+  /// Content type
+  contentType       String   @map("content_type")
+  /// Parser used
+  parser            String   @map("parser")
+  /// Number of pages (for PDF)
+  numPages          Int?     @map("num_pages")
+  /// Word count
+  wordCount         Int?     @map("word_count")
+  /// Parse status: success, failed
+  parseStatus       String   @map("parse_status")
+  /// Parse error (JSON)
+  parseError        String?  @map("parse_error")
+  /// Create timestamp
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([uid, createdAt])
+  @@index([parseStatus])
+  @@map("drive_file_parse_caches")
+}
+
 /// Variable extraction history for workflow 3.0
 model VariableExtractionHistory {
   /// Primary key
