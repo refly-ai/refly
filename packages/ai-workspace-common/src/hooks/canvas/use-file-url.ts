@@ -63,8 +63,11 @@ export const getFileUrl = (
  * - In other pages: use API endpoint /v1/drive/file/content/:fileId
  */
 export const useFileUrl = ({ file, download = false }: UseFileUrlOptions): UseFileUrlResult => {
-  const isShareCanvas = useMatch('/share/*/:canvasId');
-  const isSharePage = Boolean(isShareCanvas);
+  // Check if current page is any share page
+  const isShareCanvas = useMatch('/share/canvas/:canvasId');
+  const isShareFile = useMatch('/share/file/:shareId');
+
+  const isSharePage = Boolean(isShareCanvas || isShareFile);
 
   const result = useMemo<UseFileUrlResult>(
     () => getFileUrl(file, isSharePage, download),
