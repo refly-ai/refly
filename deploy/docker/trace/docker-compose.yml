@@ -1,3 +1,15 @@
+# Trace & Logging Stack - Loki, Tempo, Grafana
+# For distributed tracing and log aggregation
+#
+# Usage:
+#   cd deploy/docker/trace
+#   docker-compose up -d
+#
+# Services:
+#   - loki: Log aggregation (exposed: 33100)
+#   - tempo: Distributed tracing (exposed: 33200, 34318)
+#   - grafana: Visualization dashboard (exposed: 33000)
+
 services:
   loki:
     container_name: refly_loki
@@ -7,7 +19,7 @@ services:
       - 33100:3100
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
       - loki_data:/loki
     healthcheck:
       test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1']
@@ -16,7 +28,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - refly_network
+      - refly_trace_network
 
   tempo:
     container_name: refly_tempo
@@ -27,7 +39,7 @@ services:
       - 33200:3200  # Tempo HTTP API
     command: -config.file=/etc/tempo/tempo.yaml
     volumes:
-      - ./tempo/tempo-config.yaml:/etc/tempo/tempo.yaml
+      - ./tempo-config.yaml:/etc/tempo/tempo.yaml
       - tempo_data:/tmp/tempo
     healthcheck:
       test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1']
@@ -36,7 +48,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - refly_network
+      - refly_trace_network
 
   grafana:
     container_name: refly_grafana
@@ -49,7 +61,7 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=${GRAFANA_ANONYMOUS_ORG_ROLE:-Admin}
       - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:33000}
     volumes:
-      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
       - grafana_data:/var/lib/grafana
     depends_on:
       loki:
@@ -63,10 +75,10 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - refly_network
+      - refly_trace_network
 
 networks:
-  refly_network:
+  refly_trace_network:
     driver: bridge
 
 volumes:

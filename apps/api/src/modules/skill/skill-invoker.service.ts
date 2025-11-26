@@ -3,6 +3,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/dist/messages';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { ProjectNotFoundError } from '@refly/errors';
@@ -547,6 +548,20 @@ export class SkillInvokerService {
       startTimeoutCheck();
     }
 
+    // Create Langfuse callback handler if enabled
+    // New @langfuse/langchain v4 API: simpler initialization, trace ID via runId parameter
+    const langfuseEnabled = this.config.get<boolean>('langfuse.enabled');
+
+    const callbacks = [
+      langfuseEnabled &&
+        this.createLangfuseHandler({
+          sessionId: data.target?.entityId,
+          userId: user.uid,
+          skillName: data.skillName,
+          mode: data.mode,
+        }),
+    ].filter(Boolean);
+
     try {
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
@@ -566,6 +581,8 @@ export class SkillInvokerService {
         ...config,
         version: 'v2',
         signal: abortController.signal,
+        callbacks,
+        runName: data.skillName || 'skill-invoke',
       })) {
         if (abortController.signal.aborted) {
           const abortReason = abortController.signal.reason?.toString() ?? 'Request aborted';
@@ -874,6 +891,10 @@ export class SkillInvokerService {
 
       // Unregister the abort controller
       this.actionService.unregisterAbortController(resultId);
+
+      // Note: @langfuse/langchain v4 CallbackHandler creates OTEL spans via startAndRegisterOtelSpan()
+      // These spans are processed by LangfuseSpanProcessor which handles batching and export
+      // No manual flush needed - the span processor has its own export interval
 
       for (const artifact of Object.values(artifactMap)) {
         artifact.connection?.disconnect();
@@ -1260,5 +1281,21 @@ export class SkillInvokerService {
         res.end('');
       }
     }
+  }
+
+  /**
+   * Create Langfuse callback handler for LLM tracing
+   */
+  private createLangfuseHandler(params: {
+    sessionId?: string;
+    userId: string;
+    skillName?: string;
+    mode?: string;
+  }): LangfuseCallbackHandler {
+    return new LangfuseCallbackHandler({
+      sessionId: params.sessionId,
+      userId: params.userId,
+      tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
+    });
   }
 }

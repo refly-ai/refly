@@ -43,6 +43,7 @@
     "zod-to-json-schema": "3.24.6"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.12"
+    "@types/debug": "^4.1.12",
+    "nestjs-pino": "^4.0.0"
   }
 }

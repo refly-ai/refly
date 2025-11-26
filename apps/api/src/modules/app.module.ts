@@ -46,9 +46,21 @@ import { DriveModule } from './drive/drive.module';
 import { isDesktop } from '../utils/runtime';
 import { initTracer } from '../tracer';
 
-// Initialize OpenTelemetry tracing if endpoint is configured
+// Initialize OpenTelemetry tracing
+// - Tempo/Grafana: receives all spans (full observability)
+// - Langfuse: receives only LLM/LangChain spans (filtered via shouldExportSpan)
+const langfuseEnabled = process.env.LANGFUSE_ENABLED === 'true';
 if (process.env.OTLP_TRACES_ENDPOINT) {
-  initTracer(process.env.OTLP_TRACES_ENDPOINT);
+  initTracer({
+    otlpEndpoint: process.env.OTLP_TRACES_ENDPOINT,
+    langfuse: langfuseEnabled
+      ? {
+          publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+          secretKey: process.env.LANGFUSE_SECRET_KEY,
+          baseUrl: process.env.LANGFUSE_BASE_URL,
+        }
+      : undefined,
+  });
 }
 
 class CustomThrottlerGuard extends ThrottlerGuard {

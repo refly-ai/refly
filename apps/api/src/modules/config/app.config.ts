@@ -209,9 +209,10 @@ export default () => ({
     },
   },
   langfuse: {
+    enabled: process.env.LANGFUSE_ENABLED === 'true',
     publicKey: process.env.LANGFUSE_PUBLIC_KEY,
     secretKey: process.env.LANGFUSE_SECRET_KEY,
-    host: process.env.LANGFUSE_HOST,
+    baseUrl: process.env.LANGFUSE_BASE_URL,
   },
   composio: {
     apiKey: process.env.COMPOSIO_API_KEY,

@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { ReflyService } from '@refly/agent-tools';
@@ -29,8 +30,6 @@ import { ToolService } from '../tool/tool.service';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
-  private logger = new Logger(SkillEngineService.name);
-
   private searchService: SearchService;
   private resourceService: ResourceService;
   private documentService: DocumentService;
@@ -51,7 +50,10 @@ export class SkillEngineService implements OnModuleInit {
   constructor(
     private moduleRef: ModuleRef,
     private config: ConfigService,
-  ) {}
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(SkillEngineService.name);
+  }
 
   async onModuleInit() {
     this.searchService = this.moduleRef.get(SearchService, { strict: false });
