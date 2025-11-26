@@ -672,11 +672,11 @@ export class DriveService {
       canvasId: newCanvasId,
     });
 
-    if (this.internalOss.statObject(sourceFile.storageKey)) {
-      this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
-    } else if (this.externalOss.statObject(sourceFile.storageKey)) {
+    if (await this.internalOss.statObject(sourceFile.storageKey)) {
+      await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
+    } else if (await this.externalOss.statObject(sourceFile.storageKey)) {
       const stream = await this.externalOss.getObject(sourceFile.storageKey);
-      this.internalOss.putObject(newStorageKey, stream);
+      await this.internalOss.putObject(newStorageKey, stream);
     } else {
       throw new Error(
         `Failed to copy file ${sourceFile.fileId} to ${newStorageKey}: source file not found`,
