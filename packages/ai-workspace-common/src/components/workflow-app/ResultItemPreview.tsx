@@ -1,7 +1,9 @@
-import { memo, useState, useRef, useCallback, useEffect } from 'react';
+import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CanvasNode } from '@refly/canvas-common';
+import { DriveFile } from '@refly/openapi-schema';
 import { PreviewComponent } from '@refly-packages/ai-workspace-common/components/canvas/node-preview';
+import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
 import { Play } from 'refly-icons';
 import AudioBgSvg from './audioBg.svg';
 import ViewSvg from './view.svg';
@@ -318,14 +320,49 @@ export const ResultItemPreview = memo(
     const [wideModeOpen, setWideModeOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
 
+    // Construct DriveFile from node metadata if fileId exists
+    const driveFile = useMemo<DriveFile | null>(() => {
+      const fileId = node.data?.metadata?.fileId as string | undefined;
+      if (!fileId) {
+        return null;
+      }
+
+      return {
+        fileId,
+        canvasId: (node.data?.metadata?.canvasId as string | undefined) ?? '',
+        name: node.data?.title ?? '',
+        type: (node.data?.metadata?.type as string | undefined) ?? '',
+        category: node.type as DriveFile['category'],
+        publicURL: node.data?.metadata?.publicURL as string | undefined,
+        source: node.data?.metadata?.source as DriveFile['source'],
+        scope: node.data?.metadata?.scope as DriveFile['scope'],
+        size: node.data?.metadata?.size as number | undefined,
+        summary: node.data?.metadata?.summary as string | undefined,
+        variableId: node.data?.metadata?.variableId as string | undefined,
+        resultId: node.data?.metadata?.resultId as string | undefined,
+        resultVersion: node.data?.metadata?.resultVersion as number | undefined,
+        content: node.data?.metadata?.content as string | undefined,
+        createdAt: node.data?.metadata?.createdAt as string | undefined,
+        updatedAt: node.data?.metadata?.updatedAt as string | undefined,
+      };
+    }, [node.data?.metadata, node.data?.title, node.type]);
+
     let content: JSX.Element;
-    if (node.type === 'image' && node.data?.metadata?.imageUrl) {
+    // Priority 1: Use FilePreview for Drive files (when fileId exists)
+    // This handles all file types including document, image, video, audio, etc.
+    if (driveFile) {
+      content = <FilePreview file={driveFile} source="card" />;
+    } else if (node.type === 'image' && node.data?.metadata?.imageUrl) {
+      // Fallback to existing image preview for backward compatibility
       content = <ImagePreview node={node} inModal={inModal} />;
     } else if (node.type === 'video' && node.data?.metadata?.videoUrl) {
+      // Fallback to existing video preview for backward compatibility
       content = <VideoPreview node={node} inModal={inModal} />;
     } else if (node.type === 'audio' && node.data?.metadata?.audioUrl) {
+      // Fallback to existing audio preview for backward compatibility
       content = <AudioPreview node={node} />;
     } else if (node.type === 'codeArtifact') {
+      // Use artifact renderer for knowledge base code artifacts (when no fileId)
       content = (
         <WithSuspense>
           <LazyCodeArtifactRenderer
@@ -335,6 +372,8 @@ export const ResultItemPreview = memo(
         </WithSuspense>
       );
     } else if (node.type === 'document') {
+      // Use document renderer for knowledge base documents (when no fileId)
+      // Document renderer requires entityId to be a docId for knowledge base documents
       content = (
         <WithSuspense>
           <LazyDocumentRenderer
