@@ -238,6 +238,9 @@ export class SkillEngineService implements OnModuleInit {
       writeFile: async (user, param) => {
         return await this.driveService.createDriveFile(user, param);
       },
+      generateDriveFileUrls: async (user, files) => {
+        return await this.driveService.generateDriveFileUrls(user, files);
+      },
       genImageID: async () => {
         return genImageID();
       },

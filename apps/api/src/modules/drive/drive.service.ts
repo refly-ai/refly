@@ -126,6 +126,25 @@ export class DriveService {
   }
 
   /**
+   * Append UTF-8 charset declaration for text-based content types to avoid garbled characters.
+   */
+  private appendUtf8CharsetIfNeeded(contentType?: string | null): string | undefined {
+    if (!contentType) {
+      return undefined;
+    }
+
+    const normalized = contentType.toLowerCase();
+    const isTextLike =
+      normalized.startsWith('text/') || normalized.includes('json') || normalized.includes('xml');
+
+    if (!isTextLike || normalized.includes('charset=')) {
+      return contentType;
+    }
+
+    return `${contentType}; charset=utf-8`;
+  }
+
+  /**
    * Download file from URL and return buffer
    * @param url - The URL to download from
    * @returns Buffer containing the downloaded data
@@ -347,9 +366,12 @@ export class DriveService {
         }
 
         if (rawData) {
-          await this.internalOss.putObject(driveStorageKey, rawData, {
-            'Content-Type': request.type,
-          });
+          const headers: Record<string, string> = {};
+          const formattedContentType = this.appendUtf8CharsetIfNeeded(request.type);
+          if (formattedContentType) {
+            headers['Content-Type'] = formattedContentType;
+          }
+          await this.internalOss.putObject(driveStorageKey, rawData, headers);
         }
 
         results.push({
