@@ -652,15 +652,7 @@ export class DriveService {
       },
     });
 
-    // Only remove from internal (private) OSS
-    // DO NOT remove from public OSS if the file has publicURL (shared files)
-    // This ensures shared files remain accessible even after deletion
     await this.internalOss.removeObject(driveFile.storageKey, true);
-
-    this.logger.log(
-      `Deleted drive file ${fileId}, removed from internal OSS. ` +
-        `Public OSS file ${driveFile.publicURL ? 'preserved for sharing' : 'not applicable'}.`,
-    );
   }
 
   /**

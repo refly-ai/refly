@@ -25,8 +25,6 @@ export const CanvasDrive = memo(({ className, wideScreen }: CanvasDriveProps) =>
     }
   }, [currentFile, setSidePanelVisible]);
 
-  console.log('currentFile', currentFile);
-
   return (
     <div
       className={cn(
