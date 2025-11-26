@@ -24,8 +24,8 @@ const MarketplacePage = memo(() => {
   const [iframeSrc] = useState(() => {
     const isDevelopment = getEnv() === IENV.DEVELOPMENT;
     const baseUrl = isDevelopment
-      ? 'http://localhost:3000/workflow-template'
-      : `${window.location.origin}/workflow-template`;
+      ? 'http://localhost:3000/workflow-marketplace'
+      : `${window.location.origin}/workflow-marketplace`;
 
     const url = new URL(baseUrl);
     // Indicate embedded mode (hide standalone page elements)
