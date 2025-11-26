@@ -156,13 +156,10 @@ export class ShareCommonService {
     if (!canvasData.files.length) {
       return;
     }
-    // Fetch current file details from database to get publicURL
     const limit = pLimit(10);
 
-    // For each file, ensure it has a publicURL
     const promises = canvasData.files.map((file: any) =>
       limit(async () => {
-        // If file doesn't have publicURL, create one and update database
         if (file.storageKey) {
           try {
             await this.driveService.publishDriveFile(file.storageKey, file.fileId);
