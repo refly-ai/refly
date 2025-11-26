@@ -56,7 +56,7 @@ export const useDownloadFile = () => {
       try {
         // Use the getFileUrl pure function
         const file = currentFile as DriveFile;
-        const { fileUrl, shouldFetch } = getFileUrl(file, isSharePage, true);
+        const { fileUrl, shouldFetch } = getFileUrl(file, isSharePage, false);
 
         if (!fileUrl) {
           throw new Error('File URL not available');
