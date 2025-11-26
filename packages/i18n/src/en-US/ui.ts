@@ -993,16 +993,6 @@ const translations = {
     },
   },
   knowledgeBase: {
-    keepOneWindow: 'Keep at least one window',
-    resourceCollectionAssociativeModal: {
-      resourceTitle: 'Add Resources',
-      projectTitle: 'Add To Project',
-      resource: 'Resource',
-      project: 'Project',
-      resourcePlaceholder: 'Please select resources',
-      projectPlaceholder: 'Please select project',
-      importResource: 'Import Resource',
-    },
     directory: {
       canvasCount: '{{count}} canvases',
       resourceCount: '{{count}} resources',
@@ -1980,7 +1970,7 @@ const translations = {
       },
     },
     import: {
-      title: 'Import Resource',
+      title: 'Import Files',
       fromWebSearch: 'Web Search',
       fromFile: 'Upload File',
       fromImage: 'Upload Image',

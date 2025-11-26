@@ -1003,16 +1003,6 @@ const translations = {
     },
   },
   knowledgeBase: {
-    keepOneWindow: '至少保留一个窗口',
-    resourceCollectionAssociativeModal: {
-      resourceTitle: '添加资源',
-      projectTitle: '添加到项目',
-      resource: '资源',
-      project: '项目',
-      resourcePlaceholder: '请选择资源',
-      projectPlaceholder: '请选择项目',
-      importResource: '导入资源',
-    },
     directory: {
       canvasCount: '{{count}} 篇画布',
       resourceCount: '{{count}} 篇资源',
@@ -1966,7 +1956,7 @@ const translations = {
       },
     },
     import: {
-      title: '导入资源',
+      title: '导入文件',
       fromWebSearch: '全网搜索',
       fromFile: '导入本地文件',
       fromImage: '上传图片',
