@@ -1,18 +1,14 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 
 import { DirectConnection } from '@hocuspocus/server';
-import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/dist/messages';
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { AIMessageChunk } from '@langchain/core/dist/messages';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { ProjectNotFoundError } from '@refly/errors';
 import {
-  ActionResult,
-  ActionStep,
   Artifact,
   CreditBilling,
   DriveFile,
-  ProviderItem,
   SkillEvent,
   TokenUsageItem,
   User,
@@ -25,12 +21,11 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, getWholeParsedContent, safeParseJSON } from '@refly/utils';
+import { genImageID, safeParseJSON } from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
 import * as Y from 'yjs';
-import { ToolCallResult } from '@prisma/client';
 import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
@@ -41,6 +36,7 @@ import { genBaseRespDataFromError } from '../../utils/exception';
 import { extractChunkContent } from '../../utils/llm';
 import { writeSSEResponse } from '../../utils/response';
 import { ResultAggregator } from '../../utils/result';
+import { MessageAggregator } from '../../utils/message-aggregator';
 import { ActionService } from '../action/action.service';
 import { AutoNameCanvasJobData } from '../canvas/canvas.dto';
 import { PrismaService } from '../common/prisma.service';
@@ -98,54 +94,6 @@ export class SkillInvokerService {
     this.skillEngine = this.skillEngineService.getEngine();
     this.skillInventory = createSkillInventory(this.skillEngine);
     this.logger.log(`Skill inventory initialized: ${this.skillInventory.length}`);
-  }
-
-  private async buildLangchainMessages(
-    user: User,
-    providerItem: ProviderItem,
-    result: ActionResult,
-    steps: ActionStep[],
-  ): Promise<BaseMessage[]> {
-    const query = result.input?.query || result.title;
-
-    // Only create content array if images exist
-    let messageContent: string | MessageContentComplex[] = query;
-    if (result.input?.images?.length > 0 && (providerItem?.config as any)?.capabilities?.vision) {
-      const imageUrls = await this.miscService.generateImageUrls(user, result.input.images);
-      messageContent = [
-        { type: 'text', text: query },
-        ...imageUrls.map((url) => ({ type: 'image_url', image_url: { url } })),
-      ];
-    }
-
-    // Build consolidated tool call history by step from DB to avoid duplicating start/stream/end fragments
-    const toolCallsByStep = await this.toolCallService.fetchConsolidatedToolUseOutputByStep(
-      result.resultId,
-      result.version,
-    );
-
-    const aiMessages =
-      steps?.length > 0
-        ? steps.map((step) => {
-            const toolCallOutputs: ToolCallResult[] = toolCallsByStep?.get(step?.name ?? '') ?? [];
-            const mergedContent = getWholeParsedContent(step.reasoningContent, step.content ?? '');
-            return new AIMessage({
-              content: mergedContent,
-              additional_kwargs: {
-                skillMeta: result.actionMeta,
-                structuredData: step.structuredData,
-                type: result.type,
-                tplConfig:
-                  typeof result.tplConfig === 'string'
-                    ? safeParseJSON(result.tplConfig)
-                    : result.tplConfig,
-                toolCalls: toolCallOutputs,
-              },
-            });
-          })
-        : [];
-
-    return [new HumanMessage({ content: messageContent }), ...aiMessages];
   }
 
   private async buildInvokeConfig(
@@ -448,6 +396,7 @@ export class SkillInvokerService {
     };
 
     const resultAggregator = new ResultAggregator(this.stepService, resultId, version);
+    const messageAggregator = new MessageAggregator(resultId, version, this.prisma);
 
     // Initialize structuredData with original query if available
     const originalQuery = data.input?.originalQuery;
@@ -677,6 +626,16 @@ export class SkillInvokerService {
                     event_name: 'stream',
                   });
                 }
+
+                messageAggregator.addToolMessage({
+                  toolCallId,
+                  toolCallMeta: {
+                    toolName,
+                    toolsetKey,
+                    toolsetId,
+                    status: 'executing',
+                  },
+                });
                 break;
               }
             }
@@ -687,6 +646,16 @@ export class SkillInvokerService {
                 output: event.data?.output,
                 errorMessage: errorMsg,
               });
+
+              // Add ToolMessage for failed tool execution
+              messageAggregator.addToolMessage({
+                toolCallId,
+                toolCallMeta: {
+                  status: 'failed',
+                  error: errorMsg,
+                },
+              });
+
               // Send XML for failed state
               const xmlContent = buildToolUseXML(false, errorMsg, Date.now());
               if (xmlContent && res) {
@@ -715,6 +684,18 @@ export class SkillInvokerService {
                 input: undefined,
                 output: event.data?.output,
               });
+
+              // Add ToolMessage for message persistence
+              messageAggregator.addToolMessage({
+                toolCallId,
+                toolCallMeta: {
+                  toolName,
+                  toolsetKey,
+                  toolsetId,
+                  status: 'completed',
+                },
+              });
+
               // Extract tool_call_chunks from AIMessageChunk
               if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
                 const { toolsetKey } = event.metadata ?? {};
@@ -767,6 +748,14 @@ export class SkillInvokerService {
             const { content, reasoningContent } = extractChunkContent(chunk);
 
             if ((content || reasoningContent) && !runMeta?.suppressOutput) {
+              // Start a new AI message if not already started
+              if (!messageAggregator.hasCurrentAIMessage()) {
+                messageAggregator.startAIMessage();
+              }
+
+              // Accumulate content for message persistence
+              messageAggregator.appendToAIMessage(content, reasoningContent);
+
               // Update result content and forward stream events to client
               resultAggregator.handleStreamContent(runMeta, content, reasoningContent);
               if (res) {
@@ -801,6 +790,17 @@ export class SkillInvokerService {
                 outputTokens: chunk.usage_metadata?.output_tokens ?? 0,
               };
               resultAggregator.addUsageItem(runMeta, usage);
+
+              // Record usage metadata for message persistence
+              if (messageAggregator.hasCurrentAIMessage()) {
+                messageAggregator.setAIMessageUsage(
+                  chunk.usage_metadata?.input_tokens ?? 0,
+                  chunk.usage_metadata?.output_tokens ?? 0,
+                );
+
+                // Finalize the current AI message
+                messageAggregator.finalizeCurrentAIMessage();
+              }
 
               if (res) {
                 writeSSEResponse(res, {
@@ -880,11 +880,22 @@ export class SkillInvokerService {
         artifact.connection?.disconnect();
       }
 
+      // Flush all pending messages to the database
+      await messageAggregator.flush();
+
       const steps = await resultAggregator.getSteps({ resultId, version });
+      // Get only unpersisted messages (those that failed during auto-save)
+      const messages = messageAggregator.getUnpersistedMessagesAsPrismaInput();
       const status = result.errors.length > 0 ? 'failed' : 'finish';
+
+      this.logger.log(
+        `Persisting ${steps.length} steps and ${messages.length} unpersisted messages for result ${resultId}`,
+      );
 
       await this.prisma.$transaction([
         this.prisma.actionStep.createMany({ data: steps }),
+        // Persist remaining unpersisted messages to action_messages table
+        ...(messages.length > 0 ? [this.prisma.actionMessage.createMany({ data: messages })] : []),
         ...(result.pilotStepId
           ? [
               this.prisma.pilotStep.updateMany({
@@ -965,6 +976,9 @@ export class SkillInvokerService {
       if (!result.errors.length) {
         await this.processCreditUsageReport(user, resultId, version, resultAggregator);
       }
+
+      // Dispose message aggregator to clean up resources (stop auto-save timer)
+      messageAggregator.dispose();
     }
   }
 

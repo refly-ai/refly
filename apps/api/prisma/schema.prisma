@@ -211,6 +211,36 @@ model ActionStep {
   @@map("action_steps")
 }
 
+model ActionMessage {
+  /// Primary key
+  pk               BigInt   @id @default(autoincrement())
+  /// Message id
+  messageId        String   @unique @map("message_id")
+  /// Action result id
+  resultId         String   @map("result_id")
+  /// Action result version
+  version          Int      @default(0) @map("version")
+  /// Message type
+  type             String   @map("type")
+  /// Message content
+  content          String   @map("content")
+  /// Reasoning content
+  reasoningContent String?  @map("reasoning_content")
+  /// Usage metadata (JSON)
+  usageMeta        String?  @map("usage_meta")
+  /// Tool call metadata (JSON)
+  toolCallMeta     String?  @map("tool_call_meta")
+  /// Tool call id
+  toolCallId       String?  @map("tool_call_id")
+  /// Create timestamp
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([resultId, version])
+  @@map("action_messages")
+}
+
 model PilotSession {
   /// Primary key
   pk             BigInt   @id @default(autoincrement())

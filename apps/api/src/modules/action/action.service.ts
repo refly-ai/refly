@@ -96,12 +96,21 @@ export class ActionService {
     const steps = await this.stepService.getSteps(result.resultId, result.version);
     const toolCalls = await this.toolCallService.fetchToolCalls(result.resultId, result.version);
 
+    // Get messages for this action result
+    const messages = await this.prisma.actionMessage.findMany({
+      where: {
+        resultId: result.resultId,
+        version: result.version,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
     if (!steps || steps.length === 0) {
-      return { ...result, steps: [], modelInfo };
+      return { ...result, steps: [], messages, modelInfo };
     }
 
     const stepsWithToolCalls = this.toolCallService.attachToolCallsToSteps(steps, toolCalls);
-    return { ...result, steps: stepsWithToolCalls, modelInfo };
+    return { ...result, steps: stepsWithToolCalls, messages, modelInfo };
   }
 
   async batchProcessActionResults(user: User, results: ActionResult[]): Promise<ActionDetail[]> {
@@ -138,8 +147,8 @@ export class ActionService {
           return await this.enrichActionResultWithDetails(user, result);
         } catch (error) {
           this.logger.error(`Failed to process action result ${result.resultId}:`, error);
-          // Return result with empty steps and no model info on error
-          return { ...result, steps: [], modelInfo: null };
+          // Return result with empty steps, messages and no model info on error
+          return { ...result, steps: [], messages: [], modelInfo: null };
         }
       }),
     );

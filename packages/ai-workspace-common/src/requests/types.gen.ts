@@ -1742,6 +1742,49 @@ export type CodeArtifact = {
 };
 
 /**
+ * Action message type
+ */
+export type ActionMessageType = 'ai' | 'tool';
+
+/**
+ * Action message
+ */
+export type ActionMessage = {
+  /**
+   * Action message ID
+   */
+  messageId: string;
+  /**
+   * Action message type
+   */
+  type: ActionMessageType;
+  /**
+   * Action message content
+   */
+  content?: string;
+  /**
+   * Action message reasoning content
+   */
+  reasoningContent?: string;
+  /**
+   * Action message tool call metadata
+   */
+  toolCallMeta?: ToolCallMeta;
+  /**
+   * Action message tool call ID
+   */
+  toolCallId?: string;
+  /**
+   * Action message creation time
+   */
+  createdAt?: string;
+  /**
+   * Action message update time
+   */
+  updatedAt?: string;
+};
+
+/**
  * Action result
  */
 export type ActionResult = {
@@ -1814,8 +1857,13 @@ export type ActionResult = {
   history?: Array<ActionResult>;
   /**
    * Action steps
+   * @deprecated
    */
   steps?: Array<ActionStep>;
+  /**
+   * Action messages
+   */
+  messages?: Array<ActionMessage>;
   /**
    * Errors
    */
@@ -3269,6 +3317,38 @@ export type SkillEvent = {
   toolCallResult?: ToolCallResult;
 };
 
+/**
+ * Tool call status
+ */
+export type ToolCallStatus = 'executing' | 'completed' | 'failed';
+
+export type ToolCallMeta = {
+  /**
+   * Tool name
+   */
+  toolName?: string;
+  /**
+   * Toolset ID
+   */
+  toolsetId?: string;
+  /**
+   * Toolset key
+   */
+  toolsetKey?: string;
+  /**
+   * Tool call ID
+   */
+  toolCallId?: string;
+  /**
+   * Tool call status
+   */
+  status?: ToolCallStatus;
+  /**
+   * Tool call error
+   */
+  error?: string;
+};
+
 export type ToolCallResult = {
   /**
    * Tool call ID (run_id from LangChain)
@@ -3313,7 +3393,7 @@ export type ToolCallResult = {
   /**
    * Tool call status
    */
-  status: 'executing' | 'completed' | 'failed';
+  status: ToolCallStatus;
   /**
    * Tool call start timestamp (milliseconds)
    */
@@ -3327,11 +3407,6 @@ export type ToolCallResult = {
    */
   deletedAt?: number;
 };
-
-/**
- * Tool call status
- */
-export type status3 = 'executing' | 'completed' | 'failed';
 
 export type ShareRecord = {
   /**
@@ -4592,7 +4667,7 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
 /**
  * Video generation status
  */
-export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
+export type status3 = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type SandboxExecuteParams = {
   /**
@@ -6251,7 +6326,7 @@ export type ProviderTestResult = {
 /**
  * Test result status
  */
-export type status5 = 'success' | 'failed' | 'unknown';
+export type status4 = 'success' | 'failed' | 'unknown';
 
 export type TestProviderConnectionResponse = BaseResponse & {
   data?: ProviderTestResult;
@@ -7245,10 +7320,6 @@ export type DriveFile = {
    */
   content?: string;
   /**
-   * Public URL for shared files (only set when file is shared)
-   */
-  publicURL?: string;
-  /**
    * Drive file creation timestamp
    */
   createdAt?: string;
@@ -7477,7 +7548,7 @@ export type FormDefinition = {
 /**
  * Form status
  */
-export type status6 = 'draft' | 'published' | 'archived';
+export type status5 = 'draft' | 'published' | 'archived';
 
 export type FormSubmission = {
   /**
@@ -7513,7 +7584,7 @@ export type FormSubmission = {
 /**
  * Submission status
  */
-export type status7 = 'draft' | 'submitted' | 'reviewed';
+export type status6 = 'draft' | 'submitted' | 'reviewed';
 
 /**
  * RJSF compatible field schema definition
