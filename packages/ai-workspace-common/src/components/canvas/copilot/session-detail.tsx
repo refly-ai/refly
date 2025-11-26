@@ -21,6 +21,7 @@ import { useReactFlow } from '@xyflow/react';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
+import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 
 interface SessionDetailProps {
   sessionId: string;
@@ -121,7 +122,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
 
   const { getNodes, setNodes, setEdges } = useReactFlow();
   const { setVariables } = useVariablesManagement(canvasId);
-
+  const { onLayout } = useCanvasLayout();
   const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
     setShowWorkflowRun: state.setShowWorkflowRun,
   }));
@@ -178,6 +179,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     );
     setNodes(nodes);
     setEdges(edges);
+    onLayout('LR');
     setVariables(variables ?? []);
     setShowWorkflowRun(true);
   }, [
@@ -192,6 +194,7 @@ const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
     modal,
     setShowWorkflowRun,
     defaultChatModel,
+    onLayout,
   ]);
 
   return (
