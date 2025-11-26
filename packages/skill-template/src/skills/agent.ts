@@ -1,4 +1,11 @@
-import { START, END, StateGraphArgs, StateGraph, MessagesAnnotation } from '@langchain/langgraph';
+import {
+  START,
+  END,
+  StateGraphArgs,
+  StateGraph,
+  MessagesAnnotation,
+  GraphRecursionError,
+} from '@langchain/langgraph';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { z } from 'zod';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
@@ -18,6 +25,13 @@ import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
+
+// Constants for recursion control
+const MAX_TOOL_ITERATIONS = 25;
+// Formula: 2 * maxIterations + 1 (each iteration = LLM + tools nodes)
+const DEFAULT_RECURSION_LIMIT = 2 * MAX_TOOL_ITERATIONS + 1;
+// Max consecutive identical tool calls to detect infinite loops
+const MAX_IDENTICAL_TOOL_CALLS = 3;
 
 // Define a more specific type for the compiled graph
 type CompiledGraphApp = {
@@ -99,7 +113,7 @@ export class Agent extends BaseSkill {
       );
 
       if (validTools.length > 0) {
-        this.engine.logger.log(
+        this.engine.logger.info(
           `Binding ${validTools.length} valid tools to LLM with tool_choice="auto"`,
         );
         // Use tool_choice="auto" to force LLM to decide when to use tools
@@ -112,7 +126,7 @@ export class Agent extends BaseSkill {
         llmForGraph = baseLlm;
       }
     } else {
-      this.engine.logger.log('No tools selected, using base LLM without tools');
+      this.engine.logger.info('No tools selected, using base LLM without tools');
       llmForGraph = baseLlm;
     }
 
@@ -143,14 +157,14 @@ export class Agent extends BaseSkill {
       // Enhanced tool node with strict sequential execution of tool calls
       const enhancedToolNode = async (toolState: typeof MessagesAnnotation.State) => {
         try {
-          this.engine.logger.log('Executing tool node with strict sequential tool calls');
+          this.engine.logger.info('Executing tool node with strict sequential tool calls');
 
           const priorMessages = toolState.messages ?? [];
           const lastMessage = priorMessages[priorMessages.length - 1] as AIMessage | undefined;
           const toolCalls = lastMessage?.tool_calls ?? [];
 
           if (!toolCalls || toolCalls.length === 0) {
-            this.engine.logger.log('No tool calls to execute');
+            this.engine.logger.info('No tool calls to execute');
             return { messages: priorMessages };
           }
 
@@ -189,7 +203,7 @@ export class Agent extends BaseSkill {
 
             try {
               // Log tool arguments before invocation
-              this.engine.logger.log(
+              this.engine.logger.info(
                 `Invoking tool '${toolName}' with args:\n${JSON.stringify(toolArgs, null, 2)}`,
               );
 
@@ -208,7 +222,7 @@ export class Agent extends BaseSkill {
                 }),
               );
 
-              this.engine.logger.log(`Tool '${toolName}' executed successfully`);
+              this.engine.logger.info(`Tool '${toolName}' executed successfully`);
             } catch (toolError) {
               const errMsg =
                 (toolError as Error)?.message ?? String(toolError ?? 'Unknown tool error');
@@ -235,6 +249,9 @@ export class Agent extends BaseSkill {
       // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
       workflow = workflow.addEdge('tools', 'llm'); // Output of tools goes back to LLM
 
+      // Track tool call history for loop detection
+      let toolCallHistory: string[] = [];
+
       // addConditionalEdges does not return the graph instance, so no 'as typeof workflow' needed here
       // if the 'workflow' variable already has the correct comprehensive type.
       // @ts-ignore - Suppressing persistent type error with addConditionalEdges and node name mismatch
@@ -242,18 +259,43 @@ export class Agent extends BaseSkill {
         const lastMessage = graphState.messages[graphState.messages.length - 1] as AIMessage;
 
         if (lastMessage?.tool_calls && lastMessage?.tool_calls?.length > 0) {
-          this.engine.logger.log(
+          // Create a signature for the current tool calls to detect loops
+          const currentToolSignature = lastMessage.tool_calls
+            .map((tc) => `${tc?.name ?? ''}:${JSON.stringify(tc?.args ?? {})}`)
+            .sort()
+            .join('|');
+
+          // Check for repeated identical tool calls (potential infinite loop)
+          toolCallHistory.push(currentToolSignature);
+          const recentCalls = toolCallHistory.slice(-MAX_IDENTICAL_TOOL_CALLS);
+          const allIdentical =
+            recentCalls.length === MAX_IDENTICAL_TOOL_CALLS &&
+            recentCalls.every((call) => call === currentToolSignature);
+
+          if (allIdentical) {
+            this.engine.logger.warn(
+              `Detected ${MAX_IDENTICAL_TOOL_CALLS} identical consecutive tool calls, breaking potential infinite loop`,
+              { toolSignature: currentToolSignature },
+            );
+            // Reset history and route to END to prevent infinite loop
+            toolCallHistory = [];
+            return END;
+          }
+
+          this.engine.logger.info(
             `Tool calls detected (${lastMessage.tool_calls.length} calls), routing to tools node`,
-            { toolCalls: lastMessage.tool_calls },
+            { toolCalls: lastMessage.tool_calls, iterationCount: toolCallHistory.length },
           );
           return 'tools';
         }
 
-        this.engine.logger.log('No tool calls detected, routing to END');
+        this.engine.logger.info('No tool calls detected, routing to END');
+        // Reset tool call history when conversation ends naturally
+        toolCallHistory = [];
         return END;
       });
     } else {
-      this.engine.logger.log(
+      this.engine.logger.info(
         'No tools initialized or available. LLM output will directly go to END.',
       );
       // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
@@ -286,31 +328,53 @@ export class Agent extends BaseSkill {
 
     config.metadata.step = { name: 'answerQuestion' };
 
-    const result = await compiledLangGraphApp.invoke(
-      { messages: requestMessages },
-      {
-        ...config,
-        recursionLimit: 20,
-        metadata: {
-          ...config.metadata,
-          ...currentSkill,
+    try {
+      const result = await compiledLangGraphApp.invoke(
+        { messages: requestMessages },
+        {
+          ...config,
+          recursionLimit: DEFAULT_RECURSION_LIMIT,
+          metadata: {
+            ...config.metadata,
+            ...currentSkill,
+            toolsAvailable,
+            toolCount: tools?.length || 0,
+          },
+        },
+      );
+
+      this.engine.logger.info(
+        `Agent execution completed: ${JSON.stringify({
+          messagesCount: result.messages?.length || 0,
+          toolCallCount:
+            result.messages?.filter((msg) => (msg as AIMessage).tool_calls?.length > 0).length || 0,
           toolsAvailable,
           toolCount: tools?.length || 0,
-        },
-      },
-    );
+        })}`,
+      );
 
-    this.engine.logger.log(
-      `Agent execution completed: ${JSON.stringify({
-        messagesCount: result.messages?.length || 0,
-        toolCallCount:
-          result.messages?.filter((msg) => (msg as AIMessage).tool_calls?.length > 0).length || 0,
-        toolsAvailable,
-        toolCount: tools?.length || 0,
-      })}`,
-    );
+      return { messages: result.messages };
+    } catch (error) {
+      // Handle recursion limit error gracefully
+      if (error instanceof GraphRecursionError) {
+        this.engine.logger.warn(
+          `Agent reached recursion limit (${DEFAULT_RECURSION_LIMIT} steps, ~${MAX_TOOL_ITERATIONS} iterations). Returning partial result.`,
+        );
 
-    return { messages: result.messages };
+        // Create a message explaining the situation to the user
+        const limitReachedMessage = new AIMessage({
+          content:
+            'I apologize, but I have reached the maximum number of iterations while working on this task. ' +
+            'Here is a summary of what I was able to accomplish. ' +
+            'If you need further assistance, please try breaking down the task into smaller steps or provide more specific instructions.',
+        });
+
+        return { messages: [limitReachedMessage] };
+      }
+
+      // Re-throw other errors
+      throw error;
+    }
   };
 
   toRunnable() {
