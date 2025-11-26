@@ -14,7 +14,7 @@ interface UseFileUrlResult {
 }
 
 /**
- * Get file URL based on context (async function with auto publicURL fetching)
+ * Get file URL based on context
  */
 export const getDriveFileUrl = (
   file: DriveFile | null | undefined,
@@ -57,5 +57,5 @@ export const useDriveFileUrl = ({
 
   return useMemo(() => {
     return getDriveFileUrl(file, isSharePage, download);
-  }, [file?.fileId, file?.publicURL, isSharePage, download]);
+  }, [file?.fileId, isSharePage, download]);
 };

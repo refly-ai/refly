@@ -13,7 +13,6 @@ interface DownloadableFile {
   fileId?: string;
   type?: string;
   name?: string;
-  publicURL?: string;
 }
 
 interface DownloadFileParams {

@@ -7241,10 +7241,6 @@ export type DriveFile = {
    */
   content?: string;
   /**
-   * Public URL for shared files (only set when file is shared)
-   */
-  publicURL?: string;
-  /**
    * Drive file creation timestamp
    */
   createdAt?: string;
