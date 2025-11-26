@@ -53,7 +53,6 @@ export const useDownloadFile = () => {
         const fileExt = getExtFromContentType(contentType ?? '');
         fileName = buildSafeFileName(fileName, fileExt);
       }
-      console.log('fileName', fileName);
       setIsDownloading(true);
 
       try {

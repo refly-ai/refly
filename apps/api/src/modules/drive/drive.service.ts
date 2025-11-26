@@ -794,17 +794,11 @@ export class DriveService {
     try {
       // Copy file from internal to external OSS
       const stream = await this.internalOss.getObject(storageKey);
-      const buffer = await streamToBuffer(stream);
-
-      // Generate a new storage key for the public file to avoid conflicts
-      // Use a 'public/' prefix to distinguish from internal files
-      const publicStorageKey = `public/${storageKey}`;
-
-      await this.externalOss.putObject(publicStorageKey, buffer);
+      await this.externalOss.putObject(storageKey, stream);
 
       // Generate public URL using the drive public endpoint
       const publicEndpoint = this.config.get<string>('drive.publicEndpoint')?.replace(/\/$/, '');
-      const publicURL = `${publicEndpoint}/${publicStorageKey}`;
+      const publicURL = `${publicEndpoint}/${storageKey}`;
 
       this.logger.log(`Published drive file to public OSS: ${storageKey} -> ${publicURL}`);
       return publicURL;
