@@ -6,7 +6,7 @@
 
 点击链接加入我们的 Discord 社区：
 
-Discord 👉 [https://discord.com/invite/bWjffrb89h](https://discord.com/invite/bWjffrb89h)
+Discord 👉 [https://discord.com/invite/YVuYFjFvRC](https://discord.com/invite/YVuYFjFvRC)
 
 ## 邮件
 

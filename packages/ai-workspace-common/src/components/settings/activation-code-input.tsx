@@ -51,7 +51,7 @@ export const ActivationCodeInput: React.FC<ActivationCodeInputProps> = ({
 
   // Join Discord community
   const handleJoinDiscord = () => {
-    window.open('https://discord.gg/bWjffrb89h', '_blank');
+    window.open('https://discord.gg/YVuYFjFvRC', '_blank');
   };
 
   return (

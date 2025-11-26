@@ -37,7 +37,7 @@ const SimpleFooter = React.memo(() => {
             <IconGithub className="h-4 w-4" />
           </Link>
           <Link
-            to="https://discord.gg/bWjffrb89h"
+            to="https://discord.gg/YVuYFjFvRC"
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-md p-2 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"

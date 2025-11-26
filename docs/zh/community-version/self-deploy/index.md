@@ -134,4 +134,4 @@ docker compose up -d --remove-orphans
 3. 如果不健康的容器是 `refly_api`，您可以首先尝试运行 `docker restart refly_api` 来重启容器。
 4. 对于其他容器，您可以在容器日志中搜索错误消息的原因。
 
-如果问题仍然存在，您可以在我们的 [GitHub 仓库](https://github.com/refly-ai/refly/issues)提出问题，或在我们的 [Discord 服务器](https://discord.gg/bWjffrb89h)中联系我们。
+如果问题仍然存在，您可以在我们的 [GitHub 仓库](https://github.com/refly-ai/refly/issues)提出问题，或在我们的 [Discord 服务器](https://discord.gg/YVuYFjFvRC)中联系我们。

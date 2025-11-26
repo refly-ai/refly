@@ -13,14 +13,14 @@ Refly.AI is the open-source Agentic Workspace for Human–AI Collaboration. Seam
 
 [🚀 v0.10.0 Released! A powerful update with a unified resource panel. 🚀](https://docs.refly.ai/changelog/v0.10.0)
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/community-version/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/community-version/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/YVuYFjFvRC) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
 <p align="center">
     <a href="https://refly.ai" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/badge/Product-F04438"></a>
     <a href="https://refly.ai/pricing" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff"></a>
-    <a href="https://discord.gg/bWjffrb89h" target="_blank">
+    <a href="https://discord.gg/YVuYFjFvRC" target="_blank">
         <img alt="Discord Chat" src="https://img.shields.io/discord/1323513432686989362?label=chat&logo=discord&logoColor=white&style=flat&color=5865F2"></a>
     <a href="https://x.com/reflyai" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/twitter/follow/reflyai"></a>
@@ -198,7 +198,7 @@ If you have any questions, feel free to reach out to us. One of the best places 
 
 - [GitHub Discussion](https://github.com/refly-ai/refly/discussions): Best for sharing feedback and asking questions.
 - [GitHub Issues](https://github.com/refly-ai/refly/issues): Best for reporting bugs and suggesting features when using ReflyAI. Please refer to our contribution guidelines.
-- [Discord](https://discord.gg/bWjffrb89h): Best for sharing your applications and interacting with the community.
+- [Discord](https://discord.gg/YVuYFjFvRC): Best for sharing your applications and interacting with the community.
 - [X(Twitter)](https://x.com/reflyai): Best for sharing your applications and staying connected with the community.
 
 ## Upstream Projects

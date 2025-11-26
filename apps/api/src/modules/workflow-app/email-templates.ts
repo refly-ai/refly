@@ -29,7 +29,7 @@ export const WORKFLOW_APP_REVIEW_EMAIL_TEMPLATE: WorkflowAppReviewEmailTemplate 
     templateLinkLabel: 'Template link:',
     discordMessage:
       "If you'd like to track your review status or get feedback from other creators, feel free to join our Discord community — it's the fastest place to stay updated.",
-    discordLink: 'Join Discord: https://discord.com/invite/bWjffrb89h',
+    discordLink: 'Join Discord: https://discord.com/invite/YVuYFjFvRC',
     closingThanks: 'Thanks again for contributing to the Refly community.',
     closingMessage: "We can't wait to see what you've built!",
   },

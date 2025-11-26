@@ -39,7 +39,7 @@ function Header() {
             <span>{t('landingPage.tab.discord')}</span>
           </div>
         ),
-        onClick: () => window.open('https://discord.gg/bWjffrb89h', '_blank'),
+        onClick: () => window.open('https://discord.gg/YVuYFjFvRC', '_blank'),
       },
       {
         key: 'wechat',
