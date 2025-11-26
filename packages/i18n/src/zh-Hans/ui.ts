@@ -3086,6 +3086,8 @@ const translations = {
       result: ' 结果',
       parameterName: '名称',
       parameterValue: '值',
+      loadingToolCall: '加载工具调用详情...',
+      noToolCallResult: '工具调用结果为空',
       copySuccess: '已复制到剪贴板',
       emptyCode: '无法创建空代码组件',
       codeArtifactCreated: '代码组件已创建',

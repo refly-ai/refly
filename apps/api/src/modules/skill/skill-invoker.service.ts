@@ -559,22 +559,6 @@ export class SkillInvokerService {
               toolsetId,
               runId,
             });
-            const buildToolUseXML = (includeResult: boolean, errorMsg: string, updatedTs: number) =>
-              this.toolCallService.generateToolUseXML({
-                toolCallId,
-                includeResult,
-                errorMsg,
-                metadata: {
-                  name: toolName,
-                  type: event.metadata?.type as string | undefined,
-                  toolsetKey: toolsetId,
-                  toolsetName: event.metadata?.toolsetName,
-                },
-                input: event.data?.input,
-                output: event.data?.output,
-                startTs: startTs,
-                updatedTs: updatedTs,
-              });
 
             const persistToolCall = async (
               status: ToolCallStatus,
@@ -613,29 +597,29 @@ export class SkillInvokerService {
                   input: event.data?.input,
                   output: '',
                 });
-                // Send XML for executing state
-                const xmlContent = buildToolUseXML(false, '', Date.now());
-                if (xmlContent && res) {
-                  resultAggregator.handleStreamContent(runMeta, xmlContent, '');
-                  this.toolCallService.emitToolUseStream(res, {
+
+                const toolCallMeta = {
+                  toolName,
+                  toolsetKey,
+                  toolsetId,
+                  toolCallId,
+                  status: 'executing' as const,
+                };
+                const toolMessageId = messageAggregator.addToolMessage({
+                  toolCallId,
+                  toolCallMeta,
+                });
+
+                // Emit tool_call_start event with toolCallMeta and messageId
+                if (res) {
+                  writeSSEResponse(res, {
+                    event: 'tool_call_start',
                     resultId,
                     step: runMeta?.step,
-                    xmlContent,
-                    toolCallId,
-                    toolName,
-                    event_name: 'stream',
+                    messageId: toolMessageId,
+                    toolCallMeta,
                   });
                 }
-
-                messageAggregator.addToolMessage({
-                  toolCallId,
-                  toolCallMeta: {
-                    toolName,
-                    toolsetKey,
-                    toolsetId,
-                    status: 'executing',
-                  },
-                });
                 break;
               }
             }
@@ -648,27 +632,30 @@ export class SkillInvokerService {
               });
 
               // Add ToolMessage for failed tool execution
-              messageAggregator.addToolMessage({
+              const toolCallMeta = {
+                toolName,
+                toolsetKey,
+                toolsetId,
                 toolCallId,
-                toolCallMeta: {
-                  status: 'failed',
-                  error: errorMsg,
-                },
+                status: 'failed' as const,
+                error: errorMsg,
+              };
+              const toolMessageId = messageAggregator.addToolMessage({
+                toolCallId,
+                toolCallMeta,
               });
 
-              // Send XML for failed state
-              const xmlContent = buildToolUseXML(false, errorMsg, Date.now());
-              if (xmlContent && res) {
-                resultAggregator.handleStreamContent(runMeta, xmlContent, '');
-                this.toolCallService.emitToolUseStream(res, {
+              // Emit tool_call_error event with toolCallMeta and messageId
+              if (res) {
+                writeSSEResponse(res, {
+                  event: 'tool_call_error',
                   resultId,
                   step: runMeta?.step,
-                  xmlContent,
-                  toolCallId,
-                  toolName,
-                  event_name: 'stream',
+                  messageId: toolMessageId,
+                  toolCallMeta,
                 });
               }
+
               this.toolCallService.releaseToolCallId({
                 resultId,
                 version,
@@ -686,15 +673,28 @@ export class SkillInvokerService {
               });
 
               // Add ToolMessage for message persistence
-              messageAggregator.addToolMessage({
+              const toolCallMeta = {
+                toolName,
+                toolsetKey,
+                toolsetId,
                 toolCallId,
-                toolCallMeta: {
-                  toolName,
-                  toolsetKey,
-                  toolsetId,
-                  status: 'completed',
-                },
+                status: 'completed' as const,
+              };
+              const toolMessageId = messageAggregator.addToolMessage({
+                toolCallId,
+                toolCallMeta,
               });
+
+              // Emit tool_call_end event with toolCallMeta and messageId
+              if (res) {
+                writeSSEResponse(res, {
+                  event: 'tool_call_end',
+                  resultId,
+                  step: runMeta?.step,
+                  messageId: toolMessageId,
+                  toolCallMeta,
+                });
+              }
 
               // Extract tool_call_chunks from AIMessageChunk
               if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
@@ -702,19 +702,6 @@ export class SkillInvokerService {
                 // Skip non-tool user-visible helpers like commonQnA, and ensure toolsetKey exists
                 if (!toolsetKey) {
                   break;
-                }
-
-                const xmlContent = buildToolUseXML(true, '', Date.now());
-                if (xmlContent && res) {
-                  resultAggregator.handleStreamContent(runMeta, xmlContent, '');
-                  this.toolCallService.emitToolUseStream(res, {
-                    resultId,
-                    step: runMeta?.step,
-                    xmlContent,
-                    toolCallId,
-                    toolName,
-                    event_name: 'stream',
-                  });
                 }
 
                 // Handle generated files from tools (sandbox, scalebox, etc.)
@@ -738,13 +725,6 @@ export class SkillInvokerService {
             break;
           }
           case 'on_chat_model_stream': {
-            // Suppress streaming content when inside tool execution to avoid duplicate outputs
-            // Tools like generateDoc stream to their own targets (e.g., documents) and should not
-            // also stream to the skill response channel.
-            // if (event?.metadata?.langgraph_node === 'tools') {
-            //   break;
-            // }
-
             const { content, reasoningContent } = extractChunkContent(chunk);
 
             if ((content || reasoningContent) && !runMeta?.suppressOutput) {
@@ -765,6 +745,7 @@ export class SkillInvokerService {
                   content,
                   reasoningContent,
                   step: runMeta?.step,
+                  messageId: messageAggregator.getCurrentAIMessageId(),
                 });
               }
             }
@@ -791,6 +772,9 @@ export class SkillInvokerService {
               };
               resultAggregator.addUsageItem(runMeta, usage);
 
+              // Get the current AI message ID before finalizing
+              const aiMessageId = messageAggregator.getCurrentAIMessageId();
+
               // Record usage metadata for message persistence
               if (messageAggregator.hasCurrentAIMessage()) {
                 messageAggregator.setAIMessageUsage(
@@ -808,6 +792,7 @@ export class SkillInvokerService {
                   resultId,
                   tokenUsage: usage,
                   step: runMeta?.step,
+                  messageId: aiMessageId,
                 });
               }
 

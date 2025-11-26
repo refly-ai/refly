@@ -249,9 +249,10 @@ export class MessageAggregator {
   /**
    * Add a ToolMessage when a tool execution completes
    * If a message with the same toolCallId already exists, update it instead of adding a new one
+   * Returns the messageId of the tool message
    */
-  addToolMessage(params: { toolCallId: string; toolCallMeta: ToolCallMeta }): void {
-    if (this.aborted) return;
+  addToolMessage(params: { toolCallId: string; toolCallMeta: ToolCallMeta }): string {
+    if (this.aborted) return '';
 
     // Finalize any pending AI message before adding tool result
     this.finalizeCurrentAIMessage();
@@ -273,19 +274,22 @@ export class MessageAggregator {
           },
           dirty: true,
         };
+        return existingMessage.messageId;
       }
-    } else {
-      // Add new message
-      this.messages.push({
-        messageId: genActionMessageID(),
-        type: 'tool',
-        toolCallId: params.toolCallId,
-        toolCallMeta: params.toolCallMeta,
-        createdAt: new Date(),
-        dirty: true,
-        persisted: false,
-      });
     }
+
+    // Add new message
+    const messageId = genActionMessageID();
+    this.messages.push({
+      messageId,
+      type: 'tool',
+      toolCallId: params.toolCallId,
+      toolCallMeta: params.toolCallMeta,
+      createdAt: new Date(),
+      dirty: true,
+      persisted: false,
+    });
+    return messageId;
   }
 
   /**
@@ -316,6 +320,14 @@ export class MessageAggregator {
    */
   hasCurrentAIMessage(): boolean {
     return this.currentAIMessage !== null;
+  }
+
+  /**
+   * Get the current AI message's messageId
+   * Returns undefined if no AI message is currently being accumulated
+   */
+  getCurrentAIMessageId(): string | undefined {
+    return this.currentAIMessage?.messageId;
   }
 
   /**

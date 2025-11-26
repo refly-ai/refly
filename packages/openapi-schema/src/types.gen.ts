@@ -3249,6 +3249,8 @@ export type SkillEventType =
   | 'token_usage'
   | 'create_node'
   | 'tool_call_start'
+  | 'tool_call_end'
+  | 'tool_call_error'
   | 'tool_call_stream'
   | 'error';
 
@@ -3263,6 +3265,7 @@ export type SkillEvent = {
   skillMeta?: SkillMeta;
   /**
    * Action step metadata
+   * @deprecated
    */
   step?: ActionStepMeta;
   /**
@@ -3273,6 +3276,10 @@ export type SkillEvent = {
    * Result version
    */
   version?: number;
+  /**
+   * Message ID
+   */
+  messageId?: string;
   /**
    * Event content. Only present when `event` is `stream`
    */
@@ -3311,6 +3318,10 @@ export type SkillEvent = {
    * Original error message. Only present when `event` is `error`.
    */
   originError?: string;
+  /**
+   * Tool call metadata. Only present when `event` is `tool_call_start`, `tool_call_end`, or `tool_call_error`.
+   */
+  toolCallMeta?: ToolCallMeta;
   /**
    * Tool call result data.
    */
@@ -6722,6 +6733,12 @@ export type DeleteToolsetRequest = {
    * Toolset ID
    */
   toolsetId: string;
+};
+
+export type GetToolCallResultResponse = BaseResponse & {
+  data?: {
+    result?: ToolCallResult;
+  };
 };
 
 export type DocumentInterface = {
@@ -10566,6 +10583,19 @@ export type DeleteToolsetData = {
 export type DeleteToolsetResponse = BaseResponse;
 
 export type DeleteToolsetError = unknown;
+
+export type GetToolCallResultData = {
+  query: {
+    /**
+     * Tool call ID
+     */
+    toolCallId: string;
+  };
+};
+
+export type GetToolCallResultResponse2 = GetToolCallResultResponse;
+
+export type GetToolCallResultError = unknown;
 
 export type AuthorizeComposioConnectionData = {
   path: {

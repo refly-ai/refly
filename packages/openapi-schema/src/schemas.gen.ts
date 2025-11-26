@@ -4519,6 +4519,8 @@ export const SkillEventTypeSchema = {
     'token_usage',
     'create_node',
     'tool_call_start',
+    'tool_call_end',
+    'tool_call_error',
     'tool_call_stream',
     'error',
   ],
@@ -4539,6 +4541,7 @@ export const SkillEventSchema = {
     step: {
       description: 'Action step metadata',
       $ref: '#/components/schemas/ActionStepMeta',
+      deprecated: true,
     },
     resultId: {
       type: 'string',
@@ -4547,6 +4550,10 @@ export const SkillEventSchema = {
     version: {
       type: 'number',
       description: 'Result version',
+    },
+    messageId: {
+      type: 'string',
+      description: 'Message ID',
     },
     content: {
       type: 'string',
@@ -4583,6 +4590,11 @@ export const SkillEventSchema = {
     originError: {
       type: 'string',
       description: 'Original error message. Only present when `event` is `error`.',
+    },
+    toolCallMeta: {
+      description:
+        'Tool call metadata. Only present when `event` is `tool_call_start`, `tool_call_end`, or `tool_call_error`.',
+      $ref: '#/components/schemas/ToolCallMeta',
     },
     toolCallResult: {
       description: 'Tool call result data.',
@@ -9471,6 +9483,27 @@ export const DeleteToolsetRequestSchema = {
       description: 'Toolset ID',
     },
   },
+} as const;
+
+export const GetToolCallResultResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            result: {
+              $ref: '#/components/schemas/ToolCallResult',
+            },
+          },
+        },
+      },
+    },
+  ],
 } as const;
 
 export const DocumentInterfaceSchema = {

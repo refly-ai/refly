@@ -3792,6 +3792,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /tool/call/result:
+    get:
+      tags:
+        - tool
+      summary: Get tool call result
+      description: Get the result of a tool call
+      operationId: getToolCallResult
+      parameters:
+        - name: toolCallId
+          in: query
+          required: true
+          description: Tool call ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetToolCallResultResponse'
   /tool/composio/{app}/authorize:
     post:
       tags:
@@ -7268,6 +7289,8 @@ components:
         - token_usage
         - create_node
         - tool_call_start
+        - tool_call_end
+        - tool_call_error
         - tool_call_stream
         - error
     SkillEvent:
@@ -7285,12 +7308,16 @@ components:
         step:
           description: Action step metadata
           $ref: '#/components/schemas/ActionStepMeta'
+          deprecated: true
         resultId:
           type: string
           description: Result ID
         version:
           type: number
           description: Result version
+        messageId:
+          type: string
+          description: Message ID
         content:
           type: string
           description: Event content. Only present when `event` is `stream`
@@ -7318,6 +7345,9 @@ components:
         originError:
           type: string
           description: Original error message. Only present when `event` is `error`.
+        toolCallMeta:
+          description: Tool call metadata. Only present when `event` is `tool_call_start`, `tool_call_end`, or `tool_call_error`.
+          $ref: '#/components/schemas/ToolCallMeta'
         toolCallResult:
           description: Tool call result data.
           $ref: '#/components/schemas/ToolCallResult'
@@ -10734,6 +10764,16 @@ components:
         toolsetId:
           type: string
           description: Toolset ID
+    GetToolCallResultResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                result:
+                  $ref: '#/components/schemas/ToolCallResult'
     DocumentInterface:
       type: object
       properties:
