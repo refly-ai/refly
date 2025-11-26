@@ -9187,24 +9187,6 @@ export type DeleteDriveFileResponse = BaseResponse;
 
 export type DeleteDriveFileError = unknown;
 
-export type GetFilePublicUrlData = {
-  path: {
-    /**
-     * File ID
-     */
-    fileId: string;
-  };
-};
-
-export type GetFilePublicUrlResponse = {
-  success?: boolean;
-  data?: {
-    publicUrl?: string | null;
-  };
-};
-
-export type GetFilePublicUrlError = unknown;
-
 export type ListCanvasTemplatesData = {
   query?: {
     /**

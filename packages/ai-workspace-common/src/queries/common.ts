@@ -86,7 +86,6 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
-  getFilePublicUrl,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -340,16 +339,6 @@ export const UseListDriveFilesKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useListDriveFilesKey, ...(queryKey ?? [clientOptions])];
-export type GetFilePublicUrlDefaultResponse = Awaited<ReturnType<typeof getFilePublicUrl>>['data'];
-export type GetFilePublicUrlQueryResult<
-  TData = GetFilePublicUrlDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetFilePublicUrlKey = 'GetFilePublicUrl';
-export const UseGetFilePublicUrlKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetFilePublicUrlKey, ...(queryKey ?? [clientOptions])];
 export type ListCanvasTemplatesDefaultResponse = Awaited<
   ReturnType<typeof listCanvasTemplates>
 >['data'];

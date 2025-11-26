@@ -6,7 +6,7 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/download-file';
 import { useTranslation } from 'react-i18next';
 import { useMatch } from 'react-router-dom';
-import { getDriveFileUrlAsync } from './use-drive-file-url';
+import { getDriveFileUrl } from './use-drive-file-url';
 import type { DriveFile } from '@refly/openapi-schema';
 
 interface DownloadableFile {
@@ -57,7 +57,7 @@ export const useDownloadFile = () => {
         const file = currentFile as DriveFile;
 
         // Use async getFileUrl which handles publicURL fetching automatically
-        const { fileUrl } = await getDriveFileUrlAsync(file, isSharePage);
+        const { fileUrl } = getDriveFileUrl(file, isSharePage);
 
         if (!fileUrl) {
           throw new Error('File URL not available');

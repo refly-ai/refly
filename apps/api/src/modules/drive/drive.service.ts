@@ -786,8 +786,8 @@ export class DriveService {
    * Copies the file from internal OSS to external OSS and returns the public URL
    * Creates a new storage key for the public file to avoid conflicts with internal file deletion
    */
-  async publishDriveFile(storageKey: string): Promise<string> {
-    if (!storageKey) {
+  async publishDriveFile(storageKey: string, fileId: string): Promise<string> {
+    if (!storageKey || !fileId) {
       return '';
     }
 
@@ -796,9 +796,9 @@ export class DriveService {
       const stream = await this.internalOss.getObject(storageKey);
       await this.externalOss.putObject(storageKey, stream);
 
-      // Generate public URL using the drive public endpoint
+      // Generate public URL using the drive public endpoint with fileId
       const publicEndpoint = this.config.get<string>('drive.publicEndpoint')?.replace(/\/$/, '');
-      const publicURL = `${publicEndpoint}/${storageKey}`;
+      const publicURL = `${publicEndpoint}/${fileId}`;
 
       this.logger.log(`Published drive file to public OSS: ${storageKey} -> ${publicURL}`);
       return publicURL;
@@ -809,91 +809,34 @@ export class DriveService {
   }
 
   /**
-   * Get public URL for a drive file by fileId
-   * Returns the publicURL if the file exists
-   * Automatically migrates old shared files by creating publicURL if needed
-   */
-  async getFilePublicUrl(fileId: string): Promise<string | null> {
-    const driveFile = await this.prisma.driveFile.findFirst({
-      select: {
-        fileId: true,
-        publicURL: true,
-        storageKey: true,
-        canvasId: true,
-        uid: true,
-      },
-      where: { fileId, deletedAt: null },
-    });
-
-    if (!driveFile) {
-      throw new DriveFileNotFoundError(`File not found: ${fileId}`);
-    }
-
-    // If publicURL already exists, return it
-    if (driveFile.publicURL) {
-      return driveFile.publicURL;
-    }
-
-    // Check if the file needs to be published (migration for old shared files)
-    // Case 1: Check if the canvas is shared
-    const canvasShareRecord = await this.prisma.shareRecord.findFirst({
-      where: {
-        shareId: driveFile.canvasId,
-        deletedAt: null,
-      },
-    });
-
-    // Case 2: Check if the file itself is shared
-    const fileShareRecord = await this.prisma.shareRecord.findFirst({
-      where: {
-        entityId: fileId,
-        entityType: 'driveFile',
-        deletedAt: null,
-      },
-    });
-
-    // If either the canvas or the file is shared, publish the file
-    if (canvasShareRecord || fileShareRecord) {
-      this.logger.log(
-        `Migrating old shared file ${fileId}: canvas share=${!!canvasShareRecord}, file share=${!!fileShareRecord}`,
-      );
-
-      // Publish the file to external OSS
-      const publicURL = await this.publishDriveFile(driveFile.storageKey);
-
-      // Update the driveFile record with the new publicURL
-      await this.prisma.driveFile.update({
-        where: { fileId },
-        data: { publicURL },
-      });
-
-      this.logger.log(`Successfully migrated file ${fileId} with publicURL: ${publicURL}`);
-
-      return publicURL;
-    }
-
-    // File is not shared, return null
-    return null;
-  }
-
-  /**
    * Get public drive file content for serving via public endpoint
    * Used by the public file endpoint to serve shared files
    */
-  async getPublicFileContent(storageKey: string): Promise<{
+  async getPublicFileContent(fileId: string): Promise<{
     data: Buffer;
     contentType: string;
     filename: string;
   }> {
     try {
+      const driveFile = await this.prisma.driveFile.findFirst({
+        select: {
+          fileId: true,
+          publicURL: true,
+          storageKey: true,
+          canvasId: true,
+          uid: true,
+        },
+        where: { fileId, deletedAt: null },
+      });
+
+      const storageKey = driveFile.storageKey;
+
       // Get file from external OSS
       const readable = await this.externalOss.getObject(storageKey);
       const data = await streamToBuffer(readable);
 
       // Extract filename from storageKey
       const filename = storageKey.split('/').pop() || 'file';
-
-      this.logger.log(`get public file content: ${filename}`);
 
       // Try to get contentType from file extension
       const contentType = mime.getType(filename) || 'application/octet-stream';
@@ -908,7 +851,7 @@ export class DriveService {
         error?.code === 'NoSuchKey' ||
         error?.message?.includes('The specified key does not exist')
       ) {
-        throw new NotFoundException(`Public file with key ${storageKey} not found`);
+        throw new NotFoundException(`Public file with id ${fileId} not found`);
       }
       throw error;
     }

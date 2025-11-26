@@ -1186,36 +1186,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
-  /drive/file/publicUrl/{fileId}:
-    get:
-      tags:
-        - drive
-      summary: Get public URL for a drive file
-      description: Get public URL for a drive file by fileId
-      operationId: getFilePublicUrl
-      parameters:
-        - name: fileId
-          in: path
-          description: File ID
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Public URL retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      publicUrl:
-                        type: string
-                        nullable: true
   /template/list:
     get:
       tags:

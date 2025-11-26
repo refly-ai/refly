@@ -165,7 +165,7 @@ export class ShareCommonService {
           // If file doesn't have publicURL, create one and update database
           if (!publicURL && file.storageKey) {
             try {
-              publicURL = await this.driveService.publishDriveFile(file.storageKey);
+              publicURL = await this.driveService.publishDriveFile(file.storageKey, file.fileId);
 
               // Update the DriveFile record with publicURL
               await this.prisma.driveFile.update({

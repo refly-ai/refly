@@ -448,7 +448,7 @@ export class ShareCreationService {
 
     // Publish file if storageKey exists and update database
     if (driveFile.storageKey) {
-      driveFile.publicURL = await this.driveService.publishDriveFile(driveFile.storageKey);
+      driveFile.publicURL = await this.driveService.publishDriveFile(driveFile.storageKey, fileId);
       // Persist publicURL to database
       await this.prisma.driveFile.update({
         where: { fileId },

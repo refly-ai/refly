@@ -11,7 +11,7 @@ import {
   Res,
   Req,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { DriveService } from './drive.service';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -99,14 +99,6 @@ export class DriveController {
     return buildSuccessResponse();
   }
 
-  @ApiOperation({ summary: 'Get public URL for a drive file' })
-  @ApiResponse({ status: 200, description: 'Public URL retrieved successfully' })
-  @Get('file/publicUrl/:fileId')
-  async getFilePublicUrl(@Param('fileId') fileId: string): Promise<BaseResponse> {
-    const publicUrl = await this.driveService.getFilePublicUrl(fileId);
-    return buildSuccessResponse({ publicUrl });
-  }
-
   @Get('file/content/:fileId')
   @UseGuards(JwtAuthGuard)
   async serveDriveFile(
@@ -139,15 +131,14 @@ export class DriveController {
     res.end(data);
   }
 
-  @Get('file/public/:storageKey(*)')
+  @Get('file/public/:fileId')
   async servePublicDriveFile(
-    @Param('storageKey') storageKey: string,
+    @Param('fileId') fileId: string,
     @Query('download') download: string,
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
-    const { data, contentType, filename } =
-      await this.driveService.getPublicFileContent(storageKey);
+    const { data, contentType, filename } = await this.driveService.getPublicFileContent(fileId);
 
     const origin = req.headers.origin;
 
