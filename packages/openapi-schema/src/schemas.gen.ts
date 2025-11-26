@@ -2307,6 +2307,10 @@ export const ActionMessageSchema = {
       type: 'string',
       description: 'Action message tool call ID',
     },
+    toolCallResult: {
+      $ref: '#/components/schemas/ToolCallResult',
+      description: 'Tool call result',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -4631,6 +4635,14 @@ export const ToolCallMetaSchema = {
     status: {
       $ref: '#/components/schemas/ToolCallStatus',
       description: 'Tool call status',
+    },
+    startTs: {
+      type: 'number',
+      description: 'Tool call start timestamp (milliseconds)',
+    },
+    endTs: {
+      type: 'number',
+      description: 'Tool call end timestamp (milliseconds)',
     },
     error: {
       type: 'string',

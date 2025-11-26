@@ -458,6 +458,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       resultId,
       messageId,
       toolCallMeta,
+      toolCallResult,
       step,
       content = '',
       reasoningContent = '',
@@ -474,6 +475,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'tool');
       updatedMessage.toolCallMeta = toolCallMeta;
       updatedMessage.toolCallId = toolCallMeta.toolCallId;
+      updatedMessage.toolCallResult = toolCallResult;
       updatedMessage.updatedAt = new Date().toISOString();
 
       payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
@@ -508,7 +510,15 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   // Handle tool_call_end event - update tool message status to completed
   const onToolCallEnd = (skillEvent: SkillEvent) => {
-    const { resultId, messageId, toolCallMeta, step, content = '', artifact } = skillEvent;
+    const {
+      resultId,
+      messageId,
+      toolCallMeta,
+      toolCallResult,
+      step,
+      content = '',
+      artifact,
+    } = skillEvent;
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
@@ -525,6 +535,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         status: 'completed',
       };
       updatedMessage.toolCallId = toolCallMeta.toolCallId;
+      updatedMessage.toolCallResult = toolCallResult;
       updatedMessage.updatedAt = new Date().toISOString();
 
       payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
@@ -560,7 +571,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   // Handle tool_call_error event - update tool message status to failed
   const onToolCallError = (skillEvent: SkillEvent) => {
-    const { resultId, messageId, toolCallMeta, step, content = '' } = skillEvent;
+    const { resultId, messageId, toolCallMeta, toolCallResult, step, content = '' } = skillEvent;
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
@@ -577,6 +588,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         status: 'failed',
       };
       updatedMessage.toolCallId = toolCallMeta.toolCallId;
+      updatedMessage.toolCallResult = toolCallResult;
       updatedMessage.updatedAt = new Date().toISOString();
 
       payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);

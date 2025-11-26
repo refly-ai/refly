@@ -11,8 +11,12 @@ import {
 } from '@refly/openapi-schema';
 import { batchReplaceRegex, genActionResultID, pick } from '@refly/utils';
 import pLimit from 'p-limit';
-import { ActionResult } from '@prisma/client';
-import { ActionDetail } from '../action/action.dto';
+import {
+  ActionResult,
+  ActionMessage as ActionMessageModel,
+  ToolCallResult as ToolCallResultModel,
+} from '@prisma/client';
+import { ActionDetail, actionMessagePO2DTO } from '../action/action.dto';
 import { PrismaService } from '../common/prisma.service';
 import { providerItem2ModelInfo } from '../provider/provider.dto';
 import { ProviderService } from '../provider/provider.service';
@@ -105,12 +109,49 @@ export class ActionService {
       orderBy: { createdAt: 'asc' },
     });
 
+    // Create a map of tool call results by callId for quick lookup
+    const toolCallResultMap = new Map<string, ToolCallResultModel>();
+    if (toolCalls?.length) {
+      for (const toolCall of toolCalls) {
+        toolCallResultMap.set(toolCall.callId, toolCall);
+      }
+    }
+
+    // Enrich messages with tool call results for tool type messages
+    const enrichedMessages = messages.map((message: ActionMessageModel) => {
+      const enrichedMessage = actionMessagePO2DTO(message);
+
+      // For tool type messages, find and attach the corresponding tool call result
+      if (message.type === 'tool' && message.toolCallId) {
+        const toolCallResult = toolCallResultMap.get(message.toolCallId);
+        if (toolCallResult) {
+          // Attach the tool call result to the message
+          enrichedMessage.toolCallResult = {
+            callId: toolCallResult.callId,
+            uid: toolCallResult.uid,
+            toolsetId: toolCallResult.toolsetId,
+            toolName: toolCallResult.toolName,
+            stepName: toolCallResult.stepName,
+            input: JSON.parse(toolCallResult.input || '{}'),
+            output: JSON.parse(toolCallResult.output || '{}'),
+            error: toolCallResult.error || '',
+            status: toolCallResult.status as 'executing' | 'completed' | 'failed',
+            createdAt: toolCallResult.createdAt.getTime(),
+            updatedAt: toolCallResult.updatedAt.getTime(),
+            deletedAt: toolCallResult.deletedAt?.getTime(),
+          };
+        }
+      }
+
+      return enrichedMessage;
+    });
+
     if (!steps || steps.length === 0) {
-      return { ...result, steps: [], messages, modelInfo };
+      return { ...result, steps: [], messages: enrichedMessages, modelInfo };
     }
 
     const stepsWithToolCalls = this.toolCallService.attachToolCallsToSteps(steps, toolCalls);
-    return { ...result, steps: stepsWithToolCalls, messages, modelInfo };
+    return { ...result, steps: stepsWithToolCalls, messages: enrichedMessages, modelInfo };
   }
 
   async batchProcessActionResults(user: User, results: ActionResult[]): Promise<ActionDetail[]> {

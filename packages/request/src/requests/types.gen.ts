@@ -1775,6 +1775,10 @@ export type ActionMessage = {
    */
   toolCallId?: string;
   /**
+   * Tool call result
+   */
+  toolCallResult?: ToolCallResult;
+  /**
    * Action message creation time
    */
   createdAt?: string;
@@ -3354,6 +3358,14 @@ export type ToolCallMeta = {
    * Tool call status
    */
   status?: ToolCallStatus;
+  /**
+   * Tool call start timestamp (milliseconds)
+   */
+  startTs?: number;
+  /**
+   * Tool call end timestamp (milliseconds)
+   */
+  endTs?: number;
   /**
    * Tool call error
    */

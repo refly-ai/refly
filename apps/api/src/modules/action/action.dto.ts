@@ -27,7 +27,7 @@ type ActionStepDetail = ActionStepModel & {
 
 export type ActionDetail = ActionResultModel & {
   steps?: ActionStepDetail[];
-  messages?: ActionMessageModel[];
+  messages?: ActionMessage[];
   files?: DriveFile[];
   modelInfo?: ModelInfo;
 };
@@ -99,7 +99,7 @@ export function actionResultPO2DTO(result: ActionDetail): ActionResult {
     createdAt: result.createdAt.toJSON(),
     updatedAt: result.updatedAt.toJSON(),
     steps: result.steps?.map(actionStepPO2DTO),
-    messages: result.messages?.map(actionMessagePO2DTO),
+    messages: result.messages,
     files: result.files,
     toolsets: safeParseJSON(result.toolsets || '[]'),
     modelInfo: result.modelInfo,

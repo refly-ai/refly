@@ -618,6 +618,16 @@ export class SkillInvokerService {
                     step: runMeta?.step,
                     messageId: toolMessageId,
                     toolCallMeta,
+                    toolCallResult: {
+                      callId: toolCallId,
+                      toolsetId,
+                      toolName,
+                      stepName,
+                      input: event.data?.input,
+                      status: 'executing',
+                      createdAt: startTs,
+                      updatedAt: Date.now(),
+                    },
                   });
                 }
                 break;
@@ -653,6 +663,17 @@ export class SkillInvokerService {
                   step: runMeta?.step,
                   messageId: toolMessageId,
                   toolCallMeta,
+                  toolCallResult: {
+                    callId: toolCallId,
+                    toolsetId,
+                    toolName,
+                    stepName,
+                    output: event.data?.output,
+                    error: errorMsg,
+                    status: 'failed',
+                    createdAt: startTs,
+                    updatedAt: Date.now(),
+                  },
                 });
               }
 
@@ -693,6 +714,16 @@ export class SkillInvokerService {
                   step: runMeta?.step,
                   messageId: toolMessageId,
                   toolCallMeta,
+                  toolCallResult: {
+                    callId: toolCallId,
+                    toolsetId,
+                    toolName,
+                    stepName,
+                    output: event.data?.output,
+                    status: 'completed',
+                    createdAt: startTs,
+                    updatedAt: Date.now(),
+                  },
                 });
               }
 

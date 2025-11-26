@@ -49,9 +49,7 @@ AIMessageCard.displayName = 'AIMessageCard';
  */
 const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
   const toolCallMeta = message.toolCallMeta;
-  const content = message.content ?? '';
-
-  console.log('message', message);
+  const toolCallResult = message.toolCallResult;
 
   // Parse content to get arguments and result
   // For tool messages, content might contain the result
@@ -67,11 +65,11 @@ const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
       'data-tool-updated-at': message.updatedAt
         ? String(new Date(message.updatedAt).getTime())
         : '0',
-      'data-tool-arguments': JSON.stringify({ input: content }),
-      'data-tool-result': content,
-      'data-tool-error': toolCallMeta?.error ?? '',
+      'data-tool-arguments': JSON.stringify(toolCallResult?.input),
+      'data-tool-result': JSON.stringify(toolCallResult?.output),
+      'data-tool-error': toolCallMeta?.error,
     }),
-    [toolCallMeta, message, content],
+    [toolCallMeta, message, toolCallResult],
   );
 
   return (
