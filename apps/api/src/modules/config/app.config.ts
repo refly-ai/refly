@@ -92,7 +92,9 @@ export default () => ({
   },
   auth: {
     skipVerification: process.env.AUTH_SKIP_VERIFICATION === 'true' || false,
-    redirectUrl: process.env.LOGIN_REDIRECT_URL,
+    redirectUrl:
+      process.env.LOGIN_REDIRECT_URL ||
+      `${process.env.ORIGIN || 'http://localhost:5700'}/workspace`,
     cookie: {
       domain: process.env.REFLY_COOKIE_DOMAIN,
       secure: process.env.REFLY_COOKIE_SECURE,
