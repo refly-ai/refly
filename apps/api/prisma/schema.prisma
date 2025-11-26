@@ -1843,7 +1843,7 @@ model DriveFileParseCache {
   fileId            String   @unique @map("file_id")
   /// UID
   uid               String   @map("uid")
-  /// 解析后内容的存储路径
+  /// Storage path for parsed content
   contentStorageKey String   @map("content_storage_key")
   /// Content type
   contentType       String   @map("content_type")
