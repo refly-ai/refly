@@ -705,6 +705,7 @@ const translations = {
         mail: 'Email',
         joinGroup: 'Join User Community',
         scanToJoinWechatGroup: 'Scan to Join WeChat Group',
+        orWeChat: 'or WeChat',
         discordGroup: 'Discord Community',
         joinDiscordGroup: 'Join Community',
         notionDocument: 'Notion Document',
