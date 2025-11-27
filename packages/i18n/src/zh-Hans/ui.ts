@@ -2949,8 +2949,7 @@ const translations = {
     },
   },
   invitationCode: {
-    title1: '输入邀请码以解锁',
-    title2: 'Refly AI自动化',
+    title: '输入邀请码以继续',
     description: '输入您的 6 位邀请码',
     dontHaveInvitationCode: '还没有邀请码？',
     reward: '已使用 +500积分',

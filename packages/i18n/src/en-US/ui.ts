@@ -3001,8 +3001,7 @@ const translations = {
     },
   },
   invitationCode: {
-    title1: 'Enter an invitation code to unlock',
-    title2: 'Refly AI Automation',
+    title: 'Enter an invitation code to continue',
     description: 'Enter your 6-digit invitation code',
     dontHaveInvitationCode: "Don't have an invite code yet?",
     reward: 'Used +500 points',
