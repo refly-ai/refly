@@ -1277,10 +1277,6 @@ export class SkillInvokerService {
         const tokenUsageArray = safeParseJSON(step.tokenUsage);
         const tokenUsages = Array.isArray(tokenUsageArray) ? tokenUsageArray : [tokenUsageArray];
 
-        this.logger.log(
-          `Step ${step.name} has ${tokenUsages.length} token usage entries: ${JSON.stringify(tokenUsages)}`,
-        );
-
         for (const tokenUsage of tokenUsages) {
           if (tokenUsage.modelName) {
             modelNames.add(String(tokenUsage.modelName));
