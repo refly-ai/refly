@@ -197,6 +197,7 @@ export function useDragToCreateNode(onConnect?: (params: Connection) => void) {
   );
 
   return {
+    isDragging: isDraggingRef.current,
     onConnectStart,
     onConnectEnd,
   };

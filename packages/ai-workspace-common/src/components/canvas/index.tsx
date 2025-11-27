@@ -195,7 +195,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       sidePanelVisible: state.sidePanelVisible,
     }));
 
-  const { handleNodePreview } = useNodePreviewControl({ canvasId });
+  const { previewNode } = useNodePreviewControl({ canvasId });
 
   // Use the reset hook to handle canvas ID changes
   useLinearThreadReset(canvasId);
@@ -367,6 +367,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   const handlePanelClick = useCallback(
     (event: React.MouseEvent) => {
       setOperatingNodeId(null);
+      previewNode(null);
       setContextMenu((prev) => ({ ...prev, open: false }));
 
       // Clean up temporary nodes when clicking on canvas
@@ -405,6 +406,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       cleanupTemporaryEdges,
       readonly,
       setShowWorkflowRun,
+      previewNode,
     ],
   );
 
@@ -692,9 +694,9 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
         return;
       }
 
-      handleNodePreview(node);
+      previewNode(node);
     },
-    [handleNodePreview, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
+    [previewNode, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
   );
 
   // Memoize nodes and edges

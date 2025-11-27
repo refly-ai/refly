@@ -5,7 +5,11 @@ import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { CanvasNode, convertResultContextToItems, ResponseNodeMeta } from '@refly/canvas-common';
-import { useActionResultStoreShallow, type ResultActiveTab } from '@refly/stores';
+import {
+  useActionResultStoreShallow,
+  type ResultActiveTab,
+  useCanvasStoreShallow,
+} from '@refly/stores';
 import { sortSteps } from '@refly/utils/step';
 import { Segmented, Button } from 'antd';
 import { memo, useCallback, useEffect, useState } from 'react';
@@ -16,7 +20,6 @@ import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';
 import { ActionStepCard } from './action-step';
 import { Close } from 'refly-icons';
-import { useReactFlow } from '@xyflow/react';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
@@ -53,7 +56,9 @@ const SkillResponseNodePreviewComponent = ({
     setCurrentFile: state.setCurrentFile,
     currentFile: state.currentFile,
   }));
-  const { setNodes } = useReactFlow();
+  const { setNodePreview } = useCanvasStoreShallow((state) => ({
+    setNodePreview: state.setNodePreview,
+  }));
 
   const { setNodeData } = useNodeData();
   const { fetchActionResult, loading: fetchActionResultLoading } = useFetchActionResult();
@@ -176,14 +181,9 @@ const SkillResponseNodePreviewComponent = ({
 
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
 
-  const handleClose = () => {
-    setNodes((nodes) =>
-      nodes.map((n) => ({
-        ...n,
-        selected: false,
-      })),
-    );
-  };
+  const handleClose = useCallback(() => {
+    setNodePreview(canvasId, null);
+  }, [canvasId, setNodePreview]);
 
   // Get node execution status
   const isExecuting = data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';

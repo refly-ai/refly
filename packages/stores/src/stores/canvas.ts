@@ -127,8 +127,6 @@ export const useCanvasStore = create<CanvasState>()(
 
       setNodePreview: (canvasId, node) =>
         set((state) => {
-          if (!node) return state;
-
           const currentConfig = state.config[canvasId] ?? defaultCanvasConfig();
 
           return {
@@ -137,7 +135,7 @@ export const useCanvasStore = create<CanvasState>()(
               ...state.config,
               [canvasId]: {
                 ...currentConfig,
-                nodePreviewId: node.id,
+                nodePreviewId: node?.id ?? null,
                 lastUsedAt: Date.now(),
               },
             },

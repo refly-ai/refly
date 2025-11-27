@@ -9,10 +9,10 @@ import { useTranslation } from 'react-i18next';
 import SVGX from '../../../assets/x.svg';
 import { CreateVariablesModal } from '../workflow-variables';
 import { locateToVariableEmitter } from '@refly-packages/ai-workspace-common/events/locateToVariable';
-import { useReactFlow } from '@xyflow/react';
 import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
 import { BiText } from 'react-icons/bi';
 import { VARIABLE_TYPE_ICON_MAP } from '../nodes/start';
+import { useCanvasStoreShallow } from '@refly/stores';
 const { Paragraph } = Typography;
 
 type VariableType = 'string' | 'option' | 'resource';
@@ -263,12 +263,14 @@ const VariableTypeSection = ({
 export const StartNodePreview = () => {
   const { canvasId, shareLoading, shareData, readonly } = useCanvasContext();
   const { data: variables, isLoading: variablesLoading } = useVariablesManagement(canvasId);
+  const { setNodePreview } = useCanvasStoreShallow((state) => ({
+    setNodePreview: state.setNodePreview,
+  }));
 
   const workflowVariables = shareData?.variables ?? variables;
   const workflowVariablesLoading = shareLoading || variablesLoading;
 
   const [highlightedVariableId, setHighlightedVariableId] = useState<string | undefined>();
-  const { setNodes } = useReactFlow();
 
   useEffect(() => {
     const handleLocateToVariable = (event: {
@@ -336,14 +338,9 @@ export const StartNodePreview = () => {
     );
   }
 
-  const handleClose = () => {
-    setNodes((nodes) =>
-      nodes.map((n) => ({
-        ...n,
-        selected: false,
-      })),
-    );
-  };
+  const handleClose = useCallback(() => {
+    setNodePreview(canvasId, null);
+  }, [canvasId, setNodePreview]);
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">

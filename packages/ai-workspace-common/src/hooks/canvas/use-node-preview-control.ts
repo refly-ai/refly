@@ -10,9 +10,9 @@ interface UseNodePreviewControlOptions {
 
 interface NodePreviewControl {
   nodePreviewId: string | null;
-  previewNode: (node: CanvasNode) => void;
+  previewNode: (node: CanvasNode | null) => void;
   closeNodePreview: (node: CanvasNode) => void;
-  handleNodePreview: (node: CanvasNode) => void;
+  handleNodePreview: (node: CanvasNode | null) => void;
 }
 
 export const useNodePreviewControl = ({
@@ -41,7 +41,7 @@ export const useNodePreviewControl = ({
   }, [canvasId, canvasInitialized, nodePreviewId, setNodePreview]);
 
   const previewNode = useCallback(
-    (node: CanvasNode) => {
+    (node: CanvasNode | null) => {
       setNodePreview(canvasId, node);
       setSelectedNode(node);
     },
@@ -56,7 +56,7 @@ export const useNodePreviewControl = ({
    * Handle node click with preview logic
    */
   const handleNodePreview = useCallback(
-    (node: CanvasNode) => {
+    (node: CanvasNode | null) => {
       setNodePreview(canvasId, node);
       setSelectedNode(node);
     },

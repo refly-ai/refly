@@ -24,6 +24,7 @@ import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspac
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { CanvasNode } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useCanvasStoreShallow } from '@refly/stores';
 
 const NODE_SIDE_CONFIG = { width: 'fit-content', height: 'auto' };
 
@@ -82,16 +83,25 @@ type StartNodeProps = NodeProps & {
   data: CanvasNode;
 };
 
-export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodeProps) => {
+export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
+  const { canvasId, shareData } = useCanvasContext();
+  const { nodePreviewId } = useCanvasStoreShallow((state) => ({
+    nodePreviewId: state.config[canvasId]?.nodePreviewId,
+  }));
+
+  const selected = useMemo(() => {
+    return nodePreviewId === id;
+  }, [nodePreviewId, id]);
+
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [previousWidth, setPreviousWidth] = useState<string | number>('fit-content');
   const { edges } = useCanvasData();
   const { setNodeStyle, setNodePosition } = useNodeData();
-  const { getNode, setEdges } = useReactFlow();
+  const { getNode } = useReactFlow();
   useSelectedNodeZIndex(id, selected);
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
-  const { canvasId, shareData } = useCanvasContext();
+
   const [showCreateVariablesModal, setShowCreateVariablesModal] = useState(false);
   const { data: variables } = useVariablesManagement(canvasId);
   const { addNode } = useAddNode();
@@ -139,7 +149,7 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
           position,
         },
         connectTo,
-        false,
+        true,
         true,
       );
     },
@@ -233,29 +243,6 @@ export const StartNode = memo(({ id, selected, onNodeClick, data }: StartNodePro
       cleanupNodeEvents(id);
     };
   }, [id, handleAskAI]);
-
-  const setEdgesWithHighlight = useCallback(
-    (highlight: boolean) => {
-      setEdges((edges) =>
-        edges.map((edge) => {
-          if (edge.source === id || edge.target === id) {
-            return { ...edge, data: { ...edge.data, highlight: highlight } };
-          }
-          return edge;
-        }),
-      );
-    },
-    [id, setEdges],
-  );
-
-  useEffect(() => {
-    const delay = selected ? 100 : 0;
-    const timer = setTimeout(() => {
-      setEdgesWithHighlight(selected);
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [selected, id, setEdges, setEdgesWithHighlight]);
 
   return (
     <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onClick={onNodeClick}>

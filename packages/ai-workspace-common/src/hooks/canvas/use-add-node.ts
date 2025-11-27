@@ -170,19 +170,7 @@ export const useAddNode = () => {
         }
       }, 10);
 
-      if (
-        [
-          'document',
-          'resource',
-          'website',
-          'skillResponse',
-          'codeArtifact',
-          'image',
-          'video',
-          'audio',
-        ].includes(newNode.type) &&
-        shouldPreview
-      ) {
+      if (['skillResponse'].includes(newNode.type) && shouldPreview) {
         previewNode(newNode as unknown as CanvasNode);
       }
 
