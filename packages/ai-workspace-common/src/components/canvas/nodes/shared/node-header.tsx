@@ -2,6 +2,7 @@ import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from 'antd';
 import type { InputRef } from 'antd';
 import cn from 'classnames';
+import { useTranslation } from 'react-i18next';
 import { CanvasNodeType, ResourceType, ResourceMeta } from '@refly/openapi-schema';
 import { NodeIcon } from './node-icon';
 
@@ -69,6 +70,7 @@ export const NodeHeader = memo(
     maxLength,
     iconSize = 16,
   }: NodeHeaderProps) => {
+    const { t } = useTranslation();
     const [editTitle, setEditTitle] = useState(title);
     const [isEditing, setIsEditing] = useState(false);
     const inputRef = useRef<InputRef>(null);
@@ -155,14 +157,24 @@ export const NodeHeader = memo(
                   'cursor-pointer hover:bg-refly-tertiary-hover': canEdit,
                 },
               )}
-              title={editTitle || fixedTitle}
+              title={
+                editTitle ||
+                fixedTitle ||
+                title ||
+                placeholder ||
+                t('common.agent', { defaultValue: 'Agent' })
+              }
               onClick={() => {
                 if (canEdit) {
                   setIsEditing(true);
                 }
               }}
             >
-              {editTitle || fixedTitle || title}
+              {editTitle ||
+                fixedTitle ||
+                title ||
+                placeholder ||
+                t('common.agent', { defaultValue: 'Agent' })}
             </div>
           )}
         </div>

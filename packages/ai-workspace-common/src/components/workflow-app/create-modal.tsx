@@ -589,6 +589,8 @@ export const CreateWorkflowAppModal = ({
         maxHeight: '70vh',
         overflowY: 'auto',
         padding: 0,
+        paddingInline: 8,
+        scrollbarGutter: 'stable both-edges',
       }}
     >
       {contextHolder}
@@ -701,7 +703,7 @@ export const CreateWorkflowAppModal = ({
                   <Input
                     id="title-input"
                     placeholder={t('workflowApp.titlePlaceholder')}
-                    className="h-8 rounded-lg border-0 bg-refly-bg-control-z0 px-3 text-sm font-normal text-refly-text-0 placeholder:text-refly-text-3 focus:bg-refly-bg-control-z0 focus:shadow-sm"
+                    className="h-8 rounded-lg border-0 bg-refly-bg-control-z0 px-3 text-sm font-normal text-refly-text-0 placeholder:text-refly-text-3 hover:bg-refly-bg-control-z0 focus:bg-refly-bg-control-z0 focus:shadow-sm"
                   />
                 </Form.Item>
               </div>
@@ -719,7 +721,7 @@ export const CreateWorkflowAppModal = ({
                   <Input.TextArea
                     id="description-input"
                     placeholder={t('workflowApp.descriptionPlaceholder')}
-                    className="min-h-[80px] rounded-lg border-0 bg-refly-bg-control-z0 px-3 py-2 text-sm font-normal text-refly-text-0 placeholder:text-refly-text-3 focus:bg-refly-bg-control-z0 focus:shadow-sm"
+                    className="min-h-[80px] rounded-lg border-0 bg-refly-bg-control-z0 px-3 py-2 text-sm font-normal text-refly-text-0 placeholder:text-refly-text-3 hover:bg-refly-bg-control-z0 focus:bg-refly-bg-control-z0 focus:shadow-sm"
                     autoSize={{ minRows: 3, maxRows: 6 }}
                   />
                 </Form.Item>

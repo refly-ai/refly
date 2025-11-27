@@ -13,6 +13,7 @@ import type {
   ToolResourceType,
   UploadResult,
 } from '@refly/openapi-schema';
+import { fileTypeFromBuffer } from 'file-type';
 import mime from 'mime';
 import { DriveService } from '../../drive/drive.service';
 import { MiscService } from '../../misc/misc.service';
@@ -83,10 +84,14 @@ export class ResourceHandler {
     if (!response.success || !response.data) {
       return response;
     }
+
+    const fileNameTitle = (request?.params as Record<string, unknown>)?.file_name_title as
+      | string
+      | 'untitled';
+
     // Case 1: Direct binary response from HTTP adapter
-    // Response data is { buffer: Buffer, filename: string, mimetype: string }
-    if (this.isDirectBinaryResponse(response.data)) {
-      const uploadResult = await this.uploadResource(response.data, request);
+    if (Buffer.isBuffer(response.data)) {
+      const uploadResult = await this.uploadResource(response.data, fileNameTitle, undefined);
       if (uploadResult) {
         return {
           ...response,
@@ -102,12 +107,17 @@ export class ResourceHandler {
       this.logger.debug('No schema properties to process');
       return response;
     }
+
+    // Counter for generating unique file names
+    let resourceCount = 0;
     const processedData = await this.processResourcesField(
       schema as JsonSchema,
       response.data as Record<string, unknown>,
       async (value, schemaProperty) => {
         // Upload the resource and return fileId reference
-        const result = await this.uploadResource(value, request, schemaProperty);
+        resourceCount++;
+        const fileName = fileNameTitle ? `${fileNameTitle}-${resourceCount}` : undefined;
+        const result = await this.uploadResource(value, fileName, schemaProperty);
         return result ? { fileId: result.fileId } : value;
       },
       'output', // Output mode: accept any value, not just fileIds
@@ -117,21 +127,6 @@ export class ResourceHandler {
       ...response,
       data: processedData,
     };
-  }
-
-  /**
-   * Check if response data is a direct binary response from HTTP adapter
-   * Binary responses have the shape: { buffer: Buffer, filename: string, mimetype: string }
-   */
-  private isDirectBinaryResponse(data: unknown): boolean {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'buffer' in data &&
-      'filename' in data &&
-      'mimetype' in data &&
-      Buffer.isBuffer((data as any).buffer)
-    );
   }
 
   /**
@@ -161,19 +156,26 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     buffer: Buffer,
+    fileNameTitle: string,
   ): Promise<UploadResult> {
+    // Infer MIME type and extension from buffer
+    const fileTypeResult = await fileTypeFromBuffer(buffer);
+    const mimetype = fileTypeResult?.mime;
+    const ext = fileTypeResult?.ext;
+    const filename = `${fileNameTitle}.${ext}`;
+
     const uploadResult = await this.miscService.uploadFile(user, {
       file: {
         buffer,
-        mimetype: 'application/octet-stream',
-        originalname: `resource-${Date.now()}.bin`,
+        mimetype,
+        originalname: filename,
       },
       visibility: 'private',
     });
 
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: `resource-${Date.now()}.bin`,
+      name: filename,
       storageKey: uploadResult.storageKey,
       source: 'agent',
     });
@@ -183,7 +185,7 @@ export class ResourceHandler {
       resourceType: this.inferResourceType(driveFile.type),
       metadata: {
         size: Number(driveFile.size),
-        mimeType: driveFile.type,
+        mimeType: mimetype,
       },
     };
   }
@@ -200,21 +202,22 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     value: string,
+    fileName: string,
     schemaProperty?: SchemaProperty,
   ): Promise<UploadResult | null> {
     // Handle data URL (data:image/png;base64,...)
     if (value.startsWith('data:')) {
-      return await this.uploadDataUrlResource(user, canvasId, value);
+      return await this.uploadDataUrlResource(user, canvasId, value, fileName);
     }
 
     // Handle external URL
     if (value.startsWith('http://') || value.startsWith('https://')) {
-      return await this.uploadExternalUrlResource(user, canvasId, value);
+      return await this.uploadUrlResource(user, canvasId, value, fileName);
     }
 
     // Handle pure base64 string
     if (schemaProperty?.format === 'base64') {
-      return await this.uploadBase64Resource(user, canvasId, value);
+      return await this.uploadBase64Resource(user, canvasId, value, fileName);
     }
 
     return null;
@@ -231,6 +234,7 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     dataUrl: string,
+    fileName: string,
   ): Promise<UploadResult | null> {
     const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!matches) {
@@ -240,7 +244,7 @@ export class ResourceHandler {
     const [, mimeType, base64Data] = matches;
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: `resource-${Date.now()}.${mime.getExtension(mimeType) || 'bin'}`,
+      name: `${fileName}.${mime.getExtension(mimeType)}`,
       type: mimeType,
       content: base64Data,
       source: 'agent',
@@ -256,6 +260,68 @@ export class ResourceHandler {
     };
   }
 
+  private inferFileInfoFromUrl(
+    url: string,
+    title: string,
+    fallbackMediaType: string,
+  ): { filename: string; contentType: string } {
+    if (!url) {
+      const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `media_${Date.now()}`;
+      return {
+        filename: `${baseName}.${extension}`,
+        contentType: fallbackMediaType,
+      };
+    }
+
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+
+      // Extract filename from URL path
+      const urlFilename = pathname.split('/').pop() || '';
+
+      // Extract extension from filename
+      const extensionMatch = urlFilename.match(/\.([a-zA-Z0-9]+)(?:\?.*)?$/);
+      const extension = extensionMatch ? extensionMatch[1].toLowerCase() : '';
+
+      // Map extension to content type
+      const contentType = mime.getType(extension) || fallbackMediaType;
+
+      // Generate filename: use title if provided, otherwise use URL filename or fallback
+      let baseFilename: string;
+      if (title) {
+        // Strip possible file extension from title
+        const cleanTitle = title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '');
+        // Use title and infer proper extension from content type
+        const inferredExtension = mime.getExtension(contentType) || extension || fallbackMediaType;
+        baseFilename = `${cleanTitle}.${inferredExtension}`;
+      } else {
+        // Fallback to URL-based filename generation
+        baseFilename = urlFilename || `media_${Date.now()}`;
+        if (!baseFilename.includes('.')) {
+          const inferredExtension =
+            mime.getExtension(contentType) || extension || fallbackMediaType;
+          baseFilename = `${baseFilename}.${inferredExtension}`;
+        }
+      }
+
+      return { filename: baseFilename, contentType };
+    } catch (error) {
+      this.logger.warn(`Failed to parse URL for file info: ${url}`, error);
+      const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `media_${Date.now()}`;
+      return {
+        filename: `${baseName}.${extension}`,
+        contentType: fallbackMediaType,
+      };
+    }
+  }
+
   /**
    * Upload external URL resource
    * @param user - Current user
@@ -263,14 +329,21 @@ export class ResourceHandler {
    * @param url - External URL
    * @returns Upload result with fileId
    */
-  private async uploadExternalUrlResource(
+  private async uploadUrlResource(
     user: any,
     canvasId: string,
     url: string,
+    fileName: string,
   ): Promise<UploadResult> {
+    const { filename, contentType } = this.inferFileInfoFromUrl(
+      url,
+      fileName,
+      'application/octet-stream',
+    );
+
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: `resource-${Date.now()}.bin`,
+      name: filename,
       externalUrl: url,
       source: 'agent',
     });
@@ -280,7 +353,7 @@ export class ResourceHandler {
       resourceType: this.inferResourceType(driveFile.type),
       metadata: {
         size: Number(driveFile.size),
-        mimeType: driveFile.type,
+        mimeType: contentType,
       },
     };
   }
@@ -296,6 +369,7 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     base64String: string,
+    fileName: string,
   ): Promise<UploadResult> {
     const mimeType = 'image/png'; // Default for image generation tools
     const buffer = Buffer.from(base64String, 'base64');
@@ -304,7 +378,7 @@ export class ResourceHandler {
       file: {
         buffer,
         mimetype: mimeType,
-        originalname: `resource-${Date.now()}.${mime.getExtension(mimeType) || 'png'}`,
+        originalname: `${fileName}.${mime.getExtension(mimeType) || 'png'}`,
       },
       visibility: 'private',
     });
@@ -337,13 +411,13 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     obj: any,
+    fileNameTitle?: string,
   ): Promise<UploadResult | null> {
     if (!obj.buffer || !Buffer.isBuffer(obj.buffer)) {
       return null;
     }
-
     const mimeType = obj.mimetype;
-    const filename = obj.filename;
+    const filename = fileNameTitle;
 
     try {
       const uploadResult = await this.miscService.uploadFile(user, {
@@ -385,13 +459,12 @@ export class ResourceHandler {
   /**
    * Upload a resource value to DriveService
    * @param value - Resource content (Buffer, base64, URL, etc.)
-   * @param _request - Original handler request for metadata (unused but kept for signature compatibility)
    * @param schemaProperty - Schema property with format information (optional)
    * @returns Upload result with fileId
    */
   private async uploadResource(
     value: unknown,
-    _request: HandlerRequest,
+    fileName: string,
     schemaProperty?: SchemaProperty,
   ): Promise<UploadResult | null> {
     try {
@@ -400,17 +473,17 @@ export class ResourceHandler {
 
       // Handle Buffer type
       if (Buffer.isBuffer(value)) {
-        return await this.uploadBufferResource(user, canvasId, value);
+        return await this.uploadBufferResource(user, canvasId, value, fileName);
       }
 
       // Handle string type (URL, base64, data URL)
       if (typeof value === 'string') {
-        return await this.uploadStringResource(user, canvasId, value, schemaProperty);
+        return await this.uploadStringResource(user, canvasId, value, fileName, schemaProperty);
       }
 
       // Handle object with buffer property
       if (value && typeof value === 'object') {
-        return await this.uploadObjectResource(user, canvasId, value);
+        return await this.uploadObjectResource(user, canvasId, value, fileName);
       }
       return null;
     } catch (error) {

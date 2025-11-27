@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import mime from 'mime';
 import pLimit from 'p-limit';
+import pdf from 'pdf-parse';
 import { PrismaService } from '../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../common/redis.service';
@@ -20,6 +21,11 @@ import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
+import path from 'node:path';
+import { ProviderService } from '../provider/provider.service';
+import { ParserFactory } from '../knowledge/parsers/factory';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { readingTime } from 'reading-time-estimator';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -46,6 +52,8 @@ export class DriveService {
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
     @Inject(OSS_EXTERNAL) private externalOss: ObjectStorageService,
     private redis: RedisService,
+    private providerService: ProviderService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   /**
@@ -115,6 +123,25 @@ export class DriveService {
     // Fallback: use timestamp if random generation fails
     const timestamp = Date.now();
     return `${nameWithoutExt}-${timestamp}${extension}`;
+  }
+
+  /**
+   * Append UTF-8 charset declaration for text-based content types to avoid garbled characters.
+   */
+  private appendUtf8CharsetIfNeeded(contentType?: string | null): string | undefined {
+    if (!contentType) {
+      return undefined;
+    }
+
+    const normalized = contentType.toLowerCase();
+    const isTextLike =
+      normalized.startsWith('text/') || normalized.includes('json') || normalized.includes('xml');
+
+    if (!isTextLike || normalized.includes('charset=')) {
+      return contentType;
+    }
+
+    return `${contentType}; charset=utf-8`;
   }
 
   /**
@@ -339,9 +366,12 @@ export class DriveService {
         }
 
         if (rawData) {
-          await this.internalOss.putObject(driveStorageKey, rawData, {
-            'Content-Type': request.type,
-          });
+          const headers: Record<string, string> = {};
+          const formattedContentType = this.appendUtf8CharsetIfNeeded(request.type);
+          if (formattedContentType) {
+            headers['Content-Type'] = formattedContentType;
+          }
+          await this.internalOss.putObject(driveStorageKey, rawData, headers);
         }
 
         results.push({
@@ -365,7 +395,7 @@ export class DriveService {
    * List drive files with pagination and filtering
    */
   async listDriveFiles(user: User, params: ListDriveFilesParams): Promise<DriveFile[]> {
-    const { order, page, pageSize, includeContent } = params;
+    const { order, page = 1, pageSize = 10, includeContent } = params;
 
     const where: Prisma.DriveFileWhereInput = {
       uid: user.uid,
@@ -388,6 +418,42 @@ export class DriveService {
     return driveFiles.map(driveFilePO2DTO);
   }
 
+  /**
+   * List all drive files without pagination (fetches all files page by page)
+   */
+  async listAllDriveFiles(
+    user: User,
+    params: Omit<ListDriveFilesParams, 'page' | 'pageSize'>,
+  ): Promise<DriveFile[]> {
+    const pageSize = 100; // Use larger page size for efficiency
+    let page = 1;
+    const allFiles: DriveFile[] = [];
+
+    while (true) {
+      const files = await this.listDriveFiles(user, {
+        ...params,
+        page,
+        pageSize,
+      });
+
+      if (files.length === 0) {
+        // No more files to fetch
+        break;
+      }
+
+      allFiles.push(...files);
+
+      if (files.length < pageSize) {
+        // Last page reached
+        break;
+      }
+
+      page++;
+    }
+
+    return allFiles;
+  }
+
   async getDriveFileDetail(user: User, fileId: string, file?: DriveFileModel): Promise<DriveFile> {
     const driveFile =
       file ??
@@ -400,7 +466,7 @@ export class DriveService {
 
     let content = driveFile.summary;
 
-    // If file type is text/plain, retrieve actual content from minio storage
+    // Case 1: text/plain - read directly
     if (driveFile.type === 'text/plain') {
       try {
         const driveStorageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
@@ -411,15 +477,251 @@ export class DriveService {
         }
       } catch (error) {
         this.logger.warn(`Failed to retrieve text content for file ${fileId}:`, error);
-        // Fall back to summary if content retrieval fails
         content = driveFile.summary;
+      }
+
+      return {
+        ...driveFilePO2DTO(driveFile),
+        content,
+      };
+    }
+
+    // Case 2: other types - check cache or parse
+    return await this.loadOrParseDriveFile(user, driveFile);
+  }
+
+  /**
+   * Normalize whitespace in content by compressing repeated spaces/tabs and excessive line breaks
+   * @param content - Original content
+   * @returns Content with normalized whitespace
+   */
+  private normalizeWhitespace(content: string): string {
+    return (
+      content
+        // Compress multiple spaces/tabs to single space
+        .replace(/[ \t]+/g, ' ')
+        // Compress more than 2 consecutive line breaks to 2 line breaks
+        .replace(/\n{3,}/g, '\n\n')
+        // Trim whitespace at start and end of each line
+        .split('\n')
+        .map((line) => line.trim())
+        .join('\n')
+        // Trim overall content
+        .trim()
+    );
+  }
+
+  /**
+   * Truncate content by keeping head and tail, removing middle section
+   * @param content - Original content
+   * @param maxWords - Maximum word count to keep
+   * @returns Truncated content with ellipsis in the middle
+   */
+  private truncateContent(content: string, maxWords: number): string {
+    const words = content.split(/\s+/).filter((w) => w.length > 0);
+
+    if (words.length <= maxWords) {
+      return content;
+    }
+
+    const headWords = Math.floor(maxWords * 0.4); // Keep 40% at the beginning
+    const tailWords = Math.floor(maxWords * 0.4); // Keep 40% at the end
+
+    const head = words.slice(0, headWords).join('');
+    const tail = words.slice(-tailWords).join('');
+
+    return `${head}\n\n...[content truncated, ${words.length - maxWords} words removed]...\n\n${tail}`;
+  }
+
+  /**
+   * Load drive file content from cache or parse if not cached
+   */
+  private async loadOrParseDriveFile(user: User, driveFile: DriveFileModel): Promise<DriveFile> {
+    const { fileId, type: contentType } = driveFile;
+
+    this.logger.log(`Loading or parsing drive file ${fileId}, contentType: ${contentType}`);
+
+    // Step 1: Try to load from cache
+    const cache = await this.prisma.driveFileParseCache.findUnique({
+      where: { fileId },
+    });
+
+    if (cache?.parseStatus === 'success') {
+      try {
+        const stream = await this.internalOss.getObject(cache.contentStorageKey);
+        let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
+
+        content = content?.replace(/x00/g, '') || '';
+        content = this.normalizeWhitespace(content);
+
+        // Truncate content if it exceeds max word limit before storing
+        const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
+        content = this.truncateContent(content, maxWords);
+
+        this.logger.log(
+          `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
+        );
+        return { ...driveFilePO2DTO(driveFile), content };
+      } catch (error) {
+        this.logger.warn(`Cache read failed for ${fileId}, will re-parse:`, error);
+        // Continue to parse
       }
     }
 
-    return {
-      ...driveFilePO2DTO(driveFile),
-      content,
-    };
+    // Step 2: No cache found, perform parsing
+    try {
+      this.logger.log(`No cache found for ${fileId}, starting parse process`);
+
+      const parserFactory = new ParserFactory(this.config, this.providerService);
+      const parser = await parserFactory.createDocumentParser(user, contentType, {
+        resourceId: fileId,
+      });
+
+      // Load file from storage
+      const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
+      const fileStream = await this.internalOss.getObject(storageKey);
+      const fileBuffer = await streamToBuffer(fileStream);
+      this.logger.log(`File loaded from storage for ${fileId}, size: ${fileBuffer.length} bytes`);
+
+      // Check PDF page count
+      let numPages: number | undefined = undefined;
+      if (contentType === 'application/pdf') {
+        const pdfInfo = await pdf(fileBuffer);
+        numPages = pdfInfo.numpages;
+
+        // Check page limit
+        const { available, pageUsed, pageLimit } =
+          await this.subscriptionService.checkFileParseUsage(user);
+
+        if (numPages > available) {
+          const errorMessage = `Page limit exceeded: ${numPages} pages, available: ${available}`;
+          this.logger.log(
+            `Drive file ${fileId} parse failed due to page limit, numpages: ${numPages}, available: ${available}`,
+          );
+
+          // Record failure status
+          await this.prisma.driveFileParseCache.upsert({
+            where: { fileId },
+            create: {
+              fileId,
+              uid: user.uid,
+              contentStorageKey: '',
+              contentType,
+              parser: '',
+              numPages,
+              parseStatus: 'failed',
+              parseError: JSON.stringify({
+                type: 'pageLimitExceeded',
+                metadata: { numPages, pageLimit, pageUsed },
+              }),
+            },
+            update: {
+              parseStatus: 'failed',
+              parseError: JSON.stringify({
+                type: 'pageLimitExceeded',
+                metadata: { numPages, pageLimit, pageUsed },
+              }),
+              updatedAt: new Date(),
+            },
+          });
+
+          throw new Error(errorMessage);
+        }
+      }
+
+      // Perform parsing
+      this.logger.log(`Starting to parse file ${fileId} with parser: ${parser.name}`);
+      const result = await parser.parse(fileBuffer);
+      if (result.error) {
+        throw new Error(`Parse failed: ${result.error}`);
+      }
+
+      // Process content: remove null bytes and normalize whitespace
+      let processedContent = result.content?.replace(/x00/g, '') || '';
+      processedContent = this.normalizeWhitespace(processedContent);
+
+      // Truncate content if it exceeds max word limit before storing
+      const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
+      processedContent = this.truncateContent(processedContent, maxWords);
+
+      // Store to OSS
+      const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
+      await this.internalOss.putObject(contentStorageKey, result.content);
+
+      // Calculate word count
+      const wordCount = readingTime(processedContent).words;
+
+      // Save cache record (upsert ensures concurrency safety)
+      await this.prisma.driveFileParseCache.upsert({
+        where: { fileId },
+        create: {
+          fileId,
+          uid: user.uid,
+          contentStorageKey,
+          contentType,
+          parser: parser.name,
+          numPages: numPages ?? null,
+          wordCount,
+          parseStatus: 'success',
+        },
+        update: {
+          contentStorageKey,
+          parser: parser.name,
+          numPages: numPages ?? null,
+          wordCount,
+          parseStatus: 'success',
+          parseError: null,
+          updatedAt: new Date(),
+        },
+      });
+
+      // If PDF, record page usage to fileParseRecord
+      if (contentType === 'application/pdf' && numPages) {
+        await this.prisma.fileParseRecord.create({
+          data: {
+            resourceId: fileId,
+            uid: user.uid,
+            parser: parser.name,
+            contentType,
+            numPages,
+            storageKey: contentStorageKey,
+          },
+        });
+      }
+
+      this.logger.log(
+        `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
+      );
+
+      return { ...driveFilePO2DTO(driveFile), content: processedContent };
+    } catch (error) {
+      this.logger.error(
+        `Failed to parse drive file ${fileId}: ${JSON.stringify({ message: error.message })}`,
+      );
+
+      // Record failure status
+      await this.prisma.driveFileParseCache.upsert({
+        where: { fileId },
+        create: {
+          fileId,
+          uid: user.uid,
+          contentStorageKey: '',
+          contentType,
+          parser: '',
+          parseStatus: 'failed',
+          parseError: JSON.stringify({ message: error.message }),
+        },
+        update: {
+          parseStatus: 'failed',
+          parseError: JSON.stringify({ message: error.message }),
+          updatedAt: new Date(),
+        },
+      });
+
+      // Fallback to summary
+      this.logger.log(`Returning fallback summary for ${fileId} due to parse failure`);
+      return { ...driveFilePO2DTO(driveFile), content: driveFile.summary };
+    }
   }
 
   /**
@@ -662,43 +964,23 @@ export class DriveService {
     user: User,
     sourceFile: DriveFile & { storageKey?: string | null },
     newCanvasId: string,
-    newFileId?: string,
   ): Promise<DriveFile> {
-    const fileId = newFileId ?? genDriveFileID();
+    const fileId = genDriveFileID();
 
     const newStorageKey = this.generateStorageKey(user, {
       ...sourceFile,
       canvasId: newCanvasId,
     });
 
-    try {
-      // If file has publicURL but no storageKey, download from publicURL and upload
-      if (sourceFile.publicURL) {
-        this.logger.log(
-          `Downloading file from publicURL ${sourceFile.publicURL} for duplication to ${newStorageKey}`,
-        );
-
-        // Download file from publicURL
-        const response = await fetch(sourceFile.publicURL);
-        if (!response.ok) {
-          throw new Error(`Failed to download file from publicURL: ${response.statusText}`);
-        }
-
-        const buffer = Buffer.from(await response.arrayBuffer());
-
-        // Upload to new location in internal OSS
-        await this.internalOss.putObject(newStorageKey, buffer);
-      } else if (sourceFile.storageKey) {
-        // Normal case: duplicate from storageKey
-        await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
-      } else {
-        throw new Error(`File ${sourceFile.fileId} has neither storageKey nor publicURL`);
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to copy file ${sourceFile.fileId} to ${newStorageKey}: ${error.stack}`,
+    if (await this.internalOss.statObject(sourceFile.storageKey)) {
+      await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
+    } else if (await this.externalOss.statObject(sourceFile.storageKey)) {
+      const stream = await this.externalOss.getObject(sourceFile.storageKey);
+      await this.internalOss.putObject(newStorageKey, stream);
+    } else {
+      throw new Error(
+        `Failed to copy file ${sourceFile.fileId} to ${newStorageKey}: source file not found`,
       );
-      throw error;
     }
 
     // Create new drive file record with same metadata but new IDs
@@ -726,42 +1008,61 @@ export class DriveService {
       `Duplicated drive file record from ${sourceFile.fileId} to ${fileId} for canvas ${newCanvasId}`,
     );
 
+    // Copy driveFileParseCache if exists
+    const sourceCache = await this.prisma.driveFileParseCache.findUnique({
+      where: { fileId: sourceFile.fileId },
+    });
+
+    if (sourceCache) {
+      // Copy the parsed content to a new storage location
+      const newContentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
+
+      // Only copy if the source cache has successful parse status and valid content storage
+      if (sourceCache.parseStatus === 'success' && sourceCache.contentStorageKey) {
+        try {
+          // Duplicate the parsed content file
+          await this.internalOss.duplicateFile(sourceCache.contentStorageKey, newContentStorageKey);
+
+          // Create new parse cache record for the duplicated file
+          await this.prisma.driveFileParseCache.create({
+            data: {
+              fileId: fileId,
+              uid: user.uid,
+              contentStorageKey: newContentStorageKey,
+              contentType: sourceCache.contentType,
+              parser: sourceCache.parser,
+              numPages: sourceCache.numPages,
+              wordCount: sourceCache.wordCount,
+              parseStatus: sourceCache.parseStatus,
+              parseError: sourceCache.parseError,
+            },
+          });
+
+          this.logger.log(`Duplicated parse cache from ${sourceFile.fileId} to ${fileId}`);
+        } catch (error) {
+          this.logger.warn(`Failed to duplicate parse cache for ${fileId}: ${error.message}`);
+          // Continue without failing the entire duplication
+        }
+      }
+    }
+
     return driveFilePO2DTO(duplicatedFile);
   }
 
   /**
    * Get drive file stream for serving file content
-   * Supports both user-owned files and shared files
    */
   async getDriveFileStream(
     user: User,
     fileId: string,
   ): Promise<{ data: Buffer; contentType: string; filename: string }> {
-    // First try to find the file owned by the current user
-    let driveFile = await this.prisma.driveFile.findFirst({
-      select: { uid: true, canvasId: true, name: true, type: true, storageKey: true },
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: { uid: true, canvasId: true, name: true, storageKey: true, type: true },
       where: { fileId, uid: user.uid, deletedAt: null },
     });
 
-    // If not found, check if it's a shared file
     if (!driveFile) {
-      driveFile = await this.prisma.driveFile.findFirst({
-        select: { uid: true, canvasId: true, name: true, type: true, storageKey: true },
-        where: { fileId, deletedAt: null },
-      });
-
-      // Verify the share exists and is not deleted
-      const shareRecord = await this.prisma.shareRecord.findFirst({
-        where: { shareId: driveFile.canvasId, deletedAt: null },
-      });
-
-      if (!shareRecord) {
-        throw new NotFoundException(`Shared file not found: ${fileId}`);
-      }
-
-      this.logger.log(
-        `Serving shared file ${fileId} from share ${driveFile.canvasId} to user ${user.uid}`,
-      );
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
     }
 
     // Generate drive storage path
@@ -786,24 +1087,29 @@ export class DriveService {
    * Copies the file from internal OSS to external OSS and returns the public URL
    * Creates a new storage key for the public file to avoid conflicts with internal file deletion
    */
-  async publishDriveFile(storageKey: string): Promise<string> {
-    if (!storageKey) {
+  async publishDriveFile(storageKey: string, fileId: string): Promise<string> {
+    if (!storageKey || !fileId) {
       return '';
+    }
+
+    // Check if file already exists in external OSS
+    try {
+      const existingFile = await this.externalOss.statObject(storageKey);
+      if (existingFile?.size > 0) {
+        return;
+      }
+    } catch {
+      // File doesn't exist in external OSS, continue with publishing
     }
 
     try {
       // Copy file from internal to external OSS
       const stream = await this.internalOss.getObject(storageKey);
       await this.externalOss.putObject(storageKey, stream);
-
-      // Generate public URL using the drive public endpoint
-      const publicEndpoint = this.config.get<string>('drive.publicEndpoint')?.replace(/\/$/, '');
-      const publicURL = `${publicEndpoint}/${storageKey}`;
-
-      this.logger.log(`Published drive file to public OSS: ${storageKey} -> ${publicURL}`);
-      return publicURL;
     } catch (error) {
-      this.logger.error(`Failed to publish drive file ${storageKey}: ${error.stack}`);
+      this.logger.error(
+        `Failed to publish drive file - fileId: ${fileId}, storageKey: ${storageKey}, error: ${error.errorMessage}`,
+      );
       throw error;
     }
   }
@@ -812,18 +1118,28 @@ export class DriveService {
    * Get public drive file content for serving via public endpoint
    * Used by the public file endpoint to serve shared files
    */
-  async getPublicFileContent(storageKey: string): Promise<{
+  async getPublicFileContent(fileId: string): Promise<{
     data: Buffer;
     contentType: string;
     filename: string;
   }> {
     try {
+      const driveFile = await this.prisma.driveFile.findFirst({
+        select: {
+          type: true,
+          storageKey: true,
+        },
+        where: { fileId },
+      });
+
+      const storageKey = driveFile.storageKey;
+
       // Get file from external OSS
       const readable = await this.externalOss.getObject(storageKey);
       const data = await streamToBuffer(readable);
 
       // Extract filename from storageKey
-      const filename = storageKey.split('/').pop() || 'file';
+      const filename = path.basename(storageKey) || 'file';
 
       // Try to get contentType from file extension
       const contentType = mime.getType(filename) || 'application/octet-stream';
@@ -838,7 +1154,7 @@ export class DriveService {
         error?.code === 'NoSuchKey' ||
         error?.message?.includes('The specified key does not exist')
       ) {
-        throw new NotFoundException(`Public file with key ${storageKey} not found`);
+        throw new NotFoundException(`Public file with id ${fileId} not found`);
       }
       throw error;
     }

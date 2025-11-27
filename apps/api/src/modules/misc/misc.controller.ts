@@ -26,6 +26,7 @@ import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { Response, Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ParamsError } from '@refly/errors';
+import { buildContentDisposition } from '../../utils/filename';
 
 @Controller('v1/misc')
 export class MiscController {
@@ -130,7 +131,7 @@ export class MiscController {
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
       'Content-Length': String(data.length),
-      ...(download ? { 'Content-Disposition': `attachment; filename="${filename}"` } : {}),
+      ...(download ? { 'Content-Disposition': buildContentDisposition(filename) } : {}),
     });
 
     res.end(data);

@@ -3840,6 +3840,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /tool/call/result:
+    get:
+      tags:
+        - tool
+      summary: Get tool call result
+      description: Get the result of a tool call
+      operationId: getToolCallResult
+      parameters:
+        - name: toolCallId
+          in: query
+          required: true
+          description: Tool call ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetToolCallResultResponse'
   /tool/composio/{app}/authorize:
     post:
       tags:
@@ -5731,6 +5752,48 @@ components:
         updatedAt:
           type: string
           format: date-time
+    ActionMessageType:
+      type: string
+      description: Action message type
+      enum:
+        - ai
+        - tool
+    ActionMessage:
+      type: object
+      description: Action message
+      required:
+        - messageId
+        - type
+      properties:
+        messageId:
+          type: string
+          description: Action message ID
+        type:
+          $ref: '#/components/schemas/ActionMessageType'
+          description: Action message type
+        content:
+          type: string
+          description: Action message content
+        reasoningContent:
+          type: string
+          description: Action message reasoning content
+        toolCallMeta:
+          $ref: '#/components/schemas/ToolCallMeta'
+          description: Action message tool call metadata
+        toolCallId:
+          type: string
+          description: Action message tool call ID
+        toolCallResult:
+          $ref: '#/components/schemas/ToolCallResult'
+          description: Tool call result
+        createdAt:
+          type: string
+          format: date-time
+          description: Action message creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: Action message update time
     ActionResult:
       type: object
       description: Action result
@@ -5801,8 +5864,14 @@ components:
         steps:
           type: array
           description: Action steps
+          deprecated: true
           items:
             $ref: '#/components/schemas/ActionStep'
+        messages:
+          type: array
+          description: Action messages
+          items:
+            $ref: '#/components/schemas/ActionMessage'
         errors:
           type: array
           description: Errors
@@ -7271,6 +7340,8 @@ components:
         - token_usage
         - create_node
         - tool_call_start
+        - tool_call_end
+        - tool_call_error
         - tool_call_stream
         - error
     SkillEvent:
@@ -7288,12 +7359,16 @@ components:
         step:
           description: Action step metadata
           $ref: '#/components/schemas/ActionStepMeta'
+          deprecated: true
         resultId:
           type: string
           description: Result ID
         version:
           type: number
           description: Result version
+        messageId:
+          type: string
+          description: Message ID
         content:
           type: string
           description: Event content. Only present when `event` is `stream`
@@ -7321,9 +7396,46 @@ components:
         originError:
           type: string
           description: Original error message. Only present when `event` is `error`.
+        toolCallMeta:
+          description: Tool call metadata. Only present when `event` is `tool_call_start`, `tool_call_end`, or `tool_call_error`.
+          $ref: '#/components/schemas/ToolCallMeta'
         toolCallResult:
           description: Tool call result data.
           $ref: '#/components/schemas/ToolCallResult'
+    ToolCallStatus:
+      type: string
+      description: Tool call status
+      enum:
+        - executing
+        - completed
+        - failed
+    ToolCallMeta:
+      type: object
+      properties:
+        toolName:
+          type: string
+          description: Tool name
+        toolsetId:
+          type: string
+          description: Toolset ID
+        toolsetKey:
+          type: string
+          description: Toolset key
+        toolCallId:
+          type: string
+          description: Tool call ID
+        status:
+          $ref: '#/components/schemas/ToolCallStatus'
+          description: Tool call status
+        startTs:
+          type: number
+          description: Tool call start timestamp (milliseconds)
+        endTs:
+          type: number
+          description: Tool call end timestamp (milliseconds)
+        error:
+          type: string
+          description: Tool call error
     ToolCallResult:
       type: object
       required:
@@ -7363,12 +7475,8 @@ components:
           type: string
           description: Error message if tool execution failed
         status:
-          type: string
           description: Tool call status
-          enum:
-            - executing
-            - completed
-            - failed
+          $ref: '#/components/schemas/ToolCallStatus'
         createdAt:
           type: number
           description: Tool call start timestamp (milliseconds)
@@ -8053,6 +8161,9 @@ components:
         input:
           description: Skill input
           $ref: '#/components/schemas/SkillInput'
+        title:
+          description: Agent title
+          type: string
         context:
           description: Skill invocation context
           $ref: '#/components/schemas/SkillContext'
@@ -10740,6 +10851,16 @@ components:
         toolsetId:
           type: string
           description: Toolset ID
+    GetToolCallResultResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                result:
+                  $ref: '#/components/schemas/ToolCallResult'
     DocumentInterface:
       type: object
       properties:
@@ -11381,9 +11502,6 @@ components:
         content:
           type: string
           description: Drive file content (only used for model input)
-        publicURL:
-          type: string
-          description: Public URL for shared files (only set when file is shared)
         createdAt:
           type: string
           format: date-time

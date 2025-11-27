@@ -437,6 +437,7 @@ export class SkillService implements OnModuleInit {
         ? safeParseJSON(existingResult.input)
         : { query: existingResult.title };
 
+      param.title ??= existingResult.title;
       param.modelName ??= existingResult.modelName;
       param.modelItemId ??= existingResult.providerItemId;
       param.context ??= safeParseJSON(existingResult.context);
@@ -749,7 +750,7 @@ export class SkillService implements OnModuleInit {
               type: 'skill',
               tier: providerItem?.tier ?? '',
               status: 'executing',
-              title: data.input.query || data.input.originalQuery,
+              title: data.title || data.input?.query,
               targetId: data.target?.entityId,
               targetType: data.target?.entityType,
               modelName: modelConfigMap.chat.modelId,
@@ -784,7 +785,7 @@ export class SkillService implements OnModuleInit {
           tier: providerItem?.tier ?? '',
           targetId: data.target?.entityId,
           targetType: data.target?.entityType,
-          title: data.input?.query || data.input?.originalQuery,
+          title: data.title || data.input?.query,
           modelName: modelConfigMap.chat.modelId,
           type: 'skill',
           status: 'executing',
@@ -923,12 +924,14 @@ export class SkillService implements OnModuleInit {
         await Promise.all(
           resultIds.map((id) =>
             limit(() =>
-              this.actionService.getActionResult(user, { resultId: id }).catch((error) => {
-                this.logger.error(
-                  `Failed to get action result detail for resultId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
+              this.actionService
+                .getActionResult(user, { resultId: id, includeFiles: true })
+                .catch((error) => {
+                  this.logger.error(
+                    `Failed to get action result detail for resultId ${id}: ${error?.message}`,
+                  );
+                  return null;
+                }),
             ),
           ),
         )

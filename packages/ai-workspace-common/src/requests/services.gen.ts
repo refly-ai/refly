@@ -477,6 +477,9 @@ import type {
   DeleteToolsetData,
   DeleteToolsetError,
   DeleteToolsetResponse,
+  GetToolCallResultData,
+  GetToolCallResultError,
+  GetToolCallResultResponse2,
   AuthorizeComposioConnectionData,
   AuthorizeComposioConnectionError,
   AuthorizeComposioConnectionResponse,
@@ -3104,6 +3107,23 @@ export const deleteToolset = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<DeleteToolsetResponse, DeleteToolsetError, ThrowOnError>({
     ...options,
     url: '/tool/toolset/delete',
+  });
+};
+
+/**
+ * Get tool call result
+ * Get the result of a tool call
+ */
+export const getToolCallResult = <ThrowOnError extends boolean = false>(
+  options: Options<GetToolCallResultData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetToolCallResultResponse2,
+    GetToolCallResultError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/tool/call/result',
   });
 };
 

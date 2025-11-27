@@ -461,6 +461,8 @@ import type {
   ListToolsData,
   ListToolsError,
   ListToolsResponse2,
+  ListUserToolsError,
+  ListUserToolsResponse2,
   ListToolsetInventoryError,
   ListToolsetInventoryResponse2,
   ListToolsetsData,
@@ -475,6 +477,9 @@ import type {
   DeleteToolsetData,
   DeleteToolsetError,
   DeleteToolsetResponse,
+  GetToolCallResultData,
+  GetToolCallResultError,
+  GetToolCallResultResponse2,
   AuthorizeComposioConnectionData,
   AuthorizeComposioConnectionError,
   AuthorizeComposioConnectionResponse,
@@ -3024,6 +3029,19 @@ export const listTools = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * List user tools
+ * Get installed tools and unauthorized external OAuth tools for current user.
+ */
+export const listUserTools = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<ListUserToolsResponse2, ListUserToolsError, ThrowOnError>({
+    ...options,
+    url: '/tool/user/list',
+  });
+};
+
+/**
  * List toolset inventory
  * List all available toolsets in inventory, including uninstalled.
  */
@@ -3089,6 +3107,23 @@ export const deleteToolset = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<DeleteToolsetResponse, DeleteToolsetError, ThrowOnError>({
     ...options,
     url: '/tool/toolset/delete',
+  });
+};
+
+/**
+ * Get tool call result
+ * Get the result of a tool call
+ */
+export const getToolCallResult = <ThrowOnError extends boolean = false>(
+  options: Options<GetToolCallResultData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetToolCallResultResponse2,
+    GetToolCallResultError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/tool/call/result',
   });
 };
 

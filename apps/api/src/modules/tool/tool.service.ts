@@ -19,6 +19,7 @@ import {
   GenericToolset,
   ListToolsData,
   SkillContext,
+  ToolCallResult,
   ToolsetAuthType,
   ToolsetDefinition,
   UpsertToolsetRequest,
@@ -112,7 +113,7 @@ export class ToolService {
     const populatedTools = await this.populateToolsetsWithDefinition(installedTools);
 
     // 2. Get installed toolset keys for filtering
-    const installedKeys = new Set(populatedTools.map((t) => t.toolset.key));
+    const installedKeys = new Set(populatedTools.map((t) => t.toolset?.key).filter(Boolean));
 
     // 3. Get all external OAuth tools from inventory that are not installed
     // external_oauth type tools have requiresAuth=true and authPatterns with type='oauth'
@@ -1236,5 +1237,43 @@ export class ToolService {
     toolsets: GenericToolset[],
   ): Promise<StructuredToolInterface[]> {
     return this.composioService.instantiateOAuthToolsets(user, toolsets);
+  }
+
+  async getToolCallResult(user: User, toolCallId: string): Promise<ToolCallResult> {
+    if (!toolCallId) {
+      throw new ParamsError('Tool call ID is required');
+    }
+
+    const toolCallResult = await this.prisma.toolCallResult.findUnique({
+      where: {
+        callId: toolCallId,
+        deletedAt: null,
+      },
+    });
+
+    if (!toolCallResult) {
+      throw new ParamsError(`Tool call result not found for callId: ${toolCallId}`);
+    }
+
+    // Verify user ownership
+    if (toolCallResult.uid !== user.uid) {
+      throw new ParamsError('Access denied: tool call result does not belong to current user');
+    }
+
+    // Convert to DTO format
+    return {
+      callId: toolCallResult.callId,
+      uid: toolCallResult.uid,
+      toolsetId: toolCallResult.toolsetId,
+      toolName: toolCallResult.toolName,
+      stepName: toolCallResult.stepName,
+      input: safeParseJSON(toolCallResult.input || '{}'),
+      output: safeParseJSON(toolCallResult.output || '{}'),
+      error: toolCallResult.error || '',
+      status: toolCallResult.status as 'executing' | 'completed' | 'failed',
+      createdAt: toolCallResult.createdAt.getTime(),
+      updatedAt: toolCallResult.updatedAt.getTime(),
+      deletedAt: toolCallResult.deletedAt?.getTime(),
+    };
   }
 }

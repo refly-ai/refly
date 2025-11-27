@@ -4,6 +4,8 @@ import { TFunction } from 'i18next';
 import { getFileExtensionFromType } from '@refly/utils/artifact';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
+import { getDriveFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drive-file-url';
+import type { DriveFile } from '@refly/openapi-schema';
 
 // Interface for node data structure
 interface NodeData {
@@ -38,12 +40,8 @@ const triggerDownload = (href: string, fileName: string) => {
 // Download file from URL with authentication
 const downloadFromUrl = async (url: string, fileName: string): Promise<void> => {
   try {
-    // Add download=1 query parameter to the URL
-    const downloadUrl = new URL(url);
-    downloadUrl.searchParams.set('download', '1');
-
-    // Fetch the file with authentication
-    const response = await fetch(downloadUrl.toString(), {
+    // Fetch the file with authentication (do not force server-side download header)
+    const response = await fetch(url, {
       credentials: 'include',
     });
 
@@ -139,6 +137,11 @@ const getSanitizedFileName = (
 export const hasDownloadableData = (nodeData: NodeData): boolean => {
   const { nodeType, entityId, metadata = {} } = nodeData;
 
+  // Drive file support: if fileId exists, it is downloadable
+  if (metadata?.fileId) {
+    return true;
+  }
+
   switch (nodeType) {
     case 'image':
       return Boolean(metadata.imageUrl);
@@ -178,6 +181,49 @@ export const downloadNodeData = async (nodeData: NodeData, t: TFunction): Promis
   const fileName = getSanitizedFileName(title, nodeType, metadata);
 
   try {
+    // Drive file support: prioritize drive file download when fileId exists
+    if (metadata?.fileId) {
+      const isSharePage = location?.pathname?.startsWith('/share/') ?? false;
+
+      // Construct minimal DriveFile object for URL generation
+      const driveFile: DriveFile = {
+        fileId: metadata.fileId,
+        canvasId: metadata?.canvasId ?? '',
+        name: title || 'Untitled',
+        type: metadata?.type ?? 'application/octet-stream',
+        category: metadata?.category,
+        source: metadata?.source,
+        scope: metadata?.scope,
+        size: metadata?.size,
+        summary: metadata?.summary,
+        variableId: metadata?.variableId,
+        resultId: metadata?.resultId,
+        resultVersion: metadata?.resultVersion,
+        content: metadata?.content,
+        createdAt: metadata?.createdAt,
+        updatedAt: metadata?.updatedAt,
+      };
+
+      const { fileUrl } = getDriveFileUrl(driveFile, isSharePage, false);
+      if (!fileUrl) {
+        message.error(t('canvas.resourceLibrary.download.invalidUrl'));
+        return;
+      }
+
+      const fetchOptions: RequestInit = { credentials: 'include' };
+      const response = await fetch(fileUrl, fetchOptions);
+      if (!response?.ok) {
+        throw new Error(`Download failed: ${response?.status ?? 'unknown'}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      triggerDownload(objectUrl, fileName);
+      message.success(t('canvas.resourceLibrary.download.success'));
+      URL.revokeObjectURL(objectUrl);
+      return;
+    }
+
     switch (nodeType) {
       case 'image': {
         const imageUrl = metadata.imageUrl;
@@ -511,6 +557,11 @@ export const copyNodeData = async (nodeData: NodeData, t: TFunction): Promise<vo
 export const hasShareableData = (nodeData: NodeData): boolean => {
   const { nodeType, entityId, metadata = {} } = nodeData;
 
+  // Drive file support: if fileId exists, it is shareable
+  if (metadata?.fileId) {
+    return true;
+  }
+
   switch (nodeType) {
     case 'image':
       return Boolean(metadata.imageUrl);
@@ -543,6 +594,35 @@ export const shareNodeData = async (nodeData: NodeData, t: TFunction): Promise<v
   const { nodeType, entityId, metadata = {} } = nodeData;
 
   try {
+    // Drive file support: prioritize drive file share when fileId exists
+    if (metadata?.fileId) {
+      const fileId = metadata.fileId as string;
+      const loadingMessage = message.loading(t('canvas.share.loading', 'Creating share...'), 0);
+      try {
+        const { data, error } = await getClient().createShare({
+          body: {
+            entityId: fileId,
+            entityType: 'driveFile',
+          },
+        });
+        if (!data?.success || error) {
+          throw new Error(error ? String(error) : 'Failed to create share');
+        }
+        const shareLink = getShareLink('driveFile', data.data?.shareId ?? '');
+        copyToClipboard(shareLink);
+        loadingMessage();
+        message.success(
+          t('driveFile.shareSuccess', 'File shared successfully! Link copied to clipboard.'),
+        );
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to share drive file:', err);
+        loadingMessage();
+        message.error(t('driveFile.shareError', 'Failed to share file'));
+      }
+      return;
+    }
+
     switch (nodeType) {
       case 'image': {
         const imageUrl = metadata.imageUrl;

@@ -33,6 +33,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
@@ -124,6 +125,8 @@ import {
   GetSettingsError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
+  GetToolCallResultData,
+  GetToolCallResultError,
   GetWorkflowAppDetailData,
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
@@ -1176,6 +1179,21 @@ export const useListToolsetsSuspense = <
     queryKey: Common.UseListToolsetsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listToolsets({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetToolCallResultSuspense = <
+  TData = Common.GetToolCallResultDefaultResponse,
+  TError = GetToolCallResultError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetToolCallResultData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetToolCallResultKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getToolCallResult({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetComposioConnectionStatusSuspense = <

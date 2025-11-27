@@ -210,11 +210,29 @@ export abstract class BaseHandler implements IHandler {
 
   /**
    * Create a success response
+   * Handles different data types: Buffer, object, or primitive values
    */
-  protected createSuccessResponse(data: Record<string, unknown>): HandlerResponse {
+  protected createSuccessResponse(data: unknown): HandlerResponse {
+    // Preserve Buffer data directly for binary responses
+    if (Buffer.isBuffer(data)) {
+      return {
+        success: true,
+        data: data as unknown as Record<string, unknown>,
+      };
+    }
+
+    // Handle object data by spreading
+    if (typeof data === 'object' && data !== null) {
+      return {
+        success: true,
+        data: data as Record<string, unknown>,
+      };
+    }
+
+    // Wrap primitive values in result field
     return {
       success: true,
-      data,
+      data: { result: data },
     };
   }
 }
@@ -307,11 +325,7 @@ export class HttpHandler extends BaseHandler {
       }
 
       // Build success response
-      return this.createSuccessResponse({
-        ...(typeof adapterResponse.data === 'object' && adapterResponse.data !== null
-          ? (adapterResponse.data as Record<string, unknown>)
-          : { result: adapterResponse.data }),
-      });
+      return this.createSuccessResponse(adapterResponse.data);
     } catch (error) {
       this.logger.error(
         `Request execution failed: ${(error as Error).message}`,

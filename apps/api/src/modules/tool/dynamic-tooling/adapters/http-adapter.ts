@@ -10,6 +10,7 @@ import type {
   PollingConfig,
 } from '@refly/openapi-schema';
 import axios, { AxiosResponse } from 'axios';
+import { supportedMimeTypes } from 'file-type';
 import { AdapterType, HttpMethod, AdapterError } from '../../constant/constant';
 import { BaseAdapter, type IHttpAdapter } from '../core/adapter';
 import { HttpClient } from './http-client';
@@ -69,11 +70,22 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
     // Execute initial request
     const initialResponse = await this.executeHttpRequest(request);
 
-    // If polling is not configured, return immediately
+    // If polling is not configured, process and return immediately
     if (!this.pollingConfig?.statusUrl) {
       return initialResponse;
     }
 
+    // Handle async polling and process final response
+    return await this.handleAsyncPolling(initialResponse, request);
+  }
+
+  /**
+   * Handle async polling - detect task ID and poll until complete
+   */
+  private async handleAsyncPolling(
+    initialResponse: AdapterResponse,
+    request: AdapterRequest,
+  ): Promise<AdapterResponse> {
     // Auto-detect task ID from initial response
     const taskId = this.autoDetectTaskId(initialResponse.data);
     if (!taskId) {
@@ -90,9 +102,17 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
 
   /**
    * Execute standard HTTP request (extracted from executeInternal)
+   * Returns raw response data, binary processing is deferred to final response handling
    */
   private async executeHttpRequest(request: AdapterRequest): Promise<AdapterResponse> {
     try {
+      // Extract file_name_title from params before sending request
+      let params = request.params;
+      if (params && typeof params === 'object' && 'file_name_title' in params) {
+        const { file_name_title, ...restParams } = params as Record<string, unknown>;
+        params = restParams;
+      }
+
       // Prepare headers
       const headers = {
         ...this.httpClient.getHeaders(),
@@ -109,17 +129,13 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
 
       if (request.useFormData) {
         // Use FormData for file uploads
-        requestData = this.httpClient.createFormData(request.params);
+        requestData = this.httpClient.createFormData(params);
         // Don't set Content-Type header for FormData, let axios set it with boundary
         headers['Content-Type'] = undefined;
         headers['content-type'] = undefined;
       } else {
         // Use request params directly
-        requestData = request.params;
-        // Only set Content-Type to JSON if:
-        // 1. No Content-Type is specified
-        // 2. Request has body data (params is not empty)
-        // 3. Request method is not GET (GET requests typically don't have body)
+        requestData = params;
         const hasBodyData =
           requestData && typeof requestData === 'object' && Object.keys(requestData).length > 0;
         const method = request.method?.toUpperCase() || 'POST';
@@ -130,61 +146,22 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
 
       // Execute request based on HTTP method
       const method = request.method?.toUpperCase() || HttpMethod.POST;
-      let response: AxiosResponse;
+      const response = await this.sendHttpRequest(
+        method,
+        request.endpoint,
+        params,
+        requestData,
+        headers,
+        request.timeout,
+      );
 
-      switch (method) {
-        case 'GET':
-          response = await this.httpClient.get(request.endpoint, {
-            params: request.params,
-            headers,
-            timeout: request.timeout,
-            responseType: 'arraybuffer',
-          });
-          break;
-
-        case 'POST':
-          response = await this.httpClient.post(request.endpoint, requestData, {
-            headers,
-            timeout: request.timeout,
-            responseType: 'arraybuffer',
-          });
-          break;
-
-        case 'PUT':
-          response = await this.httpClient.put(request.endpoint, requestData, {
-            headers,
-            timeout: request.timeout,
-            responseType: 'arraybuffer',
-          });
-          break;
-
-        case 'DELETE':
-          response = await this.httpClient.delete(request.endpoint, {
-            headers,
-            timeout: request.timeout,
-            data: requestData,
-            responseType: 'arraybuffer',
-          });
-          break;
-
-        case 'PATCH':
-          response = await this.httpClient.patch(request.endpoint, requestData, {
-            headers,
-            timeout: request.timeout,
-            responseType: 'arraybuffer',
-          });
-          break;
-
-        default:
-          throw new AdapterError(`Unsupported HTTP method: ${method}`, 'UNSUPPORTED_METHOD');
-      }
-      // Process response based on content type
+      // Parse JSON response if needed, but don't process binary here
       const responseContentType = response.headers['content-type'] || '';
-      const processedData = this.processResponseData(response.data, responseContentType, response);
+      const data = this.parseResponseData(response.data, responseContentType);
 
-      // Return adapter response
+      // Return adapter response with raw data
       return {
-        data: processedData,
+        data,
         status: response.status,
         headers: response.headers as Record<string, string>,
         raw: response,
@@ -200,21 +177,10 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
   }
 
   /**
-   * Process response data based on content type
-   * Automatically detects binary responses and converts them to buffer objects
-   * Handles arraybuffer responses for both JSON and binary data
+   * Parse response data - only handles JSON parsing, binary processing is deferred
    */
-  private processResponseData(
-    data: unknown,
-    contentType: string,
-    response: AxiosResponse,
-  ): unknown {
-    // Check if response is binary (non-JSON)
-    if (this.isBinaryResponse(contentType)) {
-      return this.handleBinaryResponse(data, contentType, response);
-    }
-
-    // If data is ArrayBuffer or Buffer but content-type is JSON, parse it
+  private parseResponseData(data: unknown, contentType: string): unknown {
+    // If JSON content type, parse arraybuffer to JSON
     if (
       contentType.includes('application/json') ||
       contentType.includes('text/json') ||
@@ -224,148 +190,120 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
         try {
           const text = Buffer.from(data as ArrayBuffer).toString('utf-8');
           return JSON.parse(text);
-        } catch (error) {
-          this.logger.warn(
-            `Failed to parse arraybuffer as JSON for content-type: ${contentType}`,
-            error,
-          );
+        } catch {
+          // Not valid JSON, return as-is
           return data;
         }
       }
     }
-
-    // Return data as-is for other content types
     return data;
   }
 
   /**
+   * Send HTTP request based on method type
+   * Extracted for better code organization
+   */
+  private async sendHttpRequest(
+    method: string,
+    endpoint: string,
+    params: Record<string, unknown>,
+    requestData: unknown,
+    headers: Record<string, string | undefined>,
+    timeout?: number,
+  ): Promise<AxiosResponse> {
+    switch (method) {
+      case 'GET':
+        return await this.httpClient.get(endpoint, {
+          params,
+          headers,
+          timeout,
+          responseType: 'arraybuffer',
+        });
+
+      case 'POST':
+        return await this.httpClient.post(endpoint, requestData, {
+          headers,
+          timeout,
+          responseType: 'arraybuffer',
+        });
+
+      case 'PUT':
+        return await this.httpClient.put(endpoint, requestData, {
+          headers,
+          timeout,
+          responseType: 'arraybuffer',
+        });
+
+      case 'DELETE':
+        return await this.httpClient.delete(endpoint, {
+          headers,
+          timeout,
+          data: requestData,
+          responseType: 'arraybuffer',
+        });
+
+      case 'PATCH':
+        return await this.httpClient.patch(endpoint, requestData, {
+          headers,
+          timeout,
+          responseType: 'arraybuffer',
+        });
+
+      default:
+        throw new AdapterError(`Unsupported HTTP method: ${method}`, 'UNSUPPORTED_METHOD');
+    }
+  }
+
+  /**
    * Check if content type indicates binary response
+   * Uses file-type's supportedMimeTypes for known binary types
    */
   private isBinaryResponse(contentType: string): boolean {
-    const binaryTypes = [
-      'audio/',
-      'video/',
-      'image/',
-      'application/octet-stream',
-      'application/pdf',
-    ];
-    return binaryTypes.some((type) => contentType.includes(type));
-  }
-
-  private handleBinaryResponse(
-    data: unknown,
-    contentType: string,
-    response: AxiosResponse,
-  ): { buffer: Buffer; filename: string; mimetype: string } {
-    const buffer = this.normalizeToBuffer(data);
-    const filename = this.extractFilename(response) || this.generateFilename(contentType);
-
-    return {
-      buffer,
-      filename,
-      mimetype: contentType || 'application/octet-stream',
-    };
-  }
-
-  private normalizeToBuffer(data: unknown): Buffer {
-    if (Buffer.isBuffer(data)) {
-      return data;
-    }
-    if (data instanceof ArrayBuffer) {
-      return Buffer.from(data);
-    }
-    if (data instanceof Uint8Array) {
-      return Buffer.from(data);
-    }
-    if (Array.isArray(data)) {
-      return Buffer.from(data);
-    }
-    if (typeof data === 'string') {
-      throw new Error('Expected binary response but got string. Check axios responseType.');
-    }
-
-    throw new Error(`Unsupported binary data type: ${typeof data}`);
-  }
-
-  /**
-   * Extract filename from Content-Disposition header or URL
-   */
-  private extractFilename(response: AxiosResponse): string | null {
-    // Try Content-Disposition header first
-    const disposition = response.headers['content-disposition'];
-    if (disposition) {
-      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-      if (match?.[1]) {
-        return match[1].replace(/['"]/g, '');
-      }
-    }
-
-    // Try to extract from URL
-    try {
-      const url = response.config?.url;
-      if (url) {
-        const pathname = new URL(url, 'http://dummy').pathname;
-        const filename = pathname.split('/').pop();
-        if (filename?.includes('.')) {
-          return filename;
-        }
-      }
-    } catch {
-      // Ignore URL parsing errors
-    }
-
-    return null;
-  }
-
-  /**
-   * Generate filename from MIME type
-   */
-  private generateFilename(contentType: string): string {
-    const ext = this.getExtensionFromMimeType(contentType);
-    return `file-${Date.now()}.${ext}`;
-  }
-
-  /**
-   * Get file extension from MIME type
-   */
-  private getExtensionFromMimeType(mimetype: string): string {
-    const map: Record<string, string> = {
-      'audio/mpeg': 'mp3',
-      'audio/mp3': 'mp3',
-      'audio/wav': 'wav',
-      'audio/ogg': 'ogg',
-      'video/mp4': 'mp4',
-      'video/webm': 'webm',
-      'image/png': 'png',
-      'image/jpeg': 'jpg',
-      'image/jpg': 'jpg',
-      'image/gif': 'gif',
-      'image/webp': 'webp',
-      'application/pdf': 'pdf',
-      'application/octet-stream': 'bin',
-    };
-
-    // Extract base type (remove charset, etc.)
-    const baseType = mimetype.split(';')[0].trim().toLowerCase();
-    return map[baseType] || 'bin';
+    if (!contentType) return false;
+    const baseType = contentType.split(';')[0].trim().toLowerCase();
+    // Check file-type's supported types, plus generic binary stream
+    return supportedMimeTypes.has(baseType as any) || baseType === 'application/octet-stream';
   }
 
   /**
    * Add authentication headers based on credentials
+   * Supports template variable ${apiKey} in Authorization header from adapter_config
+   * Priority:
+   * 1. Template variable ${apiKey} in existing Authorization header (e.g., "Key ${apiKey}")
+   * 2. Custom apiKeyHeader (e.g., X-API-Key)
+   * 3. Default: Bearer ${apiKey}
    */
   private addAuthHeaders(
     headers: Record<string, string>,
     credentials: Record<string, unknown>,
   ): void {
-    // API Key authentication (custom header takes precedence)
-    if (credentials.apiKeyHeader && credentials.apiKey) {
-      headers[credentials.apiKeyHeader as string] = credentials.apiKey as string;
-    } else if (credentials.apiKey) {
-      headers.Authorization = `Bearer ${credentials.apiKey}`;
+    const authHeader = headers.Authorization || headers.authorization;
+
+    // 1. Check if Authorization header contains ${apiKey} template variable
+    // e.g., "Key ${apiKey}" from adapter_config.headers
+    if (authHeader?.includes('${apiKey}') && credentials.apiKey) {
+      const resolvedAuth = authHeader.replace('${apiKey}', credentials.apiKey as string);
+      if (headers.Authorization) {
+        headers.Authorization = resolvedAuth;
+      } else {
+        headers.authorization = resolvedAuth;
+      }
+      return; // Template resolved, skip other auth methods
     }
 
+    // 2. API Key with custom header name (e.g., X-API-Key)
+    if (credentials.apiKeyHeader && credentials.apiKey) {
+      headers[credentials.apiKeyHeader as string] = credentials.apiKey as string;
+      return;
+    }
+
+    // 3. Default fallback: use Bearer format if only apiKey is provided
+    if (credentials.apiKey && !authHeader) {
+      headers.Authorization = `Bearer ${credentials.apiKey}`;
+      return;
+    }
     // Basic authentication
-    if (credentials.username && credentials.password) {
+    if (credentials.username && credentials.password && !authHeader) {
       const auth = Buffer.from(`${credentials.username}:${credentials.password}`).toString(
         'base64',
       );
@@ -373,13 +311,8 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
     }
 
     // OAuth token
-    if (credentials.accessToken) {
+    if (credentials.accessToken && !authHeader) {
       headers.Authorization = `Bearer ${credentials.accessToken}`;
-    }
-
-    // Custom API key header
-    if (credentials.apiKeyHeader && credentials.apiKey) {
-      headers[credentials.apiKeyHeader as string] = credentials.apiKey as string;
     }
   }
 
@@ -413,7 +346,7 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
         return value;
       }
     }
-
+    this.logger.error('No task ID found in response for polling, data is', JSON.stringify(data));
     return null;
   }
 
@@ -478,15 +411,10 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
       const COMPLETED_STATUSES = ['completed', 'success', 'succeeded', 'done'];
       if (COMPLETED_STATUSES.includes(status.toLowerCase())) {
         this.logger.log(`✅ Task ${taskId} completed`);
-
-        // Auto-extract result data
-        const resultData = this.autoExtractResult(data);
-
-        // Auto-download file if URL found
-        const finalData = await this.autoDownloadIfNeeded(resultData, taskId);
-
+        // Auto-extract result data (may fetch from response_url)
+        const resultData = await this.autoExtractResult(data, request);
         return {
-          data: finalData,
+          data: resultData,
           status: response.status,
           headers: response.headers as Record<string, string>,
           raw: response,
@@ -536,8 +464,31 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
 
   /**
    * Auto-extract result data from response
+   * If response contains response_url, fetch data from that URL with original headers
    */
-  private autoExtractResult(data: any): any {
+  private async autoExtractResult(data: any, request: AdapterRequest): Promise<any> {
+    // Check for response_url field (e.g., fal.ai async responses)
+    const responseUrl = this.getNestedValue(data, 'response_url');
+    if (responseUrl && typeof responseUrl === 'string') {
+      this.logger.log(`Fetching result from response_url: ${responseUrl}`);
+
+      // Build headers (reuse default/request headers + auth)
+      const headers = {
+        ...this.httpClient.getHeaders(),
+        ...request.headers,
+      };
+      if (request.credentials) {
+        this.addAuthHeaders(headers, request.credentials);
+      }
+
+      const response = await this.httpClient.get(responseUrl, {
+        headers,
+        timeout: request.timeout,
+      });
+
+      return this.parseResponse(response);
+    }
+
     const RESULT_FIELDS = ['data', 'result', 'output'];
 
     // Try standard result fields
@@ -576,7 +527,8 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
   }
 
   /**
-   * Auto-download file if response contains URL
+   * Auto-download file if response contains URL pointing to binary content
+   * If URL returns non-binary content (like JSON), return original data
    */
   private async autoDownloadIfNeeded(data: any, taskId: string): Promise<any> {
     // Recursively find all URLs
@@ -586,11 +538,44 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
       return data;
     }
 
-    // Download first URL (primary file)
+    // Check if the URL points to downloadable binary content
     const primaryUrl = urls[0];
-    this.logger.log(`🔽 Downloading from: ${primaryUrl.path} = ${primaryUrl.value}`);
+    const isDownloadable = await this.isDownloadableUrl(primaryUrl.value);
 
+    if (!isDownloadable) {
+      this.logger.log(`URL ${primaryUrl.path} does not point to binary content, skipping download`);
+      return data;
+    }
+
+    this.logger.log(`🔽 Downloading from: ${primaryUrl.path} = ${primaryUrl.value}`);
     return await this.downloadFile(primaryUrl.value, data, taskId);
+  }
+
+  /**
+   * Check if URL points to downloadable binary content using HEAD request
+   */
+  private async isDownloadableUrl(url: string): Promise<boolean> {
+    try {
+      const response = await axios.head(url, { timeout: 10000 });
+      const contentType = response.headers['content-type'] || '';
+      return this.isBinaryResponse(contentType);
+    } catch {
+      // If HEAD fails, try to infer from URL extension
+      const binaryExtensions = [
+        '.mp3',
+        '.mp4',
+        '.wav',
+        '.ogg',
+        '.webm',
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.webp',
+        '.pdf',
+      ];
+      return binaryExtensions.some((ext) => url.toLowerCase().includes(ext));
+    }
   }
 
   /**
@@ -651,7 +636,7 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
 
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
-        timeout: 600000, // 10 minutes for large files
+        timeout: 600000, // 10 minutes for  large files
       });
 
       const buffer = Buffer.from(response.data);

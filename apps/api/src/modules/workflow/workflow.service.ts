@@ -249,6 +249,7 @@ export class WorkflowService {
       entityId,
       nodeData,
       connectTo,
+      title,
       processedQuery,
       originalQuery,
       resultHistory,
@@ -275,6 +276,7 @@ export class WorkflowService {
     // Prepare the invoke skill request
     const invokeRequest: InvokeSkillRequest = {
       resultId: entityId,
+      title,
       input: {
         query: processedQuery, // Use processed query for skill execution
         originalQuery, // Pass original query separately

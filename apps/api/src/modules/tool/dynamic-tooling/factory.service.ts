@@ -8,6 +8,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type {
   DynamicToolDefinition,
   HandlerRequest,
+  JsonSchema,
   ParsedMethodConfig,
   ToolMetadata,
   ToolsetConfig,
@@ -312,8 +313,10 @@ export class ToolFactory {
     config: ToolsetConfig,
     method: ParsedMethodConfig,
   ): DynamicToolDefinition {
+    // Add title field to schema for naming generated files
+    const schemaWithTitle = this.addTitleFieldToSchema(method.schema);
     // Build Zod schema from JSON schema
-    const schema = buildSchema(JSON.stringify(method.schema));
+    const schema = buildSchema(JSON.stringify(schemaWithTitle));
     // Generate tool name
     const toolName = `${method.name}`;
     // Create metadata
@@ -330,5 +333,34 @@ export class ToolFactory {
       schema,
       metadata,
     };
+  }
+
+  /**
+   * Add title field to schema for naming generated files
+   * This field will be used by HTTP adapter to name downloaded files
+   * @param schema - Original JSON schema
+   * @returns Schema with title field added
+   */
+  private addTitleFieldToSchema(schema: JsonSchema): JsonSchema {
+    // Clone schema to avoid mutation
+    const newSchema = JSON.parse(JSON.stringify(schema)) as JsonSchema;
+
+    // Add file_name_title field if properties exist and it doesn't already exist
+    if (newSchema.properties && !newSchema.properties.file_name_title) {
+      newSchema.properties.file_name_title = {
+        type: 'string',
+        description:
+          'The title for the generated file. Should be concise and descriptive. This will be used as the filename.',
+      };
+      // Add file_name_title to required fields so AI will always generate it
+      if (!newSchema.required) {
+        newSchema.required = [];
+      }
+      if (!newSchema.required.includes('file_name_title')) {
+        newSchema.required.push('file_name_title');
+      }
+    }
+
+    return newSchema;
   }
 }

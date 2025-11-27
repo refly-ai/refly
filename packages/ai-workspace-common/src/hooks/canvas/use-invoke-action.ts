@@ -3,6 +3,7 @@ import { deletedNodesEmitter } from '@refly-packages/ai-workspace-common/events/
 import { ssePost } from '@refly-packages/ai-workspace-common/utils/sse-post';
 import { convertContextItemsToInvokeParams } from '@refly/canvas-common';
 import {
+  ActionMessage,
   ActionResult,
   ActionStatus,
   ActionStep,
@@ -39,6 +40,7 @@ import { useUpdateActionResult } from './use-update-action-result';
 import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
 
 export interface InvokeActionPayload {
+  title?: string;
   nodeId?: string;
   query?: string;
   resultId?: string;
@@ -165,6 +167,35 @@ export const useInvokeAction = (params?: { source?: string }) => {
     return steps.map((step) => (step.name === updatedStep.name ? updatedStep : step));
   };
 
+  // Message helper functions
+  const findOrCreateMessage = (
+    messages: ActionMessage[],
+    messageId: string,
+    type: 'ai' | 'tool',
+  ): ActionMessage => {
+    const existingMessage = messages?.find((m) => m.messageId === messageId);
+    return existingMessage
+      ? { ...existingMessage }
+      : {
+          messageId,
+          type,
+          content: '',
+          reasoningContent: '',
+          createdAt: new Date().toISOString(),
+        };
+  };
+
+  const getUpdatedMessages = (
+    messages: ActionMessage[],
+    updatedMessage: ActionMessage,
+  ): ActionMessage[] => {
+    const existingIndex = messages?.findIndex((m) => m.messageId === updatedMessage.messageId);
+    if (existingIndex === -1 || existingIndex === undefined) {
+      return [...(messages ?? []), updatedMessage];
+    }
+    return messages.map((msg, index) => (index === existingIndex ? updatedMessage : msg));
+  };
+
   // Update toolCalls on a step by parsing tool_use XML in the current chunk content
   const updateToolCallsFromXml = (
     updatedStep: ActionStep,
@@ -225,13 +256,15 @@ export const useInvokeAction = (params?: { source?: string }) => {
   };
 
   const onSkillStream = (skillEvent: SkillEvent) => {
-    const { resultId, content = '', reasoningContent = '', step, artifact } = skillEvent;
+    const { resultId, content = '', reasoningContent = '', step, artifact, messageId } = skillEvent;
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
     if (!result || !step) {
       return;
     }
+
+    // Update steps (for backward compatibility)
     const updatedStep: ActionStep = findOrCreateStep(result.steps ?? [], step);
     updatedStep.content = (updatedStep.content ?? '') + (content ?? '');
     if (!updatedStep.reasoningContent) {
@@ -241,9 +274,20 @@ export const useInvokeAction = (params?: { source?: string }) => {
         (updatedStep.reasoningContent ?? '') + (reasoningContent ?? '');
     }
 
-    const payload = {
+    const payload: Partial<ActionResult> = {
       steps: getUpdatedSteps(result.steps ?? [], updatedStep),
     };
+
+    // Update messages if messageId is provided
+    if (messageId) {
+      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'ai');
+      updatedMessage.content = (updatedMessage.content ?? '') + (content ?? '');
+      updatedMessage.reasoningContent =
+        (updatedMessage.reasoningContent ?? '') + (reasoningContent ?? '');
+      updatedMessage.updatedAt = new Date().toISOString();
+
+      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+    }
 
     if (artifact) {
       onSkillStreamArtifact(resultId, artifact, updatedStep.content ?? '');
@@ -408,12 +452,174 @@ export const useInvokeAction = (params?: { source?: string }) => {
     }
   };
 
-  // deprecated, use stream instead
+  // Handle tool_call_start event - create a new tool message
   const onToolCallStart = (skillEvent: SkillEvent) => {
-    onToolCallStream(skillEvent);
+    const {
+      resultId,
+      messageId,
+      toolCallMeta,
+      toolCallResult,
+      step,
+      content = '',
+      reasoningContent = '',
+    } = skillEvent;
+    const { resultMap } = useActionResultStore.getState();
+    const result = resultMap[resultId];
+
+    if (!result) return;
+
+    const payload: Partial<ActionResult> = {};
+
+    // Update messages with tool message if messageId is provided
+    if (messageId && toolCallMeta) {
+      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'tool');
+      updatedMessage.toolCallMeta = toolCallMeta;
+      updatedMessage.toolCallId = toolCallMeta.toolCallId;
+      updatedMessage.toolCallResult = toolCallResult;
+      updatedMessage.updatedAt = new Date().toISOString();
+
+      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+    }
+
+    // Also update steps for backward compatibility
+    if (step) {
+      const currentSteps = getLatestSteps(resultId);
+      const existingStep = currentSteps.find((s) => s.name === step.name);
+      const updatedStep: ActionStep = existingStep
+        ? { ...existingStep }
+        : {
+            ...step,
+            content: '',
+            reasoningContent: '',
+            artifacts: [],
+            structuredData: {},
+          };
+
+      updatedStep.content = (updatedStep.content ?? '') + (content ?? '');
+      updatedStep.reasoningContent =
+        (updatedStep.reasoningContent ?? '') + (reasoningContent ?? '');
+      updateToolCallsFromXml(updatedStep, step, content);
+
+      const mergedSteps = getUpdatedSteps(currentSteps, updatedStep);
+      setLatestSteps(resultId, mergedSteps);
+      payload.steps = mergedSteps;
+    }
+
+    onUpdateResult(resultId, payload, skillEvent);
   };
 
-  // deprecated, use stream instead
+  // Handle tool_call_end event - update tool message status to completed
+  const onToolCallEnd = (skillEvent: SkillEvent) => {
+    const {
+      resultId,
+      messageId,
+      toolCallMeta,
+      toolCallResult,
+      step,
+      content = '',
+      artifact,
+    } = skillEvent;
+    const { resultMap } = useActionResultStore.getState();
+    const result = resultMap[resultId];
+
+    if (!result) return;
+
+    const payload: Partial<ActionResult> = {};
+
+    // Update messages with completed status
+    if (messageId && toolCallMeta) {
+      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'tool');
+      updatedMessage.toolCallMeta = {
+        ...updatedMessage.toolCallMeta,
+        ...toolCallMeta,
+        status: 'completed',
+      };
+      updatedMessage.toolCallId = toolCallMeta.toolCallId;
+      updatedMessage.toolCallResult = toolCallResult;
+      updatedMessage.updatedAt = new Date().toISOString();
+
+      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+    }
+
+    // Also update steps for backward compatibility
+    if (step) {
+      const currentSteps = getLatestSteps(resultId);
+      const existingStep = currentSteps.find((s) => s.name === step.name);
+      const updatedStep: ActionStep = existingStep
+        ? { ...existingStep }
+        : {
+            ...step,
+            content: '',
+            reasoningContent: '',
+            artifacts: [],
+            structuredData: {},
+          };
+
+      updatedStep.content = (updatedStep.content ?? '') + (content ?? '');
+      updateToolCallsFromXml(updatedStep, step, content);
+
+      const mergedSteps = getUpdatedSteps(currentSteps, updatedStep);
+      setLatestSteps(resultId, mergedSteps);
+      if (artifact) {
+        onSkillStreamArtifact(resultId, artifact, updatedStep.content ?? '');
+      }
+      payload.steps = mergedSteps;
+    }
+
+    onUpdateResult(resultId, payload, skillEvent);
+  };
+
+  // Handle tool_call_error event - update tool message status to failed
+  const onToolCallError = (skillEvent: SkillEvent) => {
+    const { resultId, messageId, toolCallMeta, toolCallResult, step, content = '' } = skillEvent;
+    const { resultMap } = useActionResultStore.getState();
+    const result = resultMap[resultId];
+
+    if (!result) return;
+
+    const payload: Partial<ActionResult> = {};
+
+    // Update messages with failed status
+    if (messageId && toolCallMeta) {
+      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'tool');
+      updatedMessage.toolCallMeta = {
+        ...updatedMessage.toolCallMeta,
+        ...toolCallMeta,
+        status: 'failed',
+      };
+      updatedMessage.toolCallId = toolCallMeta.toolCallId;
+      updatedMessage.toolCallResult = toolCallResult;
+      updatedMessage.updatedAt = new Date().toISOString();
+
+      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+    }
+
+    // Also update steps for backward compatibility
+    if (step) {
+      const currentSteps = getLatestSteps(resultId);
+      const existingStep = currentSteps.find((s) => s.name === step.name);
+      const updatedStep: ActionStep = existingStep
+        ? { ...existingStep }
+        : {
+            ...step,
+            content: '',
+            reasoningContent: '',
+            artifacts: [],
+            structuredData: {},
+          };
+
+      updatedStep.content = (updatedStep.content ?? '') + (content ?? '');
+      updateToolCallsFromXml(updatedStep, step, content);
+
+      const mergedSteps = getUpdatedSteps(currentSteps, updatedStep);
+      setLatestSteps(resultId, mergedSteps);
+      payload.steps = mergedSteps;
+    }
+
+    onUpdateResult(resultId, payload, skillEvent);
+  };
+
+  // Handle tool_call_stream event - update tool call XML content in steps
   const onToolCallStream = (skillEvent: SkillEvent) => {
     const { resultId, content = '', reasoningContent = '', step, artifact } = skillEvent;
     if (!resultId || !step) return;
@@ -458,6 +664,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       payload.resultId ||= genActionResultID();
 
       const {
+        title,
         nodeId,
         query,
         modelInfo,
@@ -487,6 +694,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
       const param: InvokeSkillRequest = {
         resultId,
+        title: title ?? query,
         input: {
           query,
         },
@@ -538,6 +746,8 @@ export const useInvokeAction = (params?: { source?: string }) => {
         onSkillStart: wrapEventHandler(onSkillStart),
         onSkillStream: wrapEventHandler(onSkillStream),
         onToolCallStart: wrapEventHandler(onToolCallStart),
+        onToolCallEnd: wrapEventHandler(onToolCallEnd),
+        onToolCallError: wrapEventHandler(onToolCallError),
         onToolCallStream: wrapEventHandler(onToolCallStream),
         onSkillLog: wrapEventHandler(onSkillLog),
         onSkillArtifact: wrapEventHandler(onSkillArtifact),

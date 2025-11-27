@@ -33,6 +33,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
@@ -94,6 +95,7 @@ import {
   GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
+  GetToolCallResultData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
   GetWorkflowVariablesData,
@@ -635,6 +637,14 @@ export const prefetchUseListToolsets = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListToolsetsKeyFn(clientOptions),
     queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetToolCallResult = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetToolCallResultData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetToolCallResultKeyFn(clientOptions),
+    queryFn: () => getToolCallResult({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetComposioConnectionStatus = (
   queryClient: QueryClient,

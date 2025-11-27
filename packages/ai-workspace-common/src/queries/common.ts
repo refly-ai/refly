@@ -95,6 +95,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
@@ -876,6 +877,18 @@ export const UseListToolsetsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsetsKey, ...(queryKey ?? [clientOptions])];
+export type GetToolCallResultDefaultResponse = Awaited<
+  ReturnType<typeof getToolCallResult>
+>['data'];
+export type GetToolCallResultQueryResult<
+  TData = GetToolCallResultDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetToolCallResultKey = 'GetToolCallResult';
+export const UseGetToolCallResultKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetToolCallResultKey, ...(queryKey ?? [clientOptions])];
 export type GetComposioConnectionStatusDefaultResponse = Awaited<
   ReturnType<typeof getComposioConnectionStatus>
 >['data'];

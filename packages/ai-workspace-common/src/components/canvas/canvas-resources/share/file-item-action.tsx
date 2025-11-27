@@ -1,6 +1,6 @@
 import { Button, Tooltip, Popconfirm, message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { XBorder, Delete } from 'refly-icons';
+import { /*XBorder, */ Delete } from 'refly-icons';
 import cn from 'classnames';
 import { useCallback, useState } from 'react';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -37,10 +37,10 @@ export const FileItemAction = ({
   // Add state for modal visibility
   const [isCreateVariableModalVisible, setIsCreateVariableModalVisible] = useState(false);
 
-  const handleCreateVariable = useCallback((_file: DriveFile) => {
-    // Open the create variable modal
-    setIsCreateVariableModalVisible(true);
-  }, []);
+  // const handleCreateVariable = useCallback((_file: DriveFile) => {
+  //   // Open the create variable modal
+  //   setIsCreateVariableModalVisible(true);
+  // }, []);
 
   const handleDeleteFile = useCallback(
     async (file: DriveFile) => {
@@ -151,13 +151,13 @@ export const FileItemAction = ({
     );
   }, [workflowVariables, file]);
 
-  // Get tooltip text based on resource usage status
-  const getTooltipText = useCallback(() => {
-    if (isResourceAlreadyUsed()) {
-      return t('canvas.nodeActions.alreadyCreated') || 'Already Created';
-    }
-    return t('canvas.nodeActions.createVariable') || 'Create Variable';
-  }, [isResourceAlreadyUsed, t]);
+  // // Get tooltip text based on resource usage status
+  // const getTooltipText = useCallback(() => {
+  //   if (isResourceAlreadyUsed()) {
+  //     return t('canvas.nodeActions.alreadyCreated') || 'Already Created';
+  //   }
+  //   return t('canvas.nodeActions.createVariable') || 'Create Variable';
+  // }, [isResourceAlreadyUsed, t]);
 
   return (
     <>
@@ -167,7 +167,7 @@ export const FileItemAction = ({
           className,
         )}
       >
-        <Tooltip title={getTooltipText()} arrow={false}>
+        {/* <Tooltip title={getTooltipText()} arrow={false}>
           <Button
             type="text"
             size="small"
@@ -177,7 +177,7 @@ export const FileItemAction = ({
               handleCreateVariable(file);
             }}
           />
-        </Tooltip>
+        </Tooltip> */}
         <Popconfirm
           title={t('canvas.nodeActions.resourceDeleteConfirm', {
             title: file?.name || t('common.untitled'),

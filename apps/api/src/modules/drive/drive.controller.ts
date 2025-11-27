@@ -11,6 +11,7 @@ import {
   Res,
   Req,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { DriveService } from './drive.service';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -29,7 +30,9 @@ import {
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import { Response, Request } from 'express';
+import { buildContentDisposition } from '../../utils/filename';
 
+@ApiTags('Drive')
 @Controller('v1/drive')
 export class DriveController {
   constructor(private readonly driveService: DriveService) {}
@@ -112,12 +115,6 @@ export class DriveController {
 
     const origin = req.headers.origin;
 
-    // Sanitize and encode filename for Content-Disposition header
-    // Remove any control characters and encode for RFC 6266 compliance
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-    const sanitizedFilename = filename?.replace(/[\x00-\x1F\x7F]/g, '') ?? 'download';
-    const encodedFilename = encodeURIComponent(sanitizedFilename);
-
     res.set({
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': origin || '*',
@@ -126,7 +123,7 @@ export class DriveController {
       'Content-Length': String(data.length),
       ...(download
         ? {
-            'Content-Disposition': `attachment; filename="${sanitizedFilename}"; filename*=UTF-8''${encodedFilename}`,
+            'Content-Disposition': buildContentDisposition(filename),
           }
         : {}),
     });
@@ -134,23 +131,16 @@ export class DriveController {
     res.end(data);
   }
 
-  @Get('file/public/:storageKey(*)')
+  @Get('file/public/:fileId')
   async servePublicDriveFile(
-    @Param('storageKey') storageKey: string,
+    @Param('fileId') fileId: string,
     @Query('download') download: string,
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
-    const { data, contentType, filename } =
-      await this.driveService.getPublicFileContent(storageKey);
+    const { data, contentType, filename } = await this.driveService.getPublicFileContent(fileId);
 
     const origin = req.headers.origin;
-
-    // Sanitize and encode filename for Content-Disposition header
-    // Remove any control characters and encode for RFC 6266 compliance
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-    const sanitizedFilename = filename?.replace(/[\x00-\x1F\x7F]/g, '') ?? 'download';
-    const encodedFilename = encodeURIComponent(sanitizedFilename);
 
     res.set({
       'Content-Type': contentType,
@@ -160,7 +150,7 @@ export class DriveController {
       'Content-Length': String(data.length),
       ...(download
         ? {
-            'Content-Disposition': `attachment; filename="${sanitizedFilename}"; filename*=UTF-8''${encodedFilename}`,
+            'Content-Disposition': buildContentDisposition(filename),
           }
         : {}),
     });

@@ -153,51 +153,29 @@ export class ShareCommonService {
    */
   async processFilesForShare(canvasData: SharedCanvasData, shareId: string): Promise<void> {
     // Process drive files for sharing
-    if (canvasData.files && canvasData.files.length > 0) {
-      // Fetch current file details from database to get publicURL
-      const limit = pLimit(10);
-
-      // For each file, ensure it has a publicURL
-      const promises = canvasData.files.map((file: any) =>
-        limit(async () => {
-          let publicURL = file.publicURL;
-
-          // If file doesn't have publicURL, create one and update database
-          if (!publicURL && file.storageKey) {
-            try {
-              publicURL = await this.driveService.publishDriveFile(file.storageKey);
-
-              // Update the DriveFile record with publicURL
-              await this.prisma.driveFile.update({
-                where: { fileId: file.fileId },
-                data: { publicURL },
-              });
-
-              this.logger.log(`Created publicURL for file ${file.fileId}`);
-            } catch (error) {
-              this.logger.error(
-                `Failed to create publicURL for file ${file.fileId}: ${error.stack}`,
-              );
-            }
-          }
-
-          // Return file with publicURL
-          return {
-            ...file,
-            publicURL,
-          };
-        }),
-      );
-
-      canvasData.files = await Promise.all(promises);
-
-      this.logger.log(
-        `Processed ${canvasData.files.length} files for share ${shareId}. All files now have publicURL.`,
-      );
-    } else {
-      // No files in current canvas, clear files array
-      canvasData.files = [];
+    if (!canvasData.files.length) {
+      return;
     }
+    const limit = pLimit(10);
+
+    const promises = canvasData.files.map((file: any) =>
+      limit(async () => {
+        if (file.storageKey) {
+          try {
+            await this.driveService.publishDriveFile(file.storageKey, file.fileId);
+            this.logger.log(`Created publicURL for file ${file.fileId}`);
+          } catch (error) {
+            this.logger.error(`Failed to create publicURL for file ${file.fileId}: ${error.stack}`);
+          }
+        }
+      }),
+    );
+
+    await Promise.all(promises);
+
+    this.logger.log(
+      `Processed ${canvasData.files.length} files for share ${shareId}. All files now have publicURL.`,
+    );
   }
 
   /**

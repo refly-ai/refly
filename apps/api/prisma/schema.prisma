@@ -211,6 +211,36 @@ model ActionStep {
   @@map("action_steps")
 }
 
+model ActionMessage {
+  /// Primary key
+  pk               BigInt   @id @default(autoincrement())
+  /// Message id
+  messageId        String   @unique @map("message_id")
+  /// Action result id
+  resultId         String   @map("result_id")
+  /// Action result version
+  version          Int      @default(0) @map("version")
+  /// Message type
+  type             String   @map("type")
+  /// Message content
+  content          String   @map("content")
+  /// Reasoning content
+  reasoningContent String?  @map("reasoning_content")
+  /// Usage metadata (JSON)
+  usageMeta        String?  @map("usage_meta")
+  /// Tool call metadata (JSON)
+  toolCallMeta     String?  @map("tool_call_meta")
+  /// Tool call id
+  toolCallId       String?  @map("tool_call_id")
+  /// Create timestamp
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([resultId, version])
+  @@map("action_messages")
+}
+
 model PilotSession {
   /// Primary key
   pk             BigInt   @id @default(autoincrement())
@@ -808,8 +838,6 @@ model DriveFile {
   scope         String    @default("present") @map("scope")
   /// Storage key for this file
   storageKey    String?   @map("storage_key")
-  /// Public URL for shared files (only set when file is shared)
-  publicURL     String?   @map("public_url")
   /// Drive file summary
   summary       String?   @map("summary")
   /// Related variable id (when source is 'variable')
@@ -1835,6 +1863,38 @@ model McpServer {
   @@index([uid, deletedAt])
   @@index([isGlobal])
   @@map("mcp_servers")
+}
+
+/// Drive file parse cache
+model DriveFileParseCache {
+  /// Primary key
+  pk                BigInt   @id @default(autoincrement())
+  /// Drive file id
+  fileId            String   @unique @map("file_id")
+  /// UID
+  uid               String   @map("uid")
+  /// Storage path for parsed content
+  contentStorageKey String   @map("content_storage_key")
+  /// Content type
+  contentType       String   @map("content_type")
+  /// Parser used
+  parser            String   @map("parser")
+  /// Number of pages (for PDF)
+  numPages          Int?     @map("num_pages")
+  /// Word count
+  wordCount         Int?     @map("word_count")
+  /// Parse status: success, failed
+  parseStatus       String   @map("parse_status")
+  /// Parse error (JSON)
+  parseError        String?  @map("parse_error")
+  /// Create timestamp
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([uid, createdAt])
+  @@index([parseStatus])
+  @@map("drive_file_parse_caches")
 }
 
 /// Variable extraction history for workflow 3.0

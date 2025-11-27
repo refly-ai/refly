@@ -193,7 +193,7 @@ function processMention(
     return { replacement: formatMention(type, name, mode), updatedQuery };
   }
 
-  if (type === 'step' || type === 'toolset' || type === 'tool') {
+  if (type === 'agent' || type === 'toolset' || type === 'tool') {
     // Replace step, toolset and tool mentions with the formatted name
     return { replacement: formatMention(type, name, mode), updatedQuery };
   }

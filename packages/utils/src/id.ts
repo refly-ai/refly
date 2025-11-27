@@ -48,6 +48,7 @@ export enum IDPrefix {
   START = 'start-',
   VARIABLE = 'var-',
   WorkflowApp = 'wa-',
+  ACTION_MESSAGE = 'am-',
 }
 
 export function genUID(): string {
@@ -295,6 +296,10 @@ export function genNodeID(): string {
 
 export function genWorkflowAppID(): string {
   return IDPrefix.WorkflowApp + createId();
+}
+
+export function genActionMessageID(): string {
+  return IDPrefix.ACTION_MESSAGE + createId();
 }
 
 export const genInvitationActivationCreditRechargeId = (inviterUid: string, inviteeUid: string) => {

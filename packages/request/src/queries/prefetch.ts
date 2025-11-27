@@ -33,6 +33,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
@@ -66,6 +67,7 @@ import {
   listTools,
   listToolsetInventory,
   listToolsets,
+  listUserTools,
   listWorkflowApps,
   serveStatic,
 } from '../requests/services.gen';
@@ -93,6 +95,7 @@ import {
   GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
+  GetToolCallResultData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
   GetWorkflowVariablesData,
@@ -611,6 +614,14 @@ export const prefetchUseListTools = (
     queryKey: Common.UseListToolsKeyFn(clientOptions),
     queryFn: () => listTools({ ...clientOptions }).then((response) => response.data),
   });
+export const prefetchUseListUserTools = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListUserToolsKeyFn(clientOptions),
+    queryFn: () => listUserTools({ ...clientOptions }).then((response) => response.data),
+  });
 export const prefetchUseListToolsetInventory = (
   queryClient: QueryClient,
   clientOptions: Options<unknown, true> = {},
@@ -626,6 +637,14 @@ export const prefetchUseListToolsets = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListToolsetsKeyFn(clientOptions),
     queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetToolCallResult = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetToolCallResultData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetToolCallResultKeyFn(clientOptions),
+    queryFn: () => getToolCallResult({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetComposioConnectionStatus = (
   queryClient: QueryClient,

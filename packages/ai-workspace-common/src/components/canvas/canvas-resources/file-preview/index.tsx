@@ -5,7 +5,7 @@ import { Download, File } from 'refly-icons';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
 import { isCodeFile, getCodeLanguage } from '@refly-packages/ai-workspace-common/utils/file-type';
-import { useFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-file-url';
+import { useDriveFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drive-file-url';
 import SyntaxHighlighter from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/syntax-highlighter';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
 import CodeViewer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
@@ -31,12 +31,16 @@ export const FilePreview = memo(
     const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
 
-    const { fileUrl, shouldFetch } = useFileUrl({ file: file });
+    // useFileUrl now automatically fetches publicURL if needed in share pages
+    const { fileUrl, isLoading: isLoadingUrl } = useDriveFileUrl({ file });
 
     const fetchFileContent = useCallback(async () => {
+      // Wait for URL to be ready
+      if (isLoadingUrl) {
+        return;
+      }
+
       if (!fileUrl) {
-        setError('File URL not available');
-        setLoading(false);
         return;
       }
 
@@ -44,7 +48,8 @@ export const FilePreview = memo(
         setLoading(true);
         setError(null);
 
-        const fetchOptions: RequestInit = shouldFetch ? { credentials: 'include' } : {};
+        // Use credentials for all requests (publicURL doesn't need it, but it won't hurt)
+        const fetchOptions: RequestInit = { credentials: 'include' };
         const response = await fetch(fileUrl, fetchOptions);
 
         if (!response.ok) {
@@ -53,8 +58,10 @@ export const FilePreview = memo(
 
         // Use file.type (MIME type) instead of response header for publicURL
         // because publicURL headers might return application/octet-stream
-        const contentType =
-          file.type || response.headers.get('content-type') || 'application/octet-stream';
+        let contentType = file.type;
+        if (file.type === 'application/octet-stream') {
+          contentType = response.headers.get('content-type') || 'application/octet-stream';
+        }
         const arrayBuffer = await response.arrayBuffer();
 
         // Create object URL for the blob with correct MIME type
@@ -72,7 +79,7 @@ export const FilePreview = memo(
       } finally {
         setLoading(false);
       }
-    }, [fileUrl, shouldFetch, file.type]);
+    }, [fileUrl, file.type, isLoadingUrl]);
 
     useEffect(() => {
       fetchFileContent();

@@ -139,7 +139,7 @@ export const MultiSelectResult = memo(
                             lineHeight: '20px',
                           }}
                         >
-                          {option.data?.title || t('common.untitled')}
+                          {option.data?.title || t('common.agent', { defaultValue: 'Agent' })}
                         </Text>
                       </div>
                     </div>

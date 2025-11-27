@@ -3,7 +3,7 @@ import { Typography, Button, message } from 'antd';
 import { Share, Download } from 'refly-icons';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
-import { DriveFile, ResourceType } from '@refly/openapi-schema';
+import { DriveFile, ResourceType, EntityType } from '@refly/openapi-schema';
 import cn from 'classnames';
 import { useActionResultStoreShallow } from '@refly/stores';
 import { TbArrowBackUp } from 'react-icons/tb';
@@ -102,7 +102,7 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
       const { data, error } = await getClient().createShare({
         body: {
           entityId: file.fileId,
-          entityType: 'driveFile',
+          entityType: 'driveFile' as EntityType,
         },
       });
 

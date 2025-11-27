@@ -11,10 +11,12 @@ import { ProductCard } from './product-card';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { Button, Typography } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 
 import { ArrowDown, ArrowUp, Cancelled, CheckCircleBroken } from 'refly-icons';
-import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
+import {
+  useListToolsetInventory,
+  useGetToolCallResult,
+} from '@refly-packages/ai-workspace-common/queries';
 
 const { Paragraph } = Typography;
 
@@ -50,22 +52,68 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   const currentLanguage = i18n.language || 'en';
   const [isCollapsed, setIsCollapsed] = useState(true);
 
-  // Extract tool name from props
-  const toolName = props['data-tool-name'] ?? 'unknown';
-  const toolsetKey = props['data-tool-toolset-key'] ?? 'unknown';
+  // Extract tool call ID
+  const toolCallId = props['data-tool-call-id'];
+
+  // Check if we need to fetch data from API
+  const shouldFetchData = useMemo(() => {
+    return (
+      toolCallId &&
+      (!props['data-tool-name'] ||
+        !props['data-tool-call-status'] ||
+        !props['data-tool-arguments'] ||
+        (!props['data-tool-result'] && !props['data-tool-error']))
+    );
+  }, [
+    toolCallId,
+    props['data-tool-name'],
+    props['data-tool-call-status'],
+    props['data-tool-arguments'],
+    props['data-tool-result'],
+    props['data-tool-error'],
+  ]);
+
+  // Fetch tool call result when needed
+  const { data: fetchedData, isLoading: isFetchingData } = useGetToolCallResult(
+    {
+      query: { toolCallId: toolCallId ?? '' },
+    },
+    undefined,
+    {
+      enabled: shouldFetchData && !!toolCallId && !isCollapsed,
+    },
+  );
+
+  // Extract tool name from props or fetched data
+  const toolName = props['data-tool-name'] ?? fetchedData?.data?.result?.toolName ?? 'unknown';
+  const toolsetId =
+    props['data-tool-toolset-id'] ?? fetchedData?.data?.result?.toolsetId ?? 'unknown';
+  const toolsetKey = props['data-tool-toolset-key'] ?? toolsetId;
   const toolCallStatus =
-    parseToolCallStatus(props['data-tool-call-status']) ?? ToolCallStatus.EXECUTING;
+    parseToolCallStatus(props['data-tool-call-status']) ??
+    parseToolCallStatus(fetchedData?.data?.result?.status) ??
+    ToolCallStatus.EXECUTING;
 
   // Format the content for parameters
   const parametersContent = useMemo(() => {
-    try {
-      const argsStr = props['data-tool-arguments'] ?? '{}';
-      const args = JSON.parse(argsStr);
-      return JSON.parse(args?.input ?? '{}');
-    } catch {
-      return {};
+    // First try props data
+    if (props['data-tool-arguments']) {
+      try {
+        const argsStr = props['data-tool-arguments'];
+        const args = JSON.parse(argsStr);
+        return JSON.parse(args?.input ?? '{}');
+      } catch {
+        // Fall through to API data
+      }
     }
-  }, [props['data-tool-arguments']]);
+
+    // Fall back to API data
+    if (fetchedData?.data?.result?.input) {
+      return fetchedData.data.result.input;
+    }
+
+    return {};
+  }, [props['data-tool-arguments'], fetchedData?.data?.result?.input]);
 
   const parameterEntries = useMemo(() => {
     if (!parametersContent || typeof parametersContent !== 'object') {
@@ -75,16 +123,51 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   }, [parametersContent]);
 
   // Format the content for result
-  const resultContent = props['data-tool-error'] ?? props['data-tool-result'] ?? '';
+  const resultContent = useMemo(() => {
+    // First try props data
+    if (props['data-tool-error'] || props['data-tool-result']) {
+      return props['data-tool-error'] ?? props['data-tool-result'] ?? '';
+    }
+
+    // Fall back to API data
+    if (fetchedData?.data?.result?.error) {
+      return fetchedData.data.result.error;
+    }
+
+    if (fetchedData?.data?.result?.output) {
+      return typeof fetchedData.data.result.output === 'string'
+        ? fetchedData.data.result.output
+        : JSON.stringify(fetchedData.data.result.output, null, 2);
+    }
+
+    return '';
+  }, [
+    props['data-tool-error'],
+    props['data-tool-result'],
+    fetchedData?.data?.result?.error,
+    fetchedData?.data?.result?.output,
+  ]);
+
   // Check if result exists
-  const hasResult = !!resultContent || !!props['data-tool-error'];
+  const hasResult = !!resultContent;
 
   // Compute execution duration when timestamps are provided
   const durationText = useMemo(() => {
-    const createdAtStr = props['data-tool-created-at'] ?? '0';
-    const updatedAtStr = props['data-tool-updated-at'] ?? '0';
-    const createdAt = Number(createdAtStr);
-    const updatedAt = Number(updatedAtStr);
+    let createdAt: number;
+    let updatedAt: number;
+
+    // First try props data
+    if (props['data-tool-created-at'] && props['data-tool-updated-at']) {
+      createdAt = Number(props['data-tool-created-at']);
+      updatedAt = Number(props['data-tool-updated-at']);
+    } else if (fetchedData?.data?.result?.createdAt && fetchedData?.data?.result?.updatedAt) {
+      // Fall back to API data
+      createdAt = fetchedData.data.result.createdAt;
+      updatedAt = fetchedData.data.result.updatedAt;
+    } else {
+      return '';
+    }
+
     if (
       !Number.isFinite(createdAt) ||
       !Number.isFinite(updatedAt) ||
@@ -104,7 +187,12 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     const minutes = Math.floor(seconds / 60);
     const remainSec = Math.floor(seconds % 60);
     return `${minutes}m ${remainSec}s`;
-  }, [props['data-tool-created-at'], props['data-tool-updated-at']]);
+  }, [
+    props['data-tool-created-at'],
+    props['data-tool-updated-at'],
+    fetchedData?.data?.result?.createdAt,
+    fetchedData?.data?.result?.updatedAt,
+  ]);
 
   const isCopilotGenerateWorkflow = toolsetKey === 'copilot' && toolName === 'generate_workflow';
   if (isCopilotGenerateWorkflow) {
@@ -128,65 +216,29 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   }
 
   const resultData = safeParseJSON(resultContent)?.data as Record<string, unknown> | undefined;
-
-  // Extract fileIds from result data
-  const fileIds = useMemo<string[]>(() => {
+  const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
     if (resultData?.fileId) {
-      return [String(resultData.fileId)];
+      return [
+        {
+          fileId: String(resultData.fileId),
+          canvasId: String(resultData.canvasId ?? ''),
+          name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
+          type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
+        },
+      ];
     }
 
     if (Array.isArray(resultData?.files)) {
-      return resultData.files.map((file) => String(file.fileId));
+      return resultData.files.map((file) => ({
+        fileId: String(file.fileId),
+        canvasId: String(file.canvasId ?? ''),
+        name: String(file.name ?? file.fileName ?? 'Drive file'),
+        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+      }));
     }
 
     return [];
   }, [resultData]);
-
-  // Fetch complete drive files data (including publicURL in share pages)
-  const { data: allDriveFiles } = useFetchDriveFiles();
-
-  // Match the complete file data from useFetchDriveFiles
-  const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
-    if (fileIds.length === 0) {
-      return [];
-    }
-
-    // Try to find files with complete data from allDriveFiles
-    const matchedFiles = fileIds
-      .map((fileId) => {
-        const matchedFile = allDriveFiles.find((f) => f.fileId === fileId);
-        if (matchedFile) {
-          return matchedFile;
-        }
-
-        // Fallback: construct partial file data from resultData if not found in allDriveFiles
-        if (resultData?.fileId === fileId) {
-          return {
-            fileId: String(resultData.fileId),
-            canvasId: String(resultData.canvasId ?? ''),
-            name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
-            type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
-          } as DriveFile;
-        }
-
-        if (Array.isArray(resultData?.files)) {
-          const fileData = resultData.files.find((f) => String(f.fileId) === fileId);
-          if (fileData) {
-            return {
-              fileId: String(fileData.fileId),
-              canvasId: String(fileData.canvasId ?? ''),
-              name: String(fileData.name ?? fileData.fileName ?? 'Drive file'),
-              type: String(fileData.type ?? fileData.mimeType ?? 'application/octet-stream'),
-            } as DriveFile;
-          }
-        }
-
-        return null;
-      })
-      .filter((file): file is DriveFile => file !== null);
-
-    return matchedFiles;
-  }, [fileIds, allDriveFiles, resultData]);
 
   const shouldRenderFilePreview = useMemo(() => {
     return filePreviewDriveFile.length > 0;
@@ -273,44 +325,63 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
         {/* Content section */}
         {!isCollapsed && (
           <div className="py-2 flex flex-col gap-4">
-            {/* Parameters section always shown */}
-            {parameterEntries?.length > 0 && (
-              <div className="px-3 pb-2 flex flex-col gap-2">
-                <div className="leading-5">{t('components.markdown.parameters', 'Input')}</div>
-                <div className="rounded-lg border-[0.5px] border-solid border-refly-fill-hover overflow-hidden bg-refly-fill-hover">
-                  <div className="grid grid-cols-[120px_1fr] text-[10px] leading-[14px] text-refly-text-3">
-                    <div className="px-3 py-2">
-                      {t('components.markdown.parameterName', 'Name')}
-                    </div>
-                    <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover">
-                      {t('components.markdown.parameterValue', 'Value')}
+            {isFetchingData ? (
+              <div className="px-3 py-4 flex items-center justify-center">
+                <Spin size="small" className="mr-2" />
+                <span className="text-xs text-refly-text-2">
+                  {t('components.markdown.loadingToolCall', 'Loading tool call details...')}
+                </span>
+              </div>
+            ) : (
+              <>
+                {/* Parameters section always shown */}
+                {parameterEntries?.length > 0 && (
+                  <div className="px-3 pb-2 flex flex-col gap-2">
+                    <div className="leading-5">{t('components.markdown.parameters', 'Input')}</div>
+                    <div className="rounded-lg border-[0.5px] border-solid border-refly-fill-hover overflow-hidden bg-refly-fill-hover">
+                      <div className="grid grid-cols-[120px_1fr] text-[10px] leading-[14px] text-refly-text-3">
+                        <div className="px-3 py-2">
+                          {t('components.markdown.parameterName', 'Name')}
+                        </div>
+                        <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover">
+                          {t('components.markdown.parameterValue', 'Value')}
+                        </div>
+                      </div>
+                      {parameterEntries.map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="grid grid-cols-[120px_1fr] border-[0.5px] border-solid border-b-0 border-x-0 border-refly-tertiary-hover text-xs text-refly-text-0 leading-4"
+                        >
+                          <div className="px-3 py-2 break-all">{key}</div>
+                          <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover whitespace-pre-wrap break-all">
+                            {typeof value === 'object'
+                              ? JSON.stringify(value ?? {}, null, 2)
+                              : String(value ?? '')}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  {parameterEntries.map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="grid grid-cols-[120px_1fr] border-[0.5px] border-solid border-b-0 border-x-0 border-refly-tertiary-hover text-xs text-refly-text-0 leading-4"
-                    >
-                      <div className="px-3 py-2 break-all">{key}</div>
-                      <div className="px-3 py-2 border-[0.5px] border-solid border-r-0 border-y-0 border-refly-tertiary-hover whitespace-pre-wrap break-all">
-                        {typeof value === 'object'
-                          ? JSON.stringify(value ?? {}, null, 2)
-                          : String(value ?? '')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Result section only if hasResult */}
-            {hasResult && (
-              <div>
-                <div className="px-3 leading-5">{t('components.markdown.result', 'Output')}</div>
-                <div className="mx-4 my-2 rounded-lg bg-refly-fill-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
-                  {resultContent}
-                </div>
-              </div>
+                {/* Result section only if hasResult */}
+                {hasResult ? (
+                  <div>
+                    <div className="px-3 leading-5">
+                      {t('components.markdown.result', 'Output')}
+                    </div>
+                    <div className="mx-4 my-2 rounded-lg bg-refly-fill-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
+                      {resultContent}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-3 py-4 flex items-center justify-center">
+                    <span className="text-xs text-refly-text-2">
+                      {t('components.markdown.noToolCallResult', 'No tool call result')}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
