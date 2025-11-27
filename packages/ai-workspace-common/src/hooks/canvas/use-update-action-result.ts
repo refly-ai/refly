@@ -8,8 +8,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { processContentPreview } from '../../utils/content';
 import { useSetNodeDataByEntity } from './use-set-node-data-by-entity';
 
-const FLUSH_INTERVAL_MS = 150; // Debounce interval for heavy flush
-const MAX_WAIT_MS = 1500; // Hard cap to prevent starvation under continuous streams
+const FLUSH_INTERVAL_MS = 50; // Debounce interval for heavy flush (reduced for better real-time updates)
+const MAX_WAIT_MS = 300; // Hard cap to prevent starvation under continuous streams (reduced for faster response)
 
 // Memoize token usage calculation to avoid recalculating on every update
 const memoizeTokenUsage = (() => {
@@ -358,8 +358,19 @@ export const useUpdateActionResult = () => {
       const isCriticalUpdate =
         event?.event === 'end' || event?.event === 'error' || payload?.status === 'failed';
 
+      // Stream events should be flushed more aggressively for real-time updates
+      const isStreamEvent = event?.event === 'stream' || event?.event === 'tool_call_stream';
+
       if (isCriticalUpdate) {
         scheduleFlush(resultId, true);
+      } else if (isStreamEvent) {
+        // For stream events, check if we have accumulated enough updates or time has passed
+        const entry = accumRef.current[resultId];
+        const shouldFlushStream =
+          entry &&
+          (entry.updates.length >= 3 ||
+            performance.now() - (entry.firstPendingAt ?? performance.now()) > 100);
+        scheduleFlush(resultId, shouldFlushStream);
       } else {
         scheduleFlush(resultId, false);
       }
