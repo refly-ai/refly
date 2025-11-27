@@ -89,9 +89,6 @@ const NodeStatusBar = memo(
         enabled: (status === 'finish' || status === 'failed') && !!resultId,
       },
     );
-
-    console.log('creditUsage', status, resultId, version, creditUsage);
-
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
 

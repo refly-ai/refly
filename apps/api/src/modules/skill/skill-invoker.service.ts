@@ -1270,10 +1270,6 @@ export class SkillInvokerService {
   ): Promise<void> {
     const steps = await resultAggregator.getSteps({ resultId, version });
 
-    this.logger.log(
-      `Processing credit usage for ${resultId} v${version}: found ${steps.length} steps`,
-    );
-
     // Collect all model names used in token usage
     const modelNames = new Set<string>();
     for (const step of steps) {
@@ -1292,10 +1288,6 @@ export class SkillInvokerService {
         }
       }
     }
-
-    this.logger.log(
-      `Collected ${modelNames.size} unique model names: ${Array.from(modelNames).join(', ')}`,
-    );
 
     // Batch fetch all provider items for the models used
     const providerItemsMap = new Map<string, any>();
