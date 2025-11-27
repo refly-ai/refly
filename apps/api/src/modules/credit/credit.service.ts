@@ -1182,6 +1182,7 @@ export class CreditService {
     if (version !== undefined) {
       const usages = await this.prisma.creditUsage.findMany({
         where: {
+          uid: user.uid,
           actionResultId: resultId,
           version: version,
         },

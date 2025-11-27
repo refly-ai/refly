@@ -1206,8 +1206,8 @@ export class SkillInvokerService {
   }
 
   /**
-   * Estimate token usage when execution is aborted
-   * Uses AWS Bedrock countTokens API for accurate token counting
+   * Estimate token usage when execution is aborted.
+   * Uses local tokenization (gpt-tokenizer) as a best-effort approximation.
    */
   private async estimateTokenUsageOnAbort(
     user: User,
