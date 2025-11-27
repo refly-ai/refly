@@ -31,7 +31,10 @@ import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canv
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
-import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
+import {
+  useGetCreditUsageByResultId,
+  useGetPilotSessionDetail,
+} from '@refly-packages/ai-workspace-common/queries/queries';
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
 import {
   usePilotStoreShallow,
@@ -59,18 +62,36 @@ const NODE_SIDE_CONFIG = { width: NODE_WIDTH, height: 'auto', maxHeight: 300 };
 
 const NodeStatusBar = memo(
   ({
+    resultId,
     status,
     errorType,
     executionTime,
-    creditCost,
     errors,
+    version,
   }: {
+    resultId: string;
     status: string;
     errorType?: string;
     executionTime?: number;
-    creditCost?: number;
     errors?: string[];
+    version?: number;
   }) => {
+    // Query credit usage when skill is completed
+    const { data: creditUsage } = useGetCreditUsageByResultId(
+      {
+        query: {
+          resultId: resultId ?? '',
+          version: version?.toString(),
+        },
+      },
+      undefined,
+      {
+        enabled: (status === 'finish' || status === 'failed') && !!resultId,
+      },
+    );
+
+    console.log('creditUsage', status, resultId, version, creditUsage);
+
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -115,10 +136,10 @@ const NodeStatusBar = memo(
             </div>
 
             <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500 flex-shrink-0">
-              {creditCost !== undefined && (
+              {creditUsage?.data?.total !== undefined && (
                 <div className="flex items-center gap-1">
                   <Subscription className="w-3 h-3" />
-                  <span>{creditCost}</span>
+                  <span>{creditUsage?.data?.total}</span>
                 </div>
               )}
 
@@ -282,17 +303,27 @@ export const SkillResponseNode = memo(
 
       const needsStatusUpdate = result.status !== data.metadata?.status;
       const needsPreviewUpdate = nodePreview !== resultPreview;
+      const needsVersionUpdate =
+        result.version !== undefined && result.version !== data.metadata?.version;
 
-      if (needsStatusUpdate || needsPreviewUpdate) {
-        setNodeData(id, {
-          ...data,
-          ...(needsStatusUpdate && {
-            metadata: { ...data.metadata, status: result.status },
-          }),
-          ...(needsPreviewUpdate && {
-            contentPreview: resultPreview,
-          }),
-        });
+      if (needsStatusUpdate || needsPreviewUpdate || needsVersionUpdate) {
+        const updates: any = { ...data };
+
+        // Update metadata if needed
+        if (needsStatusUpdate || needsVersionUpdate) {
+          updates.metadata = {
+            ...data.metadata,
+            ...(needsStatusUpdate && { status: result.status }),
+            ...(needsVersionUpdate && { version: result.version }),
+          };
+        }
+
+        // Update content preview if needed
+        if (needsPreviewUpdate) {
+          updates.contentPreview = resultPreview;
+        }
+
+        setNodeData(id, updates);
       }
     }, [result, data, id, setNodeData]);
 
@@ -724,11 +755,12 @@ export const SkillResponseNode = memo(
 
         {!isPreview && status !== 'init' && (
           <NodeStatusBar
+            resultId={entityId}
             status={status}
             errorType={errorType}
-            creditCost={metadata?.creditCost}
             executionTime={metadata?.executionTime}
             errors={result?.errors}
+            version={version}
           />
         )}
       </>

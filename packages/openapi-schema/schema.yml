@@ -3170,6 +3170,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: version
+          in: query
+          description: Version number (optional, returns latest version if not specified)
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: successful operation

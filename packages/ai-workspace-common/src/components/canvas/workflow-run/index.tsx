@@ -5,11 +5,13 @@ import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { WorkflowRunForm } from './workflow-run-form';
 import './index.scss';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import { useGetCreditUsageByCanvasId } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useWorkflowIncompleteNodes } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const WorkflowRun = () => {
   const { t } = useTranslation();
@@ -33,6 +35,12 @@ export const WorkflowRun = () => {
     isLoading: workflowVariablesLoading,
   } = useVariablesManagement(canvasId);
 
+  const queryClient = useQueryClient();
+
+  // Check if there are any incomplete nodes (status is 'init' or 'failed')
+  const { hasIncompleteNodes } = useWorkflowIncompleteNodes();
+
+  // Credit usage query with dynamic polling
   const { data: creditUsageData, isLoading: isCreditUsageLoading } = useGetCreditUsageByCanvasId(
     {
       query: { canvasId },
@@ -42,6 +50,24 @@ export const WorkflowRun = () => {
       enabled: showWorkflowRun && !!canvasId,
     },
   );
+
+  // Refresh credit usage when workflow status changes to non-executing state
+  // This runs once on initial render when workflowStatus is not 'executing'
+  // It also runs when workflowStatus changes and is not 'executing' (i.e., workflow completes)
+  useEffect(() => {
+    if (
+      showWorkflowRun &&
+      canvasId &&
+      queryClient &&
+      executionId &&
+      workflowStatus !== 'executing'
+    ) {
+      // Trigger refresh when workflowStatus is not executing
+      queryClient.invalidateQueries({
+        queryKey: ['getCreditUsageByCanvasId', { query: { canvasId } }],
+      });
+    }
+  }, [workflowStatus, canvasId, showWorkflowRun, queryClient, executionId]);
 
   const [isRunning, setIsRunning] = useState(false);
 
@@ -112,7 +138,11 @@ export const WorkflowRun = () => {
             isRunning={isRunning}
             onRunningChange={setIsRunning}
             canvasId={canvasId}
-            creditUsage={isCreditUsageLoading ? null : (creditUsageData?.data?.total ?? 0)}
+            creditUsage={
+              isCreditUsageLoading || hasIncompleteNodes
+                ? null
+                : (creditUsageData?.data?.total ?? 0)
+            }
           />
         )}
       </div>

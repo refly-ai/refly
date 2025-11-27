@@ -1177,8 +1177,28 @@ export class CreditService {
     };
   }
 
-  async countResultCreditUsage(user: User, resultId: string): Promise<number> {
-    // Get the latest action result record for this resultId, ordered by version desc
+  async countResultCreditUsage(user: User, resultId: string, version?: number): Promise<number> {
+    // If version is specified, query for exact version
+    if (version !== undefined) {
+      const usages = await this.prisma.creditUsage.findMany({
+        where: {
+          actionResultId: resultId,
+          version: version,
+        },
+      });
+
+      // If no usage found for the specified version, return 0
+      if (usages.length === 0) {
+        return 0;
+      }
+
+      return usages.reduce((sum, usage) => {
+        const dueAmount = usage.dueAmount ? Number(usage.dueAmount) : 0;
+        return sum + (dueAmount > 0 ? dueAmount : Number(usage.amount));
+      }, 0);
+    }
+
+    // If version is not specified, get the latest version
     const actionResult = await this.prisma.actionResult.findFirst({
       where: {
         resultId,
@@ -1193,7 +1213,7 @@ export class CreditService {
       return 0;
     }
 
-    // First try to find usages by version
+    // First try to find usages by the latest version
     const usages = await this.prisma.creditUsage.findMany({
       where: {
         actionResultId: resultId,

@@ -10306,6 +10306,10 @@ export type GetCreditUsageByResultIdData = {
      * Result ID
      */
     resultId: string;
+    /**
+     * Version number (optional, returns latest version if not specified)
+     */
+    version?: string;
   };
 };
 
