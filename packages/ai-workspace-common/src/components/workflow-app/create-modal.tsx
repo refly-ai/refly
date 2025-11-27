@@ -134,6 +134,9 @@ export const CreateWorkflowAppModal = ({
   const { nodes } = useRealtimeCanvasData();
 
   const skillResponseNodes = nodes.filter((node) => node.type === 'skillResponse');
+  const activeResultIdSet = new Set(
+    skillResponseNodes.map((node) => node.data?.entityId).filter(Boolean),
+  );
 
   const { forceSyncState } = useCanvasContext();
 
@@ -180,7 +183,7 @@ export const CreateWorkflowAppModal = ({
           });
 
           const files = data?.data ?? [];
-          allFiles.push(...files);
+          allFiles.push(...files.filter((file) => activeResultIdSet.has(file.resultId)));
 
           if (files.length < pageSize) {
             break;
@@ -585,12 +588,14 @@ export const CreateWorkflowAppModal = ({
       cancelText={t('common.cancel')}
       title={t('workflowApp.publish')}
       okButtonProps={{ disabled: isUploading }}
-      bodyStyle={{
-        maxHeight: '70vh',
-        overflowY: 'auto',
-        padding: 0,
-        paddingInline: 8,
-        scrollbarGutter: 'stable both-edges',
+      styles={{
+        body: {
+          maxHeight: '70vh',
+          overflowY: 'auto',
+          padding: 0,
+          paddingInline: 8,
+          scrollbarGutter: 'stable both-edges',
+        },
       }}
     >
       {contextHolder}
