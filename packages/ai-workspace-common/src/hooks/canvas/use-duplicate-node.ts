@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { CanvasNode } from '@refly/canvas-common';
+import { CanvasNode, CanvasNodeFilter } from '@refly/canvas-common';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { genSkillID } from '@refly/utils/id';
 import { logEvent } from '@refly/telemetry-web';
@@ -14,7 +14,7 @@ interface DuplicateNodeOptions {
 }
 
 export const useDuplicateNode = () => {
-  const { getNode } = useReactFlow();
+  const { getNode, getEdges } = useReactFlow();
   const { addNode } = useAddNode();
 
   const duplicateNode = useCallback(
@@ -37,11 +37,40 @@ export const useDuplicateNode = () => {
       }
 
       // Extract metadata for duplication
-      const title = String(data?.title || '');
+      const title = String(data?.title ?? '');
 
       // Get current node position
       const currentNode = getNode(node.id);
-      const currentPosition = currentNode?.position || { x: 0, y: 0 };
+      const currentPosition = currentNode?.position ?? { x: 0, y: 0 };
+
+      // Collect upstream connections to inherit
+      const edges = getEdges();
+      const upstreamConnectMap = new Map<string, CanvasNodeFilter>();
+      if (Array.isArray(edges)) {
+        for (const edge of edges) {
+          if (edge?.target !== node.id) {
+            continue;
+          }
+          const sourceNodeId = edge?.source;
+          if (!sourceNodeId) {
+            continue;
+          }
+          const parentNode = getNode(sourceNodeId);
+          const parentEntityIdValue = parentNode?.data?.entityId;
+          if (typeof parentEntityIdValue !== 'string') {
+            continue;
+          }
+          if (!parentNode?.type || upstreamConnectMap.has(parentEntityIdValue)) {
+            continue;
+          }
+          upstreamConnectMap.set(parentEntityIdValue, {
+            type: parentNode.type as CanvasNodeType,
+            entityId: parentEntityIdValue,
+            handleType: 'source',
+          });
+        }
+      }
+      const upstreamConnectFilters = Array.from(upstreamConnectMap.values());
 
       // Generate a new skill ID for the duplicated node
       const newSkillId = genSkillID();
@@ -62,7 +91,7 @@ export const useDuplicateNode = () => {
             y: currentPosition.y + offset.y,
           },
         },
-        undefined,
+        upstreamConnectFilters.length > 0 ? upstreamConnectFilters : undefined,
         true,
         false,
         0,
@@ -71,7 +100,7 @@ export const useDuplicateNode = () => {
 
       return true;
     },
-    [getNode, addNode],
+    [getNode, getEdges, addNode],
   );
 
   return {

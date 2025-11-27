@@ -47,3 +47,6 @@ docs/.vitepress/cache/*
 
 # local prompt files
 *.prompt
+
+# code opt
+*.opt

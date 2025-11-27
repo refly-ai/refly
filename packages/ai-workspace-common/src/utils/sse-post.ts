@@ -54,6 +54,8 @@ export const ssePost = async ({
   onSkillStart,
   onSkillStream,
   onToolCallStart,
+  onToolCallEnd,
+  onToolCallError,
   onToolCallStream,
   onSkillEnd,
   onSkillArtifact,
@@ -70,6 +72,8 @@ export const ssePost = async ({
   onSkillStart: (event: SkillEvent) => void;
   onSkillStream: (event: SkillEvent) => void;
   onToolCallStart?: (event: SkillEvent) => void;
+  onToolCallEnd?: (event: SkillEvent) => void;
+  onToolCallError?: (event: SkillEvent) => void;
   onToolCallStream?: (event: SkillEvent) => void;
   onSkillEnd: (event: SkillEvent) => void;
   onSkillStructedData: (event: SkillEvent) => void;
@@ -269,8 +273,17 @@ export const ssePost = async ({
             if (message.startsWith('data: ')) {
               try {
                 const skillEvent = JSON.parse(message.substring(6)) as SkillEvent;
+                // Handle tool call events immediately (not batched) for real-time UI updates
                 if (skillEvent.event === 'tool_call_start') {
                   onToolCallStart?.(skillEvent);
+                  continue;
+                }
+                if (skillEvent.event === 'tool_call_end') {
+                  onToolCallEnd?.(skillEvent);
+                  continue;
+                }
+                if (skillEvent.event === 'tool_call_error') {
+                  onToolCallError?.(skillEvent);
                   continue;
                 }
                 batchedEvents.push(skillEvent);

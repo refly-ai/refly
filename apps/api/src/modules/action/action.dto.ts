@@ -8,9 +8,13 @@ import {
   ModelTier,
   DriveFile,
   ToolCallResult,
+  ActionMessage,
   ActionErrorType,
+  ActionMessageType,
+  ToolCallMeta,
 } from '@refly/openapi-schema';
 import {
+  ActionMessage as ActionMessageModel,
   ActionResult as ActionResultModel,
   ActionStep as ActionStepModel,
   ToolCallResult as ToolCallResultModel,
@@ -23,6 +27,7 @@ type ActionStepDetail = ActionStepModel & {
 
 export type ActionDetail = ActionResultModel & {
   steps?: ActionStepDetail[];
+  messages?: ActionMessage[];
   files?: DriveFile[];
   modelInfo?: ModelInfo;
 };
@@ -35,6 +40,16 @@ export function actionStepPO2DTO(step: ActionStepDetail): ActionStep {
     structuredData: safeParseJSON(step.structuredData || '{}'),
     tokenUsage: safeParseJSON(step.tokenUsage || '[]'),
     toolCalls: step.toolCalls?.map(toolCallResultPO2DTO),
+  };
+}
+
+export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessage {
+  return {
+    ...pick(message, ['messageId', 'content', 'reasoningContent', 'usageMeta', 'toolCallId']),
+    type: message.type as ActionMessageType,
+    toolCallMeta: safeParseJSON(message.toolCallMeta || '{}') as ToolCallMeta,
+    createdAt: message.createdAt.toJSON(),
+    updatedAt: message.updatedAt.toJSON(),
   };
 }
 
@@ -84,6 +99,7 @@ export function actionResultPO2DTO(result: ActionDetail): ActionResult {
     createdAt: result.createdAt.toJSON(),
     updatedAt: result.updatedAt.toJSON(),
     steps: result.steps?.map(actionStepPO2DTO),
+    messages: result.messages,
     files: result.files,
     toolsets: safeParseJSON(result.toolsets || '[]'),
     modelInfo: result.modelInfo,

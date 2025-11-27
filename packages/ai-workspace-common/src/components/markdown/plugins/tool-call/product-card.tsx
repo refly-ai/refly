@@ -1,14 +1,17 @@
-import React, { memo, useCallback, useMemo } from 'react';
-import { Typography, Button } from 'antd';
+import React, { memo, useCallback, useMemo, useState } from 'react';
+import { Typography, Button, message } from 'antd';
 import { Share, Download } from 'refly-icons';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
-import { DriveFile, ResourceType } from '@refly/openapi-schema';
+import { DriveFile, ResourceType, EntityType } from '@refly/openapi-schema';
 import cn from 'classnames';
 import { useActionResultStoreShallow } from '@refly/stores';
 import { TbArrowBackUp } from 'react-icons/tb';
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 import { useTranslation } from 'react-i18next';
+import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
+import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 const { Paragraph } = Typography;
 
 // Convert DriveFile type to ResourceType
@@ -85,9 +88,43 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
     });
   }, [handleDownload, file]);
 
-  const handleShare = useCallback(() => {
-    console.info('Share requested for drive file', file?.fileId ?? '');
-  }, [file?.fileId]);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    if (!file?.fileId) {
+      return;
+    }
+
+    setIsSharing(true);
+    const loadingMessage = message.loading(t('driveFile.sharing', 'Sharing file...'), 0);
+
+    try {
+      const { data, error } = await getClient().createShare({
+        body: {
+          entityId: file.fileId,
+          entityType: 'driveFile' as EntityType,
+        },
+      });
+
+      if (!data?.success || error) {
+        throw new Error(error ? String(error) : 'Failed to share file');
+      }
+
+      const shareLink = getShareLink('driveFile', data.data?.shareId ?? '');
+      copyToClipboard(shareLink);
+      loadingMessage();
+      message.success(
+        t('driveFile.shareSuccess', 'File shared successfully! Link copied to clipboard.'),
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to share file:', err);
+      loadingMessage();
+      message.error(t('driveFile.shareError', 'Failed to share file'));
+    } finally {
+      setIsSharing(false);
+    }
+  }, [file?.fileId, t]);
 
   const actions = useMemo<ActionButtonProps[]>(
     () => [
@@ -97,9 +134,14 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
         onClick: handleDownloadProduct,
         loading: isDownloading,
       },
-      !isMediaFile && { label: 'Share', icon: <Share size={16} />, onClick: handleShare },
+      !isMediaFile && {
+        label: 'Share',
+        icon: <Share size={16} />,
+        onClick: handleShare,
+        loading: isSharing,
+      },
     ],
-    [handleDownloadProduct, handleShare, isDownloading, isMediaFile],
+    [handleDownloadProduct, handleShare, isDownloading, isMediaFile, isSharing],
   );
 
   const handleClosePreview = useCallback(() => {
@@ -157,9 +199,10 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
       </div>
 
       <div
-        className={cn('relative w-full px-3 overflow-y-auto pb-3 group', {
-          'max-h-[240px] !overflow-hidden flex': !isMediaFile && source === 'card',
-        })}
+        className={cn(
+          'relative w-full px-3 pb-3 overflow-y-auto group',
+          !isMediaFile && source === 'card' ? 'max-h-[240px] !overflow-hidden relative' : 'h-full',
+        )}
       >
         {canPreview && source === 'card' && (
           <div className="absolute z-10 bottom-3 left-3 right-3 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
@@ -171,7 +214,7 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
             </div>
           </div>
         )}
-        <FilePreview file={file} markdownClassName="text-sm min-h-[50px]" />
+        <FilePreview file={file} markdownClassName="text-sm min-h-[50px]" source={source} />
       </div>
     </div>
   );

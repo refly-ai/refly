@@ -32,6 +32,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
   getWorkflowVariables,
@@ -64,6 +65,7 @@ import {
   listTools,
   listToolsetInventory,
   listToolsets,
+  listUserTools,
   listWorkflowApps,
   serveStatic,
 } from '../requests/services.gen';
@@ -91,6 +93,7 @@ import {
   GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
+  GetToolCallResultData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
   GetWorkflowVariablesData,
@@ -593,6 +596,14 @@ export const ensureUseListToolsData = (
     queryKey: Common.UseListToolsKeyFn(clientOptions),
     queryFn: () => listTools({ ...clientOptions }).then((response) => response.data),
   });
+export const ensureUseListUserToolsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListUserToolsKeyFn(clientOptions),
+    queryFn: () => listUserTools({ ...clientOptions }).then((response) => response.data),
+  });
 export const ensureUseListToolsetInventoryData = (
   queryClient: QueryClient,
   clientOptions: Options<unknown, true> = {},
@@ -608,6 +619,14 @@ export const ensureUseListToolsetsData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListToolsetsKeyFn(clientOptions),
     queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetToolCallResultData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetToolCallResultData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetToolCallResultKeyFn(clientOptions),
+    queryFn: () => getToolCallResult({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetComposioConnectionStatusData = (
   queryClient: QueryClient,

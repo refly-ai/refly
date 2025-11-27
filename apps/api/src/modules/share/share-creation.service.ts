@@ -28,6 +28,8 @@ import { safeParseJSON } from '@refly/utils';
 import { generateCoverUrl } from '../workflow-app/workflow-app.dto';
 import { omit } from '../../utils';
 import { ConfigService } from '@nestjs/config';
+import { DriveService } from '../drive/drive.service';
+import { driveFilePO2DTO } from '../drive/drive.dto';
 
 function genShareId(entityType: keyof typeof SHARE_CODE_PREFIX): string {
   return SHARE_CODE_PREFIX[entityType] + createId();
@@ -49,6 +51,7 @@ export class ShareCreationService {
     private readonly shareCommonService: ShareCommonService,
     private readonly shareRateLimitService: ShareRateLimitService,
     private readonly configService: ConfigService,
+    private readonly driveService: DriveService,
     @Optional()
     @InjectQueue(QUEUE_CREATE_SHARE)
     private readonly createShareQueue?: Queue<CreateShareJobData>,
@@ -337,12 +340,7 @@ export class ShareCreationService {
     );
 
     // Process files for the share (cleanup old files and duplicate new ones)
-    await this.shareCommonService.processFilesForShare(
-      user,
-      canvasData,
-      shareId,
-      existingShareRecord,
-    );
+    await this.shareCommonService.processFilesForShare(canvasData, shareId);
 
     // Publish minimap
     if (canvas.minimapStorageKey) {
@@ -397,6 +395,92 @@ export class ShareCreationService {
     }
 
     return { shareRecord, canvas };
+  }
+
+  async createShareForDriveFile(user: User, param: CreateShareRequest) {
+    const { entityId: fileId, parentShareId, allowDuplication } = param;
+
+    // Check if shareRecord already exists
+    const existingShareRecord = await this.prisma.shareRecord.findFirst({
+      where: {
+        entityId: fileId,
+        entityType: 'driveFile',
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    // Generate shareId only if needed
+    const shareId = existingShareRecord?.shareId ?? genShareId('driveFile');
+
+    // Get drive file detail
+    const driveFileDetail = await this.prisma.driveFile.findFirst({
+      where: {
+        fileId,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    if (!driveFileDetail) {
+      throw new ShareNotFoundError();
+    }
+
+    // Transform to DTO
+    const driveFile: any = driveFilePO2DTO(driveFileDetail);
+
+    // Publish file if storageKey exists and update database
+    if (driveFile.storageKey) {
+      await this.driveService.publishDriveFile(driveFile.storageKey, fileId);
+    }
+
+    // Upload drive file data to storage
+    const { storageKey } = await this.miscService.uploadBuffer(user, {
+      fpath: 'driveFile.json',
+      buf: Buffer.from(JSON.stringify(driveFile)),
+      entityId: fileId,
+      entityType: 'driveFile',
+      visibility: 'public',
+      storageKey: `share/${shareId}.json`,
+    });
+
+    let shareRecord: ShareRecord;
+
+    if (existingShareRecord) {
+      // Update existing shareRecord
+      shareRecord = await this.prisma.shareRecord.update({
+        where: {
+          pk: existingShareRecord.pk,
+        },
+        data: {
+          title: driveFile.name,
+          storageKey,
+          parentShareId,
+          allowDuplication,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(
+        `Updated existing share record: ${shareRecord.shareId} for drive file: ${fileId}`,
+      );
+    } else {
+      // Create new shareRecord
+      shareRecord = await this.prisma.shareRecord.create({
+        data: {
+          shareId,
+          title: driveFile.name,
+          uid: user.uid,
+          entityId: fileId,
+          entityType: 'driveFile',
+          storageKey,
+          parentShareId,
+          allowDuplication,
+        },
+      });
+      this.logger.log(`Created new share record: ${shareRecord.shareId} for drive file: ${fileId}`);
+    }
+
+    return { shareRecord, driveFile };
   }
 
   async createShareForDocument(user: User, param: CreateShareRequest) {
@@ -1225,12 +1309,7 @@ export class ShareCreationService {
     );
 
     // Process files for the regular share (cleanup old files and duplicate new ones)
-    await this.shareCommonService.processFilesForShare(
-      user,
-      canvasData,
-      shareId,
-      existingShareRecord,
-    );
+    await this.shareCommonService.processFilesForShare(canvasData, shareId);
 
     // Create or update regular share
     const shareRecord = await this.createOrUpdateWorkflowAppShare(
@@ -1262,12 +1341,7 @@ export class ShareCreationService {
       );
 
       // Process files for the template share (no existing record for template shares)
-      await this.shareCommonService.processFilesForShare(
-        user,
-        independentCanvasData,
-        templateShareId,
-        null,
-      );
+      await this.shareCommonService.processFilesForShare(independentCanvasData, templateShareId);
 
       // Create or update template share (independent from regular share)
       templateShareRecord = await this.createOrUpdateWorkflowAppShare(
@@ -1350,6 +1424,9 @@ export class ShareCreationService {
         return;
       case 'resource':
         await this.createShareForResource(user, req);
+        return;
+      case 'driveFile':
+        await this.createShareForDriveFile(user, req);
         return;
       case 'skillResponse':
         await this.createShareForSkillResponse(user, req);

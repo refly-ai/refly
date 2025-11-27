@@ -468,6 +468,7 @@ export const SkillResponseNode = memo(
       invokeAction(
         {
           nodeId: id,
+          title: title ?? query,
           resultId: entityId,
           query: processedQuery,
           contextItems: data?.metadata?.contextItems,
@@ -484,6 +485,7 @@ export const SkillResponseNode = memo(
       data?.metadata,
       entityId,
       canvasId,
+      title,
       id,
       invokeAction,
       setNodeData,

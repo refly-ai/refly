@@ -118,7 +118,7 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
             <IconGithub className="flex items-center text-base" />
           </Link>
           <Link
-            to="https://discord.gg/bWjffrb89h"
+            to="https://discord.gg/YVuYFjFvRC"
             target="_blank"
             className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="Discord"

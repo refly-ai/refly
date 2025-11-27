@@ -115,7 +115,7 @@ const CommissionUsageCell = React.memo(({ record }: { record: CreditUsageRecord 
 
   return (
     <span className="inline-block max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom">
-      {t('subscription.subscriptionManagement.rechargeType.commissionPrefix')}
+      {t('subscription.subscriptionManagement.usageType.commissionPrefix')}
       {record.shareId ? (
         <span
           className="cursor-pointer underline hover:text-blue-600 dark:hover:text-blue-400"

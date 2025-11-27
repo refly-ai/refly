@@ -13,14 +13,14 @@ Refly.AI 是一款开源的 Agentic 工作空间，专为人机协作而生。�
 
 [🚀 v0.10.0 发布！这才是 Manus + Notion +白板的新范式](https://docs.refly.ai/zh/changelog/v0.10.0)
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/community-version/self-deploy/) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/bWjffrb89h) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/zh/community-version/self-deploy/) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/YVuYFjFvRC) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
 <p align="center">
     <a href="https://refly.ai" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/badge/Product-F04438"></a>
     <a href="https://refly.ai/pricing" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff"></a>
-    <a href="https://discord.gg/bWjffrb89h" target="_blank">
+    <a href="https://discord.gg/YVuYFjFvRC" target="_blank">
         <img alt="Discord Chat" src="https://img.shields.io/discord/1323513432686989362?label=chat&logo=discord&logoColor=white&style=flat&color=5865F2"></a>
     <a href="https://x.com/reflyai" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/twitter/follow/reflyai"></a>
@@ -208,7 +208,7 @@ kubectl apply -f refly-deployment.yaml
 
 - [GitHub Discussion](https://github.com/refly-ai/refly/discussions)：最适合分享反馈和提出问题。
 - [GitHub Issues](https://github.com/refly-ai/refly/issues)：最适合报告使用 ReflyAI 时遇到的 bug 和提出功能建议。请参阅我们的贡献指南。
-- [Discord](https://discord.gg/bWjffrb89h)：最适合分享您的应用程序并与社区互动。
+- [Discord](https://discord.gg/YVuYFjFvRC)：最适合分享您的应用程序并与社区互动。
 - [X(Twitter)](https://x.com/reflyai)：最适合分享您的应用程序并与社区保持联系。
 - [微信或飞书群聊](https://docs.refly.ai/zh/community/contact-us)：最适合与社区成员交流。
 

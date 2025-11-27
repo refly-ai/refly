@@ -465,7 +465,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
   const getActiveKey = useCallback(() => {
     const path = location.pathname;
-    if (path.startsWith('/canvas/empty')) {
+    if (path.startsWith('/canvas/empty') || path === '/workspace') {
       return 'home';
     }
     if (path.startsWith('/workflow-list')) {

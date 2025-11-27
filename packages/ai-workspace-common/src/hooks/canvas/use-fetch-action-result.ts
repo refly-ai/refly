@@ -35,6 +35,7 @@ export const useFetchActionResult = () => {
         return;
       }
 
+      console.log('updateActionResult', resultId, data.data);
       updateActionResult(resultId, data.data!);
 
       const remoteResult = data.data;

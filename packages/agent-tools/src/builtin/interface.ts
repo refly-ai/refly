@@ -138,6 +138,7 @@ export interface ReflyService {
 
   generateMedia: (user: User, req: MediaGenerateRequest) => Promise<MediaGenerationResult>;
   getActionResult(user: User, param: GetActionResultData['query']): Promise<any>;
+  generateDriveFileUrls: (user: User, files: DriveFile[]) => Promise<string[]>;
 
   getUserMediaConfig(
     user: User,

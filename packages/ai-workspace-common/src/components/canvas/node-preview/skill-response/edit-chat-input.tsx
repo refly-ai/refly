@@ -14,7 +14,6 @@ import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { useActionResultStoreShallow, useActiveNode } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Undo } from 'refly-icons';
-import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { type MentionPosition } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/rich-chat-input/mention-extension';
@@ -33,7 +32,7 @@ interface EditChatInputProps {
 const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((props, ref) => {
   const { enabled, resultId, nodeId, version, setEditMode, mentionPosition, readonly } = props;
 
-  const { getEdges, getNodes, deleteElements, addEdges } = useReactFlow();
+  const { getEdges, getNodes, getNode, deleteElements, addEdges } = useReactFlow();
 
   const editAreaRef = useRef<HTMLDivElement | null>(null);
 
@@ -130,49 +129,13 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
   const handleSendMessage = useCallback(() => {
     // Synchronize edges with latest context items
-    const nodes = getNodes();
-    let currentNode = nodes.find((node) => node.data?.entityId === resultId);
-
-    // Check if this is a media generation model
-    const isMediaGeneration = modelInfo?.category === 'mediaGeneration';
-
-    // If not found by entityId and is media generation, try to find by metadata.resultId
-    if (!currentNode && isMediaGeneration) {
-      currentNode = nodes.find((node) => (node.data?.metadata as any)?.resultId === resultId);
-    }
+    const currentNode = getNode(nodeId);
 
     if (!currentNode) {
       return;
     }
 
-    if (isMediaGeneration) {
-      // Handle media generation using existing media generation flow
-      // Parse capabilities from modelInfo
-      const capabilities = modelInfo?.capabilities as any;
-      const mediaType = capabilities?.image
-        ? 'image'
-        : capabilities?.video
-          ? 'video'
-          : capabilities?.audio
-            ? 'audio'
-            : 'image'; // Default fallback
-
-      // Emit media generation event
-      nodeOperationsEmitter.emit('generateMedia', {
-        providerItemId: modelInfo?.providerItemId ?? '',
-        targetType: 'canvas',
-        targetId: canvasId ?? '',
-        mediaType,
-        query,
-        modelInfo,
-        nodeId: currentNode.id,
-        contextItems,
-      });
-
-      setEditMode(false);
-      return;
-    }
-
+    const nodes = getNodes();
     const edges = getEdges();
     const { edgesToAdd, edgesToDelete } = convertContextItemsToEdges(
       resultId,
@@ -192,6 +155,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
     invokeAction(
       {
+        title: currentNode.data?.title as string,
         nodeId,
         resultId,
         version: (version ?? 0) + 1,
@@ -230,6 +194,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     contextItems,
     version,
     canvasId,
+    getNode,
     getNodes,
     getEdges,
     addEdges,

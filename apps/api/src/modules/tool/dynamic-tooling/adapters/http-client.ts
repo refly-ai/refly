@@ -117,10 +117,35 @@ export class HttpClient {
   }
 
   /**
-   * Get all default headers
+   * Get all default headers (merges common headers with instance-level headers)
    */
   getHeaders(): Record<string, string> {
-    return { ...this.axiosInstance.defaults.headers.common } as Record<string, string>;
+    const defaults = this.axiosInstance.defaults.headers;
+    // Merge: common headers + instance-level headers (from constructor config.headers)
+    // Instance-level headers are stored directly on defaults.headers, not in common
+    const result: Record<string, string> = {};
+
+    // Add common headers first
+    if (defaults.common) {
+      for (const [key, value] of Object.entries(defaults.common)) {
+        if (typeof value === 'string') {
+          result[key] = value;
+        }
+      }
+    }
+
+    // Add instance-level headers (overrides common)
+    for (const [key, value] of Object.entries(defaults)) {
+      // Skip method-specific headers (get, post, put, etc.) and common
+      if (['common', 'delete', 'get', 'head', 'post', 'put', 'patch'].includes(key)) {
+        continue;
+      }
+      if (typeof value === 'string') {
+        result[key] = value;
+      }
+    }
+
+    return result;
   }
 
   /**

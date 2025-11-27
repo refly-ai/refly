@@ -879,7 +879,8 @@ export type EntityType =
   | 'codeArtifact'
   | 'page'
   | 'mediaResult'
-  | 'workflowApp';
+  | 'workflowApp'
+  | 'driveFile';
 
 /**
  * Entity
@@ -1741,6 +1742,53 @@ export type CodeArtifact = {
 };
 
 /**
+ * Action message type
+ */
+export type ActionMessageType = 'ai' | 'tool';
+
+/**
+ * Action message
+ */
+export type ActionMessage = {
+  /**
+   * Action message ID
+   */
+  messageId: string;
+  /**
+   * Action message type
+   */
+  type: ActionMessageType;
+  /**
+   * Action message content
+   */
+  content?: string;
+  /**
+   * Action message reasoning content
+   */
+  reasoningContent?: string;
+  /**
+   * Action message tool call metadata
+   */
+  toolCallMeta?: ToolCallMeta;
+  /**
+   * Action message tool call ID
+   */
+  toolCallId?: string;
+  /**
+   * Tool call result
+   */
+  toolCallResult?: ToolCallResult;
+  /**
+   * Action message creation time
+   */
+  createdAt?: string;
+  /**
+   * Action message update time
+   */
+  updatedAt?: string;
+};
+
+/**
  * Action result
  */
 export type ActionResult = {
@@ -1770,7 +1818,7 @@ export type ActionResult = {
    */
   status?: ActionStatus;
   /**
-   * Error type (defaults to systemError if undefined)
+   * Error type (defaults to systemError when omitted)
    */
   errorType?: ActionErrorType;
   /**
@@ -1813,8 +1861,13 @@ export type ActionResult = {
   history?: Array<ActionResult>;
   /**
    * Action steps
+   * @deprecated
    */
   steps?: Array<ActionStep>;
+  /**
+   * Action messages
+   */
+  messages?: Array<ActionMessage>;
   /**
    * Errors
    */
@@ -3200,6 +3253,8 @@ export type SkillEventType =
   | 'token_usage'
   | 'create_node'
   | 'tool_call_start'
+  | 'tool_call_end'
+  | 'tool_call_error'
   | 'tool_call_stream'
   | 'error';
 
@@ -3214,6 +3269,7 @@ export type SkillEvent = {
   skillMeta?: SkillMeta;
   /**
    * Action step metadata
+   * @deprecated
    */
   step?: ActionStepMeta;
   /**
@@ -3224,6 +3280,10 @@ export type SkillEvent = {
    * Result version
    */
   version?: number;
+  /**
+   * Message ID
+   */
+  messageId?: string;
   /**
    * Event content. Only present when `event` is `stream`
    */
@@ -3263,9 +3323,53 @@ export type SkillEvent = {
    */
   originError?: string;
   /**
+   * Tool call metadata. Only present when `event` is `tool_call_start`, `tool_call_end`, or `tool_call_error`.
+   */
+  toolCallMeta?: ToolCallMeta;
+  /**
    * Tool call result data.
    */
   toolCallResult?: ToolCallResult;
+};
+
+/**
+ * Tool call status
+ */
+export type ToolCallStatus = 'executing' | 'completed' | 'failed';
+
+export type ToolCallMeta = {
+  /**
+   * Tool name
+   */
+  toolName?: string;
+  /**
+   * Toolset ID
+   */
+  toolsetId?: string;
+  /**
+   * Toolset key
+   */
+  toolsetKey?: string;
+  /**
+   * Tool call ID
+   */
+  toolCallId?: string;
+  /**
+   * Tool call status
+   */
+  status?: ToolCallStatus;
+  /**
+   * Tool call start timestamp (milliseconds)
+   */
+  startTs?: number;
+  /**
+   * Tool call end timestamp (milliseconds)
+   */
+  endTs?: number;
+  /**
+   * Tool call error
+   */
+  error?: string;
 };
 
 export type ToolCallResult = {
@@ -3312,7 +3416,7 @@ export type ToolCallResult = {
   /**
    * Tool call status
    */
-  status: 'executing' | 'completed' | 'failed';
+  status: ToolCallStatus;
   /**
    * Tool call start timestamp (milliseconds)
    */
@@ -3326,11 +3430,6 @@ export type ToolCallResult = {
    */
   deletedAt?: number;
 };
-
-/**
- * Tool call status
- */
-export type status3 = 'executing' | 'completed' | 'failed';
 
 export type ShareRecord = {
   /**
@@ -4005,6 +4104,10 @@ export type InvokeSkillRequest = {
    */
   input?: SkillInput;
   /**
+   * Agent title
+   */
+  title?: string;
+  /**
    * Skill invocation context
    */
   context?: SkillContext;
@@ -4587,7 +4690,7 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
 /**
  * Video generation status
  */
-export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
+export type status3 = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type SandboxExecuteParams = {
   /**
@@ -4607,10 +4710,6 @@ export type SandboxExecuteParams = {
     | 'node'
     | 'nodejs'
     | 'deno';
-  /**
-   * Execution timeout in milliseconds
-   */
-  timeout?: number;
 };
 
 /**
@@ -4664,17 +4763,23 @@ export type SandboxExecuteRequest = {
 };
 
 export type SandboxExecuteResponse = BaseResponseV2 & {
+  /**
+   * Execution result data. Present when status is 'success'.
+   * - exitCode=0: Code executed successfully
+   * - exitCode!=0: Code error (syntax error, runtime exception, etc.)
+   *
+   */
   data?: {
     /**
-     * Standard output from code execution
+     * Combined output from stdout and execution result text
      */
     output?: string;
     /**
-     * Standard error from code execution
+     * Error message extracted from stderr/traceback (ANSI stripped, truncated if too long)
      */
     error?: string;
     /**
-     * Exit code of the execution
+     * Exit code of the execution (0=success, non-zero=code error)
      */
     exitCode?: number;
     /**
@@ -4682,7 +4787,7 @@ export type SandboxExecuteResponse = BaseResponseV2 & {
      */
     executionTime?: number;
     /**
-     * List of files generated by the code execution.
+     * List of files generated by the code execution (available even when exitCode!=0)
      */
     files?: Array<DriveFile>;
   };
@@ -6244,7 +6349,7 @@ export type ProviderTestResult = {
 /**
  * Test result status
  */
-export type status5 = 'success' | 'failed' | 'unknown';
+export type status4 = 'success' | 'failed' | 'unknown';
 
 export type TestProviderConnectionResponse = BaseResponse & {
   data?: ProviderTestResult;
@@ -6596,11 +6701,56 @@ export type ListToolsResponse = BaseResponse & {
   data?: Array<GenericToolset>;
 };
 
+export type ListUserToolsResponse = BaseResponse & {
+  data?: Array<UserTool>;
+};
+
+export type UserTool = {
+  /**
+   * Toolset ID (toolsetId for installed, key for uninstalled)
+   */
+  toolsetId?: string;
+  /**
+   * Toolset key
+   */
+  key?: string;
+  /**
+   * Tool name
+   */
+  name?: string;
+  /**
+   * Tool description
+   */
+  description?: string;
+  /**
+   * Whether the tool is authorized/installed
+   */
+  authorized?: boolean;
+  /**
+   * Tool domain for favicon
+   */
+  domain?: string;
+  /**
+   * Full toolset data (only for authorized tools)
+   */
+  toolset?: GenericToolset;
+  /**
+   * Toolset definition (for unauthorized tools)
+   */
+  definition?: ToolsetDefinition;
+};
+
 export type DeleteToolsetRequest = {
   /**
    * Toolset ID
    */
   toolsetId: string;
+};
+
+export type GetToolCallResultResponse = BaseResponse & {
+  data?: {
+    result?: ToolCallResult;
+  };
 };
 
 export type DocumentInterface = {
@@ -7427,7 +7577,7 @@ export type FormDefinition = {
 /**
  * Form status
  */
-export type status6 = 'draft' | 'published' | 'archived';
+export type status5 = 'draft' | 'published' | 'archived';
 
 export type FormSubmission = {
   /**
@@ -7463,7 +7613,7 @@ export type FormSubmission = {
 /**
  * Submission status
  */
-export type status7 = 'draft' | 'submitted' | 'reviewed';
+export type status6 = 'draft' | 'submitted' | 'reviewed';
 
 /**
  * RJSF compatible field schema definition
@@ -7716,7 +7866,10 @@ export type JsonSchema = {
 export type type6 = 'object';
 
 export type ResponseSchema = JsonSchema & {
-  [key: string]: unknown;
+  /**
+   * Field names to omit from the response (e.g., ['thoughtSignature'])
+   */
+  omitFields?: Array<string>;
 };
 
 export type ResourceField = {
@@ -10398,6 +10551,10 @@ export type ListToolsResponse2 = ListToolsResponse;
 
 export type ListToolsError = unknown;
 
+export type ListUserToolsResponse2 = ListUserToolsResponse;
+
+export type ListUserToolsError = unknown;
+
 export type ListToolsetInventoryResponse2 = ListToolsetInventoryResponse;
 
 export type ListToolsetInventoryError = unknown;
@@ -10438,6 +10595,19 @@ export type DeleteToolsetData = {
 export type DeleteToolsetResponse = BaseResponse;
 
 export type DeleteToolsetError = unknown;
+
+export type GetToolCallResultData = {
+  query: {
+    /**
+     * Tool call ID
+     */
+    toolCallId: string;
+  };
+};
+
+export type GetToolCallResultResponse2 = GetToolCallResultResponse;
+
+export type GetToolCallResultError = unknown;
 
 export type AuthorizeComposioConnectionData = {
   path: {

@@ -13,6 +13,7 @@ import type {
   ToolResourceType,
   UploadResult,
 } from '@refly/openapi-schema';
+import { fileTypeFromBuffer } from 'file-type';
 import mime from 'mime';
 import { DriveService } from '../../drive/drive.service';
 import { MiscService } from '../../misc/misc.service';
@@ -83,10 +84,14 @@ export class ResourceHandler {
     if (!response.success || !response.data) {
       return response;
     }
+
+    const fileNameTitle = (request?.params as Record<string, unknown>)?.file_name_title as
+      | string
+      | 'untitled';
+
     // Case 1: Direct binary response from HTTP adapter
-    // Response data is { buffer: Buffer, filename: string, mimetype: string }
-    if (this.isDirectBinaryResponse(response.data)) {
-      const uploadResult = await this.uploadResource(response.data, request);
+    if (Buffer.isBuffer(response.data)) {
+      const uploadResult = await this.uploadResource(response.data, fileNameTitle, undefined);
       if (uploadResult) {
         return {
           ...response,
@@ -102,12 +107,17 @@ export class ResourceHandler {
       this.logger.debug('No schema properties to process');
       return response;
     }
+
+    // Counter for generating unique file names
+    let resourceCount = 0;
     const processedData = await this.processResourcesField(
       schema as JsonSchema,
       response.data as Record<string, unknown>,
       async (value, schemaProperty) => {
         // Upload the resource and return fileId reference
-        const result = await this.uploadResource(value, request, schemaProperty);
+        resourceCount++;
+        const fileName = fileNameTitle ? `${fileNameTitle}-${resourceCount}` : undefined;
+        const result = await this.uploadResource(value, fileName, schemaProperty);
         return result ? { fileId: result.fileId } : value;
       },
       'output', // Output mode: accept any value, not just fileIds
@@ -117,21 +127,6 @@ export class ResourceHandler {
       ...response,
       data: processedData,
     };
-  }
-
-  /**
-   * Check if response data is a direct binary response from HTTP adapter
-   * Binary responses have the shape: { buffer: Buffer, filename: string, mimetype: string }
-   */
-  private isDirectBinaryResponse(data: unknown): boolean {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'buffer' in data &&
-      'filename' in data &&
-      'mimetype' in data &&
-      Buffer.isBuffer((data as any).buffer)
-    );
   }
 
   /**
@@ -161,19 +156,26 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     buffer: Buffer,
+    fileNameTitle: string,
   ): Promise<UploadResult> {
+    // Infer MIME type and extension from buffer
+    const fileTypeResult = await fileTypeFromBuffer(buffer);
+    const mimetype = fileTypeResult?.mime;
+    const ext = fileTypeResult?.ext;
+    const filename = `${fileNameTitle}.${ext}`;
+
     const uploadResult = await this.miscService.uploadFile(user, {
       file: {
         buffer,
-        mimetype: 'application/octet-stream',
-        originalname: `resource-${Date.now()}.bin`,
+        mimetype,
+        originalname: filename,
       },
       visibility: 'private',
     });
 
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: `resource-${Date.now()}.bin`,
+      name: filename,
       storageKey: uploadResult.storageKey,
       source: 'agent',
     });
@@ -183,7 +185,7 @@ export class ResourceHandler {
       resourceType: this.inferResourceType(driveFile.type),
       metadata: {
         size: Number(driveFile.size),
-        mimeType: driveFile.type,
+        mimeType: mimetype,
       },
     };
   }
@@ -200,21 +202,22 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     value: string,
+    fileName: string,
     schemaProperty?: SchemaProperty,
   ): Promise<UploadResult | null> {
     // Handle data URL (data:image/png;base64,...)
     if (value.startsWith('data:')) {
-      return await this.uploadDataUrlResource(user, canvasId, value);
+      return await this.uploadDataUrlResource(user, canvasId, value, fileName);
     }
 
     // Handle external URL
     if (value.startsWith('http://') || value.startsWith('https://')) {
-      return await this.uploadExternalUrlResource(user, canvasId, value);
+      return await this.uploadUrlResource(user, canvasId, value, fileName);
     }
 
     // Handle pure base64 string
     if (schemaProperty?.format === 'base64') {
-      return await this.uploadBase64Resource(user, canvasId, value);
+      return await this.uploadBase64Resource(user, canvasId, value, fileName);
     }
 
     return null;
@@ -231,6 +234,7 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     dataUrl: string,
+    fileName: string,
   ): Promise<UploadResult | null> {
     const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!matches) {
@@ -240,7 +244,7 @@ export class ResourceHandler {
     const [, mimeType, base64Data] = matches;
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: `resource-${Date.now()}.${mime.getExtension(mimeType) || 'bin'}`,
+      name: `${fileName}.${mime.getExtension(mimeType)}`,
       type: mimeType,
       content: base64Data,
       source: 'agent',
@@ -256,6 +260,68 @@ export class ResourceHandler {
     };
   }
 
+  private inferFileInfoFromUrl(
+    url: string,
+    title: string,
+    fallbackMediaType: string,
+  ): { filename: string; contentType: string } {
+    if (!url) {
+      const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `media_${Date.now()}`;
+      return {
+        filename: `${baseName}.${extension}`,
+        contentType: fallbackMediaType,
+      };
+    }
+
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+
+      // Extract filename from URL path
+      const urlFilename = pathname.split('/').pop() || '';
+
+      // Extract extension from filename
+      const extensionMatch = urlFilename.match(/\.([a-zA-Z0-9]+)(?:\?.*)?$/);
+      const extension = extensionMatch ? extensionMatch[1].toLowerCase() : '';
+
+      // Map extension to content type
+      const contentType = mime.getType(extension) || fallbackMediaType;
+
+      // Generate filename: use title if provided, otherwise use URL filename or fallback
+      let baseFilename: string;
+      if (title) {
+        // Strip possible file extension from title
+        const cleanTitle = title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '');
+        // Use title and infer proper extension from content type
+        const inferredExtension = mime.getExtension(contentType) || extension || fallbackMediaType;
+        baseFilename = `${cleanTitle}.${inferredExtension}`;
+      } else {
+        // Fallback to URL-based filename generation
+        baseFilename = urlFilename || `media_${Date.now()}`;
+        if (!baseFilename.includes('.')) {
+          const inferredExtension =
+            mime.getExtension(contentType) || extension || fallbackMediaType;
+          baseFilename = `${baseFilename}.${inferredExtension}`;
+        }
+      }
+
+      return { filename: baseFilename, contentType };
+    } catch (error) {
+      this.logger.warn(`Failed to parse URL for file info: ${url}`, error);
+      const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `media_${Date.now()}`;
+      return {
+        filename: `${baseName}.${extension}`,
+        contentType: fallbackMediaType,
+      };
+    }
+  }
+
   /**
    * Upload external URL resource
    * @param user - Current user
@@ -263,14 +329,21 @@ export class ResourceHandler {
    * @param url - External URL
    * @returns Upload result with fileId
    */
-  private async uploadExternalUrlResource(
+  private async uploadUrlResource(
     user: any,
     canvasId: string,
     url: string,
+    fileName: string,
   ): Promise<UploadResult> {
+    const { filename, contentType } = this.inferFileInfoFromUrl(
+      url,
+      fileName,
+      'application/octet-stream',
+    );
+
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: `resource-${Date.now()}.bin`,
+      name: filename,
       externalUrl: url,
       source: 'agent',
     });
@@ -280,7 +353,7 @@ export class ResourceHandler {
       resourceType: this.inferResourceType(driveFile.type),
       metadata: {
         size: Number(driveFile.size),
-        mimeType: driveFile.type,
+        mimeType: contentType,
       },
     };
   }
@@ -296,6 +369,7 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     base64String: string,
+    fileName: string,
   ): Promise<UploadResult> {
     const mimeType = 'image/png'; // Default for image generation tools
     const buffer = Buffer.from(base64String, 'base64');
@@ -304,7 +378,7 @@ export class ResourceHandler {
       file: {
         buffer,
         mimetype: mimeType,
-        originalname: `resource-${Date.now()}.${mime.getExtension(mimeType) || 'png'}`,
+        originalname: `${fileName}.${mime.getExtension(mimeType) || 'png'}`,
       },
       visibility: 'private',
     });
@@ -337,13 +411,13 @@ export class ResourceHandler {
     user: any,
     canvasId: string,
     obj: any,
+    fileNameTitle?: string,
   ): Promise<UploadResult | null> {
     if (!obj.buffer || !Buffer.isBuffer(obj.buffer)) {
       return null;
     }
-
     const mimeType = obj.mimetype;
-    const filename = obj.filename;
+    const filename = fileNameTitle;
 
     try {
       const uploadResult = await this.miscService.uploadFile(user, {
@@ -385,13 +459,12 @@ export class ResourceHandler {
   /**
    * Upload a resource value to DriveService
    * @param value - Resource content (Buffer, base64, URL, etc.)
-   * @param _request - Original handler request for metadata (unused but kept for signature compatibility)
    * @param schemaProperty - Schema property with format information (optional)
    * @returns Upload result with fileId
    */
   private async uploadResource(
     value: unknown,
-    _request: HandlerRequest,
+    fileName: string,
     schemaProperty?: SchemaProperty,
   ): Promise<UploadResult | null> {
     try {
@@ -400,17 +473,17 @@ export class ResourceHandler {
 
       // Handle Buffer type
       if (Buffer.isBuffer(value)) {
-        return await this.uploadBufferResource(user, canvasId, value);
+        return await this.uploadBufferResource(user, canvasId, value, fileName);
       }
 
       // Handle string type (URL, base64, data URL)
       if (typeof value === 'string') {
-        return await this.uploadStringResource(user, canvasId, value, schemaProperty);
+        return await this.uploadStringResource(user, canvasId, value, fileName, schemaProperty);
       }
 
       // Handle object with buffer property
       if (value && typeof value === 'object') {
-        return await this.uploadObjectResource(user, canvasId, value);
+        return await this.uploadObjectResource(user, canvasId, value, fileName);
       }
       return null;
     } catch (error) {
@@ -421,16 +494,22 @@ export class ResourceHandler {
 
   /**
    * Resolve fileId to specified format
-   * @param value - String fileId or object with fileId property
+   * @param value - String fileId or object with fileId property (supports 'df-xxx' or 'fileId://df-xxx' format)
    * @param format - Output format (base64/url/binary/text, or legacy 'buffer')
-   * @param fieldPath - Field path for logging
    * @returns Resolved content in specified format
    */
   private async resolveFileIdToFormat(value: unknown, format: string): Promise<string | Buffer> {
     // Extract fileId from value
-    const fileId = typeof value === 'string' ? value : (value as any)?.fileId;
+    let fileId = typeof value === 'string' ? value : (value as any)?.fileId;
     if (!fileId) {
       throw new Error('Invalid resource value: missing fileId');
+    }
+
+    // Strip prefix if present ('fileId://' or '@file:')
+    if (fileId.startsWith('fileId://')) {
+      fileId = fileId.slice('fileId://'.length);
+    } else if (fileId.startsWith('@file:')) {
+      fileId = fileId.slice('@file:'.length);
     }
 
     // Get user context
@@ -522,18 +601,29 @@ export class ResourceHandler {
 
   /**
    * Validate if a value is a valid fileId
-   * FileId must start with 'df-' prefix
+   * FileId can be in formats:
+   * - Direct: 'df-xxx'
+   * - URI format: 'fileId://df-xxx'
+   * - Mention format: '@file:df-xxx'
    *
    * @param value - Value to validate (can be string or object with fileId property)
    * @returns True if the value is a valid fileId
    */
   private isValidFileId(value: unknown): boolean {
     if (typeof value === 'string') {
-      return value.startsWith('df-');
+      // Support 'df-xxx', 'fileId://df-xxx', and '@file:df-xxx' formats
+      return (
+        value.startsWith('df-') || value.startsWith('fileId://df-') || value.startsWith('@file:df-')
+      );
     }
     if (value && typeof value === 'object' && 'fileId' in value) {
       const fileId = (value as any).fileId;
-      return typeof fileId === 'string' && fileId.startsWith('df-');
+      return (
+        typeof fileId === 'string' &&
+        (fileId.startsWith('df-') ||
+          fileId.startsWith('fileId://df-') ||
+          fileId.startsWith('@file:df-'))
+      );
     }
     return false;
   }
@@ -571,8 +661,91 @@ export class ResourceHandler {
   }
 
   /**
+   * Find the best matching object option from oneOf/anyOf based on data
+   * Uses multiple strategies:
+   * 1. Match by discriminator field (e.g., 'type' with const value)
+   * 2. Match by property key overlap (prefer options with more matching keys)
+   * 3. Prefer options that contain isResource fields when data has potential fileIds
+   *
+   * @param options - Array of schema options from oneOf/anyOf
+   * @param dataObj - Data object to match against
+   * @returns The best matching schema option, or undefined if no match
+   */
+  private findMatchingObjectOption(
+    options: SchemaProperty[],
+    dataObj: Record<string, unknown>,
+  ): SchemaProperty | undefined {
+    const objectOptions = options.filter(
+      (opt: SchemaProperty) => opt.type === 'object' && opt.properties,
+    );
+
+    if (objectOptions.length === 0) {
+      return undefined;
+    }
+
+    if (objectOptions.length === 1) {
+      return objectOptions[0];
+    }
+
+    const dataKeys = Object.keys(dataObj);
+
+    // Strategy 1: Try to match by discriminator field (e.g., 'type' with const value)
+    for (const option of objectOptions) {
+      const props = option.properties!;
+      let allConstMatch = true;
+      let hasConst = false;
+
+      for (const [propKey, propSchema] of Object.entries(props)) {
+        const schemaWithConst = propSchema as SchemaProperty & { const?: unknown };
+        if (schemaWithConst.const !== undefined) {
+          hasConst = true;
+          if (dataObj[propKey] !== schemaWithConst.const) {
+            allConstMatch = false;
+            break;
+          }
+        }
+      }
+
+      if (hasConst && allConstMatch) {
+        return option;
+      }
+    }
+
+    // Strategy 2: Match by property key overlap and isResource presence
+    // Prefer options where data keys match schema keys and contain isResource fields
+    let bestOption: SchemaProperty | undefined;
+    let bestScore = -1;
+
+    for (const option of objectOptions) {
+      const schemaKeys = Object.keys(option.properties!);
+      const matchingKeys = dataKeys.filter((k) => schemaKeys.includes(k));
+      const hasResourceField = Object.values(option.properties!).some(
+        (prop) => (prop as SchemaProperty).isResource,
+      );
+
+      // Score: matching keys count + bonus for having resource fields
+      let score = matchingKeys.length;
+      if (hasResourceField) {
+        // Check if any matching key has a value that looks like a fileId
+        const hasFileIdValue = matchingKeys.some((k) => this.isValidFileId(dataObj[k]));
+        if (hasFileIdValue) {
+          score += 10; // Strong preference for options with resource fields when data has fileIds
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestOption = option;
+      }
+    }
+
+    return bestOption || objectOptions[0];
+  }
+
+  /**
    * Handle oneOf/anyOf schema patterns
    * Processes fields that can be one of multiple types, finding resource options
+   * Also handles nested objects/arrays within oneOf/anyOf options
    *
    * @param schemaProperty - Schema property with oneOf/anyOf
    * @param dataValue - Data value to process
@@ -597,6 +770,7 @@ export class ResourceHandler {
     const options = schemaWithOneOf.oneOf || schemaWithOneOf.anyOf || [];
     const resourceOption = options.find((opt: SchemaProperty) => opt.isResource);
 
+    // Case 1: Found a resource option and value matches resource criteria
     if (resourceOption && dataValue !== undefined && dataValue !== null) {
       if (mode === 'output' || this.isValidFileId(dataValue)) {
         parent[key] = await processor(dataValue, resourceOption);
@@ -604,6 +778,44 @@ export class ResourceHandler {
       }
     }
 
+    // Case 2: Value is an object - try to find matching object schema in oneOf/anyOf and process recursively
+    if (dataValue && typeof dataValue === 'object' && !Array.isArray(dataValue)) {
+      const dataObj = dataValue as Record<string, unknown>;
+      // Find the best matching object option based on discriminator field (e.g., 'type') or structure
+      const objectOption = this.findMatchingObjectOption(options, dataObj);
+      if (objectOption?.properties) {
+        const processedNested = { ...dataObj };
+        await Promise.all(
+          Object.entries(objectOption.properties).map(async ([nestedKey, nestedSchema]) => {
+            const nestedValue = dataObj[nestedKey];
+            if (nestedValue !== undefined) {
+              await this.traverseSchema(
+                nestedSchema as SchemaProperty,
+                nestedValue,
+                nestedKey,
+                processedNested,
+                processor,
+                mode,
+              );
+            }
+          }),
+        );
+        parent[key] = processedNested;
+        return;
+      }
+    }
+
+    // Case 3: Value is an array - try to find matching array schema in oneOf/anyOf and process recursively
+    if (Array.isArray(dataValue)) {
+      const arrayOption = options.find((opt: SchemaProperty) => opt.type === 'array' && opt.items);
+      if (arrayOption?.items) {
+        // Delegate to handleArray for consistent array processing
+        await this.handleArray(arrayOption, dataValue, key, parent, processor, mode);
+        return;
+      }
+    }
+
+    // Default: keep original value
     parent[key] = dataValue;
   }
 

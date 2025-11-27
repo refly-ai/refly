@@ -94,8 +94,10 @@ export const AppLayout = (props: AppLayoutProps) => {
 
   const routeLogin = useMatch('/');
   const isPricing = useMatch('/pricing');
-  const isWorkflowEmpty = useMatch('/canvas/:canvasId')?.params?.canvasId === 'empty';
-  const isWorkflow = !!useMatch('/canvas/:canvasId') && !isWorkflowEmpty;
+  const matchCanvas = useMatch('/canvas/:canvasId');
+  const matchWorkflow = useMatch('/workflow/:workflowId');
+  const isWorkflowEmpty = matchCanvas?.params?.canvasId === 'empty';
+  const isWorkflow = (!!matchCanvas || !!matchWorkflow) && !isWorkflowEmpty;
 
   if (!isPublicAccessPage && !isPricing && !isDesktop()) {
     if (!userStore.isCheckingLoginStatus === undefined || userStore.isCheckingLoginStatus) {

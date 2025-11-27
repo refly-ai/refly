@@ -11,7 +11,12 @@ interface FileListProps {
 }
 
 export const FileList = memo((props: FileListProps) => {
-  const { files, searchKeyword } = props;
+  const { searchKeyword } = props;
+
+  const files = useMemo(() => {
+    return props.files.filter((f) => f.source === 'manual');
+  }, [props.files]);
+
   const { currentFile, setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
     currentFile: state.currentFile,
     setCurrentFile: state.setCurrentFile,

@@ -41,14 +41,25 @@ export function mapDriveFileToCanvasNode(file: DriveFile, serverOrigin: string):
   // Construct content URL for file access
   const contentUrl = `${serverOrigin}/v1/drive/file/content/${file.fileId}`;
 
-  // Build metadata based on category
+  // Build metadata with all DriveFile fields for FilePreview component
   const metadata: Record<string, any> = {
     fileId: file.fileId,
+    canvasId: file.canvasId,
+    type: file.type,
+    publicURL: (file as unknown as { publicURL?: string })?.publicURL ?? undefined,
+    source: file.source,
+    scope: file.scope,
+    size: file.size,
+    summary: file.summary,
+    variableId: file.variableId,
     resultId: file.resultId ?? '',
     resultVersion: file.resultVersion ?? null,
+    content: file.content,
+    createdAt: file.createdAt,
+    updatedAt: file.updatedAt,
   };
 
-  // Add category-specific URL fields for rendering components
+  // Add category-specific URL fields for backward compatibility with existing preview components
   if (file.category === 'image') {
     metadata.imageUrl = contentUrl;
   } else if (file.category === 'video') {
@@ -87,14 +98,25 @@ export function mapDriveFileToWorkflowNodeExecution(
   // Construct content URL for file access
   const contentUrl = `${serverOrigin}/v1/drive/file/content/${file.fileId}`;
 
-  // Build metadata based on category
+  // Build metadata with all DriveFile fields for FilePreview component
   const metadata: Record<string, any> = {
     fileId: file.fileId,
+    canvasId: file.canvasId,
+    type: file.type,
+    publicURL: (file as unknown as { publicURL?: string })?.publicURL ?? undefined,
+    source: file.source,
+    scope: file.scope,
+    size: file.size,
+    summary: file.summary,
+    variableId: file.variableId,
     resultId: file.resultId ?? '',
     resultVersion: file.resultVersion ?? null,
+    content: file.content,
+    createdAt: file.createdAt,
+    updatedAt: file.updatedAt,
   };
 
-  // Add category-specific URL fields for rendering components
+  // Add category-specific URL fields for backward compatibility with existing preview components
   if (file.category === 'image') {
     metadata.imageUrl = contentUrl;
   } else if (file.category === 'video') {

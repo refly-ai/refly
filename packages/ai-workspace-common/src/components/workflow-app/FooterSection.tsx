@@ -214,7 +214,7 @@ const FooterSection: React.FC = () => {
 
           {/* Discord icon */}
           <a
-            href="https://discord.gg/bWjffrb89h"
+            href="https://discord.gg/YVuYFjFvRC"
             target="_blank"
             rel="noopener noreferrer"
             className="w-6 h-6 hover:opacity-70 transition-opacity"

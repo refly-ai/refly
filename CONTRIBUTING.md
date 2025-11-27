@@ -261,6 +261,6 @@ And that's it! Once your PR is merged, you will be featured as a contributor in 
 
 If you ever get stuck or have questions while contributing, you can:
 
-- Join our [Discord](https://discord.gg/bWjffrb89h) community
+- Join our [Discord](https://discord.gg/YVuYFjFvRC) community
 - Open a discussion in our [GitHub Discussions](https://github.com/refly-ai/refly/discussions)
 - Check our [Documentation](https://docs.refly.ai)

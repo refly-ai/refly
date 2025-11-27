@@ -1232,6 +1232,7 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
             centered
             closable={false}
             destroyOnClose
+            zIndex={10001}
           >
             <div className="h-full w-full overflow-hidden flex flex-col">
               <div className="flex items-center justify-between p-5 border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">

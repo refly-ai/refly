@@ -261,7 +261,7 @@ cd apps/desktop && pnpm dev:electron # 终端 2
 
 如果您在贡献过程中遇到困难或有疑问，可以：
 
-- 加入我们的 [Discord](https://discord.gg/bWjffrb89h) 社区
+- 加入我们的 [Discord](https://discord.gg/YVuYFjFvRC) 社区
 - 在我们的 [GitHub 讨论](https://github.com/refly-ai/refly/discussions)中开启讨论
 - 查看我们的[文档](https://docs.refly.ai)
 

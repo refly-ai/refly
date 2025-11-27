@@ -29,7 +29,7 @@ const resources = [
   },
   {
     title: 'discord',
-    link: 'https://discord.gg/bWjffrb89h',
+    link: 'https://discord.gg/YVuYFjFvRC',
   },
 ];
 
@@ -95,7 +95,7 @@ function Footer() {
                       <IconGithub className="flex items-center text-base" />
                     </Link>
                     <Link
-                      to="https://discord.gg/bWjffrb89h"
+                      to="https://discord.gg/YVuYFjFvRC"
                       target="_blank"
                       className="rounded-md px-2 py-1 text-gray-500 no-underline transition hover:text-gray-700"
                       aria-label="Discord"

@@ -151,45 +151,31 @@ export class ShareCommonService {
    * Handle file duplication and cleanup for share creation/update
    * This is the main entry point for processing files when creating or updating shares
    */
-  async processFilesForShare(
-    user: User,
-    canvasData: SharedCanvasData,
-    shareId: string,
-    existingShareRecord: any | null,
-  ): Promise<void> {
-    // If updating an existing share, clean up old files first
-    if (existingShareRecord) {
-      await this.cleanupOldSharedFiles(user, shareId);
+  async processFilesForShare(canvasData: SharedCanvasData, shareId: string): Promise<void> {
+    // Process drive files for sharing
+    if (!canvasData.files.length) {
+      return;
     }
+    const limit = pLimit(10);
 
-    // Duplicate drive files for the share to make it independent from original canvas
-    if (canvasData.files && canvasData.files.length > 0) {
-      const { fileIdMap, storageKeyMap } = await this.duplicateDriveFilesForShare(
-        user,
-        canvasData.files,
-        shareId,
-      );
+    const promises = canvasData.files.map((file: any) =>
+      limit(async () => {
+        if (file.storageKey) {
+          try {
+            await this.driveService.publishDriveFile(file.storageKey, file.fileId);
+            this.logger.log(`Created publicURL for file ${file.fileId}`);
+          } catch (error) {
+            this.logger.error(`Failed to create publicURL for file ${file.fileId}: ${error.stack}`);
+          }
+        }
+      }),
+    );
 
-      // Update canvasData.files with new fileIds
-      canvasData.files = canvasData.files.map((file: any) => ({
-        ...file,
-        storageKey: storageKeyMap.get(file.fileId) ?? file.storageKey,
-        fileId: fileIdMap.get(file.fileId) ?? file.fileId,
-        canvasId: shareId, // Use shareId as the logical canvasId for shared files
-      }));
+    await Promise.all(promises);
 
-      // Update file references in nodes (e.g., contextItems in skillResponse nodes)
-      if (canvasData.nodes) {
-        this.updateFileReferencesInNodes(canvasData.nodes, fileIdMap);
-      }
-
-      this.logger.log(
-        `Duplicated ${canvasData.files.length} files for share ${shareId}. FileId mappings: ${JSON.stringify(Array.from(fileIdMap.entries()))}`,
-      );
-    } else {
-      // No files in current canvas, clear files array
-      canvasData.files = [];
-    }
+    this.logger.log(
+      `Processed ${canvasData.files.length} files for share ${shareId}. All files now have publicURL.`,
+    );
   }
 
   /**

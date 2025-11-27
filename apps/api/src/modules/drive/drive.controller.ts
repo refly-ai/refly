@@ -11,6 +11,7 @@ import {
   Res,
   Req,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { DriveService } from './drive.service';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -29,13 +30,15 @@ import {
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import { Response, Request } from 'express';
+import { buildContentDisposition } from '../../utils/filename';
 
+@ApiTags('Drive')
 @Controller('v1/drive')
-@UseGuards(JwtAuthGuard)
 export class DriveController {
   constructor(private readonly driveService: DriveService) {}
 
   @Get('file/list')
+  @UseGuards(JwtAuthGuard)
   async listDriveFiles(
     @LoginedUser() user: User,
     @Query('canvasId') canvasId: string,
@@ -57,6 +60,7 @@ export class DriveController {
   }
 
   @Post('file/create')
+  @UseGuards(JwtAuthGuard)
   async createDriveFile(
     @LoginedUser() user: User,
     @Body() request: UpsertDriveFileRequest,
@@ -66,6 +70,7 @@ export class DriveController {
   }
 
   @Post('file/batchCreate')
+  @UseGuards(JwtAuthGuard)
   async batchCreateDriveFiles(
     @LoginedUser() user: User,
     @Body() request: BatchCreateDriveFilesRequest,
@@ -75,6 +80,7 @@ export class DriveController {
   }
 
   @Post('file/update')
+  @UseGuards(JwtAuthGuard)
   async updateDriveFile(
     @LoginedUser() user: User,
     @Body() request: UpsertDriveFileRequest,
@@ -84,6 +90,7 @@ export class DriveController {
   }
 
   @Post('file/delete')
+  @UseGuards(JwtAuthGuard)
   async deleteDriveFile(
     @LoginedUser() user: User,
     @Body() request: DeleteDriveFileRequest,
@@ -93,6 +100,7 @@ export class DriveController {
   }
 
   @Get('file/content/:fileId')
+  @UseGuards(JwtAuthGuard)
   async serveDriveFile(
     @LoginedUser() user: User,
     @Param('fileId') fileId: string,
@@ -113,7 +121,38 @@ export class DriveController {
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
       'Content-Length': String(data.length),
-      ...(download ? { 'Content-Disposition': `attachment; filename="${filename}"` } : {}),
+      ...(download
+        ? {
+            'Content-Disposition': buildContentDisposition(filename),
+          }
+        : {}),
+    });
+
+    res.end(data);
+  }
+
+  @Get('file/public/:fileId')
+  async servePublicDriveFile(
+    @Param('fileId') fileId: string,
+    @Query('download') download: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    const { data, contentType, filename } = await this.driveService.getPublicFileContent(fileId);
+
+    const origin = req.headers.origin;
+
+    res.set({
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'Content-Length': String(data.length),
+      ...(download
+        ? {
+            'Content-Disposition': buildContentDisposition(filename),
+          }
+        : {}),
     });
 
     res.end(data);

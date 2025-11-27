@@ -261,10 +261,11 @@ const VariableTypeSection = ({
 };
 
 export const StartNodePreview = () => {
-  const { canvasId, readonly } = useCanvasContext();
-  const { data: workflowVariables, isLoading: workflowVariablesLoading } =
-    useVariablesManagement(canvasId);
-  console.log('workflowVariables', workflowVariables);
+  const { canvasId, shareLoading, shareData, readonly } = useCanvasContext();
+  const { data: variables, isLoading: variablesLoading } = useVariablesManagement(canvasId);
+
+  const workflowVariables = shareData?.variables ?? variables;
+  const workflowVariablesLoading = shareLoading || variablesLoading;
 
   const [highlightedVariableId, setHighlightedVariableId] = useState<string | undefined>();
   const { setNodes } = useReactFlow();
@@ -358,14 +359,14 @@ export const StartNodePreview = () => {
           highlightedVariableId={highlightedVariableId}
         />
 
-        <VariableTypeSection
+        {/* <VariableTypeSection
           canvasId={canvasId}
           type="resource"
           variables={groupedVariables.resource}
           totalVariables={workflowVariables}
           readonly={readonly}
           highlightedVariableId={highlightedVariableId}
-        />
+        /> */}
 
         <VariableTypeSection
           canvasId={canvasId}

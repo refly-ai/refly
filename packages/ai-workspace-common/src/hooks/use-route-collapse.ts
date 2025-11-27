@@ -26,6 +26,7 @@ export const useRouteCollapse = () => {
       '/app-manager',
       '/workflow-list',
       '/canvas/empty',
+      '/workspace',
       '/home',
       '/project',
       '/marketplace',
@@ -39,6 +40,10 @@ export const useRouteCollapse = () => {
       if (route === '/canvas/empty') {
         // Exact match for /canvas/empty
         return currentPath === '/canvas/empty';
+      }
+      if (route === '/workspace') {
+        // Exact match for /workspace
+        return currentPath === '/workspace';
       }
 
       // For other routes, check if path starts with the route

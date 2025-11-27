@@ -8,11 +8,25 @@ import { ListDriveFilesData } from '@refly/openapi-schema';
 const DEFAULT_PAGE_SIZE = 100;
 
 export const useFetchDriveFiles = (params?: Partial<ListDriveFilesData['query']>) => {
-  const { canvasId, shareData, shareLoading } = useCanvasContext();
+  // Safely read canvas context; fall back to defaults when not within a provider
+  let canvasId: string | undefined;
+  let shareData: any;
+  let shareLoading = false;
+  try {
+    const ctx = useCanvasContext();
+    canvasId = ctx.canvasId;
+    shareData = ctx.shareData;
+    shareLoading = ctx.shareLoading;
+  } catch {
+    canvasId = undefined;
+    shareData = null;
+    shareLoading = false;
+  }
   const { projectId } = useGetProjectCanvasId();
   const isLogin = useUserStoreShallow((state) => state.isLogin);
 
-  const fetchRemoteEnabled = isLogin && !shareData;
+  // Avoid fetching when not inside CanvasProvider (no canvasId)
+  const fetchRemoteEnabled = isLogin && !shareData && Boolean(canvasId);
   const {
     data: filesData,
     isLoading: isLoadingFiles,
