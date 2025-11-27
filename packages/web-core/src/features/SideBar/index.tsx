@@ -76,8 +76,7 @@ export function SideBar() {
           isCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
         }
         onClick={handleToggleCollapse}
- n        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        style={{
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}        style={{
           alignSelf: 'flex-end',
           margin: '8px',
           padding: '8px 12px',
