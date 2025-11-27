@@ -9,6 +9,8 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import ToolCall from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/render';
+import { DotLoader } from 'react-spinners';
+import cn from 'classnames';
 
 interface LastRunTabProps {
   loading: boolean;
@@ -31,10 +33,10 @@ const AIMessageCard = memo(
   ({ message, resultId }: { message: ActionMessage; resultId: string }) => {
     const content = message.content ?? '';
 
-    if (!content) return null;
+    if (!content?.trim()) return null;
 
     return (
-      <div className="my-3 text-base">
+      <div className="my-2 text-base">
         <div className={`skill-response-content-${resultId}-${message.messageId}`}>
           <Markdown content={content} resultId={resultId} />
         </div>
@@ -119,6 +121,12 @@ const LastRunTabComponent = ({
   const displayQuery = useMemo(() => query ?? title ?? '', [query, title]);
   const messages = useMemo(() => result?.messages ?? [], [result?.messages]);
   const hasMessages = messages.length > 0;
+  const isExecuting = useMemo(
+    () => result?.status === 'executing' || result?.status === 'waiting',
+    [result?.status],
+  );
+
+  const showLoading = useMemo(() => isExecuting && !loading, [isExecuting, loading]);
   // Fallback to steps if no messages (for backward compatibility)
   const shouldUseSteps = !hasMessages && !!outputStep;
   const hasContent = hasMessages || shouldUseSteps;
@@ -199,10 +207,13 @@ const LastRunTabComponent = ({
   }, [handleUpdateResult]);
 
   return (
-    <div className="h-full w-full flex flex-col mb-4 pb-4">
+    <div className="h-full w-full mb-4 pb-4">
       <div
         ref={previewContainerRef}
-        className="flex-1 overflow-auto last-run-preview-container transition-opacity duration-500 px-4"
+        className={cn(
+          'overflow-y-auto last-run-preview-container transition-opacity duration-500 px-4',
+          showLoading ? 'max-h-[calc(100%-40px)]' : 'h-full',
+        )}
       >
         {!result && !loading ? (
           <div className="h-full w-full flex flex-col items-center justify-center">
@@ -214,17 +225,15 @@ const LastRunTabComponent = ({
             {loading && !isStreaming && (
               <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
             )}
-            {(result?.status === 'executing' || result?.status === 'waiting') &&
-              !hasContent &&
-              statusText && (
-                <div className="flex flex-col gap-2 animate-pulse">
-                  <Divider dashed className="my-2" />
-                  <div className="m-2 flex items-center gap-1 text-gray-500">
-                    <Thinking size={16} />
-                    <span className="text-sm">{statusText}</span>
-                  </div>
+            {isExecuting && !hasContent && statusText && (
+              <div className="flex flex-col gap-2 animate-pulse">
+                <Divider dashed className="my-2" />
+                <div className="m-2 flex items-center gap-1 text-gray-500">
+                  <Thinking size={16} />
+                  <span className="text-sm">{statusText}</span>
                 </div>
-              )}
+              </div>
+            )}
             {hasMessages && <MessageList messages={messages} resultId={resultId} />}
             {shouldUseSteps && (
               <ActionStepCard
@@ -240,6 +249,12 @@ const LastRunTabComponent = ({
           </>
         )}
       </div>
+
+      {showLoading && (
+        <div className="flex items-center justify-center h-10">
+          <DotLoader color="#36d7b7" size={26} />
+        </div>
+      )}
     </div>
   );
 };

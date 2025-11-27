@@ -180,7 +180,7 @@ const ActualContent = memo(
     sources: Source[];
     step: ActionStep;
   }) => {
-    if (!content) return null;
+    if (!content?.trim()) return null;
 
     return (
       <div className="my-3 text-base">

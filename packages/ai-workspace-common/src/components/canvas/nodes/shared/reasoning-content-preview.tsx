@@ -43,7 +43,7 @@ export const ReasoningContentPreview = memo(
 
     const markdownClassName = useMemo(() => `text-xs overflow-hidden ${className}`, [className]);
 
-    if (!content) return null;
+    if (!content?.trim()) return null;
 
     return (
       <div>
