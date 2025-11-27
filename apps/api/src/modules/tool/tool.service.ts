@@ -207,6 +207,7 @@ export class ToolService {
         authType: AuthType.OAUTH,
         uninstalled: false,
         deletedAt: null,
+        uid: user.uid,
         ...(enabled !== undefined && { enabled }),
       },
     });
