@@ -137,6 +137,7 @@ import {
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
+  postSubscriptionCreateCreditPackSession,
   recoverPilotSession,
   refreshToken,
   reindexResource,
@@ -2900,6 +2901,24 @@ export const useCreateCheckoutSession = <
     mutationKey: Common.UseCreateCheckoutSessionKeyFn(mutationKey),
     mutationFn: (clientOptions) =>
       createCheckoutSession(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const usePostSubscriptionCreateCreditPackSession = <
+  TData = Common.PostSubscriptionCreateCreditPackSessionMutationResult,
+  TError = PostSubscriptionCreateCreditPackSessionError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<unknown, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<unknown, true>, TContext>({
+    mutationKey: Common.UsePostSubscriptionCreateCreditPackSessionKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      postSubscriptionCreateCreditPackSession(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreatePortalSession = <

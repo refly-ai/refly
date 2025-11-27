@@ -46,7 +46,7 @@ export class CreditService {
     creditAmount: number,
     rechargeData: {
       rechargeId: string;
-      source: 'gift' | 'subscription' | 'commission' | 'invitation';
+      source: 'gift' | 'subscription' | 'commission' | 'invitation' | 'purchase';
       description?: string;
       createdAt: Date;
       expiresAt: Date;
@@ -181,6 +181,29 @@ export class CreditService {
         rechargeId: genSubscriptionRechargeId(uid, now),
         source: 'subscription',
         description,
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+    );
+  }
+
+  async createCreditPackRecharge(
+    uid: string,
+    creditAmount: number,
+    description?: string,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const expiresInDays = this.configService.get('credit.creditPackExpiresInDays');
+    const expiresAt = new Date(now);
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+    await this.processCreditRecharge(
+      uid,
+      creditAmount,
+      {
+        rechargeId: genSubscriptionRechargeId(uid, now),
+        source: 'purchase',
+        description: description ?? 'Credit pack purchase',
         createdAt: now,
         expiresAt,
       },

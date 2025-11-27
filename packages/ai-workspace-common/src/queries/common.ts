@@ -137,6 +137,7 @@ import {
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
+  postSubscriptionCreateCreditPackSession,
   recoverPilotSession,
   refreshToken,
   reindexResource,
@@ -1395,6 +1396,15 @@ export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof crea
 export const useCreateCheckoutSessionKey = 'CreateCheckoutSession';
 export const UseCreateCheckoutSessionKeyFn = (mutationKey?: Array<unknown>) => [
   useCreateCheckoutSessionKey,
+  ...(mutationKey ?? []),
+];
+export type PostSubscriptionCreateCreditPackSessionMutationResult = Awaited<
+  ReturnType<typeof postSubscriptionCreateCreditPackSession>
+>;
+export const usePostSubscriptionCreateCreditPackSessionKey =
+  'PostSubscriptionCreateCreditPackSession';
+export const UsePostSubscriptionCreateCreditPackSessionKeyFn = (mutationKey?: Array<unknown>) => [
+  usePostSubscriptionCreateCreditPackSessionKey,
   ...(mutationKey ?? []),
 ];
 export type CreatePortalSessionMutationResult = Awaited<ReturnType<typeof createPortalSession>>;

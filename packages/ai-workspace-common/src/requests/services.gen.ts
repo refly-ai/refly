@@ -2768,6 +2768,15 @@ export const createCheckoutSession = <ThrowOnError extends boolean = false>(
   });
 };
 
+export const postSubscriptionCreateCreditPackSession = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<void, unknown, ThrowOnError>({
+    ...options,
+    url: '/subscription/createCreditPackSession',
+  });
+};
+
 /**
  * Create portal session
  * Create a portal session

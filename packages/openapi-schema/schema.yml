@@ -3377,6 +3377,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateCheckoutSessionResponse'
+  /subscription/createCreditPackSession:
+    post:
+      tags:
+        - subscription
+    summary: Create checkout session for credit pack
+    operationId: createCreditPackSession
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreateCreditPackCheckoutSessionRequest'
+    responses:
+      '200':
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutSessionResponse'
   /subscription/createPortalSession:
     post:
       tags:
@@ -9143,6 +9161,14 @@ components:
         interval:
           description: Subscription billing interval
           $ref: '#/components/schemas/SubscriptionInterval'
+    CreateCreditPackCheckoutSessionRequest:
+      type: object
+      required: 
+        - packId
+      properties:
+        packId:
+          type: string
+          description: Credit pack identifier
     CreateCheckoutSessionResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

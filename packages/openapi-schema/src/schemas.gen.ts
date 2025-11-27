@@ -7082,6 +7082,17 @@ export const CreateCheckoutSessionRequestSchema = {
   },
 } as const;
 
+export const CreateCreditPackCheckoutSessionRequestSchema = {
+  type: 'object',
+  required: ['packId'],
+  properties: {
+    packId: {
+      type: 'string',
+      description: 'Credit pack identifier',
+    },
+  },
+} as const;
+
 export const CreateCheckoutSessionResponseSchema = {
   allOf: [
     {

@@ -5070,6 +5070,13 @@ export type CreateCheckoutSessionRequest = {
   interval?: SubscriptionInterval;
 };
 
+export type CreateCreditPackCheckoutSessionRequest = {
+  /**
+   * Credit pack identifier
+   */
+  packId: string;
+};
+
 export type CreateCheckoutSessionResponse = BaseResponse & {
   /**
    * Checkout session
