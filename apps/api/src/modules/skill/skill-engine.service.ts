@@ -25,6 +25,7 @@ import { NotificationService } from '../notification/notification.service';
 import { ProviderService } from '../provider/provider.service';
 import { RAGService } from '../rag/rag.service';
 import { SearchService } from '../search/search.service';
+import { ShareCreationService } from '../share/share-creation.service';
 import { ScaleboxService } from '../tool/sandbox/scalebox.service';
 import { ToolService } from '../tool/tool.service';
 
@@ -47,6 +48,7 @@ export class SkillEngineService implements OnModuleInit {
   private canvasSyncService: CanvasSyncService;
   private toolService: ToolService;
   private scaleboxService: ScaleboxService;
+  private shareCreationService: ShareCreationService;
   constructor(
     private moduleRef: ModuleRef,
     private config: ConfigService,
@@ -72,6 +74,7 @@ export class SkillEngineService implements OnModuleInit {
     this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
     this.toolService = this.moduleRef.get(ToolService, { strict: false });
     this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
+    this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
   }
 
   /**
@@ -240,8 +243,19 @@ export class SkillEngineService implements OnModuleInit {
       writeFile: async (user, param) => {
         return await this.driveService.createDriveFile(user, param);
       },
-      generateDriveFileUrls: async (user, files) => {
-        return await this.driveService.generateDriveFileUrls(user, files);
+      createShareForDriveFile: async (user, fileId) => {
+        const { shareRecord, driveFile } = await this.shareCreationService.createShareForDriveFile(
+          user,
+          {
+            entityId: fileId,
+            entityType: 'driveFile',
+            allowDuplication: false,
+          },
+        );
+
+        const url = `${this.config.get('origin')}/share/file/${shareRecord.shareId}`;
+
+        return { url, shareId: shareRecord.shareId, driveFile };
       },
       genImageID: async () => {
         return genImageID();
