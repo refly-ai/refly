@@ -5,7 +5,7 @@
  */
 import { User } from '@refly/openapi-schema';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { RunnableConfig } from '@langchain/core/runnables';
+import { SkillRunnableConfig } from '@refly/skill-template';
 
 export interface RequestContext {
   /**
@@ -37,18 +37,6 @@ export interface RequestContext {
    * LangChain RunnableConfig (when running within LangChain context)
    */
   langchainConfig?: SkillRunnableConfig;
-}
-
-/**
- * Extended LangChain config with custom configurable fields
- */
-export interface SkillRunnableConfig extends RunnableConfig {
-  configurable?: {
-    user?: User;
-    canvasId?: string;
-    resultId?: string;
-    [key: string]: unknown;
-  };
 }
 
 /**
@@ -136,5 +124,23 @@ export function hasContext(): boolean {
  */
 export function getCanvasId(): string | undefined {
   const context = asyncLocalStorage.getStore();
-  return context.langchainConfig?.configurable?.canvasId;
+  return context?.langchainConfig?.configurable?.canvasId;
+}
+
+/**
+ * Get result ID from context
+ * Returns the agent result ID from LangChain config
+ */
+export function getResultId(): string | undefined {
+  const context = asyncLocalStorage.getStore();
+  return context?.langchainConfig?.configurable?.resultId;
+}
+
+/**
+ * Get result version from context
+ * Returns the agent result version from LangChain config
+ */
+export function getResultVersion(): number | undefined {
+  const context = asyncLocalStorage.getStore();
+  return context?.langchainConfig?.configurable?.version as number | undefined;
 }

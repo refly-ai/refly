@@ -17,7 +17,7 @@ import { fileTypeFromBuffer } from 'file-type';
 import mime from 'mime';
 import { DriveService } from '../../drive/drive.service';
 import { MiscService } from '../../misc/misc.service';
-import { getCanvasId, getCurrentUser } from './core/tool-context';
+import { getCanvasId, getCurrentUser, getResultId, getResultVersion } from './core/tool-context';
 
 /**
  * ResourceHandler Class
@@ -178,6 +178,8 @@ export class ResourceHandler {
       name: filename,
       storageKey: uploadResult.storageKey,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
     return {
@@ -248,6 +250,8 @@ export class ResourceHandler {
       type: mimeType,
       content: base64Data,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
     return {
@@ -346,6 +350,8 @@ export class ResourceHandler {
       name: filename,
       externalUrl: url,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
     return {
@@ -388,6 +394,8 @@ export class ResourceHandler {
       name: `resource-${Date.now()}.${mime.getExtension(mimeType) || 'png'}`,
       storageKey: uploadResult.storageKey,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
     return {
@@ -436,6 +444,8 @@ export class ResourceHandler {
         name: filename,
         storageKey: uploadResult.storageKey,
         source: 'agent',
+        resultId: getResultId(),
+        resultVersion: getResultVersion(),
       });
 
       this.logger.log(
