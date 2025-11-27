@@ -32,6 +32,7 @@ import {
   convertMcpServersToClientConfig,
 } from '@refly/skill-template';
 import { genToolsetID, safeParseJSON, validateConfig } from '@refly/utils';
+import { SingleFlightCache } from '../../utils/cache';
 import { Queue } from 'bullmq';
 import { McpServer as McpServerPO, Prisma, Toolset as ToolsetPO } from '@prisma/client';
 import { QUEUE_SYNC_TOOL_CREDIT_USAGE } from '../../utils/const';
@@ -56,6 +57,7 @@ import {
 @Injectable()
 export class ToolService {
   private logger = new Logger(ToolService.name);
+  private toolsetInventoryCache: SingleFlightCache<ToolsetDefinition[]>;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -70,7 +72,12 @@ export class ToolService {
     @Optional()
     @InjectQueue(QUEUE_SYNC_TOOL_CREDIT_USAGE)
     private readonly toolCreditUsageQueue?: Queue<SyncToolCreditUsageJobData>,
-  ) {}
+  ) {
+    // Cache toolset inventory with 5-minute TTL
+    this.toolsetInventoryCache = new SingleFlightCache(this.loadToolsetInventory.bind(this), {
+      ttl: 5 * 60 * 1000,
+    });
+  }
 
   async getToolsetInventory(): Promise<
     Record<
@@ -94,13 +101,20 @@ export class ToolService {
     );
   }
 
-  async listToolsetInventory(): Promise<ToolsetDefinition[]> {
+  /**
+   * Load toolset inventory from sources (builtin + external)
+   */
+  private async loadToolsetInventory(): Promise<ToolsetDefinition[]> {
     const builtinInventory = Object.values(builtinToolsetInventory).map((toolset) => ({
       ...toolset.definition,
       builtin: true,
     }));
     const definitions = await this.inventoryService.getInventoryDefinitions();
     return [...builtinInventory, ...definitions].sort((a, b) => a.key.localeCompare(b.key));
+  }
+
+  async listToolsetInventory(): Promise<ToolsetDefinition[]> {
+    return this.toolsetInventoryCache.get();
   }
 
   /**

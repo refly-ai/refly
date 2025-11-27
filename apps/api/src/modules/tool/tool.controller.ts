@@ -50,7 +50,6 @@ export class ToolController {
     return buildSuccessResponse(userTools);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('/inventory/list')
   async listToolsetInventory(): Promise<ListToolsetInventoryResponse> {
     const toolsets = await this.toolService.listToolsetInventory();
