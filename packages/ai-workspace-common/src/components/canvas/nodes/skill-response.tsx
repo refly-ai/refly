@@ -6,18 +6,14 @@ import {
   nodeActionEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { useAddToContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-to-context';
-import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document';
 import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-node';
 import { useDuplicateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-duplicate-node';
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
-import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { CanvasNode, purgeToolsets } from '@refly/canvas-common';
 import { CanvasNodeType } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
-import { genNodeEntityId, genSkillID } from '@refly/utils/id';
+import { genNodeEntityId } from '@refly/utils/id';
 import { Position, useReactFlow } from '@xyflow/react';
 import { message, Typography } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -37,13 +33,16 @@ import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import { useGetPilotSessionDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
-import { usePilotStoreShallow, useCanvasNodesStoreShallow } from '@refly/stores';
+import {
+  usePilotStoreShallow,
+  useCanvasNodesStoreShallow,
+  useCanvasStoreShallow,
+} from '@refly/stores';
 import cn from 'classnames';
 
 import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { logEvent } from '@refly/telemetry-web';
-import { removeToolUseTags } from '@refly-packages/ai-workspace-common/utils';
 import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
 import { Subscription } from 'refly-icons';
 import { IoCheckmarkCircle } from 'react-icons/io5';
@@ -168,15 +167,17 @@ const NodeStatusBar = memo(
 NodeStatusBar.displayName = 'NodeStatusBar';
 
 export const SkillResponseNode = memo(
-  ({
-    data,
-    selected,
-    id,
-    isPreview = false,
-    hideHandles = false,
-    onNodeClick,
-  }: SkillResponseNodeProps) => {
+  ({ data, id, isPreview = false, hideHandles = false, onNodeClick }: SkillResponseNodeProps) => {
     const [isHovered, setIsHovered] = useState(false);
+    const { readonly, canvasId } = useCanvasContext();
+
+    const { nodePreviewId } = useCanvasStoreShallow((state) => ({
+      nodePreviewId: state.config[canvasId]?.nodePreviewId,
+    }));
+    const selected = useMemo(() => {
+      return nodePreviewId === id;
+    }, [nodePreviewId, id]);
+
     const { highlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
       highlightedNodeId: state.highlightedNodeId,
     }));
@@ -195,7 +196,6 @@ export const SkillResponseNode = memo(
 
     const { setNodeData, setNodeStyle } = useNodeData();
     const { getEdges, setEdges } = useReactFlow();
-    const { readonly, canvasId } = useCanvasContext();
 
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
@@ -242,7 +242,7 @@ export const SkillResponseNode = memo(
 
     const { t } = useTranslation();
 
-    const { title, contentPreview: content, metadata, entityId } = data ?? {};
+    const { title, metadata, entityId } = data ?? {};
 
     // Find current node's corresponding pilot step
     const currentPilotStep = useMemo(() => {
@@ -304,29 +304,6 @@ export const SkillResponseNode = memo(
         });
       }
     }, [id, data?.editedTitle]);
-
-    const setEdgesWithHighlight = useCallback(
-      (highlight: boolean) => {
-        setEdges((edges) =>
-          edges.map((edge) => {
-            if (edge.source === id || edge.target === id) {
-              return { ...edge, data: { ...edge.data, highlight: highlight } };
-            }
-            return { ...edge, data: { ...edge.data, highlight: false } };
-          }),
-        );
-      },
-      [id, setEdges],
-    );
-
-    useEffect(() => {
-      const delay = selected ? 100 : 0;
-      const timer = setTimeout(() => {
-        setEdgesWithHighlight(selected);
-      }, delay);
-
-      return () => clearTimeout(timer);
-    }, [selected, id, setEdges, setEdgesWithHighlight, status]);
 
     // Use pilot recovery hook for pilot steps
     const { recoverSteps } = usePilotRecovery({
@@ -531,14 +508,6 @@ export const SkillResponseNode = memo(
       id,
     ]);
 
-    const insertToDoc = useInsertToDocument(entityId);
-    const handleInsertToDoc = useCallback(
-      async (content: string) => {
-        await insertToDoc('insertBelow', content);
-      },
-      [insertToDoc],
-    );
-
     const { deleteNode } = useDeleteNode();
     const { duplicateNode } = useDuplicateNode();
 
@@ -567,72 +536,6 @@ export const SkillResponseNode = memo(
         canvasId,
       );
     }, [id, data, canvasId, duplicateNode]);
-
-    const { debouncedCreateDocument } = useCreateDocument();
-
-    const handleCreateDocument = useCallback(
-      async (event?: {
-        dragCreateInfo?: NodeDragCreateInfo;
-      }) => {
-        try {
-          // Fetch complete action result from server to get full content
-          const { data, error } = await getClient().getActionResult({
-            query: { resultId: entityId },
-          });
-
-          if (error || !data?.success) {
-            message.error(t('canvas.skillResponse.fetchContentFailed'));
-            return;
-          }
-
-          // Extract full content from all steps and remove tool_use tags
-          const fullContent = removeToolUseTags(
-            (data.data?.steps || [])
-              ?.map((step) => step?.content || '')
-              .filter(Boolean)
-              .join('\n\n')
-              .trim(),
-          )?.trim();
-
-          const { position, connectTo } = getConnectionInfo(
-            { entityId, type: 'skillResponse' },
-            event?.dragCreateInfo,
-          );
-
-          // Create document with full content
-          await debouncedCreateDocument(title ?? '', fullContent || content, {
-            sourceNodeId: connectTo.find((c) => c.handleType === 'source')?.entityId,
-            targetNodeId: connectTo.find((c) => c.handleType === 'target')?.entityId,
-            position,
-            addToCanvas: true,
-            sourceType: 'skillResponse',
-          });
-        } catch (err) {
-          console.error('Failed to create document:', err);
-          message.error(t('canvas.skillResponse.createDocumentFailed'));
-        } finally {
-          nodeActionEmitter.emit(createNodeEventName(id, 'createDocument.completed'));
-        }
-      },
-      [debouncedCreateDocument, entityId, title, content, t, id, getConnectionInfo],
-    );
-
-    const { addToContext } = useAddToContext();
-
-    const handleAddToContext = useCallback(() => {
-      logEvent('add_to_context_ask_ai', null, {
-        canvasId,
-        entityId,
-        nodeId: id,
-      });
-
-      addToContext({
-        type: 'skillResponse',
-        title: title,
-        entityId: entityId,
-        metadata: data?.metadata,
-      });
-    }, [data, entityId, title, addToContext, canvasId, id]);
 
     const { addNode } = useAddNode();
 
@@ -691,54 +594,13 @@ export const SkillResponseNode = memo(
               position,
             },
             [...connectTo, ...connectFilters],
-            false,
+            true,
             true,
           );
         }, 10);
       },
       [data, addNode, getConnectionInfo, canvasId],
     );
-
-    const handleCloneAskAI = useCallback(async () => {
-      const { contextItems, modelInfo, selectedSkill, tplConfig, structuredData } =
-        data?.metadata || {};
-      const currentSkill = actionMeta || selectedSkill;
-
-      // Create new skill node with context, similar to group node implementation
-      const connectTo = contextItems?.map((item) => ({
-        type: item.type as CanvasNodeType,
-        entityId: item.entityId,
-      }));
-
-      logEvent('clone_ask_ai', null, {
-        canvasId,
-        sourceEntityId: data.entityId,
-        sourceNodeId: id,
-      });
-
-      // Create new skill node
-      addNode(
-        {
-          type: 'skill',
-          data: {
-            title: t('canvas.nodeActions.cloneAskAI'),
-            entityId: genSkillID(),
-            metadata: {
-              contextItems,
-              query: structuredData?.query || title,
-              modelInfo,
-              selectedSkill: currentSkill,
-              tplConfig,
-            },
-          },
-        },
-        connectTo,
-        false,
-        true,
-      );
-
-      nodeActionEmitter.emit(createNodeEventName(id, 'cloneAskAI.completed'));
-    }, [id, data?.entityId, addNode, t, canvasId]);
 
     useEffect(() => {
       setNodeStyle(id, NODE_SIDE_CONFIG);
@@ -748,54 +610,40 @@ export const SkillResponseNode = memo(
     useEffect(() => {
       // Create node-specific event handlers
       const handleNodeRerun = () => handleRerun();
-      const handleNodeAddToContext = () => handleAddToContext();
-      const handleNodeInsertToDoc = (event: { content: string }) =>
-        handleInsertToDoc(event.content);
-      const handleNodeCreateDocument = (event?: {
-        dragCreateInfo?: NodeDragCreateInfo;
-      }) => handleCreateDocument(event);
       const handleNodeDelete = () => handleDelete();
       const handleNodeDuplicate = () => handleDuplicate();
       const handleNodeAskAI = (event?: {
         dragCreateInfo?: NodeDragCreateInfo;
       }) => handleAskAI(event);
-      const handleNodeCloneAskAI = () => handleCloneAskAI();
 
       // Register events with node ID
       nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-      nodeActionEmitter.on(createNodeEventName(id, 'cloneAskAI'), handleNodeCloneAskAI);
       nodeActionEmitter.on(createNodeEventName(id, 'rerun'), handleNodeRerun);
-      nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
-      nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
-      nodeActionEmitter.on(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
       nodeActionEmitter.on(createNodeEventName(id, 'duplicate'), handleNodeDuplicate);
 
       return () => {
         // Cleanup events when component unmounts
         nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
-        nodeActionEmitter.off(createNodeEventName(id, 'cloneAskAI'), handleNodeCloneAskAI);
         nodeActionEmitter.off(createNodeEventName(id, 'rerun'), handleNodeRerun);
-        nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
-        nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
-        nodeActionEmitter.off(createNodeEventName(id, 'createDocument'), handleNodeCreateDocument);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
         nodeActionEmitter.off(createNodeEventName(id, 'duplicate'), handleNodeDuplicate);
 
         // Clean up all node events
         cleanupNodeEvents(id);
       };
-    }, [
-      id,
-      handleRerun,
-      handleAddToContext,
-      handleInsertToDoc,
-      handleCreateDocument,
-      handleDelete,
-      handleDuplicate,
-      handleAskAI,
-      handleCloneAskAI,
-    ]);
+    }, [id, handleRerun, handleDelete, handleDuplicate, handleAskAI]);
+
+    useEffect(() => {
+      setEdges((edges) =>
+        edges.map((edge) => {
+          if (edge.source === id || edge.target === id) {
+            return { ...edge, data: { ...edge.data, executionStatus: status } };
+          }
+          return edge;
+        }),
+      );
+    }, [id, status, setEdges]);
 
     return (
       <>

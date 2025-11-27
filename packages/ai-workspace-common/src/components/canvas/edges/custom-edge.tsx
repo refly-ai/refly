@@ -2,6 +2,8 @@ import { memo, useCallback, useMemo, type CSSProperties } from 'react';
 import { BaseEdge, EdgeProps, getBezierPath, useReactFlow, Position } from '@xyflow/react';
 import { useEdgeStyles } from '../constants';
 import { Delete } from 'refly-icons';
+import { useCanvasStoreShallow } from '@refly/stores';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 type DeleteButtonProps = {
   handleDelete: (event: React.MouseEvent) => void;
@@ -22,11 +24,18 @@ DeleteButton.displayName = 'DeleteButton';
 
 export const CustomEdge = memo(
   ({ sourceX, sourceY, targetX, targetY, selected, data, id, source, target }: EdgeProps) => {
-    const highlight = data?.highlight;
+    const { canvasId } = useCanvasContext();
     const edgeStyles = useEdgeStyles();
     const { setEdges, getNode } = useReactFlow();
     const sourceNode = getNode(source);
     const targetNode = getNode(target);
+    const { nodePreviewId } = useCanvasStoreShallow((state) => ({
+      nodePreviewId: state.config[canvasId]?.nodePreviewId,
+    }));
+
+    const highlight = useMemo(() => {
+      return nodePreviewId === source || nodePreviewId === target;
+    }, [nodePreviewId, source, target]);
 
     const isConnectedToStartNode = sourceNode?.type === 'start' || targetNode?.type === 'start';
 

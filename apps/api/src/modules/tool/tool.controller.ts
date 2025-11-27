@@ -50,7 +50,6 @@ export class ToolController {
     return buildSuccessResponse(userTools);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('/inventory/list')
   async listToolsetInventory(): Promise<ListToolsetInventoryResponse> {
     const toolsets = await this.toolService.listToolsetInventory();
@@ -63,8 +62,11 @@ export class ToolController {
     @LoginedUser() user: UserModel,
     @Query('isGlobal', new ParseBoolPipe({ optional: true })) isGlobal?: boolean,
   ): Promise<ListToolsetsResponse> {
-    const toolsets = await this.toolService.listRegularTools(user, { isGlobal });
-    return buildSuccessResponse(toolsets.map((toolset) => toolset.toolset));
+    // Use listTools to get all tool types (regular, OAuth, builtin)
+    // Filter out MCP tools since they don't have toolset property
+    const tools = await this.toolService.listTools(user, { isGlobal });
+    const toolsets = tools.filter((tool) => tool.toolset).map((tool) => tool.toolset);
+    return buildSuccessResponse(toolsets);
   }
 
   @UseGuards(JwtAuthGuard)

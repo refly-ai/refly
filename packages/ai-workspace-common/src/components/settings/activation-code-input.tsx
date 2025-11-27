@@ -1,4 +1,4 @@
-import { Button, Input, message } from 'antd';
+import { Button, Input, message, Popover } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -87,23 +87,50 @@ export const ActivationCodeInput: React.FC<ActivationCodeInputProps> = ({
       </div>
 
       {showDiscordButton && (
-        <div className="flex flex-col gap-1 mt-4">
+        <div className="flex flex-col items-center gap-2 mt-2">
           <div className="flex justify-center">
             <span className="text-refly-text-3 text-sm">
               {t('invitationCode.dontHaveInvitationCode')}
             </span>
           </div>
-          <div className="flex justify-center">
-            <Button
-              type="text"
-              size="middle"
-              className="text-sm text-refly-primary-default font-semibold bg-refly-tertiary-default hover:bg-refly-tertiary-hover"
-              onClick={handleJoinDiscord}
-              style={{ width: 220, height: 36 }}
-            >
-              {t('common.joinDiscord')}
-            </Button>
-          </div>
+          <Button
+            type="text"
+            size="middle"
+            className="text-sm !text-refly-primary-default font-semibold rounded-lg border border-solid border-refly-primary-default hover:bg-refly-tertiary-hover"
+            onClick={handleJoinDiscord}
+            style={{ width: 220, height: 36 }}
+          >
+            {t('common.joinDiscord')}
+          </Button>
+          <Popover
+            content={
+              <div className="flex flex-col items-center p-3">
+                <div className="w-[180px] h-[180px] rounded-xl overflow-hidden bg-white p-2">
+                  <img
+                    src="https://static.refly.ai/landing/wechat-qrcode.webp"
+                    alt="WeChat Group QR Code"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="text-sm text-refly-text-0 mt-3 font-medium">
+                  {t('landingPage.footer.contactUs.scanToJoinWechatGroup')}
+                </div>
+              </div>
+            }
+            trigger="hover"
+            placement="bottom"
+            arrow={true}
+            overlayInnerStyle={{
+              borderRadius: 16,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+            }}
+          >
+            <div className="flex items-center gap-1 cursor-pointer group hover:bg-refly-tertiary-hover rounded-lg p-1">
+              <span className="text-refly-text-3 text-sm">
+                {t('landingPage.footer.contactUs.orWeChat')}
+              </span>
+            </div>
+          </Popover>
         </div>
       )}
     </div>
