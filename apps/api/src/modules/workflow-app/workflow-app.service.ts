@@ -356,9 +356,30 @@ export class WorkflowAppService {
       throw new ShareNotFoundError('Share record not found');
     }
 
-    const workflowApp = await this.prisma.workflowApp.findFirst({
+    // Try to locate workflow app by shareId first
+    let workflowApp = await this.prisma.workflowApp.findFirst({
       where: { shareId, deletedAt: null },
     });
+
+    // Fallback 1: for historical records that did not persist shareId in workflowApp
+    if (!workflowApp && shareRecord?.entityId) {
+      this.logger.warn(
+        `Workflow app not found by shareId=${shareId}. Fallback to appId=${shareRecord.entityId}`,
+      );
+      workflowApp = await this.prisma.workflowApp.findFirst({
+        where: { appId: shareRecord.entityId, deletedAt: null },
+      });
+    }
+
+    // Fallback 2: when client passes template share id
+    if (!workflowApp) {
+      this.logger.warn(
+        `Workflow app not found by shareId/appId. Fallback to templateShareId=${shareId}`,
+      );
+      workflowApp = await this.prisma.workflowApp.findFirst({
+        where: { templateShareId: shareId, deletedAt: null },
+      });
+    }
 
     if (!workflowApp) {
       throw new WorkflowAppNotFoundError();
