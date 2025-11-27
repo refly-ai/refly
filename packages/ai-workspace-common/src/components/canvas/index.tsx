@@ -351,27 +351,11 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   const { onConnectEnd: temporaryEdgeOnConnectEnd, onConnectStart: temporaryEdgeOnConnectStart } =
     useDragToCreateNode(onConnect);
 
-  const cleanupTemporaryEdges = useCallback(() => {
-    const rfInstance = reactFlowInstance;
-    rfInstance.setNodes((nodes) => nodes.filter((node) => node.type !== 'temporaryEdge'));
-    rfInstance.setEdges((edges) => {
-      // Get the current nodes to check if source/target is a temporary node
-      const currentNodes = rfInstance.getNodes();
-      const isTemporaryNode = (id: string) =>
-        currentNodes.some((node) => node.id === id && node.type === 'temporaryEdge');
-
-      return edges.filter((edge) => !isTemporaryNode(edge.source) && !isTemporaryNode(edge.target));
-    });
-  }, [reactFlowInstance]);
-
   const handlePanelClick = useCallback(
     (event: React.MouseEvent) => {
       setOperatingNodeId(null);
       previewNode(null);
       setContextMenu((prev) => ({ ...prev, open: false }));
-
-      // Clean up temporary nodes when clicking on canvas
-      cleanupTemporaryEdges();
 
       // Reset edge selection when clicking on canvas
       if (selectedEdgeId) {
@@ -403,7 +387,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       setOperatingNodeId,
       reactFlowInstance,
       selectedEdgeId,
-      cleanupTemporaryEdges,
       readonly,
       setShowWorkflowRun,
       previewNode,

@@ -1,6 +1,5 @@
 import { useCallback, useRef } from 'react';
 import { useReactFlow, addEdge, Edge, Connection } from '@xyflow/react';
-import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { genUniqueId } from '@refly/utils/id';
 
 /**
@@ -158,7 +157,8 @@ export function useDragToCreateNode(onConnect?: (params: Connection) => void) {
         id: ghostNodeId,
         type: 'ghost',
         position: flowPosition,
-        data: {},
+        data: { metadata: { position: { x: clientX, y: clientY } } },
+
         draggable: false,
         selectable: false,
       };
@@ -174,24 +174,6 @@ export function useDragToCreateNode(onConnect?: (params: Connection) => void) {
       // Add ghost node and temporary edge
       setNodes((nodes) => nodes.concat(ghostNode));
       setEdges((edges) => addEdge(tempEdge, edges));
-
-      // Use the source node's type as the context for the menu
-      // This will determine what options are available in the CreateNodeMenu
-      const contextNodeType = fromNode?.type || 'document';
-
-      // Emit event to show CreateNodeMenu at the drop position
-      nodeOperationsEmitter.emit('openNodeContextMenu', {
-        nodeId: fromNode?.id || 'temp-drag-create',
-        nodeType: contextNodeType,
-        x: clientX,
-        y: clientY,
-        source: 'handle',
-        dragCreateInfo: {
-          nodeId: handleType === 'source' ? sourceNodeId : targetNodeId,
-          handleType,
-          position: { x: clientX, y: clientY },
-        },
-      });
     },
     [screenToFlowPosition, setNodes, setEdges, getNodes, getEdges, onConnect],
   );
