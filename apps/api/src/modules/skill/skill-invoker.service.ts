@@ -714,9 +714,16 @@ export class SkillInvokerService {
               break;
             }
             if (event.event === 'on_tool_end') {
-              await persistToolCall(ToolCallStatus.COMPLETED, {
+              const toolOutput = event.data?.output;
+              const isErrorStatus = toolOutput?.status === 'error';
+              const errorMessage = isErrorStatus
+                ? String(toolOutput?.error ?? 'Tool returned error status')
+                : undefined;
+              const finalStatus = isErrorStatus ? ToolCallStatus.FAILED : ToolCallStatus.COMPLETED;
+              await persistToolCall(finalStatus, {
                 input: undefined,
-                output: event.data?.output,
+                output: toolOutput,
+                errorMessage,
               });
 
               // Add ToolMessage for message persistence
@@ -729,17 +736,18 @@ export class SkillInvokerService {
                 toolCallId,
                 startTs: toolStartTs,
                 endTs: toolEndTs,
-                status: 'completed' as const,
+                status: isErrorStatus ? ('failed' as const) : ('completed' as const),
+                ...(isErrorStatus ? { error: errorMessage } : {}),
               };
               const toolMessageId = messageAggregator.addToolMessage({
                 toolCallId,
                 toolCallMeta,
               });
 
-              // Emit tool_call_end event with toolCallMeta and messageId
+              // Emit tool_call_end or tool_call_error event with toolCallMeta and messageId
               if (res) {
                 writeSSEResponse(res, {
-                  event: 'tool_call_end',
+                  event: isErrorStatus ? 'tool_call_error' : 'tool_call_end',
                   resultId,
                   step: runMeta?.step,
                   messageId: toolMessageId,
@@ -749,25 +757,24 @@ export class SkillInvokerService {
                     toolsetId,
                     toolName,
                     stepName,
-                    output: event.data?.output,
-                    status: 'completed',
+                    output: toolOutput,
+                    ...(isErrorStatus ? { error: errorMessage } : {}),
+                    status: isErrorStatus ? 'failed' : 'completed',
                     createdAt: startTs,
                     updatedAt: Date.now(),
                   },
                 });
               }
 
-              // Extract tool_call_chunks from AIMessageChunk
-              if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
-                const { toolsetKey } = event.metadata ?? {};
-                // Skip non-tool user-visible helpers like commonQnA, and ensure toolsetKey exists
+              // Extract tool_call_chunks from AIMessageChunk for successful tool runs
+              if (!isErrorStatus && event.metadata?.langgraph_node === 'tools' && toolOutput) {
                 if (!toolsetKey) {
                   break;
                 }
 
                 // Handle generated files from tools (sandbox, scalebox, etc.)
                 // Add them to canvas as image/audio/video/document nodes
-                await this.handleToolGeneratedFiles(user, data, event.data.output, resultId).catch(
+                await this.handleToolGeneratedFiles(user, data, toolOutput, resultId).catch(
                   (error) => {
                     this.logger.error(`Failed to handle tool generated files: ${error?.message}`);
                   },

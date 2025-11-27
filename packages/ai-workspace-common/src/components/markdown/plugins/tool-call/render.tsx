@@ -122,11 +122,21 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     return Object.entries(parametersContent as Record<string, unknown>);
   }, [parametersContent]);
 
+  const errorMessage = useMemo(() => {
+    if (props['data-tool-error']) {
+      return props['data-tool-error'];
+    }
+    if (fetchedData?.data?.result?.error) {
+      return fetchedData.data.result.error;
+    }
+    return null;
+  }, [props['data-tool-error'], fetchedData?.data?.result?.error]);
+
   // Format the content for result
   const resultContent = useMemo(() => {
     // First try props data
-    if (props['data-tool-error'] || props['data-tool-result']) {
-      return props['data-tool-error'] ?? props['data-tool-result'] ?? '';
+    if (props['data-tool-result']) {
+      return props['data-tool-result'];
     }
 
     // Fall back to API data
@@ -302,14 +312,19 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
             )}
             {toolCallStatus === ToolCallStatus.COMPLETED && (
               <div className="flex items-center">
-                <CheckCircleBroken size={12} color="var(--refly-primary-default)" />
+                <CheckCircleBroken size={14} color="var(--refly-primary-default)" />
                 {durationText && (
                   <span className="ml-1 text-xs text-refly-text-2 leading-4">{durationText}</span>
                 )}
               </div>
             )}
             {toolCallStatus === ToolCallStatus.FAILED && (
-              <Cancelled size={12} color="var(--refly-func-danger-default)" />
+              <div className="flex items-center">
+                <Cancelled size={14} color="var(--refly-func-danger-default)" />
+                {durationText && (
+                  <span className="ml-1 text-xs text-refly-text-2 leading-4">{durationText}</span>
+                )}
+              </div>
             )}
 
             <Button
@@ -334,6 +349,17 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
               </div>
             ) : (
               <>
+                {errorMessage && (
+                  <div>
+                    <div className="px-3 leading-5">
+                      {t('components.markdown.failureReason', 'Failure Reason')}
+                    </div>
+                    <div className="mx-3 my-2 rounded-lg bg-refly-fill-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-1 leading-[22px] overflow-x-auto">
+                      {errorMessage}
+                    </div>
+                  </div>
+                )}
+
                 {/* Parameters section always shown */}
                 {parameterEntries?.length > 0 && (
                   <div className="px-3 pb-2 flex flex-col gap-2">

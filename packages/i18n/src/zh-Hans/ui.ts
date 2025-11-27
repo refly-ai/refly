@@ -3084,7 +3084,8 @@ const translations = {
   components: {
     markdown: {
       parameters: '输入',
-      result: ' 结果',
+      result: '结果',
+      failureReason: '失败原因',
       parameterName: '名称',
       parameterValue: '值',
       loadingToolCall: '加载工具调用详情...',

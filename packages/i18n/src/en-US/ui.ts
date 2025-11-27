@@ -3125,7 +3125,8 @@ const translations = {
   components: {
     markdown: {
       parameters: 'Input',
-      result: ' Output',
+      result: 'Output',
+      failureReason: 'Failure Reason',
       parameterName: 'Name',
       parameterValue: 'Value',
       loadingToolCall: 'Loading tool call details...',
