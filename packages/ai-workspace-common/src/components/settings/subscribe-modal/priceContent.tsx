@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { logEvent } from '@refly/telemetry-web';
 // styles
 import './index.scss';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { Checked, Wait } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import {
@@ -34,6 +35,7 @@ interface Feature {
 
 enum PlanPriorityMap {
   free = 0,
+  plus = 1,
   starter = 1,
   maker = 2,
   enterprise = 3,
@@ -52,7 +54,7 @@ const PlanItem = (props: {
   };
 }) => {
   const { t, i18n } = useTranslation('ui');
-  const { planType, title, description, features, handleClick, interval } = props;
+  const { planType, title, description, features, handleClick, interval, loadingInfo } = props;
   const { isLogin, userProfile } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
     userProfile: state.userProfile,
@@ -83,6 +85,7 @@ const PlanItem = (props: {
     }
 
     const prices = {
+      plus: { monthly: 19.9, yearly: 15.9, yearlyTotal: 190.8 },
       starter: { monthly: 24.9, yearly: 19.9, yearlyTotal: 238.8 },
       maker: { monthly: 49.9, yearly: 39.9, yearlyTotal: 478.8 },
     } as const;
@@ -171,18 +174,25 @@ const PlanItem = (props: {
         <div className="price-section">{getPrice()}</div>
 
         <div
-          className={`subscribe-btn cursor-pointer subscribe-btn--${planType} ${planType === 'starter' && 'subscribe-btn--most-popular'} ${isUpgrade && 'subscribe-btn--upgrade'} ${isButtonDisabled && 'subscribe-btn--disabled'}`}
+          className={`subscribe-btn cursor-pointer subscribe-btn--${planType} ${planType === 'starter' && 'subscribe-btn--most-popular'} ${isUpgrade && 'subscribe-btn--upgrade'} ${isButtonDisabled && 'subscribe-btn--disabled'} ${loadingInfo.isLoading && loadingInfo.plan === planType && 'subscribe-btn--loading'}`}
           onClick={handleButtonClick}
         >
-          {isCurrentPlan
-            ? t('subscription.plans.currentPlan')
-            : planType === 'free'
-              ? t('subscription.plans.free.buttonText')
-              : planType === 'enterprise'
-                ? t('subscription.plans.enterprise.buttonText')
-                : t('subscription.plans.upgrade', {
-                    planType: planType.charAt(0).toUpperCase() + planType.slice(1),
-                  })}
+          {loadingInfo.isLoading && loadingInfo.plan === planType ? (
+            <div className="flex items-center justify-center gap-2">
+              <Spin size="small" />
+              <span>{t('common.loading')}</span>
+            </div>
+          ) : isCurrentPlan ? (
+            t('subscription.plans.currentPlan')
+          ) : planType === 'free' ? (
+            t('subscription.plans.free.buttonText')
+          ) : planType === 'enterprise' ? (
+            t('subscription.plans.enterprise.buttonText')
+          ) : (
+            t('subscription.plans.upgrade', {
+              planType: planType.charAt(0).toUpperCase() + planType.slice(1),
+            })
+          )}
         </div>
 
         <div className="plane-features">
@@ -235,7 +245,7 @@ export const PriceContent = (props: { source: PriceSource }) => {
   const currentPlan: string = userProfile?.subscription?.planType || 'free';
 
   const plansData = useMemo(() => {
-    const planTypes = ['free', 'starter', 'maker', 'enterprise'];
+    const planTypes = ['free', 'plus', 'starter', 'maker', 'enterprise'];
     const data: Record<string, { title: string; description: string; features: Feature[] }> = {};
     for (const planType of planTypes) {
       data[planType] = {

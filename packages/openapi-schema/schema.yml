@@ -5962,6 +5962,7 @@ components:
         - starter
         - maker
         - enterprise
+        - plus
     SubscriptionStatus:
       type: string
       description: Subscription status

@@ -12,6 +12,7 @@ const translations = {
       starter: 'Starter 用户',
       maker: 'Maker 用户',
       enterprise: '企业用户',
+      plus: 'Plus 用户',
     },
     earlyBirdsWelcome: {
       title: '致最早的同行者',
@@ -79,6 +80,7 @@ const translations = {
         starter: 'Starter 启程版',
         maker: 'Maker 创造者版',
         freePlan: 'Free 免费版',
+        plus: 'Plus',
       },
       creditsWelcome: {
         title: '亲爱的创作者',
@@ -129,6 +131,20 @@ const translations = {
       },
       plus: {
         title: 'PLUS',
+        titleCn: 'Plus',
+        description: 'Plus 用户',
+        priceMonthly: '$ {{price}}/月',
+        priceYearly: '$ {{price}}/月',
+        priceYearlyTotal: '$ {{price}}/年 节省 20%',
+        buttonText: '升级到 {{planName}}',
+        features: [
+          '每日可获取新积分\n300点',
+          '每月积分\n2000点',
+          '世界顶级AI模型\nOpenAI、Claude、Grok、DeepSeek...',
+          '知识库文件数\n200个',
+          '文件上传限制\n最大 10MB',
+          '服务支持\n高优邮件支持',
+        ],
       },
       max: {
         title: 'MAX',

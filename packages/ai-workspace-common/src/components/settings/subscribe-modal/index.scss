@@ -248,6 +248,16 @@
           }
         }
 
+        &--loading {
+          cursor: not-allowed;
+          opacity: 0.8;
+          &:hover {
+            background-color: inherit !important;
+            border-color: inherit !important;
+            color: inherit !important;
+          }
+        }
+
         &:disabled {
           background-color: var(--refly-bg-control-z0);
           color: #9ca3af;
