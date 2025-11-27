@@ -705,6 +705,7 @@ const translations = {
         mail: 'Email',
         joinGroup: 'Join User Community',
         scanToJoinWechatGroup: 'Scan to Join WeChat Group',
+        orWeChat: 'or WeChat',
         discordGroup: 'Discord Community',
         joinDiscordGroup: 'Join Community',
         notionDocument: 'Notion Document',
@@ -3000,8 +3001,7 @@ const translations = {
     },
   },
   invitationCode: {
-    title1: 'Enter an invitation code to unlock',
-    title2: 'Refly AI Automation',
+    title: 'Enter an invitation code to continue',
     description: 'Enter your 6-digit invitation code',
     dontHaveInvitationCode: "Don't have an invite code yet?",
     reward: 'Used +500 points',
@@ -3125,7 +3125,8 @@ const translations = {
   components: {
     markdown: {
       parameters: 'Input',
-      result: ' Output',
+      result: 'Output',
+      failureReason: 'Failure Reason',
       parameterName: 'Name',
       parameterValue: 'Value',
       loadingToolCall: 'Loading tool call details...',

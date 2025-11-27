@@ -5,19 +5,18 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import type {
+  DriveFile,
   HandlerRequest,
   HandlerResponse,
   JsonSchema,
   ResponseSchema,
   SchemaProperty,
-  ToolResourceType,
-  UploadResult,
 } from '@refly/openapi-schema';
 import { fileTypeFromBuffer } from 'file-type';
 import mime from 'mime';
 import { DriveService } from '../../drive/drive.service';
 import { MiscService } from '../../misc/misc.service';
-import { getCanvasId, getCurrentUser } from './core/tool-context';
+import { getCanvasId, getCurrentUser, getResultId, getResultVersion } from './core/tool-context';
 
 /**
  * ResourceHandler Class
@@ -95,8 +94,8 @@ export class ResourceHandler {
       if (uploadResult) {
         return {
           ...response,
-          data: { fileId: uploadResult.fileId },
-          fileId: uploadResult.fileId,
+          data: uploadResult,
+          files: [uploadResult],
         };
       }
       return response;
@@ -108,8 +107,10 @@ export class ResourceHandler {
       return response;
     }
 
-    // Counter for generating unique file names
+    // Counter for generating unique file names and collect processed files
     let resourceCount = 0;
+    const processedFiles: DriveFile[] = [];
+
     const processedData = await this.processResourcesField(
       schema as JsonSchema,
       response.data as Record<string, unknown>,
@@ -118,7 +119,11 @@ export class ResourceHandler {
         resourceCount++;
         const fileName = fileNameTitle ? `${fileNameTitle}-${resourceCount}` : undefined;
         const result = await this.uploadResource(value, fileName, schemaProperty);
-        return result ? { fileId: result.fileId } : value;
+        if (result) {
+          processedFiles.push(result);
+          return result;
+        }
+        return value;
       },
       'output', // Output mode: accept any value, not just fileIds
     );
@@ -126,23 +131,8 @@ export class ResourceHandler {
     return {
       ...response,
       data: processedData,
+      files: processedFiles.length > 0 ? processedFiles : undefined,
     };
-  }
-
-  /**
-   * Infer resource type from MIME type
-   */
-  private inferResourceType(mimeType: string): ToolResourceType {
-    if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType.startsWith('audio/')) return 'audio';
-    if (mimeType.startsWith('video/')) return 'video';
-    if (mimeType.startsWith('text/') || mimeType.includes('json') || mimeType.includes('xml')) {
-      return 'document';
-    }
-    if (mimeType.includes('pdf') || mimeType.includes('word') || mimeType.includes('document')) {
-      return 'document';
-    }
-    return 'document'; // Default fallback
   }
 
   /**
@@ -157,7 +147,7 @@ export class ResourceHandler {
     canvasId: string,
     buffer: Buffer,
     fileNameTitle: string,
-  ): Promise<UploadResult> {
+  ): Promise<DriveFile> {
     // Infer MIME type and extension from buffer
     const fileTypeResult = await fileTypeFromBuffer(buffer);
     const mimetype = fileTypeResult?.mime;
@@ -178,16 +168,11 @@ export class ResourceHandler {
       name: filename,
       storageKey: uploadResult.storageKey,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
-    return {
-      fileId: driveFile.fileId,
-      resourceType: this.inferResourceType(driveFile.type),
-      metadata: {
-        size: Number(driveFile.size),
-        mimeType: mimetype,
-      },
-    };
+    return driveFile;
   }
 
   /**
@@ -204,7 +189,7 @@ export class ResourceHandler {
     value: string,
     fileName: string,
     schemaProperty?: SchemaProperty,
-  ): Promise<UploadResult | null> {
+  ): Promise<DriveFile | null> {
     // Handle data URL (data:image/png;base64,...)
     if (value.startsWith('data:')) {
       return await this.uploadDataUrlResource(user, canvasId, value, fileName);
@@ -228,14 +213,14 @@ export class ResourceHandler {
    * @param user - Current user
    * @param canvasId - Canvas ID
    * @param dataUrl - Data URL string
-   * @returns Upload result with fileId
+   * @returns DriveFile data
    */
   private async uploadDataUrlResource(
     user: any,
     canvasId: string,
     dataUrl: string,
     fileName: string,
-  ): Promise<UploadResult | null> {
+  ): Promise<DriveFile | null> {
     const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!matches) {
       return null;
@@ -248,16 +233,11 @@ export class ResourceHandler {
       type: mimeType,
       content: base64Data,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
-    return {
-      fileId: driveFile.fileId,
-      resourceType: this.inferResourceType(driveFile.type),
-      metadata: {
-        size: Number(driveFile.size),
-        mimeType: driveFile.type,
-      },
-    };
+    return driveFile;
   }
 
   private inferFileInfoFromUrl(
@@ -327,35 +307,26 @@ export class ResourceHandler {
    * @param user - Current user
    * @param canvasId - Canvas ID
    * @param url - External URL
-   * @returns Upload result with fileId
+   * @returns DriveFile data
    */
   private async uploadUrlResource(
     user: any,
     canvasId: string,
     url: string,
     fileName: string,
-  ): Promise<UploadResult> {
-    const { filename, contentType } = this.inferFileInfoFromUrl(
-      url,
-      fileName,
-      'application/octet-stream',
-    );
+  ): Promise<DriveFile> {
+    const { filename } = this.inferFileInfoFromUrl(url, fileName, 'application/octet-stream');
 
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
       name: filename,
       externalUrl: url,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
-    return {
-      fileId: driveFile.fileId,
-      resourceType: this.inferResourceType(driveFile.type),
-      metadata: {
-        size: Number(driveFile.size),
-        mimeType: contentType,
-      },
-    };
+    return driveFile;
   }
 
   /**
@@ -363,14 +334,14 @@ export class ResourceHandler {
    * @param user - Current user
    * @param canvasId - Canvas ID
    * @param base64String - Base64 encoded string
-   * @returns Upload result with fileId
+   * @returns DriveFile data
    */
   private async uploadBase64Resource(
     user: any,
     canvasId: string,
     base64String: string,
     fileName: string,
-  ): Promise<UploadResult> {
+  ): Promise<DriveFile> {
     const mimeType = 'image/png'; // Default for image generation tools
     const buffer = Buffer.from(base64String, 'base64');
 
@@ -388,16 +359,11 @@ export class ResourceHandler {
       name: `resource-${Date.now()}.${mime.getExtension(mimeType) || 'png'}`,
       storageKey: uploadResult.storageKey,
       source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
     });
 
-    return {
-      fileId: driveFile.fileId,
-      resourceType: this.inferResourceType(driveFile.type),
-      metadata: {
-        size: Number(driveFile.size),
-        mimeType: driveFile.type,
-      },
-    };
+    return driveFile;
   }
 
   /**
@@ -405,14 +371,14 @@ export class ResourceHandler {
    * @param user - Current user
    * @param canvasId - Canvas ID
    * @param obj - Object with buffer property
-   * @returns Upload result with fileId
+   * @returns DriveFile data
    */
   private async uploadObjectResource(
     user: any,
     canvasId: string,
     obj: any,
     fileNameTitle?: string,
-  ): Promise<UploadResult | null> {
+  ): Promise<DriveFile | null> {
     if (!obj.buffer || !Buffer.isBuffer(obj.buffer)) {
       return null;
     }
@@ -436,20 +402,15 @@ export class ResourceHandler {
         name: filename,
         storageKey: uploadResult.storageKey,
         source: 'agent',
+        resultId: getResultId(),
+        resultVersion: getResultVersion(),
       });
 
       this.logger.log(
         `[DEBUG] Created DriveFile, fileId: ${driveFile.fileId}, size: ${driveFile.size}, type: ${driveFile.type}`,
       );
 
-      return {
-        fileId: driveFile.fileId,
-        resourceType: this.inferResourceType(driveFile.type),
-        metadata: {
-          size: Number(driveFile.size),
-          mimeType: driveFile.type,
-        },
-      };
+      return driveFile;
     } catch (debugError) {
       this.logger.error(`[DEBUG] Error during upload process: ${(debugError as Error).message}`);
       throw debugError;
@@ -466,7 +427,7 @@ export class ResourceHandler {
     value: unknown,
     fileName: string,
     schemaProperty?: SchemaProperty,
-  ): Promise<UploadResult | null> {
+  ): Promise<DriveFile | null> {
     try {
       const user = getCurrentUser();
       const canvasId = getCanvasId();

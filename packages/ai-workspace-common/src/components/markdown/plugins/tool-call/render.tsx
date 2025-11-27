@@ -122,11 +122,21 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     return Object.entries(parametersContent as Record<string, unknown>);
   }, [parametersContent]);
 
+  const errorMessage = useMemo(() => {
+    if (props['data-tool-error']) {
+      return props['data-tool-error'];
+    }
+    if (fetchedData?.data?.result?.error) {
+      return fetchedData.data.result.error;
+    }
+    return null;
+  }, [props['data-tool-error'], fetchedData?.data?.result?.error]);
+
   // Format the content for result
   const resultContent = useMemo(() => {
     // First try props data
-    if (props['data-tool-error'] || props['data-tool-result']) {
-      return props['data-tool-error'] ?? props['data-tool-result'] ?? '';
+    if (props['data-tool-result']) {
+      return props['data-tool-result'];
     }
 
     // Fall back to API data
@@ -215,8 +225,18 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     return <CopilotWorkflowPlan data={structuredArgs} />;
   }
 
-  const resultData = safeParseJSON(resultContent)?.data as Record<string, unknown> | undefined;
   const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
+    const result = safeParseJSON(resultContent);
+    if (Array.isArray(result?.files)) {
+      return result?.files.map((file) => ({
+        fileId: String(file.fileId),
+        canvasId: String(file.canvasId ?? ''),
+        name: String(file.name ?? file.fileName ?? 'Drive file'),
+        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+      }));
+    }
+
+    const resultData = result?.data as Record<string, unknown> | undefined;
     if (resultData?.fileId) {
       return [
         {
@@ -228,17 +248,8 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
       ];
     }
 
-    if (Array.isArray(resultData?.files)) {
-      return resultData.files.map((file) => ({
-        fileId: String(file.fileId),
-        canvasId: String(file.canvasId ?? ''),
-        name: String(file.name ?? file.fileName ?? 'Drive file'),
-        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
-      }));
-    }
-
     return [];
-  }, [resultData]);
+  }, [resultContent]);
 
   const shouldRenderFilePreview = useMemo(() => {
     return filePreviewDriveFile.length > 0;
@@ -255,7 +266,7 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
       <div className="rounded-lg overflow-hidden bg-refly-bg-control-z0 text-refly-text-0">
         {/* Header bar */}
         <div
-          className="flex items-center justify-between p-3 gap-3 cursor-pointer select-none min-h-[48px]"
+          className="flex items-center justify-between p-3 gap-3 cursor-pointer select-none min-h-[48px] transition-all duration-200"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -302,14 +313,19 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
             )}
             {toolCallStatus === ToolCallStatus.COMPLETED && (
               <div className="flex items-center">
-                <CheckCircleBroken size={12} color="var(--refly-primary-default)" />
+                <CheckCircleBroken size={14} color="var(--refly-primary-default)" />
                 {durationText && (
                   <span className="ml-1 text-xs text-refly-text-2 leading-4">{durationText}</span>
                 )}
               </div>
             )}
             {toolCallStatus === ToolCallStatus.FAILED && (
-              <Cancelled size={12} color="var(--refly-func-danger-default)" />
+              <div className="flex items-center">
+                <Cancelled size={14} color="var(--refly-func-danger-default)" />
+                {durationText && (
+                  <span className="ml-1 text-xs text-refly-text-2 leading-4">{durationText}</span>
+                )}
+              </div>
             )}
 
             <Button
@@ -334,11 +350,22 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
               </div>
             ) : (
               <>
+                {errorMessage && (
+                  <div>
+                    <div className="px-3 leading-5">
+                      {t('components.markdown.failureReason', 'Failure Reason')}
+                    </div>
+                    <div className="mx-3 my-2 rounded-lg bg-refly-fill-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-1 leading-[22px] overflow-x-auto">
+                      {errorMessage}
+                    </div>
+                  </div>
+                )}
+
                 {/* Parameters section always shown */}
                 {parameterEntries?.length > 0 && (
                   <div className="px-3 pb-2 flex flex-col gap-2">
                     <div className="leading-5">{t('components.markdown.parameters', 'Input')}</div>
-                    <div className="rounded-lg border-[0.5px] border-solid border-refly-fill-hover overflow-hidden bg-refly-fill-hover">
+                    <div className="rounded-lg border-[0.5px] border-solid border-refly-fill-hover bg-refly-fill-hover max-h-[300px] overflow-y-auto">
                       <div className="grid grid-cols-[120px_1fr] text-[10px] leading-[14px] text-refly-text-3">
                         <div className="px-3 py-2">
                           {t('components.markdown.parameterName', 'Name')}
@@ -370,7 +397,7 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
                     <div className="px-3 leading-5">
                       {t('components.markdown.result', 'Output')}
                     </div>
-                    <div className="mx-4 my-2 rounded-lg bg-refly-fill-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap text-refly-text-0 leading-[22px]">
+                    <div className="max-h-[300px] overflow-y-auto mx-4 my-2 rounded-lg bg-refly-fill-hover px-4 py-3 font-mono text-xs font-normal whitespace-pre-wrap break-all text-refly-text-0 leading-[22px]">
                       {resultContent}
                     </div>
                   </div>

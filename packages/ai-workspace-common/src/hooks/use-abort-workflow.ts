@@ -73,12 +73,6 @@ export const useAbortWorkflow = ({
             // Optimistic UI update: immediately update all executing/waiting nodes
             const nodes = getNodes();
 
-            // Find all nodes that are currently executing or waiting
-            const affectedNodeExecutions = canvasNodeExecutions.filter(
-              (nodeExecution) =>
-                nodeExecution.status === 'executing' || nodeExecution.status === 'waiting',
-            );
-
             // Update canvasNodeExecutions state
             const updatedNodeExecutions = canvasNodeExecutions.map((nodeExecution) => {
               if (nodeExecution.status === 'executing' || nodeExecution.status === 'waiting') {
@@ -94,12 +88,11 @@ export const useAbortWorkflow = ({
             setCanvasNodeExecutions(canvasId, updatedNodeExecutions);
 
             // For each affected node, clean up frontend state
-            for (const nodeExecution of affectedNodeExecutions) {
-              const node = nodes.find((n) => n.data?.entityId === nodeExecution.entityId);
-              if (!node) continue;
-
-              // Clean up frontend state for this node
-              cleanupAbortedNode(node.id, nodeExecution.entityId);
+            for (const node of nodes) {
+              const status = node.data.metadata?.status;
+              if (status === 'executing' || status === 'waiting') {
+                cleanupAbortedNode(node.id, node.data.entityId);
+              }
             }
           }
 

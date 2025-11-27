@@ -4,8 +4,9 @@ import { Helmet } from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import { getEnv, IENV } from '@refly/utils';
 import { useThemeStoreShallow } from '@refly/stores';
+import { MarketplaceErrorBoundary } from './error-boundary';
 
-const MarketplacePage = memo(() => {
+const MarketplacePageContent = memo(() => {
   const { t, i18n } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { isDarkMode, themeMode } = useThemeStoreShallow((state) => ({
@@ -93,6 +94,16 @@ const MarketplacePage = memo(() => {
     </>
   );
 });
+
+MarketplacePageContent.displayName = 'MarketplacePageContent';
+
+const MarketplacePage = () => {
+  return (
+    <MarketplaceErrorBoundary>
+      <MarketplacePageContent />
+    </MarketplaceErrorBoundary>
+  );
+};
 
 MarketplacePage.displayName = 'MarketplacePage';
 

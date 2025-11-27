@@ -77,7 +77,6 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
   }, [file.type]);
 
   const handlePreview = useCallback(() => {
-    console.info('Preview requested for drive file', file?.fileId ?? '');
     setCurrentFile(file);
   }, [file, setCurrentFile]);
 

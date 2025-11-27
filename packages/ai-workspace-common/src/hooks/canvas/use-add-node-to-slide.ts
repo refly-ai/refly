@@ -16,9 +16,7 @@ export const useAddNodeToSlide = ({
   onSuccess?: () => void;
 }) => {
   const { t } = useTranslation();
-  const { showSlideshow, setShowSlideshow, setCanvasPage } = useCanvasStoreShallow((state) => ({
-    showSlideshow: state.showSlideshow,
-    setShowSlideshow: state.setShowSlideshow,
+  const { setCanvasPage } = useCanvasStoreShallow((state) => ({
     setCanvasPage: state.setCanvasPage,
   }));
 
@@ -31,9 +29,6 @@ export const useAddNodeToSlide = ({
       const pageId = response?.data?.data?.page?.pageId;
       if (pageId) {
         message.success(t('common.putSuccess'));
-        if (!showSlideshow) {
-          setShowSlideshow(true);
-        }
         setCanvasPage(canvasId, pageId);
         setTimeout(() => {
           slideshowEmitter.emit('update', { canvasId, pageId, entityId: nodeIds?.[0] });

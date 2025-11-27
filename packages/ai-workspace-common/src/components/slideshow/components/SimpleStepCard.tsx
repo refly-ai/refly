@@ -77,7 +77,7 @@ const SimpleReasoningContent = memo(
 
 // Simplified version of ActualContent
 const SimpleActualContent = memo(({ content, sources }: { content: string; sources: Source[] }) => {
-  if (!content) return null;
+  if (!content?.trim()) return null;
 
   return (
     <div className="my-3 text-gray-600 text-base dark:text-gray-300">

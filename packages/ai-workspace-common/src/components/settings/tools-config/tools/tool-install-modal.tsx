@@ -11,7 +11,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Close } from 'refly-icons';
-import { useListTools, useListToolsets } from '@refly-packages/ai-workspace-common/queries';
+import {
+  useListTools,
+  useListToolsets,
+  useListUserToolsKey,
+} from '@refly-packages/ai-workspace-common/queries';
+import { useQueryClient } from '@tanstack/react-query';
 import { OAuthStatusChecker } from './oauth-status-checker';
 import './index.scss';
 const { TextArea } = Input;
@@ -218,6 +223,7 @@ export const ToolInstallModal = React.memo(
     const [oauthStatus, setOAuthStatus] = useState<
       'checking' | 'authorized' | 'unauthorized' | 'error' | null
     >(null);
+    const queryClient = useQueryClient();
     const { data, refetch: refetchToolsets } = useListToolsets({}, [], {
       enabled: true,
     });
@@ -425,7 +431,9 @@ export const ToolInstallModal = React.memo(
     const refetchToolsOnUpdate = useCallback(() => {
       refetchToolsets();
       refetchEnabledTools();
-    }, [refetchToolsets, refetchEnabledTools]);
+      // Invalidate useListUserTools cache to refresh mention list
+      queryClient.invalidateQueries({ queryKey: [useListUserToolsKey] });
+    }, [refetchToolsets, refetchEnabledTools, queryClient]);
 
     // Determine if the submit button should be disabled
     const isSubmitDisabled = useMemo(() => {

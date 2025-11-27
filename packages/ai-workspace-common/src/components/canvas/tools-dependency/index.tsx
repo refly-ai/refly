@@ -6,7 +6,7 @@ import {
   useListTools,
   useGetCanvasData,
 } from '@refly-packages/ai-workspace-common/queries/queries';
-import { GenericToolset, RawCanvasData } from '@refly/openapi-schema';
+import { GenericToolset, RawCanvasData, ToolsetDefinition } from '@refly/openapi-schema';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
@@ -20,6 +20,7 @@ import { useOpenInstallTool } from '@refly-packages/ai-workspace-common/hooks/us
 import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use-open-install-mcp';
 import { IoWarningOutline } from 'react-icons/io5';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
 const isToolsetInstalled = (
   toolset: GenericToolset,
@@ -282,6 +283,7 @@ const ToolsDependencyContent = React.memo(
     setActiveTab,
     currentTools,
     installedToolsets,
+    toolsetDefinitions,
     setOpen,
     isLogin,
     totalCount,
@@ -297,6 +299,7 @@ const ToolsDependencyContent = React.memo(
     setActiveTab: (value: string) => void;
     currentTools: Array<{ toolset: any; referencedNodes: any[] }>;
     installedToolsets: any[];
+    toolsetDefinitions: ToolsetDefinition[];
     setOpen: (value: boolean) => void;
     isLogin: boolean;
     totalCount: number;
@@ -308,6 +311,27 @@ const ToolsDependencyContent = React.memo(
 
     const { openInstallToolByKey } = useOpenInstallTool();
     const { openInstallMcp } = useOpenInstallMcp();
+
+    // Helper function to get complete toolset definition
+    const getToolsetDefinition = useCallback(
+      (toolset: GenericToolset) => {
+        // First try to get from toolset itself
+        if (toolset?.toolset?.definition) {
+          return toolset.toolset.definition;
+        }
+
+        // If not found, try to find from toolsetInventoryData by toolsetKey
+        if (toolset?.toolset?.key && toolsetDefinitions) {
+          const definition = toolsetDefinitions.find((item) => item.key === toolset.toolset.key);
+          if (definition) {
+            return definition;
+          }
+        }
+
+        return null;
+      },
+      [toolsetDefinitions],
+    );
 
     const handleInstallTool = useCallback(
       (toolset: GenericToolset) => {
@@ -372,10 +396,11 @@ const ToolsDependencyContent = React.memo(
               ) : (
                 currentTools.map(({ toolset, referencedNodes }) => {
                   const isInstalled = isToolsetInstalled(toolset, installedToolsets);
+                  const toolsetDefinition = getToolsetDefinition(toolset);
                   const description =
                     toolset?.type === 'mcp'
                       ? toolset.mcpServer.url
-                      : toolset?.toolset?.definition?.descriptionDict?.[currentLanguage || 'en'];
+                      : toolsetDefinition?.descriptionDict?.[currentLanguage || 'en'];
 
                   return (
                     <div
@@ -394,11 +419,8 @@ const ToolsDependencyContent = React.memo(
                         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                           <div className="flex items-center gap-1 min-w-0">
                             <div className="min-w-0 max-w-full text-refly-text-0 text-xs md:text-sm font-semibold leading-5 truncate">
-                              {toolset.type === 'regular' && toolset.builtin
-                                ? (toolset?.toolset?.definition?.labelDict?.[
-                                    currentLanguage
-                                  ] as string)
-                                : toolset.name}
+                              {(toolsetDefinition?.labelDict?.[currentLanguage] as string) ||
+                                toolset.name}
                             </div>
 
                             {isLogin && (
@@ -466,6 +488,10 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
+  const { data: toolsetInventoryData } = useListToolsetInventory({}, null, {
+    enabled: true,
+  });
+  const toolsetDefinitions = toolsetInventoryData?.data ?? [];
 
   const installedToolsets = data?.data ?? [];
 
@@ -655,6 +681,7 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
           setActiveTab={setActiveTab}
           currentTools={currentTools}
           installedToolsets={installedToolsets}
+          toolsetDefinitions={toolsetDefinitions}
           totalCount={toolsetsWithNodes.length}
           setOpen={setOpen}
           showReferencedNodesDisplay={false}
@@ -703,6 +730,10 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
+  const { data: toolsetInventoryData } = useListToolsetInventory({}, null, {
+    enabled: true,
+  });
+  const toolsetDefinitions = toolsetInventoryData?.data ?? [];
 
   const installedToolsets = data?.data ?? [];
 
@@ -840,6 +871,7 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
           setActiveTab={setActiveTab}
           currentTools={currentTools}
           installedToolsets={installedToolsets}
+          toolsetDefinitions={toolsetDefinitions}
           totalCount={toolsetsWithNodes.length}
           setOpen={setOpen}
           isLoading={canvasLoading || toolsLoading}

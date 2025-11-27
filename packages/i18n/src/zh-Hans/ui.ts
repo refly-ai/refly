@@ -667,6 +667,7 @@ const translations = {
         mail: '邮箱',
         joinGroup: '加入用户交流群',
         scanToJoinWechatGroup: '扫码加入微信交流群',
+        orWeChat: '或微信',
         discordGroup: 'Discord 交流群',
         notionDocument: 'Notion 文档',
         viewNotionDocument: '查看文档',
@@ -2948,8 +2949,7 @@ const translations = {
     },
   },
   invitationCode: {
-    title1: '输入邀请码以解锁',
-    title2: 'Refly AI自动化',
+    title: '输入邀请码以继续',
     description: '输入您的 6 位邀请码',
     dontHaveInvitationCode: '还没有邀请码？',
     reward: '已使用 +500积分',
@@ -3084,7 +3084,8 @@ const translations = {
   components: {
     markdown: {
       parameters: '输入',
-      result: ' 结果',
+      result: '结果',
+      failureReason: '失败原因',
       parameterName: '名称',
       parameterValue: '值',
       loadingToolCall: '加载工具调用详情...',

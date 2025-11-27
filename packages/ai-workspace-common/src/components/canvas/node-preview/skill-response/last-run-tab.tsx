@@ -31,7 +31,7 @@ const AIMessageCard = memo(
   ({ message, resultId }: { message: ActionMessage; resultId: string }) => {
     const content = message.content ?? '';
 
-    if (!content) return null;
+    if (!content?.trim()) return null;
 
     return (
       <div className="my-3 text-base">
@@ -73,7 +73,7 @@ const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
   );
 
   return (
-    <div className="my-3">
+    <div className="my-2">
       <ToolCall {...toolProps} />
     </div>
   );

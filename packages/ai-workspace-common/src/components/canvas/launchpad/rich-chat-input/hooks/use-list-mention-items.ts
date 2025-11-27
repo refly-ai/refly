@@ -17,8 +17,11 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const { data: files } = useFetchDriveFiles();
 
   // Fetch user tools (authorized + unauthorized) using new unified API
+  // Disable caching to always get fresh data
   const { data: userToolsData } = useListUserTools({}, [], {
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    gcTime: 0,
   });
   const userTools = userToolsData?.data ?? [];
   const { data: workflowVariables } = useVariablesManagement(canvasId);

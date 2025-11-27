@@ -34,7 +34,6 @@ import {
   useToolStoreShallow,
 } from '@refly/stores';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { locateToNodePreviewEmitter } from '@refly-packages/ai-workspace-common/events/locateToNodePreview';
 import { UnifiedContextMenu } from './unified-context-menu';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-preview-control';
 import {
@@ -174,12 +173,14 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   useCopyPasteSkillResponseNode({ canvasId, readonly });
 
   const {
+    nodePreviewId,
     canvasInitialized,
     operatingNodeId,
     setOperatingNodeId,
     setInitialFitViewCompleted,
     setContextMenuOpenedCanvasId,
   } = useCanvasStoreShallow((state) => ({
+    nodePreviewId: state.config[canvasId]?.nodePreviewId,
     canvasInitialized: state.canvasInitialized[canvasId],
     operatingNodeId: state.operatingNodeId,
     setOperatingNodeId: state.setOperatingNodeId,
@@ -194,7 +195,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       sidePanelVisible: state.sidePanelVisible,
     }));
 
-  const { handleNodePreview } = useNodePreviewControl({ canvasId });
+  const { previewNode } = useNodePreviewControl({ canvasId });
 
   // Use the reset hook to handle canvas ID changes
   useLinearThreadReset(canvasId);
@@ -350,26 +351,11 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   const { onConnectEnd: temporaryEdgeOnConnectEnd, onConnectStart: temporaryEdgeOnConnectStart } =
     useDragToCreateNode(onConnect);
 
-  const cleanupTemporaryEdges = useCallback(() => {
-    const rfInstance = reactFlowInstance;
-    rfInstance.setNodes((nodes) => nodes.filter((node) => node.type !== 'temporaryEdge'));
-    rfInstance.setEdges((edges) => {
-      // Get the current nodes to check if source/target is a temporary node
-      const currentNodes = rfInstance.getNodes();
-      const isTemporaryNode = (id: string) =>
-        currentNodes.some((node) => node.id === id && node.type === 'temporaryEdge');
-
-      return edges.filter((edge) => !isTemporaryNode(edge.source) && !isTemporaryNode(edge.target));
-    });
-  }, [reactFlowInstance]);
-
   const handlePanelClick = useCallback(
     (event: React.MouseEvent) => {
       setOperatingNodeId(null);
+      previewNode(null);
       setContextMenu((prev) => ({ ...prev, open: false }));
-
-      // Clean up temporary nodes when clicking on canvas
-      cleanupTemporaryEdges();
 
       // Reset edge selection when clicking on canvas
       if (selectedEdgeId) {
@@ -401,9 +387,9 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       setOperatingNodeId,
       reactFlowInstance,
       selectedEdgeId,
-      cleanupTemporaryEdges,
       readonly,
       setShowWorkflowRun,
+      previewNode,
     ],
   );
 
@@ -503,28 +489,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
     if (showWorkflowRun) {
       setShowWorkflowRun(false);
     }
-
-    const unsubscribe = locateToNodePreviewEmitter.on(
-      'locateToNodePreview',
-      ({ canvasId: emittedCanvasId, id }) => {
-        if (emittedCanvasId === canvasId) {
-          requestAnimationFrame(() => {
-            const previewContainer = document.querySelector('.preview-container');
-            const targetPreview = document.querySelector(`[data-preview-id="${id}"]`);
-
-            if (previewContainer && targetPreview) {
-              targetPreview?.scrollIntoView?.({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'center',
-              });
-            }
-          });
-        }
-      },
-    );
-
-    return unsubscribe;
   }, [canvasId]);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -709,31 +673,22 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       }
 
       // Memo nodes are not previewable
-      if (
-        [
-          'memo',
-          'skill',
-          'group',
-          'image',
-          'mediaSkill',
-          'video',
-          'audio',
-          'mediaSkillResponse',
-        ].includes(node.type)
-      ) {
+      if (!['start', 'skillResponse'].includes(node.type)) {
         return;
       }
 
-      // Handle preview if enabled
-      handleNodePreview(node);
+      previewNode(node);
     },
-    [handleNodePreview, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
+    [previewNode, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
   );
 
   // Memoize nodes and edges
   const memoizedNodes = useMemo(() => nodes, [nodes]);
   const memoizedEdges = useMemo(() => edges, [edges]);
-  const selectedNode = useMemo(() => nodes.find((node) => node.selected) as CanvasNode, [nodes]);
+  const selectedNode = useMemo(
+    () => nodes.find((node) => node.id === nodePreviewId) as CanvasNode,
+    [nodes, nodePreviewId],
+  );
 
   // Memoize the Background component
   const memoizedBackground = useMemo(() => <MemoizedBackground />, []);

@@ -15,8 +15,8 @@ const SNAP_THRESHOLD = 10;
 export const useNodeOperations = () => {
   const canvasId = useCanvasId();
   const { setState, getState } = useStoreApi<CanvasNode<any>>();
-  const { removeNodePreview } = useCanvasStoreShallow((state) => ({
-    removeNodePreview: state.removeNodePreview,
+  const { setNodePreview } = useCanvasStoreShallow((state) => ({
+    setNodePreview: state.setNodePreview,
   }));
   const { removeContextItem } = useContextPanelStoreShallow((state) => ({
     removeContextItem: state.removeContextItem,
@@ -135,7 +135,7 @@ export const useNodeOperations = () => {
 
           // Remove from context items and node previews
           removeContextItem(nodeId);
-          removeNodePreview(canvasId, nodeId);
+          setNodePreview(canvasId, null);
         }
 
         // Check if this is a position change for snap alignment
@@ -171,7 +171,7 @@ export const useNodeOperations = () => {
       canvasId,
       updateNodesWithSync,
       removeContextItem,
-      removeNodePreview,
+      setNodePreview,
       customApplyNodeChanges,
       // Use deletedNodesEmitter event emitter to track deleted nodes
     ],

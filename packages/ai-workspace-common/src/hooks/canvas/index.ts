@@ -46,5 +46,8 @@ export * from './use-drag-create-node';
 export * from './use-node-execution-status';
 export * from './use-node-execution-focus';
 
+// Workflow hooks
+export * from './use-workflow-incomplete-nodes';
+
 // Resource operations
 export * from './use-download-file';

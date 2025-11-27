@@ -2,7 +2,6 @@ import { useState } from 'react';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useDebouncedCallback } from 'use-debounce';
 import { useSubscriptionUsage } from '../use-subscription-usage';
-import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 export const useDeleteResource = () => {
   const [isRemoving, setIsRemoving] = useState(false);
@@ -20,9 +19,6 @@ export const useDeleteResource = () => {
 
       if (data?.success) {
         success = true;
-        nodeOperationsEmitter.emit('closeNodePreviewByEntityId', {
-          entityId: resourceId,
-        });
       }
     } finally {
       setIsRemoving(false);
