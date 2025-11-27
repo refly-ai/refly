@@ -202,14 +202,17 @@ export class ToolService {
   /**
    * List regular tools
    * Combines both regular (code-based) and config_based (database-configured) toolsets
+   * Excludes OAuth toolsets (they are handled by listOAuthTools)
    */
   async listRegularTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
     const { isGlobal, enabled } = param ?? {};
 
     // Build where condition dynamically
+    // Exclude OAuth toolsets to avoid duplicates with listOAuthTools
     const whereCondition: any = {
       uninstalled: false,
       deletedAt: null,
+      authType: { not: AuthType.OAUTH },
       OR:
         isGlobal !== undefined
           ? [{ isGlobal }, { uid: user.uid }]
