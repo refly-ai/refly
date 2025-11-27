@@ -1,0 +1,271 @@
+# Langfuse v3 - LLM Observability Platform
+# Self-hosted deployment with ClickHouse backend
+#
+# Usage:
+#   cd deploy/docker/langfuse
+#   cp .env.example .env  # customize if needed
+#   docker-compose up -d
+#
+# Services:
+#   - langfuse-postgres: Metadata storage
+#   - langfuse-clickhouse: Analytics storage (traces, spans, generations)
+#   - langfuse-redis: Queue and caching
+#   - langfuse-minio: S3-compatible blob storage (media, exports)
+#   - langfuse-web: Web UI and API (exposed: 33001)
+#   - langfuse-worker: Background job processing
+#
+# Exposed Ports:
+#   - 33001: Langfuse Web UI & API
+#   - 9090: MinIO S3 API (optional, for media access)
+
+services:
+  # PostgreSQL - Metadata storage
+  langfuse-postgres:
+    container_name: refly_langfuse_postgres
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${LANGFUSE_POSTGRES_USER:-langfuse}
+      POSTGRES_PASSWORD: ${LANGFUSE_POSTGRES_PASSWORD:-langfuse}
+      POSTGRES_DB: ${LANGFUSE_POSTGRES_DB:-langfuse}
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${LANGFUSE_POSTGRES_USER:-langfuse}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - langfuse_internal
+
+  # ClickHouse - Analytics storage (v3 requirement)
+  langfuse-clickhouse:
+    container_name: refly_langfuse_clickhouse
+    image: clickhouse/clickhouse-server:24.3
+    restart: unless-stopped
+    user: '101:101'
+    environment:
+      CLICKHOUSE_DB: ${LANGFUSE_CLICKHOUSE_DB:-langfuse}
+      CLICKHOUSE_USER: ${LANGFUSE_CLICKHOUSE_USER:-langfuse}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-langfuse}
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - langfuse_internal
+
+  # Redis - Queue and caching
+  langfuse-redis:
+    container_name: refly_langfuse_redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${LANGFUSE_REDIS_AUTH:-langfuse}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - langfuse_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${LANGFUSE_REDIS_AUTH:-langfuse}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - langfuse_internal
+
+  # MinIO - S3-compatible blob storage
+  langfuse-minio:
+    container_name: refly_langfuse_minio
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${LANGFUSE_MINIO_ROOT_USER:-langfuse}
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_ROOT_PASSWORD:-langfuse123}
+    volumes:
+      - langfuse_minio_data:/data
+    ports:
+      - '${LANGFUSE_MINIO_PORT:-9090}:9000'
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - langfuse_internal
+
+  # MinIO Bucket Init - Auto-create required bucket
+  langfuse-minio-init:
+    container_name: refly_langfuse_minio_init
+    image: minio/mc:latest
+    depends_on:
+      langfuse-minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://langfuse-minio:9000 ${LANGFUSE_MINIO_ROOT_USER:-langfuse} ${LANGFUSE_MINIO_ROOT_PASSWORD:-langfuse123};
+      mc mb myminio/${LANGFUSE_S3_BUCKET:-langfuse} --ignore-existing;
+      mc anonymous set download myminio/${LANGFUSE_S3_BUCKET:-langfuse};
+      echo 'Bucket ${LANGFUSE_S3_BUCKET:-langfuse} created successfully';
+      exit 0;
+      "
+    networks:
+      - langfuse_internal
+
+  # Langfuse Web - UI and API
+  langfuse-web:
+    container_name: refly_langfuse_web
+    image: langfuse/langfuse:3
+    restart: unless-stopped
+    ports:
+      - '${LANGFUSE_PORT:-33001}:3000'
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${LANGFUSE_POSTGRES_USER:-langfuse}:${LANGFUSE_POSTGRES_PASSWORD:-langfuse}@langfuse-postgres:5432/${LANGFUSE_POSTGRES_DB:-langfuse}
+
+      # ClickHouse
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: ${LANGFUSE_CLICKHOUSE_USER:-langfuse}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-langfuse}
+      CLICKHOUSE_CLUSTER_ENABLED: 'false'
+
+      # Redis
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: '6379'
+      REDIS_AUTH: ${LANGFUSE_REDIS_AUTH:-langfuse}
+
+      # S3/MinIO - Event Upload
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${LANGFUSE_S3_BUCKET:-langfuse}
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD:-langfuse123}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: 'true'
+
+      # S3/MinIO - Media Upload
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: ${LANGFUSE_S3_BUCKET:-langfuse}
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD:-langfuse123}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:${LANGFUSE_MINIO_PORT:-9090}
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: 'true'
+
+      # Security
+      SALT: ${LANGFUSE_SALT:-0000000000000000}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-mysecretkey}
+      NEXTAUTH_URL: ${LANGFUSE_NEXTAUTH_URL:-http://localhost:33001}
+
+      # Misc
+      TELEMETRY_ENABLED: 'false'
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: 'true'
+
+      # Initial Setup (auto-creates org, project, and admin user)
+      LANGFUSE_INIT_ORG_ID: ${LANGFUSE_INIT_ORG_ID:-refly-dev}
+      LANGFUSE_INIT_ORG_NAME: ${LANGFUSE_INIT_ORG_NAME:-Refly Dev}
+      LANGFUSE_INIT_PROJECT_ID: ${LANGFUSE_INIT_PROJECT_ID:-refly-project}
+      LANGFUSE_INIT_PROJECT_NAME: ${LANGFUSE_INIT_PROJECT_NAME:-Refly Project}
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-pk-lf-dev}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-sk-lf-dev}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-admin@refly.dev}
+      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-Admin}
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-admin123}
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+      langfuse-minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3000/api/public/health || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - langfuse_internal
+
+  # Langfuse Worker - Background job processing
+  langfuse-worker:
+    container_name: refly_langfuse_worker
+    image: langfuse/langfuse-worker:3
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${LANGFUSE_POSTGRES_USER:-langfuse}:${LANGFUSE_POSTGRES_PASSWORD:-langfuse}@langfuse-postgres:5432/${LANGFUSE_POSTGRES_DB:-langfuse}
+
+      # ClickHouse
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: ${LANGFUSE_CLICKHOUSE_USER:-langfuse}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-langfuse}
+      CLICKHOUSE_CLUSTER_ENABLED: 'false'
+
+      # Redis
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: '6379'
+      REDIS_AUTH: ${LANGFUSE_REDIS_AUTH:-langfuse}
+
+      # S3/MinIO - Event Upload
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${LANGFUSE_S3_BUCKET:-langfuse}
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD:-langfuse123}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: 'true'
+
+      # S3/MinIO - Media Upload
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: ${LANGFUSE_S3_BUCKET:-langfuse}
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD:-langfuse123}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:${LANGFUSE_MINIO_PORT:-9090}
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: 'true'
+
+      # Security
+      SALT: ${LANGFUSE_SALT:-0000000000000000}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+
+      # Misc
+      TELEMETRY_ENABLED: 'false'
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+      langfuse-minio-init:
+        condition: service_completed_successfully
+    networks:
+      - langfuse_internal
+
+networks:
+  langfuse_internal:
+    driver: bridge
+    name: refly_langfuse_network
+
+volumes:
+  langfuse_postgres_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_redis_data:
+  langfuse_minio_data:

@@ -2,6 +2,9 @@ import { ResultItemPreview } from '@refly-packages/ai-workspace-common/component
 import { CanvasNode } from '@refly/openapi-schema';
 import { memo, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Modal } from 'antd';
+import { useActionResultStoreShallow } from '@refly/stores';
+import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 
 export interface SelectedResultsGridProps {
   selectedResults: string[];
@@ -18,6 +21,10 @@ export const SelectedResultsGrid = memo(
     const containerRef = useRef<HTMLDivElement>(null);
     const [itemHeight, setItemHeight] = useState<number | null>(null);
     const [itemsPerRow, setItemsPerRow] = useState<number>(3);
+    const { currentFile, setCurrentFile } = useActionResultStoreShallow((state) => ({
+      currentFile: state.currentFile,
+      setCurrentFile: state.setCurrentFile,
+    }));
 
     // Filter options to only show selected ones
     const selectedNodes = options.filter((node) => selectedResults.includes(node.id));
@@ -84,6 +91,17 @@ export const SelectedResultsGrid = memo(
         };
       }
     }, [selectedNodes.length, itemsPerRow]);
+
+    // Clean up currentFile when component unmounts if modal was open
+    // This prevents state leakage when navigating away while preview is open
+    useEffect(() => {
+      return () => {
+        if (currentFile) {
+          setCurrentFile(null);
+        }
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     if (selectedNodes.length === 0) {
       return (
@@ -201,6 +219,36 @@ export const SelectedResultsGrid = memo(
             </div>
           )}
         </div>
+        {currentFile && (
+          <Modal
+            open={!!currentFile}
+            footer={null}
+            onCancel={() => setCurrentFile(null)}
+            width="85%"
+            style={{ top: 20 }}
+            styles={{
+              body: {
+                maxHeight: 'calc(var(--screen-height, 100vh) - 100px)',
+                height: 'calc(var(--screen-height, 100vh) - 100px)',
+                padding: 0,
+                overflow: 'hidden',
+              },
+              mask: {
+                background: 'rgba(0, 0, 0, 0.65)',
+              },
+            }}
+            className="wide-mode-modal"
+          >
+            <div className="bg-white h-full w-full flex flex-col rounded-lg overflow-hidden dark:bg-gray-900">
+              <div
+                className="flex-1 overflow-auto"
+                style={{ height: 'calc(var(--screen-height, 100vh) - 160px)' }}
+              >
+                <ProductCard file={currentFile} classNames="w-full h-full" source="preview" />
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     );
   },

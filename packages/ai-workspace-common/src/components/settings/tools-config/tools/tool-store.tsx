@@ -1,8 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import {
-  useListToolsetInventory,
-  useListToolsets,
-} from '@refly-packages/ai-workspace-common/queries';
+import { useListToolsetInventory, useListTools } from '@refly-packages/ai-workspace-common/queries';
 import { Col, Empty, Row, Button, Typography, Skeleton, Input, message } from 'antd';
 import { ToolsetDefinition } from '@refly-packages/ai-workspace-common/requests';
 import { Search } from 'refly-icons';
@@ -123,22 +120,23 @@ export const ToolStore = () => {
     enabled: toolStoreModalOpen,
   });
 
-  // Get list of installed toolsets to filter out from store
-  const { data: installedToolsets } = useListToolsets({}, [], {
+  // Get list of installed tools to filter out from store
+  // Use useListTools instead of useListToolsets to include all tool types (regular, OAuth, MCP)
+  const { data: installedTools } = useListTools({}, [], {
     enabled: toolStoreModalOpen,
   });
 
   const tools = useMemo(() => {
     const allTools = (data?.data || []).filter((tool) => !tool.builtin && tool.key !== 'builtin');
 
-    // Get set of keys for all installed toolsets (both global and user-installed)
+    // Get set of keys for all installed tools (including regular, OAuth, and MCP tools)
     const installedToolKeys = new Set(
-      (installedToolsets?.data || []).map((toolset) => toolset.key),
+      (installedTools?.data || []).map((tool) => tool.toolset?.key).filter(Boolean),
     );
 
-    // Filter out tools that are already installed (globally or by user)
+    // Filter out tools that are already installed
     return allTools.filter((tool) => !installedToolKeys.has(tool.key));
-  }, [data?.data, installedToolsets?.data]);
+  }, [data?.data, installedTools?.data]);
 
   // Debounce search text to improve performance
   useEffect(() => {

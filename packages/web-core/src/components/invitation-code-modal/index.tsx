@@ -40,8 +40,7 @@ export const InvitationCodeModal = () => {
       <div className="max-w-[580px] h-[357px] px-6 flex flex-col items-center mb-8 relative z-10">
         <div className="text-center mb-8">
           <h1 className="text-[32px] font-bold text-gray-900 dark:text-white mb-2 max-w-[540px]">
-            <div>{t('invitationCode.title1')}</div>
-            <div>{t('invitationCode.title2')}</div>
+            <div>{t('invitationCode.title')}</div>
           </h1>
           <p className="text-gray-600 dark:text-gray-400">{t('invitationCode.description')}</p>
         </div>

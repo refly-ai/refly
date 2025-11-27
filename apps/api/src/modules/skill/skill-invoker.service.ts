@@ -2,6 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessageChunk } from '@langchain/core/dist/messages';
+import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -501,6 +502,20 @@ export class SkillInvokerService {
       startTimeoutCheck();
     }
 
+    // Create Langfuse callback handler if enabled
+    // New @langfuse/langchain v4 API: simpler initialization, trace ID via runId parameter
+    const langfuseEnabled = this.config.get<boolean>('langfuse.enabled');
+
+    const callbacks = [
+      langfuseEnabled &&
+        this.createLangfuseHandler({
+          sessionId: data.target?.entityId,
+          userId: user.uid,
+          skillName: data.skillName,
+          mode: data.mode,
+        }),
+    ].filter(Boolean);
+
     try {
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
@@ -521,6 +536,8 @@ export class SkillInvokerService {
         ...config,
         version: 'v2',
         signal: abortController.signal,
+        callbacks,
+        runName: data.skillName || 'skill-invoke',
       })) {
         if (abortController.signal.aborted) {
           const abortReason = abortController.signal.reason?.toString() ?? 'Request aborted';
@@ -701,9 +718,16 @@ export class SkillInvokerService {
               break;
             }
             if (event.event === 'on_tool_end') {
-              await persistToolCall(ToolCallStatus.COMPLETED, {
+              const toolOutput = event.data?.output;
+              const isErrorStatus = toolOutput?.status === 'error';
+              const errorMessage = isErrorStatus
+                ? String(toolOutput?.error ?? 'Tool returned error status')
+                : undefined;
+              const finalStatus = isErrorStatus ? ToolCallStatus.FAILED : ToolCallStatus.COMPLETED;
+              await persistToolCall(finalStatus, {
                 input: undefined,
-                output: event.data?.output,
+                output: toolOutput,
+                errorMessage,
               });
 
               // Add ToolMessage for message persistence
@@ -716,17 +740,18 @@ export class SkillInvokerService {
                 toolCallId,
                 startTs: toolStartTs,
                 endTs: toolEndTs,
-                status: 'completed' as const,
+                status: isErrorStatus ? ('failed' as const) : ('completed' as const),
+                ...(isErrorStatus ? { error: errorMessage } : {}),
               };
               const toolMessageId = messageAggregator.addToolMessage({
                 toolCallId,
                 toolCallMeta,
               });
 
-              // Emit tool_call_end event with toolCallMeta and messageId
+              // Emit tool_call_end or tool_call_error event with toolCallMeta and messageId
               if (res) {
                 writeSSEResponse(res, {
-                  event: 'tool_call_end',
+                  event: isErrorStatus ? 'tool_call_error' : 'tool_call_end',
                   resultId,
                   step: runMeta?.step,
                   messageId: toolMessageId,
@@ -736,25 +761,24 @@ export class SkillInvokerService {
                     toolsetId,
                     toolName,
                     stepName,
-                    output: event.data?.output,
-                    status: 'completed',
+                    output: toolOutput,
+                    ...(isErrorStatus ? { error: errorMessage } : {}),
+                    status: isErrorStatus ? 'failed' : 'completed',
                     createdAt: startTs,
                     updatedAt: Date.now(),
                   },
                 });
               }
 
-              // Extract tool_call_chunks from AIMessageChunk
-              if (event.metadata.langgraph_node === 'tools' && event.data?.output) {
-                const { toolsetKey } = event.metadata ?? {};
-                // Skip non-tool user-visible helpers like commonQnA, and ensure toolsetKey exists
+              // Extract tool_call_chunks from AIMessageChunk for successful tool runs
+              if (!isErrorStatus && event.metadata?.langgraph_node === 'tools' && toolOutput) {
                 if (!toolsetKey) {
                   break;
                 }
 
                 // Handle generated files from tools (sandbox, scalebox, etc.)
                 // Add them to canvas as image/audio/video/document nodes
-                await this.handleToolGeneratedFiles(user, data, event.data.output, resultId).catch(
+                await this.handleToolGeneratedFiles(user, data, toolOutput, resultId).catch(
                   (error) => {
                     this.logger.error(`Failed to handle tool generated files: ${error?.message}`);
                   },
@@ -908,6 +932,10 @@ export class SkillInvokerService {
 
       // Unregister the abort controller
       this.actionService.unregisterAbortController(resultId);
+
+      // Note: @langfuse/langchain v4 CallbackHandler creates OTEL spans via startAndRegisterOtelSpan()
+      // These spans are processed by LangfuseSpanProcessor which handles batching and export
+      // No manual flush needed - the span processor has its own export interval
 
       for (const artifact of Object.values(artifactMap)) {
         artifact.connection?.disconnect();
@@ -1323,6 +1351,22 @@ export class SkillInvokerService {
         res.end('');
       }
     }
+  }
+
+  /**
+   * Create Langfuse callback handler for LLM tracing
+   */
+  private createLangfuseHandler(params: {
+    sessionId?: string;
+    userId: string;
+    skillName?: string;
+    mode?: string;
+  }): LangfuseCallbackHandler {
+    return new LangfuseCallbackHandler({
+      sessionId: params.sessionId,
+      userId: params.userId,
+      tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
+    });
   }
 
   /**

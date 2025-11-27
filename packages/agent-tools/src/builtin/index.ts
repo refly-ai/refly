@@ -1,5 +1,6 @@
 import { z } from 'zod/v3';
 import { AgentBaseTool, AgentBaseToolset } from '../base';
+import { BuiltinExecuteCode } from './sandbox';
 
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { ToolsetDefinition, User } from '@refly/openapi-schema';
@@ -59,6 +60,13 @@ export const BuiltinToolsetDefinition: ToolsetDefinition = {
       descriptionDict: {
         en: 'Get the current date and time information.',
         'zh-CN': '获取当前日期和时间信息。',
+      },
+    },
+    {
+      name: 'execute_code',
+      descriptionDict: {
+        en: 'Execute code in a secure sandbox environment.',
+        'zh-CN': '在安全的沙箱环境中执行代码。',
       },
     },
   ],
@@ -138,6 +146,30 @@ export const BuiltinGetTimeDefinition: ToolsetDefinition = {
   descriptionDict: {
     en: 'Get the current date and time information.',
     'zh-CN': '获取当前日期和时间信息。',
+  },
+};
+
+export const BuiltinReadFileDefinition: ToolsetDefinition = {
+  key: 'read_file',
+  labelDict: {
+    en: 'Read File',
+    'zh-CN': '读取文件',
+  },
+  descriptionDict: {
+    en: 'Read content from a file.',
+    'zh-CN': '读取文件内容。',
+  },
+};
+
+export const BuiltinExecuteCodeDefinition: ToolsetDefinition = {
+  key: 'execute_code',
+  labelDict: {
+    en: 'Execute Code',
+    'zh-CN': '执行代码',
+  },
+  descriptionDict: {
+    en: 'Execute code in a secure sandbox environment.',
+    'zh-CN': '在安全的沙箱环境中执行代码。',
   },
 };
 
@@ -573,6 +605,16 @@ export class BuiltinGetTimeToolset extends AgentBaseToolset<BuiltinToolParams> {
   tools = [BuiltinGetTime] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }
 
+export class BuiltinReadFileToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinReadFileDefinition.key;
+  tools = [BuiltinReadFile] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
+export class BuiltinExecuteCodeToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinExecuteCodeDefinition.key;
+  tools = [BuiltinExecuteCode] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
 export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
   toolsetKey = BuiltinToolsetDefinition.key;
   tools = [
@@ -582,5 +624,6 @@ export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
     BuiltinSendEmail,
     BuiltinGetTime,
     BuiltinReadFile,
+    BuiltinExecuteCode,
   ] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }

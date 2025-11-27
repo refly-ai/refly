@@ -125,7 +125,7 @@ export function isLikelyStaticResource(url: string, logger?: any): boolean {
     const cdnMatch = CDN_PATTERNS.find((pattern) => hostname.includes(pattern));
     if (cdnMatch) {
       if (logger) {
-        logger.log(`URL ${url} matched CDN pattern: ${cdnMatch}`);
+        logger.info(`URL ${url} matched CDN pattern: ${cdnMatch}`);
       }
       return true;
     }
@@ -134,7 +134,7 @@ export function isLikelyStaticResource(url: string, logger?: any): boolean {
     const extensionMatch = STATIC_FILE_EXTENSIONS.find((ext) => pathname.endsWith(ext));
     if (extensionMatch) {
       if (logger) {
-        logger.log(`URL ${url} matched static file extension: ${extensionMatch}`);
+        logger.info(`URL ${url} matched static file extension: ${extensionMatch}`);
       }
       return true;
     }
@@ -144,7 +144,7 @@ export function isLikelyStaticResource(url: string, logger?: any): boolean {
     const pathMatch = staticPaths.find((path) => pathname.includes(path));
     if (pathMatch) {
       if (logger) {
-        logger.log(`URL ${url} matched static resource path: ${pathMatch}`);
+        logger.info(`URL ${url} matched static resource path: ${pathMatch}`);
       }
       return true;
     }
@@ -179,7 +179,7 @@ export async function analyzeUrlsWithLLM(
   const MAX_URLS_PER_BATCH = 20;
 
   if (urls.length > MAX_URLS_PER_BATCH) {
-    logger.log(`Too many URLs (${urls.length}), splitting into batches of ${MAX_URLS_PER_BATCH}`);
+    logger.info(`Too many URLs (${urls.length}), splitting into batches of ${MAX_URLS_PER_BATCH}`);
 
     // Split URLs into batches and process each batch
     const batches = [];
@@ -190,7 +190,7 @@ export async function analyzeUrlsWithLLM(
     // Process each batch and combine results
     let allResults: UrlAnalysisResult[] = [];
     for (let i = 0; i < batches.length; i++) {
-      logger.log(`Processing URL batch ${i + 1}/${batches.length}`);
+      logger.info(`Processing URL batch ${i + 1}/${batches.length}`);
       const batchResults = await analyzeUrlsWithLLM(batches[i], ctx);
       allResults = [...allResults, ...batchResults];
     }
@@ -198,7 +198,7 @@ export async function analyzeUrlsWithLLM(
     return allResults;
   }
 
-  logger.log(`Analyzing ${urls.length} URLs with LLM in a single batch`);
+  logger.info(`Analyzing ${urls.length} URLs with LLM in a single batch`);
 
   const systemPrompt = `You are an AI URL analyzer that identifies static resources and CDN links.
 
@@ -271,7 +271,7 @@ Return a structured JSON array with your analysis for each URL.`;
       ctx?.config?.configurable?.modelConfigMap?.queryAnalysis,
     );
 
-    logger.log(`LLM batch analysis complete: analyzed ${result.results.length} URLs`);
+    logger.info(`LLM batch analysis complete: analyzed ${result.results.length} URLs`);
 
     return result.results as UrlAnalysisResult[];
   } catch (error) {
@@ -300,7 +300,7 @@ export async function filterStaticResources(
   }
 
   const logger = ctx.ctxThis.engine.logger;
-  logger.log(`Starting to filter ${urls.length} URLs for static resources and CDN links`);
+  logger.info(`Starting to filter ${urls.length} URLs for static resources and CDN links`);
 
   // First pass: Quick programmatic filter
   const programmaticFilterResults = urls.map((url) => {
@@ -312,7 +312,7 @@ export async function filterStaticResources(
   const programmaticFilteredCount = programmaticFilterResults.filter(
     (result) => result.isStatic,
   ).length;
-  logger.log(`Programmatically identified ${programmaticFilteredCount} static resources`);
+  logger.info(`Programmatically identified ${programmaticFilteredCount} static resources`);
 
   // Get URLs that need LLM verification (passed programmatic filter)
   const needLlmVerification = programmaticFilterResults
@@ -320,13 +320,13 @@ export async function filterStaticResources(
     .map((result) => result.url);
 
   if (!needLlmVerification.length) {
-    logger.log('No URLs need LLM verification, all were filtered programmatically');
+    logger.info('No URLs need LLM verification, all were filtered programmatically');
     return [];
   }
 
   // Only perform LLM verification if there are URLs that need it
   if (needLlmVerification.length > 0) {
-    logger.log(`${needLlmVerification.length} URLs need LLM verification`);
+    logger.info(`${needLlmVerification.length} URLs need LLM verification`);
 
     // Second pass: LLM verification for remaining URLs - now in a single batch
     const llmResults = await analyzeUrlsWithLLM(needLlmVerification, ctx);
@@ -338,8 +338,8 @@ export async function filterStaticResources(
 
     // Log detailed statistics
     const llmFilteredCount = needLlmVerification.length - filteredUrls.length;
-    logger.log(`LLM identified ${llmFilteredCount} additional static resources`);
-    logger.log(
+    logger.info(`LLM identified ${llmFilteredCount} additional static resources`);
+    logger.info(
       `Filtering complete: ${urls.length} total URLs, ${programmaticFilteredCount + llmFilteredCount} filtered out, ${filteredUrls.length} remain`,
     );
 
@@ -349,13 +349,13 @@ export async function filterStaticResources(
       const nonStaticExample = llmResults.find((r) => !r.isStaticResource && r.url && r.reason);
 
       if (staticExample) {
-        logger.log(
+        logger.info(
           `Example static resource: ${staticExample.url}, Reason: ${staticExample.reason}`,
         );
       }
 
       if (nonStaticExample) {
-        logger.log(
+        logger.info(
           `Example non-static resource: ${nonStaticExample.url}, Reason: ${nonStaticExample.reason}`,
         );
       }
