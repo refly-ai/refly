@@ -1092,9 +1092,14 @@ export class DriveService {
       return '';
     }
 
-    if ((await this.externalOss.statObject(storageKey))?.size > 0) {
-      // File already exists in external OSS
-      return;
+    // Check if file already exists in external OSS
+    try {
+      const existingFile = await this.externalOss.statObject(storageKey);
+      if (existingFile?.size > 0) {
+        return;
+      }
+    } catch {
+      // File doesn't exist in external OSS, continue with publishing
     }
 
     try {
@@ -1102,7 +1107,9 @@ export class DriveService {
       const stream = await this.internalOss.getObject(storageKey);
       await this.externalOss.putObject(storageKey, stream);
     } catch (error) {
-      this.logger.error(`Failed to publish drive file ${storageKey}: ${error.stack}`);
+      this.logger.error(
+        `Failed to publish drive file - fileId: ${fileId}, storageKey: ${storageKey}, error: ${error.stack}`,
+      );
       throw error;
     }
   }
