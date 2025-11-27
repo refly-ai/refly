@@ -1,13 +1,19 @@
 import { WorkflowApp } from '@refly/openapi-schema';
 import { HoverCardContainer } from '@refly-packages/ai-workspace-common/components/common/hover-card';
-import { Avatar, Button } from 'antd';
+import { Avatar, Button, Tooltip } from 'antd';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useTranslation } from 'react-i18next';
 import { WiTime3 } from 'react-icons/wi';
+import { memo, useMemo } from 'react';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 
-export const AppCard = ({ data }: { data: WorkflowApp; onDelete?: () => void }) => {
+interface AppCardData extends WorkflowApp {
+  publishReviewStatus?: string;
+  publishToCommunity?: boolean;
+}
+
+export const AppCard = memo(({ data }: { data: AppCardData; onDelete?: () => void }) => {
   const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
 
@@ -19,6 +25,28 @@ export const AppCard = ({ data }: { data: WorkflowApp; onDelete?: () => void }) 
     e.stopPropagation();
     handleView();
   };
+
+  // Determine review status
+  const reviewStatus = useMemo(() => {
+    if (!data.publishToCommunity) {
+      return null;
+    }
+
+    const status = data.publishReviewStatus;
+    if (status === 'reviewing') {
+      return {
+        label: t('appManager.reviewStatus.reviewing'),
+        tooltip: t('appManager.reviewStatus.reviewingTooltip'),
+      };
+    }
+    if (status === 'published' || status === 'approved') {
+      return {
+        label: t('appManager.reviewStatus.published'),
+        tooltip: t('appManager.reviewStatus.publishedTooltip'),
+      };
+    }
+    return null;
+  }, [data.publishToCommunity, data.publishReviewStatus, t]);
 
   const actionContent = (
     <>
@@ -35,6 +63,20 @@ export const AppCard = ({ data }: { data: WorkflowApp; onDelete?: () => void }) 
           <div className="h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative">
             {data?.coverUrl && (
               <img src={data?.coverUrl} alt={data.title} className="w-full h-full object-cover" />
+            )}
+            {reviewStatus && (
+              <Tooltip title={reviewStatus?.tooltip}>
+                <div
+                  className="absolute top-2 right-2 flex items-center justify-center rounded-md text-white text-[10px] font-medium leading-[1.4em] cursor-default"
+                  style={{
+                    padding: '4px 10px',
+                    backgroundColor: 'rgba(28, 31, 35, 0.6)',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                >
+                  {reviewStatus?.label}
+                </div>
+              </Tooltip>
             )}
           </div>
           <div className="p-4 flex-1 flex flex-col gap-2">
@@ -62,4 +104,6 @@ export const AppCard = ({ data }: { data: WorkflowApp; onDelete?: () => void }) 
       </HoverCardContainer>
     </>
   );
-};
+});
+
+AppCard.displayName = 'AppCard';
