@@ -106,7 +106,7 @@ export const ErrorFallback = memo<ErrorFallbackProps>(
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-              {resetError && !isGlobal && (
+              {resetError && (
                 <button
                   type="button"
                   onClick={resetError}
