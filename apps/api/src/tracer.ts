@@ -1,33 +1,90 @@
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import * as opentelemetry from '@opentelemetry/sdk-node';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { PrismaInstrumentation } from '@prisma/instrumentation';
+import { LangfuseSpanProcessor } from '@langfuse/otel';
+import type { SpanProcessor } from '@opentelemetry/sdk-trace-base';
 
-let sdk: opentelemetry.NodeSDK | null = null;
+let sdk: NodeSDK | null = null;
+
+// Instrumentation scopes to exclude from Langfuse (infrastructure spans)
+// Use exact scope names for O(1) lookup
+const EXCLUDED_SCOPES = new Set([
+  'prisma',
+  '@opentelemetry/instrumentation-fs',
+  '@opentelemetry/instrumentation-http',
+  '@opentelemetry/instrumentation-https',
+  '@opentelemetry/instrumentation-net',
+  '@opentelemetry/instrumentation-dns',
+  '@opentelemetry/instrumentation-ioredis',
+]);
+
+interface TracerOptions {
+  otlpEndpoint?: string;
+  langfuse?: {
+    publicKey?: string;
+    secretKey?: string;
+    baseUrl?: string;
+  };
+}
 
 /**
  * Initialize OpenTelemetry tracing
- * @param endpoint OTLP traces endpoint (e.g., http://localhost:34318)
+ * - Tempo/Grafana: receives all spans (full observability)
+ * - Langfuse: receives only LLM/LangChain spans (filtered)
  */
-export function initTracer(endpoint: string): void {
-  const exporterOptions = {
-    url: `${endpoint}/v1/traces`,
-  };
+function createLangfuseProcessor(
+  config: NonNullable<TracerOptions['langfuse']>,
+): SpanProcessor | null {
+  const { publicKey, secretKey, baseUrl } = config;
 
-  const traceExporter = new OTLPTraceExporter(exporterOptions);
-  sdk = new opentelemetry.NodeSDK({
-    traceExporter,
+  if (!publicKey || !secretKey || !baseUrl) {
+    console.error('[Tracer] Langfuse missing required config:', {
+      hasPublicKey: !!publicKey,
+      hasSecretKey: !!secretKey,
+      hasBaseUrl: !!baseUrl,
+    });
+    return null;
+  }
+
+  try {
+    console.log('[Tracer] Initializing Langfuse:', { baseUrl });
+    return new LangfuseSpanProcessor({
+      publicKey,
+      secretKey,
+      baseUrl,
+      shouldExportSpan: ({ otelSpan }) =>
+        !EXCLUDED_SCOPES.has(otelSpan.instrumentationScope?.name ?? ''),
+    });
+  } catch (error) {
+    console.error('[Tracer] Failed to initialize Langfuse:', error);
+    return null;
+  }
+}
+
+export function initTracer(options: TracerOptions): void {
+  const spanProcessors: SpanProcessor[] = [];
+
+  if (options.langfuse) {
+    const processor = createLangfuseProcessor(options.langfuse);
+    if (processor) spanProcessors.push(processor);
+  }
+
+  sdk = new NodeSDK({
+    traceExporter: options.otlpEndpoint
+      ? new OTLPTraceExporter({ url: `${options.otlpEndpoint}/v1/traces` })
+      : undefined,
+    spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
     instrumentations: [getNodeAutoInstrumentations(), new PrismaInstrumentation()],
-    resource: new Resource({
-      [SemanticResourceAttributes.SERVICE_NAME]: 'reflyd',
+    resource: resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: 'reflyd',
     }),
   });
 
   sdk.start();
 
-  // Gracefully shut down the SDK on process exit
   process.on('SIGTERM', () => {
     sdk
       ?.shutdown()

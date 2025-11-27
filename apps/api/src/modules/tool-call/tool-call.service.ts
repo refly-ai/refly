@@ -290,12 +290,15 @@ export class ToolCallService {
       // Merge XML content into step.content
       const stepContent = step.content ?? '';
       const toolCallContent = xmlContents.length > 0 ? xmlContents.join('\n') : '';
-      const finalContent = stepContent ?? toolCallContent ?? '';
+      const mergedContent =
+        stepContent && toolCallContent
+          ? `${toolCallContent}\n${stepContent}`
+          : toolCallContent || stepContent || '';
 
       return {
         ...step,
         toolCalls: calls,
-        content: finalContent,
+        content: mergedContent,
       };
     });
   }

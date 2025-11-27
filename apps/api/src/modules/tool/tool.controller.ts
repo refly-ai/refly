@@ -13,6 +13,7 @@ import {
   UpsertToolsetRequest,
   ListToolsetInventoryResponse,
   ListUserToolsResponse,
+  GetToolCallResultResponse,
 } from '@refly/openapi-schema';
 import { toolsetPO2DTO } from './tool.dto';
 
@@ -97,5 +98,15 @@ export class ToolController {
   ): Promise<BaseResponse> {
     await this.toolService.deleteToolset(user, body);
     return buildSuccessResponse();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/call/result')
+  async getToolCallResult(
+    @LoginedUser() user: UserModel,
+    @Query('toolCallId') toolCallId: string,
+  ): Promise<GetToolCallResultResponse> {
+    const result = await this.toolService.getToolCallResult(user, toolCallId);
+    return buildSuccessResponse({ result });
   }
 }

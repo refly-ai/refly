@@ -113,7 +113,7 @@ export class Agent extends BaseSkill {
       );
 
       if (validTools.length > 0) {
-        this.engine.logger.log(
+        this.engine.logger.info(
           `Binding ${validTools.length} valid tools to LLM with tool_choice="auto"`,
         );
         // Use tool_choice="auto" to force LLM to decide when to use tools
@@ -126,7 +126,7 @@ export class Agent extends BaseSkill {
         llmForGraph = baseLlm;
       }
     } else {
-      this.engine.logger.log('No tools selected, using base LLM without tools');
+      this.engine.logger.info('No tools selected, using base LLM without tools');
       llmForGraph = baseLlm;
     }
 
@@ -157,14 +157,14 @@ export class Agent extends BaseSkill {
       // Enhanced tool node with strict sequential execution of tool calls
       const enhancedToolNode = async (toolState: typeof MessagesAnnotation.State) => {
         try {
-          this.engine.logger.log('Executing tool node with strict sequential tool calls');
+          this.engine.logger.info('Executing tool node with strict sequential tool calls');
 
           const priorMessages = toolState.messages ?? [];
           const lastMessage = priorMessages[priorMessages.length - 1] as AIMessage | undefined;
           const toolCalls = lastMessage?.tool_calls ?? [];
 
           if (!toolCalls || toolCalls.length === 0) {
-            this.engine.logger.log('No tool calls to execute');
+            this.engine.logger.info('No tool calls to execute');
             return { messages: priorMessages };
           }
 
@@ -203,7 +203,7 @@ export class Agent extends BaseSkill {
 
             try {
               // Log tool arguments before invocation
-              this.engine.logger.log(
+              this.engine.logger.info(
                 `Invoking tool '${toolName}' with args:\n${JSON.stringify(toolArgs, null, 2)}`,
               );
 
@@ -222,7 +222,7 @@ export class Agent extends BaseSkill {
                 }),
               );
 
-              this.engine.logger.log(`Tool '${toolName}' executed successfully`);
+              this.engine.logger.info(`Tool '${toolName}' executed successfully`);
             } catch (toolError) {
               const errMsg =
                 (toolError as Error)?.message ?? String(toolError ?? 'Unknown tool error');
@@ -282,20 +282,20 @@ export class Agent extends BaseSkill {
             return END;
           }
 
-          this.engine.logger.log(
+          this.engine.logger.info(
             `Tool calls detected (${lastMessage.tool_calls.length} calls), routing to tools node`,
             { toolCalls: lastMessage.tool_calls, iterationCount: toolCallHistory.length },
           );
           return 'tools';
         }
 
-        this.engine.logger.log('No tool calls detected, routing to END');
+        this.engine.logger.info('No tool calls detected, routing to END');
         // Reset tool call history when conversation ends naturally
         toolCallHistory = [];
         return END;
       });
     } else {
-      this.engine.logger.log(
+      this.engine.logger.info(
         'No tools initialized or available. LLM output will directly go to END.',
       );
       // @ts-ignore - Suppressing persistent type error with addEdge and node name mismatch
@@ -343,7 +343,7 @@ export class Agent extends BaseSkill {
         },
       );
 
-      this.engine.logger.log(
+      this.engine.logger.info(
         `Agent execution completed: ${JSON.stringify({
           messagesCount: result.messages?.length || 0,
           toolCallCount:

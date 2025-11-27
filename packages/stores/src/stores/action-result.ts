@@ -129,15 +129,6 @@ export const useActionResultStore = create<ActionResultState>()(
         // Shallow update to avoid deep copying the entire store
         const now = Date.now();
         set((state) => {
-          const oldResult = state.resultMap[resultId];
-          const oldVersion = oldResult?.version ?? 0;
-          const newVersion = result.version ?? 0;
-
-          // Skip update if we're trying to update with an older version
-          if (oldResult && newVersion < oldVersion) {
-            return state;
-          }
-
           return {
             ...state,
             resultMap: {

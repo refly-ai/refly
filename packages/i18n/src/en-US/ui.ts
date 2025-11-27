@@ -3128,6 +3128,8 @@ const translations = {
       result: ' Output',
       parameterName: 'Name',
       parameterValue: 'Value',
+      loadingToolCall: 'Loading tool call details...',
+      noToolCallResult: 'No tool call result',
       copySuccess: 'Copied to clipboard',
       emptyCode: 'Cannot create empty code artifact',
       codeArtifactCreated: 'Code artifact created',

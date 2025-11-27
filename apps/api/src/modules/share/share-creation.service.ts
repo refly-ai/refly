@@ -29,6 +29,7 @@ import { generateCoverUrl } from '../workflow-app/workflow-app.dto';
 import { omit } from '../../utils';
 import { ConfigService } from '@nestjs/config';
 import { DriveService } from '../drive/drive.service';
+import { driveFilePO2DTO } from '../drive/drive.dto';
 
 function genShareId(entityType: keyof typeof SHARE_CODE_PREFIX): string {
   return SHARE_CODE_PREFIX[entityType] + createId();
@@ -426,23 +427,7 @@ export class ShareCreationService {
     }
 
     // Transform to DTO
-    const driveFile: any = {
-      fileId: driveFileDetail.fileId,
-      canvasId: driveFileDetail.canvasId,
-      name: driveFileDetail.name,
-      type: driveFileDetail.type,
-      category: driveFileDetail.category as any,
-      size: Number(driveFileDetail.size),
-      source: driveFileDetail.source as any,
-      scope: driveFileDetail.scope as any,
-      summary: driveFileDetail.summary ?? undefined,
-      variableId: driveFileDetail.variableId ?? undefined,
-      resultId: driveFileDetail.resultId ?? undefined,
-      resultVersion: driveFileDetail.resultVersion ?? undefined,
-      storageKey: driveFileDetail.storageKey ?? undefined,
-      createdAt: driveFileDetail.createdAt.toJSON(),
-      updatedAt: driveFileDetail.updatedAt.toJSON(),
-    };
+    const driveFile: any = driveFilePO2DTO(driveFileDetail);
 
     // Publish file if storageKey exists and update database
     if (driveFile.storageKey) {

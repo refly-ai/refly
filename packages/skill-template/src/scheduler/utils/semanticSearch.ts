@@ -752,6 +752,6 @@ export async function processUrlSourcesWithSimilarity(
     if (usedTokens >= maxTokens) break;
   }
 
-  ctx.ctxThis.engine.logger.log(`Processed URL sources: ${result.length} of ${urlSources.length}`);
+  ctx.ctxThis.engine.logger.info(`Processed URL sources: ${result.length} of ${urlSources.length}`);
   return result;
 }

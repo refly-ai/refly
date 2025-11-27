@@ -32,6 +32,7 @@ import {
   MediaGenerationModelConfig,
   CreditBilling,
   DriveFile,
+  GenericToolset,
 } from '@refly/openapi-schema';
 import { BaseSkill } from '@refly/skill-template';
 import { purgeContextForActionResult, purgeToolsets } from '@refly/canvas-common';
@@ -61,6 +62,17 @@ import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
+
+/**
+ * Fixed builtin toolsets that are always available for node_agent mode.
+ * These toolsets will be automatically appended to user-selected toolsets.
+ * Note: IDs must match BuiltinToolsetDefinition.tools[].name for instantiateBuiltinToolsets to work.
+ */
+const FIXED_BUILTIN_TOOLSETS: GenericToolset[] = [
+  { type: 'regular', id: 'execute_code', name: 'execute_code', builtin: true },
+  { type: 'regular', id: 'read_file', name: 'read_file', builtin: true },
+  { type: 'regular', id: 'get_time', name: 'get_time', builtin: true },
+];
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
   if (param.triggerType === 'simpleEvent') {
@@ -412,6 +424,19 @@ export class SkillService implements OnModuleInit {
     ]);
   }
 
+  /**
+   * Append fixed builtin toolsets to user-selected toolsets.
+   * Deduplicates based on toolset id.
+   */
+  private appendFixedToolset(toolsets?: GenericToolset[]): GenericToolset[] {
+    const userToolsets = toolsets ?? [];
+    const existingIds = new Set(userToolsets.map((t) => t.id));
+
+    const toolsetsToAppend = FIXED_BUILTIN_TOOLSETS.filter((t) => !existingIds.has(t.id));
+
+    return [...userToolsets, ...toolsetsToAppend];
+  }
+
   private async prepareInvokeSkillJobData(
     user: User,
     param: InvokeSkillRequest,
@@ -437,6 +462,7 @@ export class SkillService implements OnModuleInit {
         ? safeParseJSON(existingResult.input)
         : { query: existingResult.title };
 
+      param.title ??= existingResult.title;
       param.modelName ??= existingResult.modelName;
       param.modelItemId ??= existingResult.providerItemId;
       param.context ??= safeParseJSON(existingResult.context);
@@ -561,6 +587,9 @@ export class SkillService implements OnModuleInit {
       param.resultHistory = (
         await this.actionService.batchProcessActionResults(user, historyResults)
       ).map((r) => actionResultPO2DTO(r));
+    } else {
+      // Append fixed builtin toolsets for non-copilot mode
+      param.toolsets = this.appendFixedToolset(param.toolsets);
     }
 
     // Validate workflowExecutionId and workflowNodeExecutionId if provided
@@ -746,7 +775,7 @@ export class SkillService implements OnModuleInit {
               type: 'skill',
               tier: providerItem?.tier ?? '',
               status: 'executing',
-              title: data.input.query || data.input.originalQuery,
+              title: data.title || data.input?.query,
               targetId: data.target?.entityId,
               targetType: data.target?.entityType,
               modelName: modelConfigMap.chat.modelId,
@@ -781,7 +810,7 @@ export class SkillService implements OnModuleInit {
           tier: providerItem?.tier ?? '',
           targetId: data.target?.entityId,
           targetType: data.target?.entityType,
-          title: data.input?.query || data.input?.originalQuery,
+          title: data.title || data.input?.query,
           modelName: modelConfigMap.chat.modelId,
           type: 'skill',
           status: 'executing',
@@ -920,12 +949,14 @@ export class SkillService implements OnModuleInit {
         await Promise.all(
           resultIds.map((id) =>
             limit(() =>
-              this.actionService.getActionResult(user, { resultId: id }).catch((error) => {
-                this.logger.error(
-                  `Failed to get action result detail for resultId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
+              this.actionService
+                .getActionResult(user, { resultId: id, includeFiles: true })
+                .catch((error) => {
+                  this.logger.error(
+                    `Failed to get action result detail for resultId ${id}: ${error?.message}`,
+                  );
+                  return null;
+                }),
             ),
           ),
         )

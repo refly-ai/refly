@@ -1,5 +1,6 @@
 import { z } from 'zod/v3';
 import { AgentBaseTool, AgentBaseToolset } from '../base';
+import { BuiltinExecuteCode } from './sandbox';
 
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { ToolsetDefinition, User } from '@refly/openapi-schema';
@@ -59,6 +60,13 @@ export const BuiltinToolsetDefinition: ToolsetDefinition = {
       descriptionDict: {
         en: 'Get the current date and time information.',
         'zh-CN': '获取当前日期和时间信息。',
+      },
+    },
+    {
+      name: 'execute_code',
+      descriptionDict: {
+        en: 'Execute code in a secure sandbox environment.',
+        'zh-CN': '在安全的沙箱环境中执行代码。',
       },
     },
   ],
@@ -138,6 +146,30 @@ export const BuiltinGetTimeDefinition: ToolsetDefinition = {
   descriptionDict: {
     en: 'Get the current date and time information.',
     'zh-CN': '获取当前日期和时间信息。',
+  },
+};
+
+export const BuiltinReadFileDefinition: ToolsetDefinition = {
+  key: 'read_file',
+  labelDict: {
+    en: 'Read File',
+    'zh-CN': '读取文件',
+  },
+  descriptionDict: {
+    en: 'Read content from a file.',
+    'zh-CN': '读取文件内容。',
+  },
+};
+
+export const BuiltinExecuteCodeDefinition: ToolsetDefinition = {
+  key: 'execute_code',
+  labelDict: {
+    en: 'Execute Code',
+    'zh-CN': '执行代码',
+  },
+  descriptionDict: {
+    en: 'Execute code in a secure sandbox environment.',
+    'zh-CN': '在安全的沙箱环境中执行代码。',
   },
 };
 
@@ -361,7 +393,11 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
 
   schema = z.object({
     subject: z.string().describe('The subject of the email'),
-    html: z.string().describe('The HTML content of the email'),
+    html: z
+      .string()
+      .describe(
+        "The HTML content of the email. When embedding files, reference them using placeholders like 'file://df-<fileId>' (e.g., 'file://df-xa4ieer0xx9jod9zcfsu8nnf'). CRITICAL: Use the fileId string directly (format: 'df-' followed by alphanumeric), NOT base64-encoded data. This field expects a file reference ID from the system, not actual image bytes. DO NOT encode to base64 - just use the fileId as-is.",
+      ),
     to: z
       .string()
       .describe(
@@ -371,7 +407,8 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
     attachments: z.array(z.string()).describe('The URLs of the attachments').optional(),
   });
 
-  description = 'Send an email to a specified recipient with subject and HTML content.';
+  description =
+    'Send an email to a specified recipient with subject and HTML content. When referencing Drive files in HTML, use file://df-<fileId> placeholders (e.g., file://df-xa4ieer0xx9jod9zcfsu8nnf).';
 
   protected params: BuiltinToolParams;
 
@@ -383,9 +420,10 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
   async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
+      const htmlWithResolvedFiles = await this.replaceFilePlaceholders(input.html);
       const result = await reflyService.sendEmail(user, {
         subject: input.subject,
-        html: input.html,
+        html: htmlWithResolvedFiles,
         to: input.to,
         attachments: input.attachments,
       });
@@ -407,6 +445,50 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
           error instanceof Error ? error.message : 'Unknown error occurred while sending email',
       };
     }
+  }
+
+  private async replaceFilePlaceholders(html: string): Promise<string> {
+    if (!html || !html.includes('file://df-')) {
+      return html;
+    }
+
+    const matchPattern = /file:\/\/(df-[a-zA-Z0-9]+)/g;
+    const matches = Array.from(html.matchAll(matchPattern));
+    if (matches.length === 0) {
+      return html;
+    }
+
+    const { reflyService, user } = this.params;
+    const uniqueFileIds = Array.from(new Set(matches.map(([, fileId]) => fileId)));
+    const driveFiles = await Promise.all(
+      uniqueFileIds.map(async (fileId) => {
+        const file = await reflyService.readFile(user, fileId);
+        if (!file) {
+          throw new Error(`Drive file not found: ${fileId}`);
+        }
+        return file;
+      }),
+    );
+
+    const urls = await reflyService.generateDriveFileUrls(user, driveFiles);
+    if (!urls || urls.length !== driveFiles.length) {
+      throw new Error('Failed to resolve drive file links for email HTML content');
+    }
+
+    const resolvedMap = new Map<string, string>();
+    driveFiles.forEach((file, index) => {
+      const url = urls[index];
+      if (!url) {
+        throw new Error(`Failed to generate URL for drive file: ${file.fileId}`);
+      }
+      resolvedMap.set(file.fileId, url);
+    });
+
+    const replacePattern = /file:\/\/(df-[a-zA-Z0-9]+)/g;
+    return html.replace(
+      replacePattern,
+      (match, fileId: string) => resolvedMap.get(fileId) ?? match,
+    );
   }
 }
 
@@ -523,6 +605,16 @@ export class BuiltinGetTimeToolset extends AgentBaseToolset<BuiltinToolParams> {
   tools = [BuiltinGetTime] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }
 
+export class BuiltinReadFileToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinReadFileDefinition.key;
+  tools = [BuiltinReadFile] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
+export class BuiltinExecuteCodeToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinExecuteCodeDefinition.key;
+  tools = [BuiltinExecuteCode] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
 export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
   toolsetKey = BuiltinToolsetDefinition.key;
   tools = [
@@ -532,5 +624,6 @@ export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
     BuiltinSendEmail,
     BuiltinGetTime,
     BuiltinReadFile,
+    BuiltinExecuteCode,
   ] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }

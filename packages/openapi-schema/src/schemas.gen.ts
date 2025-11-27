@@ -2272,6 +2272,58 @@ export const CodeArtifactSchema = {
   },
 } as const;
 
+export const ActionMessageTypeSchema = {
+  type: 'string',
+  description: 'Action message type',
+  enum: ['ai', 'tool'],
+} as const;
+
+export const ActionMessageSchema = {
+  type: 'object',
+  description: 'Action message',
+  required: ['messageId', 'type'],
+  properties: {
+    messageId: {
+      type: 'string',
+      description: 'Action message ID',
+    },
+    type: {
+      $ref: '#/components/schemas/ActionMessageType',
+      description: 'Action message type',
+    },
+    content: {
+      type: 'string',
+      description: 'Action message content',
+    },
+    reasoningContent: {
+      type: 'string',
+      description: 'Action message reasoning content',
+    },
+    toolCallMeta: {
+      $ref: '#/components/schemas/ToolCallMeta',
+      description: 'Action message tool call metadata',
+    },
+    toolCallId: {
+      type: 'string',
+      description: 'Action message tool call ID',
+    },
+    toolCallResult: {
+      $ref: '#/components/schemas/ToolCallResult',
+      description: 'Tool call result',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Action message creation time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Action message update time',
+    },
+  },
+} as const;
+
 export const ActionResultSchema = {
   type: 'object',
   description: 'Action result',
@@ -2358,8 +2410,16 @@ export const ActionResultSchema = {
     steps: {
       type: 'array',
       description: 'Action steps',
+      deprecated: true,
       items: {
         $ref: '#/components/schemas/ActionStep',
+      },
+    },
+    messages: {
+      type: 'array',
+      description: 'Action messages',
+      items: {
+        $ref: '#/components/schemas/ActionMessage',
       },
     },
     errors: {
@@ -4463,6 +4523,8 @@ export const SkillEventTypeSchema = {
     'token_usage',
     'create_node',
     'tool_call_start',
+    'tool_call_end',
+    'tool_call_error',
     'tool_call_stream',
     'error',
   ],
@@ -4483,6 +4545,7 @@ export const SkillEventSchema = {
     step: {
       description: 'Action step metadata',
       $ref: '#/components/schemas/ActionStepMeta',
+      deprecated: true,
     },
     resultId: {
       type: 'string',
@@ -4491,6 +4554,10 @@ export const SkillEventSchema = {
     version: {
       type: 'number',
       description: 'Result version',
+    },
+    messageId: {
+      type: 'string',
+      description: 'Message ID',
     },
     content: {
       type: 'string',
@@ -4528,9 +4595,58 @@ export const SkillEventSchema = {
       type: 'string',
       description: 'Original error message. Only present when `event` is `error`.',
     },
+    toolCallMeta: {
+      description:
+        'Tool call metadata. Only present when `event` is `tool_call_start`, `tool_call_end`, or `tool_call_error`.',
+      $ref: '#/components/schemas/ToolCallMeta',
+    },
     toolCallResult: {
       description: 'Tool call result data.',
       $ref: '#/components/schemas/ToolCallResult',
+    },
+  },
+} as const;
+
+export const ToolCallStatusSchema = {
+  type: 'string',
+  description: 'Tool call status',
+  enum: ['executing', 'completed', 'failed'],
+} as const;
+
+export const ToolCallMetaSchema = {
+  type: 'object',
+  properties: {
+    toolName: {
+      type: 'string',
+      description: 'Tool name',
+    },
+    toolsetId: {
+      type: 'string',
+      description: 'Toolset ID',
+    },
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset key',
+    },
+    toolCallId: {
+      type: 'string',
+      description: 'Tool call ID',
+    },
+    status: {
+      $ref: '#/components/schemas/ToolCallStatus',
+      description: 'Tool call status',
+    },
+    startTs: {
+      type: 'number',
+      description: 'Tool call start timestamp (milliseconds)',
+    },
+    endTs: {
+      type: 'number',
+      description: 'Tool call end timestamp (milliseconds)',
+    },
+    error: {
+      type: 'string',
+      description: 'Tool call error',
     },
   },
 } as const;
@@ -4586,9 +4702,8 @@ export const ToolCallResultSchema = {
       description: 'Error message if tool execution failed',
     },
     status: {
-      type: 'string',
       description: 'Tool call status',
-      enum: ['executing', 'completed', 'failed'],
+      $ref: '#/components/schemas/ToolCallStatus',
     },
     createdAt: {
       type: 'number',
@@ -5596,6 +5711,10 @@ export const InvokeSkillRequestSchema = {
     input: {
       description: 'Skill input',
       $ref: '#/components/schemas/SkillInput',
+    },
+    title: {
+      description: 'Agent title',
+      type: 'string',
     },
     context: {
       description: 'Skill invocation context',
@@ -9376,6 +9495,27 @@ export const DeleteToolsetRequestSchema = {
       description: 'Toolset ID',
     },
   },
+} as const;
+
+export const GetToolCallResultResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            result: {
+              $ref: '#/components/schemas/ToolCallResult',
+            },
+          },
+        },
+      },
+    },
+  ],
 } as const;
 
 export const DocumentInterfaceSchema = {
