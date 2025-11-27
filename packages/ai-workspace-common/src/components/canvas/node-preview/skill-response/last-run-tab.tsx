@@ -73,7 +73,7 @@ const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
   );
 
   return (
-    <div className="my-3">
+    <div className="my-2">
       <ToolCall {...toolProps} />
     </div>
   );
