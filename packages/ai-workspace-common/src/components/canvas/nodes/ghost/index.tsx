@@ -33,15 +33,14 @@ export const GhostNode = React.memo(({ id, data }: { id: string; data: CanvasNod
 
   const dragCreateInfo = useMemo(
     () => ({
-      nodeId: sourceNode.id,
+      nodeId: sourceNode?.id,
       handleType: 'source' as const,
       position: position,
     }),
-    [sourceNode, position],
+    [sourceNode?.id, position],
   );
 
   const handleAskAI = useCallback(() => {
-    console.log('handleAskAI', dragCreateInfo);
     nodeActionEmitter.emit(createNodeEventName(sourceNode.id, 'askAI'), { dragCreateInfo });
     close();
   }, [close, dragCreateInfo]);

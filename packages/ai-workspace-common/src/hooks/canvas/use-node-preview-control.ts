@@ -11,7 +11,6 @@ interface UseNodePreviewControlOptions {
 interface NodePreviewControl {
   nodePreviewId: string | null;
   previewNode: (node: CanvasNode | null) => void;
-  closeNodePreview: (node: CanvasNode) => void;
   handleNodePreview: (node: CanvasNode | null) => void;
 }
 
@@ -48,10 +47,6 @@ export const useNodePreviewControl = ({
     [canvasId, setNodePreview, setSelectedNode],
   );
 
-  const closeNodePreview = useCallback(() => {
-    setNodePreview(canvasId, null);
-  }, [canvasId, setNodePreview]);
-
   /**
    * Handle node click with preview logic
    */
@@ -67,7 +62,6 @@ export const useNodePreviewControl = ({
     // State
     nodePreviewId,
     previewNode,
-    closeNodePreview,
     handleNodePreview,
   };
 };
