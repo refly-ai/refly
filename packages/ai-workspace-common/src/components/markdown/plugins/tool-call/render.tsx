@@ -225,8 +225,18 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     return <CopilotWorkflowPlan data={structuredArgs} />;
   }
 
-  const resultData = safeParseJSON(resultContent)?.data as Record<string, unknown> | undefined;
   const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
+    const result = safeParseJSON(resultContent);
+    if (Array.isArray(result?.files)) {
+      return result?.files.map((file) => ({
+        fileId: String(file.fileId),
+        canvasId: String(file.canvasId ?? ''),
+        name: String(file.name ?? file.fileName ?? 'Drive file'),
+        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+      }));
+    }
+
+    const resultData = result?.data as Record<string, unknown> | undefined;
     if (resultData?.fileId) {
       return [
         {
@@ -238,17 +248,8 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
       ];
     }
 
-    if (Array.isArray(resultData?.files)) {
-      return resultData.files.map((file) => ({
-        fileId: String(file.fileId),
-        canvasId: String(file.canvasId ?? ''),
-        name: String(file.name ?? file.fileName ?? 'Drive file'),
-        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
-      }));
-    }
-
     return [];
-  }, [resultData]);
+  }, [resultContent]);
 
   const shouldRenderFilePreview = useMemo(() => {
     return filePreviewDriveFile.length > 0;
