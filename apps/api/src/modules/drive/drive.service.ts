@@ -1108,7 +1108,7 @@ export class DriveService {
       await this.externalOss.putObject(storageKey, stream);
     } catch (error) {
       this.logger.error(
-        `Failed to publish drive file - fileId: ${fileId}, storageKey: ${storageKey}, error: ${error.stack}`,
+        `Failed to publish drive file - fileId: ${fileId}, storageKey: ${storageKey}, error: ${error.errorMessage}`,
       );
       throw error;
     }
