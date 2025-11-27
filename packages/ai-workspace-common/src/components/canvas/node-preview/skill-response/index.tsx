@@ -199,10 +199,11 @@ const SkillResponseNodePreviewComponent = ({
   }, [resultId]);
 
   useEffect(() => {
-    if (result?.status === 'waiting') {
+    if (isExecuting) {
       setCurrentFile(null);
+      setResultActiveTab(resultId, 'lastRun');
     }
-  }, [result?.status]);
+  }, [isExecuting, resultId]);
 
   return purePreview ? (
     !result && !loading ? (
