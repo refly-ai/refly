@@ -1056,9 +1056,16 @@ export class DriveService {
   async getDriveFileStream(
     user: User,
     fileId: string,
-  ): Promise<{ data: Buffer; contentType: string; filename: string }> {
+  ): Promise<{ data: Buffer; contentType: string; filename: string; lastModified: Date }> {
     const driveFile = await this.prisma.driveFile.findFirst({
-      select: { uid: true, canvasId: true, name: true, storageKey: true, type: true },
+      select: {
+        uid: true,
+        canvasId: true,
+        name: true,
+        storageKey: true,
+        type: true,
+        updatedAt: true,
+      },
       where: { fileId, uid: user.uid, deletedAt: null },
     });
 
@@ -1080,6 +1087,7 @@ export class DriveService {
       data,
       contentType: driveFile.type || 'application/octet-stream',
       filename: driveFile.name,
+      lastModified: new Date(driveFile.updatedAt),
     };
   }
 
@@ -1123,12 +1131,14 @@ export class DriveService {
     data: Buffer;
     contentType: string;
     filename: string;
+    lastModified: Date;
   }> {
     try {
       const driveFile = await this.prisma.driveFile.findFirst({
         select: {
           type: true,
           storageKey: true,
+          updatedAt: true,
         },
         where: { fileId },
       });
@@ -1149,6 +1159,7 @@ export class DriveService {
         data,
         contentType,
         filename,
+        lastModified: new Date(driveFile.updatedAt),
       };
     } catch (error) {
       if (

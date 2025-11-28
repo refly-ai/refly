@@ -27,6 +27,7 @@ import { Response, Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ParamsError } from '@refly/errors';
 import { buildContentDisposition } from '../../utils/filename';
+import { checkHttpCache, send304NotModified, applyCacheHeaders } from '../../utils/http-cache';
 
 @Controller('v1/misc')
 export class MiscController {
@@ -93,20 +94,38 @@ export class MiscController {
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
-    const { data, contentType } = await this.miscService.getInternalFileStream(
+    const storageKey = `static/${objectKey}`;
+    const { data, contentType, lastModified } = await this.miscService.getInternalFileStream(
       user,
-      `static/${objectKey}`,
+      storageKey,
     );
     const filename = path.basename(objectKey);
 
     const origin = req.headers.origin;
 
-    res.set({
-      'Content-Type': contentType,
+    // Check HTTP cache and get cache headers
+    const cacheResult = checkHttpCache(req, {
+      identifier: storageKey,
+      lastModified,
+    });
+
+    const corsHeaders = {
       'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
+    };
+
+    // If client has valid cache, return 304 Not Modified
+    if (cacheResult.useCache) {
+      send304NotModified(res, cacheResult, corsHeaders);
+      return;
+    }
+
+    // Return file with cache headers
+    applyCacheHeaders(res, cacheResult, {
+      'Content-Type': contentType,
       'Content-Length': String(data.length),
+      ...corsHeaders,
       ...(download ? { 'Content-Disposition': `attachment; filename="${filename}"` } : {}),
     });
 
@@ -120,17 +139,35 @@ export class MiscController {
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
-    const { data, contentType } = await this.miscService.getExternalFileStream(storageKey);
+    const { data, contentType, lastModified } =
+      await this.miscService.getExternalFileStream(storageKey);
     const filename = path.basename(storageKey);
 
     const origin = req.headers.origin;
 
-    res.set({
-      'Content-Type': contentType,
+    // Check HTTP cache and get cache headers
+    const cacheResult = checkHttpCache(req, {
+      identifier: storageKey,
+      lastModified,
+    });
+
+    const corsHeaders = {
       'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
+    };
+
+    // If client has valid cache, return 304 Not Modified
+    if (cacheResult.useCache) {
+      send304NotModified(res, cacheResult, corsHeaders);
+      return;
+    }
+
+    // Return file with cache headers
+    applyCacheHeaders(res, cacheResult, {
+      'Content-Type': contentType,
       'Content-Length': String(data.length),
+      ...corsHeaders,
       ...(download ? { 'Content-Disposition': buildContentDisposition(filename) } : {}),
     });
 
