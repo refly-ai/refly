@@ -4054,9 +4054,9 @@ const translations = {
     deleteConfirm: '确定要撤销模版{{title}}吗',
     reviewStatus: {
       reviewing: '审核中',
-      reviewingTooltip: '模板已发布到社区',
+      reviewingTooltip: '模板正在审核中,但仍可正常使用',
       published: '已发布',
-      publishedTooltip: '模板正在审核中,但仍可正常使用',
+      publishedTooltip: '模板已发布到社区',
     },
   },
   whyChooseRefly: {

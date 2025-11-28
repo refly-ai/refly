@@ -3,7 +3,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { CanvasTemplate } from '@refly/openapi-schema';
 import { IoPersonOutline } from 'react-icons/io5';
-import { Avatar, Button, Typography, Tag } from 'antd';
+import { Avatar, Button, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useCanvasTemplateModal } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
@@ -71,11 +71,6 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
       className={`${className} m-2 flex flex-col group relative bg-refly-bg-content-z2 rounded-xl overflow-hidden cursor-pointer border-[0.5px] border-solid border-refly-Card-Border hover:shadow-lg transition-all duration-200 ease-in-out h-[245px]`}
       onClick={handlePreview}
     >
-      {template?.featured && (
-        <Tag color="green" className="absolute top-2 right-0 z-10 shadow-sm">
-          {t('common.featured')}
-        </Tag>
-      )}
       <div className="h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
         <img
           src={`${template.coverUrl}`}
