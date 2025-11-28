@@ -4027,9 +4027,9 @@ const translations = {
     deleteConfirm: 'Are you sure you want to revoke the template {{title}}?',
     reviewStatus: {
       reviewing: 'Under Review',
-      reviewingTooltip: 'Template has been published to the community',
+      reviewingTooltip: 'Template is under review, but can still be used normally',
       published: 'Published',
-      publishedTooltip: 'Template is under review, but can still be used normally',
+      publishedTooltip: 'Template has been published to the community',
     },
   },
   whyChooseRefly: {
