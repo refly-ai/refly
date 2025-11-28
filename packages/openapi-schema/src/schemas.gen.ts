@@ -10072,6 +10072,14 @@ export const WorkflowAppSchema = {
       type: 'string',
       description: 'Cover image URL',
     },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
+    },
+    publishReviewStatus: {
+      type: 'string',
+      description: 'Community publish review status',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
