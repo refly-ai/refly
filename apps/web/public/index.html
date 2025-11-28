@@ -1,86 +1,64 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Refly.AI | The Open-Source Agentic Workspace for Human-AI Collaboration</title>
-    <meta
-      name="description"
-      content="Refly.AI is the open-source Agentic Workspace for Human-AI Collaboration. Seamlessly blend human insight with AI execution across real-world scenarios—whether you’re rapidly prototyping a product design, creating polished presentations, conducting hot-topic analysis, automating deep research workflows, generating multimodal marketing content, or orchestrating complex operational pipelines, Refly empowers your team to achieve any task with transparency and control." />
-    <meta
-      name="keywords"
-      content="open-source, agentic workspace, human-AI collaboration, workflow automation, AI-assisted design, PPT generation, trend analysis, research automation, content generation, collaborative AI platform, multimodal AI, task orchestration" />
-    <!-- Open Graph  -->
-    <meta
-      property="og:title"
-      content="Refly.AI | The Open-Source Agentic Workspace for Human-AI Collaboration" />
-    <meta
-      property="og:description"
-      content="Refly.AI is the open-source Agentic Workspace for Human-AI Collaboration. Seamlessly blend human insight with AI execution across real-world scenarios—whether you’re rapidly prototyping a product design, creating polished presentations, conducting hot-topic analysis, automating deep research workflows, generating multimodal marketing content, or orchestrating complex operational pipelines, Refly empowers your team to achieve any task with transparency and control." />
-    <meta
-      property="og:image"
-      content="https://static.refly.ai/landing/product-og-min.png" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://refly.ai/" />
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="Refly.AI | The Open-Source Agentic Workspace for Human-AI Collaboration" />
-    <meta
-      name="twitter:description"
-      content="Refly.AI is the open-source Agentic Workspace for Human-AI Collaboration. Seamlessly blend human insight with AI execution across real-world scenarios—whether you’re rapidly prototyping a product design, creating polished presentations, conducting hot-topic analysis, automating deep research workflows, generating multimodal marketing content, or orchestrating complex operational pipelines, Refly empowers your team to achieve any task with transparency and control." />
-    <meta
-      name="twitter:image"
-      content="https://static.refly.ai/landing/product-og-min.png" />
-    <style>
-      @font-face {
-        font-family: 'Alibaba PuHuiTi';
-        font-weight: bold;
-        font-display: swap;
-        src:
-          url('https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2')
-            format('woff2'),
-          url('https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.ttf')
-            format('truetype');
-      }
 
-      @font-face {
-        font-family: 'Alibaba PuHuiTi';
-        font-weight: 300;
-        font-display: swap;
-        src:
-          url('https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2')
-            format('woff2'),
-          url('https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.ttf')
-            format('truetype');
-      }
-    </style>
-    <link
-      rel="preload"
-      href="https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin="anonymous" />
-    <link
-      rel="preload"
-      href="https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin="anonymous" />
-    <!-- Load configuration before the app -->
-    <script src="/config.js"></script>
-    <!-- Process polyfill -->
-    <script>
-      window.process = window.process || {
-        env: {},
-        browser: true,
-        version: '0.0.0'
-      };
-    </script>
-  </head>
-  <body class="font-inter refly">
-    <div id="root"></div>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Refly.ai-Vibe Workflow for Non-Technical Users</title>
+  <meta name="description"
+    content="Refly.ai is the vibe workflow platform for non-technical users. Build, reuse, and share powerful AI workflows by prompt or visual canvas, with no coding required." />
+  <meta name="keywords" content="Vibe workflow, Refly.ai, workflow template, no-code, AI automation" />
+  <!-- Open Graph  -->
+  <meta property="og:title" content="Refly.ai-Vibe Workflow for Non-Technical Users" />
+  <meta property="og:description"
+    content="Refly.ai is the vibe workflow platform for non-technical users. Build, reuse, and share powerful AI workflows by prompt or visual canvas, with no coding required." />
+  <meta property="og:image" content="https://static.refly.ai/landing/product-og-min.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://refly.ai/" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Refly.ai-Vibe Workflow for Non-Technical Users" />
+  <meta name="twitter:description"
+    content="Refly.ai is the vibe workflow platform for non-technical users. Build, reuse, and share powerful AI workflows by prompt or visual canvas, with no coding required." />
+  <meta name="twitter:image" content="https://static.refly.ai/landing/product-og-min.png" />
+  <style>
+    @font-face {
+      font-family: 'Alibaba PuHuiTi';
+      font-weight: bold;
+      font-display: swap;
+      src:
+        url('https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2') format('woff2'),
+        url('https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.ttf') format('truetype');
+    }
+
+    @font-face {
+      font-family: 'Alibaba PuHuiTi';
+      font-weight: 300;
+      font-display: swap;
+      src:
+        url('https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2') format('woff2'),
+        url('https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.ttf') format('truetype');
+    }
+  </style>
+  <link rel="preload" href="https://static.refly.ai/landing/Alibaba-PuHuiTi-Bold.woff2" as="font" type="font/woff2"
+    crossorigin="anonymous" />
+  <link rel="preload" href="https://static.refly.ai/landing/AlibabaPuHuiTi-3-45-Light.woff2" as="font" type="font/woff2"
+    crossorigin="anonymous" />
+  <!-- Load configuration before the app -->
+  <script src="/config.js"></script>
+  <!-- Process polyfill -->
+  <script>
+    window.process = window.process || {
+      env: {},
+      browser: true,
+      version: '0.0.0'
+    };
+  </script>
+</head>
+
+<body class="font-inter refly">
+  <div id="root"></div>
+</body>
+
 </html>
