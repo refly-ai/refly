@@ -10,6 +10,7 @@ export interface RetryConfig {
   maxDelay?: number;
   backoffFactor?: number;
   retryIf?: (error: unknown) => boolean; // Only retry if returns true; retries all errors if not provided
+  onRetry?: (error: unknown, attempt: number) => void | Promise<void>; // Called before each retry
 }
 
 interface GuardWrapper<T> {
@@ -223,6 +224,7 @@ guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<P
       maxDelay = 1000,
       backoffFactor = 1,
       retryIf,
+      onRetry,
     } = config;
 
     let lastError: unknown;
@@ -246,6 +248,7 @@ guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<P
           throw lastError;
         }
 
+        await onRetry?.(error, attempt);
         await sleep(delay);
         delay = Math.min(delay * backoffFactor, maxDelay);
       }

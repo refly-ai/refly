@@ -22,7 +22,7 @@ import {
   SandboxExecuteJobData,
   ScaleboxResponseFactory,
 } from './scalebox.dto';
-import { extractErrorMessage, checkCriticalError } from './scalebox.utils';
+import { extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { SandboxWrapper, S3Config } from './scalebox.wrapper';
 import { Trace } from './scalebox.tracer';
@@ -213,9 +213,11 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
     params: SandboxExecuteParams,
     context: ExecutionContext,
   ): Promise<ScaleboxExecutionResult> {
+    const timeoutMs = this.lock.runCodeTimeoutMs;
+
     const result = await guard.defer(
       () => this.acquireRegisterFiles(wrapper, context),
-      () => this.executeDefenseCriticalError(wrapper, params, context),
+      () => wrapper.executeCode(params, { logger: this.logger, timeoutMs }),
       (error) => this.logger.error({ error }, 'Failed to register files'),
     );
 
@@ -227,37 +229,6 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
       exitCode: result.exitCode,
       files: context.registeredFiles ?? [],
     };
-  }
-
-  private async executeDefenseCriticalError(
-    wrapper: SandboxWrapper,
-    params: SandboxExecuteParams,
-    _context: ExecutionContext,
-  ) {
-    const timeoutMs = this.lock.runCodeTimeoutMs;
-
-    return guard(() => wrapper.executeCode(params, { logger: this.logger, timeoutMs })).orElse(
-      async (error) => {
-        this.logger.error({ error }, 'Defense critical error');
-
-        const sandboxId = wrapper.sandboxId;
-
-        // Check if error indicates critical sandbox failure that requires kill
-        const result = checkCriticalError(error);
-        if (result.isCritical) {
-          this.logger.warn(
-            { sandboxId, stderr: result.stderr },
-            'Critical sandbox error detected, killing sandbox',
-          );
-          await guard.bestEffort(
-            () => wrapper.kill(),
-            (error) => this.logger.warn({ sandboxId, error }, 'Failed to kill sandbox'),
-          );
-        }
-
-        throw error;
-      },
-    );
   }
 
   private async executeViaQueue(

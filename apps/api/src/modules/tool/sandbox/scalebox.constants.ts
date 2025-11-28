@@ -21,14 +21,21 @@ export const SCALEBOX_DEFAULTS = {
   LOCK_INITIAL_TTL_SEC: 10, // Short initial TTL, renewed periodically
   LOCK_RENEWAL_INTERVAL_MS: 3000, // Renew every 3s (should be < TTL/2)
 
-  // Retry (for transient gRPC errors like UNAVAILABLE)
-  COMMAND_RETRY_MAX_ATTEMPTS: 4, // 4 attempts = 3 retries
-  COMMAND_RETRY_DELAY_MS: 500, // Fixed interval
-} as const;
+  // Health Check (create/connect readiness verification)
+  HEALTH_CHECK_MAX_ATTEMPTS: 30,
+  HEALTH_CHECK_INTERVAL_MS: 500,
 
-// gRPC error codes from @connectrpc/connect
-export const GRPC_CODE = {
-  UNAVAILABLE: 14, // Service temporarily unavailable, safe to retry
+  // Lifecycle Retry (create/connect)
+  LIFECYCLE_RETRY_MAX_ATTEMPTS: 3,
+  LIFECYCLE_RETRY_DELAY_MS: 2000,
+
+  // Pause Retry
+  PAUSE_RETRY_MAX_ATTEMPTS: 3,
+  PAUSE_RETRY_DELAY_MS: 2000,
+
+  // Kill Retry (async cleanup)
+  KILL_RETRY_MAX_ATTEMPTS: 20,
+  KILL_RETRY_INTERVAL_MS: 500,
 } as const;
 
 export const ERROR_MESSAGE_MAX_LENGTH = 1000;

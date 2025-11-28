@@ -5,12 +5,12 @@ import { Queue } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 
 import { guard } from '../../../utils/guard';
-import { QUEUE_SCALEBOX_PAUSE } from '../../../utils/const';
+import { QUEUE_SCALEBOX_PAUSE, QUEUE_SCALEBOX_KILL } from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
 
 import { SandboxCreationException } from './scalebox.exception';
 import { SandboxWrapper } from './scalebox.wrapper';
-import { ExecutionContext, SandboxPauseJobData } from './scalebox.dto';
+import { ExecutionContext, SandboxPauseJobData, SandboxKillJobData } from './scalebox.dto';
 import { ScaleboxStorage } from './scalebox.storage';
 import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 import { Trace } from './scalebox.tracer';
@@ -23,6 +23,8 @@ export class SandboxPool {
     private readonly logger: PinoLogger,
     @InjectQueue(QUEUE_SCALEBOX_PAUSE)
     private readonly pauseQueue: Queue<SandboxPauseJobData>,
+    @InjectQueue(QUEUE_SCALEBOX_KILL)
+    private readonly killQueue: Queue<SandboxKillJobData>,
   ) {
     this.logger.setContext(SandboxPool.name);
     void this.config; // Suppress unused warning - used by @Config decorators
@@ -39,6 +41,10 @@ export class SandboxPool {
 
   @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
   async acquire(context: ExecutionContext): Promise<SandboxWrapper> {
+    const onFailed = (sandboxId: string, error: Error) => {
+      this.enqueueKill(sandboxId, `acquire:${error.message.slice(0, 50)}`);
+    };
+
     const wrapper = await guard(async () => {
       const sandboxId = await this.storage.popFromIdleQueue();
       await this.cancelPause(sandboxId);
@@ -56,7 +62,7 @@ export class SandboxPool {
             ),
         );
 
-      return await SandboxWrapper.create(this.logger, context, this.sandboxTimeoutMs);
+      return await SandboxWrapper.create(this.logger, context, this.sandboxTimeoutMs, onFailed);
     });
 
     // Inject sandboxId into logger context for all subsequent logs
@@ -138,8 +144,12 @@ export class SandboxPool {
 
     guard.ensure(!!metadata).orThrow(() => new SandboxCreationException('Metadata not found'));
 
+    const onFailed = (failedSandboxId: string, error: Error) => {
+      this.enqueueKill(failedSandboxId, `reconnect:${error.message.slice(0, 50)}`);
+    };
+
     const wrapper = await guard(() =>
-      SandboxWrapper.reconnect(this.logger, context, metadata),
+      SandboxWrapper.reconnect(this.logger, context, metadata, onFailed),
     ).orElse(async (error) => {
       await this.deleteMetadata(sandboxId);
       throw new SandboxCreationException(error);
@@ -154,5 +164,20 @@ export class SandboxPool {
     );
 
     return wrapper;
+  }
+
+  /**
+   * Enqueue async kill task for sandbox cleanup
+   * Fire-and-forget pattern - does not block caller
+   */
+  private enqueueKill(sandboxId: string, label: string): void {
+    this.killQueue
+      .add('kill', { sandboxId, label }, { removeOnComplete: true, removeOnFail: true })
+      .then(() => {
+        this.logger.debug({ sandboxId, label }, 'Enqueued async kill task');
+      })
+      .catch((error) => {
+        this.logger.warn({ sandboxId, label, error }, 'Failed to enqueue kill task');
+      });
   }
 }
