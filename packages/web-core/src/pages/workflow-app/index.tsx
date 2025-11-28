@@ -66,7 +66,7 @@ const WorkflowAppPage: React.FC = () => {
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('runLogs');
   const [canvasId, setCanvasId] = useState<string | null>(null);
-  const [finalNodeExecutions, setFinalNodeExecutions] = useState<any[]>([]);
+  const [finalNodeExecutions, setFinalNodeExecutions] = useState<WorkflowNodeExecution[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [showStatusSection, setShowStatusSection] = useState(false);
@@ -280,7 +280,7 @@ const WorkflowAppPage: React.FC = () => {
 
       fetchRuntimeFiles();
     }
-  }, [workflowApp?.canvasData?.canvasId, isRunning, executionId, finalNodeExecutions.length]);
+  }, [canvasId, isRunning, executionId, finalNodeExecutions.length]);
 
   const products = useMemo(() => {
     // Legacy product node executions (document, codeArtifact, image, video, audio)
@@ -479,7 +479,7 @@ const WorkflowAppPage: React.FC = () => {
         // Extract resultIds (entityId)
         const resultIds = executingNodes
           .map((node: WorkflowNodeExecution) => node.entityId)
-          .filter((id: string): id is string => Boolean(id));
+          .filter((id: string | undefined): id is string => Boolean(id));
 
         // Abort all executing actions
         if (resultIds.length > 0) {
@@ -743,21 +743,19 @@ const WorkflowAppPage: React.FC = () => {
                                       {stepNumber > 0 && totalNodes > 0 ? (
                                         <div className="flex flex-col">
                                           {/* Display all executing nodes with Step prefix */}
-                                          {executingNodes
-                                            ?.slice(0, 5)
-                                            .map((node: any, index: number) => {
-                                              return (
-                                                <div
-                                                  key={node.nodeId ?? index}
-                                                  className="overflow-hidden text-ellipsis whitespace-nowrap"
-                                                >
-                                                  <span className="whitespace-nowrap flex-shrink-0">
-                                                    Step {stepNumber + index}/{totalNodes}:{' '}
-                                                  </span>
-                                                  <span>{node.title ?? ''}</span>
-                                                </div>
-                                              );
-                                            })}
+                                          {executingNodes?.slice(0, 5).map((node, index) => {
+                                            return (
+                                              <div
+                                                key={node.nodeId ?? index}
+                                                className="overflow-hidden text-ellipsis whitespace-nowrap"
+                                              >
+                                                <span className="whitespace-nowrap flex-shrink-0">
+                                                  Step {stepNumber + index}/{totalNodes}:{' '}
+                                                </span>
+                                                <span>{node.title ?? ''}</span>
+                                              </div>
+                                            );
+                                          })}
                                         </div>
                                       ) : (
                                         <div className="overflow-hidden text-ellipsis whitespace-nowrap">
