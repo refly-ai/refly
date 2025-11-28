@@ -1,4 +1,4 @@
-import { Navigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
@@ -54,7 +54,6 @@ export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
     isLogin: state.isLogin,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
   }));
-  const location = useLocation();
 
   const isLoggedIn = useMemo(() => {
     return getLoginStatus() || isLogin;
@@ -66,8 +65,7 @@ export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   }
 
   if (!isLoggedIn) {
-    const returnUrl = encodeURIComponent(`${location.pathname}${location.search}`);
-    return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
+    return <Navigate to={'/'} replace />;
   }
 
   return children;

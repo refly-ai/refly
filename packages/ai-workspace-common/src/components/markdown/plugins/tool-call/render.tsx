@@ -227,8 +227,11 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
   const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
     const result = safeParseJSON(resultContent);
-    if (Array.isArray(result?.files)) {
-      return result?.files.map((file) => ({
+    const resultData = result?.data as Record<string, unknown> | undefined;
+    const files = result?.files ?? resultData?.files;
+
+    if (Array.isArray(files) && files.length > 0) {
+      return files.map((file) => ({
         fileId: String(file.fileId),
         canvasId: String(file.canvasId ?? ''),
         name: String(file.name ?? file.fileName ?? 'Drive file'),
@@ -236,7 +239,6 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
       }));
     }
 
-    const resultData = result?.data as Record<string, unknown> | undefined;
     if (resultData?.fileId) {
       return [
         {

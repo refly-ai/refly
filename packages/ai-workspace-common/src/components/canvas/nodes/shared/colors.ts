@@ -43,7 +43,7 @@ export const NODE_COLORS: Record<
   website: 'var(--refly-Colorful-Blue)',
   file: 'var(--refly-Colorful-Blue)',
 
-  start: 'black',
+  start: 'var(--refly-text-0)',
   resource: 'var(--refly-primary-default)',
   resourceSelection: 'var(--refly-primary-default)',
 

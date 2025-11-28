@@ -65,14 +65,14 @@ const WorkflowAppPage: React.FC = () => {
   const shareId = routeShareId ?? '';
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('runLogs');
-  const [finalNodeExecutions, setFinalNodeExecutions] = useState<any[]>([]);
+  const [canvasId, setCanvasId] = useState<string | null>(null);
+  const [finalNodeExecutions, setFinalNodeExecutions] = useState<WorkflowNodeExecution[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [showStatusSection, setShowStatusSection] = useState(false);
   const [executionCreditUsage, setExecutionCreditUsage] = useState<number | null>(null);
 
   // Drive files state for preview and runtime
-  const [previewDriveFiles, setPreviewDriveFiles] = useState<DriveFile[]>([]);
   const [runtimeDriveFiles, setRuntimeDriveFiles] = useState<DriveFile[]>([]);
 
   // Settings modal state
@@ -112,48 +112,7 @@ const WorkflowAppPage: React.FC = () => {
   }, [workflowApp]);
 
   // Fetch drive files for preview when workflowApp loads
-  useEffect(() => {
-    const canvasId = workflowApp?.canvasData?.canvasId;
-    if (!canvasId) {
-      return;
-    }
-
-    const fetchPreviewFiles = async () => {
-      try {
-        const allFiles: DriveFile[] = [];
-        let page = 1;
-        const pageSize = 100;
-        const MAX_PAGES = 100; // Safety limit: max 10000 files
-
-        while (page <= MAX_PAGES) {
-          const { data } = await getClient().listDriveFiles({
-            query: {
-              canvasId,
-              source: 'agent',
-              scope: 'present',
-              page,
-              pageSize,
-            },
-          });
-
-          const files = data?.data ?? [];
-          allFiles.push(...files);
-
-          if (files.length < pageSize) {
-            break;
-          }
-          page++;
-        }
-
-        setPreviewDriveFiles(allFiles);
-      } catch (error) {
-        console.error('Failed to fetch preview drive files:', error);
-        // Silently degrade
-      }
-    };
-
-    fetchPreviewFiles();
-  }, [workflowApp?.canvasData?.canvasId]);
+  const previewDriveFiles = workflowApp?.canvasData?.files ?? [];
 
   const {
     data: workflowDetail,
@@ -168,6 +127,9 @@ const WorkflowAppPage: React.FC = () => {
       // Save final nodeExecutions before clearing executionId
       if (data?.data?.nodeExecutions) {
         setFinalNodeExecutions(data.data.nodeExecutions);
+      }
+      if (data?.data?.canvasId) {
+        setCanvasId(data.data.canvasId);
       }
 
       // Clear executionId when workflow completes or fails
@@ -222,6 +184,12 @@ const WorkflowAppPage: React.FC = () => {
     },
   });
 
+  useEffect(() => {
+    if (workflowDetail?.canvasId) {
+      setCanvasId(workflowDetail.canvasId);
+    }
+  }, [workflowDetail]);
+
   // Update isRunning based on actual execution status from polling
   useEffect(() => {
     if (executionId) {
@@ -269,7 +237,6 @@ const WorkflowAppPage: React.FC = () => {
 
   // Fetch drive files for runtime products after execution completes
   useEffect(() => {
-    const canvasId = workflowApp?.canvasData?.canvasId;
     if (!canvasId || isRunning || executionId) {
       return;
     }
@@ -313,7 +280,7 @@ const WorkflowAppPage: React.FC = () => {
 
       fetchRuntimeFiles();
     }
-  }, [workflowApp?.canvasData?.canvasId, isRunning, executionId, finalNodeExecutions.length]);
+  }, [canvasId, isRunning, executionId, finalNodeExecutions.length]);
 
   const products = useMemo(() => {
     // Legacy product node executions (document, codeArtifact, image, video, audio)
@@ -512,7 +479,7 @@ const WorkflowAppPage: React.FC = () => {
         // Extract resultIds (entityId)
         const resultIds = executingNodes
           .map((node: WorkflowNodeExecution) => node.entityId)
-          .filter((id: string): id is string => Boolean(id));
+          .filter((id: string | undefined): id is string => Boolean(id));
 
         // Abort all executing actions
         if (resultIds.length > 0) {
@@ -776,21 +743,19 @@ const WorkflowAppPage: React.FC = () => {
                                       {stepNumber > 0 && totalNodes > 0 ? (
                                         <div className="flex flex-col">
                                           {/* Display all executing nodes with Step prefix */}
-                                          {executingNodes
-                                            ?.slice(0, 5)
-                                            .map((node: any, index: number) => {
-                                              return (
-                                                <div
-                                                  key={node.nodeId ?? index}
-                                                  className="overflow-hidden text-ellipsis whitespace-nowrap"
-                                                >
-                                                  <span className="whitespace-nowrap flex-shrink-0">
-                                                    Step {stepNumber + index}/{totalNodes}:{' '}
-                                                  </span>
-                                                  <span>{node.title ?? ''}</span>
-                                                </div>
-                                              );
-                                            })}
+                                          {executingNodes?.slice(0, 5).map((node, index) => {
+                                            return (
+                                              <div
+                                                key={node.nodeId ?? index}
+                                                className="overflow-hidden text-ellipsis whitespace-nowrap"
+                                              >
+                                                <span className="whitespace-nowrap flex-shrink-0">
+                                                  Step {stepNumber + index}/{totalNodes}:{' '}
+                                                </span>
+                                                <span>{node.title ?? ''}</span>
+                                              </div>
+                                            );
+                                          })}
                                         </div>
                                       ) : (
                                         <div className="overflow-hidden text-ellipsis whitespace-nowrap">

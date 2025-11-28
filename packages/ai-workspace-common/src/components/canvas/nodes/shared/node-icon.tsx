@@ -29,6 +29,7 @@ import {
   MessageSmile,
 } from 'refly-icons';
 import { Avatar } from 'antd';
+import { useThemeStoreShallow } from '@refly/stores';
 
 type IconComponent = ComponentType<{ size?: number | string; color?: string }>;
 const ICONS: Record<CanvasNodeType | SelectionKey, IconComponent> = {
@@ -113,6 +114,9 @@ export const NodeIcon: NamedExoticComponent<NodeIconProps> = memo(
     fileType,
   }: NodeIconProps) => {
     const size = !filled ? 20 : small ? 14 : 16;
+    const { isDarkMode } = useThemeStoreShallow((state) => ({
+      isDarkMode: state.isDarkMode,
+    }));
 
     const isResourceFile = type === 'file';
 
@@ -150,6 +154,9 @@ export const NodeIcon: NamedExoticComponent<NodeIconProps> = memo(
       );
     }
 
+    const backgroundColor =
+      isDarkMode && ['start', 'skillResponse'].includes(type) ? 'black' : resolvedColor;
+
     return (
       <div
         className={`rounded-md flex items-center justify-center flex-shrink-0 ${
@@ -157,7 +164,7 @@ export const NodeIcon: NamedExoticComponent<NodeIconProps> = memo(
         } ${type === 'image' ? 'bg-gradient-to-r from-pink-500 to-purple-500' : ''} ${
           className ?? ''
         }`}
-        style={{ backgroundColor: resolvedColor }}
+        style={{ backgroundColor: backgroundColor }}
       >
         <Icon size={iconSize || size} color="white" />
       </div>

@@ -11,6 +11,8 @@ interface BackendRedirectProps {
 /**
  * Redirects user to a backend-served page. Useful for forcing server-side routing.
  * Uses current page origin instead of API endpoint to avoid redirecting to API server.
+ * Handles same-path (e.g. '/') case by forcing a one-time hard reload using sessionStorage marker,
+ * so that edge worker (e.g. Cloudflare Worker) can serve the configured page without query params.
  */
 const BackendRedirect = ({ absoluteUrl, targetPath = '/' }: BackendRedirectProps) => {
   useEffect(() => {
@@ -23,9 +25,32 @@ const BackendRedirect = ({ absoluteUrl, targetPath = '/' }: BackendRedirectProps
     const url = absoluteUrl ?? `${base}${targetPath ?? '/'}`;
     const targetUrl = new URL(url);
     const currentUrl = new URL(window.location.href);
+    const storageKey = '__backend_redirect_once';
 
-    // Avoid infinite loop: don't redirect if already on the target path
+    // If path is the same (e.g., '/'), force a one-time hard reload with a session flag.
+    // The flag prevents infinite loops in environments where the SPA still serves the same route.
     if (targetUrl.pathname === currentUrl.pathname) {
+      let alreadyRedirected = false;
+      try {
+        alreadyRedirected = window.sessionStorage?.getItem(storageKey) === '1';
+      } catch {
+        // Ignore storage errors and fallback to reload-once behavior
+      }
+      if (!alreadyRedirected) {
+        try {
+          window.sessionStorage?.setItem(storageKey, '1');
+        } catch {
+          // Ignore storage errors
+        }
+        // Force a full reload so edge worker can handle '/'
+        window.location.reload();
+      } else {
+        try {
+          window.sessionStorage?.removeItem(storageKey);
+        } catch {
+          // Ignore storage errors
+        }
+      }
       return;
     }
 
