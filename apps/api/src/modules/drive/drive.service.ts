@@ -818,9 +818,7 @@ export class DriveService {
       return [];
     }
 
-    const processedRequests = await this.batchProcessDriveFileRequests(user, canvasId, files, {
-      archiveFiles: true,
-    });
+    const processedRequests = await this.batchProcessDriveFileRequests(user, canvasId, files);
 
     // Process each file to prepare data for bulk creation
     const driveFilesData: Prisma.DriveFileCreateManyInput[] = processedRequests.map((req) => {
@@ -861,9 +859,7 @@ export class DriveService {
       throw new ParamsError('Canvas ID is required for create operation');
     }
 
-    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request], {
-      archiveFiles: true,
-    });
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request]);
     const processedReq = processedResults[0];
 
     if (!processedReq) {

@@ -232,9 +232,7 @@ export const CreateWorkflowAppModal = ({
     ];
 
     // Deduplicate by node ID
-    // Also check for potential duplicates by resultId to handle migration cases
     const uniqueMap = new Map<string, any>();
-    const resultIdMap = new Map<string, any>();
 
     for (const node of allNodes) {
       if (!node?.id) continue;
@@ -242,26 +240,7 @@ export const CreateWorkflowAppModal = ({
       // Skip if already added by node ID
       if (uniqueMap.has(node.id as string)) continue;
 
-      // Check for duplicate by resultId + resultVersion (for migration compatibility)
-      // This prevents showing the same result twice during migration period
-      const resultId = (node.data?.metadata?.resultId ||
-        node.data?.metadata?.parentResultId) as string;
-      const resultVersion = node.data?.metadata?.resultVersion;
-
-      // Use resultId-v{version} as key, default version to 0 for legacy nodes
-      // This ensures old nodes (no resultVersion) and new drive files (resultVersion: 0) are treated as same version
-      const resultKey = resultId ? `${resultId}-v${resultVersion ?? 0}` : null;
-
-      if (resultKey && resultIdMap.has(resultKey)) {
-        // Already have a node with this resultId+version combination
-        // Skip to avoid showing duplicate during migration
-        continue;
-      }
-
       uniqueMap.set(node.id as string, node);
-      if (resultKey) {
-        resultIdMap.set(resultKey, node);
-      }
     }
 
     return Array.from(uniqueMap.values()) as CanvasNode[];
