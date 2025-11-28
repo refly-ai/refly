@@ -400,28 +400,50 @@ export class ShareCreationService {
   async createShareForDriveFile(user: User, param: CreateShareRequest) {
     const { entityId: fileId, parentShareId, allowDuplication } = param;
 
-    // Check if shareRecord already exists
+    // Step 1: Check if this file has already been shared by anyone
+    // Note: We don't filter by uid here to allow reusing existing shares
     const existingShareRecord = await this.prisma.shareRecord.findFirst({
       where: {
         entityId: fileId,
         entityType: 'driveFile',
-        uid: user.uid,
         deletedAt: null,
       },
     });
 
-    // Generate shareId only if needed
-    const shareId = existingShareRecord?.shareId ?? genShareId('driveFile');
+    const shareDataReady =
+      existingShareRecord?.storageKey &&
+      (await this.prisma.staticFile.findFirst({
+        where: {
+          storageKey: existingShareRecord.storageKey,
+          deletedAt: null,
+        },
+      })) &&
+      (await this.miscService.fileStorageExists(existingShareRecord.storageKey, 'public'));
 
-    // Get drive file detail
+    // If share already exists and static file data is ready, reuse it
+    if (existingShareRecord && shareDataReady) {
+      const driveFileDetail = await this.prisma.driveFile.findFirst({
+        where: {
+          fileId,
+          deletedAt: null,
+        },
+      });
+      return { shareRecord: existingShareRecord, driveFile: driveFileDetail };
+    }
+
+    const shareId = existingShareRecord?.shareId ?? genShareId('driveFile');
+    const targetStorageKey = existingShareRecord?.storageKey ?? `share/${shareId}.json`;
+
+    // Verify ownership: Only the file owner can create the first share
     const driveFileDetail = await this.prisma.driveFile.findFirst({
       where: {
         fileId,
-        uid: user.uid,
+        uid: user.uid, // Filter by uid to ensure user is the owner
         deletedAt: null,
       },
     });
 
+    // If user is not the owner, throw error to prevent unauthorized sharing
     if (!driveFileDetail) {
       throw new ShareNotFoundError();
     }
@@ -441,30 +463,22 @@ export class ShareCreationService {
       entityId: fileId,
       entityType: 'driveFile',
       visibility: 'public',
-      storageKey: `share/${shareId}.json`,
+      storageKey: targetStorageKey,
     });
 
+    // Create or update shareRecord
     let shareRecord: ShareRecord;
-
     if (existingShareRecord) {
-      // Update existing shareRecord
       shareRecord = await this.prisma.shareRecord.update({
-        where: {
-          pk: existingShareRecord.pk,
-        },
+        where: { shareId },
         data: {
           title: driveFile.name,
           storageKey,
           parentShareId,
           allowDuplication,
-          updatedAt: new Date(),
         },
       });
-      this.logger.log(
-        `Updated existing share record: ${shareRecord.shareId} for drive file: ${fileId}`,
-      );
     } else {
-      // Create new shareRecord
       shareRecord = await this.prisma.shareRecord.create({
         data: {
           shareId,
@@ -477,8 +491,8 @@ export class ShareCreationService {
           allowDuplication,
         },
       });
-      this.logger.log(`Created new share record: ${shareRecord.shareId} for drive file: ${fileId}`);
     }
+    this.logger.log(`Created new share record: ${shareRecord.shareId} for drive file: ${fileId}`);
 
     return { shareRecord, driveFile };
   }

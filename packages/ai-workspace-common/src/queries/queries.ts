@@ -73,6 +73,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
   getCanvasState,
@@ -314,6 +315,8 @@ import {
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
+  GetCanvasCommissionByCanvasIdData,
+  GetCanvasCommissionByCanvasIdError,
   GetCanvasDataData,
   GetCanvasDataError,
   GetCanvasDetailData,
@@ -1302,6 +1305,23 @@ export const useGetCreditUsageByCanvasId = <
     queryKey: Common.UseGetCreditUsageByCanvasIdKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getCreditUsageByCanvasId({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetCanvasCommissionByCanvasId = <
+  TData = Common.GetCanvasCommissionByCanvasIdDefaultResponse,
+  TError = GetCanvasCommissionByCanvasIdError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetCanvasCommissionByCanvasIdData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetCanvasCommissionByCanvasIdKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getCanvasCommissionByCanvasId({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,

@@ -72,6 +72,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
   getCanvasState,
@@ -746,6 +747,18 @@ export const UseGetCreditUsageByCanvasIdKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCreditUsageByCanvasIdKey, ...(queryKey ?? [clientOptions])];
+export type GetCanvasCommissionByCanvasIdDefaultResponse = Awaited<
+  ReturnType<typeof getCanvasCommissionByCanvasId>
+>['data'];
+export type GetCanvasCommissionByCanvasIdQueryResult<
+  TData = GetCanvasCommissionByCanvasIdDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetCanvasCommissionByCanvasIdKey = 'GetCanvasCommissionByCanvasId';
+export const UseGetCanvasCommissionByCanvasIdKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetCanvasCommissionByCanvasIdKey, ...(queryKey ?? [clientOptions])];
 export type ListInvitationCodesDefaultResponse = Awaited<
   ReturnType<typeof listInvitationCodes>
 >['data'];

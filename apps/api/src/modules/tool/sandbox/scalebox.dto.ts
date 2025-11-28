@@ -70,6 +70,20 @@ export interface SandboxPauseJobData {
 }
 
 /**
+ * BullMQ job data for sandbox kill (async cleanup)
+ */
+export interface SandboxKillJobData {
+  sandboxId: string;
+  label: string; // Log identifier, e.g., 'create:attempt1'
+}
+
+/**
+ * Callback for sandbox lifecycle failure (create/reconnect)
+ * Called when an attempt fails, allowing caller to handle async cleanup
+ */
+export type OnLifecycleFailed = (sandboxId: string, error: Error) => void;
+
+/**
  * Union type for all sandbox job types
  */
 export type SandboxJobData = SandboxExecuteJobData | SandboxPauseJobData;

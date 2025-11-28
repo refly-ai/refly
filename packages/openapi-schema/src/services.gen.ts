@@ -398,6 +398,9 @@ import type {
   GetCreditUsageByCanvasIdData,
   GetCreditUsageByCanvasIdError,
   GetCreditUsageByCanvasIdResponse2,
+  GetCanvasCommissionByCanvasIdData,
+  GetCanvasCommissionByCanvasIdError,
+  GetCanvasCommissionByCanvasIdResponse2,
   ListInvitationCodesError,
   ListInvitationCodesResponse2,
   ActivateInvitationCodeData,
@@ -2653,6 +2656,23 @@ export const getCreditUsageByCanvasId = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/credit/canvas',
+  });
+};
+
+/**
+ * Get canvas commission by canvas ID
+ * Get canvas commission (credit usage with commission rate) by canvas ID
+ */
+export const getCanvasCommissionByCanvasId = <ThrowOnError extends boolean = false>(
+  options: Options<GetCanvasCommissionByCanvasIdData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetCanvasCommissionByCanvasIdResponse2,
+    GetCanvasCommissionByCanvasIdError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/credit/commission',
   });
 };
 

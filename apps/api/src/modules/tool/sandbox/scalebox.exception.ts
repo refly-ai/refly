@@ -112,3 +112,12 @@ export class SandboxRunCodeException extends SandboxException {
     super(messageOrError, 'SANDBOX_RUN_CODE_FAILED');
   }
 }
+
+export class SandboxAcquireException extends SandboxException {
+  constructor(
+    messageOrError: unknown,
+    public readonly sandboxId?: string,
+  ) {
+    super(messageOrError, 'SANDBOX_ACQUIRE_FAILED', { sandboxId });
+  }
+}

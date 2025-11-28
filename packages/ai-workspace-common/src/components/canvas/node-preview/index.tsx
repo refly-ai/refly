@@ -42,7 +42,6 @@ export const PreviewComponent = memo(
     const basicPropsEqual =
       prevProps.node?.type === nextProps.node?.type &&
       prevProps.node?.data?.entityId === nextProps.node?.data?.entityId;
-
     if (!basicPropsEqual) return false;
 
     // Check content preview

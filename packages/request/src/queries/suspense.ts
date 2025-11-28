@@ -9,6 +9,7 @@ import {
   exportDocument,
   getActionResult,
   getAuthConfig,
+  getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
   getCanvasState,
@@ -83,6 +84,8 @@ import {
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
+  GetCanvasCommissionByCanvasIdData,
+  GetCanvasCommissionByCanvasIdError,
   GetCanvasDataData,
   GetCanvasDataError,
   GetCanvasDetailData,
@@ -989,6 +992,23 @@ export const useGetCreditUsageByCanvasIdSuspense = <
     queryKey: Common.UseGetCreditUsageByCanvasIdKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getCreditUsageByCanvasId({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetCanvasCommissionByCanvasIdSuspense = <
+  TData = Common.GetCanvasCommissionByCanvasIdDefaultResponse,
+  TError = GetCanvasCommissionByCanvasIdError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetCanvasCommissionByCanvasIdData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetCanvasCommissionByCanvasIdKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getCanvasCommissionByCanvasId({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,

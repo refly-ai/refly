@@ -256,6 +256,10 @@ export const FrontPage = memo(() => {
 
   const handleViewAllWorkflows = useCallback(() => {
     navigate('/workflow-list');
+  }, [navigate]);
+
+  const handleViewMarketplace = useCallback(() => {
+    window.open('/workflow-marketplace', '_blank');
   }, []);
 
   useEffect(() => {
@@ -305,7 +309,10 @@ export const FrontPage = memo(() => {
       )}
 
       {canvasTemplateEnabled && (
-        <ModuleContainer title={t('frontPage.template.title')}>
+        <ModuleContainer
+          title={t('frontPage.template.title')}
+          handleTitleClick={handleViewMarketplace}
+        >
           {showTemplateCategories && templateCategories.length > 1 && (
             <div className="flex items-center gap-2 flex-wrap">
               {templateCategories.map((category) => (

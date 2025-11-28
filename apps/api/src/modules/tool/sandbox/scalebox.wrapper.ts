@@ -12,9 +12,10 @@ import {
   SandboxExecutionBadResultException,
   SandboxRunCodeException,
   SandboxFileListException,
+  SandboxAcquireException,
 } from './scalebox.exception';
-import { SANDBOX_DRIVE_MOUNT_POINT, SCALEBOX_DEFAULTS, GRPC_CODE } from './scalebox.constants';
-import { ExecutionContext } from './scalebox.dto';
+import { SANDBOX_DRIVE_MOUNT_POINT, SCALEBOX_DEFAULTS } from './scalebox.constants';
+import { ExecutionContext, OnLifecycleFailed } from './scalebox.dto';
 
 export interface S3Config {
   endPoint: string; // MinIO SDK uses 'endPoint' with capital P
@@ -135,29 +136,42 @@ export class SandboxWrapper {
   @Trace('sandbox.pause')
   async betaPause(): Promise<void> {
     await guard.bestEffort(
-      async () => {
-        this.logger.debug({ sandboxId: this.sandboxId }, 'Triggering sandbox pause');
-        await this.sandbox.betaPause();
-        this.logger.info('Sandbox paused');
-      },
+      () =>
+        guard
+          .retry(
+            async () => {
+              this.logger.debug({ sandboxId: this.sandboxId }, 'Triggering sandbox pause');
+              await this.sandbox.betaPause();
+              this.logger.info({ sandboxId: this.sandboxId }, 'Sandbox paused');
+            },
+            {
+              maxAttempts: SCALEBOX_DEFAULTS.PAUSE_RETRY_MAX_ATTEMPTS,
+              initialDelay: SCALEBOX_DEFAULTS.PAUSE_RETRY_DELAY_MS,
+              maxDelay: SCALEBOX_DEFAULTS.PAUSE_RETRY_DELAY_MS,
+              backoffFactor: 1,
+            },
+          )
+          .orThrow(),
       (error) => this.logger.error({ sandboxId: this.sandboxId, error }, 'Failed to pause sandbox'),
     );
   }
 
-  @Trace('sandbox.create', { 'operation.type': 'cold_start' })
-  static async create(
+  /**
+   * Inner function for create - throws SandboxAcquireException on failure
+   */
+  private static async createInner(
     logger: PinoLogger,
     context: ExecutionContext,
     timeoutMs: number,
   ): Promise<SandboxWrapper> {
-    logger.debug({ canvasId: context.canvasId }, 'Creating sandbox');
+    logger.info({ canvasId: context.canvasId }, 'Creating sandbox');
 
     const sandbox = await guard(() =>
       Sandbox.create('code-interpreter', {
         apiKey: context.apiKey,
         timeoutMs,
       }),
-    ).orThrow((e) => new SandboxCreationException(e));
+    ).orThrow((err) => new SandboxAcquireException(err));
 
     const now = Date.now();
     const wrapper = new SandboxWrapper(
@@ -169,22 +183,38 @@ export class SandboxWrapper {
       now,
     );
 
-    logger.debug({ sandboxId: wrapper.sandboxId, canvasId: context.canvasId }, 'Sandbox created');
+    const isReady = await guard(() => wrapper.healthCheck()).orThrow(
+      (err) => new SandboxAcquireException(err, wrapper.sandboxId),
+    );
+
+    guard
+      .ensure(isReady)
+      .orThrow(
+        () =>
+          new SandboxAcquireException(
+            `Sandbox ${wrapper.sandboxId} failed health check after creation`,
+            wrapper.sandboxId,
+          ),
+      );
+
+    logger.info({ sandboxId: wrapper.sandboxId, canvasId: context.canvasId }, 'Sandbox created');
 
     return wrapper;
   }
 
-  @Trace('sandbox.reconnect', { 'operation.type': 'reconnect' })
-  static async reconnect(
+  /**
+   * Inner function for reconnect - throws SandboxAcquireException on failure
+   */
+  private static async reconnectInner(
     logger: PinoLogger,
     context: ExecutionContext,
     metadata: SandboxMetadata,
   ): Promise<SandboxWrapper> {
-    logger.debug({ sandboxId: metadata.sandboxId }, 'Reconnecting to sandbox');
+    logger.info({ sandboxId: metadata.sandboxId }, 'Reconnecting to sandbox');
 
     const sandbox = await guard(() =>
       Sandbox.connect(metadata.sandboxId, { apiKey: context.apiKey }),
-    ).orThrow((error) => new SandboxConnectionException(error));
+    ).orThrow((err) => new SandboxAcquireException(err, metadata.sandboxId));
 
     const wrapper = new SandboxWrapper(
       sandbox,
@@ -201,9 +231,92 @@ export class SandboxWrapper {
       wrapper.lastPausedAt = metadata.lastPausedAt;
     }
 
-    logger.debug({ sandboxId: metadata.sandboxId }, 'Reconnected to sandbox');
+    const isReady = await guard(() => wrapper.healthCheck()).orThrow(
+      (err) => new SandboxAcquireException(err, wrapper.sandboxId),
+    );
+
+    guard
+      .ensure(isReady)
+      .orThrow(
+        () =>
+          new SandboxAcquireException(
+            `Sandbox ${wrapper.sandboxId} failed health check after reconnect`,
+            wrapper.sandboxId,
+          ),
+      );
+
+    logger.info({ sandboxId: metadata.sandboxId }, 'Reconnected to sandbox');
 
     return wrapper;
+  }
+
+  @Trace('sandbox.create', { 'operation.type': 'cold_start' })
+  static async create(
+    logger: PinoLogger,
+    context: ExecutionContext,
+    timeoutMs: number,
+    onFailed?: OnLifecycleFailed,
+  ): Promise<SandboxWrapper> {
+    const { LIFECYCLE_RETRY_MAX_ATTEMPTS, LIFECYCLE_RETRY_DELAY_MS } = SCALEBOX_DEFAULTS;
+    const errors: string[] = [];
+
+    return guard
+      .retry(() => SandboxWrapper.createInner(logger, context, timeoutMs), {
+        maxAttempts: LIFECYCLE_RETRY_MAX_ATTEMPTS,
+        initialDelay: LIFECYCLE_RETRY_DELAY_MS,
+        maxDelay: LIFECYCLE_RETRY_DELAY_MS,
+        backoffFactor: 1,
+        onRetry: (err) => {
+          const error = err as SandboxAcquireException;
+          errors.push(error.message);
+          logger.warn({ error: error.message }, 'Sandbox creation attempt failed');
+          if (error.sandboxId) {
+            onFailed?.(error.sandboxId, error);
+          }
+        },
+      })
+      .orThrow(
+        () =>
+          new SandboxCreationException(
+            `createSandbox failed after ${LIFECYCLE_RETRY_MAX_ATTEMPTS} attempts: ${errors.join('; ')}`,
+          ),
+      );
+  }
+
+  @Trace('sandbox.reconnect', { 'operation.type': 'reconnect' })
+  static async reconnect(
+    logger: PinoLogger,
+    context: ExecutionContext,
+    metadata: SandboxMetadata,
+    onFailed?: OnLifecycleFailed,
+  ): Promise<SandboxWrapper> {
+    const { LIFECYCLE_RETRY_MAX_ATTEMPTS, LIFECYCLE_RETRY_DELAY_MS } = SCALEBOX_DEFAULTS;
+    const errors: string[] = [];
+
+    return guard
+      .retry(() => SandboxWrapper.reconnectInner(logger, context, metadata), {
+        maxAttempts: LIFECYCLE_RETRY_MAX_ATTEMPTS,
+        initialDelay: LIFECYCLE_RETRY_DELAY_MS,
+        maxDelay: LIFECYCLE_RETRY_DELAY_MS,
+        backoffFactor: 1,
+        onRetry: (err) => {
+          const error = err as SandboxAcquireException;
+          errors.push(error.message);
+          logger.warn(
+            { sandboxId: metadata.sandboxId, error: error.message },
+            'Sandbox reconnect attempt failed',
+          );
+          if (error.sandboxId) {
+            onFailed?.(error.sandboxId, error);
+          }
+        },
+      })
+      .orThrow(
+        () =>
+          new SandboxConnectionException(
+            `reconnectSandbox failed after ${LIFECYCLE_RETRY_MAX_ATTEMPTS} attempts: ${errors.join('; ')}`,
+          ),
+      );
   }
 
   @Trace('sandbox.mount')
@@ -238,31 +351,10 @@ export class SandboxWrapper {
 
   @Trace('sandbox.command')
   private async runCommand(command: string) {
-    const result = await guard
-      .retry(
-        () =>
-          guard(() => this.sandbox.commands.run(command)).orThrow((error) => {
-            this.logger.warn(
-              { error, sandboxId: this.sandboxId },
-              'Sandbox command attempt failed',
-            );
-            throw error;
-          }),
-        {
-          maxAttempts: SCALEBOX_DEFAULTS.COMMAND_RETRY_MAX_ATTEMPTS,
-          initialDelay: SCALEBOX_DEFAULTS.COMMAND_RETRY_DELAY_MS,
-          maxDelay: SCALEBOX_DEFAULTS.COMMAND_RETRY_DELAY_MS,
-          backoffFactor: 1,
-          retryIf: (error) => (error as any)?.code === GRPC_CODE.UNAVAILABLE,
-        },
-      )
-      .orThrow((error) => {
-        this.logger.error(
-          { error, sandboxId: this.sandboxId },
-          'Sandbox command failed after retries',
-        );
-        return new SandboxExecutionFailedException(error);
-      });
+    const result = await guard(() => this.sandbox.commands.run(command)).orThrow((error) => {
+      this.logger.warn({ error, sandboxId: this.sandboxId }, 'Sandbox command failed');
+      return new SandboxExecutionFailedException(error);
+    });
 
     guard.ensure(result.exitCode === 0).orThrow(() => {
       this.logger.warn(
@@ -312,5 +404,22 @@ export class SandboxWrapper {
 
   async kill(): Promise<void> {
     await this.sandbox.kill();
+  }
+
+  /**
+   * Check if sandbox gRPC endpoint is ready
+   * Polls with commands.run('true') until success or max attempts
+   */
+  async healthCheck(): Promise<boolean> {
+    const { HEALTH_CHECK_MAX_ATTEMPTS, HEALTH_CHECK_INTERVAL_MS } = SCALEBOX_DEFAULTS;
+
+    return guard
+      .retry(() => this.runCommand('true').then(() => true), {
+        maxAttempts: HEALTH_CHECK_MAX_ATTEMPTS,
+        initialDelay: HEALTH_CHECK_INTERVAL_MS,
+        maxDelay: HEALTH_CHECK_INTERVAL_MS,
+        backoffFactor: 1,
+      })
+      .orElse(async () => false);
   }
 }

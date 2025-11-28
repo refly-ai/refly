@@ -3611,6 +3611,7 @@ const translations = {
     titlePlaceholder: '请输入名称',
     descriptionPlaceholder: '请输入描述',
     publish: '发布',
+    updatePublish: '更新发布',
     edit: '编辑应用',
     publishSuccess: '发布成功',
     alreadyPublished: '已发布',

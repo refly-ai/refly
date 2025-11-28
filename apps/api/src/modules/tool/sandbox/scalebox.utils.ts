@@ -73,43 +73,6 @@ export function extractErrorMessage(result: ExecutionResult): string {
 }
 
 /**
- * Check if execution result indicates a critical sandbox failure
- * Critical failures require killing the sandbox instance
- */
-export function isCriticalSandboxError(result: ExecutionResult): boolean {
-  const stderr = result.stderr || '';
-  return (
-    stderr.includes('connection refused') ||
-    stderr.includes('dial tcp') ||
-    stderr.includes('failed to create context kernel')
-  );
-}
-
-/**
- * Result of critical error check
- */
-export interface CriticalErrorCheckResult {
-  isCritical: boolean;
-  stderr?: string;
-}
-
-/**
- * Check if error is a critical sandbox error that requires killing the sandbox
- * @param error - The error to check
- * @returns Check result with isCritical flag and stderr if applicable
- */
-export function checkCriticalError(error: unknown): CriticalErrorCheckResult {
-  const result = (error as any)?.context?.result as ExecutionResult | undefined;
-  if (result && isCriticalSandboxError(result)) {
-    return {
-      isCritical: true,
-      stderr: result.stderr,
-    };
-  }
-  return { isCritical: false };
-}
-
-/**
  * Check if ExecutionResult contains a system-level transient error
  * These errors indicate infrastructure issues, not user code problems
  * @param result - The execution result to check

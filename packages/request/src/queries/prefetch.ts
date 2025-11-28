@@ -9,6 +9,7 @@ import {
   exportDocument,
   getActionResult,
   getAuthConfig,
+  getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
   getCanvasState,
@@ -77,6 +78,7 @@ import {
   ExportCanvasData,
   ExportDocumentData,
   GetActionResultData,
+  GetCanvasCommissionByCanvasIdData,
   GetCanvasDataData,
   GetCanvasDetailData,
   GetCanvasStateData,
@@ -541,6 +543,15 @@ export const prefetchUseGetCreditUsageByCanvasId = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetCreditUsageByCanvasIdKeyFn(clientOptions),
     queryFn: () => getCreditUsageByCanvasId({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetCanvasCommissionByCanvasId = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetCanvasCommissionByCanvasIdData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetCanvasCommissionByCanvasIdKeyFn(clientOptions),
+    queryFn: () =>
+      getCanvasCommissionByCanvasId({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListInvitationCodes = (
   queryClient: QueryClient,
