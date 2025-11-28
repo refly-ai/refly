@@ -63,6 +63,22 @@ export class MiscService implements OnModuleInit {
     }
   }
 
+  async fileStorageExists(
+    storageKey: string,
+    visibility: FileVisibility = 'public',
+  ): Promise<boolean> {
+    if (!storageKey) {
+      return false;
+    }
+    try {
+      const minio = this.minioClient(visibility);
+      await minio.statObject(storageKey);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async setupCleanStaticFilesCronjob() {
     if (!this.cleanStaticFilesQueue) return;
 

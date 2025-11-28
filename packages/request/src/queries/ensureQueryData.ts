@@ -9,6 +9,7 @@ import {
   exportDocument,
   getActionResult,
   getAuthConfig,
+  getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
   getCanvasState,
@@ -75,6 +76,7 @@ import {
   ExportCanvasData,
   ExportDocumentData,
   GetActionResultData,
+  GetCanvasCommissionByCanvasIdData,
   GetCanvasDataData,
   GetCanvasDetailData,
   GetCanvasStateData,
@@ -523,6 +525,15 @@ export const ensureUseGetCreditUsageByCanvasIdData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetCreditUsageByCanvasIdKeyFn(clientOptions),
     queryFn: () => getCreditUsageByCanvasId({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetCanvasCommissionByCanvasIdData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetCanvasCommissionByCanvasIdData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetCanvasCommissionByCanvasIdKeyFn(clientOptions),
+    queryFn: () =>
+      getCanvasCommissionByCanvasId({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListInvitationCodesData = (
   queryClient: QueryClient,

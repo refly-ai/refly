@@ -176,7 +176,11 @@ export const hasDownloadableData = (nodeData: NodeData): boolean => {
 };
 
 // Main download function for different node types
-export const downloadNodeData = async (nodeData: NodeData, t: TFunction): Promise<void> => {
+export const downloadNodeData = async (
+  nodeData: NodeData,
+  t: TFunction,
+  options?: { usePublicFileUrl?: boolean },
+): Promise<void> => {
   const { nodeType, entityId, title = '', metadata = {} } = nodeData;
   const fileName = getSanitizedFileName(title, nodeType, metadata);
 
@@ -204,7 +208,7 @@ export const downloadNodeData = async (nodeData: NodeData, t: TFunction): Promis
         updatedAt: metadata?.updatedAt,
       };
 
-      const { fileUrl } = getDriveFileUrl(driveFile, isSharePage, false);
+      const { fileUrl } = getDriveFileUrl(driveFile, isSharePage, options?.usePublicFileUrl, false);
       if (!fileUrl) {
         message.error(t('canvas.resourceLibrary.download.invalidUrl'));
         return;

@@ -3822,6 +3822,7 @@ const translations = {
     titlePlaceholder: 'Please enter name',
     descriptionPlaceholder: 'Please enter description',
     publish: 'Publish',
+    updatePublish: 'Update Publish',
     edit: 'Edit App',
     publishSuccess: 'Published successfully',
     alreadyPublished: 'Already Published',

@@ -10,6 +10,7 @@ import {
   Artifact,
   CreditBilling,
   DriveFile,
+  LLMModelConfig,
   SkillEvent,
   TokenUsageItem,
   ToolCallMeta,
@@ -232,12 +233,20 @@ export class SkillInvokerService {
       `invoke skill with input: ${JSON.stringify(input)}, resultId: ${resultId}, version: ${version}`,
     );
 
-    const imageFiles: DriveFile[] = context?.files
-      ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
-      ?.map((item) => item.file);
+    const imageFiles: DriveFile[] =
+      context?.files
+        ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
+        ?.map((item) => item.file) ?? [];
+    const hasVisionCapability =
+      (data.providerItem?.config as LLMModelConfig)?.capabilities?.vision ?? false;
+    const providerWithKey = data.provider as { key?: string } | undefined;
+    const providerKey = providerWithKey?.key ?? data.provider?.providerKey ?? '';
+    const forceBase64ForImages = providerKey === 'bedrock';
 
-    if (imageFiles.length > 0 && (data.providerItem?.config as any)?.capabilities?.vision) {
-      input.images = await this.driveService.generateDriveFileUrls(user, imageFiles);
+    if (imageFiles.length > 0 && hasVisionCapability) {
+      // Bedrock must receive embedded base64 payloads regardless of URL configuration.
+      const modeOverride = forceBase64ForImages ? 'base64' : undefined;
+      input.images = await this.driveService.generateDriveFileUrls(user, imageFiles, modeOverride);
     } else {
       input.images = [];
     }

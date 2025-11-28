@@ -1,15 +1,13 @@
 import { memo } from 'react';
-import {
-  DocumentNode,
-  ResourceNode,
-  MemoNode,
-  ImageNode,
-  CodeArtifactNode,
-  WebsiteNode,
-  SkillResponseNode,
-  VideoNode,
-  AudioNode,
-} from '@refly-packages/ai-workspace-common/components/canvas/nodes';
+import { DocumentNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/document';
+import { ResourceNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/resource';
+import { MemoNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/memo/memo';
+import { ImageNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/image';
+import { CodeArtifactNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/code-artifact';
+import { WebsiteNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/website';
+import { SkillResponseNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/skill-response';
+import { VideoNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/video';
+import { AudioNode } from '@refly-packages/ai-workspace-common/components/canvas/nodes/audio';
 import {
   DocumentNodeProps,
   MemoNodeProps,

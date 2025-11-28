@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
 const { Paragraph } = Typography;
 
 // Convert DriveFile type to ResourceType
@@ -59,6 +60,7 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
   const { setCurrentFile } = useActionResultStoreShallow((state) => ({
     setCurrentFile: state.setCurrentFile,
   }));
+  const inheritedUsePublicFileUrl = usePublicFileUrlContext();
   const { t } = useTranslation();
   const { handleDownload, isDownloading } = useDownloadFile();
 
@@ -77,8 +79,8 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
   }, [file.type]);
 
   const handlePreview = useCallback(() => {
-    setCurrentFile(file);
-  }, [file, setCurrentFile]);
+    setCurrentFile(file, { usePublicFileUrl: inheritedUsePublicFileUrl });
+  }, [file, inheritedUsePublicFileUrl, setCurrentFile]);
 
   const handleDownloadProduct = useCallback(() => {
     handleDownload({

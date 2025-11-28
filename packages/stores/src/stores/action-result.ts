@@ -22,6 +22,7 @@ interface ActionResultState {
   streamResults: Record<string, ActionResult>;
   traceIdMap: Record<string, string>; // key: resultId, value: traceId
   currentFile: DriveFile | null;
+  currentFileUsePublicFileUrl?: boolean;
 
   // Stream result actions
   addStreamResult: (resultId: string, result: ActionResult) => void;
@@ -55,7 +56,7 @@ interface ActionResultState {
   cleanupOldResults: () => void;
 
   // Current file management
-  setCurrentFile: (file: DriveFile | null) => void;
+  setCurrentFile: (file: DriveFile | null, options?: { usePublicFileUrl?: boolean }) => void;
 }
 
 export const defaultState = {
@@ -66,6 +67,7 @@ export const defaultState = {
   streamResults: {},
   traceIdMap: {},
   currentFile: null,
+  currentFileUsePublicFileUrl: undefined,
 };
 
 const POLLING_STATE_INITIAL: PollingState = {
@@ -424,10 +426,11 @@ export const useActionResultStore = create<ActionResultState>()(
       },
 
       // Current file management methods
-      setCurrentFile: (file: DriveFile | null) => {
+      setCurrentFile: (file: DriveFile | null, options?: { usePublicFileUrl?: boolean }) => {
         set((state) => ({
           ...state,
           currentFile: file,
+          currentFileUsePublicFileUrl: file ? options?.usePublicFileUrl : undefined,
         }));
       },
     }),

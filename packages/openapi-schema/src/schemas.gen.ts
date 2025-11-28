@@ -7329,6 +7329,29 @@ export const GetCreditUsageByCanvasIdResponseSchema = {
   ],
 } as const;
 
+export const GetCanvasCommissionByCanvasIdResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Canvas commission by canvas ID',
+          properties: {
+            total: {
+              type: 'number',
+              description: 'Total canvas commission by canvas ID',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const InvitationCodeSchema = {
   type: 'object',
   properties: {

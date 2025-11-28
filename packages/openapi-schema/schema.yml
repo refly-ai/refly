@@ -3225,6 +3225,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetCreditUsageByCanvasIdResponse'
+  /credit/commission:
+    get:
+      tags:
+        - credit
+      summary: Get canvas commission by canvas ID
+      description: Get canvas commission (credit usage with commission rate) by canvas ID
+      operationId: getCanvasCommissionByCanvasId
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCanvasCommissionByCanvasIdResponse'
   /invitation/list:
     get:
       tags:
@@ -9243,6 +9264,18 @@ components:
                   description: Credit usage list by canvas ID
                   items:
                     $ref: '#/components/schemas/CreditUsage'
+    GetCanvasCommissionByCanvasIdResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Canvas commission by canvas ID
+              properties:
+                total:
+                  type: number
+                  description: Total canvas commission by canvas ID
     InvitationCode:
       type: object
       properties:

@@ -5214,6 +5214,18 @@ export type GetCreditUsageByCanvasIdResponse = BaseResponse & {
   };
 };
 
+export type GetCanvasCommissionByCanvasIdResponse = BaseResponse & {
+  /**
+   * Canvas commission by canvas ID
+   */
+  data?: {
+    /**
+     * Total canvas commission by canvas ID
+     */
+    total?: number;
+  };
+};
+
 export type InvitationCode = {
   /**
    * Invitation code
@@ -10342,6 +10354,19 @@ export type GetCreditUsageByCanvasIdData = {
 export type GetCreditUsageByCanvasIdResponse2 = GetCreditUsageByCanvasIdResponse;
 
 export type GetCreditUsageByCanvasIdError = unknown;
+
+export type GetCanvasCommissionByCanvasIdData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetCanvasCommissionByCanvasIdResponse2 = GetCanvasCommissionByCanvasIdResponse;
+
+export type GetCanvasCommissionByCanvasIdError = unknown;
 
 export type ListInvitationCodesResponse2 = ListInvitationCodesResponse;
 

@@ -7,11 +7,16 @@ import { CloseCircleOutlined } from '@ant-design/icons';
 import { NodeRenderer } from '@refly-packages/ai-workspace-common/components/slideshow/components/NodeRenderer';
 import { type NodeRelation } from '@refly-packages/ai-workspace-common/components/slideshow/components/ArtifactRenderer';
 import { safeParseJSON } from '@refly/utils/parse';
+import {
+  PublicFileUrlProvider,
+  usePublicFileUrlContext,
+} from '@refly-packages/ai-workspace-common/context/public-file-url';
 
 export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecution[] }) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [itemsPerRow, setItemsPerRow] = useState<number>(2);
+  const inheritedUsePublicFileUrl = usePublicFileUrlContext();
 
   // State for fullscreen modal
   const [fullscreenNode, setFullscreenNode] = useState<NodeRelation | null>(null);
@@ -171,6 +176,11 @@ export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecut
         width="100%"
         className="fullscreen-modal top-0 p-0 max-w-screen"
         wrapClassName="fullscreen-modal-wrap"
+        modalRender={(modalNode) => (
+          <PublicFileUrlProvider value={inheritedUsePublicFileUrl}>
+            {modalNode}
+          </PublicFileUrlProvider>
+        )}
         styles={{
           body: {
             height: 'var(--screen-height)',
@@ -215,6 +225,11 @@ export const WorkflowAppProducts = ({ products }: { products: WorkflowNodeExecut
             },
           }}
           closeIcon={<CloseCircleOutlined className="text-gray-500 hover:text-red-500" />}
+          modalRender={(modalNode) => (
+            <PublicFileUrlProvider value={inheritedUsePublicFileUrl}>
+              {modalNode}
+            </PublicFileUrlProvider>
+          )}
         >
           <div className="bg-white h-full w-full flex flex-col rounded-lg overflow-hidden dark:bg-gray-900">
             {/* Wide mode content */}
