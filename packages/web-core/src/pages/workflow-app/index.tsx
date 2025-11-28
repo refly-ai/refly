@@ -283,8 +283,54 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [canvasId, isRunning, executionId, finalNodeExecutions.length]);
 
-  console.log('workflowApp', workflowApp);
-  console.log('runtime files', runtimeDriveFiles);
+  const canvasFilesById = useMemo(() => {
+    const map = new Map<string, DriveFile>();
+    const files = workflowApp?.canvasData?.files ?? [];
+    for (const file of files) {
+      map.set(file.fileId, file);
+    }
+    return map;
+  }, [workflowApp?.canvasData?.files]);
+
+  const canvasNodesByResultId = useMemo(() => {
+    const map = new Map<string, string>();
+    const nodes = workflowApp?.canvasData?.nodes ?? [];
+    for (const node of nodes as CanvasNode[]) {
+      const resultId = node?.data?.entityId;
+      if (resultId) {
+        map.set(resultId, node.id);
+      }
+    }
+    return map;
+  }, [workflowApp?.canvasData?.nodes]);
+
+  const parsedNodeExecutions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const execution of nodeExecutions) {
+      if (!execution?.nodeData) return;
+      try {
+        const parsed = JSON.parse(execution.nodeData);
+        const resultId = parsed?.data?.entityId;
+        if (resultId) {
+          map.set(resultId, execution.nodeId);
+        }
+      } catch (error) {
+        console.warn('Failed to parse nodeData for execution', execution.nodeId, error);
+      }
+    }
+    return map;
+  }, [nodeExecutions]);
+
+  const sourceDriveFiles = useMemo(() => {
+    const ids = (workflowApp?.resultNodeIds as string[]) ?? [];
+    const nodeIds = ids
+      .filter((nodeId) => nodeId.startsWith('df-'))
+      .map((fileId) => canvasFilesById.get(fileId)?.resultId)
+      .filter((resultId): resultId is string => Boolean(resultId))
+      .map((resultId) => canvasNodesByResultId.get(resultId))
+      .filter((nodeId): nodeId is string => Boolean(nodeId));
+    return new Set(nodeIds);
+  }, [workflowApp?.resultNodeIds, canvasFilesById, canvasNodesByResultId]);
 
   const products = useMemo(() => {
     // Legacy product node executions (document, codeArtifact, image, video, audio)
@@ -296,7 +342,6 @@ const WorkflowAppPage: React.FC = () => {
         ),
       )
       .filter((nodeExecution: WorkflowNodeExecution) => nodeExecution.status === 'finish');
-    console.log('nodeExecutions', nodeExecutions);
 
     // Legacy skillResponse products (selected via resultNodeIds)
     const legacySkillProducts = nodeExecutions
@@ -309,40 +354,15 @@ const WorkflowAppPage: React.FC = () => {
 
     // Map drive files to pseudo WorkflowNodeExecutions
     const serverOrigin = window.location.origin;
-    // 这些nodeid下的文件是需要展示的
-    const sourceDriveFiles = new Set(
-      (workflowApp?.resultNodeIds as string[])
-        ?.filter((nodeId: string) => nodeId.startsWith('df-'))
-        .map((fileId: string) => {
-          const file = workflowApp?.canvasData?.files?.find(
-            (file: DriveFile) => file.fileId === fileId,
-          );
-          return file?.resultId;
-        })
-        .filter((resultId: string) => resultId)
-        .map((resultId: string) => {
-          const node = workflowApp?.canvasData?.nodes?.find(
-            (node: CanvasNode) => node.data.entityId === resultId,
-          );
-          return node?.id;
-        }),
-    );
 
-    console.log('sourceDriveFiles', sourceDriveFiles);
-
-    const _driveProducts = mapDriveFilesToWorkflowNodeExecutions(runtimeDriveFiles, serverOrigin);
-
-    console.log('_driveProducts', _driveProducts);
-
-    const driveProducts = _driveProducts.filter((nodeExecution: WorkflowNodeExecution) => {
-      const resultId = nodeExecution.entityId;
-      const parentNode = nodeExecutions.find(
-        (node: WorkflowNodeExecution) =>
-          node.nodeData && JSON.parse(node.nodeData).data.entityId === resultId,
-      );
-      return parentNode?.nodeId && sourceDriveFiles.has(parentNode.nodeId);
+    const driveProducts = mapDriveFilesToWorkflowNodeExecutions(
+      runtimeDriveFiles,
+      serverOrigin,
+    ).filter((nodeExecution: WorkflowNodeExecution) => {
+      if (!nodeExecution.entityId) return false;
+      const parentNodeId = parsedNodeExecutions?.get(nodeExecution.entityId);
+      return parentNodeId ? sourceDriveFiles.has(parentNodeId) : false;
     });
-    console.log('filtered driveProducts', driveProducts);
 
     // Merge: priority order is legacyNodeProducts > legacySkillProducts > driveProducts
     // This ensures existing node executions take precedence over drive files
@@ -356,9 +376,7 @@ const WorkflowAppPage: React.FC = () => {
     }
 
     return Array.from(uniqueMap.values());
-  }, [nodeExecutions, runtimeDriveFiles, workflowApp?.resultNodeIds]);
-
-  console.log('products', products);
+  }, [nodeExecutions, runtimeDriveFiles, sourceDriveFiles, parsedNodeExecutions]);
 
   useEffect(() => {
     products.length > 0 && setActiveTab('products');
