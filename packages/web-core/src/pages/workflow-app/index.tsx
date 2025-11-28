@@ -498,18 +498,54 @@ const WorkflowAppPage: React.FC = () => {
           );
         }
 
-        // Clean up frontend state
+        // Save current executionId before clearing it
+        const currentExecutionId = executionId;
+
+        // Preserve canvasId if available in workflowDetail
+        if (workflowDetail?.canvasId) {
+          setCanvasId(workflowDetail.canvasId);
+        }
+
+        // Fetch execution credit usage before clearing executionId
+        if (currentExecutionId) {
+          try {
+            const response = await getClient().getCreditUsageByExecutionId({
+              query: {
+                executionId: currentExecutionId,
+              },
+            });
+            if (response?.data?.data?.total) {
+              setExecutionCreditUsage(response.data.data.total);
+            }
+          } catch (error) {
+            console.error('Failed to fetch execution credit usage:', error);
+          }
+        }
+
+        // Preserve completed node executions before clearing executionId
+        // Only keep nodes that have finished status
+        const completedExecutions = nodeExecutions.filter(
+          (node: WorkflowNodeExecution) => node.status === 'finish',
+        );
+        if (completedExecutions.length > 0) {
+          setFinalNodeExecutions(completedExecutions);
+        }
+
+        // Clean up frontend state (but preserve completed results and credit usage)
         setExecutionId(null);
         setIsRunning(false);
         setIsStopped(true);
-        setExecutionCreditUsage(null);
-        setFinalNodeExecutions([]);
-        setRuntimeDriveFiles([]);
+        // Don't clear executionCreditUsage - it's set above if available
+        // Don't clear finalNodeExecutions - it's set above if available
+        // Don't clear canvasId - it's set above if available
+        // Don't clear runtimeDriveFiles - they will be fetched based on finalNodeExecutions and canvasId
         stopPolling();
+        // Refresh credit balance after abort
+        refetchUsage();
         message.success(t('workflowApp.run.stopSuccess'));
       },
     });
-  }, [nodeExecutions, stopPolling, t]);
+  }, [nodeExecutions, stopPolling, t, executionId, workflowDetail, refetchUsage]);
 
   return (
     <ReactFlowProvider>
@@ -798,7 +834,7 @@ const WorkflowAppPage: React.FC = () => {
                     </div>
                   )}
 
-                  {logs.length > 0 && (
+                  {(products.length > 0 || logs.length > 0) && (
                     <>
                       {/* Tabs */}
                       <div
