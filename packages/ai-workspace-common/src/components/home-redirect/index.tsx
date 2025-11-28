@@ -15,6 +15,14 @@ export const HomeRedirect = ({ defaultNode }: { defaultNode: ReactNode }) => {
     if (isLogin) {
       return <Navigate to={'/workspace'} replace />;
     }
+
+    // In local development, redirect to /login directly to avoid infinite loading
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    if (isDevelopment) {
+      return <Navigate to="/login" replace />;
+    }
+
     // Return defaultNode to allow server-side handling (e.g., Cloudflare Worker)
     // BackendRedirect will handle the redirect and avoid infinite loop
     return defaultNode;
