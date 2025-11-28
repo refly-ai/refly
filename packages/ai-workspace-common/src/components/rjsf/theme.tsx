@@ -225,6 +225,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
   const submitFormMutation = useSubmitForm();
   const userStore = useUserStoreShallow((state) => ({
     setShowOnboardingFormModal: state.setShowOnboardingFormModal,
+    setShowOnboardingSuccessAnimation: state.setShowOnboardingSuccessAnimation,
   }));
 
   // Pagination state
@@ -401,7 +402,7 @@ const ObjectFieldTemplate = (props: RjsfObjectFieldTemplateProps) => {
                   {
                     onSuccess: () => {
                       message.success(t('form.submitSuccess'));
-                      // Close the onboarding form modal after successful submission
+                      userStore.setShowOnboardingSuccessAnimation(true);
                       userStore.setShowOnboardingFormModal(false);
                     },
                   },
