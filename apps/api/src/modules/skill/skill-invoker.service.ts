@@ -8,7 +8,6 @@ import { ConfigService } from '@nestjs/config';
 import { ProjectNotFoundError } from '@refly/errors';
 import {
   Artifact,
-  CreditBilling,
   DriveFile,
   LLMModelConfig,
   SkillEvent,
@@ -58,6 +57,7 @@ import { ToolService } from '../tool/tool.service';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
+import { normalizeCreditBilling } from '../../utils/credit-billing';
 
 @Injectable()
 export class SkillInvokerService {
@@ -1326,7 +1326,11 @@ export class SkillInvokerService {
           const providerItem = providerItemsMap.get(String(tokenUsage.modelName));
 
           if (providerItem?.creditBilling) {
-            const creditBilling: CreditBilling = safeParseJSON(providerItem.creditBilling);
+            const creditBilling = normalizeCreditBilling(safeParseJSON(providerItem.creditBilling));
+
+            if (!creditBilling) {
+              continue;
+            }
 
             const usage: TokenUsageItem = {
               tier: providerItem?.tier,

@@ -30,7 +30,6 @@ import {
   ActionResult,
   LLMModelConfig,
   MediaGenerationModelConfig,
-  CreditBilling,
   DriveFile,
   GenericToolset,
 } from '@refly/openapi-schema';
@@ -58,6 +57,7 @@ import { actionResultPO2DTO } from '../action/action.dto';
 import { ProviderService } from '../provider/provider.service';
 import { providerPO2DTO, providerItemPO2DTO } from '../provider/provider.dto';
 import { SkillInvokerService } from './skill-invoker.service';
+import { normalizeCreditBilling } from '../../utils/credit-billing';
 import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
@@ -495,9 +495,9 @@ export class SkillService implements OnModuleInit {
       }
     }
 
-    const creditBilling: CreditBilling = providerItem?.creditBilling
-      ? safeParseJSON(providerItem?.creditBilling)
-      : undefined;
+    const creditBilling = normalizeCreditBilling(
+      providerItem?.creditBilling ? safeParseJSON(providerItem?.creditBilling) : undefined,
+    );
 
     if (creditBilling) {
       const creditUsageResult = await this.credit.checkRequestCreditUsage(user, creditBilling);

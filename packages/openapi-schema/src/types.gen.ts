@@ -5965,13 +5965,17 @@ export type ProviderItemConfig =
  */
 export type CreditBilling = {
   /**
-   * Credit consumption per unit usage
-   */
-  unitCost: number;
-  /**
    * Measurement unit (e.g., token, product, second)
    */
   unit: string;
+  /**
+   * Credit consumption per unit for input tokens
+   */
+  inputCost: number;
+  /**
+   * Credit consumption per unit for output tokens
+   */
+  outputCost: number;
   /**
    * Minimum credit charge per request
    */
@@ -7136,6 +7140,14 @@ export type WorkflowApp = {
    * Cover image URL
    */
   coverUrl?: string;
+  /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
+  /**
+   * Community publish review status
+   */
+  publishReviewStatus?: string;
   /**
    * Workflow app creation timestamp
    */

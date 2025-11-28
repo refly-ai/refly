@@ -1,6 +1,7 @@
 import { safeParseJSON } from '@refly/utils';
 import { ProviderItem as ProviderItemModel, Provider as ProviderModel } from '@prisma/client';
 import { pick } from '../../utils';
+import { normalizeCreditBilling } from '../../utils/credit-billing';
 import {
   Provider,
   ProviderItem,
@@ -37,9 +38,9 @@ export const providerItemPO2DTO = (
     group: providerItem.groupName,
     category: providerItem.category as ProviderCategory,
     tier: providerItem.tier as ModelTier,
-    creditBilling: providerItem.creditBilling
-      ? safeParseJSON(providerItem.creditBilling)
-      : undefined,
+    creditBilling: normalizeCreditBilling(
+      providerItem.creditBilling ? safeParseJSON(providerItem.creditBilling) : undefined,
+    ),
     provider: providerPO2DTO(providerItem.provider),
     config: safeParseJSON(providerItem.config || '{}'),
   };
