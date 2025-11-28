@@ -414,6 +414,9 @@ import type {
   CreateCheckoutSessionData,
   CreateCheckoutSessionError,
   CreateCheckoutSessionResponse2,
+  CreateCreditPackCheckoutSessionData,
+  CreateCreditPackCheckoutSessionError,
+  CreateCreditPackCheckoutSessionResponse,
   CreatePortalSessionError,
   CreatePortalSessionResponse2,
   SearchData,
@@ -2768,12 +2771,20 @@ export const createCheckoutSession = <ThrowOnError extends boolean = false>(
   });
 };
 
-export const postSubscriptionCreateCreditPackSession = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
+/**
+ * Create checkout session
+ * Create a checkout session
+ */
+export const createCreditPackCheckoutSession = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCreditPackCheckoutSessionData, ThrowOnError>,
 ) => {
-  return (options?.client ?? client).post<void, unknown, ThrowOnError>({
+  return (options?.client ?? client).post<
+    CreateCreditPackCheckoutSessionResponse,
+    CreateCreditPackCheckoutSessionError,
+    ThrowOnError
+  >({
     ...options,
-    url: '/subscription/createCreditPackSession',
+    url: '/subscription/createCreditPackCheckoutSession',
   });
 };
 

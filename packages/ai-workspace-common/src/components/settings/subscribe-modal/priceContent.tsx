@@ -225,6 +225,71 @@ const PlanItem = (props: {
   );
 };
 
+const CreditPackItem = (props: {
+  packId: string;
+  title: string;
+  description: string;
+  price: string;
+  credits: string;
+  handleClick?: () => void;
+  loadingInfo: {
+    isLoading: boolean;
+    pack: string;
+  };
+}) => {
+  const { t } = useTranslation('ui');
+  const { packId, title, description, price, credits, handleClick, loadingInfo } = props;
+  const { isLogin } = useUserStoreShallow((state) => ({
+    isLogin: state.isLogin,
+  }));
+  const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
+    setLoginModalOpen: state.setLoginModalOpen,
+  }));
+
+  const handleButtonClick = () => {
+    if (loadingInfo.isLoading) return;
+
+    // Track credit pack purchase click event
+    logEvent('subscription::credit_pack_click', 'settings', {
+      pack_id: packId,
+    });
+
+    if (isLogin) {
+      handleClick?.();
+    } else {
+      setLoginModalOpen(true);
+    }
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col">
+      <div className="subscribe-content-plans-item item-credit-pack">
+        <div className="subscribe-content-plans-item-title credit-pack-title">{title}</div>
+
+        <div className="description">{description}</div>
+
+        <div className="credit-pack-credits">{credits}</div>
+
+        <div className="price-section credit-pack-price">{price}</div>
+
+        <div
+          className={`subscribe-btn credit-pack-btn ${loadingInfo.isLoading && loadingInfo.pack === packId && 'subscribe-btn--loading'}`}
+          onClick={handleButtonClick}
+        >
+          {loadingInfo.isLoading && loadingInfo.pack === packId ? (
+            <div className="flex items-center justify-center gap-2">
+              <Spin size="small" />
+              <span>{t('common.loading')}</span>
+            </div>
+          ) : (
+            t('subscription.creditPacks.buyNow')
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const PriceContent = (props: { source: PriceSource }) => {
   const { t } = useTranslation('ui');
   const navigate = useNavigate();
@@ -259,13 +324,32 @@ export const PriceContent = (props: { source: PriceSource }) => {
     return data;
   }, [t]);
 
+  const creditPacksData = useMemo(() => {
+    const packIds = ['credit_pack_100', 'credit_pack_500', 'credit_pack_1000', 'credit_pack_2000'];
+    const data: Record<
+      string,
+      { title: string; description: string; price: string; credits: string }
+    > = {};
+    for (const packId of packIds) {
+      data[packId] = {
+        title: t(`subscription.creditPacks.${packId}.title`),
+        description: t(`subscription.creditPacks.${packId}.description`),
+        price: t(`subscription.creditPacks.${packId}.price`),
+        credits: t(`subscription.creditPacks.${packId}.credits`),
+      };
+    }
+    return data;
+  }, [t]);
+
   const [interval, setInterval] = useState<SubscriptionInterval>('yearly');
   const [loadingInfo, setLoadingInfo] = useState<{
     isLoading: boolean;
     plan: string;
+    pack: string;
   }>({
     isLoading: false,
     plan: '',
+    pack: '',
   });
 
   const createCheckoutSession = async (plan: string) => {
@@ -273,7 +357,7 @@ export const PriceContent = (props: { source: PriceSource }) => {
 
     const planType = plan as SubscriptionPlanType;
 
-    setLoadingInfo({ isLoading: true, plan });
+    setLoadingInfo({ isLoading: true, plan, pack: '' });
     try {
       const res = await getClient().createCheckoutSession({
         body: {
@@ -287,7 +371,27 @@ export const PriceContent = (props: { source: PriceSource }) => {
     } catch (error) {
       console.error('Failed to create checkout session:', error);
     } finally {
-      setLoadingInfo({ isLoading: false, plan: '' });
+      setLoadingInfo({ isLoading: false, plan: '', pack: '' });
+    }
+  };
+
+  const createCreditPackCheckoutSession = async (packId: string) => {
+    if (loadingInfo.isLoading) return;
+
+    setLoadingInfo({ isLoading: true, plan: '', pack: packId });
+    try {
+      const res = await getClient().createCreditPackCheckoutSession({
+        body: {
+          packId,
+        },
+      });
+      if (res.data?.data?.url) {
+        window.location.href = res.data.data.url;
+      }
+    } catch (error) {
+      console.error('Failed to create credit pack checkout session:', error);
+    } finally {
+      setLoadingInfo({ isLoading: false, plan: '', pack: '' });
     }
   };
 
@@ -359,6 +463,25 @@ export const PriceContent = (props: { source: PriceSource }) => {
           })
           .filter(Boolean)}
       </Row>
+
+      <div className="credit-packs-section">
+        <div className="credit-packs-title">{t('subscription.creditPacks.title')}</div>
+        <Row gutter={[16, 16]} className="credit-packs-grid" justify="center" align="stretch">
+          {Object.keys(creditPacksData).map((packId) => (
+            <Col {...gridSpan} key={packId}>
+              <CreditPackItem
+                packId={packId}
+                title={creditPacksData[packId].title}
+                description={creditPacksData[packId].description}
+                price={creditPacksData[packId].price}
+                credits={creditPacksData[packId].credits}
+                handleClick={() => createCreditPackCheckoutSession(packId)}
+                loadingInfo={loadingInfo}
+              />
+            </Col>
+          ))}
+        </Row>
+      </div>
 
       <div className="subscribe-content-description">
         {t('subscription.cancelAnytime')}{' '}

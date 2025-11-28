@@ -240,7 +240,7 @@ export class SubscriptionService implements OnModuleInit {
     return session;
   }
 
-  async createCreditPackSession(user: User, param: { packId: string }) {
+  async createCreditPackCheckoutSession(user: User, param: { packId: string }) {
     const { uid } = user;
     const userPo = await this.prisma.user.findUnique({ where: { uid } });
 

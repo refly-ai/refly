@@ -16,6 +16,7 @@ import {
   safeParseJSON,
   genDailyCreditRechargeId,
   genSubscriptionRechargeId,
+  genCreditPackRechargeId,
   genCommissionCreditUsageId,
   genCommissionCreditRechargeId,
   genRegistrationCreditRechargeId,
@@ -191,6 +192,7 @@ export class CreditService {
   async createCreditPackRecharge(
     uid: string,
     creditAmount: number,
+    sessionId: string,
     description?: string,
     now: Date = new Date(),
   ): Promise<void> {
@@ -201,7 +203,7 @@ export class CreditService {
       uid,
       creditAmount,
       {
-        rechargeId: genSubscriptionRechargeId(uid, now),
+        rechargeId: genCreditPackRechargeId(uid, sessionId),
         source: 'purchase',
         description: description ?? 'Credit pack purchase',
         createdAt: now,

@@ -89,6 +89,7 @@ export class SubscriptionWebhooks {
       await this.creditService.createCreditPackRecharge(
         uid ?? '',
         creditAmount,
+        session.id,
         `Credit pack purchase: ${packPlan.name}`,
       );
 

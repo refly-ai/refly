@@ -7158,6 +7158,14 @@ export type WorkflowApp = {
    */
   coverUrl?: string;
   /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
+  /**
+   * Community publish review status
+   */
+  publishReviewStatus?: string;
+  /**
    * Workflow app creation timestamp
    */
   createdAt?: string;
@@ -10427,6 +10435,14 @@ export type CreateCheckoutSessionData = {
 export type CreateCheckoutSessionResponse2 = CreateCheckoutSessionResponse;
 
 export type CreateCheckoutSessionError = unknown;
+
+export type CreateCreditPackCheckoutSessionData = {
+  body: CreateCreditPackCheckoutSessionRequest;
+};
+
+export type CreateCreditPackCheckoutSessionResponse = CreateCheckoutSessionResponse;
+
+export type CreateCreditPackCheckoutSessionError = unknown;
 
 export type CreatePortalSessionResponse2 = CreatePortalSessionResponse;
 

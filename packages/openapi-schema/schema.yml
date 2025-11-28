@@ -3383,24 +3383,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateCheckoutSessionResponse'
-  /subscription/createCreditPackSession:
+  /subscription/createCreditPackCheckoutSession:
     post:
       tags:
         - subscription
-    summary: Create checkout session for credit pack
-    operationId: createCreditPackSession
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CreateCreditPackCheckoutSessionRequest'
-    responses:
-      '200':
+      summary: Create checkout session
+      description: Create a checkout session
+      operationId: createCreditPackCheckoutSession
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateCheckoutSessionResponse'
+              $ref: '#/components/schemas/CreateCreditPackCheckoutSessionRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCheckoutSessionResponse'
   /subscription/createPortalSession:
     post:
       tags:

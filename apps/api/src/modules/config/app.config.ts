@@ -224,6 +224,7 @@ export default () => ({
     executionCreditMarkup: Number(process.env.CREDIT_EXECUTION_CREDIT_MARKUP) || 1.2,
     canvasCreditCommissionRate: Number(process.env.CREDIT_CANVAS_CREDIT_COMMISSION_RATE) || 0.2,
     commissionCreditExpiresIn: Number(process.env.CREDIT_COMMISSION_CREDIT_EXPIRES_IN) || 6,
+    creditPackExpiresInDays: Number(process.env.CREDIT_PACK_EXPIRES_IN_DAYS) || 90,
   },
 
   audio: {

@@ -30,12 +30,12 @@ export class SubscriptionController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('/createCreditPackSession')
-  async createCreditPackSession(
+  @Post('/createCreditPackCheckoutSession')
+  async createCreditPackCheckoutSession(
     @LoginedUser() user: User,
     @Body() param: CreateCreditPackCheckoutSessionRequest,
   ): Promise<CreateCheckoutSessionResponse> {
-    const session = await this.subscriptionService.createCreditPackSession(user, param);
+    const session = await this.subscriptionService.createCreditPackCheckoutSession(user, param);
     return buildSuccessResponse({ url: session.url });
   }
 

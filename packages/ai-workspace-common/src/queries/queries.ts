@@ -24,6 +24,7 @@ import {
   createCanvasVersion,
   createCheckoutSession,
   createCodeArtifact,
+  createCreditPackCheckoutSession,
   createDocument,
   createDriveFile,
   createLabelClass,
@@ -138,7 +139,6 @@ import {
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
-  postSubscriptionCreateCreditPackSession,
   recoverPilotSession,
   refreshToken,
   reindexResource,
@@ -218,6 +218,8 @@ import {
   CreateCheckoutSessionError,
   CreateCodeArtifactData,
   CreateCodeArtifactError,
+  CreateCreditPackCheckoutSessionData,
+  CreateCreditPackCheckoutSessionError,
   CreateDocumentData,
   CreateDocumentError,
   CreateDriveFileData,
@@ -2904,22 +2906,22 @@ export const useCreateCheckoutSession = <
       createCheckoutSession(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
-export const usePostSubscriptionCreateCreditPackSession = <
-  TData = Common.PostSubscriptionCreateCreditPackSessionMutationResult,
-  TError = PostSubscriptionCreateCreditPackSessionError,
+export const useCreateCreditPackCheckoutSession = <
+  TData = Common.CreateCreditPackCheckoutSessionMutationResult,
+  TError = CreateCreditPackCheckoutSessionError,
   TQueryKey extends Array<unknown> = unknown[],
   TContext = unknown,
 >(
   mutationKey?: TQueryKey,
   options?: Omit<
-    UseMutationOptions<TData, TError, Options<unknown, true>, TContext>,
+    UseMutationOptions<TData, TError, Options<CreateCreditPackCheckoutSessionData, true>, TContext>,
     'mutationKey' | 'mutationFn'
   >,
 ) =>
-  useMutation<TData, TError, Options<unknown, true>, TContext>({
-    mutationKey: Common.UsePostSubscriptionCreateCreditPackSessionKeyFn(mutationKey),
+  useMutation<TData, TError, Options<CreateCreditPackCheckoutSessionData, true>, TContext>({
+    mutationKey: Common.UseCreateCreditPackCheckoutSessionKeyFn(mutationKey),
     mutationFn: (clientOptions) =>
-      postSubscriptionCreateCreditPackSession(clientOptions) as unknown as Promise<TData>,
+      createCreditPackCheckoutSession(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreatePortalSession = <

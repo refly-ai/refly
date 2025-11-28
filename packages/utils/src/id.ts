@@ -260,6 +260,10 @@ export const genSubscriptionRechargeId = (uid: string, t: Date) => {
   return `${IDPrefix.CREDIT_RECHARGE}subscription-${uid}-${getYYYYMM(t)}`;
 };
 
+export const genCreditPackRechargeId = (uid: string, sessionId: string) => {
+  return `${IDPrefix.CREDIT_RECHARGE}credit-pack-${uid}-${sessionId}`;
+};
+
 export const genDailyCreditRechargeId = (uid: string, t: Date) => {
   return `${IDPrefix.CREDIT_RECHARGE}daily-${uid}-${getYYYYMMDD(t)}`;
 };

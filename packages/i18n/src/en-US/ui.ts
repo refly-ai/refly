@@ -3658,6 +3658,34 @@ const translations = {
         ],
       },
     },
+    creditPacks: {
+      title: 'Credit Packs',
+      buyNow: 'Buy Now',
+      credit_pack_100: {
+        title: '100 Credits',
+        description: 'Perfect for trying out advanced AI models',
+        price: '$1',
+        credits: '100 credits',
+      },
+      credit_pack_500: {
+        title: '500 Credits',
+        description: 'Ideal for regular AI usage and experimentation',
+        price: '$5',
+        credits: '500 credits',
+      },
+      credit_pack_1000: {
+        title: '1000 Credits',
+        description: 'Great for intensive AI projects and workflows',
+        price: '$10',
+        credits: '1000 credits',
+      },
+      credit_pack_2000: {
+        title: '2000 Credits',
+        description: 'Best value for heavy AI users and teams',
+        price: '$20',
+        credits: '2000 credits',
+      },
+    },
     subscriptionManagement: {
       title: 'Subscription Management',
       subtitle: 'Manage subscription plans and credits',
@@ -3698,7 +3726,7 @@ const translations = {
         commissionPrefix: 'Template usage: ',
       },
       rechargeType: {
-        purchase: 'Purchase',
+        purchase: 'Credit pack',
         gift: 'Gift',
         promotion: 'Promotion',
         refund: 'Refund',

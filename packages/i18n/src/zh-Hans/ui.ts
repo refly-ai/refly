@@ -64,7 +64,7 @@ const translations = {
         commissionPrefix: '模板使用：',
       },
       rechargeType: {
-        purchase: '购买',
+        purchase: '购买积分包',
         gift: '赠送',
         promotion: '促销',
         refund: '退款',
@@ -204,6 +204,34 @@ const translations = {
       priceYearlyTotal: '$ {{price}}/年 节省 20%',
       upgrade: '升级到 {{planType}}',
       cannotChangeTo: '不可变更为 {{planType}}',
+    },
+    creditPacks: {
+      title: '积分包',
+      buyNow: '立即购买',
+      credit_pack_100: {
+        title: '100积分',
+        description: '适合体验高级AI模型',
+        price: '$1',
+        credits: '100积分',
+      },
+      credit_pack_500: {
+        title: '500积分',
+        description: '适合常规AI使用和实验',
+        price: '$5',
+        credits: '500积分',
+      },
+      credit_pack_1000: {
+        title: '1000积分',
+        description: '适合密集AI项目和工作流',
+        price: '$10',
+        credits: '1000积分',
+      },
+      credit_pack_2000: {
+        title: '2000积分',
+        description: '重度AI用户和团队的最佳选择',
+        price: '$20',
+        credits: '2000积分',
+      },
     },
   },
   privacyPage: {

@@ -10436,6 +10436,14 @@ export type CreateCheckoutSessionResponse2 = CreateCheckoutSessionResponse;
 
 export type CreateCheckoutSessionError = unknown;
 
+export type CreateCreditPackCheckoutSessionData = {
+  body: CreateCreditPackCheckoutSessionRequest;
+};
+
+export type CreateCreditPackCheckoutSessionResponse = CreateCheckoutSessionResponse;
+
+export type CreateCreditPackCheckoutSessionError = unknown;
+
 export type CreatePortalSessionResponse2 = CreatePortalSessionResponse;
 
 export type CreatePortalSessionError = unknown;

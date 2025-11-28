@@ -23,6 +23,7 @@ import {
   createCanvasVersion,
   createCheckoutSession,
   createCodeArtifact,
+  createCreditPackCheckoutSession,
   createDocument,
   createDriveFile,
   createLabelClass,
@@ -137,7 +138,6 @@ import {
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
-  postSubscriptionCreateCreditPackSession,
   recoverPilotSession,
   refreshToken,
   reindexResource,
@@ -1398,13 +1398,12 @@ export const UseCreateCheckoutSessionKeyFn = (mutationKey?: Array<unknown>) => [
   useCreateCheckoutSessionKey,
   ...(mutationKey ?? []),
 ];
-export type PostSubscriptionCreateCreditPackSessionMutationResult = Awaited<
-  ReturnType<typeof postSubscriptionCreateCreditPackSession>
+export type CreateCreditPackCheckoutSessionMutationResult = Awaited<
+  ReturnType<typeof createCreditPackCheckoutSession>
 >;
-export const usePostSubscriptionCreateCreditPackSessionKey =
-  'PostSubscriptionCreateCreditPackSession';
-export const UsePostSubscriptionCreateCreditPackSessionKeyFn = (mutationKey?: Array<unknown>) => [
-  usePostSubscriptionCreateCreditPackSessionKey,
+export const useCreateCreditPackCheckoutSessionKey = 'CreateCreditPackCheckoutSession';
+export const UseCreateCreditPackCheckoutSessionKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateCreditPackCheckoutSessionKey,
   ...(mutationKey ?? []),
 ];
 export type CreatePortalSessionMutationResult = Awaited<ReturnType<typeof createPortalSession>>;
