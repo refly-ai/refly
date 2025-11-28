@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useMatch } from 'react-router-dom';
 import { getDriveFileUrl } from './use-drive-file-url';
+import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
 import type { DriveFile } from '@refly/openapi-schema';
 
 interface DownloadableFile {
@@ -23,11 +24,13 @@ interface DownloadFileParams {
 export const useDownloadFile = () => {
   const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
+  const usePublicFileUrl = usePublicFileUrlContext();
 
   // Check if current page is any share page (consistent with use-file-url.ts)
   const isShareCanvas = useMatch('/share/canvas/:canvasId');
   const isShareFile = useMatch('/share/file/:shareId');
-  const isSharePage = Boolean(isShareCanvas || isShareFile);
+  const isWorkflowApp = useMatch('/app/:shareId');
+  const isSharePage = Boolean(isShareCanvas || isShareFile || isWorkflowApp);
 
   const handleDownload = useCallback(
     async ({ currentFile, contentType }: DownloadFileParams) => {
@@ -55,7 +58,7 @@ export const useDownloadFile = () => {
       try {
         const file = currentFile as DriveFile;
         // Use async getFileUrl which handles publicURL fetching automatically
-        const { fileUrl } = getDriveFileUrl(file, isSharePage);
+        const { fileUrl } = getDriveFileUrl(file, isSharePage, usePublicFileUrl);
 
         if (!fileUrl) {
           throw new Error('File URL not available');
@@ -94,7 +97,7 @@ export const useDownloadFile = () => {
         setIsDownloading(false);
       }
     },
-    [isDownloading, t, isSharePage],
+    [isDownloading, t, isSharePage, usePublicFileUrl],
   );
 
   return {

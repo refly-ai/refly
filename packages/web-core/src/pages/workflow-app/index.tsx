@@ -14,6 +14,7 @@ import { mapDriveFilesToCanvasNodes, mapDriveFilesToWorkflowNodeExecutions } fro
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { WorkflowAppProducts } from '@refly-packages/ai-workspace-common/components/workflow-app/products';
+import { PublicFileUrlProvider } from '@refly-packages/ai-workspace-common/context/public-file-url';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useWorkflowExecutionPolling } from '@refly-packages/ai-workspace-common/hooks/use-workflow-execution-polling';
 import { ReactFlowProvider } from '@refly-packages/ai-workspace-common/components/canvas';
@@ -282,6 +283,9 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [canvasId, isRunning, executionId, finalNodeExecutions.length]);
 
+  console.log('workflowApp', workflowApp);
+  console.log('runtime files', runtimeDriveFiles);
+
   const products = useMemo(() => {
     // Legacy product node executions (document, codeArtifact, image, video, audio)
     // These are old product nodes that may still exist before migration to drive_files
@@ -292,6 +296,7 @@ const WorkflowAppPage: React.FC = () => {
         ),
       )
       .filter((nodeExecution: WorkflowNodeExecution) => nodeExecution.status === 'finish');
+    console.log('nodeExecutions', nodeExecutions);
 
     // Legacy skillResponse products (selected via resultNodeIds)
     const legacySkillProducts = nodeExecutions
@@ -304,7 +309,40 @@ const WorkflowAppPage: React.FC = () => {
 
     // Map drive files to pseudo WorkflowNodeExecutions
     const serverOrigin = window.location.origin;
-    const driveProducts = mapDriveFilesToWorkflowNodeExecutions(runtimeDriveFiles, serverOrigin);
+    // 这些nodeid下的文件是需要展示的
+    const sourceDriveFiles = new Set(
+      (workflowApp?.resultNodeIds as string[])
+        ?.filter((nodeId: string) => nodeId.startsWith('df-'))
+        .map((fileId: string) => {
+          const file = workflowApp?.canvasData?.files?.find(
+            (file: DriveFile) => file.fileId === fileId,
+          );
+          return file?.resultId;
+        })
+        .filter((resultId: string) => resultId)
+        .map((resultId: string) => {
+          const node = workflowApp?.canvasData?.nodes?.find(
+            (node: CanvasNode) => node.data.entityId === resultId,
+          );
+          return node?.id;
+        }),
+    );
+
+    console.log('sourceDriveFiles', sourceDriveFiles);
+
+    const _driveProducts = mapDriveFilesToWorkflowNodeExecutions(runtimeDriveFiles, serverOrigin);
+
+    console.log('_driveProducts', _driveProducts);
+
+    const driveProducts = _driveProducts.filter((nodeExecution: WorkflowNodeExecution) => {
+      const resultId = nodeExecution.entityId;
+      const parentNode = nodeExecutions.find(
+        (node: WorkflowNodeExecution) =>
+          node.nodeData && JSON.parse(node.nodeData).data.entityId === resultId,
+      );
+      return parentNode?.nodeId && sourceDriveFiles.has(parentNode.nodeId);
+    });
+    console.log('filtered driveProducts', driveProducts);
 
     // Merge: priority order is legacyNodeProducts > legacySkillProducts > driveProducts
     // This ensures existing node executions take precedence over drive files
@@ -319,6 +357,8 @@ const WorkflowAppPage: React.FC = () => {
 
     return Array.from(uniqueMap.values());
   }, [nodeExecutions, runtimeDriveFiles, workflowApp?.resultNodeIds]);
+
+  console.log('products', products);
 
   useEffect(() => {
     products.length > 0 && setActiveTab('products');
@@ -824,7 +864,9 @@ const WorkflowAppPage: React.FC = () => {
                       <div className="bg-[var(--refly-bg-float-z3)] rounded-lg border border-[var(--refly-Card-Border)] dark:bg-[var(--bg---refly-bg-body-z0,#0E0E0E)] relative z-20 transition-all duration-300 ease-in-out">
                         <div className="transition-opacity duration-300 ease-in-out">
                           {activeTab === 'products' ? (
-                            <WorkflowAppProducts products={products || []} />
+                            <PublicFileUrlProvider value={false}>
+                              <WorkflowAppProducts products={products || []} />
+                            </PublicFileUrlProvider>
                           ) : activeTab ===
                             'runLogs' ? // <WorkflowAppRunLogs nodeExecutions={logs || []} />
 
@@ -845,12 +887,14 @@ const WorkflowAppPage: React.FC = () => {
                 <div className="text-center z-10 text-[var(--refly-text-0)] dark:text-[var(--refly-text-StaticWhite)] font-['PingFang_SC'] font-semibold text-[14px] leading-[1.4285714285714286em]">
                   {t('workflowApp.resultPreview')}
                 </div>
-                <SelectedResultsGrid
-                  fillRow
-                  bordered
-                  selectedResults={workflowApp?.resultNodeIds ?? []}
-                  options={previewOptions}
-                />
+                <PublicFileUrlProvider>
+                  <SelectedResultsGrid
+                    fillRow
+                    bordered
+                    selectedResults={workflowApp?.resultNodeIds ?? []}
+                    options={previewOptions}
+                  />
+                </PublicFileUrlProvider>
               </div>
             )}
           </div>

@@ -14,7 +14,7 @@ import { SelectedResultsGrid } from './selected-results-grid';
 import BannerSvg from './banner.svg';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
 import { CanvasNode, DriveFile } from '@refly/openapi-schema';
-import { useGetCreditUsageByCanvasId } from '../../queries/queries';
+import { useGetCanvasCommissionByCanvasId } from '../../queries/queries';
 import { mapDriveFilesToCanvasNodes } from '@refly/utils';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
@@ -141,7 +141,7 @@ export const CreateWorkflowAppModal = ({
   const { forceSyncState } = useCanvasContext();
 
   // Fetch credit usage data when modal is visible
-  const { data: creditUsageData } = useGetCreditUsageByCanvasId(
+  const { data: creditUsageData } = useGetCanvasCommissionByCanvasId(
     {
       query: { canvasId },
     },

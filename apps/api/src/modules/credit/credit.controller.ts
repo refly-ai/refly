@@ -10,6 +10,7 @@ import {
   GetCreditUsageByResultIdResponse,
   GetCreditUsageByExecutionIdResponse,
   GetCreditUsageByCanvasIdResponse,
+  GetCanvasCommissionByCanvasIdResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 import { ConfigService } from '@nestjs/config';
@@ -96,6 +97,19 @@ export class CreditController {
     const total = await this.creditService.countCanvasCreditUsageByCanvasId(user, canvasId);
     return buildSuccessResponse({
       total: Math.ceil(total * (1 + this.configService.get('credit.canvasCreditCommissionRate'))),
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/commission')
+  async getCanvasCommissionByCanvasId(
+    @LoginedUser() user: User,
+    @Query() query: { canvasId: string },
+  ): Promise<GetCanvasCommissionByCanvasIdResponse> {
+    const { canvasId } = query;
+    const total = await this.creditService.countCanvasCreditUsageByCanvasId(user, canvasId);
+    return buildSuccessResponse({
+      total: Math.ceil(total * this.configService.get('credit.canvasCreditCommissionRate')),
     });
   }
 }
