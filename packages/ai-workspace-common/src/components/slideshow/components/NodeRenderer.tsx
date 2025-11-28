@@ -15,7 +15,8 @@ import { Share } from 'refly-icons';
 import { logEvent } from '@refly/telemetry-web';
 import { CanvasNode } from '@refly/openapi-schema';
 import { ResultItemPreview } from '@refly-packages/ai-workspace-common/components/workflow-app/ResultItemPreview';
-import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
+import { useUserStoreShallow } from '@refly/stores';
+import { fetchDriveFileOwnerUid } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drive-file-owner';
 
 // Content renderer component
 const NodeRenderer = memo(
@@ -40,7 +41,9 @@ const NodeRenderer = memo(
     inModal?: boolean;
   }) => {
     const { t } = useTranslation();
-    const usePublicFileUrl = usePublicFileUrlContext();
+    const { userUid } = useUserStoreShallow((state) => ({
+      userUid: state.userProfile?.uid,
+    }));
 
     // Check if node has downloadable data
     const nodeData: NodeData = useMemo(
@@ -66,8 +69,21 @@ const NodeRenderer = memo(
           title: nodeData.title,
         });
       }
-      await downloadNodeData(nodeData, t, { usePublicFileUrl });
-    }, [nodeData, t, fromProducts, usePublicFileUrl]);
+      let shouldUsePublic: boolean | undefined;
+      const metadataUid = nodeData.metadata?.uid as string | undefined;
+      if (metadataUid && userUid) {
+        shouldUsePublic = metadataUid !== userUid;
+      } else {
+        const fileId = nodeData.metadata?.fileId as string | undefined;
+        if (fileId && userUid) {
+          const ownerUid = await fetchDriveFileOwnerUid(fileId);
+          if (ownerUid) {
+            shouldUsePublic = ownerUid !== userUid;
+          }
+        }
+      }
+      await downloadNodeData(nodeData, t, { usePublicFileUrl: shouldUsePublic });
+    }, [nodeData, t, fromProducts, userUid]);
 
     // Handle share for any node type
     const handleShare = useCallback(async () => {

@@ -530,7 +530,7 @@ export class DriveService {
     const head = words.slice(0, headWords).join('');
     const tail = words.slice(-tailWords).join('');
 
-    return `${head}\n\n...[content truncated, ${words.length - maxWords} words removed]...\n\n${tail}`;
+    return `${head.slice(0, maxWords / 2)}\n\n...[content truncated, ${words.length - maxWords} words removed]...\n\n${tail.slice(0, maxWords / 2)}`;
   }
 
   /**
@@ -1158,6 +1158,19 @@ export class DriveService {
       }
       throw error;
     }
+  }
+
+  async getDriveFileOwner(fileId: string): Promise<{ uid: string | null }> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      where: { fileId, deletedAt: null },
+      select: { uid: true },
+    });
+
+    if (!driveFile) {
+      throw new DriveFileNotFoundError();
+    }
+
+    return { uid: driveFile.uid };
   }
 
   /**

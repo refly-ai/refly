@@ -7321,6 +7321,10 @@ export type DriveFile = {
    */
   name: string;
   /**
+   * Owner user ID
+   */
+  uid?: string;
+  /**
    * Drive file type
    */
   type: string;

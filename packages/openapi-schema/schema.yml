@@ -11439,6 +11439,9 @@ components:
         name:
           type: string
           description: Drive file name
+        uid:
+          type: string
+          description: Owner user ID
         type:
           type: string
           description: Drive file type

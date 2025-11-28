@@ -10031,6 +10031,14 @@ export const WorkflowAppSchema = {
       type: 'string',
       description: 'Cover image URL',
     },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
+    },
+    publishReviewStatus: {
+      type: 'string',
+      description: 'Community publish review status',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -10350,6 +10358,10 @@ export const DriveFileSchema = {
     name: {
       type: 'string',
       description: 'Drive file name',
+    },
+    uid: {
+      type: 'string',
+      description: 'Owner user ID',
     },
     type: {
       type: 'string',

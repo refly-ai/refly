@@ -45,6 +45,7 @@ export function mapDriveFileToCanvasNode(file: DriveFile, serverOrigin: string):
   const metadata: Record<string, any> = {
     fileId: file.fileId,
     canvasId: file.canvasId,
+    uid: file.uid,
     type: file.type,
     publicURL: (file as unknown as { publicURL?: string })?.publicURL ?? undefined,
     source: file.source,
@@ -102,6 +103,7 @@ export function mapDriveFileToWorkflowNodeExecution(
   const metadata: Record<string, any> = {
     fileId: file.fileId,
     canvasId: file.canvasId,
+    uid: file.uid,
     type: file.type,
     publicURL: (file as unknown as { publicURL?: string })?.publicURL ?? undefined,
     source: file.source,

@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
 import { useMatch } from 'react-router-dom';
 import { serverOrigin } from '@refly/ui-kit';
+import { useUserStoreShallow } from '@refly/stores';
 import type { DriveFile } from '@refly/openapi-schema';
+import { useDriveFileOwnerUid } from './use-drive-file-owner';
 
 interface UseFileUrlOptions {
   file?: DriveFile | null;
@@ -67,7 +68,10 @@ export const useDriveFileUrl = ({
   file,
   download = false,
 }: UseFileUrlOptions): UseFileUrlResult => {
-  const contextUsePublicFileUrl = usePublicFileUrlContext();
+  const { userUid } = useUserStoreShallow((state) => ({
+    userUid: state.userProfile?.uid,
+  }));
+  const resolvedOwnerUid = useDriveFileOwnerUid(file);
   // Check if current page is any share page
   const isShareCanvas = useMatch('/share/canvas/:canvasId');
   const isShareFile = useMatch('/share/file/:shareId');
@@ -75,7 +79,10 @@ export const useDriveFileUrl = ({
   const isWorkflowApp = useMatch('/app/:shareId');
   const isSharePage = Boolean(isShareCanvas || isShareFile || isWorkflowApp);
 
+  const ownerBasedUsePublicFileUrl =
+    !isSharePage && resolvedOwnerUid && userUid ? resolvedOwnerUid !== userUid : undefined;
+
   return useMemo(() => {
-    return getDriveFileUrl(file, isSharePage, contextUsePublicFileUrl, download);
-  }, [file?.fileId, isSharePage, download, contextUsePublicFileUrl]);
+    return getDriveFileUrl(file, isSharePage, ownerBasedUsePublicFileUrl, download);
+  }, [file?.fileId, isSharePage, download, ownerBasedUsePublicFileUrl]);
 };

@@ -157,4 +157,10 @@ export class DriveController {
 
     res.end(data);
   }
+
+  @Get('file/owner/:fileId')
+  async getDriveFileOwner(@Param('fileId') fileId: string): Promise<BaseResponse> {
+    const owner = await this.driveService.getDriveFileOwner(fileId);
+    return buildSuccessResponse(owner);
+  }
 }

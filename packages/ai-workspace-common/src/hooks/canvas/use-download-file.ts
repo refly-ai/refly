@@ -7,7 +7,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useMatch } from 'react-router-dom';
 import { getDriveFileUrl } from './use-drive-file-url';
-import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
+import { useUserStoreShallow } from '@refly/stores';
+import { fetchDriveFileOwnerUid } from './use-drive-file-owner';
 import type { DriveFile } from '@refly/openapi-schema';
 
 interface DownloadableFile {
@@ -24,7 +25,9 @@ interface DownloadFileParams {
 export const useDownloadFile = () => {
   const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
-  const usePublicFileUrl = usePublicFileUrlContext();
+  const { userUid } = useUserStoreShallow((state) => ({
+    userUid: state.userProfile?.uid,
+  }));
 
   // Check if current page is any share page (consistent with use-file-url.ts)
   const isShareCanvas = useMatch('/share/canvas/:canvasId');
@@ -57,8 +60,11 @@ export const useDownloadFile = () => {
 
       try {
         const file = currentFile as DriveFile;
+        const ownerUid = file.uid ?? (await fetchDriveFileOwnerUid(file.fileId));
+        const ownerBasedUsePublicFileUrl =
+          !isSharePage && ownerUid && userUid ? ownerUid !== userUid : undefined;
         // Use async getFileUrl which handles publicURL fetching automatically
-        const { fileUrl } = getDriveFileUrl(file, isSharePage, usePublicFileUrl);
+        const { fileUrl } = getDriveFileUrl(file, isSharePage, ownerBasedUsePublicFileUrl);
 
         if (!fileUrl) {
           throw new Error('File URL not available');
@@ -97,7 +103,7 @@ export const useDownloadFile = () => {
         setIsDownloading(false);
       }
     },
-    [isDownloading, t, isSharePage, usePublicFileUrl],
+    [isDownloading, t, isSharePage, userUid],
   );
 
   return {
