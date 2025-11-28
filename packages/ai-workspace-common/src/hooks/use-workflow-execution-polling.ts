@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGetWorkflowDetail } from '@refly-packages/ai-workspace-common/queries';
-import { WorkflowExecutionStatus } from '@refly/openapi-schema';
+import { WorkflowExecution, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useCanvasStoreShallow } from '@refly/stores';
 
 // Global poller management per executionId to prevent concurrent polling across components
@@ -30,7 +30,7 @@ interface UseWorkflowExecutionPollingOptions {
 
 interface UseWorkflowExecutionPollingReturn {
   status: WorkflowExecutionStatus | null;
-  data: any;
+  data: WorkflowExecution;
   isLoading: boolean;
   error: any;
   isPolling: boolean;

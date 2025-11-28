@@ -77,7 +77,7 @@
     "@refly/telemetry-node": "workspace:*",
     "@refly/utils": "workspace:*",
     "@rekog/mcp-nest": "^1.5.2",
-    "@scalebox/sdk": "3.5.0",
+    "@scalebox/sdk": "3.7.0",
     "@sentry/cli": "^2.31.2",
     "@sentry/node": "^7.113.0",
     "@sentry/profiling-node": "^7.113.0",

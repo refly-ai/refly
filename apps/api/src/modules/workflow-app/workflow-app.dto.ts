@@ -42,6 +42,7 @@ export function workflowAppPO2DTO(
       : undefined,
     remixEnabled: app.remixEnabled ?? false,
     publishToCommunity: (app as any).publishToCommunity ?? false,
+    publishReviewStatus: (app as any).publishReviewStatus ?? undefined,
     templateContent: app.templateContent ?? undefined,
     createdAt: app.createdAt?.toISOString(),
     updatedAt: app.updatedAt?.toISOString(),

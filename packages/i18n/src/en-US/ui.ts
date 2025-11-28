@@ -4024,6 +4024,12 @@ const translations = {
     unpublishSuccess: '{{title}} unpublish successfully',
     unpublishFailed: '{{title}} unpublish failed',
     deleteConfirm: 'Are you sure you want to revoke the template {{title}}?',
+    reviewStatus: {
+      reviewing: 'Under Review',
+      reviewingTooltip: 'Template has been published to the community',
+      published: 'Published',
+      publishedTooltip: 'Template is under review, but can still be used normally',
+    },
   },
   whyChooseRefly: {
     title: 'Why Choose Refly to Build Workflow?',
