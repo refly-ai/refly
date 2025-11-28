@@ -28,9 +28,12 @@ export const normalizeCreditBilling = (raw: unknown): CreditBilling | undefined 
   let inputCost = parseNumber(legacy.inputCost);
   let outputCost = parseNumber(legacy.outputCost);
 
-  if (inputCost === undefined && outputCost === undefined && fallbackUnitCost !== undefined) {
+  if (inputCost === undefined && fallbackUnitCost !== undefined) {
     const half = fallbackUnitCost / 2;
     inputCost = half;
+  }
+  if (outputCost === undefined && fallbackUnitCost !== undefined) {
+    const half = fallbackUnitCost / 2;
     outputCost = half;
   }
 
