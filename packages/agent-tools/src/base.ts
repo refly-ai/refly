@@ -1,6 +1,7 @@
 import { StructuredTool } from '@langchain/core/tools';
 import type { ISkillEngine } from '@refly/common-types';
 import { ReflyService } from './builtin/interface';
+import { DriveFile } from '@refly/openapi-schema';
 
 export interface ToolCallResult {
   /**
@@ -23,6 +24,10 @@ export interface ToolCallResult {
    * Credit cost calculated by the tool call. Optional and tool-specific.
    */
   creditCost?: number;
+  /**
+   * Files of the tool call result, should be an array of DriveFile
+   */
+  files?: DriveFile[];
 }
 
 /**
