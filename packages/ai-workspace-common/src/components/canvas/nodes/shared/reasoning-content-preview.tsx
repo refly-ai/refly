@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { Source } from '@refly/openapi-schema';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -41,69 +41,66 @@ export const ReasoningContentPreview = memo(
       }
     }, [stepStatus, sizeMode]);
 
-    const markdownClassName = useMemo(() => `text-xs overflow-hidden ${className}`, [className]);
-
-    if (!content) return null;
+    if (!content?.trim()) return null;
 
     return (
-      <div>
-        <div
-          className={cn(
-            'bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all',
-            {
-              'cursor-pointer hover:bg-gray-100': collapsed,
-              'p-3': sizeMode !== 'compact',
-              'p-2': sizeMode === 'compact',
-            },
-          )}
-        >
-          {collapsed ? (
-            <div
-              className="flex items-center justify-between text-xs"
-              onClick={() => sizeMode !== 'compact' && setCollapsed(false)}
-            >
-              <div className="flex items-center gap-1">
-                <IconThinking
-                  className={cn('text-gray-500', {
-                    'w-4 h-4': sizeMode !== 'compact',
-                    'w-3 h-3': sizeMode === 'compact',
-                  })}
-                />
-                <span
-                  className={cn({
-                    truncate: sizeMode === 'compact',
-                    'max-w-[200px]': sizeMode === 'compact',
-                  })}
-                >
-                  {t('canvas.skillResponse.reasoningContent')}
-                </span>
-              </div>
-              {sizeMode !== 'compact' && <ChevronDown className="w-4 h-4" />}
+      <div
+        className={cn(
+          'bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all',
+          className,
+          {
+            'cursor-pointer hover:bg-gray-100': collapsed,
+            'p-3': sizeMode !== 'compact',
+            'p-2': sizeMode === 'compact',
+          },
+        )}
+      >
+        {collapsed ? (
+          <div
+            className="flex items-center justify-between text-xs"
+            onClick={() => sizeMode !== 'compact' && setCollapsed(false)}
+          >
+            <div className="flex items-center gap-1">
+              <IconThinking
+                className={cn('text-gray-500', {
+                  'w-4 h-4': sizeMode !== 'compact',
+                  'w-3 h-3': sizeMode === 'compact',
+                })}
+              />
+              <span
+                className={cn({
+                  truncate: sizeMode === 'compact',
+                  'max-w-[200px]': sizeMode === 'compact',
+                })}
+              >
+                {t('canvas.skillResponse.reasoningContent')}
+              </span>
             </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1 text-xs font-medium">
-                  <IconThinking className="w-4 h-4" />
-                  {t('canvas.skillResponse.reasoningContent')}
-                </div>
-                <Button
-                  type="text"
-                  icon={<ChevronUp className="w-4 h-4" />}
-                  onClick={() => setCollapsed(true)}
-                  size="small"
-                  className="flex items-center justify-center h-6 w-6 min-w-0 p-0"
-                />
+            {sizeMode !== 'compact' && <ChevronDown className="w-4 h-4" />}
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1 text-xs font-medium">
+                <IconThinking className="w-4 h-4" />
+                {t('canvas.skillResponse.reasoningContent')}
               </div>
-              <Markdown
-                className={markdownClassName}
-                content={getParsedReasoningContent(content)}
-                sources={sources || []}
-                resultId={resultId}
+              <Button
+                type="text"
+                icon={<ChevronUp className="w-4 h-4" />}
+                onClick={() => setCollapsed(true)}
+                size="small"
+                className="flex items-center justify-center h-6 w-6 min-w-0 p-0"
               />
             </div>
-          )}
-        </div>
+            <Markdown
+              className="text-xs overflow-hidden"
+              content={getParsedReasoningContent(content)}
+              sources={sources || []}
+              resultId={resultId}
+            />
+          </div>
+        )}
       </div>
     );
   },

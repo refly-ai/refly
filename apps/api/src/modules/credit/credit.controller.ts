@@ -62,10 +62,11 @@ export class CreditController {
   @Get('/result')
   async getCreditUsageByResultId(
     @LoginedUser() user: User,
-    @Query() query: { resultId: string },
+    @Query() query: { resultId: string; version?: string },
   ): Promise<GetCreditUsageByResultIdResponse> {
-    const { resultId } = query;
-    const total = await this.creditService.countResultCreditUsage(user, resultId);
+    const { resultId, version } = query;
+    const versionNumber = version ? Number.parseInt(version, 10) : undefined;
+    const total = await this.creditService.countResultCreditUsage(user, resultId, versionNumber);
     return buildSuccessResponse({ total });
   }
 
@@ -94,7 +95,7 @@ export class CreditController {
     const { canvasId } = query;
     const total = await this.creditService.countCanvasCreditUsageByCanvasId(user, canvasId);
     return buildSuccessResponse({
-      total: Math.ceil(total * this.configService.get('credit.canvasCreditCommissionRate')),
+      total: Math.ceil(total * (1 + this.configService.get('credit.canvasCreditCommissionRate'))),
     });
   }
 }

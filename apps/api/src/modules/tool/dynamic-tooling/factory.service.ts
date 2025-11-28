@@ -13,6 +13,7 @@ import type {
   ToolMetadata,
   ToolsetConfig,
 } from '@refly/openapi-schema';
+import { SkillRunnableConfig } from '@refly/skill-template';
 import { SingleFlightCache } from '../../../utils/cache';
 import { CreditService } from '../../credit/credit.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
@@ -25,7 +26,7 @@ import {
 } from '../utils';
 import { AdapterFactory } from './adapters/factory';
 import { HttpHandler } from './core/handler';
-import { getCurrentUser, runInContext, type SkillRunnableConfig } from './core/tool-context';
+import { getCurrentUser, runInContext } from './core/tool-context';
 
 /**
  * Tool factory service

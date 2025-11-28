@@ -60,7 +60,9 @@ export const useDriveFileUrl = ({
   // Check if current page is any share page
   const isShareCanvas = useMatch('/share/canvas/:canvasId');
   const isShareFile = useMatch('/share/file/:shareId');
-  const isSharePage = Boolean(isShareCanvas || isShareFile);
+  // Add workflow-app page check
+  const isWorkflowApp = useMatch('/app/:shareId');
+  const isSharePage = Boolean(isShareCanvas || isShareFile || isWorkflowApp);
 
   return useMemo(() => {
     return getDriveFileUrl(file, isSharePage, download);

@@ -7,19 +7,32 @@ import { AppLayout } from '@refly/web-core';
 import { RoutesList } from './routes';
 import { InitializationSuspense } from './prepare/InitializationSuspense';
 import { shouldSkipLayout } from './config/layout';
+import { ErrorFallback } from './components/ErrorFallback';
 
 const AppContent = () => {
   const location = useLocation();
   const skipLayout = shouldSkipLayout(location.pathname);
 
   const routes = (
-    <Suspense fallback={<LightLoading />}>
-      <Routes>
-        {RoutesList.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
-      </Routes>
-    </Suspense>
+    <ErrorBoundary
+      fallback={({ error, componentStack, eventId, resetError }) => (
+        <ErrorFallback
+          error={error}
+          componentStack={componentStack}
+          eventId={eventId}
+          resetError={resetError}
+          isGlobal={false}
+        />
+      )}
+    >
+      <Suspense fallback={<LightLoading />}>
+        <Routes>
+          {RoutesList.map((route) => (
+            <Route key={route.path} path={route.path} element={route.element} />
+          ))}
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 
   // Pages that should not be wrapped in AppLayout
@@ -32,7 +45,17 @@ const AppContent = () => {
 
 export const App = () => {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary
+      fallback={({ error, componentStack, eventId, resetError }) => (
+        <ErrorFallback
+          error={error}
+          componentStack={componentStack}
+          eventId={eventId}
+          resetError={resetError}
+          isGlobal={true}
+        />
+      )}
+    >
       <InitializationSuspense>
         <AppContent />
       </InitializationSuspense>

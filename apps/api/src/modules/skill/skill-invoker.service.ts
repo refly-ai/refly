@@ -32,6 +32,7 @@ import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
 import * as Y from 'yjs';
+import { encode } from 'gpt-tokenizer';
 import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
@@ -539,17 +540,6 @@ export class SkillInvokerService {
         callbacks,
         runName: data.skillName || 'skill-invoke',
       })) {
-        if (abortController.signal.aborted) {
-          const abortReason = abortController.signal.reason?.toString() ?? 'Request aborted';
-          this.logger.warn(`🚨 Request aborted for action: ${resultId}, reason: ${abortReason}`);
-          if (runMeta) {
-            result.errors.push(abortReason);
-          }
-          result.status = 'failed';
-          result.errorType = 'userAbort';
-          throw new Error(`Request aborted: ${abortReason}`);
-        }
-
         runMeta = event.metadata as SkillRunnableMeta;
         const chunk: AIMessageChunk = event.data?.chunk ?? event.data?.output;
 
@@ -882,7 +872,6 @@ export class SkillInvokerService {
             break;
         }
       }
-      // throw new Error('test-failure');
     } catch (err) {
       const errorInfo = this.categorizeError(err);
       const errorMessage = err.message || 'Unknown error';
@@ -902,6 +891,22 @@ export class SkillInvokerService {
       }
 
       this.logger.error(`Full error stack: ${err.stack}`);
+
+      // For user aborts, estimate token usage from generated content
+      if (errorInfo.isAbortError && runMeta) {
+        try {
+          await this.estimateTokenUsageOnAbort(
+            user,
+            data,
+            input,
+            resultAggregator,
+            runMeta,
+            resultId,
+          );
+        } catch (estimateError) {
+          this.logger.error(`Failed to estimate token usage on abort: ${estimateError?.message}`);
+        }
+      }
 
       if (res) {
         writeSSEResponse(res, {
@@ -977,7 +982,7 @@ export class SkillInvokerService {
           where: { resultId, version },
           data: {
             status,
-            errorType: result.errorType ?? 'systemError',
+            errorType: status === 'failed' ? (result.errorType ?? 'systemError') : null,
             errors: JSON.stringify(result.errors),
           },
         }),
@@ -1034,7 +1039,10 @@ export class SkillInvokerService {
       }
 
       // Process credit billing for all steps after skill completion
-      if (!result.errors.length) {
+      // Bill credits for successful completions and user aborts (partial usage should be charged)
+      const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
+
+      if (shouldBillCredits) {
         await this.processCreditUsageReport(
           user,
           resultId,
@@ -1203,6 +1211,59 @@ export class SkillInvokerService {
       }
     } catch (error) {
       this.logger.error(`Error in handleToolGeneratedFiles: ${error?.message}`, error?.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * Estimate token usage when execution is aborted.
+   * Uses local tokenization (gpt-tokenizer) as a best-effort approximation.
+   */
+  private async estimateTokenUsageOnAbort(
+    user: User,
+    data: InvokeSkillJobData,
+    input: any,
+    resultAggregator: ResultAggregator,
+    runMeta: SkillRunnableMeta,
+    resultId: string,
+  ): Promise<void> {
+    try {
+      // Get the generated content from steps
+      const steps = await resultAggregator.getSteps({ resultId, version: data.result.version });
+      const generatedContent = steps
+        .map((step) => step.content || '')
+        .filter(Boolean)
+        .join('\n');
+
+      if (!generatedContent) {
+        return;
+      }
+      // Get provider info
+      const providerItem = await this.providerService.findLLMProviderItemByModelID(
+        user,
+        String(runMeta.ls_model_name),
+      );
+
+      if (!providerItem) {
+        return;
+      }
+
+      const inputTokens = encode(input.query || '').length;
+      const outputTokens = encode(generatedContent).length;
+
+      const usage: TokenUsageItem = {
+        tier: providerItem?.tier,
+        modelProvider: providerItem?.provider?.name,
+        modelName: String(runMeta.ls_model_name),
+        modelLabel: providerItem?.name,
+        providerItemId: providerItem?.itemId,
+        inputTokens,
+        outputTokens,
+      };
+
+      resultAggregator.addUsageItem(runMeta, usage);
+    } catch (error) {
+      this.logger.error(`Error estimating token usage on abort: ${error?.message}`, error?.stack);
       throw error;
     }
   }

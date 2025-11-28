@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useSearchParams, Navigate } from 'react-router-dom';
 
 import { OAuthButton } from '../../components/login-modal/oauth-button';
+import { VerificationModal } from '../../components/verification-modal';
 
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -590,6 +591,7 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+      <VerificationModal />
     </div>
   );
 };

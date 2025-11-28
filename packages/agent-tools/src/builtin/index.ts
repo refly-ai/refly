@@ -470,7 +470,13 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
       }),
     );
 
-    const urls = await reflyService.generateDriveFileUrls(user, driveFiles);
+    const urls = await Promise.all(
+      driveFiles.map(async (file) => {
+        const { url } = await reflyService.createShareForDriveFile(user, file.fileId);
+        return url;
+      }),
+    );
+
     if (!urls || urls.length !== driveFiles.length) {
       throw new Error('Failed to resolve drive file links for email HTML content');
     }

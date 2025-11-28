@@ -9,6 +9,7 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import ToolCall from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/render';
+import { ReasoningContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/reasoning-content-preview';
 
 interface LastRunTabProps {
   loading: boolean;
@@ -28,14 +29,32 @@ interface LastRunTabProps {
  * Render AI message with markdown content
  */
 const AIMessageCard = memo(
-  ({ message, resultId }: { message: ActionMessage; resultId: string }) => {
+  ({
+    message,
+    resultId,
+    stepStatus,
+  }: {
+    message: ActionMessage;
+    resultId: string;
+    stepStatus: 'executing' | 'finish';
+  }) => {
     const content = message.content ?? '';
+    const reasoningContent = message.reasoningContent ?? '';
+    const hasReasoningContent = Boolean(reasoningContent?.trim());
 
-    if (!content) return null;
+    if (!content?.trim()) return null;
 
     return (
       <div className="my-3 text-base">
         <div className={`skill-response-content-${resultId}-${message.messageId}`}>
+          {hasReasoningContent && (
+            <ReasoningContentPreview
+              content={reasoningContent}
+              stepStatus={stepStatus}
+              className="my-3"
+              resultId={resultId}
+            />
+          )}
           <Markdown content={content} resultId={resultId} />
         </div>
       </div>
@@ -84,14 +103,29 @@ ToolMessageCard.displayName = 'ToolMessageCard';
  * Render message list based on message type
  */
 const MessageList = memo(
-  ({ messages, resultId }: { messages: ActionMessage[]; resultId: string }) => {
+  ({
+    messages,
+    resultId,
+    stepStatus,
+  }: {
+    messages: ActionMessage[];
+    resultId: string;
+    stepStatus: 'executing' | 'finish';
+  }) => {
     if (!messages?.length) return null;
 
     return (
       <div className="flex flex-col">
         {messages.map((message) => {
           if (message.type === 'ai') {
-            return <AIMessageCard key={message.messageId} message={message} resultId={resultId} />;
+            return (
+              <AIMessageCard
+                key={message.messageId}
+                message={message}
+                resultId={resultId}
+                stepStatus={stepStatus}
+              />
+            );
           }
           if (message.type === 'tool') {
             return <ToolMessageCard key={message.messageId} message={message} />;
@@ -122,6 +156,12 @@ const LastRunTabComponent = ({
   // Fallback to steps if no messages (for backward compatibility)
   const shouldUseSteps = !hasMessages && !!outputStep;
   const hasContent = hasMessages || shouldUseSteps;
+  const resultStatus = result?.status;
+  const messageStepStatus = useMemo(() => {
+    return resultStatus === 'executing' || resultStatus === 'waiting' || resultStatus === 'init'
+      ? 'executing'
+      : 'finish';
+  }, [resultStatus]);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
   const lastScrollTopRef = useRef(0);
   const isAtBottomRef = useRef(true);
@@ -225,7 +265,9 @@ const LastRunTabComponent = ({
                   </div>
                 </div>
               )}
-            {hasMessages && <MessageList messages={messages} resultId={resultId} />}
+            {hasMessages && (
+              <MessageList messages={messages} resultId={resultId} stepStatus={messageStepStatus} />
+            )}
             {shouldUseSteps && (
               <ActionStepCard
                 result={result}

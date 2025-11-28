@@ -54,6 +54,8 @@ export interface InvokeActionPayload {
 
 export const useInvokeAction = (params?: { source?: string }) => {
   const latestStepsRef = useRef(new Map<string, ActionStep[]>());
+  // Message cache for real-time updates (similar to steps cache)
+  const latestMessagesRef = useRef(new Map<string, ActionMessage[]>());
 
   const { source } = params || {};
 
@@ -250,9 +252,23 @@ export const useInvokeAction = (params?: { source?: string }) => {
   const clearLatestSteps = (resultId?: string) => {
     if (!resultId) {
       latestStepsRef.current.clear();
+      latestMessagesRef.current.clear();
     } else {
       latestStepsRef.current.delete(resultId);
+      latestMessagesRef.current.delete(resultId);
     }
+  };
+
+  const getLatestMessages = (resultId: string): ActionMessage[] => {
+    const cached = latestMessagesRef.current.get(resultId);
+    if (cached && cached.length > 0) return cached;
+
+    const storeMessages = useActionResultStore.getState().resultMap[resultId]?.messages ?? [];
+    return storeMessages;
+  };
+
+  const setLatestMessages = (resultId: string, messages: ActionMessage[]) => {
+    latestMessagesRef.current.set(resultId, messages);
   };
 
   const onSkillStream = (skillEvent: SkillEvent) => {
@@ -264,29 +280,53 @@ export const useInvokeAction = (params?: { source?: string }) => {
       return;
     }
 
+    // Use cached steps for real-time updates (same pattern as onToolCallStream)
+    const currentSteps = getLatestSteps(resultId);
+
     // Update steps (for backward compatibility)
-    const updatedStep: ActionStep = findOrCreateStep(result.steps ?? [], step);
+    const existingStep = currentSteps.find((s) => s.name === step.name);
+    const updatedStep: ActionStep = existingStep
+      ? { ...existingStep }
+      : {
+          ...step,
+          content: '',
+          reasoningContent: '',
+          artifacts: [],
+          structuredData: {},
+        };
+
     updatedStep.content = (updatedStep.content ?? '') + (content ?? '');
-    if (!updatedStep.reasoningContent) {
-      updatedStep.reasoningContent = reasoningContent ?? '';
-    } else {
-      updatedStep.reasoningContent =
-        (updatedStep.reasoningContent ?? '') + (reasoningContent ?? '');
-    }
+    updatedStep.reasoningContent = (updatedStep.reasoningContent ?? '') + (reasoningContent ?? '');
+
+    const mergedSteps = getUpdatedSteps(currentSteps, updatedStep);
+    setLatestSteps(resultId, mergedSteps);
 
     const payload: Partial<ActionResult> = {
-      steps: getUpdatedSteps(result.steps ?? [], updatedStep),
+      steps: mergedSteps,
     };
 
-    // Update messages if messageId is provided
+    // Update messages if messageId is provided (also use cache for real-time updates)
     if (messageId) {
-      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'ai');
+      const currentMessages = getLatestMessages(resultId);
+      const existingMessage = currentMessages.find((m) => m.messageId === messageId);
+      const updatedMessage: ActionMessage = existingMessage
+        ? { ...existingMessage }
+        : {
+            messageId,
+            type: 'ai',
+            content: '',
+            reasoningContent: '',
+            createdAt: new Date().toISOString(),
+          };
+
       updatedMessage.content = (updatedMessage.content ?? '') + (content ?? '');
       updatedMessage.reasoningContent =
         (updatedMessage.reasoningContent ?? '') + (reasoningContent ?? '');
       updatedMessage.updatedAt = new Date().toISOString();
 
-      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+      const mergedMessages = getUpdatedMessages(currentMessages, updatedMessage);
+      setLatestMessages(resultId, mergedMessages);
+      payload.messages = mergedMessages;
     }
 
     if (artifact) {

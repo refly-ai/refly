@@ -43,18 +43,18 @@ export const GhostNode = React.memo(({ id, data }: { id: string; data: CanvasNod
   const handleAskAI = useCallback(() => {
     nodeActionEmitter.emit(createNodeEventName(sourceNode.id, 'askAI'), { dragCreateInfo });
     close();
-  }, [close, dragCreateInfo]);
-
-  const askAI = {
-    key: 'askAI',
-    icon: AiChat,
-    label: t('canvas.nodeActions.askAI'),
-    onClick: handleAskAI,
-  };
+  }, [close, dragCreateInfo, sourceNode?.id]);
 
   const menuItems = useMemo(() => {
-    return [askAI];
-  }, [askAI]);
+    return [
+      {
+        key: 'askAI',
+        icon: AiChat,
+        label: t('canvas.nodeActions.askAI'),
+        onClick: handleAskAI,
+      },
+    ];
+  }, [handleAskAI, t]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
