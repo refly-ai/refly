@@ -102,7 +102,8 @@ const translations = {
     },
     creditBilling: {
       description: {
-        '5k_tokens': '每 5k token 消耗 {{cost}} 积分',
+        '5k_tokens':
+          '每 5k 输入 token 消耗 {{inputCost}} 积分，每 5k 输出 token 消耗 {{outputCost}} 积分',
         product: '每个产物消耗 {{cost}} 积分',
         canvasTotal: 'AI 输出不稳定，积分仅为预估情况，需按实际执行结果',
       },
