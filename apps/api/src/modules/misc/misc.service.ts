@@ -762,6 +762,30 @@ export class MiscService implements OnModuleInit {
     }
   }
 
+  async getInternalFileMetadata(
+    user: User,
+    storageKey: string,
+  ): Promise<{ contentType: string; lastModified: Date; visibility: FileVisibility }> {
+    const file = await this.prisma.staticFile.findFirst({
+      select: {
+        visibility: true,
+        contentType: true,
+        updatedAt: true,
+      },
+      where: { storageKey, uid: user.uid, deletedAt: null },
+    });
+
+    if (!file) {
+      throw new NotFoundException();
+    }
+
+    return {
+      contentType: file.contentType,
+      lastModified: new Date(file.updatedAt),
+      visibility: file.visibility as FileVisibility,
+    };
+  }
+
   async getInternalFileStream(
     user: User,
     storageKey: string,
@@ -788,6 +812,24 @@ export class MiscService implements OnModuleInit {
     const data = await streamToBuffer(readable);
 
     return { data, contentType: file.contentType, lastModified: new Date(file.updatedAt) };
+  }
+
+  async getExternalFileMetadata(
+    storageKey: string,
+  ): Promise<{ contentType: string; lastModified: Date }> {
+    const stat = await this.prisma.staticFile.findFirst({
+      select: { contentType: true, updatedAt: true },
+      where: { storageKey, deletedAt: null },
+    });
+
+    if (!stat) {
+      throw new NotFoundException(`File with key ${storageKey} not found`);
+    }
+
+    return {
+      contentType: stat.contentType ?? 'application/octet-stream',
+      lastModified: new Date(stat.updatedAt),
+    };
   }
 
   async getExternalFileStream(

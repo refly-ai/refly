@@ -95,13 +95,14 @@ export class MiscController {
     @Req() req: Request,
   ): Promise<void> {
     const storageKey = `static/${objectKey}`;
-    const { data, contentType, lastModified } = await this.miscService.getInternalFileStream(
+    const filename = path.basename(objectKey);
+    const origin = req.headers.origin;
+
+    // First, get only metadata (no file content loaded yet)
+    const { contentType, lastModified } = await this.miscService.getInternalFileMetadata(
       user,
       storageKey,
     );
-    const filename = path.basename(objectKey);
-
-    const origin = req.headers.origin;
 
     // Check HTTP cache and get cache headers
     const cacheResult = checkHttpCache(req, {
@@ -115,11 +116,14 @@ export class MiscController {
       'Cross-Origin-Resource-Policy': 'cross-origin',
     };
 
-    // If client has valid cache, return 304 Not Modified
+    // If client has valid cache, return 304 Not Modified (without loading file content)
     if (cacheResult.useCache) {
       send304NotModified(res, cacheResult, corsHeaders);
       return;
     }
+
+    // Cache is stale, load the full file content
+    const { data } = await this.miscService.getInternalFileStream(user, storageKey);
 
     // Return file with cache headers
     applyCacheHeaders(res, cacheResult, {
@@ -139,11 +143,12 @@ export class MiscController {
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
-    const { data, contentType, lastModified } =
-      await this.miscService.getExternalFileStream(storageKey);
     const filename = path.basename(storageKey);
-
     const origin = req.headers.origin;
+
+    // First, get only metadata (no file content loaded yet)
+    const { contentType, lastModified } =
+      await this.miscService.getExternalFileMetadata(storageKey);
 
     // Check HTTP cache and get cache headers
     const cacheResult = checkHttpCache(req, {
@@ -157,11 +162,14 @@ export class MiscController {
       'Cross-Origin-Resource-Policy': 'cross-origin',
     };
 
-    // If client has valid cache, return 304 Not Modified
+    // If client has valid cache, return 304 Not Modified (without loading file content)
     if (cacheResult.useCache) {
       send304NotModified(res, cacheResult, corsHeaders);
       return;
     }
+
+    // Cache is stale, load the full file content
+    const { data } = await this.miscService.getExternalFileStream(storageKey);
 
     // Return file with cache headers
     applyCacheHeaders(res, cacheResult, {

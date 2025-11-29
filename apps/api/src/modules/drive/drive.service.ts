@@ -1051,6 +1051,33 @@ export class DriveService {
   }
 
   /**
+   * Get drive file metadata without loading the full content
+   */
+  async getDriveFileMetadata(
+    user: User,
+    fileId: string,
+  ): Promise<{ contentType: string; filename: string; lastModified: Date }> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: {
+        name: true,
+        type: true,
+        updatedAt: true,
+      },
+      where: { fileId, uid: user.uid, deletedAt: null },
+    });
+
+    if (!driveFile) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    return {
+      contentType: driveFile.type || 'application/octet-stream',
+      filename: driveFile.name,
+      lastModified: new Date(driveFile.updatedAt),
+    };
+  }
+
+  /**
    * Get drive file stream for serving file content
    */
   async getDriveFileStream(
@@ -1121,6 +1148,37 @@ export class DriveService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Get public drive file metadata without loading the full content
+   */
+  async getPublicFileMetadata(fileId: string): Promise<{
+    contentType: string;
+    filename: string;
+    lastModified: Date;
+  }> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: {
+        type: true,
+        storageKey: true,
+        updatedAt: true,
+      },
+      where: { fileId },
+    });
+
+    if (!driveFile) {
+      throw new NotFoundException(`Public file with id ${fileId} not found`);
+    }
+
+    const filename = path.basename(driveFile.storageKey) || 'file';
+    const contentType = mime.getType(filename) || 'application/octet-stream';
+
+    return {
+      contentType,
+      filename,
+      lastModified: new Date(driveFile.updatedAt),
+    };
   }
 
   /**
