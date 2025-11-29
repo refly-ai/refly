@@ -10,9 +10,9 @@ import type {
   HandlerRequest,
   HandlerResponse,
 } from '@refly/openapi-schema';
-import { calculateCredits, ResourceHandler } from '../../utils';
-import type { CreditService } from '../../../credit/credit.service';
 import type { SyncToolCreditUsageJobData } from '../../../credit/credit.dto';
+import type { CreditService } from '../../../credit/credit.service';
+import { ResourceHandler, calculateCredits } from '../../utils';
 
 /**
  * Configuration for base post-handler
@@ -78,7 +78,7 @@ export function createBasePostHandler(
 
       // Step 2: Upload resources using ResourceHandler
       if (resourceHandler && context.responseSchema) {
-        processedResponse = await resourceHandler.postprocessOutputResources(
+        processedResponse = await resourceHandler.persistOutputResources(
           processedResponse,
           request,
           context.responseSchema,

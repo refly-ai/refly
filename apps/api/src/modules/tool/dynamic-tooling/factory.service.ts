@@ -276,7 +276,7 @@ export class ToolFactory {
     // Preprocess input resources if needed
     if (parsedMethod.schema?.properties) {
       const resourceHandler = this.resourceHandler;
-      return await resourceHandler.preprocessInputResources(initialRequest, parsedMethod.schema);
+      return await resourceHandler.resolveInputResources(initialRequest, parsedMethod.schema);
     }
 
     return initialRequest;

@@ -7125,6 +7125,14 @@ export type WorkflowApp = {
    */
   coverUrl?: string;
   /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
+  /**
+   * Community publish review status
+   */
+  publishReviewStatus?: string;
+  /**
    * Workflow app creation timestamp
    */
   createdAt?: string;
@@ -7784,6 +7792,20 @@ export type SchemaPropertyType = 'string' | 'number' | 'boolean' | 'object' | 'a
  */
 export type ToolResourceType = 'audio' | 'video' | 'image' | 'document';
 
+/**
+ * Resource tags for categorization and pipeline routing
+ */
+export type ResourceTag =
+  | 'image'
+  | 'audio'
+  | 'video'
+  | 'document'
+  | 'archive'
+  | 'pdf'
+  | 'spreadsheet'
+  | 'presentation'
+  | 'code';
+
 export type SchemaProperty = {
   type: SchemaPropertyType;
   /**
@@ -7798,6 +7820,26 @@ export type SchemaProperty = {
    * Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.
    */
   format?: string;
+  /**
+   * Resource tags for categorization and pipeline routing (e.g., ['image', 'png'])
+   */
+  tags?: Array<ResourceTag>;
+  /**
+   * Accepted MIME types for this resource field (e.g., ['image/png', 'image/jpeg'])
+   */
+  mimeTypes?: Array<string>;
+  /**
+   * Constant value for discriminator matching in oneOf/anyOf
+   */
+  const?: unknown;
+  /**
+   * One of the listed schemas must match
+   */
+  oneOf?: Array<SchemaProperty>;
+  /**
+   * Any of the listed schemas can match
+   */
+  anyOf?: Array<SchemaProperty>;
   /**
    * Minimum length (for string)
    */
@@ -7839,6 +7881,9 @@ export type SchemaProperty = {
   required?: Array<string>;
 };
 
+/**
+ * JSON schema definition for request/response with resource field markers
+ */
 export type JsonSchema = {
   /**
    * Schema type
@@ -7855,9 +7900,9 @@ export type JsonSchema = {
    */
   required?: Array<string>;
   /**
-   * Additional properties allowed
+   * Field names to omit from the response (e.g., ['thoughtSignature'])
    */
-  additionalProperties?: boolean;
+  omitFields?: Array<string>;
 };
 
 /**
@@ -7865,12 +7910,7 @@ export type JsonSchema = {
  */
 export type type6 = 'object';
 
-export type ResponseSchema = JsonSchema & {
-  /**
-   * Field names to omit from the response (e.g., ['thoughtSignature'])
-   */
-  omitFields?: Array<string>;
-};
+export type ResponseSchema = JsonSchema;
 
 export type ResourceField = {
   /**
@@ -8029,7 +8069,7 @@ export type ParsedMethodConfig = {
   endpoint: string;
   method?: HttpMethod;
   schema: JsonSchema;
-  responseSchema: ResponseSchema;
+  responseSchema: JsonSchema;
   billing?: BillingConfig;
   /**
    * Custom handler class name
@@ -8405,7 +8445,7 @@ export type HandlerContext = {
   /**
    * Response schema for identifying resource fields via traversal
    */
-  responseSchema?: ResponseSchema;
+  responseSchema?: JsonSchema;
   /**
    * Request start timestamp
    */
@@ -8427,7 +8467,7 @@ export type HandlerConfig = {
   /**
    * Response schema for identifying resource fields via traversal
    */
-  responseSchema?: ResponseSchema;
+  responseSchema?: JsonSchema;
   /**
    * Request timeout (ms)
    */
@@ -10306,6 +10346,10 @@ export type GetCreditUsageByResultIdData = {
      * Result ID
      */
     resultId: string;
+    /**
+     * Version number (optional, returns latest version if not specified)
+     */
+    version?: string;
   };
 };
 

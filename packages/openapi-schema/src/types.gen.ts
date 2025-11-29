@@ -7125,6 +7125,14 @@ export type WorkflowApp = {
    */
   coverUrl?: string;
   /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
+  /**
+   * Community publish review status
+   */
+  publishReviewStatus?: string;
+  /**
    * Workflow app creation timestamp
    */
   createdAt?: string;
@@ -7799,6 +7807,18 @@ export type SchemaProperty = {
    */
   format?: string;
   /**
+   * Constant value for discriminator matching in oneOf/anyOf
+   */
+  const?: unknown;
+  /**
+   * One of the listed schemas must match
+   */
+  oneOf?: Array<SchemaProperty>;
+  /**
+   * Any of the listed schemas can match
+   */
+  anyOf?: Array<SchemaProperty>;
+  /**
    * Minimum length (for string)
    */
   minLength?: number;
@@ -7839,6 +7859,9 @@ export type SchemaProperty = {
   required?: Array<string>;
 };
 
+/**
+ * JSON schema definition for request/response with resource field markers
+ */
 export type JsonSchema = {
   /**
    * Schema type
@@ -7855,9 +7878,9 @@ export type JsonSchema = {
    */
   required?: Array<string>;
   /**
-   * Additional properties allowed
+   * Field names to omit from the response (e.g., ['thoughtSignature'])
    */
-  additionalProperties?: boolean;
+  omitFields?: Array<string>;
 };
 
 /**
@@ -7865,12 +7888,7 @@ export type JsonSchema = {
  */
 export type type6 = 'object';
 
-export type ResponseSchema = JsonSchema & {
-  /**
-   * Field names to omit from the response (e.g., ['thoughtSignature'])
-   */
-  omitFields?: Array<string>;
-};
+export type ResponseSchema = JsonSchema;
 
 export type ResourceField = {
   /**
@@ -8029,7 +8047,7 @@ export type ParsedMethodConfig = {
   endpoint: string;
   method?: HttpMethod;
   schema: JsonSchema;
-  responseSchema: ResponseSchema;
+  responseSchema: JsonSchema;
   billing?: BillingConfig;
   /**
    * Custom handler class name
@@ -8346,11 +8364,15 @@ export type HandlerResponse = {
    */
   success: boolean;
   /**
-   * Response data
+   * Response data (object or array of objects)
    */
-  data?: {
-    [key: string]: unknown;
-  };
+  data?:
+    | {
+        [key: string]: unknown;
+      }
+    | Array<{
+        [key: string]: unknown;
+      }>;
   /**
    * Local file path (if file was saved)
    */
@@ -8405,7 +8427,7 @@ export type HandlerContext = {
   /**
    * Response schema for identifying resource fields via traversal
    */
-  responseSchema?: ResponseSchema;
+  responseSchema?: JsonSchema;
   /**
    * Request start timestamp
    */
@@ -8427,7 +8449,7 @@ export type HandlerConfig = {
   /**
    * Response schema for identifying resource fields via traversal
    */
-  responseSchema?: ResponseSchema;
+  responseSchema?: JsonSchema;
   /**
    * Request timeout (ms)
    */

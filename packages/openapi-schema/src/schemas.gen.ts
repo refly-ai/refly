@@ -10008,6 +10008,14 @@ export const WorkflowAppSchema = {
       type: 'string',
       description: 'Cover image URL',
     },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
+    },
+    publishReviewStatus: {
+      type: 'string',
+      description: 'Community publish review status',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -10950,6 +10958,23 @@ export const SchemaPropertySchema = {
         'Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.',
       example: 'binary',
     },
+    const: {
+      description: 'Constant value for discriminator matching in oneOf/anyOf',
+    },
+    oneOf: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/SchemaProperty',
+      },
+      description: 'One of the listed schemas must match',
+    },
+    anyOf: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/SchemaProperty',
+      },
+      description: 'Any of the listed schemas can match',
+    },
     minLength: {
       type: 'number',
       description: 'Minimum length (for string)',
@@ -11002,6 +11027,7 @@ export const SchemaPropertySchema = {
 
 export const JsonSchemaSchema = {
   type: 'object',
+  description: 'JSON schema definition for request/response with resource field markers',
   required: ['type', 'properties'],
   properties: {
     type: {
@@ -11023,32 +11049,18 @@ export const JsonSchemaSchema = {
       },
       description: 'Required property names',
     },
-    additionalProperties: {
-      type: 'boolean',
-      description: 'Additional properties allowed',
+    omitFields: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: "Field names to omit from the response (e.g., ['thoughtSignature'])",
     },
   },
 } as const;
 
 export const ResponseSchemaSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/JsonSchema',
-    },
-    {
-      type: 'object',
-      description: 'Response schema definition for identifying resource fields',
-      properties: {
-        omitFields: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-          description: "Field names to omit from the response (e.g., ['thoughtSignature'])",
-        },
-      },
-    },
-  ],
+  $ref: '#/components/schemas/JsonSchema',
 } as const;
 
 export const ResourceFieldSchema = {
@@ -11242,7 +11254,7 @@ export const ParsedMethodConfigSchema = {
       $ref: '#/components/schemas/JsonSchema',
     },
     responseSchema: {
-      $ref: '#/components/schemas/ResponseSchema',
+      $ref: '#/components/schemas/JsonSchema',
     },
     billing: {
       $ref: '#/components/schemas/BillingConfig',
@@ -11632,9 +11644,20 @@ export const HandlerResponseSchema = {
       description: 'Success status',
     },
     data: {
-      type: 'object',
-      additionalProperties: true,
-      description: 'Response data',
+      oneOf: [
+        {
+          type: 'object',
+          additionalProperties: true,
+        },
+        {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: true,
+          },
+        },
+      ],
+      description: 'Response data (object or array of objects)',
     },
     localPath: {
       type: 'string',
@@ -11693,7 +11716,7 @@ export const HandlerContextSchema = {
       description: 'Credentials for authentication',
     },
     responseSchema: {
-      $ref: '#/components/schemas/ResponseSchema',
+      $ref: '#/components/schemas/JsonSchema',
       description: 'Response schema for identifying resource fields via traversal',
     },
     startTime: {
@@ -11720,7 +11743,7 @@ export const HandlerConfigSchema = {
       description: 'Credentials',
     },
     responseSchema: {
-      $ref: '#/components/schemas/ResponseSchema',
+      $ref: '#/components/schemas/JsonSchema',
       description: 'Response schema for identifying resource fields via traversal',
     },
     timeout: {

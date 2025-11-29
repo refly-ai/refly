@@ -9,14 +9,41 @@ import type {
   HandlerRequest,
   HandlerResponse,
   JsonSchema,
-  ResponseSchema,
   SchemaProperty,
 } from '@refly/openapi-schema';
 import { fileTypeFromBuffer } from 'file-type';
+import _ from 'lodash';
 import mime from 'mime';
 import { DriveService } from '../../drive/drive.service';
 import { MiscService } from '../../misc/misc.service';
+import {
+  collectResourceFields,
+  isValidFileId,
+  removeFieldsRecursively,
+  type ResourceField,
+} from '../utils/schema-utils';
 import { getCanvasId, getCurrentUser, getResultId, getResultVersion } from './core/tool-context';
+
+/**
+ * Error thrown when fileId format is invalid
+ */
+export class InvalidFileIdError extends Error {
+  constructor(
+    public readonly fieldName: string,
+    public readonly invalidValue: unknown,
+  ) {
+    const valueStr = typeof invalidValue === 'string' ? invalidValue : JSON.stringify(invalidValue);
+    super(
+      `Invalid fileId format for field "${fieldName}": "${valueStr}". Expected formats: "df-xxx", "fileId://df-xxx", or "@file:df-xxx". Please provide a valid file ID.`,
+    );
+    this.name = 'InvalidFileIdError';
+  }
+}
+
+/**
+ * Processing mode for resource handling
+ */
+type ProcessingMode = 'input' | 'output';
 
 /**
  * ResourceHandler Class
@@ -33,32 +60,33 @@ export class ResourceHandler {
   ) {}
 
   /**
-   * Preprocess input resources by traversing schema and data together
-   * Automatically resolves all fields marked with isResource: true
+   * Preprocess input resources by converting fileId to target format(url, base64, etc)
    *
    * @param request - Handler request containing params with fileIds
-   * @param schema - JSON schema with isResource markers
-   * @returns Processed request with fileIds replaced by actual content
+   * @param request_schema - JSON schema from db with isResource markers and formats
+   * @returns Processed fileId of request replaced by target format
    */
-  async preprocessInputResources(
+  async resolveInputResources(
     request: HandlerRequest,
-    schema: JsonSchema,
+    request_schema: JsonSchema,
   ): Promise<HandlerRequest> {
-    if (!schema?.properties) {
+    if (!request_schema?.properties) {
       this.logger.debug('No schema properties to process');
       return request;
     }
-    const processedParams = await this.processResourcesField(
-      schema,
+
+    const processedParams = await this.mapResourceFields(
+      request_schema,
       request.params as Record<string, unknown>,
       async (value, schemaProperty) => {
         return await this.resolveFileIdToFormat(value, schemaProperty.format || 'text');
       },
+      'input',
     );
 
     return {
       ...request,
-      params: processedParams,
+      params: processedParams as Record<string, unknown>,
     };
   }
 
@@ -72,13 +100,13 @@ export class ResourceHandler {
    *
    * @param response - Handler response containing resource content
    * @param request - Original handler request (for metadata)
-   * @param schema - Response schema with isResource markers
+   * @param response_schema - Response schema from db with isResource markers and formats
    * @returns Processed response with content replaced by fileIds
    */
-  async postprocessOutputResources(
+  async persistOutputResources(
     response: HandlerResponse,
     request: HandlerRequest,
-    schema: ResponseSchema,
+    response_schema: JsonSchema,
   ): Promise<HandlerResponse> {
     if (!response.success || !response.data) {
       return response;
@@ -90,7 +118,7 @@ export class ResourceHandler {
 
     // Case 1: Direct binary response from HTTP adapter
     if (Buffer.isBuffer(response.data)) {
-      const uploadResult = await this.uploadResource(response.data, fileNameTitle, undefined);
+      const uploadResult = await this.writeResource(response.data, fileNameTitle, undefined);
       if (uploadResult) {
         return {
           ...response,
@@ -102,8 +130,7 @@ export class ResourceHandler {
     }
 
     // Case 2: Structured response with schema-based resource fields
-    if (!schema?.properties) {
-      this.logger.debug('No schema properties to process');
+    if (!response_schema?.properties) {
       return response;
     }
 
@@ -111,21 +138,24 @@ export class ResourceHandler {
     let resourceCount = 0;
     const processedFiles: DriveFile[] = [];
 
-    const processedData = await this.processResourcesField(
-      schema as JsonSchema,
-      response.data as Record<string, unknown>,
+    const processedData = await this.mapResourceFields(
+      response_schema,
+      response.data,
       async (value, schemaProperty) => {
-        // Upload the resource and return fileId reference
+        const fileName = fileNameTitle
+          ? resourceCount === 0
+            ? fileNameTitle
+            : `${fileNameTitle}-${resourceCount}`
+          : undefined;
         resourceCount++;
-        const fileName = fileNameTitle ? `${fileNameTitle}-${resourceCount}` : undefined;
-        const result = await this.uploadResource(value, fileName, schemaProperty);
+        const result = await this.writeResource(value, fileName, schemaProperty);
         if (result) {
           processedFiles.push(result);
           return result;
         }
         return value;
       },
-      'output', // Output mode: accept any value, not just fileIds
+      'output',
     );
 
     return {
@@ -136,11 +166,159 @@ export class ResourceHandler {
   }
 
   /**
+   * Map resources in data based on schema definitions
+   *
+   * Two-phase approach:
+   * 1. Collect resource field paths from schema (using collectResourceFields)
+   * 2. Apply processor to each field in data (using lodash get/set)
+   */
+  private async mapResourceFields(
+    schema: JsonSchema,
+    data: Record<string, unknown> | Record<string, unknown>[],
+    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
+    mode: ProcessingMode,
+  ): Promise<Record<string, unknown> | Record<string, unknown>[]> {
+    // Step 1: Remove omitFields from the data structure
+    const omitFields = schema.omitFields || [];
+    if (omitFields.length > 0) {
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          removeFieldsRecursively(item, omitFields);
+        }
+      } else {
+        removeFieldsRecursively(data, omitFields);
+      }
+    }
+
+    // Step 2: Collect resource fields from schema (done once)
+    const resourceFields = collectResourceFields(schema);
+
+    if (resourceFields.length === 0) {
+      return data;
+    }
+
+    // Step 3: Process each data item
+    if (Array.isArray(data)) {
+      return Promise.all(
+        data.map((item) => this.processDataWithFields(item, resourceFields, processor, mode)),
+      );
+    }
+
+    return this.processDataWithFields(data, resourceFields, processor, mode);
+  }
+
+  /**
+   * Process a single data object using pre-collected resource fields
+   * Note: This method mutates the input data directly for performance
+   */
+  private async processDataWithFields(
+    data: Record<string, unknown>,
+    resourceFields: ResourceField[],
+    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
+    mode: ProcessingMode,
+  ): Promise<Record<string, unknown>> {
+    // Collect all processing tasks
+    const tasks: Array<{ path: string; schema: SchemaProperty }> = [];
+
+    for (const field of resourceFields) {
+      if (field.isArrayItem) {
+        // Expand array paths to concrete indices
+        const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, data);
+        for (const path of expandedPaths) {
+          tasks.push({ path, schema: field.schema });
+        }
+      } else {
+        tasks.push({ path: field.dataPath, schema: field.schema });
+      }
+    }
+
+    // Process all fields in parallel (mutates data directly)
+    await Promise.all(
+      tasks.map(async ({ path, schema }) => {
+        const value = _.get(data, path);
+        if (value !== undefined) {
+          const processed = await this.processResourceValue(value, schema, path, processor, mode);
+          _.set(data, path, processed);
+        }
+      }),
+    );
+
+    return data;
+  }
+
+  /**
+   * Expand array paths to concrete indices based on actual data
+   *
+   * Example:
+   * - path: "items[*].nested[*].image", arrayPaths: ["items", "items[*].nested"]
+   * - data: { items: [{ nested: [{}, {}] }] }
+   * - returns: ["items[0].nested[0].image", "items[0].nested[1].image"]
+   */
+  private expandArrayPaths(
+    basePath: string,
+    arrayPaths: string[],
+    data: Record<string, unknown>,
+  ): string[] {
+    if (arrayPaths.length === 0) {
+      return [basePath];
+    }
+
+    // Each entry: { path: current basePath with some [*] replaced, arrayPathIndex: next arrayPath to process }
+    let current: Array<{ path: string; resolvedArrayPaths: string[] }> = [
+      { path: basePath, resolvedArrayPaths: [...arrayPaths] },
+    ];
+
+    for (let depth = 0; depth < arrayPaths.length; depth++) {
+      const next: Array<{ path: string; resolvedArrayPaths: string[] }> = [];
+
+      for (const { path, resolvedArrayPaths } of current) {
+        const arrayPath = resolvedArrayPaths[depth];
+        const arrayData = _.get(data, arrayPath);
+
+        if (Array.isArray(arrayData)) {
+          for (let i = 0; i < arrayData.length; i++) {
+            // Replace first [*] with actual index
+            const expandedPath = path.replace('[*]', `[${i}]`);
+            // Also update remaining arrayPaths to use concrete index
+            const updatedArrayPaths = resolvedArrayPaths.map((ap, idx) =>
+              idx > depth ? ap.replace('[*]', `[${i}]`) : ap,
+            );
+            next.push({ path: expandedPath, resolvedArrayPaths: updatedArrayPaths });
+          }
+        }
+      }
+
+      if (next.length > 0) {
+        current = next;
+      }
+    }
+
+    return current.map((c) => c.path);
+  }
+
+  /**
+   * Process a single resource field value
+   */
+  private async processResourceValue(
+    value: unknown,
+    schema: SchemaProperty,
+    fieldPath: string,
+    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
+    mode: ProcessingMode,
+  ): Promise<unknown> {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    if (mode === 'input' && !isValidFileId(value)) {
+      throw new InvalidFileIdError(fieldPath, value);
+    }
+
+    return processor(value, schema);
+  }
+
+  /**
    * Upload Buffer resource to DriveService
-   * @param user - Current user
-   * @param canvasId - Canvas ID
-   * @param buffer - Buffer data
-   * @returns Upload result with fileId
    */
   private async uploadBufferResource(
     user: any,
@@ -177,11 +355,6 @@ export class ResourceHandler {
 
   /**
    * Upload string resource (data URL, external URL, or base64)
-   * @param user - Current user
-   * @param canvasId - Canvas ID
-   * @param value - String value
-   * @param schemaProperty - Schema property with format information
-   * @returns Upload result with fileId
    */
   private async uploadStringResource(
     user: any,
@@ -210,10 +383,6 @@ export class ResourceHandler {
 
   /**
    * Upload data URL resource
-   * @param user - Current user
-   * @param canvasId - Canvas ID
-   * @param dataUrl - Data URL string
-   * @returns DriveFile data
    */
   private async uploadDataUrlResource(
     user: any,
@@ -304,10 +473,6 @@ export class ResourceHandler {
 
   /**
    * Upload external URL resource
-   * @param user - Current user
-   * @param canvasId - Canvas ID
-   * @param url - External URL
-   * @returns DriveFile data
    */
   private async uploadUrlResource(
     user: any,
@@ -331,10 +496,6 @@ export class ResourceHandler {
 
   /**
    * Upload pure base64 resource
-   * @param user - Current user
-   * @param canvasId - Canvas ID
-   * @param base64String - Base64 encoded string
-   * @returns DriveFile data
    */
   private async uploadBase64Resource(
     user: any,
@@ -342,21 +503,25 @@ export class ResourceHandler {
     base64String: string,
     fileName: string,
   ): Promise<DriveFile> {
-    const mimeType = 'image/png'; // Default for image generation tools
     const buffer = Buffer.from(base64String, 'base64');
+
+    // Detect MIME type from buffer, fallback to image/png
+    const fileTypeResult = await fileTypeFromBuffer(buffer);
+    const mimeType = fileTypeResult?.mime || 'image/png';
+    const ext = fileTypeResult?.ext || 'png';
 
     const uploadResult = await this.miscService.uploadFile(user, {
       file: {
         buffer,
         mimetype: mimeType,
-        originalname: `${fileName}.${mime.getExtension(mimeType) || 'png'}`,
+        originalname: `${fileName}.${ext}`,
       },
       visibility: 'private',
     });
 
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: `resource-${Date.now()}.${mime.getExtension(mimeType) || 'png'}`,
+      name: `${fileName}.${ext}`,
       storageKey: uploadResult.storageKey,
       source: 'agent',
       resultId: getResultId(),
@@ -368,10 +533,6 @@ export class ResourceHandler {
 
   /**
    * Upload object resource with buffer property
-   * @param user - Current user
-   * @param canvasId - Canvas ID
-   * @param obj - Object with buffer property
-   * @returns DriveFile data
    */
   private async uploadObjectResource(
     user: any,
@@ -419,11 +580,8 @@ export class ResourceHandler {
 
   /**
    * Upload a resource value to DriveService
-   * @param value - Resource content (Buffer, base64, URL, etc.)
-   * @param schemaProperty - Schema property with format information (optional)
-   * @returns Upload result with fileId
    */
-  private async uploadResource(
+  private async writeResource(
     value: unknown,
     fileName: string,
     schemaProperty?: SchemaProperty,
@@ -455,9 +613,6 @@ export class ResourceHandler {
 
   /**
    * Resolve fileId to specified format
-   * @param value - String fileId or object with fileId property (supports 'df-xxx' or 'fileId://df-xxx' format)
-   * @param format - Output format (base64/url/binary/text, or legacy 'buffer')
-   * @returns Resolved content in specified format
    */
   private async resolveFileIdToFormat(value: unknown, format: string): Promise<string | Buffer> {
     // Extract fileId from value
@@ -517,447 +672,6 @@ export class ResourceHandler {
         const result = await this.driveService.getDriveFileStream(user, fileId);
         return result.data;
       }
-    }
-  }
-
-  /**
-   * Process resources in data based on schema definitions
-   * Traverses both schema and data simultaneously, processing fields marked with isResource
-   *
-   * @param schema - JSON schema with isResource markers
-   * @param data - Data object to process
-   * @param processor - Function to process each resource field
-   * @param mode - 'input' for preprocessing (validate fileId), 'output' for postprocessing (accept any value)
-   * @returns Processed data
-   */
-  private async processResourcesField(
-    schema: JsonSchema,
-    data: Record<string, unknown>,
-    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
-    mode: 'input' | 'output' = 'input',
-  ): Promise<Record<string, unknown>> {
-    const result = { ...data };
-
-    // Get omitFields from ResponseSchema and remove them recursively, to avoid sending too large data
-    const responseSchema = schema as ResponseSchema;
-    const omitFields = responseSchema.omitFields || [];
-    if (omitFields.length > 0) {
-      this.removeFieldsRecursively(result, omitFields);
-    }
-
-    // Process all root properties using the extracted traversal method
-    if (schema.properties) {
-      await Promise.all(
-        Object.entries(schema.properties).map(async ([key, schemaProperty]) => {
-          const value = data[key];
-          if (value !== undefined) {
-            await this.traverseSchema(schemaProperty, value, key, result, processor, mode);
-          }
-        }),
-      );
-    }
-
-    return result;
-  }
-
-  /**
-   * Validate if a value is a valid fileId
-   * FileId can be in formats:
-   * - Direct: 'df-xxx'
-   * - URI format: 'fileId://df-xxx'
-   * - Mention format: '@file:df-xxx'
-   *
-   * @param value - Value to validate (can be string or object with fileId property)
-   * @returns True if the value is a valid fileId
-   */
-  private isValidFileId(value: unknown): boolean {
-    if (typeof value === 'string') {
-      // Support 'df-xxx', 'fileId://df-xxx', and '@file:df-xxx' formats
-      return (
-        value.startsWith('df-') || value.startsWith('fileId://df-') || value.startsWith('@file:df-')
-      );
-    }
-    if (value && typeof value === 'object' && 'fileId' in value) {
-      const fileId = (value as any).fileId;
-      return (
-        typeof fileId === 'string' &&
-        (fileId.startsWith('df-') ||
-          fileId.startsWith('fileId://df-') ||
-          fileId.startsWith('@file:df-'))
-      );
-    }
-    return false;
-  }
-
-  /**
-   * Remove specified fields from an object recursively
-   * Traverses the entire object tree and removes all occurrences of the specified field names
-   *
-   * @param obj - Object to process
-   * @param fieldsToOmit - Array of field names to remove
-   */
-  private removeFieldsRecursively(obj: any, fieldsToOmit: string[]): void {
-    if (!obj || typeof obj !== 'object' || fieldsToOmit.length === 0) {
-      return;
-    }
-
-    // Remove omitted fields from current object
-    for (const field of fieldsToOmit) {
-      if (field in obj) {
-        delete obj[field];
-      }
-    }
-
-    // Recursively process nested objects and arrays
-    for (const key in obj) {
-      const value = obj[key];
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          this.removeFieldsRecursively(item, fieldsToOmit);
-        }
-      } else if (value && typeof value === 'object') {
-        this.removeFieldsRecursively(value, fieldsToOmit);
-      }
-    }
-  }
-
-  /**
-   * Find the best matching object option from oneOf/anyOf based on data
-   * Uses multiple strategies:
-   * 1. Match by discriminator field (e.g., 'type' with const value)
-   * 2. Match by property key overlap (prefer options with more matching keys)
-   * 3. Prefer options that contain isResource fields when data has potential fileIds
-   *
-   * @param options - Array of schema options from oneOf/anyOf
-   * @param dataObj - Data object to match against
-   * @returns The best matching schema option, or undefined if no match
-   */
-  private findMatchingObjectOption(
-    options: SchemaProperty[],
-    dataObj: Record<string, unknown>,
-  ): SchemaProperty | undefined {
-    const objectOptions = options.filter(
-      (opt: SchemaProperty) => opt.type === 'object' && opt.properties,
-    );
-
-    if (objectOptions.length === 0) {
-      return undefined;
-    }
-
-    if (objectOptions.length === 1) {
-      return objectOptions[0];
-    }
-
-    const dataKeys = Object.keys(dataObj);
-
-    // Strategy 1: Try to match by discriminator field (e.g., 'type' with const value)
-    for (const option of objectOptions) {
-      const props = option.properties!;
-      let allConstMatch = true;
-      let hasConst = false;
-
-      for (const [propKey, propSchema] of Object.entries(props)) {
-        const schemaWithConst = propSchema as SchemaProperty & { const?: unknown };
-        if (schemaWithConst.const !== undefined) {
-          hasConst = true;
-          if (dataObj[propKey] !== schemaWithConst.const) {
-            allConstMatch = false;
-            break;
-          }
-        }
-      }
-
-      if (hasConst && allConstMatch) {
-        return option;
-      }
-    }
-
-    // Strategy 2: Match by property key overlap and isResource presence
-    // Prefer options where data keys match schema keys and contain isResource fields
-    let bestOption: SchemaProperty | undefined;
-    let bestScore = -1;
-
-    for (const option of objectOptions) {
-      const schemaKeys = Object.keys(option.properties!);
-      const matchingKeys = dataKeys.filter((k) => schemaKeys.includes(k));
-      const hasResourceField = Object.values(option.properties!).some(
-        (prop) => (prop as SchemaProperty).isResource,
-      );
-
-      // Score: matching keys count + bonus for having resource fields
-      let score = matchingKeys.length;
-      if (hasResourceField) {
-        // Check if any matching key has a value that looks like a fileId
-        const hasFileIdValue = matchingKeys.some((k) => this.isValidFileId(dataObj[k]));
-        if (hasFileIdValue) {
-          score += 10; // Strong preference for options with resource fields when data has fileIds
-        }
-      }
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestOption = option;
-      }
-    }
-
-    return bestOption || objectOptions[0];
-  }
-
-  /**
-   * Handle oneOf/anyOf schema patterns
-   * Processes fields that can be one of multiple types, finding resource options
-   * Also handles nested objects/arrays within oneOf/anyOf options
-   *
-   * @param schemaProperty - Schema property with oneOf/anyOf
-   * @param dataValue - Data value to process
-   * @param key - Property key
-   * @param parent - Parent object to update
-   * @param processor - Function to process resource field
-   * @param mode - Processing mode
-   */
-  private async handleOneOfAnyOfSchema(
-    schemaProperty: SchemaProperty,
-    dataValue: unknown,
-    key: string,
-    parent: Record<string, unknown>,
-    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
-    mode: 'input' | 'output',
-  ): Promise<void> {
-    const schemaWithOneOf = schemaProperty as SchemaProperty & {
-      oneOf?: SchemaProperty[];
-      anyOf?: SchemaProperty[];
-    };
-
-    const options = schemaWithOneOf.oneOf || schemaWithOneOf.anyOf || [];
-    const resourceOption = options.find((opt: SchemaProperty) => opt.isResource);
-
-    // Case 1: Found a resource option and value matches resource criteria
-    if (resourceOption && dataValue !== undefined && dataValue !== null) {
-      if (mode === 'output' || this.isValidFileId(dataValue)) {
-        parent[key] = await processor(dataValue, resourceOption);
-        return;
-      }
-    }
-
-    // Case 2: Value is an object - try to find matching object schema in oneOf/anyOf and process recursively
-    if (dataValue && typeof dataValue === 'object' && !Array.isArray(dataValue)) {
-      const dataObj = dataValue as Record<string, unknown>;
-      // Find the best matching object option based on discriminator field (e.g., 'type') or structure
-      const objectOption = this.findMatchingObjectOption(options, dataObj);
-      if (objectOption?.properties) {
-        const processedNested = { ...dataObj };
-        await Promise.all(
-          Object.entries(objectOption.properties).map(async ([nestedKey, nestedSchema]) => {
-            const nestedValue = dataObj[nestedKey];
-            if (nestedValue !== undefined) {
-              await this.traverseSchema(
-                nestedSchema as SchemaProperty,
-                nestedValue,
-                nestedKey,
-                processedNested,
-                processor,
-                mode,
-              );
-            }
-          }),
-        );
-        parent[key] = processedNested;
-        return;
-      }
-    }
-
-    // Case 3: Value is an array - try to find matching array schema in oneOf/anyOf and process recursively
-    if (Array.isArray(dataValue)) {
-      const arrayOption = options.find((opt: SchemaProperty) => opt.type === 'array' && opt.items);
-      if (arrayOption?.items) {
-        // Delegate to handleArray for consistent array processing
-        await this.handleArray(arrayOption, dataValue, key, parent, processor, mode);
-        return;
-      }
-    }
-
-    // Default: keep original value
-    parent[key] = dataValue;
-  }
-
-  /**
-   * Handle resource fields
-   * Processes fields marked with isResource flag
-   *
-   * @param schemaProperty - Schema property with isResource=true
-   * @param dataValue - Data value to process
-   * @param key - Property key
-   * @param parent - Parent object to update
-   * @param processor - Function to process resource field
-   * @param mode - Processing mode
-   */
-  private async handleResource(
-    schemaProperty: SchemaProperty,
-    dataValue: unknown,
-    key: string,
-    parent: Record<string, unknown>,
-    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
-    mode: 'input' | 'output',
-  ): Promise<void> {
-    if (dataValue === undefined || dataValue === null) {
-      return;
-    }
-
-    // Input mode: validate fileId format - if invalid, skip processing
-    if (mode === 'input' && !this.isValidFileId(dataValue)) {
-      parent[key] = dataValue;
-      return;
-    }
-
-    parent[key] = await processor(dataValue, schemaProperty);
-  }
-
-  /**
-   * Handle array type fields
-   * Processes arrays that may contain resource items or nested objects
-   *
-   * @param schemaProperty - Schema property with type='array'
-   * @param dataValue - Array data value
-   * @param key - Property key
-   * @param parent - Parent object to update
-   * @param processor - Function to process resource field
-   * @param mode - Processing mode
-   */
-  private async handleArray(
-    schemaProperty: SchemaProperty,
-    dataValue: unknown,
-    key: string,
-    parent: Record<string, unknown>,
-    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
-    mode: 'input' | 'output',
-  ): Promise<void> {
-    if (!Array.isArray(dataValue) || !schemaProperty.items) {
-      return;
-    }
-
-    // Check if array items are resources
-    if (schemaProperty.items.isResource) {
-      const processed = await Promise.all(
-        dataValue.map(async (item) => {
-          if (item === undefined || item === null) {
-            return item;
-          }
-          if (mode === 'input' && !this.isValidFileId(item)) {
-            return item;
-          }
-          return await processor(item, schemaProperty.items!);
-        }),
-      );
-      parent[key] = processed;
-    } else if (schemaProperty.items.type === 'object' && schemaProperty.items.properties) {
-      // Array of objects that might contain resources
-      const processed = await Promise.all(
-        dataValue.map(async (item) => {
-          if (item && typeof item === 'object') {
-            return await this.processResourcesField(
-              { type: 'object', properties: schemaProperty.items!.properties! } as JsonSchema,
-              item as Record<string, unknown>,
-              processor,
-              mode,
-            );
-          }
-          return item;
-        }),
-      );
-      parent[key] = processed;
-    }
-  }
-
-  /**
-   * Handle object type fields with nested properties
-   * Recursively processes nested object structures
-   *
-   * @param schemaProperty - Schema property with type='object'
-   * @param dataValue - Object data value
-   * @param key - Property key
-   * @param parent - Parent object to update
-   * @param processor - Function to process resource field
-   * @param mode - Processing mode
-   */
-  private async handleObject(
-    schemaProperty: SchemaProperty,
-    dataValue: unknown,
-    key: string,
-    parent: Record<string, unknown>,
-    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
-    mode: 'input' | 'output',
-  ): Promise<void> {
-    if (!schemaProperty.properties || !dataValue || typeof dataValue !== 'object') {
-      return;
-    }
-
-    const nestedData = dataValue as Record<string, unknown>;
-    const processedNested = { ...nestedData };
-
-    await Promise.all(
-      Object.entries(schemaProperty.properties).map(async ([nestedKey, nestedSchema]) => {
-        const nestedValue = nestedData[nestedKey];
-        if (nestedValue !== undefined) {
-          await this.traverseSchema(
-            nestedSchema,
-            nestedValue,
-            nestedKey,
-            processedNested,
-            processor,
-            mode,
-          );
-        }
-      }),
-    );
-
-    parent[key] = processedNested;
-  }
-
-  /**
-   * Recursively traverse schema and data together
-   * Processes resource fields based on schema definitions
-   *
-   * @param schemaProperty - Schema property definition
-   * @param dataValue - Data value to process
-   * @param key - Property key
-   * @param parent - Parent object to update
-   * @param processor - Function to process each resource field
-   * @param mode - Processing mode ('input' or 'output')
-   */
-  private async traverseSchema(
-    schemaProperty: SchemaProperty,
-    dataValue: unknown,
-    key: string,
-    parent: Record<string, unknown>,
-    processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
-    mode: 'input' | 'output',
-  ): Promise<void> {
-    const schemaWithOneOf = schemaProperty as SchemaProperty & {
-      oneOf?: SchemaProperty[];
-      anyOf?: SchemaProperty[];
-    };
-
-    // Case 0: Handle oneOf/anyOf schemas
-    if (schemaWithOneOf.oneOf || schemaWithOneOf.anyOf) {
-      await this.handleOneOfAnyOfSchema(schemaProperty, dataValue, key, parent, processor, mode);
-      return;
-    }
-
-    // Case 1: This field is marked as a resource
-    if (schemaProperty.isResource) {
-      await this.handleResource(schemaProperty, dataValue, key, parent, processor, mode);
-      return;
-    }
-
-    // Case 2: Array type
-    if (schemaProperty.type === 'array') {
-      await this.handleArray(schemaProperty, dataValue, key, parent, processor, mode);
-      return;
-    }
-
-    // Case 3: Object with nested properties
-    if (schemaProperty.type === 'object') {
-      await this.handleObject(schemaProperty, dataValue, key, parent, processor, mode);
     }
   }
 }
