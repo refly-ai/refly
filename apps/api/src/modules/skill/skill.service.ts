@@ -534,7 +534,7 @@ export class SkillService implements OnModuleInit {
     if (param.context) {
       param.context = await this.populateSkillContext(user, param.context);
     }
-    if (param.resultHistory) {
+    if (param.resultHistory && Array.isArray(param.resultHistory)) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
     }
     if (param.projectId) {
@@ -978,7 +978,11 @@ export class SkillService implements OnModuleInit {
   /**
    * Populate skill result history with actual result detail and steps.
    */
-  async populateSkillResultHistory(user: User, resultHistory: { resultId: string }[]) {
+  async populateSkillResultHistory(user: User, resultHistory: { resultId: string }[] = []) {
+    if (!Array.isArray(resultHistory) || resultHistory.length === 0) {
+      return [];
+    }
+
     // Fetch all results for the given resultIds
     const results = await this.prisma.actionResult.findMany({
       where: { resultId: { in: resultHistory.map((r) => r.resultId) }, uid: user.uid },
