@@ -749,6 +749,18 @@ export class SkillService implements OnModuleInit {
 
     const purgeResultHistory = (resultHistory: ActionResult[] = []) => {
       // remove extra unnecessary fields from result history to save storage
+      if (!Array.isArray(resultHistory)) {
+        // Handle case where resultHistory might be a stringified array due to double stringify bug
+        if (typeof resultHistory === 'string') {
+          try {
+            const parsed = JSON.parse(resultHistory);
+            return Array.isArray(parsed) ? parsed.map((r) => pick(r, ['resultId', 'title'])) : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      }
       return resultHistory?.map((r) => pick(r, ['resultId', 'title']));
     };
 
@@ -891,7 +903,7 @@ export class SkillService implements OnModuleInit {
           context: JSON.stringify(param.context ?? {}),
           tplConfig: JSON.stringify(param.tplConfig ?? {}),
           runtimeConfig: JSON.stringify(param.runtimeConfig ?? {}),
-          history: JSON.stringify(param.resultHistory ?? []),
+          history: JSON.stringify(Array.isArray(param.resultHistory) ? param.resultHistory : []),
           providerItemId: param.modelItemId,
         },
       });
