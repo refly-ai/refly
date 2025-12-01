@@ -2640,6 +2640,16 @@ const translations = {
       activateInvitationCodeSuccess: 'Welcome to Refly 🎉 Start your AI automation journey!',
       activateInvitationCodeFailed:
         'Invite code is invalid. Please try again or join Discord to get a new one.',
+      activateInvitationCodeInvalid:
+        'Invite code is invalid. Please try again or join Discord to get a new one.',
+      activateInvitationCodeUsed:
+        'Invitation code has already been used. Please try again or join Discord to get a new one.',
+      activateInvitationCodeAlreadyInvited:
+        'This user has already been invited. Please try again or join Discord to get a new one.',
+      activateInvitationCodeOwnCode:
+        'Cannot use your own invitation code. Please try again or join Discord to get a new one.',
+      activateInvitationCodeAlreadyActivated:
+        'This invitation has already been activated. Please try again or join Discord to get a new one.',
       invitationCodeCopied: 'Invite code copied! Go share it with your friends~',
       invitationCodeCopyFailed: 'Failed to copy invitation code',
       invitationReward: '+{amount} credits',

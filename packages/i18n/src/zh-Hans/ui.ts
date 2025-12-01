@@ -2608,6 +2608,14 @@ const translations = {
       activateInvitationCode: '激活邀请码',
       activateInvitationCodeSuccess: '欢迎使用 Refly 🎉 开始您的 AI 自动化之旅！',
       activateInvitationCodeFailed: '邀请码无效，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeInvalid: '邀请码无效，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeUsed: '邀请码已被使用，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeAlreadyInvited:
+        '该用户已被邀请，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeOwnCode:
+        '不能使用自己的邀请码，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeAlreadyActivated:
+        '该邀请已激活，请重试或加入 Discord 群组获取新邀请码。',
       invitationCodeCopied: '邀请码已复制！快去分享给你的朋友吧~',
       invitationCodeCopyFailed: '复制邀请码失败',
       invitationReward: '+{{amount}}积分',
