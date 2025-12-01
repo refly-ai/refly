@@ -96,10 +96,11 @@ const PublishTemplateButton = React.memo(
             type="primary"
             icon={<TurnRight size={16} />}
             onClick={() => {
+              if (disabled) return;
+
               logEvent('canvas::canvas_publish_template', Date.now(), {
                 canvas_id: canvasId,
               });
-              if (disabled) return;
               handlePublishToCommunity();
             }}
           >
