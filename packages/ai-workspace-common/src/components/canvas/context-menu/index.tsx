@@ -6,9 +6,10 @@ import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-s
 import { CanvasNodeType, SearchDomain } from '@refly/openapi-schema';
 import { ContextItem } from '@refly-packages/ai-workspace-common/types/context';
 import { AiChat, Substrsct } from 'refly-icons';
-import { genMemoID, genNodeEntityId } from '@refly/utils/id';
+import { genMemoID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { logEvent } from '@refly/telemetry-web';
+import { useAddAgentGlobal } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-agent-global';
 
 interface ContextMenuProps {
   open: boolean;
@@ -38,20 +39,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuHeight, setMenuHeight] = useState<number>(0);
   const { addNode } = useAddNode();
-
-  const createSkillResponseNode = (position: { x: number; y: number }) => {
-    const skillResponseId = genNodeEntityId('skillResponse');
-    addNode(
-      {
-        type: 'skillResponse',
-        data: { title: '', entityId: skillResponseId, metadata: { status: 'init' } },
-        position: position,
-      },
-      [],
-      true,
-      true,
-    );
-  };
+  const { addGlobalAgent } = useAddAgentGlobal();
 
   const createMemo = (position: { x: number; y: number }) => {
     const memoId = genMemoID();
@@ -139,7 +127,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     // Creation actions
     switch (key) {
       case 'askAI':
-        createSkillResponseNode(position);
+        addGlobalAgent({ position });
         setOpen(false);
         break;
       case 'createMemo':

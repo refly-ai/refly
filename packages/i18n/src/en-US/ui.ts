@@ -2119,8 +2119,8 @@ const translations = {
     defaultTitle: 'Code Artifact',
   },
   agent: {
-    configure: 'Configure',
-    lastRun: 'Last Run',
+    configure: 'Input',
+    lastRun: 'Output',
     noResult: 'Run to get results',
     editTitlePlaceholder: 'Enter title for the agent',
     config: {

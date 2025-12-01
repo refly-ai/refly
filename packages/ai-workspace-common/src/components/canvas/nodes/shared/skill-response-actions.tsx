@@ -59,6 +59,7 @@ const SkillResponseActionsComponent = ({
           okText: t('canvas.skillResponse.stopConfirmModal.confirm'),
           cancelText: t('canvas.skillResponse.stopConfirmModal.cancel'),
           icon: null,
+          centered: true,
           okButtonProps: {
             className:
               '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',

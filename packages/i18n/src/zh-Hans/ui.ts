@@ -2105,8 +2105,8 @@ const translations = {
     defaultTitle: '代码组件',
   },
   agent: {
-    configure: '配置',
-    lastRun: '最近运行',
+    configure: '输入',
+    lastRun: '输出',
     noResult: '运行后才有记录哦',
     editTitlePlaceholder: '输入智能体的标题',
     config: {

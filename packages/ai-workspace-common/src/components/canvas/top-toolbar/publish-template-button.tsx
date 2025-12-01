@@ -8,6 +8,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useCanvasStoreShallow } from '@refly/stores';
 import { useSkillResponseLoadingStatus } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-loading-status';
 import { TurnRight } from 'refly-icons';
+import { cn } from '@refly/utils/cn';
 
 interface PublishTemplateButtonProps {
   canvasId: string;
@@ -87,7 +88,9 @@ const PublishTemplateButton = React.memo(
           placement="top"
         >
           <Button
-            disabled={toolbarLoading || !skillResponseNodes?.length}
+            className={cn(
+              toolbarLoading || !skillResponseNodes?.length ? 'opacity-50 cursor-not-allowed' : '',
+            )}
             type="primary"
             icon={<TurnRight size={16} />}
             onClick={() => {
