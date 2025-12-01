@@ -1,10 +1,5 @@
-import { useEffect, useCallback, useMemo } from 'react';
-import { Empty } from 'antd';
-import InfiniteScroll from 'react-infinite-scroll-component';
-import {
-  Spinner,
-  EndMessage,
-} from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react';
+import { Empty, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -13,6 +8,8 @@ import { TemplateCard } from './template-card';
 import { TemplateCardSkeleton } from './template-card-skeleton';
 
 import cn from 'classnames';
+
+const MAX_DISPLAY_COUNT = 12;
 
 interface TemplateListProps {
   source: 'front-page' | 'template-library';
@@ -39,7 +36,11 @@ export const TemplateList = ({
   const { visible } = useCanvasTemplateModal((state) => ({
     visible: state.visible,
   }));
-  const { dataList, loadMore, reload, hasMore, isRequesting, setDataList } = useFetchDataList({
+  const [displayDataList, setDisplayDataList] = useState<any[]>([]);
+  const [isFading, setIsFading] = useState(false);
+  const prevCategoryIdRef = useRef(categoryId);
+
+  const { dataList, reload, isRequesting, setDataList } = useFetchDataList({
     fetchData: async (queryPayload) => {
       const res = await getClient().listCanvasTemplates({
         query: {
@@ -56,24 +57,82 @@ export const TemplateList = ({
     dependencies: [language, categoryId, searchQuery],
   });
 
+  // Handle smooth transition when category changes
+  useEffect(() => {
+    const categoryChanged = prevCategoryIdRef.current !== categoryId;
+
+    if (categoryChanged && prevCategoryIdRef.current && displayDataList.length > 0) {
+      // Category changed and we have existing data, wait for new data to load
+      if (dataList.length > 0 && !isRequesting) {
+        // New data is ready, start fade out
+        setIsFading(true);
+        // After fade out, update display data and fade in
+        const timer = setTimeout(() => {
+          setDisplayDataList(dataList);
+          setIsFading(false);
+          prevCategoryIdRef.current = categoryId;
+        }, 200);
+        return () => clearTimeout(timer);
+      }
+      // If still loading, keep old data visible (don't update displayDataList)
+    } else if (!categoryChanged) {
+      // Category hasn't changed, update display data normally
+      if (dataList.length > 0 || (dataList.length === 0 && !isRequesting)) {
+        setDisplayDataList(dataList);
+        setIsFading(false);
+      }
+    } else {
+      // Initial load or no previous category
+      if (dataList.length > 0 || (dataList.length === 0 && !isRequesting)) {
+        setDisplayDataList(dataList);
+        prevCategoryIdRef.current = categoryId;
+        setIsFading(false);
+      }
+    }
+  }, [categoryId, dataList, isRequesting, displayDataList.length]);
+
   useEffect(() => {
     if (source === 'front-page') return;
     visible ? reload() : setDataList([]);
   }, [visible]);
 
-  const templateCards = useMemo(() => {
-    return dataList?.map((item) => <TemplateCard key={item.templateId} template={item} />);
-  }, [dataList]);
+  // Limit display to MAX_DISPLAY_COUNT templates
+  const displayedTemplates = useMemo(() => {
+    return displayDataList?.slice(0, MAX_DISPLAY_COUNT) ?? [];
+  }, [displayDataList]);
 
-  const handleLoadMore = useCallback(() => {
-    if (!isRequesting && hasMore) {
-      loadMore();
-    }
-  }, [isRequesting, hasMore, loadMore]);
+  const hasMoreTemplates = useMemo(() => {
+    return (displayDataList?.length ?? 0) > MAX_DISPLAY_COUNT;
+  }, [displayDataList]);
+
+  const templateCards = useMemo(() => {
+    return displayedTemplates?.map((item) => (
+      <TemplateCard key={item.templateId} template={item} />
+    ));
+  }, [displayedTemplates]);
 
   const emptyState = (
     <div className="mt-8 h-full flex items-center justify-center">
       <Empty description={t('template.emptyList')} />
+    </div>
+  );
+
+  const handleGoToMarketplace = useCallback(() => {
+    window.open('/workflow-marketplace', '_blank');
+  }, []);
+
+  const viewMoreSection = (
+    <div className="flex flex-col items-center gap-4 mt-6">
+      <div className="text-base text-center text-refly-text-0">
+        {t('template.notFoundQuestion')}
+      </div>
+      <Button
+        type="default"
+        className="border-[#0E9F77] text-[#0E9F77] hover:!border-[#0E9F77] hover:!text-[#0E9F77] rounded-lg px-3 py-2.5 font-medium"
+        onClick={handleGoToMarketplace}
+      >
+        {t('template.goToMarketplace')}
+      </Button>
     </div>
   );
 
@@ -82,27 +141,22 @@ export const TemplateList = ({
       id={source === 'front-page' ? scrollableTargetId : undefined}
       className={cn('w-full h-full overflow-y-auto bg-gray-100 p-4 dark:bg-gray-700', className)}
     >
-      {isRequesting && dataList.length === 0 ? (
+      {isRequesting && displayDataList.length === 0 ? (
         <div className={cn('grid', gridClassName)}>
           {Array.from({ length: 20 }).map((_, index) => (
             <TemplateCardSkeleton key={index} />
           ))}
         </div>
-      ) : dataList.length > 0 ? (
+      ) : displayDataList.length > 0 ? (
         <div
           id={source === 'template-library' ? scrollableTargetId : undefined}
-          className="w-full h-full overflow-y-auto"
+          className={cn(
+            'w-full h-full overflow-y-auto transition-opacity duration-300 ease-in-out',
+            isFading ? 'opacity-0' : 'opacity-100',
+          )}
         >
-          <InfiniteScroll
-            dataLength={dataList.length}
-            next={handleLoadMore}
-            hasMore={hasMore}
-            loader={<Spinner />}
-            endMessage={<EndMessage />}
-            scrollableTarget={scrollableTargetId}
-          >
-            <div className={cn('grid', gridClassName)}>{templateCards}</div>
-          </InfiniteScroll>
+          <div className={cn('grid', gridClassName)}>{templateCards}</div>
+          {hasMoreTemplates && viewMoreSection}
         </div>
       ) : (
         emptyState

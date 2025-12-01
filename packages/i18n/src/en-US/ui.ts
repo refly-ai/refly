@@ -3816,6 +3816,8 @@ const translations = {
     duplicateCanvasEntities: 'Duplicate the canvas entities',
     noDescription: 'No description',
     emptyList: 'Zero templates? No problem! Create yours now and inspire the community!',
+    notFoundQuestion: "Didn't find the workflow automation template you need?",
+    goToMarketplace: 'Go to Marketplace',
   },
   workflowApp: {
     title: 'Name',

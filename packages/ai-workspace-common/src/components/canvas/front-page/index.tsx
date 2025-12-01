@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
@@ -12,6 +12,19 @@ import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+
+const TAB_ORDER = [
+  'Featured',
+  'Sales',
+  'Marketing',
+  'Research',
+  'Support',
+  'Content Creation',
+  'Business',
+  'Education',
+  'Development',
+  'Design',
+] as const;
 
 const ModuleContainer = ({
   title,
@@ -55,14 +68,57 @@ export const FrontPage = memo(() => {
   const { data } = useListCanvasTemplateCategories({}, undefined, {
     enabled: true,
   });
-  const showTemplateCategories = false;
-  const templateCategories = [
-    { categoryId: '', labelDict: { en: 'All', 'zh-CN': '全部' } },
-    ...(data?.data ?? []),
-  ];
 
   const templateLanguage = i18n.language;
   const [templateCategoryId, setTemplateCategoryId] = useState('');
+
+  // Sort categories according to TAB_ORDER
+  const templateCategories = useMemo(() => {
+    const categories = [...(data?.data ?? [])];
+    return categories.sort((a, b) => {
+      // Get English label from labelDict (try 'en' or 'en-US')
+      const getEnglishLabel = (category: (typeof categories)[0]) => {
+        return category.labelDict?.en ?? category.labelDict?.['en-US'] ?? category.name ?? '';
+      };
+
+      const labelA = getEnglishLabel(a);
+      const labelB = getEnglishLabel(b);
+
+      // Find index in TAB_ORDER (case-insensitive)
+      const indexA = TAB_ORDER.findIndex((order) => order.toLowerCase() === labelA.toLowerCase());
+      const indexB = TAB_ORDER.findIndex((order) => order.toLowerCase() === labelB.toLowerCase());
+
+      // If both found, sort by index
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      // If only A found, A comes first
+      if (indexA !== -1) {
+        return -1;
+      }
+      // If only B found, B comes first
+      if (indexB !== -1) {
+        return 1;
+      }
+      // If neither found, maintain original order
+      return 0;
+    });
+  }, [data?.data]);
+
+  // Set default category to Featured when categories are loaded
+  useEffect(() => {
+    if (templateCategories.length > 0 && !templateCategoryId) {
+      const featuredCategory = templateCategories.find((category) => {
+        const englishLabel =
+          category.labelDict?.en ?? category.labelDict?.['en-US'] ?? category.name ?? '';
+        return englishLabel.toLowerCase() === 'featured';
+      });
+
+      if (featuredCategory) {
+        setTemplateCategoryId(featuredCategory.categoryId);
+      }
+    }
+  }, [templateCategories, templateCategoryId]);
 
   const handleNewWorkflow = useCallback(() => {
     setIsManualCollapse(false);
@@ -71,9 +127,10 @@ export const FrontPage = memo(() => {
 
   const handleTemplateCategoryClick = useCallback(
     (categoryId: string) => {
+      if (categoryId === templateCategoryId) return;
       setTemplateCategoryId(categoryId);
     },
-    [setTemplateCategoryId],
+    [templateCategoryId],
   );
 
   const handleViewGuide = useCallback(() => {
@@ -146,16 +203,18 @@ export const FrontPage = memo(() => {
           title={t('frontPage.template.title')}
           handleTitleClick={handleViewMarketplace}
         >
-          {showTemplateCategories && templateCategories.length > 1 && (
+          {templateCategories.length > 1 && (
             <div className="flex items-center gap-2 flex-wrap">
               {templateCategories.map((category) => (
                 <div
                   key={category.categoryId}
                   className={cn(
-                    'flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm text-refly-text-0 leading-5 cursor-pointer rounded-[40px] hover:bg-refly-tertiary-hover',
+                    'flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm leading-5 cursor-pointer rounded-[40px] transition-all duration-300 ease-in-out transform',
                     {
-                      '!bg-refly-primary-default text-white font-semibold':
+                      '!bg-refly-primary-default text-white font-semibold shadow-sm scale-105':
                         category.categoryId === templateCategoryId,
+                      'text-refly-text-0 hover:bg-refly-tertiary-hover hover:scale-[1.02]':
+                        category.categoryId !== templateCategoryId,
                     },
                   )}
                   onClick={() => handleTemplateCategoryClick(category.categoryId)}

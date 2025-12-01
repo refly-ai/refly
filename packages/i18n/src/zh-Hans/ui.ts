@@ -3549,6 +3549,8 @@ const translations = {
     duplicateCanvasEntities: '复制该画布所包含的文档以及资源',
     noDescription: '暂无描述',
     emptyList: '暂无模版，快来发挥你的创造力，为社区贡献模版吧～',
+    notFoundQuestion: '没有找到你需要的自动化工作流模板？',
+    goToMarketplace: '前往市场',
   },
   workflowApp: {
     title: '名称',

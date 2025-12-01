@@ -7141,6 +7141,14 @@ export type WorkflowApp = {
    */
   coverUrl?: string;
   /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
+  /**
+   * Community publish review status
+   */
+  publishReviewStatus?: string;
+  /**
    * Workflow app creation timestamp
    */
   createdAt?: string;
