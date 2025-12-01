@@ -702,6 +702,10 @@ export type CanvasTemplate = {
    */
   appShareId?: string;
   /**
+   * Credit usage for running this workflow app
+   */
+  creditUsage?: number;
+  /**
    * Canvas template creation time
    */
   createdAt: string;

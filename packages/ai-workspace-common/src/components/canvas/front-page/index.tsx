@@ -204,7 +204,7 @@ export const FrontPage = memo(() => {
           handleTitleClick={handleViewMarketplace}
         >
           {templateCategories.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap mb-3">
               {templateCategories.map((category) => (
                 <div
                   key={category.categoryId}

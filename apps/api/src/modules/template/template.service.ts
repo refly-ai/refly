@@ -112,6 +112,7 @@ export class TemplateService {
           ...template,
           coverUrl,
           appShareId,
+          creditUsage: template.creditUsage ?? null,
         };
       }),
     );
