@@ -842,12 +842,11 @@ export class CreditService {
       let creditCost = 0;
       if (creditBilling) {
         if (creditBilling.unit === '5k_tokens') {
-          // Round up to nearest 5k tokens (not enough 5K counts as 5K)
-          const inputUnits = Math.ceil(inputTokens / 5000);
-          const outputUnits = Math.ceil(outputTokens / 5000);
           const perInputUnit = creditBilling.inputCost || 0;
           const perOutputUnit = creditBilling.outputCost || 0;
-          creditCost = inputUnits * perInputUnit + outputUnits * perOutputUnit;
+          creditCost = Math.ceil(
+            (inputTokens / 5000) * perInputUnit + (outputTokens / 5000) * perOutputUnit,
+          );
         } else {
           creditCost = Math.max(creditBilling.inputCost, creditBilling.outputCost);
         }
